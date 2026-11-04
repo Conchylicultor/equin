@@ -19,6 +19,11 @@
 // Synthetic wheel events never scroll anything, so every gesture below is
 // wasted by construction.
 //
+// That the motion is smooth (out and back once, never back-and-forth) is
+// checked by web/internal/rubber-band.test.ts, deterministically: a headless
+// browser on a loaded machine delivers input and frames 17–250 ms apart, so a
+// frame-by-frame trace here measures the machine, not the physics.
+//
 // Usage:
 //   ./equin run plugins/primitives/plugins/dom/plugins/overscroll-hint/e2e/overscroll-hint-verify.ts
 //
@@ -69,6 +74,20 @@ await withBrowser(async (h) => {
       b.style.cssText = css;
       return b;
     };
+
+    // The hint is mounted by a Core.Root contribution, which can land after
+    // boot resolves: wait until a wasted gesture bounces before checking.
+    const probe = scroller(200);
+    const probeChild = block("height:50px;");
+    probe.appendChild(probeChild);
+    const probeUntil = performance.now() + 15_000;
+    while (!pulled(probeChild) && performance.now() < probeUntil) {
+      wheel(probeChild, 120);
+      await frames(2);
+    }
+    const installed = pulled(probeChild);
+    probe.remove();
+    await tick(700);
 
     // --- a surface whose content fits: every gesture is wasted ---
     const dead = scroller(200);
@@ -247,8 +266,8 @@ await withBrowser(async (h) => {
       rail: rail.getBoundingClientRect().top,
     };
     site.remove();
-
     return {
+      installed,
       fits,
       realScroll,
       endBefore,
@@ -265,6 +284,7 @@ await withBrowser(async (h) => {
   });
 
   const {
+    installed,
     fits,
     realScroll,
     endBefore,
@@ -280,6 +300,7 @@ await withBrowser(async (h) => {
   } = result;
   const same = (a: number, b: number): boolean => Math.abs(a - b) < 0.5;
 
+  r.ok("the hint is installed (a probe gesture bounced)", installed);
   r.ok("a wasted gesture rubber-bands the content", fits.pulled, fits.css);
   r.ok("a second push moves it further (live, not one-shot)", fits.keepsMoving);
   r.ok("the scroll box itself never moves", fits.boxStill);

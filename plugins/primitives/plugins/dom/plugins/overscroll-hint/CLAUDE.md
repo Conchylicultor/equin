@@ -17,60 +17,71 @@ detector.
 
 ## Wasted-scroll detection
 
-A single document-level listener set covers every scroll viewport in the app
+A single window-level listener set covers every scroll viewport in the app
 (PaneChrome's `overflow-y-auto`, panes that own their own `overflow-auto`,
 Miller's horizontal strip, …) with zero per-pane wiring.
 
-The trick: record each `wheel` (or `touchmove`) gesture, then on the **next
-animation frame** check whether ANY real `scroll` event fired in the meantime
-(captured globally), and — because under a fast flick that event can land a frame
-late — whether any scroller on the gesture's chain still has room in its
-direction. Only when neither holds was the gesture wasted. The hot wheel path
-stays cheap: the style and geometry reads run only on the rare no-scroll-event
-frame.
+Gestures are **batched per frame**: every `wheel` / `touchmove` delta since the
+last frame is summed (a trackpad sends events at its own rate, unrelated to the
+display's). On the frame, the batch is wasted when no scroller on the gesture's
+chain fired a `scroll` event during it AND none of them has room left in the
+gesture's direction — the first test alone is racy (under a fast flick the
+scroll event can land a frame late). A scroll event from a scroller off the
+chain (a streaming log in another pane) says nothing about this gesture and is
+ignored. Style and geometry are read once per frame, never on the wheel path.
 
-Gestures that were intentionally consumed (`event.defaultPrevented`, e.g. graph
-zoom / canvas pan) and pinch-zoom (`ctrlKey`) are ignored.
+Gestures consumed on purpose (`defaultPrevented` — the window bubble listener
+runs after everyone else's, so it is final; e.g. graph zoom / canvas pan) and
+pinch-zoom (`ctrlKey`) are ignored.
 
-## The rubber-band (push + decay physics)
+The surface that bounces is the nearest scroller on the chain that really
+scrolls on the axis (`scrollHeight > clientHeight` — the one the gesture ran out
+of), else the nearest whose overflow would scroll (its content fits), else the
+nearest `[data-pane-id]` → `<main>` → scrolling root. Range first, because
+overflow alone over-matches: a code block scrolling sideways computes
+`overflow-y: auto` too, and bouncing it would move only the code in its box.
 
-`pickScrollSurface` walks up from the gesture target to the first element whose
-computed overflow on the gesture's dominant axis is `auto`/`scroll`/`overlay`
-(falling back to nearest `[data-pane-id]` → `<main>` → scrolling root). The
-transform is applied to that viewport's **content layers** (its direct element
-children), never the viewport box itself: moving the box would drag its clip
-boundary over an adjacent toolbar/footer and — since `transform` opens a stacking
-context — paint the overscrolled content *above* that chrome. Moving the content
-keeps the bounce inside the viewport's own `overflow` clip, the native model
-(viewport stays put and clips; only content moves). A viewport with no element
-children has nothing to bounce safely and is skipped. Its displacement is driven
-by a small continuous physics loop, not a clip:
+## The rubber-band physics
 
-- **Push.** Each wasted scroll event adds `−delta · PUSH_FACTOR · (1 − |offset|/MAX_PULL)`
-  to the signed `offset`. The `(1 − |offset|/MAX_PULL)` term is the resistance:
-  contributions shrink to nothing as the offset nears `MAX_PULL` (~48px), so a
-  hard flick reaches the limit in a few events and pushing further barely moves
-  it (down/right → nudge content up/left, like native).
-- **Decay.** A `requestAnimationFrame` loop multiplies `offset` by
-  `exp(−dt / DECAY_TAU_MS)` (τ ~90ms → ~270ms back to rest) every frame, then
-  writes `transform: translate(±offset px)`. When `|offset|` drops below
-  `STOP_EPS` the loop stops and the inline styles are cleared.
+`web/internal/rubber-band.ts`, pure and unit-tested. Two stages, so bursty
+input never shows as a shake:
 
-Because decay runs every frame regardless of incoming events, a trackpad
-**momentum tail recedes smoothly** as its deltas shrink — the surface is never
-pinned waiting for momentum to end. A fresh flick simply re-pushes it, so
-repeated dead-end scrolls always produce feedback. While a finger is down
-(`touchstart`→`touchend`) the decay **pauses** so the surface tracks the touch
-1:1, then springs back on release.
+- **Pull** — where the band wants to be. Each wasted delta stretches it through
+  a saturating curve (slope 0.5 at rest, asymptote 48px), and it relaxes
+  exponentially (τ 70ms) while no finger is down.
+- **Offset** — what is drawn. A critically damped spring (ω 45 rad/s) follows
+  the pull, stepped analytically so the motion is the same at any frame rate.
 
-`prefers-reduced-motion: reduce` disables the effect entirely (checked per
-gesture in JS). Everything is driven from inline `transform` in the
-framework-free detector — the plugin ships no CSS.
+Pushes are instant and relaxing is continuous, so the pull alone is a
+sawtooth: out on a frame with a wheel event, back on one without (a trackpad
+sends ~60 events/s, a ProMotion display draws 120 frames). Drawing it directly
+— what this plugin did until 2026-11 — shook the content ~2px back and forth
+every frame. The spring filters that ripple out, so the content goes out and
+back once.
+
+One call per frame, `frame(dt, delta, holding)`, so the order cannot be got
+wrong: the frame's input arrived during it, so it lands mid-frame — half the
+relax before it, half after. Relaxing it over the whole frame dropped the band
+on every long frame (a shake on a loaded machine); relaxing none made the pull
+depend on the frame rate. A trackpad's momentum tail keeps pushing with
+shrinking deltas; the relax wins as they shrink, so the band recedes while
+momentum is still arriving. While a finger is down (touch) the pull holds, then
+springs back on release.
+
+Smoothness is checked deterministically by `rubber-band.test.ts` (60 / 120 /
+144 Hz and an irregular 17–83 ms cadence), not by the e2e: a headless browser on
+a loaded machine delivers input and frames up to hundreds of ms apart, so a
+frame-by-frame trace there measures the machine.
+
+`prefers-reduced-motion: reduce` disables the effect (checked per batch). All
+motion is inline styles set by the detector — the plugin ships no CSS.
 
 ## A transform only looks like a scroll
 
 Moving content is not scrolling. Three things a real scroll gets right are
-kept right by the detector, all settled once when a bounce locks onto a surface:
+kept right by `web/internal/bounce-surface.ts`, all settled once when a bounce
+locks onto a surface. The content layers (the surface's element children) move,
+never the surface box: moving the box would drag its clip over adjacent chrome.
 
 - **Pinned elements stay pinned.** A sticky element stuck to the surface's edge
   (pane header, table header, menu search bar) is chrome: it is held on the edge
@@ -98,13 +109,15 @@ kept right by the detector, all settled once when a bounce locks onto a surface:
   it cannot reach the end without adding extent, the bounce is skipped rather
   than scroll the page.
 
-`e2e/overscroll-hint-verify.ts` checks both on synthetic surfaces.
+`e2e/overscroll-hint-verify.ts` checks all three on synthetic surfaces, once a
+probe gesture has shown the hint is installed (its `Core.Root` controller can
+mount after boot resolves).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
+- Description: Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Gestures are batched per frame and a batch is wasted when no scroller on its chain scrolled or has room left; a two-stage physics (a saturating pull, drawn through a critically damped spring) turns bursty trackpad input into one smooth out-and-back.
 - Web:
   - Contributes: `Core.Root` → `OverscrollHintController`
 - Cross-plugin:
