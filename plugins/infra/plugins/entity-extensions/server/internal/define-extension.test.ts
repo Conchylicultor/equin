@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { is, SQL } from "drizzle-orm";
+import { is, SQL, sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   boolean,
@@ -224,7 +224,43 @@ describe("defineExtension accessors", () => {
     );
     expect(del?.params).toEqual(["s1"]);
   });
+
+  // The statement `upsert` runs, built but not run and without RETURNING — so
+  // it can stand as one arm of a data-modifying CTE.
+  test("upsertQuery is upsert's statement, unexecuted, without returning", async () => {
+    statements.length = 0;
+    await thing.upsert("s1", { semitones: 2, source: "user" }, recordingDb);
+    const [upsert] = statements;
+    const built = new PgDialect().sqlToQuery(
+      thing.upsertQuery("s1", { semitones: 2, source: "user" }),
+    );
+    expect(upsert?.sql).toBe(
+      `${built.sql} returning ${returningOf(upsert?.sql)}`,
+    );
+    expect(built.sql).not.toContain("returning");
+    expect(built.params).toEqual(upsert?.params ?? []);
+  });
+
+  // Composed into a data-modifying CTE, it stays bare: a parenthesised main
+  // statement (what an embedded drizzle builder renders as) is a syntax error.
+  test("upsertQuery composes into a CTE unparenthesised", () => {
+    const arm = thing.upsertQuery("s1", { semitones: 1, source: "user" });
+    const main = thing.upsertQuery("s2", { semitones: 2, source: "agent" });
+    const built = new PgDialect().sqlToQuery(sql`WITH a AS (${arm}) ${main}`);
+    expect(built.sql).toMatch(
+      /^WITH a AS \(insert into "ext_probe_ext_thing" .*\) insert into "ext_probe_ext_thing" /,
+    );
+    // One placeholder numbering across both arms.
+    expect(built.params.indexOf("s1")).toBeLessThan(built.params.indexOf("s2"));
+    expect(built.sql).toContain(`$${built.params.length}`);
+  });
 });
+
+function returningOf(statement: string | undefined): string {
+  const m = statement?.match(/ returning (.*)$/);
+  if (!m?.[1]) throw new Error(`no returning in: ${statement}`);
+  return m[1];
+}
 
 // ── Derived updatedAt: default all-true, per-column overrides ───────────────
 // The statement's conflict set, and whether any bound value is a timestamp: an

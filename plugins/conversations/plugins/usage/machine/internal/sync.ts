@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugins/transcript-watcher/server";
 import {
@@ -17,6 +17,7 @@ import {
   type FileScan,
   type PricedFile,
 } from "./scan";
+import { writeUsage } from "./write";
 import {
   _conversationUsageFiles,
   conversationUsage,
@@ -134,28 +135,7 @@ async function syncConversationUsage(conversationId: string): Promise<void> {
     current.agentCount === totals.agentCount;
   if (toWrite.length === 0 && same) return;
 
-  await db.transaction(async (tx) => {
-    if (toWrite.length > 0) {
-      await tx
-        .insert(_conversationUsageFiles)
-        .values(toWrite.map((row) => ({ conversationId, ...row })))
-        .onConflictDoUpdate({
-          target: [
-            _conversationUsageFiles.conversationId,
-            _conversationUsageFiles.path,
-          ],
-          set: {
-            kind: sql`excluded.kind`,
-            offset: sql`excluded.offset`,
-            buckets: sql`excluded.buckets`,
-            tailHashes: sql`excluded.tail_hashes`,
-            costUsd: sql`excluded.cost_usd`,
-            unpricedModels: sql`excluded.unpriced_models`,
-          },
-        });
-    }
-    if (!same) await conversationUsage.upsert(conversationId, totals, tx);
-  });
+  await writeUsage(db, conversationId, toWrite, same ? null : totals);
 }
 
 // Per-conversation serialization: a sync already running for a conversation

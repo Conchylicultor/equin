@@ -1,4 +1,9 @@
-import { type BuildExtraConfigColumns, eq, getTableName } from "drizzle-orm";
+import {
+  type BuildExtraConfigColumns,
+  eq,
+  getTableName,
+  type SQL,
+} from "drizzle-orm";
 import {
   type AnyIndexBuilder,
   type AnyPgColumn,
@@ -124,6 +129,16 @@ export interface EntityExtension<
     values: Omit<ExtensionTable<F, D>["$inferInsert"], K | ExtensionTimestamp>,
     exec?: DbExecutor,
   ): Promise<ExtensionTable<F, D>["$inferSelect"]>;
+  // The same `INSERT … ON CONFLICT DO UPDATE`, built but not run (no
+  // RETURNING): a caller writing several tables at once composes it into ONE
+  // statement — a data-modifying CTE — instead of a transaction of round trips
+  // that holds its row locks while the app thinks between them. Plain `SQL`,
+  // not the builder: drizzle parenthesises a builder embedded in sql`…`, and a
+  // CTE body or main statement in parentheses is a syntax error.
+  upsertQuery(
+    id: string,
+    values: Omit<ExtensionTable<F, D>["$inferInsert"], K | ExtensionTimestamp>,
+  ): SQL;
   // Change some columns of an EXISTING row; `undefined` when there is none
   // (nothing is inserted).
   update(
@@ -262,6 +277,23 @@ export function defineExtension<
     throw new Error(`defineExtension("${tableName}"): no key column "${key}".`);
   }
 
+  // `updatedAt` is derived by the trigger, so neither side stamps it. An
+  // empty patch would leave `set` empty, which drizzle rejects: rewrite the
+  // key with its own value instead — a no-op the trigger ignores. (drizzle
+  // drops `undefined` values, so a patch of only those is empty too.)
+  const upsertBuilder = (
+    id: string,
+    patch: Record<string, unknown>,
+    exec: DbExecutor,
+  ) => {
+    const empty = Object.values(patch).every((v) => v === undefined);
+    const set = empty ? { [key]: id } : patch;
+    return exec
+      .insert(table)
+      .values({ ...patch, [key]: id })
+      .onConflictDoUpdate({ target: keyColumn, set });
+  };
+
   // The one cast, as in `defineEntity`: the body is typed against the widened
   // `FieldsRecord`; `ExtensionOf<Sh, M>` restates the precise types the shape
   // and meta produce (the rows the methods read are that table's rows).
@@ -284,18 +316,11 @@ export function defineExtension<
       patch: Record<string, unknown>,
       exec: DbExecutor = db,
     ) {
-      // `updatedAt` is derived by the trigger, so neither side stamps it. An
-      // empty patch would leave `set` empty, which drizzle rejects: rewrite the
-      // key with its own value instead — a no-op the trigger ignores. (drizzle
-      // drops `undefined` values, so a patch of only those is empty too.)
-      const empty = Object.values(patch).every((v) => v === undefined);
-      const set = empty ? { [key]: id } : patch;
-      const rows = await exec
-        .insert(table)
-        .values({ ...patch, [key]: id })
-        .onConflictDoUpdate({ target: keyColumn, set })
-        .returning();
+      const rows = await upsertBuilder(id, patch, exec).returning();
       return rows[0];
+    },
+    upsertQuery(id: string, patch: Record<string, unknown>): SQL {
+      return upsertBuilder(id, patch, db).getSQL();
     },
     async update(
       id: string,

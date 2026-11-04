@@ -202,6 +202,62 @@ other multi-round-trip background transactions that could be single statements;
 don't change them. Done = `./equin test plugins/conversations/plugins/usage`
 passes and a real conversation's totals are unchanged.
 
+**Landed (2026-11-04).** `writeUsage` (`usage/machine/internal/write.ts`) issues
+`WITH files AS (<files upsert>) <totals upsert>`, one statement. To build it,
+`entity-extensions` gained `upsertQuery(id, values): SQL`, which is `upsert`'s
+statement built but not run. `upsert` itself is a plain
+`INSERT … ON CONFLICT DO UPDATE … RETURNING`, and its effects (the derived
+`updatedAt` row trigger, the change feed's statement triggers) all happen in the
+database, so the CTE keeps all of them. A real-Postgres test
+(`write.test.ts`) covers each branch and the trigger.
+
+Trap: drizzle wraps an embedded query *builder* in parentheses, so
+``sql`WITH a AS (${builder}) …` `` renders `((insert …))`, which is a syntax
+error. Embed `.getSQL()` (a plain `SQL`) instead.
+
+**Other multi-round-trip background transactions** (listed, not changed),
+ranked by fit:
+
+- Pure writes, so one statement fits:
+  - `tasks/task-title/machine/internal/short-title-job.ts:57`: `FOR UPDATE`, a
+    string compare, then an upsert. Can be one `INSERT … SELECT … WHERE title = $`.
+  - `infra/jobs/machine/internal/dead-job-gc.ts:39`: archive `INSERT … SELECT`,
+    then `DELETE`s.
+  - `apps/events/refresh/server/internal/run-ledger.ts:96`: run, run-events,
+    source-state.
+  - `apps/chord/song-index/server/internal/load.ts:82`: chunked inserts.
+  - `infra/events/server/internal/trigger-contributions.ts:47`: one delete and
+    one insert per trigger table.
+  - `apps/events/events-core/server/internal/events-repo.ts:250`: per-row
+    updates whose plan is computed beforehand. Fits
+    `UPDATE … FROM (VALUES …)`.
+- Maybe:
+  - `infra/claude-cli/server/internal/record-call.ts:28`: insert,
+    ring-trim, horizon.
+  - `events-repo.ts:73`: N upserts.
+  - `places-core/server/internal/seed.ts:71`: `LOCK`, count, insert.
+  - `deploy/analytics/collect/server/internal/aggregate-sql.ts:264`: delete
+    and insert per table. Two statements; one would hit same-key conflicts.
+- No (a lock or app logic sits between statements, so this needs redesign, not
+  a CTE): `op-store/store.ts:240`; the `watch.*` jobs; the queue rank jobs
+  (`lockDeck`); `inline-date/reconcile.ts:44`; `editor-collab/doc-store.ts:86`
+  (Yjs merge); the boot DDL installers.
+
+**Next rung (not done).** The existing lint `database/no-pool-await-in-transaction`
+keeps awaits inside a transaction on `tx`. It still allows a transaction of
+several `tx` round trips with app work between them. That is exactly the
+idle-in-transaction window this task closed. Two ways to turn it into an
+enforced rule:
+
+- A lint that flags a `db.transaction` callback awaiting two or more
+  statements and none of `FOR UPDATE`, an advisory lock or a read whose result
+  feeds a later write (the cases that genuinely need a transaction). It would
+  point to a CTE. Its exemptions would be the "No" list above.
+- Removing the need structurally: an atomic multi-write primitive
+  (`writeAtomically(exec, [w1, w2, …])`, composing CTE arms the way
+  `writeUsage` does by hand) so a background writer never needs
+  `db.transaction` for pure writes.
+
 ## Runbook: a database wedged by an abandoned transaction
 
 Symptom: pages hang on "Waiting for the server…", `db.jsonl` shows `[deadline]`
