@@ -24,6 +24,11 @@ one JSON line to ~/.equin/logs/monitors/fs-latency.jsonl, and exits):
               (IOBlockStorageDriver Statistics), load average.
   daemons     %CPU of the system daemons that were suspects (fseventsd,
               syspolicyd, XprotectService, mds, mds_stores).
+  readers     root only: the processes reading the most from disk since the
+              last tick (proc_pid_rusage, root daemons included), and the
+              fseventsd log files fseventsd holds open. A history replay
+              shows as a log file far behind the one being written, advancing
+              tick after tick.
 
 A tick whose slowest single operation exceeds STALL_MS (default 1000) also
 writes `"stall": true`; when run as root it captures a 5 s `fs_usage -f
@@ -208,6 +213,52 @@ def daemon_cpu():
     return want
 
 
+libproc = ctypes.CDLL("/usr/lib/libproc.dylib")
+RUSAGE_INFO_V2 = 2
+TOP_READERS = 8
+
+
+class RusageV2(ctypes.Structure):
+    _fields_ = [("uuid", ctypes.c_uint8 * 16)] + [
+        (n, ctypes.c_uint64)
+        for n in ("ut", "st", "pkg_idle", "int_wk", "pageins", "wired", "resident", "phys", "start", "exit",
+                  "child_ut", "child_st", "child_pkg", "child_int", "child_pageins", "child_elapsed",
+                  "diskio_read", "diskio_write")
+    ]
+
+
+def disk_readers(now, state):
+    """Root only: top disk readers since the last tick, by process name (MB/s)."""
+    out = subprocess.run(["/bin/ps", "-Ao", "pid=,comm="], capture_output=True).stdout.decode("utf-8", "replace")
+    prev, prev_t = state.get("readers_prev", {}), state.get("readers_t")
+    cur, by_name = {}, {}
+    for line in out.splitlines():
+        parts = line.strip().split(None, 1)
+        if len(parts) != 2:
+            continue
+        pid, ru = int(parts[0]), RusageV2()
+        if libproc.proc_pid_rusage(pid, RUSAGE_INFO_V2, ctypes.byref(ru)) != 0:
+            continue
+        cur[str(pid)] = ru.diskio_read
+        if str(pid) in prev and ru.diskio_read >= prev[str(pid)]:
+            name = os.path.basename(parts[1])
+            by_name[name] = by_name.get(name, 0) + ru.diskio_read - prev[str(pid)]
+    state["readers_prev"], state["readers_t"] = cur, now
+    if not prev_t or now <= prev_t:
+        return None
+    top = sorted(by_name.items(), key=lambda kv: -kv[1])[:TOP_READERS]
+    return {n: round(b / (now - prev_t) / 1e6, 1) for n, b in top}
+
+
+def fseventsd_logs():
+    """Root only: the .fseventsd log files fseventsd holds open (hex event ids)."""
+    pid = subprocess.run(["/usr/bin/pgrep", "-x", "fseventsd"], capture_output=True, text=True).stdout.split()
+    if not pid:
+        return None
+    out = subprocess.run(["/usr/sbin/lsof", "-nP", "-p", pid[0], "-Fn"], capture_output=True, text=True).stdout
+    return sorted({ln.rsplit("/", 1)[1] for ln in out.splitlines() if ln.startswith("n") and "/.fseventsd/" in ln})
+
+
 def maybe_incident(now, state):
     if os.geteuid() != 0 or now - state.get("last_incident", 0) < INCIDENT_COOLDOWN_S:
         return None
@@ -282,6 +333,9 @@ def main():
         "load1": float(load[0]),
         "daemon_cpu": daemon_cpu(),
     }
+    if os.geteuid() == 0:
+        rec["disk_readers_mb_s"] = disk_readers(now, state)
+        rec["fseventsd_logs"] = fseventsd_logs()
     if rec["stall"]:
         path = maybe_incident(now, state)
         if path:
