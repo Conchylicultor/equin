@@ -6,6 +6,10 @@
  * In `/demo` (the Agent Manager on made-up data, served by the browser
  * worker), it:
  *
+ *  0. presses inside the embed, then mod+B twice: the Agent Manager's
+ *     sidebar collapses, then expands — once the user is in the embed, its
+ *     app's surface-scoped shortcuts answer as they do in a tab, not the
+ *     host page's (mounting the embed alone does not move the keys into it);
  *  1. opens the launcher inside the embed and picks Pages: the embed switches
  *     to Pages (`data-app-embed`, its theme scope), whose sidebar lists the
  *     seeded pages ("Lumen", "Ideas");
@@ -140,6 +144,36 @@ await withBrowser(async (h) => {
     "the embed opens on the Agent Manager",
     await embeddedApp(page),
     "agent-manager",
+  );
+
+  // ── 0. the embedded app's own shortcut: mod+B toggles its sidebar ───────
+  // The user moves into the embed with a press on its sidebar (no control
+  // there), then leaves the conversation's prompt editor: a rich-text field
+  // claims mod+B (bold) for itself, as it does on the desktop.
+  const sidebar = embedRoot(page).locator("[data-side][data-state]").first();
+  const sidebarState = (): Promise<string | null> =>
+    sidebar.getAttribute("data-state");
+  await sidebar.dispatchEvent("pointerdown");
+  await page.evaluate(() => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) active.blur();
+  });
+  await renders(
+    "the Agent Manager's sidebar starts expanded",
+    sidebarState,
+    (state) => state === "expanded",
+  );
+  await page.keyboard.press("ControlOrMeta+b");
+  await renders(
+    "mod+B collapses the embedded app's sidebar",
+    sidebarState,
+    (state) => state === "collapsed",
+  );
+  await page.keyboard.press("ControlOrMeta+b");
+  await renders(
+    "mod+B expands it again",
+    sidebarState,
+    (state) => state === "expanded",
   );
 
   // ── 1. launcher → Pages ─────────────────────────────────────────────────

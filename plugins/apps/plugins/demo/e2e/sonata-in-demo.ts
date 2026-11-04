@@ -12,7 +12,10 @@
  *  2. opens "Für Elise" and plays two notes on its keyboard: each press
  *     starts a sampled voice (an `AudioBufferSourceNode` started), and the
  *     samples come through the worker's asset mirror, whose fetch of the
- *     instrument's public CDN is the only sample traffic.
+ *     instrument's public CDN is the only sample traffic;
+ *  3. presses Space twice: the transport plays, then pauses (the play button
+ *     reads Pause, then Play) — the embedded app's surface-scoped shortcuts
+ *     answer as in a tab, not the host page's.
  *
  * And asserts, throughout, that the page itself never moved and nothing left
  * the scope — the list `no-leak.ts` checks against (D3): no `/api/…` request
@@ -198,6 +201,28 @@ await withBrowser(async (h) => {
     );
   }
   await snap(page, OUT, "2-played");
+
+  // ── 3. Space plays, Space pauses ────────────────────────────────────────
+  const transport = (label: string): Locator =>
+    embedRoot(page).getByRole("button", { name: label, exact: true });
+  await renders(
+    "the transport rests on Play",
+    () => transport("Play").count(),
+    (n) => n > 0,
+  );
+  await page.keyboard.press("Space");
+  await renders(
+    "Space starts the song (the button reads Pause)",
+    () => transport("Pause").count(),
+    (n) => n > 0,
+  );
+  await snap(page, OUT, "3-playing");
+  await page.keyboard.press("Space");
+  await renders(
+    "Space pauses it again (the button reads Play)",
+    () => transport("Play").count(),
+    (n) => n > 0,
+  );
 
   page.off("request", onRequest);
   page.off("websocket", onSocket);
