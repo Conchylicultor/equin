@@ -11498,6 +11498,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses tokens:
                   - `ui/tokens/chart --chart-1`
                   - `ui/tokens/color-palette --background`
+                  - `ui/tokens/color-palette --border`
                   - `ui/tokens/color-palette --faint-foreground`
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted-foreground`

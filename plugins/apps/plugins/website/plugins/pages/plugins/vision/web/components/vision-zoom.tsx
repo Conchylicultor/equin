@@ -94,7 +94,17 @@ const LadderMarkup = memo(function LadderMarkup() {
         {LADDER.map((l) => (
           <section key={l.key} className="vs-step" id={`layer-${l.key}`}>
             <article className="vs-card">
-              <h2 className="vs-card-title">{l.title}</h2>
+              <h2 className="vs-card-title">
+                {l.title}
+                {l.status && (
+                  <>
+                    {" "}
+                    <span className="vs-status" data-status={l.status}>
+                      {l.status}
+                    </span>
+                  </>
+                )}
+              </h2>
               <div className="vs-card-body">
                 {l.before && <p className="vs-before">{l.before}</p>}
                 <p className="vs-after">{l.after}</p>

@@ -12,6 +12,8 @@ export interface Chapter {
   title: string;
   before: string;
   after: string;
+  /** A chapter not built yet, drawn as a chip after its title. */
+  status?: "planned" | "future";
 }
 
 export const LADDER: readonly Chapter[] = [
@@ -53,6 +55,7 @@ export const LADDER: readonly Chapter[] = [
   {
     key: "share",
     name: "Shared",
+    status: "planned",
     title: "Apps and building blocks, shared.",
     before:
       "Even with agents, building a full app from scratch is still not free.",
@@ -62,6 +65,7 @@ export const LADDER: readonly Chapter[] = [
   {
     key: "every",
     name: "Every app",
+    status: "future",
     title: "Every app, rebuilt.",
     before: "",
     after:

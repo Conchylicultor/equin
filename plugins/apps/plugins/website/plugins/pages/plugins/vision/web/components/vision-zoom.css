@@ -136,6 +136,32 @@
 .vision-zoom .vs-card-body p + p {
   margin-top: 12px;
 }
+/* status: a chapter not built yet carries a chip after its title */
+.vision-zoom .vs-status {
+  display: inline-block;
+  vertical-align: 0.32em;
+  margin-left: 6px;
+  padding: 3px 9px 2px;
+  border-radius: 999px;
+  border: 1px solid;
+  text-shadow: none;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.vision-zoom .vs-status[data-status="planned"] {
+  color: var(--vz-azure);
+  border-color: color-mix(in srgb, var(--vz-azure) 45%, transparent);
+  background: color-mix(in srgb, var(--vz-azure) 12%, transparent);
+}
+.vision-zoom .vs-status[data-status="future"] {
+  color: var(--faint-foreground);
+  border-color: var(--border);
+  border-style: dashed;
+}
 /* two plain paragraphs, the past quieter than the present */
 .vision-zoom .vs-before {
   color: var(--muted-foreground);
