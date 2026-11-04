@@ -93,6 +93,33 @@ alias would land in every read-set the query is captured under, so a raw shape
 spells its own names unquoted (query-resource's A38) and the quoted relations
 of its text must be exactly the tables it routes.
 
+## Every statement names its origin
+
+Every statement on the app pool carries the runtime-profiler entry it ran under
+as a leading comment, `/* origin=conversations.usage:sync */ `
+(`tagClientQueriesWithOrigin` in `machine/internal/pg-driver.ts`, installed once
+per physical connection on pg-pool's `connect` event, so it is the innermost
+layer of both `pool.query` and the checked-out-client path `db.transaction()`
+takes). It is what lets the database side name who holds a lock:
+`pg_stat_activity.query` shows the comment, and `database/lock-watch` reads it.
+Not `application_name`: pgbouncer runs in transaction mode, so no session
+setting survives into the next client's transaction.
+
+- The format is `database/connection` core's (`tagSqlWithOrigin` /
+  `parseSqlOrigin`); the label is reduced to `[A-Za-z0-9._:/@=+-]` (anything
+  else becomes `_`) and cut at 120 chars, so it can neither close its comment
+  nor contain a `from <name>` the read-set capture would read.
+- The read-set capture sits outside it and reads the untagged text; the
+  connection's own label (`queryText`) strips the comment, so spans and
+  deadline reports name the statement alone (their `origin` field names the
+  caller).
+- Untagged: context-less calls (boot, migrations), a Submittable, and a NAMED
+  prepared statement (pg refuses one name with two texts).
+- Cost, measured in `pg-driver.test.ts` over a fake client (200k statements):
+  ~30–60 ns per statement for the whole wrapper, the tag adding ~0–30 ns over
+  the untagged path (within run-to-run noise) — against a round trip of
+  ≥ 100 µs through pgbouncer.
+
 ## Query deadline (a call with no reply fails; its connection is abandoned)
 
 Every database call on **every backend connection** has a client-side deadline —
@@ -354,7 +381,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `libpqEnv`
     - `readDatabaseConfig`
 - Cross-plugin:
-  - Imported by: 136 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 137 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×39
     - `conversations` ×15
     - `page` ×15
@@ -362,8 +389,8 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `infra` ×12
     - `active-data` ×8
     - `debug` ×7
+    - `database` ×4
     - `primitives` ×4
-    - `database` ×3
     - `network` ×3
     - `reports` ×2
     - `stats` ×2
@@ -396,6 +423,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
   - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
   - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the base DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
   - **`fork-point`** — Reads when this database was forked from another (databaseForkedAt): the instant the fork stamped on it, or null for a database never forked.
+  - **`lock-watch`** — Database lock watch: a per-worktree job that looks at pg_stat_activity + pg_blocking_pids once a minute (Postgres has no change signal for lock waits), on a direct connection that a saturated…
   - **`migrations`** — DDL lifecycle: migration runner and SQL files.
   - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
   - **`pglite`** (excluded) — The PGlite database driver: provides the DatabaseDriver host service with Postgres compiled to WASM, in memory, for a host without the computer's Postgres cluster (the browser composition, the…

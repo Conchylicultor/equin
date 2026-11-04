@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
+import { dbLockWatch } from "@plugins/database/plugins/lock-watch/core";
 import { dbQueryDeadlines } from "../../core";
 import { databaseVerdict } from "./database-health";
 
 /**
- * The health report's Database row. Cheap: one subscription to a small pushed
- * resource the server already holds in memory — nothing is fetched per render.
+ * The health report's Database row. Cheap: two subscriptions to small pushed
+ * values the server already holds in memory — the recent deadline hits and the
+ * lock watch's latest look — nothing is fetched per render.
  *
  * Time moves the verdict on its own (a lost query ages out of the 10-minute
- * window), so `now` is state, refreshed by ONE timer scheduled to the next
+ * window; the lock watch's latest look goes stale when no newer one lands), so `now` is state, refreshed by ONE timer scheduled to the next
  * instant the verdict changes. When nothing is waiting to expire there is no
  * timer at all.
  *
@@ -23,8 +25,9 @@ import { databaseVerdict } from "./database-health";
  */
 export function useDatabaseHealth(): HealthStatus {
   const result = useLive(dbQueryDeadlines);
+  const lockWatch = useLive(dbLockWatch);
   const [now, setNow] = useState(() => Date.now());
-  const verdict = databaseVerdict(result, now);
+  const verdict = databaseVerdict(result, lockWatch, now);
   const nextChangeAt = verdict.nextChangeAt;
 
   useEffect(() => {

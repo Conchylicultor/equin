@@ -11,3 +11,12 @@ export {
 // A connect refused because the server side is full (pgbouncer's
 // max_client_conn, Postgres's too_many_connections): back-pressure, transient.
 export { isConnectionCapacityRefusal } from "./internal/capacity-refusal";
+// A statement names its caller in its own text — `/* origin=<label> */ ` in
+// front — so the database side can say who holds a lock (`pg_stat_activity`).
+export {
+  ORIGIN_LABEL_MAX,
+  originCommentLabel,
+  parseSqlOrigin,
+  tagSqlWithOrigin,
+  type SqlOrigin,
+} from "./internal/origin-comment";

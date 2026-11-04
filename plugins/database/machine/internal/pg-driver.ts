@@ -29,6 +29,7 @@ import {
   queryText,
   withQueryDeadline,
 } from "@plugins/database/plugins/connection/server";
+import { tagSqlWithOrigin } from "@plugins/database/plugins/connection/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   isTransientDbError,
@@ -518,6 +519,58 @@ function wrapClientQueryForReadSet(client: PoolClient): PoolClient {
   return client;
 }
 
+// Name the caller in every statement's text: `/* origin=<entry label> */ ` in
+// front (`tagSqlWithOrigin`, database/connection core). It is what lets the
+// DATABASE side say who holds a lock or sits idle in a transaction —
+// `pg_stat_activity.query` shows a session's statement verbatim — which the lock
+// watch (`database/lock-watch`) reads. On 2026-11-03 a chain of 16 sessions
+// blocked main for 5 h and nothing on the server could say whose they were.
+// Not `application_name`: pgbouncer runs in transaction mode, so no session
+// setting survives into the next client's transaction.
+//
+// Installed once per physical connection (pg-pool's `connect` event, emitted
+// before the new client's first checkout), so it is the INNERMOST layer on
+// every path: `pool.query`'s own checkout, `pool.connect()` → `client.query`
+// (the path `db.transaction()` takes, BEGIN and COMMIT included), and pg-pool's
+// internal `pool.query`. The read-set capture sits outside it on both paths and
+// reads the text before the comment is added; the comment's alphabet has no
+// space anyway, so no `from` inside it could look like a read clause. The
+// connection's own label (`queryText`) strips it again, so a span or deadline
+// names the statement alone and its `origin` field names the caller.
+//
+// Left untagged: context-less calls (boot, migrations — nobody to name), a
+// Submittable (the object is the query), and a NAMED prepared statement — pg
+// caches a name's text per connection and refuses the same name with another
+// text, which a per-caller comment would be.
+//
+// Cost: one entry-label read, one regex replace over the (short) label and one
+// string concat per statement — measured in pg-driver.test.ts (numbers in
+// plugins/database/CLAUDE.md, "Every statement names its origin").
+export function tagClientQueriesWithOrigin(client: PoolClient): void {
+  // biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded query signature.
+  const clientQuery: (...a: unknown[]) => any = client.query.bind(client);
+  // biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded query signature.
+  client.query = ((...a: unknown[]): any => {
+    const label = currentEntryLabel();
+    if (label === undefined) return clientQuery(...a);
+    const first = a[0];
+    if (typeof first === "string") {
+      a[0] = tagSqlWithOrigin(first, label);
+    } else if (
+      first &&
+      typeof first === "object" &&
+      typeof (first as { text?: unknown }).text === "string" &&
+      typeof (first as { submit?: unknown }).submit !== "function" &&
+      !(first as { name?: unknown }).name
+    ) {
+      // A copy: drizzle reuses its query config object across executions.
+      const config = first as { text: string };
+      a[0] = { ...config, text: tagSqlWithOrigin(config.text, label) };
+    }
+    return clientQuery(...a);
+  }) as typeof client.query;
+}
+
 // Turn one background checkout into a gate lease: the slot is held from checkout
 // until the lease ends, exactly once, one of two ways:
 //   - the caller releases: pg's release runs with `err` forwarded unchanged
@@ -572,6 +625,7 @@ function pool(): Pool {
     max: POOL_MAX,
     idleTimeoutMillis: 20_000,
   });
+  p.on("connect", tagClientQueriesWithOrigin);
   installQueryWrapper(p);
   poolSingleton = p;
   return p;

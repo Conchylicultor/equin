@@ -20595,7 +20595,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `libpqEnv`
       - `readDatabaseConfig`
   - Cross-plugin:
-    - Imported by: 136 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 137 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×39
       - `conversations` ×15
       - `page` ×15
@@ -20603,8 +20603,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra` ×12
       - `active-data` ×8
       - `debug` ×7
+      - `database` ×4
       - `primitives` ×4
-      - `database` ×3
       - `network` ×3
       - `reports` ×2
       - `stats` ×2
@@ -20680,6 +20680,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/serve-composition`
           - `database/db-test-fixture/sweep`
           - `database/fork`
+          - `database/lock-watch`
           - `database/query`
           - `debug/boot-profile`
           - `debug/latency-ledger`
@@ -20712,6 +20713,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `database/admin`
+          - `database/lock-watch`
           - `database/query-deadline`
           - `infra/jobs`
       - Server:
@@ -20751,6 +20753,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DbCallPhase`
           - `DbPoolName`
           - `DbTxState`
+          - `SqlOrigin`
         - Exports (values):
           - `DB_CALL_PHASES`
           - `DB_POOL_NAMES`
@@ -20758,6 +20761,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `IN_FLIGHT_REPORT_MAX`
           - `isConnectionCapacityRefusal`
           - `isInTransaction`
+          - `ORIGIN_LABEL_MAX`
+          - `originCommentLabel`
+          - `parseSqlOrigin`
+          - `tagSqlWithOrigin`
       - Test helpers:
         - Server: `@plugins/database/plugins/connection/server/testing`
           - `QueryDeadlineExceededError` — A database call got no reply within its deadline.
@@ -20974,6 +20981,44 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `conversations`
       - Core:
         - Exports (values): `FORKED_AT_SETTING`
+    - **`lock-watch`** — Database lock watch: a per-worktree job that looks at pg_stat_activity + pg_blocking_pids once a minute (Postgres has no change signal for lock waits), on a direct connection that a saturated pgbouncer cannot starve, and names every session holding others back or idle inside a transaction past 60 s by the origin its statement's comment carries — a db-lock-holder report (one row per origin) and the db-lock-watch push value behind the health report's Database row. It never ends a session.
+      - Server:
+        - Contributes:
+          - `report-kind` "db-lock-holder"
+          - `resource.declare` "db-lock-watch"
+        - Uses:
+          - `database.dbLog`
+          - `database/admin.openShortLivedClient`
+          - `infra/jobs.defineJob`
+          - `network/live.serveValue`
+          - `reports.ReportKind`
+          - `reports.ReportRow`
+          - `reports/engine.recordReport`
+        - Register: `defineJob('database.lock-watch')`
+        - Resources: `db-lock-watch` (push, notified)
+      - Core:
+        - Uses:
+          - `database/connection.parseSqlOrigin`
+          - `network/live.liveValue`
+        - Exports (types):
+          - `DbLockHolderPayload`
+          - `LockHolder`
+          - `LockWatchObservation`
+          - `LockWatchState`
+          - `SessionRow`
+        - Exports (values):
+          - `DB_LOCK_HOLDER_KIND`
+          - `DbLockHolderPayloadSchema`
+          - `dbLockWatch`
+          - `describeLockHolder`
+          - `holderName`
+          - `LOCK_WATCH_HOLDERS_MAX`
+          - `LOCK_WATCH_SQL_MAX`
+          - `LOCK_WATCH_THRESHOLD_MS`
+          - `lockHolders`
+          - `LockHolderSchema`
+          - `LockWatchObservationSchema`
+          - `LockWatchStateSchema`
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Server:
         - Contributes: `host-service:database.migration-source` "database.migration-source"
@@ -31768,14 +31813,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 61 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 62 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×18
           - `infra` ×12
           - `conversations` ×8
           - `debug` ×7
           - `tasks` ×5
+          - `database` ×3
           - `page` ×3
-          - `database` ×2
           - `integrations/youtube/audio-fetch`
           - `network/live/live-state-snapshot`
           - `shell/notifications`
@@ -34815,7 +34860,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 316 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 317 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×84
           - `conversations` ×52
           - `debug` ×32
@@ -34834,13 +34879,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui` ×3
           - `apps-core` ×2
           - `config_v2` ×2
+          - `database` ×2
           - `hints` ×2
           - `history` ×2
           - `integrations` ×2
           - `release` ×2
           - `search` ×2
           - `backup/runs-arm`
-          - `database/query-deadline`
           - `fields/secret/config`
           - `network/live/optimistic-mutation`
           - `runs`
@@ -49210,11 +49255,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 55 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 56 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×25
       - `debug` ×14
+      - `database` ×4
       - `conversations` ×3
-      - `database` ×3
       - `framework` ×2
       - `active-data/report`
       - `backup`
@@ -49404,10 +49449,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 21 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Imported by: 22 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `debug` ×9
+          - `database` ×3
           - `conversations` ×2
-          - `database` ×2
           - `reports` ×2
           - `backup`
           - `infra/jobs/deadline-audit`

@@ -24,6 +24,10 @@ export const SERVER_REPORT_SOURCES = [
   "server-report-storm",
   "server-duress-monitor",
   "server-stall-monitor",
+  // The database lock watch (database/lock-watch): a session held others back,
+  // or sat idle inside a transaction, past its bound. A scheduled observation
+  // of the database, not an error anyone caught.
+  "server-db-lock-watch",
   // Main's daily upstream check: the repo this checkout was cloned from has
   // commits local `main` does not. Its own source because nothing failed — it
   // is a scheduled observation of another repository, not an error anyone

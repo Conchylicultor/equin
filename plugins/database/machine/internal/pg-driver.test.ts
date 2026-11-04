@@ -25,6 +25,7 @@ import {
   NestedBackgroundTxLeaseError,
   POOL_MAX,
   RESERVED_INTERACTIVE,
+  tagClientQueriesWithOrigin,
   withTxLeaseScope,
 } from "./pg-driver";
 
@@ -653,5 +654,80 @@ describe("pool.connect read-set capture", () => {
     await done;
 
     expect(getReadSetIndex()["POST /x"]).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The origin comment: every statement on an app-pool connection names the
+// entry it ran under, for the database side (`pg_stat_activity`) to read.
+// ---------------------------------------------------------------------------
+
+describe("tagClientQueriesWithOrigin", () => {
+  function fakeClient(): { client: PoolClient; seen: unknown[][] } {
+    const seen: unknown[][] = [];
+    const client = {
+      query: (...a: unknown[]) => {
+        seen.push(a);
+        return Promise.resolve({ rows: [] });
+      },
+    } as unknown as PoolClient;
+    tagClientQueriesWithOrigin(client);
+    return { client, seen };
+  }
+
+  it("prefixes a string statement and a config object with the entry label", async () => {
+    const { client, seen } = fakeClient();
+    const config = { text: 'select * from "tasks"', rowMode: "array" };
+    await recordEntrySpan("job", "conversations.usage:sync", async () => {
+      await client.query("BEGIN");
+      await client.query(config, [1]);
+    });
+    expect(seen[0]![0]).toMatch(
+      /^\/\* origin=conversations\.usage:sync \*\/ BEGIN$/,
+    );
+    expect(seen[1]![0]).toEqual({
+      text: expect.stringMatching(
+        /^\/\* origin=\S+ \*\/ select \* from "tasks"$/,
+      ),
+      rowMode: "array",
+    });
+    expect(seen[1]![1]).toEqual([1]);
+    // drizzle reuses its config object: the original is never written.
+    expect(config.text).toBe('select * from "tasks"');
+  });
+
+  it("leaves context-less calls, named statements and submittables alone", async () => {
+    const { client, seen } = fakeClient();
+    await client.query("SELECT 1");
+    const named = { name: "q1", text: "select 2" };
+    const submittable = { text: "select 3", submit: () => undefined };
+    await recordEntrySpan("job", "x", async () => {
+      await client.query(named);
+      await (client.query as (q: unknown) => Promise<unknown>)(submittable);
+    });
+    expect(seen.map((a) => a[0])).toEqual(["SELECT 1", named, submittable]);
+  });
+
+  it("adds tens of nanoseconds per statement (printed; the bound only catches a 100× regression)", async () => {
+    const { client } = fakeClient();
+    const N = 200_000;
+    const loop = () => {
+      const t0 = performance.now();
+      for (let i = 0; i < N; i++) void client.query('select * from "tasks"');
+      return performance.now() - t0;
+    };
+    loop(); // warm the JIT on both paths
+    await recordEntrySpan("loader", "tasks:list", async () => loop());
+    const untagged = loop(); // no entry: the label read, then straight through
+    const tagged = await recordEntrySpan("loader", "tasks:list", async () =>
+      loop(),
+    );
+    const ns = (ms: number) => (ms * 1e6) / N;
+    // Printed for the record (plugins/database/CLAUDE.md quotes it); the bound
+    // only catches an accidental O(statement length) or allocation-heavy path.
+    console.log(
+      `origin tag: ${ns(tagged).toFixed(0)} ns/statement tagged vs ${ns(untagged).toFixed(0)} untagged (fake client)`,
+    );
+    expect(ns(tagged) - ns(untagged)).toBeLessThan(5_000);
   });
 });

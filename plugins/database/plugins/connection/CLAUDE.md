@@ -163,6 +163,15 @@ This also covers libraries handed a pool. graphile-worker (`infra/jobs`, given
 with a "Your pool doesn't have error handlers!" warning, only on a pool that has
 none.
 
+## A statement names its caller
+
+`tagSqlWithOrigin(text, label)` / `parseSqlOrigin(text)` (`core`) are the one
+spelling of the origin comment the app pool puts in front of every statement
+(`/* origin=<label> */ `; applied by `database#machine`, read back by
+`database/lock-watch` from `pg_stat_activity`). `queryText` strips it, so a
+span label and a `QueryDeadlineExceededError.sql` are the statement alone —
+the caller already has its own field, `origin`.
+
 ## Pool names
 
 A closed list in `core` (`DB_POOL_NAMES`, `DbPoolName`) — plain data both
@@ -248,6 +257,7 @@ deadline sees it go silent. That needs a heartbeat.
 - Cross-plugin:
   - Imported by:
     - `database/admin`
+    - `database/lock-watch`
     - `database/query-deadline`
     - `infra/jobs`
 - Server:
@@ -287,6 +297,7 @@ deadline sees it go silent. That needs a heartbeat.
     - `DbCallPhase`
     - `DbPoolName`
     - `DbTxState`
+    - `SqlOrigin`
   - Exports (values):
     - `DB_CALL_PHASES`
     - `DB_POOL_NAMES`
@@ -294,6 +305,10 @@ deadline sees it go silent. That needs a heartbeat.
     - `IN_FLIGHT_REPORT_MAX`
     - `isConnectionCapacityRefusal`
     - `isInTransaction`
+    - `ORIGIN_LABEL_MAX`
+    - `originCommentLabel`
+    - `parseSqlOrigin`
+    - `tagSqlWithOrigin`
 - Test helpers:
   - Server: `@plugins/database/plugins/connection/server/testing`
     - `QueryDeadlineExceededError` — A database call got no reply within its deadline.

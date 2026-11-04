@@ -10,13 +10,20 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
+import {
+  dbLockWatch,
+  type LockWatchState,
+} from "@plugins/database/plugins/lock-watch/core";
 import type { QueryDeadlineHit, QueryDeadlines } from "../../core";
 
 let resourceValue: ResourceResult<QueryDeadlines>;
+let lockValue: ResourceResult<LockWatchState>;
+type LockHolder = NonNullable<LockWatchState["observation"]>["holders"][number];
 
 vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  useLive: () => resourceValue,
+  useLive: (value: unknown) =>
+    value === dbLockWatch ? lockValue : resourceValue,
 }));
 
 import { useDatabaseHealth } from "../internal/use-database-health";
@@ -44,7 +51,35 @@ function hit(
   };
 }
 
-const OK = "No unanswered database calls in the last 10 min";
+const WATCHED_AT = START - 30_000;
+const FAR = START + 24 * 60 * MIN;
+const OK = `No unanswered database calls in the last 10 min; no session holding others back (as of ${clock(FAR)})`;
+
+function watched(
+  holders: LockHolder[],
+  observedAt = WATCHED_AT,
+): ResourceResult<LockWatchState> {
+  return {
+    status: "ready",
+    data: { observation: { observedAt, thresholdMs: MIN, holders } },
+    refetch,
+  };
+}
+
+function holder(over: Partial<LockHolder> = {}): LockHolder {
+  return {
+    pid: 87346,
+    origin: "conversations.usage:sync",
+    sql: 'insert into "conversations_ext_usage" …',
+    state: "idle in transaction",
+    applicationName: "",
+    xactMs: 5 * MIN,
+    idleMs: 5 * MIN,
+    waiting: 15,
+    longestWaitMs: 4 * MIN,
+    ...over,
+  };
+}
 
 function clock(at: number): string {
   return new Date(at).toLocaleTimeString([], {
@@ -58,6 +93,9 @@ beforeEach(() => {
   // clock also fires the row's one expiry timer.
   vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
   vi.setSystemTime(START);
+  // A look the deadline tests never see go stale: stamped past every instant
+  // they reach, so only the 10-minute window moves the verdict.
+  lockValue = watched([], FAR);
 });
 
 afterEach(() => {
@@ -92,7 +130,7 @@ describe("Database health row", () => {
       state: "ok",
       summary: OK,
     });
-    expect(vi.getTimerCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(1); // only the lock watch's staleness instant, far off
   });
 
   it("turns attention on a recent hit, counts down, and returns to ok after 10 min", () => {
@@ -133,7 +171,7 @@ describe("Database health row", () => {
       state: "ok",
       summary: OK,
     });
-    expect(vi.getTimerCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(1); // only the lock watch's staleness instant, far off
   });
 
   it("says a connect was opening a connection, and leaves out an unknown caller", () => {
@@ -189,5 +227,78 @@ describe("Database health row", () => {
       vi.advanceTimersByTime(10 * MIN);
     });
     expect(result.current.state).toBe("ok");
+  });
+
+  it("is unknown while the lock watch has not loaded", () => {
+    resourceValue = settled([]);
+    lockValue = { status: "loading", refetch };
+    const { result } = renderHook(() => useDatabaseHealth());
+    expect(result.current).toEqual({ state: "unknown" });
+  });
+
+  it("says so when the lock watch has not looked yet", () => {
+    resourceValue = settled([]);
+    lockValue = { status: "ready", data: { observation: null }, refetch };
+    const { result } = renderHook(() => useDatabaseHealth());
+    // Not looked yet is not-known-yet: grey, never green.
+    expect(result.current).toEqual({
+      state: "unknown",
+      summary: "The lock watch has not looked yet",
+    });
+  });
+
+  it("is critical while a session holds others back, naming its origin", () => {
+    resourceValue = settled([]);
+    lockValue = watched([
+      holder(),
+      holder({ pid: 2, waiting: 0, longestWaitMs: 0, origin: "x" }),
+    ]);
+    const { result } = renderHook(() => useDatabaseHealth());
+    expect(result.current).toEqual({
+      state: "critical",
+      summary: `Blocked now: conversations.usage:sync holds 15 sessions (longest wait 4 min), idle in its transaction for 5 min (+1 more) — as of ${clock(WATCHED_AT)}`,
+    });
+  });
+
+  it("is attention for a session idle in its transaction, followed by recent lost calls", () => {
+    resourceValue = settled([hit(START - MIN)]);
+    lockValue = watched([
+      holder({ waiting: 0, longestWaitMs: 0, idleMs: 2 * MIN }),
+    ]);
+    const { result } = renderHook(() => useDatabaseHealth());
+    expect(result.current).toEqual({
+      state: "attention",
+      summary: `Now: conversations.usage:sync has sat idle in its transaction for 2 min — as of ${clock(WATCHED_AT)}; 1 database call got no reply in the last 10 min — app, issued by push conversations-gone-stats, at ${clock(START - MIN)}`,
+    });
+  });
+
+  it("turns attention once the lock watch's look goes stale — by one timer", () => {
+    resourceValue = settled([]);
+    lockValue = watched([]);
+    const { result } = renderHook(() => useDatabaseHealth());
+    expect(result.current.state).toBe("ok");
+    expect(vi.getTimerCount()).toBe(1);
+    act(() => {
+      vi.advanceTimersByTime(3 * MIN);
+    });
+    expect(result.current).toEqual({
+      state: "attention",
+      summary: `The lock watch has not looked since ${clock(WATCHED_AT)}`,
+    });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("keeps the deadline verdict when the lock watch fails to load", () => {
+    resourceValue = settled([hit(START - MIN)]);
+    lockValue = {
+      status: "error",
+      error: new ResourceError("loader-failed", "boom", null),
+      refetch,
+    };
+    const { result } = renderHook(() => useDatabaseHealth());
+    expect(result.current).toEqual({
+      state: "attention",
+      summary: `Couldn't load the database lock watch; 1 database call got no reply in the last 10 min — app, issued by push conversations-gone-stats, at ${clock(START - MIN)}`,
+    });
   });
 });

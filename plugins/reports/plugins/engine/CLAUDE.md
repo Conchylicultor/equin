@@ -152,10 +152,10 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
 - Cross-plugin:
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×9
+    - `database` ×3
     - `conversations` ×2
-    - `database` ×2
     - `reports` ×2
     - `backup`
     - `infra/jobs/deadline-audit`

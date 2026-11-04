@@ -170,18 +170,29 @@ special-cased.
 ## The Database row
 
 `HealthReport.Row({ kind: "status", id: "database", order: 20 })`, right after
-Connection (10). States:
+Connection (10). It reads two values: this plugin's deadline ring (a fading
+10-minute window of past events) and `database/lock-watch`'s `db-lock-watch`
+(the lock watch's latest look — the state NOW). States:
 
-- resource not loaded yet → `unknown` (pulsing, "Checking…"); failed to load →
-  `unknown` "Couldn't load recent database call failures". Never `ok` before the
-  data is read.
-- a hit on any pool in the last 10 min → `attention`, counting them and naming
-  the latest: "2 database calls got no reply in the last 10 min — last:
-  jobs-enqueue, issued by tasks.maybe-launch, at 10:21" (singular: "1 database
-  call got no reply in the last 10 min — jobs-enqueue, issued by …, at 10:21").
-  A connect reads "opening a jobs-enqueue connection"; an unknown caller is
-  left out.
-- otherwise → `ok`: "No unanswered database calls in the last 10 min".
+- either value not loaded yet → `unknown` (pulsing, "Checking…"). Never `ok`
+  before the data is read. Otherwise each read gives a part, and the row is the
+  worse of the two, its summary every part that is not `ok` (the lock watch's
+  first) — so a failed read of one never hides what the other knows:
+- the lock watch: a session holding others back → `critical`, "Blocked now:
+  conversations.usage:sync holds 15 sessions (longest wait 4 min), idle in its
+  transaction for 5 min — as of 10:21"; one idle in its transaction →
+  `attention`, "Now: … has sat idle in its transaction for 3 min — as of 10:21";
+  not looked yet → `unknown`; latest look older than `LOCK_WATCH_STALE_MS`
+  (3 min) → `attention`, "The lock watch has not looked since 10:21"; failed
+  to load → `unknown`.
+- the deadline ring: a hit on any pool in the last 10 min → `attention`,
+  counting them and naming the latest: "2 database calls got no reply in the
+  last 10 min — last: jobs-enqueue, issued by tasks.maybe-launch, at 10:21"
+  (singular: "1 database call got no reply in the last 10 min — jobs-enqueue,
+  issued by …, at 10:21"). A connect reads "opening a jobs-enqueue
+  connection"; an unknown caller is left out. Failed to load → `unknown`.
+- both `ok` → "No unanswered database calls in the last 10 min; no session
+  holding others back (as of 10:21)".
 
 ## The Reports list
 
@@ -196,7 +207,8 @@ other calls waiting", and a View-trace link chip onto Debug → Slow Events. A
 
 Time moves the verdict by itself, so the hook keeps `now` as state and schedules
 **one** `setTimeout` to the next instant the verdict changes — the moment the
-oldest in-window hit turns 10 minutes old — re-arming after each step until
+oldest in-window hit turns 10 minutes old, or the lock watch's look goes
+stale — re-arming after each step until
 nothing is left to expire. No interval, no polling. The timer never steps `now`
 short of the instant it waited for, or a verdict left unchanged would leave the
 effect with no timer to fire again.

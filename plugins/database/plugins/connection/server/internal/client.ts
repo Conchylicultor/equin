@@ -8,6 +8,7 @@ import { hasRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/cor
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import {
   IN_FLIGHT_REPORT_MAX,
+  parseSqlOrigin,
   type DbCallPhase,
   type DbPoolName,
   type DbTxState,
@@ -55,12 +56,17 @@ export function sqlLabel(text: string): string {
   return text.length > SQL_LABEL_MAX ? text.slice(0, SQL_LABEL_MAX) : text;
 }
 
-/** The SQL text of `client.query`'s first argument (a string or a config object). */
+/**
+ * The SQL text of `client.query`'s first argument (a string or a config
+ * object), without the origin comment the app pool puts in front of it
+ * (`tagSqlWithOrigin`, core): the caller is already named in its own field
+ * (`origin`), so a label — a span's, a deadline's — stays the statement alone.
+ */
 export function queryText(first: unknown): string {
-  if (typeof first === "string") return first;
+  if (typeof first === "string") return parseSqlOrigin(first).sql;
   if (first && typeof first === "object" && "text" in first) {
     const text = (first as { text?: unknown }).text;
-    if (typeof text === "string") return text;
+    if (typeof text === "string") return parseSqlOrigin(text).sql;
   }
   return "?";
 }

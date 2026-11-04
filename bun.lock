@@ -2465,6 +2465,10 @@
       "name": "@equin/plugin-database-fork-point",
       "version": "0.0.1",
     },
+    "plugins/database/plugins/lock-watch": {
+      "name": "@equin/plugin-database-lock-watch",
+      "version": "0.0.1",
+    },
     "plugins/database/plugins/migrations": {
       "name": "@equin/plugin-database-migrations",
       "version": "0.0.1",
@@ -8343,6 +8347,8 @@
     "@equin/plugin-database-fork": ["@equin/plugin-database-fork@workspace:plugins/database/plugins/fork"],
 
     "@equin/plugin-database-fork-point": ["@equin/plugin-database-fork-point@workspace:plugins/database/plugins/fork-point"],
+
+    "@equin/plugin-database-lock-watch": ["@equin/plugin-database-lock-watch@workspace:plugins/database/plugins/lock-watch"],
 
     "@equin/plugin-database-migrations": ["@equin/plugin-database-migrations@workspace:plugins/database/plugins/migrations"],
 

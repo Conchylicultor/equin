@@ -95,6 +95,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`embedded`** [load-bearing] [exempt] — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
     - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the base DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
     - **`fork-point`** — Reads when this database was forked from another (databaseForkedAt): the instant the fork stamped on it, or null for a database never forked.
+    - **`lock-watch`** — Database lock watch: a per-worktree job that looks at pg_stat_activity + pg_blocking_pids once a minute (Postgres has no change signal for lock waits), on a direct connection that a saturated…
     - **`migrations`** [test helpers] [exempt] — DDL lifecycle: migration runner and SQL files.
       - Plugins:
         - **`bundled-source`** (excluded) — The migration history bundled as text: provides the MigrationSource host service from the committed data/*.sql inlined at build time, for a host without the repo on disk (a browser worker host).…
