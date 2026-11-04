@@ -17,6 +17,24 @@
 export const IDLE_IN_TRANSACTION_TIMEOUT_MS = 5 * 60_000;
 
 /**
+ * What Postgres logs about each new connection (PG 18's list form of
+ * `log_connections`): `receipt` when the postmaster accepts the socket, and
+ * `setup_durations` once the backend is ready — total setup, fork and
+ * authentication times. Read at session start, so it is a session setting too.
+ *
+ * Why: on 2026-11-04 every new direct connection on the cluster went
+ * unanswered for about a minute while open sessions kept answering, and
+ * Postgres's log said nothing: there was no telling whether the postmaster
+ * never accepted the sockets or the backends were slow to start. With both, the
+ * next stall shows which: a connection with no `connection received` line was
+ * never accepted; one received but slow to be ready names the phase.
+ *
+ * Not `authentication` / `authorization`: under `trust` they add two lines per
+ * connection that `setup_durations` already times.
+ */
+export const LOG_CONNECTIONS = "receipt,setup_durations";
+
+/**
  * The session settings every session on every database of the cluster starts
  * with. A CLUSTER setting, owned by the one act that brings the cluster up:
  * set per database it would need a writer per database — and the writer was
@@ -28,6 +46,7 @@ export const IDLE_IN_TRANSACTION_TIMEOUT_MS = 5 * 60_000;
  */
 export const CLUSTER_SESSION_SETTINGS: Readonly<Record<string, string>> = {
   idle_in_transaction_session_timeout: `${IDLE_IN_TRANSACTION_TIMEOUT_MS}ms`,
+  log_connections: LOG_CONNECTIONS,
 };
 
 /** The one call `applyClusterSettings` needs of a `pg` client. */

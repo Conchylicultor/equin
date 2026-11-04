@@ -20,6 +20,7 @@ report, ring hit and row message carries that name:
 | `job-lock` | the advisory-lock pool behind `withJobLock` | the direct socket | `PG_LOG_FILE` |
 | `admin` | the admin pool (maintenance database) | the direct socket | `PG_LOG_FILE` |
 | `admin-short-lived` | one-off admin clients around a single operation | the direct socket | `PG_LOG_FILE` |
+| `lock-watch` | the lock watch's held session | the direct socket | `PG_LOG_FILE` |
 | `change-feed` | the change-feed LISTEN client | the direct socket | `PG_LOG_FILE` |
 
 The investigation task points at the log in the last column: a stray close

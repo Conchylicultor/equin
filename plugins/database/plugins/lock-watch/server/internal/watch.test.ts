@@ -19,8 +19,13 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { lockHolders, type SessionRow } from "../../core";
+import { readClusterActivity } from "./cluster-activity";
 import { readSessions } from "./read-sessions";
-import { lockHolderFingerprint, lockHolderMessage } from "./render";
+import {
+  lockHolderFingerprint,
+  lockHolderMessage,
+  stalledConnectLines,
+} from "./render";
 
 let t: TestDb;
 let holderPool: Pool;
@@ -110,5 +115,41 @@ describe("lock watch on a real database", () => {
     });
     expect(after.n).toBe(11);
     expect(lockHolders(await readSessions(watchPool), 0)).toEqual([]);
+  });
+
+  test("the cluster look names a busy backend on another database, with what it waits on", async () => {
+    // The look reads the whole cluster through its own session: a backend
+    // sleeping on the throwaway database is listed with its wait event.
+    const sleeper = holderPool.query("SELECT pg_sleep(2)");
+    let activity = await readClusterActivity(watchPool);
+    for (let i = 0; i < 100; i++) {
+      if (activity.busy.some((b) => b.waitEvent === "PgSleep")) break;
+      await Bun.sleep(20);
+      activity = await readClusterActivity(watchPool);
+    }
+    const sleeping = activity.busy.find((b) => b.waitEvent === "PgSleep");
+    expect(sleeping).toMatchObject({
+      datname: t.name,
+      backendType: "client backend",
+      state: "active",
+      waitEventType: "Timeout",
+      query: "SELECT pg_sleep(2)",
+    });
+    expect(activity.backends).toBeGreaterThan(1);
+    expect(activity.maxConnections).toBeGreaterThan(0);
+
+    const lines = stalledConnectLines(5_000, activity);
+    expect(lines[0]).toStartWith(
+      "[lock-watch] a new connection got no reply within 5.0 s while the held session answered; the cluster now: ",
+    );
+    expect(
+      lines.some(
+        (l) =>
+          l.includes(`pid ${sleeping!.pid} client backend db=${t.name}`) &&
+          l.includes("waits on Timeout:PgSleep") &&
+          l.endsWith("— SELECT pg_sleep(2)"),
+      ),
+    ).toBe(true);
+    await sleeper;
   });
 });

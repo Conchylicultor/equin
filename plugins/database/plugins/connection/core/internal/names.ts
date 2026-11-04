@@ -23,6 +23,11 @@ export const DB_POOL_NAMES = [
   /** One-off admin clients opened and closed around a single operation. */
   "admin-short-lived",
   /**
+   * The lock watch's held session (`database/lock-watch`): opened once and
+   * kept, so a look still runs while new connections to the cluster stall.
+   */
+  "lock-watch",
+  /**
    * The session holding a DB fork's temp lease (`database/admin`): the fork
    * holds it from before its temp exists to after the rename; the temp sweep
    * tries it before dropping a temp.

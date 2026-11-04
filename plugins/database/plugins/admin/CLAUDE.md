@@ -110,9 +110,10 @@ Two more things that look wrong but are load-bearing:
 
 ## Connections and long statements
 
-`getAdminPool()` (`admin`, the `postgres` maintenance database, one connection)
-and `openShortLivedClient(db)` (`admin-short-lived`, a disposable one-connection
-pool) are built by the connection plugin's `createDbPool`
+`getAdminPool()` (`admin`, the `postgres` maintenance database, one connection),
+`openShortLivedClient(db)` (`admin-short-lived`, a disposable one-connection
+pool) and `openHeldClient(name, db)` (a one-connection pool that keeps its
+connection while idle — the lock watch's) are built by the connection plugin's `createDbPool`
 (`plugins/database/plugins/connection/CLAUDE.md`). Opening a connection and every
 statement on them give up after **60 s** with no reply.
 
@@ -238,6 +239,7 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `inspectBackup`
     - `isForkTempName`
     - `listDatabases`
+    - `openHeldClient`
     - `openShortLivedClient`
     - `reclaimForkTemp`
 - Cross-plugin:

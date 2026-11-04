@@ -127,6 +127,21 @@ export function openShortLivedClient(dbName: string): Pool {
   });
 }
 
+// A one-connection pool on `dbName`, direct (never pgbouncer), that keeps its
+// connection between uses instead of closing it when idle: for a watcher that
+// must still reach the cluster while NEW connections stall. A lost connection
+// (a deadline, the server closing it) leaves the pool, and the next use opens
+// another. Does not keep the process alive.
+export function openHeldClient(name: "lock-watch", dbName: string): Pool {
+  return createDbPool({
+    name,
+    connectionString: buildConnString(getConn(), dbName),
+    max: 1,
+    idleTimeoutMillis: 0,
+    allowExitOnIdle: true,
+  });
+}
+
 // A standalone session on the `postgres` system DB, direct (never pgbouncer),
 // for a session-held advisory lock: every process that takes or tests the lock
 // meets on the same database, since advisory locks are per-database.

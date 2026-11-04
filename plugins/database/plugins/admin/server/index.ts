@@ -4,6 +4,7 @@ export {
   getAdminPool,
   closeAdminPool,
   openShortLivedClient,
+  openHeldClient,
   connectionString,
 } from "./internal/pool";
 export {

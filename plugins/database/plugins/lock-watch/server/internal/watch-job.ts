@@ -10,8 +10,11 @@ import {
   lockHolders,
   type LockWatchObservation,
 } from "../../core";
+import { readClusterActivity } from "./cluster-activity";
+import { CONNECT_STALL_MS, probeNewConnection } from "./connect-probe";
+import { heldSession } from "./held-session";
 import { readSessions } from "./read-sessions";
-import { lockHolderMessage } from "./render";
+import { lockHolderMessage, stalledConnectLines } from "./render";
 import { publishObservation } from "./state";
 
 // The lock watch: once a minute, who on this worktree's database holds other
@@ -22,11 +25,17 @@ import { publishObservation } from "./state";
 // the only way to see one is to look. `pg_stat_activity` + `pg_blocking_pids`
 // once a minute is the cheapest look there is.
 //
-// It READS on a connection of its own, straight to Postgres
-// (`openShortLivedClient`: never pgbouncer), so a wedge that has taken every
-// pgbouncer slot — the 2026-11-03 incident — is still seen. Publishing the
-// look, the `db.jsonl` line and only then the reports, unawaited: they are
-// written through `db`, the very pool a wedge starves.
+// It READS on a session of its own, straight to Postgres (never pgbouncer), so
+// a wedge that has taken every pgbouncer slot — the 2026-11-03 incident — is
+// still seen; and HELD between looks (`held-session.ts`), so a stall of new
+// connections — 2026-11-04 — does not blind it. Publishing the look, the
+// `db.jsonl` line and only then the reports, unawaited: they are written
+// through `db`, the very pool a wedge starves.
+//
+// Then it opens one NEW connection, as the watch always did, as a probe: if
+// it has not answered within `CONNECT_STALL_MS`, the held session reads what
+// the whole cluster is doing while the stall is on, into `db.jsonl`. The
+// probe's own missed deadline fails the job as loudly as before.
 //
 // It never ends a session. Its job is to name the code that left a transaction
 // open so that code gets fixed; terminating the session would make the symptom
@@ -45,8 +54,8 @@ export const lockWatchJob = defineJob({
   schedule: { cron: "* * * * *", perWorktree: true },
   maxAttempts: 1,
   run: async () => {
-    const pool = openShortLivedClient(runtimeNamespace());
-    const rows = await readSessions(pool).finally(() => pool.end());
+    const held = heldSession();
+    const rows = await readSessions(held);
     const observation: LockWatchObservation = {
       observedAt: Date.now(),
       thresholdMs: LOCK_WATCH_THRESHOLD_MS,
@@ -73,5 +82,23 @@ export const lockWatchJob = defineJob({
         message: r.message,
       });
     }
+
+    await probeNewConnection({
+      stallMs: CONNECT_STALL_MS,
+      connect: async () => {
+        const probe = openShortLivedClient(runtimeNamespace());
+        try {
+          await probe.query("SELECT 1");
+        } finally {
+          await probe.end();
+        }
+      },
+      onStalled: async (stalledMs) => {
+        const activity = await readClusterActivity(held);
+        for (const line of stalledConnectLines(stalledMs, activity)) {
+          dbLog.publish(line, "stderr");
+        }
+      },
+    });
   },
 });

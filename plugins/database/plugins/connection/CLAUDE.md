@@ -187,6 +187,7 @@ runtimes read, not a slot:
 | `job-lock` | the advisory-lock pool behind `withJobLock` | `infra/jobs` `job-lock.ts` |
 | `admin` | the admin pool (fork, drop, list) | `database/admin` `pool.ts` `getAdminPool` |
 | `admin-short-lived` | one-off pools opened and closed around a single operation | `database/admin` `pool.ts` `openShortLivedClient` |
+| `lock-watch` | the lock watch's held session on its worktree's database, kept open between looks so a look still runs while new connections stall | `database/admin` `pool.ts` `openHeldClient`, held by `database/lock-watch` |
 | `fork-lease` | the session holding a DB fork's temp lease (an advisory lock), from before its temp exists to after the rename; the temp sweep tries it before a drop | `database/admin` `fork-lease.ts` |
 | `change-feed` | the change-feed LISTEN client | this plugin's `listen-session.ts` (`openListenSession`), opened by `database#machine`'s `DatabaseDriver.listen` for `network/live/change-feed`'s `listener.ts` |
 | `events-test` | the events-test harness's stand-in worker sessions | `infra/events-test` `crash-recovery.ts`, `superseded.ts`, `queue-lock-no-steal.ts` |

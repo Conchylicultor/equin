@@ -5,6 +5,7 @@ import {
   holderName,
   type DbLockHolderPayload,
 } from "../../core";
+import { CLUSTER_BUSY_MAX, type ClusterActivity } from "./cluster-activity";
 
 // Everything kind-specific that can be said without the reports engine: the
 // fingerprint, the message and the investigation task. Testable without
@@ -89,4 +90,43 @@ export function renderLockHolderTask(
     title: `[db] ${clampOneLine(describeLockHolder(d), TITLE_MAX)}`,
     description: lines.join("\n"),
   };
+}
+
+function seconds(ms: number): string {
+  return `${(ms / 1000).toFixed(1)} s`;
+}
+
+/**
+ * The `db.jsonl` lines for a look at the cluster taken while a new connection
+ * stalled: a headline (how long, how many backends against the cap), then one
+ * line per busy backend — which database, what kind, what it waits on, for how
+ * long and on what statement.
+ */
+export function stalledConnectLines(
+  stalledMs: number,
+  activity: ClusterActivity,
+): string[] {
+  const listed =
+    activity.busy.length >= CLUSTER_BUSY_MAX
+      ? `the ${CLUSTER_BUSY_MAX} oldest busy ones`
+      : `${activity.busy.length} busy`;
+  const lines = [
+    `[lock-watch] a new connection got no reply within ${seconds(stalledMs)} ` +
+      `while the held session answered; the cluster now: ` +
+      `${activity.backends} backends (max_connections ${activity.maxConnections}), ${listed}:`,
+  ];
+  for (const s of activity.busy) {
+    const wait =
+      s.waitEventType !== null
+        ? `waits on ${s.waitEventType}:${s.waitEvent ?? "?"}`
+        : "not waiting";
+    const running = s.runningMs !== null ? ` for ${seconds(s.runningMs)}` : "";
+    const query = clampOneLine(s.query, 200);
+    lines.push(
+      `[lock-watch]   pid ${s.pid} ${s.backendType} db=${s.datname ?? "-"} ` +
+        `user=${s.usename ?? "-"} ${s.state ?? "no state"}, ${wait}${running}` +
+        (query !== "" ? ` — ${query}` : ""),
+    );
+  }
+  return lines;
 }
