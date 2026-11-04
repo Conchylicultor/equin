@@ -1659,6 +1659,11 @@ row; `doc-init` 404s only after purge.
   (`appendRunsAtEnd`, in the target owner's `untracked`), then the structural merge
   trashes the block. Unmounted target: `spliceStoredBlockDoc` first, delete only after
   it lands.
+- **A landing takes DOM focus before it edits** (`internal/editor-focus.ts`'s
+  `focusEditor`, every landing's one focus call). Lexical's `editor.focus()` never
+  focuses the root, and the focused editable is the browser's scroll-anchor priority
+  candidate: a merge growing the target while the source below still held focus
+  scrolled the page by that growth. Spec: `e2e/merge-scroll-verify.ts`.
 - **The doc-update pipeline reports "Saved"**: the provider's `saveState`
   (`idle | syncing | error` + `lastFlushedAt`, a memoized frozen snapshot) →
   `useReportSync({ label: "text" })` in `CollabTextPlugin`.

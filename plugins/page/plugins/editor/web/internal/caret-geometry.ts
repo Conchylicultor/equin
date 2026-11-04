@@ -50,6 +50,7 @@ import {
   nextLeafInParagraph,
   prevLeafInParagraph,
 } from "./inline-format-surgery";
+import { focusEditor, SKIP_SCROLL_TAG } from "./editor-focus";
 import type { MarkBoundary } from "./mark-boundary";
 import type { MarkDepthEntry } from "./mark-depth";
 
@@ -553,29 +554,6 @@ function measureFocusLines(
 interface DomCaret {
   node: Node;
   offset: number;
-}
-
-/**
- * Lexical's `skip-scroll-into-view` update tag: suppresses the
- * `scrollIntoViewIfNeeded` that `updateDOMSelection` otherwise runs on every
- * collapsed-selection reconcile. Passed on the no-scroll path.
- *
- * Exported for the one caller that is ALREADY inside an update and therefore
- * cannot go through {@link placeCaretAtOffset} — it pairs the tag with
- * {@link $placeCaretAtOffset} to reconstruct exactly this module's no-scroll
- * landing.
- */
-export const SKIP_SCROLL_TAG = "skip-scroll-into-view";
-
-/**
- * Take DOM focus for a caret landing. A no-scroll landing focuses the ROOT
- * element with `preventScroll` (Lexical's `editor.focus()` has no such option —
- * it always lets the browser scroll focus into view); a scroll-wanted landing
- * keeps `editor.focus()`, today's behavior.
- */
-function focusEditor(editor: LexicalEditor, scroll: boolean): void {
-  if (scroll) editor.focus();
-  else editor.getRootElement()?.focus({ preventScroll: true });
 }
 
 /** Cross-browser caret hit-test: WebKit/Chrome `caretRangeFromPoint`, Firefox `caretPositionFromPoint`. */

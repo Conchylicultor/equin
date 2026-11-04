@@ -15,12 +15,7 @@ import {
   $placeCaretAtLinearOffset,
   blockTextTokenExtensions,
 } from "./block-text-extensions";
-
-/**
- * Lexical's `skip-scroll-into-view` update tag: suppresses the scroll-into-view
- * a collapsed-selection reconcile otherwise runs. Passed on no-scroll landings.
- */
-const SKIP_SCROLL_TAG = "skip-scroll-into-view";
+import { focusEditor, SKIP_SCROLL_TAG } from "./editor-focus";
 
 // Text surgery on a block's BOUND Lexical editor (per-block CRDT plan).
 // Split/merge are structural ops that also move TEXT between two content
@@ -184,13 +179,10 @@ export function deleteBlockTextRange(
  * on every Tab.
  */
 function focusRestoringSelection(editor: LexicalEditor, scroll: boolean): void {
-  if (scroll) {
-    editor.focus(undefined, { defaultSelection: "rootStart" });
-    return;
-  }
-  // No-scroll: focus the root directly (`preventScroll`) and land the caret
-  // under the skip-scroll tag so the reconcile doesn't scroll either.
-  editor.getRootElement()?.focus({ preventScroll: true });
+  focusEditor(editor, scroll, "rootStart");
+  if (scroll) return;
+  // No-scroll: land the caret under the skip-scroll tag so the reconcile
+  // doesn't scroll either.
   editor.update(
     () => {
       const selection = $getSelection();
@@ -313,8 +305,9 @@ export function appendRunsAtJoin(
   runs: RichText,
   scroll = true,
 ): void {
-  if (scroll) editor.focus();
-  else editor.getRootElement()?.focus({ preventScroll: true });
+  // Focus BEFORE the append: the growth must happen under this block as the
+  // scroll anchor, not the merged-away source below it (`focusEditor`).
+  focusEditor(editor, scroll);
   editor.update(
     () => {
       const join = $paragraphsPlainLength();

@@ -27,9 +27,9 @@ import { serializeBlockRuns } from "../internal/block-text-extensions";
 import {
   $placeCaretAtOffset,
   readCaretContext,
-  SKIP_SCROLL_TAG,
   type CaretContext,
 } from "../internal/caret-geometry";
+import { SKIP_SCROLL_TAG } from "../internal/editor-focus";
 import {
   $scanMarkSpan,
   removeMarkSpan,
