@@ -56,6 +56,8 @@ pg-pool's own `pool.query`, and a bare client. So the deadline is **one
   (`currentEntryLabel()`).
 - **Not pg's `connectionTimeoutMillis`.** On expiry both pg and pg-pool call
   `stream.destroy()`. That closes the fd, which the abandon rule forbids.
+- **The clock counts awake time only** (`armAwakeDeadline`,
+  `server/internal/awake-timer.ts`). See "A sleep is not a silent connection".
 - **Queue wait is not bounded.** Waiting for a free connection is back-pressure,
   and every held connection has its own bound that frees it.
 
@@ -105,6 +107,36 @@ listener the callback attached is removed again before the client is abandoned.
 
 A late real reply (a slow call, not a lost one) is dropped: its call was already
 settled. The cost is one leaked server connection until the backend restarts.
+
+## A sleep is not a silent connection
+
+A timer keeps running while the machine sleeps; `performance.now()` pauses with
+it. So on wake every deadline whose time passed during the nap fires at once —
+before the reply had any awake time to arrive. The deadline therefore re-arms
+for what remains of its bound by `performance.now()`: the bound is awake time.
+
+And an abandoned connection must not be able to hold locks forever: it is never
+closed and never sent a `ROLLBACK`, so a transaction it was in stays open on the
+server for as long as the process lives. `IDLE_IN_TRANSACTION_TIMEOUT_MS`
+(5 min) is the server-side twin of the deadline: the desktop driver
+(`database#machine`'s `ready()`) sets it as the database's
+`idle_in_transaction_session_timeout` at every boot, so Postgres ends such a
+transaction itself. New sessions only: pgbouncer's existing server connections
+take it when they are recycled (`server_lifetime`). **Interim:** it bounds a
+flaw in the abandon rule rather than fixing it, and the reap is not reported; it
+goes once a lost connection is closed instead of abandoned — the vision and
+tasks are in
+[`research/2026-11-04-global-db-connection-failure-vision.md`](../../../../research/2026-11-04-global-db-connection-failure-vision.md).
+
+The incident (2026-11-03, main): a `conversations.usage:sync` transaction
+upserted `conversations_ext_usage` at 20:02 and the laptop slept until 20:18;
+on wake the 60 s deadline fired with 578 ms of awake time elapsed and abandoned
+the connection mid-transaction. Postgres showed it `idle in transaction` for
+5 h; every later usage sync queued on its row locks, each holding an app-pool
+connection, until the pool was gone and `/home` sat on "Waiting for the
+server…". Each of those waiters was itself abandoned after 60 s, so freeing the
+first only passed the lock to the next dead session — the timeout reaps them
+all.
 
 ## When a connection breaks
 
@@ -237,6 +269,7 @@ deadline sees it go silent. That needs a heartbeat.
     - `createSchemaGenerationLocks`
     - `currentQueryDeadline`
     - `formatDeadlineLogLine`
+    - `IDLE_IN_TRANSACTION_TIMEOUT_MS`
     - `onClientLost`
     - `openListenSession`
     - `QUERY_DEADLINE_MS`

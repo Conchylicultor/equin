@@ -20771,6 +20771,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createSchemaGenerationLocks`
           - `currentQueryDeadline`
           - `formatDeadlineLogLine`
+          - `IDLE_IN_TRANSACTION_TIMEOUT_MS`
           - `onClientLost`
           - `openListenSession`
           - `QUERY_DEADLINE_MS`

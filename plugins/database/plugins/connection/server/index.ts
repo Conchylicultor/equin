@@ -28,6 +28,7 @@ export {
 export {
   QUERY_DEADLINE_MS,
   BOOT_DDL_QUERY_DEADLINE_MS,
+  IDLE_IN_TRANSACTION_TIMEOUT_MS,
   queryDeadlineSink,
   withQueryDeadline,
   currentQueryDeadline,

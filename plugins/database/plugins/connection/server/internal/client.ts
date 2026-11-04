@@ -17,6 +17,7 @@ import {
   type QueryDeadlineEvent,
 } from "./deadline";
 import { abandonClient, assertPgPoolInternals } from "./abandon";
+import { armAwakeDeadline } from "./awake-timer";
 
 // ---------------------------------------------------------------------------
 // The deadline lives on the CONNECTION: one `pg.Client` subclass bounds the two
@@ -205,7 +206,7 @@ export class DbClient extends Client {
     }
     const call = this.#capture("connect", CONNECT_CALL_LABEL);
     let settled = false;
-    const timer = setTimeout(() => {
+    const cancel = armAwakeDeadline(call.startedAt, call.deadlineMs, () => {
       if (settled) return;
       settled = true;
       const err = this.#lose(call, (err) => {
@@ -227,17 +228,17 @@ export class DbClient extends Client {
         }
       });
       this.#report(call, err);
-    }, call.deadlineMs);
+    });
     try {
       pgConnect.call(this, (...result: unknown[]) => {
         if (settled) return; // late completion of a connect already failed
         settled = true;
-        clearTimeout(timer);
+        cancel();
         callback(...result);
       });
     } catch (err) {
       settled = true;
-      clearTimeout(timer);
+      cancel();
       throw err;
     }
     return undefined;
@@ -278,25 +279,25 @@ export class DbClient extends Client {
       const fail: LostListener = (err) => {
         if (settled) return;
         settled = true;
-        clearTimeout(timer);
+        cancel();
         this.#inFlight.delete(fail);
         reject(err);
       };
-      const timer = setTimeout(() => {
+      const cancel = armAwakeDeadline(call.startedAt, call.deadlineMs, () => {
         if (settled) return;
         settled = true;
         this.#inFlight.delete(fail);
         const err = this.#lose(call);
         reject(err);
         this.#report(call, err);
-      }, call.deadlineMs);
+      });
       this.#inFlight.add(fail);
       // A late outcome (after the deadline, or after another call lost the
       // client) is dropped here — handled, never an unhandled rejection.
       pending.then((value) => {
         if (settled) return;
         settled = true;
-        clearTimeout(timer);
+        cancel();
         this.#inFlight.delete(fail);
         resolve(value);
       }, fail);
