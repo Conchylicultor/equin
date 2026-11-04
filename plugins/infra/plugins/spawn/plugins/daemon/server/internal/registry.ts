@@ -1,4 +1,5 @@
 import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import type { OwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import {
   RECENT_RUNS_MAX,
@@ -157,9 +158,9 @@ export type DetachedLaunch = DaemonStartCommon & {
          * stdout and stderr both go to this open descriptor (a log file opened
          * for append) — for a process that outlives this backend, which no pipe
          * of ours could keep draining. The child gets its own duplicate; the
-         * caller closes its copy once this returns.
+         * caller owns this handle and closes it once this returns.
          */
-        outputFd: number;
+        outputFd: OwnedFd;
         onOutputLine?: never;
       }
   );

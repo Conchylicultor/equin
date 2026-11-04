@@ -3,7 +3,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { closeSync, openSync } from "node:fs";
+import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { link, mkdir, open, rename, rm, rmdir, unlink } from "node:fs/promises";
 import { lstat, readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import type { Stats } from "node:fs";
@@ -89,15 +89,15 @@ export async function withFileLock<T>(
       lockPath,
       async () => {
         await mkdir(dirname(lockPath), { recursive: true });
-        const fd = openSync(lockPath, "a");
-        if (flockTry(fd)) {
+        const fd = openOwnedFd(lockPath, "a");
+        if (flockTry(fd.fd)) {
           try {
             return await fn();
           } finally {
-            closeSync(fd);
+            fd.close();
           }
         }
-        closeSync(fd);
+        fd.close();
         const held = await waitForFlock(lockPath, { signal });
         try {
           return await fn();

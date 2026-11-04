@@ -404,7 +404,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 63 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 65 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×10
     - `framework/tooling/exempt` ×7
     - `reports/check-thread-stall` ×7
@@ -417,6 +417,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `framework/tooling/collected-dir` ×2
     - `infra/paths` ×2
     - `packages/macrotask-yield` ×2
+    - `packages/owned-fd` ×2
     - `packages/thread-cpu-clock` ×2
     - `reports/outbox` ×2
     - `infra/file-sink.defineFileSink`

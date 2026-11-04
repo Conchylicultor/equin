@@ -1,5 +1,9 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { closeSync, fstatSync, openSync, readSync } from "node:fs";
+import { fstatSync, readSync } from "node:fs";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { DEPLOY_RUN_KIND_ID } from "./kind-id";
@@ -71,25 +75,25 @@ export function readTranscriptTail(legId: string): string[] {
     DEPLOY_RUN_KIND_ID,
     legId,
   );
-  let fd: number;
+  let fd: OwnedFd;
   try {
-    fd = openSync(path, "r");
+    fd = openOwnedFd(path, "r");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
   }
   let text: string;
   try {
-    const size = fstatSync(fd).size;
+    const size = fstatSync(fd.fd).size;
     const want = Math.min(TAIL_BYTES, size);
     const buf = Buffer.allocUnsafe(want);
-    const read = readSync(fd, buf, 0, want, size - want);
+    const read = readSync(fd.fd, buf, 0, want, size - want);
     text = buf.subarray(0, Math.max(read, 0)).toString("utf-8");
     // The first line of a mid-file read is whatever the previous line ended
     // with, so it is dropped rather than quoted as a line of its own.
     if (want < size) text = text.slice(text.indexOf("\n") + 1);
   } finally {
-    closeSync(fd);
+    fd.close();
   }
   const lines = text.split("\n");
   // A transcript ends in a newline unless the child died mid-line, so the last

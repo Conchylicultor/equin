@@ -41,7 +41,6 @@
 
 import { createHash } from "crypto";
 import {
-  closeSync,
   linkSync,
   mkdirSync,
   opendirSync,
@@ -52,6 +51,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "fs";
+import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
 import {
   readdirSync,
   readFileSync,
@@ -363,7 +363,7 @@ function hasLegacyEntry(dir: PassSetDir): boolean {
 }
 
 function markLegacySwept(home: AppPath): void {
-  closeSync(openSync(join(home, LEGACY_SWEPT_FILE), "w"));
+  adoptFd(openSync(join(home, LEGACY_SWEPT_FILE), "w")).close();
 }
 
 interface Budget {

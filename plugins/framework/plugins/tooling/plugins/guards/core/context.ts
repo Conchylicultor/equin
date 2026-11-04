@@ -1,4 +1,5 @@
-import { closeSync, fstatSync, openSync, readSync } from "node:fs";
+import { fstatSync, openSync, readSync } from "node:fs";
+import { adoptFd, type OwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
@@ -24,22 +25,22 @@ import type {
 const TRANSCRIPT_TAIL_BYTES = 64 * 1024 * 1024;
 
 function readTail(path: string): TranscriptRead {
-  let fd: number;
+  let fd: OwnedFd;
   try {
-    fd = openSync(path, "r");
+    fd = adoptFd(openSync(path, "r"));
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code == null) throw err;
     return { kind: "unavailable", why: `transcript unreadable (${code})` };
   }
   try {
-    const size = fstatSync(fd).size;
+    const size = fstatSync(fd.fd).size;
     const length = Math.min(size, TRANSCRIPT_TAIL_BYTES);
     const buf = Buffer.allocUnsafe(length);
-    readSync(fd, buf, 0, length, size - length);
+    readSync(fd.fd, buf, 0, length, size - length);
     return { kind: "read", text: buf.toString("utf8") };
   } finally {
-    closeSync(fd);
+    fd.close();
   }
 }
 

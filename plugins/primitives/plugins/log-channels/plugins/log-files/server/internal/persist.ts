@@ -3,7 +3,11 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { z } from "zod";
-import { closeSync, fstatSync, openSync, readSync } from "node:fs";
+import { fstatSync, readSync } from "node:fs";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import { readdirSync } from "@plugins/packages/plugins/timed-fs/core";
 import { open } from "node:fs/promises";
 import { sanitizeChannel } from "@plugins/infra/plugins/file-sink/core";
@@ -82,27 +86,33 @@ export function readTail(
   file: AppPath,
   tail: number,
 ): { t: number; stream?: LogStream; line: string }[] | null {
-  let fd: number;
+  let owned: OwnedFd;
   try {
-    fd = openSync(file, "r");
+    owned = openOwnedFd(file, "r");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
   }
   try {
-    const size = fstatSync(fd).size;
+    const size = fstatSync(owned.fd).size;
     const start = Math.max(0, size - READ_TAIL_BYTES);
     const length = size - start;
     const buf = Buffer.allocUnsafe(length);
     let offset = 0;
     while (offset < length) {
-      const read = readSync(fd, buf, offset, length - offset, start + offset);
+      const read = readSync(
+        owned.fd,
+        buf,
+        offset,
+        length - offset,
+        start + offset,
+      );
       if (read === 0) break;
       offset += read;
     }
     return parseTail(buf.toString("utf8", 0, offset), start > 0, tail);
   } finally {
-    closeSync(fd);
+    owned.close();
   }
 }
 

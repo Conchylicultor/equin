@@ -1,6 +1,5 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
-  closeSync,
   mkdirSync,
   openSync,
   readSync,
@@ -8,6 +7,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
 import {
   existsSync,
   lstatSync,
@@ -163,13 +163,13 @@ export function dirBytes(dir: string): number {
 function readFrom(path: string, from: number): string {
   const size = statSync(path).size;
   if (size <= from) return "";
-  const fd = openSync(path, "r");
+  const fd = adoptFd(openSync(path, "r"));
   try {
     const buf = Buffer.alloc(size - from);
-    readSync(fd, buf, 0, buf.length, from);
+    readSync(fd.fd, buf, 0, buf.length, from);
     return buf.toString("utf8");
   } finally {
-    closeSync(fd);
+    fd.close();
   }
 }
 

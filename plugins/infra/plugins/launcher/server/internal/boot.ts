@@ -4,7 +4,8 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { closeSync, openSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import {
   existsSync,
   readFileSync,
@@ -570,17 +571,17 @@ export function spawnGatewayDaemon(opts: GatewayLaunchOptions): Bun.Subprocess {
   const spec = gatewayLaunchSpec(opts);
   // Truncate ("w"): only holds raw stdout/stderr until slog takes over, plus
   // any panic. The gateway writes its own rotating logs under -log-dir.
-  const logFd = openSync(spec.stdioLog, "w");
+  const logFd = openOwnedFd(spec.stdioLog, "w");
 
   const gw = Bun.spawn(spec.argv, {
     cwd: spec.cwd,
-    stdout: logFd,
-    stderr: logFd,
+    stdout: logFd.fd,
+    stderr: logFd.fd,
     stdin: "ignore",
     env: spec.env,
   });
 
-  closeSync(logFd);
+  logFd.close();
   // Written here too, not only by the gateway's own -pid-file: a gateway that
   // dies before it gets that far must still leave its (dead) pid behind, or a
   // preview's reaper — which reads a missing file as "still booting" — would

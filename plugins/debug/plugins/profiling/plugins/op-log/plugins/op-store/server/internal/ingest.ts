@@ -2,7 +2,11 @@ import {
   asAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { closeSync, fstatSync, openSync, readSync } from "node:fs";
+import { fstatSync, readSync } from "node:fs";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import type { OpLine } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import {
   planSegments,
@@ -42,20 +46,20 @@ export type DrainResult =
   | { kind: "moved" };
 
 interface OpenFile {
-  fd: number;
+  fd: OwnedFd;
   stat: FileStat;
 }
 
 function openIfExists(path: AppPath): OpenFile | null {
-  let fd: number;
+  let fd: OwnedFd;
   try {
-    fd = openSync(path, "r");
+    fd = openOwnedFd(path, "r");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
   }
   // The inode of what we HOLD, not of whatever the name points at by now.
-  const st = fstatSync(fd, { bigint: true });
+  const st = fstatSync(fd.fd, { bigint: true });
   return { fd, stat: { inode: st.ino.toString(), size: Number(st.size) } };
 }
 
@@ -187,7 +191,7 @@ export async function drainOpLog(opts: DrainOptions): Promise<DrainResult> {
       const file = opened[seg.slot]!;
       let committedEnd = -1;
       let rest = seg.from;
-      for (const chunk of readSegment(file.fd, seg, chunkBytes)) {
+      for (const chunk of readSegment(file.fd.fd, seg, chunkBytes)) {
         const next = { inode: seg.inode, offset: chunk.end };
         const r = await commitBatch(opts.db, {
           expected,
@@ -233,6 +237,6 @@ export async function drainOpLog(opts: DrainOptions): Promise<DrainResult> {
     }
     return { kind: "ok", lines, written, gap: plan.gap };
   } finally {
-    for (const o of opened) if (o) closeSync(o.fd);
+    for (const o of opened) if (o) o.fd.close();
   }
 }

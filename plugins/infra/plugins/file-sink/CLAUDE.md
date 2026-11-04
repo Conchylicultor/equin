@@ -197,6 +197,8 @@ as the only escape. Being importable from every runtime *is* the feature.
     - `infra/host-fs/user-path.appPathParent`
     - `infra/host-fs/user-path.asAppPath`
     - `infra/host-fs/user-path.joinAppPath`
+    - `packages/owned-fd.openOwnedFd`
+    - `packages/owned-fd.OwnedFd`
     - `packages/timed-fs.stat`
     - `packages/timed-fs.statSync`
   - Exports (types):

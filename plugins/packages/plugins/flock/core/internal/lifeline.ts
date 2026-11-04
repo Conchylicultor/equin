@@ -1,4 +1,4 @@
-import { closeSync, openSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
 import {
@@ -10,6 +10,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { flockTry } from "./flock";
 
 // The PARENT_LIFELINE variable is what a parent hands its child the lifeline
@@ -36,14 +37,14 @@ export interface ParentLifeline {
 export function holdParentLifeline(dir: AppPath): ParentLifeline {
   const path = joinAppPath(dir, "lifeline");
   writeFileSync(path, "");
-  const fd = openSync(path, "r");
-  if (!flockTry(fd)) {
-    closeSync(fd);
+  const lock = openOwnedFd(path, "r");
+  if (!flockTry(lock.fd)) {
+    lock.close();
     throw new Error(`holdParentLifeline: could not lock fresh file ${path}`);
   }
   return {
     env: envEntries({ PARENT_LIFELINE: path }),
-    release: () => closeSync(fd),
+    release: () => lock.close(),
   };
 }
 

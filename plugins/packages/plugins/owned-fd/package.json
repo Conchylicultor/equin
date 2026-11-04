@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-owned-fd",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Owned file descriptors: openOwnedFd / adoptFd return an OwnedFd whose close() closes its descriptor exactly once — a second close throws FdAlreadyClosedError naming where the first happened, instead of closing whatever reused the number. Imports node:fs and the AppPath type only; enforced by the owned-fd/no-raw-fd-close lint (no fs.closeSync / fs.close outside it) and owned-fd/no-raw-spawn-stdio-fd (a spawn's stdio descriptor is an OwnedFd's .fd)."
+}

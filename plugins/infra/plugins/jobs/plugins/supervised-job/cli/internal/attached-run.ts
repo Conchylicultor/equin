@@ -1,11 +1,5 @@
-import {
-  closeSync,
-  fstatSync,
-  mkdirSync,
-  openSync,
-  readSync,
-  writeSync,
-} from "node:fs";
+import { fstatSync, mkdirSync, openSync, readSync, writeSync } from "node:fs";
+import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
 import { constants } from "node:os";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
@@ -48,7 +42,7 @@ export async function runAttachedNow(opts: AttachedRun): Promise<number> {
   }
   mkdirSync(runsDir, { recursive: true });
   // Created before the child exists, so the echo has a file from the start.
-  closeSync(openSync(transcript, "a"));
+  adoptFd(openSync(transcript, "a")).close();
   // The same "a new set trims the old ones" rule the backend's spawn follows.
   pruneWorktreeRunArtifacts(opts.namespace, opts.kindId);
 
@@ -110,15 +104,15 @@ function signalNumber(name: string): number {
 
 /** Copies whatever the transcript gained since the last pump to stdout. */
 function createEcho(path: string): { pump(): void; stop(): void } {
-  const fd = openSync(path, "r");
+  const fd = adoptFd(openSync(path, "r"));
   let offset = 0;
   let open = true;
   const buf = Buffer.alloc(ECHO_CHUNK_BYTES);
   const pump = (): void => {
     if (!open) return;
-    const size = fstatSync(fd).size;
+    const size = fstatSync(fd.fd).size;
     while (offset < size) {
-      const n = readSync(fd, buf, 0, buf.length, offset);
+      const n = readSync(fd.fd, buf, 0, buf.length, offset);
       if (n === 0) break;
       writeAll(buf.subarray(0, n));
       offset += n;
@@ -129,7 +123,7 @@ function createEcho(path: string): { pump(): void; stop(): void } {
     stop: () => {
       pump();
       open = false;
-      closeSync(fd);
+      fd.close();
     },
   };
 }

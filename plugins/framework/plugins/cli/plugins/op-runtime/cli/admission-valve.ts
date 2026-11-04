@@ -1,6 +1,7 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { closeSync, openSync, watch } from "node:fs";
+import { openSync, watch } from "node:fs";
+import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
 import { statSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import {
@@ -421,14 +422,14 @@ export function createGateLocks(dir: GateDir): GateLocks {
   return {
     tryLock(mode) {
       dir.ensure();
-      const fd = openSync(lockFile(), "w");
-      if (mode === "shared" ? flockTryShared(fd) : flockTry(fd)) {
+      const lock = adoptFd(openSync(lockFile(), "w"));
+      if (mode === "shared" ? flockTryShared(lock.fd) : flockTry(lock.fd)) {
         return hold(mode, () => {
-          closeSync(fd);
+          lock.close();
           return Promise.resolve();
         });
       }
-      closeSync(fd);
+      lock.close();
       return null;
     },
     async waitLock(mode, signal) {

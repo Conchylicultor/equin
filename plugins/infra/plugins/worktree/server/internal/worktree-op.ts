@@ -2,15 +2,8 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  closeSync,
-  type Dirent,
-  mkdirSync,
-  openSync,
-  renameSync,
-  rmSync,
-  writeSync,
-} from "node:fs";
+import { type Dirent, mkdirSync, renameSync, rmSync, writeSync } from "node:fs";
+import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { type FileHandle, open } from "node:fs/promises";
 import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
@@ -116,14 +109,14 @@ export function markWorktreeOpStart(
     opsDir(slug),
     `${opId}.json.${process.pid}${TMP_SUFFIX}`,
   );
-  const fd = openSync(tmp, "w");
+  const fd = openOwnedFd(tmp, "w");
   try {
-    if (!flockTry(fd))
+    if (!flockTry(fd.fd))
       throw new Error(
         `worktree-op: could not lock a marker file this process just created (${tmp})`,
       );
     writeSync(
-      fd,
+      fd.fd,
       JSON.stringify({
         v: 2,
         kind: op,
@@ -134,7 +127,7 @@ export function markWorktreeOpStart(
     );
     renameSync(tmp, path);
   } catch (err) {
-    closeSync(fd);
+    fd.close();
     rmSync(tmp, { force: true });
     throw err;
   }
@@ -148,7 +141,7 @@ export function markWorktreeOpStart(
       // unlink and takes the lock after the close only reaps an already-gone
       // path.
       rmSync(path, { force: true });
-      closeSync(fd);
+      fd.close();
     },
   };
 }

@@ -177,7 +177,17 @@ the next gateway start. In its place the cluster sets
 mid-statement — running, or waiting on a lock — is cancelled rather than run to
 completion. `deadline.test.ts` proves a lost client closed, its session gone
 from `pg_stat_activity`, and an advisory lock it held inside its transaction
-free again. The owned-fd handle + lint follows as a second push.
+free again.
+
+**Landed (2026-11-04), owned descriptors.** `plugins/packages/plugins/owned-fd`:
+`openOwnedFd` / `adoptFd` return an `OwnedFd` whose `close()` closes exactly
+once; a second close throws `FdAlreadyClosedError` with the first close's
+stack. Lints: `owned-fd/no-raw-fd-close` (no `fs.closeSync` / `fs.close`
+outside it) and the type-aware `owned-fd/no-raw-spawn-stdio-fd` (a spawn's
+stdio descriptor is an `OwnedFd`'s `.fd`). Every call site in app code was
+migrated (tests, research and generated files are out of scope; the
+`bun-runtime` probe is sanctioned — closing a raw handed-over fd is what it
+tests).
 
 ### 3. Database watchdog
 

@@ -1,12 +1,9 @@
-import {
-  closeSync,
-  mkdirSync,
-  openSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import {
   flockTry,
   flockTryShared,
@@ -551,17 +548,17 @@ export function createHostSemaphore(opts: {
     // invariant, so we WAIT for the guard via one `flock-wait` child rather than crash. A blocking in-process flock is banned (freezes the
     // loop) and polling is banned; the child does the blocking wait off our loop.
     const guard = guardFile();
-    const guardFd = openSync(guard, "w");
+    const guardFd = openOwnedFd(guard, "w");
     let guardHeld: HeldFlock | undefined;
-    if (!flockTry(guardFd)) {
-      closeSync(guardFd);
+    if (!flockTry(guardFd.fd)) {
+      guardFd.close();
       guardHeld = await waitForFlock(guard);
     }
     const releaseGuard = async (): Promise<void> => {
       if (guardHeld) {
         await guardHeld.release();
       } else {
-        closeSync(guardFd);
+        guardFd.close();
       }
     };
 
@@ -580,18 +577,18 @@ export function createHostSemaphore(opts: {
         // the declared pair is safe ONLY if the pool is idle: LOCK_NB-sweep every slot
         // across both sizes. If any is held, an out-of-identity process is live.
         const hi = Math.max(sentinel.size, declaredSize);
-        const probeFds: number[] = [];
+        const probeFds: OwnedFd[] = [];
         let allFree = true;
         for (let i = 0; i < hi; i++) {
-          const fd = openSync(slotFile(i), "w");
-          probeFds.push(fd);
-          if (!flockTry(fd)) {
+          const probe = openOwnedFd(slotFile(i), "w");
+          probeFds.push(probe);
+          if (!flockTry(probe.fd)) {
             allFree = false;
             break;
           }
         }
         if (!allFree) {
-          for (const fd of probeFds) closeSync(fd);
+          for (const probe of probeFds) probe.close();
           // Live pool, different pair → ADOPT the live one for this instance.
           //
           // The pool's identity is host state, not a per-process belief, and this
@@ -630,7 +627,7 @@ export function createHostSemaphore(opts: {
           for (let i = declaredSize; i < sentinel.size; i++) {
             rmSync(slotFile(i), { force: true });
           }
-          for (const fd of probeFds) closeSync(fd);
+          for (const probe of probeFds) probe.close();
         }
       } else {
         // The sentinel names the declared pair — this instance may have been sweeping
@@ -650,15 +647,15 @@ export function createHostSemaphore(opts: {
   // freezes the loop the way LOCK_EX would. Slots OUTSIDE `order` (e.g. the reserved
   // floor for a background caller) are never opened, so they are structurally
   // unreachable. `limit === 0` locks nothing and returns [].
-  function sweepKeep(limit: number, order: number[]): number[] {
+  function sweepKeep(limit: number, order: number[]): OwnedFd[] {
     slots.ensure();
-    const kept: number[] = [];
+    const kept: OwnedFd[] = [];
     for (const i of order) {
-      const fd = openSync(slotFile(i), "w");
-      if (kept.length < limit && flockTry(fd)) {
-        kept.push(fd);
+      const slot = openOwnedFd(slotFile(i), "w");
+      if (kept.length < limit && flockTry(slot.fd)) {
+        kept.push(slot);
       } else {
-        closeSync(fd);
+        slot.close();
       }
     }
     return kept;
@@ -740,14 +737,14 @@ export function createHostSemaphore(opts: {
     signal: AbortSignal | undefined,
   ): Promise<() => Promise<void>> {
     slots.ensure();
-    const fd = openSync(demandFile(), "w");
-    if (flockTryShared(fd)) {
+    const demand = openOwnedFd(demandFile(), "w");
+    if (flockTryShared(demand.fd)) {
       return () => {
-        closeSync(fd);
+        demand.close();
         return Promise.resolve();
       };
     }
-    closeSync(fd);
+    demand.close();
     const held = await waitForFlock(demandFile(), { shared: true, signal });
     return () => held.release();
   }
@@ -756,11 +753,11 @@ export function createHostSemaphore(opts: {
   // exclusive try that releases immediately.
   function demandPresent(): boolean {
     slots.ensure();
-    const fd = openSync(demandFile(), "w");
+    const probe = openOwnedFd(demandFile(), "w");
     try {
-      return !flockTry(fd);
+      return !flockTry(probe.fd);
     } finally {
-      closeSync(fd);
+      probe.close();
     }
   }
 
@@ -772,13 +769,13 @@ export function createHostSemaphore(opts: {
 
   /** What one acquisition holds: fds swept in-process, plus a fan-out winner. */
   interface Taken {
-    fds: number[];
+    fds: OwnedFd[];
     winner: HeldFlock | undefined;
   }
 
   // Hand back everything `taken` holds, synchronously (see `HostShare.releaseSlots`).
   function releaseTakenSync(taken: Taken): void {
-    for (const fd of taken.fds) closeSync(fd);
+    for (const slot of taken.fds) slot.close();
     // Signals the child holding the winner's slot; it exits, its fd closes and
     // the flock releases. The async release below reaps it.
     taken.winner?.releaseSync();

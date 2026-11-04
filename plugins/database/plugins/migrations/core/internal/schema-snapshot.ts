@@ -17,7 +17,11 @@
  * its `.sql` starts with a snapshot header, or it is a legacy key, or (until
  * the cutover folds it) it has a sibling `<tag>_snapshot.json`.
  */
-import { closeSync, openSync, readSync } from "fs";
+import { readSync } from "fs";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import {
   existsSync,
   readdirSync,
@@ -59,19 +63,19 @@ const HEAD_RE = /^\{\s*"id":\s*"([^"]+)",\s*"prevId":\s*"([^"]+)"/;
 
 /** The first `HEAD_BYTES` of `path`, or null when it does not exist. */
 export function readStart(path: AppPath): string | null {
-  let fd: number;
+  let fd: OwnedFd;
   try {
-    fd = openSync(path, "r");
+    fd = openOwnedFd(path, "r");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
   }
   try {
     const buf = Buffer.alloc(HEAD_BYTES);
-    const bytesRead = readSync(fd, buf, 0, HEAD_BYTES, 0);
+    const bytesRead = readSync(fd.fd, buf, 0, HEAD_BYTES, 0);
     return buf.toString("utf8", 0, bytesRead);
   } finally {
-    closeSync(fd);
+    fd.close();
   }
 }
 

@@ -601,6 +601,8 @@ only agreement that matters.
     - `infra/host-fs/user-path.joinAppPath`
     - `infra/spawn.spawnCaptured`
     - `infra/spawn.spawnExpectOk`
+    - `packages/owned-fd.openOwnedFd`
+    - `packages/owned-fd.OwnedFd`
     - `packages/semaphore.createSemaphore`
     - `packages/timed-fs.existsSync`
     - `packages/timed-fs.readdir`

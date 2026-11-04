@@ -37,7 +37,11 @@
 // can take that lock knows the owner is gone and reaps the lease. No pid, no
 // heartbeat, no age heuristic.
 
-import { closeSync, mkdirSync, openSync, rmSync, symlinkSync } from "node:fs";
+import { mkdirSync, rmSync, symlinkSync } from "node:fs";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import {
   readdirSync,
   readlinkSync,
@@ -97,17 +101,17 @@ async function withStoreLock<T>(
   fn: () => T,
 ): Promise<T> {
   mkdirSync(appPathParent(layout.lockFile), { recursive: true });
-  const fd = openSync(layout.lockFile, "a");
+  const fd = openOwnedFd(layout.lockFile, "a");
   try {
-    if (mode === "shared" ? flockTryShared(fd) : flockTry(fd)) {
+    if (mode === "shared" ? flockTryShared(fd.fd) : flockTry(fd.fd)) {
       try {
         return fn();
       } finally {
-        flockRelease(fd);
+        flockRelease(fd.fd);
       }
     }
   } finally {
-    closeSync(fd);
+    fd.close();
   }
   const held = await waitForFlock(layout.lockFile, {
     shared: mode === "shared",
@@ -149,13 +153,13 @@ export function openBuildLease(
     `${process.pid}-${randomBytes(6).toString("hex")}`,
   );
   const pinned = new Set<AppPath>();
-  let ownerFd: number | null = null;
+  let ownerFd: OwnedFd | null = null;
 
   const create = (): void => {
     mkdirSync(dir, { recursive: true });
-    const fd = openSync(joinAppPath(dir, OWNER_LOCK), "a");
-    if (!flockTry(fd)) {
-      closeSync(fd);
+    const fd = openOwnedFd(joinAppPath(dir, OWNER_LOCK), "a");
+    if (!flockTry(fd.fd)) {
+      fd.close();
       throw new Error(
         `build lease ${dir}: its fresh owner lock is held by another process`,
       );
@@ -197,7 +201,7 @@ export function openBuildLease(
         await withStoreLock(layout, "shared", () => {
           rmSync(dir, { recursive: true, force: true });
         });
-        closeSync(fd); // after the rm: a live owner's dir is never reaped
+        fd.close(); // after the rm: a live owner's dir is never reaped
         ownerFd = null;
       })();
       return releasing;
@@ -221,15 +225,15 @@ export function liveLeaseTargets(leasesDir: AppPath): Set<string> {
   }
   for (const name of names) {
     const dir = joinAppPath(leasesDir, name);
-    let fd: number | null;
+    let fd: OwnedFd | null;
     try {
-      fd = openSync(joinAppPath(dir, OWNER_LOCK), "r");
+      fd = openOwnedFd(joinAppPath(dir, OWNER_LOCK), "r");
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       fd = null; // no owner lock: the owner died mid-release
     }
     try {
-      if (fd !== null && !flockTry(fd)) {
+      if (fd !== null && !flockTry(fd.fd)) {
         // Held: the owner is alive, and its pins are roots.
         for (const link of readdirSync(dir)) {
           if (link === OWNER_LOCK) continue;
@@ -239,7 +243,7 @@ export function liveLeaseTargets(leasesDir: AppPath): Set<string> {
       }
       rmSync(dir, { recursive: true, force: true }); // owner gone: reap
     } finally {
-      if (fd !== null) closeSync(fd);
+      if (fd !== null) fd.close();
     }
   }
   return targets;

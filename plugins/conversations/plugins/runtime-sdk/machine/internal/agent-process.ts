@@ -1,5 +1,6 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { closeSync, mkdirSync, openSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import {
   existsSync,
   readFileSync,
@@ -234,7 +235,7 @@ export async function startAgentProcess(
   const exited = new Promise<string>((resolve) => {
     settle = resolve;
   });
-  const log = openSync(logPath, "a");
+  const log = openOwnedFd(logPath, "a");
   try {
     instances.set(
       id,
@@ -252,7 +253,7 @@ export async function startAgentProcess(
       }),
     );
   } finally {
-    closeSync(log);
+    log.close();
   }
   return {
     exited,

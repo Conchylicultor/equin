@@ -1,5 +1,9 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { closeSync, fstatSync, openSync, readSync } from "node:fs";
+import { fstatSync, readSync } from "node:fs";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 
 /**
  * How many bytes of ONE run's transcript reach the log channel.
@@ -111,9 +115,9 @@ export function createTranscriptTail(opts: {
 
   function pump(): void {
     if (stopped || truncated) return;
-    let fd: number;
+    let fd: OwnedFd;
     try {
-      fd = openSync(path, "r");
+      fd = openOwnedFd(path, "r");
     } catch (err) {
       // The transcript is created before the child is spawned, so ENOENT here
       // means the artifact prune reaped it (a run outlived 50 newer runs of its
@@ -123,7 +127,7 @@ export function createTranscriptTail(opts: {
       throw err;
     }
     try {
-      const size = fstatSync(fd).size;
+      const size = fstatSync(fd.fd).size;
       if (size < offset) {
         // The file got shorter, which an append-only transcript cannot do. A
         // run id was reused, or something truncated the file underneath us.
@@ -138,7 +142,7 @@ export function createTranscriptTail(opts: {
       while (offset < size) {
         const want = Math.min(READ_CHUNK_BYTES, size - offset);
         const buf = Buffer.allocUnsafe(want);
-        const read = readSync(fd, buf, 0, want, offset);
+        const read = readSync(fd.fd, buf, 0, want, offset);
         if (read <= 0) break;
         offset += read;
         publishedBytes += read;
@@ -154,7 +158,7 @@ export function createTranscriptTail(opts: {
         }
       }
     } finally {
-      closeSync(fd);
+      fd.close();
     }
   }
 
@@ -194,19 +198,19 @@ export function readTranscriptEnd(
   path: AppPath,
   maxBytes: number,
 ): TranscriptEnd {
-  let fd: number;
+  let fd: OwnedFd;
   try {
-    fd = openSync(path, "r");
+    fd = openOwnedFd(path, "r");
   } catch (err) {
     const e = err as NodeJS.ErrnoException;
     if (e.code === "ENOENT") return { kind: "missing" };
     return { kind: "unreadable", message: e.message };
   }
   try {
-    const size = fstatSync(fd).size;
+    const size = fstatSync(fd.fd).size;
     const start = Math.max(0, size - maxBytes);
     const buf = Buffer.allocUnsafe(size - start);
-    const read = readSync(fd, buf, 0, buf.length, start);
+    const read = readSync(fd.fd, buf, 0, buf.length, start);
     let text = buf.subarray(0, read).toString("utf-8").trimEnd();
     // A window opened mid-file starts mid-line (maybe mid-character): drop
     // that fragment so the excerpt opens on a whole line — unless the window
@@ -221,6 +225,6 @@ export function readTranscriptEnd(
       message: err instanceof Error ? err.message : String(err),
     };
   } finally {
-    closeSync(fd);
+    fd.close();
   }
 }

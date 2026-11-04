@@ -21140,6 +21140,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.joinAppPath`
           - `infra/spawn.spawnCaptured`
           - `infra/spawn.spawnExpectOk`
+          - `packages/owned-fd.openOwnedFd`
+          - `packages/owned-fd.OwnedFd`
           - `packages/semaphore.createSemaphore`
           - `packages/timed-fs.existsSync`
           - `packages/timed-fs.readdir`
@@ -27630,6 +27632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/youtube/audio-fetch` (3 debt)
               - `packages/flock` (3 debt)
               - `packages/host-semaphore` (1 debt)
+              - `packages/owned-fd` (0 debt)
               - `packages/signal-origin` (2 debt)
               - `packages/single-flight` (1 debt)
               - `packages/sleep-clock` (1 debt)
@@ -27659,7 +27662,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons/icon-sets` (1 debt)
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 63 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 65 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×10
               - `framework/tooling/exempt` ×7
               - `reports/check-thread-stall` ×7
@@ -27672,6 +27675,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/collected-dir` ×2
               - `infra/paths` ×2
               - `packages/macrotask-yield` ×2
+              - `packages/owned-fd` ×2
               - `packages/thread-cpu-clock` ×2
               - `reports/outbox` ×2
               - `infra/file-sink.defineFileSink`
@@ -27751,6 +27755,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempts itself from:
                   - `spawn-safety/no-raw-bun-spawn` — `check/internal/fd-double-close-probe.ts` (sanctioned)
+                  - `owned-fd/no-raw-fd-close` — `check/internal/fd-double-close-probe.ts` (sanctioned)
                   - `check-thread-safety/no-blocking-check-work` — `check/internal/fd-double-close-probe.ts` (debt)
             - **`cache-prune`** — The hourly checks.cache-prune job: ages out and caps the shared check-result cache and reclaims idle flight files, so no check run lists the whole cache.
               - Server:
@@ -28264,7 +28269,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries/no-platform-api` — `core/internal/changed-files.ts`, `core/internal/format-sources.ts`, `core/internal/format-thread.ts`, `core/internal/format-worker.ts`, `core/internal/prettier.ts` (debt)
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
-            - Uses: 23 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
               - `framework/cli/cli-name` ×3
               - `infra/host-fs/user-path` ×3
               - `packages/timed-fs` ×3
@@ -28274,6 +28279,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/env-names` ×2
               - `infra/namespace` ×2
               - `infra/paths` ×2
+              - `packages/owned-fd` ×2
               - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
               - `infra/paths/repo-root.REPO_ROOT`
             - Exports (types):
@@ -28609,12 +28615,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 30 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 32 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `packages/timed-fs` ×8
               - `framework/plugin-id` ×4
               - `framework/web-core` ×4
               - `infra/host-fs/user-path` ×4
               - `packages/flock` ×4
+              - `packages/owned-fd` ×2
               - `framework/product-name.LEGACY_IDS`
               - `framework/tooling.loadRepoSnapshot`
               - `infra/namespace.MAIN_COMPOSITION_ID`
@@ -31009,6 +31016,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.appPathParent`
           - `infra/host-fs/user-path.asAppPath`
           - `infra/host-fs/user-path.joinAppPath`
+          - `packages/owned-fd.openOwnedFd`
+          - `packages/owned-fd.OwnedFd`
           - `packages/timed-fs.stat`
           - `packages/timed-fs.statSync`
         - Exports (types):
@@ -33237,7 +33246,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.asAppPath`
+          - `infra/host-fs/user-path.joinAppPath`
           - `packages/flock.holdParentLifeline`
+          - `packages/owned-fd.openOwnedFd`
+          - `packages/owned-fd.OwnedFd`
           - `packages/spawn-priority.spawnAtTier`
           - `packages/timed-fs.readFileSync`
         - Exports (types):
@@ -35862,6 +35874,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/launcher/env-names.envEntries`
           - `infra/launcher/env-names.readEnv`
           - `infra/launcher/env-names.unsetEnv`
+          - `packages/owned-fd.openOwnedFd`
         - Exports (types):
           - `HeldFlock`
           - `ParentLifeline`
@@ -36003,6 +36016,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createTimeSlicer`
           - `createTurnQueue`
           - `yieldMacrotask`
+    - **`owned-fd`** — Owned file descriptors: openOwnedFd / adoptFd return an OwnedFd whose close() closes its descriptor exactly once — a second close throws FdAlreadyClosedError naming where the first happened, instead of closing whatever reused the number. Imports node:fs and the AppPath type only; enforced by the owned-fd/no-raw-fd-close lint (no fs.closeSync / fs.close outside it) and owned-fd/no-raw-spawn-stdio-fd (a spawn's stdio descriptor is an OwnedFd's .fd).
+      - Cross-plugin:
+        - Imported by:
+          - `database/migrations`
+          - `framework/tooling/checks`
+          - `framework/tooling/guards`
+          - `framework/tooling/web-artifacts`
+          - `infra/file-sink`
+          - `infra/spawn`
+          - `packages/flock`
+          - `packages/single-flight`
+          - `packages/ticket-line`
+      - Exemptions:
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `core/internal/owned-fd.ts` (sanctioned)
+          - `owned-fd/no-raw-fd-close` — `core/internal/owned-fd.ts` (sanctioned)
+        - Exempted by:
+          - `framework/tooling/checks/bun-runtime` (0 debt)
+          - `packages/owned-fd` (0 debt)
+      - Core:
+        - Exports (types): `OwnedFd`
+        - Exports (values):
+          - `adoptFd`
+          - `FdAlreadyClosedError`
+          - `openOwnedFd`
     - **`partial-json`** — parsePartialJson: the value a prefix of a JSON document already holds — every container closed, an in-progress string value finished, an in-progress key, number or literal cut — for drawing a document while it is still being written (a streamed tool call's input).
       - Core:
         - Exports (values): `parsePartialJson`
@@ -36109,6 +36147,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/flock.flockTry`
           - `packages/flock.HeldFlock`
           - `packages/flock.waitForFlock`
+          - `packages/owned-fd.openOwnedFd`
+          - `packages/owned-fd.OwnedFd`
           - `packages/timed-fs.readFileSync`
         - Exports (types):
           - `Flight`
@@ -36242,6 +36282,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.joinAppPath`
           - `packages/flock.flockTry`
           - `packages/flock.waitForFlock`
+          - `packages/owned-fd.openOwnedFd`
+          - `packages/owned-fd.OwnedFd`
           - `packages/timed-fs.readdirSync`
         - Exports (types):
           - `Ticket`

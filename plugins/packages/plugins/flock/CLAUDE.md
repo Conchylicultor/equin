@@ -74,6 +74,7 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
     - `infra/launcher/env-names.envEntries`
     - `infra/launcher/env-names.readEnv`
     - `infra/launcher/env-names.unsetEnv`
+    - `packages/owned-fd.openOwnedFd`
   - Exports (types):
     - `HeldFlock`
     - `ParentLifeline`

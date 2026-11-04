@@ -1,13 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
-import {
-  closeSync,
-  mkdirSync,
-  openSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import { z } from "zod";
 import {
   flockTry,
@@ -148,9 +145,9 @@ export async function singleFlight<V, R>(
   const files = flightFiles(opts.dir, opts.key);
 
   // "a": create without truncating — the lock file's content is never read.
-  const fd = openSync(files.lock, "a");
-  if (flockTry(fd)) return runLead(opts, files, fdHold(fd), lead);
-  closeSync(fd);
+  const lock = openOwnedFd(files.lock, "a");
+  if (flockTry(lock.fd)) return runLead(opts, files, fdHold(lock), lead);
+  lock.close();
 
   // Read AFTER seeing the lock held: whatever is on disk now was published by
   // a run that ended before we arrived (or by the current holder, a moment
@@ -193,12 +190,12 @@ export async function tryLead<V, R>(
   lead: (publish: Publish<V>) => Promise<R>,
 ): Promise<{ role: "led"; result: R } | { role: "busy" }> {
   const files = flightFiles(opts.dir, opts.key);
-  const fd = openSync(files.lock, "a");
-  if (!flockTry(fd)) {
-    closeSync(fd);
+  const lock = openOwnedFd(files.lock, "a");
+  if (!flockTry(lock.fd)) {
+    lock.close();
     return { role: "busy" };
   }
-  const flight = await runLead(opts, files, fdHold(fd), lead);
+  const flight = await runLead(opts, files, fdHold(lock), lead);
   return { role: "led", result: flight.result };
 }
 
@@ -256,12 +253,12 @@ async function runLead<V, R>(
 }
 
 /** A lock held on one of our own fds. */
-function fdHold(fd: number): HeldFlock {
+function fdHold(lock: OwnedFd): HeldFlock {
   let released = false;
   const releaseSync = (): void => {
     if (released) return;
     released = true;
-    closeSync(fd);
+    lock.close();
   };
   return {
     releaseSync,

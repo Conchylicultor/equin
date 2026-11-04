@@ -408,19 +408,17 @@ export function launchDetachedIn(
   const rec = claimInstance(state, opts.instance, "detached", opts.pidFile);
   const emit = (t: DaemonTransition): void => opts.onState?.(t);
   let bootstrapRunning = true;
-  const stdio =
-    opts.outputFd !== undefined
-      ? opts.outputFd
-      : opts.onOutputLine === undefined
-        ? "ignore"
-        : "pipe";
   const proc = Bun.spawn(opts.argv, {
     detached: true,
     env: opts.env,
     cwd: opts.cwd,
     stdin: "ignore",
-    stdout: stdio,
-    stderr: stdio,
+    stdout:
+      opts.outputFd?.fd ??
+      (opts.onOutputLine === undefined ? "ignore" : "pipe"),
+    stderr:
+      opts.outputFd?.fd ??
+      (opts.onOutputLine === undefined ? "ignore" : "pipe"),
     onExit: (_p, code, signalCode) => {
       bootstrapRunning = false;
       if (code !== 0) {

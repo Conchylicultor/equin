@@ -18,13 +18,8 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
  *
  * Plan: research/2026-10-17-infra-agent-browser-persistent-host.md
  */
-import {
-  closeSync,
-  openSync,
-  renameSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { resolve } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
@@ -56,8 +51,8 @@ const startedAt = new Date().toISOString();
 
 // The singleton: whoever holds the lock is THE host. The kernel drops it when
 // this process dies however it dies, so a crashed host never blocks the next.
-const lockFd = openSync(file(HOST_FILES.lock), "a");
-if (!flockTry(lockFd)) {
+const lockFd = openOwnedFd(file(HOST_FILES.lock), "a");
+if (!flockTry(lockFd.fd)) {
   console.error(`[agent-browser] another host holds ${dir}; exiting`);
   process.exit(0);
 }
@@ -107,7 +102,7 @@ async function shutdown(reason: string): Promise<void> {
     writeStatus("exited");
     unlinkSync(file(HOST_FILES.pid));
     if (existsSync(socketPath)) unlinkSync(socketPath);
-    closeSync(lockFd);
+    lockFd.close();
     process.exit(0);
   }
 }

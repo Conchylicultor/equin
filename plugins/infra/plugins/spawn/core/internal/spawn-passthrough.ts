@@ -1,5 +1,9 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { closeSync, mkdtempSync, openSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";
@@ -33,24 +37,24 @@ export function spawnPassthrough(
 
 /**
  * {@link spawnPassthrough}, with the child's stdout AND stderr appended to one
- * file instead of inherited (`>> path 2>&1`): a raw kernel fd, so — like every
+ * file instead of inherited (`>> path 2>&1`): an owned kernel fd, so — like every
  * spawn here — there is no JS stream to wedge, and stdout/stderr keep their
  * interleaving in the file. The file is created when missing.
  *
  * For a child whose output is a RECORD — a run transcript a reader follows from
- * the file while it grows (supervised-job's attached runs). The parent's copy
- * of the descriptor is closed once the child holds its own.
+ * the file while it grows (supervised-job's attached runs). The parent's handle
+ * on the descriptor is closed once the child holds its own.
  */
 export async function spawnToFile(
   argv: string[],
   opts: SpawnToFileOptions,
 ): Promise<SpawnPassthroughResult> {
-  const fd = openSync(opts.outputPath, "a");
+  const fd = openOwnedFd(opts.outputPath, "a");
   let open = true;
   const close = (): void => {
     if (!open) return;
     open = false;
-    closeSync(fd);
+    fd.close();
   };
   try {
     // The child holds its own duplicate once spawned, so the parent's copy is
@@ -65,7 +69,7 @@ export async function spawnToFile(
 async function runToCompletion(
   argv: string[],
   opts: SpawnPassthroughOptions,
-  output: "inherit" | number,
+  output: "inherit" | OwnedFd,
   afterSpawn?: () => void,
 ): Promise<SpawnPassthroughResult> {
   // The same two guarantees `spawnCaptured` gives: the child is SIGTERMed if
@@ -80,8 +84,8 @@ async function runToCompletion(
           cwd: opts.cwd,
           env: childEnv(opts.env, lifeline),
           stdin: opts.stdin ?? "ignore",
-          stdout: output,
-          stderr: output,
+          stdout: output === "inherit" ? output : output.fd,
+          stderr: output === "inherit" ? output : output.fd,
         }),
       );
       afterSpawn?.();

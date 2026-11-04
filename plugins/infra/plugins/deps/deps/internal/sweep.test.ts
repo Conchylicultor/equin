@@ -89,7 +89,7 @@ test("keeps current and recently used identities, removes the rest unless locked
     now: NOW,
     idleMs: SWEEP_IDLE_MS,
   });
-  releaseLock(fd as number);
+  releaseLock(fd!);
 
   expect(existsSync(current)).toBe(true);
   expect(existsSync(trial)).toBe(true);

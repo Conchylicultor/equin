@@ -236,7 +236,7 @@ describe("depState", () => {
       since: "2026-09-29T10:00:00.000Z",
       logTail: ["line 1", "line 2"],
     });
-    releaseLock(fd as number);
+    releaseLock(fd!);
     rmSync(paths.root, { recursive: true });
 
     // failed: the install threw, and ensureDep rethrows it.
@@ -310,7 +310,7 @@ describe("readyNow", () => {
       since: "2026-09-30T10:00:00.000Z",
       logTail: ["downloading"],
     });
-    releaseLock(fd as number);
+    releaseLock(fd!);
     rmSync(paths.root, { recursive: true });
 
     // failed: the last install threw.
@@ -392,7 +392,7 @@ describe("removeDep", () => {
     expect(await removeDep(dep, { store, root: base })).toEqual({
       kind: "busy",
     });
-    releaseLock(fd as number);
+    releaseLock(fd!);
 
     const removed = await removeDep(dep, { store, root: base });
     expect(removed.kind).toBe("removed");

@@ -3,7 +3,11 @@ import {
   appPathParent,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { closeSync, fstatSync, openSync, readSync } from "node:fs";
+import { fstatSync, readSync } from "node:fs";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import { open } from "node:fs/promises";
 import { basename } from "node:path";
 
@@ -71,27 +75,33 @@ interface FileChunk {
  * error or a bad fd is a real bug, not an empty file).
  */
 function readLastBytes(file: AppPath, budget: number): FileChunk | null {
-  let fd: number;
+  let fd: OwnedFd;
   try {
-    fd = openSync(file, "r");
+    fd = openOwnedFd(file, "r");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
   }
   try {
-    const size = fstatSync(fd).size;
+    const size = fstatSync(fd.fd).size;
     const start = Math.max(0, size - budget);
     const length = size - start;
     const buf = Buffer.allocUnsafe(length);
     let offset = 0;
     while (offset < length) {
-      const read = readSync(fd, buf, offset, length - offset, start + offset);
+      const read = readSync(
+        fd.fd,
+        buf,
+        offset,
+        length - offset,
+        start + offset,
+      );
       if (read === 0) break;
       offset += read;
     }
     return { text: buf.toString("utf8", 0, offset), clipped: start > 0 };
   } finally {
-    closeSync(fd);
+    fd.close();
   }
 }
 

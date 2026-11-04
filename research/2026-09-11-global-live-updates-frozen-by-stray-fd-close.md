@@ -28,8 +28,10 @@ close a connection lost to a deadline, its fd number might be someone else's —
 is gone. A lost connection is closed, so its transaction is rolled back and its
 PgBouncer slot freed (`research/2026-11-04-global-db-connection-failure-vision.md`,
 task 2). Upstream #35931 and #38630 are other, open Bun double-close bugs the
-probe does not cover; the guard against our own code doing it is the owned-fd
-work of the same task.
+probe does not cover. Against our own code doing it: every descriptor the app
+opens is an `OwnedFd` (`plugins/packages/plugins/owned-fd`) that closes exactly
+once and throws `FdAlreadyClosedError` on a second close, enforced by the
+`owned-fd/no-raw-fd-close` and `owned-fd/no-raw-spawn-stdio-fd` lints.
 
 ## Symptom (as the user saw it)
 

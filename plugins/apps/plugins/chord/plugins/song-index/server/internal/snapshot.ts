@@ -1,4 +1,4 @@
-import { closeSync, openSync, renameSync, writeFileSync } from "node:fs";
+import { renameSync, writeFileSync } from "node:fs";
 import {
   existsSync,
   readFileSync,
@@ -7,6 +7,7 @@ import { createReadStream } from "node:fs";
 import { createGunzip, gunzipSync, gzipSync } from "node:zlib";
 import { JSONParser } from "@streamparser/json";
 import { z } from "zod";
+import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import { chordDir } from "@plugins/apps/plugins/chord/data-dirs";
@@ -67,12 +68,12 @@ export async function ensureSnapshot(hooks: SnapshotHooks): Promise<AppPath> {
   if (existsSync(path)) return path;
 
   songIndexArea.ensure();
-  const fd = openSync(songIndexArea.file("snapshot.lock"), "a");
+  const lock = openOwnedFd(songIndexArea.file("snapshot.lock"), "a");
   try {
-    if (!flockTry(fd)) {
+    if (!flockTry(lock.fd)) {
       hooks.log("another process is building the snapshot; waiting for it");
       await hooks.onPhase("building-snapshot");
-      while (!flockTry(fd)) await Bun.sleep(LOCK_RETRY_MS);
+      while (!flockTry(lock.fd)) await Bun.sleep(LOCK_RETRY_MS);
     }
     if (existsSync(path)) return path;
 
@@ -100,7 +101,7 @@ export async function ensureSnapshot(hooks: SnapshotHooks): Promise<AppPath> {
     );
     return path;
   } finally {
-    closeSync(fd);
+    lock.close();
   }
 }
 

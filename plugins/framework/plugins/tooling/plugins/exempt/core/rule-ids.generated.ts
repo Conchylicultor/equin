@@ -106,6 +106,8 @@ export type ExemptableRuleId =
   | "no-raw-event-source"
   | "no-raw-sse"
   | "no-raw-websocket"
+  | "owned-fd/no-raw-fd-close"
+  | "owned-fd/no-raw-spawn-stdio-fd"
   | "page-editor/no-adhoc-block-id"
   | "page-editor/no-adhoc-doc-write"
   | "page-editor/no-adhoc-forest-write"

@@ -126,6 +126,12 @@ both for as long as the process lived. On 2026-11-03, 16 of them took main down
 for five hours (`research/2026-11-04-global-db-connection-failure-vision.md`).
 Closing is what makes a lost call clean up after itself.
 
+Closing does rely on no one else having closed the lost socket's number. The
+app's own code cannot: every descriptor it opens is an `OwnedFd`
+(`packages/owned-fd`), closed exactly once, and a second close throws at the
+culprit (`owned-fd/no-raw-fd-close`, `owned-fd/no-raw-spawn-stdio-fd`). Bun's
+own double closes are re-proved absent by the `bun-runtime` check.
+
 ## A sleep is not a silent connection
 
 A timer keeps running while the machine sleeps; `performance.now()` pauses with

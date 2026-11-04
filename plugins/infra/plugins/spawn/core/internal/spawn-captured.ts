@@ -1,11 +1,12 @@
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
-  closeSync,
-  mkdtempSync,
-  openSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -113,11 +114,11 @@ export async function spawnCaptured(
   signal?.throwIfAborted();
   const dir = asAppPath(mkdtempSync(join(tmpdir(), "sg-spawn-")));
   try {
-    const outPath = join(dir, "out");
-    const errPath = join(dir, "err");
-    let inFd: number | undefined;
-    let outFd: number | undefined;
-    let errFd: number | undefined;
+    const outPath = joinAppPath(dir, "out");
+    const errPath = joinAppPath(dir, "err");
+    let inFd: OwnedFd | undefined;
+    let outFd: OwnedFd | undefined;
+    let errFd: OwnedFd | undefined;
     let proc: ReturnType<typeof Bun.spawn>;
     let exitCode: number;
     let timedOut = false;
@@ -132,21 +133,24 @@ export async function spawnCaptured(
     const lifeline = holdParentLifeline(dir);
     try {
       if (opts.stdin !== undefined) {
-        const inPath = join(dir, "in");
+        const inPath = joinAppPath(dir, "in");
         writeFileSync(inPath, opts.stdin);
-        inFd = openSync(inPath, "r");
+        inFd = openOwnedFd(inPath, "r");
       }
-      outFd = openSync(outPath, "w");
-      errFd = opts.mergeStderr ? outFd : openSync(errPath, "w");
+      // `mergeStderr` aliases the two: ONE handle, so one close.
+      const out = openOwnedFd(outPath, "w");
+      outFd = out;
+      const err = opts.mergeStderr ? out : openOwnedFd(errPath, "w");
+      errFd = err;
       // The tier wraps exactly the synchronous `Bun.spawn` call: a
       // `foreground` lift (`spawnInForeground`) lasts only as long as the fork.
       const child = spawnAtTier(opts.tier ?? "inherit", argv, (tiered) =>
         Bun.spawn(tiered, {
           cwd: opts.cwd,
           env: childEnv(opts.env, lifeline),
-          stdin: inFd ?? "ignore",
-          stdout: outFd,
-          stderr: errFd,
+          stdin: inFd?.fd ?? "ignore",
+          stdout: out.fd,
+          stderr: err.fd,
         }),
       );
       proc = child;
@@ -215,11 +219,13 @@ export async function spawnCaptured(
       untrack?.();
       lifeline.release();
       if (onAbort !== undefined) signal?.removeEventListener("abort", onAbort);
-      // Close our copies of the fds regardless of spawn/exit outcome; the
-      // child held its own dups. mergeStderr aliases errFd to outFd.
-      if (inFd !== undefined) closeSync(inFd);
-      if (outFd !== undefined) closeSync(outFd);
-      if (errFd !== undefined && errFd !== outFd) closeSync(errFd);
+      // Close our handles regardless of spawn/exit outcome; the child held its
+      // own dups. mergeStderr aliases errFd to outFd: the ONE handle, closed
+      // once (a second close would throw, and on a bare number would have hit
+      // whatever reused it).
+      inFd?.close();
+      outFd?.close();
+      if (errFd !== undefined && errFd !== outFd) errFd.close();
       if (deadlineTimer !== undefined) clearTimeout(deadlineTimer);
       if (killTimer !== undefined) clearTimeout(killTimer);
     }

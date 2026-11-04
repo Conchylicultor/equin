@@ -1,12 +1,6 @@
 import { spawn } from "node:child_process";
-import {
-  closeSync,
-  mkdtempSync,
-  openSync,
-  readSync,
-  watch,
-  writeSync,
-} from "node:fs";
+import { mkdtempSync, openSync, readSync, watch, writeSync } from "node:fs";
+import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
 import { constants, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -54,7 +48,7 @@ export async function runHandedOff(
     mkdtempSync(join(tmpdir(), `equin-${op}-`)),
     "output.log",
   );
-  const writeFd = openSync(logPath, "a");
+  const writeFd = adoptFd(openSync(logPath, "a"));
   const env = { ...process.env };
   unsetEnv("FOREGROUND_DEADLINE", env);
   setEnv("OP_HANDED_OFF", "1", env);
@@ -62,9 +56,9 @@ export async function runHandedOff(
     cwd: process.cwd(),
     env,
     detached: true,
-    stdio: ["ignore", writeFd, writeFd],
+    stdio: ["ignore", writeFd.fd, writeFd.fd],
   });
-  closeSync(writeFd);
+  writeFd.close();
 
   let handedOff = false;
   process.on("exit", () => {
@@ -80,13 +74,13 @@ export async function runHandedOff(
   for (const sig of ENDING_SIGNALS)
     process.on(sig, () => process.exit(signalExitCode(sig)));
 
-  const readFd = openSync(logPath, "r");
+  const readFd = adoptFd(openSync(logPath, "r"));
   let offset = 0;
   // Synchronous writes: every byte must be out before `process.exit`.
   const pump = () => {
     for (;;) {
       const chunk = Buffer.alloc(READ_CHUNK_BYTES);
-      const n = readSync(readFd, chunk, 0, chunk.length, offset);
+      const n = readSync(readFd.fd, chunk, 0, chunk.length, offset);
       if (n <= 0) return;
       offset += n;
       writeSync(1, chunk.subarray(0, n));
@@ -111,7 +105,7 @@ export async function runHandedOff(
   });
   watcher.close();
   pump();
-  closeSync(readFd);
+  readFd.close();
 
   if (ending.kind === "exited") process.exit(ending.code);
 

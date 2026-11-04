@@ -1,4 +1,5 @@
-import { openSync, readSync, closeSync, renameSync } from "node:fs";
+import { openSync, readSync, renameSync } from "node:fs";
+import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
 import {
   existsSync,
   readdirSync,
@@ -29,16 +30,16 @@ export interface ProjectRename {
 function sessionCwd(dir: string): string | null {
   const transcript = readdirSync(dir).find((name) => name.endsWith(".jsonl"));
   if (transcript === undefined) return null;
-  const fd = openSync(join(dir, transcript), "r");
+  const fd = adoptFd(openSync(join(dir, transcript), "r"));
   try {
     const buf = Buffer.alloc(64 * 1024);
-    const n = readSync(fd, buf, 0, buf.length, 0);
+    const n = readSync(fd.fd, buf, 0, buf.length, 0);
     const match = /"cwd":"((?:[^"\\]|\\.)*)"/.exec(buf.toString("utf8", 0, n));
     return match?.[1] === undefined
       ? null
       : (JSON.parse(`"${match[1]}"`) as string);
   } finally {
-    closeSync(fd);
+    fd.close();
   }
 }
 

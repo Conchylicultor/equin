@@ -235,7 +235,10 @@ presence only — **no re-exports**; import from `core/`.
   - Uses:
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.asAppPath`
+    - `infra/host-fs/user-path.joinAppPath`
     - `packages/flock.holdParentLifeline`
+    - `packages/owned-fd.openOwnedFd`
+    - `packages/owned-fd.OwnedFd`
     - `packages/spawn-priority.spawnAtTier`
     - `packages/timed-fs.readFileSync`
   - Exports (types):

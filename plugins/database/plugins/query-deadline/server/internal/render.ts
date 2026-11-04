@@ -147,7 +147,10 @@ export function renderQueryDeadlineTask(
   lines.push(
     "3. A stray close is a double close of a file descriptor. The 2026-09 ones " +
       "were Bun's own (oven-sh/bun#33828, fixed in 1.4.0; the `bun-runtime` " +
-      "check re-proves it on every build). Hunt a new one with " +
+      "check re-proves it on every build), and app code holds every " +
+      "descriptor as an `OwnedFd` (`packages/owned-fd`), whose second close " +
+      "throws `FdAlreadyClosedError` naming the first — search the reports " +
+      "for one. Otherwise hunt it with " +
       `"How to find it" in \`${INCIDENT_DOC}\`.`,
   );
   lines.push("");

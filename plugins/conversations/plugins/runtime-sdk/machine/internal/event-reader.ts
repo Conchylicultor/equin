@@ -2,7 +2,11 @@ import {
   asAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { closeSync, fstatSync, openSync, readSync } from "node:fs";
+import { fstatSync, readSync } from "node:fs";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import { AgentEventSchema, type AgentEvent } from "../../core";
 import type { ReadPosition } from "../../server/internal/read-position";
 
@@ -28,20 +32,20 @@ import type { ReadPosition } from "../../server/internal/read-position";
 const SINK_KEEP = 3;
 
 interface OpenFile {
-  fd: number;
+  fd: OwnedFd;
   ino: number;
   size: number;
 }
 
 function openIfExists(path: AppPath): OpenFile | null {
-  let fd: number;
+  let fd: OwnedFd;
   try {
-    fd = openSync(path, "r");
+    fd = openOwnedFd(path, "r");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
   }
-  const st = fstatSync(fd);
+  const st = fstatSync(fd.fd);
   return { fd, ino: st.ino, size: st.size };
 }
 
@@ -55,7 +59,7 @@ function readLinesFrom(
   const buf = Buffer.alloc(length);
   let read = 0;
   while (read < length) {
-    const n = readSync(file.fd, buf, read, length - read, offset + read);
+    const n = readSync(file.fd.fd, buf, read, length - read, offset + read);
     if (n === 0) break;
     read += n;
   }
@@ -118,7 +122,7 @@ export function readAgentEvents(
     }
     return { events, position: live ? next : null };
   } finally {
-    for (const f of files) if (f) closeSync(f.fd);
+    for (const f of files) if (f) f.fd.close();
   }
 }
 

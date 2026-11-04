@@ -1,12 +1,8 @@
+import { renameSync, rmSync, unlinkSync, utimesSync, writeFileSync } from "fs";
 import {
-  closeSync,
-  openSync,
-  renameSync,
-  rmSync,
-  unlinkSync,
-  utimesSync,
-  writeFileSync,
-} from "fs";
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import {
   existsSync,
   readFileSync,
@@ -246,9 +242,9 @@ function publishRefreshedIndex(
   seen: { ino: bigint; size: bigint; mtimeNs: bigint; ctimeNs: bigint },
 ): void {
   const lock = besideIndex(realIndex, "lock");
-  let fd: number;
+  let fd: OwnedFd;
   try {
-    fd = openSync(lock, "wx");
+    fd = openOwnedFd(lock, "wx");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "EEXIST") return; // a writer has it
     throw err;
@@ -262,7 +258,7 @@ function publishRefreshedIndex(
       now.ctimeNs === seen.ctimeNs;
     if (unchanged) renameSync(refreshed, realIndex);
   } finally {
-    closeSync(fd);
+    fd.close();
     unlinkSync(lock);
   }
 }

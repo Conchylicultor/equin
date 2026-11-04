@@ -3,7 +3,11 @@ import {
   asAppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { closeSync, mkdirSync, openSync } from "node:fs";
+import { mkdirSync } from "node:fs";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
@@ -53,17 +57,18 @@ export function featurePaths(
 // fd OR dies, so a killed analysis leaves no lock behind — only a stale
 // `running.json`, which reads as absent because nobody holds this.
 
-/** Take the lock without waiting: the held fd, or `null` when another holds it. */
-export function tryLock(path: AppPath): number | null {
+/** Take the lock without waiting: its held descriptor, or `null` when another holds it. */
+export function tryLock(path: AppPath): OwnedFd | null {
   mkdirSync(asAppPath(dirname(path)), { recursive: true });
-  const fd = openSync(path, "a");
-  if (flockTry(fd)) return fd;
-  closeSync(fd);
+  const owned = openOwnedFd(path, "a");
+  if (flockTry(owned.fd)) return owned;
+  owned.close();
   return null;
 }
 
-export function releaseLock(fd: number): void {
-  closeSync(fd);
+/** Release a lock taken with {@link tryLock} / {@link waitLock}; a second release throws. */
+export function releaseLock(lock: OwnedFd): void {
+  lock.close();
 }
 
 const LOCK_RETRY_MS = 500;
@@ -78,7 +83,7 @@ const LOCK_RETRY_MS = 500;
 export async function waitLock(
   path: AppPath,
   onWait: () => void | Promise<void>,
-): Promise<number> {
+): Promise<OwnedFd> {
   const first = tryLock(path);
   if (first !== null) return first;
   await onWait();
@@ -92,10 +97,10 @@ export async function waitLock(
 /** Whether some process holds the lock now: take it for an instant, release. */
 export function isLockHeld(path: AppPath): boolean {
   if (!existsSync(path)) return false;
-  const fd = openSync(path, "a");
+  const fd = openOwnedFd(path, "a");
   try {
-    return !flockTry(fd);
+    return !flockTry(fd.fd);
   } finally {
-    closeSync(fd);
+    fd.close();
   }
 }

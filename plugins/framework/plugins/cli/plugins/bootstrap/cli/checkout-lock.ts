@@ -1,4 +1,5 @@
-import { closeSync, ftruncateSync, mkdirSync, openSync, writeSync } from "fs";
+import { ftruncateSync, mkdirSync, openSync, writeSync } from "fs";
+import { adoptFd, type OwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "path";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
@@ -115,7 +116,7 @@ export type HolderObservation =
  * Every other cross-process mutex in the repo (push, cpu, db-fork,
  * worktree-mutate) was already on flock; this was the last holdout.
  *
- * The lock file is NEVER unlinked — release is just `closeSync`. Unlinking is
+ * The lock file is NEVER unlinked — release is just `close()`. Unlinking is
  * what let the old `release()` (which had no ownership check) remove a
  * *successor's* lock; with the fd as the lock there is nothing to mis-delete.
  * The lock file is gitignored, so leaving it behind is free.
@@ -147,16 +148,16 @@ export async function acquireCheckoutLock(
   mkdirSync(dirname(lockPath), { recursive: true });
   // "a" (append), never "w": truncating would clobber the pid a live holder
   // wrote. The fd is ours alone; the flock below decides who owns the lock.
-  const fd = openSync(lockPath, "a");
+  const lock = adoptFd(openSync(lockPath, "a"));
 
   for (;;) {
-    if (flockTry(fd)) {
+    if (flockTry(lock.fd)) {
       // Safe to rewrite only now: we hold the lock, so no other holder's pid can
       // be clobbered. Truncate first so the file stays one line forever instead
       // of growing by a pid per build.
-      ftruncateSync(fd, 0);
-      writeSync(fd, `${process.pid}\n`);
-      return makeRelease(fd);
+      ftruncateSync(lock.fd, 0);
+      writeSync(lock.fd, `${process.pid}\n`);
+      return makeRelease(lock);
     }
 
     const now = Date.now();
@@ -188,7 +189,7 @@ export async function acquireCheckoutLock(
 
     const timeout = timeoutMessage(clock, now, { capMs, stallMs });
     if (timeout !== null) {
-      closeSync(fd);
+      lock.close();
       throw new Error(
         `Timed out waiting for the ${opts.what} lock at ${lockPath}` +
           `${describeHolder(clock.pid)}: ${timeout}`,
@@ -326,12 +327,12 @@ function seconds(ms: number): string {
  * as an exit hook too so a holder that never calls it still releases at exit —
  * though for the crash case the kernel has already done it.
  */
-function makeRelease(fd: number): () => void {
+function makeRelease(fd: OwnedFd): () => void {
   let released = false;
   const release = (): void => {
     if (released) return;
     released = true;
-    closeSync(fd);
+    fd.close();
   };
   process.on("exit", release);
   return release;

@@ -1,6 +1,10 @@
-import { closeSync, mkdirSync, openSync, renameSync, rmSync } from "node:fs";
+import { mkdirSync, renameSync, rmSync } from "node:fs";
 import { readdirSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dlopen } from "bun:ffi";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import { flockTry, waitForFlock } from "@plugins/packages/plugins/flock/core";
 import {
   joinAppPath,
@@ -152,19 +156,19 @@ function liveTickets(dir: AppPath, before?: string): string[] {
  * owner left (between its unlink and its close) or died — reap the file.
  */
 function isLive(path: AppPath): boolean {
-  let fd: number;
+  let lock: OwnedFd;
   try {
-    fd = openSync(path, "r");
+    lock = openOwnedFd(path, "r");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
     throw err;
   }
   try {
-    if (!flockTry(fd)) return true;
+    if (!flockTry(lock.fd)) return true;
     rmSync(path, { force: true });
     return false;
   } finally {
-    closeSync(fd);
+    lock.close();
   }
 }
 
@@ -185,9 +189,9 @@ export function createTicketLine(dir: AppPath): TicketLine {
       const name = ticketName(place);
       const path = joinAppPath(dir, name);
       const tmp = joinAppPath(dir, `.${name}.tmp`);
-      const fd = openSync(tmp, "wx");
-      if (!flockTry(fd)) {
-        closeSync(fd);
+      const lock = openOwnedFd(tmp, "wx");
+      if (!flockTry(lock.fd)) {
+        lock.close();
         rmSync(tmp, { force: true });
         throw new Error(`ticket-line(${dir}): could not lock a fresh ticket`);
       }
@@ -202,7 +206,7 @@ export function createTicketLine(dir: AppPath): TicketLine {
           // Unlink first, then close: the close is what wakes the waiter behind
           // us, and by then the file is already gone from its next scan.
           rmSync(path, { force: true });
-          closeSync(fd);
+          lock.close();
         },
       };
 

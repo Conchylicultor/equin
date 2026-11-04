@@ -3,14 +3,8 @@ import {
   asAppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  chmodSync,
-  closeSync,
-  mkdirSync,
-  openSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import {
   readdirSync,
   readFileSync,
@@ -179,14 +173,14 @@ function spawnPlain(
   dir: AppPath,
   env: Record<string, string | undefined>,
 ): Child {
-  const out = openSync(joinAppPath(dir, OUTPUT), "w", 0o600);
+  const out = openOwnedFd(joinAppPath(dir, OUTPUT), "w", 0o600);
   try {
     const child = Bun.spawn([bundledClaudeBin(), ...args], {
       cwd: dir,
       env,
       stdin: "pipe",
-      stdout: out,
-      stderr: out,
+      stdout: out.fd,
+      stderr: out.fd,
     });
     return {
       exited: child.exited,
@@ -199,7 +193,7 @@ function spawnPlain(
       },
     };
   } finally {
-    closeSync(out);
+    out.close();
   }
 }
 

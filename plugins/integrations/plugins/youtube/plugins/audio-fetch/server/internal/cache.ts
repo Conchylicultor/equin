@@ -2,14 +2,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  closeSync,
-  mkdirSync,
-  openSync,
-  renameSync,
-  utimesSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, renameSync, utimesSync, writeFileSync } from "node:fs";
 import {
   existsSync,
   readFileSync,
@@ -17,6 +10,10 @@ import {
 import { dirname } from "node:path";
 import { z } from "zod";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 
 /**
  * The layout of one cache dir (the declared `cache/youtube-audio`, or a test's
@@ -80,13 +77,13 @@ export function writeMeta(
   renameSync(tmp, path);
 }
 
-/** Take a video's host flock without waiting: the held fd, or `null` when another holds it. */
-export function tryLockVideo(dir: AppPath, videoId: string): number | null {
+/** Take a video's host flock without waiting: its held descriptor, or `null` when another holds it. */
+export function tryLockVideo(dir: AppPath, videoId: string): OwnedFd | null {
   const path = lockPath(dir, videoId);
   mkdirSync(dirname(path), { recursive: true });
-  const fd = openSync(path, "a");
-  if (flockTry(fd)) return fd;
-  closeSync(fd);
+  const lock = openOwnedFd(path, "a");
+  if (flockTry(lock.fd)) return lock;
+  lock.close();
   return null;
 }
 
@@ -102,7 +99,7 @@ export async function waitLockVideo(
   dir: AppPath,
   videoId: string,
   onWait: () => void,
-): Promise<number> {
+): Promise<OwnedFd> {
   const first = tryLockVideo(dir, videoId);
   if (first !== null) return first;
   onWait();
@@ -113,7 +110,7 @@ export async function waitLockVideo(
   }
 }
 
-/** Release a lock taken with {@link tryLockVideo} / {@link waitLockVideo}. */
-export function releaseLockVideo(fd: number): void {
-  closeSync(fd);
+/** Release a lock taken with {@link tryLockVideo} / {@link waitLockVideo}; a second release throws. */
+export function releaseLockVideo(lock: OwnedFd): void {
+  lock.close();
 }

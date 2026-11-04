@@ -228,7 +228,7 @@ can blind or deafen all of them at once.
 
 - Description: Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
 - Core:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/cli/cli-name` ×3
     - `infra/host-fs/user-path` ×3
     - `packages/timed-fs` ×3
@@ -238,6 +238,7 @@ can blind or deafen all of them at once.
     - `infra/launcher/env-names` ×2
     - `infra/namespace` ×2
     - `infra/paths` ×2
+    - `packages/owned-fd` ×2
     - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
     - `infra/paths/repo-root.REPO_ROOT`
   - Exports (types):

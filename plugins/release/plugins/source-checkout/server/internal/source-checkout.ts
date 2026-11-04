@@ -1,4 +1,4 @@
-import { closeSync, fstatSync, mkdirSync, openSync, unlinkSync } from "node:fs";
+import { fstatSync, mkdirSync, unlinkSync } from "node:fs";
 import {
   existsSync,
   readdirSync,
@@ -6,6 +6,10 @@ import {
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { rm } from "node:fs/promises";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import { basename, dirname, join, resolve } from "node:path";
 import {
   MAIN_COMPOSITION_ID,
@@ -102,7 +106,7 @@ export async function acquireReleaseCheckout(opts: {
     );
   }
   const lockPath = lockPathFor(root);
-  const fd = takeOwnLock(lockPath);
+  const lock = takeOwnLock(lockPath);
 
   try {
     // `infra/worktree`'s add: no `git worktree add`, which dies beside another
@@ -119,10 +123,10 @@ export async function acquireReleaseCheckout(opts: {
     // too is printed and left to the next release's sweep.
     try {
       await removeCheckoutArtifacts(sourceRoot, root);
-      dropLock(lockPath, fd);
+      dropLock(lockPath, lock);
     } catch (cleanupErr) {
-      flockRelease(fd);
-      closeSync(fd);
+      flockRelease(lock.fd);
+      lock.close();
       console.warn(
         `  Could not clean up the failed release checkout ${root} (the next release's sweep retries): ${String(cleanupErr)}`,
       );
@@ -144,11 +148,11 @@ export async function acquireReleaseCheckout(opts: {
       } catch (err) {
         // Keep the lock file (the sweep keys on it) but release the lock, so
         // the next release's sweep sees a leaked checkout and retries.
-        flockRelease(fd);
-        closeSync(fd);
+        flockRelease(lock.fd);
+        lock.close();
         throw err;
       }
-      dropLock(lockPath, fd);
+      dropLock(lockPath, lock);
     },
   };
 }
@@ -179,20 +183,20 @@ export async function sweepLeakedReleaseCheckouts(
   for (const name of [...names].sort()) {
     const root = joinAppPath(dir, name);
     const lockPath = lockPathFor(root);
-    const fd = tryTakeLock(lockPath);
-    if (fd === null) {
+    const lock = tryTakeLock(lockPath);
+    if (lock === null) {
       result.live.push(name);
       continue;
     }
     try {
       await removeCheckoutArtifacts(repoRoot, root);
     } catch (err) {
-      flockRelease(fd);
-      closeSync(fd);
+      flockRelease(lock.fd);
+      lock.close();
       result.failed.push({ name, error: String(err) });
       continue;
     }
-    dropLock(lockPath, fd);
+    dropLock(lockPath, lock);
     result.removed.push(name);
   }
   return result;
@@ -232,11 +236,11 @@ function realOrSelf(path: AppPath): string {
  * nobody else can see. So a won flock only counts if the path still names the
  * inode we locked; otherwise it is dropped and reported as not taken.
  */
-function tryTakeLock(lockPath: AppPath): number | null {
+function tryTakeLock(lockPath: AppPath): OwnedFd | null {
   // "a", never "w": opening must not truncate anything a holder wrote.
-  const fd = openSync(lockPath, "a");
-  if (!flockTry(fd)) {
-    closeSync(fd);
+  const lock = openOwnedFd(lockPath, "a");
+  if (!flockTry(lock.fd)) {
+    lock.close();
     return null;
   }
   let onPath: number | null;
@@ -246,12 +250,12 @@ function tryTakeLock(lockPath: AppPath): number | null {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     onPath = null;
   }
-  if (onPath !== fstatSync(fd).ino) {
-    flockRelease(fd);
-    closeSync(fd);
+  if (onPath !== fstatSync(lock.fd).ino) {
+    flockRelease(lock.fd);
+    lock.close();
     return null;
   }
-  return fd;
+  return lock;
 }
 
 /**
@@ -260,10 +264,10 @@ function tryTakeLock(lockPath: AppPath): number | null {
  * file in the instant between our open and our flock) — retried a few times,
  * then a loud failure.
  */
-function takeOwnLock(lockPath: AppPath): number {
+function takeOwnLock(lockPath: AppPath): OwnedFd {
   for (let attempt = 0; attempt < 3; attempt++) {
-    const fd = tryTakeLock(lockPath);
-    if (fd !== null) return fd;
+    const lock = tryTakeLock(lockPath);
+    if (lock !== null) return lock;
   }
   throw new Error(
     `could not take the release checkout lock ${lockPath}: another process holds it, ` +
@@ -272,14 +276,14 @@ function takeOwnLock(lockPath: AppPath): number {
 }
 
 /** Unlink the lock file (while still holding it), then release and close. */
-function dropLock(lockPath: AppPath, fd: number): void {
+function dropLock(lockPath: AppPath, lock: OwnedFd): void {
   try {
     unlinkSync(lockPath);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }
-  flockRelease(fd);
-  closeSync(fd);
+  flockRelease(lock.fd);
+  lock.close();
 }
 
 /** The checkout really is at `sha` — the whole point of pinning. */

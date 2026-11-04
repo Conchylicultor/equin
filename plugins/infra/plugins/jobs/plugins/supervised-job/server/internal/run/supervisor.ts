@@ -1,6 +1,7 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { basename } from "node:path";
-import { closeSync, mkdirSync, openSync } from "node:fs";
+import { mkdirSync } from "node:fs";
+import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import {
   defineFileWatcher,
@@ -602,14 +603,14 @@ export async function startSupervisedRun(
     // Append, not truncate: `"a"` also creates the file, so the transcript exists
     // before the child does and the tail has something to open from the first
     // pump onwards.
-    const fd = openSync(transcriptPath, "a");
+    const fd = openOwnedFd(transcriptPath, "a");
     try {
       const shim = supervisedArgv(opts.argv, terminalPath);
       const proc = Bun.spawn(shim.argv, {
         cwd: opts.cwd,
         stdin: "ignore",
-        stdout: fd,
-        stderr: fd,
+        stdout: fd.fd,
+        stderr: fd.fd,
         detached: true,
         env: { ...process.env, ...shim.env, ...opts.envOverrides },
       });
@@ -618,7 +619,7 @@ export async function startSupervisedRun(
       // The child holds its own duplicate of the descriptor, so the parent's copy
       // has done its job the moment the spawn returns. Closing it in `finally`
       // means a failed spawn does not leak one either.
-      closeSync(fd);
+      fd.close();
     }
 
     // Cap this kind's artifacts now that the newest set exists — the same

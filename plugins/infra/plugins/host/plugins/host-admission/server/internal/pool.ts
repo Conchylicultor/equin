@@ -1,6 +1,9 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { dlopen } from "bun:ffi";
-import { closeSync, openSync } from "node:fs";
+import {
+  openOwnedFd,
+  type OwnedFd,
+} from "@plugins/packages/plugins/owned-fd/core";
 import {
   createHostSemaphore,
   type AcquireHooks,
@@ -30,17 +33,17 @@ const LOCK_NB = 4;
 // truncates a lock file a holder may be using; a non-zero flock return means
 // EWOULDBLOCK ⇒ someone else holds it.
 function slotHeld(slotPath: AppPath): boolean {
-  let fd: number;
+  let fd: OwnedFd;
   try {
-    fd = openSync(slotPath, "a");
+    fd = openOwnedFd(slotPath, "a");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return false; // no file ⇒ never held
     throw err;
   }
   try {
-    return ffi.flock(fd, LOCK_EX | LOCK_NB) !== 0;
+    return ffi.flock(fd.fd, LOCK_EX | LOCK_NB) !== 0;
   } finally {
-    closeSync(fd); // releases the flock if the probe happened to acquire it
+    fd.close(); // releases the flock if the probe happened to acquire it
   }
 }
 

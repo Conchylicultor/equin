@@ -1,5 +1,6 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { closeSync, fstatSync, openSync, readSync } from "node:fs";
+import { fstatSync, openSync, readSync } from "node:fs";
+import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
 import {
   existsSync,
   readFileSync,
@@ -50,18 +51,18 @@ export function screenLine(line: string): string {
 /** The last `lines` lines of a (possibly large) log, reading only its end. */
 export function logTail(path: string, lines = DEP_LOG_TAIL_LINES): string[] {
   if (!existsSync(path)) return [];
-  const fd = openSync(path, "r");
+  const fd = adoptFd(openSync(path, "r"));
   try {
-    const size = fstatSync(fd).size;
+    const size = fstatSync(fd.fd).size;
     const length = Math.min(size, 16 * 1024);
     const buf = Buffer.alloc(length);
-    readSync(fd, buf, 0, length, size - length);
+    readSync(fd.fd, buf, 0, length, size - length);
     const all = buf.toString("utf8").split("\n").map(screenLine);
     // A cut at the front may split a line; drop that partial one.
     if (length < size) all.shift();
     return all.filter((l) => l.trim() !== "").slice(-lines);
   } finally {
-    closeSync(fd);
+    fd.close();
   }
 }
 
