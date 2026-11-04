@@ -358,12 +358,13 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `apps` ×39
     - `conversations` ×15
     - `page` ×15
-    - `infra` ×13
     - `tasks` ×13
+    - `infra` ×12
     - `active-data` ×8
     - `debug` ×7
-    - `database` ×5
     - `primitives` ×4
+    - `database` ×3
+    - `network` ×3
     - `reports` ×2
     - `stats` ×2
     - `apps-core/app-usage`
@@ -386,7 +387,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `snapshotWatermark`
 - Sub-plugins:
   - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
-  - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations…
   - **`client-tools`** — Postgres client tools (pg_dump, pg_restore) built from the same release as the embedded server: pgClientBin resolves the vendored binary, never the PATH.
   - **`connection`** — Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds…
   - **`db-test-fixture`** — Shared throwaway-database fixture for DB-backed test suites.
@@ -396,7 +396,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
   - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
   - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the base DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
   - **`fork-point`** — Reads when this database was forked from another (databaseForkedAt): the instant the fork stamped on it, or null for a database never forked.
-  - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a…
   - **`migrations`** — DDL lifecycle: migration runner and SQL files.
   - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
   - **`pglite`** (excluded) — The PGlite database driver: provides the DatabaseDriver host service with Postgres compiled to WASM, in memory, for a host without the computer's Postgres cluster (the browser composition, the…

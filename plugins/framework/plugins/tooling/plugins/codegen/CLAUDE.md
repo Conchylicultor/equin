@@ -176,8 +176,8 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `config_v2/ledger` ×2
     - `framework/tooling/boundaries` ×2
     - `framework/tooling/format` ×2
-    - `packages/macrotask-yield` ×2
     - `network/live/resource-protocol` ×2
+    - `packages/macrotask-yield` ×2
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
     - `framework/tooling/guards/agent-policy.agentPolicySettings`
     - `framework/tooling/import-closure.importClosures`

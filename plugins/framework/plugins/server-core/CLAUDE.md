@@ -453,10 +453,10 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `framework/plugin-id.pluginOfNode`
     - `framework/plugin-loader.computeLoadWaves`
     - `framework/plugin-loader.topoSortPlugins`
-    - `network/live/resource-runtime.createResourceRuntime`
-    - `network/live/resource-runtime.ResourceGuardError`
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `network/live/resource-protocol.RESOURCE_HTTP_ROUTE`
+    - `network/live/resource-runtime.createResourceRuntime`
+    - `network/live/resource-runtime.ResourceGuardError`
     - `packages/string-hash.hash64`
   - Exports (types):
     - `BootJournalEntry`

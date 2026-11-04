@@ -125,14 +125,14 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
 
 - Web:
   - Uses:
+    - `network/live/live-state.ensureNotificationsClient`
+    - `network/live/live-state.NotificationsProvider`
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit`
     - `primitives/css/ui-kit.Button`
     - `primitives/dom/element-size/resize-loop-trace.installResizeLoopTrace`
-    - `network/live/live-state.ensureNotificationsClient`
-    - `network/live/live-state.NotificationsProvider`
     - `primitives/networking.TransportProvider`
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/networking/request-guard.allowAssetRoute`

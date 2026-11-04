@@ -2082,7 +2082,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `Editor.BlockMenuItem` ← `page.open-as-page`
   - Contributes: `IdKinds.Kind` "block"
   - Uses: 92 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×6
+    - `network/live/live-state` ×6
     - `primitives/text-editor/caret-trigger` ×5
     - `infra/endpoints` ×4
     - `primitives/css/spacing` ×4
@@ -2092,10 +2092,10 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `primitives/persistent-draft` ×4
     - `primitives/slot-render` ×4
     - `primitives/undo-redo` ×4
+    - `network/live/optimistic-mutation` ×3
     - `primitives/css/control-panel` ×3
     - `primitives/css/coords` ×3
     - `primitives/multi-select` ×3
-    - `primitives/optimistic-mutation` ×3
     - `primitives/text-editor/caret-motion` ×3
     - `reorder` ×3
     - `primitives/latest-ref` ×2

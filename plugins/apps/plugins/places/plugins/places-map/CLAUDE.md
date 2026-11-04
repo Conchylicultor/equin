@@ -469,8 +469,8 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `map` ×9
     - `apps/places/places-core` ×8
     - `conversations/agent-thread` ×8
+    - `network/live/live-state` ×6
     - `primitives/collapsible` ×6
-    - `primitives/live-state` ×6
     - `network/live` ×5
     - `primitives/css/ui-kit` ×4
     - `primitives/overlay/image-viewer` ×4

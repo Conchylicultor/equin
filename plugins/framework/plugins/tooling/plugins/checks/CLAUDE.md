@@ -488,7 +488,6 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`host-budget`**
   - **`host-pools-declared`**
   - **`inherited-theme-defaults-scoped`** [exempt]
-  - **`keyed-resource-scope`** [exempt]
   - **`lint-directives-stable`**
   - **`migration-hashes-unique`** [exempt]
   - **`migration-metadata-consistent`**

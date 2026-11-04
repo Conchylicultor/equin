@@ -14,12 +14,12 @@
     - `debug/profiling.Profiling`
     - `debug/profiling.useProfilingContext`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/data-table.ColumnDef`
     - `primitives/data-table.DataTable`
-    - `network/live/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Server:
   - Contributes: `resource.declare` "profiling.boot"

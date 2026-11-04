@@ -803,7 +803,7 @@ with an empty route.
   - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `primitives/slot-render` ×4
-    - `primitives/live-state` ×3
+    - `network/live/live-state` ×3
     - `primitives/css/scroll` ×2
     - `primitives/link-gesture` ×2
     - `primitives/adaptive-bar.AdaptiveBar`

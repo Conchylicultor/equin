@@ -2065,7 +2065,7 @@ list, table and `primitives/tree` share it.
     - `network/live` ×21
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
-    - `primitives/live-state` ×6
+    - `network/live/live-state` ×6
     - `primitives/slot-render` ×5
     - `primitives/css/control-panel` ×4
     - `primitives/collapsible` ×3

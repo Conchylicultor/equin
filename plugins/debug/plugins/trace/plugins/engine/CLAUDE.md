@@ -238,7 +238,6 @@ expandable JSON.
     - `database.db`
     - `database/admin.ExcludeFromBackup`
     - `database/admin.ExcludeFromFork`
-    - `database/change-feed.defineChangeProducer`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defaultRandom`
@@ -247,6 +246,7 @@ expandable JSON.
     - `infra/host/duress/shed.ShedSummary`
     - `infra/retention.defineRetention`
     - `network/live.serveCollection`
+    - `network/live/change-feed.defineChangeProducer`
     - `reports/engine.recordReport`
   - DB schema: `plugins/debug/plugins/trace/plugins/engine/server/internal/tables.ts`
   - Exports (types):
