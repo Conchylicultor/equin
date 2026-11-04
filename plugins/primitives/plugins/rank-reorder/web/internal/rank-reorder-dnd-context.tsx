@@ -3,13 +3,12 @@ import {
   DndContext,
   DragOverlay,
   MeasuringStrategy,
-  PointerSensor,
   pointerWithin,
-  useSensor,
   useSensors,
   type DragEndEvent,
   type PointerSensorOptions,
 } from "@dnd-kit/core";
+import { useChromePointerSensor } from "@plugins/primitives/plugins/sortable-list/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export interface RankReorderDndContextProps {
@@ -48,7 +47,7 @@ export function RankReorderDndContext({
 }: RankReorderDndContextProps) {
   // Module-level options: `useSensor` memoizes on the object, so an inline
   // literal would mint new sensors (and row listeners) on every render.
-  const sensors = useSensors(useSensor(PointerSensor, POINTER_SENSOR_OPTIONS));
+  const sensors = useSensors(useChromePointerSensor(POINTER_SENSOR_OPTIONS));
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const overlayNode = activeId && dragOverlay ? dragOverlay(activeId) : null;

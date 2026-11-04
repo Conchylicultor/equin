@@ -1,5 +1,6 @@
 import { Bar } from "@plugins/primitives/plugins/bar/web";
-import { useContext, useMemo, type ReactNode } from "react";
+import { useContext, useMemo, type MouseEvent, type ReactNode } from "react";
+import { isChromeGesture } from "@plugins/primitives/plugins/dom/plugins/gesture-origin/web";
 import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
@@ -193,6 +194,11 @@ export function PaneChrome({
   const { contentOwnsTopChrome, leadingControl } =
     useContext(SurfaceChromeContext);
   const doClose = pane.useClose();
+  // Only the header's own double-click maximizes: not one bubbled through React
+  // from a popover opened in it, nor one picking a word in its text entry.
+  const onHeaderDoubleClick = (e: MouseEvent) => {
+    if (isChromeGesture(e)) layoutCtx?.onDoubleClickHeader();
+  };
   const doBack = pane.useBack();
   const titleValue = useMemo<PaneTitleValue>(
     () => ({ pane: pane._internal, entry }),
@@ -223,7 +229,7 @@ export function PaneChrome({
         floatingHeader && "transition-colors",
         atTop && "border-transparent",
       )}
-      onDoubleClick={layoutCtx?.onDoubleClickHeader}
+      onDoubleClick={onHeaderDoubleClick}
       {...layoutCtx?.dragHandleProps}
     >
       {showLeading && leadingControl}
@@ -292,7 +298,7 @@ export function PaneChrome({
                 "h-chrome-pane-card gap-2xs px-chrome-pane-card text-toolbar-foreground",
                 hoverRevealGroup,
               )}
-              onDoubleClick={layoutCtx?.onDoubleClickHeader}
+              onDoubleClick={onHeaderDoubleClick}
             >
               <ControlSizeProvider size="sm">
                 {showLeading && leadingControl}

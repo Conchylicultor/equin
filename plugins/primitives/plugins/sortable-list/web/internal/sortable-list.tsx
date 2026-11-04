@@ -3,7 +3,6 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
   closestCenter,
   useSensor,
   useSensors,
@@ -18,6 +17,7 @@ import {
   horizontalListSortingStrategy,
   type SortingStrategy,
 } from "@dnd-kit/sortable";
+import { useChromePointerSensor } from "./chrome-pointer-sensor";
 
 export interface SortableListProps {
   items: string[];
@@ -53,6 +53,9 @@ export interface SortableListProps {
   children: ReactNode;
 }
 
+/** 4px before a press becomes a drag, so a click on an item still clicks. */
+const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 4 } };
+
 /** Cross-axis margin (px) a release must clear past the strip to count as a tear-off. */
 const TEAR_OFF_MARGIN = 24;
 
@@ -74,9 +77,7 @@ export function SortableList({
     (orientation === "horizontal"
       ? horizontalListSortingStrategy
       : verticalListSortingStrategy);
-  const pointerSensor = useSensor(PointerSensor, {
-    activationConstraint: { distance: 4 },
-  });
+  const pointerSensor = useChromePointerSensor(POINTER_SENSOR_OPTIONS);
   const keyboardSensor = useSensor(KeyboardSensor, {
     coordinateGetter: sortableKeyboardCoordinates,
   });

@@ -102,7 +102,9 @@ It must NOT import `tree` or `data-view` — the dependency graph stays a DAG
 
 - Description: Rank-based drag-reorder primitive. Flat lists and grids: a sortable RankReorderProvider (one SortableContext, the dragged row follows the pointer and its group's rows slide, drops resolved to a Rank via computeFlatReorder, group-by aware) and useRankSortableItem per row. The tree: RankReorderDndContext + useRankReorderItem (indicator-line before/after droppables and a drag chip). Depends only on rank + dnd-kit.
 - Web:
-  - Uses: `primitives/css/text.Text`
+  - Uses:
+    - `primitives/css/text.Text`
+    - `primitives/sortable-list.useChromePointerSensor`
   - Exports (types):
     - `RankReorderDndContextProps`
     - `RankReorderItem`

@@ -14,13 +14,12 @@ import { flushSync } from "react-dom";
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
   pointerWithin,
-  useSensor,
   useSensors,
   type CollisionDetection,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { useChromePointerSensor } from "@plugins/primitives/plugins/sortable-list/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -398,6 +397,9 @@ type BlockEditorProps = {
 // `props.ref`: a ref reachable through an object taints every read of that object
 // during render for `react-hooks/refs`, so `props.pageId` would be flagged too.
 // Pulled out here, `props` is plain data and `ref` is forwarded untouched.
+/** 4px before a press on a handle becomes a drag. */
+const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 4 } };
+
 export function BlockEditor({ ref, ...props }: BlockEditorProps) {
   if (props.persist === false) {
     return (
@@ -1753,9 +1755,7 @@ function SelectionLayer({
 
   // ---- Drag-and-drop (single block, or the whole selection) ----------------
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-  );
+  const sensors = useSensors(useChromePointerSensor(POINTER_SENSOR_OPTIONS));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   // External (OS / cross-app) drag state, kept separate from the dnd-kit

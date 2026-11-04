@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-dom-gesture-origin",
+  "description": "Whether a gesture a chrome surface caught is its own: isChromeGesture(event).",
+  "private": true,
+  "version": "0.0.1"
+}

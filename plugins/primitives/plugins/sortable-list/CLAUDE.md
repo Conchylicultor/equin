@@ -48,9 +48,10 @@ items. Importing this barrel for an item would pull dnd-kit into that bundle.
 
 ## Plugin reference
 
-- Description: Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components, plus DeferredSortableList / DeferredSortableHost for a list draggable only in a mode (no drag machinery mounted while disabled, items never remounted by the toggle; its items are deferred-item's DeferredSortableItem, which imports no dnd-kit).
+- Description: Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components, its pointer sensor useChromePointerSensor (activates only on a press that is the handle's own — not one bubbled from a portaled popover, not one in text entry — and is the one every drag primitive mounts), plus DeferredSortableList / DeferredSortableHost for a list draggable only in a mode (no drag machinery mounted while disabled, items never remounted by the toggle; its items are deferred-item's DeferredSortableItem, which imports no dnd-kit).
 - Web:
   - Uses:
+    - `primitives/dom/gesture-origin.isChromeGesture`
     - `primitives/sortable-list/deferred-item.ItemBindingProvider`
     - `primitives/sortable-list/deferred-item.ItemBindingStore`
     - `primitives/sortable-list/deferred-item.useItemBindingStore`
@@ -68,6 +69,7 @@ items. Importing this barrel for an item would pull dnd-kit into that bundle.
     - `rectSortingStrategy`
     - `SortableItem`
     - `SortableList`
+    - `useChromePointerSensor`
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-bar`
@@ -76,8 +78,10 @@ items. Importing this barrel for an item would pull dnd-kit into that bundle.
     - `config_v2/fields`
     - `fields/list/config`
     - `layouts/miller`
+    - `page/editor`
     - `primitives/data-view`
     - `primitives/data-view/view-core`
+    - `primitives/rank-reorder`
     - `reorder/editor`
     - `tasks/task-draft-form`
 - Exemptions:

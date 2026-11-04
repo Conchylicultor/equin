@@ -2,9 +2,7 @@ import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   DndContext,
   MeasuringStrategy,
-  PointerSensor,
   closestCenter,
-  useSensor,
   useSensors,
   type CollisionDetection,
   type DragEndEvent,
@@ -12,6 +10,7 @@ import {
   type MeasuringConfiguration,
   type PointerSensorOptions,
 } from "@dnd-kit/core";
+import { useChromePointerSensor } from "@plugins/primitives/plugins/sortable-list/web";
 import {
   SortableContext,
   rectSortingStrategy,
@@ -101,7 +100,7 @@ export function RankReorderProvider({
   // Module-level sensor options: `useSensor` memoizes on the options object, so
   // an inline literal would mint new sensors — and so new activator listeners
   // on every sortable row — on every render.
-  const sensors = useSensors(useSensor(PointerSensor, POINTER_SENSOR_OPTIONS));
+  const sensors = useSensors(useChromePointerSensor(POINTER_SENSOR_OPTIONS));
   const [activeId, setActiveId] = useState<string | null>(null);
   const ordered = useMemo(() => sortableOrder(items), [items]);
   // The sortable context and the slide strategy are keyed on what they read —

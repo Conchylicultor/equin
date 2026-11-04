@@ -479,6 +479,7 @@ export const browserHost = {
     "primitives.dom.dom-selection",
     "primitives.dom.element-size",
     "primitives.dom.element-size.resize-loop-trace",
+    "primitives.dom.gesture-origin",
     "primitives.dom.in-view",
     "primitives.dom.layout-host",
     "primitives.dom.movable",

@@ -2081,7 +2081,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `Editor.TurnInto` ×2
     - `Editor.BlockMenuItem` ← `page.open-as-page`
   - Contributes: `IdKinds.Kind` "block"
-  - Uses: 91 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 92 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×6
     - `primitives/text-editor/caret-trigger` ×5
     - `infra/endpoints` ×4
@@ -2121,6 +2121,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `primitives/scope/dom-scope.defineDomScope`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/select-scope.ContentScope`
+    - `primitives/sortable-list.useChromePointerSensor`
     - `primitives/sync-status.useReportSync`
     - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
     - `primitives/text-editor/token-extension/node.TokenPastePlugin`

@@ -36768,7 +36768,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
         - Contributes: `IdKinds.Kind` "block"
-        - Uses: 91 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 92 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `primitives/live-state` ×6
           - `primitives/text-editor/caret-trigger` ×5
           - `infra/endpoints` ×4
@@ -36808,6 +36808,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/scope/dom-scope.defineDomScope`
           - `primitives/scope/scoped-store.defineScopedStore`
           - `primitives/select-scope.ContentScope`
+          - `primitives/sortable-list.useChromePointerSensor`
           - `primitives/sync-status.useReportSync`
           - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
           - `primitives/text-editor/token-extension/node.TokenPastePlugin`
@@ -43958,6 +43959,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `claimsResizeLoopError`
                   - `installResizeLoopTrace`
                   - `resizeLoopReportSink`
+        - **`gesture-origin`** — Whether a pointer gesture a chrome surface caught (a drag handle's press, a header's double-click) is its own: isChromeGesture(event) — false for an event bubbled through React from a portal (a popover opened from the surface, outside it in the DOM) and for one landing in text entry (input, textarea, select, editable region), where a press-and-drag selects text and a double-click picks a word. Read by the sortable-list pointer sensor and the pane header's double-click.
+          - Cross-plugin:
+            - Imported by:
+              - `primitives/pane`
+              - `primitives/sortable-list`
+          - Web:
+            - Exports (values): `isChromeGesture`
         - **`in-view`** — The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element).
           - Web:
             - Uses: `primitives/latest-ref.useEventCallback`
@@ -46561,7 +46569,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `welcomePane.Actions` "title" → `PaneTitleItem`
           - `workflow-node.actions` "title" → `PaneTitleItem`
           - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-        - Uses: 39 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Uses: 40 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `primitives/css/ui-kit` ×4
           - `primitives/slot-render` ×4
           - `primitives/live-state` ×3
@@ -46581,6 +46589,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/yield.yieldClass`
+          - `primitives/dom/gesture-origin.isChromeGesture`
           - `primitives/dom/in-view.useInView`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/icon-button.IconButton`
@@ -47030,7 +47039,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withRank`
     - **`rank-reorder`** — Rank-based drag-reorder primitive. Flat lists and grids: a sortable RankReorderProvider (one SortableContext, the dragged row follows the pointer and its group's rows slide, drops resolved to a Rank via computeFlatReorder, group-by aware) and useRankSortableItem per row. The tree: RankReorderDndContext + useRankReorderItem (indicator-line before/after droppables and a drag chip). Depends only on rank + dnd-kit.
       - Web:
-        - Uses: `primitives/css/text.Text`
+        - Uses:
+          - `primitives/css/text.Text`
+          - `primitives/sortable-list.useChromePointerSensor`
         - Exports (types):
           - `RankReorderDndContextProps`
           - `RankReorderItem`
@@ -47503,9 +47514,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes`
           - `stats`
           - `wish`
-    - **`sortable-list`** — Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components, plus DeferredSortableList / DeferredSortableHost for a list draggable only in a mode (no drag machinery mounted while disabled, items never remounted by the toggle; its items are deferred-item's DeferredSortableItem, which imports no dnd-kit).
+    - **`sortable-list`** — Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components, its pointer sensor useChromePointerSensor (activates only on a press that is the handle's own — not one bubbled from a portaled popover, not one in text entry — and is the one every drag primitive mounts), plus DeferredSortableList / DeferredSortableHost for a list draggable only in a mode (no drag machinery mounted while disabled, items never remounted by the toggle; its items are deferred-item's DeferredSortableItem, which imports no dnd-kit).
       - Web:
         - Uses:
+          - `primitives/dom/gesture-origin.isChromeGesture`
           - `primitives/sortable-list/deferred-item.ItemBindingProvider`
           - `primitives/sortable-list/deferred-item.ItemBindingStore`
           - `primitives/sortable-list/deferred-item.useItemBindingStore`
@@ -47523,6 +47535,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `rectSortingStrategy`
           - `SortableItem`
           - `SortableList`
+          - `useChromePointerSensor`
       - Cross-plugin:
         - Imported by:
           - `apps-core/tab-bar`
@@ -47531,8 +47544,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2/fields`
           - `fields/list/config`
           - `layouts/miller`
+          - `page/editor`
           - `primitives/data-view`
           - `primitives/data-view/view-core`
+          - `primitives/rank-reorder`
           - `reorder/editor`
           - `tasks/task-draft-form`
       - Exemptions:
