@@ -1,18 +1,22 @@
-import { existsSync } from "node:fs";
-import { cp, stat } from "node:fs/promises";
+import { cp } from "node:fs/promises";
 import { join } from "node:path";
 import { getConfig } from "@plugins/config_v2/server";
 import { legacyAuthDir } from "@plugins/infra/plugins/secrets/data-dirs";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
 import type { BackupSourceReport } from "@plugins/backup/core";
 import { PLATFORM_SOURCE_ID, platformSourceConfig } from "../../shared/config";
+import {
+  scanGlob,
+  existsSync,
+  stat,
+} from "@plugins/packages/plugins/timed-fs/core";
 
 async function countFilesAndSize(
   cwd: string,
 ): Promise<{ count: number; sizeBytes: number }> {
   let count = 0;
   let sizeBytes = 0;
-  for await (const rel of new Bun.Glob("**/*").scan({ cwd, onlyFiles: true })) {
+  for await (const rel of scanGlob("**/*", { cwd, onlyFiles: true })) {
     count++;
     const s = await stat(`${cwd}/${rel}`);
     sizeBytes += s.size;

@@ -2,14 +2,16 @@ import {
   constants,
   copyFileSync,
   mkdirSync,
-  readdirSync,
-  realpathSync,
   renameSync,
   rmSync,
-  statSync,
   writeFileSync,
   type Stats,
 } from "node:fs";
+import {
+  readdirSync,
+  realpathSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   joinAppPath,
   type AppPath,

@@ -1,6 +1,7 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { appendFileSync, readFileSync, unlinkSync } from "node:fs";
+import { appendFileSync, unlinkSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { reportsBufferDir } from "@plugins/reports/data-dirs";
 import type { ReportSource } from "@plugins/reports/core";
 

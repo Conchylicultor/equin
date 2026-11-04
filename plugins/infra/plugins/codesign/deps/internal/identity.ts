@@ -1,13 +1,15 @@
 import { X509Certificate, randomBytes } from "node:crypto";
 import {
   chmodSync,
-  existsSync,
   mkdirSync,
-  readFileSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import {
   envName,

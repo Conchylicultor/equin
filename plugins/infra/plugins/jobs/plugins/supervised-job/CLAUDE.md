@@ -746,6 +746,8 @@ construction, and the job and the body it spawns cannot drift apart.
   - Uses:
     - `infra/paths.worktreeArtifacts`
     - `infra/runtime-identity.runtimeNamespace`
+    - `packages/timed-fs.readFileSync`
+    - `packages/timed-fs.statSync`
   - Exports (types):
     - `ExecContext`
     - `RunObservation`

@@ -11,7 +11,8 @@ import {
   rmSync,
   writeSync,
 } from "node:fs";
-import { type FileHandle, open, readdir, stat } from "node:fs/promises";
+import { type FileHandle, open } from "node:fs/promises";
+import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
 import {
   worktreesDir,

@@ -22,7 +22,7 @@ import {
   readFileSync,
   realpathSync,
   statSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   asAppPath,
   appPathParent,

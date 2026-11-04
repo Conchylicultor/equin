@@ -8,7 +8,7 @@
  * frozen after {@link FREEZE_AFTER_MS}, closed after {@link PAGE_ORPHAN_MS}.
  * Every lifetime here is a one-shot deadline reset on use — never a poll.
  */
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { extname, join } from "node:path";
 import type { ServerWebSocket } from "bun";
 import type {

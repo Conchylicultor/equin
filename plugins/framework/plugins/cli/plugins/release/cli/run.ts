@@ -7,15 +7,17 @@ import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
   cpSync,
-  existsSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
-  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  realpathSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative } from "node:path";
 import { Resvg } from "@resvg/resvg-js";

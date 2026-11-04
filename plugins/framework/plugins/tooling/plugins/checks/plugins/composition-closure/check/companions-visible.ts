@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import { buildRegistryGenContext } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";

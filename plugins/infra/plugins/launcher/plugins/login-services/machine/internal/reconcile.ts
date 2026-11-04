@@ -1,5 +1,6 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import {
   holdDep,

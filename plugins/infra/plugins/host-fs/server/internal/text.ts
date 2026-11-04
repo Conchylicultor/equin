@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises";
+import { readFile, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { HOST_FS_TEXT_MAX_BYTES, type HostFsTextResult } from "../../core";
 import { locateHostPath } from "./archive/locate";
 import { readArchiveText } from "./archive/read";

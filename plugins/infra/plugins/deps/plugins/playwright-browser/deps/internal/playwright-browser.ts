@@ -1,4 +1,5 @@
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join, relative, resolve } from "node:path";
 import type {
   Browser,

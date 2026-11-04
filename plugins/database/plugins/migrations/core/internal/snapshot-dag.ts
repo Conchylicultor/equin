@@ -19,7 +19,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readdir } from "fs/promises";
+import { readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   legacySnapshotFiles,

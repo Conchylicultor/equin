@@ -1,4 +1,5 @@
-import { existsSync, rmSync } from "node:fs";
+import { rmSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { localIdentityPaths, machineHost } from "../../deps";
 

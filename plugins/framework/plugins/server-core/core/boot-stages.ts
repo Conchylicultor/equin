@@ -11,7 +11,11 @@ import {
 import { setBootMode, setRegisteringPlugin } from "./boot-mode";
 import { assertHostServices } from "./host-service";
 import { collectContributions } from "./contributions";
-import { profilerStart, recordMemoryCheckpoint } from "./profiler";
+import {
+  LOAD_SPAN_FLOOR_MS,
+  profilerStart,
+  recordMemoryCheckpoint,
+} from "./profiler";
 import {
   assertDbReadsHaveChangeFeed,
   assertServedReadsHaveWatermarkSource,
@@ -210,7 +214,18 @@ async function loadServerPlugins(
   // Collect ALL load failures across every wave and throw once at the end — the
   // operator needs the full list, not just the first plugin to blow up.
   const loadFailures: Array<{ pluginPath: string; error: string }> = [];
-  for (const wave of waves) {
+  for (const [w, wave] of waves.entries()) {
+    // One span per wave, journaled as it OPENS with its plugins: a boot killed
+    // mid-wave (the readiness deadline is a SIGKILL) still says which wave and
+    // which plugins it was importing. Each barrel past LOAD_SPAN_FLOOR_MS gets
+    // a span of its own — the wave's time, attributed.
+    const endWave = profilerStart(
+      `load:wave-${w + 1}`,
+      "load",
+      `Load wave ${w + 1}/${waves.length} (${wave.length} plugins)`,
+      undefined,
+      { members: wave.map((n) => n.pluginPath) },
+    );
     // ── Warm this wave's core barrels BEFORE loading its server barrels ──
     // Waves order plugins so a plugin's server barrel loads after its
     // dependencies' — but that is only HALF the invariant. A plugin's `server`
@@ -229,17 +244,40 @@ async function loadServerPlugins(
     // (In a `bun --compile` release the whole graph is one bundle, so the race
     // cannot occur and `PLUGINS_DIR` may not exist on disk; core-warming simply
     // no-ops via `coreBarrel`.)
+    const took: { plugin: string; ms: number }[] = [];
     const coreLoads = wave.flatMap((n) => {
       const load = coreBarrel(n.entry.pluginPath);
-      return load === null ? [] : [load];
+      return load === null ? [] : [{ pluginPath: n.pluginPath, load }];
     });
-    await Promise.allSettled(coreLoads.map((load) => load()));
+    await Promise.allSettled(
+      coreLoads.map(({ pluginPath, load }) =>
+        timedLoad(
+          `load-core:${pluginPath}`,
+          `${pluginPath} (core)`,
+          pluginPath,
+          load,
+          took,
+        ),
+      ),
+    );
 
     const results = await Promise.allSettled(
       wave.map(
-        (n) => n.entry.loader() as Promise<{ default: ServerPluginDefinition }>,
+        (n) =>
+          timedLoad(
+            `load:${n.pluginPath}`,
+            n.pluginPath,
+            n.pluginPath,
+            n.entry.loader,
+            took,
+          ) as Promise<{ default: ServerPluginDefinition }>,
       ),
     );
+    endWave({
+      slowest: took
+        .sort((a, b) => b.ms - a.ms)
+        .slice(0, WAVE_SLOWEST_JOURNALED),
+    });
     for (let i = 0; i < results.length; i++) {
       const r = results[i]!;
       const node = wave[i]!;
@@ -286,6 +324,33 @@ async function loadServerPlugins(
   recordMemoryCheckpoint("after-import");
   return ordered;
 }
+
+/**
+ * Import one barrel under a `load` span recorded only past
+ * `LOAD_SPAN_FLOOR_MS` — its settle time inside a concurrent wave, so a span
+ * names a barrel that held the wave up, directionally (siblings sharing a
+ * slow import all wait on it).
+ */
+async function timedLoad<T>(
+  id: string,
+  label: string,
+  pluginPath: string,
+  load: () => Promise<T>,
+  took: { plugin: string; ms: number }[],
+): Promise<T> {
+  const end = profilerStart(id, "load", label, pluginPath, {
+    floorMs: LOAD_SPAN_FLOOR_MS,
+    journal: false,
+  });
+  try {
+    return await load();
+  } finally {
+    took.push({ plugin: label, ms: end() });
+  }
+}
+
+/** How many of a wave's slowest imports its journaled span names. */
+const WAVE_SLOWEST_JOURNALED = 3;
 
 // Phase 1 — register: sequential, topo-sorted. Each plugin's `register`
 // array holds Registration tokens returned by helpers like `Mcp.tool`,

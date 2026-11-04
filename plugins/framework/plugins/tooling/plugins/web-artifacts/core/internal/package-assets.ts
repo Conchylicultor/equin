@@ -12,14 +12,11 @@
 // is added or bumped — never recompresses them: their cost follows a change
 // to the package that ships them.
 
+import { copyFileSync, linkSync, mkdirSync, rmSync } from "node:fs";
 import {
-  copyFileSync,
   existsSync,
-  linkSync,
-  mkdirSync,
   readFileSync,
-  rmSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   asAppPath,
   appPathParent,

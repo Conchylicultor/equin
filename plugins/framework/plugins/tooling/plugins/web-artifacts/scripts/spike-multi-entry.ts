@@ -6,7 +6,7 @@
 //
 //   ./equin run plugins/framework/plugins/tooling/plugins/web-artifacts/scripts/spike-multi-entry.ts [--n 40] [--one-by-one]
 
-import { readFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type { Rolldown } from "vite";
 

@@ -24,6 +24,7 @@ import {
 } from "../../core";
 
 const PHASE_ORDER = [
+  "load",
   "register",
   "awaitPgReady",
   "runMigrations",
@@ -37,6 +38,11 @@ const PHASE_ORDER = [
 ];
 
 const PHASE_CONFIG: Record<string, PhaseConfig> = {
+  load: {
+    label: "Load plugins (waves)",
+    color: "bg-categorical-10",
+    bg: "bg-categorical-10/10",
+  },
   register: {
     label: "Register (sequential)",
     color: "bg-categorical-1",

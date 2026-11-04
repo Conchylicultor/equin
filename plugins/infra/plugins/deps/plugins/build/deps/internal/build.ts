@@ -3,7 +3,11 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { isAbsolute, join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {

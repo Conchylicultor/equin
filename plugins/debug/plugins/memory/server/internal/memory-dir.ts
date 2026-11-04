@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join } from "node:path";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";

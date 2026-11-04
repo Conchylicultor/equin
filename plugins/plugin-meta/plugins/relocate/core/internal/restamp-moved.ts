@@ -20,7 +20,12 @@
 // appeared, a field default that changed, a ledger entry whose old id a later
 // plugin reused — fails the comparison and is left to the usual staleness gates.
 
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname } from "node:path";
 import {
   type AppPath,

@@ -1,10 +1,8 @@
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import {
   existsSync,
-  mkdirSync,
   readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type { DepSource, Ready } from "./dep";
 import { defaultStore, installPaths, type DepStore } from "./store";

@@ -13,7 +13,11 @@
  * which names the build), made once and atomically (built beside, renamed
  * into place); copies of other builds are removed.
  */
-import { existsSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { renameSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join, relative } from "node:path";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";

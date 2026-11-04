@@ -4,7 +4,10 @@
 // the barrel closure, vendor-request assembly, and map-entry assembly live in
 // `plan.ts`, shared with the `web-artifacts:map-in-sync` check.
 
-import { existsSync, readdirSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   joinAppPath,
   type AppPath,

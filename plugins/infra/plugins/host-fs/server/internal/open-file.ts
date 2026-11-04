@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { access, stat } from "node:fs/promises";
+import { access, stat } from "@plugins/packages/plugins/timed-fs/core";
 import type { HostFsArchiveReason } from "../../core";
 import { locateHostPath } from "./archive/locate";
 import { openArchiveMember, statArchiveMember } from "./archive/read";

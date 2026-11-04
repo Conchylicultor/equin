@@ -1,6 +1,7 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { jobsStateDir } from "../../data-dirs";
 
 // The anti-loop latch, shared by every deliberate exit of the worker pool: the

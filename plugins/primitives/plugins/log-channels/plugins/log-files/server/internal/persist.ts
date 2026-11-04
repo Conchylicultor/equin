@@ -3,7 +3,8 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { z } from "zod";
-import { closeSync, fstatSync, openSync, readdirSync, readSync } from "node:fs";
+import { closeSync, fstatSync, openSync, readSync } from "node:fs";
+import { readdirSync } from "@plugins/packages/plugins/timed-fs/core";
 import { open } from "node:fs/promises";
 import { sanitizeChannel } from "@plugins/infra/plugins/file-sink/core";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";

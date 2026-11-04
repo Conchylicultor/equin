@@ -1,4 +1,4 @@
-import { existsSync, statSync } from "fs";
+import { existsSync, statSync } from "@plugins/packages/plugins/timed-fs/core";
 import { extname, relative, resolve } from "path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 // The set of extensions this command accepts is READ FROM THE GUARD, not

@@ -179,7 +179,7 @@ function argNamespace(): string {
 
 const worktree = argNamespace();
 
-import { readFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";

@@ -2,7 +2,7 @@ import {
   asAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 

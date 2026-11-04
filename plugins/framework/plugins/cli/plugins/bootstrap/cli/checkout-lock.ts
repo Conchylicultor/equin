@@ -1,11 +1,5 @@
-import {
-  closeSync,
-  ftruncateSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  writeSync,
-} from "fs";
+import { closeSync, ftruncateSync, mkdirSync, openSync, writeSync } from "fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "path";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
 import { adaptiveTimeoutMs } from "./adaptive-timeout";

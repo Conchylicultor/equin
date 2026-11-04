@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { builtinModules } from "node:module";
 import { dirname, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";

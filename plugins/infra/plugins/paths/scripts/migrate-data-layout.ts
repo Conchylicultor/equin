@@ -60,17 +60,19 @@
 
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
-  existsSync,
-  lstatSync,
   mkdirSync,
-  readdirSync,
-  readFileSync,
-  readlinkSync,
   renameSync,
   rmdirSync,
   symlinkSync,
   unlinkSync,
 } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { isRunning, readPid } from "@plugins/infra/plugins/launcher/server";
 // Own-plugin, so relative — the `@plugins/infra/plugins/paths/core` alias would
 // name this plugin from inside itself. Same shape as `check/index.ts`, and it

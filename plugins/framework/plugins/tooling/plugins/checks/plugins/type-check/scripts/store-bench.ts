@@ -24,15 +24,8 @@ import {
   asAppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  rmSync,
-  statSync,
-  utimesSync,
-  writeFileSync,
-} from "fs";
+import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "fs";
+import { readdirSync, statSync } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "os";
 import { join } from "path";
 import {

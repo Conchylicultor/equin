@@ -1,5 +1,8 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { statSync, readFileSync } from "node:fs";
+import {
+  statSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import { assertRunId, assertRunKindId } from "./ids";
 

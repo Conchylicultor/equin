@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type { DepSource } from "@plugins/infra/plugins/deps/deps";
 import { uvEnv, uvVersion } from "./uv";

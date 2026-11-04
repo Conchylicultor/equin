@@ -183,26 +183,14 @@ takes a `debt` exemption on the check's id.
 
 - Description: Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
 - Core:
-  - Uses:
-    - `framework/plugin-id.isTestCodePath`
-    - `framework/plugin-id.PLUGIN_FOLDERS`
-    - `framework/plugin-id.PluginFolder`
-    - `framework/plugin-id.RUNTIME_FOLDERS`
-    - `framework/plugin-id.TESTING_FOLDER`
-    - `framework/plugin-id.VERIFYING_FOLDERS`
-    - `framework/tooling/import-closure.importClosure`
-    - `framework/tooling/import-closure.importClosures`
-    - `framework/tooling/import-closure.loadTypescript`
-    - `framework/tooling/import-closure.UnionImportClosure`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework/plugin-id` ×6
+    - `plugin-meta/parse-utils` ×6
+    - `framework/tooling/import-closure` ×4
     - `infra/host-fs/user-path.joinAppPath`
     - `infra/spawn.getWorktreeRoot`
     - `packages/macrotask-yield.yieldMacrotask`
-    - `plugin-meta/parse-utils.findImports`
-    - `plugin-meta/parse-utils.HostServiceDecl`
-    - `plugin-meta/parse-utils.hostServicesByName`
-    - `plugin-meta/parse-utils.ImportRef`
-    - `plugin-meta/parse-utils.parseHostServiceDeclarations`
-    - `plugin-meta/parse-utils.providedServiceNames`
+    - `packages/timed-fs.existsSync`
     - `plugin-meta/plugin-tree.buildStructureTreeOnce`
   - Exports (types):
     - `AllowEdge`
@@ -274,7 +262,7 @@ takes a `debt` exemption on the check's id.
     - `conversations` (3 debt)
     - `conversations/conversation-view/code` (2 debt)
     - `conversations/transcript-retention` (1 debt)
-    - `conversations/transcript-watcher` (4 debt)
+    - `conversations/transcript-watcher` (5 debt)
     - `conversations/workspace/scratch` (3 debt)
     - `conversations/workspace/worktree` (1 debt)
     - `database` (1 debt)
@@ -282,7 +270,7 @@ takes a `debt` exemption on the check's id.
     - `database/client-tools` (1 debt)
     - `database/connection` (2 debt)
     - `database/embedded` (1 debt)
-    - `database/migrations` (6 debt)
+    - `database/migrations` (7 debt)
     - `database/pgbouncer` (1 debt)
     - `database/query` (1 debt)
     - `debug/broadcasts` (3 debt)
@@ -294,6 +282,7 @@ takes a `debt` exemption on the check's id.
     - `debug/memory` (3 debt)
     - `debug/paging-probe` (2 debt)
     - `debug/profiling/boot-bench` (3 debt)
+    - `debug/profiling/fs-wait` (1 debt)
     - `debug/profiling/op-log/op-store` (2 debt)
     - `debug/profiling/runtime` (1 debt)
     - `debug/scratch-hello` (1 debt)
@@ -363,6 +352,7 @@ takes a `debt` exemption on the check's id.
     - `packages/spawn-priority` (3 debt)
     - `packages/thread-cpu-clock` (1 debt)
     - `packages/ticket-line` (1 debt)
+    - `packages/timed-fs` (0 debt)
     - `plugin-meta/barrel-import` (1 debt)
     - `plugin-meta/parse-utils` (1 debt)
     - `plugin-meta/plugin-refs` (1 debt)

@@ -12,7 +12,7 @@
 // reclaims the answer. A namespace kind invented later is reclaimed with no edit
 // to any caller.
 
-import { readdir } from "node:fs/promises";
+import { readdir } from "@plugins/packages/plugins/timed-fs/core";
 import {
   asNamespace,
   isNamespace,

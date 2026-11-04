@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join, resolve } from "node:path";
 import type { ShellCall } from "./parse-shell";
 import { CLI_NAMES } from "@plugins/framework/plugins/cli/plugins/cli-name/core";

@@ -1,4 +1,5 @@
 import { SCHEMA_GLOBS } from "./schema-glob-patterns";
+import { scanGlob } from "@plugins/packages/plugins/timed-fs/core";
 
 /**
  * Enumerate the schema-glob files drizzle-kit discovers, from the SAME constant
@@ -19,7 +20,7 @@ import { SCHEMA_GLOBS } from "./schema-glob-patterns";
 export async function schemaGlobFiles(root: string): Promise<string[]> {
   const files = new Set<string>();
   for (const pattern of SCHEMA_GLOBS) {
-    for await (const match of new Bun.Glob(pattern).scan({ cwd: root }))
+    for await (const match of scanGlob(pattern, { cwd: root }))
       files.add(match);
   }
   return [...files].sort();

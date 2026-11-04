@@ -2,7 +2,10 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { z } from "zod";
 import {

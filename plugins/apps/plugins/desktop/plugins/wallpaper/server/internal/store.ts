@@ -1,4 +1,5 @@
-import { writeFile, readFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { desktopDir } from "@plugins/apps/plugins/desktop/data-dirs";
 
 // Machine-global wallpaper store, at `apps/desktop/wallpaper/` — this plugin's

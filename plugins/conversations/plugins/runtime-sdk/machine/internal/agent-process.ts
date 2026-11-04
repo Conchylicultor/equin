@@ -1,14 +1,10 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { closeSync, mkdirSync, openSync, rmSync, writeFileSync } from "node:fs";
 import {
-  closeSync,
   existsSync,
-  mkdirSync,
-  openSync,
   readFileSync,
-  rmSync,
   statSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { spawnSync } from "node:child_process";
 import { userInfo } from "node:os";
 import {

@@ -1,6 +1,7 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { closeSync, openSync, statSync, watch } from "node:fs";
+import { closeSync, openSync, watch } from "node:fs";
+import { statSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import {
   duressLatchDir,

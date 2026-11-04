@@ -165,6 +165,7 @@ the shared Playwright harness.
   - Uses:
     - `infra/paths.worktreeArtifacts`
     - `infra/paths.worktreeDataDir`
+    - `packages/timed-fs.readFileSync`
   - Exports (types):
     - `BuildReceipt`
     - `BuildReceiptStatus`

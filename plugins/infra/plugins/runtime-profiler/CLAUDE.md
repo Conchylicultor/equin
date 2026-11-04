@@ -87,7 +87,10 @@ an in-flight resource read) (`server-core/core/resources.ts`); `endpoint-concurr
 span encloses them, so deduped GETs record one span per request with joiners showing
 `endpoint-dedupe ≈ wall`, `selfMs ≈ 0`); `git-coalesce:<name>` (joined an in-flight git
 recompute) and the 0 ms markers `git-memo-hit:<name>` / `git-memo-miss:<name>`
-(`infra/git/git-read-cache`). A `chargeWait` with no active entry (context-less jobs/pollers)
+(`infra/git/git-read-cache`); `fs-stat` / `fs-readdir` / `fs-read` / `fs-glob`
+(kind `io`: a file call past `packages/timed-fs`'s floor, charged by
+`server/internal/install.ts`'s `onSlowFsCall` subscriber — a disk stall is the
+disk's time, filed like a `queue` wait as `wait fs-<op>`). A `chargeWait` with no active entry (context-less jobs/pollers)
 falls back to a standalone `db [layer]` span so the wait is never lost. See
 `research/2026-07-02-global-profiler-wait-propagation.md`.
 
@@ -166,7 +169,8 @@ imports `server/`, so on the client every entry point is a transparent passthrou
   identical run already in flight (a coalesce or dedupe), or a 0 ms hit/miss
   marker, so the time is that run's. A slow-op consumer judges a span on its
   own time (its waits excluded), so this is what decides who the waited time
-  is charged to.
+  is charged to. `io` means the filesystem (`packages/timed-fs`): the time
+  is the disk's, and it is filed like `queue`.
 - `onSlowWait(handler, { thresholdMs })` — the push seam for a slow `queue`
   wait: called once per wait, from `chargeWait` (an ancestor's union would
   count it once per level), with the layer, the ms and the innermost open

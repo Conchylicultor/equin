@@ -1,4 +1,7 @@
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { ipCountryCache } from "../../data-dirs";
 import { loadSnapshot, lookupIn, type Snapshot } from "./snapshot";

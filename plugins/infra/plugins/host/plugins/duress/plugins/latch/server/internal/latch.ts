@@ -2,14 +2,11 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { mkdirSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
 import {
-  mkdirSync,
   readFileSync,
   statSync,
-  unlinkSync,
-  utimesSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { duressLatchDir } from "../../data-dirs";
 
 // Host-global duress latch: a single sentinel process (the Phase-B cluster

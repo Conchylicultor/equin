@@ -1,5 +1,5 @@
 import { webDistDir } from "@plugins/infra/plugins/paths/server";
-import { readFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 
 // The content identity of the frontend bundle this backend is serving, read
 // from `dist/.build-graph` FRESH on every call — same rule, and same reason, as

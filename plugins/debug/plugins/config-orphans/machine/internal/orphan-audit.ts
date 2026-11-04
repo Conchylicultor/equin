@@ -1,4 +1,4 @@
-import { readdir, stat } from "node:fs/promises";
+import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { configFileOwner, APP_SCOPE_DIR } from "@plugins/config_v2/core";
 import type {

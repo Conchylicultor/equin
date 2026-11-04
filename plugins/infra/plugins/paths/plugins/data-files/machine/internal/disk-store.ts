@@ -3,7 +3,10 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync, realpathSync } from "node:fs";
+import {
+  existsSync,
+  realpathSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { mkdir, unlink } from "node:fs/promises";
 import { sep } from "node:path";
 import type { FileWatcherDecl } from "@plugins/infra/plugins/file-watcher/server";

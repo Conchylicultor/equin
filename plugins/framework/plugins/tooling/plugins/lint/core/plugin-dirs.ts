@@ -1,4 +1,7 @@
-import { existsSync, readdirSync } from "fs";
+import {
+  existsSync,
+  readdirSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import {
   type AppPath,

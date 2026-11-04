@@ -1,4 +1,9 @@
-import { mkdtempSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+  realpathSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";

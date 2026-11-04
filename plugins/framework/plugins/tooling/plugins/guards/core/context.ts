@@ -1,4 +1,5 @@
-import { closeSync, existsSync, fstatSync, openSync, readSync } from "node:fs";
+import { closeSync, fstatSync, openSync, readSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { classifyRepo } from "./git-target";

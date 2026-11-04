@@ -1,6 +1,6 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { Dirent } from "node:fs";
-import { readdir } from "node:fs/promises";
+import { readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type {
   Check,

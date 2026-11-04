@@ -1,17 +1,14 @@
-import { existsSync, statSync } from "node:fs";
+import {
+  existsSync,
+  statSync,
+  readdir,
+  readFile,
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  mkdir,
-  mkdtemp,
-  readdir,
-  readFile,
-  rename,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   relPath,

@@ -28,7 +28,10 @@
 // after all writers catches every one of them, including ones not written yet.
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 

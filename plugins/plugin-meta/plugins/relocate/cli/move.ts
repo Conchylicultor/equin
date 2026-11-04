@@ -1,6 +1,11 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync, readdirSync, rmdirSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { rmdirSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFile,
+} from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { configDir } from "@plugins/config_v2/data-dirs";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";

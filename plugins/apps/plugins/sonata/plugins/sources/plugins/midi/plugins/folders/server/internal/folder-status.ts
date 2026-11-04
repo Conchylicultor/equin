@@ -1,4 +1,5 @@
-import { opendir, realpath } from "node:fs/promises";
+import { opendir } from "node:fs/promises";
+import { realpath } from "@plugins/packages/plugins/timed-fs/core";
 import { getConfig } from "@plugins/config_v2/server";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";

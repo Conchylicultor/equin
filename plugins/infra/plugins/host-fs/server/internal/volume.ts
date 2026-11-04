@@ -1,4 +1,9 @@
-import { lstat, readdir, readlink, statfs } from "node:fs/promises";
+import { statfs } from "node:fs/promises";
+import {
+  lstat,
+  readdir,
+  readlink,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type { HostFsVolumeResult } from "../../core";
 import { classifyFsError } from "./path";

@@ -1,4 +1,4 @@
-import { lstat } from "node:fs/promises";
+import { lstat } from "@plugins/packages/plugins/timed-fs/core";
 import { resolve } from "node:path";
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
 import { type DirtyEntry, editedFilesEtag, parsePorcelainZ } from "./edited-files-etag";

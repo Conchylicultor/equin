@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import {
   MAIN_COMPOSITION_ID,

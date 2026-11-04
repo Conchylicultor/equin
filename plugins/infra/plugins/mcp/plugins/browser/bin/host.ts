@@ -20,12 +20,12 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
  */
 import {
   closeSync,
-  existsSync,
   openSync,
   renameSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { resolve } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import type { AgentBrowserHostStatus } from "../core";

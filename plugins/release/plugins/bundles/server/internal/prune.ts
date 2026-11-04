@@ -1,4 +1,9 @@
-import { existsSync, readdirSync, realpathSync, rmSync } from "node:fs";
+import { rmSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  realpathSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { basename } from "node:path";
 import { isPointerName } from "./pointer";
 import { releaseRunIdKind } from "../../core/internal/run-id";

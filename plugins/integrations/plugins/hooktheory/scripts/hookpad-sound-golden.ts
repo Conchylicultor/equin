@@ -25,7 +25,8 @@
 // Results of the last run: research/2026-09-17-integrations-hookpad-chord-sound.md.
 
 import { createHash } from "node:crypto";
-import { createReadStream, readFileSync, writeFileSync } from "node:fs";
+import { createReadStream, writeFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { gunzipSync, createGunzip } from "node:zlib";
 import { JSONParser } from "@streamparser/json";

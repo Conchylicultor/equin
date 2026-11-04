@@ -1,4 +1,8 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "fs";
+import { mkdtempSync, rmSync } from "fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "os";
 import { join } from "path";
 import {

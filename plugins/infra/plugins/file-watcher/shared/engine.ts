@@ -1,6 +1,10 @@
 import type * as parcel from "@parcel/watcher";
 import { type FSWatcher, watch as fsWatch } from "node:fs";
-import { readdir, realpath, stat } from "node:fs/promises";
+import {
+  readdir,
+  realpath,
+  stat,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, extname, join } from "node:path";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {

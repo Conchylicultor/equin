@@ -1,5 +1,8 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readdirSync, readFileSync } from "fs";
+import {
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join, resolve } from "path";
 import {
   MIGRATIONS_DATA_DIR,

@@ -16,7 +16,8 @@ import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/co
  *
  * Usage: ./equin run plugins/ui/plugins/icons/scripts/vendor-seti.ts
  */
-import { mkdtemp, readdir, readFile, rm, writeFile, mkdir } from "fs/promises";
+import { mkdtemp, rm, writeFile, mkdir } from "fs/promises";
+import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
 import { writeGenerated } from "@plugins/framework/plugins/tooling/plugins/codegen/core";

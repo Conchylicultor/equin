@@ -24,7 +24,7 @@ import {
 import { PLUGINS_DIR, toolchainPin } from "@plugins/infra/plugins/paths/core";
 import { runtimePath } from "@plugins/infra/plugins/launcher/core";
 import { readServingSocket } from "@plugins/infra/plugins/runtime-identity/core";
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import {
   centralRoutePrefixes,

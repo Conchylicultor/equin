@@ -1,11 +1,5 @@
-import {
-  closeSync,
-  mkdirSync,
-  openSync,
-  readdirSync,
-  renameSync,
-  rmSync,
-} from "node:fs";
+import { closeSync, mkdirSync, openSync, renameSync, rmSync } from "node:fs";
+import { readdirSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dlopen } from "bun:ffi";
 import { flockTry, waitForFlock } from "@plugins/packages/plugins/flock/core";
 import {

@@ -1,15 +1,11 @@
 import { createHash, randomUUID } from "crypto";
+import { closeSync, openSync, renameSync, rmSync, writeFileSync } from "fs";
 import {
-  closeSync,
   existsSync,
-  openSync,
   readdirSync,
   readFileSync,
-  renameSync,
-  rmSync,
   statSync,
-  writeFileSync,
-} from "fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import {
   type AppPath,

@@ -1,4 +1,7 @@
-import { readdirSync, readFileSync } from "fs";
+import {
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join, resolve } from "path";
 import {
   findPublishedMigrationViolations,

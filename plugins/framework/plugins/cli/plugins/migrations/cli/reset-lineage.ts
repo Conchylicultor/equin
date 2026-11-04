@@ -35,7 +35,10 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
  * supersedes them when it runs exactly their statements, in order, phase for
  * phase: a database that applied them then holds what it would run.
  */
-import { readdirSync, readFileSync } from "fs";
+import {
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import {
   analyzeSnapshotDag,

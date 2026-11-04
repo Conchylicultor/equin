@@ -1,4 +1,8 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
 import {
   joinAppPath,

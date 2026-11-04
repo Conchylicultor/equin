@@ -3,7 +3,7 @@ import {
   asAppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type { AssetMirrorPrewarm } from "../../core";
 import { mirrorFetchToDisk } from "./fetch-to-disk";

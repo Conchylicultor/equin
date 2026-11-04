@@ -31,7 +31,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "crypto";
-import { readFile } from "fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import {

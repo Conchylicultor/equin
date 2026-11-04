@@ -1,4 +1,5 @@
-import { readdir, rm, stat } from "node:fs/promises";
+import { rm } from "node:fs/promises";
+import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { backupsDir } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";

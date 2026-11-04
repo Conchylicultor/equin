@@ -1,4 +1,4 @@
-import { lstat, readdir } from "node:fs/promises";
+import { lstat, readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import { SubagentRequestShapeSchema } from "../../core";
 

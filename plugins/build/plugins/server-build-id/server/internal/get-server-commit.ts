@@ -1,5 +1,5 @@
 import { webDistDir } from "@plugins/infra/plugins/paths/server";
-import { readFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 
 // The commit the frontend bundle this backend serves was BUILT FROM, read from
 // `dist/.build-commit` FRESH on every call — same rule, and same reason, as

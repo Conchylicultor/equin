@@ -1,5 +1,5 @@
 import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import {
   RECENT_RUNS_MAX,
   type BackgroundRun,

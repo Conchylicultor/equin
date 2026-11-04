@@ -2,6 +2,11 @@ import { program } from "commander";
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
+import { recordFsWaits } from "@plugins/debug/plugins/profiling/plugins/fs-wait/server";
+import {
+  checkoutNamespace,
+  REPO_ROOT,
+} from "@plugins/infra/plugins/paths/core";
 import { isCliCommand, isCliEntryPresent, type CliCommand } from "../core";
 import { cliEntries } from "../core/cli.generated";
 import { registerCommands } from "./register-commands";
@@ -28,6 +33,14 @@ import { runCli } from "./run-cli";
  * behind the declaration's own lazy `import()` until commander routes to it. So
  * `./equin build` no longer pays to load every other command's body.
  */
+
+// Every slow file call of this run (a build, a check, a test) is written to
+// the checkout's `fs-wait` channel — the same record a backend writes — so a
+// disk stall in a build names itself rather than reading as the step's work.
+recordFsWaits({
+  process: `cli ${process.argv[2] ?? ""}`.trimEnd(),
+  namespace: checkoutNamespace(REPO_ROOT),
+});
 
 program.name(CLI_NAME).description(`${PRODUCT_NAME} agent CLI`);
 

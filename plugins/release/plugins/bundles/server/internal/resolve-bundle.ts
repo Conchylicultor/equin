@@ -4,7 +4,7 @@ import {
   readdirSync,
   realpathSync,
   statSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "node:path";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { ReleaseManifestSchema } from "../../core";

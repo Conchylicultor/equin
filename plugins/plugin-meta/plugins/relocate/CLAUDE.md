@@ -93,11 +93,12 @@ moving anything.
 
 - Description: `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that every build replays onto its namespace's saved user config (folder moved, reorder keys re-rooted, hash chain kept).
 - Core:
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×9
     - `config_v2/ledger` ×6
     - `framework/plugin-id` ×3
     - `infra/host-fs/user-path` ×3
+    - `packages/timed-fs` ×3
     - `plugin-meta/plugin-refs.scanReorderItemRefs`
   - Exports (types):
     - `AppliedMove`

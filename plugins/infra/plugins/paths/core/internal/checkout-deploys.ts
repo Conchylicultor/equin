@@ -3,7 +3,11 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  realpathSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { resolve } from "node:path";
 import {
   MAIN_COMPOSITION_ID,

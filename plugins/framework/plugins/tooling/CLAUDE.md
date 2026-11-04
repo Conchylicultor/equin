@@ -9,6 +9,7 @@
   - Uses:
     - `infra/spawn.spawnCaptured`
     - `packages/semaphore.createSemaphore`
+    - `packages/timed-fs.readFile`
   - Exports (types):
     - `Check`
     - `CheckContext`

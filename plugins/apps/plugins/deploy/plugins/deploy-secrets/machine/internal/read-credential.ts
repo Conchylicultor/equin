@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import {
   asAppPath,
   joinAppPath,

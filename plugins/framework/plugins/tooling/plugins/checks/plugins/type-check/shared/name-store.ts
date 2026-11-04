@@ -17,7 +17,7 @@
 //     program-level diagnostics (options, global) of the environment that hash
 //     names, so a run that builds no program still reports them.
 
-import { readFileSync } from "fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import { z } from "zod";
 import { contractsDir, nameRecordsDir } from "../data-dirs";

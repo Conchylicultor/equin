@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { existsSync, renameSync, writeFileSync } from "node:fs";
+import { renameSync, writeFileSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { resolve } from "node:path";
 import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";

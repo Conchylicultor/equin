@@ -1,5 +1,4 @@
-import { existsSync } from "node:fs";
-import { cp, stat } from "node:fs/promises";
+import { cp } from "node:fs/promises";
 import { join } from "node:path";
 import { getConfig } from "@plugins/config_v2/server";
 import { costUsageDir } from "@plugins/stats/plugins/cost/data-dirs";
@@ -8,6 +7,11 @@ import type {
   BackupSourceReport,
 } from "@plugins/backup/core";
 import { costHistorySourceConfig } from "../../shared/config";
+import {
+  scanGlob,
+  existsSync,
+  stat,
+} from "@plugins/packages/plugins/timed-fs/core";
 
 export async function assembleCostHistory(
   dir: string,
@@ -37,7 +41,7 @@ export async function assembleCostHistory(
   // would archive state that is either worthless or torn.
   let shards = 0;
   if (existsSync(costUsageDir.path)) {
-    for await (const rel of new Bun.Glob("sessions-*.json").scan({
+    for await (const rel of scanGlob("sessions-*.json", {
       cwd: costUsageDir.path,
       onlyFiles: true,
     })) {

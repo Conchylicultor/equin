@@ -32,14 +32,11 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { linkSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import {
-  linkSync,
-  mkdirSync,
   readdirSync,
   readFileSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { basename, relative, sep } from "node:path";
 import { init as esInit, parse as esParse } from "es-module-lexer/minimal";
 import { isBrowserHostSpecifier } from "../browser-host-specifier";

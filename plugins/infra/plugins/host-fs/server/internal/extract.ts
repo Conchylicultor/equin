@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, rename, rm, stat, utimes } from "node:fs/promises";
+import { mkdir, rename, rm, utimes } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, extname, join } from "node:path";
 import { type HostFsArchiveReason, type HostFsExtractResult } from "../../core";
 import { locateHostPath } from "./archive/locate";

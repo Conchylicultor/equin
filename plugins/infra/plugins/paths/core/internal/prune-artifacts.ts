@@ -2,7 +2,8 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readdirSync, statSync, unlinkSync } from "node:fs";
+import { unlinkSync } from "node:fs";
+import { readdirSync, statSync } from "@plugins/packages/plugins/timed-fs/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
   RUN_TERMINAL_SUFFIX,

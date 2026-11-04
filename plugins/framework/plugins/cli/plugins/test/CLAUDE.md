@@ -77,6 +77,9 @@ queueing for a grant, writes its own record (the leader's runners,
     - `infra/paths.pruneWorktreeTestArtifacts`
     - `infra/paths.worktreeArtifacts`
     - `infra/paths.worktreeDataDir`
+    - `packages/timed-fs.existsSync`
+    - `packages/timed-fs.readdirSync`
+    - `packages/timed-fs.readFileSync`
   - Exports (types):
     - `JunitSummary`
     - `TestRunnerName`

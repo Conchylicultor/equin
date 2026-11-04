@@ -4,7 +4,11 @@
 // (`applyPluginMoves`). So saved settings follow the code that reads them, per
 // checkout, with no step for anyone to remember.
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { z } from "zod";
 import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";

@@ -1,5 +1,5 @@
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 
 const TASKPOLICY = "/usr/sbin/taskpolicy";
 

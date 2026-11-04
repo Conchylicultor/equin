@@ -1,4 +1,9 @@
-import { readdir, readFile, stat, unlink } from "node:fs/promises";
+import { unlink } from "node:fs/promises";
+import {
+  readdir,
+  readFile,
+  stat,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import {
   OutboxEntrySchema,

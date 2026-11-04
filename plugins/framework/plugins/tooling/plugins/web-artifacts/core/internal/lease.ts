@@ -37,15 +37,11 @@
 // can take that lock knows the owner is gone and reaps the lease. No pid, no
 // heartbeat, no age heuristic.
 
+import { closeSync, mkdirSync, openSync, rmSync, symlinkSync } from "node:fs";
 import {
-  closeSync,
-  mkdirSync,
-  openSync,
   readdirSync,
   readlinkSync,
-  rmSync,
-  symlinkSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   appPathParent,
   joinAppPath,

@@ -1,5 +1,6 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, resolve } from "node:path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { prototypeMetasIn } from "@plugins/apps/plugins/prototypes/plugins/files/cli";

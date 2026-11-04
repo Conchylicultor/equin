@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join } from "node:path";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {

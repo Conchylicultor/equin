@@ -4,12 +4,16 @@
 // so its bytes are compressed exactly once, here — and the gateway only negotiates (`gateway/proxy.go`
 // `serveStaticFile`), never compresses a file per request.
 
-import { readdirSync, statSync } from "node:fs";
+import {
+  readdirSync,
+  statSync,
+  readFile,
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readFile, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { availableParallelism } from "node:os";
 import { promisify } from "node:util";
 import { brotliCompress, constants, gzip } from "node:zlib";

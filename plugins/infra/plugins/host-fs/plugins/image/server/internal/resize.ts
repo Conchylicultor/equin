@@ -3,8 +3,9 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync } from "node:fs";
-import { rename, stat, utimes, writeFile } from "node:fs/promises";
+import { mkdirSync } from "node:fs";
+import { existsSync, stat } from "@plugins/packages/plugins/timed-fs/core";
+import { rename, utimes, writeFile } from "node:fs/promises";
 import { cpus } from "node:os";
 import sharp from "sharp";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";

@@ -28,13 +28,8 @@ import type {
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 import { spawn, spawnSync, type ChildProcessByStdio } from "node:child_process";
-import {
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { createServer, type Socket } from "node:net";
 import type { Readable, Writable } from "node:stream";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";

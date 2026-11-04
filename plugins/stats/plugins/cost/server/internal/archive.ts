@@ -1,4 +1,5 @@
-import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, rename, writeFile } from "node:fs/promises";
+import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { isRepoProjectDir } from "./classify-projects";
 import type { FilePartial } from "./usage-index";

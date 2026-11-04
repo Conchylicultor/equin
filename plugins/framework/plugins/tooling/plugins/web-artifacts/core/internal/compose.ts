@@ -3,15 +3,12 @@
 // symlinks into the shared store (or real copies, under `materialize`), the
 // eager-tier modulepreload closure, and the hard-fail URL/coverage verification.
 
+import { cpSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import {
-  cpSync,
   existsSync,
-  mkdirSync,
   readFileSync,
   statSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   joinAppPath,
   type AppPath,

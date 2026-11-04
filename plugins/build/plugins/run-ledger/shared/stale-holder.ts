@@ -1,4 +1,7 @@
-import { readFileSync, statSync } from "node:fs";
+import {
+  readFileSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";

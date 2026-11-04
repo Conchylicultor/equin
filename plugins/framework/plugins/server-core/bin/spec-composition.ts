@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import { WORKTREE_SPEC_FILE } from "@plugins/infra/plugins/paths/core";
 

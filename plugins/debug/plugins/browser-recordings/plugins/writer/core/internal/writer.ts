@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { mkdir, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join } from "node:path";
 import { TOOL_USE_ID_RE } from "@plugins/framework/plugins/tooling/plugins/guards/core";
 import {

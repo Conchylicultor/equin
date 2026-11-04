@@ -5,13 +5,12 @@
 // names kept through minification (`KEEP_NAMES_MINIFY`). NO `@tailwindcss/vite` here — utilities come from the
 // single global pass (see `global-css.ts`).
 
+import { rmSync, writeFileSync } from "node:fs";
 import {
   existsSync,
   readFileSync,
   readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   appPathParent,
   joinAppPath,

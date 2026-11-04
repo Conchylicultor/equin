@@ -59,6 +59,8 @@ const headed = await launchChromium(ready, { headless: false });  // headed bina
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.asAppPath`
     - `infra/host-fs/user-path.joinAppPath`
+    - `packages/timed-fs.existsSync`
+    - `packages/timed-fs.readFileSync`
   - Exports (types):
     - `BrowserExecutables`
     - `ReadBrowserExecutables`

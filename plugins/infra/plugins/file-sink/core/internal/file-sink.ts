@@ -4,13 +4,8 @@ import {
   asAppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  appendFileSync,
-  mkdirSync,
-  renameSync,
-  statSync,
-  unlinkSync,
-} from "node:fs";
+import { appendFileSync, mkdirSync, renameSync, unlinkSync } from "node:fs";
+import { statSync } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname } from "node:path";
 // Relative sibling import, not the `@plugins/infra/plugins/file-sink/core` alias:
 // this file now lives INSIDE that barrel's plugin, so the alias form would cycle

@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { SHELL_OUTPUT_TAIL_BYTES, type ShellOutput } from "../../core";
 
 /**

@@ -2,7 +2,7 @@ import {
   type AppPath,
   asAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { userInfo } from "node:os";
 import { join } from "node:path";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";

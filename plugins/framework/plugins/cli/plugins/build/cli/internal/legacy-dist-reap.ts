@@ -37,8 +37,8 @@
 // permanently, which costs nothing: a host with no gateway has no legacy served
 // dist to reclaim either.
 
-import { existsSync } from "node:fs";
-import { readdir, rm } from "node:fs/promises";
+import { existsSync, readdir } from "@plugins/packages/plugins/timed-fs/core";
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { distNames } from "./dist-publish";

@@ -39,7 +39,11 @@
  *
  * The branch is `e2e-synthetic` so the rows are recognisable in the history.
  */
-import { existsSync, readFileSync, watch, writeFileSync } from "node:fs";
+import { watch, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import {
   appendOpLog,

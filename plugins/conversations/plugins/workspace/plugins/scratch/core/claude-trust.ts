@@ -1,4 +1,8 @@
-import { readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { renameSync, writeFileSync } from "node:fs";
+import {
+  readFileSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import { CLAUDE_USER_CONFIG } from "@plugins/infra/plugins/paths/core";
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";

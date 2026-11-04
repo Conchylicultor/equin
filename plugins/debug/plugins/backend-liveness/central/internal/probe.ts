@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { access, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/central";
 import { GATEWAY_PORT } from "@plugins/infra/plugins/namespace/core";

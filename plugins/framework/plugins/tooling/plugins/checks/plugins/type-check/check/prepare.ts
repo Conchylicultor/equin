@@ -39,7 +39,7 @@
 // writes the shards that changed and a new root, and assembles the verdict
 // from the shards that hold messages.
 
-import { realpathSync } from "fs";
+import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import {
   readTreeSnapshot,

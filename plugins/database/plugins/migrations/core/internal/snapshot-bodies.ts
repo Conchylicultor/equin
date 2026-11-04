@@ -29,7 +29,10 @@
  * answered throws, naming the id and what to do (a shallow clone has to fetch
  * its history) — a missing body is never stood in for.
  */
-import { existsSync, readFileSync } from "fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { relative } from "path";
 import {
   spawnCaptured,

@@ -1,5 +1,5 @@
 import type { Stats } from "node:fs";
-import { lstat, readlink, stat } from "node:fs/promises";
+import { lstat, readlink, stat } from "@plugins/packages/plugins/timed-fs/core";
 import {
   compareHostFsNames,
   type HostFsEntry,

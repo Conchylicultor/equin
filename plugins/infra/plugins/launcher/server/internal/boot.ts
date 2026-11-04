@@ -4,13 +4,11 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { closeSync, openSync, writeFileSync } from "node:fs";
 import {
-  closeSync,
   existsSync,
-  openSync,
   readFileSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import {

@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { memoryFiles, type MemoryFile } from "../../shared/resources";
 import { memoryDir, watchMemoryDir } from "./memory-dir";

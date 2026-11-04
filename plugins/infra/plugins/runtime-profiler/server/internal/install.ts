@@ -6,6 +6,10 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
+  installFsAwait,
+  onSlowFsCall,
+} from "@plugins/packages/plugins/timed-fs/core";
+import {
   recordLoaderReadSet,
   setProfilerHooks,
   type LoaderReadsSink,
@@ -32,6 +36,7 @@ import {
 } from "../../core";
 import {
   installLeaseContextRuntime,
+  whileWaiting,
   type LeaseScope,
 } from "@plugins/packages/plugins/semaphore/core";
 
@@ -39,6 +44,13 @@ import {
 // object reference across the entry's async continuation, so a gate awaited deep
 // inside a loader mutates the very wait map `recordEntrySpan` later reads.
 const als = new AsyncLocalStorage<EntryContext>();
+
+// A file read past timed-fs's floor is the disk's time, not the caller's: charge
+// it as an `io` wait on its layer (`fs-read` / `fs-readdir` / `fs-stat` /
+// `fs-glob`), so the enclosing entries name it and slow-ops files it as
+// `wait fs-<op>` instead of folding it into the caller's own time. Called as the
+// call returns, still inside the caller's ambient context.
+onSlowFsCall((call) => chargeWait(call.layer, call.ms, "io"));
 
 installSpanContextRuntime({
   run: (ctx, fn) => als.run(ctx, fn),
@@ -84,6 +96,17 @@ installLeaseContextRuntime({
   run: (scope, fn) => leaseAls.run(scope, fn),
   current: () => leaseAls.getStore(),
 });
+
+// A read waiting on the disk waits like one waiting on another caller's work:
+// every awaited timed-fs call gives the read-admit slot back while it is
+// pending. Without it, six reads stalled in their own file calls (main,
+// 2026-11-03: the projects-dir glob, a transcript lstat) hold every slot and
+// each unrelated read queues behind the disk. Measured
+// (resource-runtime/scripts/fs-yield-bench.ts): unrelated reads behind six reads
+// stalled 2 s answered at a median of ~2,050 ms holding the slot, 33–49 ms
+// yielding; a herd of 60 reads × 40 stats showed no thrash (67–113 ms held,
+// 66–69 ms yielded), at most 6 calls in flight.
+installFsAwait((pending) => whileWaiting(pending));
 
 // The root context, captured here — at module eval, outside every scope above —
 // so `runInRootContext` (a change producer's coalescing timer and flush) runs

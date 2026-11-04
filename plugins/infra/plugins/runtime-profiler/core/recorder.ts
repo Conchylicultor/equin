@@ -878,9 +878,14 @@ export function onSlowSpan(
  * - `join`: for an identical run already in flight (`read-coalesce`,
  *   `*-coalesce`, `endpoint-dedupe`), or a 0 ms hit/miss marker: the time is
  *   that run's own work, which its own span already reports.
+ * - `io`: for the filesystem to answer a read, listing, stat or glob scan
+ *   (`fs-read`, `fs-readdir`, `fs-stat`, `fs-glob` — `packages/timed-fs`):
+ *   the time is the disk's. Filed like a `queue` wait — handed to
+ *   `onSlowWait` against its layer, its residue summed — so a stalled disk is
+ *   reported as `wait fs-<op>` wherever it lands, never as the caller's work.
  * Either way it is not the WAITER's time (see `slow-ops`' own-time rule).
  */
-export type WaitKind = "queue" | "join";
+export type WaitKind = "queue" | "join" | "io";
 
 /**
  * One `queue` wait at or past an `onSlowWait` floor — or a sum of waits no
@@ -1907,7 +1912,7 @@ function capDetail(detail: SpanDetail | undefined): SpanDetail | undefined {
  * it blocked.
  *
  * `kind` says what the caller was waiting FOR (see `WaitKind`): a `queue`
- * wait at or past an `onSlowWait` floor is handed to its subscribers as the
+ * (or `io`) wait at or past an `onSlowWait` floor is handed to its subscribers as the
  * GATE's slowness, charged where it happens (once per wait — the per-ancestor
  * unions above would count it once per level). A queue wait no subscriber
  * filed is residue, kept on the innermost open entry and offered again, summed,
@@ -1931,7 +1936,7 @@ export function chargeWait(layer: string, ms: number, kind: WaitKind): void {
     return;
   }
   if (
-    kind === "queue" &&
+    kind !== "join" &&
     !notifySlowWait({ layer, ms, caller: { kind: cur.kind, label: cur.label } })
   ) {
     const holder = nearestOpen(cur);

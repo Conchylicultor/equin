@@ -26,7 +26,8 @@
  * by comparing mtimes of every tracked file before and after the run; the files
  * a run touched are listed (and a dirty `git status` is a finding to report).
  */
-import { statSync, writeFileSync } from "fs";
+import { writeFileSync } from "fs";
+import { statSync } from "@plugins/packages/plugins/timed-fs/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join, resolve } from "path";
 import {

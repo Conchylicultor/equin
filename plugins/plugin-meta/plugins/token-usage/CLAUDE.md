@@ -41,6 +41,7 @@ changes them fails a test rather than an edge.
     - `packages/macrotask-yield.createTimeSlicer`
     - `packages/macrotask-yield.yieldMacrotask`
     - `packages/string-hash.hash53`
+    - `packages/timed-fs.readFileSync`
     - `primitives/css/ui-kit.APP_STYLESHEET_PATH`
     - `ui/theme-engine.tokenVarName`
   - Exports (types):

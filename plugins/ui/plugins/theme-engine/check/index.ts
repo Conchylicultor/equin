@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";

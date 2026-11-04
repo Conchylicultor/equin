@@ -17,14 +17,12 @@
  * its `.sql` starts with a snapshot header, or it is a legacy key, or (until
  * the cutover folds it) it has a sibling `<tag>_snapshot.json`.
  */
+import { closeSync, openSync, readSync } from "fs";
 import {
-  closeSync,
   existsSync,
-  openSync,
   readdirSync,
   readFileSync,
-  readSync,
-} from "fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { open } from "fs/promises";
 import { join } from "path";
 import {

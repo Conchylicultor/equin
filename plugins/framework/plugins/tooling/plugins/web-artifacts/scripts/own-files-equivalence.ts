@@ -5,7 +5,10 @@
 //
 //   ./equin run plugins/framework/plugins/tooling/plugins/web-artifacts/scripts/own-files-equivalence.ts
 
-import { readdirSync, existsSync } from "node:fs";
+import {
+  readdirSync,
+  existsSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "node:path";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";

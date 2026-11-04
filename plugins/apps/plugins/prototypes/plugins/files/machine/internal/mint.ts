@@ -2,7 +2,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { replaceElementText } from "@plugins/infra/plugins/html-decode/core";
 import {
   copyTree,

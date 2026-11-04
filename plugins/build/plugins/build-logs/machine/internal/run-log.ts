@@ -1,5 +1,5 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { readRunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";

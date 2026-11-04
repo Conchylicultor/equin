@@ -12,14 +12,12 @@ import {
   envName,
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { mkdirSync, rmSync, symlinkSync } from "node:fs";
 import {
   existsSync,
   lstatSync,
-  mkdirSync,
   readFileSync,
-  rmSync,
-  symlinkSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join, dirname, basename } from "node:path";
 import { spawnSync } from "node:child_process";
 import { connect } from "node:net";

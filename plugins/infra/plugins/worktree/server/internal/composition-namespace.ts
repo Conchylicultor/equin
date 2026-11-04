@@ -22,14 +22,13 @@ import {
 // consume the exact same safety-critical logic; a marker-name or collision-rule
 // change can never drift between them.
 
+import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import {
   existsSync,
-  mkdirSync,
   readFileSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs";
-import { readFile } from "node:fs/promises";
+  readFile,
+} from "@plugins/packages/plugins/timed-fs/core";
+
 import { basename } from "node:path";
 import {
   isNamespaceHostAlias,

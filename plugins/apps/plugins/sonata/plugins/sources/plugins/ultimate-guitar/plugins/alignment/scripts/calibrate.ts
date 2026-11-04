@@ -29,7 +29,11 @@
 // Results: research/2026-10-01-apps-sonata-ug-alignment-aligner.md (B) and
 // research/2026-10-07-apps-sonata-ug-alignment-scoring.md (D).
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "node:path";
 import {
   ANALYSIS_VERSION,

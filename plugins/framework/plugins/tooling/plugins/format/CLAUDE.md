@@ -202,6 +202,8 @@ idempotent and per-file.
     - `infra/host-fs/user-path.joinAppPath`
     - `infra/spawn.spawnCaptured`
     - `packages/macrotask-yield.createTimeSlicer`
+    - `packages/timed-fs.existsSync`
+    - `packages/timed-fs.readFile`
   - Exports (types):
     - `DirectiveDisplacement`
     - `DirectiveTarget`

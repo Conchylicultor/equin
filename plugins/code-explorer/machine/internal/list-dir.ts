@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { resolve } from "node:path";
 import type { Dirent } from "node:fs";
 import type { CodeDirEntry } from "@plugins/code-explorer/plugins/code-api/core";

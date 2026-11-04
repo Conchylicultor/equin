@@ -2,7 +2,12 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync, readdirSync, renameSync, statSync } from "node:fs";
+import { renameSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";

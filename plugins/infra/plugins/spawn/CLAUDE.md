@@ -233,6 +233,7 @@ presence only — **no re-exports**; import from `core/`.
     - `infra/host-fs/user-path.asAppPath`
     - `packages/flock.holdParentLifeline`
     - `packages/spawn-priority.spawnAtTier`
+    - `packages/timed-fs.readFileSync`
   - Exports (types):
     - `ChildResourceUsage`
     - `SpawnBaseOptions`

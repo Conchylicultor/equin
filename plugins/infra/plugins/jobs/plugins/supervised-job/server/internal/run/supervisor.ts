@@ -1,6 +1,7 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { basename } from "node:path";
-import { closeSync, existsSync, mkdirSync, openSync } from "node:fs";
+import { closeSync, mkdirSync, openSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import {
   defineFileWatcher,
   type FileWatcher,

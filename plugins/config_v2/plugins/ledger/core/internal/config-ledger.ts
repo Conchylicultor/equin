@@ -19,13 +19,12 @@
 // `rewriteConfigFiles` rewrites snapshots (origins, ancestors) first, collects
 // each old → new hash pair, and re-stamps every override anchored to an old one.
 
+import { mkdirSync, writeFileSync } from "node:fs";
 import {
   existsSync,
-  mkdirSync,
   readdirSync,
   readFileSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { parse as parseJsonc, type ParseError } from "jsonc-parser";
 import { z } from "zod";
 import {

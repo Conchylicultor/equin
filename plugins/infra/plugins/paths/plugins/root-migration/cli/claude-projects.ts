@@ -1,11 +1,8 @@
+import { openSync, readSync, closeSync, renameSync } from "node:fs";
 import {
   existsSync,
-  openSync,
   readdirSync,
-  readSync,
-  closeSync,
-  renameSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type { Move } from "./plan";
 import { claudeProjectDirName, rewriteDbValue } from "./rewrite";

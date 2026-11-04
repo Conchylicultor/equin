@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { matchBracket } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";

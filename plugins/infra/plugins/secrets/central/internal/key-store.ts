@@ -1,10 +1,8 @@
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import {
-  chmodSync,
   existsSync,
-  mkdirSync,
   readFileSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { randomBytes } from "node:crypto";
 import { keyPath, secretsDir, storePath } from "./paths";
 import { SecretsKeychainLockedError } from "@plugins/infra/plugins/secrets/core";

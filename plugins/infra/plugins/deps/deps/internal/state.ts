@@ -1,12 +1,9 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import {
-  closeSync,
   existsSync,
-  fstatSync,
-  openSync,
   readFileSync,
-  readSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import { DEP_LOG_TAIL_LINES, type DepState } from "../../core";
 import { isLockHeld } from "./lock";

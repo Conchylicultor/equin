@@ -17,7 +17,7 @@
 // async reads one gate per set bounds — so a caller iterating thousands of
 // files never makes a blocking call per file on a thread others share.
 
-import { readFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";

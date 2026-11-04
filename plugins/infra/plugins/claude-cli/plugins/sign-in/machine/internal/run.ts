@@ -8,12 +8,14 @@ import {
   closeSync,
   mkdirSync,
   openSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+  realpathSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";

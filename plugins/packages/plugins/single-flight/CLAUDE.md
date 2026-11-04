@@ -99,6 +99,7 @@ verdict re-run, a stale verdict never adopted, different keys in parallel.
     - `packages/flock.flockTry`
     - `packages/flock.HeldFlock`
     - `packages/flock.waitForFlock`
+    - `packages/timed-fs.readFileSync`
   - Exports (types):
     - `Flight`
     - `FlightLeader`

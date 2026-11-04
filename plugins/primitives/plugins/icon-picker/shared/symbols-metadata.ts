@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { readFileSync } from "fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { fileURLToPath } from "url";
 import { z } from "zod";
 

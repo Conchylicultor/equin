@@ -1,5 +1,6 @@
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
+import { readdirSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { connect } from "node:net";
 import { eq } from "drizzle-orm";

@@ -2,8 +2,13 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readdirSync, statSync } from "node:fs";
-import { readdir, stat } from "node:fs/promises";
+import {
+  readdirSync,
+  statSync,
+  readdir,
+  stat,
+} from "@plugins/packages/plugins/timed-fs/core";
+
 import { join } from "node:path";
 import { worktreesDir } from "./paths";
 

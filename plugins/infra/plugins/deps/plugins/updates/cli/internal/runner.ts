@@ -1,12 +1,9 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import {
   existsSync,
-  mkdirSync,
   readFileSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join } from "node:path";
 import {
   confirmedFailures,

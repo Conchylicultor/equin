@@ -1,4 +1,5 @@
-import { mkdir, readdir, realpath, rename, writeFile } from "node:fs/promises";
+import { mkdir, rename, writeFile } from "node:fs/promises";
+import { readdir, realpath } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";

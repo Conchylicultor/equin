@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { access, stat } from "node:fs/promises";
+import { access, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename } from "node:path";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { locateHostPath, type HostLocation } from "./archive/locate";

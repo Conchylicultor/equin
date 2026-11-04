@@ -6,6 +6,8 @@
 import "./declare-namespace";
 import "./pin-toolchain";
 import {
+  BOOT_JOURNAL_CHANNEL,
+  installBootJournal,
   profilerStart,
   recordMemoryCheckpoint,
   notificationsWsHandler,
@@ -42,6 +44,10 @@ import {
 } from "@plugins/infra/plugins/runtime-identity/core";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import {
+  channelFileSink,
+  logEnvelope,
+} from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
+import {
   HOST_ROUTES_ROUTE,
   hostGateFromArgv,
   type HostGate,
@@ -71,6 +77,29 @@ if (isMain() && boostInteractiveQos()) {
 // the per-plugin (per-span) RSS deltas inside those phases overlap and are only
 // *directional*. The phase-boundary checkpoints recorded here are the
 // authoritative per-phase RSS numbers.
+// ── Boot journal (durable, as it accrues) ───────────────────────
+// The boot profile lives in memory and is lost with a backend killed before
+// ready — the gateway's readiness deadline is a SIGKILL, which runs no handler.
+// So every checkpoint, every load wave as it opens (with its plugins) and each
+// slow span is also appended, synchronously, to the boot-journal channel:
+// the last `open` with no closing `span` is the step a killed boot died in.
+// SERVE ONLY, installed before the first checkpoint and the plugin graph.
+const bootJournal = channelFileSink({
+  id: BOOT_JOURNAL_CHANNEL,
+  description:
+    "Per-boot journal of a serving backend's boot profile, written as it accrues: phase checkpoints, each plugin load wave as it opens (with its plugins), and every slow span — so a backend killed before ready still says where it was.",
+});
+const processStartedAt = Math.round(performance.timeOrigin);
+installBootJournal((entry) => {
+  bootJournal.append(
+    logEnvelope({
+      t: Date.now(),
+      stream: "stdout",
+      line: JSON.stringify({ processStartedAt, entry }),
+    }),
+  );
+});
+
 recordMemoryCheckpoint("boot-start");
 
 // ── Route tables ────────────────────────────────────────────────

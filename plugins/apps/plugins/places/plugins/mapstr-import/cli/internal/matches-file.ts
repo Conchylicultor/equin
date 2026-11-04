@@ -1,4 +1,5 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import {
   PlaceCandidateSchema,

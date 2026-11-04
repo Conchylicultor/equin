@@ -13,15 +13,13 @@
 // package version + wrapper + esbuild version + flags. Lazy: rebuilt only when
 // the key changes (a new dep, a version bump, a flag change).
 
+import { mkdirSync, rmSync, utimesSync } from "node:fs";
 import {
   existsSync,
-  mkdirSync,
   readFileSync,
   readdirSync,
-  rmSync,
   statSync,
-  utimesSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   appPathParent,
   asAppPath,

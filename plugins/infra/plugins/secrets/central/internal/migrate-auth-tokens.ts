@@ -1,4 +1,8 @@
-import { existsSync, readFileSync, renameSync } from "node:fs";
+import { renameSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { decrypt } from "./crypto";
 import { legacyAuthBlob, legacyAuthKey } from "./paths";
 import { hasLocal, setLocal } from "./store";

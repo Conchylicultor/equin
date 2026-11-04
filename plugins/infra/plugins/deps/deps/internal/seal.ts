@@ -2,7 +2,8 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";

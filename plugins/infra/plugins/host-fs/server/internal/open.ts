@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import type { HostFsOpenResult } from "../../core";
 import { locateHostPath } from "./archive/locate";

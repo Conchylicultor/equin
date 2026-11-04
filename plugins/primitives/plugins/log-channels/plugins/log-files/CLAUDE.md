@@ -36,6 +36,7 @@ another worktree's logs. See `plugins/primitives/plugins/log-channels/CLAUDE.md`
     - `debug/boot-watchdog`
     - `debug/health-monitor`
     - `debug/logs`
+    - `debug/profiling/fs-wait`
     - `debug/sentinel`
     - `debug/slow-ops`
     - `debug/timeline`

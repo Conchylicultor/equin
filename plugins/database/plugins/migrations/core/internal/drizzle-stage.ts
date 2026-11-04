@@ -18,15 +18,17 @@
  */
 import {
   copyFileSync,
-  existsSync,
   mkdirSync,
   mkdtempSync,
-  readdirSync,
-  readFileSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join, relative, resolve } from "path";
 import { DRIZZLE_CONFIG_PATH } from "./drizzle-cli";
 import {

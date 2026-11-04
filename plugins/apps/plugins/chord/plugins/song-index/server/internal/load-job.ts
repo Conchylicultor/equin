@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";

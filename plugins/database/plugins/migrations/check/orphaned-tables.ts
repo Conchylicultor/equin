@@ -1,4 +1,7 @@
-import { readdirSync, readFileSync } from "fs";
+import {
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "path";
 // The imperative-public-table allowlist lives in the derived-views core leaf
 // (the shared sink) — see that module for why it is NOT in @plugins/database/core.

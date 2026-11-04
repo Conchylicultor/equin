@@ -2,13 +2,11 @@ import {
   type AppPath,
   asAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import {
   existsSync,
-  mkdirSync,
   readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 
 /**

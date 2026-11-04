@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { STAMP_REL } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";

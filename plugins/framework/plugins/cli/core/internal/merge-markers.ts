@@ -1,4 +1,5 @@
-import { existsSync, rmSync } from "node:fs";
+import { rmSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { resolveGitDir } from "./git-dir";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";

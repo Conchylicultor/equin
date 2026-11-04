@@ -1,13 +1,10 @@
+import { rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import {
   lstatSync,
   readdirSync,
   readFileSync,
   readlinkSync,
-  rmSync,
-  symlinkSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { isAbsolute, join, relative } from "node:path";
 import type { Move } from "./plan";
 import {

@@ -5,7 +5,7 @@
 //
 //   ./equin run plugins/framework/plugins/tooling/plugins/web-artifacts/scripts/css-scope-diff.ts <deployed.css>
 
-import { readFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import {
   asAppPath,
   joinAppPath,

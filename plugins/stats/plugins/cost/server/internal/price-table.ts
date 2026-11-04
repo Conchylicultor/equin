@@ -1,4 +1,5 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, rename, writeFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import { safeFetch } from "@plugins/infra/plugins/safe-fetch/server";
 import type { ModelPrice, PriceTable } from "../../core";

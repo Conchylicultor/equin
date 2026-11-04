@@ -14199,6 +14199,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.JsonValue`
           - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.joinAppPath`
+          - `packages/timed-fs.existsSync`
+          - `packages/timed-fs.readdirSync`
+          - `packages/timed-fs.readFileSync`
         - Exports (types):
           - `AppliedConfigMigration`
           - `ConfigLedgerEntry`
@@ -20223,7 +20226,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/transcript-retention`
           - `debug/read-set`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/find-transcript-path.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
     - **`turn-ledger`** — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, confirmTurn (the agent's confirmation that it took a turn, applied to that row by the turn id it echoed, with the transcript line's uuid; resolvePromptSubmit is its temporary equality-matched fallback for an agent started before turn ids), Stop's and rewind's returnTurnByPromptUuid (the turn taken back, by its transcript line), the turn-ledger.turns live collection, the conversation.userTurnSent event (emitted once the agent confirmed a user's turn) and the 7-day retention sweep of settled rows.
       - Web:
         - Contributes: `IdKinds.Kind` "turn"
@@ -20492,6 +20495,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `framework/product-name.PRODUCT_NAME`
               - `infra/paths.CLAUDE_USER_CONFIG`
+              - `packages/timed-fs.readFileSync`
+              - `packages/timed-fs.statSync`
             - Exports (values):
               - `assertDirTrusted`
               - `ensureDirTrusted`
@@ -20560,6 +20565,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `readTag`
       - `schemaChangedAtBoot`
       - `snapshotWatermark`
+  - Core:
+    - Uses: `packages/timed-fs.readFileSync`
+    - Exports (types):
+      - `DatabaseConfig`
+      - `DatabaseProvider`
+    - Exports (values):
+      - `buildConnectionString`
+      - `DATABASE_CONFIG_PATH`
+      - `libpqEnv`
+      - `readDatabaseConfig`
   - Cross-plugin:
     - Imported by: 136 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×39
@@ -20588,15 +20603,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `wish`
   - Exemptions:
     - Exempts itself from: `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
-  - Core:
-    - Exports (types):
-      - `DatabaseConfig`
-      - `DatabaseProvider`
-    - Exports (values):
-      - `buildConnectionString`
-      - `DATABASE_CONFIG_PATH`
-      - `libpqEnv`
-      - `readDatabaseConfig`
   - Test helpers:
     - Server: `@plugins/database/server/testing`
       - `snapshotWatermark`
@@ -21085,6 +21091,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/spawn.spawnCaptured`
           - `infra/spawn.spawnExpectOk`
           - `packages/semaphore.createSemaphore`
+          - `packages/timed-fs.existsSync`
+          - `packages/timed-fs.readdir`
+          - `packages/timed-fs.readdirSync`
+          - `packages/timed-fs.readFile`
+          - `packages/timed-fs.readFileSync`
+          - `packages/timed-fs.scanGlob`
         - Exports (types):
           - `ContractOp`
           - `DrizzleGenerateOptions`
@@ -21159,7 +21171,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `product-name:legacy-id` — `data` (sanctioned)
           - `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
-          - `boundaries/no-platform-api` — `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/snapshot-dag.ts` (debt)
+          - `boundaries/no-platform-api` — `core/internal/schema-glob.ts`, `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/snapshot-dag.ts` (debt)
           - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/migration-phases-valid.ts`, `check/orphaned-tables.ts` (debt)
         - Exempted by: `database/migrations` (0 debt)
       - Machine:
@@ -21809,6 +21821,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/browser-recordings.RecordingSource`
               - `debug/browser-recordings.RecordingStep`
               - `framework/tooling/guards.TOOL_USE_ID_RE`
+              - `packages/timed-fs.readdir`
+              - `packages/timed-fs.stat`
             - Exports (types):
               - `FrameFormat`
               - `Recording`
@@ -22632,6 +22646,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/categorical --categorical-1`
+              - `ui/tokens/categorical --categorical-10`
               - `ui/tokens/categorical --categorical-2`
               - `ui/tokens/categorical --categorical-3`
               - `ui/tokens/categorical --categorical-4`
@@ -22695,6 +22710,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius`
             - Imported by: `debug/profiling/ops`
         - **`cold-start`** — Cold-start benchmark: stops the worktree's server, loads a page in a fresh browser and splits page request → first screen with data across the gateway, the server's boot phases and the browser's boot trace.
+        - **`fs-wait`** — Records a backend's and an exec child's slow file calls to their namespace's fs-wait log channel from the register phase on; recordFsWaits does the same for a CLI run.
+          - Server:
+            - Uses:
+              - `primitives/log-channels/log-files.logEnvelope`
+              - `primitives/log-channels/log-files.logsDirFor`
+            - Exports (values): `recordFsWaits`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/record-fs-waits.ts` (debt)
+          - Core:
+            - Exports (types): `FsWaitLine`
+            - Exports (values):
+              - `FS_WAIT_CHANNEL`
+              - `FsWaitLineSchema`
         - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, and the merged file reader. Its op-store child ingests it into the DB and owns the orphan reconciler.
           - Core:
             - Uses:
@@ -26616,6 +26644,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `framework/product-name.LEGACY_IDS`
           - `framework/tooling/collected-dir.defineCollectedDir`
+          - `packages/timed-fs.existsSync`
+          - `packages/timed-fs.readFileSync`
+          - `packages/timed-fs.statSync`
         - Exports (types):
           - `ClaudeMdRepo`
           - `CliAction`
@@ -26826,6 +26857,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `infra/paths.worktreeArtifacts`
               - `infra/paths.worktreeDataDir`
+              - `packages/timed-fs.readFileSync`
             - Exports (types):
               - `BuildReceipt`
               - `BuildReceiptStatus`
@@ -26954,6 +26986,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/paths.pruneWorktreeTestArtifacts`
               - `infra/paths.worktreeArtifacts`
               - `infra/paths.worktreeDataDir`
+              - `packages/timed-fs.existsSync`
+              - `packages/timed-fs.readdirSync`
+              - `packages/timed-fs.readFileSync`
             - Exports (types):
               - `JunitSummary`
               - `TestRunnerName`
@@ -27219,6 +27254,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`
           - `packages/string-hash.hash64`
         - Exports (types):
+          - `BootJournalEntry`
           - `BootMode`
           - `BrowserHost`
           - `BrowserHostBoot`
@@ -27282,6 +27318,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `assertPreloadedResourcesDeclared`
           - `bindDeferredResources`
+          - `BOOT_JOURNAL_CHANNEL`
           - `bootBrowserHost`
           - `boundedMembershipKeys`
           - `collectContributions`
@@ -27297,6 +27334,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `handOffEpoch`
           - `heapMemory`
           - `hostHttpRoutes`
+          - `installBootJournal`
           - `installHeapReader`
           - `installMemoryProbe`
           - `installPeerMemoryProbe`
@@ -27416,6 +27454,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/spawn.spawnCaptured`
           - `packages/semaphore.createSemaphore`
+          - `packages/timed-fs.readFile`
         - Exports (types):
           - `Check`
           - `CheckContext`
@@ -27446,26 +27485,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
-            - Uses:
-              - `framework/plugin-id.isTestCodePath`
-              - `framework/plugin-id.PLUGIN_FOLDERS`
-              - `framework/plugin-id.PluginFolder`
-              - `framework/plugin-id.RUNTIME_FOLDERS`
-              - `framework/plugin-id.TESTING_FOLDER`
-              - `framework/plugin-id.VERIFYING_FOLDERS`
-              - `framework/tooling/import-closure.importClosure`
-              - `framework/tooling/import-closure.importClosures`
-              - `framework/tooling/import-closure.loadTypescript`
-              - `framework/tooling/import-closure.UnionImportClosure`
+            - Uses: 21 symbols — full list in [`plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md)
+              - `framework/plugin-id` ×6
+              - `plugin-meta/parse-utils` ×6
+              - `framework/tooling/import-closure` ×4
               - `infra/host-fs/user-path.joinAppPath`
               - `infra/spawn.getWorktreeRoot`
               - `packages/macrotask-yield.yieldMacrotask`
-              - `plugin-meta/parse-utils.findImports`
-              - `plugin-meta/parse-utils.HostServiceDecl`
-              - `plugin-meta/parse-utils.hostServicesByName`
-              - `plugin-meta/parse-utils.ImportRef`
-              - `plugin-meta/parse-utils.parseHostServiceDeclarations`
-              - `plugin-meta/parse-utils.providedServiceNames`
+              - `packages/timed-fs.existsSync`
               - `plugin-meta/plugin-tree.buildStructureTreeOnce`
             - Exports (types):
               - `AllowEdge`
@@ -27537,7 +27564,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations` (3 debt)
               - `conversations/conversation-view/code` (2 debt)
               - `conversations/transcript-retention` (1 debt)
-              - `conversations/transcript-watcher` (4 debt)
+              - `conversations/transcript-watcher` (5 debt)
               - `conversations/workspace/scratch` (3 debt)
               - `conversations/workspace/worktree` (1 debt)
               - `database` (1 debt)
@@ -27545,7 +27572,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/client-tools` (1 debt)
               - `database/connection` (2 debt)
               - `database/embedded` (1 debt)
-              - `database/migrations` (6 debt)
+              - `database/migrations` (7 debt)
               - `database/pgbouncer` (1 debt)
               - `database/query` (1 debt)
               - `debug/broadcasts` (3 debt)
@@ -27557,6 +27584,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/memory` (3 debt)
               - `debug/paging-probe` (2 debt)
               - `debug/profiling/boot-bench` (3 debt)
+              - `debug/profiling/fs-wait` (1 debt)
               - `debug/profiling/op-log/op-store` (2 debt)
               - `debug/profiling/runtime` (1 debt)
               - `debug/scratch-hello` (1 debt)
@@ -27626,6 +27654,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/spawn-priority` (3 debt)
               - `packages/thread-cpu-clock` (1 debt)
               - `packages/ticket-line` (1 debt)
+              - `packages/timed-fs` (0 debt)
               - `plugin-meta/barrel-import` (1 debt)
               - `plugin-meta/parse-utils` (1 debt)
               - `plugin-meta/plugin-refs` (1 debt)
@@ -27647,11 +27676,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons/icon-sets` (1 debt)
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 58 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 63 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×10
               - `framework/tooling/exempt` ×7
               - `reports/check-thread-stall` ×7
               - `infra/stack-sampler` ×5
+              - `packages/timed-fs` ×5
               - `infra/host-fs/user-path` ×4
               - `infra/launcher/env-names` ×3
               - `infra/paths` ×3
@@ -27910,7 +27940,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Register: `defineSupervisedJob('type-check.backstop')`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 114 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 118 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×20
               - `config_v2` ×15
               - `framework/plugin-id` ×14
@@ -27920,6 +27950,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/composition` ×5
               - `plugin-meta/facets` ×5
               - `infra/host-fs/user-path` ×4
+              - `packages/timed-fs` ×4
               - `plugin-meta/plugin-tree` ×4
               - `framework/slot-declaration` ×3
               - `config_v2/ledger` ×2
@@ -28221,6 +28252,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.joinAppPath`
               - `infra/spawn.spawnCaptured`
               - `packages/macrotask-yield.createTimeSlicer`
+              - `packages/timed-fs.existsSync`
+              - `packages/timed-fs.readFile`
             - Exports (types):
               - `DirectiveDisplacement`
               - `DirectiveTarget`
@@ -28244,27 +28277,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries/no-platform-api` — `core/internal/changed-files.ts`, `core/internal/format-sources.ts`, `core/internal/format-thread.ts`, `core/internal/format-worker.ts`, `core/internal/prettier.ts` (debt)
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
-            - Uses:
-              - `framework/cli/cli-name.CLI_NAME`
-              - `framework/cli/cli-name.CLI_NAMES`
-              - `framework/cli/cli-name.isCliName`
-              - `framework/cli/foreground-handoff.foregroundDeadline`
-              - `framework/cli/foreground-handoff.isHandoffOp`
+            - Uses: 23 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+              - `framework/cli/cli-name` ×3
+              - `infra/host-fs/user-path` ×3
+              - `infra/paths` ×3
+              - `packages/timed-fs` ×3
+              - `framework/cli/foreground-handoff` ×2
+              - `framework/tooling/collected-dir` ×2
+              - `framework/tooling/guards/refusal-format` ×2
+              - `infra/launcher/env-names` ×2
+              - `infra/namespace` ×2
               - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
-              - `framework/tooling/collected-dir.defineCollectedDir`
-              - `framework/tooling/collected-dir.loadCollectedDir`
-              - `framework/tooling/guards/refusal-format.joinRefusal`
-              - `framework/tooling/guards/refusal-format.REFUSAL_HEADER`
-              - `infra/host-fs/user-path.AppPath`
-              - `infra/host-fs/user-path.asAppPath`
-              - `infra/host-fs/user-path.joinAppPath`
-              - `infra/launcher/env-names.envName`
-              - `infra/launcher/env-names.readEnv`
-              - `infra/namespace.asNamespace`
-              - `infra/namespace.isNamespace`
-              - `infra/paths.HOME_DIR`
-              - `infra/paths.REPO_ROOT`
-              - `infra/paths.worktreeArtifacts`
             - Exports (types):
               - `AllowVerdict`
               - `BuiltinTool`
@@ -28312,6 +28335,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/e2e-harness`
           - Exemptions:
             - Exempts itself from:
+              - `timed-fs/no-untimed-fs-read` — `bin/bootstrap.ts` (sanctioned)
               - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/main-edits.ts` (sanctioned)
               - `user-path/no-sync-fs` — `core/context.ts`, `core/git-target.ts`, `core/guards/poll-loop.ts` (sanctioned)
               - `python/no-system-python` — `core` (sanctioned)
@@ -28351,6 +28375,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.AppPath`
               - `infra/host-fs/user-path.asAppPath`
               - `infra/host-fs/user-path.joinAppPath`
+              - `packages/timed-fs.readdirSync`
+              - `packages/timed-fs.readFileSync`
+              - `packages/timed-fs.realpathSync`
             - Exports (types):
               - `CommandRunEdge`
               - `DynamicImportPolicy`
@@ -28384,6 +28411,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/exempt.ruleIdProblems`
               - `infra/host-fs/user-path.AppPath`
               - `infra/host-fs/user-path.joinAppPath`
+              - `packages/timed-fs.existsSync`
+              - `packages/timed-fs.readdirSync`
+              - `packages/timed-fs.readFileSync`
             - Exports (types):
               - `BuildLintConfigOptions`
               - `ClassRuleFactory`
@@ -28643,7 +28673,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 22 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 30 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+              - `packages/timed-fs` ×8
               - `framework/plugin-id` ×4
               - `framework/web-core` ×4
               - `infra/host-fs/user-path` ×4
@@ -28746,6 +28777,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/relative-time.ElapsedTime`
           - `primitives/slot-render.RenderCoreRoot`
           - `reports.report`
+      - Core:
+        - Uses:
+          - `packages/timed-fs.readdir`
+          - `packages/timed-fs.stat`
+        - Exports (types):
+          - `BabelContribution`
+          - `BabelPluginItem`
+          - `BabelSource`
+          - `OrderedBabelContributions`
+        - Exports (values):
+          - `babelPluginsFor`
+          - `findViteContributions`
+          - `isViteContributionPath`
+          - `loadBabelContributions`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
@@ -28761,17 +28806,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `core/vite-contributions.ts` (debt)
           - `networking/no-page-transport` — `web/App.tsx` (sanctioned)
           - `networking/no-request-guard-capability` — `web/install-request-guard.ts` (sanctioned)
-      - Core:
-        - Exports (types):
-          - `BabelContribution`
-          - `BabelPluginItem`
-          - `BabelSource`
-          - `OrderedBabelContributions`
-        - Exports (values):
-          - `babelPluginsFor`
-          - `findViteContributions`
-          - `isViteContributionPath`
-          - `loadBabelContributions`
       - Structure:
         - Composition root: yes
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
@@ -30342,11 +30376,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `updater` "mise"
             - Uses: `infra/deps/updates.UpdaterDeclare`
           - Core:
-            - Uses: 21 symbols — full list in [`plugins/infra/plugins/deps/plugins/mise/REFERENCE.md`](../plugins/infra/plugins/deps/plugins/mise/REFERENCE.md)
+            - Uses: 22 symbols — full list in [`plugins/infra/plugins/deps/plugins/mise/REFERENCE.md`](../plugins/infra/plugins/deps/plugins/mise/REFERENCE.md)
               - `toolchain` ×12
               - `infra/deps/updates` ×6
               - `infra/host-fs/user-path` ×2
               - `infra/spawn.spawnCaptured`
+              - `packages/timed-fs.readFileSync`
             - Exports (values):
               - `installLockedToolchain`
               - `miseUpdater`
@@ -30369,6 +30404,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/updates.utcDay`
               - `infra/spawn.spawnCaptured`
               - `packages/semaphore.createSemaphore`
+              - `packages/timed-fs.readFile`
             - Exports (types):
               - `Packument`
               - `Plan`
@@ -30393,6 +30429,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.AppPath`
               - `infra/host-fs/user-path.asAppPath`
               - `infra/host-fs/user-path.joinAppPath`
+              - `packages/timed-fs.existsSync`
+              - `packages/timed-fs.readFileSync`
             - Exports (types):
               - `BrowserExecutables`
               - `ReadBrowserExecutables`
@@ -31066,6 +31104,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.appPathParent`
           - `infra/host-fs/user-path.asAppPath`
           - `infra/host-fs/user-path.joinAppPath`
+          - `packages/timed-fs.stat`
+          - `packages/timed-fs.statSync`
         - Exports (types):
           - `FileSink`
           - `FileSinkSpec`
@@ -32162,6 +32202,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `infra/paths.worktreeArtifacts`
               - `infra/runtime-identity.runtimeNamespace`
+              - `packages/timed-fs.readFileSync`
+              - `packages/timed-fs.statSync`
             - Exports (types):
               - `ExecContext`
               - `RunObservation`
@@ -32668,26 +32710,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `ndjsonResponse`
     - **`paths`** — Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
       - Core:
-        - Uses:
-          - `framework/product-name.LEGACY_IDS`
-          - `framework/product-name.PRODUCT_NAME`
+        - Uses: 28 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `packages/timed-fs` ×8
+          - `infra/namespace` ×7
+          - `infra/launcher/env-names` ×4
+          - `infra/host-fs/user-path` ×3
+          - `framework/product-name` ×2
+          - `infra/runtime-identity` ×2
           - `framework/tooling/collected-dir.defineCollectedDir`
-          - `infra/host-fs/user-path.AppPath`
-          - `infra/host-fs/user-path.asAppPath`
-          - `infra/host-fs/user-path.joinAppPath`
-          - `infra/launcher/env-names.readEnv`
-          - `infra/launcher/env-names.readEnvPath`
-          - `infra/launcher/env-names.setEnv`
-          - `infra/launcher/env-names.unsetEnv`
-          - `infra/namespace.asNamespace`
-          - `infra/namespace.CheckoutRef`
-          - `infra/namespace.isNamespace`
-          - `infra/namespace.MAIN_COMPOSITION_ID`
-          - `infra/namespace.MAIN_WORKTREE_NAME`
-          - `infra/namespace.Namespace`
-          - `infra/namespace.namespaceFor`
-          - `infra/runtime-identity.isMain`
-          - `infra/runtime-identity.runtimeNamespace`
           - `infra/spawn.getMainRepoRoot`
         - Exports (types):
           - `AppIdentity`
@@ -33439,6 +33469,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.asAppPath`
           - `packages/flock.holdParentLifeline`
           - `packages/spawn-priority.spawnAtTier`
+          - `packages/timed-fs.readFileSync`
         - Exports (types):
           - `ChildResourceUsage`
           - `SpawnBaseOptions`
@@ -35661,6 +35692,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/flock.flockTry`
           - `packages/flock.HeldFlock`
           - `packages/flock.waitForFlock`
+          - `packages/timed-fs.readFileSync`
         - Exports (types):
           - `Flight`
           - `FlightLeader`
@@ -35720,7 +35752,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Non-standard folders: `native/`
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; spawnInForeground starts a scarce slot holder's child out of darwinbg; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
       - Core:
-        - Uses: `infra/launcher/env-names.readEnv`
+        - Uses:
+          - `infra/launcher/env-names.readEnv`
+          - `packages/timed-fs.existsSync`
         - Exports (types):
           - `DarwinBackground`
           - `SpawnTier`
@@ -35789,6 +35823,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.joinAppPath`
           - `packages/flock.flockTry`
           - `packages/flock.waitForFlock`
+          - `packages/timed-fs.readdirSync`
         - Exports (types):
           - `Ticket`
           - `TicketLine`
@@ -35798,6 +35833,54 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createTicketLine`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
+    - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call past FS_WAIT_FLOOR_MS handed to onSlowFsCall subscribers as a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
+      - Cross-plugin:
+        - Imported by: 34 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `framework` ×13
+          - `infra` ×7
+          - `packages` ×3
+          - `plugin-meta` ×3
+          - `database` ×2
+          - `config_v2/ledger`
+          - `conversations/workspace/scratch`
+          - `debug/browser-recordings/writer`
+          - `reports/outbox`
+          - `toolchain`
+          - `ui/icons/icon-sets`
+      - Exemptions:
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `core/internal/timed-fs.ts` (sanctioned)
+          - `timed-fs/no-untimed-fs-read` — `core/internal/timed-fs.ts` (sanctioned)
+        - Exempted by:
+          - `framework/tooling/guards` (0 debt)
+          - `packages/timed-fs` (0 debt)
+      - Core:
+        - Exports (types):
+          - `FsWaitLayer`
+          - `SlowFsCall`
+        - Exports (values):
+          - `access`
+          - `accessSync`
+          - `existsSync`
+          - `FS_WAIT_FLOOR_MS`
+          - `FS_WAIT_LAYERS`
+          - `installFsAwait`
+          - `lstat`
+          - `lstatSync`
+          - `onSlowFsCall`
+          - `readdir`
+          - `readdirSync`
+          - `readFile`
+          - `readFileSync`
+          - `readlink`
+          - `readlinkSync`
+          - `realpath`
+          - `realpathSync`
+          - `scanGlob`
+          - `scanGlobSync`
+          - `stat`
+          - `statSync`
+          - `TIMED_FS_CALLS`
     - **`value-patch`** — A JSON value's change as what changed: diffValue(prev, next) → set / append / push ops at paths (null when the root itself changed), applyValuePatch(base, ops) → the next value, copy-on-write so every untouched subtree keeps its identity. What a pushed live value declared `patches: true` ships instead of its whole value.
       - Cross-plugin:
         - Imported by: `framework/resource-runtime`
@@ -39680,6 +39763,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/plugin-id.TESTS_DIR`
           - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.joinAppPath`
+          - `packages/timed-fs.existsSync`
+          - `packages/timed-fs.readdirSync`
+          - `packages/timed-fs.readFileSync`
         - Exports (types):
           - `BarrelExport`
           - `DefaultExportObject`
@@ -40127,11 +40213,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
     - **`relocate`** — `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that every build replays onto its namespace's saved user config (folder moved, reorder keys re-rooted, hash chain kept).
       - Core:
-        - Uses: 22 symbols — full list in [`plugins/plugin-meta/plugins/relocate/REFERENCE.md`](../plugins/plugin-meta/plugins/relocate/REFERENCE.md)
+        - Uses: 25 symbols — full list in [`plugins/plugin-meta/plugins/relocate/REFERENCE.md`](../plugins/plugin-meta/plugins/relocate/REFERENCE.md)
           - `config_v2` ×9
           - `config_v2/ledger` ×6
           - `framework/plugin-id` ×3
           - `infra/host-fs/user-path` ×3
+          - `packages/timed-fs` ×3
           - `plugin-meta/plugin-refs.scanReorderItemRefs`
         - Exports (types):
           - `AppliedMove`
@@ -40157,6 +40244,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/macrotask-yield.createTimeSlicer`
           - `packages/macrotask-yield.yieldMacrotask`
           - `packages/string-hash.hash53`
+          - `packages/timed-fs.readFileSync`
           - `primitives/css/ui-kit.APP_STYLESHEET_PATH`
           - `ui/theme-engine.tokenVarName`
         - Exports (types):
@@ -45305,6 +45393,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/boot-watchdog`
               - `debug/health-monitor`
               - `debug/logs`
+              - `debug/profiling/fs-wait`
               - `debug/sentinel`
               - `debug/slow-ops`
               - `debug/timeline`
@@ -49440,6 +49529,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/paths.REPO_ROOT`
           - `infra/spawn.getMainRepoRoot`
           - `infra/spawn.spawnCaptured`
+          - `packages/timed-fs.readdir`
+          - `packages/timed-fs.realpath`
         - Exports (types):
           - `FileReportOutcome`
           - `MergeBaseResult`
@@ -53828,6 +53919,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/deps/updates.holdProblems`
       - `infra/host-fs/user-path.asAppPath`
       - `infra/paths.HOME_DIR`
+      - `packages/timed-fs.existsSync`
     - Exports (types):
       - `ToolSmoke`
       - `ToolSpec`
@@ -54139,6 +54231,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `infra/host-fs/user-path.AppPath`
               - `infra/host-fs/user-path.asAppPath`
+              - `packages/timed-fs.readFileSync`
             - Exports (types): `SymbolNameList`
             - Exports (values):
               - `ICON_SET_PACKAGES`

@@ -1,6 +1,6 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { existsSync, readFile } from "@plugins/packages/plugins/timed-fs/core";
+
 import { z } from "zod";
 import {
   AnalysisPhaseSchema,

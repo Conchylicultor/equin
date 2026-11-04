@@ -9,7 +9,10 @@
 // the program contained.
 
 import { createHash } from "node:crypto";
-import { readFileSync, statSync } from "node:fs";
+import {
+  readFileSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**

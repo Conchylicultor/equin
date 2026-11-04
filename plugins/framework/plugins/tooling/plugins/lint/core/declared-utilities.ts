@@ -2,7 +2,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readFileSync } from "fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 
 /**
  * Which custom `@utility` classes exist — the one stylesheet fact a class rule

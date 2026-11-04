@@ -1,11 +1,15 @@
-import { existsSync } from "node:fs";
-import { cp, stat, mkdir } from "node:fs/promises";
+import { cp, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { getConfig } from "@plugins/config_v2/server";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 import type { BackupSourceReport } from "@plugins/backup/core";
 import { projectMemorySourceConfig } from "../../shared/config";
+import {
+  scanGlob,
+  existsSync,
+  stat,
+} from "@plugins/packages/plugins/timed-fs/core";
 
 export async function assembleProjectMemory(
   dir: string,
@@ -38,7 +42,7 @@ export async function assembleProjectMemory(
   // Scan for */memory/ directories under CLAUDE_PROJECTS_DIR
   // Bun.Glob does not support onlyDirectories, so scan files under */memory/**/* instead
   const seen = new Set<string>();
-  for await (const rel of new Bun.Glob("*/memory/**/*").scan({
+  for await (const rel of scanGlob("*/memory/**/*", {
     cwd: CLAUDE_PROJECTS_DIR,
     onlyFiles: true,
   })) {

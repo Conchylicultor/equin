@@ -31,7 +31,11 @@
 // throws (`readText`).
 
 import { createHash } from "crypto";
-import { readdirSync, readFileSync, statSync } from "fs";
+import {
+  readdirSync,
+  readFileSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, relative } from "path";
 import ts from "typescript";
 import { readTreeSnapshot } from "@plugins/framework/plugins/tooling/plugins/checks/core";

@@ -1,5 +1,6 @@
 import type { BigIntStats } from "node:fs";
-import { open, stat } from "node:fs/promises";
+import { open } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 
 // The whole kept history of a rotated file — the live file and every `path.N`
 // beside it — read as ONE line stream, newest first, by POSITION.

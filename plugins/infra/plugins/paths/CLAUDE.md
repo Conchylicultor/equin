@@ -277,26 +277,14 @@ run everywhere.
 
 - Description: Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
 - Core:
-  - Uses:
-    - `framework/product-name.LEGACY_IDS`
-    - `framework/product-name.PRODUCT_NAME`
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `packages/timed-fs` ×8
+    - `infra/namespace` ×7
+    - `infra/launcher/env-names` ×4
+    - `infra/host-fs/user-path` ×3
+    - `framework/product-name` ×2
+    - `infra/runtime-identity` ×2
     - `framework/tooling/collected-dir.defineCollectedDir`
-    - `infra/host-fs/user-path.AppPath`
-    - `infra/host-fs/user-path.asAppPath`
-    - `infra/host-fs/user-path.joinAppPath`
-    - `infra/launcher/env-names.readEnv`
-    - `infra/launcher/env-names.readEnvPath`
-    - `infra/launcher/env-names.setEnv`
-    - `infra/launcher/env-names.unsetEnv`
-    - `infra/namespace.asNamespace`
-    - `infra/namespace.CheckoutRef`
-    - `infra/namespace.isNamespace`
-    - `infra/namespace.MAIN_COMPOSITION_ID`
-    - `infra/namespace.MAIN_WORKTREE_NAME`
-    - `infra/namespace.Namespace`
-    - `infra/namespace.namespaceFor`
-    - `infra/runtime-identity.isMain`
-    - `infra/runtime-identity.runtimeNamespace`
     - `infra/spawn.getMainRepoRoot`
   - Exports (types):
     - `AppIdentity`

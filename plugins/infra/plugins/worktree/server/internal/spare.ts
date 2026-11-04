@@ -2,7 +2,11 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readdir, readFile, stat } from "node:fs/promises";
+import {
+  readdir,
+  readFile,
+  stat,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "node:path";
 import { installCheckout } from "./install-checkout";
 import { withWorktreeMutateSlot } from "./mutate-gate";

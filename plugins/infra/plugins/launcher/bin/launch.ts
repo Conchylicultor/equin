@@ -28,7 +28,11 @@ import {
   readEnv,
   setEnvDefault,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 // Zero-import and path-independent, so the ordering constraint above does not
 // apply to it — nothing here freezes a path constant.
 import {

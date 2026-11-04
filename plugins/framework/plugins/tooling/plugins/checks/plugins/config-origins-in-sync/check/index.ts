@@ -1,4 +1,7 @@
-import { existsSync, readFileSync } from "fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import {
   renderConfigOriginContent,

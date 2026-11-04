@@ -13,7 +13,12 @@
 // scheduled prune (`pruneWebArtifactCaches`) reads it unlocked and re-reads
 // only the dists that changed under the store lock (`refreshServedDists`).
 
-import { readdirSync, readlinkSync, realpathSync, statSync } from "node:fs";
+import {
+  readdirSync,
+  readlinkSync,
+  realpathSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   asAppPath,
   joinAppPath,

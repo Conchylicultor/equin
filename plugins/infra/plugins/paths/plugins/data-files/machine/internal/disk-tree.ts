@@ -4,18 +4,8 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { closeSync, openSync } from "node:fs";
-import {
-  link,
-  lstat,
-  mkdir,
-  open,
-  readdir,
-  rename,
-  rm,
-  rmdir,
-  stat,
-  unlink,
-} from "node:fs/promises";
+import { link, mkdir, open, rename, rm, rmdir, unlink } from "node:fs/promises";
+import { lstat, readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import type { Stats } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";

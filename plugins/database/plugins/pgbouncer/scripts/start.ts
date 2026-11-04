@@ -3,7 +3,8 @@ import {
   envName,
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { existsSync, writeFileSync, rmSync } from "node:fs";
+import { writeFileSync, rmSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, dirname } from "node:path";
 import { spawnSync } from "node:child_process";
 import { connect } from "node:net";

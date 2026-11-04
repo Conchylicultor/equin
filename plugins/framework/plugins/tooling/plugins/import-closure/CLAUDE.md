@@ -46,6 +46,9 @@ never import this plugin back.
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.asAppPath`
     - `infra/host-fs/user-path.joinAppPath`
+    - `packages/timed-fs.readdirSync`
+    - `packages/timed-fs.readFileSync`
+    - `packages/timed-fs.realpathSync`
   - Exports (types):
     - `CommandRunEdge`
     - `DynamicImportPolicy`

@@ -1,13 +1,15 @@
 import {
-  existsSync,
   mkdirSync,
-  readFileSync,
-  readdirSync,
   renameSync,
   rmdirSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { randomUUID } from "node:crypto";
 import { basename, dirname } from "node:path";
 import {

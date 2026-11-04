@@ -1,5 +1,5 @@
 // `core/` here means RUNTIME-NEUTRAL NODE, not web-safe.
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";

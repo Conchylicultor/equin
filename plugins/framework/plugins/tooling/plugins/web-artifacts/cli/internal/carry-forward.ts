@@ -20,13 +20,15 @@
 import {
   constants as fsConstants,
   copyFileSync,
-  existsSync,
-  lstatSync,
   mkdirSync,
-  readdirSync,
-  readlinkSync,
   symlinkSync,
 } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  readdirSync,
+  readlinkSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { isAbsolute, join } from "node:path";
 import { webArtifactsDir } from "../../data-dirs";
 

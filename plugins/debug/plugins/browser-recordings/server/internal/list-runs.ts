@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join, sep } from "node:path";
 import { TOOL_USE_ID_RE } from "@plugins/framework/plugins/tooling/plugins/guards/core";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";

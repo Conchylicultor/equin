@@ -9,7 +9,11 @@
  * Protocol: argv[2] is a JSON job file. stdout is one `BatchOutcome`. A nonzero
  * exit means the batch itself crashed.
  */
-import { existsSync, readFileSync, writeSync } from "fs";
+import { writeSync } from "fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import type ts from "typescript";
 import { exitWithParent } from "@plugins/packages/plugins/flock/core";

@@ -1,5 +1,5 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
-import { existsSync } from "fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {

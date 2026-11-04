@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 
 export async function uploadToDrive(
   archivePath: string,

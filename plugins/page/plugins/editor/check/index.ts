@@ -1,5 +1,5 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
-import { existsSync } from "fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import { buildEnrichedTree } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";

@@ -3,7 +3,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "crypto";
-import { readFileSync } from "fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { fileURLToPath } from "url";
 import type { IconifyJSON } from "@iconify/types";
 

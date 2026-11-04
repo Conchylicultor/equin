@@ -1,6 +1,6 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
-import { readdir, stat } from "node:fs/promises";
+import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import {
   gitWorktreesDir,

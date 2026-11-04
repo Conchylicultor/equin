@@ -1,13 +1,10 @@
 import { randomBytes } from "node:crypto";
+import { chmodSync, copyFileSync, renameSync, rmSync } from "node:fs";
 import {
-  chmodSync,
-  copyFileSync,
   readdirSync,
   readFileSync,
-  renameSync,
-  rmSync,
   statSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import {

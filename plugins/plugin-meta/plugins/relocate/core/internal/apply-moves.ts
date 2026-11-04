@@ -31,14 +31,12 @@
 // shared config ledger's (`config_v2/plugins/ledger`), which config
 // migrations ride too.
 
+import { mkdirSync, renameSync, rmdirSync } from "node:fs";
 import {
   existsSync,
-  mkdirSync,
   readdirSync,
   readFileSync,
-  renameSync,
-  rmdirSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   appPathParent,
   type AppPath,

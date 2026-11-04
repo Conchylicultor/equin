@@ -1,4 +1,4 @@
-import { realpath } from "node:fs/promises";
+import { realpath } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join } from "node:path";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import type {

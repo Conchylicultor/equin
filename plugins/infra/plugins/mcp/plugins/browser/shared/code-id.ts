@@ -3,7 +3,10 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { relative } from "node:path";
 
 /** The folders whose source the host process runs (the rest is the backend's). */

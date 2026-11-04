@@ -2,7 +2,7 @@ import {
   envName,
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 
 /**

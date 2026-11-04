@@ -1,7 +1,7 @@
 // The desktop's native probes (memory, snapshot hash), installed into `core`
 // before either boot mode loads the graph — see `./host-probes`.
 import "./host-probes";
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 // The registry import goes through the `@composition-server-registry` alias

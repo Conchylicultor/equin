@@ -1,5 +1,5 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { readFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";

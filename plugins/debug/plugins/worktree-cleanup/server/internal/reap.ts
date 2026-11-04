@@ -1,4 +1,5 @@
-import { rm, stat } from "node:fs/promises";
+import { rm } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { configDir } from "@plugins/config_v2/data-dirs";
 import {
   databaseExists,

@@ -1,11 +1,8 @@
+import { closeSync, openSync, renameSync, writeFileSync } from "node:fs";
 import {
-  closeSync,
   existsSync,
-  openSync,
   readFileSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { createReadStream } from "node:fs";
 import { createGunzip, gunzipSync, gzipSync } from "node:zlib";
 import { JSONParser } from "@streamparser/json";

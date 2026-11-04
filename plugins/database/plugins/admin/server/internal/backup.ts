@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { pgClientBin } from "@plugins/database/plugins/client-tools/server";
 import { queryRows } from "@plugins/database/plugins/sql-rows/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";

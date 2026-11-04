@@ -1,11 +1,9 @@
+import { mkdirSync, renameSync, writeFileSync } from "fs";
 import {
   existsSync,
-  mkdirSync,
   readdirSync,
   readFileSync,
-  renameSync,
-  writeFileSync,
-} from "fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   pruneWorktreeTestArtifacts,
   worktreeArtifacts,

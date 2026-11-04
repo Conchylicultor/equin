@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lstat } from "node:fs/promises";
+import { lstat } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import {
   GitError,

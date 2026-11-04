@@ -1,4 +1,5 @@
-import { copyFileSync, existsSync, mkdtempSync, rmSync } from "fs";
+import { copyFileSync, mkdtempSync, rmSync } from "fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "os";
 import { join } from "path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";

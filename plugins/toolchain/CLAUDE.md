@@ -65,6 +65,7 @@ every move proven before it lands.
     - `infra/deps/updates.holdProblems`
     - `infra/host-fs/user-path.asAppPath`
     - `infra/paths.HOME_DIR`
+    - `packages/timed-fs.existsSync`
   - Exports (types):
     - `ToolSmoke`
     - `ToolSpec`

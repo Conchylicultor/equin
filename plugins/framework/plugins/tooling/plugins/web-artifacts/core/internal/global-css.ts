@@ -22,15 +22,17 @@
 
 import {
   cpSync,
-  existsSync,
   mkdirSync,
   mkdtempSync,
-  readdirSync,
-  readFileSync,
   rmSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   appPathParent,
   asAppPath,

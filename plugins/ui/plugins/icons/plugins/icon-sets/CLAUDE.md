@@ -9,6 +9,7 @@
   - Uses:
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.asAppPath`
+    - `packages/timed-fs.readFileSync`
   - Exports (types): `SymbolNameList`
   - Exports (values):
     - `ICON_SET_PACKAGES`

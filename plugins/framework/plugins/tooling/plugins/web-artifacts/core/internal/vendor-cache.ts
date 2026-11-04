@@ -25,13 +25,11 @@
 // Same load/save idiom as the fingerprint cache in `store.ts`: unparseable or
 // wrong-version ⇒ treat as empty, atomic tmp-then-rename publish.
 
+import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import {
-  mkdirSync,
   readFileSync,
-  renameSync,
   statSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   appPathParent,
   asAppPath,

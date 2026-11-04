@@ -1,5 +1,8 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { codeSignature } from "@plugins/infra/plugins/codesign/deps";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
 import { isRelease } from "@plugins/infra/plugins/paths/core";

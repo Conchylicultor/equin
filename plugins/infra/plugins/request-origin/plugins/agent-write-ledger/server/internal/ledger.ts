@@ -42,14 +42,11 @@ import {
  * needs one. (The design doc's original objection was to a slot for a single
  * contributor; with a registry, no load order is load-bearing at all.)
  */
+import { mkdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import {
   existsSync,
-  mkdirSync,
   readFileSync,
-  renameSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { randomUUID } from "node:crypto";
 import { basename, dirname } from "node:path";
 import { z } from "zod";

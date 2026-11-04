@@ -23,7 +23,8 @@
  */
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "crypto";
-import { readdirSync, writeFileSync } from "fs";
+import { writeFileSync } from "fs";
+import { readdirSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import {
   analyzeSnapshotDag,

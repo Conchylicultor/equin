@@ -1,13 +1,11 @@
+import { renameSync, symlinkSync, unlinkSync } from "node:fs";
 import {
   existsSync,
   lstatSync,
   readdirSync,
   readFileSync,
   realpathSync,
-  renameSync,
-  symlinkSync,
-  unlinkSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   asAppPath,
   joinAppPath,

@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename } from "node:path";
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";

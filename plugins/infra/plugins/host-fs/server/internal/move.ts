@@ -1,12 +1,6 @@
 import { randomUUID } from "node:crypto";
-import {
-  cp,
-  lstat,
-  realpath,
-  rename as fsRename,
-  rm,
-  stat,
-} from "node:fs/promises";
+import { cp, rename as fsRename, rm } from "node:fs/promises";
+import { lstat, realpath, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join, sep } from "node:path";
 import {
   type HostFsMoveOutcome,

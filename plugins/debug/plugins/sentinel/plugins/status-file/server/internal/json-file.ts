@@ -3,7 +3,8 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { z } from "zod";
-import { readFileSync, renameSync, writeFileSync } from "node:fs";
+import { renameSync, writeFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 
 // The two moves every file in the watcher's directory makes: a whole-file JSON
 // read that says what it found (never a guess), and a write-then-rename so a

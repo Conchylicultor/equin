@@ -2,7 +2,7 @@
 // (its declared dependencies and its `dependencyPolicy`) and what `bun.lock`
 // resolved each to. Read-only.
 
-import { readFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";
 import { z } from "zod";

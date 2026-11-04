@@ -8,7 +8,7 @@
 //     --minutes 20 --every 30 <dir> [<dir> …]
 //
 // Research: research/2026-10-25-infra-file-watcher-reconcile-to-onlost.md
-import { lstat, readdir } from "node:fs/promises";
+import { lstat, readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { join, sep } from "node:path";
 import { createFileWatcher } from "../shared/engine";
 

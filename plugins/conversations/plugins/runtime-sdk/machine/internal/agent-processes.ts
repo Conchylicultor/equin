@@ -2,7 +2,10 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readdirSync, readFileSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import {
   pidAlive,

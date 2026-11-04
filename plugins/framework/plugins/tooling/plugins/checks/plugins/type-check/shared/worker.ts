@@ -19,7 +19,11 @@
  * never hit the argv limit). stdout is one JSON result object. A nonzero exit
  * means the worker itself crashed (the orchestrator records no PASSes for it).
  */
-import { readFileSync, realpathSync, unlinkSync, writeSync } from "fs";
+import { unlinkSync, writeSync } from "fs";
+import {
+  readFileSync,
+  realpathSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import ts from "typescript";
 import { exitWithParent } from "@plugins/packages/plugins/flock/core";

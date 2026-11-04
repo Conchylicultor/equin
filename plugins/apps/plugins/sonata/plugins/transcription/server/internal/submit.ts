@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { basename } from "node:path";
 import {
   songIdKind,

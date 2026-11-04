@@ -1,4 +1,7 @@
-import { readdirSync, readFileSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { readEnvPath } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {

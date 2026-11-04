@@ -1,7 +1,7 @@
 // The worker half of spike-build-threads.ts: load the toolchain, build its
 // chunk of targets as ONE batched vite run (write:false), report the times.
 
-import { readFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { parentPort, workerData } from "node:worker_threads";
 import { loadBabelContributions } from "@plugins/framework/plugins/web-core/core";

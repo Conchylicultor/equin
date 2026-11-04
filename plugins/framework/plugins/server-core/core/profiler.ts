@@ -1,6 +1,10 @@
 import { heapMemory, physFootprintBytes } from "./memory-probe";
 
 export type PhaseId =
+  // Importing the plugin graph (`loadServerPlugins`): one `load:wave-<n>` span
+  // per load wave, and a `load:<plugin>` / `load-core:<plugin>` span for each
+  // barrel whose import took at least `LOAD_SPAN_FLOOR_MS`.
+  | "load"
   | "register"
   | "awaitPgReady"
   | "runMigrations"
@@ -71,28 +75,126 @@ function footprintMb(): number | undefined {
   return bytes === null ? undefined : toMb(bytes);
 }
 
+/**
+ * One line of the boot journal: the boot profile as it accrues, so a backend
+ * killed before ready (the gateway's readiness deadline is a SIGKILL, which
+ * runs no handler) still left where it was. `open` is written as a span
+ * STARTS, for the spans that name what they hold (`members` — a load wave's
+ * plugins), so the last open with no matching `span` is the step it died in.
+ */
+export type BootJournalEntry =
+  | {
+      e: "open";
+      id: string;
+      phase: PhaseId;
+      label: string;
+      startMs: number;
+      members: readonly string[];
+    }
+  | {
+      e: "span";
+      span: Span;
+      /** A load wave's slowest barrel imports (their own spans stay in memory). */
+      slowest?: readonly { plugin: string; ms: number }[];
+    }
+  | { e: "checkpoint"; checkpoint: MemoryCheckpoint };
+
+/**
+ * A finished span is journaled when it took at least this long (every `load`
+ * span is): the boot's slow steps, not its few hundred quick ones.
+ */
+const JOURNAL_SPAN_FLOOR_MS = 50;
+
+/**
+ * A plugin barrel's import is a span of its own when it took at least this
+ * long — the wave's span covers the rest.
+ */
+export const LOAD_SPAN_FLOOR_MS = 100;
+
+/**
+ * The log channel a serving backend journals its boot to
+ * (`<logs>/boot-journal.jsonl`), one `{ processStartedAt, entry }` line per
+ * entry — `processStartedAt` the boot-events pairing key
+ * (`Math.round(performance.timeOrigin)`).
+ */
+export const BOOT_JOURNAL_CHANNEL = "boot-journal";
+
+let journal: ((entry: BootJournalEntry) => void) | null = null;
+
+/**
+ * Hand the boot profile, as it accrues, to `write` — synchronously, so each
+ * entry is durable before the boot moves on. Installed by the serving entry
+ * point before the plugin graph loads (`bin/index.ts`); a host that installs
+ * none keeps the profile in memory only. Every checkpoint, every `open`, and
+ * each span past `JOURNAL_SPAN_FLOOR_MS` (or in the `load` phase) — but not a
+ * span started with `journal: false` (a wave's barrel imports: the wave's
+ * span carries its `slowest` instead — a boot's few hundred concurrent
+ * imports each past the floor are ~500 synchronous appends on a stalled disk).
+ */
+export function installBootJournal(
+  write: (entry: BootJournalEntry) => void,
+): void {
+  journal = write;
+}
+
 export function profilerStart(
   id: string,
   phase: PhaseId,
   label: string,
   plugin?: string,
-): () => void {
+  opts?: {
+    /** What the span holds: journaled as an `open` entry as it starts. */
+    members?: readonly string[];
+    /** Record the span only when it took at least this long. */
+    floorMs?: number;
+    /**
+     * `false`: keep the span in memory only — one of many concurrent siblings
+     * (a wave's barrel imports), summarised by the span around it instead.
+     */
+    journal?: false;
+  },
+): (detail?: {
+  slowest?: readonly { plugin: string; ms: number }[];
+}) => number {
   const count = idCounts.get(id) ?? 0;
   idCounts.set(id, count + 1);
   const uniqueId = count === 0 ? id : `${id}:${count}`;
   const t0 = performance.now();
   const physFootprintStartMb = footprintMb();
-  return () => {
-    spans.push({
+  if (opts?.members !== undefined)
+    journal?.({
+      e: "open",
+      id: uniqueId,
+      phase,
+      label,
+      startMs: Math.round(t0 - bootStart),
+      members: opts.members,
+    });
+  return (detail) => {
+    const durationMs = Math.round(performance.now() - t0);
+    if (opts?.floorMs !== undefined && durationMs < opts.floorMs)
+      return durationMs;
+    const span: Span = {
       id: uniqueId,
       phase,
       plugin,
       label,
       startMs: Math.round(t0 - bootStart),
-      durationMs: Math.round(performance.now() - t0),
+      durationMs,
       physFootprintStartMb,
       physFootprintEndMb: footprintMb(),
-    });
+    };
+    spans.push(span);
+    if (
+      opts?.journal !== false &&
+      (phase === "load" || durationMs >= JOURNAL_SPAN_FLOOR_MS)
+    )
+      journal?.({
+        e: "span",
+        span,
+        ...(detail?.slowest && { slowest: detail.slowest }),
+      });
+    return durationMs;
   };
 }
 
@@ -105,14 +207,16 @@ export function recordMemoryCheckpoint(label: string): void {
   // A host with no heap reader has nothing to record.
   const mem = heapMemory();
   if (mem === null) return;
-  memoryCheckpoints.push({
+  const checkpoint: MemoryCheckpoint = {
     label,
     atMs: Math.round(performance.now() - bootStart),
     physFootprintMb: toMb(physFootprintBytes() ?? mem.rss),
     heapUsedMb: toMb(mem.heapUsed),
     externalMb: toMb(mem.external),
     arrayBuffersMb: toMb(mem.arrayBuffers),
-  });
+  };
+  memoryCheckpoints.push(checkpoint);
+  journal?.({ e: "checkpoint", checkpoint });
 }
 
 /**

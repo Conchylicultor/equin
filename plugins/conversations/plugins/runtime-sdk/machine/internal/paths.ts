@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import {
   asAppPath,
   joinAppPath,

@@ -1,13 +1,15 @@
 import {
-  existsSync,
   mkdirSync,
-  readFileSync,
   writeFileSync,
   renameSync,
   unlinkSync,
-  readdirSync,
   rmdirSync,
 } from "fs";
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   appPathParent,
   joinAppPath,

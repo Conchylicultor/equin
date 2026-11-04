@@ -1,5 +1,9 @@
 import { createHash } from "node:crypto";
-import { lstatSync, readdirSync, readlinkSync } from "node:fs";
+import {
+  lstatSync,
+  readdirSync,
+  readlinkSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type {
   Check,

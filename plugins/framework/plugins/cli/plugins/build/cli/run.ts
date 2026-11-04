@@ -3,7 +3,7 @@ import {
   setEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
-import { existsSync } from "fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { sweepDistLeftovers } from "./internal/dist-publish";
 import {

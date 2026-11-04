@@ -1,5 +1,5 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync } from "fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { ServerContribution } from "@plugins/framework/plugins/server-core/core";

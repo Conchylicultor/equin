@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { basename } from "node:path";
 import {
   listAttempts,

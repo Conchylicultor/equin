@@ -19,7 +19,10 @@
  * that fails to load, is malformed, or rejects aborts the whole install with a
  * combined error — never the warn-and-continue of `loadCollectedDir`.
  */
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { provisionEntries } from "../core/provision.generated";

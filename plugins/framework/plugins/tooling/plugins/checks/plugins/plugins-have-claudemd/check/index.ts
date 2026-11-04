@@ -1,5 +1,5 @@
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync } from "fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { pluginClaudeMdPath } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, rmSync, statSync } from "fs";
+import { rmSync } from "fs";
 import { join, relative, resolve } from "path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
@@ -26,6 +26,12 @@ import {
   isTestFilePath,
   partitionTestPaths,
 } from "@plugins/framework/plugins/tooling/plugins/test-layout/core";
+import {
+  scanGlob,
+  existsSync,
+  readFileSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 
 // No args ⇒ every test in the repo. `plugins/` is the whole of it: both runners
 // are scoped to that tree (vitest's `include` literally starts `plugins/**`).
@@ -61,7 +67,7 @@ async function enumerateTests(
   }
 
   const files: string[] = [];
-  for await (const hit of new Bun.Glob(TEST_FILE_GLOB).scan({
+  for await (const hit of scanGlob(TEST_FILE_GLOB, {
     cwd: abs,
     onlyFiles: true,
   })) {

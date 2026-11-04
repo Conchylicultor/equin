@@ -1,4 +1,5 @@
-import { cp, stat } from "node:fs/promises";
+import { cp } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "node:path";
 import { getConfig } from "@plugins/config_v2/server";
 import { listRetainedConversations } from "@plugins/tasks/plugins/tasks-core/server";

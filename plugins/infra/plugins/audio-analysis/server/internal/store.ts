@@ -3,7 +3,8 @@ import {
   asAppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { closeSync, existsSync, mkdirSync, openSync } from "node:fs";
+import { closeSync, mkdirSync, openSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import {

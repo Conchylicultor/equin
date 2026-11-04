@@ -1,4 +1,5 @@
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname } from "node:path";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {

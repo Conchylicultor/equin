@@ -166,6 +166,8 @@ export type ExemptableRuleId =
   | "text/no-adhoc-typography"
   | "text/no-clip-without-nowrap"
   | "theme-boundary/no-adhoc-theme-scope"
+  | "timed-fs/no-untimed-fs-read"
+  | "timed-fs/no-untimed-glob-scan"
   | "timer/no-unlisted-timer"
   | "trigger-render-safety/no-provider-trigger-render"
   | "turn-send-safety/no-adhoc-turn-send"

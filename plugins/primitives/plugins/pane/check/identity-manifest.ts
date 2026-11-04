@@ -1,4 +1,8 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { writeFileSync } from "fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join, posix, relative } from "path";
 import type TS from "typescript";
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";

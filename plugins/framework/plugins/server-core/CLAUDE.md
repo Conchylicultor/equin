@@ -189,6 +189,26 @@ an `exec` child is background work spawned under a deliberately lowered priority
 and raising it to user-interactive would defeat exactly the isolation it was
 spawned under.
 
+## The boot profile, attributed and durable
+
+`core/profiler.ts` records the boot profile (Debug → Profiling → Boot). The
+plugin-graph import (`loadServerPlugins`) is the `load` phase: one
+`load:wave-<n>` span per wave, and a `load:<plugin>` / `load-core:<plugin>`
+span for each barrel whose import took at least `LOAD_SPAN_FLOOR_MS`. Before
+this, an 11 s import gap on main was one blank between `boot-start` and
+`after-import`.
+
+A serving backend also **journals** the profile as it accrues
+(`installBootJournal`, wired in `bin/index.ts`). The journal goes to the
+`boot-journal` log channel (`BOOT_JOURNAL_CHANNEL`), one
+`{ processStartedAt, entry }` line per entry, appended synchronously. Each
+checkpoint is journaled, each load wave as it **opens** (with its plugins),
+and each span past 50 ms (a wave's barrel imports only as its `slowest` three, so a boot journals ~100 lines, not ~500). The gateway's readiness deadline is a SIGKILL,
+which runs no handler, so the in-memory profile dies with the process. The
+journal's last `open` with no matching `span` is the wave a killed boot died
+in. A slow file call during boot is recorded too, by `packages/timed-fs` →
+`debug/profiling/fs-wait`.
+
 ## Host services and the `machine/` half
 
 A capability portable server code needs from whatever host it runs on is a
@@ -439,6 +459,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`
     - `packages/string-hash.hash64`
   - Exports (types):
+    - `BootJournalEntry`
     - `BootMode`
     - `BrowserHost`
     - `BrowserHostBoot`
@@ -502,6 +523,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
   - Exports (values):
     - `assertPreloadedResourcesDeclared`
     - `bindDeferredResources`
+    - `BOOT_JOURNAL_CHANNEL`
     - `bootBrowserHost`
     - `boundedMembershipKeys`
     - `collectContributions`
@@ -517,6 +539,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `handOffEpoch`
     - `heapMemory`
     - `hostHttpRoutes`
+    - `installBootJournal`
     - `installHeapReader`
     - `installMemoryProbe`
     - `installPeerMemoryProbe`

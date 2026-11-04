@@ -1,5 +1,8 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readdirSync, readFileSync } from "fs";
+import {
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join, resolve } from "path";
 // The splitter is the migrations plugin's: the phaser, fork-schema-drift and
 // this check read statements one way. So is what a schema migration is.

@@ -1,5 +1,6 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { writeFileSync, statSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
+import { statSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";

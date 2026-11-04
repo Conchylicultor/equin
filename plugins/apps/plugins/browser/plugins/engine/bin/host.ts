@@ -17,13 +17,13 @@
  */
 import {
   closeSync,
-  existsSync,
   openSync,
   renameSync,
   rmSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { resolve } from "node:path";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { flockTry } from "@plugins/packages/plugins/flock/core";

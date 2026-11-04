@@ -1,4 +1,5 @@
-import { access, cp, stat } from "node:fs/promises";
+import { cp } from "node:fs/promises";
+import { access, stat } from "@plugins/packages/plugins/timed-fs/core";
 import type { WorkspaceImpl } from "@plugins/conversations/plugins/workspace/server";
 import { databaseForkJob } from "@plugins/database/plugins/fork/server";
 import { configDir } from "@plugins/config_v2/data-dirs";

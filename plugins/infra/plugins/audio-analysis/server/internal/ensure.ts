@@ -3,7 +3,7 @@ import {
   asAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import { ensureDep } from "@plugins/infra/plugins/deps/deps";
 import { runPython } from "@plugins/infra/plugins/deps/plugins/python/deps";

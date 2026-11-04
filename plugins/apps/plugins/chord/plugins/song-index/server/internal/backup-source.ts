@@ -1,5 +1,6 @@
-import { copyFile, stat } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { copyFile } from "node:fs/promises";
+import { stat, existsSync } from "@plugins/packages/plugins/timed-fs/core";
+
 import { basename, join } from "node:path";
 import type { BackupSourceReport } from "@plugins/backup/core";
 import { snapshotPath } from "./snapshot";

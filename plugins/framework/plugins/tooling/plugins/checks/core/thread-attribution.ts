@@ -1,4 +1,4 @@
-import { realpathSync } from "node:fs";
+import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import {

@@ -45,6 +45,7 @@
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/categorical --categorical-1`
+    - `ui/tokens/categorical --categorical-10`
     - `ui/tokens/categorical --categorical-2`
     - `ui/tokens/categorical --categorical-3`
     - `ui/tokens/categorical --categorical-4`

@@ -160,7 +160,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 114 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 118 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/parse-utils` ×20
     - `config_v2` ×15
     - `framework/plugin-id` ×14
@@ -170,6 +170,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `plugin-meta/composition` ×5
     - `plugin-meta/facets` ×5
     - `infra/host-fs/user-path` ×4
+    - `packages/timed-fs` ×4
     - `plugin-meta/plugin-tree` ×4
     - `framework/slot-declaration` ×3
     - `config_v2/ledger` ×2

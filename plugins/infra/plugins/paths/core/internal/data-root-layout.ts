@@ -1,4 +1,7 @@
-import { lstatSync, realpathSync } from "node:fs";
+import {
+  lstatSync,
+  realpathSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import {
   asAppPath,

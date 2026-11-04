@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, extname, join } from "path";
 import { __unstable__loadDesignSystem } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";

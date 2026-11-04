@@ -11,7 +11,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { relative } from "node:path";
 import { isViteContributionPath } from "@plugins/framework/plugins/web-core/core";
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";

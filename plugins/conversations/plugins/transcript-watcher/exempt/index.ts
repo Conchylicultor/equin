@@ -6,6 +6,7 @@ export default [
     paths: [
       "server/internal/anchor.ts",
       "server/internal/chain-signature.ts",
+      "server/internal/find-transcript-path.ts",
       "server/internal/session-writes.ts",
       "server/internal/watcher.ts",
     ],

@@ -1,4 +1,8 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join, sep } from "node:path";
 import {
   APP_SCOPE_DIR,

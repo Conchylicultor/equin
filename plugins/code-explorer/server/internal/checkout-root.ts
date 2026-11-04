@@ -1,4 +1,4 @@
-import { realpath } from "node:fs/promises";
+import { realpath } from "@plugins/packages/plugins/timed-fs/core";
 import { isAbsolute } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";

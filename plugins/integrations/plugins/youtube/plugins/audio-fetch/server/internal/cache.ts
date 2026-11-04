@@ -4,14 +4,16 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   closeSync,
-  existsSync,
   mkdirSync,
   openSync,
-  readFileSync,
   renameSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import { z } from "zod";
 import { flockTry } from "@plugins/packages/plugins/flock/core";

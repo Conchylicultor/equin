@@ -116,6 +116,8 @@ pass the same `code` field.
     - `infra/paths.REPO_ROOT`
     - `infra/spawn.getMainRepoRoot`
     - `infra/spawn.spawnCaptured`
+    - `packages/timed-fs.readdir`
+    - `packages/timed-fs.realpath`
   - Exports (types):
     - `FileReportOutcome`
     - `MergeBaseResult`

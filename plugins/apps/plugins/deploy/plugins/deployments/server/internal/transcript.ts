@@ -1,5 +1,6 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { closeSync, existsSync, fstatSync, openSync, readSync } from "node:fs";
+import { closeSync, fstatSync, openSync, readSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { DEPLOY_RUN_KIND_ID } from "./kind-id";
 

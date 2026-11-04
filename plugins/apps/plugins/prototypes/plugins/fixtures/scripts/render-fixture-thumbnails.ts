@@ -11,16 +11,13 @@
 // Each version's folder is laid out in a temp tree (one folder per version,
 // named `<id>.v<N>` — the renderer reads a folder, the fingerprint its files,
 // never its name), then `./equin prototype thumbnails` renders the tree.
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import {
   existsSync,
-  mkdirSync,
-  mkdtempSync,
   readdirSync,
   readFileSync,
-  rmSync,
   statSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { parseArgs } from "node:util";

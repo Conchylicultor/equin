@@ -4,17 +4,19 @@
 // under the store lock with build leases as roots — `lease.ts`.
 
 import {
-  existsSync,
-  lstatSync,
   mkdirSync,
-  readdirSync,
-  readFileSync,
   renameSync,
   rmSync,
-  statSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   joinAppPath,
   type AppPath,

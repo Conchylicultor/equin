@@ -17,7 +17,10 @@
 // transcript (`check-<buildId>.log`, kept for a checkout's last 50 runs), whose
 // worker cost lines end in `slot wait …s`; "slot n/N" says how many builds
 // still had one.
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   foldOpLines,
   toOpRecords,

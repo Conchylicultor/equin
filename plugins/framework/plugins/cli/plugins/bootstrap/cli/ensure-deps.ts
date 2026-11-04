@@ -39,15 +39,12 @@
  * context, where the alias does *not* resolve.
  */
 import { createHash } from "node:crypto";
+import { type Dirent, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import {
-  type Dirent,
-  mkdirSync,
   readdirSync,
   readFileSync,
-  renameSync,
   statSync,
-  writeFileSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join, relative, resolve } from "node:path";
 import {
   getWorktreeRoot,

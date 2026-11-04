@@ -1,4 +1,7 @@
-import { readdirSync, readFileSync } from "fs";
+import {
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join, resolve } from "path";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 import {

@@ -1,4 +1,4 @@
-import { lstat } from "node:fs/promises";
+import { lstat } from "@plugins/packages/plugins/timed-fs/core";
 import { extname, join } from "node:path";
 import { classifyFsError } from "./path";
 import {

@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { HOST_FS_PEEK_MAX_NAMES, type HostFsPeekResult } from "../../core";
 import { locateHostDir } from "./archive/locate";
 import { listArchiveDir } from "./archive/read";

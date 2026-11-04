@@ -1,4 +1,5 @@
-import { readdir, rm, stat } from "node:fs/promises";
+import { rm } from "node:fs/promises";
+import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";

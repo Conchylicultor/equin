@@ -1,4 +1,5 @@
-import { lstat, open } from "node:fs/promises";
+import { open } from "node:fs/promises";
+import { lstat } from "@plugins/packages/plugins/timed-fs/core";
 import { resolve, sep } from "node:path";
 import {
   readImageKey,

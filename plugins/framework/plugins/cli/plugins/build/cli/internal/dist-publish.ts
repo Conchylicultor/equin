@@ -20,16 +20,13 @@ import {
   asAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync, lstatSync } from "fs";
 import {
-  mkdir,
+  existsSync,
+  lstatSync,
   readdir,
   readlink,
-  rename,
-  rm,
-  symlink,
-  unlink,
-} from "fs/promises";
+} from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, rename, rm, symlink, unlink } from "fs/promises";
 import { basename, dirname, join } from "path";
 
 export interface DistNames {

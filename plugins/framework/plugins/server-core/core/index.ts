@@ -41,11 +41,18 @@ export {
   type ProcMemory,
 } from "./memory-probe";
 export {
+  BOOT_JOURNAL_CHANNEL,
   getProfilingData,
+  installBootJournal,
   profilerStart,
   recordMemoryCheckpoint,
 } from "./profiler";
-export type { PhaseId, Span, MemoryCheckpoint } from "./profiler";
+export type {
+  BootJournalEntry,
+  PhaseId,
+  Span,
+  MemoryCheckpoint,
+} from "./profiler";
 export { isServerReady, markServerReady } from "./readiness";
 export { hostHttpRoutes } from "./host-routes";
 export { bootBrowserHost } from "./browser-host";

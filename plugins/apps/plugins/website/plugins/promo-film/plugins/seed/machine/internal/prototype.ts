@@ -2,7 +2,12 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { parsePrototypeTree } from "@plugins/apps/plugins/prototypes/plugins/fixtures/core";

@@ -9,7 +9,8 @@
 //
 //   ./equin run plugins/framework/plugins/tooling/plugins/web-artifacts/scripts/measure-tailwind.ts [--runs 3]
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import {
   asAppPath,
   joinAppPath,

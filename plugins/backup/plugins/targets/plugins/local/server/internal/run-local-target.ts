@@ -1,4 +1,5 @@
-import { readdir, rm, stat } from "node:fs/promises";
+import { rm } from "node:fs/promises";
+import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { backupsDir } from "@plugins/infra/plugins/paths/server";
 import { getConfig } from "@plugins/config_v2/server";
 import type { BackupArchive, BackupTargetResult } from "@plugins/backup/core";

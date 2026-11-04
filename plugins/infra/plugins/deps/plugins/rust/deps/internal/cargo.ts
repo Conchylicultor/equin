@@ -1,4 +1,5 @@
-import { chmodSync, copyFileSync, existsSync } from "node:fs";
+import { chmodSync, copyFileSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { isAbsolute, join } from "node:path";
 import {
   joinAppPath,

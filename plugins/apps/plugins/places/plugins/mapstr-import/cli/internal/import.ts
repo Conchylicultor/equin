@@ -1,5 +1,9 @@
-import { existsSync } from "node:fs";
-import { readFile, stat } from "node:fs/promises";
+import {
+  existsSync,
+  readFile,
+  stat,
+} from "@plugins/packages/plugins/timed-fs/core";
+
 import { z } from "zod";
 import { dirname, join, resolve } from "node:path";
 import { replaceAllPlaces } from "@plugins/apps/plugins/places/plugins/places-core/server";

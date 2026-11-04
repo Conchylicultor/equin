@@ -1,4 +1,8 @@
-import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
+import {
+  readFileSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, resolve } from "node:path";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 // Relative sibling: this file lives INSIDE the `paths` plugin (see

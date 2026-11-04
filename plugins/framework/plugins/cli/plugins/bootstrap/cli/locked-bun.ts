@@ -37,7 +37,10 @@
  * scanner rather than `toolchain/core`'s `parseMiseLock`, whose barrel reaches
  * `paths/core` and the whole data-dir registry.
  */
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join } from "node:path";
 import {
   runtimePath,

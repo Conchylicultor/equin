@@ -96,12 +96,24 @@ const PLATFORM_PACKAGES = [
   ...NODE_BUILTIN_ROOTS,
 ] as const;
 
+/**
+ * Repo modules that ARE a platform API by another name: `packages/timed-fs`
+ * re-exports node:fs's read calls (timed) under their own names, so a file
+ * importing them imports node:fs — and a portable folder may no more import
+ * it than node:fs itself.
+ */
+const PLATFORM_REPO_MODULES = [
+  "@plugins/packages/plugins/timed-fs/core",
+] as const;
+
 /** Package-name prefixes: every `pg-*` package and graphile-worker's family. */
 const PLATFORM_PACKAGE_PREFIXES = ["pg-", "graphile-worker"] as const;
 
 /** Whether importing `specifier` reaches a platform API. */
 export function isPlatformApi(specifier: string): boolean {
   if (PLATFORM_PREFIXES.some((p) => specifier.startsWith(p))) return true;
+  if ((PLATFORM_REPO_MODULES as readonly string[]).includes(specifier))
+    return true;
   if (
     PLATFORM_PACKAGES.some(
       (p) => specifier === p || specifier.startsWith(`${p}/`),

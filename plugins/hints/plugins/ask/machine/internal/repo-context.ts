@@ -1,4 +1,5 @@
-import { copyFile, mkdir, readFile } from "node:fs/promises";
+import { copyFile, mkdir } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join, relative, resolve } from "node:path";
 
 /** Where the repo's own context is copied, inside the scratch dir. */

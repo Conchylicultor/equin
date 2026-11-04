@@ -13,6 +13,8 @@
     - `debug/browser-recordings.RecordingSource`
     - `debug/browser-recordings.RecordingStep`
     - `framework/tooling/guards.TOOL_USE_ID_RE`
+    - `packages/timed-fs.readdir`
+    - `packages/timed-fs.stat`
   - Exports (types):
     - `FrameFormat`
     - `Recording`

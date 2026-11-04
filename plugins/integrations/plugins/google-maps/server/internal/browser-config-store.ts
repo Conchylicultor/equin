@@ -1,4 +1,5 @@
-import { readFile, rename, rm, writeFile } from "node:fs/promises";
+import { rename, rm, writeFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import { googleMapsDir } from "../../data-dirs";
 import type { MapsBrowserConfigValue } from "../../core";

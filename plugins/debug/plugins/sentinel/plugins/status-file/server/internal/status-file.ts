@@ -2,7 +2,8 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdirSync, readdirSync, unlinkSync } from "node:fs";
+import { mkdirSync, unlinkSync } from "node:fs";
+import { readdirSync } from "@plugins/packages/plugins/timed-fs/core";
 import {
   SentinelStatusRecordSchema,
   type SentinelStatus,

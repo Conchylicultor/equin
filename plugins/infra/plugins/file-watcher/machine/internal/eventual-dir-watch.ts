@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname } from "node:path";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import {

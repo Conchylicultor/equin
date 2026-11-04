@@ -1,10 +1,9 @@
+import { rmdirSync, unlinkSync } from "node:fs";
 import {
   existsSync,
   readdirSync,
-  rmdirSync,
   statSync,
-  unlinkSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   APP_SCOPE_DIR,
   appScopeId,

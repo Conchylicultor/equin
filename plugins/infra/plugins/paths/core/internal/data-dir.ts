@@ -2,13 +2,8 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  lstatSync,
-  mkdirSync,
-  renameSync,
-  statSync,
-  symlinkSync,
-} from "node:fs";
+import { mkdirSync, renameSync, symlinkSync } from "node:fs";
+import { lstatSync, statSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join, relative, sep } from "node:path";
 // Relative sibling import: this file lives INSIDE the `paths` plugin, so the
 // `@plugins/infra/plugins/paths/core` alias would cycle back through the barrel

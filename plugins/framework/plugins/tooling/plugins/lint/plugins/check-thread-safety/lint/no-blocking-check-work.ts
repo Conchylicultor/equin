@@ -55,6 +55,9 @@ const BLOCKING = new Set([
   "execFileSync",
   "spawnSync",
   "scanSync",
+  // packages/timed-fs's timed twin of `glob.scanSync` (its fs calls keep
+  // node's names).
+  "scanGlobSync",
 ]);
 
 /** Whole-file synchronous parses, each with the thread-yielding, run-shared form to use. */

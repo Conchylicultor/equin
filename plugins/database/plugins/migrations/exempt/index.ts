@@ -18,6 +18,7 @@ export default [
   {
     rule: "boundaries/no-platform-api",
     paths: [
+      "core/internal/schema-glob.ts",
       "core/internal/drizzle-stage.ts",
       "core/internal/published-immutable.ts",
       "core/internal/schema-load-probe.ts",

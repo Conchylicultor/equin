@@ -2,6 +2,13 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
+    rule: "timed-fs/no-untimed-fs-read",
+    paths: ["bin/bootstrap.ts"],
+    kind: "sanctioned",
+    reason:
+      "The hook bootstrap imports only node: builtins (guards:bootstrap-builtins-only), so a mid-edit checkout cannot break every tool call; its one existsSync runs in Claude Code's short hook process, never a process whose waits are profiled.",
+  },
+  {
     rule: "guard-path-safety/no-adhoc-path-resolve",
     paths: ["core/guards/main-edits.ts"],
     kind: "sanctioned",

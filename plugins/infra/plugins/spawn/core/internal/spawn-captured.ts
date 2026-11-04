@@ -3,10 +3,10 @@ import {
   closeSync,
   mkdtempSync,
   openSync,
-  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";

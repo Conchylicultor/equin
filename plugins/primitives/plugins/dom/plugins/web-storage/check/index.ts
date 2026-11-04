@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";

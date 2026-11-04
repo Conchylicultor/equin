@@ -228,27 +228,17 @@ can blind or deafen all of them at once.
 
 - Description: Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
 - Core:
-  - Uses:
-    - `framework/cli/cli-name.CLI_NAME`
-    - `framework/cli/cli-name.CLI_NAMES`
-    - `framework/cli/cli-name.isCliName`
-    - `framework/cli/foreground-handoff.foregroundDeadline`
-    - `framework/cli/foreground-handoff.isHandoffOp`
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework/cli/cli-name` ×3
+    - `infra/host-fs/user-path` ×3
+    - `infra/paths` ×3
+    - `packages/timed-fs` ×3
+    - `framework/cli/foreground-handoff` ×2
+    - `framework/tooling/collected-dir` ×2
+    - `framework/tooling/guards/refusal-format` ×2
+    - `infra/launcher/env-names` ×2
+    - `infra/namespace` ×2
     - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
-    - `framework/tooling/collected-dir.defineCollectedDir`
-    - `framework/tooling/collected-dir.loadCollectedDir`
-    - `framework/tooling/guards/refusal-format.joinRefusal`
-    - `framework/tooling/guards/refusal-format.REFUSAL_HEADER`
-    - `infra/host-fs/user-path.AppPath`
-    - `infra/host-fs/user-path.asAppPath`
-    - `infra/host-fs/user-path.joinAppPath`
-    - `infra/launcher/env-names.envName`
-    - `infra/launcher/env-names.readEnv`
-    - `infra/namespace.asNamespace`
-    - `infra/namespace.isNamespace`
-    - `infra/paths.HOME_DIR`
-    - `infra/paths.REPO_ROOT`
-    - `infra/paths.worktreeArtifacts`
   - Exports (types):
     - `AllowVerdict`
     - `BuiltinTool`
@@ -296,6 +286,7 @@ can blind or deafen all of them at once.
     - `framework/tooling/e2e-harness`
 - Exemptions:
   - Exempts itself from:
+    - `timed-fs/no-untimed-fs-read` — `bin/bootstrap.ts` (sanctioned)
     - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/main-edits.ts` (sanctioned)
     - `user-path/no-sync-fs` — `core/context.ts`, `core/git-target.ts`, `core/guards/poll-loop.ts` (sanctioned)
     - `python/no-system-python` — `core` (sanctioned)

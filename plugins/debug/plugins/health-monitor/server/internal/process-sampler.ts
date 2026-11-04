@@ -6,7 +6,11 @@ import {
   runtimeNamespace,
   isMain,
 } from "@plugins/infra/plugins/runtime-identity/core";
-import { readFileSync, statSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import {
+  readFileSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { monitorEventLoopDelay, PerformanceObserver } from "node:perf_hooks";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { procMemory } from "@plugins/framework/plugins/server-core/core";

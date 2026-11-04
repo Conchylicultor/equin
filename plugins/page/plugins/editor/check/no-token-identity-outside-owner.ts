@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join } from "path";
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {

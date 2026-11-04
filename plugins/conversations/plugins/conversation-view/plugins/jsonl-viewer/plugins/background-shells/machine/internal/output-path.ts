@@ -1,4 +1,4 @@
-import { realpathSync } from "node:fs";
+import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
 import { SHELL_ID_PATTERN } from "../../core";
 

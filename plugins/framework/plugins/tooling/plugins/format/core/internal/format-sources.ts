@@ -4,7 +4,8 @@
 // the same `formatInScope` over the same `formatSource`, so they cannot
 // disagree about what "formatted" means.
 
-import { readFile, writeFile } from "fs/promises";
+import { writeFile } from "fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import { listChangedFormattableFiles } from "./changed-files";

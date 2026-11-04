@@ -1,7 +1,7 @@
 import { endpointPath } from "@plugins/infra/plugins/endpoints/core";
 import { mcpRequest } from "@plugins/infra/plugins/mcp/core";
-import { existsSync } from "node:fs";
-import { access, mkdir } from "node:fs/promises";
+import { existsSync, access } from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
   ScratchProfile,

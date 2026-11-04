@@ -40,15 +40,15 @@ import {
   asAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { renameSync, writeFileSync } from "node:fs";
 import {
   existsSync,
   readdirSync,
   readFileSync,
-  renameSync,
   statSync,
-  writeFileSync,
-} from "node:fs";
-import { readFile } from "node:fs/promises";
+  readFile,
+} from "@plugins/packages/plugins/timed-fs/core";
+
 import { join } from "node:path";
 import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import type {

@@ -1,4 +1,4 @@
-import { readdir, stat } from "node:fs/promises";
+import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { type HostFsEntry, type HostFsListResult } from "../../core";
 import { locateHostDir } from "./archive/locate";

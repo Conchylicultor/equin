@@ -2,14 +2,12 @@ import {
   asAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { renameSync, rmSync, writeFileSync } from "fs";
 import {
   existsSync,
   readdirSync,
   readFileSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join, resolve } from "path";
 // The plugin dir is drizzle-kit's cwd, and every relative path in
 // drizzle.config.ts resolves against it (the `schema:` globs and `out`). Taken

@@ -1,5 +1,10 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import type { Dep, DepSource } from "./dep";

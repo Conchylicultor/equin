@@ -441,6 +441,9 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
   - Uses:
     - `framework/product-name.LEGACY_IDS`
     - `framework/tooling/collected-dir.defineCollectedDir`
+    - `packages/timed-fs.existsSync`
+    - `packages/timed-fs.readFileSync`
+    - `packages/timed-fs.statSync`
   - Exports (types):
     - `ClaudeMdRepo`
     - `CliAction`

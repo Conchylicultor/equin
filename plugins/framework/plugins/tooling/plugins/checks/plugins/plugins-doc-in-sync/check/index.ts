@@ -1,5 +1,5 @@
-import { existsSync } from "fs";
-import { readFile } from "fs/promises";
+import { existsSync, readFile } from "@plugins/packages/plugins/timed-fs/core";
+
 import {
   buildEnrichedTree,
   mainComposition,

@@ -145,6 +145,20 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `primitives/relative-time.ElapsedTime`
     - `primitives/slot-render.RenderCoreRoot`
     - `reports.report`
+- Core:
+  - Uses:
+    - `packages/timed-fs.readdir`
+    - `packages/timed-fs.stat`
+  - Exports (types):
+    - `BabelContribution`
+    - `BabelPluginItem`
+    - `BabelSource`
+    - `OrderedBabelContributions`
+  - Exports (values):
+    - `babelPluginsFor`
+    - `findViteContributions`
+    - `isViteContributionPath`
+    - `loadBabelContributions`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
@@ -160,17 +174,6 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `boundaries/no-platform-api` — `core/vite-contributions.ts` (debt)
     - `networking/no-page-transport` — `web/App.tsx` (sanctioned)
     - `networking/no-request-guard-capability` — `web/install-request-guard.ts` (sanctioned)
-- Core:
-  - Exports (types):
-    - `BabelContribution`
-    - `BabelPluginItem`
-    - `BabelSource`
-    - `OrderedBabelContributions`
-  - Exports (values):
-    - `babelPluginsFor`
-    - `findViteContributions`
-    - `isViteContributionPath`
-    - `loadBabelContributions`
 - Structure:
   - Composition root: yes
 

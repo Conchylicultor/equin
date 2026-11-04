@@ -1,17 +1,19 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   closeSync,
-  existsSync,
-  lstatSync,
   mkdirSync,
   openSync,
-  readdirSync,
   readSync,
   renameSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  readdirSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";

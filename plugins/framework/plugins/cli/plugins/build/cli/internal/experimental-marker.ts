@@ -24,7 +24,8 @@
 // of a mock against the real screen). The stamp reads the same flag values the
 // app does, spelled once in embed's core.
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { resolve } from "node:path";
 import {
   EMBED_PARAM,

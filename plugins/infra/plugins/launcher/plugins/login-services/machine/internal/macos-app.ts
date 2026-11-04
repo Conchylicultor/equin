@@ -3,15 +3,17 @@ import {
   chmodSync,
   copyFileSync,
   cpSync,
-  existsSync,
   mkdirSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import {

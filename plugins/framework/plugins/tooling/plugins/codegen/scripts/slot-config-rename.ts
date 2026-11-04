@@ -21,13 +21,13 @@
  * the move in relocate's ledger, and every build migrates its own namespace
  * (`applyPluginMoves`) — no hand-run step.
  */
+import { renameSync } from "fs";
 import {
   existsSync,
   readdirSync,
   readFileSync,
-  renameSync,
   statSync,
-} from "fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import { configDir } from "@plugins/config_v2/data-dirs";
 

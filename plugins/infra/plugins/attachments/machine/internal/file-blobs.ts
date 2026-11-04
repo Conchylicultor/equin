@@ -1,4 +1,5 @@
-import { stat, unlink } from "node:fs/promises";
+import { unlink } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import type { AttachmentBlobsImpl } from "@plugins/infra/plugins/attachments/server";
 import { diskPathFor, ensureAttachmentsRoot } from "./paths";
 

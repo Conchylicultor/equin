@@ -6,7 +6,7 @@ import {
   envEntries,
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { realpathSync } from "node:fs";
+import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
   checkBroadcasts,

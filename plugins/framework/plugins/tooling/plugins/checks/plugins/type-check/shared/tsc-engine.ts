@@ -3,7 +3,11 @@
 // diagnostic is printed, and the canonical form of a `.d.ts` that signatures
 // and per-name records are read from.
 
-import { existsSync, readdirSync, readFileSync } from "fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import ts from "typescript";
 import { sha256 } from "./keys";

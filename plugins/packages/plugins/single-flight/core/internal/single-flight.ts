@@ -3,11 +3,11 @@ import {
   closeSync,
   mkdirSync,
   openSync,
-  readFileSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import {
   flockTry,

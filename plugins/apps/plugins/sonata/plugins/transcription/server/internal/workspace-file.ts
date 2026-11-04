@@ -1,4 +1,4 @@
-import { realpath } from "node:fs/promises";
+import { realpath } from "@plugins/packages/plugins/timed-fs/core";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
 /** A path the agent named that does not stay inside its own directory. */

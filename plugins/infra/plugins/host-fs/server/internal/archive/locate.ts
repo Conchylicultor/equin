@@ -1,4 +1,4 @@
-import { lstat, stat } from "node:fs/promises";
+import { lstat, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, relative } from "node:path";
 import { classifyFsError, parentOf } from "../path";
 import { archiveFormatFor, type ArchiveFormat } from "./registry";

@@ -2,7 +2,7 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join } from "node:path";
 import { z } from "zod";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";

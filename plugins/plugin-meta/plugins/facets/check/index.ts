@@ -1,5 +1,5 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
-import { existsSync } from "fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { declareSlotsFromBarrels } from "@plugins/framework/plugins/tooling/plugins/codegen/core";

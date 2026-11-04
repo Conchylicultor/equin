@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "node:path";
 import { z } from "zod";
 import { parseCsv } from "./csv";

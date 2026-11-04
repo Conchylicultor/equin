@@ -1,4 +1,8 @@
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { rename, writeFile, chmod, unlink } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { decrypt, encrypt } from "./crypto";

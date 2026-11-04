@@ -8,7 +8,7 @@
 // over `spawnCaptured` (raw `Bun.spawn` is lint-banned, and `git-read-cache` is
 // server-only so it is unreachable from here).
 
-import { existsSync } from "fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   type AppPath,

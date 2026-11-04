@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "node:path";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { memoryFile } from "../../shared/resources";

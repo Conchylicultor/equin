@@ -10,7 +10,7 @@
 // Imported through the `@plugins/framework/plugins/web-core/core` barrel.
 
 import path from "node:path";
-import { readdir, stat } from "node:fs/promises";
+import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import type react from "@vitejs/plugin-react";
 
 // Each `vite/index.ts` contribution returns a Babel plugin. We derive the exact

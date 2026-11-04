@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import type { HostFsEntry } from "../../../core";

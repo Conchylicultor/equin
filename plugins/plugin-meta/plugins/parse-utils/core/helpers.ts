@@ -1,4 +1,8 @@
-import { existsSync, readdirSync, readFileSync } from "fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join, relative } from "path";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {

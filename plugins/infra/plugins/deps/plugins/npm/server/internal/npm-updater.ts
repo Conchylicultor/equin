@@ -3,7 +3,8 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";

@@ -1,5 +1,5 @@
 import type { Dirent } from "node:fs";
-import { readdir, stat } from "node:fs/promises";
+import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { HOST_FS_COMPLETE_LIMIT, type HostFsCompleteResult } from "../../core";

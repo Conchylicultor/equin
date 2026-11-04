@@ -1,4 +1,4 @@
-import { lstat } from "node:fs/promises";
+import { lstat } from "@plugins/packages/plugins/timed-fs/core";
 
 // The identity of a conversation's session chain — the single definition of "did
 // the chain change?", owned by the plugin that owns the chain.

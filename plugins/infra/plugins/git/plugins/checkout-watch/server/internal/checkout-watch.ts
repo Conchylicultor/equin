@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { resolve } from "node:path";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import {

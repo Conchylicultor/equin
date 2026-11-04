@@ -1,4 +1,4 @@
-import { realpath } from "node:fs/promises";
+import { realpath } from "@plugins/packages/plugins/timed-fs/core";
 import {
   acquireDirWatch,
   type DirWatchRelease,

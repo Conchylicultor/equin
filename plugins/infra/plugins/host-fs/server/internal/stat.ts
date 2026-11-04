@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { access } from "node:fs/promises";
+import { access } from "@plugins/packages/plugins/timed-fs/core";
 import { basename } from "node:path";
 import type { HostFsReadAccess, HostFsStatResult } from "../../core";
 import { locateHostPath } from "./archive/locate";

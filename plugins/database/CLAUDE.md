@@ -343,6 +343,16 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `readTag`
     - `schemaChangedAtBoot`
     - `snapshotWatermark`
+- Core:
+  - Uses: `packages/timed-fs.readFileSync`
+  - Exports (types):
+    - `DatabaseConfig`
+    - `DatabaseProvider`
+  - Exports (values):
+    - `buildConnectionString`
+    - `DATABASE_CONFIG_PATH`
+    - `libpqEnv`
+    - `readDatabaseConfig`
 - Cross-plugin:
   - Imported by: 136 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×39
@@ -371,15 +381,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `wish`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
-- Core:
-  - Exports (types):
-    - `DatabaseConfig`
-    - `DatabaseProvider`
-  - Exports (values):
-    - `buildConnectionString`
-    - `DATABASE_CONFIG_PATH`
-    - `libpqEnv`
-    - `readDatabaseConfig`
 - Test helpers:
   - Server: `@plugins/database/server/testing`
     - `snapshotWatermark`

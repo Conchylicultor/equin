@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { relative } from "node:path";
 import {
   joinAppPath,

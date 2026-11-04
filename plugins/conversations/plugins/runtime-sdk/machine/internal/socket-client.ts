@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { existsSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { connect } from "node:net";
 import {
   CommandReplySchema,

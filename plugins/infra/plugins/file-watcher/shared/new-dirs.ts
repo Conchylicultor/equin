@@ -1,5 +1,5 @@
 import type * as parcel from "@parcel/watcher";
-import { readdir, stat } from "node:fs/promises";
+import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { join, matchesGlob, resolve, sep } from "node:path";
 
 // What a backend that watches each directory on its own misses, recovered.

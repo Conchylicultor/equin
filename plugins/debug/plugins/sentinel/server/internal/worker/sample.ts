@@ -4,7 +4,8 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
-import { statfsSync, statSync } from "node:fs";
+import { statfsSync } from "node:fs";
+import { statSync } from "@plugins/packages/plugins/timed-fs/core";
 import { cpus, loadavg } from "node:os";
 import {
   HOME_DIR,

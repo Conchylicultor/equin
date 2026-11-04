@@ -1,4 +1,5 @@
-import { readFile, writeFile } from "fs/promises";
+import { writeFile } from "fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join, relative } from "path";
 import {

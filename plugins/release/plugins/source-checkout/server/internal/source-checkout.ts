@@ -1,14 +1,10 @@
+import { closeSync, fstatSync, mkdirSync, openSync, unlinkSync } from "node:fs";
 import {
-  closeSync,
   existsSync,
-  fstatSync,
-  mkdirSync,
-  openSync,
   readdirSync,
   realpathSync,
   statSync,
-  unlinkSync,
-} from "node:fs";
+} from "@plugins/packages/plugins/timed-fs/core";
 import { rm } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import {

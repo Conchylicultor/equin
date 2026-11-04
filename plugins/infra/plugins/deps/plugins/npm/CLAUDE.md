@@ -147,6 +147,7 @@ functions in `core/internal/coherence.ts` over `readWorkspace(root)`.
     - `infra/deps/updates.utcDay`
     - `infra/spawn.spawnCaptured`
     - `packages/semaphore.createSemaphore`
+    - `packages/timed-fs.readFile`
   - Exports (types):
     - `Packument`
     - `Plan`

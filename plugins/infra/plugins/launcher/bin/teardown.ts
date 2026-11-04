@@ -21,7 +21,10 @@ import {
   setEnvDefault,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { dirname, join } from "node:path";
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 
 // `process.execPath` is the compiled `teardown` binary; its dir is the bundle
 // root (extracted bundle dir when packed, or the staged dir for `--dev`).

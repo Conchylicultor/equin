@@ -1,4 +1,8 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { CheckResult } from "@plugins/framework/plugins/tooling/core";

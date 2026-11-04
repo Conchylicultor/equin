@@ -14,6 +14,9 @@
     - `config_v2.JsonValue`
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.joinAppPath`
+    - `packages/timed-fs.existsSync`
+    - `packages/timed-fs.readdirSync`
+    - `packages/timed-fs.readFileSync`
   - Exports (types):
     - `AppliedConfigMigration`
     - `ConfigLedgerEntry`

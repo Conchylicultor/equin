@@ -46,15 +46,17 @@ import {
   mkdirSync,
   opendirSync,
   openSync,
-  readdirSync,
-  readFileSync,
   renameSync,
   rmdirSync,
   rmSync,
-  statSync,
   unlinkSync,
   writeFileSync,
 } from "fs";
+import {
+  readdirSync,
+  readFileSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import {
   type AppPath,

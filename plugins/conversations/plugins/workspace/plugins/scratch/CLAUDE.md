@@ -43,6 +43,8 @@ The `scratch` workspace: `state/workspaces/<attemptId>/`, holding the profile's
   - Uses:
     - `framework/product-name.PRODUCT_NAME`
     - `infra/paths.CLAUDE_USER_CONFIG`
+    - `packages/timed-fs.readFileSync`
+    - `packages/timed-fs.statSync`
   - Exports (values):
     - `assertDirTrusted`
     - `ensureDirTrusted`

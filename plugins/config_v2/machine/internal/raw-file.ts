@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { relative } from "node:path";
 import { configFileRelPath, configRawFile } from "../../core";
 import { serveValue } from "@plugins/network/plugins/live/machine";

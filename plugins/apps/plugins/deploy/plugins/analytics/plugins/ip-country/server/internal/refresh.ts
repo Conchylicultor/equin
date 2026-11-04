@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, open, rename, rm, stat } from "node:fs/promises";
+import { mkdir, open, rename, rm } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";

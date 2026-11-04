@@ -11,6 +11,11 @@
  */
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import {
+  existsSync,
+  statSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import path from "node:path";
 import ts from "typescript";
 import { globToRegExp, type FileCategory } from "../core/file-category";
@@ -25,7 +30,7 @@ const sh = (cmd: string, args: string[]) =>
 const tracked = sh("git", ["ls-files", "-co", "--exclude-standard"])
   .split("\n")
   .filter(Boolean)
-  .filter((f) => fs.existsSync(f));
+  .filter((f) => existsSync(f));
 const barrels = tracked.filter((f) => /^plugins\/.*\/lint\/index\.ts$/.test(f));
 
 const CATEGORY_GLOBS: Record<string, FileCategory> = {
@@ -82,11 +87,11 @@ function resolveGlob(g: string): Resolved {
     const dir = base.replace(DIR_SUFFIX, "");
     if (!hasGlob(dir)) {
       if (dir !== base) {
-        return fs.existsSync(dir) && fs.statSync(dir).isDirectory()
+        return existsSync(dir) && statSync(dir).isDirectory()
           ? { kind: "paths", paths: [dir] }
           : { kind: "dead" };
       }
-      return fs.existsSync(base)
+      return existsSync(base)
         ? { kind: "paths", paths: [base] }
         : { kind: "dead" };
     }
@@ -145,7 +150,7 @@ const stringsOf = (e: ts.Expression | undefined): string[] =>
     : [];
 
 for (const file of barrels) {
-  const text = fs.readFileSync(file, "utf8");
+  const text = readFileSync(file, "utf8");
   if (!/\bignores\b/.test(text)) continue;
   const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const exp = sf.statements.find(ts.isExportAssignment);
@@ -320,8 +325,8 @@ for (const [owner, m] of [...manifests].sort()) {
   console.log(`${file}: ${m.size} entries`);
   if (!apply) continue;
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  if (fs.existsSync(file)) {
-    const cur = fs.readFileSync(file, "utf8");
+  if (existsSync(file)) {
+    const cur = readFileSync(file, "utf8");
     const i = cur.lastIndexOf("] satisfies Exemptions");
     if (i === -1) throw new Error(`${file}: cannot merge`);
     fs.writeFileSync(file, cur.slice(0, i) + body + "\n" + cur.slice(i));

@@ -62,6 +62,7 @@ Cost: one `flock-wait` child (~37 MB, `bun --smol`) per queued waiter.
     - `infra/host-fs/user-path.joinAppPath`
     - `packages/flock.flockTry`
     - `packages/flock.waitForFlock`
+    - `packages/timed-fs.readdirSync`
   - Exports (types):
     - `Ticket`
     - `TicketLine`

@@ -2,7 +2,11 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { rm } from "node:fs/promises";
 import { metaPath, releaseLockVideo, tryLockVideo } from "./cache";
 

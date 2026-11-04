@@ -2659,6 +2659,10 @@
       "name": "@equin/plugin-debug-profiling-cold-start",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/profiling/plugins/fs-wait": {
+      "name": "@equin/plugin-debug-profiling-fs-wait",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/profiling/plugins/op-log": {
       "name": "@equin/plugin-debug-profiling-op-log",
       "version": "0.0.1",
@@ -4657,6 +4661,10 @@
     },
     "plugins/packages/plugins/ticket-line": {
       "name": "@equin/plugin-packages-ticket-line",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/timed-fs": {
+      "name": "@equin/plugin-packages-timed-fs",
       "version": "0.0.1",
     },
     "plugins/packages/plugins/value-patch": {
@@ -8426,6 +8434,8 @@
 
     "@equin/plugin-debug-profiling-cold-start": ["@equin/plugin-debug-profiling-cold-start@workspace:plugins/debug/plugins/profiling/plugins/cold-start"],
 
+    "@equin/plugin-debug-profiling-fs-wait": ["@equin/plugin-debug-profiling-fs-wait@workspace:plugins/debug/plugins/profiling/plugins/fs-wait"],
+
     "@equin/plugin-debug-profiling-op-log": ["@equin/plugin-debug-profiling-op-log@workspace:plugins/debug/plugins/profiling/plugins/op-log"],
 
     "@equin/plugin-debug-profiling-op-log-op-store": ["@equin/plugin-debug-profiling-op-log-op-store@workspace:plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store"],
@@ -9373,6 +9383,8 @@
     "@equin/plugin-packages-thread-pool": ["@equin/plugin-packages-thread-pool@workspace:plugins/packages/plugins/thread-pool"],
 
     "@equin/plugin-packages-ticket-line": ["@equin/plugin-packages-ticket-line@workspace:plugins/packages/plugins/ticket-line"],
+
+    "@equin/plugin-packages-timed-fs": ["@equin/plugin-packages-timed-fs@workspace:plugins/packages/plugins/timed-fs"],
 
     "@equin/plugin-packages-value-patch": ["@equin/plugin-packages-value-patch@workspace:plugins/packages/plugins/value-patch"],
 
