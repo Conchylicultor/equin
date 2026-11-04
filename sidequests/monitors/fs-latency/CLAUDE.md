@@ -98,11 +98,14 @@ launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/$PLIST
 
 ```sh
 /usr/bin/python3 -I ~/.equin/logs/monitors/fs-latency-src/report.py --hours 24
+/usr/bin/python3 -I ~/.equin/logs/monitors/fs-latency-src/report.py --since 2026-11-04T03:29 --until 2026-11-04T16:23
 tail -1 ~/.equin/logs/monitors/fs-latency.jsonl
 ```
 
 Per hour: cold lstat / readdir per tier, slowest op, stall count, vnode
-churn, disk ops and device ms/op, and the cache lifetime. The exit criterion
+churn, disk read ops/s, MB/s and device ms/op, fseventsd %CPU, and the cache
+lifetime; then the window's p50s. `--since` / `--until` (UTC ISO prefixes)
+pick a before/after window. The exit criterion
 "no file-metadata stall over 1 s across a day" is `stalls 0` over 24 h.
 
 ## Who is churning, without root
@@ -152,6 +155,15 @@ and launchd relaunches it at once (`because xpc event`). See it without root:
 
 `consumeStream Time taken` is one replay (seconds); `consuming stream … from
 ID:` is the marker it replays from.
+
+**Fixed 2026-11-04 16:23 UTC** by restoring the two stock directories (root):
+`sudo mkdir -p /Library/Logs/CoreCapture /Library/Logs/CrashReporter/CoreCapture`.
+The replay running at the time saved a new marker on finishing (1839631885 →
+3727846510), the next launch replayed for 0.11 s instead of 294 s, and
+corecaptured then exited idle and stayed down (`launchctl print
+system/com.apple.corecaptured`: `runs` stopped growing at 549). If the loop comes
+back (`corecaptured` age cycling under ~300 s, fseventsd near 100 % CPU at idle),
+check first that the directories still exist.
 
 ## Uninstall
 
