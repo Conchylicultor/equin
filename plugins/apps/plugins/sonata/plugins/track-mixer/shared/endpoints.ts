@@ -3,7 +3,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
 /**
  * Partial-patch upsert of one or more tracks' view overrides — the SAME patch
- * applied to every `trackIds` entry, in one transaction. Only the provided fields
+ * applied to every `trackIds` entry, in one statement. Only the provided fields
  * are written; omitted fields keep their prior value (or the column default on
  * first insert). `color: null` explicitly clears a custom color back to the
  * palette default; `instrument: null` clears the override back to "auto". A

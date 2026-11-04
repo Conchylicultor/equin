@@ -3757,7 +3757,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "events.sources.all"
               - `resource.declare` "events.sources.all:rows"
             - Uses:
+              - `database.AtomicWrite`
               - `database.db`
+              - `database.writeAtomically`
               - `ids.IdKinds`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
@@ -3956,6 +3958,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/events/events-core.TouchedEvent`
               - `apps/events/events-core.upsertEvents`
               - `database.db`
+              - `database.writeAtomically`
               - `infra/jobs.defineJob`
               - `infra/jobs.NonRetryableError`
               - `infra/retention.defineRetention`
@@ -20644,6 +20647,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/log-channels.defineLogSink`
     - DB schema: `plugins/database/server/internal/boot-schema.ts`
     - Exports (types):
+      - `AtomicWrite`
       - `DatabaseDriverImpl`
       - `Db`
       - `DbExecutor`
@@ -20661,6 +20665,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `readTag`
       - `schemaChangedAtBoot`
       - `snapshotWatermark`
+      - `writeAtomically`
   - Machine:
     - Uses: `database/pgbouncer.convergePgbouncerConfig`
   - Core:
@@ -30821,6 +30826,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `background.trigger-source` "job"
         - Uses:
           - `database.db`
+          - `database.writeAtomically`
           - `database/sql-column.parsedJson`
           - `database/sql-projection.parsed`
           - `infra/background/catalog.BackgroundTriggerSource`

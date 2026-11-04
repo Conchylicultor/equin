@@ -111,7 +111,7 @@ reporting, not handling.
 `extract` returns `{ events, flags }`. `flags` is what the extractor could not
 *express* on a run that otherwise succeeded — never a failure, never per event.
 `finishExtracted` writes it to the run row AND to the source's `lastFlags` in the
-same transaction; `finishUnchanged`/`finishFailed` write `flags: []` on their own
+same statement; `finishUnchanged`/`finishFailed` write `flags: []` on their own
 row and leave `lastFlags` **alone** — neither re-read the page, so the last
 extraction's caveats still stand.
 
@@ -125,8 +125,9 @@ and sits in `completeRun`'s base patch: EVERY ending writes it (the cheap
 ## The ledger is written at the end, not the start
 
 `run-ledger.ts` is the only writer of `event_source_runs` and of a source row's
-runtime state, and writes both **in one transaction** — a source that says
-`error` always has the failed run explaining it. Inserting only at the end means
+runtime state, and writes both **in one statement** (`writeAtomically`: a
+data-modifying CTE, so no row stays locked across an app round trip) — a source
+that says `error` always has the failed run explaining it. Inserting only at the end means
 every ledger row is complete by construction; an in-flight run is already visible
 as `status: "running"` on the live-pushed source row.
 
@@ -171,6 +172,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `apps/events/events-core.TouchedEvent`
     - `apps/events/events-core.upsertEvents`
     - `database.db`
+    - `database.writeAtomically`
     - `infra/jobs.defineJob`
     - `infra/jobs.NonRetryableError`
     - `infra/retention.defineRetention`

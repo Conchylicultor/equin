@@ -1,5 +1,9 @@
 import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
-import { db } from "@plugins/database/server";
+import {
+  db,
+  writeAtomically,
+  type AtomicWrite,
+} from "@plugins/database/server";
 import type { RunEventAction } from "../../core";
 import { planReanchor } from "./plan-reanchor";
 import { _events } from "./tables";
@@ -182,6 +186,9 @@ function startOfLocalDay(t: Date): Date {
   return d;
 }
 
+/** Rows moved per statement: 4 bind parameters each, well under 65,535. */
+const REANCHOR_MOVES_PER_STATEMENT = 1_000;
+
 /**
  * Move every recurring row's occurrence projection forward to its next
  * occurrence as of `now`.
@@ -247,26 +254,36 @@ export async function reanchorRecurringEvents(
   let moved = 0;
   let exhausted = 0;
 
-  await db.transaction(async (tx) => {
-    for (const row of rows) {
-      const plan = planReanchor(row.date, row.startsAt, today);
-      if (plan.kind === "over") {
-        exhausted += 1;
-        continue;
-      }
-      if (plan.kind === "keep") continue;
+  const moves: AtomicWrite[] = [];
+  for (const row of rows) {
+    const plan = planReanchor(row.date, row.startsAt, today);
+    if (plan.kind === "over") {
+      exhausted += 1;
+      continue;
+    }
+    if (plan.kind === "keep") continue;
 
-      await tx
+    moves.push(
+      db
         .update(_events)
         .set({
           startsAt: plan.occurrence.startsAt,
           endsAt: plan.occurrence.endsAt,
           allDay: plan.occurrence.allDay,
         })
-        .where(eq(_events.id, row.id));
-      moved += 1;
-    }
-  });
+        .where(eq(_events.id, row.id)),
+    );
+    moved += 1;
+  }
+  // The moves as statements of up to REANCHOR_MOVES_PER_STATEMENT rows each
+  // (one arm per row): the plan is computed above, so nothing is read between
+  // the writes, and no moved row stays locked across an app round trip. Each
+  // statement is atomic on its own, which is all the pass needs — a row's move
+  // depends on that row alone, and a pass that dies midway is finished by the
+  // next one.
+  for (let i = 0; i < moves.length; i += REANCHOR_MOVES_PER_STATEMENT) {
+    await writeAtomically(db, moves.slice(i, i + REANCHOR_MOVES_PER_STATEMENT));
+  }
 
   return { checked: rows.length, moved, exhausted };
 }

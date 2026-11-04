@@ -37,6 +37,7 @@ export type ExemptableRuleId =
   | "data-files/no-direct-store"
   | "data-view/no-adhoc-row-list"
   | "database/no-pool-await-in-transaction"
+  | "database/no-pure-write-transaction"
   | "db-client-tools/no-path-pg-client"
   | "db-connection/no-raw-pg-connection"
   | "detached-work-safety/no-raw-set-interval"

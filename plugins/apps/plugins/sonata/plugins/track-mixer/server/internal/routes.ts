@@ -9,8 +9,8 @@ import { _trackView } from "./tables";
  * Partial-patch upsert, one row per `trackIds` entry: insert a fresh row
  * (omitted fields take column defaults) or update only the provided columns of
  * an existing one. Lets a mute toggle land without clobbering a custom color and
- * vice-versa. Every track is written inside ONE transaction, so a many-track
- * patch is atomic and the change feed emits it as a single commit.
+ * vice-versa. Every track is written by ONE statement, so a many-track patch
+ * is atomic and the change feed emits it as a single commit.
  */
 export const handleUpsertTrackView = implement(
   upsertTrackView,
@@ -28,25 +28,26 @@ export const handleUpsertTrackView = implement(
     if (body.hidden !== undefined) set.hidden = body.hidden;
     if (body.volume !== undefined) set.volume = body.volume;
 
-    await db.transaction(async (tx) => {
-      for (const trackId of body.trackIds) {
-        await tx
-          .insert(_trackView)
-          .values({
-            songId: songIdKind.key(params.songId),
-            trackId,
-            color: body.color ?? null,
-            instrument: body.instrument ?? null,
-            muted: body.muted ?? false,
-            hidden: body.hidden ?? false,
-            volume: body.volume ?? 1,
-          })
-          .onConflictDoUpdate({
-            target: [_trackView.songId, _trackView.trackId],
-            set,
-          });
-      }
-    });
+    // ONE multi-row upsert: atomic, and no row stays locked across an app
+    // round trip. Distinct ids, since one statement cannot touch a row twice.
+    const songId = songIdKind.key(params.songId);
+    await db
+      .insert(_trackView)
+      .values(
+        [...new Set(body.trackIds)].map((trackId) => ({
+          songId,
+          trackId,
+          color: body.color ?? null,
+          instrument: body.instrument ?? null,
+          muted: body.muted ?? false,
+          hidden: body.hidden ?? false,
+          volume: body.volume ?? 1,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [_trackView.songId, _trackView.trackId],
+        set,
+      });
   },
 );
 

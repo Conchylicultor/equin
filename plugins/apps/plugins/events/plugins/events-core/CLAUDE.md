@@ -198,7 +198,9 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `resource.declare` "events.sources.all"
     - `resource.declare` "events.sources.all:rows"
   - Uses:
+    - `database.AtomicWrite`
     - `database.db`
+    - `database.writeAtomically`
     - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`

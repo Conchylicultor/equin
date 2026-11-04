@@ -327,6 +327,31 @@ forensic companion `research/2026-07-09-global-interactive-lane-under-load.md`; 
 `research/2026-06-19-global-live-state-unified-read-path-v2.md` (Task 2) and
 `research/2026-06-19-global-wait-attribution-instrumentation.md`.
 
+## No idle window inside a transaction: `writeAtomically`
+
+Between two statements of a transaction the server sits `idle in transaction`,
+holding every lock the first one took, while the app makes its next round trip;
+an app that stalls or loses its connection there queues every writer of those
+rows behind a session waiting on nobody (the 2026-11-03 incident). So a group of
+writes that read nothing in between is **one statement**, never a transaction:
+`writeAtomically(exec, [w1, w2, …])` (server barrel) composes drizzle
+insert/update/delete builders (or ``sql`INSERT …` ``; `null` skips one) into a
+data-modifying CTE, `WITH w0 AS (…), w1 AS (…) SELECT 1` — atomic, one round
+trip, every arm firing its own triggers, foreign keys checked at the end of the
+statement (a child arm may reference a sibling arm's parent). What one statement
+asks of its arms (pinned in `write-atomically.test.ts` on real Postgres): every
+arm sees the snapshot from before the statement; no row is touched by two arms,
+and a key deleted by one arm cannot be re-inserted by another; all arms share
+65 535 bind parameters.
+
+**Enforced** by `database/no-pure-write-transaction`: a `db.transaction`
+callback that awaits two or more writes on `tx` (a write in a loop counts as
+several) whose results are discarded, and nothing else, is an error. It stays
+silent on any transaction that also awaits a read, a used result, a lock or a
+helper handed `tx` — the cases a transaction exists for. A batch whose atomicity
+something else already gives (the chord song index's load-phase row) needs no
+transaction at all; same-shaped rows are one multi-row statement.
+
 ## Runbook: a database wedged by a lock chain
 
 Symptom: pages hang on "Waiting for the server…", `db.jsonl` shows
@@ -440,6 +465,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/database/server/internal/boot-schema.ts`
   - Exports (types):
+    - `AtomicWrite`
     - `DatabaseDriverImpl`
     - `Db`
     - `DbExecutor`
@@ -457,6 +483,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `readTag`
     - `schemaChangedAtBoot`
     - `snapshotWatermark`
+    - `writeAtomically`
 - Machine:
   - Uses: `database/pgbouncer.convergePgbouncerConfig`
 - Core:

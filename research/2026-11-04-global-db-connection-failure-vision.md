@@ -292,6 +292,38 @@ enforced rule:
   `writeUsage` does by hand) so a background writer never needs
   `db.transaction` for pure writes.
 
+**Next rung, landed (2026-11-04, task-1793770934-buaup7).** Both halves:
+
+- The primitive: `writeAtomically(exec, writes)` (`database/server`) composes
+  drizzle builders or ``sql`…` `` writes (`null` skips one) into
+  `WITH w0 AS (…), w1 AS (…) SELECT 1`. Its semantics are pinned on real
+  Postgres (`write-atomically.test.ts`): a child arm may reference a sibling
+  arm's parent (FKs are checked at the end of the statement), every arm sees the
+  pre-statement snapshot, and a key deleted by one arm cannot be re-inserted by
+  another.
+- The lint: `database/no-pure-write-transaction` flags a `db.transaction`
+  callback whose only awaits are two or more discarded-result writes on `tx`
+  (one in a loop counts as several). It stays silent on a read, a used result, a
+  lock or a helper handed `tx`, so it needs no exemption list. Repo-wide it
+  found five sites, all rewritten:
+  - `events/refresh/run-ledger.ts` `completeRun`: run, run-events, source in
+    one `writeAtomically`.
+  - `infra/events/trigger-contributions.ts`: every table's delete and insert
+    as arms of one statement (job names bound as one array parameter per
+    table).
+  - `events-core/events-repo.ts` `reanchorRecurringEvents`: one update arm
+    per moved row.
+  - `sonata/track-mixer/routes.ts`: one multi-row upsert (track ids deduped).
+  - `chord/song-index/load.ts`: no transaction at all. The load-phase row
+    already hides a half-loaded index, and a batch's windows overflow one
+    statement's bind parameters.
+- Also rewritten, though the lint allows it (it holds a lock):
+  `task-title/short-title-job.ts`. A `FOR UPDATE` read, an app-side compare and
+  an upsert became one `INSERT … SELECT … WHERE title = $ ON CONFLICT`
+  (`short-title-store.test.ts`).
+- Left as is: `dead-job-gc.ts` (the purge's `RETURNING` feeds an app-side
+  filter before the log delete), and the "Maybe" and "No" lists above.
+
 ## Runbook: a database wedged by a lock chain
 
 Moved to `plugins/database/CLAUDE.md` ("Runbook: a database wedged by a lock

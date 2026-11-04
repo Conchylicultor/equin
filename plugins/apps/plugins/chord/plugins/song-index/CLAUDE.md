@@ -221,7 +221,7 @@ because it is jsonb, and Postgres orders an object's keys itself.
    downloads and sha256-checks the files when they are not installed (phase
    `downloading`); truncates the two
    index tables; streams the snapshot, keeps the scope's sections, derives and
-   inserts them in batches of 200 (one transaction per batch); marks the state
+   inserts them in batches of 200 (each INSERT its own commit); marks the state
    row `ready`. A throw marks it `failed` with the message and rethrows.
 4. **No transaction around the whole load, on purpose.** Progress must commit to
    reach the browser, and ~184k uncommitted rows for minutes is the wrong trade.

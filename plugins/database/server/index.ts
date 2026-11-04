@@ -44,6 +44,7 @@ export {
   readTag,
 } from "./internal/read-set-capture";
 export { currentTxId, type DbExecutor } from "./internal/current-tx-id";
+export { writeAtomically, type AtomicWrite } from "./internal/write-atomically";
 
 export default {
   description:

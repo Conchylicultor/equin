@@ -41,8 +41,11 @@ export type LoadResult = {
  * write flips it back. So no reader ever sees a half-loaded index, and a load
  * that dies midway leaves a `failed` (or stuck `loading`) row that the next
  * `ensure` or boot replaces with a fresh load from the start — the tables are
- * truncated first, so a rerun never meets its predecessor's rows. Each batch
- * is its own transaction, so a section and its windows land together.
+ * truncated first, so a rerun never meets its predecessor's rows. For the
+ * same reason a batch needs no transaction either: its sections land first
+ * (the windows' FK needs them), then its windows, each INSERT committing on its
+ * own. A transaction would buy nothing the state row does not already give,
+ * and would hold the batch's rows locked while the app sends the next chunk.
  */
 export async function loadSections(args: {
   snapshotPath: AppPath;
@@ -79,14 +82,12 @@ export async function loadSections(args: {
     if (sectionBatch.length > 0) {
       const rows = sectionBatch;
       const windowRows = windowBatch;
-      await db.transaction(async (tx) => {
-        await tx.insert(_chordSections).values(rows);
-        for (let i = 0; i < windowRows.length; i += WINDOW_INSERT_CHUNK) {
-          await tx
-            .insert(_chordLoopWindows)
-            .values(windowRows.slice(i, i + WINDOW_INSERT_CHUNK));
-        }
-      });
+      await db.insert(_chordSections).values(rows);
+      for (let i = 0; i < windowRows.length; i += WINDOW_INSERT_CHUNK) {
+        await db
+          .insert(_chordLoopWindows)
+          .values(windowRows.slice(i, i + WINDOW_INSERT_CHUNK));
+      }
       sections += rows.length;
       windows += windowRows.length;
       sectionBatch = [];

@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@plugins/database/server";
+import { db, writeAtomically } from "@plugins/database/server";
 import type {
   EventSource,
   RunOutcome,
@@ -19,7 +19,7 @@ import {
 
 // The ONLY writer of `event_source_runs` and of a source row's runtime state.
 //
-// Every run ends here, and every ending writes BOTH tables in one transaction:
+// Every run ends here, and every ending writes BOTH tables in one statement:
 // the ledger row (what happened) and the source row (status, fingerprint,
 // watermarks, classified error). Keeping the pair atomic is what makes the two
 // answerable together — a source that says `error` always has the failed run row
@@ -93,8 +93,13 @@ async function completeRun(
   },
   sourceState: SourceStatePatch,
 ): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx.insert(_eventSourceRuns).values({
+  // ONE statement (`writeAtomically`), not a transaction of three round trips:
+  // nothing here reads, so there is nothing to wait on between the writes, and
+  // a transaction would only hold the source row locked across the app's next
+  // round trip. The run-events' FK to the run row is checked at the end of the
+  // statement, so the arms may land in any order.
+  await writeAtomically(db, [
+    db.insert(_eventSourceRuns).values({
       id: run.runId,
       sourceId: source.id,
       startedAt: run.startedAt,
@@ -108,20 +113,19 @@ async function completeRun(
       durationMs: run.finishedAt.getTime() - run.startedAt.getTime(),
       flags: run.flags,
       error: run.error,
-    });
-    // In the SAME transaction as the row above, which is what makes the counts
+    }),
+    // In the SAME statement as the row above, which is what makes the counts
     // and the list they summarize one fact rather than two that can disagree.
-    // The FK to the run row is why this cannot be written any earlier.
-    if (run.touched.length > 0) {
-      await tx.insert(_eventSourceRunEvents).values(
-        run.touched.map((t) => ({
-          runId: run.runId,
-          eventId: t.eventId,
-          action: t.action,
-        })),
-      );
-    }
-    await tx
+    run.touched.length > 0
+      ? db.insert(_eventSourceRunEvents).values(
+          run.touched.map((t) => ({
+            runId: run.runId,
+            eventId: t.eventId,
+            action: t.action,
+          })),
+        )
+      : null,
+    db
       .update(_eventSources)
       .set({
         lastRunAt: run.finishedAt,
@@ -129,7 +133,7 @@ async function completeRun(
         // a backlog of overdue ticks.
         nextRunAt: computeNextRunAt(source.refresh, run.finishedAt),
         // In the BASE patch, not per-arm: `outcome` is already on the run row
-        // being inserted three statements up, so every ending writes it here by
+        // being inserted in the first arm, so every ending writes it here by
         // construction and no arm can forget to. It is the newest thing the
         // engine knows — including the cheap `unchanged` runs — which is what
         // makes the sources list's derived status answer "how is it NOW"
@@ -137,8 +141,8 @@ async function completeRun(
         lastOutcome: run.outcome,
         ...sourceState,
       })
-      .where(eq(_eventSources.id, source.id));
-  });
+      .where(eq(_eventSources.id, source.id)),
+  ]);
 }
 
 /**
@@ -177,7 +181,7 @@ export async function finishUnchanged(
 /**
  * The full path: extraction ran, the diff landed, the fingerprint advances.
  *
- * The ONLY writer of `lastFlags`, and it writes it in the same transaction as
+ * The ONLY writer of `lastFlags`, and it writes it in the same statement as
  * the run row that produced it — so the Status card's caveats and the run they
  * came from can never disagree, and the card needs no second query to find them.
  */

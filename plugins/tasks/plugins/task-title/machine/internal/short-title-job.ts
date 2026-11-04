@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
-import { db } from "@plugins/database/server";
+import { and, eq, sql } from "drizzle-orm";
+import { db, type DbExecutor } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { generateTitles } from "./generate-title";
@@ -51,24 +51,42 @@ export const shortTitleJob = defineJob({
       );
       return;
     }
-    // Persist only if the title is still the one we shortened. The row lock
-    // orders this against a concurrent rename; a rename that wins has its own
-    // event, and so its own run, on the way.
-    await db.transaction(async (tx) => {
-      const [current] = await tx
-        .select({ title: _tasks.title })
-        .from(_tasks)
-        .where(eq(_tasks.id, taskId))
-        .for("update");
-      if (current?.title !== title) return;
-      await tasksShortTitle.upsert(
-        taskId,
-        { shortTitle: result.shortTitle, sourceTitle: title },
-        tx,
-      );
-    });
+    await storeIfTitleUnchanged(db, taskId, title, result.shortTitle);
   },
 });
+
+// Persist only if the title is still the one we shortened — in ONE statement:
+// the upsert's rows come from a SELECT of the task guarded on its title, so a
+// rename that commits first leaves nothing to write (its own event brings its
+// own run). It replaced a `FOR UPDATE` read, a compare in the app, then the
+// upsert: two round trips with the task row locked between them. A rename that
+// commits after the statement's snapshot can still land a short title made from
+// the old title — readers show one only while `sourceTitle` equals the task's
+// title, and the rename's own run replaces it.
+export async function storeIfTitleUnchanged(
+  exec: DbExecutor,
+  taskId: string,
+  title: string,
+  shortTitle: string,
+): Promise<void> {
+  const t = tasksShortTitle.table;
+  const col = (c: { name: string }) => sql.identifier(c.name);
+  const source = exec
+    .select({
+      id: _tasks.id,
+      shortTitle: sql`${shortTitle}`,
+      title: _tasks.title,
+    })
+    .from(_tasks)
+    .where(and(eq(_tasks.id, taskId), eq(_tasks.title, title)));
+  await exec.execute(sql`
+    INSERT INTO ${t} (${col(t[tasksShortTitle.key])}, ${col(t.shortTitle)}, ${col(t.sourceTitle)})
+    ${source.getSQL()}
+    ON CONFLICT (${col(t[tasksShortTitle.key])}) DO UPDATE
+      SET ${col(t.shortTitle)} = excluded.${col(t.shortTitle)},
+          ${col(t.sourceTitle)} = excluded.${col(t.sourceTitle)}
+  `);
+}
 
 // A title already that short is its own short title (no model call); otherwise
 // the model shortens it knowing what the task is about. A failed call throws
