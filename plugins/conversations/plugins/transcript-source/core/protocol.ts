@@ -206,6 +206,13 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     messageId: z.string().optional(),
     text: z.string(),
     stopReason: z.string().optional(),
+    /**
+     * How the turn's Stop hooks answered this `end_turn` (their
+     * `stop_hook_summary` line): `allowed` — the agent stopped, the turn is
+     * over; `blocked` — a hook sent it back to work. Absent while they still
+     * run, on any other stop reason, and when the agent runs no Stop hook.
+     */
+    stopHooks: z.enum(["allowed", "blocked"]).optional(),
     usage: TokenUsageSchema.optional(),
   }),
   z.object({

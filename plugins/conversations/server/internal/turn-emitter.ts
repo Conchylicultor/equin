@@ -93,10 +93,15 @@ function subscribeToConversation(conversationId: string): () => void {
   const emittedIds = new Set<string>();
 
   async function handleEvents(events: JsonlEvent[]): Promise<void> {
+    // A turn is over once its Stop hooks let the agent stop — not at the
+    // `end_turn` text, which the CLI writes BEFORE running them: a waiter that
+    // tears the agent down on that text (exit_clean's finalize) killed the
+    // stop gate mid-run, and a stop a hook blocked is no end at all.
     const endTurns = events.filter(
       (e): e is EndTurnEvent =>
         e.kind === "assistant-text" &&
         e.stopReason === "end_turn" &&
+        e.stopHooks === "allowed" &&
         typeof e.messageId === "string",
     );
 

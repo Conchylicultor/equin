@@ -17,8 +17,9 @@ const finishedIcon = symbol("check-circle");
 const FINALIZE_TIMEOUT_MS = 60_000;
 
 // Spawned by the `exit_clean` MCP tool. Defers `deleteConversation` until
-// after the model's current turn ends, so the closing agent kill doesn't
-// race against a still-streaming response. If end_turn doesn't arrive
+// after the model's current turn ends — its Stop hooks included — so the
+// closing agent kill races neither a still-streaming response nor the stop
+// gate (killed mid-run, it showed as a Stop hook error on every clean exit). If end_turn doesn't arrive
 // within FINALIZE_TIMEOUT_MS we delete anyway — the model has already
 // signalled clean exit, so missing the end_turn (transcript poll lag,
 // missed event) shouldn't strand the conversation.

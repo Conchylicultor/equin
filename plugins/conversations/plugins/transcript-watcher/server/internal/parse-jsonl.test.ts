@@ -348,6 +348,83 @@ describe("readJsonlEvents — AskUserQuestion answers", () => {
   });
 });
 
+describe("readJsonlEvents — Stop hooks settle an end_turn", () => {
+  const endTurnLine = (uuid: string, parentUuid: string, msgId: string) => ({
+    type: "assistant",
+    uuid,
+    parentUuid,
+    timestamp: TS,
+    message: {
+      id: msgId,
+      role: "assistant",
+      stop_reason: "end_turn",
+      content: [{ type: "text", text: `done ${msgId}` }],
+    },
+  });
+  const stopSummaryLine = (uuid: string, parentUuid: string) => ({
+    type: "system",
+    subtype: "stop_hook_summary",
+    uuid,
+    parentUuid,
+    timestamp: TS,
+    hookCount: 1,
+    hookErrors: [],
+    preventedContinuation: false,
+  });
+  const stopBlockLine = (uuid: string, parentUuid: string) => ({
+    type: "attachment",
+    uuid,
+    parentUuid,
+    timestamp: TS,
+    attachment: {
+      type: "hook_blocking_error",
+      hookName: "Stop",
+      hookEvent: "Stop",
+      blockingError: { blockingError: "submit your report first" },
+    },
+  });
+  const stopHooksOf = (events: Awaited<ReturnType<typeof readJsonlEvents>>) =>
+    events.flatMap((e) =>
+      e.kind === "assistant-text" ? [[e.messageId, e.stopHooks]] : [],
+    );
+
+  test("the summary after an end_turn marks it allowed", async () => {
+    const path = await writeFixture([
+      userLine("u1", null, "go"),
+      endTurnLine("a1", "u1", "m1"),
+      stopSummaryLine("s1", "a1"),
+    ]);
+    expect(stopHooksOf(await readJsonlEvents(path))).toEqual([
+      ["m1", "allowed"],
+    ]);
+  });
+
+  test("a Stop block marks that end_turn blocked; the next one is allowed", async () => {
+    const path = await writeFixture([
+      userLine("u1", null, "go"),
+      endTurnLine("a1", "u1", "m1"),
+      stopBlockLine("b1", "a1"),
+      stopSummaryLine("s1", "b1"),
+      endTurnLine("a2", "s1", "m2"),
+      stopSummaryLine("s2", "a2"),
+    ]);
+    expect(stopHooksOf(await readJsonlEvents(path))).toEqual([
+      ["m1", "blocked"],
+      ["m2", "allowed"],
+    ]);
+  });
+
+  test("an end_turn whose Stop hooks are still running is unsettled", async () => {
+    const path = await writeFixture([
+      userLine("u1", null, "go"),
+      endTurnLine("a1", "u1", "m1"),
+    ]);
+    expect(stopHooksOf(await readJsonlEvents(path))).toEqual([
+      ["m1", undefined],
+    ]);
+  });
+});
+
 describe("readJsonlEvents — unparseable timestamp", () => {
   test("a line whose timestamp is not a parseable date emits no event", async () => {
     const path = await writeFixture([

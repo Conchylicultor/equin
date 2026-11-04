@@ -468,6 +468,12 @@ export async function buildJsonlEvents(
     JsonlEvent & { kind: "assistant-text" }
   >();
   const usageAttributedMsgIds = new Set<string>();
+  // The latest `end_turn` text whose Stop hooks have not answered yet, and
+  // whether one of them blocked it. Claude Code writes the turn's last
+  // message, then runs its Stop hooks — a block as a `hook_blocking_error`
+  // attachment — then one `stop_hook_summary` line, which settles `stopHooks`.
+  let stopPending: (JsonlEvent & { kind: "assistant-text" }) | null = null;
+  let stopBlocked = false;
   // tool-call pairing: toolUseId → emitted ToolCallEvent (result populated later)
   const toolCallByUseId = new Map<string, ToolCallEvent>();
   // Deferred tool results whose call hasn't appeared yet
@@ -845,7 +851,20 @@ export async function buildJsonlEvents(
         if (existing && !existing.stopReason) {
           existing.stopReason = msg.stop_reason;
         }
+        if (existing?.stopReason === "end_turn") {
+          stopPending = existing;
+          stopBlocked = false;
+        }
       }
+      continue;
+    }
+
+    if (type === "system" && obj.subtype === "stop_hook_summary") {
+      if (stopPending) {
+        stopPending.stopHooks = stopBlocked ? "blocked" : "allowed";
+        stopPending = null;
+      }
+      stopBlocked = false;
       continue;
     }
 
@@ -930,6 +949,13 @@ export async function buildJsonlEvents(
         // record naming no call (SessionStart, UserPromptSubmit, Stop) or an
         // unknown call stays an event of its own.
         const hook = hookRecordOf(subtype, att as Record<string, unknown>, ts);
+        if (
+          hook.kind === "hook" &&
+          hook.record.event === "Stop" &&
+          subtype === "hook_blocking_error"
+        ) {
+          stopBlocked = true;
+        }
         if (hook.kind === "hook" && hook.toolUseId) {
           const call = toolCallByUseId.get(hook.toolUseId);
           if (call) {
