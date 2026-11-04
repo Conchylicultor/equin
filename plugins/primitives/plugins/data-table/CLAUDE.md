@@ -321,6 +321,8 @@ Verified in Chromium only (the e2e harness drives Chromium).
     - `apps/studio/contributions/tables/foreign-keys`
     - `apps/studio/contributions/tables/indexes`
     - `apps/studio/contributions/tables/sample-rows`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/query-db`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/timeline`
     - `debug/boot-profile`
     - `debug/heap-snapshot`
     - `debug/profiling/boot`

@@ -89,7 +89,9 @@
     - `InsertBetweenBody`
     - `LaunchTaskBody`
     - `LaunchTaskResponse`
+    - `ManageAnswer`
     - `MoveTaskBody`
+    - `ReadManageAnswer`
     - `TaskChainCard`
     - `TaskChainRelate`
     - `TaskChainRelateMode`
@@ -104,6 +106,7 @@
     - `CreateTaskBodySchema`
     - `createTaskChain`
     - `DepsMoveBodySchema`
+    - `formatManageAnswer`
     - `getTask`
     - `InsertBetweenBodySchema`
     - `insertTaskBetween`
@@ -114,6 +117,7 @@
     - `moveTask`
     - `MoveTaskBodySchema`
     - `moveTaskInDepsTree`
+    - `readManageAnswer`
     - `removeTaskDependency`
     - `repoInfo`
     - `TaskChainCardSchema`

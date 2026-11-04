@@ -51,6 +51,20 @@ Names no workflow. Plan: `research/2026-10-30-tasks-message-agents.md`.
   - Register:
     - `mcpTool('list_agents')`
     - `mcpTool('message_agent')`
+- Core:
+  - Exports (types):
+    - `AgentLine`
+    - `Delivery`
+    - `MessageAnswer`
+    - `ReadAgentLine`
+    - `ReadMessageAnswer`
+  - Exports (values):
+    - `DELIVERIES`
+    - `formatAgentLine`
+    - `formatAgentList`
+    - `formatMessageAnswer`
+    - `readAgentList`
+    - `readMessageAnswer`
 - Sub-plugins:
   - **`capability`** — The message.tree mandate capability as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant it without a cycle through message, which imports conversations.
 

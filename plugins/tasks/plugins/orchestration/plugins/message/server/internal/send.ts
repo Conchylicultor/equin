@@ -1,5 +1,6 @@
 import { STUCK_TURN_WAITING_FOR } from "@plugins/conversations/core";
 import type { TreeAgent, TreeAgents } from "./agents";
+import { formatMessageAnswer, type Delivery } from "../../core";
 
 /** What sending a message does outside the tree read: ports, so a test drives
  * the policy with a fake agent. */
@@ -119,22 +120,29 @@ export async function sendAgentMessage(
 
 /** `message_agent`'s answer. */
 export function renderOutcome(outcome: MessageOutcome): string {
-  if (outcome.kind === "refused") return `Not sent: ${outcome.message}`;
-  const { conversationId, was } = outcome;
-  if (outcome.resumed)
-    return `Sent to ${conversationId}: it had stopped, so it is resuming, and the message is delivered once it is up.`;
+  if (outcome.kind === "refused")
+    return formatMessageAnswer({ kind: "not-sent", message: outcome.message });
+  return formatMessageAnswer({
+    kind: "sent",
+    conversationId: outcome.conversationId,
+    delivery: deliveryOf(outcome),
+  });
+}
+
+function deliveryOf(
+  outcome: Extract<MessageOutcome, { kind: "sent" }>,
+): Delivery {
+  if (outcome.resumed) return "resuming";
+  const { was } = outcome;
   switch (was.status) {
     case "starting":
-      return `Sent to ${conversationId}: it is starting, and the message is delivered once it is up.`;
+      return "starting";
     case "working":
-      return `Sent to ${conversationId}: it is working, and reads the message at its next step.`;
+      return "working";
     case "waiting":
     case "gone":
     case "done":
-      if (was.waitingFor === STUCK_TURN_WAITING_FOR)
-        return `Sent to ${conversationId}: it is stuck — it holds a turn it never started — so the message queues behind that turn and is read only once the agent moves again.`;
-      return was.waitingFor !== null
-        ? `Sent to ${conversationId}: it was waiting on the user, and takes your message instead.`
-        : `Sent to ${conversationId}: it was idle, and starts on it now.`;
+      if (was.waitingFor === STUCK_TURN_WAITING_FOR) return "stuck";
+      return was.waitingFor !== null ? "was-waiting" : "was-idle";
   }
 }

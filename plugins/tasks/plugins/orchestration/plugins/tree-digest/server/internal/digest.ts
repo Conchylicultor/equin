@@ -10,6 +10,8 @@
  * report knows how to say it); a test passes its own.
  */
 
+import { formatTreeHeader, formatTreeLine } from "../../core";
+
 /** One task of the digested subtree. */
 export interface DigestTask {
   id: string;
@@ -93,9 +95,13 @@ async function renderLines(
   const shown = rows.slice(0, opts.cap);
   const notes = await opts.annotate(shown.map((r) => r.task));
   const lines = shown.map(({ task, depth }) => {
-    const words = [task.status, ...(notes.get(task.id) ?? [])];
-    if (task.id === opts.selfTaskId) words.push("your task");
-    return `${"  ".repeat(depth)}- ${task.id} ${JSON.stringify(task.title)} — ${words.join(", ")}`;
+    return formatTreeLine({
+      depth,
+      taskId: task.id,
+      title: task.title,
+      words: [task.status, ...(notes.get(task.id) ?? [])],
+      self: task.id === opts.selfTaskId,
+    });
   });
   const more = rows.length - shown.length;
   if (more > 0) lines.push(`+${more} more${overflowHint}`);
@@ -137,7 +143,7 @@ export async function treeDigestOn(
       overflow,
     );
     digest = {
-      text: [`Your task tree (root ${scope.rootTaskId}):`, ...lines].join("\n"),
+      text: [formatTreeHeader(scope.rootTaskId), ...lines].join("\n"),
       full: true,
     };
   } else {
@@ -176,5 +182,5 @@ export async function taskTreeOn(
     { selfTaskId: scope.taskId, annotate: args.annotate, cap: TREE_LINE_CAP },
     "",
   );
-  return [`Your task tree (root ${scope.rootTaskId}):`, ...lines].join("\n");
+  return [formatTreeHeader(scope.rootTaskId), ...lines].join("\n");
 }

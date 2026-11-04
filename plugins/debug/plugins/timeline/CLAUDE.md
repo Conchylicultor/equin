@@ -197,11 +197,22 @@ slowness/freeze/memory-pressure incident across the cluster.
   - Uses: `packages/list-bound.wholeRecord`
   - Exports (types):
     - `TimelineEvent`
+    - `TimelineHeader`
+    - `TimelineRead`
+    - `TimelineReport`
+    - `TimelineReportEvent`
+    - `TimelineReportSection`
+    - `TimelineSectionId`
     - `TimelineSeverity`
     - `TimelineSource`
   - Exports (values):
+    - `formatTimelineEvent`
+    - `formatTimelineHeader`
+    - `readTimelineReport`
+    - `TIMELINE_SECTIONS`
     - `TIMELINE_SOURCES`
     - `TimelineEventSchema`
+    - `timelineHeading`
     - `TimelineSeveritySchema`
     - `TimelineSourceSchema`
 - Cross-plugin:

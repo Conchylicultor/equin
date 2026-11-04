@@ -20,8 +20,7 @@ import {
   undefinedColumnOf,
 } from "./read-aliases";
 import { oneStatement } from "./one-statement";
-
-const MAX_ROWS = 200;
+import { QUERY_DB_MAX_ROWS, formatQueryDbResult } from "../../core";
 
 // Conversations already told what the read aliases are. In memory: after a
 // restart a conversation is told once more, which costs one line.
@@ -31,7 +30,7 @@ export const queryDbTool = Mcp.tool({
   name: "query_db",
   description: `Execute a read-only SQL query against a worktree's PostgreSQL database.
 For debugging and inspection only. All queries run in a READ ONLY transaction.
-One statement per call (multi-statement SQL is refused). Returns up to ${MAX_ROWS} rows.
+One statement per call (multi-statement SQL is refused). Returns up to ${QUERY_DB_MAX_ROWS} rows.
 
 A table with a derived \`<table>_v\` view reads as that view: \`tasks\` here is \`tasks_v\`
 (with computed columns such as \`status\`), \`public.tasks\` is the physical table.
@@ -101,7 +100,7 @@ Pass \`database\` to target a different worktree (e.g. "att-1778089188-7uvf", or
           );
         }
         await client.query("ROLLBACK");
-        const rows = result.rows.slice(0, MAX_ROWS);
+        const rows = result.rows.slice(0, QUERY_DB_MAX_ROWS);
         const named = toldAliases.has(conversationId)
           ? []
           : aliasesNamedIn(sql, aliases);
@@ -112,12 +111,12 @@ Pass \`database\` to target a different worktree (e.g. "att-1778089188-7uvf", or
           content: [
             {
               type: "text",
-              text: JSON.stringify({
+              text: formatQueryDbResult({
                 database: dbName,
                 columns,
                 rows,
                 rowCount: result.rowCount,
-                truncated: (result.rowCount ?? 0) > MAX_ROWS,
+                truncated: (result.rowCount ?? 0) > QUERY_DB_MAX_ROWS,
                 ...(note === undefined ? {} : { note }),
               }),
             },

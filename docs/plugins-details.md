@@ -17444,25 +17444,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Slots:
                   - `JsonlViewerTool.Renderer`
                   - `JsonlViewerTool.Footer`
-                - Slot contributors:
-                  - `JsonlViewerTool.Renderer` ← `apps.places.places-map`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.add-task`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.agent`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.bash`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.edit`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.flag-raise`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.orchestration-tools`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.edit-page`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.read-page`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.write-note`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.read`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.skill`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.tool-search`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.web-search`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.workflow`
-                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.write`
+                - Slot contributors: 22 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                  - `JsonlViewerTool.Renderer` ×21
                   - `JsonlViewerTool.Footer` ← `debug.browser-recordings`
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
@@ -17508,26 +17491,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density` ×4
                   - `ui/tokens/shape` ×4
                   - `ui/tokens/font-family --font-mono`
-                - Imported by:
+                - Imported by: 23 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                  - `conversations` ×21
                   - `apps/places/places-map`
-                  - `conversations/agent-thread`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/write-note`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/read`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/tool-search`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/write`
                   - `debug/browser-recordings`
               - Plugins:
                 - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
@@ -17737,6 +17703,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/type-scale --font-scale`
                       - `ui/tokens/type-scale --font-size-2xs`
                       - `ui/tokens/type-scale --line-height-2xs`
+                - **`exit-clean`** — Renders exit_clean MCP tool calls as one quiet line — the agent closing its conversation as all-smooth; a refusal opens with the tool's reason.
+                  - Web:
+                    - Contributes: `JsonlViewerTool.Renderer` "exit_clean$" → `ExitCleanToolView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/css/text.Text`
+                  - Cross-plugin:
+                    - Uses tokens: `ui/tokens/color-palette --destructive`
                 - **`flag-raise`** — Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "flag_raise$" → `FlagRaiseToolView`
@@ -17865,6 +17840,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageToolError`
                           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageWriteReport`
                           - `primitives/css/spacing.Stack`
+                - **`query-db`** — Renders query_db MCP tool calls: the SQL on one line (highlighted inside), the database when one was named, the row count in the note, and the rows as a compact table; a failed query turns the card to its error tone with the database's message.
+                  - Web:
+                    - Contributes: `JsonlViewerTool.Renderer` "query_db$" → `QueryDbToolView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/data-table.ColumnDef`
+                      - `primitives/data-table.DataTable`
+                      - `primitives/syntax-highlight.HighlightedCode`
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --destructive`
+                      - `ui/tokens/font-family --font-mono`
+                      - `ui/tokens/shape --spacing`
                 - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Read" → `ReadToolView`
@@ -17962,6 +17954,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/shape` ×2
                       - `ui/tokens/font-family --font-mono`
                       - `ui/tokens/shadow --shadow-sm`
+                - **`timeline`** — Renders get_timeline MCP tool calls: the window and filters asked for in the summary, the events found in the note, and the report as sections inside — events as a compact table, duress, host pressure and backend health as lines.
+                  - Web:
+                    - Contributes: `JsonlViewerTool.Renderer` "get_timeline$" → `TimelineToolView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/css/badge.Badge`
+                      - `primitives/css/rigid.rigidClass`
+                      - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/data-table.ColumnDef`
+                      - `primitives/data-table.DataTable`
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/font-family --font-mono`
+                      - `ui/tokens/shape --spacing`
                 - **`tool-search`** — Renders ToolSearch calls as the deferred tools they loaded: the tool names in the row, a select's not-found names flagged, a keyword search's query and match count.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "ToolSearch" → `ToolSearchToolView`
@@ -21329,6 +21338,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `mcpTool('query_db')`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/mcp-tools.ts` (debt)
+      - Core:
+        - Exports (types):
+          - `QueryDbRead`
+          - `QueryDbResult`
+        - Exports (values):
+          - `formatQueryDbResult`
+          - `QUERY_DB_MAX_ROWS`
+          - `QueryDbResultSchema`
+          - `readQueryDbResult`
     - **`query-deadline`** — Query-deadline presence: the health report's Database row (attention while a database call on any pool got no reply in the last 10 minutes, naming the latest's pool and caller, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries (pool, phase, query, caller) for the db-query-deadline kind and the retired db-abandon-cap kind (kept so its old rows still render). Query-deadline audit: registers a handler on the database plugin's query-deadline seam and turns each announcement into a report — db-query-deadline (error, one row per pool, phase and caller — the query label when there is no caller) when a call on any backend connection — opening it or a query on it — got no answer before its deadline and its connection was closed, carrying the connection's transaction state, every other call then in flight, and a link to a trace of that instant; the retired db-abandon-cap kind (filed while lost connections were abandoned) stays registered so its old rows still render and can be investigated — and keeps the last 20 hits in memory as the db-query-deadlines push resource behind the health report's Database row.
       - Web:
         - Contributes:
@@ -24061,11 +24079,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `packages/list-bound.wholeRecord`
         - Exports (types):
           - `TimelineEvent`
+          - `TimelineHeader`
+          - `TimelineRead`
+          - `TimelineReport`
+          - `TimelineReportEvent`
+          - `TimelineReportSection`
+          - `TimelineSectionId`
           - `TimelineSeverity`
           - `TimelineSource`
         - Exports (values):
+          - `formatTimelineEvent`
+          - `formatTimelineHeader`
+          - `readTimelineReport`
+          - `TIMELINE_SECTIONS`
           - `TIMELINE_SOURCES`
           - `TimelineEventSchema`
+          - `timelineHeading`
           - `TimelineSeveritySchema`
           - `TimelineSourceSchema`
       - Cross-plugin:
@@ -28224,10 +28253,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 181 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 182 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×53
               - `primitives` ×28
-              - `conversations` ×25
+              - `conversations` ×26
               - `page` ×25
               - `debug` ×8
               - `apps-core` ×6
@@ -41546,10 +41575,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 171 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 172 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×34
-              - `conversations` ×25
+              - `conversations` ×26
               - `reports` ×14
               - `primitives` ×10
               - `tasks` ×10
@@ -42333,9 +42362,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 141 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 142 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×36
-              - `conversations` ×25
+              - `conversations` ×26
               - `primitives` ×20
               - `debug` ×13
               - `tasks` ×8
@@ -42422,8 +42451,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 97 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
-              - `conversations` ×27
+            - Imported by: 99 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+              - `conversations` ×29
               - `apps` ×21
               - `primitives` ×15
               - `debug` ×13
@@ -42536,9 +42565,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 432 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 434 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×109
-              - `conversations` ×70
+              - `conversations` ×72
               - `primitives` ×54
               - `debug` ×38
               - `ui` ×31
@@ -42780,9 +42809,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 414 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 417 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×111
-              - `conversations` ×76
+              - `conversations` ×79
               - `primitives` ×47
               - `debug` ×37
               - `page` ×24
@@ -43322,6 +43351,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/studio/contributions/tables/foreign-keys`
           - `apps/studio/contributions/tables/indexes`
           - `apps/studio/contributions/tables/sample-rows`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/query-db`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/timeline`
           - `debug/boot-profile`
           - `debug/heap-snapshot`
           - `debug/profiling/boot`
@@ -48127,6 +48158,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
           - `conversations/conversation-view/jsonl-viewer/code-listing`
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/query-db`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/jsonl-viewer/tool-call/write`
           - `debug/mcp-tools`
@@ -51871,7 +51903,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `InsertBetweenBody`
       - `LaunchTaskBody`
       - `LaunchTaskResponse`
+      - `ManageAnswer`
       - `MoveTaskBody`
+      - `ReadManageAnswer`
       - `TaskChainCard`
       - `TaskChainRelate`
       - `TaskChainRelateMode`
@@ -51886,6 +51920,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `CreateTaskBodySchema`
       - `createTaskChain`
       - `DepsMoveBodySchema`
+      - `formatManageAnswer`
       - `getTask`
       - `InsertBetweenBodySchema`
       - `insertTaskBetween`
@@ -51896,6 +51931,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `moveTask`
       - `MoveTaskBodySchema`
       - `moveTaskInDepsTree`
+      - `readManageAnswer`
       - `removeTaskDependency`
       - `repoInfo`
       - `TaskChainCardSchema`
@@ -52636,6 +52672,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register:
               - `mcpTool('list_agents')`
               - `mcpTool('message_agent')`
+          - Core:
+            - Exports (types):
+              - `AgentLine`
+              - `Delivery`
+              - `MessageAnswer`
+              - `ReadAgentLine`
+              - `ReadMessageAnswer`
+            - Exports (values):
+              - `DELIVERIES`
+              - `formatAgentLine`
+              - `formatAgentList`
+              - `formatMessageAnswer`
+              - `readAgentList`
+              - `readMessageAnswer`
           - Plugins:
             - **`capability`** — The message.tree mandate capability as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant it without a cycle through message, which imports conversations.
               - Core:
@@ -52661,6 +52711,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `taskTree`
               - `treeDigest`
               - `TreeDigest`
+          - Core:
+            - Exports (types):
+              - `ReadTree`
+              - `ReadTreeLine`
+              - `TreeLine`
+            - Exports (values):
+              - `formatTreeHeader`
+              - `formatTreeLine`
+              - `readTree`
         - **`watch`** — Watch, web half: registers the watch and watch-event id kinds, so their ids are recognised in the browser as on the server; presents the exposed `managedBy` field (Agent / You — whether another task's agent watches the task) and `managerTaskId` (the watching agent's task, hidden by default) in every list whose rows reach a task. Watch, every host's half: task_watches (who watches which task's subtree; live while not ended and its conversation not done) and watch_inbox (routed, not yet delivered events), with their id kinds; watchTask / endWatch / retargetWatch / watchesOf; the WatchSource and WatchHandler contribution kinds; tasks_ext_manager (which task's agent watches each task, exposed as the `managedBy` field — Agent / You — of every list whose rows reach a task); the routing, quiet and delivery policy over the tables; and the stop waiver (a watcher whose subtree still has work running may stop — the next event wakes it). Names no source, handler or workflow.
           - Web:
             - Contributes:
@@ -55706,9 +55765,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 532 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 534 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×118
-              - `conversations` ×90
+              - `conversations` ×92
               - `primitives` ×77
               - `debug` ×37
               - `page` ×33
@@ -55906,8 +55965,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Tokens used by: 154 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
-              - `conversations` ×36
+            - Tokens used by: 156 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+              - `conversations` ×38
               - `plugin-meta` ×23
               - `apps` ×22
               - `debug` ×19
@@ -56198,9 +56257,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 411 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 413 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×87
-              - `conversations` ×81
+              - `conversations` ×83
               - `primitives` ×69
               - `page` ×36
               - `debug` ×27

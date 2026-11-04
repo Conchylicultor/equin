@@ -13,7 +13,11 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
-import { readTaskTree, type TreeLine } from "../internal/parse";
+import {
+  readTree,
+  type ReadTreeLine,
+} from "@plugins/tasks/plugins/orchestration/plugins/tree-digest/core";
+import { TaskStatusSchema } from "@plugins/tasks/plugins/tasks-core/core";
 
 /** px of indentation per tree level. */
 const INDENT = 16;
@@ -29,7 +33,7 @@ function shownWords(words: readonly string[]): string[] {
 
 export function TaskTreeView({ event }: ToolRendererProps) {
   const tree = useMemo(
-    () => (event.result ? readTaskTree(event.result.content) : null),
+    () => (event.result ? readTree(event.result.content) : null),
     [event.result],
   );
   const openPane = useOpenPane();
@@ -69,7 +73,7 @@ function TreeRow({
   line,
   open,
 }: {
-  line: TreeLine;
+  line: ReadTreeLine;
   open: (taskId: string) => Activation;
 }) {
   if (line.kind === "text")
@@ -78,18 +82,23 @@ function TreeRow({
         {line.text}
       </Text>
     );
+  // A line's first word is its task's status; one this build does not know
+  // stays a word.
+  const [first = "", ...rest] = line.words;
+  const status = TaskStatusSchema.safeParse(first);
+  const words = status.success ? rest : line.words;
   return (
     <Row
       size="sm"
       indent={line.depth * INDENT}
-      icon={line.status ? <StatusIcon status={line.status} /> : undefined}
+      icon={status.success ? <StatusIcon status={status.data} /> : undefined}
       title={line.taskId}
       {...activationProps(open(line.taskId))}
     >
       <Fill as="span" className="truncate">
         {line.title}
       </Fill>
-      {shownWords(line.words).map((w) => (
+      {shownWords(words).map((w) => (
         <Badge key={w} variant="muted" className={rigidClass()}>
           {w}
         </Badge>

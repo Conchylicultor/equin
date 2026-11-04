@@ -6,7 +6,11 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { readManageAnswer } from "../internal/parse";
+import { readManageAnswer } from "@plugins/tasks/core";
+import {
+  TRACK_META,
+  type TaskTrack,
+} from "@plugins/tasks/plugins/task-track/core";
 import { Refusal, TaskChip } from "./target-chip";
 
 type EditTaskInput = {
@@ -17,12 +21,16 @@ type EditTaskInput = {
   remove_after?: string[];
   start?: "armed" | "manual";
   model?: string;
+  /** Calls made before edit_task could move a task between tracks lack it. */
+  track?: TaskTrack;
 };
 
 /** The edit in words, in the order the tool applies it. */
 function changes(input: EditTaskInput): string[] {
   const out: string[] = [];
   if (input.title !== undefined) out.push("renamed");
+  if (input.track !== undefined)
+    out.push(`track: ${TRACK_META[input.track].label}`);
   if (input.description === null) out.push("description cleared");
   else if (input.description !== undefined) out.push("description rewritten");
   const added = input.add_after?.length ?? 0;

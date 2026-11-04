@@ -11,6 +11,7 @@ import {
 import { ConversationStatusSchema } from "@plugins/tasks/plugins/tasks-core/core";
 import { STUCK_TURN_WAITING_FOR } from "@plugins/conversations/core";
 import { mandateOf } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
+import { formatAgentList } from "../../core";
 
 /** A task of the tree, and the agent working on it: its latest conversation
  * (`null` while no agent ran on it yet). */
@@ -141,14 +142,17 @@ export function renderAgents(agents: readonly TreeAgent[]): string {
     a.conversation === null
       ? []
       : [
-          `- ${a.taskId} "${a.title}" · ${a.conversation.id} · ${standingOf(a.conversation)}${a.self ? " · you" : ""}`,
+          {
+            taskId: a.taskId,
+            title: a.title,
+            conversationId: a.conversation.id,
+            standing: standingOf(a.conversation),
+            self: a.self,
+          },
         ],
   );
-  const waiting = agents.filter((a) => a.conversation === null).length;
-  if (lines.length === 0) return "No agent has run on a task of this tree yet.";
-  const tail =
-    waiting > 0
-      ? `\n\n${waiting} task${waiting === 1 ? "" : "s"} no agent ran on yet (see \`task_tree\`).`
-      : "";
-  return lines.join("\n") + tail;
+  return formatAgentList(
+    lines,
+    agents.filter((a) => a.conversation === null).length,
+  );
 }

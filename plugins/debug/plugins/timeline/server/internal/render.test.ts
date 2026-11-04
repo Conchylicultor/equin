@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import type { TimelineEvent, TimelineSeverity } from "../../core";
+import {
+  readTimelineReport,
+  type TimelineEvent,
+  type TimelineSeverity,
+} from "../../core";
 import { HOST_LANE, type TimelineFrame } from "../../shared/frames";
 import { renderTimeline, type RenderOpts } from "./render";
 
@@ -218,5 +222,24 @@ describe("renderTimeline minSeverity gate", () => {
     expect(eventsBlock).toContain("[ERROR]");
     expect(eventsBlock).not.toContain("[INFO ]");
     expect(out).toContain("dropped (raise minSeverity / narrow window): slow-op 1 info");
+  });
+});
+
+describe("renderTimeline ⇄ readTimelineReport", () => {
+  test("the reader recovers what the renderer wrote", () => {
+    const text = renderTimeline(buildFrames(), OPTS);
+    const read = readTimelineReport(text);
+    expect(read.kind).toBe("report");
+    if (read.kind !== "report") return;
+    expect(read.report.sections.map((s) => s.id)).toEqual([
+      "duress",
+      "host-pressure",
+      "backend-health",
+      "events",
+      "chunk-errors",
+    ]);
+    expect(read.report.shown.length).toBeGreaterThan(0);
+    expect(read.report.shown.length).toBeLessThanOrEqual(OPTS.maxEvents);
+    expect(read.report.tz).toBe("UTC");
   });
 });

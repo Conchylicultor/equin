@@ -11,7 +11,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { readAgents } from "../internal/parse";
+import { readAgentList } from "@plugins/tasks/plugins/orchestration/plugins/message/core";
 
 /** The standing's headword (`idle (hibernated)` → `idle`, `working · status
  *  unverified` → `working`); the whole standing stays on hover. */
@@ -41,7 +41,7 @@ function tally(standings: readonly string[]): string {
 
 export function ListAgentsView({ event }: ToolRendererProps) {
   const lines = useMemo(
-    () => (event.result ? readAgents(event.result.content) : []),
+    () => (event.result ? readAgentList(event.result.content) : []),
     [event.result],
   );
   const opener = useConversationOpener();

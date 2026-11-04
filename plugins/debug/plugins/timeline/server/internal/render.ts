@@ -1,4 +1,10 @@
-import type { TimelineEvent, TimelineSeverity } from "../../core";
+import {
+  formatTimelineEvent,
+  formatTimelineHeader,
+  timelineHeading,
+  type TimelineEvent,
+  type TimelineSeverity,
+} from "../../core";
 import { HOST_LANE, type TimelineFrame, type TimelineHealthPoint } from "../../shared/frames";
 import { hostPressureScore, pressureBucket } from "../../shared/pressure";
 import { formatDurationMs, formatLocal, formatLocalFull, tzName } from "./format";
@@ -64,28 +70,31 @@ function reduceFrames(frames: readonly TimelineFrame[]): Buckets {
   return b;
 }
 
-function sevTag(sev: TimelineSeverity): string {
-  return { info: "INFO ", warning: "WARN ", error: "ERROR" }[sev];
-}
-
 // ---------------------------------------------------------------------------
 
 function renderHeader(b: Buckets, opts: RenderOpts, lines: string[]): void {
   const from = formatLocalFull(opts.fromMs, opts.tz);
   const to = formatLocalFull(opts.toMs, opts.tz);
-  lines.push(`TIMELINE  ${from} → ${to}  (${tzName(opts.tz)})`);
   const healthLanes = b.health.size;
   const scanned = b.total ?? b.chunkErrors.length + b.events.length; // total is emitted first; fall back defensively
   lines.push(
-    `window ${formatDurationMs(opts.toMs - opts.fromMs)} · scanned ${scanned} chunks · ` +
-      `${b.events.length} events · ${b.duress.length} duress · ` +
-      `${healthLanes} health lanes · ${b.chunkErrors.length} chunk errors`,
+    ...formatTimelineHeader({
+      from,
+      to,
+      tz: tzName(opts.tz),
+      window: formatDurationMs(opts.toMs - opts.fromMs),
+      scanned,
+      events: b.events.length,
+      duress: b.duress.length,
+      healthLanes,
+      chunkErrors: b.chunkErrors.length,
+    }),
   );
 }
 
 function renderDuress(b: Buckets, opts: RenderOpts, lines: string[]): void {
   lines.push("");
-  lines.push("DURESS  (host-global — signal is thinned inside these)");
+  lines.push(timelineHeading("duress"));
   if (b.duress.length === 0) {
     lines.push("  none in window");
     return;
@@ -108,7 +117,7 @@ function renderDuress(b: Buckets, opts: RenderOpts, lines: string[]): void {
 
 function renderHostPressure(b: Buckets, opts: RenderOpts, lines: string[]): void {
   lines.push("");
-  lines.push("HOST PRESSURE (peak)");
+  lines.push(timelineHeading("host-pressure"));
   const samples = b.health.get(HOST_LANE) ?? [];
   let peak: TimelineHealthPoint | undefined;
   let peakScore = -1;
@@ -137,7 +146,7 @@ function renderHostPressure(b: Buckets, opts: RenderOpts, lines: string[]): void
 
 function renderBackendHealth(b: Buckets, opts: RenderOpts, lines: string[]): void {
   lines.push("");
-  lines.push("BACKEND HEALTH (peak event-loop p99)");
+  lines.push(timelineHeading("backend-health"));
   interface LanePeak {
     worktree: string;
     p99Ms: number;
@@ -170,7 +179,7 @@ function renderBackendHealth(b: Buckets, opts: RenderOpts, lines: string[]): voi
 
 function renderEvents(b: Buckets, opts: RenderOpts, lines: string[]): void {
   lines.push("");
-  lines.push("EVENTS");
+  lines.push(timelineHeading("events"));
   const min = SEVERITY_RANK[opts.minSeverity];
   const eligible = b.events.filter((e) => SEVERITY_RANK[e.severity] >= min);
 
@@ -189,9 +198,15 @@ function renderEvents(b: Buckets, opts: RenderOpts, lines: string[]): void {
     lines.push("  none in window at this severity");
   } else {
     for (const e of rendered) {
-      const trace = e.traceId ? `  trace=${e.traceId}` : "";
       lines.push(
-        `  ${formatLocal(e.startMs, opts.tz)} [${sevTag(e.severity)}] ${e.source}  ${e.worktree}  ${e.label}${trace}`,
+        formatTimelineEvent({
+          time: formatLocal(e.startMs, opts.tz),
+          severity: e.severity,
+          source: e.source,
+          worktree: e.worktree,
+          label: e.label,
+          traceId: e.traceId,
+        }),
       );
     }
   }
@@ -218,7 +233,7 @@ function renderEvents(b: Buckets, opts: RenderOpts, lines: string[]): void {
 
 function renderChunkErrors(b: Buckets, lines: string[]): void {
   lines.push("");
-  lines.push("CHUNK ERRORS (data missing here)");
+  lines.push(timelineHeading("chunk-errors"));
   if (b.chunkErrors.length === 0) {
     lines.push("  none");
     return;

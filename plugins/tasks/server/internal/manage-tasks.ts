@@ -28,6 +28,7 @@ import {
   type ModelChoice,
 } from "@plugins/conversations/plugins/model-provider/core";
 import type { TaskTrack } from "@plugins/tasks/plugins/task-track/core";
+import { formatManageAnswer } from "../../core";
 
 export const EDIT_STARTS = ["armed", "manual"] as const;
 export type EditStart = (typeof EDIT_STARTS)[number];
@@ -232,12 +233,7 @@ export async function dropTask(
 }
 
 export function renderManageOutcome(out: ManageOutcome): string {
-  switch (out.kind) {
-    case "edited":
-      return `Edited ${out.taskId} (${out.changed.join(", ")}).`;
-    case "dropped":
-      return `Dropped ${out.taskId}.`;
-    case "refused":
-      return `Refused: ${out.message}`;
-  }
+  return formatManageAnswer(
+    out.kind === "refused" ? { kind: "refused", message: out.message } : out,
+  );
 }

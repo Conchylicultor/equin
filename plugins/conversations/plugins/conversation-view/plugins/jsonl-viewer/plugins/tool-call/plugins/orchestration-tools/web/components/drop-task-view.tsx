@@ -1,6 +1,6 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { readManageAnswer } from "../internal/parse";
+import { readManageAnswer } from "@plugins/tasks/core";
 import { Refusal, TaskChip } from "./target-chip";
 
 type DropTaskInput = { task_id: string };

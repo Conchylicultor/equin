@@ -2085,6 +2085,10 @@
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-edit",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/exit-clean": {
+      "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-exit-clean",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/flag-raise": {
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-flag-raise",
       "version": "0.0.1",
@@ -2109,6 +2113,10 @@
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-page-tools-write-note",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/query-db": {
+      "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-query-db",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/read": {
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-read",
       "version": "0.0.1",
@@ -2119,6 +2127,10 @@
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/task-tools": {
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-task-tools",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/timeline": {
+      "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-timeline",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/tool-search": {
@@ -8206,6 +8218,8 @@
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-edit": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-edit@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/edit"],
 
+    "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-exit-clean": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-exit-clean@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/exit-clean"],
+
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-flag-raise": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-flag-raise@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/flag-raise"],
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-orchestration-tools": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-orchestration-tools@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/orchestration-tools"],
@@ -8218,11 +8232,15 @@
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-page-tools-write-note": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-page-tools-write-note@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools/plugins/write-note"],
 
+    "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-query-db": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-query-db@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/query-db"],
+
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-read": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-read@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/read"],
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-skill": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-skill@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/skill"],
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-task-tools": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-task-tools@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/task-tools"],
+
+    "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-timeline": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-timeline@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/timeline"],
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-tool-search": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-tool-search@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/tool-search"],
 

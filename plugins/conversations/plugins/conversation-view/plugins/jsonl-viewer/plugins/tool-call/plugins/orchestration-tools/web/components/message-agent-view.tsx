@@ -3,7 +3,10 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { readMessageAnswer } from "../internal/parse";
+import {
+  DELIVERIES,
+  readMessageAnswer,
+} from "@plugins/tasks/plugins/orchestration/plugins/message/core";
 import { AgentChip, Refusal } from "./target-chip";
 
 type MessageAgentInput = { to: string; text: string; reopen?: boolean };
@@ -16,6 +19,10 @@ function firstLine(text: string): string {
       .find((l) => l.trim() !== "")
       ?.trim() ?? ""
   );
+}
+
+function sentence(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 export function MessageAgentView({ event }: ToolRendererProps) {
@@ -39,10 +46,10 @@ export function MessageAgentView({ event }: ToolRendererProps) {
         {answer?.kind === "not-sent" && <Refusal message={answer.message} />}
         {answer?.kind === "sent" && (
           <Text as="p" variant="caption" tone="muted">
-            {answer.delivery}
+            {sentence(DELIVERIES[answer.delivery])}
           </Text>
         )}
-        {answer?.kind === "unread" && (
+        {answer?.kind === "text" && (
           <Text as="p" variant="caption" tone="muted">
             {answer.text}
           </Text>

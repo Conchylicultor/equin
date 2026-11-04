@@ -9,25 +9,8 @@
   - Slots:
     - `JsonlViewerTool.Renderer`
     - `JsonlViewerTool.Footer`
-  - Slot contributors:
-    - `JsonlViewerTool.Renderer` ← `apps.places.places-map`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.add-task`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.agent`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.bash`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.edit`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.flag-raise`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.orchestration-tools`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.edit-page`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.read-page`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.write-note`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.read`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.skill`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.tool-search`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.web-search`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.workflow`
-    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.write`
+  - Slot contributors: 22 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `JsonlViewerTool.Renderer` ×21
     - `JsonlViewerTool.Footer` ← `debug.browser-recordings`
   - Contributes:
     - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
@@ -73,26 +56,9 @@
     - `ui/tokens/density` ×4
     - `ui/tokens/shape` ×4
     - `ui/tokens/font-family --font-mono`
-  - Imported by:
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×21
     - `apps/places/places-map`
-    - `conversations/agent-thread`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/write-note`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/read`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/tool-search`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/write`
     - `debug/browser-recordings`
 - Sub-plugins:
   - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
@@ -100,12 +66,15 @@
   - **`ask-user-question`** [exempt] — Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.
   - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
   - **`edit`** — Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
+  - **`exit-clean`** — Renders exit_clean MCP tool calls as one quiet line — the agent closing its conversation as all-smooth; a refusal opens with the tool's reason.
   - **`flag-raise`** — Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.
   - **`orchestration-tools`** — Renders the task-orchestration MCP tool calls an agent manages its task tree with: edit_task (the task's chip and the edit in words — renamed, prerequisites added or removed, armed or disarmed; the…
   - **`page-tools`** [3 sub-plugins] — Shared appearance for the equin page MCP tool rows (read_page / write_agent_note / edit_page): the page-identity chip, the apply-report chips, the markdown body, and the refusal block. Contributes…
+  - **`query-db`** — Renders query_db MCP tool calls: the SQL on one line (highlighted inside), the database when one was named, the row count in the note, and the rows as a compact table; a failed query turns the card…
   - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
   - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
   - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay. Serves a conversation's task list folded from its Task* tool calls over the whole transcript…
+  - **`timeline`** — Renders get_timeline MCP tool calls: the window and filters asked for in the summary, the events found in the note, and the report as sections inside — events as a compact table, duress, host…
   - **`tool-search`** — Renders ToolSearch calls as the deferred tools they loaded: the tool names in the row, a select's not-found names flagged, a keyword search's query and match count.
   - **`web-search`** — Renders WebSearch calls as the query and its source count; opened, the model-written summary in full and the sources grouped by site, folded beneath it.
   - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.

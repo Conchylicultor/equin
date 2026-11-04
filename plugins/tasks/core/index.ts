@@ -46,3 +46,9 @@ export type {
   TaskChainSubmitResponse,
 } from "./task-chain-types";
 export { repoInfo } from "./repo-info";
+export {
+  formatManageAnswer,
+  readManageAnswer,
+  type ManageAnswer,
+  type ReadManageAnswer,
+} from "./manage-answer";

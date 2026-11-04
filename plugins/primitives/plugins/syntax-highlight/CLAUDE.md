@@ -50,6 +50,7 @@
     - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
     - `conversations/conversation-view/jsonl-viewer/code-listing`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/query-db`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/jsonl-viewer/tool-call/write`
     - `debug/mcp-tools`
