@@ -120,23 +120,35 @@ export function useLoadDocument(): (
 }
 
 /**
- * Write one source's raw input into the loaded document — a source editor's
- * edit. Throws when no document is loaded: an editor only exists inside a loaded song's
- * player, so an edit with none is a broken assumption, not a case to absorb.
+ * Edit one source's raw input of the document `identity` — a source editor's
+ * write, bound to the document it was derived from. `update` maps the source's
+ * CURRENT raw (read at write time, never a render's copy) to its next one, so
+ * a write that only changes part of the raw (Ultimate Guitar's alignment)
+ * cannot rebuild it from a stale base. Dropped unless `identity` is the
+ * document loaded, like a setting write: a writer left over from an earlier
+ * song cannot land its content on the next one. Returning the current raw
+ * changes nothing. Throws when no document is loaded: an editor only exists
+ * inside a loaded song's player, so an edit with none is a broken assumption.
  */
-export function useEditLoadedRaw(): (sourceId: string, raw: unknown) => void {
+export function useEditSourceRaw(
+  identity: SongIdentity | null,
+): (sourceId: string, update: (raw: unknown) => unknown) => void {
   const api = loadedSongStore.useStoreApi();
   return useMemo(
-    () => (sourceId: string, raw: unknown) =>
+    () => (sourceId: string, update: (raw: unknown) => unknown) =>
       api.setState((prev) => {
-        if (prev === null) {
+        if (prev === null || identity === null) {
           throw new Error(
             `Sonata: source "${sourceId}" edited with no song loaded`,
           );
         }
-        return { ...prev, rawById: { ...prev.rawById, [sourceId]: raw } };
+        if (!sameIdentity(prev.identity, identity)) return prev;
+        const current = prev.rawById[sourceId];
+        const next = update(current);
+        if (next === current) return prev;
+        return { ...prev, rawById: { ...prev.rawById, [sourceId]: next } };
       }),
-    [api],
+    [api, identity],
   );
 }
 

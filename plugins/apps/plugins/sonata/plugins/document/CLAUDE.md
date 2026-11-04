@@ -3,8 +3,18 @@
 The song document: which song a surface holds, its content (every source's raw
 input) and its per-song settings, as ONE per-surface state, and the score
 composed from them. `SongDocumentProvider` provides it; `useSongDocument()` reads
-`{ identity, content, sourceRaw, setSourceRaw }`; `useLoadDocument()` returns
+`{ identity, content, sourceRaw, editSourceRaw }`; `useLoadDocument()` returns
 the one way to load: `load(identity, rawById)`.
+
+`editSourceRaw(sourceId, update)` is the one way to write a source's raw, and
+it carries its song by construction: the function is bound to the `identity`
+of the value it was read with, and a call once another document is loaded is
+dropped (like a setting write for a song no longer loaded) — a stale editor
+callback or effect cannot write song A's content into song B. `update` maps
+the source's CURRENT raw (read at write time) to the next one, so a write that
+changes part of the raw (UG's `alignment`) never rebuilds it from a render's
+stale copy; returning the current raw changes nothing. A reload of the same
+song keeps the writer valid.
 
 ## Identity
 

@@ -5,7 +5,7 @@ import { CHORD_GRID_SOURCE_ID } from "../constants";
 /**
  * In-player editor for a chord-grid song, contributed to `Sonata.Section`
  * (`area: "editor"`). Mounts the `ChordGridLoader`, writing edits straight into
- * the context (`setSourceRaw` → live score recompile).
+ * the context (`editSourceRaw` → live score recompile).
  *
  * This component no longer persists or gates:
  * - **Persistence** lives in the headless, always-mounted
@@ -20,7 +20,7 @@ import { CHORD_GRID_SOURCE_ID } from "../constants";
  * paper over it with a non-null assertion or a silent `null`.
  */
 export function ChordGridEditorSection() {
-  const { sourceRaw, setSourceRaw } = useSongDocument();
+  const { sourceRaw, editSourceRaw } = useSongDocument();
 
   const rawValue = sourceRaw(CHORD_GRID_SOURCE_ID);
   if (rawValue === undefined) {
@@ -32,7 +32,7 @@ export function ChordGridEditorSection() {
   return (
     <ChordGridLoader
       raw={rawValue}
-      onRaw={(r) => setSourceRaw(CHORD_GRID_SOURCE_ID, r)}
+      onRaw={(r) => editSourceRaw(CHORD_GRID_SOURCE_ID, () => r)}
     />
   );
 }

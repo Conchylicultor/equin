@@ -26,7 +26,7 @@ import { SonataDocument } from "./slots";
 import type { SongIdentity } from "./identity";
 import {
   LoadedSongProvider,
-  useEditLoadedRaw,
+  useEditSourceRaw,
   useLoadedDocument,
   useLoadedRaw,
 } from "./loaded-song";
@@ -67,11 +67,14 @@ export interface SongDocumentValue {
    */
   sourceRaw: (sourceId: string) => unknown;
   /**
-   * Write a specific source's raw (merges one key) — recompiles the composed
-   * score immediately. Used by per-source editor sections. Throws with no
-   * document loaded.
+   * Edit a specific source's raw: `update` maps its CURRENT raw to the next
+   * one (merged under its key) — recompiles the composed score immediately.
+   * Bound to `identity`, the document this value was read for: a call from a
+   * value read for an earlier song is dropped, so a stale editor or effect can
+   * never write one song's content into another. Throws with no document
+   * loaded.
    */
-  setSourceRaw: (sourceId: string, raw: unknown) => void;
+  editSourceRaw: (sourceId: string, update: (raw: unknown) => unknown) => void;
 }
 
 const SongDocumentContext = createContext<SongDocumentValue | null>(null);
@@ -144,8 +147,9 @@ function ComposedDocument({ children }: { children: ReactNode }) {
   // replacing another. Read from the same state as `settings`: one identity
   // for both, so they can never belong to two songs.
   const rawById = useLoadedRaw();
-  const editLoadedRaw = useEditLoadedRaw();
   const loaded = useLoadedDocument();
+  const identity = loaded?.identity ?? null;
+  const editSourceRaw = useEditSourceRaw(identity);
 
   // --- The score in two physically separate layers. -------------------------
   //
@@ -278,10 +282,9 @@ function ComposedDocument({ children }: { children: ReactNode }) {
     [rawById],
   );
 
-  const identity = loaded?.identity ?? null;
   const value = useMemo<SongDocumentValue>(
-    () => ({ identity, content, sourceRaw, setSourceRaw: editLoadedRaw }),
-    [identity, content, sourceRaw, editLoadedRaw],
+    () => ({ identity, content, sourceRaw, editSourceRaw }),
+    [identity, content, sourceRaw, editSourceRaw],
   );
 
   return (

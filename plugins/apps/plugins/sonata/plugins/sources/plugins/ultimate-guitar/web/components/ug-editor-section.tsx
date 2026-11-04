@@ -5,7 +5,7 @@ import { UG_SOURCE_ID } from "@plugins/apps/plugins/sonata/plugins/sources/plugi
 /**
  * In-player editor for an Ultimate Guitar song, contributed to `Sonata.Section`
  * (`area: "editor"`). Mounts the `UltimateGuitarLoader`, writing the fetched
- * `UgTab` straight into the context as the raw's `tab` (`setSourceRaw` → live
+ * `UgTab` straight into the context as the raw's `tab` (`editSourceRaw` → live
  * score recompile).
  *
  * This component no longer persists or gates:
@@ -24,7 +24,7 @@ import { UG_SOURCE_ID } from "@plugins/apps/plugins/sonata/plugins/sources/plugi
  * paper over it with a non-null assertion or a silent `null`.
  */
 export function UltimateGuitarEditorSection() {
-  const { sourceRaw, setSourceRaw } = useSongDocument();
+  const { sourceRaw, editSourceRaw } = useSongDocument();
 
   const rawValue = sourceRaw(UG_SOURCE_ID);
   if (rawValue === undefined) {
@@ -36,7 +36,7 @@ export function UltimateGuitarEditorSection() {
   return (
     <UltimateGuitarLoader
       raw={rawValue}
-      onRaw={(r) => setSourceRaw(UG_SOURCE_ID, r)}
+      onRaw={(r) => editSourceRaw(UG_SOURCE_ID, () => r)}
     />
   );
 }

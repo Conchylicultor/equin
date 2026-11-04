@@ -2,9 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import {
   LoadedSongProvider,
-  useEditLoadedRaw,
+  useEditSourceRaw,
+  useLoadedDocument,
   useLibrarySongLoad,
   useLoadDocument,
+  useLoadedRaw,
   useSourceEdit,
   type LibrarySongLoad,
   type SourceEdit,
@@ -26,10 +28,14 @@ function renderStore() {
   const edits: SourceEdit[] = [];
   const loads: LibrarySongLoad[] = [];
   let load: ReturnType<typeof useLoadDocument> | null = null;
-  let edit: ReturnType<typeof useEditLoadedRaw> | null = null;
+  let edit: ReturnType<typeof useEditSourceRaw> | null = null;
+  const writers: ReturnType<typeof useEditSourceRaw>[] = [];
+  const raws: unknown[] = [];
   function Probe() {
     load = useLoadDocument();
-    edit = useEditLoadedRaw();
+    edit = useEditSourceRaw(useLoadedDocument()?.identity ?? null);
+    writers.push(edit);
+    raws.push(useLoadedRaw().grid);
     edits.push(useSourceEdit("grid"));
     loads.push(useLibrarySongLoad());
     return null;
@@ -42,9 +48,18 @@ function renderStore() {
   return {
     edits,
     loads,
+    raws,
+    /** The writer the latest render held — kept, it goes stale on a switch. */
+    writer: () => {
+      const held = writers.at(-1);
+      if (held === undefined) throw new Error("no render yet");
+      return (sourceId: string, update: (raw: unknown) => unknown) =>
+        act(() => held(sourceId, update));
+    },
     load: (identity: SongIdentity, rawById: Record<string, unknown>) =>
       act(() => load?.(identity, rawById)),
-    edit: (sourceId: string, raw: unknown) => act(() => edit?.(sourceId, raw)),
+    edit: (sourceId: string, raw: unknown) =>
+      act(() => edit?.(sourceId, () => raw)),
   };
 }
 
@@ -104,5 +119,49 @@ describe("useLibrarySongLoad: the song with its load", () => {
     expect(s.loads.at(-1)).toEqual({ kind: "library", songId: "A", load: 2 });
     s.load(B, {});
     expect(s.loads.at(-1)).toEqual({ kind: "library", songId: "B", load: 3 });
+  });
+});
+
+describe("useEditSourceRaw: a write is bound to the document it was derived from", () => {
+  it("drops a write from a writer held for an earlier song", () => {
+    const s = renderStore();
+    s.load(A, { grid: "a0" });
+    const staleA = s.writer();
+    s.load(B, { grid: "b0" });
+    staleA("grid", () => "a1");
+    expect(s.raws.at(-1)).toBe("b0");
+    expect(s.edits.at(-1)).toEqual({ kind: "unedited" });
+  });
+
+  it("keeps a write across a reload of the same song", () => {
+    const s = renderStore();
+    s.load(A, { grid: "a0" });
+    const heldA = s.writer();
+    s.load(A, { grid: "a0" });
+    heldA("grid", () => "a1");
+    expect(s.raws.at(-1)).toBe("a1");
+  });
+
+  it("applies the update to the current raw, not the one the writer was read with", () => {
+    const s = renderStore();
+    s.load(A, { grid: { tab: "t0", alignment: null } });
+    const held = s.writer();
+    s.edit("grid", { tab: "t1", alignment: null });
+    held("grid", (raw) => ({ ...(raw as object), alignment: "x" }));
+    expect(s.raws.at(-1)).toEqual({ tab: "t1", alignment: "x" });
+  });
+
+  it("an update returning the current raw changes nothing", () => {
+    const s = renderStore();
+    s.load(A, { grid: "a0" });
+    const renders = s.raws.length;
+    s.edit("grid", "a0");
+    s.writer()("grid", (raw) => raw);
+    expect(s.raws.length).toBe(renders);
+  });
+
+  it("throws with no document loaded", () => {
+    const s = renderStore();
+    expect(() => s.edit("grid", "x")).toThrow(/no song loaded/);
   });
 });

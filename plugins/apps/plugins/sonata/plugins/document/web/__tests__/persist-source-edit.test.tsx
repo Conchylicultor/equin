@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import {
   LoadedSongProvider,
-  useEditLoadedRaw,
+  useEditSourceRaw,
+  useLoadedDocument,
   useLoadDocument,
 } from "../loaded-song";
 import {
@@ -31,10 +32,10 @@ const B: SongIdentity = { kind: "library", songId: "B" };
 function renderObserver() {
   const saves: { songId: string; raw: unknown }[] = [];
   let load: ReturnType<typeof useLoadDocument> | null = null;
-  let edit: ReturnType<typeof useEditLoadedRaw> | null = null;
+  let edit: ReturnType<typeof useEditSourceRaw> | null = null;
   function Store() {
     load = useLoadDocument();
-    edit = useEditLoadedRaw();
+    edit = useEditSourceRaw(useLoadedDocument()?.identity ?? null);
     return null;
   }
   function Observer() {
@@ -60,7 +61,7 @@ function renderObserver() {
       }),
     edit: (raw: unknown) =>
       act(() => {
-        edit?.("grid", raw);
+        edit?.("grid", () => raw);
       }),
     wait: (ms: number) =>
       act(() => {
