@@ -26,6 +26,7 @@ import type {
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import {
   isTestCodePath,
+  LEAF_FOLDERS,
   machineNode,
   PLUGIN_FOLDERS,
   type PluginFolder,
@@ -613,6 +614,17 @@ const IMPORT_SPECIFIER_SCAN: FileScan<string[]> = {
   scan: (src) => findImports(src).map((imp) => imp.specifier),
 };
 
+const LEAF_FOLDER_SET: ReadonlySet<string> = new Set(LEAF_FOLDERS);
+
+// Which `<dir>/index.ts` files are entries. A LEAF folder (`check/`, `lint/`,
+// `facet/`, …) is never imported — its `index.ts` exists only to be collected —
+// so every one is an entry, by construction, and its loader fails loudly if it
+// has no default export. Only a BARREL folder (`cli/`, `web/`, …) can hold an
+// `index.ts` that is not a contribution (shared machinery other plugins import),
+// so only there is the default export scanned for. A leaf entry used to be
+// scanned too, and a masker that lost sync on a nested template literal read
+// server-core's `export default` as string: its check vanished from the
+// registry and never ran.
 async function collectEntries(
   tree: PluginTree,
   repo: RepoFiles,
@@ -621,11 +633,13 @@ async function collectEntries(
   const barrels = [...tree.byDir.values()]
     .map((node) => ({ node, rel: `plugins/${node.path}/${dir}/index.ts` }))
     .filter((b) => repo.has(b.rel));
-  const isEntry = await scanFiles(
-    repo,
-    barrels.map((b) => b.rel),
-    DEFAULT_EXPORT_SCAN,
-  );
+  const isEntry = LEAF_FOLDER_SET.has(dir)
+    ? barrels.map(() => true)
+    : await scanFiles(
+        repo,
+        barrels.map((b) => b.rel),
+        DEFAULT_EXPORT_SCAN,
+      );
   const entries: CollectedRawEntry[] = [];
   for (const [i, { node }] of barrels.entries()) {
     if (!isEntry[i]) continue;

@@ -237,15 +237,13 @@ function maskUncached(src: string, maskStrings: boolean): string {
       continue;
     }
 
-    // String / template literal: delimiters kept verbatim, interior optionally blanked.
+    // String / template literal: delimiters kept verbatim, interior optionally
+    // blanked. A template's interior includes its `${ … }` substitutions, which
+    // are followed as code to find where the template really ends.
     if (c === DQUOTE || c === SQUOTE || c === BACKTICK) {
       i++;
       const start = i;
-      while (i < n) {
-        const s = src.charCodeAt(i);
-        if (s === c) break;
-        i += s === BACKSLASH && i + 1 < n ? 2 : 1;
-      }
+      i = c === BACKTICK ? templateInteriorEnd(src, i) : quotedEnd(src, i, c);
       if (maskStrings) blank(start, i);
       if (i < n) i++; // closing delimiter (if present)
       prevSig = SIG_VALUE; // a string literal as a whole is a value
@@ -274,4 +272,150 @@ function maskUncached(src: string, maskStrings: boolean): string {
 
   if (copied === 0) return src;
   return copied < n ? out + src.slice(copied) : out;
+}
+
+const DOLLAR = 0x24;
+const PLUS = 0x2b;
+const MINUS = 0x2d;
+const LBRACE = 0x7b;
+/** `substitutionEnd`'s `prev` after a string, template or regex literal (a value). */
+const LITERAL = 0x10000;
+
+/**
+ * The index of the closing `quote` of a `'…'` / `"…"` literal whose interior
+ * starts at `i` (or `n` when unterminated). Escapes are skipped.
+ */
+function quotedEnd(src: string, i: number, quote: number): number {
+  const n = src.length;
+  while (i < n) {
+    const s = src.charCodeAt(i);
+    if (s === quote) return i;
+    i += s === BACKSLASH && i + 1 < n ? 2 : 1;
+  }
+  return n;
+}
+
+/**
+ * The index of the closing backtick of a template literal whose interior starts
+ * at `i` (or `n` when unterminated). A `${` opens a substitution, which is CODE
+ * up to its matching `}`: it may hold strings, comments, braces and templates of
+ * its own (`` `a ${xs.map((x) => `${x}`)} b` ``). Reading the template as flat
+ * text instead ends it at the first nested backtick, and every literal after it
+ * in the file is then read inside-out — the masker loses sync and blanks real
+ * code (a whole `check/` once vanished from its registry because its
+ * `export default` was masked as string).
+ */
+function templateInteriorEnd(src: string, i: number): number {
+  const n = src.length;
+  while (i < n) {
+    const s = src.charCodeAt(i);
+    if (s === BACKTICK) return i;
+    if (s === BACKSLASH) {
+      i += 2;
+      continue;
+    }
+    if (s === DOLLAR && src.charCodeAt(i + 1) === LBRACE) {
+      i = substitutionEnd(src, i + 2);
+      continue;
+    }
+    i++;
+  }
+  return n;
+}
+
+/**
+ * The index just past the `}` closing a `${ … }` substitution whose code starts
+ * at `i` (or `n` when unterminated). Skips nested strings, templates, comments
+ * and regex literals (a `/` after an operator or opening bracket), and counts
+ * braces so an object literal's `}` does not close the substitution.
+ */
+function substitutionEnd(src: string, i: number): number {
+  const n = src.length;
+  let depth = 0;
+  // Last significant char, for regex vs division (see `regexCanStart`); a
+  // keyword before a regex is not tracked — rare enough inside a substitution.
+  let prev = LBRACE;
+  while (i < n) {
+    const c = src.charCodeAt(i);
+    if (c === DQUOTE || c === SQUOTE) {
+      i = quotedEnd(src, i + 1, c) + 1;
+      prev = LITERAL;
+      continue;
+    }
+    if (c === BACKTICK) {
+      i = templateInteriorEnd(src, i + 1) + 1;
+      prev = LITERAL;
+      continue;
+    }
+    if (c === SLASH) {
+      const next = src.charCodeAt(i + 1);
+      if (next === SLASH) {
+        const end = src.indexOf("\n", i + 2);
+        i = end < 0 ? n : end;
+        continue;
+      }
+      if (next === STAR) {
+        const close = src.indexOf("*/", i + 2);
+        i = close < 0 ? n : close + 2;
+        continue;
+      }
+      // A regex, unless it would run off its line unterminated — then the
+      // heuristic misread a division (after a keyword-less `return`, say).
+      const end = isOperandEnd(prev) ? -1 : regexEnd(src, i + 1);
+      if (end >= 0) {
+        i = end;
+        prev = LITERAL;
+        continue;
+      }
+    }
+    if (c === LBRACE) depth++;
+    else if (c === RBRACE) {
+      if (depth === 0) return i + 1;
+      depth--;
+    }
+    // `i++` / `i--` end an operand: a `/` after them divides.
+    if ((c === PLUS || c === MINUS) && src.charCodeAt(i - 1) === c) {
+      prev = LITERAL;
+    } else if (c >= 128 || ASCII_CLASS[c] !== SPACE) prev = c;
+    i++;
+  }
+  return n;
+}
+
+/** Whether a `/` after `prev` is division: `prev` ended an operand. */
+function isOperandEnd(prev: number): boolean {
+  if (prev === LITERAL) return true;
+  if (prev === RPAREN || prev === RBRACKET || prev === RBRACE) return true;
+  return prev < 128 ? ASCII_CLASS[prev] === IDENT : true;
+}
+
+/**
+ * The index just past a regex literal whose body starts at `i`, flags included,
+ * or -1 when no closing `/` comes before the end of the line (no regex).
+ */
+function regexEnd(src: string, i: number): number {
+  const n = src.length;
+  let inClass = false;
+  for (;;) {
+    if (i >= n) return -1;
+    const r = src.charCodeAt(i);
+    if (r === NL) return -1;
+    if (r === BACKSLASH) {
+      i += 2;
+      continue;
+    }
+    if (r === LBRACKET) inClass = true;
+    else if (r === RBRACKET) inClass = false;
+    else if (r === SLASH && !inClass) {
+      i++;
+      break;
+    }
+    i++;
+  }
+  while (i < n) {
+    const f = src.charCodeAt(i);
+    if (f < 0x61 || f > 0x7a) break;
+    i++;
+  }
+  return i;
 }

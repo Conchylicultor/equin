@@ -21,13 +21,14 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/check"), dependsOn: ["framework/plugins/tooling/plugins/boundaries", "framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "conversations/plugins/model-provider", id: "conversations.model-provider", loader: () => import("@plugins/conversations/plugins/model-provider/check"), dependsOn: [] },
   { pluginPath: "database/plugins/derived-updated-at", id: "database.derived-updated-at", loader: () => import("@plugins/database/plugins/derived-updated-at/check"), dependsOn: ["database/plugins/migrations"] },
-  { pluginPath: "database/plugins/migrations", id: "database.migrations", loader: () => import("@plugins/database/plugins/migrations/check"), dependsOn: ["database/plugins/derived-updated-at", "framework/plugins/tooling/plugins/codegen", "infra/plugins/namespace", "infra/plugins/paths"] },
+  { pluginPath: "database/plugins/migrations", id: "database.migrations", loader: () => import("@plugins/database/plugins/migrations/check"), dependsOn: ["database/plugins/derived-updated-at", "framework/plugins/server-core", "framework/plugins/tooling/plugins/codegen", "infra/plugins/namespace", "infra/plugins/paths"] },
   { pluginPath: "debug/plugins/profiling/plugins/boot", id: "debug.profiling.boot", loader: () => import("@plugins/debug/plugins/profiling/plugins/boot/check"), dependsOn: [] },
   { pluginPath: "debug/plugins/sentinel", id: "debug.sentinel", loader: () => import("@plugins/debug/plugins/sentinel/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli", id: "framework.cli", loader: () => import("@plugins/framework/plugins/cli/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "framework/plugins/cli/plugins/release", id: "framework.cli.release", loader: () => import("@plugins/framework/plugins/cli/plugins/release/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "framework/plugins/principal", id: "framework.principal", loader: () => import("@plugins/framework/plugins/principal/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/product-name", id: "framework.product-name", loader: () => import("@plugins/framework/plugins/product-name/check"), dependsOn: [] },
+  { pluginPath: "framework/plugins/server-core", id: "framework.server-core", loader: () => import("@plugins/framework/plugins/server-core/check"), dependsOn: ["framework/plugins/tooling/plugins/boundaries", "framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "framework/plugins/tooling/plugins/boundaries", id: "framework.tooling.boundaries", loader: () => import("@plugins/framework/plugins/tooling/plugins/boundaries/check"), dependsOn: ["framework/plugins/tooling/plugins/test-layout"] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync", id: "framework.tooling.checks.app-css-utilities-in-sync", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/app-declarations-in-sync", id: "framework.tooling.checks.app-declarations-in-sync", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/app-declarations-in-sync/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
@@ -104,7 +105,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "network/plugins/live", id: "network.live", loader: () => import("@plugins/network/plugins/live/check"), dependsOn: [] },
   { pluginPath: "network/plugins/live/plugins/change-feed", id: "network.live.change-feed", loader: () => import("@plugins/network/plugins/live/plugins/change-feed/check"), dependsOn: [] },
   { pluginPath: "network/plugins/live/plugins/resource-runtime", id: "network.live.resource-runtime", loader: () => import("@plugins/network/plugins/live/plugins/resource-runtime/check"), dependsOn: [] },
-  { pluginPath: "network/plugins/live/plugins/resource-vocabulary", id: "network.live.resource-vocabulary", loader: () => import("@plugins/network/plugins/live/plugins/resource-vocabulary/check"), dependsOn: ["network/plugins/live"] },
+  { pluginPath: "network/plugins/live/plugins/resource-vocabulary", id: "network.live.resource-vocabulary", loader: () => import("@plugins/network/plugins/live/plugins/resource-vocabulary/check"), dependsOn: ["framework/plugins/server-core", "network/plugins/live"] },
   { pluginPath: "page/plugins/annotations", id: "page.annotations", loader: () => import("@plugins/page/plugins/annotations/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen", "page/plugins/editor", "plugin-meta/plugins/facets"] },
   { pluginPath: "page/plugins/editor", id: "page.editor", loader: () => import("@plugins/page/plugins/editor/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen", "plugin-meta/plugins/facets"] },
   { pluginPath: "plugin-meta/plugins/facets", id: "plugin-meta.facets", loader: () => import("@plugins/plugin-meta/plugins/facets/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
@@ -124,10 +125,3 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "ui/plugins/theme-engine", id: "ui.theme-engine", loader: () => import("@plugins/ui/plugins/theme-engine/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "ui/plugins/tokens/plugins/type-scale", id: "ui.tokens.type-scale", loader: () => import("@plugins/ui/plugins/tokens/plugins/type-scale/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
 ];
-
-export interface CompositionIdentity {
-  id: string;
-  home: string | null;
-}
-
-export const composition: CompositionIdentity = { id: "singularity", home: "home" };

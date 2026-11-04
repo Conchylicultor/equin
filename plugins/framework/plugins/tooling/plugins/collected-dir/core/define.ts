@@ -20,12 +20,15 @@ import type { PluginFolder } from "@plugins/framework/plugins/plugin-id/core";
  * Which plugins a collected dir's committed registry lists.
  *
  * - `"composition"` (the default): the main composition's closure —
- *   what the app ships. Every runtime registry (web, server, check, lint, …) is
- *   this: an excluded plugin's contribution must not load.
+ *   what the app ships. Every runtime registry (web, server, machine, cli,
+ *   deps, …) is this: an excluded plugin's contribution must not load.
  * - `"checkout"`: every plugin the checkout declares, excluded ones included.
  *   For a registry that describes SOURCE rather than the app — one whose
  *   consumers act on every plugin on disk, so its set must be that set.
- *   `guard/` is the case: guards watch the agent editing this checkout.
+ *   `guard/` (guards watch the agent editing this checkout), `check/` and
+ *   `lint/` (they police its source) and `facet/` (it documents every plugin)
+ *   are the cases. Filtered by the composition instead, a check of a plugin
+ *   outside the app would silently never run.
  */
 export type CollectedDirMembership = "composition" | "checkout";
 

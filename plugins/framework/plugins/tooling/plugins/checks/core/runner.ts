@@ -124,10 +124,16 @@ function normalizeScopes(
 
 async function loadAllChecks(): Promise<Check[]> {
   const { checkEntries } = await import("./check.generated");
+  // `strict`: a check whose module fails to load (or exports no check) is not
+  // a check that passed — skipped with a warning, it would read as green.
+  // A registry line whose `check/` was deleted fails here too (naming it)
+  // until `./equin build` regenerates the registry, which a build does before
+  // it checks.
   const checks = await loadCollectedDir<Check>(checkEntries, {
     isItem: isCheck,
     dedupeKey: (c) => c.id,
     label: "check",
+    strict: true,
   });
   assertScopeInvariant(checks);
   assertExemptableInvariant(checks);

@@ -208,6 +208,39 @@ test("template literal with escaped backtick and interpolation", () => {
   expect(mask(src, { strings: false })).toBe(src);
 });
 
+// A substitution is code up to its matching `}`: a template nested in it does
+// not end the outer one. Read as flat text, the outer template ended at the
+// first nested backtick and the masker was out of sync for the rest of the file
+// — server-core's `export default` was blanked, and its check never registered.
+// `$` + `{` concatenated for no-template-curly-in-string, as above.
+const S = "$" + "{";
+
+test("template nested in a substitution stays inside its template", () => {
+  const src =
+    "t = `a " + S + "xs.map((x) => `" + S + "x}`)} b`;\nexport default c;";
+  const out = mask(src);
+  expect(out.split("\n")[1]).toBe("export default c;");
+  expect(out.startsWith("t = `")).toBe(true);
+  expect(out.split("\n")[0]!.endsWith("`;")).toBe(true);
+  expect(out).not.toContain("map");
+});
+
+test("a substitution's braces, strings and comments do not end it", () => {
+  const src =
+    "t = `" + S + "f({ a: '}', b: \"`\" })/* } */} x`; export default 1;";
+  expect(mask(src)).toMatch(/`; export default 1;$/);
+});
+
+test("a regex in a substitution may hold a backtick", () => {
+  const src = "t = `" + S + "s.replace(/`/g, '')}`; export default 1;";
+  expect(mask(src)).toMatch(/`; export default 1;$/);
+});
+
+test("a division after a postfix increment in a substitution is no regex", () => {
+  const src = "a = `" + S + "i++ / 2}`;\nexport default 1;";
+  expect(mask(src).split("\n")[1]).toBe("export default 1;");
+});
+
 test("escaped newline inside a string keeps the newline", () => {
   expect(mask('s = "a\\\nb";')).toBe('s = "  \n ";');
 });

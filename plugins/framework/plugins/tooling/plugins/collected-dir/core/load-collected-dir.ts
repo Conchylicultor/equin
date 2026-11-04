@@ -33,13 +33,13 @@ export interface LoadCollectedDirOptions<T> {
    * collected and thrown as one error, so a broken tree reports all of its
    * breakage instead of one item per run.
    *
-   * Off by default, which is right for facets and checks: a facet that fails to
-   * load costs a doc section, and the registry is large enough that one bad
-   * contribution should not take the whole pass down.
+   * Off by default, which is right for facets: a facet that fails to load
+   * costs a doc section, and one bad contribution should not take the whole
+   * docs pass down.
    *
    * It is WRONG wherever a missing item is indistinguishable from an item that
-   * does not exist. `./equin`'s command registry is the case that
-   * motivated the option: a `cli/index.ts` that throws at load would otherwise
+   * does not exist — a check that failed to load reads as a check that passed.
+   * `./equin`'s command registry is the case that motivated the option: a `cli/index.ts` that throws at load would otherwise
    * make its verb quietly absent, and `./equin build` would report
    * "unknown command" — a broken deploy pipeline reading as a typo. `lint/` and
    * `provision/` each hand-rolled a fail-loud loader to escape this default;
