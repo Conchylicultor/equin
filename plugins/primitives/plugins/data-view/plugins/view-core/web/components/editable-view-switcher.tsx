@@ -152,8 +152,8 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
   // re-aimed at a different view and the next click in it edited that one.
   const [settingsForId, setSettingsForId] = useState<string | null>(null);
   const ids = instances.map((r) => r.instance.id);
-  // The chip is `md` (control-sm, px-control-sm, text-caption) at every
-  // density but `xs` — see `ToggleChip`'s `chipSizeForDensity`.
+  // The chip is `md` (the small control's height, padding and caption type)
+  // at every density but `xs` — see `ToggleChip`'s `chipSizeForDensity`.
   const mdChip = useControlSize() !== "xs";
 
   const onMove = (movedId: string, overId: string) => {

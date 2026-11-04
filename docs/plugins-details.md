@@ -11860,6 +11860,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/sidebar-palette --sidebar-accent-foreground`
           - `ui/tokens/type-scale --font-weight-bold`
         - Imported by:
+          - `apps/demo`
           - `apps/home/app-cards`
           - `apps/home/usage-fields`
           - `menu-bar/app-grid`
@@ -44205,11 +44206,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ViewTypeMeta`
             - Exports (values): `viewIdKind`
           - Cross-plugin:
-            - Uses tokens: 34 vars — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
+            - Uses tokens: 30 vars — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
               - `ui/tokens/data-view` ×14
-              - `ui/tokens/type-scale` ×9
+              - `ui/tokens/type-scale` ×6
               - `ui/tokens/color-palette` ×4
-              - `ui/tokens/density` ×4
+              - `ui/tokens/density` ×3
               - `ui/tokens/sidebar-metrics` ×2
               - `ui/tokens/shape --spacing`
             - Imported by:
