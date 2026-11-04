@@ -21140,7 +21140,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
           - `boundaries/no-platform-api` — `core/internal/schema-glob.ts`, `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/snapshot-dag.ts` (debt)
           - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/migration-phases-valid.ts`, `check/orphaned-tables.ts` (debt)
-        - Exempted by: `database/migrations` (0 debt)
+        - Exempted by:
+          - `database/migrations` (0 debt)
+          - `plugin-meta/plugin-records` (0 debt)
       - Machine:
         - Exports (values):
           - `listMigrationFiles`
@@ -26696,7 +26698,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 47 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 48 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×34
               - `framework/cli/bootstrap` ×4
               - `framework/cli/migrations` ×3
@@ -26704,6 +26706,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/run-ledger.createBuildRunRecorder`
               - `framework/cli/doctor.assertPrerequisites`
               - `framework/cli/git-artifacts.registerMergeDrivers`
+              - `plugin-meta/plugin-records.openRecordStore`
           - Plugins:
             - **`experimental-marks`** — The Show experimental marks setting (view-options popover and Settings → Config, on an experimental build): useShowExperimentalMarks() is true when the build stamped this document experimental and the marks are on; the frame and the Wish banner both follow it. Registers the Show experimental marks config and, while it is off, serves a head script that hides the marks before the first frame.
               - Web:
@@ -26931,6 +26934,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/op-runtime.runCheckSubprocess`
               - `framework/cli/op-runtime.signalOriginTap`
         - **`regen-generated`** — `./equin regen-generated` — the repo-tree half of build's codegen standalone (registries, barrels, plugin docs, manifests, config origins), for the post-rebase normalize step in `push`.
+          - Cli:
+            - Uses: `plugin-meta/plugin-records.openRecordStore`
         - **`regen-migrations`** — `./equin regen-migrations` — discard branch-local migrations and re-generate them against the rebased schema, for the post-rebase normalize step in `push`; aborts on hand-edited SQL.
           - Cli:
             - Uses: `framework/cli/migrations.generateMigration`
@@ -27035,6 +27040,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/facets/cross-refs`
           - `plugin-meta/facets/exports`
           - `plugin-meta/parse-utils`
+          - `plugin-meta/plugin-records`
           - `plugin-meta/plugin-refs`
           - `plugin-meta/plugin-tree`
           - `plugin-meta/relocate`
@@ -27291,12 +27297,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `framework/tooling/codegen`
           - `framework/web-sdk`
+          - `plugin-meta/barrel-import`
           - `plugin-meta/composition`
-          - `plugin-meta/plugin-tree`
+          - `plugin-meta/plugin-records`
       - Core:
         - Exports (types):
           - `KeyedCompanions`
           - `KeySpace`
+          - `ModuleEvaluation`
           - `SlotCompanions`
           - `SlotDeclaration`
           - `SlotDeclarationListener`
@@ -27307,6 +27315,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotNamingEntry`
           - `SlotRecord`
           - `SlotScope`
+          - `SlotSite`
           - `SlotSource`
         - Exports (values):
           - `collectSlots`
@@ -27317,10 +27326,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isKeySpace`
           - `isSlot`
           - `KEY_SPACES`
+          - `moduleEvaluation`
           - `recordCreatedSlot`
           - `seg`
+          - `settleSlotNaming`
           - `slotIdFor`
+          - `slotSite`
+          - `slotSitesTracked`
           - `subscribeSlotsDeclared`
+          - `trackSlotSites`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:
         - Uses:
@@ -27349,6 +27363,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `framework/tooling/checks`
+          - `framework/tooling/codegen`
           - `framework/tooling/lint`
           - `framework/tooling/web-artifacts`
           - `plugin-meta/plugin-tree`
@@ -27357,10 +27372,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
-            - Uses: 21 symbols — full list in [`plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md)
+            - Uses: 24 symbols — full list in [`plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md)
               - `framework/plugin-id` ×6
               - `plugin-meta/parse-utils` ×6
               - `framework/tooling/import-closure` ×4
+              - `plugin-meta/plugin-records` ×3
               - `infra/host-fs/user-path.joinAppPath`
               - `infra/spawn.getWorktreeRoot`
               - `packages/macrotask-yield.yieldMacrotask`
@@ -27809,30 +27825,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Register: `defineSupervisedJob('type-check.backstop')`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 118 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 132 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×20
               - `config_v2` ×15
               - `framework/plugin-id` ×14
               - `network/live/resource-vocabulary` ×10
+              - `plugin-meta/plugin-records` ×10
+              - `framework/slot-declaration` ×6
+              - `packages/timed-fs` ×6
               - `plugin-meta/barrel-import` ×6
               - `plugin-meta/closure` ×5
               - `plugin-meta/composition` ×5
               - `plugin-meta/facets` ×5
               - `infra/host-fs/user-path` ×4
-              - `packages/timed-fs` ×4
               - `plugin-meta/plugin-tree` ×4
-              - `framework/slot-declaration` ×3
               - `config_v2/ledger` ×2
               - `framework/tooling/boundaries` ×2
               - `framework/tooling/format` ×2
               - `network/live/resource-protocol` ×2
-              - `packages/macrotask-yield` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
-              - `framework/tooling/import-closure.importClosures`
               - `framework/tooling/lint.loadLintContributions`
               - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
+              - `framework/tooling.loadRepoSnapshot`
               - `infra/namespace.MAIN_COMPOSITION_ID`
+              - `packages/macrotask-yield.yieldMacrotask`
               - `packages/semaphore.createSemaphore`
               - `plugin-meta/facets/contributions.contributionsFacetDef`
               - `plugin-meta/facets/exemptions.exemptionsFacetDef`
@@ -27842,6 +27859,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.isIconRefModule`
             - Exports (types):
               - `AuthoredOverrideSeedResult`
+              - `BarrelEvaluation`
               - `BrowserHostDecl`
               - `CodegenStep`
               - `CollectedRawEntry`
@@ -27908,6 +27926,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `discoverCollectedDirs`
               - `discoverCollectedDirsIn`
               - `eagerTierManifestPath`
+              - `evaluateAllBarrels`
+              - `evaluateWebBarrels`
               - `EXEMPT_RULE_IDS_REL_PATH`
               - `exemptRuleIdsPath`
               - `extractRuntimeImportSpecifiers`
@@ -27953,6 +27973,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readDefineApp`
               - `readEffectiveConfigFromDisk`
               - `readGitLayerConfig`
+              - `recordSlotNaming`
               - `regenerateManifestCodegen`
               - `regenerateRegistryCodegen`
               - `renderAppDeclarationsManifest`
@@ -28013,7 +28034,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/token-group-vars-gen.ts`, `core/write-generated.ts` (debt)
+              - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
               - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
@@ -28257,9 +28278,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `importClosures`
               - `loadTypescript`
           - Cross-plugin:
-            - Imported by:
-              - `framework/tooling/boundaries`
-              - `framework/tooling/codegen`
+            - Imported by: `framework/tooling/boundaries`
           - Exemptions:
             - Exempts itself from:
               - `boundaries/no-platform-api` — `core/import-closure.ts` (debt)
@@ -36065,6 +36084,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `map`
           - `network/live/resource-protocol`
           - `network/live/resource-runtime`
+          - `plugin-meta/plugin-records`
           - `plugin-meta/token-usage`
           - `reports/icon-family-gap`
       - Core:
@@ -36111,11 +36131,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call past FS_WAIT_FLOOR_MS handed to onSlowFsCall subscribers as a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 34 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 35 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `framework` ×13
           - `infra` ×7
+          - `plugin-meta` ×4
           - `packages` ×3
-          - `plugin-meta` ×3
           - `database` ×2
           - `config_v2/ledger`
           - `conversations/workspace/scratch`
@@ -39091,6 +39111,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
       - Core:
         - Uses:
+          - `framework/slot-declaration.trackSlotSites`
           - `infra/namespace.asNamespace`
           - `infra/runtime-identity.declareRuntimeNamespace`
           - `infra/runtime-identity.hasRuntimeNamespace`
@@ -39108,7 +39129,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `framework/tooling/codegen`
-          - `plugin-meta/plugin-tree`
+          - `plugin-meta/plugin-records`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/stubs.ts` (debt)
       - Test helpers:
@@ -39398,6 +39419,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `DocFact`
           - `DocFactGroup`
+          - `EnrichContext`
+          - `ExtractBatch`
           - `ExtractContext`
           - `Facet`
           - `FacetDef`
@@ -39409,6 +39432,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `facetCollectedDir`
           - `getFacet`
           - `loadFacets`
+          - `loadFacetSources`
           - `setFacet`
       - Cross-plugin:
         - Imported by:
@@ -40181,6 +40205,61 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --success`
           - `ui/tokens/color-palette --warning`
           - `ui/tokens/shape --spacing`
+    - **`plugin-records`**
+      - Core:
+        - Uses:
+          - `framework/plugin-id.asPluginId`
+          - `framework/slot-declaration.declaredSlotSources`
+          - `framework/slot-declaration.declarePluginSlots`
+          - `framework/slot-declaration.isSlot`
+          - `framework/slot-declaration.moduleEvaluation`
+          - `framework/slot-declaration.SlotDeclaringPlugin`
+          - `framework/slot-declaration.SlotHandle`
+          - `framework/slot-declaration.slotSite`
+          - `framework/slot-declaration.slotSitesTracked`
+          - `packages/string-hash.sha1Hex`
+          - `packages/string-hash.sha256Hex`
+          - `plugin-meta/barrel-import.importBarrel`
+          - `plugin-meta/barrel-import.registerBarrelStubs`
+        - Exports (types):
+          - `BarrelRef`
+          - `BarrelRuntime`
+          - `BundledClosure`
+          - `CreatedSlot`
+          - `EvaluatedBarrels`
+          - `EvaluationInput`
+          - `FileScan`
+          - `Json`
+          - `ModuleGraph`
+          - `ModuleGraphInput`
+          - `ModuleNode`
+          - `RecordStore`
+          - `RecordTable`
+          - `ReviveOptions`
+          - `SerializeOptions`
+        - Exports (values):
+          - `buildModuleGraph`
+          - `createMemoryRecordStore`
+          - `currentRecordStore`
+          - `evaluateBarrels`
+          - `gitBlobId`
+          - `installRecordStore`
+          - `RECORD_TABLES`
+          - `recordKey`
+          - `reviveValue`
+          - `scanFilesCached`
+          - `serializeValue`
+      - Cross-plugin:
+        - Imported by:
+          - `framework/cli/build`
+          - `framework/cli/regen-generated`
+          - `framework/tooling/boundaries`
+          - `framework/tooling/codegen`
+          - `plugin-meta/plugin-tree`
+      - Exemptions:
+        - Exempts itself from: `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
+      - Cli:
+        - Exports (values): `openRecordStore`
     - **`plugin-refs`** — The one plugin-reference locator: every place the repo names a plugin (path literals, @plugins specifiers, structurally-read dot ids, relative markdown/CSS links), each with an exact character range a mover rewrites by.
       - Core:
         - Uses:
@@ -40253,19 +40332,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineWarmup('plugin-tree.trees')`
           - `defineFileWatcher('plugin-tree.plugins-dir')`
       - Core:
-        - Uses: 24 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/REFERENCE.md)
+        - Uses: 31 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/REFERENCE.md)
           - `framework/plugin-id` ×6
+          - `plugin-meta/facets` ×6
           - `plugin-meta/parse-utils` ×4
+          - `plugin-meta/plugin-records` ×4
+          - `framework/tooling` ×3
           - `infra/host-fs/user-path` ×3
-          - `plugin-meta/facets` ×3
-          - `framework/slot-declaration` ×2
-          - `framework/tooling` ×2
+          - `packages/timed-fs` ×3
           - `packages/macrotask-yield` ×2
-          - `plugin-meta/barrel-import` ×2
         - Exports (types):
+          - `BuildPluginTreeOptions`
           - `PluginNode`
           - `PluginTree`
           - `Runtime`
+          - `TreeEnrichment`
         - Exports (values):
           - `buildPluginTree`
           - `buildStructureTreeOnce`

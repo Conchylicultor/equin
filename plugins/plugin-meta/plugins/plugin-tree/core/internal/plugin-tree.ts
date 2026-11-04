@@ -1,5 +1,5 @@
 import type { SlotNaming } from "@plugins/framework/plugins/slot-declaration/core";
-import { existsSync, readFileSync, statSync } from "fs";
+import { existsSync, readFileSync, statSync } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join, relative } from "path";
 import {
   loadRepoFiles,

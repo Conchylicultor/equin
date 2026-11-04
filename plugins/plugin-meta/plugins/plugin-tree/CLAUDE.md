@@ -77,13 +77,14 @@ dynamic value.
     - `defineWarmup('plugin-tree.trees')`
     - `defineFileWatcher('plugin-tree.plugins-dir')`
 - Core:
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/plugin-id` ×6
     - `plugin-meta/facets` ×6
     - `plugin-meta/parse-utils` ×4
     - `plugin-meta/plugin-records` ×4
     - `framework/tooling` ×3
     - `infra/host-fs/user-path` ×3
+    - `packages/timed-fs` ×3
     - `packages/macrotask-yield` ×2
   - Exports (types):
     - `BuildPluginTreeOptions`

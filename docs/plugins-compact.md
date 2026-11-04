@@ -273,6 +273,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`facets`** [exempt] [44 sub-plugins] — Facet-based plugin metadata extraction and docgen pipeline
     - **`parse-utils`** [exempt]
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
+    - **`plugin-records`** [exempt]
     - **`plugin-refs`** [test helpers] [exempt] — The one plugin-reference locator: every place the repo names a plugin (path literals, @plugins specifiers, structurally-read dot ids, relative markdown/CSS links), each with an exact character range…
     - **`plugin-tree`** [exempt] — Cached, watcher-invalidated plugin-tree accessors: structure-only for the hot path and a shared full-faceted build for the two facet consumers.
     - **`plugin-view`** [6 sub-plugins] — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections.

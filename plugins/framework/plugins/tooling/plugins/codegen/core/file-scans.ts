@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
