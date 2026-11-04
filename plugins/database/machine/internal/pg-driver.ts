@@ -24,7 +24,6 @@ import {
   BOOT_DDL_QUERY_DEADLINE_MS,
   createDbPool,
   createSchemaGenerationLocks,
-  IDLE_IN_TRANSACTION_TIMEOUT_MS,
   onClientLost,
   openListenSession,
   queryText,
@@ -660,18 +659,6 @@ async function warmPool(): Promise<void> {
   for (const c of clients) c.release();
 }
 
-// An abandoned connection never ends the transaction it was in (the connection
-// plugin's IDLE_IN_TRANSACTION_TIMEOUT_MS says why), so this database lets
-// Postgres end it: every NEW session on it — pgbouncer's server connections,
-// the job pools, admin sessions — inherits the bound. Existing sessions keep
-// theirs until they reconnect (pgbouncer recycles its server connections
-// within `server_lifetime`). Idempotent; one catalog write per boot.
-async function boundIdleTransactions(): Promise<void> {
-  await pool().query(
-    `DO $$ BEGIN EXECUTE format('ALTER DATABASE %I SET idle_in_transaction_session_timeout = %L', current_database(), '${IDLE_IN_TRANSACTION_TIMEOUT_MS}ms'); END $$`,
-  );
-}
-
 /**
  * The desktop's database driver: the per-worktree pool above, behind the lane
  * gates, the deadlock retry and read-set capture, every connection bounded by
@@ -687,7 +674,6 @@ export const pgDriver: DatabaseDriverImpl = {
   db: realDb,
   async ready({ warm }) {
     await awaitDbReady();
-    await boundIdleTransactions();
     if (warm) await warmPool();
   },
   // Boot DDL can wait minutes on the previous backend's locks during a

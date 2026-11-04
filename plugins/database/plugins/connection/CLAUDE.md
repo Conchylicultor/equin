@@ -118,11 +118,13 @@ for what remains of its bound by `performance.now()`: the bound is awake time.
 And an abandoned connection must not be able to hold locks forever: it is never
 closed and never sent a `ROLLBACK`, so a transaction it was in stays open on the
 server for as long as the process lives. `IDLE_IN_TRANSACTION_TIMEOUT_MS`
-(5 min) is the server-side twin of the deadline: the desktop driver
-(`database#machine`'s `ready()`) sets it as the database's
-`idle_in_transaction_session_timeout` at every boot, so Postgres ends such a
-transaction itself. New sessions only: pgbouncer's existing server connections
-take it when they are recycled (`server_lifetime`). **Interim:** it bounds a
+(5 min, `database/embedded`'s `shared/`) is the server-side twin of the
+deadline: the cluster's start script sets it as the CLUSTER's
+`idle_in_transaction_session_timeout` (`applyClusterSettings`: `ALTER SYSTEM`
++ reload, on every start), so Postgres ends such a transaction itself, on
+every database and every session. Not per database at boot: every process
+booting the DB layer wrote the same catalog row, and concurrent boots failed
+with `tuple concurrently updated` (2026-11-04). **Interim:** it bounds a
 flaw in the abandon rule rather than fixing it, and the reap is not reported; it
 goes once a lost connection is closed instead of abandoned — the vision and
 tasks are in
@@ -269,7 +271,6 @@ deadline sees it go silent. That needs a heartbeat.
     - `createSchemaGenerationLocks`
     - `currentQueryDeadline`
     - `formatDeadlineLogLine`
-    - `IDLE_IN_TRANSACTION_TIMEOUT_MS`
     - `onClientLost`
     - `openListenSession`
     - `QUERY_DEADLINE_MS`

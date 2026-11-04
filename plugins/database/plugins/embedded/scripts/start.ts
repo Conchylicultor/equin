@@ -4,7 +4,8 @@
  * service supervisor via the "start" command in database.json.
  *
  * Handles: binary resolution, dylib symlinks, reattach detection,
- * initdb, stale pidfile cleanup, pg_ctl start, and the base database.
+ * initdb, stale pidfile cleanup, pg_ctl start, the base database and the
+ * cluster-wide session settings.
  *
  * Exits 0 on success (PG is running), non-zero on failure.
  */
@@ -32,6 +33,7 @@ import {
   PG_LOG_FILE,
   PG_PID_FILE,
   MAX_CONNECTIONS,
+  applyClusterSettings,
 } from "../shared";
 
 const READY_TIMEOUT_SEC = 30;
@@ -292,7 +294,32 @@ function startPostmaster(binDir: string): void {
  * `bun build --compile` bundles into the release `pg-start` binary the same way
  * it already does for the compiled backend and launcher.
  */
-async function ensureBaseDatabase(): Promise<void> {
+async function ensureBaseDatabase(client: Client): Promise<void> {
+  const existing = await client.query(
+    "SELECT 1 FROM pg_database WHERE datname = $1",
+    [PG_BASE_DATABASE],
+  );
+  if ((existing.rowCount ?? 0) > 0) return;
+
+  console.log(`pg: creating base database "${PG_BASE_DATABASE}"`);
+  try {
+    await client.query(`CREATE DATABASE "${PG_BASE_DATABASE}"`);
+  } catch (err: any) {
+    // 42P04 duplicate_database: another starter won the race between the
+    // SELECT above and this CREATE. That is the one tolerated error — the
+    // database exists, which is all this function promised. Anything else
+    // propagates and takes the script's exit code with it.
+    if (err.code !== "42P04") throw err;
+  }
+}
+
+/**
+ * Bring the cluster up to the state every database relies on: the base
+ * database exists, and the cluster-wide session settings are in force
+ * (`applyClusterSettings` — one writer per cluster start, never one per
+ * backend boot). Over the cluster's own socket, as its superuser.
+ */
+async function ensureClusterState(): Promise<void> {
   const client = new Client({
     host: PG_SOCKET_DIR,
     port: PG_PORT,
@@ -301,22 +328,8 @@ async function ensureBaseDatabase(): Promise<void> {
   });
   await client.connect();
   try {
-    const existing = await client.query(
-      "SELECT 1 FROM pg_database WHERE datname = $1",
-      [PG_BASE_DATABASE],
-    );
-    if ((existing.rowCount ?? 0) > 0) return;
-
-    console.log(`pg: creating base database "${PG_BASE_DATABASE}"`);
-    try {
-      await client.query(`CREATE DATABASE "${PG_BASE_DATABASE}"`);
-    } catch (err: any) {
-      // 42P04 duplicate_database: another starter won the race between the
-      // SELECT above and this CREATE. That is the one tolerated error — the
-      // database exists, which is all this function promised. Anything else
-      // propagates and takes the script's exit code with it.
-      if (err.code !== "42P04") throw err;
-    }
+    await ensureBaseDatabase(client);
+    await applyClusterSettings(client);
   } finally {
     // Block form, not `eslint-disable-next-line`: a disable/enable PAIR is a
     // line RANGE and survives the format pass reflowing the line under it.
@@ -339,12 +352,12 @@ async function main(): Promise<void> {
   ensureSymlinks(binDir);
 
   // Reattach: PG is already running, so there is no cluster to start — but we
-  // still fall through to the base-database check below.
+  // still fall through to the base-database and settings checks below.
   const reattached = existsSync(PG_PID_FILE) && (await pingSocket(1500));
   if (reattached) console.log("pg: embedded PG already running; reattaching");
   else startPostmaster(binDir);
 
-  await ensureBaseDatabase();
+  await ensureClusterState();
 
   console.log("pg: embedded PG ready");
 }

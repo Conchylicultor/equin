@@ -20717,7 +20717,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createSchemaGenerationLocks`
           - `currentQueryDeadline`
           - `formatDeadlineLogLine`
-          - `IDLE_IN_TRANSACTION_TIMEOUT_MS`
           - `onClientLost`
           - `openListenSession`
           - `QUERY_DEADLINE_MS`
@@ -20901,7 +20900,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PG_USER`
           - `pgPostmasterPidFile`
       - Shared:
+        - Exports (types): `ClusterSettingsClient`
         - Exports (values):
+          - `applyClusterSettings`
+          - `CLUSTER_SESSION_SETTINGS`
+          - `IDLE_IN_TRANSACTION_TIMEOUT_MS`
           - `MAX_CONNECTIONS`
           - `PG_BASE_DATABASE`
           - `PG_DATA_DIR`

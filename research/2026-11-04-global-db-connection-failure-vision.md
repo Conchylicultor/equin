@@ -91,9 +91,12 @@ is reported. Nothing is set aside silently.** In order of cost:
 - **(3) Awake-time deadline.** `DbClient`'s `connect()` and `query()` deadlines
   re-arm for what remains of their bound by `performance.now()` when the timer
   fires early (`awake-timer.ts`, tested in `awake-timer.test.ts`).
-- **Interim backstop: `IDLE_IN_TRANSACTION_TIMEOUT_MS` (5 min).** The desktop
-  driver's `ready()` sets it as the database's `idle_in_transaction_session_timeout`,
-  so Postgres ends a transaction an abandoned connection left open. This is a
+- **Interim backstop: `IDLE_IN_TRANSACTION_TIMEOUT_MS` (5 min).** The cluster's
+  `idle_in_transaction_session_timeout` (`database/embedded`'s
+  `applyClusterSettings`, run by the cluster start script — it first landed as a
+  per-database `ALTER DATABASE` in every process's boot, and concurrent boots
+  crashed with `tuple concurrently updated`), so Postgres ends a transaction an
+  abandoned connection left open. This is a
   bound around our own design flaw, not a fix: it reaps each dead link of a chain
   after 5 min (a 16-link chain still costs ~80 min), and the reap is not reported.
   **Remove it when task 2 lands.**
@@ -144,7 +147,10 @@ Then change `DbClient#lose` (`connection/server/internal/client.ts`) to CLOSE a
 lost connection — Postgres rolls back, pgbouncer frees the slot — and delete the
 abandon machinery (`abandon.ts`, `AbandonedClientHold`, the pg-pool internals
 accessor) and the interim `IDLE_IN_TRANSACTION_TIMEOUT_MS` /
-`boundIdleTransactions` (`database/machine/internal/pg-driver.ts`).
+`CLUSTER_SESSION_SETTINGS` entry (`database/embedded/shared/internal/cluster-settings.ts`;
+removing the entry leaves the value in `postgresql.auto.conf`, so `ALTER SYSTEM RESET`
+it, and `ALTER DATABASE … RESET` the per-database copies the first version left on
+the databases that booted it).
 If the culprit cannot be found, the interim form is close-when-provably-ours:
 record the socket's device + inode at connect, re-check at the deadline, close if
 it matches, abandon only if not (then the original socket is already closed and

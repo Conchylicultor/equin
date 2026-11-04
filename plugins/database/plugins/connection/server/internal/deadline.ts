@@ -27,25 +27,6 @@ export const QUERY_DEADLINE_MS = 60_000;
  */
 export const BOOT_DDL_QUERY_DEADLINE_MS = 15 * 60_000;
 
-/**
- * The server-side twin of the deadline: how long Postgres lets a session sit
- * idle inside an open transaction before it terminates it (rolling back and
- * releasing its locks). An abandoned connection (./abandon.ts) is never closed
- * and never sent a ROLLBACK, so a transaction it was in stays open with its
- * row locks for as long as the process lives — on 2026-11-03 one such
- * transaction blocked every usage-sync writer, then the whole app pool, for
- * five hours. Every database a backend serves carries this as its
- * `idle_in_transaction_session_timeout` (set at boot by the desktop driver),
- * so an abandoned transaction lets go within this bound. Generous: no live
- * code sits idle in a transaction for minutes (long holders use session-level
- * advisory locks, which this does not touch).
- *
- * Interim: a bound around the abandon rule's flaw, removed once a lost
- * connection is closed instead of abandoned
- * (research/2026-11-04-global-db-connection-failure-vision.md, task 2).
- */
-export const IDLE_IN_TRANSACTION_TIMEOUT_MS = 5 * 60_000;
-
 /** The label a `connect` call carries where a query carries its SQL. */
 export const CONNECT_CALL_LABEL = "[connect]";
 

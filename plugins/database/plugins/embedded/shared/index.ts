@@ -11,3 +11,9 @@ export {
   PG_USER,
   pgPostmasterPidFile,
 } from "./internal/paths";
+export {
+  applyClusterSettings,
+  CLUSTER_SESSION_SETTINGS,
+  IDLE_IN_TRANSACTION_TIMEOUT_MS,
+  type ClusterSettingsClient,
+} from "./internal/cluster-settings";
