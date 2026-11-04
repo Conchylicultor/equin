@@ -118,6 +118,23 @@ vnodes/s, and names the heaviest readers in the worst seconds. A proxy (neither
 counter is a vnode count; processes under ~1 s and root daemons are missed);
 `fs_usage` in the root mode above is the exact answer.
 
+## Which client makes fseventsd replay its history (root, on demand)
+
+```sh
+sudo /usr/bin/python3 -I ~/.equin/logs/monitors/fs-latency-src/fseventsd-bisect.py [--fseventsd]
+```
+
+The `fseventsd_logs` field shows fseventsd cycling through old log files, a
+history replay for some client. `fseventsd-bisect.py` names the client. It
+watches one cycle (6 min) with fseventsd's debug logging on, recording a
+`log stream` and dating the replayed range from the log files' mtimes. Then it
+restarts each suspect in turn (`SUSPECTS`, launchd respawns them all) and
+watches another cycle. The first restart after which no replay is seen gives the
+verdict. `--fseventsd` adds a restart of fseventsd itself as the last step,
+which proves the mechanism but names no client. Writes
+`captures/fseventsd-bisect-<stamp>.json` and `captures/fseventsd-debug-<stamp>.log`.
+Takes 6 min per step, at most 24 min.
+
 ## Uninstall
 
 ```sh
