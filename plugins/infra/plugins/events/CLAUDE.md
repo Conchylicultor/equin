@@ -22,9 +22,14 @@ stale binding can never re-accumulate dead jobs:
    the window between a job's removal and the next boot sweep.
 
 Static triggers are declared as `Trigger({ on, do, with })` contributions and
-re-projected from code each boot by `syncTriggerContributions()` (wipe + insert
-per declared job), so the DB is a pure projection of code — removing a job's
-declaration cannot leave a stale row. Trigger **tables** are real Drizzle tables
+re-projected from code each boot by `syncTriggerContributions()`: their rows
+carry `declared = true`, and the sync wipes every declared row (plus every row
+of a declared job) and inserts the contributions' rows, so the declared rows
+are a pure projection of code — renaming or removing a declared trigger's job
+cannot leave a stale row. (Before the `declared` column the sync wiped only
+the jobs still declared, so every such rename reached the sweep below as an
+error, once per database.) The sweep is therefore only ever about a row a
+runtime `trigger()` call made for a job that has since gone — a real leak. Trigger **tables** are real Drizzle tables
 built inside `defineTriggerEvent`; deleting an event's source file makes
 drizzle-kit generate a `DROP` migration on the next build, so orphaned trigger
 tables can't linger either. Event-payload schema drift (target job exists but

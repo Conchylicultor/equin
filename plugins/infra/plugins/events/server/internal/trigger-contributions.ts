@@ -7,7 +7,7 @@ import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import { getAllRegisteredJobNames } from "@plugins/infra/plugins/jobs/server";
 import { db, writeAtomically } from "@plugins/database/server";
 import { triggerTableRegistry } from "./registry";
-import { triggerRow } from "./trigger";
+import { declaredTriggerRow } from "./trigger";
 import type { TriggerSpec } from "./trigger";
 
 // biome-ignore lint/suspicious/noExplicitAny: type params erased at the contribution boundary
@@ -23,8 +23,19 @@ export const Trigger = defineServerContribution<TriggerSpec<any, any>>(
 );
 
 /**
- * Make the trigger tables hold exactly the declared triggers for every job a
- * contribution binds: each such job's rows are replaced by its declared ones.
+ * Make the trigger tables hold exactly the declared triggers: every declared
+ * row (`declared`, whatever job it names — one whose contribution was renamed
+ * or removed included) and every row of a job a contribution binds are
+ * replaced by the contributions' rows.
+ *
+ * A declared row of a job no longer declared is the code's own change, not a
+ * leak: nothing could have deleted it but this sync. Leaving it for
+ * `sweepStaleTriggers` reported every rename of a declared trigger's job as an
+ * error, once per database (`tasks.auto-start-cancel-on-drop`, 2026-11-04).
+ *
+ * Owning EVERY declared row assumes the backend syncing is the only plugin set
+ * that database serves: a composition gets a database of its own
+ * (`ensureDatabase`, never a fork), and an `exec` child runs no `onReady`.
  *
  * One statement, one DELETE and at most one INSERT per trigger table. It was
  * one DELETE per table per job, then one INSERT per trigger — ~750 serial
@@ -33,12 +44,11 @@ export const Trigger = defineServerContribution<TriggerSpec<any, any>>(
  */
 export async function syncTriggerContributions(): Promise<void> {
   const declared = Trigger.getContributions();
-  if (declared.length === 0) return;
   const jobNames = [...new Set(declared.map((t) => t.do.name))];
 
   const rowsByTable = new Map<PgTable, Record<string, unknown>[]>();
   for (const t of declared) {
-    const { table, values } = triggerRow(t);
+    const { table, values } = declaredTriggerRow(t);
     const rows = rowsByTable.get(table);
     if (rows) rows.push(values);
     else rowsByTable.set(table, [values]);
@@ -53,11 +63,15 @@ export async function syncTriggerContributions(): Promise<void> {
     ...[...triggerTableRegistry.values()].map((table) => {
       // biome-ignore lint/suspicious/noExplicitAny: dynamic column access on base-columns.
       const jobNameCol = (table as any).jobName as AnyPgColumn;
+      // biome-ignore lint/suspicious/noExplicitAny: dynamic column access on base-columns.
+      const declaredCol = (table as any).declared as AnyPgColumn;
       // One array parameter per table, not one per job name: every arm shares
       // the statement's bind-parameter budget.
       return db
         .delete(table)
-        .where(sql`${jobNameCol} = ANY(${sql.param(jobNames)}::text[])`);
+        .where(
+          sql`${declaredCol} OR ${jobNameCol} = ANY(${sql.param(jobNames)}::text[])`,
+        );
     }),
     ...[...rowsByTable].map(([table, rows]) => db.insert(table).values(rows)),
   ]);

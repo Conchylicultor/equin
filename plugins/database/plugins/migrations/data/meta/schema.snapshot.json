@@ -1,6 +1,6 @@
 {
-  "id": "47a1b1b9-4d5a-4dba-ac95-efa8a1d67c54",
-  "prevId": "649805cf-1a45-460d-8eaf-699ba6d30fa8",
+  "id": "457c6664-ccba-439b-abb4-6a4a0a5deffd",
+  "prevId": "47a1b1b9-4d5a-4dba-ac95-efa8a1d67c54",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -9205,6 +9205,13 @@
           "notNull": true,
           "default": true
         },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -14281,6 +14288,13 @@
           "notNull": true,
           "default": true
         },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -14424,6 +14438,13 @@
           "notNull": true,
           "default": true
         },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -14499,6 +14520,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -14576,6 +14604,13 @@
           "notNull": true,
           "default": true
         },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -14652,6 +14687,13 @@
           "notNull": true,
           "default": true
         },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -14727,6 +14769,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -14826,6 +14875,13 @@
           "notNull": true,
           "default": true
         },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -14902,6 +14958,13 @@
           "notNull": true,
           "default": true
         },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -14954,6 +15017,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -15031,6 +15101,13 @@
           "notNull": true,
           "default": true
         },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -15106,6 +15183,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -15183,6 +15267,13 @@
           "notNull": true,
           "default": true
         },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -15236,6 +15327,13 @@
           "notNull": true,
           "default": true
         },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -15288,6 +15386,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -15365,6 +15470,13 @@
           "notNull": true,
           "default": true
         },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -15441,6 +15553,13 @@
           "notNull": true,
           "default": true
         },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -15493,6 +15612,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -15569,6 +15695,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -15667,6 +15800,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",

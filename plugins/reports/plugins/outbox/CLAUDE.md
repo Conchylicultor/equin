@@ -37,10 +37,20 @@ await fileReportFromProcess({ kind, message, data, code? });
 
 ## Reading: the drain (server, main only)
 
-`server/internal/watcher.ts` drains the directory once in `onReady`, then on
-every change its `reportOutboxWatcher` (a main-only `defineFileWatcher`) reports. No timer: a write is the signal. It is
-main-only because the directory is host-global and one reader is the whole
-design — a worktree backend would race main and file under its own namespace.
+`server/internal/watcher.ts` drains the directory once on becoming the
+drainer, then on every change its `reportOutboxWatcher` (a main-only
+`defineFileWatcher`) reports. No timer: a write is the signal. It is main-only
+because the directory is host-global and one reader is the whole design — a
+worktree backend would race main and file under its own namespace.
+
+**One reader is a kernel lock, not `isMain()`.** Across a deploy of main there
+are two main backends: the successor serves before the gateway stops the old
+one, which drains until its shutdown hooks run. Both recorded the same entry
+and the slower one's delete hit ENOENT (2026-11-04, a crash 6–17 s after each
+main boot). So the drainer is whoever holds the exclusive flock on
+`drainer.lock` in the outbox (`server/internal/drainer-lock.ts`): `onReady`
+starts the push-based wait without blocking the boot, and the old backend
+releases it on shutdown only after its pass in flight finished (or by dying).
 
 For each entry, oldest first (`server/internal/drain.ts`):
 

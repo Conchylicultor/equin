@@ -63,19 +63,20 @@ interface RowInsertSpec<P> {
 }
 
 /**
- * A trigger as the row its event's table stores — the table it goes in and the
- * values: the filter values, job name and serialized `with` config. The one
- * spelling of a trigger row, for the single insert and the boot sync's batch.
+ * A `Trigger` contribution as the row its event's table stores — the table it
+ * goes in and the values: the filter values, job name, serialized `with`
+ * config, and `declared` (the boot sync owns every such row).
  */
-export function triggerRow<P, I>(
+export function declaredTriggerRow<P, I>(
   spec: TriggerSpec<P, I>,
 ): { table: PgTable; values: Record<string, unknown> } {
-  return rowOf({
+  const row = rowOf({
     on: spec.on,
     jobName: spec.do.name,
     with: spec.with as Record<string, unknown>,
     oneShot: spec.oneShot,
   });
+  return { table: row.table, values: { ...row.values, declared: true } };
 }
 
 function rowOf<P>(spec: RowInsertSpec<P>): {

@@ -16,6 +16,12 @@ export const eventTriggerColumns = () => ({
   jobWith: parsedJson("job_with", z.record(z.string(), z.unknown())).notNull(),
   enabled: boolean("enabled").notNull().default(true),
   oneShot: boolean("one_shot").notNull().default(true),
+  // Written by `syncTriggerContributions` (a `Trigger` contribution's row),
+  // false for a row a runtime `trigger()` call made. The boot sync owns every
+  // declared row — including those of a job no longer declared (renamed or
+  // removed) — so code changes reconcile them without the dangling-trigger
+  // sweep ever seeing one.
+  declared: boolean("declared").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
