@@ -22,13 +22,12 @@ import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 // default bound and the scoped ones are the database plugin's, and a restated
 // number would drift from them the first time either is edited.
 
-/** Where the diagnosis of the only known cause lives. */
+/** Where the diagnosis of the 2026-09 stray closes lives, and how to hunt one. */
 export const INCIDENT_DOC =
   "research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md";
 
-/** The runbook for a database wedged by a transaction an abandon left open. */
-export const LOCK_CHAIN_DOC =
-  "research/2026-11-04-global-db-connection-failure-vision.md";
+/** Where the runbook for a database wedged by a lock chain lives. */
+export const LOCK_CHAIN_DOC = "plugins/database/CLAUDE.md";
 
 /** The longest stretch of a query label a task title carries. */
 const TITLE_SQL_MAX = 80;
@@ -72,9 +71,9 @@ export function queryDeadlineFingerprint(d: DbQueryDeadlinePayload): string {
 export function queryDeadlineMessage(d: DbQueryDeadlinePayload): string {
   return d.phase === "connect"
     ? `Opening a database connection (pool ${d.pool}) got no answer for ` +
-        `${formatDurationMs(d.elapsedMs)} and was abandoned`
+        `${formatDurationMs(d.elapsedMs)} and was closed`
     : `A database query (pool ${d.pool}) got no answer for ` +
-        `${formatDurationMs(d.elapsedMs)} and was abandoned: ${d.sql}`;
+        `${formatDurationMs(d.elapsedMs)} and its connection was closed: ${d.sql}`;
 }
 
 /**
@@ -85,20 +84,14 @@ export function queryDeadlineMessage(d: DbQueryDeadlinePayload): string {
 function serverLogFor(d: DbQueryDeadlinePayload): {
   file: string;
   signature: string;
-  leak: string;
 } {
   return DB_POOLS_THROUGH_PGBOUNCER.has(d.pool)
-    ? {
-        file: PGBOUNCER_LOG_FILE,
-        signature: "`client unexpected eof`",
-        leak: "one leaked pgbouncer client connection",
-      }
+    ? { file: PGBOUNCER_LOG_FILE, signature: "`client unexpected eof`" }
     : {
         file: PG_LOG_FILE,
         signature:
           "`unexpected EOF on client connection` or " +
           "`could not receive data from client`",
-        leak: "one leaked Postgres connection",
       };
 }
 
@@ -113,8 +106,10 @@ export function renderQueryDeadlineTask(
       `from this server got no answer for ${formatDurationMs(d.elapsedMs)}. ` +
       `The server stopped waiting at its ${formatDurationMs(d.deadlineMs)} ` +
       "deadline: the caller got a `QueryDeadlineExceededError` instead of a " +
-      "result, and the connection was **abandoned** — taken out of its pool, " +
-      "but deliberately not closed.",
+      "result, and the connection was **closed**: taken out of its pool and " +
+      "its socket shut, so Postgres ended its session — rolling back any " +
+      "transaction it was in and releasing its locks — and pgbouncer freed " +
+      "its slot.",
   );
   lines.push("");
   lines.push(
@@ -124,15 +119,6 @@ export function renderQueryDeadlineTask(
       "for 25+ minutes while the health dot stayed green. On 2026-09-15 a job " +
       "waited 2.5 hours on one. The deadline turns that freeze into this report " +
       "and a pause of at most one deadline.",
-  );
-  lines.push("");
-  lines.push(
-    "**Why abandoned, not closed.** The known way to get here is a " +
-      "socket whose file handle was closed underneath a running call by other " +
-      "code in the same process. `pg` gets no event, and Postgres never sees " +
-      "the call. By the time the deadline fires, that handle number may " +
-      "already belong to something else, so closing it would kill an innocent " +
-      `resource. The cost of abandoning is ${log.leak} until the backend restarts.`,
   );
   lines.push("");
   lines.push(...evidenceLines(d));
@@ -145,21 +131,24 @@ export function renderQueryDeadlineTask(
       : "1. Tell a lost query from a slow or blocked one. If Postgres had the " +
           "query (`pg_stat_activity` shows it running or waiting on a lock — " +
           "`pg_blocking_pids(pid)` names the blocker), it is not lost: find why " +
-          "it waits. A transaction left open by an earlier abandon, with calls " +
-          "queued behind it (above), is a lock chain — see the runbook in " +
-          `\`${LOCK_CHAIN_DOC}\`. Boot DDL that legitimately waits on locks ` +
+          "it waits. A transaction holding locks with calls queued behind it " +
+          '(above) is a lock chain — see "Runbook: a database wedged by a lock chain" ' +
+          `in \`${LOCK_CHAIN_DOC}\`. Boot DDL that legitimately waits on locks ` +
           "gets a longer bound with `withQueryDeadline`.",
   );
   lines.push(
-    `2. Otherwise, look in \`${log.file}\` around the ` +
-      `first and last seen times below for a single, mid-life ${log.signature} ` +
-      "on a young socket. That is the signature of a " +
-      "stray close. A burst at the same millisecond is just a restart.",
+    `2. Otherwise, look in \`${log.file}\` for a single ${log.signature} on ` +
+      "this connection BEFORE the deadline fired, while the call was still " +
+      "waiting. The deadline's own close leaves one at the instant it fires; " +
+      "an earlier one means the socket was closed underneath the call by " +
+      "something in this process — a stray close. A burst at the same " +
+      "millisecond is just a restart.",
   );
   lines.push(
-    `3. Follow "How to find it" in \`${INCIDENT_DOC}\` to hunt the code that ` +
-      "closes a file handle it does not own. Each report is another victim " +
-      "sighting to add to its table.",
+    "3. A stray close is a double close of a file descriptor. The 2026-09 ones " +
+      "were Bun's own (oven-sh/bun#33828, fixed in 1.4.0; the `bun-runtime` " +
+      "check re-proves it on every build). Hunt a new one with " +
+      `"How to find it" in \`${INCIDENT_DOC}\`.`,
   );
   lines.push("");
   lines.push(
@@ -183,8 +172,8 @@ export function renderQueryDeadlineTask(
   lines.push(`**Last seen:** ${row.lastSeenAt.toISOString()}`);
   const title =
     d.phase === "connect"
-      ? `[db] Opening a connection got no answer and was abandoned: pool ${d.pool}`
-      : `[db] Query got no answer and was abandoned (${d.pool}): ${clampOneLine(d.sql, TITLE_SQL_MAX)}`;
+      ? `[db] Opening a connection got no answer and was closed: pool ${d.pool}`
+      : `[db] Unanswered query, connection closed (${d.pool}): ${clampOneLine(d.sql, TITLE_SQL_MAX)}`;
   return { title, description: lines.join("\n") };
 }
 
@@ -221,8 +210,8 @@ function txLabel(state: DbQueryDeadlinePayload["transaction"]): string {
 /**
  * What the call was part of — read FIRST, because it usually says why the call
  * was lost before any stray-close hunt starts: a lost call inside a
- * transaction, others waiting behind it, abandoned connections still holding
- * transactions open — that is a lock chain, not a vanished socket.
+ * transaction, others waiting behind it — that is a lock chain, not a
+ * vanished socket.
  */
 function evidenceLines(d: DbQueryDeadlinePayload): string[] {
   const lines: string[] = [
@@ -234,20 +223,9 @@ function evidenceLines(d: DbQueryDeadlinePayload): string[] {
         ? "- Its connection's transaction state: not recorded."
         : `- It was sent ${txLabel(d.transaction)}.` +
             (isInTransaction(d.transaction)
-              ? " Abandoned, that connection is never rolled back: if Postgres " +
-                "has the statement, the transaction and every row lock it took stay " +
-                "open, and later writers to those rows queue behind it."
+              ? " Closing the connection rolled that transaction back: its " +
+                "work is lost, and the caller saw the error."
               : ""),
-    );
-  }
-  if (d.abandoned !== null) {
-    lines.push(
-      `- Connections this process has abandoned since it started: ${d.abandoned.total}. ` +
-        `Of the ${d.abandoned.held} it holds, ${d.abandoned.inTransaction} ` +
-        "were left inside a transaction" +
-        (d.abandoned.total > d.abandoned.held
-          ? " (the rest are past the hold's cap, their state unknown)."
-          : "."),
     );
   }
   if (d.inFlightCount === null) {
@@ -283,29 +261,16 @@ function evidenceLines(d: DbQueryDeadlinePayload): string[] {
   return lines;
 }
 
-// --- db-abandon-cap ---------------------------------------------------------
+// --- db-abandon-cap (RETIRED) -------------------------------------------------
+//
+// Nothing files this kind any more: until 2026-11-04 a lost connection was
+// abandoned (never closed) into a hold set capped at 32, and this kind fired
+// past the cap. Lost connections are closed now. Kept so existing rows still
+// validate, render and can be investigated.
 
-/**
- * One rolling row per worktree (the reports unique index is
- * `(fingerprint, worktree)`). What is reported is the state of this process as
- * a whole, and the upsert refreshes `data` on every occurrence, so the row
- * always shows the latest count.
- *
- * The pool is NOT in the fingerprint. The hold set and its cap are process-wide,
- * shared by every pool, so "past the cap" is one fact about the process; a row
- * per pool would split one count across rows that each show the same total.
- * The payload's `pool` names the connection whose abandon crossed it most
- * recently, and the per-pool breakdown is the `db-query-deadline` rows.
- */
+/** One rolling row per worktree: the state of the process as a whole. */
 export function abandonCapFingerprint(): string {
   return DB_ABANDON_CAP_KIND;
-}
-
-export function abandonCapMessage(d: DbAbandonCapPayload): string {
-  return (
-    `${d.abandoned} database connections have been abandoned since the server ` +
-    `started — more than the ${d.cap} it is built to hold (latest: pool ${d.pool})`
-  );
 }
 
 export function renderAbandonCapTask(
@@ -314,35 +279,19 @@ export function renderAbandonCapTask(
 ): { title: string; description: string } {
   const lines: string[] = [];
   lines.push(
-    `This server has abandoned ${d.abandoned} database connections since it ` +
-      `started. The database plugin holds on to at most ${d.cap} of them, and ` +
-      "it files this report for every abandon past that.",
+    `This server had abandoned ${d.abandoned} database connections — more ` +
+      `than the ${d.cap} its hold set kept. Until 2026-11-04 a connection whose ` +
+      "call missed its deadline was abandoned (taken out of its pool, never " +
+      "closed), and each one kept its server session, its PgBouncer slot and " +
+      "any transaction it was in, until the backend restarted.",
   );
   lines.push("");
   lines.push(
-    "Each one is a connection whose query got no answer before its deadline " +
-      `(the \`${DB_QUERY_DEADLINE_KIND}\` reports next to this one name the ` +
-      "queries). The server keeps a reference to every abandoned connection on " +
-      "purpose, so that nothing — garbage collection included — ever closes its " +
-      "file handle later, when that number may belong to something else. Past " +
-      "the cap a newly abandoned connection is still taken out of the pool, but " +
-      "is no longer held, so garbage collection may close its handle — the very " +
-      "stray close the hold set exists to prevent (see `abandonClient` in " +
-      "`plugins/database/plugins/connection/server/internal/`).",
-  );
-  lines.push("");
-  lines.push(
-    "**Going past the cap means lost queries are not rare here.** Something " +
-      "keeps closing sockets underneath the pool, or the database keeps not " +
-      "answering. Each abandoned connection also leaks one pgbouncer client " +
-      "connection (app pool) or Postgres connection (every other pool) until the " +
-      "backend restarts.",
-  );
-  lines.push("");
-  lines.push(
-    `**What to do:** restart the backend to release the leaked connections, ` +
-      `then treat the \`${DB_QUERY_DEADLINE_KIND}\` reports as a live incident: ` +
-      `follow "How to find it" in \`${INCIDENT_DOC}\`.`,
+    "**This kind is retired.** Lost connections are closed now, so their " +
+      "transactions are rolled back and their slots freed; nothing files this " +
+      "report any more. If the backend that filed it has restarted since " +
+      `(\`Last seen\` below), there is nothing left to do here; the \`${DB_QUERY_DEADLINE_KIND}\` ` +
+      "reports beside it name the calls that were lost.",
   );
   lines.push("");
   lines.push(`**Abandoned:** ${d.abandoned}`);

@@ -25,11 +25,11 @@ const BACKGROUND_POOL_SIZE = PGBOUNCER_LANES.background.poolSize;
 // ---------------------------------------------------------------------------
 // Lane isolation, end to end, on the real cluster: every background PgBouncer
 // server slot of a database held — the 2026-11-03 shape, where 16 abandoned
-// background connections sat idle in a transaction and `/home`'s `SELECT 1`
-// queued forever — and interactive work still answers.
+// (then never closed) background connections sat idle in a transaction and
+// `/home`'s `SELECT 1` queued forever — and interactive work still answers.
 //
 // The holders come from a SECOND set of lane pools on the same database: like
-// abandoned connections, they are invisible to the app pools under test, so
+// those connections, they are invisible to the app pools under test, so
 // what runs out is PgBouncer's background pool, not the app's own.
 //
 // Needs the machine's PgBouncer serving the lanes (the background role and its

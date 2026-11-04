@@ -1,7 +1,35 @@
 # Live updates frozen on main: a DB socket closed under a query (investigation)
 
-Status: root chain proven; the code doing the stray close is **not found yet**.
+Status: root chain proven; **culprit found 2026-09-16** (see "Culprit" below).
 Follow-up task: "Find the code that closes file handles twice" (filed 2026-09-11).
+
+## Culprit (found 2026-09-16)
+
+Suspect 1 below was right, in a form the single-spawn probe could not see: Bun
+≤ 1.3.14 closes a finished child's **extra** stdio fds (index ≥ 3, exposed via
+`.stdio`) a second time when the child object is garbage-collected
+(oven-sh/bun#33828, fixed in 1.4.0). Playwright hands Chromium two such pipe
+fds on every launch, so every browser launch in a backend left two numbers to
+be closed again at some later GC — killing whatever had reused them: a pooled
+pg socket (09-11), `spawnCaptured`'s temp-file fd (09-10, the EBADF at its own
+`closeSync`), tmux's pipes. It reproduces deterministically in round 2 of the
+probe that now guards it.
+
+Fixed by commit 0d5b373dd6 (2026-09-16): Bun pinned exactly (`mise.lock`, now
+1.4.x), and the `bun-runtime` check
+(`plugins/framework/plugins/tooling/plugins/checks/plugins/bun-runtime`)
+re-proves the defect absent against the running Bun on every build and push.
+The pgbouncer log agrees: single mid-life `client unexpected eof`s on main's
+database spike to 20 and 14 on 09-10 / 09-11 and fall back to the 1–3 a day of
+ordinary one-connection process exits after it.
+
+Consequence (2026-11-04): the abandon rule this incident introduced — never
+close a connection lost to a deadline, its fd number might be someone else's —
+is gone. A lost connection is closed, so its transaction is rolled back and its
+PgBouncer slot freed (`research/2026-11-04-global-db-connection-failure-vision.md`,
+task 2). Upstream #35931 and #38630 are other, open Bun double-close bugs the
+probe does not cover; the guard against our own code doing it is the owned-fd
+work of the same task.
 
 ## Symptom (as the user saw it)
 

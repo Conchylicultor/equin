@@ -20770,7 +20770,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `pgClientBin`
           - `PgClientToolMissingError`
-    - **`connection`** — Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is abandoned — detached, held, never closed, since its fd may already be someone else's — and announced on queryDeadlineSink. Every pool also carries its own connection-error listeners (pool and per client), which report a broken connection once instead of letting it crash the process — so a library handed the pool (graphile-worker) installs none of its own.
+    - **`connection`** — Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is closed — handed back to its pool as broken and its socket destroyed, so Postgres rolls back its transaction and PgBouncer frees its slot — and announced on queryDeadlineSink. Every pool also carries its own connection-error listeners (pool and per client), which report a broken connection once instead of letting it crash the process — so a library handed the pool (graphile-worker) installs none of its own.
       - Cross-plugin:
         - Imported by:
           - `database/admin`
@@ -20788,10 +20788,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SchemaGenerationLocks`
           - `SchemaGenerationLocksOptions`
         - Exports (values):
-          - `ABANDON_HOLD_CAP`
-          - `abandonClient`
-          - `AbandonedClientHold`
-          - `assertPgPoolInternals`
           - `BOOT_DDL_QUERY_DEADLINE_MS`
           - `createDbClient`
           - `createDbPool`
@@ -20992,8 +20988,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `ClusterSettingsClient`
         - Exports (values):
           - `applyClusterSettings`
+          - `CLIENT_CONNECTION_CHECK_INTERVAL_MS`
           - `CLUSTER_SESSION_SETTINGS`
-          - `IDLE_IN_TRANSACTION_TIMEOUT_MS`
           - `MAX_CONNECTIONS`
           - `PG_BASE_DATABASE`
           - `PG_DATA_DIR`
@@ -21005,6 +21001,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PG_SOCKET_DIR`
           - `PG_USER`
           - `pgPostmasterPidFile`
+          - `RETIRED_CLUSTER_SETTINGS`
     - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the base DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
       - Server:
         - Contributes:
@@ -21299,7 +21296,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `mcpTool('query_db')`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/mcp-tools.ts` (debt)
-    - **`query-deadline`** — Query-deadline presence: the health report's Database row (attention while a database call on any pool got no reply in the last 10 minutes, naming the latest's pool and caller, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries (pool, phase, query, caller) for the db-query-deadline and db-abandon-cap kinds. Query-deadline audit: registers a handler on the database plugin's query-deadline seam and turns each announcement into a report — db-query-deadline (error, one row per pool, phase and caller — the query label when there is no caller) when a call on any backend connection — opening it or a query on it — got no answer before its deadline and its connection was abandoned, carrying the connection's transaction state, every other call then in flight, the abandoned connections left in a transaction, and a link to a trace of that instant; db-abandon-cap (error, one rolling row) when the abandoned connections exceed the cap — and keeps the last 20 hits in memory as the db-query-deadlines push resource behind the health report's Database row.
+    - **`query-deadline`** — Query-deadline presence: the health report's Database row (attention while a database call on any pool got no reply in the last 10 minutes, naming the latest's pool and caller, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries (pool, phase, query, caller) for the db-query-deadline kind and the retired db-abandon-cap kind (kept so its old rows still render). Query-deadline audit: registers a handler on the database plugin's query-deadline seam and turns each announcement into a report — db-query-deadline (error, one row per pool, phase and caller — the query label when there is no caller) when a call on any backend connection — opening it or a query on it — got no answer before its deadline and its connection was closed, carrying the connection's transaction state, every other call then in flight, and a link to a trace of that instant; the retired db-abandon-cap kind (filed while lost connections were abandoned) stays registered so its old rows still render and can be investigated — and keeps the last 20 hits in memory as the db-query-deadlines push resource behind the health report's Database row.
       - Web:
         - Contributes:
           - `Reports.KindView` → `QueryDeadlineSummary`

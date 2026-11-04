@@ -5,6 +5,8 @@ import { DbAbandonCapPayloadSchema } from "../../core";
 
 // One-line summary for the Debug → Reports list, e.g.
 // "33 abandoned database connections — over the cap of 32 · latest [jobs-runner]".
+// A RETIRED kind (nothing files it since lost connections are closed,
+// 2026-11-04): kept so its old rows still render.
 // The cap is process-wide, so the pool is only the latest abandon's, not a
 // breakdown — the db-query-deadline rows carry that.
 export function AbandonCapSummary({ report }: { report: Report }) {

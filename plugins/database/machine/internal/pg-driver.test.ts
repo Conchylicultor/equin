@@ -481,8 +481,8 @@ describe("pool.connect transaction lease (Gap B)", () => {
     expect(caught).toBeInstanceOf(QueryDeadlineExceededError);
     expect(txGauge().active).toBe(0);
 
-    // A holder that does release later neither reaches pg-pool (the client is
-    // abandoned) nor frees a second slot.
+    // A holder that does release later neither reaches pg-pool (the deadline
+    // already closed the client) nor frees a second slot.
     client.release();
     expect(releases).toBe(0);
     expect(txGauge().active).toBe(0);

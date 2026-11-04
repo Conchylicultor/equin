@@ -60,8 +60,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Destroys the proxied sockets, the abandoned connection's included, so the
-  // throwaway database has no session left when it is dropped.
+  // Destroys the proxied sockets, so the throwaway database has no session
+  // left when it is dropped.
   await proxy.close();
   await new Promise((r) => setTimeout(r, 50));
   await t.drop();

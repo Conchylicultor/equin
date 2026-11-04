@@ -7,8 +7,8 @@ import { DbQueryDeadlinePayloadSchema } from "../../core";
 import { formatDurationMs } from "../../shared/format-duration";
 
 // One-line summary for the Debug → Reports list, e.g.
-//   [jobs-enqueue] [query] [select … from jobs] no answer for 60s — abandoned · issued by tasks.maybe-launch
-//   [app] [connect] no answer for 60s — abandoned · issued by push tasks
+//   [jobs-enqueue] [query] [select … from jobs] no answer for 60s — closed · issued by tasks.maybe-launch
+//   [app] [connect] no answer for 60s — closed · issued by push tasks
 // The pool and phase lead as muted chips (they say which connection and what it
 // was doing), the query label is a destructive mono chip that truncates, and
 // the caller trails, muted. A connect has no query to show. Then the evidence:
@@ -40,14 +40,14 @@ export function QueryDeadlineSummary({ report }: { report: Report }) {
           {d.sql}
         </Badge>
       )}
-      <span>no answer for {formatDurationMs(d.elapsedMs)} — abandoned</span>
+      <span>no answer for {formatDurationMs(d.elapsedMs)} — closed</span>
       {d.origin !== null && (
         <span className="text-muted-foreground">· issued by {d.origin}</span>
       )}
       {isInTransaction(d.transaction) && (
         <Badge
           variant="warning"
-          tooltip="Sent inside a transaction: abandoned, it is never rolled back, so its row locks stay held"
+          tooltip="Sent inside a transaction, which closing the connection rolled back"
         >
           in tx
         </Badge>

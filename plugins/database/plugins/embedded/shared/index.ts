@@ -13,7 +13,8 @@ export {
 } from "./internal/paths";
 export {
   applyClusterSettings,
+  CLIENT_CONNECTION_CHECK_INTERVAL_MS,
   CLUSTER_SESSION_SETTINGS,
-  IDLE_IN_TRANSACTION_TIMEOUT_MS,
+  RETIRED_CLUSTER_SETTINGS,
   type ClusterSettingsClient,
 } from "./internal/cluster-settings";

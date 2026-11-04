@@ -19,7 +19,7 @@ export interface BlackHoleProxy {
   port: number;
   /** false ⇒ every byte in either direction is silently dropped. */
   setForwarding(on: boolean): void;
-  /** Destroys every proxied socket (abandoned connections' included) and stops listening. */
+  /** Destroys every proxied socket and stops listening. */
   close(): Promise<void>;
 }
 

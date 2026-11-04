@@ -8,9 +8,8 @@ import {
   it,
 } from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
-import { EventEmitter } from "node:events";
 import net from "node:net";
-import type { ClientBase, Pool, PoolClient } from "pg";
+import { Client, type ClientBase, type Pool, type PoolClient } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
 import {
@@ -38,11 +37,6 @@ import {
   type QueryDeadlineEvent,
 } from "./deadline";
 import { startBlackHoleProxy, type BlackHoleProxy } from "../testing";
-import {
-  AbandonedClientHold,
-  abandonClient,
-  assertPgPoolInternals,
-} from "./abandon";
 
 // The connection deadline against a REAL Postgres, through a black-hole proxy
 // (../testing/black-hole-proxy.ts): a TCP server in front of the cluster whose forwarding
@@ -84,23 +78,11 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Tears down every proxied socket, abandoned ones included: each abandoned pg
-  // client now gets a real `end` + `error` from its socket. Without the
-  // abandon's no-op listeners that `error` is unhandled and fails this run.
   await proxy.close();
   await new Promise((r) => setTimeout(r, 50));
 });
 
-interface PgPoolInternals {
-  _clients: ClientBase[];
-  _idle: { client: ClientBase; timeoutId: unknown }[];
-}
-
-function internals(pool: Pool): PgPoolInternals {
-  return pool as unknown as PgPoolInternals;
-}
-
-/** The client's socket: an abandoned client's must never be destroyed (closed). */
+/** The client's socket: a lost client's is destroyed (closed) by the deadline. */
 function socketOf(client: ClientBase): net.Socket {
   return (client as unknown as { connection: { stream: net.Socket } })
     .connection.stream;
@@ -114,7 +96,7 @@ interface TestPool {
   pool: Pool;
   /** Every checkout, in order (a pooled client appears once per checkout). */
   acquired: PoolClient[];
-  /** Clients whose `end()` was called — an abandoned client must never be one. */
+  /** Clients whose `end()` was called — pg-pool's `_remove` ends a dropped client. */
   ended: Set<ClientBase>;
 }
 
@@ -155,7 +137,7 @@ beforeEach(() => {
 afterEach(async () => {
   queryDeadlineSink.register(null);
   proxy.setForwarding(true);
-  // Every test releases what it checked out and abandoned clients are no longer
+  // Every test releases what it checked out, and a lost client is no longer
   // the pool's, so end() never waits on a lost statement.
   for (const pool of pools.splice(0)) await pool.end();
 });
@@ -181,112 +163,58 @@ async function warm(pool: Pool): Promise<void> {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// ---------------------------------------------------------------------------
-// pg-pool internals pin
-// ---------------------------------------------------------------------------
+async function until(cond: () => boolean | Promise<boolean>): Promise<void> {
+  for (let i = 0; i < 200 && !(await cond()); i++) await sleep(10);
+  expect(await cond()).toBe(true);
+}
 
-describe("pg-pool internals (pinned: a pg-pool upgrade that moves them fails here)", () => {
-  it("abandonClient detaches checked-out and idle clients without ending them", async () => {
-    const t = createTestPool({ max: 1, idleTimeoutMillis: 100 });
-    const { pool } = t;
-    assertPgPoolInternals(pool);
-    const hold = new AbandonedClientHold(8);
+/** The server session behind a connection (asked while it still answers). */
+async function backendPidOf(client: ClientBase): Promise<number> {
+  const { rows } = await client.query<{ pid: number }>(
+    "select pg_backend_pid() as pid",
+  );
+  return rows[0]!.pid;
+}
 
-    // A checked-out client is in `_clients`, not `_idle`.
-    const a = await pool.connect();
-    expect(internals(pool)._clients).toContain(a);
-    expect(pool.totalCount).toBe(1);
-
-    // The pool is full, so the next checkout queues.
-    const queued = pool.connect();
-    await sleep(10);
-    expect(pool.waitingCount).toBe(1);
-
-    // Abandoning the checked-out client frees its place, and the queued checkout
-    // gets a FRESH client right away (the pulse) — not the abandoned one.
-    abandonClient(pool, a, "jobs-runner", hold);
-    expect(internals(pool)._clients).not.toContain(a);
-    const b = await queued;
-    expect(b).not.toBe(a);
-
-    // A released client sits in `_idle` with its idle timer.
-    b.release();
-    expect(internals(pool)._idle.map((item) => item.client)).toEqual([b]);
-    expect(internals(pool)._idle[0]!.timeoutId).toBeDefined();
-
-    // Abandoning an idle client removes it and cancels that timer: past the
-    // 100 ms idle timeout, pg-pool never ended it.
-    abandonClient(pool, b, "jobs-runner", hold);
-    expect(pool.idleCount).toBe(0);
-    expect(pool.totalCount).toBe(0);
-    await sleep(250);
-    expect(t.ended.has(a)).toBe(false);
-    expect(t.ended.has(b)).toBe(false);
-
-    // Neither has the pool's error listener any more; the abandon's no-op one
-    // absorbs a late socket error instead of crashing the process.
-    expect(() => a.emit("error", new Error("late socket error"))).not.toThrow();
-    expect(() => b.emit("error", new Error("late socket error"))).not.toThrow();
-    expect(hold.size).toBe(2);
+// The server's view, read on a direct session that bypasses the proxy: what a
+// lost connection left behind on the server is the whole point of closing it.
+let observer: Client;
+beforeAll(async () => {
+  observer = new Client({
+    host: PG_SOCKET_DIR,
+    port: PG_PORT,
+    user: PG_USER,
+    database: "postgres",
   });
+  await observer.connect();
+});
+afterAll(async () => {
+  await observer.end();
 });
 
-describe("AbandonedClientHold cap", () => {
-  it("holds up to the cap, then detaches without holding and emits abandon-cap", () => {
-    const clients = [1, 2, 3].map(
-      () => new EventEmitter() as unknown as PoolClient,
-    );
-    let pulses = 0;
-    const fakePool = {
-      _clients: [...clients],
-      _idle: [],
-      _pulseQueue: () => {
-        pulses++;
-      },
-    } as unknown as Pool;
-    const hold = new AbandonedClientHold(2);
-
-    abandonClient(fakePool, clients[0]!, "admin", hold);
-    abandonClient(fakePool, clients[1]!, "admin", hold);
-    expect(events).toEqual([]);
-
-    abandonClient(fakePool, clients[2]!, "admin", hold);
-    expect(events).toEqual([
-      {
-        kind: "abandon-cap",
-        at: expect.any(Number),
-        pool: "admin",
-        abandoned: 3,
-        cap: 2,
-      },
-    ]);
-    expect(hold.size).toBe(2);
-    expect(hold.abandoned).toBe(3);
-    expect(internals(fakePool)._clients).toEqual([]);
-    expect(pulses).toBe(3);
-
-    // Idempotent: a second abandon of the same client does nothing.
-    abandonClient(fakePool, clients[2]!, "admin", hold);
-    expect(events.length).toBe(1);
-    expect(hold.abandoned).toBe(3);
-    expect(() => clients[2]!.emit("error", new Error("late"))).not.toThrow();
-  });
-});
+async function sessionAlive(pid: number): Promise<boolean> {
+  const { rows } = await observer.query<{ n: number }>(
+    "select count(*)::int as n from pg_stat_activity where pid = $1",
+    [pid],
+  );
+  return rows[0]!.n > 0;
+}
 
 // ---------------------------------------------------------------------------
 // The query deadline
 // ---------------------------------------------------------------------------
 
 describe("query deadline on a pooled client", () => {
-  it("rejects a lost query, abandons its connection, and the next query gets a fresh one", async () => {
+  it("rejects a lost query, closes its connection, and the next query gets a fresh one", async () => {
     const t = createTestPool();
     const { pool } = t;
     await warm(pool);
     const warmed = t.acquired.at(-1)!;
 
-    proxy.setForwarding(false);
     const client = await pool.connect();
     expect(client).toBe(warmed);
+    const pid = await backendPidOf(client);
+    proxy.setForwarding(false);
     const t0 = performance.now();
     const err = asDeadlineError(
       await rejectionOf(
@@ -309,23 +237,22 @@ describe("query deadline on a pooled client", () => {
     // No `.code`: the app pool's 40P01/40001 retry must never re-run it.
     expect((err as unknown as { code?: unknown }).code).toBeUndefined();
 
-    // The client is gone from the pool — not ended, not idle, not counted —
-    // and its socket was never closed.
-    expect(internals(pool)._clients).not.toContain(client);
-    expect(internals(pool)._idle.map((i) => i.client)).not.toContain(client);
+    // The client is gone from the pool — handed back as broken, so pg-pool
+    // dropped and ended it — its socket is closed, and so its server session
+    // ended (the proxy passes the close on, as PgBouncer does).
     expect(pool.totalCount).toBe(0);
-    expect(t.ended.has(client)).toBe(false);
-    expect(socketOf(client).destroyed).toBe(false);
+    expect(pool.idleCount).toBe(0);
+    expect(t.ended.has(client)).toBe(true);
+    expect(socketOf(client).destroyed).toBe(true);
+    await until(async () => !(await sessionAlive(pid)));
     expect(() =>
       client.emit("error", new Error("late socket error")),
     ).not.toThrow();
 
     // A later call on the lost client fails at once with the same error, and
-    // releasing it — even as broken — does nothing.
+    // the holder's own release — even as broken — does nothing more.
     expect(await rejectionOf(client.query("select 1"))).toBe(err);
     expect(() => client.release(true)).not.toThrow();
-    expect(t.ended.has(client)).toBe(false);
-    expect(socketOf(client).destroyed).toBe(false);
     expect(pool.totalCount).toBe(0);
 
     // Exactly one emission, carrying the same facts as the error.
@@ -344,11 +271,6 @@ describe("query deadline on a pooled client", () => {
         transaction: "idle",
         inFlight: [],
         inFlightCount: 0,
-        abandoned: {
-          total: expect.any(Number),
-          held: expect.any(Number),
-          inTransaction: expect.any(Number),
-        },
       },
     ]);
 
@@ -376,12 +298,13 @@ describe("query deadline on a pooled client", () => {
     expect(err.sql).toBe("select 7 as lost");
     expect(err.phase).toBe("query");
 
-    // pg-pool answers a failed query with `release(err)` — a destroy — which
-    // the lost client turned into a no-op.
+    // The deadline handed the client back as broken; pg-pool's own
+    // `release(err)` after the failed query then did nothing more (no
+    // double-release throw).
     expect(t.acquired.at(-1)).toBe(warmed);
     expect(pool.totalCount).toBe(0);
-    expect(t.ended.has(warmed)).toBe(false);
-    expect(socketOf(warmed).destroyed).toBe(false);
+    expect(t.ended.has(warmed)).toBe(true);
+    expect(socketOf(warmed).destroyed).toBe(true);
     expect(events.length).toBe(1);
   });
 
@@ -405,7 +328,7 @@ describe("query deadline on a pooled client", () => {
     client.release();
   });
 
-  it("abandons a slow-but-alive query too, and its late reply never returns it to the pool", async () => {
+  it("closes a slow-but-alive query's connection too, and nothing returns it to the pool", async () => {
     const t = createTestPool();
     const { pool } = t;
 
@@ -414,14 +337,115 @@ describe("query deadline on a pooled client", () => {
     );
     expect(err.deadlineMs).toBe(DEADLINE_MS);
     const slow = t.acquired.at(-1)!;
+    expect(socketOf(slow).destroyed).toBe(true);
 
-    // The reply lands ~200 ms after the deadline: it resolves a call already
-    // settled, and pg-pool never sees the client again.
+    // Past when the reply would have landed: pg-pool never sees the client again.
     await sleep(400);
-    expect(internals(pool)._clients).not.toContain(slow);
-    expect(internals(pool)._idle.map((i) => i.client)).not.toContain(slow);
-    expect(t.ended.has(slow)).toBe(false);
+    expect(pool.totalCount).toBe(0);
+    expect(pool.idleCount).toBe(0);
+    expect(t.ended.has(slow)).toBe(true);
     expect(events.length).toBe(1);
+  });
+
+  it("a connection lost inside a transaction is closed: its session ends and its locks are released", async () => {
+    // The 2026-11-03 shape: a transaction holding a lock, its next statement
+    // lost. Abandoned, the session stayed `idle in transaction` with the lock
+    // for five hours; closed, Postgres rolls it back at once.
+    const t = createTestPool();
+    const { pool } = t;
+    const client = await pool.connect();
+    const pid = await backendPidOf(client);
+    await client.query("begin");
+    await client.query("select pg_advisory_xact_lock(4242)");
+    expect(await sessionAlive(pid)).toBe(true);
+
+    proxy.setForwarding(false);
+    const err = asDeadlineError(
+      await rejectionOf(client.query("select 2 as lost_in_tx")),
+    );
+    expect(events).toMatchObject([{ kind: "deadline", transaction: "open" }]);
+    expect(err.sql).toBe("select 2 as lost_in_tx");
+
+    await until(async () => !(await sessionAlive(pid)));
+    const { rows } = await observer.query<{ got: boolean }>(
+      "select pg_try_advisory_lock(4242) as got",
+    );
+    expect(rows[0]!.got).toBe(true);
+    await observer.query("select pg_advisory_unlock(4242)");
+
+    client.release();
+    expect(pool.totalCount).toBe(0);
+  });
+
+  it("a client released with its call still pending is dropped from the pool when the call is lost", async () => {
+    // A holder bug — release() while its statement is in flight — leaves the
+    // client idle in the pool. Lost, it must not be handed out again.
+    const { pool } = createTestPool({ max: 1 });
+    await warm(pool);
+    const client = await pool.connect();
+    proxy.setForwarding(false);
+    const lost = rejectionOf(client.query("select 1 as pending"));
+    client.release();
+    expect(pool.idleCount).toBe(1);
+
+    asDeadlineError(await lost);
+    await until(() => pool.totalCount === 0);
+    expect(pool.idleCount).toBe(0);
+    expect(socketOf(client).destroyed).toBe(true);
+
+    proxy.setForwarding(true);
+    const next = await pool.connect();
+    expect(next).not.toBe(client);
+    next.release();
+  });
+
+  it("an unexpected error on a closed lost client is reported once, never swallowed or fatal", async () => {
+    const reports: Parameters<Parameters<typeof setErrorReporter>[0]>[0][] = [];
+    setErrorReporter((r) => reports.push(r));
+    try {
+      const client = createDbClient({
+        name: "change-feed",
+        connectionString: proxiedConnectionString(),
+        deadlineMs: DEADLINE_MS,
+      });
+      proxy.setForwarding(false);
+      asDeadlineError(await rejectionOf(client.connect()));
+      expect(reports).toEqual([]);
+      client.emit("error", new Error("late surprise"));
+      client.emit("error", new Error("and another"));
+      expect(reports).toHaveLength(1);
+      expect(reports[0]!.message).toBe(
+        "[db] pool=change-feed: error on a connection closed after a missed deadline: late surprise",
+      );
+    } finally {
+      setErrorReporter(() => {});
+    }
+  });
+
+  it("a lost background-lease checkout: the holder's wrapped release after the loss does nothing more", async () => {
+    // A holder that wraps `release` (the app pool's background lease does) —
+    // the deadline returns the client through pg-pool's own release, and the
+    // holder's wrapper, called later, neither throws nor returns it twice.
+    const t = createTestPool();
+    const { pool } = t;
+    const client = await pool.connect();
+    const inner = client.release.bind(client);
+    let wrapperCalls = 0;
+    client.release = (err?: Error | boolean) => {
+      wrapperCalls++;
+      inner(err);
+    };
+    proxy.setForwarding(false);
+    asDeadlineError(await rejectionOf(client.query("select 1 as lost")));
+    expect(pool.totalCount).toBe(0);
+    expect(socketOf(client).destroyed).toBe(true);
+    expect(() => client.release()).not.toThrow();
+    expect(wrapperCalls).toBe(0);
+
+    proxy.setForwarding(true);
+    expect((await pool.query<{ ok: number }>("select 1 as ok")).rows).toEqual([
+      { ok: 1 },
+    ]);
   });
 
   it("a transaction that hangs rejects once; its ROLLBACK fails at once with the same error", async () => {
@@ -448,8 +472,8 @@ describe("query deadline on a pooled client", () => {
     // release() was absorbed.
     expect(events.length).toBe(1);
     const leased = t.acquired.at(-1)!;
-    expect(internals(pool)._clients).not.toContain(leased);
-    expect(t.ended.has(leased)).toBe(false);
+    expect(t.ended.has(leased)).toBe(true);
+    expect(socketOf(leased).destroyed).toBe(true);
 
     // The pool recovers: the next transaction runs on a new client.
     proxy.setForwarding(true);
@@ -467,17 +491,29 @@ describe("query deadline on a pooled client", () => {
 // ---------------------------------------------------------------------------
 
 describe("connect deadline", () => {
-  it("fails a pooled checkout whose connection never answers, and the pool forgets the client without closing it", async () => {
+  it("fails a pooled checkout whose connection never answers, and the pool drops the closed client", async () => {
     const t = createTestPool({ max: 1 });
     const { pool } = t;
+    // pg-pool builds each client as `new pool.Client(options)`: record them.
+    const built: ClientBase[] = [];
+    const host = pool as unknown as {
+      Client: new (...args: unknown[]) => ClientBase;
+    };
+    const Base = host.Client;
+    host.Client = class extends Base {
+      constructor(...args: unknown[]) {
+        super(...args);
+        built.push(this);
+      }
+    };
 
     proxy.setForwarding(false);
     const first = rejectionOf(pool.connect());
     const queued = rejectionOf(pool.connect()); // waits: the pool is full
     await sleep(20);
     expect(pool.waitingCount).toBe(1);
-    const connecting = internals(pool)._clients[0]!;
-    expect(connecting).toBeDefined();
+    expect(pool.totalCount).toBe(1);
+    const connecting = built[0]!;
 
     const err = asDeadlineError(await first);
     expect(err.pool).toBe("jobs-runner");
@@ -485,16 +521,12 @@ describe("connect deadline", () => {
     expect(err.sql).toBe("[connect]");
     expect(err.deadlineMs).toBe(DEADLINE_MS);
 
-    // pg-pool dropped it from `_clients`; nothing ended it or closed its socket;
-    // the pool's idle `error` listener (whose firing ends a client) was taken
-    // off again, leaving only the abandon's no-op one.
-    expect(internals(pool)._clients).not.toContain(connecting);
-    expect(socketOf(connecting).destroyed).toBe(false);
-    expect(connecting.listeners("error")).toHaveLength(1);
+    // pg-pool's connect callback dropped it; the deadline closed its socket,
+    // and a late socket error on it is absorbed.
+    expect(socketOf(connecting).destroyed).toBe(true);
     expect(() =>
       connecting.emit("error", new Error("late socket error")),
     ).not.toThrow();
-    expect(socketOf(connecting).destroyed).toBe(false);
 
     // The waiting checkout got a new client (the pulse), which is black-holed
     // too: it fails on its own bound rather than waiting forever.
@@ -502,10 +534,7 @@ describe("connect deadline", () => {
     expect(queuedErr).not.toBe(err);
     expect(queuedErr.phase).toBe("connect");
     expect(pool.totalCount).toBe(0);
-    expect(events.map((e) => e.kind === "deadline" && e.phase)).toEqual([
-      "connect",
-      "connect",
-    ]);
+    expect(events.map((e) => e.phase)).toEqual(["connect", "connect"]);
 
     // Recovery.
     proxy.setForwarding(true);
@@ -515,7 +544,7 @@ describe("connect deadline", () => {
     expect(t.ended.size).toBe(0);
   });
 
-  it("fails a standalone client's connect; later calls fail at once, end() closes nothing", async () => {
+  it("fails a standalone client's connect and closes it; later calls fail at once", async () => {
     const client: DbClient = createDbClient({
       name: "change-feed",
       connectionString: proxiedConnectionString(),
@@ -535,9 +564,9 @@ describe("connect deadline", () => {
     expect(err.origin).toBe("change-feed.listen");
     expect(client.lostError).toBe(err);
 
+    expect(socketOf(client).destroyed).toBe(true);
     expect(await rejectionOf(client.query("LISTEN x"))).toBe(err);
     await client.end();
-    expect(socketOf(client).destroyed).toBe(false);
     expect(() =>
       client.emit("error", new Error("late socket error")),
     ).not.toThrow();
@@ -556,11 +585,6 @@ describe("connect deadline", () => {
         transaction: null,
         inFlight: [],
         inFlightCount: 0,
-        abandoned: {
-          total: expect.any(Number),
-          held: expect.any(Number),
-          inTransaction: expect.any(Number),
-        },
       },
     ]);
   });
@@ -823,7 +847,7 @@ describe("what a missed deadline reports it was part of", () => {
     const head = await connect();
     const waiter = await connect();
     // The head is inside an open transaction when its next statement is lost —
-    // the 2026-11-03 shape: an abandoned connection holding row locks.
+    // the 2026-11-03 shape: a lost connection holding row locks.
     await head.query("begin");
     await head.query("select 1");
 
@@ -842,10 +866,7 @@ describe("what a missed deadline reports it was part of", () => {
     asDeadlineError(await waiterLost);
     asDeadlineError(await headLost);
 
-    const deadlines = events.filter(
-      (e): e is Extract<QueryDeadlineEvent, { kind: "deadline" }> =>
-        e.kind === "deadline",
-    );
+    const deadlines = events;
     expect(deadlines.map((e) => e.origin)).toEqual([
       "usage:sync waiter",
       "usage:sync head",
@@ -869,11 +890,9 @@ describe("what a missed deadline reports it was part of", () => {
     expect(first!.inFlight[0]!.ageMs).toBeGreaterThanOrEqual(DEADLINE_MS - 100);
 
     // The head: sent inside an open transaction, nothing left in flight (the
-    // waiter's call settled at its own deadline), and the hold now counts it
-    // among the abandoned connections left in a transaction.
+    // waiter's call settled at its own deadline).
     expect(second!.transaction).toBe("open");
     expect(second!.inFlight).toEqual([]);
     expect(second!.inFlightCount).toBe(0);
-    expect(second!.abandoned.inTransaction).toBeGreaterThanOrEqual(1);
   });
 });

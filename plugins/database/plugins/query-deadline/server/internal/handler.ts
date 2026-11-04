@@ -5,14 +5,12 @@ import {
 import type { recordReport } from "@plugins/reports/plugins/engine/server";
 import type { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import {
-  DB_ABANDON_CAP_KIND,
   DB_QUERY_DEADLINE_KIND,
-  type DbAbandonCapPayload,
   type DbQueryDeadlinePayload,
 } from "../../core";
 import type { HitRing } from "./hit-ring";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
-import { abandonCapMessage, queryDeadlineMessage } from "./render";
+import { queryDeadlineMessage } from "./render";
 
 export interface QueryDeadlineHandlerDeps {
   /**
@@ -58,21 +56,6 @@ export function createQueryDeadlineHandler(
   // entry per (pool, phase): bounded by the closed name sets.
   const lastTrace = new Map<string, { id: string; at: number }>();
   return (event) => {
-    if (event.kind === "abandon-cap") {
-      const data: DbAbandonCapPayload = {
-        pool: event.pool,
-        abandoned: event.abandoned,
-        cap: event.cap,
-      };
-      void deps.recordReport({
-        kind: DB_ABANDON_CAP_KIND,
-        source: "server-caught",
-        message: abandonCapMessage(data),
-        data,
-      });
-      return;
-    }
-
     // The durable line first: it needs no database, so it lands even when the
     // report write below is the call that cannot reach one.
     deps.log(formatDeadlineLogLine(event));
@@ -97,7 +80,6 @@ export function createQueryDeadlineHandler(
       transaction: event.transaction,
       inFlight: event.inFlight,
       inFlightCount: event.inFlightCount,
-      abandoned: event.abandoned,
     };
     // The evidence: everything in flight at this instant (spans, gates, host
     // and Postgres contention), linked from the report. Critical, like a stuck

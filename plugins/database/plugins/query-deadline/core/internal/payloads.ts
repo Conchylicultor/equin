@@ -20,7 +20,7 @@ export type InFlightDbCall = z.infer<typeof InFlightDbCallSchema>;
 /**
  * The jsonb payload behind a `db-query-deadline` report: one database call — on
  * any backend connection, opening it or running a query on it — got no answer
- * before its deadline, failed its caller, and had its connection abandoned.
+ * before its deadline, failed its caller, and had its connection closed.
  *
  * Rows filed before every connection carried a deadline have no `pool` / `phase`
  * (and may carry a since-removed `leased` flag, which parsing strips): they were
@@ -58,9 +58,8 @@ export const DbQueryDeadlinePayloadSchema = z.object({
   // filed before these were carried parse with "not recorded" defaults. ---
   /**
    * The lost connection's transaction state as of its last reply: `open` (or
-   * `failed`) means the call was sent inside a transaction, so if the server
-   * has it, that transaction and its row locks stay open. Null for a connect,
-   * and for older rows.
+   * `failed`) means the call was sent inside a transaction, which closing the
+   * connection rolled back. Null for a connect, and for older rows.
    */
   transaction: z.enum(DB_TX_STATES).nullable().default(null),
   /** Every other call pending at the expiry instant, oldest first, capped. */
@@ -72,23 +71,8 @@ export const DbQueryDeadlinePayloadSchema = z.object({
    * Null for older rows, which did not record it — not "none were".
    */
   inFlightCount: z.number().int().nullable().default(null),
-  /**
-   * The abandoned-connection hold right after this abandon: how many lost
-   * connections the process keeps open, and how many were left inside a
-   * transaction — each a server session that may still hold locks. Null for
-   * older rows.
-   */
-  abandoned: z
-    .object({
-      /** Every abandon since the backend started. */
-      total: z.number().int(),
-      /** How many of them the hold keeps (at most its cap). */
-      held: z.number().int(),
-      /** How many of the held were left inside a transaction. */
-      inTransaction: z.number().int(),
-    })
-    .nullable()
-    .default(null),
+  // Rows filed while lost connections were abandoned (before 2026-11-04) also
+  // carry an `abandoned` hold count, which parsing strips.
   /** The trace of everything in flight at the expiry (Debug → Slow Events), when one was captured. */
   traceId: z.string().nullable().default(null),
 });
@@ -97,13 +81,11 @@ export type DbQueryDeadlinePayload = z.infer<
 >;
 
 /**
- * The jsonb payload behind a `db-abandon-cap` report: the process has abandoned
- * more connections than the database plugin's capped hold set is sized for.
- *
- * A separate kind (not a second fingerprint of `db-query-deadline`) because it
- * is a different fact with a different shape: one query lost vs. what the lost
- * queries add up to for the whole process. Sharing a kind would force one
- * schema to describe both, with every field optional.
+ * The jsonb payload behind a `db-abandon-cap` report — a RETIRED kind: the
+ * process had abandoned more lost connections than the connection plugin's
+ * capped hold set was sized for. Nothing files it since lost connections are
+ * closed instead (2026-11-04); kept so existing rows still validate, render and
+ * can be investigated.
  */
 export const DbAbandonCapPayloadSchema = z.object({
   /**

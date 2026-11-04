@@ -13,7 +13,7 @@ This plugin ships:
 
 - **Single embedded cluster, supervised by the gateway.** The gateway's generic service supervisor invokes `scripts/start.ts`, which runs `initdb` on first start (writing to `~/.equin/postgres/data-pg18/`), `pg_ctl start -w` to launch PG, and then `CREATE DATABASE` for the base database if the cluster does not have it. `pg_ctl` daemonizes PG (forks + setsid), so the spawned process exits as soon as PG is ready, leaving PG running with no parent. PG listens on a Unix socket at `~/.equin/postgres/socket/.s.PGSQL.5433`.
 - **The base database is born with the cluster.** The base database is the one that is nobody's copy — every other database in the app is minted from it — so the script that brings the cluster up creates it, empty, on every start (reattach included, so a dropped one comes back). Its schema is not this plugin's business: the first backend to boot against it runs the migrations. Before this, nothing anywhere created it, and a fresh clone's first build waited 60s for a fork of a database that did not exist.
-- **Session settings are the cluster's.** A setting every session on every database must start with (`CLUSTER_SESSION_SETTINGS` in `shared/` — today the interim `idle_in_transaction_session_timeout` backstop, and `log_connections` — `receipt,setup_durations`, so a connection stall shows in `postgres.log` whether the postmaster accepted the socket and how long the backend took to be ready) is written by the start script with `ALTER SYSTEM` + `pg_reload_conf()` on every start, reattach included — one writer per cluster start. Never `ALTER DATABASE … SET` it from a backend's boot: every process booting the DB layer (the server and each supervised exec child) would write the same `pg_db_role_setting` row, and concurrent boots fail with `tuple concurrently updated`; a fork would not carry it either.
+- **Session settings are the cluster's.** A setting every session on every database must start with (`CLUSTER_SESSION_SETTINGS` in `shared/` — today `client_connection_check_interval`, so a statement whose client closed its connection — a call lost to its deadline, which `database/connection` closes — is cancelled within 10 s instead of running or waiting on a lock to completion, and `log_connections` — `receipt,setup_durations`, so a connection stall shows in `postgres.log` whether the postmaster accepted the socket and how long the backend took to be ready) is written by the start script with `ALTER SYSTEM` + `pg_reload_conf()` on every start, reattach included — one writer per cluster start. A setting the cluster must no longer carry goes in `RETIRED_CLUSTER_SETTINGS`: the same start `ALTER SYSTEM RESET`s it and `ALTER DATABASE … RESET`s it on every database still carrying its own copy (today `idle_in_transaction_session_timeout`, the interim backstop for abandoned connections, whose first version was set per database). Never `ALTER DATABASE … SET` it from a backend's boot: every process booting the DB layer (the server and each supervised exec child) would write the same `pg_db_role_setting` row, and concurrent boots fail with `tuple concurrently updated`; a fork would not carry it either.
 - **Cluster shared by every worktree backend.** Isolation comes from per-worktree databases inside the cluster, not separate clusters. Worktree backends connect via `~/.equin/postgres/socket` on port 5433 (see `server/src/db/client.ts`).
 - **PG outlives gateway and central restarts.** Because PG is detached, both `./equin build` (which restarts central) and `./equin start` (which rebuilds + relaunches the gateway) leave PG untouched. Worktree backends keep their pools alive across both blips. A reattach check (pidfile + socket dial) lets a freshly-started gateway pick up an already-running PG instead of trying to spawn a duplicate.
 - **Binaries from `embedded-postgres` npm.** The package vendors PG 18 binaries per platform via `@embedded-postgres/<platform>` optionalDependencies. The package only ships `postgres`, `initdb`, and `pg_ctl`. Client tools (`pg_isready`, `psql`) are replaced with `pg.Client` calls / `net.Dial` socket pings; `pg_dump`/`pg_restore` are vendored by the sibling [`client-tools`](../client-tools/CLAUDE.md) plugin, built from the same Postgres release — the `postgres-release` lockstep group (in client-tools' `package.json`) makes the npm updater move both together, and `deps-npm:groups-coherent` fails when the lock disagrees.
@@ -71,8 +71,8 @@ Worktree backends read connection params from `~/.equin/state/db-config/database
   - Exports (types): `ClusterSettingsClient`
   - Exports (values):
     - `applyClusterSettings`
+    - `CLIENT_CONNECTION_CHECK_INTERVAL_MS`
     - `CLUSTER_SESSION_SETTINGS`
-    - `IDLE_IN_TRANSACTION_TIMEOUT_MS`
     - `MAX_CONNECTIONS`
     - `PG_BASE_DATABASE`
     - `PG_DATA_DIR`
@@ -84,5 +84,6 @@ Worktree backends read connection params from `~/.equin/state/db-config/database
     - `PG_SOCKET_DIR`
     - `PG_USER`
     - `pgPostmasterPidFile`
+    - `RETIRED_CLUSTER_SETTINGS`
 
 <!-- AUTOGENERATED:END -->

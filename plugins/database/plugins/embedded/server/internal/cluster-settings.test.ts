@@ -4,8 +4,8 @@
  *
  * Runs `applyClusterSettings` against the live cluster — the same idempotent
  * write the start script makes on every cluster start, with the same values,
- * so it changes nothing a gateway start would not — from several sessions at
- * once, then creates a database and opens a fresh session on it.
+ * so it changes nothing a gateway start would not — once, then from several
+ * sessions at once, then creates a database and opens a fresh session on it.
  *
  * Run: `./equin test plugins/database/plugins/embedded`.
  */
@@ -16,6 +16,7 @@ import { queryOne } from "@plugins/database/plugins/sql-rows/core";
 import {
   applyClusterSettings,
   CLUSTER_SESSION_SETTINGS,
+  RETIRED_CLUSTER_SETTINGS,
 } from "../../shared/internal/cluster-settings";
 import { PG_PORT, PG_SOCKET_DIR, PG_USER } from "../../shared";
 
@@ -41,9 +42,21 @@ async function withSession<T>(
 }
 
 const testDb = `cluster_settings_test_${process.pid}_${Date.now().toString(36)}`;
+// A database left with its own copy of every retired setting — what the first,
+// per-database version of the idle-in-transaction backstop left behind.
+const legacyDb = `${testDb}_legacy`;
 
 beforeAll(async () => {
-  // Concurrent applications, each on its own session: all succeed.
+  await withSession("postgres", async (c) => {
+    await c.query(`CREATE DATABASE "${legacyDb}"`);
+    for (const name of RETIRED_CLUSTER_SETTINGS) {
+      await c.query(`ALTER DATABASE "${legacyDb}" SET ${name} = '1min'`);
+    }
+  });
+  // One application resets every retired copy (a catalog write per database
+  // carrying one); after it, concurrent applications — each on its own
+  // session — have no catalog row left to write, and all succeed.
+  await withSession("postgres", applyClusterSettings);
   await Promise.all(
     Array.from({ length: 4 }, () =>
       withSession("postgres", applyClusterSettings),
@@ -56,6 +69,9 @@ beforeAll(async () => {
 afterAll(async () => {
   await withSession("postgres", (c) =>
     c.query(`DROP DATABASE IF EXISTS "${testDb}" WITH (FORCE)`),
+  );
+  await withSession("postgres", (c) =>
+    c.query(`DROP DATABASE IF EXISTS "${legacyDb}" WITH (FORCE)`),
   );
 });
 
@@ -76,4 +92,19 @@ test("a new session on a database created after them carries every setting", asy
       expect(row.source).toBe("configuration file");
     }
   });
+});
+
+test("a retired setting is gone: from the cluster's file and from a database's own copy", async () => {
+  for (const database of [testDb, legacyDb]) {
+    await withSession(database, async (client) => {
+      for (const name of RETIRED_CLUSTER_SETTINGS) {
+        const row = await queryOne(client, {
+          sql: "SELECT source FROM pg_settings WHERE name = $1",
+          params: [name],
+          row: z.object({ source: z.string() }),
+        });
+        expect(row.source).toBe("default");
+      }
+    });
+  }
 });

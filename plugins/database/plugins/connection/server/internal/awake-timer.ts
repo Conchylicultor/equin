@@ -9,7 +9,8 @@
 //
 // That is what wedged main on 2026-11-03: a usage-sync upsert was issued at
 // 20:02, the machine slept until 20:18, the 60 s deadline fired on wake with
-// 578 ms of awake time elapsed, and the connection was abandoned in the middle
+// 578 ms of awake time elapsed, and the connection was abandoned (left open,
+// never closed — the rule until 2026-11-04) in the middle
 // of its transaction — which Postgres then kept open, locks held, for five hours
 // (connection's CLAUDE.md, "A sleep is not a silent connection").
 //

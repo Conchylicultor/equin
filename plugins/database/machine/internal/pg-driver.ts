@@ -131,11 +131,9 @@ export const BACKGROUND_POOL_SIZE = PGBOUNCER_LANES.background.poolSize;
 // are the same number, in PgBouncer's background pool — so it can always finish
 // and release the slots the transactions wait on, and no cycle can close. That
 // inequality IS the proof, so it is asserted below at module load rather than
-// left in prose. (It assumes the lane's PgBouncer slots are the app's to use: an
-// ABANDONED connection keeps its server slot, shrinking the lane until the
-// abandon is fixed — research/2026-11-04-global-db-connection-failure-vision.md,
-// task 2. Then the background lane wedges loudly, its calls missing their
-// deadline on pool `app-background`, and the interactive pool is untouched.)
+// left in prose. (It assumes the lane's PgBouncer slots are the app's to use: a
+// connection lost to its deadline is CLOSED, so PgBouncer frees its slot — it no
+// longer keeps it, as the abandoned ones did on 2026-11-03.)
 // Exported for co-located unit testing: the deadlock proof is an arithmetic
 // relation, so the test asserts the relation rather than re-deriving numbers.
 export const BACKGROUND_TX_MAX = 3;
@@ -303,7 +301,7 @@ function retryableSqlState(err: unknown): string | null {
 
 // The deadline is not this wrapper's: every client of the app pool is a
 // `DbClient` (`createDbPool`, @plugins/database/plugins/connection), which bounds
-// each `connect()` and `query()` on the connection itself and abandons a lost
+// each `connect()` and `query()` on the connection itself and closes a lost
 // one. What only the app pool has stays here — lane gates, deadlock retry,
 // `[acquire]` spans, read-set capture — plus the one piece of lease bookkeeping
 // that must end with a lost connection: the background-transaction gate slot.
@@ -381,7 +379,8 @@ export function installQueryWrapper(pool: Pool, background: Pool): void {
         return res;
       } finally {
         // Success or error, the connection goes back — unless the deadline lost
-        // it, where the client's own `release()` is a no-op (it was abandoned).
+        // it, where the client's own `release()` is a no-op (the deadline
+        // already handed it back, closed).
         client.release();
       }
     };
@@ -470,7 +469,7 @@ export function installQueryWrapper(pool: Pool, background: Pool): void {
   // pool: the lane split holds for transactions as it does for statements.
   //
   // Every query on the checked-out client is bounded by the client itself; a lost
-  // one abandons it, and the lease's slot is freed with it (`armLease`).
+  // one closes it, and the lease's slot is freed with it (`armLease`).
   // biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded connect signature.
   pool.connect = ((...a: Parameters<typeof origConnect>): any => {
     // Callback form — untouched, exactly like `pool.query`'s. Nothing in the repo
@@ -619,7 +618,7 @@ export function tagClientQueriesWithOrigin(client: PoolClient): void {
 //     `err` is truthy, and swallowing it would quietly return a poisoned
 //     connection to the pool), and the slot is freed;
 //   - a call on the client misses its deadline first: the client is lost and
-//     abandoned by the connection plugin, and the slot is freed right then —
+//     closed by the connection plugin, and the slot is freed right then —
 //     drizzle calls no `release()` at all when its `BEGIN` is the statement that
 //     hung. The holder's later `release()` reaches the client's own, which is a
 //     no-op on a lost client.

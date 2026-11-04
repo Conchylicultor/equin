@@ -120,7 +120,7 @@ setting survives into the next client's transaction.
   the untagged path (within run-to-run noise) — against a round trip of
   ≥ 100 µs through pgbouncer.
 
-## Query deadline (a call with no reply fails; its connection is abandoned)
+## Query deadline (a call with no reply fails; its connection is closed)
 
 Every database call on **every backend connection** has a client-side deadline —
 **60 s** by default — on both phases: **opening a connection** and **each query**.
@@ -141,10 +141,14 @@ live-state flush awaiting it waited forever
 (`research/2026-09-16-global-db-call-deadline-every-connection.md`).
 
 On expiry the caller gets `QueryDeadlineExceededError` (no `.code`, so the
-deadlock retry never re-runs it), the connection is **abandoned, never closed**
-(its fd may already be someone else's), later calls on it fail at once, its
-`release()` / `end()` do nothing, and the event goes to `queryDeadlineSink`
-(reported by `database/query-deadline`).
+deadlock retry never re-runs it), the connection is **closed** — dropped from
+its pool and its socket destroyed, so Postgres rolls back its transaction and
+releases its locks, and PgBouncer frees its slot — later calls on it fail at
+once, the holder's own `release()` does nothing more, and the event goes to
+`queryDeadlineSink` (reported by `database/query-deadline`). Until 2026-11-04
+a lost connection was abandoned instead (never closed), for fear of a stray fd
+close whose culprit — Bun's own double close, oven-sh/bun#33828 — was found and
+fixed on 2026-09-16; see the connection plugin's "Why close".
 
 What the app pool (`machine/internal/pg-driver.ts`) adds on top:
 
@@ -218,9 +222,11 @@ pool `app-background`), so the two cannot disagree. drizzle is built over the
 interactive pool; `installQueryWrapper(front, background)` routes a
 background-origin statement or transaction to the background pool.
 
-Why: a connection lost to a deadline is abandoned and keeps its PgBouncer server
-slot while it sits idle in a transaction. On 2026-11-03, 16 of them took the one
-shared pool and `/home` hung. Now background trouble can exhaust only the
+Why: on 2026-11-03, 16 background connections lost to a deadline were
+abandoned (never closed, the rule then), each keeping its PgBouncer server slot
+while it sat idle in a transaction; they took the one shared pool and `/home`
+hung. Lost connections are closed now, but background work can still fill its
+slots by being slow or blocked: with a pool per lane it exhausts only the
 background pool — loudly, its calls missing their deadline on `app-background` —
 and the interactive pool is never shared with it. Isolation, not headroom:
 `research/2026-11-04-global-pgbouncer-pool-per-lane.md`.
@@ -271,10 +277,9 @@ the terminal holders always complete: bg-tx holders pin ≤3 connections and
 bg-query holders ≤7, so every query holder finds a background connection — in the
 app pool and in PgBouncer, the same number — to finish and release the slots the
 transactions wait on. The inequality is asserted at module load, not left in
-prose. (An abandoned connection keeps its PgBouncer slot and shrinks the lane;
-that is the abandon rule's flaw, task 2 of the 2026-11-04 vision, and it wedges
-the background lane only.) **Never raise either cap
-without re-checking it.**
+prose. (It assumes the lane's PgBouncer slots are the app's: a connection lost
+to its deadline is closed, so PgBouncer frees its slot rather than keeping it.)
+**Never raise either cap without re-checking it.**
 
 The proof also needs background transaction leases **never to nest**: a holder of
 one bg-tx slot waiting for a second closes a cycle inside the bg-tx gate itself,
@@ -321,6 +326,51 @@ See `research/2026-07-09-global-interactive-lane-origin-based-db-gating.md` and 
 forensic companion `research/2026-07-09-global-interactive-lane-under-load.md`; also
 `research/2026-06-19-global-live-state-unified-read-path-v2.md` (Task 2) and
 `research/2026-06-19-global-wait-attribution-instrumentation.md`.
+
+## Runbook: a database wedged by a lock chain
+
+Symptom: pages hang on "Waiting for the server…", `db.jsonl` shows
+`[deadline]` lines even for trivial SQL, the health report's Database row says
+"Blocked now: <origin> holds N sessions" (`database/lock-watch`), and
+`db-lock-holder` / `db-query-deadline` reports name the caller.
+
+Look, read-only (`query_db`, or `psql` on the cluster's socket), at the
+database's sessions:
+
+```sql
+select pid, state, wait_event_type, wait_event, xact_start, query_start,
+       pg_blocking_pids(pid) as blocked_by, left(query, 120) as query
+from pg_stat_activity where datname = '<database>' order by xact_start;
+```
+
+The blocker heads a chain: a session that others wait on with
+`wait_event_type = 'Lock'`, itself `idle in transaction` (its client stopped
+talking mid-transaction) or `active` on something slow. The leading
+`/* origin=… */` comment of its `query` names the code that opened it.
+
+Since 2026-11-04 a lost connection is closed, so a chain built of LOST calls
+clears by itself: a client whose call misses its 60 s deadline closes its
+connection, Postgres rolls that transaction back, and the cluster's
+`client_connection_check_interval` cancels a closed waiter's lock wait within
+10 s. What the deadline does not cover is a head whose client is alive but not
+talking: `idle in transaction` with no call pending — the app holding a
+transaction open between two statements (awaiting something else, or wedged
+in its own code), or a caller under a long `withQueryDeadline` bound (boot DDL:
+15 min), or a connection built outside `database/connection`
+(`db-connection/no-raw-pg-connection` bans one). A chain standing for more
+than a minute past its members' deadlines is one of those: the origin names
+the code — fix that, then free the database.
+
+To free it now: end the **whole chain** older than the deadline — the head and
+every waiter — not only the head:
+`select pg_terminate_backend(pid) from pg_stat_activity where datname = '<database>' and xact_start < now() - interval '60 seconds' and (pid = <head> or <head> = any(pg_blocking_pids(pid)))`
+(repeat while waiters remain). Ending only the head hands the lock to the next
+waiter, which finishes its statement and, if its client is gone, sits idle in
+its transaction in turn — what happened on 2026-11-03, when every waiter had
+been abandoned. Or restart the backend that holds the sockets (a push to main
+does it): its connections close, and Postgres rolls every one of them back.
+`query_db` is read-only, so terminating needs a superuser session on the
+cluster's socket.
 
 ## Import-safety (lazy pool)
 

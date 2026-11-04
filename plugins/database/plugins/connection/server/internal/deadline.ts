@@ -70,7 +70,7 @@ export function txStateOf(
 /**
  * What the deadline tells the outside world, through `queryDeadlineSink`.
  *
- * - `deadline` — one call missed its deadline and its connection was abandoned.
+ * - `deadline` — one call missed its deadline and its connection was closed.
  *   `pool` names the connection (`createDbPool` / `createDbClient` name);
  *   `phase` is `connect` (opening it) or `query` (a statement on it).
  *   `sql` is the query's label exactly as its `<sql>` profiler span records it,
@@ -80,55 +80,39 @@ export function txStateOf(
  *   enclosing `withQueryDeadline` scope's reason, `null` under the default bound.
  *   What the call was part of, so a report can say WHY it was lost, not only
  *   that it was: `transaction` is the lost connection's state as of its last
- *   reply (`null` for a connect, which has none) — `open` means the server may
- *   still hold that transaction's locks; `inFlight` is every call pending on
+ *   reply (`null` for a connect, which has none) — `open` means the lost call
+ *   was part of a transaction, which the close rolled back (Postgres ends a
+ *   session whose client is gone); `inFlight` is every call pending on
  *   this process's OTHER connections at the expiry instant (those queued on the
  *   lost one never reached the server), oldest first, at most
- *   `IN_FLIGHT_REPORT_MAX` (`core`) of them (`inFlightCount` counts them all);
- *   and `abandoned` is the hold right after this abandon — every abandon since
- *   boot (`total`), how many the hold keeps (`held`, at most its cap), and how
- *   many of the held were left inside a transaction.
- * - `abandon-cap` — an abandon (on `pool`) landed after `cap` connections were
- *   already being held; this one is detached but no longer retained (see
- *   `abandonClient`). `abandoned` counts every abandon since boot.
+ *   `IN_FLIGHT_REPORT_MAX` (`core`) of them (`inFlightCount` counts them all).
  *
  * `at` is epoch ms (`Date.now()`).
  */
-export type QueryDeadlineEvent =
-  | {
-      kind: "deadline";
-      at: number;
-      pool: DbPoolName;
-      phase: DbCallPhase;
-      sql: string;
-      elapsedMs: number;
-      deadlineMs: number;
-      origin: string | null;
-      reason: string | null;
-      transaction: DbTxState | null;
-      inFlight: InFlightDbCall[];
-      inFlightCount: number;
-      abandoned: { total: number; held: number; inTransaction: number };
-    }
-  | {
-      kind: "abandon-cap";
-      at: number;
-      pool: DbPoolName;
-      abandoned: number;
-      cap: number;
-    };
+export interface QueryDeadlineEvent {
+  kind: "deadline";
+  at: number;
+  pool: DbPoolName;
+  phase: DbCallPhase;
+  sql: string;
+  elapsedMs: number;
+  deadlineMs: number;
+  origin: string | null;
+  reason: string | null;
+  transaction: DbTxState | null;
+  inFlight: InFlightDbCall[];
+  inFlightCount: number;
+}
 
 /**
  * The one spelling of a missed deadline's log line: `db.jsonl` in a backend
  * (written by the sink handler), stderr in a CLI process.
  */
-export function formatDeadlineLogLine(
-  event: Extract<QueryDeadlineEvent, { kind: "deadline" }>,
-): string {
+export function formatDeadlineLogLine(event: QueryDeadlineEvent): string {
   return (
     `[deadline] pool=${event.pool} phase=${event.phase} no reply in ${event.elapsedMs}ms ` +
     `(bound ${event.deadlineMs}ms${event.reason ? `, ${event.reason}` : ""}) ` +
-    `origin=${event.origin ?? "-"} sql=${event.sql.slice(0, 160)} — connection abandoned`
+    `origin=${event.origin ?? "-"} sql=${event.sql.slice(0, 160)} — connection closed`
   );
 }
 
@@ -141,9 +125,9 @@ export const queryDeadlineSink = defineReportSink<QueryDeadlineEvent>();
 
 /**
  * A database call got no reply within its deadline. The caller's promise (or
- * callback) gets this; the connection it ran on has been abandoned (never
- * reused, never closed), and every later call on that connection gets this same
- * error at once.
+ * callback) gets this; the connection it ran on has been closed (out of its
+ * pool, its server session ended), and every later call on that connection
+ * gets this same error at once.
  *
  * Deliberately carries no `code`: the app pool's 40P01/40001 retry keys on
  * `err.code`, and a lost query must never be re-run on another connection behind
@@ -176,7 +160,7 @@ export class QueryDeadlineExceededError extends Error {
       `${what} (pool ${fields.pool}) got no reply within ${fields.deadlineMs}ms ` +
         `(${fields.elapsedMs}ms elapsed${fields.origin ? `, issued by ${fields.origin}` : ""}` +
         `${fields.reason ? `, bound: ${fields.reason}` : ""}); ` +
-        `its connection was abandoned.` +
+        `its connection was closed.` +
         (fields.phase === "query" ? ` sql: ${fields.sql.slice(0, 200)}` : ""),
     );
     this.pool = fields.pool;

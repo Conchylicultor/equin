@@ -7,12 +7,14 @@
 // and privileges are the cluster user's while `session_user` — what
 // `pg_stat_activity.usename` shows — names the lane.
 //
-// Why: a background connection lost to a deadline is abandoned, never closed,
-// and keeps its PgBouncer server slot while it sits idle in a transaction. With
-// one pool per database, 16 of them took every slot and `/home`'s `SELECT 1`
-// queued forever (2026-11-03). With a pool per lane, background trouble can
-// exhaust only the background pool — still loudly: its calls miss their
-// deadline on the `app-background` pool. This is isolation, not headroom.
+// Why: on 2026-11-03 background connections lost to a deadline were abandoned
+// (never closed, the rule then) and kept their PgBouncer server slots while
+// they sat idle in a transaction. With one pool per database, 16 of them took
+// every slot and `/home`'s `SELECT 1` queued forever. Lost connections are
+// closed now, but a background lane can still fill its slots with work that is
+// merely slow or blocked; with a pool per lane, that exhausts only the
+// background pool — still loudly: its calls miss their deadline on the
+// `app-background` pool. This is isolation, not headroom.
 // See research/2026-11-04-global-pgbouncer-pool-per-lane.md.
 
 export type PgbouncerLane = "interactive" | "background";

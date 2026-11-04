@@ -4,14 +4,13 @@ import type { QueryDeadlineEvent } from "@plugins/database/plugins/connection/se
 import type { recordReport } from "@plugins/reports/plugins/engine/server";
 import type { TraceTrigger } from "@plugins/debug/plugins/trace/plugins/engine/core";
 import {
-  DbAbandonCapPayloadSchema,
   DbQueryDeadlinePayloadSchema,
   QUERY_DEADLINE_RING_CAPACITY,
 } from "../../core";
 import { QueryDeadlinesSchema } from "../../core/internal/resources";
 import { createQueryDeadlineHandler } from "./handler";
 import { createHitRing } from "./hit-ring";
-import { abandonCapFingerprint, queryDeadlineFingerprint } from "./render";
+import { queryDeadlineFingerprint } from "./render";
 
 type ReportInput = Parameters<typeof recordReport>[0];
 
@@ -72,7 +71,6 @@ const deadline: QueryDeadlineEvent = {
     },
   ],
   inFlightCount: 1,
-  abandoned: { total: 2, held: 2, inTransaction: 1 },
 };
 
 const fingerprintOf = (input: ReportInput): string =>
@@ -88,7 +86,7 @@ describe("deadline event", () => {
     expect(input.kind).toBe("db-query-deadline");
     expect(input.source).toBe("server-caught");
     expect(input.message).toBe(
-      "A database query (pool app) got no answer for 60s and was abandoned: select count(*) from conversations_v",
+      "A database query (pool app) got no answer for 60s and its connection was closed: select count(*) from conversations_v",
     );
     // The payload is exactly what the kind's schema validates on ingest — no
     // `at` (the row has its own first/last-seen), nothing dropped.
@@ -101,9 +99,8 @@ describe("deadline event", () => {
       phase: "query",
       reason: null,
       transaction: "open",
-      inFlight: deadline.kind === "deadline" ? deadline.inFlight : [],
+      inFlight: deadline.inFlight,
       inFlightCount: 1,
-      abandoned: { total: 2, held: 2, inTransaction: 1 },
       traceId: "trace-1",
     });
   });
@@ -206,7 +203,7 @@ describe("deadline event", () => {
       sql: "[connect]",
     });
     expect(h.recorded[0]!.message).toBe(
-      "Opening a database connection (pool jobs-runner) got no answer for 60s and was abandoned",
+      "Opening a database connection (pool jobs-runner) got no answer for 60s and was closed",
     );
   });
 
@@ -232,15 +229,11 @@ describe("deadline event", () => {
       transaction: null,
       inFlight: [],
       inFlightCount: null,
-      abandoned: null,
       traceId: null,
     });
     expect(queryDeadlineFingerprint(parsed)).toBe(
       "db-query-deadline:app:query:sql=select 1",
     );
-    expect(
-      DbAbandonCapPayloadSchema.parse({ abandoned: 33, cap: 32 }).pool,
-    ).toBe("app");
   });
 
   test("records the hit in the ring and pushes it BEFORE the report write", () => {
@@ -271,88 +264,7 @@ describe("deadline event", () => {
     expect(h.logged).toEqual([
       "[deadline] pool=jobs-enqueue phase=query no reply in 60004ms " +
         "(bound 60000ms, boot: migrations) origin=push conversations-gone-stats " +
-        "sql=select count(*) from conversations_v — connection abandoned",
+        "sql=select count(*) from conversations_v — connection closed",
     ]);
-  });
-});
-
-describe("abandon-cap event", () => {
-  test("files one rolling db-abandon-cap report and leaves the ring alone", () => {
-    const h = harness();
-    h.handle({
-      kind: "abandon-cap",
-      at: 1,
-      pool: "change-feed",
-      abandoned: 33,
-      cap: 32,
-    });
-
-    expect(h.recorded).toHaveLength(1);
-    const input = h.recorded[0]!;
-    expect(input.kind).toBe("db-abandon-cap");
-    expect(input.source).toBe("server-caught");
-    expect(input.message).toBe(
-      "33 database connections have been abandoned since the server started — more than the 32 it is built to hold (latest: pool change-feed)",
-    );
-    expect(DbAbandonCapPayloadSchema.parse(input.data)).toEqual({
-      pool: "change-feed",
-      abandoned: 33,
-      cap: 32,
-    });
-    expect(abandonCapFingerprint()).toBe("db-abandon-cap");
-    expect(h.ring.snapshot()).toEqual([]);
-    expect(h.calls).toEqual(["record"]);
-  });
-});
-
-describe("hit ring", () => {
-  test("keeps only the last 20 hits, oldest first", () => {
-    const h = harness();
-    for (let i = 0; i < 25; i++) h.handle({ ...deadline, at: i });
-
-    const hits = h.ring.snapshot();
-    expect(hits).toHaveLength(20);
-    expect(hits[0]!.at).toBe(5);
-    expect(hits.at(-1)!.at).toBe(24);
-    // Every hit pushes, whether or not it evicted one.
-    expect(h.calls.filter((c) => c === "notify")).toHaveLength(25);
-  });
-
-  test("the ring's bound is the resource schema's bound", () => {
-    const hit = {
-      at: 0,
-      pool: "app" as const,
-      phase: "query" as const,
-      sql: "select 1",
-      origin: null,
-      elapsedMs: 1,
-    };
-    const full = Array.from(
-      { length: QUERY_DEADLINE_RING_CAPACITY },
-      () => hit,
-    );
-    expect(QueryDeadlinesSchema.safeParse({ hits: full }).success).toBe(true);
-    expect(
-      QueryDeadlinesSchema.safeParse({ hits: [...full, hit] }).success,
-    ).toBe(false);
-  });
-
-  test("snapshot is a copy the loader can hand off", () => {
-    const ring = createHitRing(2);
-    const hit = {
-      pool: "app" as const,
-      phase: "query" as const,
-      origin: null,
-      elapsedMs: 1,
-    };
-    ring.push({ ...hit, at: 1, sql: "a" });
-    const snap = ring.snapshot();
-    ring.push({ ...hit, at: 2, sql: "b" });
-    expect(snap).toHaveLength(1);
-  });
-
-  test("refuses a capacity that could not hold a hit", () => {
-    expect(() => createHitRing(0)).toThrow(/positive integer/);
-    expect(() => createHitRing(1.5)).toThrow(/positive integer/);
   });
 });

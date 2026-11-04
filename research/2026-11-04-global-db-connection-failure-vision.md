@@ -99,7 +99,7 @@ is reported. Nothing is set aside silently.** In order of cost:
   abandoned connection left open. This is a
   bound around our own design flaw, not a fix: it reaps each dead link of a chain
   after 5 min (a 16-link chain still costs ~80 min), and the reap is not reported.
-  **Remove it when task 2 lands.**
+  **Removed with task 2 (2026-11-04).**
 
 ## Proposed tasks
 
@@ -157,6 +157,27 @@ it matches, abandon only if not (then the original socket is already closed and
 the server has already rolled back). First verify Bun exposes a pg socket's fd
 reliably. Done = `deadline.test.ts` shows a lost client closed and its server
 session gone from `pg_stat_activity`.
+
+**Landed (2026-11-04), close-instead-of-abandon.** The culprit had in fact been
+found on 2026-09-16 and never written back here: Bun ≤ 1.3.14 double-closed a
+finished child's extra stdio fds at GC (oven-sh/bun#33828), Playwright's
+Chromium launch hands it two, and Bun is pinned past it with the `bun-runtime`
+check re-proving it on every build (see the 09-11 doc's "Culprit"). So the
+interim device+inode form was not needed. `DbClient` now closes a lost
+connection: a checked-out client goes back to its pool as broken through
+pg-pool's own per-checkout `release(err)` (public API — no internals), a
+standalone or still-connecting one is `end()`ed, and `end()` on a lost client
+destroys its socket. `abandon.ts`, `AbandonedClientHold`, the pg-pool
+internals accessor, the `abandoned` counts in the deadline event and the
+`db-abandon-cap` report kind are deleted. The idle-in-transaction backstop is
+retired: the start script `ALTER SYSTEM RESET`s it and `ALTER DATABASE … RESET`s
+every per-database copy (`RETIRED_CLUSTER_SETTINGS`, `database/embedded`), on
+the next gateway start. In its place the cluster sets
+`client_connection_check_interval` (10 s), so a session whose client closed
+mid-statement — running, or waiting on a lock — is cancelled rather than run to
+completion. `deadline.test.ts` proves a lost client closed, its session gone
+from `pg_stat_activity`, and an advisory lock it held inside its transaction
+free again. The owned-fd handle + lint follows as a second push.
 
 ### 3. Database watchdog
 
@@ -258,15 +279,7 @@ enforced rule:
   `writeUsage` does by hand) so a background writer never needs
   `db.transaction` for pure writes.
 
-## Runbook: a database wedged by an abandoned transaction
+## Runbook: a database wedged by a lock chain
 
-Symptom: pages hang on "Waiting for the server…", `db.jsonl` shows `[deadline]`
-lines even for trivial SQL. Look (read-only) at `pg_stat_activity` for the
-database: `state`, `wait_event_type`, `xact_start`, `pg_blocking_pids(pid)`. An
-`idle in transaction` session at the head of a `Lock` chain is the blocker.
-**Ending only the head does not free it**: every waiter's own deadline has
-expired, so its client abandoned it too — the next waiter takes the lock,
-finishes its statement and sits idle in transaction in turn. End the whole chain
-(every session of it older than the 60 s deadline), or restart the backend that
-holds the sockets. The interim 5-min timeout (above) reaps such a chain one link
-at a time until task 2 lands.
+Moved to `plugins/database/CLAUDE.md` ("Runbook: a database wedged by a lock
+chain"), updated for lost connections being closed.

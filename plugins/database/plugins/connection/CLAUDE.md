@@ -54,8 +54,8 @@ pg-pool's own `pool.query`, and a bare client. So the deadline is **one
   `withQueryDeadline({ ms, reason }, fn)` scope's. The scope is an
   `AsyncLocalStorage`, read synchronously at the call along with the caller
   (`currentEntryLabel()`).
-- **Not pg's `connectionTimeoutMillis`.** On expiry both pg and pg-pool call
-  `stream.destroy()`. That closes the fd, which the abandon rule forbids.
+- **Not pg's `connectionTimeoutMillis`.** It bounds only the connect, counts
+  a sleep as elapsed, and reports nothing.
 - **The clock counts awake time only** (`armAwakeDeadline`,
   `server/internal/awake-timer.ts`). See "A sleep is not a silent connection".
 - **Queue wait is not bounded.** Waiting for a free connection is back-pressure,
@@ -71,14 +71,20 @@ context-less) and `reason` (the scope's, `null` under the default). It has no
 
 The client is then **lost**, for good:
 
-1. **Abandoned, never closed** (`abandonClient`, `server/internal/abandon.ts`).
-   By the time the deadline fires, the lost socket's fd number may already
-   belong to something else, so closing it would close an innocent resource.
-   Instead: permanent no-op `error` / `end` listeners, removal from pg-pool's
-   `_clients` / `_idle` plus a queue pulse so a replacement is built, and a strong
-   reference in a hold capped at 32 (`ABANDON_HOLD_CAP`; past it, an
-   `abandon-cap` event). This reaches into pg-pool 3.13 internals — asserted at
-   pool build (`assertPgPoolInternals`) and pinned by `deadline.test.ts`.
+1. **Closed.** A checked-out client is handed back to its pool as broken with
+   pg-pool's own `release(err)` for that checkout — pg-pool's public way to
+   drop a client: it leaves the pool, pg-pool `end()`s it, and the queue is
+   pulsed so a waiting checkout gets a replacement. A standalone client, or
+   one whose connect timed out (pg-pool's connect callback already dropped
+   it), is `end()`ed directly. Either way `end()` on a lost client destroys its
+   socket outright: pg's own `end()` closes gracefully when no statement is
+   active (Terminate, then wait for the server), and a lost connection may
+   never answer. The server sees the session end: Postgres rolls back any
+   transaction it was in and releases its locks, and PgBouncer frees its
+   server slot. A session still mid-statement (running, or waiting on a lock)
+   is cancelled by the cluster's `client_connection_check_interval`
+   (`database/embedded`) instead of running to completion. No pg-pool
+   internals are touched.
 2. **Recorded**: a `<sql>[deadline]` `db` span and an event on
    `queryDeadlineSink`. This plugin cannot file a report (`reports` depends on
    `database`), and does not write `db.jsonl` either (see "Why it is its own
@@ -89,24 +95,36 @@ The client is then **lost**, for good:
    queued behind the lost one included, since pg runs one statement per
    connection. drizzle's `ROLLBACK` after a lost statement therefore costs
    nothing.
-4. **`release()` and `end()` do nothing.** pg-pool turns `release(err)` and
-   `release(true)` into `client.end()`, which closes the fd. `withJobLock` calls
-   `release(true)` on uncertain paths. pg-pool assigns `release` on every
-   checkout, so `DbClient` takes it through an accessor, and a lost client's
-   release is a no-op however it was checked out.
+4. **The holder's own `release()` does nothing more.** The deadline already
+   handed the client back; a second release would be pg-pool's double-release
+   throw. pg-pool assigns `release` on every checkout, right after emitting
+   `acquire`, so `DbClient` takes it through an accessor: `createDbPool`'s
+   `acquire` listener marks the next assignment as pg-pool's own, and any other
+   (the app pool's background lease wraps it, `armLease`) as a holder's.
 5. **`onClientLost(client, fn)` subscribers are told**, synchronously. A lease
    owner uses it to end bookkeeping tied to the connection: the app pool frees
    its background-transaction gate slot there.
 
-**A connect that times out inside a pool.** The deadline hands the error to
-pg-pool's connect callback first. pg-pool drops the client from `_clients`,
-pulses the queue and fails the waiting checkout — without ending the client. But
-that callback attaches the pool's idle `error` listener before it checks the
-error, and that listener ends the client when it fires. So whatever `error`
-listener the callback attached is removed again before the client is abandoned.
+A late real reply (a slow call, not a lost one) never arrives: its socket is
+gone, and its call was already settled.
 
-A late real reply (a slow call, not a lost one) is dropped: its call was already
-settled. The cost is one leaked server connection until the backend restarts.
+### Why close (it used to be abandoned)
+
+Until 2026-11-04 a lost connection was **abandoned** — detached from its pool,
+held, never closed — because of the 2026-09-11 incident: something in the
+process had closed a file descriptor it did not own, the number had been reused
+by a pooled pg socket, and closing a lost client might close whatever innocent
+resource held its fd number by then. The culprit was found on 2026-09-16: Bun
+≤ 1.3.14 closed a finished child's extra stdio fds a second time at garbage
+collection (oven-sh/bun#33828, fixed in 1.4.0), and Playwright hands Chromium
+two such fds on every launch. Bun is pinned past it, and the `bun-runtime` check
+reproduces the defect against the running Bun on every build and push.
+
+Abandoning was itself costly: an abandoned connection inside a transaction kept
+its row locks, and every abandoned connection kept a PgBouncer server slot,
+both for as long as the process lived. On 2026-11-03, 16 of them took main down
+for five hours (`research/2026-11-04-global-db-connection-failure-vision.md`).
+Closing is what makes a lost call clean up after itself.
 
 ## A sleep is not a silent connection
 
@@ -115,30 +133,14 @@ it. So on wake every deadline whose time passed during the nap fires at once —
 before the reply had any awake time to arrive. The deadline therefore re-arms
 for what remains of its bound by `performance.now()`: the bound is awake time.
 
-And an abandoned connection must not be able to hold locks forever: it is never
-closed and never sent a `ROLLBACK`, so a transaction it was in stays open on the
-server for as long as the process lives. `IDLE_IN_TRANSACTION_TIMEOUT_MS`
-(5 min, `database/embedded`'s `shared/`) is the server-side twin of the
-deadline: the cluster's start script sets it as the CLUSTER's
-`idle_in_transaction_session_timeout` (`applyClusterSettings`: `ALTER SYSTEM`
-+ reload, on every start), so Postgres ends such a transaction itself, on
-every database and every session. Not per database at boot: every process
-booting the DB layer wrote the same catalog row, and concurrent boots failed
-with `tuple concurrently updated` (2026-11-04). **Interim:** it bounds a
-flaw in the abandon rule rather than fixing it, and the reap is not reported; it
-goes once a lost connection is closed instead of abandoned — the vision and
-tasks are in
-[`research/2026-11-04-global-db-connection-failure-vision.md`](../../../../research/2026-11-04-global-db-connection-failure-vision.md).
-
 The incident (2026-11-03, main): a `conversations.usage:sync` transaction
 upserted `conversations_ext_usage` at 20:02 and the laptop slept until 20:18;
 on wake the 60 s deadline fired with 578 ms of awake time elapsed and abandoned
-the connection mid-transaction. Postgres showed it `idle in transaction` for
-5 h; every later usage sync queued on its row locks, each holding an app-pool
-connection, until the pool was gone and `/home` sat on "Waiting for the
-server…". Each of those waiters was itself abandoned after 60 s, so freeing the
-first only passed the lock to the next dead session — the timeout reaps them
-all.
+the connection mid-transaction (the rule then). Postgres showed it `idle in
+transaction` for 5 h; every later usage sync queued on its row locks, each
+holding an app-pool connection, until the pool was gone and `/home` sat on
+"Waiting for the server…". Both halves are fixed: the clock counts awake time,
+and a lost connection is closed, so its transaction is rolled back at once.
 
 ## When a connection breaks
 
@@ -155,8 +157,8 @@ holder's next statement rejects, and pg-pool drops it on release. The listeners
 report the error, once per connection, as
 `[db] pool=<name>: connection error: …`. In a backend that goes to
 `reportServerError` (`errorType` `DbConnectionError`); in a CLI process it goes to
-stderr. A lost (abandoned) client is never reported: its socket events belong to
-the abandon.
+stderr. A lost client is never reported: the deadline closed it, and already
+reported that.
 
 This also covers libraries handed a pool. graphile-worker (`infra/jobs`, given
 `jobs-runner` / `jobs-enqueue` as `pgPool`) installs its own logging handlers,
@@ -255,7 +257,7 @@ deadline sees it go silent. That needs a heartbeat.
 
 ## Plugin reference
 
-- Description: Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is abandoned — detached, held, never closed, since its fd may already be someone else's — and announced on queryDeadlineSink. Every pool also carries its own connection-error listeners (pool and per client), which report a broken connection once instead of letting it crash the process — so a library handed the pool (graphile-worker) installs none of its own.
+- Description: Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is closed — handed back to its pool as broken and its socket destroyed, so Postgres rolls back its transaction and PgBouncer frees its slot — and announced on queryDeadlineSink. Every pool also carries its own connection-error listeners (pool and per client), which report a broken connection once instead of letting it crash the process — so a library handed the pool (graphile-worker) installs none of its own.
 - Cross-plugin:
   - Imported by:
     - `database/admin`
@@ -273,10 +275,6 @@ deadline sees it go silent. That needs a heartbeat.
     - `SchemaGenerationLocks`
     - `SchemaGenerationLocksOptions`
   - Exports (values):
-    - `ABANDON_HOLD_CAP`
-    - `abandonClient`
-    - `AbandonedClientHold`
-    - `assertPgPoolInternals`
     - `BOOT_DDL_QUERY_DEADLINE_MS`
     - `createDbClient`
     - `createDbPool`

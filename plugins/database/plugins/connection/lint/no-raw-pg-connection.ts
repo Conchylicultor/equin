@@ -9,7 +9,7 @@ const createRule = lintRuleCreator(import.meta.url);
  * Every backend database connection must be built by the connection plugin
  * (`createDbPool` / `createDbClient`), because that is where the deadline
  * lives: a pg.Client subclass that gives up on a connect or a query that gets
- * no reply, abandons the connection, and reports it. A connection built any
+ * no reply, closes the connection, and reports it. A connection built any
  * other way can wait forever in silence — on 2026-09-15 a job waited 2.5 hours
  * on one. See research/2026-09-16-global-db-call-deadline-every-connection.md.
  *
@@ -78,7 +78,7 @@ export default createRule({
         "@plugins/database/plugins/connection/server, not `new {{name}}` from " +
         '"pg". A raw connection has no deadline: a connect or query that gets ' +
         "no reply waits forever in silence (a job once waited 2.5 hours). The " +
-        "plugin's connections fail that call, abandon the connection and report " +
+        "plugin's connections fail that call, close the connection and report " +
         "it. See research/2026-09-16-global-db-call-deadline-every-connection.md.",
       graphileConnectionString:
         "Don't pass `connectionString` to graphile-worker's `{{name}}`: it " +

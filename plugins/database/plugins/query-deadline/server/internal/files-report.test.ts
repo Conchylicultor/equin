@@ -139,7 +139,6 @@ describe("a forced deadline files a report", () => {
       traceId: "trace-2",
     });
     expect(data.elapsedMs).toBeGreaterThanOrEqual(DEADLINE_MS - 5);
-    expect(data.abandoned?.held).toBeGreaterThanOrEqual(2);
     expect(traces).toEqual(["events-test:query", "events-test:query"]);
 
     // Another caller is another row.

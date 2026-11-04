@@ -44,16 +44,15 @@ const CHANNEL_RE = /^[a-z_][a-z0-9_]*$/;
  *
  * Opening the connection and the LISTEN statement each carry the connection
  * deadline: one that gets no reply rejects with `QueryDeadlineExceededError`,
- * like any other failure to open, and the client it happened on is LOST —
- * abandoned, never closed, its `end()` a no-op. A failed attempt is closed (not
- * awaited) and the open rejects; the caller decides whether to retry.
+ * like any other failure to open, and the client it happened on is LOST — the
+ * deadline closes it. A failed attempt is closed (not awaited) and the open
+ * rejects; the caller decides whether to retry.
  *
  * An ESTABLISHED session has two failure paths: a connection-level `error`
  * (socket dropped, Postgres restarted) and a clean `end`. Either reaches
  * `handlers.lost` once. Both act only while the session is established and not
- * closed: what a failed attempt's socket does afterwards (a late `end`; an
- * `error` on a connection abandoned after a missed deadline and held open) must
- * not reach the caller, who already got the rejection. The `error` listener
+ * closed: what a failed attempt's socket does afterwards (a late `end`, or
+ * the `end` of a connection the deadline closed) must not reach the caller, who already got the rejection. The `error` listener
  * stays attached for the client's whole life: pg emits `error` on its socket,
  * and an `error` with no listener is an uncaught exception.
  *
@@ -103,7 +102,8 @@ export async function openListenSession(
   } catch (err) {
     state = "done";
     // Close the failed attempt, so a connection whose LISTEN was refused does
-    // not linger open. A no-op on a client lost to a missed deadline.
+    // not linger open. A client lost to a missed deadline is closed already;
+    // ending it again only waits for that close.
     // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget close of a failed attempt's socket
     void c.end().catch(options.endFailed);
     throw err;

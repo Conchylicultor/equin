@@ -5,6 +5,7 @@ import { PG_LOG_FILE } from "@plugins/database/plugins/embedded/server";
 import { PGBOUNCER_LOG_FILE } from "@plugins/database/plugins/pgbouncer/server";
 import {
   INCIDENT_DOC,
+  LOCK_CHAIN_DOC,
   renderAbandonCapTask,
   renderQueryDeadlineTask,
 } from "./render";
@@ -45,12 +46,11 @@ const payload: DbQueryDeadlinePayload = {
   transaction: null,
   inFlight: [],
   inFlightCount: null,
-  abandoned: null,
   traceId: null,
 };
 
 describe("renderQueryDeadlineTask", () => {
-  test("leads with what the call was part of: transaction, waiters, abandoned, trace", () => {
+  test("leads with what the call was part of: transaction, waiters, trace", () => {
     const d: DbQueryDeadlinePayload = {
       ...payload,
       pool: "app",
@@ -74,15 +74,11 @@ describe("renderQueryDeadlineTask", () => {
         },
       ],
       inFlightCount: 14,
-      abandoned: { total: 40, held: 32, inTransaction: 2 },
       traceId: "trace-1",
     };
     const { description } = renderQueryDeadlineTask(row(d), d);
     expect(description).toContain("It was sent inside an open transaction.");
-    expect(description).toContain("row lock");
-    expect(description).toContain(
-      "Connections this process has abandoned since it started: 40. Of the 32 it holds, 2 were left inside a transaction (the rest are past the hold's cap, their state unknown).",
-    );
+    expect(description).toContain("rolled that transaction back");
     expect(description).toContain(
       "14 other database calls were waiting (the 2 oldest):",
     );
@@ -93,8 +89,9 @@ describe("renderQueryDeadlineTask", () => {
       "  - 2s · pool `jobs-runner` · unknown caller · opening a connection",
     );
     expect(description).toContain("trace-1");
+    expect(description).toContain(LOCK_CHAIN_DOC);
     expect(description).toContain(
-      "2026-11-04-global-db-connection-failure-vision.md",
+      '"Runbook: a database wedged by a lock chain"',
     );
     // The evidence comes before the stray-close hunt.
     expect(description.indexOf("What it was part of")).toBeLessThan(
@@ -117,10 +114,10 @@ describe("renderQueryDeadlineTask", () => {
       payload,
     );
     expect(title).toBe(
-      "[db] Query got no answer and was abandoned (jobs-enqueue): select count(*) from conversations_v",
+      "[db] Unanswered query, connection closed (jobs-enqueue): select count(*) from conversations_v",
     );
     expect(description).toContain("got no answer for 60s");
-    expect(description).toContain("**abandoned**");
+    expect(description).toContain("**closed**");
     expect(description).toContain(INCIDENT_DOC);
     expect(description).toContain(
       "**Ran under:** `push conversations-gone-stats`",
@@ -136,7 +133,6 @@ describe("renderQueryDeadlineTask", () => {
     // Postgres, so that is the log to read.
     expect(description).toContain(PG_LOG_FILE);
     expect(description).not.toContain(PGBOUNCER_LOG_FILE);
-    expect(description).toContain("one leaked Postgres connection");
     // No scope granted a longer bound, so no line claims one.
     expect(description).not.toContain("Longer deadline granted for");
   });
@@ -162,7 +158,7 @@ describe("renderQueryDeadlineTask", () => {
     };
     const { title, description } = renderQueryDeadlineTask(row(scoped), scoped);
     expect(title).toBe(
-      "[db] Opening a connection got no answer and was abandoned: pool app",
+      "[db] Opening a connection got no answer and was closed: pool app",
     );
     expect(description).not.toContain("**Query:**");
     expect(description).toContain(
@@ -187,16 +183,14 @@ describe("renderQueryDeadlineTask", () => {
   });
 });
 
-describe("renderAbandonCapTask", () => {
-  test("says how many, the cap, and what to do", () => {
+describe("renderAbandonCapTask (retired kind)", () => {
+  test("still renders an old row, and says the kind is retired", () => {
     const d = { pool: "app" as const, abandoned: 33, cap: 32 };
     const { title, description } = renderAbandonCapTask(row(d), d);
     expect(title).toBe(
       "[db] 33 abandoned database connections — over the cap of 32",
     );
-    expect(description).toContain("abandoned 33 database connections");
     expect(description).toContain("**Latest abandon:** pool `app`");
-    expect(description).toContain("restart the backend");
-    expect(description).toContain(INCIDENT_DOC);
+    expect(description).toContain("This kind is retired");
   });
 });
