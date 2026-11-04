@@ -15,13 +15,18 @@
     - `conversations/conversation-view/header.HeaderChip`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
+    - `conversations/conversation-view/resume.useRetryLaunch`
+    - `infra/endpoints.useMachineAvailability`
     - `network/live.useLive`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.formatStatusLabel`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.WithTooltip`
+    - `primitives/overlay/popover.InlinePopover`
     - `primitives/relative-time.formatRelativeTime`
+    - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

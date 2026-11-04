@@ -14432,6 +14432,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resolvePromptAttachments`
       - `ResumeBlockedError`
       - `resumeConversation`
+      - `retryLaunch`
       - `rewindConversationAt`
       - `Runtime`
       - `submitTurn`
@@ -18728,7 +18729,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --space-lg`
-        - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`; useResumeConversation (the one browser resume, whose failure is a 'Couldn't resume conversation' notification) and that notification's Retry (the resume action kind).
+        - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`; useResumeConversation (the one browser resume, whose failure is a 'Couldn't resume conversation' notification) and that notification's Retry (the resume action kind); useRetryLaunch, which re-runs the launch of a conversation that failed to start.
           - Web:
             - Contributes: `Notifications.Action` "resume"
             - Uses:
@@ -18742,15 +18743,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell/notifications.Notifications`
               - `shell/notifications.useToast`
             - Exports (types): `ResumeSubject`
-            - Exports (values): `useResumeConversation`
+            - Exports (values):
+              - `useResumeConversation`
+              - `useRetryLaunch`
           - Machine:
             - Uses: `infra/endpoints.implementMachine`
-            - Routes: `POST /api/conversations/:id/resume`
+            - Routes:
+              - `POST /api/conversations/:id/resume`
+              - `POST /api/conversations/:id/retry-launch`
           - Core:
             - Uses: `infra/endpoints.defineEndpoint`
-            - Exports (values): `resumeConversationEndpoint`
+            - Exports (values):
+              - `resumeConversationEndpoint`
+              - `retryLaunchEndpoint`
           - Cross-plugin:
-            - Imported by: `conversations/conversation-view/push-and-exit`
+            - Imported by:
+              - `conversations/conversation-view/push-and-exit`
+              - `conversations/conversation-view/status`
         - **`rewind`** — Row actions on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back. useGoBackToMessage is the same flow for a surface that stands for a hidden message (e.g. a question's answer), with the caller deciding where the removed text goes.
           - Web:
             - Contributes:
@@ -18885,13 +18894,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/header.HeaderChip`
               - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
               - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
+              - `conversations/conversation-view/resume.useRetryLaunch`
+              - `infra/endpoints.useMachineAvailability`
               - `network/live.useLive`
               - `network/live/live-state.ResourceErrorInline`
               - `primitives/css/badge.formatStatusLabel`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.WithTooltip`
+              - `primitives/overlay/popover.InlinePopover`
               - `primitives/relative-time.formatRelativeTime`
+              - `ui/icons.Icon`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -30507,9 +30521,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 232 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 233 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×65
-          - `conversations` ×33
+          - `conversations` ×34
           - `infra` ×21
           - `page` ×19
           - `debug` ×18
@@ -46556,11 +46570,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlinePopoverProps`
             - Exports (values): `InlinePopover`
           - Cross-plugin:
-            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
+            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
               - `page` ×7
               - `apps` ×6
               - `primitives` ×6
-              - `conversations` ×4
+              - `conversations` ×5
               - `fields` ×2
               - `shell` ×2
               - `build`
@@ -54275,9 +54289,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 366 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 367 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×96
-          - `conversations` ×57
+          - `conversations` ×58
           - `primitives` ×42
           - `fields` ×41
           - `page` ×41

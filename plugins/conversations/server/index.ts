@@ -53,6 +53,7 @@ export {
   createConversation,
   deleteConversation,
   resumeConversation,
+  retryLaunch,
   ensureResumed,
   ResumeBlockedError,
   previewRewind,

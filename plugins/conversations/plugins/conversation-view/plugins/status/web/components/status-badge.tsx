@@ -10,13 +10,27 @@ import {
 } from "@plugins/conversations/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  WithTooltip,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import {
   describeSpawnFailure,
   FAILED_TO_START_LABEL,
   spawnFailureRows,
+  type SpawnFailure,
 } from "@plugins/conversations/plugins/spawn-failure/core";
+import { useState } from "react";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { conversationName } from "@plugins/tasks/plugins/tasks-core/core";
+import { useMachineAvailability } from "@plugins/infra/plugins/endpoints/web";
+import { useRetryLaunch } from "@plugins/conversations/plugins/conversation-view/plugins/resume/web";
+import { retryLaunchEndpoint } from "@plugins/conversations/plugins/conversation-view/plugins/resume/core";
 
 // Each status is a bordered pill; the live one (working) takes the accent for
 // its text and outline, so the one conversation doing something reads at a glance.
@@ -122,12 +136,72 @@ function GoneChip({ conversationId }: { conversationId: string }) {
       </HeaderChip>
     );
   return (
-    <WithTooltip content={describeSpawnFailure(failure.row)}>
-      <span>
-        <HeaderChip colorClass={FAILED_CLASS}>
+    <FailedToStartChip conversationId={conversationId} failure={failure.row} />
+  );
+}
+
+const replayIcon = symbol("replay");
+
+// A launch that never came up: the chip opens what failed and a Retry, which
+// re-runs the launch (workspace, then agent) — the chip turns to Starting.
+function FailedToStartChip({
+  conversationId,
+  failure,
+}: {
+  conversationId: string;
+  failure: SpawnFailure;
+}) {
+  const conversation = useConversationById(conversationId);
+  const retry = useRetryLaunch();
+  const machine = useMachineAvailability(retryLaunchEndpoint);
+  const [open, setOpen] = useState(false);
+  return (
+    <InlinePopover
+      open={open}
+      onOpenChange={setOpen}
+      align="end"
+      width="card"
+      padding="sm"
+      trigger={
+        <HeaderChip
+          as="button"
+          colorClass={FAILED_CLASS}
+          aria-label="Failed to start — details and retry"
+        >
           {FAILED_TO_START_LABEL}
         </HeaderChip>
-      </span>
-    </WithTooltip>
+      }
+    >
+      <Stack gap="sm">
+        <Text as="p" variant="caption" className="break-words">
+          {describeSpawnFailure(failure)}
+        </Text>
+        <Stack direction="row" align="center" justify="between" gap="sm">
+          <Text as="span" variant="caption" className="text-muted-foreground">
+            {formatRelativeTime(failure.failedAt)}
+          </Text>
+          <WithTooltip
+            content={machine.available ? undefined : machine.message}
+          >
+            <span>
+              <Button
+                disabled={!machine.available || !conversation}
+                onClick={async () => {
+                  if (!conversation) return;
+                  await retry({
+                    id: conversation.id,
+                    name: conversationName(conversation),
+                  });
+                  setOpen(false);
+                }}
+              >
+                <Icon icon={replayIcon} />
+                Retry
+              </Button>
+            </span>
+          </WithTooltip>
+        </Stack>
+      </Stack>
+    </InlinePopover>
   );
 }

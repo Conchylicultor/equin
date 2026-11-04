@@ -107,6 +107,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `resolvePromptAttachments`
     - `ResumeBlockedError`
     - `resumeConversation`
+    - `retryLaunch`
     - `rewindConversationAt`
     - `Runtime`
     - `submitTurn`

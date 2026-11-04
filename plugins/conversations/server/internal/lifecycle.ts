@@ -66,6 +66,7 @@ import {
 import { turnIdKind } from "@plugins/conversations/plugins/turn-ledger/core";
 import { launchWithHeldTurn } from "./turns";
 import { spawnConversationJob } from "./spawn-job";
+import { spawnFailures } from "@plugins/conversations/plugins/spawn-failure/server";
 import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
 import { resolvePrepromptItem } from "@plugins/conversations/plugins/preprompts/server";
@@ -847,6 +848,66 @@ export async function resumeConversation(id: string): Promise<Conversation> {
   await updateTask(row.taskId, { drop: false, hold: false });
 
   return (await getConversation(id)) as Conversation;
+}
+
+/**
+ * Retry the launch of a conversation that failed to start — `gone` with a
+ * recorded spawn failure, so no session ever ran and there is nothing to
+ * `--resume`. Re-runs the durable spawn job (workspace `prepare`, then
+ * `runtime.create`, both idempotent) with what the launch spawned with, read
+ * back from the row: a failed spawn is always a new-attempt launch, which
+ * neither resumes nor forks a session. The launch prompt was released back to
+ * `held` when the spawn threw, so the new session starts on it.
+ *
+ * The row goes back to `starting` on the SAME transaction that enqueues the
+ * job: the status reconciler never sees a `starting` row whose spawn is not in
+ * flight — one created long ago would be swept straight back to `gone`.
+ */
+export async function retryLaunch(id: string): Promise<void> {
+  const row = await getConversation(id);
+  if (!row) throw new Error(`Conversation ${id} not found`);
+  if (row.status !== "gone") {
+    throw new Error(
+      `Cannot retry the launch of conversation ${id} (status: ${row.status})`,
+    );
+  }
+  if (!(await spawnFailures.get(id))) {
+    throw new Error(
+      `Conversation ${id} did not fail to start: there is no launch to retry`,
+    );
+  }
+  // Refused here, with the fix, rather than as another failure of the job.
+  await assertClaudeCodeReady();
+
+  const workspace = await workspaceOf(row);
+  const create = {
+    appendSystemPrompt: systemPromptAppend(
+      await getConversationPreprompt(row.id),
+    ),
+    model: row.model,
+    effort: await resolveTaskEffort(row.taskId),
+    forkSession: false,
+  };
+  await updateConversation(
+    row.id,
+    { status: "starting", endedAt: null, closeRequested: false },
+    {
+      alongside: async (tx) => {
+        await spawnConversationJob.enqueue(
+          {
+            conversationId: row.id,
+            attemptId: row.attemptId,
+            worktreePath: workspace.path,
+            workspace: workspace.spec,
+            runtimeId: row.runtime,
+            create,
+          },
+          { tx: tx as EmitTx },
+        );
+      },
+    },
+  );
+  await updateTask(row.taskId, { drop: false, hold: false });
 }
 
 // Idempotent transparent restore for a hibernated conversation. No-op unless the
