@@ -1,7 +1,7 @@
 # lumen
 
-The Lumen demo — the website's live demo: the Agent Manager, Pages and
-Prototypes on one made-up story about a small notes app called Lumen. Its
+The Lumen demo — the website's live demo: the Agent Manager, Pages,
+Prototypes and Sonata on one made-up story about a small notes app called Lumen. Its
 scenario is `lumenDemo` (`core`) — the app, the
 route it opens at (`/c/conv-demo-dark-mode`) and its browser host
 (`bin/browser-host.ts`): a Web Worker booting the real server code of the
@@ -23,9 +23,11 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   the Lumen workspace (`core/internal/pages.ts`, a Pages fixture), what the
   dark-mode agent wrote (`DARK_MODE_PAGE_WORK`), the transcripts, the
   prototypes (`data/`, a Prototypes fixture) and their tags and pin
-  (`core/internal/prototypes.ts`). How each app's data is written is that
-  app's fixture writer: `apps/pages/fixtures`' `writePageTree` and
-  `apps/prototypes/fixtures`' `writePrototypeFixture`. Design:
+  (`core/internal/prototypes.ts`), the Sonata songs (`core/internal/songs.ts`,
+  a Sonata fixture). How each app's data is written is that
+  app's fixture writer: `apps/pages/fixtures`' `writePageTree`,
+  `apps/prototypes/fixtures`' `writePrototypeFixture` and
+  `apps/sonata/fixtures`' `writeSongFixtures`. Design:
   `research/2026-10-28-global-per-app-demo-seeds-v2.md`.
 - **The seed writes into a live host** (`bin/seed.ts`). `bootBrowserHost`
   seeds after the post-ready phases, so triggers, the job queue and the files
@@ -40,7 +42,9 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   (`page/annotations/agent-access`'s `pageTools.read` / `edit` / `writeNote`,
   as that conversation; each call's input and exact result go into its
   transcript, the minted card and page ids read from the edit's own report)
-  → settle → the transcripts → the prototypes fixture → settle.
+  → settle → the transcripts → the prototypes fixture → settle → the songs →
+  settle. (Sonata's MIDI starters are not the demo's: the MIDI source seeds
+  them itself, as on a fresh install.)
 - **Every id carries `demo`** (`conv-demo-…`, `task-demo-…`, `att-demo-…`), so a
   request that leaked past the scope to the real server is findable in its logs.
 - **Nothing the demo uses goes unanswered, by construction.** The build's
@@ -64,8 +68,15 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   renderers, and the Pages app itself) minus what means nothing without the
   computer (push-and-exit, the automations, the file explorer), plus Prototypes
   (`apps.prototypes.**`, a positive: its tree is a `data-files` root, memory
-  here — `research/2026-10-24-global-data-files-host-service.md`) and Home
-  (`apps.home.**`, the app gallery, minus its onboarding tour). Home is the composition's home, as on
+  here — `research/2026-10-24-global-data-files-host-service.md`), Home
+  (`apps.home.**`, the app gallery, minus its onboarding tour) and Sonata
+  (`apps.sonata.**`, minus transcription and the MIDI file preview, exactly as
+  Sonata's own app composition ships it;
+  `research/2026-11-04-global-sonata-in-browser-demo.md`). Its samples load
+  through the worker's asset mirror (`infra/asset-mirror`, portable), fetched
+  from the instruments' public CDNs once per session; reading Ultimate Guitar,
+  aligning a sheet to a recording and watching MIDI folders need the computer
+  and say so. Home is the composition's home, as on
   main, so the launcher inside the embed lists the Agent Manager and its "All
   apps" opens the gallery. The demo still opens on the Agent Manager:
   `lumenDemo` names its app. Otherwise it
@@ -179,6 +190,8 @@ data and seed; no app folder changes:
     - `DEMO_AGENTS`
     - `DEMO_PAGE_IDS`
     - `DEMO_PAGES`
+    - `DEMO_SONG_ID`
+    - `DEMO_SONGS`
     - `DEMO_STORIES`
     - `demoAgentId`
     - `demoAgentLaunchId`

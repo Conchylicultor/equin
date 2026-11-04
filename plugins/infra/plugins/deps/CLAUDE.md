@@ -298,7 +298,7 @@ torch.
 
 ## Plugin reference
 
-- Description: Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request, the pushed deps.states live value says absent / installing / ready / failed for every declared dependency, the install/remove endpoints back Settings → Dependencies. The daily deps.sweep is its sweep sub-plugin.
+- Description: Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request. The daily deps.sweep is its sweep sub-plugin.
 - Web:
   - Slots:
     - `item-actions`
@@ -317,6 +317,7 @@ torch.
     - `network/live.useLive`
     - `network/live/live-state.foldResource`
     - `primitives/css/badge.Badge`
+    - `primitives/css/text.Text`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineItemActions`
@@ -330,19 +331,18 @@ torch.
 - Server:
   - Contributes: `resource.declare` "deps.states"
   - Uses:
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
-    - `infra/file-watcher.defineFileWatcher`
     - `infra/jobs/supervised-job.defineSupervisedJob`
-    - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
   - Exports (values):
     - `onDepInstallSettled`
     - `requestDep`
-  - Register:
-    - `defineSupervisedJob('deps.install')`
-    - `defineFileWatcher('deps.cache')`
+  - Register: `defineSupervisedJob('deps.install')`
   - Resources: `deps.states` (push, notified, whole: one row per optional dependency the code declares — a closed handful (browsers, python envs, toolchains))
+- Machine:
+  - Uses:
+    - `infra/endpoints.implementMachine`
+    - `network/live.serveValue`
+  - Register: `defineFileWatcher('deps.cache')`
   - Routes:
     - `POST /api/deps/install`
     - `POST /api/deps/remove`

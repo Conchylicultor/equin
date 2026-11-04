@@ -147,9 +147,7 @@ format-digest mismatch → rebuild.
   - Exports (types): `CorpusFormat`
   - Exports (values): `corpusFormat`
 - Cross-plugin:
-  - Imported by:
-    - `apps/sonata/sources/midi/folders`
-    - `stats/cost`
+  - Imported by: `stats/cost`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/corpus-index.ts` (debt)
 

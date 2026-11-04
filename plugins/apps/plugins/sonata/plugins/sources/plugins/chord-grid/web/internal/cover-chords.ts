@@ -12,7 +12,7 @@ import {
   type ScaleDegree,
 } from "@plugins/music/plugins/chord-box/core";
 import type { ChordEvent } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
-import { parseGrid, type KeyChange } from "../parse-grid";
+import { parseGrid, type KeyChange } from "../../core";
 
 /** One chord the cover draws: its tile colour, its numeral and its name. */
 export interface CoverChord {

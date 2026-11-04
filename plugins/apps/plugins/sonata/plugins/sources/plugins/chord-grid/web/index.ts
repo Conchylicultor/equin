@@ -5,7 +5,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
-import { compile } from "./compile";
+import { compile } from "../core";
 import { ChordGridLoader } from "./loader";
 import { CHORD_GRID_SOURCE_ID } from "./constants";
 import { useHydration } from "./hydrate";

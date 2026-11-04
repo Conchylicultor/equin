@@ -1,5 +1,6 @@
-import { assetMirrorUrl } from "@plugins/infra/plugins/asset-mirror/core";
+import { assetMirrorBase } from "@plugins/infra/plugins/asset-mirror/core";
 import type {
+  InstrumentAssets,
   InstrumentVoices,
   ScheduledNote,
 } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
@@ -28,12 +29,13 @@ import { SOUNDFONT_MIRROR_ID } from "../shared/mirror";
  *  - `sf.dispose()` stops all voices, disposes the output channel, and stops the
  *    scheduler (`disconnect()` is the deprecated alias).
  *
- * Samples are served same-origin via the asset-mirror primitive: we point smplr's
- * `instrumentUrl` at `/api/asset-mirror/gm-soundfont/<gleitz>-mp3.js`; the server
- * lazily downloads that file from the gleitz soundfont CDN on first request,
- * caches it under `~/.equin/cache/asset-mirror/`, and serves it from disk thereafter. So each
- * timbre needs network exactly once (first online play), then sounds fully offline
- * — the browser never talks to the external CDN. Format is fixed to `mp3` (the
+ * Samples are served same-origin via the asset-mirror primitive, resolved over
+ * the host's transport (`assets`): we point smplr's `instrumentUrl` at
+ * `<gm-soundfont mirror>/<gleitz>-mp3.js` and hand it the transport's fetch as
+ * its `storage`; the server (the desktop's, or a demo's in-browser one)
+ * downloads that file from the gleitz soundfont CDN on its first request and
+ * serves it from its cache thereafter. On the desktop each timbre needs network
+ * exactly once (first online play), then sounds fully offline. Format is fixed to `mp3` (the
  * gleitz CDN's universally-supported encoding), so there is no per-browser format
  * negotiation. The mirror route requires a flat file name, which `<gleitz>-mp3.js`
  * is (the kit directory is baked into `SOUNDFONT_REMOTE_BASE`).
@@ -59,8 +61,10 @@ type Sf = ReturnType<(typeof import("smplr"))["Soundfont"]>;
 export function createSoundfontVoices(
   ctx: AudioContext,
   destination: AudioNode,
+  assets: InstrumentAssets,
   gleitzName: string,
 ): InstrumentVoices {
+  const samples = assets(assetMirrorBase(SOUNDFONT_MIRROR_ID));
   // `smplr` is imported DYNAMICALLY here (inside the factory body) rather than
   // as a top-level static import, so the sample-engine library is code-split OFF
   // the eager plugin-boot wave: this plugin registers 127 Instrument
@@ -87,8 +91,19 @@ export function createSoundfontVoices(
   // and therefore still needs exactly one `disposed` re-check. (Both promises
   // resolve from the same module anyway: `sharedSampleLoader` reaches `smplr`
   // through the same dynamic import.)
-  const loaded = Promise.all([import("smplr"), sharedSampleLoader(ctx)]).then(
-    ([{ Soundfont }, loader]) => {
+  const loaded =
+    samples.kind === "unavailable"
+      ? Promise.reject(new Error(samples.message))
+      : load(samples.base, { fetch: samples.fetch });
+
+  function load(
+    base: string,
+    storage: { fetch: (url: string) => Promise<Response> },
+  ): Promise<void> {
+    return Promise.all([
+      import("smplr"),
+      sharedSampleLoader(ctx, { base, storage }),
+    ]).then(([{ Soundfont }, loader]) => {
       // Disposed before the chunk landed (fast unmount / instrument-switch):
       // skip instantiation entirely — nothing to sound or tear down.
       if (disposed) return;
@@ -97,7 +112,9 @@ export function createSoundfontVoices(
         // Full same-origin URL to this patch's gleitz file. `<base>` already
         // pins the kit directory, so the only trailing segment is the flat
         // `<gleitz>-mp3.js` name the mirror route accepts.
-        instrumentUrl: `${assetMirrorUrl(SOUNDFONT_MIRROR_ID)}/${gleitzName}-mp3.js`,
+        instrumentUrl: `${base}/${gleitzName}-mp3.js`,
+        // Fetched over the host's transport, never by URL from the page.
+        storage,
         // Shared per AudioContext, like the piano's. See the note above on why
         // this is currently a no-op for soundfonts specifically.
         loader,
@@ -105,6 +122,7 @@ export function createSoundfontVoices(
       return sf.ready;
     },
   );
+  }
 
   return {
     loaded,

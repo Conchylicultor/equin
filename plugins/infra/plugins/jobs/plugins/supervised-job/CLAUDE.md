@@ -810,14 +810,26 @@ construction, and the job and the body it spawns cannot drift apart.
     - `cliExecContext`
     - `runAttached`
 - Cross-plugin:
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `framework` ×8
-    - `apps` ×4
-    - `infra` ×4
+  - Imported by:
+    - `apps/chord/song-index`
+    - `apps/deploy/deployments`
+    - `apps/prototypes/thumbnails`
     - `backup`
     - `conversations/workspace/worktree`
     - `database/fork`
     - `debug/worktree-cleanup`
+    - `framework/cli/build`
+    - `framework/cli/op-runtime`
+    - `framework/cli/release`
+    - `framework/cli/serve-app`
+    - `framework/cli/start`
+    - `framework/tooling/checks/cache-prune`
+    - `framework/tooling/checks/type-check/backstop`
+    - `framework/tooling/web-artifacts/prune`
+    - `infra/audio-analysis`
+    - `infra/deps`
+    - `infra/events-test`
+    - `infra/worktree/spare-pool`
     - `release`
 - Exemptions:
   - Exempts itself from:

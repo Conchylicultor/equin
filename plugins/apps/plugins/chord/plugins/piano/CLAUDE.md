@@ -180,6 +180,7 @@ one held down — the one thing a value check cannot tell you.
     - `apps/chord/vocabulary.chordToneStyle`
     - `apps/sonata/audio/instruments.InstrumentVoices`
     - `apps/sonata/audio/instruments.SonataAudio`
+    - `apps/sonata/audio/instruments.useInstrumentAssets`
     - `apps/sonata/primitives/keyboard.Keyboard`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

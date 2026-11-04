@@ -222,6 +222,8 @@ against both providers; a new provider runs it too.
     - `apps/prototypes`
     - `apps/prototypes/files`
     - `apps/prototypes/thumbnails`
+    - `apps/sonata/covers`
+    - `infra/asset-mirror`
     - `infra/paths/data-files/memory`
     - `primitives/file-viewer`
 - Exemptions:

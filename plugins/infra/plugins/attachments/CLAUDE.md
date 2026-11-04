@@ -113,10 +113,12 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
   - Exports (values):
     - `_attachments`
     - `AttachmentBlobs`
+    - `AttachmentMissingError`
     - `Attachments`
     - `createAttachment`
     - `deleteAttachment`
     - `getAttachment`
+    - `readAttachmentBytes`
   - Register: `defineJob('attachments.orphan-sweep')`
   - Resources:
     - `attachments.by-owner` (push, whole: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)

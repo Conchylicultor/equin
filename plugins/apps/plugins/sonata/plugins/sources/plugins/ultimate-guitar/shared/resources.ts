@@ -3,6 +3,12 @@ import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import { UgTabSchema } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import { UgSearchResultSchema, ultimateGuitarShape } from "../core";
 
+/**
+ * UG's private mobile API is signed and answers no browser (no CORS), so a
+ * tab and the catalog search are read by the desktop's server only.
+ */
+const READING_UG = { feature: "Reading Ultimate Guitar" };
+
 /** The longest query UG's catalog is asked (a longer one is refused `invalid-query`). */
 export const UG_SEARCH_QUERY_MAX = 200;
 
@@ -36,6 +42,7 @@ export const ugSearch = liveValue("sonata.ultimate-guitar.search", {
   params: ["q"],
   refusals: ["invalid-query"],
   load: "on-demand",
+  needsMachine: READING_UG,
 });
 
 /**
@@ -58,6 +65,7 @@ export const ugSearch = liveValue("sonata.ultimate-guitar.search", {
 export const ugTab = liveValue("sonata.ultimate-guitar.tab", {
   schema: UgTabSchema,
   params: ["url"],
+  needsMachine: READING_UG,
   refusals: ["invalid-url", "not-found"],
   load: "on-demand",
 });

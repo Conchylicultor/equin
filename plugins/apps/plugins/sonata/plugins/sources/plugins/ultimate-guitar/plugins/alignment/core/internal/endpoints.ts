@@ -2,12 +2,19 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
 /**
+ * Choosing and aligning a recording downloads its audio and analyses it on
+ * this computer, so every request that starts, steers or stops one needs it.
+ */
+const ALIGNING = { feature: "Aligning a sheet to a recording" };
+
+/**
  * Set the song's recording from a pasted YouTube link (or a bare id) and start
  * aligning to it: the user's pick (`pick: "user"`), which nothing automatic
  * overrides. Picking one of the resolver's candidates is this call with its id.
  * 400 when the text is not a YouTube video.
  */
 export const setUgAlignmentVideo = defineEndpoint({
+  needsMachine: ALIGNING,
   route: "PUT /api/sonata/songs/:id/ultimate-guitar/alignment/video",
   body: z.object({ url: z.string() }),
   response: z.object({ videoId: z.string() }),
@@ -20,6 +27,7 @@ export const setUgAlignmentVideo = defineEndpoint({
  * 409 when there is nothing to align to.
  */
 export const realignUg = defineEndpoint({
+  needsMachine: ALIGNING,
   route: "POST /api/sonata/songs/:id/ultimate-guitar/alignment/realign",
   response: z.object({ ok: z.literal(true) }),
 });
@@ -32,6 +40,7 @@ export const realignUg = defineEndpoint({
  * 409 when nothing is in progress.
  */
 export const cancelUgAlignment = defineEndpoint({
+  needsMachine: ALIGNING,
   route: "POST /api/sonata/songs/:id/ultimate-guitar/alignment/cancel",
   response: z.object({ ok: z.literal(true) }),
 });
@@ -42,6 +51,7 @@ export const cancelUgAlignment = defineEndpoint({
  * until one aligns well enough (`pick: "auto"`).
  */
 export const resolveUgAlignment = defineEndpoint({
+  needsMachine: ALIGNING,
   route: "POST /api/sonata/songs/:id/ultimate-guitar/alignment/resolve",
   response: z.object({ ok: z.literal(true) }),
 });
@@ -54,6 +64,7 @@ export const resolveUgAlignment = defineEndpoint({
  * says whether a new pick was started.
  */
 export const refuseUgAlignmentVideo = defineEndpoint({
+  needsMachine: ALIGNING,
   route: "POST /api/sonata/songs/:id/ultimate-guitar/alignment/video-refused",
   body: z.object({
     videoId: z.string(),

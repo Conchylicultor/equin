@@ -796,9 +796,9 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
 - Cross-plugin:
-  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×18
-    - `infra` ×12
+  - Imported by: 59 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×16
+    - `infra` ×11
     - `conversations` ×8
     - `debug` ×7
     - `tasks` ×5

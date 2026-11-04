@@ -1180,6 +1180,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/vocabulary.chordToneStyle`
               - `apps/sonata/audio/instruments.InstrumentVoices`
               - `apps/sonata/audio/instruments.SonataAudio`
+              - `apps/sonata/audio/instruments.useInstrumentAssets`
               - `apps/sonata/primitives/keyboard.Keyboard`
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -7460,6 +7461,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `apps/sonata/audio/instruments.InstrumentVoices`
                   - `apps/sonata/audio/instruments.SonataAudio`
+                  - `apps/sonata/audio/instruments.useInstrumentAssets`
                   - `apps/sonata/library.sonataPlayerPane`
                   - `apps/sonata/primitives/toolbar-control.hoverExpandHost`
                   - `apps/sonata/primitives/toolbar-control.HoverExpandPanel`
@@ -7485,16 +7487,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/sonata/audio/live-play`
                   - `apps/sonata/audio/metronome`
-            - **`instruments`** — Sonata audio Instrument axis: the SonataAudio.Instrument slot and its voice contracts (InstrumentVoices, ScheduledNote) — an audio contract a host with an AudioContext can consume without importing the Sonata app shell.
+            - **`instruments`** — Sonata audio Instrument axis: the SonataAudio.Instrument slot and its voice contracts (InstrumentVoices, ScheduledNote, and InstrumentAssets — the samples resolved over the host transport, read with useInstrumentAssets) — an audio contract a host with an AudioContext can consume without importing the Sonata app shell.
               - Web:
                 - Slots: `SonataAudio.Instrument`
                 - Slot contributors:
                   - `SonataAudio.Instrument` ← `apps.sonata.audio.piano`
                   - `SonataAudio.Instrument` ← `apps.sonata.audio.soundfont`
+                - Uses:
+                  - `infra/endpoints.assetFetchOver`
+                  - `primitives/networking.useTransport`
                 - Exports (types):
+                  - `InstrumentAssets`
                   - `InstrumentVoices`
                   - `ScheduledNote`
-                - Exports (values): `SonataAudio`
+                - Exports (values):
+                  - `SonataAudio`
+                  - `useInstrumentAssets`
               - Cross-plugin:
                 - Imported by:
                   - `apps/chord/piano`
@@ -7512,6 +7520,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/audio/engine.useAudioGraph`
                   - `apps/sonata/audio/instruments.InstrumentVoices`
                   - `apps/sonata/audio/instruments.SonataAudio`
+                  - `apps/sonata/audio/instruments.useInstrumentAssets`
                   - `apps/sonata/session.SonataSession`
                   - `primitives/latest-ref.useLatestRef`
                   - `primitives/scope/scoped-store.defineScopedStore`
@@ -7563,12 +7572,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/audio/sample-loader.sharedSampleLoader`
               - Server:
                 - Uses: `infra/asset-mirror.defineAssetMirror`
-            - **`sample-loader`** — Sonata audio sample loader: one smplr SampleLoader per AudioContext, shared by every instrument instance built against it, so N copies of an instrument cost one download and one decode instead of N.
+            - **`sample-loader`** — Sonata audio sample loader: one smplr SampleLoader per AudioContext and sample source, shared by every instrument instance built against it, so N copies of an instrument cost one download and one decode instead of N.
               - Cross-plugin:
                 - Imported by:
                   - `apps/sonata/audio/piano`
                   - `apps/sonata/audio/soundfont`
               - Web:
+                - Exports (types): `SampleSource`
                 - Exports (values): `sharedSampleLoader`
             - **`soundfont`** — Sonata Instruments: the full General MIDI melodic set (programs 1-127) backed by smplr's Soundfont, served same-origin via the asset-mirror (offline after first warm-up). Program 0 (acoustic grand) is owned by the dedicated sampled-piano plugin. Registers the gm-soundfont asset mirror so the General MIDI instruments' samples are served same-origin (offline-capable) rather than streamed from the remote gleitz CDN.
               - Web:
@@ -7634,7 +7644,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/shortcuts.targetClaimsKey`
               - `primitives/shortcuts.usePlayPauseShortcut`
               - `primitives/shortcuts.useSurfaceShortcuts`
-        - **`covers`** — Serves Sonata song covers: a content-addressed SVG cache (rendered on request, deduped while in flight), immutable while the URL's version is current.
+        - **`covers`** — Serves Sonata song covers: a content-addressed SVG cache (rendered on request, deduped while in flight) over the scoreCoverFiles data-files root, immutable while the URL's version is current.
+          - Server:
+            - Contributes: `data-files.root-location` "apps.sonata.covers"
+            - Uses: `infra/paths/data-files.defineFileRoot`
+            - Exports (types): `ScoreCoverRequest`
+            - Exports (values):
+              - `scoreCoverFiles`
+              - `serveScoreCover`
+          - Machine:
+            - Uses: `infra/paths/data-files.FileRootLocation`
           - Core:
             - Uses:
               - `apps/sonata/look.SONATA_DEFAULT_LOOK`
@@ -7658,11 +7677,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/sonata/sources/midi`
               - `apps/sonata/sources/musicxml`
-          - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/cover-cache.ts` (debt)
-          - Server:
-            - Exports (types): `ScoreCoverRequest`
-            - Exports (values): `serveScoreCover`
         - **`document`** — Sonata song document: a song's identity (a library song or a file), its sources' raw input and its per-song settings as one per-surface state, composed into a score through the source → merge → transpose → voicing → key → spelling → analyzer → chord-mode → swing pipeline. Defines the SonataDocument.{Source,Analyzer,SongSetting} registries; a file document settles every setting to its default and mounts no observer.
           - Web:
             - Slots:
@@ -7719,6 +7733,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by: 26 plugins — full list in [`plugins/apps/plugins/sonata/plugins/document/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/document/REFERENCE.md)
               - `apps` ×26
+        - **`fixtures`** — Sonata fixtures, server half: writeSongFixtures writes SongFixtures through each source's real write path (a chord grid through the chord-grid source's create write), measuring a grid as the editor does. Derives nothing else.
+          - Server:
+            - Uses: `apps/sonata/sources/chord-grid.createChordGridSongRow`
+            - Exports (values): `writeSongFixtures`
+          - Core:
+            - Exports (types): `SongFixture`
         - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by every field an extension exposes on the songs entity). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - Web:
             - Slots:
@@ -7746,7 +7766,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
-            - Uses: 92 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Uses: 93 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `primitives/pane` ×13
               - `primitives/data-view` ×7
               - `apps/sonata/shell` ×6
@@ -7755,9 +7775,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/player` ×5
               - `network/live` ×5
               - `apps/sonata/document` ×4
+              - `infra/endpoints` ×3
               - `primitives/persistent-draft` ×3
               - `apps/sonata/view-options` ×2
-              - `infra/endpoints` ×2
               - `primitives/css/layer` ×2
               - `primitives/css/spacing` ×2
               - `primitives/latest-ref` ×2
@@ -9483,16 +9503,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live.LiveColumns`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_chord_grid`)
-                - Exports (values): `songChordGrid`
+                - Exports (types): `NewChordGridSong`
+                - Exports (values):
+                  - `createChordGridSongRow`
+                  - `songChordGrid`
                 - Routes:
                   - `POST /api/sonata/songs/chord-grid`
                   - `PUT /api/sonata/songs/:id/chord-grid`
               - Core:
                 - Uses:
                   - `apps/sonata/library.songsEntityRef`
+                  - `apps/sonata/theory.parseChordSymbol`
+                  - `apps/sonata/theory.parseKeySignature`
+                  - `apps/sonata/theory.parseRomanNumeral`
+                  - `apps/sonata/voicing.ChordEvent`
                   - `fields/text/config.textField`
                   - `infra/entity-extensions.defineExtensionShape`
-                - Exports (values): `songChordGridShape`
+                - Exports (types):
+                  - `ChordGridRaw`
+                  - `GridToken`
+                  - `KeyChange`
+                - Exports (values):
+                  - `asChordGridRaw`
+                  - `compile`
+                  - `parseGrid`
+                  - `songChordGridShape`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --background`
@@ -9512,6 +9547,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-size-caption`
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --line-height-caption`
+                - Imported by: `apps/sonata/fixtures`
             - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, the song's falling-notes cover, and the cell of the Tracks field its extension exposes on every list of songs. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves each song's MIDI row as the lookup-only live collection sonata.midi (what the player hydrates the song from), exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), serves each song's falling-notes cover (GET …/midi/cover/<version>.svg, drawn by covers), and seeds the bundled public-domain MIDI starters at boot.
               - Web:
                 - Contributes:
@@ -9556,9 +9592,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/library.songAttachments`
                   - `apps/sonata/library.updateSongMeta`
                   - `database.db`
-                  - `infra/attachments.AttachmentBlobs`
+                  - `infra/attachments.AttachmentMissingError`
                   - `infra/attachments.createAttachment`
-                  - `infra/attachments.getAttachment`
+                  - `infra/attachments.readAttachmentBytes`
                   - `infra/endpoints.implement`
                   - `infra/endpoints.rawEndpointHandler`
                   - `infra/entity-extensions.defineExtension`
@@ -9603,8 +9639,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/sonata/sources/midi/file-preview`
                   - `apps/sonata/sources/midi/folders`
-              - Exemptions:
-                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import.ts` (debt)
               - Plugins:
                 - **`file-preview`** — Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi files, host or workspace) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes piano roll in its own player with a play bar, and Open in Sonata — imported into the library idempotently by content — at the playhead's bar.
                   - Web:
@@ -9639,7 +9673,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --primary-foreground`
                       - `ui/tokens/shape --radius`
                       - `ui/tokens/shape --spacing`
-                - **`folders`** — Watched-folder UI for the MIDI source: registers the midi-folders config and presents the File field (the MIDI exposure's `sourceMissing`) that flags — and lets you filter for — folder-imported songs whose file has been deleted from disk. Shows every watched folder that cannot be read (denied by macOS, missing, not a folder) as a notice on the library — which folder, why, and Allow access / Check again / Change folder / Remove — and puts the folder list itself, with each folder's status, under a Sonata settings gear in the library header. Watches configured folders for .mid/.midi files and mirrors them into the Sonata library: auto-imports on create/edit (via a per-file job), badges 'source deleted' on removal, and reconciles drift on boot and config change. The watched-folder list is a config_v2 listField. Probes each folder (ok / missing / not a folder / denied / unreadable): only readable folders are watched and walked, and the statuses are served live (sonata.midi-folders.status) with a Check again endpoint, plus each folder's imported-song count.
+                - **`folders`** — Watched-folder UI for the MIDI source: registers the midi-folders config and presents the File field (the MIDI exposure's `sourceMissing`) that flags — and lets you filter for — folder-imported songs whose file has been deleted from disk. Shows every watched folder that cannot be read (denied by macOS, missing, not a folder) as a notice on the library — which folder, why, and Allow access / Check again / Change folder / Remove — and puts the folder list itself, with each folder's status, under a Sonata settings gear in the library header. Watched MIDI folders, every host's half: registers the watched-folder list (a config_v2 listField) and serves each folder's imported-song count (sonata.midi-folders.song-count, a count over the MIDI side-table). Watching, importing and probing the folders is the machine/ half's.
                   - Web:
                     - Contributes:
                       - `ConfigV2.WebRegister` "midi-folders"
@@ -9673,31 +9707,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `resource.declare` "sonata.midi-folders.song-count"
                       - `resource.declare` "sonata.midi-folders.status"
                     - Uses:
-                      - `apps/sonata/sources/midi.getSongMidiBySourcePath`
-                      - `apps/sonata/sources/midi.importMidiSong`
-                      - `apps/sonata/sources/midi.listFolderImportedSongs`
-                      - `apps/sonata/sources/midi.setSourceMissing`
                       - `apps/sonata/sources/midi.songMidi`
                       - `config_v2.ConfigV2`
-                      - `config_v2.getConfig`
-                      - `config_v2.watchConfig`
                       - `database.db`
-                      - `infra/corpus-index.CorpusDelta`
-                      - `infra/corpus-index.defineCorpusIndex`
-                      - `infra/endpoints.implement`
-                      - `infra/file-watcher.defineFileWatcher`
-                      - `infra/file-watcher.FileChangeEvent`
-                      - `infra/file-watcher.FileWatcher`
-                      - `infra/jobs.defineJob`
-                      - `infra/warmup.defineWarmup`
+                      - `network/live.serveValue`
+                    - Resources:
+                      - `sonata.midi-folders.song-count` (push)
+                      - `sonata.midi-folders.status` (push, notified, whole: one entry per configured watched folder — a handful, user-authored)
+                  - Machine:
+                    - Uses:
+                      - `infra/endpoints.implementMachine`
                       - `network/live.serveValue`
                     - Register:
                       - `defineJob('sonata.midi.import')`
                       - `defineWarmup('sonata.midi-folders.reconcile')`
                       - `defineFileWatcher('sonata-midi-folders.folders')`
-                    - Resources:
-                      - `sonata.midi-folders.song-count` (push)
-                      - `sonata.midi-folders.status` (push, notified, whole: one entry per configured watched folder — a handful, user-authored)
                     - Routes: `POST /api/sonata/midi-folders/recheck`
                   - Cross-plugin:
                     - Uses tokens:
@@ -9720,8 +9744,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/type-scale --font-weight-medium`
                       - `ui/tokens/type-scale --font-weight-normal`
                       - `ui/tokens/type-scale --line-height-caption`
-                  - Exemptions:
-                    - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import-job.ts`, `server/internal/reconcile.ts`, `server/internal/folder-status.ts` (debt)
             - **`musicxml`** — MusicXML file input source for Sonata: compile() parses a score-partwise document into a Score (parts and staves as tracks, ties merged, repeats unrolled, chord symbols, tempo, swing). Persists per-song MusicXML as an attachment and contributes the library Import affordance, hydration and the song's staff cover. Owns the sonata_songs_ext_musicxml side-table: per-song MusicXML attachment + content hash. Creates MusicXML-backed songs from an uploaded document (content-hash dedup), serves each song's row as the lookup-only live collection sonata.musicxml (what the player hydrates the song from) and fills an existing MusicXML song with a document (importMusicXmlForSong, for the transcription flow). Serves each song's staff cover (GET …/musicxml/cover/<version>.svg, drawn by covers).
               - Web:
                 - Contributes:
@@ -9753,9 +9775,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/library.songAttachments`
                   - `apps/sonata/library.updateSongMeta`
                   - `database.db`
-                  - `infra/attachments.AttachmentBlobs`
                   - `infra/attachments.createAttachment`
                   - `infra/attachments.getAttachment`
+                  - `infra/attachments.readAttachmentBytes`
                   - `infra/endpoints.implement`
                   - `infra/endpoints.rawEndpointHandler`
                   - `infra/entity-extensions.defineExtension`
@@ -9777,9 +9799,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-lg`
                   - `ui/tokens/shape --spacing`
                 - Imported by: `apps/sonata/transcription`
-              - Exemptions:
-                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import.ts` (debt)
-            - **`ultimate-guitar`** — Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → chord annotations, sections, lyrics, synthesized 4/4 tempo). Chord notes are generated by the shell's reactive re-voicing step from the chord annotations. Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section, and presents the tab's Key field (exposed on every list of songs). Ultimate Guitar source server: serves a tab URL's raw tab from UG's private mobile API as the live sonata.ultimate-guitar.tab value (a bad URL or a missing tab refused, any other breakage loud) and its catalog search as sonata.ultimate-guitar.search, and owns the sonata_songs_ext_ultimate_guitar side-table — serving each song's row as the lookup-only live collection sonata.ultimate-guitar.songs (what the player hydrates from), creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration), exposing the tab's key to every list of songs (LiveColumns.Expose), announcing sonata.ug.tabSaved when a song's sheet content changes.
+            - **`ultimate-guitar`** — Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → chord annotations, sections, lyrics, synthesized 4/4 tempo). Chord notes are generated by the shell's reactive re-voicing step from the chord annotations. Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section, and presents the tab's Key field (exposed on every list of songs). Ultimate Guitar source server, every host's half: owns the sonata_songs_ext_ultimate_guitar side-table — serving each song's row as the lookup-only live collection sonata.ultimate-guitar.songs (what the player hydrates from), creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration), exposing the tab's key to every list of songs (LiveColumns.Expose), announcing sonata.ug.tabSaved when a song's sheet content changes. Reading UG itself (a tab, the catalog search) is the machine/ half's.
               - Web:
                 - Contributes:
                   - `SonataDocument.Source` "Ultimate Guitar"
@@ -9830,18 +9850,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
                   - `infra/events.defineTriggerEvent`
-                  - `infra/safe-fetch.safeFetch`
-                  - `infra/safe-fetch.SsrfError`
                   - `network/live.LiveColumns`
                   - `network/live.serveCollection`
-                  - `network/live.serveValue`
                 - DB schema:
                   - `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/server/internal/tables-tab-saved.ts`
                   - `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_ultimate_guitar`)
                 - Exports (types): `UgTabSavedPayload`
                 - Exports (values):
-                  - `fetchUgTabContent`
                   - `songUltimateGuitar`
                   - `ugTabSaved`
                 - Register: `defineTriggerEvent('sonata.ug.tabSaved')`
@@ -9852,6 +9868,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Routes:
                   - `POST /api/sonata/songs/ultimate-guitar`
                   - `PUT /api/sonata/songs/:id/ultimate-guitar`
+              - Machine:
+                - Uses: `network/live.serveValue`
+                - Exports (values): `fetchUgTabContent`
               - Core:
                 - Uses:
                   - `apps/sonata/library.songsEntityRef`
@@ -9873,13 +9892,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-weight-semibold`
-                - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
               - Exemptions:
-                - Exempts itself from:
-                  - `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
-                  - `boundaries/no-platform-api` — `server/internal/ug-client.ts` (debt)
+                - Exempts itself from: `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
               - Plugins:
-                - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section showing the song's YouTube video (the recording plugin's RecordingVideo viewport with its volume, and its on/off RecordingSwitch in the header; the video itself is declared by a headless effect to the session's recording player, so it keeps playing — synced to the transport when the song plays on its alignment, a weak match included, else on its own — while the section is collapsed), an alignment status box (icon, status line, one control — Cancel, Re-align, Retry, Try another or Find a video — and while working a three-stage bar: find a video, analyse the audio, align the sheet), the video's line (title, match chip, channel, Replace) and an inline picker (a YouTube link, the candidate videos with thumbnail and outcome — click one to switch — and Search again); a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. In the library: the Video field's presentation (hidden by default). UG sheet alignment server: owns the sonata_songs_ext_ug_alignment side-table (video, who picked it, the resolver's candidates, status, record) served as a lookup-only live collection and its video id exposed to every list of songs (LiveColumns.Expose), the sonata.ug-alignment.align supervised job (choose a video with findSongVideos and walk the best candidates when none was set; beat features → alignChords → record, its live phase written on the row; a user's Cancel stops it as cancelled), the set-video / find-a-video / video-refused / re-align (also resuming a cancelled or failed walk) / cancel endpoints, and a trigger that starts choosing a video for a new UG song and re-aligns one whose sheet changes.
+                - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section showing the song's YouTube video (the recording plugin's RecordingVideo viewport with its volume, and its on/off RecordingSwitch in the header; the video itself is declared by a headless effect to the session's recording player, so it keeps playing — synced to the transport when the song plays on its alignment, a weak match included, else on its own — while the section is collapsed), an alignment status box (icon, status line, one control — Cancel, Re-align, Retry, Try another or Find a video — and while working a three-stage bar: find a video, analyse the audio, align the sheet), the video's line (title, match chip, channel, Replace) and an inline picker (a YouTube link, the candidate videos with thumbnail and outcome — click one to switch — and Search again); a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. In the library: the Video field's presentation (hidden by default). UG sheet alignment, every host's half: owns the sonata_songs_ext_ug_alignment side-table (video, who picked it, the resolver's candidates, status, record), served as a lookup-only live collection, its video id exposed to every list of songs (LiveColumns.Expose). Choosing a video and aligning to it is the machine/ half's.
                   - Web:
                     - Contributes:
                       - `Sonata.Section` "Recording" → `RecordingSection`
@@ -9916,28 +9932,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `trigger` "sonata.ug-alignment.on-tab-saved"
                     - Uses:
                       - `apps/sonata/library._songs`
-                      - `apps/sonata/sources/ultimate-guitar.songUltimateGuitar`
-                      - `apps/sonata/sources/ultimate-guitar.ugTabSaved`
-                      - `infra/audio-analysis.ensureBeatFeatures`
-                      - `infra/endpoints.HttpError`
-                      - `infra/endpoints.implement`
                       - `infra/entity-extensions.defineExtension`
-                      - `infra/events.Trigger`
-                      - `infra/jobs.defineJob`
-                      - `infra/jobs.isNonRetryableError`
-                      - `infra/jobs/supervised-job.cancelSupervisedJobByLock`
-                      - `infra/jobs/supervised-job.defineSupervisedJob`
-                      - `integrations/youtube/audio-fetch.isYouTubeAudioError`
-                      - `integrations/youtube/song-videos.findSongVideos`
                       - `network/live.LiveColumns`
                       - `network/live.serveCollection`
-                      - `primitives/log-channels.defineLogSink`
                     - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/server/internal/tables.ts`
                     - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_ug_alignment`)
+                    - Exports (values): `songUgAlignment`
+                    - Resources: `sonata-ug-alignment:rows` (keyed, point)
+                  - Machine:
+                    - Uses:
+                      - `infra/audio-analysis.ensureBeatFeatures`
+                      - `infra/endpoints.implementMachine`
                     - Register:
                       - `defineSupervisedJob('sonata.ug-alignment.align')`
                       - `defineJob('sonata.ug-alignment.on-tab-saved')`
-                    - Resources: `sonata-ug-alignment:rows` (keyed, point)
                     - Routes:
                       - `PUT /api/sonata/songs/:id/ultimate-guitar/alignment/video`
                       - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/realign`
@@ -10079,6 +10087,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/chord/vocabulary`
               - `apps/sonata/lyric-line`
+              - `apps/sonata/sources/chord-grid`
               - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/sonata/voicing`
         - **`track-mixer`** — Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track) and registers with the song document as a per-song setting (SonataDocument.SongSetting, settled by a headless observer), so the player waits for it. Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / instrument / muted / hidden / volume) and serves them per song, consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
@@ -10400,6 +10409,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MIN_HAND_OCTAVE`
               - `reVoiceChords`
               - `voiceChords`
+          - Cross-plugin:
+            - Imported by: `apps/sonata/sources/chord-grid`
     - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.
       - Plugins:
         - **`compositions`** — Compositions pane: list named compositions and open a composition's detail pane, whose sections (draft, closure, release) are contributed by sub-plugins.
@@ -11127,6 +11138,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DEMO_AGENTS`
                   - `DEMO_PAGE_IDS`
                   - `DEMO_PAGES`
+                  - `DEMO_SONG_ID`
+                  - `DEMO_SONGS`
                   - `DEMO_STORIES`
                   - `demoAgentId`
                   - `demoAgentLaunchId`
@@ -27513,11 +27526,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/events/sources/url-extract` (1 debt)
               - `apps/file-explorer/git` (2 debt)
               - `apps/places/place-details` (1 debt)
-              - `apps/sonata/covers` (1 debt)
-              - `apps/sonata/sources/midi` (1 debt)
-              - `apps/sonata/sources/midi/folders` (3 debt)
-              - `apps/sonata/sources/musicxml` (1 debt)
-              - `apps/sonata/sources/ultimate-guitar` (1 debt)
               - `apps/sonata/transcription` (5 debt)
               - `auth/apple-signing` (1 debt)
               - `backup` (2 debt)
@@ -27584,8 +27592,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/lint` (2 debt)
               - `framework/tooling/web-artifacts` (19 debt)
               - `framework/web-core` (1 debt)
-              - `infra/asset-mirror` (3 debt)
-              - `infra/audio-analysis` (4 debt)
+              - `infra/asset-mirror/bundle` (3 debt)
               - `infra/corpus-index` (1 debt)
               - `infra/deps/mise` (2 debt)
               - `infra/deps/npm` (2 debt)
@@ -28696,7 +28703,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/element-size/resize-loop-trace.installResizeLoopTrace`
           - `primitives/networking.TransportProvider`
           - `primitives/networking/page-transport.pageTransport`
-          - `primitives/networking/request-guard.allowAssetRoute`
           - `primitives/networking/request-guard.installRequestGuard`
           - `primitives/perfs/boot-trace.markBootInstant`
           - `primitives/perfs/boot-trace.markBootInstantAtNextCommit`
@@ -29321,12 +29327,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:
-    - **`asset-mirror`** — Generic server-side asset mirror: plugins declare a remote asset source via defineAssetMirror; files are lazily downloaded on first request, cached on local disk, and served same-origin thereafter (offline-capable after one warm-up). Its route is the machine/ half's.
-      - Machine:
-        - Uses: `infra/endpoints.machineHandler`
+    - **`asset-mirror`** — Generic asset mirror, on every host: plugins declare a remote asset source via defineAssetMirror; GET /api/asset-mirror/:id/:file (and /:id/:dir/:file) downloads each file on its first request into the assetMirrorFiles data-files root and serves it same-origin thereafter — offline-capable after one warm-up on the desktop (the computer's disk, shared by every worktree), once per session in a browser host (memory).
+      - Server:
+        - Contributes: `data-files.root-location` "infra.asset-mirror"
+        - Uses:
+          - `infra/endpoints.rawEndpointHandler`
+          - `infra/paths/data-files.defineFileRoot`
+        - Exports (types): `AssetMirrorSpec`
+        - Exports (values):
+          - `assetMirrorFiles`
+          - `defineAssetMirror`
         - Routes:
           - `GET /api/asset-mirror/:id/:file`
           - `GET /api/asset-mirror/:id/:dir/:file`
+      - Machine:
+        - Uses: `infra/paths/data-files.FileRootLocation`
       - Core:
         - Uses:
           - `framework/tooling/collected-dir.defineCollectedDir`
@@ -29338,10 +29353,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AssetMirrorPrewarm`
           - `CollectedEntry`
         - Exports (values):
-          - `ASSET_MIRROR_PREFIX`
           - `assetMirrorBase`
           - `assetMirrorPrewarmCollectedDir`
-          - `assetMirrorUrl`
           - `defineAssetMirrorPrewarm`
           - `getMirroredFile`
           - `getMirroredNestedFile`
@@ -29350,16 +29363,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/sonata/audio/piano`
           - `apps/sonata/audio/soundfont`
-          - `infra/launcher`
           - `ui/icons/emoji`
-      - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/fetch-to-disk.ts`, `server/internal/run-prewarm.ts`, `server/internal/seed-cache.ts` (debt)
-      - Server:
-        - Exports (types): `AssetMirrorSpec`
-        - Exports (values):
-          - `defineAssetMirror`
-          - `runAssetMirrorPrewarm`
-          - `seedAssetMirrorCache`
+      - Plugins:
+        - **`bundle`** — The asset mirror's release bundle, host-only: runAssetMirrorPrewarm downloads every prewarm-declared file of a composition's closure into a release bundle, and seedAssetMirrorCache copies a bundle's files into a fresh install's mirror cache (copy-if-absent).
+          - Cross-plugin:
+            - Imported by: `infra/launcher`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/fetch-to-disk.ts`, `server/internal/run-prewarm.ts`, `server/internal/seed-cache.ts` (debt)
+          - Server:
+            - Exports (values):
+              - `runAssetMirrorPrewarm`
+              - `seedAssetMirrorCache`
     - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments: rows plus bytes in the host's blob store (AttachmentBlobs — on the desktop UUID-named files under ~/.equin/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable, linkRef) over a link entity their own core declares, serve its scoped link collection and contribute it as Attachments.Link — attachments.by-owner follows each contributed set (built at bind), naming no owner; orphan sweep reclaims unreferenced rows past TTL. holdAttachments keeps an attachment an unsent draft references alive for the draft's lifetime.
       - Server:
         - Contributes:
@@ -29388,10 +29402,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `_attachments`
           - `AttachmentBlobs`
+          - `AttachmentMissingError`
           - `Attachments`
           - `createAttachment`
           - `deleteAttachment`
           - `getAttachment`
+          - `readAttachmentBytes`
         - Register: `defineJob('attachments.orphan-sweep')`
         - Resources:
           - `attachments.by-owner` (push, whole: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
@@ -29468,21 +29484,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `host-service:attachments.blobs` "attachments.blobs"
             - Uses: `infra/attachments.AttachmentBlobs`
-    - **`audio-analysis`** — The audio-analysis settings registration (beat tracker device and model, chroma variant), so they appear in Settings → Config. Audio analysis of YouTube videos on the on-demand `audio-python` dependency: ensureBeatFeatures(videoId, exec) fetches the audio, runs Beat This! (beats, downbeats, no DBN) and a librosa CQT chroma out of process under one background unit of host admission, and caches the validated features host-wide per video, analysis version and settings (beat model, chroma variant — user config, with the fast ones as defaults; the device is config too) under a per-entry host flock; readBeatFeatures answers absent / running / ready / failed from the files, and requestBeatFeatures (GET/POST /api/audio-analysis/beat-features/:videoId) enqueues the audio-analysis.beat-features supervised job.
+    - **`audio-analysis`** — The audio-analysis settings registration (beat tracker device and model, chroma variant), so they appear in Settings → Config. Audio analysis, every host's half: registers its settings (beat model, chroma variant, device) so they read and edit on every host. Analysing is the machine/ half's.
       - Web:
         - Contributes: `ConfigV2.WebRegister` "config"
         - Uses: `config_v2.ConfigV2`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
-        - Uses:
-          - `config_v2.ConfigV2`
-          - `config_v2.getConfig`
-          - `infra/endpoints.HttpError`
-          - `infra/endpoints.implement`
-          - `infra/jobs.isNonRetryableError`
-          - `infra/jobs/supervised-job.defineSupervisedJob`
-          - `integrations/youtube/audio-fetch.fetchYouTubeAudio`
-          - `primitives/log-channels.defineLogSink`
+        - Uses: `config_v2.ConfigV2`
+      - Machine:
+        - Uses: `infra/endpoints.implementMachine`
         - Exports (types):
           - `EnsureBeatFeaturesOptions`
           - `EnsurePhase`
@@ -29530,8 +29540,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `audioPythonDep`
       - Cross-plugin:
         - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
-      - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ensure.ts`, `server/internal/job.ts`, `server/internal/state.ts`, `server/internal/store.ts` (debt)
     - **`background`** — Umbrella for what the app runs on its own: the catalog every background mechanism reports into, and the page that lists it.
       - Plugins:
         - **`catalog`** — Background activity catalog, browser half: the live read of one entry across both halves of the catalog, the countdown to its next run, and the catalog list (a DataView grouped by kind, with status, trigger in words, next and last run) and entry detail (scope, declaring plugin, recent runs with a row-action slot the mounting app fills, Run now) components — mounted as panes by Debug → Background activity. Background activity catalog: defineBackgroundKind registers a provider (a mechanism that runs things on its own: jobs, warm-ups, timers) that lists its entries with trigger, scope and latest run, its recent runs and an optional Run now; the catalog merges every provider into the pushed background.catalog value (throttled), serves background.recent-runs per entry and POST /api/background/run-now, fills event-triggered entries' event names from contributed BackgroundTriggerSource annotations, and names no provider. Background activity catalog, central half: defineBackgroundKind registers a provider for what the machine-wide central runtime runs on its own, merged into the pushed background.central-catalog value (every entry scope central) with background.central-recent-runs per entry.
@@ -30098,12 +30106,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `CorpusFormat`
         - Exports (values): `corpusFormat`
       - Cross-plugin:
-        - Imported by:
-          - `apps/sonata/sources/midi/folders`
-          - `stats/cost`
+        - Imported by: `stats/cost`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/corpus-index.ts` (debt)
-    - **`deps`** — Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request, the pushed deps.states live value says absent / installing / ready / failed for every declared dependency, the install/remove endpoints back Settings → Dependencies. The daily deps.sweep is its sweep sub-plugin.
+    - **`deps`** — Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request. The daily deps.sweep is its sweep sub-plugin.
       - Web:
         - Slots:
           - `item-actions`
@@ -30122,6 +30128,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.useLive`
           - `network/live/live-state.foldResource`
           - `primitives/css/badge.Badge`
+          - `primitives/css/text.Text`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
           - `primitives/data-view.defineItemActions`
@@ -30135,19 +30142,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes: `resource.declare` "deps.states"
         - Uses:
-          - `infra/endpoints.HttpError`
-          - `infra/endpoints.implement`
-          - `infra/file-watcher.defineFileWatcher`
           - `infra/jobs/supervised-job.defineSupervisedJob`
-          - `network/live.serveValue`
           - `primitives/log-channels.defineLogSink`
         - Exports (values):
           - `onDepInstallSettled`
           - `requestDep`
-        - Register:
-          - `defineSupervisedJob('deps.install')`
-          - `defineFileWatcher('deps.cache')`
+        - Register: `defineSupervisedJob('deps.install')`
         - Resources: `deps.states` (push, notified, whole: one row per optional dependency the code declares — a closed handful (browsers, python envs, toolchains))
+      - Machine:
+        - Uses:
+          - `infra/endpoints.implementMachine`
+          - `network/live.serveValue`
+        - Register: `defineFileWatcher('deps.cache')`
         - Routes:
           - `POST /api/deps/install`
           - `POST /api/deps/remove`
@@ -30477,7 +30483,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `utcDay`
           - Cli:
             - Exports (values): `upgradeThisWorktree`
-    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, or unavailable; contentUrlOver hands a content frame a ContentPath's URL on the transport's content serving (the content host, off every app origin, for the page's own server; an in-browser server's frame Service Worker, declared safe), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.
+    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, unavailable, or fetch-only (served, but no URL reaches it); assetFetchOver hands a library that takes a fetch hook the asset's base and a fetch over the transport; contentUrlOver hands a content frame a ContentPath's URL on the transport's content serving (the content host, off every app origin, for the page's own server; an in-browser server's frame Service Worker, declared safe), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.
       - Web:
         - Uses:
           - `primitives/networking.fetchWithRetry`
@@ -30488,6 +30494,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/networking.useTransportScoped`
           - `primitives/networking/request-guard.allowAssetRoute`
         - Exports (types):
+          - `AssetFetch`
           - `AssetSrc`
           - `AssetUrl`
           - `ContentUrl`
@@ -30495,6 +30502,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FetchEndpoint`
           - `ReadyContentUrl`
         - Exports (values):
+          - `assetFetchOver`
           - `assetUrlOver`
           - `contentUrlOver`
           - `EndpointAgentWriteRefusedError`
@@ -30569,14 +30577,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 233 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×65
+        - Imported by: 235 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×66
           - `conversations` ×34
           - `infra` ×21
           - `page` ×19
           - `debug` ×18
           - `tasks` ×18
-          - `primitives` ×14
+          - `primitives` ×15
           - `reports` ×6
           - `ui` ×6
           - `auth` ×5
@@ -30850,10 +30858,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
           - `tasks` ×8
-          - `apps` ×6
           - `conversations` ×6
+          - `apps` ×5
           - `infra` ×4
           - `page` ×4
           - `wish`
@@ -31036,12 +31044,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `core/internal/file-sink.ts`, `core/internal/history.ts`, `core/internal/read.ts` (debt)
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, kqueue sizing; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
       - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
-          - `infra` ×8
+        - Imported by: 24 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `debug` ×7
+          - `infra` ×7
           - `build` ×2
           - `conversations` ×2
-          - `apps/sonata/sources/midi/folders`
           - `framework/cli/await`
           - `integrations/google-maps`
           - `plugin-meta/plugin-tree`
@@ -31925,9 +31932,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 62 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
-          - `apps` ×18
-          - `infra` ×12
+        - Imported by: 59 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+          - `apps` ×16
+          - `infra` ×11
           - `conversations` ×8
           - `debug` ×7
           - `tasks` ×5
@@ -32135,14 +32142,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `cliExecContext`
               - `runAttached`
           - Cross-plugin:
-            - Imported by: 21 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
-              - `framework` ×8
-              - `apps` ×4
-              - `infra` ×4
+            - Imported by:
+              - `apps/chord/song-index`
+              - `apps/deploy/deployments`
+              - `apps/prototypes/thumbnails`
               - `backup`
               - `conversations/workspace/worktree`
               - `database/fork`
               - `debug/worktree-cleanup`
+              - `framework/cli/build`
+              - `framework/cli/op-runtime`
+              - `framework/cli/release`
+              - `framework/cli/serve-app`
+              - `framework/cli/start`
+              - `framework/tooling/checks/cache-prune`
+              - `framework/tooling/checks/type-check/backstop`
+              - `framework/tooling/web-artifacts/prune`
+              - `infra/audio-analysis`
+              - `infra/deps`
+              - `infra/events-test`
+              - `infra/worktree/spare-pool`
               - `release`
           - Exemptions:
             - Exempts itself from:
@@ -32166,7 +32185,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/pgbouncer.PGBOUNCER_PORT`
           - `database/pgbouncer.PGBOUNCER_SOCKET_DIR`
           - `database/pgbouncer.pgbouncerPidFileUnder`
-          - `infra/asset-mirror.seedAssetMirrorCache`
+          - `infra/asset-mirror/bundle.seedAssetMirrorCache`
           - `infra/endpoints.callEndpoint`
           - `infra/paths.ReleaseIdentity`
           - `infra/paths.setReleaseIdentity`
@@ -32864,6 +32883,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes`
               - `apps/prototypes/files`
               - `apps/prototypes/thumbnails`
+              - `apps/sonata/covers`
+              - `infra/asset-mirror`
               - `infra/paths/data-files/memory`
               - `primitives/file-viewer`
           - Exemptions:
@@ -33089,7 +33110,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/events/sources/dmda`
           - `apps/events/sources/salsanueva`
           - `apps/events/sources/url-extract`
-          - `apps/sonata/sources/ultimate-guitar`
           - `infra/safe-fetch/browser-fetch`
           - `stats/cost`
       - Exemptions:
@@ -33457,7 +33477,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/content-search`
           - `apps/places/places-core`
           - `apps/prototypes/thumbnails`
-          - `apps/sonata/sources/midi/folders`
           - `conversations/turn-ledger`
           - `infra/corpus-index`
           - `infra/warmup/background-arm`
@@ -34060,10 +34079,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isYouTubeAudioError`
               - `YouTubeAccessError`
             - Register: `defineJob('youtube-audio.sweep')`
-          - Cross-plugin:
-            - Imported by:
-              - `apps/sonata/sources/ultimate-guitar/alignment`
-              - `infra/audio-analysis`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/cache.ts`, `server/internal/fetch.ts`, `server/internal/sweep.ts` (debt)
           - Test helpers:
@@ -34103,7 +34118,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/chord/song-index`
-              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `integrations/youtube/song-videos/youtube-search`
           - Plugins:
             - **`youtube-search`** — The youtube-search song-video source: YouTube's first ten results for "<artist> <title>" (yt-dlp's flat search: title, channel, duration, views, verified, art track), contributed to SongVideos.Source.
@@ -42596,7 +42610,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 412 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 413 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×76
               - `primitives` ×47
@@ -42606,7 +42620,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×15
               - `tasks` ×15
               - `fields` ×11
-              - `infra` ×7
+              - `infra` ×8
               - `stats` ×6
               - `build` ×5
               - `auth` ×4
@@ -43186,7 +43200,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 133 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 134 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×21
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
@@ -43216,6 +43230,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/toast` ×2
           - `fields.Fields`
           - `ids.IdKinds`
+          - `infra/endpoints.useAssetSrc`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
           - `primitives/css/coords.Placed`
@@ -45671,10 +45686,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
-          - `apps` ×12
+        - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+          - `apps` ×11
           - `debug` ×9
-          - `infra` ×8
+          - `infra` ×7
           - `database` ×5
           - `framework` ×4
           - `network` ×4
@@ -46153,8 +46168,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTransport`
           - `useTransportScoped`
       - Cross-plugin:
-        - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
-          - `apps` ×9
+        - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
+          - `apps` ×10
           - `conversations` ×5
           - `primitives` ×5
           - `framework` ×3

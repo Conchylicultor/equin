@@ -52,12 +52,14 @@ const PRIMARY_PILL = "bg-foreground text-background hover:bg-foreground/90";
  * out (allow access in macOS, check again, change or remove it). Every other
  * folder keeps importing; this is how the user learns one is not. Nothing
  * while every folder reads, or before the statuses are known (the library
- * below shows its own loading state).
+ * below shows its own loading state), or on a host that watches no folder (a
+ * browser host: the folders are on the computer).
  */
 export function MidiFoldersNotice() {
   const statuses = useLive(midiFoldersStatus);
   return foldResource(statuses, {
     loading: () => null,
+    unavailable: () => null,
     error: (error) => (
       <div className="pb-lg">
         <ResourceErrorInline error={error} variant="inline" />

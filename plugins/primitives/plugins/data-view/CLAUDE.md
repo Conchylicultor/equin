@@ -2061,7 +2061,7 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 133 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 134 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×21
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
@@ -2091,6 +2091,7 @@ list, table and `primitives/tree` share it.
     - `shell/toast` ×2
     - `fields.Fields`
     - `ids.IdKinds`
+    - `infra/endpoints.useAssetSrc`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/coords.Placed`

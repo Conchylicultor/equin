@@ -2,7 +2,8 @@ import { z } from "zod";
 import {
   blob,
   defineEndpoint,
-  endpointPath,
+  assetPath,
+  type AssetPath,
 } from "@plugins/infra/plugins/endpoints/core";
 
 /**
@@ -31,9 +32,12 @@ export const getSongMusicXmlCover = defineEndpoint({
   response: blob(),
 });
 
-/** The URL of a song's MusicXML cover, versioned by its `sourcesChangedAt`. */
-export function musicXmlCoverUrl(id: string, sourcesChangedAt: Date): string {
-  return endpointPath(getSongMusicXmlCover, {
+/** The asset of a song's MusicXML cover, versioned by its `sourcesChangedAt`. */
+export function musicXmlCoverAsset(
+  id: string,
+  sourcesChangedAt: Date,
+): AssetPath {
+  return assetPath(getSongMusicXmlCover, {
     id,
     file: `${sourcesChangedAt.getTime()}.svg`,
   });

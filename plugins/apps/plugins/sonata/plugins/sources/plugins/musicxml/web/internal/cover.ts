@@ -1,7 +1,7 @@
 import type { Song } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import type { SongCoverAnswer } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { MUSICXML_SOURCE_ID } from "../../shared/constants";
-import { musicXmlCoverUrl } from "../../shared/endpoints";
+import { musicXmlCoverAsset } from "../../shared/endpoints";
 
 /**
  * A MusicXML song's cover: a schematic grand staff of its opening bars, drawn
@@ -16,8 +16,8 @@ export const musicXmlCover = (song: Song): SongCoverAnswer | undefined =>
     ? {
         kind: "art",
         content: {
-          kind: "image",
-          src: musicXmlCoverUrl(song.id, song.sourcesChangedAt),
+          kind: "asset",
+          asset: musicXmlCoverAsset(song.id, song.sourcesChangedAt),
         },
       }
     : undefined;

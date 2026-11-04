@@ -7,6 +7,7 @@ import {
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { formatByteSize } from "@plugins/fields/plugins/byte-size/core";
 import { depsStates, type DepRow, type DepState } from "../../core";
@@ -59,6 +60,7 @@ export function DependenciesView() {
   const result = useLive(depsStates);
   const rows = foldResource(result, {
     loading: () => NO_ROWS,
+    unavailable: () => NO_ROWS,
     error: () => NO_ROWS,
     ready: (d) => d,
   });
@@ -154,6 +156,15 @@ export function DependenciesView() {
     ],
     [],
   );
+
+  // On a host without the computer there is nothing installed to list.
+  if (result.status === "unavailable") {
+    return (
+      <Text variant="caption" tone="muted">
+        {result.message}
+      </Text>
+    );
+  }
 
   return (
     <DataView<DepRow>

@@ -17,8 +17,8 @@ export default {
       icon: familyIcon[gm.family],
       gmProgram: gm.program,
       group: gm.family,
-      createVoices: (ctx, destination) =>
-        createSoundfontVoices(ctx, destination, gm.gleitz),
+      createVoices: (ctx, destination, assets) =>
+        createSoundfontVoices(ctx, destination, assets, gm.gleitz),
     }),
   ),
 } satisfies PluginDefinition;

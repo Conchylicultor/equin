@@ -1,16 +1,10 @@
 import type { MachinePluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { machineHandler } from "@plugins/infra/plugins/endpoints/machine";
-import { getMirroredFile, getMirroredNestedFile } from "../core";
-import { handleMirror } from "./internal/handle-mirror";
+import { FileRootLocation } from "@plugins/infra/plugins/paths/plugins/data-files/machine";
+import { assetMirrorCache } from "../data-dirs";
+import { assetMirrorFiles } from "../server";
 
 export default {
   description:
-    "The asset mirror's route, desktop-only (needsMachine): GET /api/asset-mirror/:id/:file and /:id/:dir/:file serve a registered mirror's file from the on-disk cache, downloading it from the remote source on a miss.",
-  httpRoutes: {
-    [getMirroredFile.route]: machineHandler(getMirroredFile, handleMirror),
-    [getMirroredNestedFile.route]: machineHandler(
-      getMirroredNestedFile,
-      handleMirror,
-    ),
-  },
+    "The asset mirror, desktop half: binds the assetMirrorFiles root to the machine-wide cache on this computer (cache/asset-mirror), the directory a release bundle seeds.",
+  contributions: [FileRootLocation(assetMirrorFiles, assetMirrorCache)],
 } satisfies MachinePluginDefinition;

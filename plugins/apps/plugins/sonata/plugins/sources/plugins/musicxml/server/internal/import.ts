@@ -1,10 +1,11 @@
-import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
   createAttachment,
   getAttachment,
+  readAttachmentBytes,
 } from "@plugins/infra/plugins/attachments/server";
+import { createSha256 } from "@plugins/packages/plugins/string-hash/core";
 import {
   _songs,
   createSongRow,
@@ -25,7 +26,7 @@ import { songMusicXml, _songMusicXmlExt } from "./tables";
 
 /** SHA-256 (hex) of the document's bytes — the content-dedup key. */
 function hashBytes(bytes: Uint8Array): string {
-  return createHash("sha256").update(bytes).digest("hex");
+  return createSha256().update(bytes).hex();
 }
 
 /**
@@ -104,7 +105,7 @@ export async function createMusicXmlSongFromAttachment(
 ): Promise<{ id: string; title: string }> {
   const att = await getAttachment(attachmentId);
   if (!att) throw new Error(`[musicxml] attachment not found: ${attachmentId}`);
-  const bytes = await Bun.file(att.diskPath).bytes();
+  const bytes = await readAttachmentBytes(attachmentId);
   const xml = new TextDecoder().decode(bytes);
   const meta = deriveMusicXmlSongMeta(xml);
   const contentHash = hashBytes(bytes);

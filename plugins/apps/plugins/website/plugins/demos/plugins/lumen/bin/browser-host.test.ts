@@ -103,6 +103,7 @@ import {
   DARK_MODE_PAGE_WORK,
   DEMO_AGENTS,
   DEMO_PAGE_IDS,
+  DEMO_SONGS,
   DEMO_STORIES,
   demoAgentId,
   demoConversationId,
@@ -1141,5 +1142,63 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     } finally {
       ws.close(socket, 1000, "test");
     }
+  });
+  // ── Sonata: the library seeded, its reads and routes on the worker ─────────
+  test("the library holds the demo's songs and the MIDI starters", async () => {
+    const songs = await db.execute<{
+      id: string;
+      title: string;
+      source: string;
+    }>(sql`SELECT id, title, source FROM sonata_songs ORDER BY id`);
+    for (const song of DEMO_SONGS) {
+      expect(songs.rows).toContainEqual({
+        id: song.id,
+        title: song.title,
+        source: "chord-grid",
+      });
+    }
+    // A fresh install's starters, seeded by the MIDI source itself.
+    expect(
+      songs.rows.filter((r) => r.source === "midi" && r.id.startsWith("seed-"))
+        .length,
+    ).toBeGreaterThan(0);
+    const grids = await db.execute<{ song_id: string; chord_text: string }>(
+      sql`SELECT parent_id AS song_id, chord_text FROM sonata_songs_ext_chord_grid ORDER BY parent_id`,
+    );
+    for (const song of DEMO_SONGS) {
+      expect(grids.rows).toContainEqual({
+        song_id: song.id,
+        chord_text: song.chordText,
+      });
+    }
+  });
+
+  test("a MIDI starter's cover is drawn and cached on the worker", async () => {
+    const [starter] = (
+      await db.execute<{ id: string; changed: Date }>(
+        sql`SELECT id, sources_changed_at AS changed FROM sonata_songs WHERE source = 'midi' ORDER BY id LIMIT 1`,
+      )
+    ).rows;
+    const version = new Date(starter!.changed).getTime();
+    for (let i = 0; i < 2; i++) {
+      const res = await request(
+        "GET",
+        `/api/sonata/songs/${starter!.id}/midi/cover/${version}.svg`,
+      );
+      expect(res.status).toBe(200);
+      expect(await res.text()).toContain("<svg");
+    }
+  });
+
+  test("the asset mirror is served here: an unknown mirror is its own 404", async () => {
+    const res = await request("GET", "/api/asset-mirror/no-such-mirror/x.ogg");
+    expect(res.status).toBe(404);
+    expect(await res.text()).toContain("unknown mirror");
+  });
+
+  test("watching MIDI folders needs the computer: declared needsMachine, refused here", async () => {
+    const res = await request("POST", "/api/sonata/midi-folders/recheck");
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ reason: "unsupported" });
   });
 });

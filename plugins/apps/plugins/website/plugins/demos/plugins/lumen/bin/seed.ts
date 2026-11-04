@@ -27,12 +27,14 @@ import { pageTools } from "@plugins/page/plugins/annotations/plugins/agent-acces
 import { writePageTree } from "@plugins/apps/plugins/pages/plugins/fixtures/server";
 import type { PrototypeFixtureData } from "@plugins/apps/plugins/prototypes/plugins/fixtures/core";
 import { writePrototypeFixture } from "@plugins/apps/plugins/prototypes/plugins/fixtures/server";
+import { writeSongFixtures } from "@plugins/apps/plugins/sonata/plugins/fixtures/server";
 import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server";
 import {
   DARK_MODE_PAGE_WORK,
   DEMO_AGENTS,
   DEMO_PAGE_IDS,
   DEMO_PAGES,
+  DEMO_SONGS,
   DEMO_STORIES,
   demoAgentId,
   demoAgentLaunchId,
@@ -71,7 +73,9 @@ import {
  * 5. the Prototypes gallery, through Prototypes' fixture writer
  *    (`writePrototypeFixture`) from `prototypes` — the committed `../data/`,
  *    inlined into the worker's bundle or read off disk by the boot test — then
- *    settled.
+ *    settled;
+ * 6. the Sonata library's songs (`../core`'s), through Sonata's fixture writer
+ *    (`writeSongFixtures`), beside the MIDI starters the MIDI source seeds.
  */
 const DARK_MODE = demoStoryByKey("dark-mode");
 
@@ -179,6 +183,8 @@ export async function seed(prototypes: PrototypeFixtureData): Promise<void> {
     );
 
   await writePrototypeFixture(demoPrototypeFixture(prototypes));
+  await settleJobQueue();
+  await writeSongFixtures(DEMO_SONGS);
   await settleJobQueue();
 }
 

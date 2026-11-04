@@ -218,13 +218,13 @@ export interface EmojiPickerProps {
  * on mount.
  *
  * The mirror is reached by URL (frimousse fetches `<base>/<locale>/data.json`
- * itself), so its base comes from `useAssetUrl`: the mirror's route is
- * desktop-only, and on a host without the computer (the demo) the picker says
- * it is unavailable instead of pointing frimousse at the page's own server.
+ * itself, with no fetch hook), so its base comes from `useAssetUrl`: on a host
+ * no URL reaches (the demo's in-browser server) the picker says it is
+ * unavailable instead of pointing frimousse at the page's own server.
  */
 export function EmojiPicker(props: EmojiPickerProps) {
   const base = useAssetUrl(EMOJIBASE);
-  if (base.kind === "unavailable") {
+  if (base.kind !== "ready") {
     return (
       <Text as="div" variant="caption" tone="muted">
         {unavailableMessage({ feature: "The emoji picker" })}

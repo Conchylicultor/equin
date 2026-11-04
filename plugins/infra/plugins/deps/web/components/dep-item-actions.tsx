@@ -23,6 +23,7 @@ export function InstallDepAction({
 }: ItemActionProps<DepRow>): ReactElement | null {
   const install = useEndpointMutation(installDepEndpoint);
   const kind = row.state.kind;
+  if (install.kind === "unavailable") return null;
   if (kind === "ready" || kind === "installing") return null;
   return (
     <IconButton
@@ -43,6 +44,7 @@ export function RemoveDepAction({
   row,
 }: ItemActionProps<DepRow>): ReactElement | null {
   const remove = useEndpointMutation(removeDepEndpoint);
+  if (remove.kind === "unavailable") return null;
   if (row.state.kind !== "ready" && row.state.kind !== "failed") return null;
   return (
     <IconButton

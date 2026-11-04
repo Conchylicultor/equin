@@ -145,6 +145,7 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
   // list not drawn yet (loading) or replaced by its error has none to move to.
   const navigableRows = foldResource(filtered, {
     loading: () => NO_ROWS,
+    unavailable: () => NO_ROWS,
     error: () => NO_ROWS,
     ready: (rows) => rows,
   });
@@ -170,8 +171,9 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
       setError(null);
       try {
         const answer = await readLive(ugTab, { url: target });
-        // A bad URL or a missing tab is the answer, shown as the alert line.
-        if (answer.status === "refused") {
+        // A bad URL or a missing tab is the answer, shown as the alert line —
+        // as is a host that cannot reach UG (a browser host).
+        if (answer.status === "refused" || answer.status === "unavailable") {
           setError(answer.message);
           return;
         }
@@ -312,6 +314,8 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
             />
           ) : filtered.status === "loading" ? (
             <Loading variant="rows" />
+          ) : filtered.status === "unavailable" ? (
+            <Placeholder>{filtered.message}</Placeholder>
           ) : filtered.data.length === 0 ? (
             <Placeholder>No results.</Placeholder>
           ) : (

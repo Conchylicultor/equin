@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   SonataAudio,
+  useInstrumentAssets,
   type InstrumentVoices,
 } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
@@ -67,6 +68,7 @@ export type Piano = {
 export function usePiano(volume: number): Piano {
   const instruments = SonataAudio.Instrument.useContributions();
   const instrumentsRef = useLatestRef(instruments);
+  const assetsRef = useLatestRef(useInstrumentAssets());
   const graphRef = useRef<PianoGraph | null>(null);
   const volumeRef = useLatestRef(volume);
 
@@ -106,7 +108,11 @@ export function usePiano(volume: number): Piano {
         const gain = ctx.createGain();
         gain.gain.value = volumeRef.current;
         gain.connect(ctx.destination);
-        graph = { ctx, voices: instrument.createVoices(ctx, gain), gain };
+        graph = {
+          ctx,
+          voices: instrument.createVoices(ctx, gain, assetsRef.current),
+          gain,
+        };
         graphRef.current = graph;
       }
       const { ctx, voices } = graph;

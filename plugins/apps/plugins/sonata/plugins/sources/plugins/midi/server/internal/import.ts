@@ -1,10 +1,11 @@
-import { createHash } from "node:crypto";
 import { eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
+  AttachmentMissingError,
   createAttachment,
-  getAttachment,
+  readAttachmentBytes,
 } from "@plugins/infra/plugins/attachments/server";
+import { createSha256 } from "@plugins/packages/plugins/string-hash/core";
 import {
   createSongRow,
   songAttachments,
@@ -20,7 +21,7 @@ import { songMidi, _songMidiExt } from "./tables";
 
 /** SHA-256 (hex) of the raw `.mid` bytes — the content-dedup key. */
 export function hashMidiBytes(bytes: Uint8Array): string {
-  return createHash("sha256").update(bytes).digest("hex");
+  return createSha256().update(bytes).hex();
 }
 
 /** Generic metadata for the library `sonata_songs` row, derived from the file. */
@@ -202,9 +203,7 @@ export async function createMidiSongFromAttachment(input: {
   trackCount: number;
   meta: MidiSongMeta;
 }): Promise<string> {
-  const att = await getAttachment(input.attachmentId);
-  if (!att) throw new Error(`attachment not found: ${input.attachmentId}`);
-  const bytes = await Bun.file(att.diskPath).bytes();
+  const bytes = await readAttachmentBytes(input.attachmentId);
 
   return writeMidiSong({
     contentHash: hashMidiBytes(bytes),
@@ -271,23 +270,19 @@ export async function backfillContentHashes(): Promise<void> {
     .from(_songMidiExt)
     .where(isNull(_songMidiExt.contentHash));
   for (const row of rows) {
-    const att = await getAttachment(row.attachmentId);
-    if (!att) {
+    let bytes: Uint8Array;
+    try {
+      bytes = await readAttachmentBytes(row.attachmentId);
+    } catch (err) {
+      if (!(err instanceof AttachmentMissingError)) throw err;
       console.warn(
-        `[midi] backfill: attachment ${row.attachmentId} for song ${row.songId} not found, skipping`,
-      );
-      continue;
-    }
-    const file = Bun.file(att.diskPath);
-    if (!(await file.exists())) {
-      console.warn(
-        `[midi] backfill: attachment file gone for song ${row.songId}, skipping`,
+        `[midi] backfill: ${err.message} (song ${row.songId}), skipping`,
       );
       continue;
     }
     await db
       .update(_songMidiExt)
-      .set({ contentHash: hashMidiBytes(await file.bytes()) })
+      .set({ contentHash: hashMidiBytes(bytes) })
       .where(eq(_songMidiExt.songId, row.songId));
   }
 }

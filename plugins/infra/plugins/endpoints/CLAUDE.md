@@ -197,13 +197,19 @@ return <img src={src.src} />;
 - **A sink that loads by URL on its own** — an `<img>` inside an HTML string,
   a library's own `fetch` — cannot take a blob URL. `useAssetUrl(asset)` /
   `assetUrlOver(transport, asset)` answer `ready{url}` (the path, on a server
-  reachable by URL) or `unavailable{message}` (a `needsMachine` route on a
-  transport without the computer), and THROW for a portable route on a
-  transport no URL reaches (that sink would load from the page's server — use
-  `useAssetSrc`). For a library that appends the rest of the path itself
-  (`<base>/<file>`), `assetBase(endpoint, leadingParams)` builds an opaque
-  `AssetBase` — the route's path cut before its first param left open — that
-  `useAssetUrl` resolves the same way (`asset-mirror`'s `assetMirrorBase`).
+  reachable by URL), `unavailable{message}` (a `needsMachine` route on a
+  transport without the computer), or `fetch-only` for a portable route on a
+  transport no URL reaches — never a URL that would load from the page's
+  server; the sink says it is not available there, or uses `useAssetSrc`.
+  For a library that appends the rest of the path itself (`<base>/<file>`),
+  `assetBase(endpoint, leadingParams)` builds an opaque `AssetBase` — the
+  route's path cut before its first param left open — that `useAssetUrl`
+  resolves the same way (`asset-mirror`'s `assetMirrorBase`).
+- **A library that takes a fetch hook** (smplr's `storage`) is handed
+  `assetFetchOver(transport, asset)`: `ready{base, fetch}` — `fetch` loads a
+  URL under `base` over the transport, so an in-browser server answers it
+  too (a URL outside `base` throws) — or `unavailable{message}`. Sonata's
+  samplers load through it (`InstrumentAssets`).
 - **A raw route is a declaration too.** A GET whose handler returns its own
   bytes / headers / status (a file, a redirect, a proxied image) is still a
   `defineEndpoint` with a literal `route:` in `core/` — `response: blob()`,
@@ -451,7 +457,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 
 ## Plugin reference
 
-- Description: Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, or unavailable; contentUrlOver hands a content frame a ContentPath's URL on the transport's content serving (the content host, off every app origin, for the page's own server; an in-browser server's frame Service Worker, declared safe), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.
+- Description: Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, unavailable, or fetch-only (served, but no URL reaches it); assetFetchOver hands a library that takes a fetch hook the asset's base and a fetch over the transport; contentUrlOver hands a content frame a ContentPath's URL on the transport's content serving (the content host, off every app origin, for the page's own server; an in-browser server's frame Service Worker, declared safe), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.
 - Load-bearing: yes
 - Web:
   - Uses:
@@ -463,6 +469,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `primitives/networking.useTransportScoped`
     - `primitives/networking/request-guard.allowAssetRoute`
   - Exports (types):
+    - `AssetFetch`
     - `AssetSrc`
     - `AssetUrl`
     - `ContentUrl`
@@ -470,6 +477,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `FetchEndpoint`
     - `ReadyContentUrl`
   - Exports (values):
+    - `assetFetchOver`
     - `assetUrlOver`
     - `contentUrlOver`
     - `EndpointAgentWriteRefusedError`
@@ -544,14 +552,14 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 233 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×65
+  - Imported by: 235 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×66
     - `conversations` ×34
     - `infra` ×21
     - `page` ×19
     - `debug` ×18
     - `tasks` ×18
-    - `primitives` ×14
+    - `primitives` ×15
     - `reports` ×6
     - `ui` ×6
     - `auth` ×5

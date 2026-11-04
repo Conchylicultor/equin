@@ -299,7 +299,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `database/pgbouncer.PGBOUNCER_PORT`
     - `database/pgbouncer.PGBOUNCER_SOCKET_DIR`
     - `database/pgbouncer.pgbouncerPidFileUnder`
-    - `infra/asset-mirror.seedAssetMirrorCache`
+    - `infra/asset-mirror/bundle.seedAssetMirrorCache`
     - `infra/endpoints.callEndpoint`
     - `infra/paths.ReleaseIdentity`
     - `infra/paths.setReleaseIdentity`

@@ -59,6 +59,7 @@
   - Imported by:
     - `apps/chord/vocabulary`
     - `apps/sonata/lyric-line`
+    - `apps/sonata/sources/chord-grid`
     - `apps/sonata/sources/ultimate-guitar/alignment`
     - `apps/sonata/voicing`
 

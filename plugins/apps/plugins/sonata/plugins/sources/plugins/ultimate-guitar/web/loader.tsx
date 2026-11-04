@@ -96,8 +96,9 @@ export function UltimateGuitarLoader({ raw, onRaw }: Props) {
     setError(null);
     try {
       const answer = await readLive(ugTab, { url: trimmed });
-      // A bad URL or a missing tab is the answer, shown as the alert line.
-      if (answer.status === "refused") {
+      // A bad URL or a missing tab is the answer, shown as the alert line —
+      // as is a host that cannot reach UG (a browser host).
+      if (answer.status === "refused" || answer.status === "unavailable") {
         setError(answer.message);
         return;
       }

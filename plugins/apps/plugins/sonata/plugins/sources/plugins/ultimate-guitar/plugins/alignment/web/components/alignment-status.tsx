@@ -132,36 +132,32 @@ export function AlignmentStatus({
       {label}
     </Button>
   );
+  // A control that asks the computer to align: disabled, saying so, on a host
+  // without it (the demo).
+  const send = (label: string, mutation: typeof realign) =>
+    mutation.kind === "unavailable" ? (
+      <Button variant="ghost" disabled tooltip={mutation.message}>
+        {label}
+      </Button>
+    ) : (
+      action(label, () => void run(() => mutation.mutateAsync(params)))
+    );
   const control = ((): ReactNode => {
     switch (state.kind) {
       case "working":
-        return action(
-          "Cancel",
-          () => void run(() => cancel.mutateAsync(params)),
-        );
+        return send("Cancel", cancel);
       case "aligned":
       case "out-of-date":
-        return action(
-          "Re-align",
-          () => void run(() => realign.mutateAsync(params)),
-        );
+        return send("Re-align", realign);
       case "failed":
-        return state.permanent
-          ? null
-          : action("Retry", () => void run(() => realign.mutateAsync(params)));
+        return state.permanent ? null : send("Retry", realign);
       case "cancelled":
-        return action(
-          "Retry",
-          () => void run(() => realign.mutateAsync(params)),
-        );
+        return send("Retry", realign);
       case "weak":
       case "needs-video":
         return action("Try another", onReplace);
       case "no-video":
-        return action(
-          "Find a video",
-          () => void run(() => resolve.mutateAsync(params)),
-        );
+        return send("Find a video", resolve);
       case "unreadable":
         return null;
     }

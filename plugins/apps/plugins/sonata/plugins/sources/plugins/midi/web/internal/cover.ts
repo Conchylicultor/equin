@@ -1,7 +1,7 @@
 import type { Song } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import type { SongCoverAnswer } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { MIDI_SOURCE_ID } from "../../shared/constants";
-import { midiCoverUrl } from "../../shared/endpoints";
+import { midiCoverAsset } from "../../shared/endpoints";
 
 /**
  * A MIDI song's cover: its falling-notes roll, drawn on the server from the
@@ -13,8 +13,8 @@ export const midiCover = (song: Song): SongCoverAnswer | undefined =>
     ? {
         kind: "art",
         content: {
-          kind: "image",
-          src: midiCoverUrl(song.id, song.sourcesChangedAt),
+          kind: "asset",
+          asset: midiCoverAsset(song.id, song.sourcesChangedAt),
         },
       }
     : undefined;

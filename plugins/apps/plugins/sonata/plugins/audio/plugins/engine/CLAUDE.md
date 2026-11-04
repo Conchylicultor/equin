@@ -155,6 +155,7 @@ notes through the same scheduler against the same store.
   - Uses:
     - `apps/sonata/audio/instruments.InstrumentVoices`
     - `apps/sonata/audio/instruments.SonataAudio`
+    - `apps/sonata/audio/instruments.useInstrumentAssets`
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/primitives/toolbar-control.hoverExpandHost`
     - `apps/sonata/primitives/toolbar-control.HoverExpandPanel`

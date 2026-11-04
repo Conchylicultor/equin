@@ -368,6 +368,13 @@ export const compositionsConfig = defineConfig({
             "apps.home.**",
             "!apps.home.tour.**",
             "apps.prototypes.**",
+            // Sonata, as its own app ships (`app("sonata")` below): without
+            // transcription (it launches an agent in a scratch workspace) and
+            // the MIDI file preview (its adapter into the file viewer, which
+            // this demo leaves out).
+            "apps.sonata.**",
+            "!apps.sonata.sources.midi.file-preview.**",
+            "!apps.sonata.transcription.**",
             // The OS menu-bar panel and its sections: a page the native
             // helper opens on the computer, meaningless in a demo.
             "!menu-bar.**",

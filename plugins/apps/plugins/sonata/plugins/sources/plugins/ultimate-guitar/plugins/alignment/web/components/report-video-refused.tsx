@@ -17,10 +17,12 @@ export function ReportVideoRefused() {
   const refusal = useMediaRefusal();
   const song = useUgLibrarySong();
   const songId = song?.songId ?? null;
-  const { mutate } = useEndpointMutation(refuseUgAlignmentVideo);
+  const report = useEndpointMutation(refuseUgAlignmentVideo);
+  // On a host without the computer there is no resolver to tell.
+  const mutate = report.kind === "available" ? report.mutate : null;
 
   useEffect(() => {
-    if (songId === null) return;
+    if (songId === null || mutate === null) return;
     mutate({
       params: { id: songId },
       body: { videoId: refusal.videoId, status: refusal.status },

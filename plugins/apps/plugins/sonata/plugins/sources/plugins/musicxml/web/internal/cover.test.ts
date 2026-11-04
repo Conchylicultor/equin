@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Song } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { musicXmlCover } from "./cover";
+import { musicXmlCoverAsset } from "../../shared/endpoints";
 
 const AT = new Date(1_700_000_000_000);
 const song = (source: string) =>
@@ -11,8 +12,8 @@ describe("musicXmlCover", () => {
     expect(musicXmlCover(song("musicxml"))).toEqual({
       kind: "art",
       content: {
-        kind: "image",
-        src: "/api/sonata/songs/song-1/musicxml/cover/1700000000000.svg",
+        kind: "asset",
+        asset: musicXmlCoverAsset(song("musicxml").id, AT),
       },
     });
   });

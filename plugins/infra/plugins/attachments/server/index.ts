@@ -24,6 +24,10 @@ export {
 } from "./internal/operations";
 export { Attachments } from "./internal/attachments";
 export { AttachmentBlobs } from "./internal/blobs";
+export {
+  AttachmentMissingError,
+  readAttachmentBytes,
+} from "./internal/read-bytes";
 export type { AttachmentBlobsImpl } from "./internal/blobs";
 export type { AttachmentLink } from "./internal/define-link";
 export type { AttachmentLinkContribution } from "./internal/attachments";

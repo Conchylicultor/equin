@@ -13,6 +13,7 @@ import { hash53 } from "@plugins/packages/plugins/string-hash/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { ColorTokenRef } from "@plugins/ui/plugins/tokens/plugins/color-ref/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { useAssetSrcs } from "@plugins/infra/plugins/endpoints/web";
 import type { Song } from "../../core";
 import type { SongCoverAnswer } from "../slots";
 
@@ -73,8 +74,10 @@ export interface SongCoverProps {
  * on that source's tint — so a song nothing draws art for still has a cover
  * (never an "empty" claim). On top of it:
  *
- * - `art` — the picture: an image (decoded off the main thread; a load error
- *   drops back to the base with the failure badge) or the source's own node;
+ * - `art` — the picture: an image or an endpoint's asset (loaded over the
+ *   subtree's transport, so an in-browser server draws it too; decoded off the
+ *   main thread; a load error drops back to the base with the failure badge)
+ *   or the source's own node;
  * - `pending` — a loading marker with its label: the cover is being made;
  * - `failed` — a visible "Cover failed" badge, the message as its tooltip.
  */
@@ -85,10 +88,18 @@ export function SongCover({ song, answer }: SongCoverProps): ReactNode {
   // The image's own failure, keyed by its URL: a new URL tries again.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
+  const content = answer?.kind === "art" ? answer.content : null;
+  // An asset's src is what the transport hands out: its path on the page's
+  // own server, a blob URL from an in-browser one.
+  const [assetSrc] = useAssetSrcs(
+    content?.kind === "asset" ? [content.asset] : [],
+  );
   const image =
-    answer?.kind === "art" && answer.content.kind === "image"
-      ? answer.content
-      : null;
+    content?.kind === "image"
+      ? { src: content.src, alt: content.alt }
+      : content?.kind === "asset" && assetSrc?.kind === "ready"
+        ? { src: assetSrc.src, alt: content.alt }
+        : null;
   const imageFailed = image !== null && failedSrc === image.src;
   // An icon answer takes the glyph's place on the tint (two glyphs would stack).
   const iconArt =
@@ -98,7 +109,9 @@ export function SongCover({ song, answer }: SongCoverProps): ReactNode {
   const failure =
     answer?.kind === "failed"
       ? answer.message
-      : imageFailed
+      : assetSrc?.kind === "error" || assetSrc?.kind === "unavailable"
+        ? assetSrc.message
+        : imageFailed
         ? `The cover image did not load (${image.src}).`
         : null;
 

@@ -45,7 +45,7 @@ import {
 import { symbolBody } from "@plugins/ui/plugins/icons/server";
 import type { SymbolName } from "@plugins/ui/plugins/icons/core";
 import { appIconToSvg } from "@plugins/apps-core/plugins/app-icon/core";
-import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/server";
+import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/plugins/bundle/server";
 import {
   compositionRegistryFileName,
   compositionRegistryRedirects,

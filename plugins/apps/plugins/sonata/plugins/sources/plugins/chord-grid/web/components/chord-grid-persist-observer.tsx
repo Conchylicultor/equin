@@ -5,7 +5,7 @@ import {
   beatToSeconds,
   scoreEndBeat,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { asChordGridRaw, compile } from "../compile";
+import { asChordGridRaw, compile } from "../../core";
 import { CHORD_GRID_SOURCE_ID } from "../constants";
 import { useSaveChordGrid } from "../actions";
 

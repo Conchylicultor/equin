@@ -57,8 +57,12 @@ const FolderStatusesSchema = wholeList(FolderStatusSchema, {
  * re-check finds a folder's state changed (a config edit, the reconcile, the
  * user's Check again).
  */
+/** The folders are on the computer: probing and watching them needs it. */
+const WATCHING_FOLDERS = { feature: "Watching MIDI folders" };
+
 export const midiFoldersStatus = liveValue("sonata.midi-folders.status", {
   schema: FolderStatusesSchema,
+  needsMachine: WATCHING_FOLDERS,
 });
 
 /** How many folder-imported songs live under `dir` (any depth). */
@@ -75,4 +79,5 @@ export const midiFolderSongCount = liveValue("sonata.midi-folders.song-count", {
 export const recheckMidiFolders = defineEndpoint({
   route: "POST /api/sonata/midi-folders/recheck",
   response: FolderStatusesSchema,
+  needsMachine: WATCHING_FOLDERS,
 });

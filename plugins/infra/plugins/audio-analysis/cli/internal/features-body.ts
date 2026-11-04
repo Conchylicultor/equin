@@ -7,7 +7,7 @@ import {
   BeatModelSchema,
   ChromaVariantSchema,
 } from "../../core";
-import { ensureBeatFeatures, sonifyBeatFeatures } from "../../server";
+import { ensureBeatFeatures, sonifyBeatFeatures } from "../../machine";
 import { formatSummary, summarizeBeats } from "./summary";
 
 export interface FeaturesOptions {

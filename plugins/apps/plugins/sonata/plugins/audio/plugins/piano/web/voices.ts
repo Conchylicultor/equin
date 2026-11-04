@@ -1,5 +1,6 @@
-import { assetMirrorUrl } from "@plugins/infra/plugins/asset-mirror/core";
+import { assetMirrorBase } from "@plugins/infra/plugins/asset-mirror/core";
 import type {
+  InstrumentAssets,
   InstrumentVoices,
   ScheduledNote,
 } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
@@ -10,11 +11,12 @@ import { PIANO_MIRROR_ID } from "../shared/mirror";
  * Wrap smplr's `SplendidGrandPiano` (high-quality sampled acoustic grand) into
  * the Sonata `InstrumentVoices` contract.
  *
- * Samples are served same-origin via the asset-mirror primitive: smplr fetches
- * `<mirror>/<sample>.<format>`, the server lazily downloads each file from the
- * CDN on first request, caches it under `~/.equin/cache/asset-mirror/`, and serves it from
- * disk thereafter. So the piano needs network exactly once (first online play),
- * then sounds fully offline — the browser never talks to the external CDN.
+ * Samples are served same-origin via the asset-mirror primitive, resolved over
+ * the host's transport (`assets`): smplr fetches `<mirror>/<sample>.<format>`
+ * through the transport's fetch (its `storage`), and the server — the desktop's,
+ * or a demo's in-browser one — downloads each file from the CDN on its first
+ * request and serves it from its cache thereafter. On the desktop the piano
+ * needs network exactly once (first online play), then sounds fully offline.
  * smplr's loader picks the format per browser (ogg on Chromium/Firefox, m4a on
  * Safari) and the mirror fetches whatever is requested, so all browsers work.
  *
@@ -56,7 +58,9 @@ type Piano = ReturnType<(typeof import("smplr"))["SplendidGrandPiano"]>;
 export function createVoices(
   ctx: AudioContext,
   destination: AudioNode,
+  assets: InstrumentAssets,
 ): InstrumentVoices {
+  const samples = assets(assetMirrorBase(PIANO_MIRROR_ID));
   // `smplr` is imported DYNAMICALLY here (inside the factory body) rather than
   // as a top-level static import, so the ~heavy sample-engine library is
   // code-split OFF the eager plugin-boot wave: the barrel statically imports
@@ -83,8 +87,19 @@ export function createVoices(
   // and therefore still needs exactly one `disposed` re-check. (Both promises
   // resolve from the same module anyway: `sharedSampleLoader` reaches `smplr`
   // through the same dynamic import.)
-  const loaded = Promise.all([import("smplr"), sharedSampleLoader(ctx)]).then(
-    ([{ SplendidGrandPiano }, loader]) => {
+  const loaded =
+    samples.kind === "unavailable"
+      ? Promise.reject(new Error(samples.message))
+      : load(samples.base, { fetch: samples.fetch });
+
+  function load(
+    base: string,
+    storage: { fetch: (url: string) => Promise<Response> },
+  ): Promise<void> {
+    return Promise.all([
+      import("smplr"),
+      sharedSampleLoader(ctx, { base, storage }),
+    ]).then(([{ SplendidGrandPiano }, loader]) => {
       // Disposed before the chunk landed (fast unmount / instrument-switch): skip
       // instantiation entirely — there is nothing to sound or tear down.
       if (disposed) return;
@@ -93,7 +108,9 @@ export function createVoices(
         // Same-origin mirror instead of smplr's default CDN. smplr appends
         // `/<sample>.<format>` and URL-encodes it, so the mirror receives a
         // well-formed path; `formats` is left at smplr's default ["ogg","m4a"].
-        baseUrl: assetMirrorUrl(PIANO_MIRROR_ID),
+        baseUrl: base,
+        // Fetched over the host's transport, never by URL from the page.
+        storage,
         // Shared per AudioContext: the sample set is fetched and decoded once
         // however many piano tracks the score has.
         loader,
@@ -101,6 +118,7 @@ export function createVoices(
       return piano.ready;
     },
   );
+  }
 
   return {
     loaded,

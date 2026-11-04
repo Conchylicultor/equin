@@ -1,9 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import {
-  AttachmentBlobs,
-  getAttachment,
-} from "@plugins/infra/plugins/attachments/server";
+import { readAttachmentBytes } from "@plugins/infra/plugins/attachments/server";
 import { _songs } from "@plugins/apps/plugins/sonata/plugins/library/server";
 import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { serveScoreCover } from "@plugins/apps/plugins/sonata/plugins/covers/server";
@@ -15,13 +12,7 @@ import {
 
 /** The text a stored attachment holds; throws when it is gone. */
 async function readAttachmentText(attachmentId: string): Promise<string> {
-  const att = await getAttachment(attachmentId);
-  if (!att) throw new Error(`[musicxml] attachment not found: ${attachmentId}`);
-  const blob = await AttachmentBlobs.get().read(att.diskPath);
-  if (blob === null) {
-    throw new Error(`[musicxml] attachment bytes missing: ${attachmentId}`);
-  }
-  return blob.text();
+  return new TextDecoder().decode(await readAttachmentBytes(attachmentId));
 }
 
 /** One song's MusicXML as the cover route reads it, from the DB. */

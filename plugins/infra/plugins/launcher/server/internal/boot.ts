@@ -26,7 +26,7 @@ import {
   namespaceUrl,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
-import { seedAssetMirrorCache } from "@plugins/infra/plugins/asset-mirror/server";
+import { seedAssetMirrorCache } from "@plugins/infra/plugins/asset-mirror/plugins/bundle/server";
 import { propagateOriginLayer } from "./config-propagate";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";

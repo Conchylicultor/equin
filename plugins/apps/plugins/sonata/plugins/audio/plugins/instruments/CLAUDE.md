@@ -38,16 +38,22 @@ the slot; it registers no instrument itself.
 
 ## Plugin reference
 
-- Description: Sonata audio Instrument axis: the SonataAudio.Instrument slot and its voice contracts (InstrumentVoices, ScheduledNote) — an audio contract a host with an AudioContext can consume without importing the Sonata app shell.
+- Description: Sonata audio Instrument axis: the SonataAudio.Instrument slot and its voice contracts (InstrumentVoices, ScheduledNote, and InstrumentAssets — the samples resolved over the host transport, read with useInstrumentAssets) — an audio contract a host with an AudioContext can consume without importing the Sonata app shell.
 - Web:
   - Slots: `SonataAudio.Instrument`
   - Slot contributors:
     - `SonataAudio.Instrument` ← `apps.sonata.audio.piano`
     - `SonataAudio.Instrument` ← `apps.sonata.audio.soundfont`
+  - Uses:
+    - `infra/endpoints.assetFetchOver`
+    - `primitives/networking.useTransport`
   - Exports (types):
+    - `InstrumentAssets`
     - `InstrumentVoices`
     - `ScheduledNote`
-  - Exports (values): `SonataAudio`
+  - Exports (values):
+    - `SonataAudio`
+    - `useInstrumentAssets`
 - Cross-plugin:
   - Imported by:
     - `apps/chord/piano`

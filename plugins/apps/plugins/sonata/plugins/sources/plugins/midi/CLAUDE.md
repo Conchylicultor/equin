@@ -67,9 +67,9 @@ MIDI for playback is its row in the lookup-only live collection `sonata.midi`
     - `apps/sonata/library.songAttachments`
     - `apps/sonata/library.updateSongMeta`
     - `database.db`
-    - `infra/attachments.AttachmentBlobs`
+    - `infra/attachments.AttachmentMissingError`
     - `infra/attachments.createAttachment`
-    - `infra/attachments.getAttachment`
+    - `infra/attachments.readAttachmentBytes`
     - `infra/endpoints.implement`
     - `infra/endpoints.rawEndpointHandler`
     - `infra/entity-extensions.defineExtension`
@@ -114,8 +114,6 @@ MIDI for playback is its row in the lookup-only live collection `sonata.midi`
   - Imported by:
     - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/sources/midi/folders`
-- Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import.ts` (debt)
 - Sub-plugins:
   - **`file-preview`** — Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi files, host or workspace) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's…
   - **`folders`** — Watched-folder UI for the MIDI source: registers the midi-folders config and presents the File field (the MIDI exposure's `sourceMissing`) that flags — and lets you filter for — folder-imported…

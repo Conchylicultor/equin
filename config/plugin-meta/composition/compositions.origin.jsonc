@@ -1,4 +1,4 @@
-// @hash 99af0e924a6b
+// @hash d7c828fed4ef
 {
   "manifests": [
     {
@@ -143,6 +143,9 @@
         "apps.home.**",
         "!apps.home.tour.**",
         "apps.prototypes.**",
+        "apps.sonata.**",
+        "!apps.sonata.sources.midi.file-preview.**",
+        "!apps.sonata.transcription.**",
         "!menu-bar.**",
         "!conversations.menu-bar-status.**",
         "!tasks.menu-bar-task.**",

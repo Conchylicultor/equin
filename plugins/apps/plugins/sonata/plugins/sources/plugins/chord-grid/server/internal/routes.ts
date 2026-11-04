@@ -1,4 +1,7 @@
-import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
+import {
+  songIdKind,
+  type SongId,
+} from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import {
   createSongRow,
@@ -8,26 +11,42 @@ import { CHORD_GRID_SOURCE_ID } from "../../shared/constants";
 import {
   createChordGridSong,
   updateChordGridSong,
+  type CreateChordGridSongBody,
 } from "../../shared/endpoints";
 import { songChordGrid } from "./tables";
+
+/** A new chord-grid song: the create body, and optionally its id. */
+export interface NewChordGridSong extends CreateChordGridSongBody {
+  /** A caller-chosen id (a fixture's); a fresh one by default. */
+  id?: SongId;
+}
 
 /**
  * Create a chord-grid–backed song. Writes the generic song row (library helper)
  * then this source's extension row. No attachment, so no `songAttachments` link.
+ * The create route's write, and a fixture's.
  */
+export async function createChordGridSongRow(
+  song: NewChordGridSong,
+): Promise<SongId> {
+  const id = await createSongRow({
+    id: song.id,
+    title: song.title,
+    composer: song.composer,
+    durationSec: song.durationSec,
+    endBeat: song.endBeat,
+    source: CHORD_GRID_SOURCE_ID,
+  });
+  await songChordGrid.upsert(id, {
+    chordText: song.chordText,
+  });
+  return id;
+}
+
 export const handleCreateChordGridSong = implement(
   createChordGridSong,
   async ({ body }) => {
-    const id = await createSongRow({
-      title: body.title,
-      composer: body.composer,
-      durationSec: body.durationSec,
-      endBeat: body.endBeat,
-      source: CHORD_GRID_SOURCE_ID,
-    });
-    await songChordGrid.upsert(id, {
-      chordText: body.chordText,
-    });
+    const id = await createChordGridSongRow(body);
     return { id, title: body.title };
   },
 );

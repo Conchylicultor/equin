@@ -83,6 +83,11 @@ function FolderList() {
     <Stack gap="sm">
       {foldResource(statuses, {
         loading: () => <Loading variant="rows" count={2} />,
+        unavailable: (message) => (
+          <Text variant="caption" tone="muted">
+            {message}
+          </Text>
+        ),
         error: (error) => <ResourceErrorInline error={error} variant="block" />,
         ready: (all) =>
           all.length === 0 ? (

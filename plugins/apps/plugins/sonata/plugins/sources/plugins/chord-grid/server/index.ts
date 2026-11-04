@@ -8,6 +8,8 @@ import {
 import { songChordGrid } from "./internal/tables";
 
 export { songChordGrid } from "./internal/tables";
+export { createChordGridSongRow } from "./internal/routes";
+export type { NewChordGridSong } from "./internal/routes";
 
 export default {
   description:

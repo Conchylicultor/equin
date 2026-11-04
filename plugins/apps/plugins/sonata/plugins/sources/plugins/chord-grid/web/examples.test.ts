@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { PLACEHOLDER_TEXT, STARTER_TEXT } from "./examples";
-import { parseGrid } from "./parse-grid";
+import { parseGrid } from "../core";
 
 describe("chord-grid examples", () => {
   it.each([

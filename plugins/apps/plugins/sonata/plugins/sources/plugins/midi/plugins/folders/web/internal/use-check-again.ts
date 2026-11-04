@@ -17,8 +17,12 @@ export function useCheckAgain(path: string): {
   const fetchEndpoint = useFetchEndpoint();
   const [result, setResult] = useState<string | null>(null);
   const run = async () => {
-    const statuses = await fetchEndpoint(recheckMidiFolders, {});
-    const same = statuses.find((s) => s.path === path);
+    const answer = await fetchEndpoint(recheckMidiFolders, {});
+    if (answer.kind === "unavailable") {
+      setResult(answer.message);
+      return;
+    }
+    const same = answer.value.find((s) => s.path === path);
     setResult(same && same.state !== "ok" ? stillUnreadable(same) : null);
   };
   return { run, result };

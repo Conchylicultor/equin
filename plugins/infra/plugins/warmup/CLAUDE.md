@@ -56,7 +56,6 @@ like `defineJob`.
     - `apps/pages/content-search`
     - `apps/places/places-core`
     - `apps/prototypes/thumbnails`
-    - `apps/sonata/sources/midi/folders`
     - `conversations/turn-ledger`
     - `infra/corpus-index`
     - `infra/warmup/background-arm`

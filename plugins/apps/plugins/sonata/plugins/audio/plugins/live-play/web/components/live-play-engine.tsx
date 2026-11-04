@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   SonataAudio,
+  useInstrumentAssets,
   type InstrumentVoices,
 } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { useAudioGraph } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/engine/web";
@@ -38,6 +39,7 @@ export function LivePlayEngine() {
     [instruments],
   );
   const instrumentRef = useLatestRef(defaultInstrument);
+  const assetsRef = useLatestRef(useInstrumentAssets());
 
   const voicesRef = useRef<InstrumentVoices | null>(null);
   const heldRef = useRef<Map<number, () => void>>(new Map());
@@ -52,7 +54,11 @@ export function LivePlayEngine() {
       const graphNow = graphRef.current;
       const inst = instrumentRef.current;
       if (!graphNow || !inst) return;
-      const voices = inst.createVoices(graphNow.ctx, graphNow.master);
+      const voices = inst.createVoices(
+        graphNow.ctx,
+        graphNow.master,
+        assetsRef.current,
+      );
       voicesRef.current = voices;
       // Start the sample load; surface a rejected load loudly (async throw →
       // unhandled rejection) rather than leaving it floating or silenced.

@@ -1,5 +1,16 @@
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import type { AssetBase } from "@plugins/infra/plugins/endpoints/core";
+import type { AssetFetch } from "@plugins/infra/plugins/endpoints/web";
+
+/**
+ * How an instrument reaches its samples: an asset base (e.g. an asset mirror's)
+ * resolved over the host's transport — the page's own server on the desktop,
+ * the in-browser server in a demo — or `unavailable` where nothing serves it.
+ * Handed to `createVoices` by the host that owns the AudioContext
+ * (`useInstrumentAssets`), so a sampler never spells a URL by hand.
+ */
+export type InstrumentAssets = (asset: AssetBase) => AssetFetch;
 
 /** One note to sound, timed against the AudioContext clock (absolute seconds). */
 export interface ScheduledNote {
@@ -44,10 +55,15 @@ export const SonataAudio = {
     group?: string;
     /** Fallback timbre for tracks with no program/override (exactly one). */
     default?: boolean;
-    /** Create a voice manager bound to `ctx`, routed into `destination`. */
+    /**
+     * Create a voice manager bound to `ctx`, routed into `destination`, loading
+     * its samples through `assets`. A sample source `assets` answers
+     * `unavailable` for rejects `loaded` with its message.
+     */
     createVoices: (
       ctx: AudioContext,
       destination: AudioNode,
+      assets: InstrumentAssets,
     ) => InstrumentVoices;
   }>({ docLabel: (p) => p.label }),
 };

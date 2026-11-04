@@ -34,6 +34,7 @@ import type {
 } from "./toolbar-arrangement";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import type { AssetPath } from "@plugins/infra/plugins/endpoints/core";
 import type { ColorTokenRef } from "@plugins/ui/plugins/tokens/plugins/color-ref/core";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import type { LiveDataSource } from "./live-data-source";
@@ -42,10 +43,12 @@ export type FieldValue = string | number | boolean | Date | null | undefined;
 
 /**
  * A row's cover — the picture a card is, and a list row's leading thumbnail.
- * One of three kinds, each drawn by `CoverFrame` into the same fixed frame so
+ * One of four kinds, each drawn by `CoverFrame` into the same fixed frame so
  * every card stays the same size:
  *
- * - `image` — a URL painted `object-cover`.
+ * - `image` — a URL painted `object-cover` (a URL that is not the app's API).
+ * - `asset` — a picture an endpoint serves (`assetPath`), loaded over the
+ *   subtree's transport (`useAssetSrc`), so an in-browser server draws it too.
  * - `icon`  — an icon centered on a tinted block (a record without artwork).
  * - `node`  — an arbitrary preview node (a theme swatch, a chord grid),
  *   clipped to the frame.
@@ -55,6 +58,7 @@ export type FieldValue = string | number | boolean | Date | null | undefined;
  */
 export type CoverContent =
   | { kind: "image"; src: string; alt?: string }
+  | { kind: "asset"; asset: AssetPath; alt?: string }
   | { kind: "icon"; icon: IconRef }
   | { kind: "node"; node: ReactNode };
 

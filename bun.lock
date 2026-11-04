@@ -979,6 +979,10 @@
       "name": "@equin/plugin-apps-sonata-document",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/fixtures": {
+      "name": "@equin/plugin-apps-sonata-fixtures",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/library": {
       "name": "@equin/plugin-apps-sonata-library",
       "version": "0.0.1",
@@ -3998,6 +4002,10 @@
     },
     "plugins/infra/plugins/asset-mirror": {
       "name": "@equin/plugin-infra-asset-mirror",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/asset-mirror/plugins/bundle": {
+      "name": "@equin/plugin-infra-asset-mirror-bundle",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/attachments": {
@@ -7640,6 +7648,8 @@
 
     "@equin/plugin-apps-sonata-document": ["@equin/plugin-apps-sonata-document@workspace:plugins/apps/plugins/sonata/plugins/document"],
 
+    "@equin/plugin-apps-sonata-fixtures": ["@equin/plugin-apps-sonata-fixtures@workspace:plugins/apps/plugins/sonata/plugins/fixtures"],
+
     "@equin/plugin-apps-sonata-library": ["@equin/plugin-apps-sonata-library@workspace:plugins/apps/plugins/sonata/plugins/library"],
 
     "@equin/plugin-apps-sonata-look": ["@equin/plugin-apps-sonata-look@workspace:plugins/apps/plugins/sonata/plugins/look"],
@@ -9093,6 +9103,8 @@
     "@equin/plugin-infra": ["@equin/plugin-infra@workspace:plugins/infra"],
 
     "@equin/plugin-infra-asset-mirror": ["@equin/plugin-infra-asset-mirror@workspace:plugins/infra/plugins/asset-mirror"],
+
+    "@equin/plugin-infra-asset-mirror-bundle": ["@equin/plugin-infra-asset-mirror-bundle@workspace:plugins/infra/plugins/asset-mirror/plugins/bundle"],
 
     "@equin/plugin-infra-attachments": ["@equin/plugin-infra-attachments@workspace:plugins/infra/plugins/attachments"],
 

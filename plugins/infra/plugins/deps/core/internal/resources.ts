@@ -4,6 +4,9 @@ import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { DepRowSchema } from "./dep-state";
 
+/** On-demand dependencies are installed on the computer, under its data dir. */
+const ON_DEMAND = { feature: "Installing dependencies" };
+
 /**
  * Every dependency this backend declares, with its state on this machine.
  *
@@ -16,6 +19,7 @@ export const depsStates = liveValue("deps.states", {
     reason:
       "one row per optional dependency the code declares — a closed handful (browsers, python envs, toolchains)",
   }),
+  needsMachine: ON_DEMAND,
 });
 
 /**
@@ -25,6 +29,7 @@ export const depsStates = liveValue("deps.states", {
  */
 export const installDepEndpoint = defineEndpoint({
   route: "POST /api/deps/install",
+  needsMachine: ON_DEMAND,
   body: z.object({ id: z.string() }),
   response: z.object({ id: z.string() }),
 });
@@ -35,6 +40,7 @@ export const installDepEndpoint = defineEndpoint({
  */
 export const removeDepEndpoint = defineEndpoint({
   route: "POST /api/deps/remove",
+  needsMachine: ON_DEMAND,
   body: z.object({ id: z.string() }),
   response: z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("removed"), bytes: z.number().int() }),

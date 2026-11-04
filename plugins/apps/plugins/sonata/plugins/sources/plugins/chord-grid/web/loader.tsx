@@ -30,9 +30,13 @@ import { OverlayTextarea } from "@plugins/primitives/plugins/syntax-highlight/pl
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Fragment, useMemo, type ReactNode } from "react";
-import { asChordGridRaw, type ChordGridRaw } from "./compile";
+import {
+  asChordGridRaw,
+  parseGrid,
+  type ChordGridRaw,
+  type GridToken,
+} from "../core";
 import { PLACEHOLDER_TEXT } from "./examples";
-import { parseGrid, type GridToken } from "./parse-grid";
 import "./chord-grid.css";
 
 const legendOpenStore = defineStore({

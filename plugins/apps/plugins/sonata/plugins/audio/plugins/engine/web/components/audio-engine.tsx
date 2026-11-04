@@ -9,6 +9,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   SonataAudio,
+  useInstrumentAssets,
   type InstrumentVoices,
 } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import {
@@ -191,6 +192,8 @@ export function AudioEngine() {
     () => new Map(instruments.map((inst) => [inst.id, inst] as const)),
     [instruments],
   );
+  // Where the voices load their samples from: this subtree's transport.
+  const assets = useInstrumentAssets();
 
   // The channel strips that SHOULD exist: one per track that still has audible
   // notes, paired with the instrument that track resolves to. A track whose notes
@@ -391,7 +394,7 @@ export function AudioEngine() {
         // the SAME GainNode. The fader belongs to the track, so its position —
         // and any glide still running on it — survives the new timbre.
         existing.voices.dispose();
-        existing.voices = contribution.createVoices(ctx, existing.gain);
+        existing.voices = contribution.createVoices(ctx, existing.gain, assets);
         existing.instrumentId = instrumentId;
         watchLoad(existing.voices);
       } else {
@@ -401,7 +404,7 @@ export function AudioEngine() {
         // the ref precisely so the levels do NOT become a dep of this effect.
         gain.gain.value = levelOf(volumes, trackId);
         gain.connect(master);
-        const voices = contribution.createVoices(ctx, gain);
+        const voices = contribution.createVoices(ctx, gain, assets);
         channels.set(trackId, { gain, voices, instrumentId });
         watchLoad(voices);
       }
@@ -427,7 +430,7 @@ export function AudioEngine() {
     // contributions change; `setLoadError` is memoized-stable. `trackVolumesRef`
     // is a stable latest-ref — deliberately the ref and not the map, so moving a
     // fader never reconciles an audio node. All intentional deps.
-  }, [inUseKey, instrumentById, setLoadError]);
+  }, [inUseKey, instrumentById, assets, setLoadError]);
 
   // --- Fader effect: apply live level changes to the strips that exist. ------
   // Separate from the reconcile effect on purpose: reconcile creates and

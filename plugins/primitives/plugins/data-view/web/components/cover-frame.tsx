@@ -4,7 +4,12 @@ import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { AssetPath } from "@plugins/infra/plugins/endpoints/core";
+import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { dataPart, type CoverContent } from "../../core";
+
+const brokenImageIcon = symbol("broken-image");
 
 /**
  * The hover group a cover lifts with: put it on the element whose hover should
@@ -76,6 +81,57 @@ const ICON_SIZE: Record<CoverFrameProps["size"], string> = {
   thumb: "size-5",
 };
 
+function CoverImage({
+  src,
+  alt,
+  size,
+}: {
+  src: string;
+  alt: string | undefined;
+  size: CoverFrameProps["size"];
+}): ReactNode {
+  return (
+    <img
+      src={src}
+      alt={alt ?? ""}
+      decoding="async"
+      loading="lazy"
+      draggable={false}
+      className={cn("block size-full object-cover", CONTENT[size])}
+    />
+  );
+}
+
+/**
+ * An endpoint's picture, loaded over the subtree's transport: its path on the
+ * page's own server, a blob URL from an in-browser one. While it loads the
+ * frame's tint shows alone; a failure (or a host that cannot serve it) says
+ * so, with the reason on hover.
+ */
+function AssetCoverImage({
+  asset,
+  alt,
+  size,
+}: {
+  asset: AssetPath;
+  alt: string | undefined;
+  size: CoverFrameProps["size"];
+}): ReactNode {
+  const src = useAssetSrc(asset);
+  if (src.kind === "ready")
+    return <CoverImage src={src.src} alt={alt} size={size} />;
+  if (src.kind === "loading") return null;
+  return (
+    <Center
+      title={src.message}
+      aria-label={`Cover failed — ${src.message}`}
+      className={cn("size-full text-destructive", CONTENT[size])}
+    >
+      <Icon icon={brokenImageIcon} className={ICON_SIZE[size]} />
+    </Center>
+  );
+}
+
 /**
  * THE cover frame — one fixed shape per size, whatever the content: an image
  * (`object-cover`, decoded off the main thread), an icon on a tint, an
@@ -102,14 +158,9 @@ export function CoverFrame({
       )}
     >
       {content === null ? null : content.kind === "image" ? (
-        <img
-          src={content.src}
-          alt={content.alt ?? ""}
-          decoding="async"
-          loading="lazy"
-          draggable={false}
-          className={cn("block size-full object-cover", CONTENT[size])}
-        />
+        <CoverImage src={content.src} alt={content.alt} size={size} />
+      ) : content.kind === "asset" ? (
+        <AssetCoverImage asset={content.asset} alt={content.alt} size={size} />
       ) : content.kind === "icon" ? (
         <Center
           className={cn(

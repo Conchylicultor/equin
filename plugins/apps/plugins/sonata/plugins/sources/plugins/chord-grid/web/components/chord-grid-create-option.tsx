@@ -6,7 +6,7 @@ import {
   openSongImperative,
   type SourceCreateOption,
 } from "@plugins/apps/plugins/sonata/plugins/library/web";
-import { compile, type ChordGridRaw } from "../compile";
+import { compile, type ChordGridRaw } from "../../core";
 import { STARTER_TEXT } from "../examples";
 import { createChordGridSong } from "../../shared/endpoints";
 import { symbol } from "@plugins/ui/plugins/icons/core";

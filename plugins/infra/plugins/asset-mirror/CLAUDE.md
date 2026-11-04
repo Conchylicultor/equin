@@ -1,11 +1,12 @@
 # asset-mirror
 
-Generic server-side mirror for remote binary assets. A plugin declares a remote
-source; the primitive lazily downloads each requested file once, caches it under
-`~/.equin/cache/asset-mirror/<id>/`, and serves it same-origin thereafter. After
-one online warm-up the assets are fully offline and the external source is never
-touched again. The disk cache lives outside any worktree, so the download
-happens at most once per machine regardless of how many worktrees are running.
+Generic mirror for remote binary assets, on every host. A plugin declares a
+remote source; the primitive downloads each requested file once into its cache
+— the `assetMirrorFiles` data-files root over `cache/asset-mirror` — and serves
+it same-origin thereafter. On the desktop that root is the computer's disk
+(bound by `machine/`, outside any worktree, so the download happens at most
+once per machine, and a release bundle seeds it); in a browser host it is
+memory, so each file is fetched from its remote once per session.
 
 ## API
 
@@ -25,24 +26,24 @@ export default {
 ```
 
 ```ts
-// web — point a library that fetches `<base>/<file>` itself at the local mirror
+// web — a library that fetches `<base>/<file>` itself, through a fetch hook
 import { assetMirrorBase } from "@plugins/infra/plugins/asset-mirror/core";
-import { useAssetUrl } from "@plugins/infra/plugins/endpoints/web";
+import { assetFetchOver } from "@plugins/infra/plugins/endpoints/web";
 
-const base = useAssetUrl(assetMirrorBase("my-assets"));
-if (base.kind === "unavailable") return <Text>{base.message}</Text>;
-// base.url === "/api/asset-mirror/my-assets"; `${base.url}/logo.png` is
-// mirrored from https://cdn.example.com/assets/logo.png
+const at = assetFetchOver(transport, assetMirrorBase("my-assets"));
+if (at.kind === "unavailable") return <Text>{at.message}</Text>;
+// at.base === "/api/asset-mirror/my-assets"; at.fetch(`${at.base}/logo.png`)
+// loads over the subtree's transport — the page's server, or a demo's worker
 ```
 
 The routes are declarations (`getMirroredFile` / `getMirroredNestedFile` in
-`core/`, literal `route:`s), served by the `machine/` half: the cache is on
-disk, so they are `needsMachine`, and `useAssetUrl` answers `unavailable` on a
-host without the computer (the demo) instead of handing the library a URL that
-would reach the page's own server. The browser-host coverage guard reads them
-like any endpoint. `assetMirrorUrl(id)` — the same base as a plain string,
-spelled by hand — is only for page-only code with no transport to resolve over
-(Sonata's instrument factories); the guard refuses a scoped reader of it.
+`core/`, literal `route:`s) served by the portable `server/` half, so the
+browser-host coverage guard reads them like any endpoint. A library that only
+takes a URL (frimousse, the emoji picker) resolves the base with
+`useAssetUrl`, which answers `fetch-only` on a transport no URL reaches (a
+browser host): such a sink says it is not available there. Sonata's samplers
+take a fetch hook (`InstrumentAssets`, `apps/sonata/audio/instruments`), so
+they play in the demo. There is no hand-spelled `/api/asset-mirror` string.
 
 ## Prewarm (offline cold start)
 
@@ -72,10 +73,10 @@ every other filtered registry, so two compositions never share one. The
 mechanism:
 
 - **Release** (`release.ts` `[3.5]`) calls
-  `runAssetMirrorPrewarm({ composition, destRoot })`, which reads that
+  `runAssetMirrorPrewarm({ composition, destRoot })` (the `bundle` sub-plugin), which reads that
   composition's closure-filtered registry and downloads each declared file into
   `<destRoot>/<id>/<file>` (fail-loud: any failed download aborts the release).
-- **Launch** (`launch.ts`) calls `seedAssetMirrorCache({ bundleRoot, dataDir })`,
+- **Launch** (`launch.ts`) calls `seedAssetMirrorCache({ bundleRoot, dataDir })` (the `bundle` sub-plugin),
   which copies the bundled `asset-mirror/` tree into the cache's declared spot
   beneath `dataDir` **copy-if-absent** — never clobbering a user's
   already-downloaded samples. `dataDir` is a parameter (the target may be a fresh
@@ -106,12 +107,21 @@ without booting the server.
 
 ## Plugin reference
 
-- Description: Generic server-side asset mirror: plugins declare a remote asset source via defineAssetMirror; files are lazily downloaded on first request, cached on local disk, and served same-origin thereafter (offline-capable after one warm-up). Its route is the machine/ half's.
-- Machine:
-  - Uses: `infra/endpoints.machineHandler`
+- Description: Generic asset mirror, on every host: plugins declare a remote asset source via defineAssetMirror; GET /api/asset-mirror/:id/:file (and /:id/:dir/:file) downloads each file on its first request into the assetMirrorFiles data-files root and serves it same-origin thereafter — offline-capable after one warm-up on the desktop (the computer's disk, shared by every worktree), once per session in a browser host (memory).
+- Server:
+  - Contributes: `data-files.root-location` "infra.asset-mirror"
+  - Uses:
+    - `infra/endpoints.rawEndpointHandler`
+    - `infra/paths/data-files.defineFileRoot`
+  - Exports (types): `AssetMirrorSpec`
+  - Exports (values):
+    - `assetMirrorFiles`
+    - `defineAssetMirror`
   - Routes:
     - `GET /api/asset-mirror/:id/:file`
     - `GET /api/asset-mirror/:id/:dir/:file`
+- Machine:
+  - Uses: `infra/paths/data-files.FileRootLocation`
 - Core:
   - Uses:
     - `framework/tooling/collected-dir.defineCollectedDir`
@@ -123,10 +133,8 @@ without booting the server.
     - `AssetMirrorPrewarm`
     - `CollectedEntry`
   - Exports (values):
-    - `ASSET_MIRROR_PREFIX`
     - `assetMirrorBase`
     - `assetMirrorPrewarmCollectedDir`
-    - `assetMirrorUrl`
     - `defineAssetMirrorPrewarm`
     - `getMirroredFile`
     - `getMirroredNestedFile`
@@ -135,15 +143,8 @@ without booting the server.
   - Imported by:
     - `apps/sonata/audio/piano`
     - `apps/sonata/audio/soundfont`
-    - `infra/launcher`
     - `ui/icons/emoji`
-- Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/fetch-to-disk.ts`, `server/internal/run-prewarm.ts`, `server/internal/seed-cache.ts` (debt)
-- Server:
-  - Exports (types): `AssetMirrorSpec`
-  - Exports (values):
-    - `defineAssetMirror`
-    - `runAssetMirrorPrewarm`
-    - `seedAssetMirrorCache`
+- Sub-plugins:
+  - **`bundle`** — The asset mirror's release bundle, host-only: runAssetMirrorPrewarm downloads every prewarm-declared file of a composition's closure into a release bundle, and seedAssetMirrorCache copies a bundle's…
 
 <!-- AUTOGENERATED:END -->

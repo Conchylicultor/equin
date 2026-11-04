@@ -135,7 +135,6 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `primitives/dom/element-size/resize-loop-trace.installResizeLoopTrace`
     - `primitives/networking.TransportProvider`
     - `primitives/networking/page-transport.pageTransport`
-    - `primitives/networking/request-guard.allowAssetRoute`
     - `primitives/networking/request-guard.installRequestGuard`
     - `primitives/perfs/boot-trace.markBootInstant`
     - `primitives/perfs/boot-trace.markBootInstantAtNextCommit`

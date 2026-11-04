@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Song } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { midiCover } from "./cover";
+import { midiCoverAsset } from "../../shared/endpoints";
 
 const AT = new Date(1_700_000_000_000);
 const song = (source: string) =>
@@ -11,8 +12,8 @@ describe("midiCover", () => {
     expect(midiCover(song("midi"))).toEqual({
       kind: "art",
       content: {
-        kind: "image",
-        src: "/api/sonata/songs/song-1/midi/cover/1700000000000.svg",
+        kind: "asset",
+        asset: midiCoverAsset(song("midi").id, AT),
       },
     });
   });

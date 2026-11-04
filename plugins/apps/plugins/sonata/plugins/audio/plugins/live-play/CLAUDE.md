@@ -13,6 +13,7 @@
     - `apps/sonata/audio/engine.useAudioGraph`
     - `apps/sonata/audio/instruments.InstrumentVoices`
     - `apps/sonata/audio/instruments.SonataAudio`
+    - `apps/sonata/audio/instruments.useInstrumentAssets`
     - `apps/sonata/session.SonataSession`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/scope/scoped-store.defineScopedStore`

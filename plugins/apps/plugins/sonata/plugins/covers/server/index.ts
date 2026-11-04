@@ -2,8 +2,9 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export type { ScoreCoverRequest } from "./internal/serve-cover";
 export { serveScoreCover } from "./internal/serve";
+export { scoreCoverFiles } from "./internal/roots";
 
 export default {
   description:
-    "Serves Sonata song covers: a content-addressed SVG cache (rendered on request, deduped while in flight), immutable while the URL's version is current.",
+    "Serves Sonata song covers: a content-addressed SVG cache (rendered on request, deduped while in flight) over the scoreCoverFiles data-files root, immutable while the URL's version is current.",
 } satisfies ServerPluginDefinition;

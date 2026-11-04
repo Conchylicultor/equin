@@ -3,7 +3,12 @@
 // library itself is reached only through the dynamic `import("smplr")` below,
 // for the same reason the piano and soundfont wrappers import it dynamically:
 // the chunk must stay off the eager plugin-boot wave.
-import type { SampleLoader, SampleLoaderLoadOptions, SmplrPreset } from "smplr";
+import type {
+  SampleLoader,
+  SampleLoaderLoadOptions,
+  SmplrPreset,
+  Storage,
+} from "smplr";
 
 /**
  * One shared `SampleLoader` per `AudioContext`.
@@ -16,11 +21,27 @@ import type { SampleLoader, SampleLoaderLoadOptions, SmplrPreset } from "smplr";
  * the megabytes of samples cached inside its loader. A `WeakMap` gives each
  * context its own loader and lets the whole pair go when the context does.
  *
+ * Within a context, one loader per sample SOURCE (its base path): a loader
+ * fetches through the storage it was built with, and a source's storage only
+ * reaches that source's files (`assetFetchOver`), so a piano and another
+ * sampled instrument on one context each need their own.
+ *
  * The PROMISE is cached rather than the resolved loader, so callers racing to
  * create the first loader for a context all join the one in-flight dynamic
  * import instead of each starting their own.
  */
-const loaders = new WeakMap<BaseAudioContext, Promise<SampleLoader>>();
+const loaders = new WeakMap<
+  BaseAudioContext,
+  Map<string, Promise<SampleLoader>>
+>();
+
+/** Where an instrument's samples come from: a base path and the fetch reaching it. */
+export interface SampleSource {
+  /** The base the instrument's sample URLs are under. */
+  readonly base: string;
+  /** smplr's storage: fetches a URL under `base` over the host's transport. */
+  readonly storage: Storage;
+}
 
 /**
  * The `SampleLoader` every smplr instrument built against `ctx` should be given
@@ -36,16 +57,25 @@ const loaders = new WeakMap<BaseAudioContext, Promise<SampleLoader>>();
  */
 export function sharedSampleLoader(
   ctx: BaseAudioContext,
+  source: SampleSource,
 ): Promise<SampleLoader> {
-  const existing = loaders.get(ctx);
+  let bySource = loaders.get(ctx);
+  if (!bySource) {
+    bySource = new Map();
+    loaders.set(ctx, bySource);
+  }
+  const existing = bySource.get(source.base);
   if (existing) return existing;
 
   // Renamed on destructure: smplr exports the factory and the interface it
   // produces under one name, and this module names the interface already.
+  // The storage is how the samples are fetched — over the host's transport
+  // (`InstrumentAssets`). Every instrument of one context is built by one host,
+  // under one transport, so one source's first storage serves all its callers.
   const created = import("smplr").then(({ SampleLoader: createLoader }) =>
-    withSharedLoads(createLoader(ctx)),
+    withSharedLoads(createLoader(ctx, { storage: source.storage })),
   );
-  loaders.set(ctx, created);
+  bySource.set(source.base, created);
   return created;
 }
 

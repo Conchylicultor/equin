@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-sonata-fixtures",
+  "description": "Sonata fixtures: typed songs (SongFixture) and their writer through each source's real write path, for demos and tests.",
+  "private": true,
+  "version": "0.0.1"
+}

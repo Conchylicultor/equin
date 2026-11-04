@@ -136,6 +136,23 @@ export function VideoReplace({
     meta: { suppressError: true },
   });
 
+  // Setting a video aligns to it, on the computer: a host without it (the
+  // demo) says so instead of offering the picker.
+  if (setVideo.kind === "unavailable") {
+    return (
+      <Text variant="caption" tone="muted">
+        {setVideo.message}
+      </Text>
+    );
+  }
+  if (resolve.kind === "unavailable") {
+    return (
+      <Text variant="caption" tone="muted">
+        {resolve.message}
+      </Text>
+    );
+  }
+
   const use = async (link: string) => {
     const ok = await run(() =>
       setVideo.mutateAsync({ params: { id: songId }, body: { url: link } }),
