@@ -61,6 +61,7 @@ import {
   compareWithLabel,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 import { REAL_APP_LABEL } from "@plugins/apps/plugins/prototypes/plugins/compare/core";
+import { pickFromLauncher as pickTile } from "@plugins/apps-core/plugins/app-launcher/e2e";
 
 const OUT = arg("out") ?? "/tmp/demo-prototypes";
 
@@ -94,23 +95,9 @@ function embedRoot(page: Page): Locator {
   return page.locator("[data-app-embed]").first();
 }
 
-/** Hover the embed's launcher and pick the tile named `name`. */
+/** Pick the tile named `name` from the embed's launcher, then leave it. */
 async function pickFromLauncher(page: Page, name: RegExp): Promise<boolean> {
-  await embedRoot(page)
-    .getByRole("button", { name: "All apps" })
-    .first()
-    .hover();
-  const menu = page.locator('[aria-label="Apps"]').last();
-  await menu.waitFor({ timeout: 5_000 });
-  const tile = menu
-    .locator('[data-row-key][role="button"]')
-    .filter({ hasText: name })
-    .first();
-  if ((await tile.count()) === 0) {
-    await page.keyboard.press("Escape");
-    return false;
-  }
-  await tile.click();
+  if (!(await pickTile(embedRoot(page), name))) return false;
   await page.keyboard.press("Escape");
   await page.mouse.move(0, 0);
   return true;

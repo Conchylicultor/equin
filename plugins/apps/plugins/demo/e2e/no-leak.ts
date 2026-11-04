@@ -63,6 +63,10 @@ import type { Locator, Page, Request, WebSocket } from "playwright";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 import { CANVAS_FRAME_ATTR } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 import {
+  launcherTiles,
+  openLauncherGrid,
+} from "@plugins/apps-core/plugins/app-launcher/e2e";
+import {
   arg,
   boot,
   onBeforeFinish,
@@ -644,16 +648,8 @@ await withBrowser(async (h) => {
   await snap(page, OUT, "conversation");
 
   // ── 3. Prototypes: frames come from the host, never the page's origin ──
-  await page
-    .locator("[data-app-embed]")
-    .first()
-    .getByRole("button", { name: "All apps" })
-    .first()
-    .hover();
-  const apps = page.locator('[aria-label="Apps"]').last();
-  await apps.waitFor({ timeout: 5_000 });
-  await apps
-    .locator('[data-row-key][role="button"]')
+  const grid = await openLauncherGrid(page.locator("[data-app-embed]").first());
+  await launcherTiles(grid)
     .filter({ hasText: /Prototypes/ })
     .first()
     .click();

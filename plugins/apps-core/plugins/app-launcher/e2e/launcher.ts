@@ -16,6 +16,7 @@
 //   ./equin run plugins/apps-core/plugins/app-launcher/e2e/launcher.ts [--headed]
 
 import {
+  ELEMENT_TIMEOUT_MS,
   pathUrl,
   report,
   snap,
@@ -47,6 +48,9 @@ await withBrowser(async (h) => {
   // Hover the mark: the grid opens after the intent delay.
   await mark.hover();
   await menu.waitFor({ timeout: 2000 });
+  // The panel opens before its grid is known (a loading state): wait for the
+  // tiles, not just the panel, or a slow load reads as an empty grid.
+  await tiles.first().waitFor({ timeout: ELEMENT_TIMEOUT_MS });
   const tileCount = await tiles.count();
   r.ok("hovering the mark opens the Apps grid", tileCount > 0, `${tileCount}`);
   r.note(`tiles: ${tileCount}`);

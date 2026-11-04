@@ -166,12 +166,24 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   // array position.
   const configRows = (knownConfig?.views as RawViewRow[] | undefined) ?? [];
 
+  // Raw rows as one string: the reconcile below compares config by value, not
+  // by the identity of a freshly-parsed document.
+  const configJson = JSON.stringify(configRows);
+
   // Optimistic mirror of the normalized persisted rows. Config is the single
   // source — an empty config means **no views** (the host renders a
-  // placeholder), never synthesized defaults.
-  const [mirror, setMirror] = useState<ViewConfigRow[]>(() =>
-    normalizeRows(configRows),
-  );
+  // placeholder), never synthesized defaults. `basis` is the config the rows
+  // were last reconciled against; `editing` says a local edit is not flushed
+  // yet (the config it would overwrite is not adopted meanwhile).
+  const [mirror, setMirror] = useState<{
+    rows: ViewConfigRow[];
+    basis: string;
+    editing: boolean;
+  }>(() => ({
+    rows: normalizeRows(configRows),
+    basis: configJson,
+    editing: false,
+  }));
 
   // Freshest setConfig + key for the debounced flush.
   const setConfigRef = useLatestRef(setConfig);
@@ -190,6 +202,11 @@ export function useViewsConfig<T extends ViewTypeMeta>(
     const next = pendingRef.current;
     if (next === null) return;
     pendingRef.current = null;
+    // Only when what is flushed is still what the mirror shows: an edit queued
+    // behind this flush (its updater not run yet) keeps the mirror editing.
+    setMirror((prev) =>
+      prev.rows === next ? { ...prev, editing: false } : prev,
+    );
     setConfigRef.current("views", next);
   }, []);
 
@@ -202,19 +219,29 @@ export function useViewsConfig<T extends ViewTypeMeta>(
     [flush],
   );
 
-  // Reconcile the mirror from config when external truth advances and we have no
-  // pending write. Incoming rows are normalized (terse → full) — an empty config
-  // normalizes to `[]` — and shared row-by-row with the mirror (`shareRows`), so
-  // an unchanged row (or list) keeps its identity: no re-render thrash, and an
-  // edit to one view leaves the others' raw values untouched.
-  const configJson = JSON.stringify(configRows);
-  useEffect(() => {
-    if (pendingRef.current !== null) return;
-    setMirror((prev) =>
-      shareRows(prev, normalizeRows(JSON.parse(configJson) as RawViewRow[])),
-    );
-    // configRows is derived from configJson; depend on the string only.
-  }, [configJson]);
+  // Reconcile the mirror from config when external truth advances and no local
+  // edit is pending. Incoming rows are normalized (terse → full) — an empty
+  // config normalizes to `[]` — and shared row-by-row with the mirror
+  // (`shareRows`), so an unchanged row (or list) keeps its identity: no
+  // re-render thrash, and an edit to one view leaves the others' raw values
+  // untouched.
+  //
+  // DURING RENDER (React's adjust-state-on-prop-change), never in an effect:
+  // `ready` is read off the config in this very render, so a mirror one commit
+  // behind it would commit `ready` with the rows of the config before — on the
+  // first known config, zero rows, which the host renders as "No views
+  // configured" for one frame before the effect caught up.
+  let current = mirror;
+  if (mirror.basis !== configJson) {
+    current = mirror.editing
+      ? { ...mirror, basis: configJson }
+      : {
+          rows: shareRows(mirror.rows, normalizeRows(configRows)),
+          basis: configJson,
+          editing: false,
+        };
+    setMirror(current);
+  }
 
   // Flush any pending durable write on unmount.
   useEffect(() => () => flush(), [flush]);
@@ -225,9 +252,9 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   const applyMutation = useCallback(
     (mutate: (rows: ViewConfigRow[]) => ViewConfigRow[]) => {
       setMirror((prev) => {
-        const next = mutate(prev);
+        const next = mutate(prev.rows);
         scheduleWrite(next);
-        return next;
+        return { ...prev, rows: next, editing: true };
       });
     },
     [scheduleWrite],
@@ -235,7 +262,7 @@ export function useViewsConfig<T extends ViewTypeMeta>(
 
   // The rows actually displayed: the normalized mirror (config is the only
   // source — no synthesized seed).
-  const displayRows = mirror;
+  const displayRows = current.rows;
 
   // Render in array order, resolving each row through its source entry's
   // contribution registry (unknown source / orphan type → fail-soft skip).

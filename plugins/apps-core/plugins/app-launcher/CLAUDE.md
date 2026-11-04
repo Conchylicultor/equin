@@ -112,6 +112,7 @@ never draw their own header (the shell places it; see
     - `ui/tokens/sidebar-palette --sidebar-accent-foreground`
     - `ui/tokens/type-scale --font-weight-bold`
   - Imported by:
+    - `apps/demo`
     - `apps/home/app-cards`
     - `apps/home/usage-fields`
     - `menu-bar/app-grid`

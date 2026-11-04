@@ -29,6 +29,7 @@
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
+import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import {
   arg,
   boot,
@@ -75,26 +76,6 @@ async function embeddedApp(page: Page): Promise<string | null> {
 /** The launcher drawn by the embedded app's brand. */
 function launcherMark(page: Page): Locator {
   return embedRoot(page).getByRole("button", { name: "All apps" }).first();
-}
-
-/**
- * Hover the embed's launcher and pick the tile named `name`; `false` when the
- * grid has no such tile (the composition's home app is the mark itself).
- */
-async function pickFromLauncher(page: Page, name: RegExp): Promise<boolean> {
-  await launcherMark(page).hover();
-  const menu = page.locator('[aria-label="Apps"]').last();
-  await menu.waitFor({ timeout: 5_000 });
-  const tile = menu
-    .locator('[data-row-key][role="button"]')
-    .filter({ hasText: name })
-    .first();
-  if ((await tile.count()) === 0) {
-    await page.keyboard.press("Escape");
-    return false;
-  }
-  await tile.click();
-  return true;
 }
 
 await withBrowser(async (h) => {
@@ -164,7 +145,7 @@ await withBrowser(async (h) => {
   // ── 1. launcher → Pages ─────────────────────────────────────────────────
   r.ok(
     "the launcher offers Pages",
-    await pickFromLauncher(page, /^\s*Pages\s*$/),
+    await pickFromLauncher(embedRoot(page), /^\s*Pages\s*$/),
   );
   await renders(
     "the embed switches to Pages",
@@ -189,7 +170,7 @@ await withBrowser(async (h) => {
 
   // ── 2. launcher → back to the Agent Manager ─────────────────────────────
   // The composition's home app is the launcher mark itself (not a tile).
-  const picked = await pickFromLauncher(page, /Agent manager/i);
+  const picked = await pickFromLauncher(embedRoot(page), /Agent manager/i);
   if (!picked) await launcherMark(page).click();
   // The pointer still rests on the mark, so its hover grid stays open over the
   // sidebar: dismiss it and move off, as a user would.

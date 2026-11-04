@@ -1,4 +1,5 @@
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { useEffect } from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
@@ -289,6 +290,34 @@ describe("useViewsConfig — loading is not empty", () => {
     } finally {
       configFailure = null;
     }
+  });
+
+  it("never commits ready with the rows of the config before (the first known config)", () => {
+    configPending = true;
+    configDoc = { views: [{ id: "a", name: "A", view: { type: "table" } }] };
+    // What each COMMITTED render showed — a render React discards before
+    // committing never reaches the screen, so only effects see the truth.
+    const committed: { ready: boolean; ids: string[] }[] = [];
+    const { rerender } = renderHook(() => {
+      const handle = useViewsConfig<ViewTypeMeta>(
+        "k",
+        descriptorMap,
+        singleSource,
+      );
+      useEffect(() => {
+        committed.push({
+          ready: handle.ready,
+          ids: handle.instances.map((i) => i.instance.id),
+        });
+      });
+      return handle;
+    });
+    configPending = false;
+    rerender();
+    expect(committed).toEqual([
+      { ready: false, ids: [] },
+      { ready: true, ids: ["a"] },
+    ]);
   });
 
   it("reports ready:true for a settled, genuinely empty config", () => {
