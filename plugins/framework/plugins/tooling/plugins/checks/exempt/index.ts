@@ -9,6 +9,13 @@ export default [
       "A one-off migration script that already ran. It walks the way every check did before they moved to `listRepoFiles`; nothing runs it, so its file set decides no verdict.",
   },
   {
+    rule: "user-path/no-unproven-claim",
+    paths: ["core/tree-hash.ts"],
+    kind: "sanctioned",
+    reason:
+      "The checkout's own git index, as `git rev-parse --path-format=absolute --git-path index` names it: the app owns it as it owns the checkout. In a linked worktree it sits in the common `.git/worktrees/<id>/`, outside the checkout root, so `joinAppPath` cannot derive it; every scratch path beside it is derived from it.",
+  },
+  {
     rule: "boundaries/no-platform-api",
     paths: [
       "core/cache.ts",

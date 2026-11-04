@@ -27684,6 +27684,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from:
               - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
+              - `user-path/no-unproven-claim` — `core/tree-hash.ts` (sanctioned)
               - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts` (debt)
           - Test helpers:
             - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
@@ -31649,6 +31650,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/deploy-secrets` (0 debt)
               - `debug/paging-probe` (0 debt)
               - `debug/sentinel` (0 debt)
+              - `framework/tooling/checks` (0 debt)
               - `framework/tooling/checks/type-check` (0 debt)
               - `framework/tooling/codegen` (0 debt)
               - `framework/tooling/guards` (0 debt)

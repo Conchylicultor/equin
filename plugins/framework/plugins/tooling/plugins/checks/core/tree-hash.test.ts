@@ -1,0 +1,185 @@
+/**
+ * `computeTreeHash` against a throwaway git repo. Pins the two halves of its
+ * contract: the hash is the working tree's (a racily clean edit — same size,
+ * same mtime second as the index — is still caught), and what its refresh
+ * learns is published to the real index without changing what it stages, so
+ * the next run has nothing left to re-read — unless a writer holds the lock.
+ */
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { computeTreeHash } from "./tree-hash";
+
+let root!: AppPath;
+let index!: string;
+
+async function git(...args: string[]): Promise<string> {
+  const proc = Bun.spawn(["git", ...args], {
+    cwd: root,
+    stdout: "pipe",
+    stderr: "pipe",
+    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
+  });
+  const out = await new Response(proc.stdout).text();
+  if ((await proc.exited) !== 0)
+    throw new Error(`git ${args.join(" ")} failed`);
+  return out.trim();
+}
+
+/** Entries git must re-check by content: mtime second ≥ the index's own. */
+async function racyCount(): Promise<number> {
+  const indexSec = Math.floor(statSync(index).mtimeMs / 1000);
+  return (await git("ls-files", "--debug"))
+    .split("\n")
+    .filter((l) => l.startsWith("  mtime:"))
+    .filter((l) => Number(l.slice(9).split(":")[0]) >= indexSec).length;
+}
+
+/** Stamp a file with the index's mtime: written in the index's last second. */
+function makeRacy(rel: string): void {
+  const t = statSync(index).mtime;
+  utimesSync(join(root, rel), t, t);
+}
+
+/** What `add -A` + `write-tree` gives in a scratch copy — the reference hash. */
+async function referenceHash(): Promise<string> {
+  const scratch = join(root, "..", "ref-index");
+  rmSync(scratch, { force: true });
+  const run = async (...args: string[]): Promise<string> => {
+    const proc = Bun.spawn(["git", ...args], {
+      cwd: root,
+      stdout: "pipe",
+      env: { ...process.env, GIT_INDEX_FILE: scratch },
+    });
+    const out = await new Response(proc.stdout).text();
+    await proc.exited;
+    return out.trim();
+  };
+  await run("add", "-A");
+  return run("write-tree");
+}
+
+beforeEach(async () => {
+  root = asAppPath(mkdtempSync(join(tmpdir(), "tree-hash-test-")));
+  root = asAppPath(join(root, "repo"));
+  await Bun.write(join(root, ".keep"), "");
+  await git("init", "-q", "-b", "main");
+  for (const name of ["a.txt", "b.txt", "c.txt"])
+    writeFileSync(join(root, name), `${name} v1\n`);
+  await git("add", "-A");
+  await git(
+    "-c",
+    "user.name=t",
+    "-c",
+    "user.email=t@t",
+    "commit",
+    "-qm",
+    "init",
+  );
+  index = join(root, ".git", "index");
+});
+
+afterEach(() => {
+  rmSync(join(root, ".."), { recursive: true, force: true });
+});
+
+describe("computeTreeHash", () => {
+  test("a racily clean edit (same size, the index's mtime second) is hashed", async () => {
+    const clean = await computeTreeHash(root);
+    writeFileSync(join(root, "a.txt"), "a.txt v2\n"); // same size as v1
+    makeRacy("a.txt");
+    const edited = await computeTreeHash(root);
+    expect(edited).not.toBe(clean);
+    expect(edited).toBe(await referenceHash());
+    // And again, after the first run published its refresh.
+    expect(await computeTreeHash(root)).toBe(edited);
+  });
+
+  test("publishes the refresh: the next run has no racy entry left", async () => {
+    for (const name of ["a.txt", "b.txt", "c.txt"]) makeRacy(name);
+    expect(await racyCount()).toBeGreaterThanOrEqual(3);
+    await Bun.sleep(1100); // the published index is written in a later second
+    const hash = await computeTreeHash(root);
+    expect(hash).toBe(await referenceHash());
+    expect(await racyCount()).toBe(0);
+    expect(existsSync(`${index}.lock`)).toBe(false);
+    // Settled: a run with nothing to learn leaves the index alone (no rewrite
+    // for the checkout watchers to hear), even with a modified file.
+    writeFileSync(join(root, "b.txt"), "b.txt v2 longer\n");
+    await computeTreeHash(root);
+    const settled = statSync(index).mtimeMs;
+    await Bun.sleep(1100);
+    expect(await computeTreeHash(root)).toBe(await referenceHash());
+    expect(statSync(index).mtimeMs).toBe(settled);
+  });
+
+  test("never changes what the real index stages", async () => {
+    writeFileSync(join(root, "b.txt"), "b staged\n");
+    await git("add", "b.txt");
+    writeFileSync(join(root, "b.txt"), "b worktree\n");
+    writeFileSync(join(root, "new.txt"), "untracked\n");
+    makeRacy("c.txt");
+    const staged = await git("diff", "--cached", "--name-status");
+    const tracked = await git("ls-files");
+    await Bun.sleep(1100);
+    expect(await computeTreeHash(root)).toBe(await referenceHash());
+    expect(await git("diff", "--cached", "--name-status")).toBe(staged);
+    expect(await git("ls-files")).toBe(tracked);
+    expect(await git("show", ":b.txt")).toBe("b staged");
+  });
+
+  test("a linked worktree seeds from, and publishes to, its own index", async () => {
+    // `--git-path index` answers absolute in a linked worktree; joined onto
+    // the root it named no file, so the hash ran on an empty index (the whole
+    // tree re-hashed every run) and nothing could be published.
+    const main = root;
+    const linked = asAppPath(join(main, "..", "linked"));
+    await git("worktree", "add", "-q", "--detach", linked);
+    root = linked;
+    index = await git(
+      "rev-parse",
+      "--path-format=absolute",
+      "--git-path",
+      "index",
+    );
+    makeRacy("a.txt");
+    expect(await racyCount()).toBeGreaterThanOrEqual(1);
+    await Bun.sleep(1100);
+    expect(await computeTreeHash(linked)).toBe(await referenceHash());
+    expect(await racyCount()).toBe(0);
+    root = main;
+  });
+
+  test("sweeps the scratch indexes of dead runs, never a live one's", async () => {
+    const dead = `${index}.equin-tree-hash-99999999-deadbeef`;
+    const live = `${index}.equin-refreshed-${process.pid}-cafe0001`;
+    writeFileSync(dead, "debris");
+    writeFileSync(live, "in use");
+    expect(await computeTreeHash(root)).toBe(await referenceHash());
+    expect(existsSync(dead)).toBe(false);
+    expect(existsSync(live)).toBe(true);
+  });
+
+  test("a held index.lock is left alone and nothing is published", async () => {
+    makeRacy("a.txt");
+    writeFileSync(`${index}.lock`, "held by a writer");
+    const before = readFileSync(index);
+    await Bun.sleep(1100);
+    expect(await computeTreeHash(root)).toBe(await referenceHash());
+    expect(readFileSync(index).equals(before)).toBe(true);
+    expect(readFileSync(`${index}.lock`, "utf8")).toBe("held by a writer");
+  });
+});

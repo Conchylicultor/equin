@@ -126,6 +126,7 @@ out-of-scope folders.
     - `apps/deploy/deploy-secrets` (0 debt)
     - `debug/paging-probe` (0 debt)
     - `debug/sentinel` (0 debt)
+    - `framework/tooling/checks` (0 debt)
     - `framework/tooling/checks/type-check` (0 debt)
     - `framework/tooling/codegen` (0 debt)
     - `framework/tooling/guards` (0 debt)

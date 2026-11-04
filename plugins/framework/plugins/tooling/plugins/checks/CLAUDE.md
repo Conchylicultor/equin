@@ -27,6 +27,27 @@ left in that gitignored directory counted as source and failed its coverage
 gate. Both ask git for tracked + untracked-not-ignored — the same universe
 `computeTreeHash` builds. The `no-adhoc-repo-walk` lint rule enforces it.
 
+## `computeTreeHash` costs O(changed files)
+
+It hashes through a scratch index seeded from the checkout's real one, so `add
+-A` re-reads only the files the stat cache cannot vouch for. Two things keep
+that set small, and both are load-bearing:
+
+- **The seed is found by an absolute path** (`--path-format=absolute`).
+  `--git-path index` alone is relative in main but absolute in a linked
+  worktree, and joined onto the root it named no file: from the cache's start
+  (2026-06-07) to 2026-11-04 every agent worktree hashed from an EMPTY index — the whole tree's content on every
+  check run (180 s timeouts under load, so `null` and an uncached run).
+- **What the refresh learns is published back** to the real index
+  (`publishRefreshedIndex`): no git read of ours ever saves its stat refresh
+  (`GIT_OPTIONAL_LOCKS=0`, spawn's child-env), so racily clean entries left by
+  a checkout, a spare claim's switch or a rebase (up to 11,200 of 20,664
+  measured) were otherwise re-read by every run until the next commit. Only
+  when the refresh learned something, compare-and-swap under git's own
+  `index.lock`, held for one stat + one rename. Scratch indexes keep the source
+  index's mtime (`copyIndex`) — a fresh one would trust racily clean stats and
+  hash a stale tree.
+
 ## A `scope: "tree"` verdict must not depend on the process that produced it
 
 A passing check writes an entry to the shared cache under
@@ -460,6 +481,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 - Exemptions:
   - Exempts itself from:
     - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
+    - `user-path/no-unproven-claim` — `core/tree-hash.ts` (sanctioned)
     - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts` (debt)
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
