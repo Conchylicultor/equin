@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   mapResource,
   ResourceErrorInline,
@@ -171,24 +171,14 @@ function JsonlPaneInner({
     pending.status === "ready" ? pending.data : (pending.stale ?? []);
   const followKey = useSentTurnFollowKey(pendingTurns);
 
-  // Derive when "working" started: last event's timestamp, or now if none.
-  // Seeded once per working transition (snapshot of the last event present at
-  // the rising edge), kept out of render so we never read the clock during render.
-  const [workingStartAt, setWorkingStartAt] = useState<number | null>(null);
-  useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- rising-edge snapshot: fires only on the isWorking transition (dep array is intentionally [isWorking]) to freeze workingStartAt once at transition time; a render-derived value can't capture the clock once per edge without re-snapshotting on every new event. */
-    if (isWorking) {
-      if (workingStartAt == null) {
-        const last = events.length ? events[events.length - 1] : null;
-        const lastAt = last?.at ?? null;
-        setWorkingStartAt(lastAt ? new Date(lastAt).getTime() : Date.now());
-      }
-    } else {
-      setWorkingStartAt(null);
-    }
-    /* eslint-enable react-hooks/set-state-in-effect */
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot events once per working transition
-  }, [isWorking]);
+  // How long the agent has been at it: since its status became what it is
+  // now, as the server stamped it — the same clock on every visit, and on the
+  // first look at an agent that started in the background. A row whose status
+  // has not moved since the stamp existed shows no clock.
+  const workingStartAt =
+    isWorking && conversation.statusSince
+      ? conversation.statusSince.getTime()
+      : null;
 
   const agentStarting = conversation.status === "starting";
   // The foot's activity line (see TranscriptActivity): the agent's phase. A

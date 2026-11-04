@@ -1,6 +1,6 @@
 {
-  "id": "649805cf-1a45-460d-8eaf-699ba6d30fa8",
-  "prevId": "abb0a4f2-74ab-45cb-a572-867943fc2c87",
+  "id": "47a1b1b9-4d5a-4dba-ac95-efa8a1d67c54",
+  "prevId": "649805cf-1a45-460d-8eaf-699ba6d30fa8",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -13601,6 +13601,12 @@
         },
         "status_unverified_since": {
           "name": "status_unverified_since",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status_since": {
+          "name": "status_since",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false

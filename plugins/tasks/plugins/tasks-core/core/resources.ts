@@ -451,6 +451,7 @@ const CONVERSATION_QUEUE_CARRY = {
     "waitingFor",
     "workingOn",
     "statusUnverifiedSince",
+    "statusSince",
     "spawnedBy",
     "closeRequested",
     "hibernatedAt",

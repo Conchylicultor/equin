@@ -6,6 +6,7 @@ import {
   isNull,
   notInArray,
   or,
+  sql,
 } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
@@ -58,6 +59,21 @@ export type UpdateConversationPatch = ConversationStatusPatch & {
    */
   hibernatedAt?: null;
 };
+
+/**
+ * THE status write: `status` with the `statusSince` that goes with it, for a
+ * `.set(...)`. The stamp moves only when the value really changes — decided by
+ * the database against the row's current status in the same statement, so a
+ * re-write of the status it already has (the reconciler settling, a close of a
+ * closed row) keeps the moment it began. Every status write in this file
+ * spreads it; none sets `status` alone.
+ */
+function statusWrite<S extends ConversationStatus>(status: S) {
+  return {
+    status,
+    statusSince: sql`CASE WHEN ${_conversations.status} IS DISTINCT FROM ${status} THEN now() ELSE ${_conversations.statusSince} END`,
+  };
+}
 
 // Resolve the owning task id AND the current status (status + waitingFor) of
 // a conversation in one read. `taskId` is null when the conversation/attempt
@@ -123,13 +139,18 @@ async function taskOfAttempt(
  *
  * The bump fires only when a row actually came back, so a conflict that inserted
  * nothing does not invalidate the memo over an attribution set that did not move.
+ *
+ * A new row's status begins with it: `statusSince` is the insert's own
+ * `now()`, never the caller's to pass.
  */
 export async function insertConversationRow(
   exec: DbExecutor,
-  values: (typeof _conversations)["$inferInsert"],
+  values: Omit<(typeof _conversations)["$inferInsert"], "statusSince">,
   opts: { ignoreConflict?: boolean } = {},
 ): Promise<(typeof _conversations)["$inferSelect"] | undefined> {
-  const insert = exec.insert(_conversations).values(values);
+  const insert = exec
+    .insert(_conversations)
+    .values({ ...values, statusSince: sql`now()` });
   const [row] = await (
     opts.ignoreConflict ? insert.onConflictDoNothing() : insert
   ).returning();
@@ -218,11 +239,12 @@ export async function updateConversation(
   // No `updatedAt` here: it is derived by the database from the columns the
   // entity declares as counting (`touchedBy` in `tables.ts`), and a write to
   // it raises.
-  const dbPatch: Partial<(typeof _conversations)["$inferInsert"]> = {};
-  if (patch.status !== undefined) {
-    dbPatch.status = patch.status;
+  // `status` itself goes through `statusWrite` below, with its `statusSince`.
+  const dbPatch: Partial<
+    Omit<(typeof _conversations)["$inferInsert"], "status" | "statusSince">
+  > = {};
+  if (patch.status !== undefined)
     dbPatch.workingOn = patch.status === "working" ? patch.workingOn : null;
-  }
   if (patch.title !== undefined) dbPatch.title = patch.title;
   if (patch.claudeSessionId !== undefined)
     dbPatch.claudeSessionId = patch.claudeSessionId;
@@ -237,7 +259,7 @@ export async function updateConversation(
   if (patch.hibernatedAt !== undefined) dbPatch.hibernatedAt = null;
   const alongside = opts.alongside;
   // An empty patch writes nothing (drizzle rejects an empty SET).
-  if (Object.keys(dbPatch).length === 0) {
+  if (Object.keys(dbPatch).length === 0 && patch.status === undefined) {
     if (alongside !== undefined) await alongside(db);
     return;
   }
@@ -246,7 +268,10 @@ export async function updateConversation(
     withTaskStatusChange(taskId ?? [], exec, async () => {
       await exec
         .update(_conversations)
-        .set(dbPatch)
+        .set({
+          ...dbPatch,
+          ...(patch.status !== undefined ? statusWrite(patch.status) : {}),
+        })
         .where(eq(_conversations.id, id));
     });
   if (alongside === undefined) {
@@ -363,7 +388,7 @@ export async function markConversationGone(id: string): Promise<boolean> {
     db
       .update(_conversations)
       .set({
-        status: "gone",
+        ...statusWrite("gone"),
         endedAt: now,
         waitingFor: null,
         workingOn: null,
@@ -444,7 +469,7 @@ export async function markConversationClosed(
     await db
       .update(_conversations)
       .set({
-        status: "done",
+        ...statusWrite("done"),
         endedAt,
         workingOn: null,
         statusUnverifiedSince: null,

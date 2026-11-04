@@ -166,6 +166,12 @@ export const conversationFields = {
   // readers render "Unknown" instead of claiming it. Cleared on the next
   // reconcile that could check.
   statusUnverifiedSince: nullable(dateField()),
+  // When `status` last took the value it has now, stamped by the database in
+  // the same write that changes it (`statusWrite` in tasks-core's mutations) —
+  // so a reader can say how long the agent has been working, or waiting, from
+  // its first look, whoever was watching when the status moved. Null on a row
+  // whose status has not changed since the column was added.
+  statusSince: nullable(dateField()),
   spawnedBy: nullable(textField()),
   createdAt: dateField({ label: "Created" }),
   // Last activity. Sortable in the lists: it is DERIVED (a DB trigger) and

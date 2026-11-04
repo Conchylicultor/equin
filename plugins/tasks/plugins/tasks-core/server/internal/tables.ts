@@ -209,6 +209,7 @@ const conversationsEntity = defineEntity(conversationsEntityRef, {
       waitingFor: false,
       workingOn: { into: ["turn"], outOf: ["turn"] },
       statusUnverifiedSince: false,
+      statusSince: false,
       spawnedBy: false,
       createdAt: false,
       endedAt: false,
