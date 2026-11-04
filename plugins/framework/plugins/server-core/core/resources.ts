@@ -463,8 +463,22 @@ export function installSnapHash(fn: (json: string) => bigint): void {
   hostSnapHash = fn;
 }
 
+// The machine's cumulative time asleep, read only by `_debug.linger` — the
+// desktop host installs `packages/sleep-clock`'s reading (bun:ffi), other hosts
+// leave it unknown.
+let hostAsleepMs: (() => number | null) | null = null;
+
+/** Install this host's sleep-clock reader. Once per process, before boot. */
+export function installAsleepClock(fn: () => number | null): void {
+  if (hostAsleepMs !== null) {
+    throw new Error("[resources] a sleep clock is already installed.");
+  }
+  hostAsleepMs = fn;
+}
+
 const runtime = createResourceRuntime({
   snapHash: (json) => (hostSnapHash ?? hash64)(json),
+  asleepMs: () => (hostAsleepMs === null ? null : hostAsleepMs()),
   // The label stays the resource key (one slow-op row per resource, and the key
   // the loader→tables read-set index is built on); WHICH params ran rides as the
   // span's variant, and a scoped refill carries how many ids it read.

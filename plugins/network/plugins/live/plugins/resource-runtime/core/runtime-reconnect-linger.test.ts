@@ -18,6 +18,7 @@
 
 import { describe, expect, mock, test } from "bun:test";
 import { z } from "zod";
+import type { LingerLedgerSnapshot } from "./linger-ledger";
 import { SOCKET_LINGER_MS } from "./runtime";
 import {
   createHarness,
@@ -71,7 +72,7 @@ function answerOn(
 }
 
 interface Debug {
-  linger: { sockets: number; records: number };
+  linger: { sockets: number; records: number } & LingerLedgerSnapshot;
   resources: Array<{
     key: string;
     versions: Record<string, number>;
@@ -126,7 +127,7 @@ describe("a reconnect within the linger keeps its span", () => {
     expect(c.loads).toBe(loads);
     expect((await entryDebug(h, "dbp")).subShortCircuits).toBe(1);
     // The replay took the closed socket's hold over: nothing lingers.
-    expect((await debugOf(h)).linger).toEqual({ sockets: 0, records: 0 });
+    expect((await debugOf(h)).linger).toMatchObject({ sockets: 0, records: 0 });
     expect((await entryDebug(h, "dbp")).subCounts).toEqual({
       '{"id":"a"}': 1,
     });
@@ -230,7 +231,7 @@ describe("a reconnect within the linger keeps its span", () => {
     await h.subscribeBatch([], { socket: 1, tabId: TAB });
 
     expect(last).toHaveBeenCalledTimes(1);
-    expect((await debugOf(h)).linger).toEqual({ sockets: 0, records: 0 });
+    expect((await debugOf(h)).linger).toMatchObject({ sockets: 0, records: 0 });
     expect((await entryDebug(h, "dbp")).versions).toEqual({});
   });
 
@@ -251,7 +252,7 @@ describe("a reconnect within the linger keeps its span", () => {
     await h.unsubTab(TAB, { socket: 1 });
 
     expect(last).toHaveBeenCalledTimes(1);
-    expect((await debugOf(h)).linger).toEqual({ sockets: 0, records: 0 });
+    expect((await debugOf(h)).linger).toMatchObject({ sockets: 0, records: 0 });
   });
 
   test("only the tab that replayed is released: another tab's hold lingers to the bound", async () => {
@@ -276,13 +277,19 @@ describe("a reconnect within the linger keeps its span", () => {
         socket: 1,
         tabId: TAB,
       });
-      expect((await debugOf(h)).linger).toEqual({ sockets: 1, records: 1 });
+      expect((await debugOf(h)).linger).toMatchObject({
+        sockets: 1,
+        records: 1,
+      });
       expect(last).toHaveBeenCalledTimes(0);
 
       await clock.advance(SOCKET_LINGER_MS);
       expect(last).toHaveBeenCalledTimes(1);
       expect(last.mock.calls[0]![0]).toEqual({ id: "b" });
-      expect((await debugOf(h)).linger).toEqual({ sockets: 0, records: 0 });
+      expect((await debugOf(h)).linger).toMatchObject({
+        sockets: 0,
+        records: 0,
+      });
     });
   });
 });
@@ -365,7 +372,7 @@ describe("a replay that raced the old socket's close", () => {
     });
     h.closeSocket(0);
 
-    expect((await debugOf(h)).linger).toEqual({ sockets: 0, records: 0 });
+    expect((await debugOf(h)).linger).toMatchObject({ sockets: 0, records: 0 });
     expect(last).toHaveBeenCalledTimes(1);
     expect(last.mock.calls[0]![0]).toEqual({ id: "b" });
     expect((await entryDebug(h, "dbp")).subCounts).toEqual({
@@ -467,5 +474,110 @@ describe("one runtime-wide version clock", () => {
     );
     const body = (await res.json()) as { version: number };
     expect(body.version).toBeGreaterThanOrEqual(ack.version!);
+  });
+});
+
+describe("_debug.linger records what each linger did", () => {
+  test("a replay within the bound: ended by the replay, on each clock, with the host's sleep", async () => {
+    await withFakeClock(async (clock) => {
+      let asleep = 1_000;
+      const h = createHarness({ sockets: 2, asleepMs: () => asleep });
+      defineDbp(h, () => "v1");
+      const ack = await held(h);
+
+      h.closeSocket(0);
+      await clock.advance(5_000);
+      asleep += 3_000;
+      await replay(h, ack);
+
+      const l = (await debugOf(h)).linger;
+      expect(l.ended).toEqual({ replayed: 1, "unsub-tab": 0, expired: 0 });
+      expect(l.lateReplays).toBe(0);
+      expect(l.episodes).toEqual([
+        {
+          closedAt: expect.any(Number),
+          tabs: 1,
+          records: 1,
+          endedBy: "replayed",
+          held: { wallMs: 5_000, monoMs: 5_000, asleepMs: 3_000 },
+          expiredRecords: 0,
+          lateReplay: null,
+        },
+      ]);
+    });
+  });
+
+  test("an unsub-tab ends it so", async () => {
+    const h = createHarness({ sockets: 2 });
+    defineDbp(h, () => "v1");
+    await held(h);
+
+    h.closeSocket(0);
+    await h.unsubTab(TAB, { socket: 1 });
+
+    const l = (await debugOf(h)).linger;
+    expect(l.ended).toEqual({ replayed: 0, "unsub-tab": 1, expired: 0 });
+    // No sleep clock on this host: unknown, never 0.
+    expect(l.episodes[0]?.held?.asleepMs).toBeNull();
+  });
+
+  test("a tab back after the bound is a late replay, measured from the close", async () => {
+    await withFakeClock(async (clock) => {
+      const h = createHarness({ sockets: 2, asleepMs: () => 0 });
+      defineDbp(h, () => "v1");
+      const ack = await held(h);
+
+      h.closeSocket(0);
+      await clock.advance(SOCKET_LINGER_MS);
+      let l = (await debugOf(h)).linger;
+      expect(l.ended.expired).toBe(1);
+      expect(l.episodes[0]).toMatchObject({
+        endedBy: "expired",
+        expiredRecords: 1,
+        lateReplay: null,
+      });
+
+      await clock.advance(10_000);
+      await replay(h, ack);
+      l = (await debugOf(h)).linger;
+      expect(l.lateReplays).toBe(1);
+      expect(l.episodes[0]?.lateReplay).toEqual({
+        wallMs: SOCKET_LINGER_MS + 10_000,
+        monoMs: SOCKET_LINGER_MS + 10_000,
+        asleepMs: 0,
+      });
+
+      // Its next reconnect is an ordinary one, not late again.
+      h.closeSocket(1);
+      await h.subscribeBatch([{ key: "dbp", params: { id: "a" } }], {
+        socket: 0,
+        tabId: TAB,
+      });
+      expect((await debugOf(h)).linger.lateReplays).toBe(1);
+    });
+  });
+
+  test("a tab that replayed before another tab's hold expired is not awaited", async () => {
+    await withFakeClock(async (clock) => {
+      const h = createHarness({ sockets: 2 });
+      defineDbp(h, () => "v1");
+      const ack = await held(h);
+      await h.subscribeBatch([{ key: "dbp", params: { id: "a" } }], {
+        tabId: "t2",
+      });
+
+      h.closeSocket(0);
+      await replay(h, ack);
+      await clock.advance(SOCKET_LINGER_MS);
+      // TAB's next reconnect, long after: it came back in time last time.
+      await h.subscribeBatch([{ key: "dbp", params: { id: "a" } }], {
+        socket: 1,
+        tabId: TAB,
+      });
+
+      const l = (await debugOf(h)).linger;
+      expect(l.ended.expired).toBe(1);
+      expect(l.lateReplays).toBe(0);
+    });
   });
 });

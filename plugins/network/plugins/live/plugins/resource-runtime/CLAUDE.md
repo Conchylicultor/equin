@@ -601,7 +601,12 @@ All but the version are co-produced by the starter. A push drain mints
     replay reloads exactly what changed. Senders walk `sockets` only; every
     enumeration of tracked tuples (`subscribedParamsFor` = `entry.tracked`,
     `unregisterTupleEverywhere`) includes lingering ones. `_debug.linger`
-    counts them. Pinned by `runtime-reconnect-linger.test.ts`;
+    counts them and records what each linger did (`core/linger-ledger.ts`):
+    how it ended (`replayed` / `unsub-tab` / `expired`), its duration in wall,
+    monotonic and asleep time (`asleepMs` option: the desktop host installs
+    `packages/sleep-clock`, others report `null`), and `lateReplay` — a tab
+    back after its linger expired, whose whole set reloads. Bounded: the last
+    50 episodes. Pinned by `runtime-reconnect-linger.test.ts`;
     `research/2026-11-04-global-live-reconnect-linger-and-version-clock.md`.
   - `versionIsComplete`: every non-`revalidate` resource, and a `revalidate` one
     declared `notified` (its notify stream is its whole change signal; its ETag

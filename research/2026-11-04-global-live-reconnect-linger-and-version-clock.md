@@ -147,3 +147,41 @@ takes a minted id and a `category`): it now asserts on the frames alone.
 - Unit tests that wanted "close ⇒ released" now advance the fake clock by `SOCKET_LINGER_MS`.
 - One test pinned "next version = base + 1"; with one clock it is "> base" (the skip still mints
   nothing — its only frame is an ack).
+
+## Follow-up: does the linger survive a real sleep? (2026-11-05)
+
+Question: does `SOCKET_LINGER_MS` expire during a Mac sleep, so that every real wake still reloads
+everything? It depends on (a) when the server sees the close relative to the sleep, and (b) whether
+its timers advance while asleep.
+
+**History, before the linger shipped** (main's client `ws-close` diag in
+`~/.equin/worktrees/singularity/logs/live-state.jsonl*` against `pmset -g log`, 2026-10-31 → 11-04;
+four full sleeps with a tab open):
+
+| sleep | asleep | `/ws/notifications` closes |
+|---|---|---|
+| 11-03 17:45 → 18:09 (clamshell) | 24 min, 25 dark wakes | −29 s before "Entering Sleep", reopened +0.2 s; none at wake |
+| 11-03 19:37 → 20:30 (idle) | 53 min, 4 dark wakes | −29 s before, reopened +0.5 s; **+2.5 s after wake**, reopened +0.7 s |
+| 11-03 20:30 → 11-04 00:54 (clamshell) | 4.4 h, 127 dark wakes | −29 s before, reopened +0.2 s; none at wake |
+| 11-01 → 11-03 03:10 (battery died, hibernate) | 28 h | **+22.5 s after wake**, reopened at once |
+
+- "Entering Sleep" is stamped at the END of a ~30 s sleep preparation (`Delays to Sleep
+  notifications: … timed out (30000 ms)`), so the pre-sleep close and its sub-second reconnect both
+  happen while the machine is still awake: the replay lands well inside the linger.
+- The socket itself (browser → gateway → Unix socket, all local) usually SURVIVES the sleep: two of
+  four wakes closed nothing. Then nothing replays — the best case, the linger is not involved.
+- Two wakes closed the socket seconds after the wake, each reconnect within < 1 s of the client
+  seeing it. What the client log cannot say is when the SERVER saw those closes: at the wake (the
+  linger holds — the replay is < 1 s later), or during a dark wake hours earlier (the 30 s timer
+  could fire in a later dark wake or on the wake itself, before the replay).
+
+**Instrument** (this change): `_debug.linger` records per closed socket how the linger ended
+(`replayed` / `unsub-tab` / `expired`), its span in wall, monotonic (`performance.now`, the clock
+Bun judges the timer by) and asleep time (`packages/sleep-clock`), and `lateReplay` — a tab whose
+linger expired coming back (its whole set reloads), measured from the close. Reading it after a
+night with sleeps answers both unknowns directly: a `lateReplay` with `asleepMs > 0` is a wake that
+overran the bound; `held.monoMs ≈ wallMs` on an `expired` episode whose `asleepMs > 0` means Bun's
+timers count sleep.
+
+If wakes do overrun: bound the linger by awake time (the sleep clock), or release on the tab's own
+return / departure signals — not a larger number.

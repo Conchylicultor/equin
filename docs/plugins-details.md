@@ -27390,6 +27390,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `handOffEpoch`
           - `heapMemory`
           - `hostHttpRoutes`
+          - `installAsleepClock`
           - `installBootJournal`
           - `installHeapReader`
           - `installMemoryProbe`

@@ -541,6 +541,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `handOffEpoch`
     - `heapMemory`
     - `hostHttpRoutes`
+    - `installAsleepClock`
     - `installBootJournal`
     - `installHeapReader`
     - `installMemoryProbe`

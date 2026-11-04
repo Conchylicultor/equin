@@ -35,6 +35,7 @@ import {
   type SnapEntry,
 } from "./keyed-diff";
 import { ResourceGuardError } from "./guard-error";
+import { createLingerLedger, type LingerEnd } from "./linger-ledger";
 import {
   isMintedPlan,
   routeTuple,
@@ -1783,6 +1784,14 @@ export interface ResourceRuntimeOptions {
    */
   snapHash?: (json: string) => bigint;
   /**
+   * The machine's cumulative time asleep (ms), comparable within this process;
+   * null where the host cannot tell. Only `_debug.linger`'s episodes read it,
+   * to say whether a linger spanned a sleep. The desktop server passes
+   * `packages/sleep-clock`'s reading; central and a browser host omit it
+   * (always null).
+   */
+  asleepMs?: () => number | null;
+  /**
    * Wrap each loader call. `info.variant` is the canonical params
    * (`paramsKey`, absent for `{}`); `info.scopedIds` is how many ids a scoped
    * refill read (absent on a FULL load). `capture` takes THIS run's own read
@@ -2820,6 +2829,8 @@ export function createResourceRuntime(
   // senders walk `sockets` only.
   // research/2026-11-04-global-live-reconnect-linger-and-version-clock.md
   const detached = new Map<SocketState, ReturnType<typeof setTimeout>>();
+  // What each linger did, for `_debug.linger` (`linger-ledger.ts`).
+  const lingerLedger = createLingerLedger(opts.asleepMs ?? (() => null));
   // The flush scheduler, as ONE state whose every transition is synchronous:
   //   idle    — nothing pending a flush;
   //   queued  — a `flushNotifies` microtask is pending;
@@ -7516,7 +7527,7 @@ export function createResourceRuntime(
           const m = msg as ReceivedFrame<"unsub-tab">;
           const tabId = typeof m.tabId === "string" ? m.tabId : "";
           releaseTabSubs(state, tabId);
-          releaseDetachedTab(tabId);
+          releaseDetachedTab(tabId, "unsub-tab");
           return;
         }
       }
@@ -7536,6 +7547,7 @@ export function createResourceRuntime(
         );
         (timer as { unref?: () => void }).unref?.();
         detached.set(state, timer);
+        lingerLedger.opened(state, tabsOf(state).size, recordCount(state));
       }
     },
   };
@@ -8672,7 +8684,8 @@ export function createResourceRuntime(
       // …and everything it still held on a closed socket: what it restated is
       // held here now (registered above, so it never went through 0 — the
       // short-circuit below can answer it), the rest it no longer wants.
-      releaseDetachedTab(tabId);
+      releaseDetachedTab(tabId, "replayed");
+      lingerLedger.returned(tabId);
     }
 
     // Pass 2 — synchronous short-circuit collection; everything else detaches
@@ -8889,6 +8902,10 @@ export function createResourceRuntime(
     if (timer === undefined) return;
     clearTimeout(timer);
     detached.delete(state);
+    lingerLedger.ended(state, "expired", {
+      records: recordCount(state),
+      tabs: tabsOf(state),
+    });
     for (const [key, inner] of state.subs) {
       for (const [pk, rec] of inner) releaseSubRefcount(key, pk, rec.params);
     }
@@ -8902,29 +8919,43 @@ export function createResourceRuntime(
   function releaseReattachedTabs(closing: SocketState): void {
     const live = new Set<string>();
     for (const st of sockets.values()) {
-      for (const inner of st.subs.values()) {
-        for (const rec of inner.values()) {
-          for (const tab of rec.tabs) live.add(tab);
-        }
-      }
+      for (const tab of tabsOf(st)) live.add(tab);
     }
-    const here = new Set<string>();
-    for (const inner of closing.subs.values()) {
+    for (const tab of tabsOf(closing)) {
+      if (live.has(tab)) releaseTabSubs(closing, tab);
+    }
+  }
+
+  // The tabs holding subs on a socket.
+  function tabsOf(state: SocketState): Set<string> {
+    const tabs = new Set<string>();
+    for (const inner of state.subs.values()) {
       for (const rec of inner.values()) {
-        for (const tab of rec.tabs) here.add(tab);
+        for (const tab of rec.tabs) tabs.add(tab);
       }
     }
-    for (const tab of here) if (live.has(tab)) releaseTabSubs(closing, tab);
+    return tabs;
+  }
+
+  // The (key, pk) records a socket holds.
+  function recordCount(state: SocketState): number {
+    let n = 0;
+    for (const inner of state.subs.values()) n += inner.size;
+    return n;
   }
 
   // `tabId` replayed or left: release what it held on every lingering socket,
   // and drop a socket nothing is left on.
-  function releaseDetachedTab(tabId: string): void {
+  function releaseDetachedTab(
+    tabId: string,
+    by: Exclude<LingerEnd, "expired">,
+  ): void {
     for (const [state, timer] of detached) {
       releaseTabSubs(state, tabId);
       if (state.subs.size === 0) {
         clearTimeout(timer);
         detached.delete(state);
+        lingerLedger.ended(state, by);
       }
     }
   }
@@ -9421,15 +9452,17 @@ export function createResourceRuntime(
             refusals: Object.fromEntries(resumeRefusals),
             shadows: [...shadows.values()].reduce((n, m) => n + m.size, 0),
           },
-          // Closed sockets whose subs still linger (`detached`), and the
-          // (key, pk) records they hold.
+          // Closed sockets whose subs still linger (`detached`), the
+          // (key, pk) records they hold, and what every linger did
+          // (`linger-ledger.ts`): how each ended, after how long awake and
+          // asleep, and the tabs that came back after theirs expired.
           linger: {
             sockets: detached.size,
             records: [...detached.keys()].reduce(
-              (n, st) =>
-                n + [...st.subs.values()].reduce((k, m) => k + m.size, 0),
+              (n, st) => n + recordCount(st),
               0,
             ),
+            ...lingerLedger.snapshot(),
           },
           resources: out,
         },

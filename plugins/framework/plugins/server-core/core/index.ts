@@ -74,6 +74,7 @@ export {
   defineExternalResource,
   onDeferredResourcesBound,
   handleResourceHttp,
+  installAsleepClock,
   installSnapHash,
   loadResourceByKey,
   loadResourceFresh,
