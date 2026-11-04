@@ -12,23 +12,24 @@ import {
   type FileRenderersHandle,
 } from "@plugins/primitives/plugins/file-viewer/web";
 import type { FileRef } from "@plugins/primitives/plugins/file-viewer/core";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   useFileHostPath,
   useHostPathSource,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 
 /**
- * What the file-peek body hands its own header: the path it is showing (the
- * resolved one once resolution settles), the file it reads (`null` until the
- * path settles on one — a fuzzy path names no place yet), where a path-bar
- * place goes, and the renderer tabs' state, which is body-local (`useState`
+ * What the file-peek body hands its own header: the path it is showing and
+ * the file it names (the requested one until resolution settles, so the
+ * header reads the file's place from the first frame, in parallel with the
+ * resolution), where a path-bar place goes, and the renderer tabs' state, which is body-local (`useState`
  * in file-viewer's `useFileRenderers`) and shared with the content below.
  * `renderers` is `null` while the path is still resolving or ambiguous —
  * there are no tabs to offer yet.
  */
 interface FilePeekHeaderValue {
   path: string;
-  file: FileRef | null;
+  file: FileRef;
   activationFor: (target: PathTarget) => Activation;
   renderers: FileRenderersHandle | null;
 }
@@ -64,38 +65,30 @@ function useFilePeekHeader(): FilePeekHeaderValue {
 /**
  * The file-peek pane's header title: the file's place as the Files path bar
  * (rooted at its checkout for a workspace file), every folder a link to that
- * folder's listing, then a copy of the path as shown to agents. Until the file
- * has a place on this computer (resolving, an app data file, a host without
- * the computer) the path is a plain breadcrumb with the same copy button.
+ * folder's listing, then a copy of the path as shown to agents. While the
+ * place is read (the checkout's root) a loading block holds the spot —
+ * invisible on a fast read; a file with no place on this computer (an app
+ * data file, a host without the computer) is a plain breadcrumb.
  */
 export function FilePeekTitle() {
   const { path, file, activationFor } = useFilePeekHeader();
-  if (file === null) return <FilepathBreadcrumb path={path} />;
-  return (
-    <FileHostTitle path={path} file={file} activationFor={activationFor} />
-  );
-}
-
-function FileHostTitle({
-  path,
-  file,
-  activationFor,
-}: {
-  path: string;
-  file: FileRef;
-  activationFor: (target: PathTarget) => Activation;
-}) {
   const place = useFileHostPath(file);
-  if (place.kind !== "ready") return <FilepathBreadcrumb path={path} />;
-  return (
-    <HostPathBar
-      home={place.home}
-      root={place.root}
-      path={place.path}
-      copyText={path}
-      activationFor={activationFor}
-    />
-  );
+  switch (place.kind) {
+    case "pending":
+      return <Loading variant="block" className="h-4 w-48" />;
+    case "none":
+      return <FilepathBreadcrumb path={path} />;
+    case "ready":
+      return (
+        <HostPathBar
+          home={place.home}
+          root={place.root}
+          path={place.path}
+          copyText={path}
+          activationFor={activationFor}
+        />
+      );
+  }
 }
 
 function HostPathBar({

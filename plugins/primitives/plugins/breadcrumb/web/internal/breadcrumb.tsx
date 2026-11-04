@@ -13,7 +13,11 @@ import {
   cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { TrailSeparator } from "./trail-separator";
-import { useAncestorCollapse } from "./use-ancestor-collapse";
+import {
+  CRUMB_FOLD_ATTR,
+  CRUMB_INDEX_ATTR,
+  useAncestorCollapse,
+} from "./use-ancestor-collapse";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
@@ -99,16 +103,25 @@ function Crumb({
   label,
   activation,
   textClass,
+  index,
 }: {
   label: ReactNode;
   activation?: Activation;
   textClass: string;
+  /** Its place in the trail, which the fold measures it by. */
+  index: number;
 }) {
+  const marker = { [CRUMB_INDEX_ATTR]: index };
   if (!activation) {
-    return <span className="font-normal text-muted-foreground">{label}</span>;
+    return (
+      <span {...marker} className="font-normal text-muted-foreground">
+        {label}
+      </span>
+    );
   }
   return (
     <Button
+      {...marker}
       variant="ghost"
       aspect="inline"
       {...activationProps(activation)}
@@ -123,7 +136,7 @@ function Crumb({
 }
 
 /**
- * The ancestors, folded: one overflow crumb that gives them all back as a menu.
+ * The folded ancestors: one overflow crumb that gives them back as a menu.
  *
  * Folding is what a breadcrumb does INSTEAD of taking letters off the page's
  * name — the ancestors are one click from being read in full, the name is not.
@@ -134,6 +147,7 @@ function FoldedCrumbs({ segments }: { segments: BreadcrumbSegment[] }) {
       <DropdownMenuTrigger
         render={
           <Button
+            {...{ [CRUMB_FOLD_ATTR]: "" }}
             variant="ghost"
             aspect="inline"
             aria-label={`Show the ${segments.length} levels above this one`}
@@ -171,7 +185,7 @@ function FoldedCrumbs({ segments }: { segments: BreadcrumbSegment[] }) {
  *   (`BreadcrumbSlots.Separator`: chevron or slash), so it is a mark between
  *   crumbs rather than punctuation glued to the words.
  * - **The leaf never pays for the row.** The ancestor run is rigid and folds
- *   whole into an overflow crumb when the room runs out (see
+ *   into an overflow crumb, oldest ancestor first, as the room runs out (see
  *   `useAncestorCollapse`), so the page's own name loses letters only once
  *   there is nothing left to fold.
  *
@@ -196,12 +210,12 @@ export function Breadcrumb({
   const prefix = segments.slice(0, Math.max(lastIndex, 0));
   const active = segments[lastIndex];
 
-  const folded = useAncestorCollapse({
+  const hidden = useAncestorCollapse({
     rootRef,
     prefixRef,
     leafRef,
     trailKey: segments.map((seg) => seg.key).join(" "),
-    foldable: prefix.length > 0,
+    count: prefix.length,
   });
 
   if (active === undefined) return null;
@@ -220,10 +234,11 @@ export function Breadcrumb({
       )}
     >
       {prefix.length > 0 && (
-        // ONE box for the ancestors in both states, so what folds and what the
-        // fit measures are the same element. Rigid: it never gives room back by
-        // shrinking — it either stands whole or folds — which is what makes the
-        // leaf's own truncation a reliable report that the row is over-full.
+        // ONE box for the ancestors however many are folded, so what folds and
+        // what the fit measures are the same element. Rigid: it never gives room
+        // back by shrinking — its crumbs either stand whole or fold — which is
+        // what makes the leaf's own truncation a reliable report that the row is
+        // over-full.
         <Stack
           ref={prefixRef}
           direction="row"
@@ -231,23 +246,23 @@ export function Breadcrumb({
           gap="2xs"
           className={rigidClass()}
         >
-          {folded ? (
+          {hidden > 0 && (
             <>
-              <FoldedCrumbs segments={prefix} />
+              <FoldedCrumbs segments={prefix.slice(0, hidden)} />
               <TrailSeparator />
             </>
-          ) : (
-            prefix.map((seg) => (
-              <Fragment key={seg.key}>
-                <Crumb
-                  label={seg.label}
-                  activation={seg.activation}
-                  textClass={textClass}
-                />
-                <TrailSeparator />
-              </Fragment>
-            ))
           )}
+          {prefix.slice(hidden).map((seg, i) => (
+            <Fragment key={seg.key}>
+              <Crumb
+                label={seg.label}
+                activation={seg.activation}
+                textClass={textClass}
+                index={hidden + i}
+              />
+              <TrailSeparator />
+            </Fragment>
+          ))}
         </Stack>
       )}
       <span

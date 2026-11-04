@@ -25,4 +25,8 @@ export const hostHome = liveValue("host-account.home", {
   // The process environment of the computer: a host without one (the demo)
   // has no home folder to name, so its readers render the unavailable arm.
   needsMachine: { feature: "Your home folder" },
+  // Fixed for the process and a few bytes, and read by every host path bar
+  // (Files, a file pane's header) to spell `~`: resident from the boot
+  // snapshot, so no surface has a frame without it.
+  preload: "boot-and-keep",
 });

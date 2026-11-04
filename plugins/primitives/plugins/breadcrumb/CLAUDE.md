@@ -6,12 +6,18 @@ A quiet trail: muted ancestor crumbs, a themed separator
 (`inherit` | `strong`), `text` (`inherit` | `body`), trailing `actions`. The
 leaf carries `data-breadcrumb-leaf`.
 
-## The fold (`use-ancestor-collapse.ts`)
+## The fold (`use-ancestor-collapse.ts`, `fold-plan.ts`)
 
-The leaf never truncates while something else can give: the ancestor run is
-rigid and folds WHOLE into a `…` menu when the leaf would have to truncate, and
-comes back when the trail's slack covers the open run's (cached) width plus a
-4px margin.
+The leaf never truncates while something else can give: the visible ancestors
+are rigid, and when the leaf would have to truncate the OLDEST ones fold, one
+by one, into a `…` menu — the fewest that let the leaf stand whole, so the
+crumbs nearest the page stay as long as there is room (`… › c › d › leaf`).
+A folded ancestor comes back, nearest first, when the trail's slack covers its
+cached width plus a 4px margin. Each ancestor's width is measured from its
+crumb (`data-crumb-index`) to the next crumb or the leaf, so it carries its
+separator; the overflow crumb (`data-crumb-fold`) the same way. The decision
+itself is the pure `planFold`. (It used to fold the whole run at once: a deep
+path showed `… › leaf` with hundreds of pixels standing empty.)
 
 - **It observes the trail, the ancestor run and the leaf** — every box the
   decision reads. It used to observe only the trail, so a fold taken on a
@@ -31,7 +37,7 @@ comes back when the trail's slack covers the open run's (cached) width plus a
 
 ## Plugin reference
 
-- Description: Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the ancestors fold whole into an overflow menu instead.
+- Description: Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the oldest ancestors fold one by one into an overflow menu instead, keeping as many crumbs nearest the page as fit.
 - Web:
   - Slots: `BreadcrumbSlots.Separator`
   - Slot contributors: `BreadcrumbSlots.Separator` ← `ui.breadcrumb-separator`

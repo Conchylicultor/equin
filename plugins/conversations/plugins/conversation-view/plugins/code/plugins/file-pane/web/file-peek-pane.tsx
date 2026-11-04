@@ -188,8 +188,8 @@ function FilePeekPaneContent() {
   );
 
   // The header's title and renderer tabs read this (see file-peek-header): the
-  // requested path, no place and no tabs until the path resolves to one file
-  // (or to none, whose miss the file content reports).
+  // requested path and no tabs until the path resolves to one file (or to
+  // none, whose miss the file content reports).
   const settled =
     resolved.status === "exact" ||
     resolved.status === "resolved" ||
@@ -198,7 +198,7 @@ function FilePeekPaneContent() {
     () =>
       settled
         ? { path: effectivePath, file, activationFor, renderers }
-        : { path: filePath, file: null, activationFor, renderers: null },
+        : { path: filePath, file, activationFor, renderers: null },
     [settled, effectivePath, file, filePath, activationFor, renderers],
   );
 

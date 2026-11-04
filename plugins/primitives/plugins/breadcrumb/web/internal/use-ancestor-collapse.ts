@@ -1,76 +1,70 @@
 import { useRef, useState, type RefObject } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { planFold } from "./fold-plan";
 
-/**
- * Slack the row must have beyond the exact fit before folded ancestors come
- * back. Without a margin, "fold" and "unfold" share their boundary condition
- * and a one-subpixel measurement disagreement flips the trail every frame.
- */
-const EXPAND_MARGIN_PX = 4;
+/** Marks a visible ancestor crumb with its index in the trail. */
+export const CRUMB_INDEX_ATTR = "data-crumb-index";
+/** Marks the overflow crumb the folded ancestors live behind. */
+export const CRUMB_FOLD_ATTR = "data-crumb-fold";
 
-/** A measured difference this small is a rounding artefact, not an overflow. */
-const SUBPIXEL_PX = 1;
-
-/** The ancestor run's open width, and the trail it was measured on. */
-interface OpenWidth {
+/** Each ancestor's last seen width, and the trail they were measured on. */
+interface SeenWidths {
   trailKey: string;
-  px: number;
+  widths: (number | undefined)[];
+  foldUnit: number | undefined;
 }
 
 export interface AncestorCollapseInput {
   /** The trail itself. It takes the row's slack, so its width IS the room. */
   rootRef: RefObject<HTMLElement | null>;
-  /** The ancestor run — the full crumbs when open, the overflow crumb when folded. */
+  /** The ancestor run — the overflow crumb (when folded) and the visible crumbs. */
   prefixRef: RefObject<HTMLElement | null>;
   /** The current page's label, the one leaf allowed to truncate. */
   leafRef: RefObject<HTMLElement | null>;
   /** Identity of the trail being shown; a new one re-decides from scratch. */
   trailKey: string;
-  /** False when there are no ancestors to fold (a root page). */
-  foldable: boolean;
+  /** How many ancestors the trail has (0 for a root page: nothing to fold). */
+  count: number;
 }
 
 /**
- * Decides whether the ancestors are folded behind an overflow crumb.
+ * Decides how many leading ancestors are folded behind an overflow crumb.
  *
  * **The promise this exists to keep: the page's own name is never the thing
  * that gets cut.** The ancestors are secondary — they can leave the row and
  * still be one click away — while the leaf is the answer to "what am I looking
- * at", so it is the last thing to give, not the first.
+ * at", so it is the last thing to give, not the first. And they leave **one at
+ * a time, oldest first**: the ones nearest the page say the most about it, so
+ * they stay as long as there is room for them (`… › c › d › leaf`, never `… › leaf`
+ * with the room for `c › d` standing empty).
  *
- * Two measurements decide it, both read off the real rendered boxes:
+ * Measurements read off the real rendered boxes (`planFold` decides):
  *
- * - **Fold** when the leaf has started truncating (`scrollWidth > clientWidth`).
- *   The ancestors are rigid, so the leaf is the only cell flex can take room
- *   from — its truncation IS the row reporting that it is over-full.
- * - **Unfold** when the row's trailing slack covers what unfolding would cost
- *   (the ancestor run's open width minus the folded crumb's), plus a margin.
+ * - **Fold** when the leaf has started truncating (`scrollWidth > clientWidth`):
+ *   the visible ancestors are rigid, so the leaf is the only cell flex can take
+ *   room from — its truncation IS the row reporting that it is over-full. The
+ *   oldest visible ancestors fold until their width covers the cut.
+ * - **Unfold** when the row's trailing slack covers the nearest folded
+ *   ancestor's last seen width, plus a margin — repeated while it does.
  *
- * The open width is **stamped with the trail it was measured on**, so a new
- * trail cannot be judged against the last one's numbers — and it is one ref
- * rather than a width plus an effect that clears it, because two pieces of
- * state can disagree about which trail they describe and one cannot.
- *
- * Deliberately NOT `AdaptiveBar`, which solves a neighbouring problem: that bar
- * relocates *occupants contributed by other plugins*, each declaring its own
- * ladder of smaller forms, demoting from the trailing edge. A trail's segments
- * come from its own caller, carry no forms, fold from the FRONT, and must keep
- * their order and their leaf. Sharing the ledger would mean teaching it all of
- * that; the decision here is one boolean.
+ * Each ancestor's width is the distance from its crumb to the next crumb (or
+ * the leaf), so it carries its separator and gaps; the overflow crumb's the
+ * same way. They are **stamped with the trail they were measured on**, so a new
+ * trail cannot be judged against the last one's numbers — a folded ancestor
+ * never seen on this trail shows them all, and the next pass folds again what
+ * does not fit.
  *
  * **It re-decides whenever any input moves, not only the room.** It observes
  * the trail, the ancestor run AND the leaf: the decision reads all three, and
  * each can change size with the trail's own width standing still — a web font
  * landing after the first measure, a theme's type step, the separator variant
  * arriving with a deferred plugin tier, a label re-rendering. Watching the
- * trail alone left a fold taken on such a transient (a wider fallback font, a
- * crumb drawn before its theme) in place for good: nothing ever asked again,
- * so the ancestors sat behind "…" with the room to show them. Observing the
- * leaf cannot loop: a fold only comes back out when the cached open width says
- * it fits, and a stale cache is corrected by the very open pass it triggers.
+ * trail alone left a fold taken on such a transient in place for good.
+ * Observing the leaf cannot loop: an ancestor only comes back when its cached
+ * width says it fits, and a stale cache is corrected by the pass it triggers.
  *
- * **Every width is in layout pixels.** The open width is cached across frames,
- * so it must not depend on a CSS transform that can change between them (a
+ * **Every width is in layout pixels.** The widths are cached across frames,
+ * so they must not depend on a CSS transform that can change between them (a
  * scaled exhibit or canvas frame zooming): visual widths from
  * `getBoundingClientRect` are divided back by the trail's own scale, the same
  * space `scrollWidth` / `clientWidth` already report in.
@@ -85,18 +79,20 @@ export function useAncestorCollapse({
   prefixRef,
   leafRef,
   trailKey,
-  foldable,
-}: AncestorCollapseInput): boolean {
-  const [folded, setFolded] = useState(false);
-  /** The ancestor run's width when last seen open — what unfolding costs. */
-  const openWidth = useRef<OpenWidth | null>(null);
+  count,
+}: AncestorCollapseInput): number {
+  const [hidden, setHidden] = useState(0);
+  const seen = useRef<SeenWidths | null>(null);
 
   useResizeObserver(
     [rootRef, prefixRef, leafRef],
     () => {
       const root = rootRef.current;
       const leaf = leafRef.current;
-      if (root === null || leaf === null || !foldable) return;
+      const prefix = prefixRef.current;
+      if (root === null || leaf === null || prefix === null || count === 0) {
+        return;
+      }
       const rootRect = root.getBoundingClientRect();
       // Visual px per layout px (a CSS transform on an ancestor); 1 when the
       // trail is not laid out at all, so nothing divides by zero.
@@ -104,48 +100,48 @@ export function useAncestorCollapse({
         root.offsetWidth > 0 && rootRect.width > 0
           ? rootRect.width / root.offsetWidth
           : 1;
-      const layoutWidth = (el: Element) =>
-        el.getBoundingClientRect().width / scale;
+      const leftOf = (el: Element) => el.getBoundingClientRect().left / scale;
 
-      const leafDeficit = leaf.scrollWidth - leaf.clientWidth;
-
-      if (!folded) {
-        // Open: the run is rigid, so its box is its natural width — the number
-        // unfolding will later be compared against.
-        const prefix = prefixRef.current;
-        if (prefix !== null) {
-          openWidth.current = {
-            trailKey,
-            px: layoutWidth(prefix),
-          };
-        }
-        if (leafDeficit > SUBPIXEL_PX) setFolded(true);
-        return;
+      if (seen.current === null || seen.current.trailKey !== trailKey) {
+        seen.current = { trailKey, widths: [], foldUnit: undefined };
       }
-
-      const open = openWidth.current;
-      if (open === null || open.trailKey !== trailKey) {
-        // Folded, with no open measurement of THIS trail — it arrived folded,
-        // or the segments changed underneath. Show it: the next pass measures
-        // it and folds again if it really doesn't fit. Both passes run before
-        // paint, so the open state is never painted.
-        setFolded(false);
-        return;
+      const record = seen.current;
+      // The row in order: the overflow crumb (when folded), each visible
+      // ancestor, then the leaf — each one's width runs to the next one's left.
+      const fold = prefix.querySelector(`[${CRUMB_FOLD_ATTR}]`);
+      const crumbs = Array.from(
+        prefix.querySelectorAll<HTMLElement>(`[${CRUMB_INDEX_ATTR}]`),
+      );
+      const leftOfNext = (i: number) =>
+        leftOf(i + 1 < crumbs.length ? crumbs[i + 1]! : leaf);
+      crumbs.forEach((crumb, i) => {
+        const index = Number(crumb.getAttribute(CRUMB_INDEX_ATTR));
+        record.widths[index] = leftOfNext(i) - leftOf(crumb);
+      });
+      if (fold !== null) {
+        record.foldUnit =
+          leftOf(crumbs.length > 0 ? crumbs[0]! : leaf) - leftOf(fold);
       }
-      if (leafDeficit > SUBPIXEL_PX) return; // still over-full — stay folded
 
       // The row is left-packed, so its free space is what lies past its last
       // child's right edge.
       const last = root.lastElementChild;
-      if (last === null) return;
       const free =
-        (rootRect.right - last.getBoundingClientRect().right) / scale;
-      const foldedWidth =
-        prefixRef.current === null ? 0 : layoutWidth(prefixRef.current);
-      if (free >= open.px - foldedWidth + EXPAND_MARGIN_PX) setFolded(false);
+        last === null
+          ? 0
+          : (rootRect.right - last.getBoundingClientRect().right) / scale;
+      const next = planFold({
+        hidden: Math.min(hidden, count),
+        count,
+        deficit: leaf.scrollWidth - leaf.clientWidth,
+        free,
+        widths: record.widths,
+        foldUnit: record.foldUnit,
+      });
+      if (next !== hidden) setHidden(next);
     },
-    { deps: [trailKey, folded, foldable] },
+    { deps: [trailKey, hidden, count] },
   );
 
-  return folded && foldable;
+  return Math.min(hidden, count);
 }

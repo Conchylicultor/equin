@@ -15838,7 +15838,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `Pane.Register` "file-peek"
                   - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`
-                - Uses: 29 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md)
+                - Uses: 30 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md)
                   - `primitives/file-viewer` ×5
                   - `primitives/pane` ×5
                   - `apps/file-explorer/browser` ×4
@@ -15854,6 +15854,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/text.Text`
                   - `primitives/file-links.FileLinksWorkspaceProvider`
                   - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
+                  - `primitives/loading.Loading`
                 - Exports (values):
                   - `FilePaneView`
                   - `filePeekPane`
@@ -15863,6 +15864,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/density --space-md`
                   - `ui/tokens/density --space-sm`
+                  - `ui/tokens/shape --spacing`
                 - Imported by:
                   - `conversations/conversation-view/artifacts/research`
                   - `conversations/conversation-view/artifacts/skill`
@@ -40957,7 +40959,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane`
       - Exemptions:
         - Exempts itself from: `pane/no-adhoc-pane-toolbar` — `web/internal/bar.tsx` (sanctioned)
-    - **`breadcrumb`** — Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the ancestors fold whole into an overflow menu instead.
+    - **`breadcrumb`** — Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the oldest ancestors fold one by one into an overflow menu instead, keeping as many crumbs nearest the page as fit.
       - Web:
         - Slots: `BreadcrumbSlots.Separator`
         - Slot contributors: `BreadcrumbSlots.Separator` ← `ui.breadcrumb-separator`
@@ -45481,10 +45483,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 224 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 225 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×68
           - `ui` ×23
-          - `conversations` ×21
+          - `conversations` ×22
           - `debug` ×19
           - `primitives` ×19
           - `tasks` ×15
@@ -55912,9 +55914,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 410 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 411 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×87
-              - `conversations` ×80
+              - `conversations` ×81
               - `primitives` ×69
               - `page` ×36
               - `debug` ×27

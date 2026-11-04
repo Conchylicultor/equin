@@ -20,46 +20,67 @@ const plugin = {
   slots: BreadcrumbSlots,
 } as unknown as LoadedPlugin;
 
-/** The scripted layout: the room, and the natural widths of what fills it. */
+/**
+ * The scripted layout: a left-packed row. Each visible crumb unit (crumb +
+ * separator + gap) is `crumbUnit` wide, the overflow crumb `foldUnit`, and the
+ * leaf takes its natural width or what the room leaves after everything
+ * before it.
+ */
 const layout = {
   room: 500,
-  openPrefix: 200,
-  foldedPrefix: 30,
-  gap: 4,
+  crumbUnit: 60,
+  foldUnit: 30,
   leaf: 100,
 };
 
-function isFoldedPrefix(el: Element): boolean {
-  return el.querySelector("[aria-label^='Show the']") !== null;
+const LEAF = "data-breadcrumb-leaf";
+
+function isRoot(el: Element): boolean {
+  return el.querySelector(":scope > [" + LEAF + "]") !== null;
 }
 
-function prefixWidth(root: Element): number {
-  const prefix = root.firstElementChild;
-  if (!prefix || prefix.hasAttribute("data-breadcrumb-leaf")) return 0;
-  return isFoldedPrefix(prefix) ? layout.foldedPrefix : layout.openPrefix;
+function isPrefix(el: Element): boolean {
+  return el.nextElementSibling?.hasAttribute(LEAF) === true;
 }
 
-/** Width the flex row hands the leaf: the room left, never more than it needs. */
-function leafBox(leaf: Element): number {
-  const root = leaf.parentElement!;
-  return Math.max(
-    0,
-    Math.min(layout.leaf, layout.room - prefixWidth(root) - layout.gap),
+function prefixWidth(prefix: Element | null): number {
+  if (!prefix || prefix.hasAttribute(LEAF)) return 0;
+  const fold = prefix.querySelector("[data-crumb-fold]") ? layout.foldUnit : 0;
+  return (
+    fold +
+    layout.crumbUnit * prefix.querySelectorAll("[data-crumb-index]").length
   );
 }
 
-function widthOf(el: Element): number {
-  if (el.hasAttribute("data-breadcrumb-leaf")) return leafBox(el);
-  if (el.querySelector(":scope > [data-breadcrumb-leaf]")) return layout.room;
-  if (el.nextElementSibling?.hasAttribute("data-breadcrumb-leaf"))
-    return prefixWidth(el.parentElement!);
-  return 0;
+function leafBox(leaf: Element): number {
+  const before = prefixWidth(leaf.parentElement!.firstElementChild);
+  return Math.max(0, Math.min(layout.leaf, layout.room - before));
 }
 
-function rightOf(el: Element): number {
-  if (el.hasAttribute("data-breadcrumb-leaf"))
-    return prefixWidth(el.parentElement!) + layout.gap + leafBox(el);
-  return widthOf(el);
+function box(el: Element): { left: number; right: number } {
+  if (el.hasAttribute(LEAF)) {
+    const left = prefixWidth(el.parentElement!.firstElementChild);
+    return { left, right: left + leafBox(el) };
+  }
+  if (isRoot(el)) return { left: 0, right: layout.room };
+  if (isPrefix(el)) return { left: 0, right: prefixWidth(el) };
+  if (el.hasAttribute("data-crumb-fold"))
+    return { left: 0, right: layout.foldUnit };
+  if (el.hasAttribute("data-crumb-index")) {
+    const prefix = el.closest("[data-crumb-index]")!.parentElement!;
+    const crumbs = Array.from(prefix.querySelectorAll("[data-crumb-index]"));
+    const fold = prefix.querySelector("[data-crumb-fold]")
+      ? layout.foldUnit
+      : 0;
+    const left = fold + layout.crumbUnit * crumbs.indexOf(el);
+    return { left, right: left + layout.crumbUnit };
+  }
+  return { left: 0, right: 0 };
+}
+
+function widthOf(el: Element): number {
+  const { left, right } = box(el);
+  return right - left;
 }
 
 /** Every live fake observer, with the elements it watches. */
@@ -103,17 +124,17 @@ beforeEach(() => {
     Object.defineProperty(HTMLElement.prototype, prop, {
       configurable: true,
       get(this: HTMLElement) {
-        if (prop === "scrollWidth" && this.hasAttribute("data-breadcrumb-leaf"))
+        if (prop === "scrollWidth" && this.hasAttribute(LEAF))
           return layout.leaf;
         return widthOf(this);
       },
     });
   }
   HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement) {
-    const right = rightOf(this);
-    const width = widthOf(this);
+    const { left, right } = box(this);
+    const width = right - left;
     return {
-      left: right - width,
+      left,
       right,
       width,
       top: 0,
@@ -144,11 +165,19 @@ const SEGMENTS = [
   { key: "b", label: "beta", activation: noop },
   { key: "c", label: "gamma" },
 ];
+const DEEP = [
+  { key: "a", label: "alpha", activation: noop },
+  { key: "b", label: "beta", activation: noop },
+  { key: "c", label: "gamma", activation: noop },
+  { key: "d", label: "delta", activation: noop },
+  { key: "e", label: "epsilon", activation: noop },
+  { key: "f", label: "zeta" },
+];
 
-function renderTrail() {
+function renderTrail(segments = SEGMENTS) {
   return render(
     <PluginProvider plugins={[plugin]}>
-      <Breadcrumb segments={SEGMENTS} />
+      <Breadcrumb segments={segments} />
     </PluginProvider>,
   );
 }
@@ -157,9 +186,29 @@ function leaf(): HTMLElement {
   return document.querySelector("[data-breadcrumb-leaf]") as HTMLElement;
 }
 
+function root(): HTMLElement {
+  return leaf().parentElement!;
+}
+
 function folded(): boolean {
   return screen.queryByLabelText(/^Show the/) !== null;
 }
+
+/** The ancestors drawn as crumbs, by label. */
+function visible(segments = DEEP): string[] {
+  return segments
+    .slice(0, -1)
+    .map((s) => s.label as string)
+    .filter((label) => screen.queryByText(label) !== null);
+}
+
+function foldLabel(): string | null {
+  return (
+    screen.queryByLabelText(/^Show the/)?.getAttribute("aria-label") ?? null
+  );
+}
+
+const levels = (n: number) => `Show the ${n} levels above this one`;
 
 describe("Breadcrumb ancestor fold", () => {
   it("shows every ancestor when the trail fits", () => {
@@ -169,14 +218,14 @@ describe("Breadcrumb ancestor fold", () => {
   });
 
   it("folds when the leaf would have to truncate", () => {
-    layout.room = 250;
+    layout.room = 150;
     renderTrail();
     expect(folded()).toBe(true);
   });
 
   it("unfolds when the leaf shrinks back while the room stays the same", async () => {
     // First layout with a transient wide leaf (a fallback font before the web
-    // font lands): it does not fit, so the ancestors fold.
+    // font lands): it does not fit, so an ancestor folds.
     layout.leaf = 400;
     renderTrail();
     expect(folded()).toBe(true);
@@ -189,24 +238,74 @@ describe("Breadcrumb ancestor fold", () => {
   });
 
   it("unfolds when the room grows", async () => {
-    layout.room = 250;
-    const { container } = renderTrail();
+    layout.room = 150;
+    renderTrail();
     expect(folded()).toBe(true);
     layout.room = 600;
-    const root = container.querySelector(
-      ":scope [data-breadcrumb-leaf]",
-    )!.parentElement!;
-    act(() => resized(root));
+    act(() => resized(root()));
     await waitFor(() => expect(folded()).toBe(false));
   });
 
   it("stays folded while the room is still short", async () => {
-    layout.room = 250;
+    layout.room = 150;
     renderTrail();
     expect(folded()).toBe(true);
     act(() => resized(leaf()));
     // Give a scheduled frame the chance to (wrongly) unfold.
     await new Promise((r) => setTimeout(r, 50));
     expect(folded()).toBe(true);
+  });
+
+  describe("partial fold", () => {
+    it("shows every ancestor of a deep trail when it fits", () => {
+      layout.room = 500;
+      renderTrail(DEEP);
+      expect(folded()).toBe(false);
+      expect(visible()).toEqual(["alpha", "beta", "gamma", "delta", "epsilon"]);
+    });
+
+    it("folds only the oldest ancestors that must go", () => {
+      // 5 crumbs (300) + leaf (100) = 400 > 270; folding 3 leaves
+      // 30 + 120 + 100 = 250, folding 2 would leave 310.
+      layout.room = 270;
+      renderTrail(DEEP);
+      expect(foldLabel()).toBe(levels(3));
+      expect(visible()).toEqual(["delta", "epsilon"]);
+      expect(screen.getByText("zeta")).toBeTruthy();
+    });
+
+    it("brings back exactly the ancestors that fit as the room grows", async () => {
+      layout.room = 270;
+      renderTrail(DEEP);
+      expect(foldLabel()).toBe(levels(3));
+
+      // Free space 40: not enough for gamma (60) plus the margin.
+      layout.room = 290;
+      act(() => resized(root()));
+      await new Promise((r) => setTimeout(r, 50));
+      expect(foldLabel()).toBe(levels(3));
+
+      // Free space 64: gamma (60) fits with the margin, beta does not.
+      layout.room = 314;
+      act(() => resized(root()));
+      await waitFor(() => expect(foldLabel()).toBe(levels(2)));
+      expect(visible()).toEqual(["gamma", "delta", "epsilon"]);
+
+      // Plenty: everything comes back, overflow crumb included.
+      layout.room = 600;
+      act(() => resized(root()));
+      await waitFor(() => expect(folded()).toBe(false));
+      expect(visible()).toEqual(["alpha", "beta", "gamma", "delta", "epsilon"]);
+    });
+
+    it("folds further when the room shrinks", async () => {
+      layout.room = 500;
+      renderTrail(DEEP);
+      expect(folded()).toBe(false);
+      layout.room = 270;
+      act(() => resized(root()));
+      await waitFor(() => expect(foldLabel()).toBe(levels(3)));
+      expect(visible()).toEqual(["delta", "epsilon"]);
+    });
   });
 });

@@ -13,7 +13,7 @@
   - Contributes:
     - `Pane.Register` "file-peek"
     - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/file-viewer` ×5
     - `primitives/pane` ×5
     - `apps/file-explorer/browser` ×4
@@ -29,6 +29,7 @@
     - `primitives/css/text.Text`
     - `primitives/file-links.FileLinksWorkspaceProvider`
     - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
+    - `primitives/loading.Loading`
   - Exports (values):
     - `FilePaneView`
     - `filePeekPane`
@@ -38,6 +39,7 @@
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/conversation-view/artifacts/research`
     - `conversations/conversation-view/artifacts/skill`
