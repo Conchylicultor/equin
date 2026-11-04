@@ -65,7 +65,11 @@ import {
 import { VENDOR_PRUNE_POLICY } from "./vendors";
 import { CSS_PRUNE_POLICY } from "./global-css";
 import { PACKAGE_ASSETS_PRUNE_POLICY } from "./package-assets";
-import { refreshServedDists, scanServedDists } from "./served-dists";
+import {
+  refreshServedDists,
+  scanServedDists,
+  type ServedDistLayout,
+} from "./served-dists";
 
 /** Where the store lock and the leases live (a test passes its own). */
 export interface LeaseLayout {
@@ -246,6 +250,8 @@ export interface PruneReport {
   /** Unlocked: every dist's links, then a stat of every non-root entry. */
   surveyMs: number;
   dists: number;
+  /** Dists whose links were read rather than memoized (new or changed). */
+  distsLinksRead: number;
   distTargets: number;
   surveyedEntries: number;
   /** Waiting for the exclusive store lock. */
@@ -264,8 +270,10 @@ export interface PruneReport {
  * Two phases, so the exclusive store lock — which every build's pins wait on —
  * is held for O(dists + victims), never O(every link of every dist):
  *
- * 1. Unlocked: scan every dist's links (`scanServedDists`, each dist stamped
- *    before it is read) and survey every cache dir (`surveyCacheDir`).
+ * 1. Unlocked: collect every dist's link targets (`scanServedDists`, each
+ *    dist stamped before it is read; its memo when the stamp matches, so
+ *    O(dists) plus the links of the dists new since the last prune) and survey
+ *    every cache dir (`surveyCacheDir`).
  * 2. Locked: read the live leases, re-read only the dists that are new or
  *    changed since their stamp (`refreshServedDists`), then judge the surveys
  *    against those roots and delete. Nothing that became a root after phase 1
@@ -278,7 +286,7 @@ export interface PruneReport {
 export async function pruneWebArtifactCaches(
   opts: {
     layout?: LeaseLayout;
-    worktrees?: AppPath;
+    dists?: ServedDistLayout;
     policies?: readonly CachePrunePolicy[];
   } = {},
 ): Promise<PruneReport> {
@@ -290,7 +298,7 @@ export async function pruneWebArtifactCaches(
     PACKAGE_ASSETS_PRUNE_POLICY,
   ];
   const t0 = performance.now();
-  const dists = scanServedDists(opts.worktrees);
+  const dists = scanServedDists(opts.dists);
   const surveys = policies.map((policy) => ({
     policy,
     survey: surveyCacheDir(policy.root, dists.targets),
@@ -301,7 +309,7 @@ export async function pruneWebArtifactCaches(
     t2 = performance.now();
     const referenced = new Set(dists.targets);
     for (const t of liveLeaseTargets(layout.leasesDir)) referenced.add(t);
-    const { reread } = refreshServedDists(dists, opts.worktrees);
+    const { reread } = refreshServedDists(dists, opts.dists);
     for (const t of dists.targets) referenced.add(t);
     let removed = 0;
     for (const { policy, survey } of surveys) {
@@ -312,6 +320,7 @@ export async function pruneWebArtifactCaches(
   return {
     surveyMs: t1 - t0,
     dists: dists.stamps.size,
+    distsLinksRead: dists.linksRead,
     distTargets: dists.targets.size,
     surveyedEntries: surveys.reduce((n, s) => n + s.survey.entries.length, 0),
     lockWaitMs: t2 - t1,

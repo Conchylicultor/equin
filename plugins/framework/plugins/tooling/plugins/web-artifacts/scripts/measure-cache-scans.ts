@@ -1,6 +1,8 @@
 // Measures the whole-cache scans a build used to pay on its critical path,
-// read-only (nothing is deleted): the web-artifact prune's roots (every dist's
-// links) and its store pass, and the check cache's open-time listing. Prints
+// deleting nothing from the caches: the web-artifact prune's roots (every
+// dist's links, then the same scan again over the per-dist memos the first one
+// wrote — the prune's steady state) and its store pass, and the check cache's
+// open-time listing. Prints
 // wall time and the number of fs metadata calls each makes — counted from what
 // the scans iterate (each is one call per entry), since Bun binds `node:fs`
 // imports natively and a wrapper cannot count them.
@@ -23,6 +25,7 @@ import {
 import {
   refreshServedDists,
   scanServedDists,
+  type ServedDistScan,
 } from "../core/internal/served-dists";
 
 const ms = (t0: number): string => `${(performance.now() - t0).toFixed(0)} ms`;
@@ -69,12 +72,21 @@ const tryReaddir = (dir: string): string[] => {
   console.log(
     `dist roots: ${namespaces.length} namespaces, ${roots} dist dirs (incl. duplicates by realpath), ${links} links, ~${ops} fs calls, ${ms(t0)}`,
   );
-  const t1 = performance.now();
-  const scan = scanServedDists();
+  // Twice: the first reads the links of every dist not memoized yet and
+  // memoizes them; the second is what an hourly prune pays once only the
+  // dists published since the last one are new.
+  const timedScan = (pass: string): ServedDistScan => {
+    const t1 = performance.now();
+    const scan = scanServedDists();
+    console.log(
+      `scanServedDists() ${pass} (the prune's unlocked phase): ${scan.stamps.size} dists, ` +
+        `${scan.linksRead} read off their links, ${scan.targets.size} distinct targets, ${ms(t1)}`,
+    );
+    return scan;
+  };
+  timedScan("first");
+  const scan = timedScan("memoized");
   const refs = scan.targets;
-  console.log(
-    `scanServedDists() (the prune's unlocked phase): ${scan.stamps.size} dists, ${refs.size} distinct targets, ${ms(t1)}`,
-  );
   // The prune's locked phase re-reads only what changed since the scan:
   // roots listed again (~1 readdir per worktree + a realpath and a stat per dist).
   const tr = performance.now();

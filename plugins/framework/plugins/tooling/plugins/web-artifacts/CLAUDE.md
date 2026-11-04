@@ -226,12 +226,16 @@ Key invariants:
   by extension, so a `.br`/`.gz` never reads as a module.
 - **No build prunes; the scheduled `web-artifacts.prune` job does**
   (`plugins/prune`, hourly, main only, in a supervised child). The prune is
-  O(the host's caches) — every link of every dist (~450k with 120 worktrees)
-  plus a stat of every unreferenced entry — and it used to open every build's
-  `detect` stage, which a file-metadata stall turned into minutes. It runs in two
-  phases (`pruneWebArtifactCaches`): UNLOCKED, scan every dist's links
-  (`scanServedDists`, each dist stamped by its `artifacts/` dir's inode+mtime
-  BEFORE its links are read) and survey every cache dir (`surveyCacheDir`);
+  O(the host's caches) — what every dist links plus a stat of every
+  unreferenced entry — and it used to open every build's `detect` stage, which
+  a file-metadata stall turned into minutes. A dist's links are read ONCE in
+  its life (~2.4k readlinks; ~450k for a whole host of 120 worktrees): the
+  scan memoizes each dist's targets in `dist-links/`, stamped with its
+  `artifacts/` dir's inode+mtime, and trusts a memo only while that stamp still
+  matches — so a scan is O(dists) plus the links of the dists published since.
+  It runs in two phases (`pruneWebArtifactCaches`): UNLOCKED, collect every
+  dist's targets (`scanServedDists`, each dist stamped BEFORE its links or memo
+  are read) and survey every cache dir (`surveyCacheDir`);
   then under the EXCLUSIVE store lock, read the leases, re-read only the dists
   that are new or whose stamp moved (`refreshServedDists`), judge the surveys
   against those roots, and re-stat each victim before deleting it (a reuse

@@ -31,7 +31,11 @@ const DAY = 24 * 60 * 60 * 1000;
 function fixture() {
   const base = asAppPath(mkdtempSync(join(tmpdir(), "web-artifacts-lease-")));
   const store = joinAppPath(base, "store");
-  const worktrees = joinAppPath(base, "worktrees"); // no dists: only leases are roots
+  // No dists: only leases are roots.
+  const dists = {
+    worktrees: joinAppPath(base, "worktrees"),
+    memoDir: joinAppPath(base, "dist-links"),
+  };
   mkdirSync(store, { recursive: true });
   const layout: LeaseLayout = {
     lockFile: joinAppPath(base, "store.lock"),
@@ -56,7 +60,7 @@ function fixture() {
     trimTo: 0,
   };
   const prune = () =>
-    pruneWebArtifactCaches({ layout, worktrees, policies: [policy] });
+    pruneWebArtifactCaches({ layout, dists, policies: [policy] });
   return { base, store, layout, entry, prune };
 }
 

@@ -13,10 +13,11 @@ const s = (ms: number): string => `${(ms / 1000).toFixed(2)}s`;
 
 /**
  * Keeps the shared web caches bounded without any build paying for it. The
- * prune reads every link of every dist on the host (~450k with 120 worktrees)
- * and stats every unreferenced entry — O(the host's caches) — so it used to
- * make every build's `detect` stage O(machine), minutes under a file-metadata
- * stall. A build is safe without it: its lease pins what it composes.
+ * prune collects what every dist on the host links (memoized per dist, so
+ * only the dists new since the last run have their links read) and stats every
+ * unreferenced entry — O(the host's caches) — so it used to make every build's
+ * `detect` stage O(machine), minutes under a file-metadata stall. A build is
+ * safe without it: its lease pins what it composes.
  *
  * Hourly, main only (a schedule's default: the caches are host-global, and N
  * backends pruning would only queue on the store lock). In a supervised child,
@@ -34,7 +35,7 @@ export const webArtifactsPruneJob = defineSupervisedJob({
   async run(_input, { log }) {
     const r = await pruneWebArtifactCaches();
     log(
-      `survey ${s(r.surveyMs)} (${r.dists} dists, ${r.distTargets} linked entries, ${r.surveyedEntries} unlinked entries stat'd); ` +
+      `survey ${s(r.surveyMs)} (${r.dists} dists, ${r.distsLinksRead} read off their links, ${r.distTargets} linked entries, ${r.surveyedEntries} unlinked entries stat'd); ` +
         `lock wait ${s(r.lockWaitMs)}; locked ${s(r.lockedMs)} (${r.distsReread} dists re-read, ${r.removed} removed)`,
     );
   },

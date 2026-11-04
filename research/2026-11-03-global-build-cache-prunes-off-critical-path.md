@@ -57,7 +57,12 @@ The prune itself (now a scheduled job): unlocked phase ~115 s on this host
 
 ## Not done / follow-ups
 
-- The prune is still O(dists × links) when it runs (unlocked). A per-dist
-  manifest of its targets written at compose would make the scan O(dists).
+- ~~The prune is still O(dists × links) when it runs (unlocked).~~ Done
+  (task-1793730068-i1lch0): each dist's targets are memoized in the cache
+  (`dist-links/`), valid while its `artifacts/` stamp matches, so a scan reads
+  only the links of dists published since the last prune. Memoized by the
+  scan rather than written at compose, so one writer covers every dist,
+  including those composed before the change, and a memo can never be trusted
+  past a change to the links it describes.
 - The store grows with worktrees (~34k linked entries): carry-forward keeps
   every address a dist ever served while the cache holds it.
