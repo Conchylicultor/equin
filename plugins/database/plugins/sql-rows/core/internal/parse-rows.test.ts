@@ -236,6 +236,18 @@ describe("queryResult", () => {
     });
     expect(promise).rejects.toBeInstanceOf(SqlRowError);
   });
+
+  test("a multi-statement answer (pg's array of results) throws, naming the count", () => {
+    // What pg's simple-query protocol hands back for `SET …; SELECT …`.
+    const client: SqlQueryable = {
+      query: () => Promise.resolve([result([]), result([{ id: 1 }])]),
+    };
+    const promise = queryResult(client, {
+      sql: "SET LOCAL search_path = public; SELECT 1 AS id",
+      row: IdRow,
+    });
+    expect(promise).rejects.toThrow(/expected one SQL statement, got 2/);
+  });
 });
 
 describe("queryRows / queryOne", () => {

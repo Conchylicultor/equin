@@ -19,6 +19,7 @@ import {
   relationsWithColumn,
   undefinedColumnOf,
 } from "./read-aliases";
+import { oneStatement } from "./one-statement";
 
 const MAX_ROWS = 200;
 
@@ -30,7 +31,7 @@ export const queryDbTool = Mcp.tool({
   name: "query_db",
   description: `Execute a read-only SQL query against a worktree's PostgreSQL database.
 For debugging and inspection only. All queries run in a READ ONLY transaction.
-Returns up to ${MAX_ROWS} rows.
+One statement per call (multi-statement SQL is refused). Returns up to ${MAX_ROWS} rows.
 
 A table with a derived \`<table>_v\` view reads as that view: \`tasks\` here is \`tasks_v\`
 (with computed columns such as \`status\`), \`public.tasks\` is the physical table.
@@ -82,7 +83,7 @@ Pass \`database\` to target a different worktree (e.g. "att-1778089188-7uvf", or
         // and `rowCount`.
         let result: ParsedResult<Record<string, unknown>>;
         try {
-          result = await queryResult(client, {
+          result = await queryResult(oneStatement(client), {
             sql,
             row: z.record(z.string(), z.unknown()),
           });

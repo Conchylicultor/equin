@@ -1,6 +1,12 @@
 import type { z } from "zod";
 import { parseRows } from "./parse-rows";
-import type { ParsedResult, SqlExecutable, SqlQueryable } from "./types";
+import type {
+  ParsedResult,
+  SqlAnswer,
+  SqlExecutable,
+  SqlQueryable,
+  SqlResult,
+} from "./types";
 
 /**
  * The front doors. Each one reads rows AND parses them in the same call, so
@@ -45,6 +51,20 @@ function exactlyOne<T>(rows: T[], sql: string | undefined): T {
 }
 
 /**
+ * The one result a single-statement door reads, or a throw naming the
+ * statement count. By the time pg answers with an array every statement has
+ * already run — a caller that cannot vouch for its SQL being one statement
+ * (an agent's, a user's) must also stop the driver from running several
+ * (pg's `queryMode: "extended"`, which Postgres refuses multi-statement SQL on).
+ */
+function oneResult(answer: SqlAnswer, sql: string | undefined): SqlResult {
+  if (!Array.isArray(answer)) return answer;
+  throw new Error(
+    `expected one SQL statement, got ${answer.length}: a single-statement door reads one result — send each statement as its own query.${label(sql)}`,
+  );
+}
+
+/**
  * Run `sql` on a pg-shaped client and hand back the parsed rows together with
  * the result's `fields` and `rowCount`.
  *
@@ -56,7 +76,7 @@ export async function queryResult<T>(
   client: SqlQueryable,
   opts: { sql: string; params?: unknown[]; row: z.ZodType<T> },
 ): Promise<ParsedResult<T>> {
-  const result = await client.query(opts.sql, opts.params);
+  const result = oneResult(await client.query(opts.sql, opts.params), opts.sql);
   return {
     rows: parseRows(result, opts.row, { sql: opts.sql }),
     rowCount: result.rowCount,
@@ -92,7 +112,7 @@ export async function executeResult<T, Q>(
   db: SqlExecutable<Q>,
   opts: { query: Q; row: z.ZodType<T>; label?: string },
 ): Promise<ParsedResult<T>> {
-  const result = await db.execute(opts.query);
+  const result = oneResult(await db.execute(opts.query), opts.label);
   return {
     rows: parseRows(result, opts.row, { sql: opts.label }),
     rowCount: result.rowCount,

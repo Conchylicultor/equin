@@ -57,9 +57,17 @@ export interface SqlResult {
   fields?: SqlField[];
 }
 
+/**
+ * What one call can answer with: one result, or — for SQL holding several
+ * statements sent without params (pg's simple-query protocol) — one result
+ * per statement. `pg`'s own types claim a single `QueryResult` either way; this
+ * union is the runtime truth, so no reader can take `.rows` off an array.
+ */
+export type SqlAnswer = SqlResult | SqlResult[];
+
 /** Anything shaped like a `pg` Pool / PoolClient / Client. */
 export interface SqlQueryable {
-  query(sql: string, params?: unknown[]): Promise<SqlResult>;
+  query(sql: string, params?: unknown[]): Promise<SqlAnswer>;
 }
 
 /**
@@ -68,7 +76,7 @@ export interface SqlQueryable {
  * never has to name drizzle.
  */
 export interface SqlExecutable<Q> {
-  execute(query: Q): Promise<SqlResult>;
+  execute(query: Q): Promise<SqlAnswer>;
 }
 
 /**
