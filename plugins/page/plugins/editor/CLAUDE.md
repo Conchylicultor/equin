@@ -913,6 +913,9 @@ answers:
   `split` resolved by `enterReplacingIntent` over `intentContextOf`, both predicted
   before dispatch). Other keys ride the flight buffer (`landWithInput`); a composition
   key lands the caret and starts with the NEXT key (the flight's bound).
+- **Tab / Shift+Tab** indent / outdent every line the span touches, even partially
+  (`spanRoots`: the roots a block selection of those lines resolves to); the span
+  stays.
 - **Shift+Arrow moves the head** (`stepTextOffset`, `goalX` for vertical);
   `normalizeSpan` widens to blocks on a line that cannot end a span.
 

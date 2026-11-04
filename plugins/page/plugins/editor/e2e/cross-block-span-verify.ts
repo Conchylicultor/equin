@@ -23,7 +23,9 @@
 //      column (no native selection), and Delete merges the two lines;
 //  10. Shift+ArrowRight at a line's end crosses into the next line one character
 //      at a time, and stepping back onto the anchor is a caret again;
-//  11. a NESTED partial copy pasted mid-line joins at both ends, nesting kept.
+//  11. a NESTED partial copy pasted mid-line joins at both ends, nesting kept;
+//  12. Tab over a span indents every line it touches (partially included), the
+//      span stays painted, and Shift+Tab outdents them back.
 //
 // Usage: ./equin run plugins/page/plugins/editor/e2e/cross-block-span-verify.ts [--url <deploy>]
 import {
@@ -343,6 +345,28 @@ await withBrowser(async (h) => {
     (await textLeft(6)) > (await textLeft(5)),
   );
   await undo("11: one Cmd+Z restores the line", before11);
+
+  // 12. Tab / Shift+Tab over a span: lines 2 and 3, both partially covered.
+  const left0 = await textLeft(0);
+  await drag(page, await pointAt(page, 1, 3), await pointAt(page, 2, 4));
+  const span12 = [LINES[1]!.slice(3), LINES[2]!.slice(0, 4)];
+  r.eq("12: setup: a span over lines 2–3", await paintedSpan(page), span12);
+  await page.keyboard.press("Tab");
+  await page.waitForTimeout(1500);
+  r.ok(
+    "12: Tab indents BOTH touched lines",
+    (await textLeft(1)) > left0 && (await textLeft(2)) > left0,
+  );
+  r.eq("12: …line 1 stays put", await textLeft(0), left0);
+  r.eq("12: …the text is unchanged", await blockTexts(page), before11);
+  r.eq("12: …and the span is still painted", await paintedSpan(page), span12);
+  await page.keyboard.press("Shift+Tab");
+  await page.waitForTimeout(1500);
+  r.ok(
+    "12: Shift+Tab outdents them back",
+    (await textLeft(1)) === left0 && (await textLeft(2)) === left0,
+  );
+  r.eq("12: …span still painted", await paintedSpan(page), span12);
 
   await r.finish();
 });

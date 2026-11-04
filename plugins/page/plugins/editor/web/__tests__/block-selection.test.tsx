@@ -262,6 +262,7 @@ function setup(visible: VisibleBlock[] = FLAT) {
     spanMotion: fakeSpanMotion,
     indent: vi.fn(),
     outdent: vi.fn(),
+    spanRoots: vi.fn(() => ["b2", "b3"]),
     remove: vi.fn(),
     duplicate: vi.fn(),
     focusBlock: vi.fn(),
@@ -636,6 +637,30 @@ describe("the selection union: a text span", () => {
     expect(t.actions.deleteSpan).toHaveBeenCalledWith(SPAN.from, SPAN.to);
     expect(t.actions.remove).not.toHaveBeenCalled();
     expect(t.span()).toBe("");
+  });
+
+  it("Tab / Shift+Tab indent and outdent every line the span touches, and the span stays", () => {
+    const t = setup();
+    t.makeSpan();
+
+    fireEvent.keyDown(t.container, { key: "Tab" });
+    expect(t.actions.spanRoots).toHaveBeenCalledWith(SPAN);
+    expect(t.actions.indent).toHaveBeenCalledWith(["b2", "b3"]);
+    fireEvent.keyDown(t.container, { key: "Tab", shiftKey: true });
+    expect(t.actions.outdent).toHaveBeenCalledWith(["b2", "b3"]);
+
+    expect(t.span()).toBe("b2:1-b3:2");
+    expect(document.activeElement).toBe(t.container);
+  });
+
+  it("Ctrl+Tab over a span is the browser's", () => {
+    const t = setup();
+    t.makeSpan();
+
+    fireEvent.keyDown(t.container, { key: "Tab", ctrlKey: true });
+
+    expect(t.actions.indent).not.toHaveBeenCalled();
+    expect(t.span()).toBe("b2:1-b3:2");
   });
 
   it("a plain arrow collapses the span to the end it points at", () => {

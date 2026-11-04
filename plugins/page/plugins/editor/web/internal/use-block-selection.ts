@@ -35,6 +35,12 @@ export interface BlockSelectionActions {
   indent: (roots: string[]) => void;
   /** Outdent the selection's subtree roots one level. */
   outdent: (roots: string[]) => void;
+  /**
+   * The subtree roots of the lines a text span touches — what Tab /
+   * Shift+Tab over a span indents, the same roots a block selection of those
+   * lines would resolve to (`blockSelectionRoots`).
+   */
+  spanRoots: (span: TextSpan) => string[];
   /** Delete the selected blocks (and their subtrees). */
   remove: (ids: string[]) => void;
   /** Duplicate the selected blocks. */
@@ -448,7 +454,10 @@ export function useBlockSelection({
    *   bound — see the editor's CLAUDE.md).
    * - Shift+Arrow moves the head one caret position / one visual line,
    *   crossing lines; a plain arrow collapses the span to the end it points at.
-   * - Tab is consumed: it must not walk DOM focus out of a live selection.
+   * - Tab / Shift+Tab indent / outdent every line the span touches, even
+   *   partially (their subtree roots), and the span stays — the lines keep
+   *   their ids, so the same offsets still name the same text. Always
+   *   consumed: it must not walk DOM focus out of a live selection.
    *
    * Clipboard keys are not here: copy / cut / paste are `ClipboardEvent`s the
    * surface handles (`block-editor.tsx`).
@@ -475,8 +484,12 @@ export function useBlockSelection({
         selectEveryBlock();
         return;
       }
-      if (e.key === "Tab") {
+      // `!mod` leaves Ctrl+Tab (browser tab switch) alone, as below.
+      if (e.key === "Tab" && !mod) {
         e.preventDefault();
+        const spanRoots = actions.spanRoots(span);
+        if (e.shiftKey) actions.outdent(spanRoots);
+        else actions.indent(spanRoots);
         return;
       }
       const dir = arrowDir(e.key);

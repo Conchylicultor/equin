@@ -853,12 +853,60 @@ function SelectionLayer({
     });
   }, [flat, anchorTypes, spanLines, textReadsOf]);
 
+  /**
+   * The lines a text span covers, as a block selection of them: every visible
+   * line from its start line to its end line (`lo`..`hi` in `flat`), minus a
+   * container the span only ENTERS (an ancestor of its end line) — the span
+   * covered that box's first lines, not the box. Null when an end is not
+   * rendered.
+   */
+  const spanCoveredLines = useCallback(
+    (
+      span: TextSpan,
+    ): { lo: number; hi: number; covered: Set<string> } | null => {
+      const { from, to } = span;
+      const lo = flat.findIndex((f) => f.block.id === from.blockId);
+      const hi = flat.findIndex((f) => f.block.id === to.blockId);
+      if (lo === -1 || hi === -1) return null;
+      const enteredBoxes = new Set<string>();
+      const parentOf = new Map(flat.map((f) => [f.block.id, f.block.parentId]));
+      for (let p = parentOf.get(to.blockId); p != null; p = parentOf.get(p)) {
+        if (
+          anchorTypes.has(flat.find((f) => f.block.id === p)?.block.type ?? "")
+        )
+          enteredBoxes.add(p);
+      }
+      const covered = new Set<string>();
+      for (let i = lo; i <= hi; i += 1) {
+        const id = flat[i]!.block.id;
+        if (!enteredBoxes.has(id)) covered.add(id);
+      }
+      return { lo, hi, covered };
+    },
+    [flat, anchorTypes],
+  );
+  // What Tab / Shift+Tab over a span act on: the roots of the lines it
+  // touches, even partially — the roots a block selection of them would have.
+  const spanRoots = useCallback(
+    (span: TextSpan): string[] => {
+      const lines = spanCoveredLines(span);
+      if (lines === null) return [];
+      return blockSelectionRoots(
+        toNodes(rowsRef.current),
+        lines.covered,
+        isAnchorNodeRef.current,
+      );
+    },
+    [spanCoveredLines, rowsRef, isAnchorNodeRef],
+  );
+
   // ---- Block-selection mode (range state, container focus + keyboard) -------
 
   const selectionActions = useMemo<BlockSelectionActions>(
     () => ({
       indent: indentBlocks,
       outdent: outdentBlocks,
+      spanRoots,
       remove: bulkDelete,
       duplicate: bulkDuplicate,
       focusBlock,
@@ -869,6 +917,7 @@ function SelectionLayer({
     [
       indentBlocks,
       outdentBlocks,
+      spanRoots,
       bulkDelete,
       bulkDuplicate,
       focusBlock,
@@ -993,22 +1042,12 @@ function SelectionLayer({
           },
         ];
       }
-      const lo = flat.findIndex((f) => f.block.id === from.blockId);
-      const hi = flat.findIndex((f) => f.block.id === to.blockId);
-      if (lo === -1 || hi === -1) return [];
-      const enteredBoxes = new Set<string>();
-      const parentOf = new Map(flat.map((f) => [f.block.id, f.block.parentId]));
-      for (let p = parentOf.get(to.blockId); p != null; p = parentOf.get(p)) {
-        if (
-          anchorTypes.has(flat.find((f) => f.block.id === p)?.block.type ?? "")
-        )
-          enteredBoxes.add(p);
-      }
-      const covered = new Set<string>();
+      const lines = spanCoveredLines(span);
+      if (lines === null) return [];
+      const { lo, hi, covered } = lines;
       const runsOverride = new Map<string, RichText>();
       for (let i = lo; i <= hi; i += 1) {
         const id = flat[i]!.block.id;
-        if (!enteredBoxes.has(id)) covered.add(id);
         const runs = live(id);
         if (runs !== null) runsOverride.set(id, runs);
       }
@@ -1030,7 +1069,7 @@ function SelectionLayer({
       );
       return serializeForest(rowsRef.current, roots, { runsOverride, exclude });
     },
-    [textReadsOf, handles, flat, anchorTypes, rowsRef, isAnchorNodeRef],
+    [textReadsOf, handles, flat, spanCoveredLines, rowsRef, isAnchorNodeRef],
   );
 
   /**
