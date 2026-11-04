@@ -750,7 +750,9 @@ await withBrowser(async (h) => {
       { timeoutMs: RENDER_TIMEOUT_MS },
     );
     if (!quiet.ok)
-      r.note(`${tile.name}: the page never went quiet (${quiet.value} ms idle)`);
+      r.note(
+        `${tile.name}: the page never went quiet (${quiet.value} ms idle)`,
+      );
     r.ok(
       `${tile.name}: its landing (${(await embed.getAttribute("data-app-embed")) ?? "?"}) loads nothing from the page's origin`,
       leaked.length === leakedBefore,

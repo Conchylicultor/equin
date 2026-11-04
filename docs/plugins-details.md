@@ -1874,7 +1874,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `AnalyticsFilterSchema`
                   - `analyticsQueryEndpoint`
                   - `AnalyticsQueryParamSchema`
-                  - `analyticsQueryPath`
                   - `AnalyticsQueryResultSchema`
                   - `AnalyticsQuerySchema`
                   - `AnalyticsRangeSchema`
@@ -2007,6 +2006,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes: `resource.declare` "deploy-analytics.report"
                 - Uses:
                   - `apps/deploy/host-query.hostOnlyQueryOverSsh`
+                  - `infra/endpoints.endpointPath`
                   - `network/live.serveValue`
                 - Resources: `deploy-analytics.report` (invalidate, snapshot)
               - Core:
@@ -3039,6 +3039,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes: `resource.declare` "deploy-site-messages.list"
                 - Uses:
                   - `apps/deploy/host-query.hostOnlyQueryOverSsh`
+                  - `infra/endpoints.endpointPath`
                   - `network/live.serveValue`
                 - Resources: `deploy-site-messages.list` (invalidate, snapshot)
               - Core:
@@ -3121,7 +3122,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteMessageRecordSchema`
                   - `SiteMessageResponseSchema`
                   - `siteMessagesListEndpoint`
-                  - `siteMessagesListPath`
                   - `SiteMessagesListQuerySchema`
                   - `SiteMessagesPageSchema`
                   - `SiteMessageVerdictSchema`
@@ -11746,7 +11746,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps-core/app-launcher`
-          - `apps-core/app-manifest`
           - `apps-core/app-rail`
           - `apps/desktop/shell`
           - `config_v2/settings`
@@ -11822,10 +11821,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `DocumentHead.Fragment` "app-manifest"
         - Uses:
           - `apps-core.declaredApps`
+          - `infra/endpoints.endpointPath`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `shell/document-head.DocumentHead`
           - `shell/document-head.HeadFragments`
+        - Exports (values): `appIconPath`
         - Routes: `GET /api/apps/:appId/manifest.webmanifest`
       - Machine:
         - Uses: `infra/endpoints.machineHandler`
@@ -11835,20 +11836,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes: `GET /api/apps/:appId/icon/:file`
       - Core:
         - Uses:
-          - `apps-core/app-icon.appIcon`
-          - `apps-core/app-icon.appTileFill`
           - `infra/endpoints.blob`
           - `infra/endpoints.defineEndpoint`
-          - `infra/endpoints.endpointPath`
         - Exports (types):
           - `AppIconSize`
           - `WebAppManifest`
         - Exports (values):
           - `APP_ICON_SIZES`
           - `appIconFile`
-          - `appIconPath`
-          - `appManifestFor`
-          - `appManifestPath`
           - `getAppIconPng`
           - `getAppManifest`
           - `installableApp`
@@ -12342,10 +12337,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Auth.ScopeRequirement` ← `integrations.gmail`
       - `accountsPane.Actions` ← `primitives.pane`
       - `accountPane.Actions` ← `primitives.pane`
-    - Uses: 43 symbols — full list in [`plugins/auth/REFERENCE.md`](../plugins/auth/REFERENCE.md)
+    - Uses: 45 symbols — full list in [`plugins/auth/REFERENCE.md`](../plugins/auth/REFERENCE.md)
+      - `infra/endpoints` ×6
       - `primitives/pane` ×6
       - `primitives/setup-steps` ×6
-      - `infra/endpoints` ×5
       - `network/live/live-state` ×5
       - `primitives/collapsible` ×4
       - `primitives/css/ui-kit` ×3
@@ -12358,6 +12353,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/spacing.Stack`
       - `primitives/css/text.Text`
       - `primitives/loading.Loading`
+      - `primitives/networking.useTransport`
       - `primitives/section-card.SectionCard`
       - `shell/notifications.useToast`
       - `ui/icons.Icon`
@@ -12607,27 +12603,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`setup-wizard`** — Guided setup steps for Google OAuth credentials (project → Drive API → consent screen → OAuth client → paste → connect), rendered inline in the Google Accounts pane.
           - Web:
-            - Uses:
-              - `auth.currentWorktreeName`
-              - `auth.startConnectFlow`
-              - `auth.useAccountStatus`
+            - Uses: 21 symbols — full list in [`plugins/auth/plugins/google/plugins/setup-wizard/REFERENCE.md`](../plugins/auth/plugins/google/plugins/setup-wizard/REFERENCE.md)
+              - `primitives/setup-steps` ×6
+              - `auth` ×3
+              - `network/live/live-state` ×2
+              - `primitives/css/ui-kit` ×2
               - `config_v2.useConfigRegistrations`
               - `infra/endpoints.useFetchEndpoint`
               - `network/live.useLive`
-              - `network/live/live-state.ResourceErrorInline`
-              - `network/live/live-state.useCombinedResources`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.Input`
               - `primitives/loading.Loading`
-              - `primitives/setup-steps.Step`
-              - `primitives/setup-steps.StepCommand`
-              - `primitives/setup-steps.StepDone`
-              - `primitives/setup-steps.StepLink`
-              - `primitives/setup-steps.StepNote`
-              - `primitives/setup-steps.Steps`
+              - `primitives/networking.useTransport`
             - Exports (values): `GoogleSetup`
           - Cross-plugin:
             - Uses tokens:
@@ -16219,9 +16207,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `conversations/transcript-source.JsonlEventSchema`
+              - `infra/endpoints.assetPath`
+              - `infra/endpoints.AssetPath`
               - `infra/endpoints.blob`
               - `infra/endpoints.defineEndpoint`
-              - `infra/endpoints.interpolatePath`
               - `network/live.liveValue`
               - `packages/list-bound.wholeList`
             - Exports (types):
@@ -16237,7 +16226,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlEventsQuerySchema`
               - `seqKey`
               - `TranscriptEventRowSchema`
-              - `transcriptImageUrl`
+              - `transcriptImage`
               - `TranscriptMetaSchema`
               - `transcriptPrompts`
               - `transcriptToolCall`
@@ -16380,7 +16369,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
-                      - `primitives/overlay/image-viewer.ViewerThumbnail`
+                      - `primitives/overlay/image-viewer.AssetThumbnail`
                       - `primitives/syntax-highlight.CodeListing`
                 - **`command-permissions`** — Renders command-permissions attachment events showing permission grants for the session.
                   - Web:
@@ -18202,7 +18191,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.SectionLabel`
-                  - `primitives/overlay/image-viewer.ViewerThumbnail`
+                  - `primitives/overlay/image-viewer.AssetThumbnail`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --background`
@@ -18231,7 +18220,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/spacing.Inset`
                   - `primitives/expandable.Expandable`
                   - `primitives/icon-button.IconButton`
-                  - `primitives/overlay/image-viewer.ViewerThumbnail`
+                  - `primitives/overlay/image-viewer.AssetThumbnail`
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree.
           - Web:
             - Contributes:
@@ -20559,6 +20548,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/workspace.ScratchProfile`
               - `conversations/workspace.Workspace`
               - `conversations/workspace.WorkspaceImpl`
+              - `infra/endpoints.endpointPath`
               - `infra/jobs.defineJob`
               - `infra/mcp.Mcp`
               - `primitives/log-channels.defineLogSink`
@@ -27682,7 +27672,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/git/checkout-watch` (1 debt)
               - `infra/git/remotes` (2 debt)
               - `infra/host-fs` (16 debt)
-              - `infra/host-fs/image` (2 debt)
+              - `infra/host-fs/image` (1 debt)
               - `infra/host-fs/zip` (1 debt)
               - `infra/host/contention` (1 debt)
               - `infra/host/duress/latch` (1 debt)
@@ -30622,6 +30612,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MachineUnavailable`
           - `ReadMarker`
           - `ReadOf`
+          - `RequestFetch`
           - `WriteEndpoint`
         - Exports (values):
           - `agentWriteRefusedMessage`
@@ -30632,28 +30623,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `contentPath`
           - `dateString`
           - `defineEndpoint`
+          - `documentLink`
           - `EndpointAgentWriteRefusedError`
           - `EndpointError`
-          - `endpointPath`
-          - `endpointRequest`
-          - `extractMethod`
-          - `extractPath`
           - `getRouteSlowThresholdMs`
           - `HttpError`
           - `implement`
-          - `interpolatePath`
           - `isAgentWriteRefusal`
           - `isCodec`
           - `multipart`
           - `rawEndpointHandler`
           - `readEndpointResponse`
+          - `sendEndpointRequest`
           - `unavailableMessage`
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 235 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×66
-          - `conversations` ×34
+        - Imported by: 240 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×68
+          - `conversations` ×35
           - `infra` ×21
           - `page` ×19
           - `debug` ×18
@@ -30662,6 +30650,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×6
           - `ui` ×6
           - `auth` ×5
+          - `network` ×3
           - `active-data` ×2
           - `apps-core` ×2
           - `build` ×2
@@ -30669,11 +30658,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2` ×2
           - `history` ×2
           - `integrations` ×2
-          - `network` ×2
           - `screenshot` ×2
           - `tag-tree` ×2
           - `backup`
           - `database/fork`
+          - `framework/tooling/e2e-harness`
           - `hints`
           - `menu-bar`
           - `release`
@@ -30703,8 +30692,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Exports (values):
           - `callEndpoint`
+          - `endpointPath`
           - `HttpError`
           - `implement`
+          - `interpolatePath`
           - `rawEndpointHandler`
       - Machine:
         - Exports (values):
@@ -31786,30 +31777,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/archive/locate.ts`, `server/internal/archive/tree.ts`, `server/internal/complete.ts`, `server/internal/entry.ts`, `server/internal/extract.ts`, `server/internal/free-path.ts`, `server/internal/list.ts`, `server/internal/move.ts`, `server/internal/open-file.ts`, `server/internal/open.ts`, `server/internal/path.ts`, `server/internal/peek.ts`, `server/internal/raw.ts`, `server/internal/stat.ts`, `server/internal/text.ts`, `server/internal/volume.ts` (debt)
       - Plugins:
-        - **`image`** — Images on the host filesystem: GET resized (a copy with a long edge from a closed set, EXIF-rotated, never enlarged — JPEG, or WebP with transparency — made with sharp, cached host-wide and served immutable for the file version the URL names; 415 when undecodable). The daily host-fs-image.sweep keeps the cache within 30 days unused and 1 GB.
+        - **`image`** — Images on the host filesystem: the daily host-fs-image.sweep keeps the resized-copy cache (machine/'s GET resized) within 30 days unused and 1 GB.
           - Server:
             - Contributes: `resource.declare` "host-fs.image-sizes"
             - Uses:
-              - `infra/endpoints.HttpError`
-              - `infra/host-fs.HostFileOpen`
-              - `infra/host-fs.inertHeaders`
               - `infra/host-fs.openHostFile`
-              - `infra/host-fs.resolveHostPath`
               - `infra/jobs.defineJob`
               - `primitives/log-channels.Log`
             - Register: `defineJob('host-fs-image.sweep')`
             - Resources: `host-fs.image-sizes` (keyed, window, notified)
-            - Routes: `GET /api/host-fs/image/resized`
           - Machine:
             - Uses:
+              - `infra/endpoints.machineHandler`
               - `infra/host-fs.listHostPath`
               - `infra/host-fs.refusalFor`
               - `infra/host-fs.resolvedOrNull`
               - `infra/host-fs.resolveOrRefuse`
               - `infra/host-fs.watchHostDir`
               - `network/live.serveValue`
+            - Routes: `GET /api/host-fs/image/resized`
           - Core:
             - Uses:
+              - `infra/endpoints.assetPath`
+              - `infra/endpoints.AssetPath`
               - `infra/endpoints.blob`
               - `infra/endpoints.defineEndpoint`
               - `infra/host-fs.HOST_FS_MACHINE`
@@ -31823,7 +31813,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `hostFsFolderImageSizes`
               - `hostFsImageResized`
-              - `hostResizedUrl`
+              - `hostResizedAsset`
               - `isResizableName`
               - `parseEdge`
               - `RESIZABLE_EXTENSIONS`
@@ -31831,7 +31821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resizedVersion`
               - `snapEdge`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/resize.ts`, `server/internal/sweep.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
             - Imported by: 28 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
@@ -45186,6 +45176,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `FileViewer.Renderer` "Image" → `ImageView`
             - Uses:
+              - `infra/endpoints.assetUrlOver`
               - `infra/endpoints.useAssetSrc`
               - `infra/endpoints.useAssetSrcs`
               - `network/live.useLive`
@@ -45194,6 +45185,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/file-viewer.FileViewer`
               - `primitives/file-viewer.UnloadedFile`
               - `primitives/loading.Loading`
+              - `primitives/networking.Transport`
+              - `primitives/networking.useTransport`
               - `primitives/overlay/image-viewer.ImageViewer`
               - `primitives/overlay/image-viewer.MissingImage`
               - `primitives/overlay/image-viewer.useImageLoad`
@@ -46322,12 +46315,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTransport`
           - `useTransportScoped`
       - Cross-plugin:
-        - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
+        - Imported by: 36 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
           - `apps` ×10
+          - `primitives` ×6
           - `conversations` ×5
-          - `primitives` ×5
           - `framework` ×3
           - `network` ×3
+          - `auth` ×2
           - `infra` ×2
           - `page` ×2
           - `debug/worktree-cleanup`
@@ -48513,7 +48507,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/attachments.getAttachmentFile`
               - `infra/endpoints.assetPath`
               - `infra/endpoints.AssetPath`
-              - `infra/endpoints.interpolatePath`
+              - `infra/endpoints.documentLink`
               - `primitives/text-editor/token-extension/node.defineInlineTokenNode`
             - Exports (types):
               - `AttachmentSegment`

@@ -314,7 +314,7 @@ takes a `debt` exemption on the check's id.
     - `infra/git/checkout-watch` (1 debt)
     - `infra/git/remotes` (2 debt)
     - `infra/host-fs` (16 debt)
-    - `infra/host-fs/image` (2 debt)
+    - `infra/host-fs/image` (1 debt)
     - `infra/host-fs/zip` (1 debt)
     - `infra/host/contention` (1 debt)
     - `infra/host/duress/latch` (1 debt)
