@@ -12,8 +12,16 @@ export { PreviewPane } from "./components/preview-pane";
 export { FileBrowserSlots, type ExplorerLensItem } from "./slots";
 export type { ExplorerNavigator } from "./internal/navigator";
 export { useExplorerDir } from "./internal/explorer-dir";
-export { useHomeDir, type HomeDir } from "./internal/host-path-source";
-export { useExplorerFileTarget } from "./internal/file-target";
+export {
+  useHomeDir,
+  useHostPathSource,
+  type HomeDir,
+} from "./internal/host-path-source";
+export {
+  useExplorerFileTarget,
+  useFileHostPath,
+  type FileHostPath,
+} from "./internal/file-target";
 export {
   filesAtPane,
   filesHomePane,
@@ -28,7 +36,7 @@ export {
 
 export default {
   description:
-    "The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).",
+    "The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).",
   slots: {
     "files-home": filesHomePane,
     "files-at": filesAtPane,

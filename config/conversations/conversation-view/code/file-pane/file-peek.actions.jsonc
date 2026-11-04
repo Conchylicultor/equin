@@ -7,12 +7,11 @@
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
-  // The file's breadcrumb, then the renderer tabs (Code / Preview / Diff …)
-  // right beside it; the spacer keeps them there rather than letting the row
-  // pack everything to the right edge.
+  // The file's path bar and its copy button, then the renderer tabs
+  // (Markdown / Diff / Code …) at the row's far end: the title's cell takes
+  // the slack between them.
   "items": [
     "primitives.pane:title",
-    "conversations.conversation-view.code.file-pane:renderer-tabs",
-    { "type": "spacer", "id": "title-end" }
+    "conversations.conversation-view.code.file-pane:renderer-tabs"
   ]
 }

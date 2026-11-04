@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import {
   hostFsCompletions,
   hostFsPathStat,
+  hostFsVolumeInfo,
   isBrowsable,
 } from "@plugins/infra/plugins/host-fs/core";
 import {
@@ -9,7 +11,11 @@ import {
   displayPath,
   hostHome,
 } from "@plugins/infra/plugins/host-account/core";
-import { useLive, type LiveReader } from "@plugins/network/plugins/live/web";
+import {
+  useLive,
+  useLiveReader,
+  type LiveReader,
+} from "@plugins/network/plugins/live/web";
 import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
 import type {
   PathBarSource,
@@ -53,6 +59,33 @@ export function crumbLabel(path: string, rootName: string | undefined): string {
   if (path === HOME) return "Home";
   if (path === "/") return rootName ?? "/";
   return baseName(path);
+}
+
+/**
+ * {@link hostPathSource} bound to this subtree: the live reader its
+ * validation reads through, and the name of the volume mounted at `/`
+ * ("Macintosh HD") for its crumb — which reads "/" itself until the volume
+ * names it, or when it cannot. What every host path bar renders from (the
+ * explorer's toolbar, a file pane's header).
+ */
+export function useHostPathSource(home: string, root?: string): PathBarSource {
+  const rootVolume = useLive(hostFsVolumeInfo, { path: "/" });
+  let rootName: string | undefined;
+  switch (rootVolume.status) {
+    case "ready":
+      rootName = rootVolume.data.name;
+      break;
+    case "loading":
+    case "error":
+    case "unavailable":
+      rootName = undefined;
+      break;
+  }
+  const liveReader = useLiveReader();
+  return useMemo(
+    () => hostPathSource(liveReader, home, rootName, root),
+    [liveReader, home, rootName, root],
+  );
 }
 
 /**

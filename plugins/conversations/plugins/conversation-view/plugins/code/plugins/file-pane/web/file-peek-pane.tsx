@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import {
   Pane,
   PaneChrome,
@@ -29,7 +29,12 @@ import {
 } from "@plugins/primitives/plugins/file-viewer/core";
 import { FileLinksWorkspaceProvider } from "@plugins/primitives/plugins/file-links/web";
 import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
-import { useExplorerFileTarget } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
+import {
+  locationParams,
+  useExplorerFileTarget,
+} from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
+import { folderPeekPane } from "@plugins/apps/plugins/file-explorer/plugins/folder-peek/web";
+import type { PathTarget } from "@plugins/primitives/plugins/path-bar/web";
 import {
   FilePeekHeaderProvider,
   FilePeekTitle,
@@ -53,10 +58,14 @@ function splitLine(rawFilePath: string): { filePath: string; line?: number } {
  */
 function usePeekedFile(worktree: string, filePath: string) {
   const resolved = useResolvedFile(worktree, filePath);
+  const requested = useMemo(
+    () => fileRefForPath(worktree, filePath),
+    [worktree, filePath],
+  );
   const file: FileRef =
     resolved.status === "resolved" || resolved.status === "exact"
       ? resolved.file
-      : fileRefForPath(worktree, filePath);
+      : requested;
   return { resolved, file };
 }
 
@@ -92,8 +101,9 @@ export const filePeekPane = Pane.define({
   app: agentManagerApp,
   component: FilePeekPaneBody,
   // Tab/document title: the file name from the URL param, so a deep link
-  // shows the file instead of the bare app name. The header paints the path as
-  // a breadcrumb (FilePeekTitle); the renderer tabs beside it are a header item.
+  // shows the file instead of the bare app name. The header paints the file's
+  // place as the Files path bar (FilePeekTitle); the renderer tabs are a
+  // header item at the row's far end.
   title: {
     useText: ({ filePath }) => fileTitle(filePath),
     component: FilePeekTitle,
@@ -158,9 +168,28 @@ function FilePeekPaneContent() {
       : {}),
   });
 
+  // Where a place in the header's path bar goes: a folder swaps this pane for
+  // that folder's listing (Up out of a file, to its siblings), a file typed
+  // into the bar swaps in that file's peek.
+  const activationFor = useCallback(
+    (target: PathTarget) =>
+      target.kind === "dir"
+        ? openPane.to(
+            folderPeekPane,
+            locationParams({ dir: target.path, open: null }),
+            { mode: "swap" },
+          )
+        : openPane.to(
+            filePeekPane,
+            { worktree, filePath: target.path },
+            { mode: "swap" },
+          ),
+    [openPane, worktree],
+  );
+
   // The header's title and renderer tabs read this (see file-peek-header): the
-  // requested path and no tabs until the path resolves to one file (or to
-  // none, whose miss the file content reports).
+  // requested path, no place and no tabs until the path resolves to one file
+  // (or to none, whose miss the file content reports).
   const settled =
     resolved.status === "exact" ||
     resolved.status === "resolved" ||
@@ -168,9 +197,9 @@ function FilePeekPaneContent() {
   const header = useMemo(
     () =>
       settled
-        ? { path: effectivePath, renderers }
-        : { path: filePath, renderers: null },
-    [settled, effectivePath, filePath, renderers],
+        ? { path: effectivePath, file, activationFor, renderers }
+        : { path: filePath, file: null, activationFor, renderers: null },
+    [settled, effectivePath, file, filePath, activationFor, renderers],
   );
 
   if (resolved.status === "loading") {

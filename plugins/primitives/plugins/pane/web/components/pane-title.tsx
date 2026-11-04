@@ -126,12 +126,16 @@ function NodeTitle({ children }: { children: ReactNode }) {
     // (`inline-block …`) down as `className`, which `cn` then resolves as the
     // WINNER over `Line`'s `flex`, so the row silently stops being a row. Hence a
     // raw class, its directive on the attribute line itself so it cannot drift.
+    // `w-full` overrides the single-line leaf's shrink-to-fit `w-fit`: the node
+    // spans the title's yielding cell, so a breadcrumb inside measures the room
+    // the row really gives it — shrink-wrapped, a trail that folded once found
+    // no slack to unfold into, ever.
     <Text
       as="div"
       pick={PANE_TITLE_PICK}
       data-part={PANE_TITLE_PART}
       // eslint-disable-next-line layout/no-adhoc-layout -- node title needs a flex row for breadcrumb-style multi-segment compositions; see above for why Line cannot supply it
-      className="flex min-w-0 items-center text-pane-title-foreground"
+      className="flex w-full min-w-0 items-center text-pane-title-foreground"
     >
       {children}
     </Text>

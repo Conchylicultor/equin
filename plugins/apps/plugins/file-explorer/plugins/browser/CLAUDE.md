@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
+- Description: The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
 - Web:
   - Slots:
     - `filesHomePane.Actions`
@@ -62,6 +62,7 @@
     - `ExplorerLensItem`
     - `ExplorerNavigator`
     - `FileBrowserProps`
+    - `FileHostPath`
     - `HomeDir`
     - `LocationParams`
   - Exports (values):
@@ -76,7 +77,9 @@
     - `useExplorerFileTarget`
     - `useExplorerFolderTarget`
     - `useExplorerLocation`
+    - `useFileHostPath`
     - `useHomeDir`
+    - `useHostPathSource`
     - `useLocationNavigator`
     - `useOpenInFiles`
 - Core:

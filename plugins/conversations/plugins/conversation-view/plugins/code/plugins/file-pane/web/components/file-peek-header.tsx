@@ -1,19 +1,35 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
+import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import {
+  PathBar,
+  type PathTarget,
+} from "@plugins/primitives/plugins/path-bar/web";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import {
   FileTabs,
   type FileRenderersHandle,
 } from "@plugins/primitives/plugins/file-viewer/web";
+import type { FileRef } from "@plugins/primitives/plugins/file-viewer/core";
+import {
+  useFileHostPath,
+  useHostPathSource,
+} from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 
 /**
  * What the file-peek body hands its own header: the path it is showing (the
- * resolved one once resolution settles) and the renderer tabs' state, which is
- * body-local (`useState` in file-viewer's `useFileRenderers`) and shared with the content
- * below. `renderers` is `null` while the path is still resolving or ambiguous —
+ * resolved one once resolution settles), the file it reads (`null` until the
+ * path settles on one — a fuzzy path names no place yet), where a path-bar
+ * place goes, and the renderer tabs' state, which is body-local (`useState`
+ * in file-viewer's `useFileRenderers`) and shared with the content below.
+ * `renderers` is `null` while the path is still resolving or ambiguous —
  * there are no tabs to offer yet.
  */
 interface FilePeekHeaderValue {
   path: string;
+  file: FileRef | null;
+  activationFor: (target: PathTarget) => Activation;
   renderers: FileRenderersHandle | null;
 }
 
@@ -45,9 +61,76 @@ function useFilePeekHeader(): FilePeekHeaderValue {
   return value;
 }
 
-/** The file-peek pane's header title: the path as a breadcrumb. */
+/**
+ * The file-peek pane's header title: the file's place as the Files path bar
+ * (rooted at its checkout for a workspace file), every folder a link to that
+ * folder's listing, then a copy of the path as shown to agents. Until the file
+ * has a place on this computer (resolving, an app data file, a host without
+ * the computer) the path is a plain breadcrumb with the same copy button.
+ */
 export function FilePeekTitle() {
-  return <FilepathBreadcrumb path={useFilePeekHeader().path} />;
+  const { path, file, activationFor } = useFilePeekHeader();
+  if (file === null) return <FilepathBreadcrumb path={path} />;
+  return (
+    <FileHostTitle path={path} file={file} activationFor={activationFor} />
+  );
+}
+
+function FileHostTitle({
+  path,
+  file,
+  activationFor,
+}: {
+  path: string;
+  file: FileRef;
+  activationFor: (target: PathTarget) => Activation;
+}) {
+  const place = useFileHostPath(file);
+  if (place.kind !== "ready") return <FilepathBreadcrumb path={path} />;
+  return (
+    <HostPathBar
+      home={place.home}
+      root={place.root}
+      path={place.path}
+      copyText={path}
+      activationFor={activationFor}
+    />
+  );
+}
+
+function HostPathBar({
+  home,
+  root,
+  path,
+  copyText,
+  activationFor,
+}: {
+  home: string;
+  root: string | undefined;
+  path: string;
+  copyText: string;
+  activationFor: (target: PathTarget) => Activation;
+}) {
+  const source = useHostPathSource(home, root);
+  return (
+    <PathBar
+      path={path}
+      source={source}
+      activationFor={activationFor}
+      // A side pane beside other surfaces: ⌘L stays the surface's own.
+      shortcut={false}
+      actions={
+        <CopyButton
+          text={copyText}
+          aspect="inline"
+          className="text-muted-foreground hover:text-foreground"
+          tooltip="Copy path"
+        />
+      }
+      // The whole title cell, so the trail measures the room the row gives it.
+      className={fillClasses("x")}
+    />
+  );
 }
 
 /** The renderer tabs (Diff / Raw / Preview …) as a file-peek header item. */

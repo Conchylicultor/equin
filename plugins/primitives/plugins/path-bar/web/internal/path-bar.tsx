@@ -80,6 +80,12 @@ export interface PathBarProps {
   text?: BreadcrumbProps["text"];
   /** The current place's weight, forwarded to the trail (`Breadcrumb.leafWeight`). */
   leafWeight?: BreadcrumbProps["leafWeight"];
+  /**
+   * Controls set right after the current place (a copy button), forwarded to
+   * the trail (`Breadcrumb.actions`) so they sit against the crumbs, ahead of
+   * the slack. Crumb mode only.
+   */
+  actions?: ReactNode;
   className?: string;
 }
 
@@ -106,6 +112,7 @@ export function PathBar({
   shortcut = true,
   text: trailText,
   leafWeight,
+  actions,
   className,
 }: PathBarProps): ReactNode {
   const separator = source.separator ?? "/";
@@ -257,6 +264,7 @@ export function PathBar({
           }))}
           text={trailText}
           leafWeight={leafWeight}
+          actions={actions}
         />
         <IconButton
           icon={editIcon}

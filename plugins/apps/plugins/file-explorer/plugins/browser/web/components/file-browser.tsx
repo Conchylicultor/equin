@@ -58,11 +58,9 @@ import { z } from "zod";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   hasHostPaths,
-  hostFsVolumeInfo,
   readHostPaths,
   type HostFsEntry,
 } from "@plugins/infra/plugins/host-fs/core";
-import { useLive, useLiveReader } from "@plugins/network/plugins/live/web";
 import type { RowSelectionState } from "@plugins/primitives/plugins/tree/core";
 import { DROP_TARGET_RING } from "@plugins/primitives/plugins/data-view/web";
 import {
@@ -75,7 +73,7 @@ import {
   type EntryRow,
   type LensHideRule,
 } from "../../core";
-import { hostPathSource, useHomeDir } from "../internal/host-path-source";
+import { useHostPathSource, useHomeDir } from "../internal/host-path-source";
 import {
   isOnDisk,
   unlistedCount,
@@ -328,25 +326,7 @@ function Listing({
   }));
   const selected = selection.anchor;
   const treeRef = useRef<HTMLElement | null>(null);
-  // The name of the volume mounted at `/` ("Macintosh HD") for its crumb —
-  // which reads "/" itself until the volume names it, or when it cannot.
-  const rootVolume = useLive(hostFsVolumeInfo, { path: "/" });
-  let rootName: string | undefined;
-  switch (rootVolume.status) {
-    case "ready":
-      rootName = rootVolume.data.name;
-      break;
-    case "loading":
-    case "error":
-    case "unavailable":
-      rootName = undefined;
-      break;
-  }
-  const liveReader = useLiveReader();
-  const source = useMemo(
-    () => hostPathSource(liveReader, home, rootName, root),
-    [liveReader, home, rootName, root],
-  );
+  const source = useHostPathSource(home, root);
   const { listings, request, setOpen, readers } = useListings(dir);
   const moveInto = useMoveInto();
   // The paths this listing is dragging right now: dropping them back into

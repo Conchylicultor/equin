@@ -4426,7 +4426,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.useReservesFloatingBar`
               - `primitives/text-editor/paste-images.AttachmentSlots`
             - Exports (values): `attachmentPreviewPane`
-        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
+        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
           - Web:
             - Slots:
               - `filesHomePane.Actions`
@@ -4484,6 +4484,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ExplorerLensItem`
               - `ExplorerNavigator`
               - `FileBrowserProps`
+              - `FileHostPath`
               - `HomeDir`
               - `LocationParams`
             - Exports (values):
@@ -4498,7 +4499,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useExplorerFileTarget`
               - `useExplorerFolderTarget`
               - `useExplorerLocation`
+              - `useFileHostPath`
               - `useHomeDir`
+              - `useHostPathSource`
               - `useLocationNavigator`
               - `useOpenInFiles`
           - Core:
@@ -4578,7 +4581,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `folderPeekPane`
               - `useFolderPeekTarget`
           - Cross-plugin:
-            - Imported by: `active-data/folder-link`
+            - Imported by:
+              - `active-data/folder-link`
+              - `conversations/conversation-view/code/file-pane`
         - **`git`** — Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field (client fields of the file-entry row kind, empty outside a checkout), ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (the file-explorer.git-checkout snapshot value, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from the shared checkout watch (infra/git/checkout-watch: working tree + git dir) while subscribed.
           - Web:
             - Contributes:
@@ -15811,14 +15816,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `Pane.Register` "file-peek"
                   - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`
-                - Uses: 21 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md)
+                - Uses: 29 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md)
                   - `primitives/file-viewer` ×5
                   - `primitives/pane` ×5
+                  - `apps/file-explorer/browser` ×4
                   - `code-explorer/file-resolve` ×2
                   - `primitives/live-state` ×2
-                  - `apps/file-explorer/browser.useExplorerFileTarget`
+                  - `primitives/path-bar` ×2
+                  - `apps/file-explorer/folder-peek.folderPeekPane`
                   - `conversations/conversation-view/code.useEditedFile`
                   - `conversations/conversation-view.conversationPane`
+                  - `primitives/copy-to-clipboard.CopyButton`
+                  - `primitives/css/fill.fillClasses`
                   - `primitives/css/placeholder.Placeholder`
                   - `primitives/css/text.Text`
                   - `primitives/file-links.FileLinksWorkspaceProvider`
@@ -15828,6 +15837,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `filePeekPane`
               - Cross-plugin:
                 - Uses tokens:
+                  - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/density --space-md`
                   - `ui/tokens/density --space-sm`
@@ -40721,11 +40731,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
           - `apps` ×10
           - `primitives` ×5
+          - `conversations` ×4
           - `page` ×4
-          - `conversations` ×3
           - `debug` ×3
           - `infra` ×2
           - `review` ×2
@@ -41140,10 +41150,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 177 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 178 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×53
               - `primitives` ×31
-              - `conversations` ×24
+              - `conversations` ×25
               - `debug` ×17
               - `page` ×10
               - `ui` ×9
@@ -46742,7 +46752,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --font-weight-semibold`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by: `apps/file-explorer/browser`
+        - Imported by:
+          - `apps/file-explorer/browser`
+          - `conversations/conversation-view/code/file-pane`
     - **`perfs`** — Umbrella for client-side performance primitives.
       - Plugins:
         - **`boot-trace`** — Module-level boot-span store imported eagerly by the framework boot path. Captures one-clock boot spans (startBootSpan/markBootInstant/recordBootSpan) and folds in Navigation/Paint Timing plus the first React commit; getBootTrace() assembles the trace. Every span / instant is mirrored as a User Timing measure / mark named boot:<id>, so an outside reader (a Playwright script) reads it with performance.getEntriesByType.

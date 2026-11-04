@@ -13,14 +13,18 @@
   - Contributes:
     - `Pane.Register` "file-peek"
     - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/file-viewer` ×5
     - `primitives/pane` ×5
+    - `apps/file-explorer/browser` ×4
     - `code-explorer/file-resolve` ×2
     - `primitives/live-state` ×2
-    - `apps/file-explorer/browser.useExplorerFileTarget`
+    - `primitives/path-bar` ×2
+    - `apps/file-explorer/folder-peek.folderPeekPane`
     - `conversations/conversation-view/code.useEditedFile`
     - `conversations/conversation-view.conversationPane`
+    - `primitives/copy-to-clipboard.CopyButton`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/text.Text`
     - `primitives/file-links.FileLinksWorkspaceProvider`
@@ -30,6 +34,7 @@
     - `filePeekPane`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
