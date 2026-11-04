@@ -52,6 +52,13 @@ install: `setupWorktree`'s `existing` path minus the convergence).
   …/commondir") on an admin dir a concurrent `git worktree add` is half-way
   through writing — the mutate gate admits three at once, so a claim's lock
   failed beside a spare refill and left the checkout unlocked.
+- **An unlock is a `rename`, never an `unlink`.** `unlockWorktree` renames
+  `locked` to a name only it knows, then deletes that. On macOS (APFS) two
+  concurrent `unlink`s of one file both return success about half the time —
+  across processes too — so an unlink-based unlock let both claimers of one
+  spare move it (ENOENT on the second's `gitdir` rename). `rename`, `mkdir`
+  and an `O_EXCL` create (`wx`) are exclusive; `unlink` and `rmdir` are not,
+  so neither may decide a winner.
 - **The list is its admin files, not a git command.** `listWorktreeEntries` /
   `listWorktreePaths` read `.git/HEAD` and each `.git/worktrees/<id>/{gitdir,
   HEAD, locked}` (one `rev-parse --git-common-dir` to find them): `git worktree

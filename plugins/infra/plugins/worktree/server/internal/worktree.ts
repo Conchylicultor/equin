@@ -17,6 +17,7 @@ import {
   readFile,
   realpath,
 } from "@plugins/packages/plugins/timed-fs/core";
+import { randomUUID } from "node:crypto";
 import { basename, dirname, join, resolve } from "node:path";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
@@ -430,10 +431,18 @@ export async function lockWorktree(
 }
 
 /**
- * Unlock the worktree at `wtPath`. One `unlink`, so of two unlockers exactly
- * one gets `unlocked` — what tells two claimers of one spare apart;
- * `unregistered` when `wtPath` is no registered worktree. Any other failure
- * throws.
+ * Unlock the worktree at `wtPath`. Of two unlockers exactly one gets
+ * `unlocked` — what tells two claimers of one spare apart; `unregistered` when
+ * `wtPath` is no registered worktree. Any other failure throws.
+ *
+ * The lock is taken away by a `rename` to a name only this call knows, then
+ * that file is deleted — NOT by unlinking `locked`: on macOS (APFS) two
+ * concurrent `unlink`s of one file BOTH return success, about half the time
+ * (2026-11-04, measured across processes as well as on Bun's fs thread pool),
+ * so both claimers of a spare moved it. `rename` of one source, like `mkdir`
+ * and an `O_EXCL` create, measured exclusive. A crash between the two steps
+ * leaves a stray `locked.released-*` in the admin dir, which git ignores and the
+ * entry's prune removes with it.
  */
 export async function unlockWorktree(
   repoRoot: AppPath,
@@ -441,14 +450,15 @@ export async function unlockWorktree(
 ): Promise<"unlocked" | "not-locked" | "unregistered"> {
   const admin = await adminDirOf(join(repoRoot, ".git"), wtPath);
   if (admin === null) return "unregistered";
-  const file = join(admin, "locked");
+  const released = join(admin, `locked.released-${randomUUID()}`);
   try {
-    await unlink(file);
-    return "unlocked";
+    await rename(join(admin, "locked"), released);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return "not-locked";
     throw err;
   }
+  await unlink(released);
+  return "unlocked";
 }
 
 /**

@@ -177,6 +177,21 @@ describe("spare claim", () => {
     }
   });
 
+  test("of concurrent unlockers of one lock, exactly one gets it", async () => {
+    // What tells two claimers of one spare apart. On APFS two concurrent
+    // `unlink`s of one file both succeed about half the time, so an unlock that
+    // unlinked `locked` handed one spare to both claimers (2026-11-04: the
+    // concurrent-claim test above failed 1 run in 3, ENOENT in the move).
+    const spare = await createSpareIn(repo, noInstall);
+    for (let round = 0; round < 20; round++) {
+      const results = await Promise.all(
+        Array.from({ length: 8 }, () => unlockWorktree(repo, spare)),
+      );
+      expect(results.filter((r) => r === "unlocked")).toHaveLength(1);
+      expect(await lockWorktree(repo, spare, "again")).toBe("locked");
+    }
+  });
+
   test("lock and unlock hold while another worktree's add is half-written", async () => {
     // What a concurrent `git worktree add` leaves for a moment: its admin
     // entry with `commondir` created but not yet written. `git worktree lock`
