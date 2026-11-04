@@ -18,6 +18,7 @@ function manifest(
     writtenAt: "2026-09-01T00:00:00.000Z",
     keys: sets.keys ?? [],
     rootEntries: sets.rootEntries ?? [],
+    logClaims: [],
   };
 }
 
@@ -89,6 +90,7 @@ describe("declaredSets", () => {
     expect(declaredSets(new Map([["cache/test-plain", plain]]))).toEqual({
       keys: ["cache/test-plain"],
       rootEntries: [],
+      logClaims: [],
     });
   });
 

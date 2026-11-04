@@ -52,6 +52,7 @@ export const checkProgressLogDir = defineDataDir({
   // anything a future one needs — a dropped log re-runs the checks, it does not
   // change their verdict.
   reclaim: { kind: "safe" },
+  logs: [{ pattern: "check-progress.jsonl", bound: { kind: "file-sink" } }],
 });
 
 export default [checkCacheDir, retiredTsBuildInfoPoolDir, checkProgressLogDir];

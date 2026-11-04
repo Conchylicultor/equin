@@ -27,6 +27,16 @@ export const menuBarLogs = defineDataDir({
   description:
     "The native menu-bar helper's stdio capture, when it runs as the dev.equin.menu-bar login service",
   reclaim: { kind: "safe" },
+  logs: [
+    {
+      pattern: "helper-stdio.log",
+      bound: {
+        kind: "truncate-on-start",
+        reason:
+          "the helper's raw stdout/stderr as its login service captures it: emptied each time the service is installed, and only crash output lands here",
+      },
+    },
+  ],
 });
 
 export default [menuBarState, menuBarLogs];

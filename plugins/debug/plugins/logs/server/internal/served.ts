@@ -113,7 +113,10 @@ async function watchFolders(
   const backend = sources.find((s) => s.scope === "backend");
   const ownFolders = sources.filter(
     (s) =>
-      s.scope === "worktree" || s.scope === "undeclared" || s.scope === "host",
+      s.scope === "worktree" ||
+      s.scope === "undeclared" ||
+      s.scope === "host" ||
+      s.scope === "service",
   );
   // The gateway's folder holds every worktree's capture: hear only this one.
   const releaseBackend = backend ? await watchSources([backend], notify) : null;

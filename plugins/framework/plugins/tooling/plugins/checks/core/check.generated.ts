@@ -99,6 +99,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/jobs", id: "infra.jobs", loader: () => import("@plugins/infra/plugins/jobs/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/check"), dependsOn: [] },
+  { pluginPath: "infra/plugins/launcher/plugins/gateway-logs", id: "infra.launcher.gateway-logs", loader: () => import("@plugins/infra/plugins/launcher/plugins/gateway-logs/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/namespace", id: "infra.namespace", loader: () => import("@plugins/infra/plugins/namespace/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths", id: "infra.paths", loader: () => import("@plugins/infra/plugins/paths/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths/plugins/data-files", id: "infra.paths.data-files", loader: () => import("@plugins/infra/plugins/paths/plugins/data-files/check"), dependsOn: [] },

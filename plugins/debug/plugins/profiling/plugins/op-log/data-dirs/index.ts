@@ -22,6 +22,7 @@ export const opLogDir = defineDataDir({
   // Observability output. Losing it costs past op history — the Gantt goes
   // blank for those runs — never anything a future op needs to run correctly.
   reclaim: { kind: "safe" },
+  logs: [{ pattern: "op-log.jsonl", bound: { kind: "file-sink" } }],
 });
 
 export default [opLogDir];

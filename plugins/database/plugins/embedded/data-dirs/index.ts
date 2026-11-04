@@ -30,6 +30,29 @@ export const pgClusterDir = defineDataDir({
     reason:
       "a live ~35 GB cluster with a running postmaster; moving it requires full cluster downtime, so it is grandfathered in place",
   },
+  // Postgres and PgBouncer log through the gateway's service log relay now
+  // (logs/gateway/services/). These are their pre-relay files, moved into that
+  // rotation on the first fresh start under a relay-aware gateway.
+  logs: [
+    {
+      pattern: "postgres.log",
+      bound: {
+        kind: "debt",
+        reason:
+          "pre-relay `pg_ctl -l` file, still written by a cluster started before the relay; moved into the relay's rotation on its next fresh start",
+        task: "task-1793827129-t489g4",
+      },
+    },
+    {
+      pattern: "pgbouncer.log",
+      bound: {
+        kind: "debt",
+        reason:
+          "pre-relay `logfile`, still written by a PgBouncer started before the relay; moved into the relay's rotation on its next fresh start",
+        task: "task-1793827129-t489g4",
+      },
+    },
+  ],
 });
 
 export default [pgClusterDir];

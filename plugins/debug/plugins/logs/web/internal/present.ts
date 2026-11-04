@@ -9,6 +9,7 @@ export function servedWorktree(): string | null {
 export const SCOPE_LABEL: Record<LogScope, string> = {
   worktree: "This worktree",
   backend: "Backend process",
+  service: "Supervised service",
   host: "Host-wide",
   undeclared: "Undeclared · clientLog",
 };

@@ -15,7 +15,7 @@ import {
   gatewayPidFile,
   LOOPBACK_BIND,
 } from "@plugins/infra/plugins/launcher/server";
-import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
+import { gatewayLogs } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
 import { gatewayBinary } from "@plugins/infra/plugins/launcher/deps";
 import { ensureDep } from "@plugins/infra/plugins/deps/deps";
 import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";

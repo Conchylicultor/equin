@@ -152,6 +152,8 @@ gateway/
 ├── worktree.go    # Worktree state machine (Idle→Starting→Running→Restarting→Stopping), spawn, lifecycle
 ├── registry.go    # Map of worktrees: dir-level fsnotify watch + lazy Resolve + periodic Reconcile, idle sweeper, stale-socket sweep
 ├── supervisor.go  # Generic service supervisor: start commands, readiness probes, watchdog
+├── logrelay.go    # Relay mode (`gateway -log-relay <path>`): a supervised daemon's output through a rotating writer
+├── namespace_logs.go # A namespace's log channel deleted with its registry dir (on unregister, and a boot sweep)
 ├── document_head.go # The backend-rendered <head> fragment spliced into the SPA shell
 ├── encoding.go    # Content-encoding of statics: precompressed-sidecar negotiation, on-the-fly gzip of the spliced shell
 ├── principal.go   # principalOf: owner/anonymous verdict, X-Equin-Principal stamp, cross-site refusal
@@ -202,6 +204,17 @@ Auto-generated on first `./equin start`. Contains two sections:
 
 Each service has a `start` command (executed synchronously), a `ready` probe (`{"unix": "<path>"}` or `{"tcp": "<host:port>"}`), and an optional `watchdog` interval.
 
+### A service's output: the log relay
+
+A supervised daemon never owns a log file. Every start (boot and watchdog re-start) spawns a **log relay** first (`logrelay.go`): a copy of this binary in relay mode, `gateway -log-relay <log-dir>/services/<service>.log`, in its own session, reading a pipe and writing it through the same `rotatingWriter` (and bound) as every other channel. The start command gets the pipe's write end as fd 3 and `--log-fd 3` appended to its argv (argv, not env: the daemon would inherit an env var for life); it hands that fd to the daemon as stdout/stderr (`pg_ctl -l /dev/fd/3`; PgBouncer in the foreground, no `logfile`). The gateway then closes its copies.
+
+- **Outlives the gateway**, like the daemon: the relay reads until every process holding the write end has exited, so a gateway restart that reattaches leaves both running (verified: relays reparent to pid 1 and keep writing). Not a pipe into the gateway process, which the first restart would cut.
+- **A start that only reattaches** never hands the fd on, so its relay reads EOF at once and exits without opening the file.
+- **The trade**, shared with Postgres's own `logging_collector`: a relay that stopped reading would block the daemon's stderr writes once the pipe buffer fills (the relay only appends to a local file), and lines over `PIPE_BUF` (512 B on macOS) from concurrent Postgres backends can interleave. A dead relay costs log lines, not the daemon: Postgres and PgBouncer ignore SIGPIPE.
+- **Behind an older gateway** (no `--log-fd`), the start scripts say so and fall back: Postgres to its old unrotated `postgres/postgres.log`, PgBouncer to `-d` with no log. Restart the gateway (`./equin start --force`) and then the cluster.
+
+`serviceLogsSubdir`, `serviceLogFdFlag`, `maxLogBytes` and `maxLogBackups` are pinned to their TypeScript twins (`infra/launcher/gateway-logs`) by `gateway-logs:in-sync`.
+
 ### Bootstrap order on a cold gateway start:
 
 1. `Supervisor.StartAll(ctx)` runs synchronously in main — for each service, executes the start command, waits for the readiness probe to succeed, then arms the watchdog goroutine.
@@ -233,10 +246,11 @@ If `database.json` is missing or has an empty `services` array, the supervisor d
 Each channel gets its own size-rotated file under `-log-dir` (default `~/.equin/logs/gateway/`), so one channel's volume can't bury another:
 
 - `gateway.log` — the gateway's own `slog` output (lifecycle, routing, supervisor). Written directly by the Go process via a rotating writer. Every backend the gateway kills or abandons leaves a line here: `backend abandoned: not ready by its deadline` (cold start or hot restart — pid, socket, deadline, waited, escalated, outcome, error; `abandonUnreadyBackend`), `backend killed: still running after SIGTERM grace` (stop / drain; `terminateBackend`), and `hot restart failed; old backend intact`. The backend's own log just stops at a kill, so this is the only record of it.
-- `<name>.log` — one file per worktree, holding that backend's stdout/stderr (`central.log`, `<worktree>.log`, …). Each line is `<RFC3339> [stdout|stderr] <line>`. Backend output never lands in `gateway.log`. This is the durable counterpart to the in-memory `logRing` that feeds the live UI.
+- `<name>.log` — one file per worktree, holding that backend's stdout/stderr (`central.log`, `<worktree>.log`, …). Each line is `<RFC3339> [stdout|stderr] <line>`. Backend output never lands in `gateway.log`. This is the durable counterpart to the in-memory `logRing` that feeds the live UI. **Deleted with the namespace** (`namespace_logs.go`): once a namespace's registry dir is gone, its unregistration removes `<name>.log` and its rotations after the backend's last lines are written; and at boot `LoadAll` sweeps the files of every namespace whose registry dir is gone (reaped while no gateway ran). A per-file bound is not a bound on the folder while the number of files is unbounded — 2,898 dead namespaces' logs (1.9 GB) had piled up by 2026-11-04. A registration evicted only because its server dir vanished keeps its logs.
+- `services/<service>.log` — each supervised daemon's stdout/stderr (`postgres.log`, `pgbouncer.log`), written by its log relay (see "Service supervision").
 - `gateway-stdio.log` — the daemon's raw stdout/stderr (Go panics, any crash before `slog` is wired up). Owned by the launcher (`./equin start`), truncated on each start.
 
-Rotation (`logwriter.go`, `rotatingWriter`) is size-based: at `maxLogBytes` (50 MB) the active file becomes `<file>.1`, older backups shift up, and the oldest past `maxLogBackups` (5) is dropped — so each channel is capped at ~300 MB with no external dependency. The per-worktree writer opens lazily and is closed when the worktree is unregistered.
+Rotation (`logwriter.go`, `rotatingWriter`) is size-based: at `maxLogBytes` (50 MB) the active file becomes `<file>.1`, older backups shift up, and the oldest past `maxLogBackups` (5) is dropped — so each channel is capped at ~300 MB with no external dependency. The per-worktree writer opens lazily and is closed when the worktree is unregistered. Every file here is claimed on the `logs/gateway` data dir (`infra/launcher/gateway-logs`) for `paths:logs-claimed`.
 
 ## Build & Run
 

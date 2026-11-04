@@ -8,6 +8,7 @@ import { dirname, join, relative, sep } from "node:path";
 // Relative sibling import: this file lives INSIDE the `paths` plugin, so the
 // `@plugins/infra/plugins/paths/core` alias would cycle back through the barrel
 // that re-exports it.
+import type { LogClaim } from "./log-claims";
 import { isHostSingleton, isRelease, resolveDataRoot } from "./paths";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 
@@ -116,6 +117,13 @@ export interface DataDirSpec {
    * why this is a declaration rather than a one-off migration script.
    */
   movedFrom?: readonly MovedFrom[];
+  /**
+   * The log files this directory holds, each family with what keeps it finite
+   * (see `./log-claims.ts`). `paths:logs-claimed` fails on a `*.log` /
+   * `*.jsonl` file in a `logs` or `services` dir — or in any dir that declares
+   * claims — that no claim matches.
+   */
+  logs?: readonly LogClaim[];
 }
 
 /**

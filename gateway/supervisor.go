@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -158,6 +159,9 @@ type Supervisor struct {
 	// env.go). Postgres and PgBouncer are daemons that outlive the command, so
 	// whatever they inherit they keep for the life of the cluster.
 	env ChildEnv
+	// logDir is the gateway's -log-dir: each service's output goes to
+	// serviceLogPath(logDir, name) through a detached relay (logrelay.go).
+	logDir string
 }
 
 const (
@@ -169,13 +173,14 @@ const (
 
 // NewSupervisor reads the config file and builds the supervisor. If the file
 // is missing or has no services, the supervisor is empty (nothing to manage).
-// env is the environment every service start command runs with.
-func NewSupervisor(configPath string, env ChildEnv) (*Supervisor, error) {
+// env is the environment every service start command runs with; logDir is
+// where each service's output channel lives.
+func NewSupervisor(configPath string, env ChildEnv, logDir string) (*Supervisor, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			slog.Info("supervisor: no database config file; no services to manage", "path", configPath)
-			return &Supervisor{env: env}, nil
+			return &Supervisor{env: env, logDir: logDir}, nil
 		}
 		return nil, fmt.Errorf("supervisor: read config: %w", err)
 	}
@@ -185,7 +190,7 @@ func NewSupervisor(configPath string, env ChildEnv) (*Supervisor, error) {
 		return nil, fmt.Errorf("supervisor: parse config: %w", err)
 	}
 
-	sup := &Supervisor{env: env}
+	sup := &Supervisor{env: env, logDir: logDir}
 	for _, sc := range cfg.Services {
 		probe, err := parseReadyProbe(sc.Ready)
 		if err != nil {
@@ -252,11 +257,25 @@ func (sup *Supervisor) startService(ctx context.Context, svc *Service) error {
 // declared base environment, set explicitly: a nil Env here used to mean the
 // command — and the daemon it leaves running — inherited the gateway's whole
 // environment, starter's shell and all.
+//
+// Every start gets its own log relay (logrelay.go): the command inherits the
+// relay pipe's write end as fd 3, named by `--log-fd 3` on its argv, and hands it
+// to the daemon it starts as stdout/stderr — so the daemon never owns a log
+// file. A start that only reattaches to a running daemon leaves the fd unused;
+// once this function closes its own copy the relay reads EOF and exits without
+// ever opening the file.
 func (sup *Supervisor) execStartCommand(cfg ServiceConfig) error {
 	if len(cfg.Start) == 0 {
 		return fmt.Errorf("empty start command")
 	}
-	cmd := sup.env.Command(cfg.Start[0], cfg.Start[1:]...)
+	logW, err := startLogRelay(sup.env, serviceLogPath(sup.logDir, cfg.Name))
+	if err != nil {
+		return err
+	}
+	defer logW.Close()
+	args := append(append([]string{}, cfg.Start[1:]...), serviceLogFdFlag, strconv.Itoa(serviceLogFd))
+	cmd := sup.env.Command(cfg.Start[0], args...)
+	cmd.ExtraFiles = []*os.File{logW}
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("start command failed: %w: %s", err, string(out))

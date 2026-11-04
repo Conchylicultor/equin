@@ -179,6 +179,9 @@ func (r *Registry) LoadAll() error {
 		}
 	}
 	slog.Info("registry loaded", "count", len(r.byName), "dir", r.cfg.RegistryDir)
+	// Namespaces reaped while no gateway was running left their logs behind;
+	// no unregistration will ever fire for them. Before any backend writes.
+	sweepOrphanNamespaceLogs(r.cfg.LogDir, r.cfg.RegistryDir)
 	return nil
 }
 
@@ -460,6 +463,12 @@ func (r *Registry) remove(name string) {
 	go func() {
 		_ = wt.Stop(context.Background())
 		wt.CloseLog()
+		// After the close: the backend's last lines are written, the writer
+		// will not reopen. Deleted only when the namespace itself is gone
+		// (namespace_logs.go).
+		if registryDirGone(r.cfg.RegistryDir, name) {
+			removeNamespaceLogs(r.cfg.LogDir, name)
+		}
 	}()
 }
 

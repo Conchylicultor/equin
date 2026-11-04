@@ -187,6 +187,12 @@ func writePidFile(path string) error {
 }
 
 func main() {
+	// Relay mode (logrelay.go): a detached copy of this binary that writes one
+	// supervised service's output through a rotating writer. Decided before the
+	// gateway's own flag set, which relay mode does not take.
+	if len(os.Args) > 1 && os.Args[1] == logRelayFlag {
+		os.Exit(logRelayMain(os.Args[2:]))
+	}
 	cfg, childEnvFlag := parseFlags()
 	setupLogging(cfg)
 
@@ -232,7 +238,7 @@ func main() {
 	reconcileOrphanBackends(cfg.SocketsDir, reg)
 
 	routes := NewCentralRoutesStore(cfg.CentralRoutesFile)
-	sup, err := NewSupervisor(cfg.DbConfigFile, cfg.ChildEnv)
+	sup, err := NewSupervisor(cfg.DbConfigFile, cfg.ChildEnv, cfg.LogDir)
 	if err != nil {
 		// A malformed database.json is a misconfiguration, not a signal. The
 		// benign "I manage my own database" case is a *missing* file, which

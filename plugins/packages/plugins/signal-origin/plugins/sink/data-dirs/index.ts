@@ -26,6 +26,7 @@ export const signalOriginLogDir = defineDataDir({
   // a record of the PAST — nothing running reads it, so dropping it costs
   // history and never correctness.
   reclaim: { kind: "safe" },
+  logs: [{ pattern: "signal-origin.jsonl", bound: { kind: "file-sink" } }],
 });
 
 export default [signalOriginLogDir];

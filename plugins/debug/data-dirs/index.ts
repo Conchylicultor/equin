@@ -26,6 +26,24 @@ export const monitorLogsDir = defineDataDir({
   // Losing it costs the record of a past host-level incident, never anything a
   // running monitor needs.
   reclaim: { kind: "safe" },
+  logs: [
+    {
+      pattern: "fd-monitor.log",
+      bound: {
+        kind: "rotates-itself",
+        how: "fd-monitor.sh moves it to fd-monitor.log.1 past 200k lines, keeping one",
+      },
+    },
+    {
+      pattern: "**",
+      bound: {
+        kind: "debt",
+        reason:
+          "the other sidequests/monitors jobs (fs-latency, worktree-removal, fseventsd captures) append forever",
+        task: "task-1793827125-kkjagx",
+      },
+    },
+  ],
 });
 
 export default [monitorLogsDir];

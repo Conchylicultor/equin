@@ -34,7 +34,7 @@ func TestStartFailureRecordsReason(t *testing.T) {
 		[]string{"/bin/sh", "-c", "echo initdb-refused-to-run >&2; exit 1"},
 		UnixProbe{Path: filepath.Join(t.TempDir(), "never.sock")},
 	)
-	sup := &Supervisor{services: []*Service{svc}, env: testChildEnv(t)}
+	sup := &Supervisor{services: []*Service{svc}, env: testChildEnv(t), logDir: t.TempDir()}
 
 	start := time.Now()
 	err := sup.StartAll(context.Background())
@@ -73,7 +73,7 @@ func TestReadyTimeoutRecordsReason(t *testing.T) {
 		[]string{"/bin/sh", "-c", "exit 0"},
 		UnixProbe{Path: filepath.Join(t.TempDir(), "never.sock")},
 	)
-	sup := &Supervisor{services: []*Service{svc}, env: testChildEnv(t)}
+	sup := &Supervisor{services: []*Service{svc}, env: testChildEnv(t), logDir: t.TempDir()}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 	defer cancel()
@@ -103,7 +103,7 @@ func TestHealthyServiceSnapshotHasNoErrorKey(t *testing.T) {
 	t.Cleanup(func() { _ = l.Close() })
 
 	svc := newTestService("healthy", []string{"/bin/sh", "-c", "exit 0"}, UnixProbe{Path: socketPath})
-	sup := &Supervisor{services: []*Service{svc}, env: testChildEnv(t)}
+	sup := &Supervisor{services: []*Service{svc}, env: testChildEnv(t), logDir: t.TempDir()}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	// Stop the watchdog goroutine StartAll arms before the test's listener dies.

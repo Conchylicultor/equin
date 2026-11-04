@@ -17,7 +17,6 @@ const INPUTS: PgbouncerConfigInputs = {
   pgPort: 5433,
   listenPort: 6432,
   userlistFile: "/tmp/userlist.txt",
-  logFile: "/tmp/pgbouncer.log",
   pidFile: "/tmp/pgbouncer.pid",
   maxConnections: 500,
 };

@@ -43,6 +43,7 @@ import {
   undeclaredLegacyTargets,
 } from "../core/internal/legacy-layout";
 import type { LegacyRootEntry } from "../core/internal/legacy-layout";
+import { logsClaimedCheck } from "./internal/logs-claimed";
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -1111,6 +1112,7 @@ const legacyLayoutTargetsDeclaredCheck: Check = {
 };
 
 export default [
+  logsClaimedCheck,
   noHardcodedPathsCheck,
   noInlinedWorktreeArtifactsCheck,
   noUndeclaredDataDirsCheck,

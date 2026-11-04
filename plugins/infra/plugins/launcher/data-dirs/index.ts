@@ -3,32 +3,15 @@ import {
   relativeToDataRoot,
 } from "@plugins/infra/plugins/paths/core";
 
-// Everything the gateway daemon owns under the data root. Four directories, and
+// Everything the gateway daemon owns under the data root but its logs (those
+// are `launcher/gateway-logs`'s, a leaf the database plugins can import). Three
+// directories, and
 // each one is handed to the Go process as an explicit flag (`-log-dir`,
 // `-central-routes-file`, `-sockets-dir`) rather than left to a Go-side default
 // derived from the inherited `EQUIN_DIR` — a second, silently-drifting
 // derivation of the same layout is exactly what this registry exists to end.
 // The pid file too (`-pid-file`): the gateway writes its own pid, since under
 // launchd no launcher sees the spawn.
-
-/**
- * The gateway's log directory: its own rotating slog sink (`gateway.log`), the
- * per-worktree channel logs it writes, and the raw stdout/stderr capture the
- * launcher opens for the daemon (`gateway-stdio.log`).
- *
- * Declared as its own entry rather than left to the bare `logs` kind: the kind
- * is a reclaim class, not an owner, and these files have one.
- */
-export const gatewayLogs = defineDataDir({
-  kind: "logs",
-  name: "gateway",
-  owner: "infra/launcher",
-  description:
-    "Gateway daemon logs: its rotating slog sink, per-worktree channel logs, and the raw stdio capture",
-  // Observability output. Losing it costs the record of a past boot, never
-  // anything the running system needs.
-  reclaim: { kind: "safe" },
-});
 
 /**
  * The gateway's routing state: `central-routes.json`, the manifest naming which
@@ -116,4 +99,4 @@ export function gatewayPidFileRelativeToRoot(): string {
   return relativeToDataRoot(gatewayLocks, GATEWAY_PID_FILENAME);
 }
 
-export default [gatewayLogs, gatewayState, gatewayLocks, socketsDir];
+export default [gatewayState, gatewayLocks, socketsDir];

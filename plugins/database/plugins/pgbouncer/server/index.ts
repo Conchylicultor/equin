@@ -4,6 +4,7 @@ export {
   PGBOUNCER_PORT,
   PGBOUNCER_SOCKET_DIR,
   PGBOUNCER_LOG_FILE,
+  PGBOUNCER_SERVICE_NAME,
   pgbouncerPidFileUnder,
 } from "../shared";
 export { pgbouncerConfigFiles } from "./internal/config";

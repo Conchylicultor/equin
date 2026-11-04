@@ -20,6 +20,7 @@ export const buildProgressLogDir = defineDataDir({
   // Observability output. Losing it costs the record of a past build — the
   // build itself is re-runnable and its receipt lives elsewhere.
   reclaim: { kind: "safe" },
+  logs: [{ pattern: "build-progress.jsonl", bound: { kind: "file-sink" } }],
 });
 
 export default [buildProgressLogDir];

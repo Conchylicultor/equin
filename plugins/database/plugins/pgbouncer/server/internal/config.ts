@@ -5,7 +5,6 @@ import {
 } from "@plugins/database/plugins/embedded/server";
 import { renderPgbouncerConfig, type PgbouncerConfigFiles } from "../../core";
 import {
-  PGBOUNCER_LOG_FILE,
   PGBOUNCER_PID_FILE,
   PGBOUNCER_PORT,
   PGBOUNCER_SOCKET_DIR,
@@ -25,7 +24,6 @@ export function pgbouncerConfigFiles(): PgbouncerConfigFiles {
     pgPort: PG_PORT,
     listenPort: PGBOUNCER_PORT,
     userlistFile: PGBOUNCER_USERLIST_FILE,
-    logFile: PGBOUNCER_LOG_FILE,
     pidFile: PGBOUNCER_PID_FILE,
     maxConnections: MAX_CONNECTIONS,
   });

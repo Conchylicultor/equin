@@ -3,10 +3,15 @@ import {
   envName,
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
+  serviceLogTarget,
+  type ServiceLogTarget,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-logs/core";
+import { adoptLegacyLog } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
 import { writeFileSync, rmSync } from "node:fs";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, dirname } from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { connect } from "node:net";
 import {
   PGBOUNCER_PORT,
@@ -14,6 +19,7 @@ import {
   PGBOUNCER_CONFIG_FILE,
   PGBOUNCER_USERLIST_FILE,
   PGBOUNCER_LOG_FILE,
+  PGBOUNCER_LEGACY_LOG_FILE,
   PGBOUNCER_PID_FILE,
 } from "../shared";
 import { pgbouncerConfigFiles } from "../server";
@@ -90,6 +96,65 @@ function pingSocket(timeoutMs: number): Promise<boolean> {
   });
 }
 
+// ─── launch ─────────────────────────────────────────────────
+
+/**
+ * Start the daemon. With the gateway's log relay, PgBouncer runs in the
+ * FOREGROUND (it logs to stderr only when not daemonized), detached into its
+ * own session with stdout/stderr on the relay fd, and this script lets go of it
+ * — so its log is the relay's bounded channel, and the config names no
+ * `logfile`. It still writes its pidfile, which every stop and reattach reads.
+ *
+ * `absent` is a gateway older than the relay running this script (its binary is
+ * only rebuilt by `./equin start`): PgBouncer daemonizes as before, with no log
+ * at all — said out loud, never by quietly reviving the unbounded file.
+ */
+function launch(binary: string, target: ServiceLogTarget): Launched {
+  if (target.kind === "relay") {
+    const adopted = adoptLegacyLog(
+      PGBOUNCER_LEGACY_LOG_FILE,
+      PGBOUNCER_LOG_FILE,
+    );
+    if (adopted.kind === "moved")
+      console.log(
+        `pgbouncer: moved ${PGBOUNCER_LEGACY_LOG_FILE} to ${adopted.to}`,
+      );
+    if (adopted.kind === "slots-full")
+      console.log(
+        `pgbouncer: left ${PGBOUNCER_LEGACY_LOG_FILE} in place: every backup slot of ${PGBOUNCER_LOG_FILE} is taken`,
+      );
+    const child = spawn(binary, [PGBOUNCER_CONFIG_FILE], {
+      detached: true,
+      stdio: ["ignore", target.fd, target.fd],
+    });
+    // A foreground daemon that dies at once (a config it refuses) says why on
+    // the relay, not here: the readiness wait stops at its exit, naming the log.
+    const launched: Launched = { exit: null };
+    child.on("exit", (code, signal) => {
+      launched.exit = signal ?? `code ${code}`;
+    });
+    child.unref();
+    return launched;
+  }
+  console.log(
+    "pgbouncer: this gateway predates the service log relay; running without a log — restart the gateway (./equin start --force) and then pgbouncer",
+  );
+  const result = spawnSync(binary, [PGBOUNCER_CONFIG_FILE, "-d"], {
+    stdio: "pipe",
+  });
+  if (result.status !== 0) {
+    const out = result.stderr?.toString() || result.stdout?.toString() || "";
+    throw new Error(`pgbouncer start failed: ${out}`);
+  }
+  // Daemonized: the -d parent's own exit is the success above.
+  return { exit: null };
+}
+
+/** How the launched process ended, while the readiness wait runs; null while it lives. */
+interface Launched {
+  exit: string | null;
+}
+
 // ─── main lifecycle ─────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -118,19 +183,16 @@ async function main(): Promise<void> {
   console.log(
     `pgbouncer: starting (socket=${PGBOUNCER_SOCKET_DIR}, port=${PGBOUNCER_PORT})`,
   );
-  const result = spawnSync(binary, [PGBOUNCER_CONFIG_FILE, "-d"], {
-    stdio: "pipe",
-  });
-  if (result.status !== 0) {
-    const out = result.stderr?.toString() || result.stdout?.toString() || "";
-    throw new Error(
-      `pgbouncer start failed: ${out} (see ${PGBOUNCER_LOG_FILE})`,
-    );
-  }
+  const launched = launch(binary, serviceLogTarget(process.argv));
 
   // Wait for socket readiness.
   const deadline = Date.now() + READY_TIMEOUT_MS;
   while (Date.now() < deadline) {
+    if (launched.exit !== null) {
+      throw new Error(
+        `pgbouncer exited (${launched.exit}) before it was ready (see ${PGBOUNCER_LOG_FILE})`,
+      );
+    }
     if (await pingSocket(500)) {
       console.log("pgbouncer: ready");
       return;
@@ -138,7 +200,7 @@ async function main(): Promise<void> {
     await Bun.sleep(300);
   }
   throw new Error(
-    `pgbouncer: did not become ready within ${READY_TIMEOUT_MS}ms`,
+    `pgbouncer: did not become ready within ${READY_TIMEOUT_MS}ms (see ${PGBOUNCER_LOG_FILE})`,
   );
 }
 

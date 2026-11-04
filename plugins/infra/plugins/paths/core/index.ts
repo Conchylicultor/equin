@@ -89,6 +89,15 @@ export type {
   ReclaimPolicy,
 } from "./internal/data-dir";
 
+// Log claims: which log files a data dir holds and what bounds each, read by
+// `paths:logs-claimed` and published in each namespace's data-dirs manifest.
+export {
+  LOG_FILE_RE,
+  logPatternMatches,
+  publishedLogClaim,
+} from "./internal/log-claims";
+export type { LogBound, LogClaim } from "./internal/log-claims";
+
 // The one legacy table: where each declared directory USED to sit, and what has
 // to happen to it. Two consumers read it — `paths:no-undeclared-data-dirs`
 // (which derives its grandfathering from the `from` names, so the check's to-do

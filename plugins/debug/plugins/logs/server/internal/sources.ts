@@ -10,7 +10,11 @@ import {
   logsDir,
   logsDirFor,
 } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
-import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
+import {
+  GATEWAY_LOG_BOUND,
+  SERVICE_LOGS_SUBDIR,
+  gatewayLogs,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
 import {
   isNamespace,
   resolveNamespaceAlias,
@@ -84,9 +88,10 @@ export async function logSources(typed: string): Promise<LogSource[]> {
     description:
       "This worktree's backend process: everything it printed on stdout and stderr, captured by the gateway that launched it.",
     path: gatewayLogs.file(`${worktree}.log`),
-    // The gateway rotates this file itself; no sink here declares its bound.
-    bound: null,
+    // The gateway rotates this file itself, at its own bound.
+    bound: GATEWAY_LOG_BOUND,
   });
+  sources.push(...(await serviceSources()));
   sources.push(...host);
 
   for (const file of await listJsonl(dir)) {
@@ -118,11 +123,34 @@ export class InvalidWorktree extends Error {
   }
 }
 
-async function listJsonl(dir: string): Promise<string[]> {
+/**
+ * Each daemon the gateway supervises, by the channel its log relay writes
+ * (`services/<service>.log`). Listed from the folder, not from a list of
+ * services: the gateway's supervisor is the one that knows them.
+ */
+async function serviceSources(): Promise<LogSource[]> {
+  const dir = gatewayLogs.file(SERVICE_LOGS_SUBDIR);
+  return (await listWithSuffix(dir, ".log")).map((file) => {
+    const service = file.slice(0, -".log".length);
+    return {
+      id: service,
+      scope: "service",
+      description: `The ${service} daemon the gateway supervises: everything it printed on stdout and stderr, through the gateway's log relay.`,
+      path: join(dir, file),
+      bound: GATEWAY_LOG_BOUND,
+    };
+  });
+}
+
+function listJsonl(dir: string): Promise<string[]> {
+  return listWithSuffix(dir, ".jsonl");
+}
+
+async function listWithSuffix(dir: string, suffix: string): Promise<string[]> {
   try {
-    return (await readdir(dir)).filter((n) => n.endsWith(".jsonl"));
+    return (await readdir(dir)).filter((n) => n.endsWith(suffix));
   } catch (err) {
-    // A worktree that never logged has no folder yet: it has no files.
+    // A folder nothing has written to yet does not exist: it has no files.
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
   }

@@ -5,6 +5,7 @@ import {
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { join } from "node:path";
 import { pgClusterDir } from "@plugins/database/plugins/embedded/data-dirs";
+import { serviceLogFile } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
 
 // PgBouncer's generated config, userlist, log and pidfile live INSIDE the
 // embedded cluster's directory. That directory has exactly one owner — the
@@ -24,7 +25,22 @@ export const PGBOUNCER_SOCKET_DIR =
 
 export const PGBOUNCER_CONFIG_FILE = join(PG_DIR, "pgbouncer.ini");
 export const PGBOUNCER_USERLIST_FILE = join(PG_DIR, "userlist.txt");
-export const PGBOUNCER_LOG_FILE = join(PG_DIR, "pgbouncer.log");
+
+/** PgBouncer's service name in the gateway's supervisor (`database.json`). */
+export const PGBOUNCER_SERVICE_NAME = "pgbouncer";
+
+/**
+ * PgBouncer's log: its stderr, on the gateway's log relay pipe (the start
+ * script runs it in the foreground) — the gateway's bounded service channel.
+ */
+export const PGBOUNCER_LOG_FILE = serviceLogFile(PGBOUNCER_SERVICE_NAME);
+
+/**
+ * Where PgBouncer wrote its log (`logfile =`) before the relay, unrotated. Read
+ * by the start script's one-shot move of it into {@link PGBOUNCER_LOG_FILE}'s
+ * rotation. Delete with that migration once no machine has the file.
+ */
+export const PGBOUNCER_LEGACY_LOG_FILE = joinAppPath(PG_DIR, "pgbouncer.log");
 
 /**
  * The PgBouncer pidfile under an arbitrary install root. Used by teardown to find

@@ -15,7 +15,7 @@ import {
   gatewayBinary,
   gatewayBuild,
 } from "@plugins/infra/plugins/launcher/deps";
-import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
+import { gatewayLogs } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
 import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
 import {
   MAIN_WORKTREE_NAME,

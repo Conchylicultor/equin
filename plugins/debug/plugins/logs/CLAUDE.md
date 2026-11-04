@@ -7,13 +7,14 @@ one. Design: `research/2026-10-15-debug-logs-v2.md` (prototype
 
 ## The catalog — `debug.logs.catalog` (params `{ worktree }`)
 
-Every log the viewer can open, from four places (`server/internal/sources.ts`,
+Every log the viewer can open, from five places (`server/internal/sources.ts`,
 in this precedence when two share an id):
 
 | scope | what | from |
 |---|---|---|
 | `worktree` | each `defineLogSink` channel — listed even before it has written | `getFileSinks()` (sinks are declared at import) |
 | `backend` | the backend process's own stdout / stderr | the gateway's capture, `logs/gateway/<worktree>.log` |
+| `service` | each daemon the gateway supervises (Postgres, PgBouncer): its stdout / stderr | the gateway's log relay, `logs/gateway/services/<service>.log` (listed from the folder) |
 | `host` | each `defineFileSink` outside the logs folder (the op log, …) | `getFileSinks()` |
 | `undeclared` | a file in the logs folder no sink declares — a browser `clientLog` channel, or a writer that bypassed `defineLogSink` | `readdir` |
 

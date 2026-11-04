@@ -16,6 +16,7 @@ import {
 // that re-exports it. Same reasoning as `data-dir.ts` importing `./paths`.
 import type { DataDir } from "./data-dir";
 import { worktreeArtifacts, worktreesDir } from "./paths";
+import { publishedLogClaim } from "./log-claims";
 
 // What each namespace on this machine DECLARES under the shared data root.
 //
@@ -59,6 +60,13 @@ export interface DeclaredSets {
    * clears is exactly one top-level entry.
    */
   rootEntries: string[];
+  /**
+   * Every log claim, as `<kind>/<name>:<pattern>` ({@link publishedLogClaim}) —
+   * what `paths:logs-claimed` excuses a file by when another live branch
+   * declares it. Absent from a manifest written before claims existed: such a
+   * namespace claims nothing.
+   */
+  logClaims: string[];
 }
 
 export interface DataDirsManifest extends DeclaredSets {
@@ -77,13 +85,17 @@ export function declaredSets(
   declared: ReadonlyMap<string, DataDir>,
 ): DeclaredSets {
   const rootEntries = new Set<string>();
-  for (const dir of declared.values()) {
+  const logClaims: string[] = [];
+  for (const [key, dir] of declared) {
     const legacy = dir.spec.legacyLocation;
     if (legacy) rootEntries.add(legacy.path.split("/")[0]!);
+    for (const claim of dir.spec.logs ?? [])
+      logClaims.push(publishedLogClaim(key, claim.pattern));
   }
   return {
     keys: [...declared.keys()].sort(),
     rootEntries: [...rootEntries].sort(),
+    logClaims: logClaims.sort(),
   };
 }
 
@@ -216,12 +228,15 @@ function parseManifest(raw: string): DataDirsManifest | string {
     Array.isArray(v) && v.every((s) => typeof s === "string");
   if (!isStrings(m.keys)) return "keys is not a string[]";
   if (!isStrings(m.rootEntries)) return "rootEntries is not a string[]";
+  if (m.logClaims !== undefined && !isStrings(m.logClaims))
+    return "logClaims is not a string[]";
   return {
     version: m.version,
     namespace: m.namespace,
     writtenAt: typeof m.writtenAt === "string" ? m.writtenAt : "",
     keys: m.keys,
     rootEntries: m.rootEntries,
+    logClaims: m.logClaims ?? [],
   };
 }
 

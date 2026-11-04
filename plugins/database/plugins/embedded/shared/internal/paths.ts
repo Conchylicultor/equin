@@ -9,6 +9,7 @@ import {
 import { join } from "node:path";
 import { pgClusterDir } from "../../data-dirs";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import { serviceLogFile } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
 
 // Per-instance port override. Default 5433 (dev cluster). A local release preview
 // runs PG alongside the dev cluster on the same host; PG binds no TCP listener,
@@ -55,7 +56,24 @@ export const PG_DATA_DIR = join(PG_DIR, `data-pg${PG_MAJOR}`);
 // plugin reads the SAME env var so both agree on the socket dir. Frozen at import
 // time, like every path constant; the launcher sets it before this module loads.
 export const PG_SOCKET_DIR = readEnv("PG_SOCKET_DIR") ?? join(PG_DIR, "socket");
-export const PG_LOG_FILE = join(PG_DIR, "postgres.log");
+
+/** The cluster's service name in the gateway's supervisor (`database.json`). */
+export const PG_SERVICE_NAME = "postgres";
+
+/**
+ * Postgres's log: its stdout/stderr, which the start script hands the postmaster
+ * as the gateway's log relay pipe — so the file is the gateway's service channel,
+ * bounded by its rotating writer, never a file Postgres owns.
+ */
+export const PG_LOG_FILE = serviceLogFile(PG_SERVICE_NAME);
+
+/**
+ * Where Postgres wrote its own log (`pg_ctl -l`) before the relay, unrotated.
+ * Read by the start script's one-shot move of it into {@link PG_LOG_FILE}'s
+ * rotation, and written only by a cluster started by a gateway that predates
+ * the relay. Delete with that migration once no machine has the file.
+ */
+export const PG_LEGACY_LOG_FILE = joinAppPath(PG_DIR, "postgres.log");
 
 /**
  * The PG postmaster pidfile under an arbitrary install root. Used by teardown to

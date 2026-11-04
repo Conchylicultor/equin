@@ -6,6 +6,7 @@ export {
   PG_DIR,
   PG_LOG_FILE,
   PG_PORT,
+  PG_SERVICE_NAME,
   PG_SOCKET_DIR,
   PG_USER,
   pgPostmasterPidFile,

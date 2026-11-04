@@ -11,6 +11,9 @@ import { liveValue } from "@plugins/network/plugins/live/core";
  * - `worktree` — a `defineLogSink` channel, one file per worktree;
  * - `backend` — the backend process's own stdout / stderr, captured by the
  *   gateway that launched it (rotated by the gateway, not by a sink);
+ * - `service` — a daemon the gateway supervises (Postgres, PgBouncer): its
+ *   stdout / stderr through the gateway's log relay, one file per service,
+ *   rotated by the gateway like the backend's;
  * - `host` — a `defineFileSink` shared by every worktree (the op log, …);
  * - `undeclared` — a file in the worktree's logs folder no sink declares: a
  *   browser `clientLog` channel (the one open-ended family), or a writer that
@@ -19,6 +22,7 @@ import { liveValue } from "@plugins/network/plugins/live/core";
 export const LOG_SCOPES = [
   "worktree",
   "backend",
+  "service",
   "host",
   "undeclared",
 ] as const;

@@ -7,12 +7,21 @@
  * initdb, stale pidfile cleanup, pg_ctl start, the base database and the
  * cluster-wide session settings.
  *
+ * Its output goes to the gateway's log relay: the supervisor appends
+ * `--log-fd <n>` and the postmaster gets that fd as stdout/stderr, so Postgres
+ * never owns a log file (`PG_LOG_FILE` is the gateway's bounded service channel).
+ *
  * Exits 0 on success (PG is running), non-zero on failure.
  */
 import {
   envName,
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
+  serviceLogTarget,
+  type ServiceLogTarget,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-logs/core";
+import { adoptLegacyLog } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
 import { mkdirSync, rmSync, symlinkSync } from "node:fs";
 import {
   existsSync,
@@ -31,6 +40,7 @@ import {
   PG_DATA_DIR,
   PG_SOCKET_DIR,
   PG_LOG_FILE,
+  PG_LEGACY_LOG_FILE,
   PG_PID_FILE,
   MAX_CONNECTIONS,
   applyClusterSettings,
@@ -194,10 +204,53 @@ function dataDirPartial(): boolean {
 // ─── postmaster start ───────────────────────────────────────
 
 /**
+ * Where the postmaster's stdout/stderr go, as `pg_ctl -l` takes it, and the
+ * extra fd pg_ctl must inherit for that path to name the relay pipe.
+ *
+ * `absent` is a gateway older than the relay running this script (its binary is
+ * only rebuilt by `./equin start`): the old unrotated file, said out loud —
+ * refusing would leave the cluster down until someone restarts the gateway.
+ */
+function postmasterLog(target: ServiceLogTarget): {
+  /** What `pg_ctl -l` is given. */
+  path: string;
+  /** The file a person reads the log in. */
+  file: string;
+  stdio: Array<"ignore" | "pipe" | number>;
+} {
+  if (target.kind === "relay") {
+    // Fresh start, so nothing writes the pre-relay file any more: move it into
+    // the new channel's rotation rather than leave it unbounded.
+    const adopted = adoptLegacyLog(PG_LEGACY_LOG_FILE, PG_LOG_FILE);
+    if (adopted.kind === "moved")
+      console.log(`pg: moved ${PG_LEGACY_LOG_FILE} to ${adopted.to}`);
+    if (adopted.kind === "slots-full")
+      console.log(
+        `pg: left ${PG_LEGACY_LOG_FILE} in place: every backup slot of ${PG_LOG_FILE} is taken`,
+      );
+    // pg_ctl runs `exec postgres … >> "<path>" 2>&1` in a shell, so the path
+    // must name the inherited relay fd; it is passed as pg_ctl's fd 3.
+    return {
+      path: "/dev/fd/3",
+      file: PG_LOG_FILE,
+      stdio: ["ignore", "pipe", "pipe", target.fd],
+    };
+  }
+  console.log(
+    `pg: this gateway predates the service log relay; logging to the unrotated ${PG_LEGACY_LOG_FILE} — restart the gateway (./equin start --force) and then the cluster`,
+  );
+  return {
+    path: PG_LEGACY_LOG_FILE,
+    file: PG_LEGACY_LOG_FILE,
+    stdio: ["ignore", "pipe", "pipe"],
+  };
+}
+
+/**
  * Bring the postmaster up: initdb on a fresh (or half-written) data dir, then
  * `pg_ctl start`. Only reached when nothing is serving yet.
  */
-function startPostmaster(binDir: string): void {
+function startPostmaster(binDir: string, target: ServiceLogTarget): void {
   // Partial data dir (interrupted initdb) — nuke and redo.
   if (dataDirPartial()) {
     console.log("pg: data dir partial (no PG_VERSION); cleaning and re-initdb");
@@ -241,6 +294,7 @@ function startPostmaster(binDir: string): void {
   // 5433, another release's, or another preview's. The GUC is
   // postmaster-start-only, so it takes effect only on a full cluster (re)start.
   // PGHOST/PGPORT/PGUSER in env so pg_ctl's -w probe finds the socket.
+  const log = postmasterLog(target);
   console.log(`pg: starting (socket=${PG_SOCKET_DIR}, port=${PG_PORT})`);
   const result = spawnSync(
     join(binDir, "pg_ctl"),
@@ -249,7 +303,7 @@ function startPostmaster(binDir: string): void {
       "-D",
       PG_DATA_DIR,
       "-l",
-      PG_LOG_FILE,
+      log.path,
       "-o",
       `-k ${PG_SOCKET_DIR} -p ${PG_PORT} -c max_connections=${MAX_CONNECTIONS} -c listen_addresses=''`,
       "-w",
@@ -257,7 +311,7 @@ function startPostmaster(binDir: string): void {
       String(READY_TIMEOUT_SEC),
     ],
     {
-      stdio: "pipe",
+      stdio: log.stdio,
       env: {
         ...process.env,
         PGHOST: PG_SOCKET_DIR,
@@ -269,7 +323,7 @@ function startPostmaster(binDir: string): void {
   if (result.status !== 0) {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; SpawnSyncReturns fields may be null
     const out = result.stderr?.toString() || result.stdout?.toString() || "";
-    throw new Error(`pg_ctl start failed: ${out} (see ${PG_LOG_FILE})`);
+    throw new Error(`pg_ctl start failed: ${out} (see ${log.file})`);
   }
 }
 
@@ -348,6 +402,7 @@ async function main(): Promise<void> {
   // below this line is legal as root.
   assertNotRoot();
 
+  const logTarget = serviceLogTarget(process.argv);
   const binDir = resolveBinDir();
   ensureSymlinks(binDir);
 
@@ -355,7 +410,7 @@ async function main(): Promise<void> {
   // still fall through to the base-database and settings checks below.
   const reattached = existsSync(PG_PID_FILE) && (await pingSocket(1500));
   if (reattached) console.log("pg: embedded PG already running; reattaching");
-  else startPostmaster(binDir);
+  else startPostmaster(binDir, logTarget);
 
   await ensureClusterState();
 

@@ -39,12 +39,14 @@ import { getHealthReady } from "@plugins/infra/plugins/health/core";
 import {
   PG_SOCKET_DIR,
   PG_PORT,
+  PG_SERVICE_NAME,
   PG_USER,
   pgPostmasterPidFile,
 } from "@plugins/database/plugins/embedded/server";
 import {
   PGBOUNCER_SOCKET_DIR,
   PGBOUNCER_PORT,
+  PGBOUNCER_SERVICE_NAME,
   pgbouncerPidFileUnder,
 } from "@plugins/database/plugins/pgbouncer/server";
 import { dbConfigDir } from "@plugins/database/data-dirs";
@@ -53,11 +55,11 @@ import {
   CENTRAL_ROUTES_FILENAME,
   GATEWAY_PID_FILENAME,
   gatewayLocks,
-  gatewayLogs,
   gatewayPidFileRelativeToRoot,
   gatewayState,
   socketsDir,
 } from "../../data-dirs";
+import { gatewayLogs } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
 import { listenFlag } from "./listen";
 // Own-plugin, so relative — the `@plugins/infra/plugins/launcher/core` alias
 // would name this plugin from inside itself.
@@ -235,7 +237,7 @@ export function hasPgBouncerPackage(repoRoot: AppPath): boolean {
 
 export function pgbouncerService(repoRoot: AppPath) {
   return {
-    name: "pgbouncer",
+    name: PGBOUNCER_SERVICE_NAME,
     start: [
       "bun",
       "run",
@@ -261,7 +263,9 @@ export function ensureDatabaseConfig(
     try {
       const existing = JSON.parse(readFileSync(DATABASE_CONFIG_PATH, "utf-8"));
       const services: Array<{ name: string }> = existing.services ?? [];
-      const hasPgBouncer = services.some((s) => s.name === "pgbouncer");
+      const hasPgBouncer = services.some(
+        (s) => s.name === PGBOUNCER_SERVICE_NAME,
+      );
       let changed = false;
       let nextServices = services;
       if (!hasPgBouncer && hasPgBouncerPackage(repoRoot)) {
@@ -307,7 +311,7 @@ export function ensureDatabaseConfig(
         ...(hasPgBouncer ? { pgbouncer: pgbouncerConnection() } : {}),
         services: [
           {
-            name: "postgres",
+            name: PG_SERVICE_NAME,
             start: ["bun", "run", startScript],
             ready: {
               unix: join(PG_SOCKET_DIR, `.s.PGSQL.${PG_PORT}`),
@@ -367,7 +371,7 @@ export function writeReleaseDatabaseConfig(
     ...(hasPgBouncer ? { pgbouncer: pgbouncerConnection() } : {}),
     services: [
       {
-        name: "postgres",
+        name: PG_SERVICE_NAME,
         start: [pgStartBin],
         ready: {
           unix: join(PG_SOCKET_DIR, `.s.PGSQL.${PG_PORT}`),
@@ -377,7 +381,7 @@ export function writeReleaseDatabaseConfig(
       ...(hasPgBouncer
         ? [
             {
-              name: "pgbouncer",
+              name: PGBOUNCER_SERVICE_NAME,
               start: [pgbouncerStartBin],
               ready: {
                 unix: join(PGBOUNCER_SOCKET_DIR, `.s.PGSQL.${PGBOUNCER_PORT}`),
@@ -716,7 +720,7 @@ export async function awaitPgReady(
         const supervisorErr =
           opts.port === undefined
             ? null
-            : await readServiceError(opts.port, "postgres");
+            : await readServiceError(opts.port, PG_SERVICE_NAME);
         throw new Error(
           `Postgres did not become reachable within ${deadlineMs}ms` +
             (supervisorErr === null

@@ -102,7 +102,6 @@ export interface PgbouncerConfigInputs {
   readonly pgPort: number;
   readonly listenPort: number;
   readonly userlistFile: string;
-  readonly logFile: string;
   readonly pidFile: string;
   /** The cluster's `max_connections`, which the lanes are budgeted against. */
   readonly maxConnections: number;
@@ -123,6 +122,10 @@ export interface PgbouncerConfigFiles {
  * its own. And no `min_pool_size`: it would pin idle server connections in
  * every (database, lane) pool used in the last hour — worktrees, forks,
  * throwaway test databases — against the lanes' cluster caps.
+ *
+ * And no `logfile`: PgBouncer runs in the foreground with its stderr on the
+ * gateway's log relay (the start script), so its log is the gateway's bounded
+ * service channel, never a file it appends to forever.
  */
 export function renderPgbouncerConfig(
   inputs: PgbouncerConfigInputs,
@@ -146,7 +149,6 @@ pool_mode = transaction
 max_client_conn = 200
 auth_type = trust
 auth_file = ${inputs.userlistFile}
-logfile = ${inputs.logFile}
 pidfile = ${inputs.pidFile}
 `;
   const userlist = LANES.map(
