@@ -34,12 +34,32 @@ export interface FeedCut {
  * session, on a session lost while waiting, and past the deadline — a cut
  * that cannot be proven is never reported as one.
  */
-export async function feedCut(): Promise<FeedCut> {
-  const cutXid = await snapshotWatermark(db);
-  const token = `cut-${globalThis.crypto.randomUUID()}`;
-  // Registered before the NOTIFY commits, so its delivery cannot be missed.
-  const arrived = awaitFeedBarrier(token, FEED_CUT_DEADLINE_MS);
-  await db.execute(sql`SELECT pg_notify(${BARRIER_CHANNEL}, ${token})`);
-  await arrived;
-  return { cutXid };
+export const feedCut: () => Promise<FeedCut> = createFeedCut({
+  watermark: () => snapshotWatermark(db),
+  barrier: awaitFeedBarrier,
+  notify: async (token) => {
+    await db.execute(sql`SELECT pg_notify(${BARRIER_CHANNEL}, ${token})`);
+  },
+  deadlineMs: FEED_CUT_DEADLINE_MS,
+});
+
+/** What a feed cut runs on — injected so a suite can stall the NOTIFY. */
+export interface FeedCutDeps {
+  watermark: () => Promise<string>;
+  barrier: (token: string, deadlineMs: number) => Promise<void>;
+  notify: (token: string) => Promise<void>;
+  deadlineMs: number;
+}
+
+export function createFeedCut(deps: FeedCutDeps): () => Promise<FeedCut> {
+  return async () => {
+    const cutXid = await deps.watermark();
+    const token = `cut-${globalThis.crypto.randomUUID()}`;
+    // Registered before the NOTIFY commits, so its delivery cannot be missed;
+    // awaited together with it, so a deadline that passes while the NOTIFY is
+    // still pending rejects THIS call instead of escaping as unhandled.
+    const arrived = deps.barrier(token, deps.deadlineMs);
+    await Promise.all([deps.notify(token), arrived]);
+    return { cutXid };
+  };
 }

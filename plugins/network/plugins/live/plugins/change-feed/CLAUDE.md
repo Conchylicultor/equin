@@ -433,8 +433,10 @@ changes and end marker arrived first. It is refused with no session, on a
 session lost or a listener stopped while waiting, and past 1.5 s. The epoch
 handoff's old half (live-state-snapshot) is its consumer; `feedListening()`
 (resolves once the first LISTEN session is up) gates its successor's replay.
-`live_state_handoff` is denylisted like the other plumbing tables. Pinned by
-`barrier.test.ts`.
+`live_state_handoff` is denylisted like the other plumbing tables. The barrier
+wait and the NOTIFY are awaited together, so a deadline that passes while the
+NOTIFY is still pending rejects the cut, never the process. Pinned by
+`barrier.test.ts` and `cut.test.ts`.
 
 ## One entry, one router
 
