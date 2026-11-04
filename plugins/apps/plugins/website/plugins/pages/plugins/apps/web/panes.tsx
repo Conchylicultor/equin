@@ -38,7 +38,7 @@ function AppsBody() {
       >
         <AppsSearch query={query} onQueryChange={setQuery} />
       </WebsiteHero>
-      <WebsiteBand rhythm="page-body">
+      <WebsiteBand section="gallery" rhythm="page-body">
         <AppsGallery
           query={query}
           category={category}

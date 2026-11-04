@@ -12,7 +12,7 @@ import { WebsiteBand } from "./website-band";
  */
 export function WebsiteSoon() {
   return (
-    <WebsiteBand rhythm="page" className="text-center">
+    <WebsiteBand section="soon" rhythm="page" className="text-center">
       <Stack gap="xs" align="center">
         <Text variant="eyebrow" tone="muted" className="font-semibold">
           More details soon

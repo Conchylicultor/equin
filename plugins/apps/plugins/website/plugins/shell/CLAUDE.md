@@ -12,6 +12,13 @@ and the three chrome pieces a page is built out of.
   the same file: the page's vertical score is a designed scale of its own, above
   what the density spacing ramp can say, so a band names its role and never
   writes a number.
+- **Section reach** — how far readers get, per page. Every `WebsiteBand` takes a
+  required `section` name and records `section_reach` (the deploy analytics'
+  cookieless tracker) once per visit when it reaches the upper half of the
+  screen, its `section` prop spelled `<page>/<section>` (`landing/layers`). The page
+  comes from `WebsiteChrome` (the pane id without its `website-` prefix), so a band names only itself; a page drawing its own scene calls
+  `useWebsiteSectionReach` for each part it wants counted. Read it in the Deploy
+  app's Analytics tab: Events → `section_reach`, expanded by `section`.
 - **`WebsiteHero`** — the heading every page opens with: a centred sentence
   with its accent half painted through the azure→cyan gradient, the lede under
   it, and the ambient glow behind both (`website-hero.css`). `kind="home"` is
@@ -93,13 +100,13 @@ hover.
     - `ThemeEngine.Theme` "equin"
     - `ThemeEngine.SubTheme` "equin document"
     - `ThemeEngine.SubTheme` "equin page heading"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×6
     - `primitives/css/spacing` ×3
+    - `apps/deploy/analytics/collect` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
     - `apps-core.Apps`
-    - `apps/deploy/analytics/collect.AnalyticsTracker`
     - `layouts/full-pane.FullPane`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/coords.Placed`
@@ -113,6 +120,7 @@ hover.
   - Exports (types): `WebsiteBandRhythm`
   - Exports (values):
     - `landingPane`
+    - `useWebsiteSectionReach`
     - `Website`
     - `WebsiteArrow`
     - `WebsiteBand`

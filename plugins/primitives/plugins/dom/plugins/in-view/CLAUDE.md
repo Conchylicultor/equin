@@ -68,7 +68,9 @@ allowlisting a copy.
     - `useInView`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/analytics/collect`
     - `apps/website/pages/foundations`
+    - `apps/website/pages/vision`
     - `conversations/agent-thread`
     - `conversations/conversation-view/jsonl-viewer`
     - `hints`

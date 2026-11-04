@@ -29,7 +29,7 @@ const githubIcon = brand("github");
  */
 export function WebsiteFooter() {
   return (
-    <WebsiteBand as="footer" divider rhythm="footer">
+    <WebsiteBand section="footer" as="footer" divider rhythm="footer">
       <Cluster justify="between" gap="md">
         <WordmarkText variant="body" className="text-faint-foreground" />
         <Inline gap="lg">

@@ -1,0 +1,639 @@
+/* The vision page, ported from the prototype (proto-1792811767-vd1ygi) at its picked options
+   (direction zoom · variant b · fit b · copy paragraphs · os orbit).
+
+   The night palette below is the scene's own: a starfield, dark discs and the blues, teals and violets
+   its drawings glow in. It is one illustration's fixed palette — the same in light and dark mode, because
+   the picture does not change with the mode — so it is declared once, here, and read by everything in the
+   zoom through these variables (the drawings' markup names them through `internal/kit/palette.ts`).
+   Nothing outside `.vision-zoom` reads them. The page's own text (the cards, the layer strip) reads the
+   site's theme tokens. */
+.vision-zoom {
+  --vz-dim: #3d6fb8;
+  --vz-haze: #7fa6d6;
+  --vz-deep: #2c4f86;
+  --vz-ring: #2c5a9e;
+  --vz-sky: #93c5fd;
+  --vz-azure: #60a5fa;
+  --vz-ice: #7dd3fc;
+  --vz-teal: #5eead4;
+  --vz-cyan: #22d3ee;
+  --vz-aqua: #67e8f9;
+  --vz-violet: #a78bfa;
+  --vz-indigo: #818cf8;
+  --vz-periwinkle: #a5b4fc;
+  --vz-blue: #3b82f6;
+  --vz-pale: #cfe1ff;
+  --vz-ray: #bcd2ff;
+  --vz-glow: #bae6fd;
+  --vz-frost: #e0f2fe;
+  --vz-moon: #e6f0ff;
+  --vz-white: #ffffff;
+  --vz-ink: #f4f4f5;
+  --vz-pop: #0a1020;
+  --vz-key-black: #0b1222;
+  --vz-disc-core: #12306b;
+  --vz-disc-mid: #0e1219;
+  --vz-disc-edge: #07090e;
+  --vz-star-blue: #dbeafe;
+  --vz-star-warm: #ffe2b8;
+
+  position: relative;
+}
+
+/* ---- the hero: the first screen, dissolving into the zoom as the page moves (--h, 0 → 1) ---- */
+.vision-zoom-hero {
+  position: relative;
+  z-index: 5;
+  min-height: calc(var(--screen, 100vh) - var(--vs-head, 0px));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* with the heading's own band padding (72px over, 36px under), the heading sits where the design centres it */
+  padding: 0 0 108px;
+  opacity: calc(1 - var(--h, 0));
+  transform: translateY(calc(var(--h, 0) * -40px));
+  pointer-events: none;
+}
+.vision-zoom-hero > * {
+  pointer-events: auto;
+}
+
+/* ---- the ladder, pulled up under the hero so the zoom starts from it ---- */
+.vision-zoom .vs {
+  position: relative;
+  margin-top: calc(-1 * var(--screen, 100vh) + var(--vs-head, 0px));
+}
+
+/* The pinned stage: one screen, behind the copy. */
+.vision-zoom .vs-stage {
+  position: sticky;
+  top: 0;
+  z-index: 0;
+  height: var(--screen, 100vh);
+  width: 100%;
+  overflow: hidden;
+  opacity: calc(0.28 + 0.72 * var(--h, 0));
+  -webkit-mask-image: linear-gradient(#000 82%, transparent);
+  mask-image: linear-gradient(#000 82%, transparent);
+}
+
+/* The copy scrolls over the stage: pulled up by one screen. */
+.vision-zoom .vs-track {
+  position: relative;
+  z-index: 10;
+  margin-top: calc(-1 * var(--screen, 100vh));
+  pointer-events: none;
+}
+.vision-zoom .vs-step {
+  min-height: calc(var(--screen, 100vh) * 1.1);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 clamp(16px, 6vw, 80px);
+}
+.vision-zoom .vs-step:first-child {
+  min-height: calc(var(--screen, 100vh) * 2);
+  padding-top: calc(var(--screen, 100vh) * 0.5);
+  padding-bottom: calc(var(--screen, 100vh) * 0.3);
+}
+.vision-zoom .vs-step:last-child {
+  min-height: calc(var(--screen, 100vh) * 1.3);
+}
+/* copy: plain text on the page, no card */
+.vision-zoom .vs-card {
+  pointer-events: auto;
+  max-width: 420px;
+  text-shadow:
+    0 1px 18px color-mix(in srgb, var(--background) 90%, transparent),
+    0 0 2px color-mix(in srgb, var(--background) 80%, transparent);
+  opacity: 0.35;
+  transform: translateY(8px);
+  transition:
+    opacity 0.4s,
+    transform 0.4s;
+}
+.vision-zoom .vs-step.is-on .vs-card {
+  opacity: 1;
+  transform: none;
+}
+.vision-zoom .vs-card-title {
+  font-size: clamp(24px, 1.4vw + 16px, 34px);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  margin: 0 0 8px;
+  color: var(--foreground);
+}
+.vision-zoom .vs-card-body {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+}
+.vision-zoom .vs-card-body p {
+  margin: 0;
+}
+.vision-zoom .vs-card-body p + p {
+  margin-top: 12px;
+}
+/* two plain paragraphs, the past quieter than the present */
+.vision-zoom .vs-before {
+  color: var(--muted-foreground);
+}
+.vision-zoom .vs-after {
+  color: var(--foreground);
+}
+
+/* narrow: scene on top, card at the bottom */
+@media (max-width: 999px) {
+  .vision-zoom .vs-step {
+    justify-content: center;
+  }
+  .vision-zoom .vs-card {
+    position: relative;
+    top: calc(var(--screen, 100vh) * 0.3);
+    max-width: 520px;
+    width: 100%;
+  }
+  .vision-zoom .vs-card-body {
+    font-size: 14.5px;
+  }
+}
+
+/* ---- the layer strip, pinned under the site header while the ladder is read ---- */
+.vision-zoom .vs-strip-pin {
+  position: sticky;
+  top: 0;
+  z-index: 59;
+  height: 0;
+}
+.vision-zoom .vs-strip {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: absolute;
+  top: var(--vs-head, 0px);
+  left: 0;
+  right: 0;
+  padding: 0 max(var(--space-2xl), calc((100% - var(--website-measure)) / 2));
+  height: 34px;
+  background: color-mix(in srgb, var(--background), transparent 55%);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition:
+    opacity 0.3s,
+    transform 0.3s;
+}
+.vision-zoom .vs-strip.is-live {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.vision-zoom .vs-strip-seg {
+  display: flex;
+  gap: 4px;
+  flex: 0 1 260px;
+  min-width: 140px;
+}
+.vision-zoom .vs-strip-seg button {
+  flex: 1;
+  height: 18px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  position: relative;
+}
+.vision-zoom .vs-strip-seg button::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 8px;
+  height: 2px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+.vision-zoom .vs-strip-seg button::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  height: 2px;
+  border-radius: 2px;
+  width: calc(var(--fill, 0) * 100%);
+  background: linear-gradient(90deg, var(--primary), var(--chart-1));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--primary) 36%, transparent);
+}
+.vision-zoom .vs-strip-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--vz-azure);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vision-zoom .vs-strip-label b {
+  color: var(--faint-foreground);
+  font-weight: 600;
+  margin-right: 8px;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 640px) {
+  .vision-zoom .vs-strip {
+    gap: 10px;
+    padding-inline: 20px;
+  }
+  .vision-zoom .vs-strip-seg {
+    flex-basis: 120px;
+    min-width: 100px;
+  }
+}
+
+/* ---- the zoom's stage: a starfield, and the frames nested in the scene ---- */
+.vision-zoom .z-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.vision-zoom .z-bg i {
+  position: absolute;
+  left: -100%;
+  top: -100%;
+  width: 300%;
+  height: 300%;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+  background-image:
+    radial-gradient(1.2px 1.2px at 40px 60px, var(--vz-white), transparent),
+    radial-gradient(1px 1px at 190px 30px, var(--vz-star-blue), transparent),
+    radial-gradient(1.6px 1.6px at 260px 210px, var(--vz-white), transparent),
+    radial-gradient(1px 1px at 90px 250px, var(--vz-star-warm), transparent),
+    radial-gradient(1.2px 1.2px at 330px 120px, var(--vz-star-blue), transparent),
+    radial-gradient(1px 1px at 150px 160px, var(--vz-white), transparent);
+  background-size: 380px 380px;
+}
+.vision-zoom .z-bg i:nth-child(2) {
+  background-position: 120px 70px;
+  background-size: 460px 460px;
+}
+.vision-zoom .z-bg i:nth-child(3) {
+  background-position: 220px 190px;
+  background-size: 310px 310px;
+}
+.vision-zoom .z-scene {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+.vision-zoom .z-frame {
+  position: absolute;
+  left: -500px;
+  top: -500px;
+  width: 1000px;
+  height: 1000px;
+  transform-origin: 50% 50%;
+}
+.vision-zoom .z-frame svg {
+  display: block;
+  overflow: visible;
+}
+.vision-zoom svg text {
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+/* ---- the drawing's vocabulary (internal/kit/night.ts) ---- */
+/* a primitive's glyph; the shared blocks light up together, one kind after another */
+.vision-zoom .zk {
+  fill: none;
+  stroke: var(--vz-ink);
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  --zb: var(--zc);
+  --zl: var(--vz-white);
+  animation: vz-lit 8s infinite;
+}
+.vision-zoom .zk-list {
+  --zc: var(--vz-cyan);
+  animation-delay: 0s;
+}
+.vision-zoom .zk-diff {
+  --zc: var(--vz-blue);
+  animation-delay: -6s;
+}
+.vision-zoom .zk-keys {
+  --zc: var(--vz-sky);
+  animation-delay: -4s;
+}
+.vision-zoom .zk-chip {
+  --zc: var(--vz-teal);
+  animation-delay: -2s;
+}
+.vision-zoom .zb-box {
+  stroke: none;
+}
+.vision-zoom .zb-rim {
+  fill: none;
+  stroke: var(--vz-azure);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.8;
+}
+/* a glowing line: the wide faint glow, the thin line over it */
+.vision-zoom .zb-g {
+  fill: none;
+  stroke-width: 7px;
+  opacity: 0.16;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+}
+.vision-zoom .zb-l {
+  fill: none;
+  stroke-width: 1.4px;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+}
+.vision-zoom .zb-f {
+  fill-opacity: 0.06;
+}
+.vision-zoom .zb-g.zb-f {
+  fill: none;
+}
+.vision-zoom .zb-dot {
+  stroke: none;
+}
+.vision-zoom .zb-halo {
+  stroke: none;
+  opacity: 0.14;
+}
+.vision-zoom .zb-pulsering {
+  fill: none;
+  stroke: var(--vz-sky);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zb-ring {
+  fill: none;
+  stroke: var(--vz-ring);
+  stroke-width: 1px;
+  stroke-dasharray: 3 6;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zb-bead {
+  fill: var(--vz-disc-mid);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zb-note {
+  fill: color-mix(in srgb, var(--vz-azure) 5%, transparent);
+  stroke: var(--vz-dim);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zb-pill {
+  fill: color-mix(in srgb, var(--vz-azure) 16%, transparent);
+  stroke: var(--vz-azure);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zb-pill.zb-dim {
+  fill: color-mix(in srgb, var(--vz-azure) 5%, transparent);
+  stroke: var(--vz-dim);
+}
+.vision-zoom .zb-pilltxt {
+  fill: var(--vz-ink);
+  font-weight: 600;
+}
+.vision-zoom .zb-wnote {
+  fill: color-mix(in srgb, var(--vz-pop) 92%, transparent);
+}
+/* chapters 1–2: a click's ripple, link chips, the pointer */
+.vision-zoom .zb-ripple {
+  fill: none;
+  stroke: var(--vz-frost);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zb-chip {
+  fill-opacity: 0.14;
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zb-cursor {
+  fill: var(--vz-ink);
+  stroke: var(--vz-disc-mid);
+  stroke-width: 1.2px;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+/* chapters 3–4: other people's little systems */
+.vision-zoom .zb-mini {
+  fill: color-mix(in srgb, var(--vz-sky) 6%, transparent);
+  stroke-width: 1.2px;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zb-breath {
+  animation: vz-breath 3.6s ease-in-out infinite;
+}
+.vision-zoom .zb-pop,
+.vision-zoom .zb-dockbg {
+  fill: var(--vz-pop);
+  stroke: none;
+}
+/* scene links: draw themselves (stroke-dashoffset, driven by the timeline) */
+.vision-zoom .zs-link,
+.vision-zoom .zs-glow {
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 100 100;
+  stroke-dashoffset: 100;
+}
+.vision-zoom .zs-link {
+  stroke-width: 2.5px;
+}
+.vision-zoom .zs-glow {
+  stroke-width: 10px;
+  opacity: 0.18;
+}
+.vision-zoom .zb-twinkle {
+  animation: vz-pulse 2.4s ease-in-out infinite;
+}
+.vision-zoom .zb-glow {
+  stroke: none;
+}
+/* chapter 2's abstract apps */
+.vision-zoom .zb-thick {
+  stroke-width: 4px;
+}
+.vision-zoom .zb-g.zb-thick {
+  stroke-width: 10px;
+}
+.vision-zoom .zb-sel {
+  fill: color-mix(in srgb, var(--vz-sky) 8%, transparent);
+  stroke: none;
+}
+.vision-zoom .zb-bubble {
+  fill-opacity: 0.1;
+  stroke-opacity: 0.7;
+  stroke-width: 1.2px;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zb-mapbg {
+  fill: color-mix(in srgb, var(--vz-teal) 5%, transparent);
+  stroke: none;
+}
+.vision-zoom .zb-park {
+  fill: color-mix(in srgb, var(--vz-teal) 12%, transparent);
+  stroke: none;
+}
+.vision-zoom .zb-pinbob {
+  animation: vz-pinbob 2.2s ease-in-out infinite;
+}
+.vision-zoom .zb-note2 {
+  fill: color-mix(in srgb, var(--vz-cyan) 55%, transparent);
+  stroke: var(--vz-aqua);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zb-key {
+  fill: color-mix(in srgb, var(--vz-moon) 10%, transparent);
+  stroke: var(--vz-haze);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zb-bkey {
+  fill: var(--vz-key-black);
+  stroke: var(--vz-dim);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zb-fall {
+  animation: vz-fall 3.6s linear infinite;
+}
+/* chapter 2: the typed link is a line of text, not a drawn link */
+.vision-zoom .zs-link.zb-typed {
+  stroke-width: 1.4px;
+}
+.vision-zoom .zs-glow.zb-typed {
+  stroke-width: 7px;
+  opacity: 0.16;
+}
+
+/* ---- chapters 3–5: orbits (chapters/os-orbit.ts, shared.ts, globe.ts) ---- */
+/* Frame 3 is drawn at full size and shrunk by the zoom (4.5× by chapter 4), its lines with it: the plain
+   shapes thicken theirs by --zo-k as it does, so they read as boldly as everyone else's orbits. A plain
+   app is small on screen (~25px across, not ~180 like a window of chapter 3): its glow and lines are
+   sized for that. */
+.vision-zoom .zo-ring {
+  fill: none;
+  stroke: var(--vz-ring);
+  stroke-width: 1px;
+  stroke-dasharray: 2 7;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zo-plain .zb-l {
+  stroke-width: calc(1.1px * var(--zo-k, 1));
+}
+.vision-zoom .zo-plain .zb-g {
+  stroke-width: calc(2.5px * var(--zo-k, 1));
+}
+.vision-zoom .zo4-ring {
+  fill: none;
+  stroke: var(--vz-ring);
+  stroke-width: calc(1px * var(--zo4-k, 1));
+  stroke-dasharray: 2 6;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.8;
+}
+.vision-zoom .zo4-trail {
+  fill: none;
+  stroke-width: calc(1.2px * var(--zo4-k, 1));
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zb-shared .zb-l {
+  stroke-width: calc(1.1px * var(--zo4-k, 1));
+}
+.vision-zoom .zb-shared .zb-g {
+  stroke-width: calc(2.5px * var(--zo4-k, 1));
+}
+.vision-zoom .zo5-arc {
+  fill: none;
+  stroke-width: calc(1.3px * var(--zo5-k, 1));
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.vision-zoom .zb-shared-back .zb-ring {
+  stroke-width: calc(1px * var(--zo5-k, 1));
+}
+
+@keyframes vz-breath {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes vz-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes vz-lit {
+  0% {
+    stroke: var(--zb);
+    stroke-width: 1.5px;
+  }
+  4%,
+  22% {
+    stroke: var(--zl);
+    stroke-width: 3.2px;
+  }
+  30%,
+  100% {
+    stroke: var(--zb);
+    stroke-width: 1.5px;
+  }
+}
+@keyframes vz-pinbob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+@keyframes vz-fall {
+  from {
+    transform: translateY(-60px);
+  }
+  to {
+    transform: translateY(300px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vision-zoom .zk,
+  .vision-zoom .zb-breath,
+  .vision-zoom .zb-fall,
+  .vision-zoom .zb-pinbob {
+    animation: none;
+  }
+  .vision-zoom .vs-strip {
+    transition: none;
+  }
+}

@@ -83,7 +83,7 @@ The dashboard's Events panel expands an event into these rows.
 
 ## Plugin reference
 
-- Description: The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report query, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+- Description: The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report query, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
 - Server:
   - Contributes:
     - `change-feed-exclusion` "analytics_hits"
@@ -115,12 +115,15 @@ The dashboard's Events panel expands an event into these rows.
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpointOver`
+    - `primitives/dom/in-view.createInViewWatcher`
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/pane.currentRoutePath`
     - `primitives/pane.usePathname`
   - Exports (values):
     - `AnalyticsTracker`
+    - `observeSectionReach`
     - `track`
+    - `useSectionReach`
 - Core:
   - Uses:
     - `apps/deploy/analytics/host-only.HOST_ONLY_PREFIX`
@@ -250,6 +253,7 @@ The dashboard's Events panel expands an event into these rows.
     - `apps/website/improve`
     - `apps/website/pages/download`
     - `apps/website/pages/foundations`
+    - `apps/website/pages/vision`
     - `apps/website/shell`
   - Endpoint callers:
     - `deploy-secrets`

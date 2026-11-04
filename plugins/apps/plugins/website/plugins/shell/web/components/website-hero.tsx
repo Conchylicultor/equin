@@ -81,6 +81,7 @@ export function WebsiteHero({
         className="website-hero-wash"
       />
       <WebsiteBand
+        section="hero"
         rhythm={home ? "hero" : "page-hero"}
         className="relative text-center"
       >

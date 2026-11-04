@@ -62,9 +62,9 @@ different need, extend the primitive rather than allowlisting a copy.
     - `useResizeObserver`
     - `useResizeObserverSet`
 - Cross-plugin:
-  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×22
-    - `apps` ×9
+    - `apps` ×10
     - `shell` ×2
     - `active-data/go`
     - `conversations/conversation-view/jsonl-viewer`

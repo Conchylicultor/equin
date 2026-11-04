@@ -52,7 +52,9 @@ The one palette the theme does not carry is the Foundations page's iceberg
 (`pages/foundations`): a drawing whose sunlit sky and black abyss are the
 picture itself, the same in either mode. It declares its palette once, scoped to
 the scene, and documents why there; it is not a precedent for a component's
-colour.
+colour. The Vision page's zoom (`pages/vision`) is the second such picture —
+a night sky whose drawings glow in their own blues — declared and documented
+the same way.
 
 Light/dark is still global — per-scope dark hasn't landed — so the site follows
 the desktop's mode; the dark values are the design and the light ones a readable
@@ -89,7 +91,7 @@ everywhere a reader can see it; the old name survives only as an internal identi
       - **`foundations`** — The technical foundations page of the equin website: the /website/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop…
       - **`guide`** — The getting-started guide of the equin website: the /website/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the…
       - **`story`** — The story page of the equin website: the /website/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into.
-      - **`vision`** — The vision page of the equin website: the /website/vision pane on the vision for applications (a placeholder heading for now), its Vision nav link, and the WebsiteVision.Section slot the page is…
+      - **`vision`** — The vision page of the equin website: the /website/vision pane on the vision for applications — one Powers of Ten zoom-out on a dark starfield, six chapter cards scrolling over a pinned stage (an…
   - **`promo-film`** — The equin showcase film (script: the Video page's Script v2): the real app recorded as one continuous session on the seeded promo-film composition (e2e/record.ts), ending on equin's desktop mode…
     - Plugins:
       - **`seed`** — The showcase film's seed: POST /api/promo-film/seed writes the film's curated story (the piano wiki, the practice-file conversation and its transcript and workspace files, a tidy task list, the…

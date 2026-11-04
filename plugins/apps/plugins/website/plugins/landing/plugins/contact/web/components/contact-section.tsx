@@ -30,7 +30,7 @@ const CARD_CLASS = "rounded-2xl shadow-none";
  */
 export function ContactSection() {
   return (
-    <WebsiteBand divider rhythm="closing">
+    <WebsiteBand section="contact" divider rhythm="closing">
       {/* `fit` collapses the empty trailing track: at the site's measure a 20rem
           minimum packs three, and two cards in a three-track row read as one
           card missing. The two cards share a row's height, so the GitHub

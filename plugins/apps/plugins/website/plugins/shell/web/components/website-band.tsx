@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useWebsiteSectionReach } from "../internal/section-reach";
 import "./website-band.css";
 
 /**
@@ -36,6 +37,12 @@ const RHYTHM_CLASS: Record<WebsiteBandRhythm, string> = {
 };
 
 export interface WebsiteBandProps {
+  /**
+   * The band's name on its page (`hero`, `layers`, `footer`): how far readers
+   * get is measured per band, as `section_reach` `<page>/<section>` — see
+   * `useWebsiteSectionReach`. Required, so no band ships unmeasured.
+   */
+  section: string;
   /** Host element. Defaults to `section` — pass `footer` for the site footer. */
   as?: "section" | "footer" | "header";
   /** Hairline above this band's content, separating it from the one before. */
@@ -75,14 +82,16 @@ export interface WebsiteBandProps {
  * it lives in `website-band.css`.
  */
 export function WebsiteBand({
+  section,
   as: As = "section",
   divider = false,
   rhythm = "page",
   className,
   children,
 }: WebsiteBandProps) {
+  const reachRef = useWebsiteSectionReach<HTMLElement>(section);
   return (
-    <As>
+    <As ref={reachRef}>
       {/* The side gutter only bites once the viewport is narrower than the
           measure plus two gutters; at full width the measure centres itself. */}
       <Inset x="2xl">

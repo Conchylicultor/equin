@@ -24,7 +24,12 @@ const LINK = "Read the full story and context";
 export function StoryLinkSection() {
   const openPane = useOpenPane();
   return (
-    <WebsiteBand divider rhythm="interlude" className="text-center">
+    <WebsiteBand
+      section="story-link"
+      divider
+      rhythm="interlude"
+      className="text-center"
+    >
       <Text as="p" variant="subheading" tone="muted" className="font-normal">
         {PROMPT}{" "}
         <Button

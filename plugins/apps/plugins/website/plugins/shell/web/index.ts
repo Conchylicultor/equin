@@ -23,6 +23,7 @@ export { WebsiteHero } from "./components/website-hero";
 export { WebsiteSoon } from "./components/website-soon";
 export type { WebsiteBandRhythm } from "./components/website-band";
 export { WebsiteChrome } from "./components/website-chrome";
+export { useWebsiteSectionReach } from "./internal/section-reach";
 export { landingPane } from "./panes";
 
 export default {

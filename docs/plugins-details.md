@@ -1787,7 +1787,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`analytics`** — Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, host-only report query), and the dashboard half in the local deploy app.
           - Plugins:
-            - **`collect`** — The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report query, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+            - **`collect`** — The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report query, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
               - Server:
                 - Contributes:
                   - `change-feed-exclusion` "analytics_hits"
@@ -1819,12 +1819,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Web:
                 - Uses:
                   - `infra/endpoints.fetchEndpointOver`
+                  - `primitives/dom/in-view.createInViewWatcher`
                   - `primitives/networking/page-transport.pageTransport`
                   - `primitives/pane.currentRoutePath`
                   - `primitives/pane.usePathname`
                 - Exports (values):
                   - `AnalyticsTracker`
+                  - `observeSectionReach`
                   - `track`
+                  - `useSectionReach`
               - Core:
                 - Uses:
                   - `apps/deploy/analytics/host-only.HOST_ONLY_PREFIX`
@@ -1954,6 +1957,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/improve`
                   - `apps/website/pages/download`
                   - `apps/website/pages/foundations`
+                  - `apps/website/pages/vision`
                   - `apps/website/shell`
                 - Endpoint callers:
                   - `deploy-secrets`
@@ -11467,18 +11471,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `WebsiteStory`
               - Cross-plugin:
                 - Imported by: `apps/website/landing/story-link`
-            - **`vision`** — The vision page of the equin website: the /website/vision pane on the vision for applications (a placeholder heading for now), its Vision nav link, and the WebsiteVision.Section slot the page is written into.
+            - **`vision`** — The vision page of the equin website: the /website/vision pane on the vision for applications — one Powers of Ten zoom-out on a dark starfield, six chapter cards scrolling over a pinned stage (an idea, an app that reshapes itself, apps that integrate, a personal OS, apps shared between people, every app rebuilt) with a layer strip under the header — its Vision nav link, and the WebsiteVision.Section slot for sections below it.
               - Web:
                 - Slots: `WebsiteVision.Section`
                 - Contributes:
                   - `Pane.Register` "website-vision"
                   - `WebsiteHeader` "vision" → `VisionNavItem`
                 - Uses:
+                  - `apps/deploy/analytics/collect.observeSectionReach`
                   - `apps/website/shell.WebsiteChrome`
                   - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteHero`
                   - `apps/website/shell.WebsiteNavLink`
-                  - `apps/website/shell.WebsiteSoon`
+                  - `primitives/dom/auto-scroll.findScrollParent`
+                  - `primitives/dom/element-size.useResizeObserver`
+                  - `primitives/dom/in-view.createInViewWatcher`
+                  - `primitives/dom/scroll-reveal.revealElement`
                   - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
                   - `primitives/pane.useOpenPane`
@@ -11487,6 +11495,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `visionPane`
                   - `WebsiteVision`
               - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/chart --chart-1`
+                  - `ui/tokens/color-palette --background`
+                  - `ui/tokens/color-palette --faint-foreground`
+                  - `ui/tokens/color-palette --foreground`
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/color-palette --primary`
+                  - `ui/tokens/density --space-2xl`
+                  - `ui/tokens/font-family --font-sans`
                 - Imported by:
                   - `apps/website/landing/layers`
                   - `apps/website/pages/apps`
@@ -11546,13 +11563,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ThemeEngine.Theme` "equin"
               - `ThemeEngine.SubTheme` "equin document"
               - `ThemeEngine.SubTheme` "equin page heading"
-            - Uses: 25 symbols — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
+            - Uses: 26 symbols — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
               - `primitives/pane` ×6
               - `primitives/css/spacing` ×3
+              - `apps/deploy/analytics/collect` ×2
               - `primitives/css/text` ×2
               - `primitives/css/ui-kit` ×2
               - `apps-core.Apps`
-              - `apps/deploy/analytics/collect.AnalyticsTracker`
               - `layouts/full-pane.FullPane`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/coords.Placed`
@@ -11566,6 +11583,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `WebsiteBandRhythm`
             - Exports (values):
               - `landingPane`
+              - `useWebsiteSectionReach`
               - `Website`
               - `WebsiteArrow`
               - `WebsiteBand`
@@ -27986,8 +28004,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 180 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×52
+            - Imported by: 181 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×53
               - `primitives` ×28
               - `conversations` ×25
               - `page` ×25
@@ -44091,6 +44109,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/progress/loop`
               - `apps/sonata/rich/chord-progression`
               - `apps/website/pages/foundations`
+              - `apps/website/pages/vision`
               - `conversations/agent-thread`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/background-shells`
@@ -44151,9 +44170,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserver`
               - `useResizeObserverSet`
           - Cross-plugin:
-            - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+            - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×22
-              - `apps` ×9
+              - `apps` ×10
               - `shell` ×2
               - `active-data/go`
               - `conversations/conversation-view/jsonl-viewer`
@@ -44198,7 +44217,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useInView`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/analytics/collect`
               - `apps/website/pages/foundations`
+              - `apps/website/pages/vision`
               - `conversations/agent-thread`
               - `conversations/conversation-view/jsonl-viewer`
               - `hints`
@@ -44261,8 +44282,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
-              - `apps` ×8
+            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+              - `apps` ×9
               - `primitives` ×6
               - `conversations` ×2
               - `page` ×2
@@ -55171,6 +55192,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/analytics/dashboard`
               - `apps/sonata/primitives/rhythm-circle`
               - `apps/website/landing/screenshot`
+              - `apps/website/pages/vision`
               - `apps/website/shell`
               - `primitives/css/ui-kit`
         - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per Roman numeral's number, I … VII, ♭VII sharing VII's) and --chord-outside (a chord with no key), with their customizer section.
@@ -55243,8 +55265,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 530 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×117
+            - Tokens used by: 531 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×118
               - `conversations` ×89
               - `primitives` ×77
               - `debug` ×37
@@ -55363,9 +55385,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 347 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 348 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×73
-              - `apps` ×71
+              - `apps` ×72
               - `conversations` ×49
               - `debug` ×28
               - `ui` ×24
@@ -55443,10 +55465,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Tokens used by: 153 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 154 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×36
               - `plugin-meta` ×23
-              - `apps` ×21
+              - `apps` ×22
               - `debug` ×19
               - `primitives` ×16
               - `reports` ×7

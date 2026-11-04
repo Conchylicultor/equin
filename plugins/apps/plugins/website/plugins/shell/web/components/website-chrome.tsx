@@ -4,6 +4,7 @@ import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/we
 import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import type { SubTheme } from "@plugins/ui/plugins/theme-engine/core";
 import { equinDocumentTheme } from "../internal/theme";
+import { WebsitePageKeyProvider } from "../internal/section-reach";
 import { WebsitePage } from "./website-page";
 
 /**
@@ -52,7 +53,9 @@ export function WebsiteChrome({
         headerGlass={headerGlass}
         headerTheme={headerTheme && subThemeScope(headerTheme)}
       >
-        <WebsitePage>{children}</WebsitePage>
+        <WebsitePageKeyProvider pane={pane}>
+          <WebsitePage>{children}</WebsitePage>
+        </WebsitePageKeyProvider>
       </PaneChrome>
     </Theme>
   );

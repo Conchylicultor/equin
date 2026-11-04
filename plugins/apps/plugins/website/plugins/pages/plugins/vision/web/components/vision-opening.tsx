@@ -1,8 +1,8 @@
 import { WebsiteHero } from "@plugins/apps/plugins/website/plugins/shell/web";
 
 /**
- * The applications page's heading: the vision this page argues, and the one
- * paragraph that says why now.
+ * The vision page's heading: the vision this page argues, and the question it
+ * answers. The page's zoom (`VisionZoom`) dissolves it as the page moves.
  */
 export function VisionOpening() {
   return (
@@ -10,7 +10,7 @@ export function VisionOpening() {
       kind="page"
       lead="A vision for "
       accent="applications"
-      lede="Building an application used to be expensive. Legacy software only made sense because its cost could be amortized over a lot of users. That is not true anymore."
+      lede="What will apps evolve into in the age of agents? A new kind of application, which could not exist before."
     />
   );
 }

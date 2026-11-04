@@ -71,7 +71,7 @@ const CLAUDE_APP_LINK = `claude://code/new?q=${PROMPT_QUERY}`;
 export function DownloadInstall() {
   const [audience, setAudience] = useState<Audience>("human");
   return (
-    <WebsiteBand rhythm="closing">
+    <WebsiteBand section="install" rhythm="closing">
       <Stack gap="2xl" className="mx-auto max-w-[51.25rem]">
         <Stack gap="xl">
           <Stack gap="xs" align="center">

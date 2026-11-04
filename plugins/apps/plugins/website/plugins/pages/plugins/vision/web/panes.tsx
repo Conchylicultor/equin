@@ -3,18 +3,16 @@ import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
 import {
   WebsiteChrome,
   WebsiteHeader,
-  WebsiteSoon,
 } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { WebsiteVision } from "./slots";
-import { VisionOpening } from "./components/vision-opening";
+import { VisionZoom } from "./components/vision-zoom";
 
 /**
- * The vision page at `/website/vision` — the vision for applications.
- * Wears the shared site header (`actions: WebsiteHeader`), so the wordmark and
- * every nav link follow the reader here, and renders every
- * `WebsiteVision.Section` contribution below the heading inside `WebsiteChrome`
- * so the site footer renders exactly once. Unwritten so far, so the heading is
- * followed by the site's "more details soon" note.
+ * The vision page at `/website/vision` — the vision for applications, as one
+ * zoom-out from an idea to every app. Wears the shared site header
+ * (`actions: WebsiteHeader`), frosted once the zoom scrolls under it, and
+ * renders every `WebsiteVision.Section` contribution below the zoom inside
+ * `WebsiteChrome`, so the site footer renders exactly once.
  */
 export const visionPane = Pane.define({
   route: defineRoute({ id: "website-vision", segment: "vision" }),
@@ -25,9 +23,8 @@ export const visionPane = Pane.define({
 
 function VisionBody() {
   return (
-    <WebsiteChrome pane={visionPane}>
-      <VisionOpening />
-      <WebsiteSoon />
+    <WebsiteChrome pane={visionPane} headerGlass>
+      <VisionZoom />
       <WebsiteVision.Section.Render />
     </WebsiteChrome>
   );

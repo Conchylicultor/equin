@@ -96,7 +96,7 @@ const CATEGORIES: Category[] = [
  */
 export function LayersSection() {
   return (
-    <WebsiteBand divider rhythm="section">
+    <WebsiteBand section="layers" divider rhythm="section">
       <Stack gap="2xl" className="mx-auto w-full max-w-[53.75rem]">
         <Stack gap="sm" align="center" className="text-center">
           <Text as="h2" variant="title" className="tracking-tight">

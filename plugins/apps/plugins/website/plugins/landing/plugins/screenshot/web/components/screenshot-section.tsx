@@ -115,7 +115,7 @@ const BLACK_KEYS = Array.from({ length: OCTAVES }, (_, octave) =>
  */
 export function ScreenshotSection() {
   return (
-    <WebsiteBand divider rhythm="section">
+    <WebsiteBand section="screenshot" divider rhythm="section">
       <Stack gap="md">
         <div
           role="img"
