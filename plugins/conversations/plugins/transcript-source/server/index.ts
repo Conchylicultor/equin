@@ -12,6 +12,9 @@ export { buildJsonlEvents } from "./internal/parse-jsonl";
 export type { TranscriptImageReader } from "./internal/parse-jsonl";
 export { TranscriptLines, wholeBytes } from "./internal/transcript-lines";
 export type { TranscriptByteRead } from "./internal/transcript-lines";
+// A session file as a backup keeps it: the images tools returned left out.
+export { archiveTranscriptJsonl } from "./internal/archive-form";
+export type { ArchivedTranscript } from "./internal/archive-form";
 // Images by reference: the key a host mints for a prompt's image file, and the
 // read every host answers `TranscriptSource.image` with over its own storage.
 export {

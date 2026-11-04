@@ -61,6 +61,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `conversations/session-chain.conversationSessionsServed`
     - `tasks/tasks-core.conversationSessionTailsServed`
   - Exports (types):
+    - `ArchivedTranscript`
     - `TranscriptByteRead`
     - `TranscriptImageIo`
     - `TranscriptImageRead`
@@ -68,6 +69,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `TranscriptSnapshot`
     - `TranscriptSourceImpl`
   - Exports (values):
+    - `archiveTranscriptJsonl`
     - `buildJsonlEvents`
     - `encodeImageKey`
     - `followedTranscriptChain`
@@ -130,6 +132,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `wrapPreprompt`
 - Cross-plugin:
   - Imported by:
+    - `backup/sources/transcripts`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/outline`

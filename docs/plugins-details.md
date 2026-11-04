@@ -13026,6 +13026,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup.BackupSource`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
+              - `conversations/transcript-source.archiveTranscriptJsonl`
               - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
               - `tasks/tasks-core.listRetainedConversations`
           - Exemptions:
@@ -20133,6 +20134,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/session-chain.conversationSessionsServed`
           - `tasks/tasks-core.conversationSessionTailsServed`
         - Exports (types):
+          - `ArchivedTranscript`
           - `TranscriptByteRead`
           - `TranscriptImageIo`
           - `TranscriptImageRead`
@@ -20140,6 +20142,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TranscriptSnapshot`
           - `TranscriptSourceImpl`
         - Exports (values):
+          - `archiveTranscriptJsonl`
           - `buildJsonlEvents`
           - `encodeImageKey`
           - `followedTranscriptChain`
@@ -20202,6 +20205,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wrapPreprompt`
       - Cross-plugin:
         - Imported by:
+          - `backup/sources/transcripts`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/outline`

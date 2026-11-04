@@ -16,6 +16,7 @@
     - `backup.BackupSource`
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
+    - `conversations/transcript-source.archiveTranscriptJsonl`
     - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
     - `tasks/tasks-core.listRetainedConversations`
 - Exemptions:
