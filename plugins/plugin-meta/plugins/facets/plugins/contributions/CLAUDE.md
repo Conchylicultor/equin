@@ -4,9 +4,9 @@ Extracts runtime slot contributions from each plugin's barrel imports. Reads
 `def.contributions[]` from the module default export across all runtimes (in
 practice only web barrels carry contributions).
 
-Unlike static-analysis facets (commands, slots, resources), this facet needs the barrel-imported
-modules — it reads the `imported` field of `ExtractContext`, which is populated by
-`buildPluginTree()` when `skipBarrelImport` is not set. That field carries the modules and the
+Its runtime half needs the evaluated barrels: `extract` (cached per plugin as a plugin record)
+fills only the static half, and `enrich` reads `EnrichContext.imported` — the build's evaluated
+records, revived, passed by the enriched tree only. That field carries the modules and the
 `SlotNaming` of the declaration pass over those same modules as ONE value, and the pairing is the
 point: a plugin's `contributions` array is not always a literal (reorder's is filled by a
 `subscribeSlotsDeclared` callback), and reading barrels without a pass answers with a smaller set
@@ -45,7 +45,7 @@ Three rules the scanners must keep:
   reason — an `options: { route: defineRoute(…) }` decoy is a real call too.
 - **Never read identity off the imported pane object** (`pane._internal.id`, which
   is public and tempting). All three surfaces this facet feeds build their tree
-  with `skipBarrelImport: true`, so the runtime half is empty exactly there.
+  barrel-free, so the runtime half is empty exactly there.
 - **A `Pane.define` whose identity cannot be read THROWS**, rather than being
   dropped. Dropping it is invisible: `docs/plugins-details.md` takes its pane
   lines from the runtime `docLabel`, so `plugins-doc-in-sync` stays green while

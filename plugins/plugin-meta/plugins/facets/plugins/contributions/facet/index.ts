@@ -10,6 +10,7 @@ import {
   getFacet,
   type DocFact,
   type DocFactGroup,
+  type EnrichContext,
   type ExtractContext,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import {
@@ -111,7 +112,26 @@ export default createFacet<ContributionsFacetData>({
       }
     }
 
-    // Runtime contributions from barrel imports (existing logic)
+    return {
+      static: staticContributions,
+      // The evaluated half: filled by `enrich` on the enriched tree.
+      runtime: [],
+      panes,
+      routes,
+      paneRefs,
+      // Server companions, statically like the web ones above (the closure
+      // engine runs barrel-free): the kinds this plugin's `server/` opens to
+      // companions, and its `server/index.ts`'s `companion: true` calls.
+      serverCompanionKinds: parseServerCompanionKinds(ctx.dir),
+      serverCompanions: parseServerCompanions(ctx.dir),
+      // The host services its `server/index.ts` provides: a non-empty list makes
+      // it a host provider, which no composition bundles (`EdgeGraph.hostProviders`).
+      hostServiceProvides: parseHostServiceProvides(ctx.dir),
+    };
+  },
+
+  enrich(data, ctx: EnrichContext): ContributionsFacetData {
+    // Runtime contributions from the evaluated barrels.
     const runtimeContributions: DocMetaContribution[] = [];
     // Barrels and the naming of the pass over them arrive together, and that
     // pairing is load-bearing here more than anywhere else. A plugin's
@@ -126,10 +146,8 @@ export default createFacet<ContributionsFacetData>({
     // here and refuse the early read; `ExtractContext.imported` now makes that
     // state unspellable, so the assert has nothing left to catch.
     //
-    // The `skipBarrelImport` path passes no modules, so this block is skipped,
-    // and facets never run in the browser.
     const imported = ctx.imported;
-    if (imported && imported.modules.length > 0) {
+    {
       const { naming } = imported;
       for (const { mod } of imported.modules) {
         let def: Record<string, unknown> | undefined;
@@ -204,21 +222,7 @@ export default createFacet<ContributionsFacetData>({
       }
     }
 
-    return {
-      static: staticContributions,
-      runtime: runtimeContributions,
-      panes,
-      routes,
-      paneRefs,
-      // Server companions, statically like the web ones above (the closure
-      // engine runs barrel-free): the kinds this plugin's `server/` opens to
-      // companions, and its `server/index.ts`'s `companion: true` calls.
-      serverCompanionKinds: parseServerCompanionKinds(ctx.dir),
-      serverCompanions: parseServerCompanions(ctx.dir),
-      // The host services its `server/index.ts` provides: a non-empty list makes
-      // it a host provider, which no composition bundles (`EdgeGraph.hostProviders`).
-      hostServiceProvides: parseHostServiceProvides(ctx.dir),
-    };
+    return { ...data, runtime: runtimeContributions };
   },
 
   relate(rawCtx) {

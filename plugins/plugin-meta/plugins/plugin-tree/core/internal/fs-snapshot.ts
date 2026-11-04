@@ -1,5 +1,8 @@
 import { join, relative } from "node:path";
-import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import type {
+  RepoFiles,
+  RepoSnapshot,
+} from "@plugins/framework/plugins/tooling/core";
 import {
   isTestCodePath,
   TESTS_DIR,
@@ -74,9 +77,41 @@ function entry(name: string, dir: boolean): SnapshotDirEntry {
   return { name, isFile: () => !dir, isDirectory: () => dir };
 }
 
+/**
+ * What a plugin's snapshot holds, as one line per entry: every path it lists
+ * (a skipped directory by its name alone), with the blob id of each file it
+ * reads. Exactly the inputs of a facet's `extract` of that plugin — so the
+ * plugin's records are keyed by it, and a change the snapshot cannot see (a
+ * sub-plugin's file, a test) moves no record.
+ */
+export function pluginFilesManifest(
+  repo: RepoSnapshot,
+  pluginDir: AppPath,
+): string[] {
+  const rel = relative(repo.root, pluginDir);
+  const lines = new Set<string>();
+  for (const path of repo.under(rel)) {
+    const segs = path.slice(rel.length + 1).split("/");
+    for (let i = 0; i < segs.length; i++) {
+      const name = segs[i]!;
+      const sub = segs.slice(0, i + 1).join("/");
+      if (i === segs.length - 1) {
+        lines.add(shouldRead(name) ? `${sub}\t${repo.blobOf(path)}` : sub);
+        break;
+      }
+      if (isSkippedDir(name)) {
+        lines.add(`${sub}/`);
+        break;
+      }
+    }
+  }
+  return [...lines];
+}
+
 export async function buildFsSnapshot(
   repo: RepoFiles,
   pluginDirs: readonly AppPath[],
+  opts?: { strict?: string },
 ): Promise<FsSnapshot> {
   const files = new Map<string, string>();
   // dir → name → is it a directory. Insertion follows the sorted path list.
@@ -122,5 +157,5 @@ export async function buildFsSnapshot(
       [...names].map(([name, isDir]) => entry(name, isDir)),
     );
   }
-  return { files, dirs };
+  return { files, dirs, ...(opts?.strict ? { strict: opts.strict } : {}) };
 }

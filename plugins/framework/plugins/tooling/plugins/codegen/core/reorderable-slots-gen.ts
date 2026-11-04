@@ -11,7 +11,7 @@ import {
 } from "./config-origin-gen";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { declareSlotsFromBarrels } from "./slot-declaration-guard";
+import { recordSlotNaming } from "./evaluated-barrels";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import { mainBundle } from "./main-bundle";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
@@ -84,7 +84,7 @@ interface ReorderableSlotsData {
  * unreadable, and "is this reorderable" was a function name a grep had to
  * recognise.
  *
- * It rides the shared declaration pass, which imports WEB barrels and only web
+ * It rides the registry naming over the evaluated WEB barrels, and only web
  * barrels. That is what fixes the ordering this file used to be pinned by: the
  * manifest is written between the web and the server import phases, so the
  * server barrels that read it (the server cannot see web slots) are imported
@@ -94,9 +94,10 @@ interface ReorderableSlotsData {
 async function collectReorderableSlotSet(
   root: AppPath,
 ): Promise<ReorderableSlotEntry[]> {
-  // The one declaration pass — shared with the orphan guard, which has already
-  // proved every created slot is in it.
-  const naming = await declareSlotsFromBarrels(root, "registry");
+  // The registry naming over the evaluated web barrels — shared with the
+  // orphan guard, which has already proved every created slot is in it. Each
+  // declared slot's stand-in carries its `meta`, as the live slot does.
+  const naming = await recordSlotNaming(root, "registry");
 
   // Exactly the derivation the web runtime runs (`syncReorderDescriptors`):
   // every DECLARED slot whose own `meta.reorderable` is true, attributed to the

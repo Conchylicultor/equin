@@ -1,4 +1,4 @@
-import { dirname, join } from "path";
+import { join } from "path";
 import {
   createFacet,
   getFacet,
@@ -23,8 +23,8 @@ import {
   matchBracket,
   parseStaticCallId,
   pathExists,
-  type FsSnapshot,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { APP_STYLESHEET_PATH } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import {
   tokenGroupsDeclaredIn,
@@ -326,23 +326,21 @@ export default createFacet<CrossRefsData>({
   },
 
   // Every var each plugin's shipped source reads, in ONE async pass over the
-  // whole tree: the token scanner batches every plugin into a single Tailwind
-  // extraction and yields while it compiles (see `tokenVarsUsedBy`).
-  async prepareRelate(ctx: unknown) {
-    const { tree, fs } = ctx as { tree: PluginTree; fs: FsSnapshot };
-    const nodes = [...tree.byDir.values()].filter((node) =>
-      getFacet(node, crossRefsFacetDef),
-    );
-    const sources = runWithFsSnapshot(fs, () =>
-      nodes.map((node) => shippedSources(node.dir)),
-    );
-    const used = await tokenVarsUsedBy(
-      asAppPath(dirname(tree.pluginsRoot)),
-      sources,
-    );
-    nodes.forEach((node, i) => {
-      getFacet(node, crossRefsFacetDef)!.rawVars = [...used[i]!];
-    });
+  // plugins whose record missed: the token scanner batches them into a single
+  // Tailwind extraction and yields while it compiles (see `tokenVarsUsedBy`).
+  // The result reads app.css (the design system a class compiles against)
+  // besides the plugin's own files, so app.css is part of the record's key.
+  extractBatch: {
+    inputs: [APP_STYLESHEET_PATH],
+    async run({ root, fs, plugins }) {
+      const sources = runWithFsSnapshot(fs, () =>
+        plugins.map((p) => shippedSources(p.dir)),
+      );
+      const used = await tokenVarsUsedBy(root, sources);
+      plugins.forEach((p, i) => {
+        p.data.rawVars = [...used[i]!];
+      });
+    },
   },
 
   relate(ctx: unknown) {

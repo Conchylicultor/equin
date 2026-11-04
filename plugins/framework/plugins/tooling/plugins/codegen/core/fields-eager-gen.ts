@@ -31,7 +31,7 @@ import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
  * `loader → barrels → server-capabilities`, a clean DAG. Every eval-time consumer
  * imports the loader barrel for side-effect.
  *
- * The renderer is barrel-FREE (a static `skipBarrelImport` tree scan), so it is
+ * The renderer is barrel-FREE (a static barrel-free tree scan), so it is
  * sound to regenerate in the pre-barrel phase before the first barrel import
  * freezes the ESM cache. The `fields-eager-in-sync` check fails on drift.
  */

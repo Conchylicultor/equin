@@ -13,7 +13,7 @@ multiply the CPU burn exactly when the host is busiest.
 ## One structure tree per check pass (`core/internal/structure-tree-once.ts`)
 
 A check pass runs ~100 checks on one JS thread, and six of them used to call
-`buildPluginTree(root, { skipBarrelImport: true })` themselves — six full walks
+`buildPluginTree(root)` themselves — six full walks
 back to back, all of it time the other checks waited on. Check code now reads
 `buildStructureTreeOnce(pluginsRoot)`: built once per root for the life of the
 process and handed to every caller as the same value. The facet-carrying twins
@@ -77,19 +77,20 @@ dynamic value.
     - `defineWarmup('plugin-tree.trees')`
     - `defineFileWatcher('plugin-tree.plugins-dir')`
 - Core:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/plugin-id` ×6
+    - `plugin-meta/facets` ×6
     - `plugin-meta/parse-utils` ×4
+    - `plugin-meta/plugin-records` ×4
+    - `framework/tooling` ×3
     - `infra/host-fs/user-path` ×3
-    - `plugin-meta/facets` ×3
-    - `framework/slot-declaration` ×2
-    - `framework/tooling` ×2
     - `packages/macrotask-yield` ×2
-    - `plugin-meta/barrel-import` ×2
   - Exports (types):
+    - `BuildPluginTreeOptions`
     - `PluginNode`
     - `PluginTree`
     - `Runtime`
+    - `TreeEnrichment`
   - Exports (values):
     - `buildPluginTree`
     - `buildStructureTreeOnce`

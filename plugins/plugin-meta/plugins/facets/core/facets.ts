@@ -7,8 +7,20 @@ export interface FacetDef<T> {
   _phantom?: T;
 }
 
+/**
+ * What one facet's `extract` of one plugin reads: that plugin's own files, and
+ * nothing else. Its result is a PLUGIN RECORD (`plugin-meta/plugin-records`),
+ * stored under the hash of exactly those files and the facet's own code, and
+ * shared by every worktree — so `extract` must be a pure function of them. A
+ * read outside the plugin's files throws while a record is being made (the
+ * snapshot is strict), and so does a module-level variable that would carry a
+ * plugin's data into another's extraction: whatever needs more than one plugin
+ * is `relate`'s job.
+ */
 export interface ExtractContext {
   dir: AppPath;
+  /** The plugin's directory, relative to the repo root — what a record may store (never `dir`). */
+  relDir: string;
   /**
    * The plugin this extraction describes, as its dotted id.
    *
@@ -18,38 +30,60 @@ export interface ExtractContext {
    * either way, so the facet derives it rather than depending on a stamp.
    */
   pluginId: string;
-  /**
-   * The barrels imported for this plugin, PAIRED with the naming the declaration
-   * pass over those same barrels settled. Populated by `buildPluginTree` unless
-   * `skipBarrelImport` is set; absent for facets that only need static files.
-   *
-   * ONE FIELD, NOT TWO, and that is the whole point — do not flatten it back into
-   * `modules?` beside `naming?`. Importing a barrel is what brings a plugin's
-   * `contributions` into existence; running a declaration pass is what gives the
-   * slots those contributions target their names. A reader holding the first
-   * without the second gets an answer that is smaller than the truth and shaped
-   * exactly like a correct one: every id reads as absent, so a whole plugin's
-   * contributions silently vanish. That is not hypothetical — it is how a
-   * `docs/plugins-details.md` missing reorder's entire `Contributes:` block got
-   * committed, and how it made `main` un-pushable four commits later. A runtime
-   * assert used to catch it here; pairing the two makes the state unspellable
-   * instead, so there is nothing left to assert.
-   */
-  imported?: {
+  // The plugin's files, read once, in memory. The parse-utils `readIfExists` /
+  // `walkFiles` helpers read from it (wired ambiently by buildPluginTree's
+  // extract loop), so facet bodies need no change; the structure facet reads it
+  // through codegen's standardPluginDirsFromSnapshot.
+  fs?: FsSnapshot;
+}
+
+/**
+ * What a facet's `enrich` adds to its record: the plugin's barrels as the build
+ * evaluated them, PAIRED with the naming of the slots their contributions
+ * target.
+ *
+ * ONE FIELD, NOT TWO, and that is the whole point — do not flatten it back into
+ * `modules?` beside `naming?`. Importing a barrel is what brings a plugin's
+ * `contributions` into existence; running a declaration pass is what gives the
+ * slots those contributions target their names. A reader holding the first
+ * without the second gets an answer that is smaller than the truth and shaped
+ * exactly like a correct one: every id reads as absent, so a whole plugin's
+ * contributions silently vanish. That is not hypothetical — it is how a
+ * `docs/plugins-details.md` missing reorder's entire `Contributes:` block got
+ * committed, and how it made `main` un-pushable four commits later. Pairing the
+ * two makes the state unspellable.
+ *
+ * The modules are the build's evaluated records (`plugin-records`), revived: a
+ * contribution's component is a function with its name, its slot a stand-in the
+ * naming resolves. Never cached per plugin — the naming is the whole tree's.
+ */
+export interface EnrichContext {
+  dir: AppPath;
+  pluginId: string;
+  imported: {
     modules: {
       mod: Record<string, unknown>;
       runtime: "web" | "server" | "machine" | "central";
     }[];
     naming: SlotNaming;
   };
-  // Build-scoped, read-once in-memory FS snapshot in effect for this extraction.
-  // When present, the parse-utils `readIfExists` / `walkFiles` helpers read from
-  // it instead of disk (wired ambiently by buildPluginTree's extract loop), so
-  // facet bodies need no change. Absent for build-time callers that scan disk
-  // directly. Facets read files via the parse-utils helpers, not this field
-  // (the structure facet reads it through codegen's
-  // standardPluginDirsFromSnapshot).
-  fs?: FsSnapshot;
+}
+
+/**
+ * A per-plugin extraction too costly to run plugin by plugin (cross-refs' token
+ * scan batches every plugin into one Tailwind pass). It runs over the plugins
+ * whose record missed only, and writes into their extracted data, which is then
+ * stored — so `inputs` must name every repo file besides the plugins' own that
+ * its result reads (they are part of the key).
+ */
+export interface ExtractBatch<T> {
+  /** Repo-relative files the batch reads besides each plugin's own. */
+  inputs: readonly string[];
+  run(ctx: {
+    root: AppPath;
+    fs: FsSnapshot;
+    plugins: readonly { dir: AppPath; data: T }[];
+  }): Promise<void>;
 }
 
 interface DocFactBase {
@@ -90,7 +124,8 @@ export interface RenderDocContext {
 export interface Facet {
   def: FacetDef<unknown>;
   extract: (ctx: ExtractContext) => unknown;
-  prepareRelate?: (ctx: unknown) => Promise<void>;
+  extractBatch?: ExtractBatch<unknown>;
+  enrich?: (data: unknown, ctx: EnrichContext) => unknown;
   relate?: (ctx: unknown) => void;
   renderDoc: (data: unknown, ctx: RenderDocContext) => DocFact[];
 }
@@ -102,14 +137,13 @@ export function defineFacet<T>(id: string): FacetDef<T> {
 export function createFacet<T>(impl: {
   def: FacetDef<T>;
   extract: (ctx: ExtractContext) => T;
+  extractBatch?: ExtractBatch<T>;
   /**
-   * Async work over the whole extracted tree, before any facet's `relate` —
-   * for a pass too heavy to run in one synchronous block (it can yield) or that
-   * needs an async API. Same `{ tree }` context as `relate`, plus the build's
-   * `fs` snapshot, which a sync stretch reads under `runWithFsSnapshot(fs, …)`
-   * (the ambient snapshot does not survive an `await`).
+   * The barrel-evaluated part of the facet, from the build's evaluated records
+   * (see {@link EnrichContext}): returns the enriched data. Runs on every
+   * enriched tree, after the records are read and before `relate`.
    */
-  prepareRelate?: (ctx: unknown) => Promise<void>;
+  enrich?: (data: T, ctx: EnrichContext) => T;
   relate?: (ctx: unknown) => void;
   renderDoc: (data: T, ctx: RenderDocContext) => DocFact[];
 }): Facet {

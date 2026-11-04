@@ -95,6 +95,8 @@ See `plugins/commands/` for the reference implementation.
   - Exports (types):
     - `DocFact`
     - `DocFactGroup`
+    - `EnrichContext`
+    - `ExtractBatch`
     - `ExtractContext`
     - `Facet`
     - `FacetDef`
@@ -106,6 +108,7 @@ See `plugins/commands/` for the reference implementation.
     - `facetCollectedDir`
     - `getFacet`
     - `loadFacets`
+    - `loadFacetSources`
     - `setFacet`
 - Cross-plugin:
   - Imported by:

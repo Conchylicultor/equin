@@ -94,7 +94,7 @@ const structureMemo = createGitStateMemo<PluginTree>({
 });
 
 // Full faceted tree, shared by the two genuine facet consumers (Contributions +
-// the detail pane). `skipBarrelImport: true` mirrors the previous hot-path build.
+// the detail pane). Barrel-free, as the previous hot-path build.
 const facetsMemo = createGitStateMemo<PluginTree>({
   name: "plugin-tree.facets",
 });
@@ -114,8 +114,6 @@ export async function getFacetsTreeCached(): Promise<PluginTree> {
     PLUGINS_DIR,
     () => Promise.resolve(treeChange.token()),
     () =>
-      withHeavyReadSlot(() =>
-        buildPluginTree(PLUGINS_DIR, { skipBarrelImport: true, facets: true }),
-      ),
+      withHeavyReadSlot(() => buildPluginTree(PLUGINS_DIR, { facets: true })),
   );
 }

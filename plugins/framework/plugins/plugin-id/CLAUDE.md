@@ -46,6 +46,7 @@
     - `plugin-meta/facets/cross-refs`
     - `plugin-meta/facets/exports`
     - `plugin-meta/parse-utils`
+    - `plugin-meta/plugin-records`
     - `plugin-meta/plugin-refs`
     - `plugin-meta/plugin-tree`
     - `plugin-meta/relocate`

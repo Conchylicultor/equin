@@ -49,8 +49,11 @@ const check: Check = {
 
     // Map <hier>/<name>.origin.jsonc → ConfigDescriptor. Same discovery the
     // sibling check reuses.
+    // Live: the fields' list mapping runs each field's own code, which no
+    // evaluated record holds.
     const descriptorsByOriginRel = await loadConfigDescriptorsByOriginPath({
       root,
+      live: true,
     });
 
     const result = await spawnCaptured(

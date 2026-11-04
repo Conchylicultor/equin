@@ -42,6 +42,7 @@ None of those defends against a forged collision; they tell contents apart.
     - `map`
     - `network/live/resource-protocol`
     - `network/live/resource-runtime`
+    - `plugin-meta/plugin-records`
     - `plugin-meta/token-usage`
     - `reports/icon-family-gap`
 - Core:

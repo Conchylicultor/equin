@@ -1,3 +1,4 @@
+import { trackSlotSites } from "@plugins/framework/plugins/slot-declaration/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import {
@@ -268,6 +269,11 @@ export function importBarrel(
       preBarrelImportGuard = null;
       await guard();
     }
+    // Every slot a barrel makes is attributed to its creating module from
+    // the first barrel on, so a process that records barrels as data
+    // (`plugin-records`) can name any slot any barrel exports, whoever
+    // imported it first.
+    trackSlotSites();
     let mod: Record<string, unknown>;
     try {
       // Marked, because loading and evaluating a module leaves no JS frame on

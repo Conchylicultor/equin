@@ -56,17 +56,17 @@ import {
  * Membership rule: a manifest belongs here iff a barrel reaches it at
  * module-load AND its renderer is barrel-free (so regenerating it before the
  * first barrel import is sound):
- *   - dataViews: a barrel-free static scan (`skipBarrelImport`).
+ *   - dataViews: a barrel-free static scan.
  *   - customUtilities: reads `app.css` by path only (no plugin tree); reachable
  *     at module-load via the ui-kit web barrel (`cn` → `lib/utils.ts` iterates
  *     `CUSTOM_UTILITY_REGISTRY` at top level).
  *   - spaceRamp: reads `app.css` by path only, same as customUtilities;
  *     reachable at module-load via the spacing web barrel (`<Stack>` resolves its
  *     gap class off `RAMP_CLASSES` at top level).
- *   - fieldsEager / eagerTier: barrel-free `skipBarrelImport` tree scans.
+ *   - fieldsEager / eagerTier: barrel-free tree scans.
  *   - iconManifest: a plain source-file walk for `symbol("…")` / `brand("…")`
  *     literals; the icon sprites server barrel reaches it at module-load.
- *   - companionManifest: a barrel-free `skipBarrelImport` tree scan; the
+ *   - companionManifest: a barrel-free tree scan; the
  *     web-sdk core barrel reaches it at module-load.
  *
  * A manifest whose renderer NEEDS barrels cannot satisfy that rule and does not
@@ -97,7 +97,7 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
   {
     // Side-effect imports of the fields storage server barrels. The
     // fields/server-capabilities-loader barrel imports it at module-load; its
-    // renderer is a barrel-free `skipBarrelImport` tree scan, so regenerating it
+    // renderer is a barrel-free tree scan, so regenerating it
     // pre-barrel is sound.
     id: "fieldsEager",
     path: fieldsEagerManifestPath,
@@ -106,7 +106,7 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
   {
     // The deferred web plugin tier. The web-sdk core barrel reaches it at
     // module-load (`load-tiers.ts` imports `web-tiers.generated.ts`); its
-    // renderer is a barrel-free `skipBarrelImport` tree scan, so regenerating
+    // renderer is a barrel-free tree scan, so regenerating
     // it pre-barrel is sound. Also generated earlier in
     // `regenerateRegistryCodegen` (sharing the registry context — one tree
     // walk, early reachability failure); this entry makes the pre-barrel

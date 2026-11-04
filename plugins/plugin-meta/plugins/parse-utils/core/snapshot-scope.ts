@@ -18,6 +18,13 @@
 export interface FsSnapshot {
   files: Map<string, string>;
   dirs: Map<string, SnapshotDirEntry[]>;
+  /**
+   * Set while plugin records are being made: the snapshot holds exactly the
+   * files a record is keyed by, so a read that falls outside it would make the
+   * record depend on a file its key does not name — it THROWS instead of asking
+   * the disk. The value says what the snapshot covers, for the message.
+   */
+  strict?: string;
 }
 
 /**
@@ -62,6 +69,20 @@ export function currentFsSnapshot(): FsSnapshot | null {
 }
 
 /**
+ * Called by a helper about to answer `path` from the disk because the ambient
+ * snapshot does not cover it: throws under a strict snapshot (see
+ * {@link FsSnapshot.strict}).
+ */
+export function assertDiskReadAllowed(path: string): void {
+  if (activeSnapshot?.strict === undefined) return;
+  throw new Error(
+    `[facets] ${path} is outside the files this extraction may read (${activeSnapshot.strict}). ` +
+      "A facet's extract is cached per plugin, keyed by that plugin's own files: " +
+      "read another plugin's files in `relate`, or name the input in an `extractBatch`.",
+  );
+}
+
+/**
  * Whether `path` exists, as far as the ambient snapshot can tell: `true` /
  * `false` when its directory (or itself) was scanned, `undefined` when it lies
  * outside the snapshot (the caller asks the disk).
@@ -78,8 +99,12 @@ export function snapshotHas(path: string): boolean | undefined {
       `snapshotHas(${JSON.stringify(path)}): expected an absolute path with no trailing "/".`,
     );
   const cut = path.lastIndexOf("/");
-  const siblings = activeSnapshot.dirs.get(path.slice(0, cut));
-  if (!siblings) return undefined;
+  const parent = path.slice(0, cut);
+  const siblings = activeSnapshot.dirs.get(parent);
+  // A parent the snapshot knows is absent holds nothing: absent too, however
+  // deep (a plugin's missing `machine/` has no `index.ts`).
+  if (!siblings)
+    return cut > 0 && snapshotHas(parent) === false ? false : undefined;
   const name = path.slice(cut + 1);
   return siblings.some((e) => e.name === name);
 }

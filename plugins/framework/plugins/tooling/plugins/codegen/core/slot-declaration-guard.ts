@@ -11,11 +11,9 @@ import {
 import {
   declarePluginSlots,
   declaredSlotSources,
-  findUndeclaredSlots,
 } from "@plugins/framework/plugins/slot-declaration/core";
 import type {
   SlotDeclaringPlugin,
-  SlotHandle,
   SlotNaming,
   SlotScope,
 } from "@plugins/framework/plugins/slot-declaration/core";
@@ -23,6 +21,8 @@ import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
 import { mainBundle } from "./main-bundle";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
+import { undeclaredSlots } from "./evaluated-barrels";
+import type { CreatedSlot } from "@plugins/plugin-meta/plugins/plugin-records/core";
 
 /**
  * Load the web runtime the way the browser loads it, and run one declaration
@@ -63,10 +63,11 @@ import { buildBarrelFreeTree } from "./barrel-free-tree";
  * ownerless. What the orphan guard sees is a separate matter, settled at
  * {@link assertSlotsDeclared}.
  *
- * The registry pass is also the phase boundary the codegen ordering rests on:
- * after it, every web slot the browser will load exists and every owner is
- * stamped, and NO server barrel has been imported yet. Both the orphan guard and
- * the reorderable-slots manifest read that pass's result.
+ * The LIVE pass, for readers that hold live slot objects — checks importing
+ * barrels themselves (`config-v2:registrations-paired`, the page and
+ * active-data checks). The build's generators never run it: they read the
+ * evaluated records and the naming settled over them (`recordSlotNaming`,
+ * `evaluated-barrels.ts`), whose slots are stand-ins this naming cannot name.
  *
  * Memoized per (scope, root) — NOT per root. The barrel imports are ESM-cache
  * hits on a second call, but each scope's declaration pass must run exactly once
@@ -147,20 +148,16 @@ async function runDeclarationPass(
 }
 
 /**
- * The created-vs-declared guard: every slot constructed in this process must be
- * declared by exactly one plugin (`PluginDefinition.slots`).
+ * The created-vs-declared guard: every slot the browser's modules construct
+ * must be declared by exactly one plugin (`PluginDefinition.slots`).
  *
- * WHY HERE. Both sets are complete only where module loading is complete, and
- * this process is the one place that holds: {@link declareSlotsFromBarrels}
- * imports every web barrel. In the browser, web plugins load in TIERS
- * (`web-sdk/core/load-tiers.ts`), so mid-boot `created` and `declared` are both
- * partial and a slot created by an eager module but declared by a deferred
- * plugin would false-positive. The build is the guarantee, not a backstop.
- *
- * WHY IT CANNOT BE FORGOTTEN. `defineSlot` is the single funnel every slot
- * constructor calls, and it appends to the created-set at construction — so this
- * sees every slot that exists, whatever file, factory or nesting depth produced
- * it, with no registry to keep in sync.
+ * WHY OVER RECORDS. Both sets come from the build's evaluated records
+ * (`evaluated-barrels.ts`): each module's record lists the slots its top-level
+ * evaluation created, by identity (module + ordinal), and the registry naming
+ * over the bundled web barrels' records says which of them a plugin declares.
+ * So the guard sees every slot that exists, whatever file, factory or nesting
+ * depth produced it — a factory used by ten panes yields ten identities — and
+ * reads it without importing a barrel when nothing changed.
  *
  * WHY IT RUNS BEFORE THE REST OF CODEGEN. An undeclared slot is a slot missing
  * from the reorderable-slots manifest, and a missing manifest row is a config
@@ -170,19 +167,15 @@ async function runDeclarationPass(
  *
  * WHY `"registry"`, AND WHY THAT IS NOT AN OMISSION TO "COMPLETE". The guard is
  * registry-scoped ON PURPOSE: a disabled plugin ships nothing and owes nothing,
- * so its slots are outside what this guard is asking about. Switching it to
- * `"source"` would look like widening the net and would instead import every
- * disabled barrel ahead of the freeze point this phase boundary defines, and
+ * so its slots are outside what this guard is asking about — the created set is
+ * the bundled web barrels' modules only. Switching it to `"source"` would
  * demand declarations from plugins that register no descriptors — which is the
  * `config-v2:registrations-paired` divergence the registry scope exists to
- * prevent. Re-enabling a plugin puts its slots back in the created-set and the
- * guard names any it forgot; that is the whole coverage story.
+ * prevent. Re-enabling a plugin puts its modules back in the set and the guard
+ * names any slot it forgot; that is the whole coverage story.
  */
 export async function assertSlotsDeclared(root: AppPath): Promise<void> {
-  // Runs (and memoizes) the registry declaration pass; the stamps it writes are
-  // what the guard reads back off each created slot.
-  await declareSlotsFromBarrels(root, "registry");
-  const orphans = findUndeclaredSlots();
+  const orphans = await undeclaredSlots(root);
   if (orphans.length === 0) return;
   throw new Error(await renderOrphanReport(root, orphans));
 }
@@ -208,12 +201,13 @@ async function slotBearingDirs(root: AppPath): Promise<string[]> {
 
 async function renderOrphanReport(
   root: AppPath,
-  orphans: readonly SlotHandle[],
+  orphans: readonly CreatedSlot[],
 ): Promise<string> {
   const byKind = new Map<string, number>();
   for (const slot of orphans) {
     byKind.set(slot.meta.kind, (byKind.get(slot.meta.kind) ?? 0) + 1);
   }
+  const modules = [...new Set(orphans.map((o) => o.module))].sort();
   const lines = [...byKind.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([kind, n]) => `  ${n} × ${kind}`);
@@ -225,6 +219,9 @@ async function renderOrphanReport(
     "An undeclared slot has no id to name it by — an id is DERIVED from the",
     "declaration it is missing — so they are listed by kind:",
     ...lines,
+    "",
+    "Created by these modules (at their top level, through any factory):",
+    ...modules.map((m) => `  ${m}`),
     "",
     "Add each one under a KEY in the `slots: {…}` record of the plugin that owns",
     "it — the exact sibling of `contributions` in that plugin's `web/index.ts`.",

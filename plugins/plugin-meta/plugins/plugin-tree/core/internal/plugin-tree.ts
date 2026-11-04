@@ -1,21 +1,19 @@
-import {
-  declarePluginSlots,
-  declaredSlotSources,
-} from "@plugins/framework/plugins/slot-declaration/core";
+import type { SlotNaming } from "@plugins/framework/plugins/slot-declaration/core";
+import { existsSync, readFileSync, statSync } from "fs";
 import { basename, join, relative } from "path";
 import {
   loadRepoFiles,
   type RepoFiles,
+  type RepoSnapshot,
 } from "@plugins/framework/plugins/tooling/core";
 import {
-  registerBarrelStubs,
-  importBarrel,
-} from "@plugins/plugin-meta/plugins/barrel-import/core";
-import {
+  getFacet,
   loadFacets,
   setFacet,
+  type EnrichContext,
   type Facet,
 } from "@plugins/plugin-meta/plugins/facets/core";
+import { currentRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   asPluginId,
   type PluginId,
@@ -27,6 +25,7 @@ import {
   yieldMacrotask,
 } from "@plugins/packages/plugins/macrotask-yield/core";
 import { buildFsSnapshot } from "./fs-snapshot";
+import { extractFacetRecords } from "./facet-records";
 import { parsePluginBarrel, type BarrelMeta } from "./barrel-meta";
 import {
   appPathParent,
@@ -278,6 +277,41 @@ function computeIds(nodes: PluginNode[], parentId: string): void {
 }
 
 /**
+ * What makes a tree ENRICHED: each plugin's barrels as the build evaluated them
+ * (the evaluated records, revived — `codegen`'s evaluation pass), and the
+ * naming of the slots their contributions target. Applied by each facet's
+ * `enrich`; see `EnrichContext` for why the two travel as one value.
+ */
+export interface TreeEnrichment {
+  modulesOf(node: PluginNode): EnrichContext["imported"]["modules"];
+  naming: SlotNaming;
+}
+
+export interface BuildPluginTreeOptions {
+  /** Extract every facet (without it, the tree is structure only). */
+  facets?: boolean;
+  /**
+   * The repo's file set. A SNAPSHOT (with blob ids — a build's) makes the
+   * facets plugin records: read from the process's record store, extracted
+   * only where they missed. Absent, the tree asks git for a file set.
+   */
+  repo?: RepoFiles;
+  /** Enrich the facets with the evaluated barrels (see {@link TreeEnrichment}). */
+  enrich?: TreeEnrichment;
+}
+
+function isSnapshot(repo: RepoFiles): repo is RepoSnapshot {
+  return typeof (repo as Partial<RepoSnapshot>).blobOf === "function";
+}
+
+/** A gitignored file's content from disk, for the module graph (null when absent). */
+function readOutside(root: AppPath, rel: string): string | null {
+  const abs = joinAppPath(root, rel);
+  if (!existsSync(abs) || !statSync(abs).isFile()) return null;
+  return readFileSync(abs, "utf8");
+}
+
+/**
  * The plugin tree under `pluginsRoot`, read off `opts.repo` — the repo's file
  * set, whose root `pluginsRoot` sits directly under. A caller that holds the
  * pass's set (a build's snapshot, a check run's `ctx.repo()`) passes it; with
@@ -285,7 +319,7 @@ function computeIds(nodes: PluginNode[], parentId: string): void {
  */
 export async function buildPluginTree(
   pluginsRoot: AppPath,
-  opts?: { skipBarrelImport?: boolean; facets?: boolean; repo?: RepoFiles },
+  opts?: BuildPluginTreeOptions,
 ): Promise<PluginTree> {
   const repo = opts?.repo ?? (await loadRepoFiles(appPathParent(pluginsRoot)));
   if (repo.root !== appPathParent(pluginsRoot)) {
@@ -347,143 +381,125 @@ export async function buildPluginTree(
     facets: [],
   };
 
-  // Step 4a: barrel import (web → server → machine → central) — gated on `facets` (and, as
-  // before, skippable within a facet build via `skipBarrelImport`). Only the 2
-  // runtime facets (contributions runtime part, registrations) need imported
-  // modules. The other 7 facets parse files from disk and populate without barrels.
-  const importedModules = new Map<
-    string,
-    {
-      mod: Record<string, unknown>;
-      runtime: "web" | "server" | "machine" | "central";
-    }[]
-  >();
-  if (opts?.facets && !opts?.skipBarrelImport) {
-    registerBarrelStubs(join(pluginsRoot, ".."));
-
-    // Seed web-sdk core barrel (defines Core.Root etc. — needed for slot display names)
-    const webSdkCoreBarrel = join(
-      pluginsRoot,
-      "framework/plugins/web-sdk/core/index.ts",
-    );
-    const pluginsRel = relative(repo.root, pluginsRoot);
-    if (repo.has(`${pluginsRel}/framework/plugins/web-sdk/core/index.ts`)) {
-      const coreMod = await importBarrel(webSdkCoreBarrel);
-      const webSdkDir = join(pluginsRoot, "framework/plugins/web-sdk");
-      if (byDir.has(webSdkDir)) {
-        importedModules.set(webSdkDir, [{ mod: coreMod, runtime: "web" }]);
-      }
-    }
-
-    for (const runtime of ["web", "server", "machine", "central"] as const) {
-      for (const node of byDir.values()) {
-        if (!node.runtimes[runtime]) continue;
-        const barrelPath = join(node.dir, runtime, "index.ts");
-
-        const mod = await importBarrel(barrelPath);
-
-        let mods = importedModules.get(node.dir);
-        if (!mods) {
-          mods = [];
-          importedModules.set(node.dir, mods);
-        }
-        mods.push({ mod, runtime });
-      }
-    }
-  }
-
-  // Steps 4b + 4c: facet extract + relate — gated on `facets`. When `facets` is
-  // falsy this whole block is skipped: no `loadFacets`/`buildFsSnapshot`, no
-  // extract, no relate — so `tree.facets` stays `[]` and every `node.facets`
-  // stays `{}` (its init value). Structure-only is steps 1–3, the cheap async
-  // skeleton the hot callers need.
+  // Step 4: facets — gated on `facets`. When `facets` is falsy this whole block
+  // is skipped, so `tree.facets` stays `[]` and every `node.facets` stays `{}`
+  // (its init value). Structure-only is steps 1–3, the cheap async skeleton the
+  // hot callers need.
   if (opts?.facets) {
-    // Step 4b: facet extract. Static facets fully populate; runtime facets are
-    // partial (empty importedModules) under skipBarrelImport — acceptable.
-    //
-    // The facet `extract`/`relate` functions are synchronous and re-read the whole
-    // plugin source tree several times over via sync `readFileSync`/`readdirSync`,
-    // which monopolizes the single event loop for many seconds. To make that fast
-    // AND non-blocking without changing any facet body or the tree's output: read
-    // every needed file ONCE, asynchronously and in parallel, into an in-memory
-    // snapshot, then run the (still-synchronous) extract/relate against it via the
-    // ambient-snapshot hook in parse-utils — so the loops touch zero disk. The
-    // snapshot build runs in parallel with the (async) facet-module load.
-    const [facets, fsSnapshot] = await Promise.all([
-      loadFacets(),
-      buildFsSnapshot(repo, dirs),
-    ]);
+    const facets = await loadFacets();
     tree.facets = facets;
+    const nodes = [...byDir.values()];
 
-    // IMPORTING THE BARRELS IS WHAT DECLARES THE SLOTS. A slot's id is derived
-    // from the plugin that declares it, so a slot nobody has declared has no id
-    // at all — and a facet that reads one off a contribution (`contributions`
-    // names the slot each contribution targets) would silently see nothing and
-    // report an empty set, which reads downstream as "this plugin contributes
-    // nothing" rather than as the tooling failure it is.
-    //
-    // Running the pass HERE, over exactly the modules just imported, is what
-    // makes that impossible: any consumer holding an enriched tree holds
-    // declared slots. Plugins the app's composition leaves out are included
-    // deliberately — their barrels were imported too, and a facet describes
-    // source, not the live registry (the runtime sets filter on composition
-    // membership separately).
-    //
-    // `"source"` is the scope this pass models, and it is what the paragraph
-    // above says in one word: every plugin the checkout declares, excluded ones
-    // included. An `out-of-scope` answer from this naming therefore means the
-    // slot is declared by nobody anywhere, not merely by nobody the browser
-    // loads.
-    const naming = declarePluginSlots(
-      [...byDir.values()].flatMap((node) => {
-        const mods = importedModules.get(node.dir) ?? [];
-        return mods.flatMap((m) => {
-          const slots = declaredSlotSources(m.mod);
-          return slots ? [{ id: node.id, slots }] : [];
-        });
-      }),
-      "source",
-    );
-    // The extract loop shares its thread with whoever else is running (a check
-    // pass runs ~100 checks on it), so it yields a macrotask after ~10 ms of work
-    // rather than per node count: one node's facets can cost far more than
-    // another's, and a fixed count let a heavy stretch hold the thread for
-    // seconds. The reads are in-memory, so this bounds CPU, not I/O.
-    const slice = createTimeSlicer();
-    for (const node of byDir.values()) {
-      const nodeModules = importedModules.get(node.dir) ?? [];
-      for (const facet of facets) {
-        runWithFsSnapshot(fsSnapshot, () => {
-          const data = facet.extract({
-            dir: node.dir,
-            pluginId: node.id,
-            // The modules and the naming travel as ONE value: a facet cannot be
-            // handed barrels without the pass that names the slots their
-            // contributions point at. See `ExtractContext.imported`.
-            imported: { modules: nodeModules, naming },
-            fs: fsSnapshot,
-          });
-          setFacet(node, facet.def, data);
-        });
-        await slice();
+    // Step 4a: extract. From a snapshot, facets are plugin records (see
+    // `facet-records.ts`): only the plugins whose files changed are read.
+    // Without one there is nothing to key a record by, so every plugin is read
+    // and extracted — through the same JSON spelling a record has, so both
+    // paths hand `relate` and `renderDoc` the same values.
+    if (isSnapshot(repo)) {
+      await extractFacetRecords(
+        {
+          snapshot: repo,
+          store: currentRecordStore(),
+          readOutside: (rel) => readOutside(repo.root, rel),
+        },
+        nodes,
+        facets,
+      );
+    } else {
+      await extractEveryFacet(repo, nodes, facets);
+    }
+
+    // Step 4b: enrich with the evaluated barrels (the enriched tree only). Never
+    // a record: the naming is the whole tree's.
+    const enrich = opts.enrich;
+    if (enrich) {
+      for (const node of nodes) {
+        const modules = enrich.modulesOf(node);
+        for (const facet of facets) {
+          if (!facet.enrich) continue;
+          setFacet(
+            node,
+            facet.def,
+            facet.enrich(getFacet(node, facet.def), {
+              dir: node.dir,
+              pluginId: node.id,
+              imported: { modules, naming: enrich.naming },
+            }),
+          );
+        }
       }
     }
 
-    // Step 4c: async whole-tree passes a facet runs before ANY relate, so a
-    // relate (its own or a later facet's) reads their results.
-    for (const facet of facets) {
-      if (facet.prepareRelate)
-        await facet.prepareRelate({ tree, fs: fsSnapshot });
-    }
-    // Step 4d: facet relate. `relate` (e.g. routes/cross-refs) also walks every
-    // plugin's source, so it reads from the same snapshot. Yield between facets so
-    // the residual block is one facet's relate, not all of them summed.
+    // Step 4c: facet relate, over every plugin's data in memory. Yield between
+    // facets so the residual block is one facet's relate, not all of them summed.
     for (const facet of facets) {
       if (!facet.relate) continue;
-      runWithFsSnapshot(fsSnapshot, () => facet.relate!({ tree }));
+      facet.relate({ tree });
       await yieldMacrotask();
     }
   }
 
   return tree;
+}
+
+/**
+ * Every facet of every plugin, extracted from a file set with no blob ids (so
+ * no record can be keyed): the files are read once, in memory, and each
+ * result is spelled as JSON exactly as a record is.
+ */
+async function extractEveryFacet(
+  repo: RepoFiles,
+  nodes: readonly PluginNode[],
+  facets: readonly Facet[],
+): Promise<void> {
+  const fs = await buildFsSnapshot(
+    repo,
+    nodes.map((n) => n.dir),
+  );
+  // The extract loop shares its thread with whoever else is running (a check
+  // pass runs ~100 checks on it), so it yields a macrotask after ~10 ms of work
+  // rather than per node count: one node's facets can cost far more than
+  // another's. The reads are in-memory, so this bounds CPU, not I/O.
+  const slice = createTimeSlicer();
+  const data = new Map<PluginNode, Map<string, unknown>>();
+  for (const node of nodes) {
+    const byFacet = new Map<string, unknown>();
+    for (const facet of facets) {
+      byFacet.set(
+        facet.def.id,
+        runWithFsSnapshot(fs, () =>
+          facet.extract({
+            dir: node.dir,
+            relDir: relative(repo.root, node.dir),
+            pluginId: node.id,
+            fs,
+          }),
+        ),
+      );
+      await slice();
+    }
+    data.set(node, byFacet);
+  }
+  for (const facet of facets) {
+    if (!facet.extractBatch) continue;
+    await facet.extractBatch.run({
+      root: repo.root,
+      fs,
+      plugins: nodes.map((node) => ({
+        dir: node.dir,
+        data: data.get(node)!.get(facet.def.id),
+      })),
+    });
+  }
+  for (const node of nodes) {
+    for (const facet of facets) {
+      setFacet(
+        node,
+        facet.def,
+        JSON.parse(
+          JSON.stringify(data.get(node)!.get(facet.def.id)),
+        ) as unknown,
+      );
+    }
+  }
 }

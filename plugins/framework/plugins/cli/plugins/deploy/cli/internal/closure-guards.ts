@@ -84,7 +84,6 @@ async function loadClosureContext(): Promise<ClosureContext> {
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
   });
   const tree = await buildPluginTree(joinAppPath(REPO_ROOT, "plugins"), {
-    skipBarrelImport: true,
     facets: true,
   });
   return {

@@ -168,7 +168,7 @@ export function seg(key: string): string {
  * scheme, not a string each reader happens to build. It was built in six places
  * (the `slot.id` getter, {@link declarePluginSlots}, and four sites in the slots
  * facet), and the facet's copies are the ones that matter: they run under
- * `skipBarrelImport`, where there is no declaration to read the id back off, so
+ * a barrel-free tree, where there is no declaration to read the id back off, so
  * they must derive the SAME id the pass would settle. Six spellings of a
  * scheme is six chances for one to drift and produce a plausible id that names
  * nothing.
@@ -199,6 +199,83 @@ const createdSlots: SlotHandle[] = [];
 /** Internal: called by `defineSlot` for every slot, once, at construction. */
 export function recordCreatedSlot(slot: SlotHandle): void {
   createdSlots.push(slot);
+  if (siteTracking) {
+    const module = evaluatingModule();
+    const o = moduleEvaluation(module);
+    sites.set(slot, { module, ordinal: o.created.length });
+    o.created.push(slot);
+  }
+}
+
+/**
+ * WHERE each slot was made, for a process that evaluates barrels to record
+ * them as data (the build: `plugin-records`): the module whose top-level
+ * evaluation constructed it, and its ordinal among that module's slots. That
+ * pair names a slot with no declaration pass, the same in every process that
+ * evaluates the same code — what an evaluated record stores in place of the
+ * slot object.
+ *
+ * Off unless {@link trackSlotSites} turned it on (it reads a stack trace per
+ * slot): the browser never does.
+ */
+export interface SlotSite {
+  /** The creating module's absolute path, as the runtime spells it. */
+  module: string;
+  ordinal: number;
+}
+
+/** What one module's top-level evaluation did, while sites were tracked. */
+export interface ModuleEvaluation {
+  created: SlotHandle[];
+  /** It subscribed to declaration passes (see {@link subscribeSlotsDeclared}). */
+  subscribes: boolean;
+}
+
+let siteTracking = false;
+const sites = new WeakMap<SlotHandle, SlotSite>();
+const moduleEvaluations = new Map<string, ModuleEvaluation>();
+
+/** Track every slot's {@link SlotSite} from now on, in this process. */
+export function trackSlotSites(): void {
+  siteTracking = true;
+}
+
+/** Whether sites are tracked — a module evaluated before that has no record of its slots. */
+export function slotSitesTracked(): boolean {
+  return siteTracking;
+}
+
+/** The site of `slot` (a facade's target), or `undefined` when it was made untracked. */
+export function slotSite(slot: SlotHandle): SlotSite | undefined {
+  return sites.get(slot._slot ?? slot);
+}
+
+/** What the module at `path` did while sites were tracked (nothing, if it was not evaluated). */
+export function moduleEvaluation(path: string): ModuleEvaluation {
+  let o = moduleEvaluations.get(path);
+  if (!o) moduleEvaluations.set(path, (o = { created: [], subscribes: false }));
+  return o;
+}
+
+/**
+ * The module whose top-level evaluation is running: the stack's bottom frame.
+ * A module evaluates from the loader, never inside its importer's frames, so
+ * the bottom frame is the module being evaluated — through any factory it
+ * calls, and after a top-level `await`.
+ */
+function evaluatingModule(): string {
+  const prev = Error.stackTraceLimit;
+  Error.stackTraceLimit = Infinity;
+  const stack = new Error().stack ?? "";
+  Error.stackTraceLimit = prev;
+  const lines = stack.trim().split("\n");
+  const last = lines[lines.length - 1]!.trim();
+  const m = /^at (?:.*\()?(\/.*?):\d+:\d+\)?$/.exec(last);
+  if (!m)
+    throw new Error(
+      `[slots] cannot tell which module is evaluating from the stack frame ${JSON.stringify(last)}`,
+    );
+  return m[1]!;
 }
 
 /**
@@ -572,6 +649,7 @@ export function subscribeSlotsDeclared(
   listener: SlotDeclarationListener,
 ): () => void {
   declarationListeners.add(listener);
+  if (siteTracking) moduleEvaluation(evaluatingModule()).subscribes = true;
   listener(lastNaming);
   return () => {
     declarationListeners.delete(listener);
@@ -607,6 +685,39 @@ export function declarePluginSlots(
   plugins: readonly SlotDeclaringPlugin[],
   scope: SlotScope,
 ): SlotNaming {
+  const { entries, owners } = settle(plugins);
+  for (const { slot, pluginId, key } of entries) {
+    slot._pluginId = pluginId;
+    slot._key = key;
+  }
+  const naming = makeNaming(entries, owners, scope);
+  // Published before the listeners run, so a subscriber that re-derives state
+  // here (and anything it calls) already sees the pass it is being notified
+  // about. A pass that threw above never publishes — it settled no ownership.
+  lastNaming = naming;
+  for (const listener of declarationListeners) listener(naming);
+  return naming;
+}
+
+/**
+ * The naming {@link declarePluginSlots} would settle over `plugins`, with the
+ * same refusals — but stamping no slot and notifying no subscriber. For a
+ * reader naming slots it holds as DATA (the build's evaluated records, whose
+ * slots are stand-ins), where the stamps and the listeners belong to no live
+ * registry.
+ */
+export function settleSlotNaming(
+  plugins: readonly SlotDeclaringPlugin[],
+  scope: SlotScope,
+): SlotNaming {
+  const { entries, owners } = settle(plugins);
+  return makeNaming(entries, owners, scope);
+}
+
+function settle(plugins: readonly SlotDeclaringPlugin[]): {
+  entries: SlotNamingEntry[];
+  owners: Map<string, PluginId>;
+} {
   const owners = new Map<string, PluginId>();
   // THIS pass's declarations, in declaration order. Accumulated here rather than
   // recovered afterwards from the stamps written below — see {@link SlotNaming}
@@ -623,8 +734,8 @@ export function declarePluginSlots(
     if (!plugin.slots) continue;
     for (const { slot, key } of collectSlots(plugin.id, plugin.slots)) {
       // Composed here rather than read off `slot.id`: the getter derives the id
-      // FROM the stamps this loop is about to write, so asking the slot for its
-      // own name before naming it is exactly the read that throws.
+      // FROM the stamps the live pass writes, so asking the slot for its own
+      // name before naming it is exactly the read that throws.
       const id = slotIdFor(plugin.id, key);
       const existing = owners.get(id);
       if (existing !== undefined && existing !== plugin.id) {
@@ -652,17 +763,9 @@ export function declarePluginSlots(
       }
       claimant.set(id, slot);
       owners.set(id, plugin.id);
-      slot._pluginId = plugin.id;
-      slot._key = key;
     }
   }
-  const naming = makeNaming(entries, owners, scope);
-  // Published before the listeners run, so a subscriber that re-derives state
-  // here (and anything it calls) already sees the pass it is being notified
-  // about. A pass that threw above never publishes — it settled no ownership.
-  lastNaming = naming;
-  for (const listener of declarationListeners) listener(naming);
-  return naming;
+  return { entries, owners };
 }
 
 /**

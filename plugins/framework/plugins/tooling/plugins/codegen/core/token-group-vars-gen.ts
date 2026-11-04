@@ -3,14 +3,8 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { relative } from "path";
 import { writeGenerated } from "./write-generated";
-import { buildBarrelFreeTree } from "./barrel-free-tree";
-import { declareSlotsFromBarrels } from "./slot-declaration-guard";
-import {
-  registerBarrelStubs,
-  importBarrel,
-} from "@plugins/plugin-meta/plugins/barrel-import/core";
+import { evaluateWebBarrels, recordSlotNaming } from "./evaluated-barrels";
 
 /**
  * Generates the token-group-vars manifest consumed by the build-time CSS
@@ -20,8 +14,8 @@ import {
  * `@plugins/ui/...` token-group descriptors at runtime (that would invert the
  * framework→ui layering), and `shared/group.ts` is plugin-private (boundary
  * R10). But this build-time codegen can read the REAL `defineTokenGroup`
- * descriptors via `importBarrel` — exactly how the `facets:render-complete`
- * check already reads live web-slot contributions.
+ * descriptors, as the build evaluated the web barrels (their evaluated
+ * records: the descriptors' `vars` and `schema` are plain data).
  *
  * It generically collects every contribution whose slot id is
  * `ui.theme-engine.token-group` (the TokenGroup slot's own registry — never
@@ -113,13 +107,12 @@ export function collectTokenGroups(
 async function collectTokenGroupsUncached(
   root: AppPath,
 ): Promise<Record<string, CollectedTokenGroup>> {
-  const tree = await buildBarrelFreeTree(root);
-  registerBarrelStubs(root);
-  // Imports web barrels below, so it must also declare their slots: a
-  // contribution names its slot by object, and that slot's id comes from
-  // whichever plugin declares it. Without this the token-group set reads as
-  // empty — a smaller, wrong answer that looks right.
-  const naming = await declareSlotsFromBarrels(root, "registry");
+  const ev = await evaluateWebBarrels(root);
+  // A contribution names its slot by object, and that slot's id comes from
+  // whichever plugin declares it — the registry naming over the evaluated
+  // records. Without it the token-group set reads as empty — a smaller, wrong
+  // answer that looks right.
+  const naming = await recordSlotNaming(root, "registry");
   // Resolved ONCE, here, rather than compared as a string inside the loop: a
   // stale id then fails at this named line instead of matching nothing and
   // emitting an empty manifest (which is how `css-vars-supplied` once reported
@@ -128,18 +121,10 @@ async function collectTokenGroupsUncached(
   const tokenGroupSlot = naming.slotNamed(TOKEN_GROUP_SLOT_ID);
 
   const byGroup: Record<string, CollectedTokenGroup> = {};
-  for (const node of tree.byDir.values()) {
-    // A plugin dir of this checkout.
-    if (!node.runtimes.web) continue;
-    const webIndex = joinAppPath(node.dir, "web", "index.ts");
-    let mod: Record<string, unknown>;
-    try {
-      mod = await importBarrel(webIndex);
-    } catch (err) {
-      throw new Error(
-        `Failed to import web barrel ${relative(root, webIndex)}: ${String(err)}`,
-      );
-    }
+  for (const ref of ev.refs) {
+    // Every plugin's web barrel (web-sdk's seed declares slots, contributes none).
+    if (!ref.path.endsWith("/web/index.ts")) continue;
+    const mod = ev.barrels.module(ref.path);
     const def = mod.default as
       | {
           contributions?: Array<

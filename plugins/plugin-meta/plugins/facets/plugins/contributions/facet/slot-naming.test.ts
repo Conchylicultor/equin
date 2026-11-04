@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { declarePluginSlots } from "@plugins/framework/plugins/slot-declaration/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import type { ExtractContext } from "@plugins/plugin-meta/plugins/facets/core";
+import type {
+  EnrichContext,
+  ExtractContext,
+} from "@plugins/plugin-meta/plugins/facets/core";
 import type { ContributionsFacetData } from "../core";
 import contributionsFacet from "./index";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
@@ -11,7 +14,7 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
 // when it was handed barrels in a process where no slot-declaration pass had
 // run, because reading a derived `contributions` array that early answers with a
 // silently smaller set. The barrels and the naming of the pass over them now
-// arrive as ONE value (`ExtractContext.imported`), so that state is unspellable
+// arrive as ONE value (`EnrichContext.imported`), so that state is unspellable
 // and there is nothing left to assert.
 //
 // What is worth testing instead is what the facet DOES with that naming — and
@@ -21,13 +24,10 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
 // is the disease the pairing cures; a test that reintroduced the dependency
 // would be testing the thing that was removed.
 
-// A plugin dir that cannot exist, so the static half of `extract` reads no files
+// A plugin dir that cannot exist, so the static half (`extract`) reads no files
 // and the tests stay hermetic — no tree build, no barrel imports, no disk.
-const ctx = (imported: ExtractContext["imported"]): ExtractContext => ({
-  dir: asAppPath("/nonexistent/plugin-dir-for-slot-naming-test"),
-  pluginId: "slot.naming.test",
-  imported,
-});
+const dir = asAppPath("/nonexistent/plugin-dir-for-slot-naming-test");
+const pluginId = "slot.naming.test";
 
 /**
  * A slot as `isSlot` recognises one: a callable carrying `useContributions` and
@@ -49,8 +49,15 @@ const oneWebBarrel = (contributions: unknown[]) => [
   },
 ];
 
-const extract = (imported: ExtractContext["imported"]) =>
-  contributionsFacet.extract(ctx(imported)) as ContributionsFacetData;
+const extract = (imported: EnrichContext["imported"]) =>
+  contributionsFacet.enrich!(
+    contributionsFacet.extract({
+      dir,
+      relDir: "fixtures/slot-naming-test",
+      pluginId,
+    } satisfies ExtractContext),
+    { dir, pluginId, imported },
+  ) as ContributionsFacetData;
 
 describe("contributions facet: slot ids come from the paired naming", () => {
   test("a contribution's slot id is the one this pass settled", () => {
@@ -145,6 +152,5 @@ describe("contributions facet: slot ids come from the paired naming", () => {
     expect(
       extract({ modules: [], naming: declarePluginSlots([], "source") }),
     ).toEqual(empty);
-    expect(extract(undefined)).toEqual(empty);
   });
 });

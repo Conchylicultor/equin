@@ -227,10 +227,12 @@ export async function regenerateManifestCodegen({
   // invariant into a loud runtime failure instead of silent config pruning.
   setPreBarrelImportGuard(() => assertPreBarrelManifestsFresh(root));
   try {
-    // The web declaration pass happens here (inside both steps below, shared
-    // and memoized): it imports every WEB barrel and nothing else, so the
-    // freeze-point guard fires on the first of those imports, and no server
-    // barrel has read the manifest yet.
+    // The web barrels are evaluated here (inside both steps below, shared and
+    // memoized — `evaluated-barrels.ts`): read from their evaluated records,
+    // and imported only where a record missed — WEB barrels and nothing else,
+    // so the freeze-point guard fires on the first such import, and no server
+    // barrel has read the manifest yet. The server barrels' evaluation runs at
+    // the first reader after the post-web manifests (the docs' enriched tree).
     //
     // The GUARD runs before the manifest is written, and both run before any
     // config origin is generated. That order is load-bearing: an undeclared slot
@@ -241,9 +243,8 @@ export async function regenerateManifestCodegen({
     await onStep("slotDeclarations", "slot declaration guard", () =>
       assertSlotsDeclared(root),
     );
-    // POST-WEB manifests: their renderers need those same declarations. The web
-    // imports are ESM-cache hits for `generatePluginDocs` below, so this costs
-    // one evaluation of each web barrel, not two.
+    // POST-WEB manifests: their renderers need those same declarations, read
+    // from the same evaluated records.
     for (const m of postWebManifests) {
       await onStep(m.id, `${m.id} manifest`, () =>
         writePreBarrelManifest(m, root),

@@ -270,7 +270,7 @@ function applyCompanions(
  * skips sub-plugin `plugins/` trees, `node_modules` and tests), deduped by slot
  * id, first writer wins.
  *
- * Two callers, two jobs. Under `skipBarrelImport` this IS the slot set. When
+ * Two callers, two jobs. In the barrel-free tree this IS the slot set. When
  * barrels are imported the declaration is the set, and this supplies only the
  * DISPLAY NAMES (`Group.Member`) — the one thing source text knows and the
  * runtime has erased. A slot the parse can't reach (a factory's templated id)
@@ -465,25 +465,25 @@ function collectDeclaredSlots(
 export default createFacet<SlotDef[]>({
   def: slotsFacetDef,
 
+  // Two discovery modes:
+  //  - `extract` (every tree): the static text parse alone. Its one blind spot
+  //    is a slot with no NAME in source (one minted inside a factory, such as a
+  //    pane's `Actions`) — those the evaluated barrels see instead.
+  //  - `enrich` (the enriched tree): the plugin's own `slots: {…}` DECLARATION,
+  //    from its evaluated barrel, is the sole authoritative set, and each
+  //    slot's `meta.kind` is read off the slot itself. Nothing is sniffed and
+  //    nothing is guessed: a slot is here because its owner said so, which is
+  //    also what makes the attribution correct (it was "whichever barrel
+  //    exposed it first" while this walked export graphs). The barrel's
+  //    exports still give the `Group.Member` display names.
   extract(ctx) {
-    // Two discovery modes:
-    //  - Imports present (the normal build): the plugin's own `slots: {…}`
-    //    DECLARATION is the sole authoritative set, and each slot's `meta.kind`
-    //    is read off the slot object. Nothing is sniffed and nothing is guessed:
-    //    a slot is here because its owner said so, which is also what makes the
-    //    attribution correct (it was "whichever barrel exposed it first" while
-    //    this walked export graphs). The static parse still runs, but only to
-    //    recover the `Group.Member` display names source text alone knows.
-    //  - No imports (`skipBarrelImport` build mode): fall back to the static
-    //    text parse alone. Its one blind spot is a *dynamic* slot id — an id
-    //    built from a template/identifier expression rather than a string
-    //    a slot with no NAME in source (one minted inside a factory, such as a
-    //    pane's `Actions`) — those the barrel-import path sees instead.
-    const modules = ctx.imported?.modules;
-    if (modules && modules.length > 0) {
-      return collectDeclaredSlots(ctx.dir, ctx.pluginId, modules);
-    }
     return parseSlotsFromSource(ctx.dir, ctx.pluginId);
+  },
+
+  enrich(data, ctx) {
+    const modules = ctx.imported.modules;
+    if (modules.length === 0) return data;
+    return collectDeclaredSlots(ctx.dir, ctx.pluginId, modules);
   },
 
   // The per-slot reverse index (`SlotDef.contributors`) is populated by the

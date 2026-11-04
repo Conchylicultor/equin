@@ -3,7 +3,17 @@
  * chosen order so the first payer of a process-wide memo is attributed:
  *
  *   ./equin run plugins/framework/plugins/tooling/plugins/codegen/scripts/measure-build-steps.ts \
- *     [--order pipeline|docs-first|guard-first|tree-only|migrations-only] [--json out.json]
+ *     [--order pipeline|docs-first|guard-first|tree-only|migrations-only] [--json out.json] [--records]
+ *
+ * `--records`: read and write the shared plugin-record store, from a repo
+ * snapshot, as `./equin build` does (without it: the process's memory store,
+ * every record computed — a cold run). Reports how many barrels each
+ * evaluation imported live.
+ *
+ * `--dump <file>`: after the run, write every plugin's facets, in the
+ * barrel-free and the enriched tree, as JSON. A `--records` run's dump against
+ * a run without it (fresh, every record computed) is the records'
+ * verification: any difference is a record whose key missed an input.
  *
  * ONE order per invocation (a fresh process each: the memos make a second order
  * in the same process meaningless). Per step: wall ms (performance.now), CPU ms
@@ -40,10 +50,15 @@ import {
   schemaLoadFailures,
   stageDrizzleOut,
 } from "@plugins/database/plugins/migrations/core";
+import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import { installRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import { openRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/cli";
 import {
+  assertSlotsDeclared,
   buildBarrelFreeTree,
   buildEnrichedTree,
-  declareSlotsFromBarrels,
+  evaluateAllBarrels,
+  evaluateWebBarrels,
   formatGenerated,
   regenerateManifestCodegen,
   regenerateRegistryCodegen,
@@ -74,6 +89,8 @@ if (!(ORDERS as readonly string[]).includes(orderArg)) {
 }
 const order = orderArg as Order;
 const jsonOut = arg("json");
+const records = process.argv.includes("--records");
+const dumpOut = arg("dump");
 
 interface Row {
   step: string;
@@ -135,6 +152,10 @@ async function trackedMtimes(): Promise<Map<string, number>> {
   return m;
 }
 
+if (records) installRecordStore(openRecordStore());
+const snapshot = records
+  ? await step("repo snapshot", () => loadRepoSnapshot(root))
+  : undefined;
 const before = await trackedMtimes();
 const modulesAtStart = moduleCount();
 
@@ -169,7 +190,7 @@ const treeCounts = async (): Promise<Record<string, number>> => {
 if (order === "tree-only") {
   await step(
     "barrel-free tree",
-    () => buildBarrelFreeTree(root),
+    () => buildBarrelFreeTree(root, snapshot),
     (t) => ({
       plugins: t.byDir.size,
     }),
@@ -181,19 +202,30 @@ if (order === "tree-only") {
 if (order === "guard-first") {
   await step(
     "barrel-free tree",
-    () => buildBarrelFreeTree(root),
+    () => buildBarrelFreeTree(root, snapshot),
     (t) => ({
       plugins: t.byDir.size,
     }),
   );
-  await step("web barrels (slot declaration)", () =>
-    declareSlotsFromBarrels(root, "registry"),
+  await step(
+    "web barrels evaluated + slot guard",
+    async () => {
+      await assertSlotsDeclared(root);
+      return evaluateWebBarrels(root);
+    },
+    (e) => ({ barrels: e.refs.length, imported: e.barrels.imported }),
   );
   await step(
     "enriched tree (server/machine/central + facets)",
     () => buildEnrichedTree(root),
     (t) => ({ plugins: t.byDir.size }),
   );
+  const all = await evaluateAllBarrels(root);
+  rows[rows.length - 1]!.counts = {
+    ...rows[rows.length - 1]!.counts,
+    barrels: all.refs.length,
+    imported: all.barrels.imported,
+  };
   await step("docs render+format (no write)", docsRender, (o) => ({
     compactBytes: o.compact,
     detailsBytes: o.details,
@@ -261,14 +293,42 @@ if (order === "pipeline") {
       await step(`${prefix}${id} (${label})`, run);
     };
   await step("regenerateRegistryCodegen (total)", async () => {
-    await regenerateRegistryCodegen({ root, onStep: record("  reg: ") });
+    await regenerateRegistryCodegen({
+      root,
+      ...(snapshot ? { repo: snapshot } : {}),
+      onStep: record("  reg: "),
+    });
   });
   await step("regenerateManifestCodegen (total)", async () => {
     await regenerateManifestCodegen({ root, onStep: record("  man: ") });
   });
   const t = await treeCounts();
   const first = rows[0]!;
-  first.counts = { ...first.counts, ...t };
+  const web = await evaluateWebBarrels(root);
+  const all = await evaluateAllBarrels(root);
+  first.counts = {
+    ...first.counts,
+    ...t,
+    webImported: web.barrels.imported,
+    allImported: all.barrels.imported,
+  };
+}
+
+if (dumpOut) {
+  const dump: Record<string, unknown> = {};
+  for (const [name, tree] of [
+    ["barrel-free", await buildBarrelFreeTree(root)],
+    ["enriched", await buildEnrichedTree(root)],
+  ] as const) {
+    const nodes: Record<string, unknown> = {};
+    for (const n of [...tree.byDir.values()].sort((a, b) =>
+      a.path.localeCompare(b.path),
+    ))
+      nodes[n.path] = n.facets;
+    dump[name] = nodes;
+  }
+  writeFileSync(dumpOut, JSON.stringify(dump, null, 1) + "\n");
+  console.log(`dumped facets to ${dumpOut}`);
 }
 
 const after = await trackedMtimes();

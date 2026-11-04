@@ -48,6 +48,7 @@ mark the check-thread watch could only call that time `native (anonymous)`.
 - Description: Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
 - Core:
   - Uses:
+    - `framework/slot-declaration.trackSlotSites`
     - `infra/namespace.asNamespace`
     - `infra/runtime-identity.declareRuntimeNamespace`
     - `infra/runtime-identity.hasRuntimeNamespace`
@@ -65,7 +66,7 @@ mark the check-thread watch could only call that time `native (anonymous)`.
 - Cross-plugin:
   - Imported by:
     - `framework/tooling/codegen`
-    - `plugin-meta/plugin-tree`
+    - `plugin-meta/plugin-records`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/stubs.ts` (debt)
 - Test helpers:

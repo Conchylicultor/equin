@@ -49,6 +49,7 @@ import {
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
 import { mainBundle } from "./main-bundle";
+import { evaluateAllBarrels } from "./evaluated-barrels";
 import { writeGenerated } from "./write-generated";
 import {
   applyConfigMigrations,
@@ -76,7 +77,35 @@ function isConfigDescriptor(v: unknown): v is ConfigDescriptor {
   );
 }
 
-async function discoverConfigs(root: AppPath): Promise<DiscoveredConfig[]> {
+/**
+ * Every config descriptor the bundled server halves register.
+ *
+ * From the build's evaluated records by default: a descriptor's name, fields,
+ * defaults and legend are data, which is all an origin is rendered from — so
+ * no barrel is imported when nothing changed. `live` imports the barrels
+ * instead, for a reader that needs what a record cannot hold: the descriptor's
+ * zod `schema` (the in-sync check validates committed files with it), or code
+ * a field carries.
+ */
+async function discoverConfigs(
+  root: AppPath,
+  opts?: { live?: boolean },
+): Promise<DiscoveredConfig[]> {
+  if (!opts?.live) {
+    const ev = await evaluateAllBarrels(root);
+    const bundle = mainBundle(ev.tree, root);
+    const results: DiscoveredConfig[] = [];
+    for (const node of ev.tree.byDir.values()) {
+      if (!bundle.has(node.id)) continue;
+      for (const { mod, runtime } of ev.modulesOf(node)) {
+        if (!(SERVER_HALF_RUNTIMES as readonly string[]).includes(runtime))
+          continue;
+        results.push(...configsOfModule(mod, node.id));
+      }
+    }
+    return results;
+  }
+
   const tree = await buildEnrichedTree(root);
   registerBarrelStubs(root);
 
@@ -128,6 +157,14 @@ async function configsOfBarrel(
     );
   }
 
+  return configsOfModule(mod, nodeId);
+}
+
+/** The config descriptors one server-half module registers (live or evaluated). */
+function configsOfModule(
+  mod: Record<string, unknown>,
+  nodeId: PluginId,
+): DiscoveredConfig[] {
   // Reading `.default` off the imported module record cannot throw, so no
   // guard is needed — a missing default is simply `undefined`.
   const def = mod.default as Record<string, unknown> | undefined;
@@ -429,8 +466,13 @@ export async function renderConfigOriginContent(opts: {
  */
 export async function loadConfigDescriptorsByOriginPath(opts: {
   root: AppPath;
+  /**
+   * Import the barrels for LIVE descriptors (their zod `schema`, their code),
+   * rather than reading the evaluated records' data — see `discoverConfigs`.
+   */
+  live?: boolean;
 }): Promise<Map<string, ConfigDescriptor>> {
-  const configs = await discoverConfigs(opts.root);
+  const configs = await discoverConfigs(opts.root, { live: opts.live });
   const result = new Map<string, ConfigDescriptor>();
   for (const { hierarchyPath, descriptor } of configs) {
     result.set(`${hierarchyPath}/${descriptor.name}.origin.jsonc`, descriptor);

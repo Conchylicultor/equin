@@ -1,0 +1,82 @@
+/**
+ * Where records live: a content-addressed key → value map, one per kind of
+ * record. A key is a hash of EVERYTHING the value is a function of (see
+ * `keys.ts`), so a value never goes stale — it is simply never asked for again
+ * once one of its inputs changes — and a store may be shared by every worktree
+ * and every process of the machine.
+ *
+ * The interface is synchronous and batched on purpose: a warm build asks for
+ * ~20k records, in a handful of batches, and the SQLite store answers a batch
+ * in one prepared statement.
+ */
+
+/** The kinds of record, one table each. */
+export const RECORD_TABLES = [
+  // A file's own facts (its import specifiers), keyed by its blob id.
+  "file",
+  // One facet's extract of one plugin, keyed by the plugin's own files.
+  "facet",
+  // One barrel's evaluated facts, keyed by its module Merkle key.
+  "evaluated",
+  // The slots one module's top-level evaluation created, keyed by its Merkle key.
+  "module",
+] as const;
+export type RecordTable = (typeof RECORD_TABLES)[number];
+
+export interface RecordStore {
+  /**
+   * What every record also depends on that no file names: the runtime that
+   * computes it (its version and platform). Part of every record identity, so
+   * a store shared by two Bun versions keeps their records apart.
+   */
+  readonly environment: string;
+  /** The values stored under `keys` (a key with no value is absent). */
+  getMany(table: RecordTable, keys: readonly string[]): Map<string, string>;
+  /** Store `entries`; a key already present keeps its value (it is the same). */
+  putMany(
+    table: RecordTable,
+    entries: ReadonlyArray<readonly [key: string, value: string]>,
+  ): void;
+}
+
+/** A store that lives as long as the process: what a caller with no shared store gets. */
+export function createMemoryRecordStore(environment = "memory"): RecordStore {
+  const tables = new Map<RecordTable, Map<string, string>>();
+  const tableOf = (t: RecordTable): Map<string, string> => {
+    let m = tables.get(t);
+    if (!m) tables.set(t, (m = new Map()));
+    return m;
+  };
+  return {
+    environment,
+    getMany(table, keys) {
+      const m = tableOf(table);
+      const out = new Map<string, string>();
+      for (const k of keys) {
+        const v = m.get(k);
+        if (v !== undefined) out.set(k, v);
+      }
+      return out;
+    },
+    putMany(table, entries) {
+      const m = tableOf(table);
+      for (const [k, v] of entries) if (!m.has(k)) m.set(k, v);
+    },
+  };
+}
+
+// The process's store. The build installs the shared one (`plugin-records/cli`)
+// before codegen runs; any other process (a check pass, a script) keeps the
+// in-memory default, which computes everything once per process — exactly what
+// it did before records existed.
+let installed: RecordStore | undefined;
+
+/** Install the store every record read and write of this process goes through. */
+export function installRecordStore(store: RecordStore): void {
+  installed = store;
+}
+
+/** The installed store, or the process's in-memory one. */
+export function currentRecordStore(): RecordStore {
+  return (installed ??= createMemoryRecordStore());
+}

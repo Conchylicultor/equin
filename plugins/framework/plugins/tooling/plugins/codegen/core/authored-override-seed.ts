@@ -266,6 +266,13 @@ async function remarkIfStale(opts: {
 export async function applyAuthoredOverrideSeeding(opts: {
   configDir: AppPath;
   descriptorsByOriginRel: Map<string, ConfigDescriptor>;
+  /**
+   * The LIVE descriptor of an origin, for its `seedWhen` predicate — code, which
+   * a descriptor read from the build's evaluated records holds only as a
+   * stand-in. Asked only on the path that would create a file. Absent: the
+   * descriptors above are live already.
+   */
+  liveDescriptor?: (originRel: string) => Promise<ConfigDescriptor>;
 }): Promise<AuthoredOverrideSeedResult> {
   const { configDir } = opts;
   const seeded: string[] = [];
@@ -315,7 +322,11 @@ export async function applyAuthoredOverrideSeeding(opts: {
       : `${owner.name}.jsonc`;
     const basePath = joinAppPath(configDir, baseRel);
     if (!existsSync(basePath)) {
-      if (isWorthAuthoring({ descriptor, originRel, originContent })) {
+      const asked =
+        descriptor.requiresAuthoredOverride.seedWhen && opts.liveDescriptor
+          ? await opts.liveDescriptor(originRel)
+          : descriptor;
+      if (isWorthAuthoring({ descriptor: asked, originRel, originContent })) {
         await writeGenerated({
           file: basePath,
           content: renderHeaderedFile(
@@ -373,12 +384,25 @@ export async function applyAuthoredOverrideSeeding(opts: {
 export async function seedAuthoredOverrides(opts: {
   root: AppPath;
 }): Promise<AuthoredOverrideSeedResult> {
+  let live$: Promise<Map<string, ConfigDescriptor>> | undefined;
   return await applyAuthoredOverrideSeeding({
     // `root`: the checkout root the caller works in.
     configDir: joinAppPath(opts.root, "config"),
     descriptorsByOriginRel: await loadConfigDescriptorsByOriginPath({
       root: opts.root,
     }),
+    liveDescriptor: async (originRel) => {
+      const live = (live$ ??= loadConfigDescriptorsByOriginPath({
+        root: opts.root,
+        live: true,
+      }));
+      const d = (await live).get(originRel);
+      if (!d)
+        throw new Error(
+          `seedAuthoredOverrides: no live descriptor for config/${originRel}, though the evaluated records hold one.`,
+        );
+      return d;
+    },
   });
 }
 

@@ -1,4 +1,3 @@
-import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import {
   joinAppPath,
   type AppPath,
@@ -13,9 +12,9 @@ import {
   unresolvableCallIdMessage,
   sourceFilesIn,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import { isIconRefModule } from "@plugins/ui/plugins/icons/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
+import { scanFiles, type FileScan } from "./file-scans";
 
 /**
  * Generates the icon manifest — every icon name the code draws, collected from
@@ -112,6 +111,12 @@ export function scanIconNames(src: string, displayPath: string): IconManifest {
   return out;
 }
 
+const ICON_SCAN: FileScan<IconManifest> = {
+  module:
+    "plugins/framework/plugins/tooling/plugins/codegen/core/icon-manifest-gen.ts",
+  scan: (src, rel) => scanIconNames(src, rel),
+};
+
 /** Every icon name the repo draws, scanned from source now (not read from the generated file). */
 export async function collectIconManifest(
   root: AppPath,
@@ -119,24 +124,22 @@ export async function collectIconManifest(
   const symbols = new Set<string>();
   const brands = new Set<string>();
   const seti = new Set<string>();
-  // A check pass runs this on the thread its checks share: read without
-  // blocking, and pause every ~10 ms of scanning.
-  const slice = createTimeSlicer();
   // Every plugin's own files (a walk stops at `plugins/`, where each child is
   // its own node). Not filtered by composition: a name drawn by any plugin in
-  // the repo ships, which costs a symbol, never a missing glyph.
+  // the repo ships, which costs a symbol, never a missing glyph. Each file's
+  // names are a file record: only a file whose blob changed is read.
   const tree = await buildBarrelFreeTree(root);
+  const files: string[] = [];
   for (const node of tree.byDir.values()) {
     for (const file of sourceFilesIn(tree.repo, node.dir)) {
       if (file.endsWith(".generated.ts")) continue;
-      const src = await readFile(file, "utf8");
-      if (!MARKER_CALL_RE.test(src)) continue;
-      await slice();
-      const found = scanIconNames(src, relative(root, file));
-      for (const n of found.symbols) symbols.add(n);
-      for (const n of found.brands) brands.add(n);
-      for (const n of found.seti) seti.add(n);
+      files.push(relative(root, file));
     }
+  }
+  for (const found of await scanFiles(tree.repo, files, ICON_SCAN)) {
+    for (const n of found.symbols) symbols.add(n);
+    for (const n of found.brands) brands.add(n);
+    for (const n of found.seti) seti.add(n);
   }
   return {
     symbols: [...symbols].sort(),

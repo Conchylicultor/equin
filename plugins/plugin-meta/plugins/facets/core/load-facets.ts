@@ -11,6 +11,41 @@ function isFacet(value: unknown): value is Facet {
   );
 }
 
+/**
+ * Each facet's source module (repo-relative), by facet id: what a facet's
+ * plugin records are keyed by (its code's Merkle key), so editing one facet
+ * re-extracts that facet and no other.
+ *
+ * A facet's id is its plugin directory's name — asserted, so a facet whose id
+ * drifted from its folder fails here instead of keying its records on another
+ * facet's code.
+ */
+export async function loadFacetSources(
+  facets: readonly Facet[],
+): Promise<Map<string, string>> {
+  const generatedModule = "./facet.generated";
+  const { facetEntries } = (await import(generatedModule)) as {
+    facetEntries: { pluginPath: string }[];
+  };
+  const byId = new Map<string, string>();
+  for (const e of facetEntries) {
+    byId.set(
+      e.pluginPath.slice(e.pluginPath.lastIndexOf("/") + 1),
+      `plugins/${e.pluginPath}/facet/index.ts`,
+    );
+  }
+  const out = new Map<string, string>();
+  for (const f of facets) {
+    const source = byId.get(f.def.id);
+    if (source === undefined)
+      throw new Error(
+        `[facets] facet "${f.def.id}" lives in no facets/plugins/${f.def.id}/ folder: a facet's id must be its plugin directory's name.`,
+      );
+    out.set(f.def.id, source);
+  }
+  return out;
+}
+
 export async function loadFacets(): Promise<Facet[]> {
   // loadFacets is build/server-only (it reads facet/ folders via fs) and never
   // runs in the browser. The specifier is held in a variable so the repo's

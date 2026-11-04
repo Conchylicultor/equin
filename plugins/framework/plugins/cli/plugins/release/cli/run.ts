@@ -275,7 +275,7 @@ function findDefineAppIconKey(node: PluginNode): SymbolName | null {
  * barrel execution. Mirrors the composition-resolution pattern in `build.ts`
  * (`compositionsConfig.fields.manifests.defaultValue` → `manifestItemToManifest`
  * → `entryPoints` like `["apps.sonata"]`; resolved against
- * `buildPluginTree(..., { skipBarrelImport: true })`), then static-parses the
+ * `buildPluginTree(...)`), then static-parses the
  * entry app's `defineApp({...})`. Fails loudly — never silently defaults.
  */
 async function resolveCompositionIconKey(opts: {
@@ -301,9 +301,7 @@ async function resolveCompositionIconKey(opts: {
     );
   }
 
-  const tree = await buildPluginTree(joinAppPath(root, "plugins"), {
-    skipBarrelImport: true,
-  });
+  const tree = await buildPluginTree(joinAppPath(root, "plugins"));
 
   // Each entry point is an EntryPattern (`id`, `id.**`, `!id.**`, or the root
   // `**`); its base id is a dotted plugin id whose tree node is keyed by the

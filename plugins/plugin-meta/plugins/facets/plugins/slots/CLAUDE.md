@@ -1,8 +1,8 @@
 # slots
 
-Extracts `defineSlot()` definitions from each plugin's `web/`. When barrels are
-imported the runtime walk over the barrel export graph is authoritative; in the
-barrel-free (`skipBarrelImport`) path the facet statically parses **every source
+Extracts `defineSlot()` definitions from each plugin's `web/`. In the enriched
+tree, `enrich` replaces them with the plugin's own declaration from its evaluated
+barrels (authoritative); `extract` (every tree, and the plugin record) statically parses **every source
 file under the plugin's own `web/`** (sub-plugin `plugins/` trees, tests and
 `node_modules` excluded), so the declaring filename is irrelevant — only
 *dynamic* (non-literal) slot ids stay out of reach there. Each

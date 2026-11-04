@@ -1,12 +1,6 @@
-import {
-  joinAppPath,
-  type AppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
-import { importBarrel } from "@plugins/plugin-meta/plugins/barrel-import/core";
-import { buildBarrelFreeTree } from "./barrel-free-tree";
-import { declareSlotsFromBarrels } from "./slot-declaration-guard";
-import { mainBundle } from "./main-bundle";
+import { bundledWebBarrels, recordSlotNaming } from "./evaluated-barrels";
 
 /** One web contribution as its barrel exported it (slot plumbing included). */
 export type WebSlotContribution = Record<string, unknown> & {
@@ -15,7 +9,8 @@ export type WebSlotContribution = Record<string, unknown> & {
 
 /**
  * Every contribution the bundled web barrels make to the named slots, grouped
- * by section — the read a post-web manifest (theme declarations, app
+ * by section, as the build's evaluated records hold them (data: a function is a
+ * named stand-in, dropped by `JSON.stringify` like the real one) — the read a post-web manifest (theme declarations, app
  * declarations) projects into data for the SERVER, which cannot see web slots.
  *
  * Generic: keyed on slot id, never naming a contributor. Registry-scoped, like
@@ -27,11 +22,11 @@ export async function collectWebSlotContributions<S extends string>(
   root: AppPath,
   slotIds: Record<S, string>,
 ): Promise<Record<S, WebSlotContribution[]>> {
-  const tree = await buildBarrelFreeTree(root);
-  // The one registry declaration pass — it imports every bundled web barrel and
-  // stamps every slot's owner, so each contribution's slot can be named.
-  const naming = await declareSlotsFromBarrels(root, "registry");
-  const bundle = mainBundle(tree, root);
+  // The evaluated bundled web barrels, and the registry naming settled over
+  // them — so each contribution's slot can be named, with no barrel imported
+  // when nothing changed.
+  const { ev, refs } = await bundledWebBarrels(root);
+  const naming = await recordSlotNaming(root, "registry");
   const sectionBySlotId = new Map<string, S>(
     (Object.entries(slotIds) as [S, string][]).map(([s, id]) => {
       naming.slotNamed(id);
@@ -41,14 +36,8 @@ export async function collectWebSlotContributions<S extends string>(
   const out = Object.fromEntries(
     (Object.keys(slotIds) as S[]).map((s) => [s, []]),
   ) as unknown as Record<S, WebSlotContribution[]>;
-  for (const node of tree.byDir.values()) {
-    if (!bundle.has(node.id)) continue;
-    // A plugin dir of this checkout.
-    if (!node.runtimes.web) continue;
-    const webIndex = joinAppPath(node.dir, "web", "index.ts");
-    // An ESM-cache hit: the declaration pass above imported it.
-    const mod = await importBarrel(webIndex);
-    const def = mod.default as
+  for (const ref of refs) {
+    const def = ev.barrels.module(ref.path).default as
       { contributions?: WebSlotContribution[] } | undefined;
     for (const c of def?.contributions ?? []) {
       if (c._slot === undefined) continue;

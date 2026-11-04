@@ -12,6 +12,7 @@ import {
 } from "@plugins/framework/plugins/plugin-id/core";
 import { maskSource } from "./mask-source";
 import {
+  assertDiskReadAllowed,
   currentFsSnapshot,
   memoInSnapshot,
   snapshotHas,
@@ -39,6 +40,8 @@ export function readIfExists(path: AppPath): string | null {
     // The directory was scanned but the file is absent → definitively null, no
     // syscall. Otherwise the directory is outside the snapshot's scope → disk.
     if (snapshot.dirs.has(dirname(path))) return null;
+    if (snapshotHas(path) === false) return null;
+    assertDiskReadAllowed(path);
   }
   return existsSync(path) ? readFileSync(path, "utf8") : null;
 }
@@ -49,7 +52,10 @@ export function readIfExists(path: AppPath): string | null {
  * asking "has this plugin a `web/`?" for every plugin costs no syscall.
  */
 export function pathExists(path: AppPath): boolean {
-  return snapshotHas(path) ?? existsSync(path);
+  const known = snapshotHas(path);
+  if (known !== undefined) return known;
+  assertDiskReadAllowed(path);
+  return existsSync(path);
 }
 
 const transpilers = {
@@ -661,6 +667,7 @@ export function walkFiles(
       return;
     }
     // dir not in snapshot → fall through to disk below.
+    assertDiskReadAllowed(dir);
   }
 
   let entries;

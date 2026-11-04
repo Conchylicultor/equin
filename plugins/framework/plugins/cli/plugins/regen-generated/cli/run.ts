@@ -5,10 +5,20 @@ import {
   listReviewMarkedOverrides,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import { installRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import { openRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/cli";
 
 const run: CliAction<[], object> = async () => {
   const root = await getWorktreeRoot();
-  const { renamedPackages } = await regenerateRegistryCodegen({ root });
+  // The shared plugin records, as the build reads them: the facets and
+  // evaluated barrels of the plugins this push did not touch are not computed
+  // again.
+  installRecordStore(openRecordStore());
+  const { renamedPackages } = await regenerateRegistryCodegen({
+    root,
+    repo: await loadRepoSnapshot(root),
+  });
   await regenerateManifestCodegen({ root });
 
   // A created or corrected package.json leaves `bun.lock` without the new

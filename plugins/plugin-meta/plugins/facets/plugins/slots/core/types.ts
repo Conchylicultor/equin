@@ -12,7 +12,7 @@ export interface SlotDef {
    * `"ordered-dispatch"` for `defineOrderedDispatchSlot`, `"ordered"` for
    * `defineOrderedSlot`, `"wrap"` for
    * `defineWrapperSlot`, `"slot"` for `defineSlot`. In the barrel-free
-   * (`skipBarrelImport`) mode it is inferred from the constructor's name in
+   * (barrel-free) tree it is inferred from the constructor's name in
    * source text, which cannot see `"ordered-dispatch"`.
    */
   kind?:

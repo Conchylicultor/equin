@@ -470,7 +470,7 @@ function inlineRouteId(body: string, bodyMask: string): string | null {
  * The pane's identity is deliberately NOT read off the imported pane object,
  * tempting though `pane._internal.id` is: all three surfaces this facet feeds —
  * the Studio Contributions table, the plugin-detail card, and the PR diff — build
- * their tree with `skipBarrelImport: true`, so the runtime half of the facet is
+ * a barrel-free tree, so the runtime half of the facet (its `enrich`) is
  * empty exactly where the id is needed.
  *
  * `file` is only for the error message; the scan itself needs nothing but `src`.

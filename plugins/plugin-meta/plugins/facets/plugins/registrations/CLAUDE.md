@@ -3,9 +3,9 @@
 Extracts runtime registration metadata (MCP tools, jobs, trigger-events) from each plugin's
 server and central barrel imports by reading `def.register[]`.
 
-Unlike static-analysis facets (commands, slots, resources), this facet needs the barrel-imported
-modules — it reads the `imported` field of `ExtractContext`, which is populated by
-`buildPluginTree()` when `skipBarrelImport` is not set.
+Unlike static-analysis facets (commands, slots, resources), this facet needs the evaluated
+barrels: its `extract` is empty, and its `enrich` reads `EnrichContext.imported` — the build's
+evaluated records (`plugin-meta/plugin-records`), passed by the enriched tree only.
 
 No `relate()` — registrations have no cross-plugin relationships.
 

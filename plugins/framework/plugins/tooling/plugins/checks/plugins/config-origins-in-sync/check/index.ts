@@ -77,8 +77,11 @@ const check: Check = {
     // injects the exact same comment lines the build wrote into committed
     // origins. With no provider registered this is byte-identical to before.
     const expected = await renderConfigOriginContent({ root });
+    // Live: the files are validated with each descriptor's zod `schema`,
+    // which no evaluated record holds.
     const descriptorsByOriginRel = await loadConfigDescriptorsByOriginPath({
       root,
+      live: true,
     });
 
     for (const [relPath, content] of expected) {

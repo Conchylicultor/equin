@@ -42,7 +42,6 @@ export function getMainPluginTree(
     () =>
       withHeavyReadSlot(() =>
         buildPluginTree(mainPluginsDir, {
-          skipBarrelImport: true,
           facets: true,
         }),
       ),
@@ -80,7 +79,6 @@ export function getWorktreePluginTree(
     () =>
       withHeavyReadSlot(() =>
         buildPluginTree(worktreePluginsDir, {
-          skipBarrelImport: true,
           facets: true,
         }),
       ),

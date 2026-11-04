@@ -5,6 +5,11 @@ export {
   collectSlots,
   declaredSlotSources,
   declarePluginSlots,
+  moduleEvaluation,
+  settleSlotNaming,
+  slotSite,
+  slotSitesTracked,
+  trackSlotSites,
   subscribeSlotsDeclared,
   findUndeclaredSlots,
   seg,
@@ -21,6 +26,8 @@ export type {
   SlotDeclaration,
   SlotDeclaringPlugin,
   SlotDeclarationListener,
+  ModuleEvaluation,
+  SlotSite,
 } from "./declaration";
 export { KEY_SPACES, isKeySpace } from "./companion-keys";
 export type {

@@ -34,7 +34,9 @@ import {
   createPooledArtifactBuilder,
   idealArtifactBuildThreads,
 } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/cli";
-import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import { installRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import { openRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/cli";
 import {
   restampMovedOverrides,
   snapshotConfigOrigins,
@@ -396,11 +398,15 @@ export async function prepareCompositionSources(opts: {
   // Neither non-`fresh` kind re-execs here, exactly as `installed` never did:
   // this caller is mid-build with the CLI already loaded (see
   // `EnsureDepsResult` for the constraint that places on it).
-  // 0. The checkout's file set, listed ONCE for the whole stage: the dep
-  // inputs, the plugin trees and the registry scans all read it, so no step
-  // walks `plugins/` itself. Stage 2 reuses it through the memoized trees.
+  // 0. The checkout's file set with each file's blob id, listed ONCE for the
+  // whole stage: the dep inputs, the plugin trees and the registry scans all
+  // read it, so no step walks `plugins/` itself, and the blob ids key the
+  // plugin records the trees are read from (the shared store installed here:
+  // a plugin whose files did not change is not extracted again, in any
+  // worktree). Stage 2 reuses it through the memoized trees.
   let endSpan = hooks.span("repoFiles", "build:setup", "repo file set");
-  const repo = await loadRepoFiles(root);
+  installRecordStore(openRecordStore());
+  const repo = await loadRepoSnapshot(root);
   endSpan();
 
   endSpan = hooks.span("bunInstall", "build:setup", "bun install");

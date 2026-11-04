@@ -1,6 +1,6 @@
 /**
  * Engine verification against the REAL plugin tree. Builds the tree once
- * (`skipBarrelImport: true`, so it works at build time / browser-less), classifies
+ * (barrel-free, so it works at build time / browser-less), classifies
  * edges, and resolves the `agent-manager` composition under the CONSERVATIVE opt-in
  * model, asserting the closure topology the design calls out. Run with `bun test`
  * from the repo root.
@@ -88,7 +88,6 @@ setDefaultTimeout(60_000);
 beforeAll(async () => {
   const root = (await Bun.$`git rev-parse --show-toplevel`.text()).trim();
   tree = await buildPluginTree(joinAppPath(asAppPath(root), "plugins"), {
-    skipBarrelImport: true,
     facets: true,
   });
   graph = classifyEdges(tree);

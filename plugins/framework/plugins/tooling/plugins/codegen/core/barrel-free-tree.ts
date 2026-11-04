@@ -11,22 +11,22 @@ import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 const barrelFreeTreeCache = new Map<string, Promise<PluginTree>>();
 
 /**
- * The barrel-FREE plugin tree (`skipBarrelImport`) — a pure function of committed
- * plugin source (facet extraction reads only .ts/.tsx/package.json; no generated
- * manifest feeds it), so it is IDENTICAL for every skipBarrelImport caller in a
- * build. Memoized per root so one `./equin build` does ONE barrel-free tree
- * build, not one per codegen step. Twin of `buildEnrichedTree` (which is the
- * enriched, barrel-imported tree; the two are deliberately separate caches).
+ * The barrel-FREE plugin tree — a pure function of committed plugin source
+ * (facet extraction reads only .ts/.tsx/package.json; no generated manifest
+ * feeds it), so it is IDENTICAL for every caller in a build. Memoized per root
+ * so one `./equin build` does ONE barrel-free tree build, not one per codegen
+ * step. `buildEnrichedTree` reads the same facet records again and enriches
+ * them with the evaluated barrels.
  *
- * WHY ITS OWN MODULE. This is the bottom tier of codegen's three-tier ordering:
- * `barrel-free-tree` → `slot-declaration-guard` → `enriched-tree`. The guard
- * needs a barrel-free tree to compute the disabled set, and the enriched tree
- * needs the guard to have declared slots before anything reads `contributions`.
- * Keeping this tier free of the other two is what lets the enriched tree depend
- * on the declaration pass without closing an import cycle.
+ * WHY ITS OWN MODULE. It is the bottom tier: the barrel evaluation needs it to
+ * know every plugin's barrels and which plugins the registry omits, and the
+ * enriched tree needs the evaluation. Keeping this tier free of the other two
+ * is what lets them depend on it without closing an import cycle.
  *
- * `repo`: the pass's file set when the caller holds one (the build's snapshot);
- * the first call's builds the tree, so the build hands it to the first.
+ * `repo`: the pass's file set when the caller holds one. The build's is a
+ * SNAPSHOT (blob ids), which makes the facets plugin records read from the
+ * shared store; the first call's builds the tree, so the build hands it to the
+ * first.
  */
 export function buildBarrelFreeTree(
   root: AppPath,
@@ -35,7 +35,6 @@ export function buildBarrelFreeTree(
   let cached = barrelFreeTreeCache.get(root);
   if (!cached) {
     cached = buildPluginTree(joinAppPath(root, "plugins"), {
-      skipBarrelImport: true,
       facets: true,
       ...(repo ? { repo } : {}),
     });

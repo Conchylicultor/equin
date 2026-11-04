@@ -24,7 +24,6 @@ import {
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type DbSchemaFacetData, dbSchemaFacetDef } from "../core";
 import {
-  asAppPath,
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
@@ -99,11 +98,10 @@ interface RawExtRef {
 // table variable, the second a string literal name.
 const EXTENSION_ARGS_RE = /^\s*([A-Za-z_$][\w$]*)\s*,\s*"([^"]+)"/;
 
-function parseEntityExtensionCalls(dbFiles: AppPath[]): RawExtRef[] {
+function parseEntityExtensionCalls(sources: readonly string[]): RawExtRef[] {
   const out: RawExtRef[] = [];
-  for (const f of dbFiles) {
-    const raw = readIfExists(f);
-    if (!raw || !raw.includes("defineExtension")) continue;
+  for (const raw of sources) {
+    if (!raw.includes("defineExtension")) continue;
     const src = stripTypes(raw);
     const imports = parseImports(src);
     for (const call of findMarkerCalls(src, "defineExtension")) {
@@ -139,6 +137,15 @@ export function parseTableNames(
   out: Map<string, string>,
   refNames: ReadonlyMap<string, string> = new Map(),
 ): void {
+  resolveTableNames(parseTableDecls(src), refNames, out);
+}
+
+/**
+ * The table declarations of one schema file, before the refs are known — what
+ * the facet's record stores, so `relate` can name an entity built from ANOTHER
+ * plugin's ref without reading the file again.
+ */
+export function parseTableDecls(src: string): TableDecls {
   // FULL-mask so a `pgTable("x")` / `defineEntity(ref)` / `.table` written in a
   // comment, string, or template literal (a fixture, docs snippet, codegen
   // template) can't register a phantom table. Genuine calls are located over the
@@ -154,39 +161,61 @@ export function parseTableNames(
   const firstStringArg = (open: number, close: number): string | undefined =>
     /^\s*["']([^"']+)["']/.exec(src.slice(open + 1, close))?.[1];
 
+  const decls: TableDecls = { tables: [], entities: [], aliases: [] };
   // Form (1): direct `const <var> = pgTable("name", …)` bindings.
   for (const span of markerCallSpans(masked, "pgTable")) {
     const varName = declBefore(span.identifier);
     const name = firstStringArg(span.open, span.close);
-    if (varName && name) out.set(varName, name);
+    if (varName && name) decls.tables.push([varName, name]);
   }
-
-  // Form (2a): `const <entity> = defineEntity(<ref>, …)` bindings, named by
-  // the ref's own `entityRef("name", …)`.
-  const entityVarToName = new Map<string, string>();
+  // Form (2a): `const <entity> = defineEntity(<ref>, …)` bindings, named later
+  // by the ref's own `entityRef("name", …)`.
   for (const span of markerCallSpans(masked, "defineEntity")) {
     const varName = declBefore(span.identifier);
     const ref = /^\s*([A-Za-z_$][\w$]*)\s*[,)]/.exec(
       masked.slice(span.open + 1, span.close + 1),
     )?.[1];
-    const name = ref === undefined ? undefined : refNames.get(ref);
-    if (varName && name) entityVarToName.set(varName, name);
+    if (varName && ref) decls.entities.push([varName, ref]);
   }
-
   // Form (2b): `const <alias> = <entity>.table` re-exports — the alias is the
   // importable handle; the entity var is intermediate. Matched over the mask
   // (identifiers aren't blanked, so a `.table` in a string can't register).
-  const aliasSources = new Set<string>();
   const aliasRe =
     /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)\.table\b/g;
   let m: RegExpExecArray | null;
-  while ((m = aliasRe.exec(masked))) {
-    const name = entityVarToName.get(m[2]!);
-    if (name === undefined) continue;
-    out.set(m[1]!, name);
-    aliasSources.add(m[2]!);
-  }
+  while ((m = aliasRe.exec(masked))) decls.aliases.push([m[1]!, m[2]!]);
+  return decls;
+}
 
+/** One schema file's declarations, refs unresolved (see {@link parseTableDecls}). */
+export interface TableDecls {
+  /** `[var, table name]` of each direct `pgTable("name")` binding. */
+  tables: [string, string][];
+  /** `[entity var, ref var]` of each `defineEntity(<ref>, …)` binding. */
+  entities: [string, string][];
+  /** `[alias, entity var]` of each `const <alias> = <entity>.table`. */
+  aliases: [string, string][];
+}
+
+/** `varName → physical table name` of `decls`, now that every ref is known. */
+function resolveTableNames(
+  decls: TableDecls,
+  refNames: ReadonlyMap<string, string>,
+  out: Map<string, string>,
+): void {
+  for (const [v, name] of decls.tables) out.set(v, name);
+  const entityVarToName = new Map<string, string>();
+  for (const [v, ref] of decls.entities) {
+    const name = refNames.get(ref);
+    if (name !== undefined) entityVarToName.set(v, name);
+  }
+  const aliasSources = new Set<string>();
+  for (const [alias, entity] of decls.aliases) {
+    const name = entityVarToName.get(entity);
+    if (name === undefined) continue;
+    out.set(alias, name);
+    aliasSources.add(entity);
+  }
   // Inline `const <alias> = defineEntity(<ref>, …).table` (no separate
   // statement): the binding var is itself the usable handle. Keep every entity
   // var not already consumed as a `.table` alias source.
@@ -214,12 +243,12 @@ export function parseEntityRefNames(
   }
 }
 
-// Every ref a plugin declares anywhere in its own tree, and — module-wide, so a
-// plugin whose tables are built from ANOTHER plugin's ref (imported through its
-// barrel) resolves it in `relate` — every ref any plugin declared in `extract`.
-const allRefNames = new Map<string, string>();
-
-function collectRefNames(pluginDir: AppPath): Map<string, string> {
+// Every ref a plugin declares anywhere in its own tree. A plugin whose tables
+// are built from ANOTHER plugin's ref (imported through its barrel) resolves it
+// in `relate`, over every plugin's refs — never through state kept between two
+// plugins' extractions, which a plugin record (one extraction, cached on its own
+// files) cannot see.
+function collectRefNames(pluginDir: AppPath): [string, string][] {
   const files: AppPath[] = [];
   walkFiles(pluginDir, files);
   const local = new Map<string, string>();
@@ -228,21 +257,7 @@ function collectRefNames(pluginDir: AppPath): Map<string, string> {
     if (!raw || !raw.includes("entityRef(")) continue;
     parseEntityRefNames(stripTypes(raw), local);
   }
-  for (const [k, v] of local) allRefNames.set(k, v);
-  return local;
-}
-
-function parseTableNamesFromDbFiles(
-  dbFiles: AppPath[],
-  refNames: ReadonlyMap<string, string>,
-): Map<string, string> {
-  const out = new Map<string, string>();
-  for (const f of dbFiles) {
-    const raw = readIfExists(f);
-    if (!raw) continue;
-    parseTableNames(stripTypes(raw), out, refNames);
-  }
-  return out;
+  return [...local];
 }
 
 // Enumerates through the shared `walkFiles`, which owns the rule for what is
@@ -273,15 +288,28 @@ export default createFacet<DbSchemaFacetData>({
 
   extract(ctx) {
     const dbFiles = findDbFiles(ctx.dir);
-    const tableMap = parseTableNamesFromDbFiles(
-      dbFiles,
-      collectRefNames(ctx.dir),
-    );
-    const tables = [...tableMap.entries()].map(([varName, name]) => ({
-      name,
-      varName,
-    }));
-    return { dbFiles, tables, entityExtensions: [], extendedBy: [] };
+    const sources = dbFiles.map((f) => readIfExists(f) ?? "");
+    const refNames = collectRefNames(ctx.dir);
+    const decls = sources.map((src) => parseTableDecls(stripTypes(src)));
+    const local = new Map(refNames);
+    const tableMap = new Map<string, string>();
+    for (const d of decls) resolveTableNames(d, local, tableMap);
+    return {
+      // Repo-relative: a record is shared by every worktree, so it holds no
+      // path of this checkout.
+      dbFiles: dbFiles.map((f) => `${ctx.relDir}/${relative(ctx.dir, f)}`),
+      tables: [...tableMap.entries()].map(([varName, name]) => ({
+        name,
+        varName,
+      })),
+      entityExtensions: [],
+      extendedBy: [],
+      raw: {
+        refNames,
+        decls,
+        extensions: parseEntityExtensionCalls(sources),
+      },
+    };
   },
 
   relate(rawCtx) {
@@ -290,15 +318,20 @@ export default createFacet<DbSchemaFacetData>({
     for (const node of tree.byDir.values()) byId.set(node.id, node);
 
     // A table built from another plugin's ref could not be named in `extract`
-    // (that plugin's refs may not have been read yet): every plugin's refs are
-    // known now, so re-read each plugin's tables against all of them.
+    // (it saw its own plugin only): every plugin's refs are known now, so
+    // resolve each plugin's declarations against all of them.
+    const allRefNames = new Map<string, string>();
+    for (const node of tree.byDir.values()) {
+      for (const [k, v] of getFacet(node, dbSchemaFacetDef)?.raw?.refNames ??
+        [])
+        allRefNames.set(k, v);
+    }
     for (const node of tree.byDir.values()) {
       const d = getFacet(node, dbSchemaFacetDef);
-      if (!d) continue;
-      const tableMap = parseTableNamesFromDbFiles(
-        d.dbFiles.map(asAppPath),
-        allRefNames,
-      );
+      if (!d?.raw) continue;
+      const tableMap = new Map<string, string>();
+      for (const decls of d.raw.decls)
+        resolveTableNames(decls, allRefNames, tableMap);
       d.tables = [...tableMap.entries()].map(([varName, name]) => ({
         name,
         varName,
@@ -318,9 +351,7 @@ export default createFacet<DbSchemaFacetData>({
     for (const node of tree.byDir.values()) {
       const data = getFacet(node, dbSchemaFacetDef);
       if (!data) continue;
-      for (const ref of parseEntityExtensionCalls(
-        data.dbFiles.map(asAppPath),
-      )) {
+      for (const ref of data.raw?.extensions ?? []) {
         // A defineExtension parent is always a cross-plugin barrel import.
         if (!ref.parentModule.startsWith("@plugins/")) continue;
         const r = resolvePluginSpecifier(tree, ref.parentModule);
@@ -367,16 +398,18 @@ export default createFacet<DbSchemaFacetData>({
       if (!d) continue;
       d.entityExtensions.sort((a, b) => a.tableName.localeCompare(b.tableName));
       d.extendedBy.sort((a, b) => a.tableName.localeCompare(b.tableName));
+      // Relate's own inputs: resolved now, so nothing downstream reads them.
+      d.raw = undefined;
     }
   },
 
-  renderDoc(data, ctx) {
+  renderDoc(data) {
     const facts: DocFact[] = [];
     if (data.dbFiles.length > 0) {
       facts.push({
         folder: "server",
         key: "DB schema",
-        values: data.dbFiles.map((f) => `\`${relative(ctx.root, f)}\``),
+        values: data.dbFiles.map((f) => `\`${f}\``),
       });
     }
     if (data.entityExtensions.length > 0) {

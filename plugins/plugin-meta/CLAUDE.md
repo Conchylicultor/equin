@@ -22,6 +22,7 @@ Sub-plugins:
   - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
   - **`parse-utils`**
   - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
+  - **`plugin-records`**
   - **`plugin-refs`** — The one plugin-reference locator: every place the repo names a plugin (path literals, @plugins specifiers, structurally-read dot ids, relative markdown/CSS links), each with an exact character range…
   - **`plugin-tree`** — Cached, watcher-invalidated plugin-tree accessors: structure-only for the hot path and a shared full-faceted build for the two facet consumers.
   - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections.

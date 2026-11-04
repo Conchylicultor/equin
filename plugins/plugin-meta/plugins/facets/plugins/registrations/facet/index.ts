@@ -1,7 +1,7 @@
 import {
   createFacet,
   type DocFact,
-  type ExtractContext,
+  type EnrichContext,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import { type DocMetaRegistration, registrationsFacetDef } from "../core";
 
@@ -14,9 +14,13 @@ function formatRegistration(r: DocMetaRegistration): string {
 export default createFacet<DocMetaRegistration[]>({
   def: registrationsFacetDef,
 
-  extract(ctx: ExtractContext): DocMetaRegistration[] {
-    const modules = ctx.imported?.modules;
-    if (!modules || modules.length === 0) return [];
+  // Registrations exist only on an evaluated barrel: none in source text.
+  extract(): DocMetaRegistration[] {
+    return [];
+  },
+
+  enrich(_data, ctx: EnrichContext): DocMetaRegistration[] {
+    const modules = ctx.imported.modules;
 
     const registrations: DocMetaRegistration[] = [];
     for (const { mod, runtime } of modules) {

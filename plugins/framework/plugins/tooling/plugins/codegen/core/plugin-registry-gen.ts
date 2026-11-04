@@ -43,6 +43,7 @@ import {
 import { resolveMainComposition } from "./main-bundle";
 import { readDeclaredApps, type DeclaredApp } from "./declared-apps";
 import { readListed, timeSlicer } from "./scan-pacing";
+import { scanFiles, type FileScan } from "./file-scans";
 import { writeGenerated } from "./write-generated";
 
 export interface DiscoveredCollectedDir extends CollectedDirDef {
@@ -598,6 +599,20 @@ function identifierForDir(dir: string): string {
   return dir.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
 }
 
+// Per-file scans, cached as file records (`file-scans.ts`).
+const SCANNER_MODULE =
+  "plugins/framework/plugins/tooling/plugins/codegen/core/plugin-registry-gen.ts";
+const DEFAULT_EXPORT_SCAN: FileScan<boolean> = {
+  module: SCANNER_MODULE,
+  params: ["default-export"],
+  scan: (src) => hasDefaultExport(src),
+};
+const IMPORT_SPECIFIER_SCAN: FileScan<string[]> = {
+  module: SCANNER_MODULE,
+  params: ["import-specifiers"],
+  scan: (src) => findImports(src).map((imp) => imp.specifier),
+};
+
 async function collectEntries(
   tree: PluginTree,
   repo: RepoFiles,
@@ -606,13 +621,14 @@ async function collectEntries(
   const barrels = [...tree.byDir.values()]
     .map((node) => ({ node, rel: `plugins/${node.path}/${dir}/index.ts` }))
     .filter((b) => repo.has(b.rel));
-  const texts = await Promise.all(barrels.map((b) => readListed(repo, b.rel)));
-  const tick = timeSlicer();
+  const isEntry = await scanFiles(
+    repo,
+    barrels.map((b) => b.rel),
+    DEFAULT_EXPORT_SCAN,
+  );
   const entries: CollectedRawEntry[] = [];
   for (const [i, { node }] of barrels.entries()) {
-    const isEntry = hasDefaultExport(texts[i]!);
-    await tick();
-    if (!isEntry) continue;
+    if (!isEntry[i]) continue;
     entries.push({
       pluginPath: node.path,
       importPath: `@plugins/${node.path}/${dir}`,
@@ -655,10 +671,9 @@ async function collectImportSpecifiers(
   tick: () => Promise<void>,
 ): Promise<Set<string>> {
   const files = tsFilesUnder(repo, `plugins/${pluginPath}/${dir}`);
-  const texts = await Promise.all(files.map((rel) => readListed(repo, rel)));
   const specifiers = new Set<string>();
-  for (const text of texts) {
-    for (const imp of findImports(text)) specifiers.add(imp.specifier);
+  for (const found of await scanFiles(repo, files, IMPORT_SPECIFIER_SCAN)) {
+    for (const spec of found) specifiers.add(spec);
     await tick();
   }
   return specifiers;

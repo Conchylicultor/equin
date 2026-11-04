@@ -1,4 +1,3 @@
-import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import {
   joinAppPath,
   type AppPath,
@@ -15,7 +14,7 @@ import {
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { mainBundle } from "./main-bundle";
-import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
+import { scanFiles, type FileScan } from "./file-scans";
 
 /**
  * Generates the data-views manifest consumed by the data-view primitive: the
@@ -109,12 +108,19 @@ export interface DataViewEntry {
  * dropping it silently would leave a data view with no persisted view state and
  * nothing anywhere saying why.
  *
- * Uses `{ skipBarrelImport: true }`: this collector only reads `node.dir` /
+ * Uses the barrel-free tree: this collector only reads `node.dir` /
  * `node.id` and text-scans web source — it never touches facets/barrel data, so
  * a barrel-free tree is correct. Critically, it MUST stay barrel-free: the
  * manifest it feeds is imported by plugin barrels at module-load, so it has to
  * be regenerated BEFORE the first barrel import freezes the ESM cache.
  */
+const DATA_VIEW_SCAN: FileScan<string[]> = {
+  module:
+    "plugins/framework/plugins/tooling/plugins/codegen/core/data-views-gen.ts",
+  scan: (src, rel) =>
+    src.includes(DATA_VIEW_MARKER) ? [...scanDataViewIds(src, rel)] : [],
+};
+
 export async function collectDataViews(
   root: AppPath,
 ): Promise<DataViewEntry[]> {
@@ -128,20 +134,24 @@ export async function collectDataViews(
   const bundle = mainBundle(tree, root);
   const definingPath = new Map<string, string>();
 
-  // A check pass runs this on the thread its ~100 checks share: walk and read
-  // without blocking, and pause every ~10 ms of scanning.
-  const slice = createTimeSlicer();
+  // Each file's data-view ids are a file record: only a file whose blob
+  // changed is read and scanned.
+  const owned: { file: string; pluginId: string }[] = [];
   for (const node of tree.byDir.values()) {
     if (!bundle.has(node.id)) continue;
-    for (const file of sourceFilesIn(tree.repo, join(node.dir, "web"))) {
-      const src = await readFile(file, "utf8");
-      if (!src.includes(DATA_VIEW_MARKER)) continue;
-      await slice();
-      for (const id of scanDataViewIds(src, relative(root, file))) {
-        if (!definingPath.has(id)) definingPath.set(id, node.id);
-      }
-    }
+    for (const file of sourceFilesIn(tree.repo, join(node.dir, "web")))
+      owned.push({ file: relative(root, file), pluginId: node.id });
   }
+  const found = await scanFiles(
+    tree.repo,
+    owned.map((o) => o.file),
+    DATA_VIEW_SCAN,
+  );
+  owned.forEach(({ pluginId }, i) => {
+    for (const id of found[i]!) {
+      if (!definingPath.has(id)) definingPath.set(id, pluginId);
+    }
+  });
 
   return [...definingPath.entries()]
     .map(([id, pluginId]) => ({ id, pluginId }))

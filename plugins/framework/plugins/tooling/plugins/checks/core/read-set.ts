@@ -269,7 +269,7 @@ export async function readTreeSnapshot(
 // it (e.g. how a hollow-shell dir is gated, or how compositionRoot is detected)
 // could flip the verdict with NO recorded tree-fact change → a stale PASS. Adding
 // the prefix pins it. (Its runtime-facet code path is skipped by boundaries'
-// `skipBarrelImport`, but hashing the whole subtree is the sound superset.)
+// the barrel-free tree, but hashing the whole subtree is the sound superset.)
 //
 // `migrations/core/` (which holds `drizzle.config.ts`). `schema-files-loadable` and
 // `table-defs-in-schema-glob` enumerate their scan surface through

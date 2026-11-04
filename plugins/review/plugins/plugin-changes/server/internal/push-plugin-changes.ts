@@ -140,12 +140,10 @@ async function loadPushPluginChanges(
       // run at once, so just build both trees inside the one slot.
       const [headTree, baseTree] = await Promise.all([
         buildPluginTree(joinAppPath(headDir, "plugins"), {
-          skipBarrelImport: true,
           facets: true,
           repo: head.repo,
         }),
         buildPluginTree(joinAppPath(baseDir, "plugins"), {
-          skipBarrelImport: true,
           facets: true,
           repo: base.repo,
         }),

@@ -1,4 +1,3 @@
-import { join } from "path";
 import {
   joinAppPath,
   type AppPath,
@@ -32,7 +31,8 @@ import {
   collectEntriesWithDeps,
   type RegistryGenContext,
 } from "./plugin-registry-gen";
-import { readListed, timeSlicer } from "./scan-pacing";
+import { timeSlicer } from "./scan-pacing";
+import { scanFiles, type FileScan } from "./file-scans";
 
 /**
  * Generates the web load-tier manifest: the DEFERRED plugin-path set that
@@ -297,27 +297,27 @@ function sourceFilesUnder(
   return out;
 }
 
-interface Source {
-  rel: string;
-  text: string;
-}
-
-/** The first watched boot slot one of `sources` genuinely calls (with its head imported), or null. */
-async function watchedSlotIn(
-  sources: readonly Source[],
-  tick: () => Promise<void>,
-): Promise<string | null> {
-  for (const { text } of sources) {
-    const idents = pluginImportedIdents(text);
-    await tick();
-    for (const { marker, head } of WATCHED_SLOTS) {
-      if (!idents.has(head)) continue;
-      if (!text.includes(marker)) continue; // cheap fast-path
-      if (findMarkerCalls(text, marker).length > 0) return marker;
-    }
+/** The first watched boot slot `text` genuinely calls (with its head imported), or null. */
+function watchedSlotIn(text: string): string | null {
+  const idents = pluginImportedIdents(text);
+  for (const { marker, head } of WATCHED_SLOTS) {
+    if (!idents.has(head)) continue;
+    if (!text.includes(marker)) continue; // cheap fast-path
+    if (findMarkerCalls(text, marker).length > 0) return marker;
   }
   return null;
 }
+
+/** One file's eager-tier answers: its first watched slot, and its preloaded keys. */
+const EAGER_TIER_SCAN: FileScan<{ watched: string | null; preload: string[] }> =
+  {
+    module:
+      "plugins/framework/plugins/tooling/plugins/codegen/core/eager-tier-gen.ts",
+    scan: (text, rel) => ({
+      watched: watchedSlotIn(text),
+      preload: preloadedKeysIn(text, rel, { ownerPlugin: false }),
+    }),
+  };
 
 /**
  * Every preloaded descriptor key in ONE source file, in source order.
@@ -482,32 +482,25 @@ async function scanEagerTierInputs(
           "core",
           "shared",
         ]);
-        const sources = await Promise.all(
-          files.map(async (rel) => ({
-            rel,
-            text: await readListed(repo, rel),
-          })),
-        );
+        // Each file's two answers are a file record: only a file whose blob
+        // changed is read and scanned.
+        const scanned = await scanFiles(repo, files, EAGER_TIER_SCAN);
+        await tick();
 
         // Watched-slot scan: only app-content web entries can flip from
         // deferred to eager via a slot (non-app-content is already
-        // structurally eager).
+        // structurally eager). The first file with a hit names the pin.
         if (webSet.has(node.path) && isAppContent(node.path)) {
-          const slot = await watchedSlotIn(sources, tick);
+          const slot = scanned.find((f) => f.watched !== null)?.watched;
           if (slot) watchedSlotHits.push({ path: node.path, slot });
         }
 
         // preload scan: EVERY plugin node (reachability is checked
         // against web entries in the pure core, so a descriptor in a
-        // web-entryless plugin throws).
-        const keys: string[] = [];
+        // web-entryless plugin throws). The vocabulary's owner declares the
+        // factories, it preloads nothing.
         const ownerPlugin = isResourceVocabularyOwner(`plugins/${node.path}`);
-        for (const { rel, text } of sources) {
-          keys.push(
-            ...preloadedKeysIn(text, join(ctx.root, rel), { ownerPlugin }),
-          );
-          await tick();
-        }
+        const keys = ownerPlugin ? [] : scanned.flatMap((f) => f.preload);
         if (keys.length > 0)
           preloadOwners.push({ path: node.path, keys: keys.sort() });
       }),

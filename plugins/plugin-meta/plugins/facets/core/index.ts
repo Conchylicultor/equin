@@ -1,5 +1,5 @@
 export { facetCollectedDir } from "./collected-dir";
-export { loadFacets } from "./load-facets";
+export { loadFacets, loadFacetSources } from "./load-facets";
 export {
   createFacet,
   defineFacet,
@@ -10,6 +10,8 @@ export {
 export type {
   DocFact,
   DocFactGroup,
+  EnrichContext,
+  ExtractBatch,
   ExtractContext,
   Facet,
   FacetDef,

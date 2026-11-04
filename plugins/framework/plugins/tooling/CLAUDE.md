@@ -32,6 +32,7 @@
 - Cross-plugin:
   - Imported by:
     - `framework/tooling/checks`
+    - `framework/tooling/codegen`
     - `framework/tooling/lint`
     - `framework/tooling/web-artifacts`
     - `plugin-meta/plugin-tree`

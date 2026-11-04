@@ -17,7 +17,8 @@
 //   composition bundles) that provide a host service the graph declares, added
 //   to a fixpoint — exactly one per service;
 // - the guard: every server barrel the graph's code statically loads
-//   (`importClosures` — one union build per fixpoint round) must be in it,
+//   (the plugin-records module graph's bundler view, one per fixpoint
+//   round — its file facts are records) must be in it,
 //   so a portable barrel reaching a non-portable one fails here, naming the
 //   import chain, not at worker boot.
 //
@@ -34,7 +35,11 @@
 
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { importClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
+import {
+  buildModuleGraph,
+  currentRecordStore,
+  type BundledClosure,
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   asFsPath,
   type PluginId,
@@ -457,9 +462,9 @@ async function inferUncached(
     candidateBarrels: hostProviderServerBarrels(ctx.graph),
     read: (path) => repo.read(path),
     portability: await serverPortabilityOf(repo),
-    // What the bundler loads from these modules, as the bundle will.
-    closure: (entries) =>
-      importClosures(ctx.root, entries, { dynamicImports: "cut" }),
+    // What the bundler loads from these modules, as the bundle will: the
+    // record module graph's bundler view (`serverPortabilityOf`'s reading).
+    closure: (entries) => bundledClosureOf(repo, entries),
   });
   const webPlugins = [...resolved.bundle]
     .filter((id) => repo.has(`plugins/${asFsPath(id)}/web/index.ts`))
@@ -642,4 +647,30 @@ async function stepped<T>(
     );
   }
   return out[0]!;
+}
+
+/**
+ * The union closure of `entries` as a bundler measures it (dynamic imports
+ * cut, unused TypeScript imports dropped), from the plugin-records module
+ * graph — its file facts are records, so a build reads only changed modules.
+ * Every module is a member of the file set: an import resolving to none
+ * throws, naming it.
+ */
+async function bundledClosureOf(
+  repo: RepoFiles,
+  entries: readonly string[],
+): Promise<BundledClosure> {
+  const graph = await buildModuleGraph(
+    { snapshot: repo, store: currentRecordStore(), readOutside: () => null },
+    entries,
+  );
+  const closure = graph.bundledClosure(entries);
+  for (const m of closure.modules) {
+    const unresolved = graph.modules.get(m)!.unresolved;
+    if (unresolved.length > 0)
+      throw new Error(
+        `${m} imports ${unresolved.map((u) => JSON.stringify(u)).join(", ")}, which resolves to no file of the checkout: a browser host's closure is measured over the file set.`,
+      );
+  }
+  return closure;
 }

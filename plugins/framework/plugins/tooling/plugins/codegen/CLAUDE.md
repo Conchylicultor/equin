@@ -47,7 +47,8 @@ reached — an import chain is computed only when reporting a failure. Emitted a
 `serverPortabilityOf(repo)` (`boundaries/core/portability.ts`): a server
 barrel whose static closure loads no module that imports a platform API, uses
 a host-only value, or declares a host service no portable `server/` barrel
-provides — one union build over every server barrel, shared per snapshot
+provides — one union closure over every server barrel (the module graph's
+bundler view; each module's facts a file record), shared per snapshot
 (`resolveHostGraph` takes it as its `portability` input, so a test injects
 it). There is no per-plugin flag and no opt-out: a plugin joins or leaves the
 worker when its closure changes, which shows up as a diff of the committed
@@ -160,11 +161,13 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 118 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 130 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/parse-utils` ×20
     - `config_v2` ×15
     - `framework/plugin-id` ×14
     - `network/live/resource-vocabulary` ×10
+    - `plugin-meta/plugin-records` ×10
+    - `framework/slot-declaration` ×6
     - `plugin-meta/barrel-import` ×6
     - `plugin-meta/closure` ×5
     - `plugin-meta/composition` ×5
@@ -172,18 +175,17 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `infra/host-fs/user-path` ×4
     - `packages/timed-fs` ×4
     - `plugin-meta/plugin-tree` ×4
-    - `framework/slot-declaration` ×3
     - `config_v2/ledger` ×2
     - `framework/tooling/boundaries` ×2
     - `framework/tooling/format` ×2
     - `network/live/resource-protocol` ×2
-    - `packages/macrotask-yield` ×2
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
     - `framework/tooling/guards/agent-policy.agentPolicySettings`
-    - `framework/tooling/import-closure.importClosures`
     - `framework/tooling/lint.loadLintContributions`
     - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
+    - `framework/tooling.loadRepoSnapshot`
     - `infra/namespace.MAIN_COMPOSITION_ID`
+    - `packages/macrotask-yield.yieldMacrotask`
     - `packages/semaphore.createSemaphore`
     - `plugin-meta/facets/contributions.contributionsFacetDef`
     - `plugin-meta/facets/exemptions.exemptionsFacetDef`
@@ -193,6 +195,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `ui/icons.isIconRefModule`
   - Exports (types):
     - `AuthoredOverrideSeedResult`
+    - `BarrelEvaluation`
     - `BrowserHostDecl`
     - `CodegenStep`
     - `CollectedRawEntry`
@@ -259,6 +262,8 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `discoverCollectedDirs`
     - `discoverCollectedDirsIn`
     - `eagerTierManifestPath`
+    - `evaluateAllBarrels`
+    - `evaluateWebBarrels`
     - `EXEMPT_RULE_IDS_REL_PATH`
     - `exemptRuleIdsPath`
     - `extractRuntimeImportSpecifiers`
@@ -304,6 +309,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `readDefineApp`
     - `readEffectiveConfigFromDisk`
     - `readGitLayerConfig`
+    - `recordSlotNaming`
     - `regenerateManifestCodegen`
     - `regenerateRegistryCodegen`
     - `renderAppDeclarationsManifest`
@@ -364,7 +370,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `ui/tokens/shadow --shadow`
 - Exemptions:
   - Exempts itself from:
-    - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/token-group-vars-gen.ts`, `core/write-generated.ts` (debt)
+    - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
     - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
 

@@ -45,6 +45,11 @@ import {
   type ImportRef,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
+import {
+  buildModuleGraph,
+  currentRecordStore,
+  scanFilesCached,
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
 import type TS from "typescript";
 import {
   isPlatformApi,
@@ -168,6 +173,13 @@ function pluginOf(path: string): string {
   return m === null ? path : m[1]!;
 }
 
+/** What one module says for portability: rules 1–2, its host-service declarations, what it provides. */
+export interface ModulePortabilityFacts {
+  needs: string[];
+  decls: HostServiceDecl[];
+  provides: string[];
+}
+
 /** What {@link derivePortability} reads: the union closure, and the run's file reads. */
 export interface PortabilityInputs {
   /** The server barrels measured. */
@@ -175,6 +187,60 @@ export interface PortabilityInputs {
   /** Their union closure (dynamic imports cut). */
   closure: Pick<UnionImportClosure, "modules" | "children" | "importChain">;
   read(path: string): Promise<string | null>;
+  /**
+   * Each module's facts, in order — by default read and computed here; the
+   * build hands its file records (`serverPortabilityOf`).
+   */
+  facts?(modules: readonly string[]): Promise<ModulePortabilityFacts[]>;
+}
+
+/** One module's {@link ModulePortabilityFacts}, from its text. */
+function factsOf(
+  ts: typeof TS,
+  module: string,
+  src: string,
+): ModulePortabilityFacts {
+  return {
+    needs: moduleNeeds(ts, module, src),
+    decls: src.includes("defineHostService")
+      ? parseHostServiceDeclarations(src)
+      : [],
+    // Only a server barrel provides (a provider is a barrel's contribution).
+    provides: SERVER_BARREL_RE.test(module) ? providedServiceNames(src) : [],
+  };
+}
+
+/** The default {@link PortabilityInputs.facts}: every module read and scanned, yielding as it goes. */
+function readFacts(
+  read: (path: string) => Promise<string | null>,
+): (modules: readonly string[]) => Promise<ModulePortabilityFacts[]> {
+  return async (modules) => {
+    const ts = await loadTypescript();
+    const texts = await Promise.all(
+      modules.map(async (m) => {
+        const src = await read(m);
+        if (src === null) {
+          throw new Error(
+            `The server-barrel closure loads ${m}, which the run's file set cannot read.`,
+          );
+        }
+        return src;
+      }),
+    );
+    // Thousands of modules, some parsed: yield to the event loop every ~10 ms
+    // of CPU, so a check pass sharing this thread is not stalled behind the
+    // scan (a macrotask, never a microtask — see yieldMacrotask).
+    let lastYield = performance.now();
+    const out: ModulePortabilityFacts[] = [];
+    for (const [i, module] of modules.entries()) {
+      if (performance.now() - lastYield > 10) {
+        await yieldMacrotask();
+        lastYield = performance.now();
+      }
+      out.push(factsOf(ts, module, texts[i]!));
+    }
+    return out;
+  };
 }
 
 /**
@@ -186,43 +252,25 @@ export async function derivePortability(
 ): Promise<ServerPortability> {
   const { closure } = inputs;
   const barrels = [...inputs.barrels].sort();
-  const ts = await loadTypescript();
-  const source = async (path: string): Promise<string> => {
-    const src = await inputs.read(path);
-    if (src === null) {
-      throw new Error(
-        `The server-barrel closure loads ${path}, which the run's file set cannot read.`,
-      );
-    }
-    return src;
-  };
-
   // Rules 1 and 2, and the host services each module declares.
   const seeds = new Map<string, string[]>();
   const decls: (HostServiceDecl & { module: string })[] = [];
   const modules = [...closure.modules].sort();
-  const texts = await Promise.all(modules.map((m) => source(m)));
-  // Thousands of modules, some parsed: yield to the event loop every ~10 ms
-  // of CPU, so a check pass sharing this thread is not stalled behind the
-  // scan (a macrotask, never a microtask — see yieldMacrotask).
-  let lastYield = performance.now();
+  const facts = await (inputs.facts ?? readFacts(inputs.read))(modules);
+  const factsByModule = new Map<string, ModulePortabilityFacts>();
   for (const [i, module] of modules.entries()) {
-    if (performance.now() - lastYield > 10) {
-      await yieldMacrotask();
-      lastYield = performance.now();
-    }
-    const src = texts[i]!;
-    const needs = moduleNeeds(ts, module, src);
-    if (needs.length > 0) seeds.set(module, needs);
-    if (src.includes("defineHostService")) {
-      for (const d of parseHostServiceDeclarations(src))
-        decls.push({ ...d, module });
-    }
+    const f = facts[i]!;
+    factsByModule.set(module, f);
+    if (f.needs.length > 0) seeds.set(module, f.needs);
+    for (const d of f.decls) decls.push({ ...d, module });
   }
   const byName = hostServicesByName(decls);
   const providers = new Map<string, string[]>();
   for (const barrel of barrels) {
-    for (const name of providedServiceNames(await source(barrel))) {
+    const provided = factsByModule.get(barrel);
+    if (!provided)
+      throw new Error(`${barrel} is not in the server-barrel closure.`);
+    for (const name of provided.provides) {
       if (!byName.has(name)) continue;
       providers.set(name, [...(providers.get(name) ?? []), barrel]);
     }
@@ -430,22 +478,60 @@ export async function serverPortability(
 
 const memo = new WeakMap<RepoFiles, Promise<ServerPortability>>();
 
+/** This module: what the per-module portability facts are keyed by. */
+const PORTABILITY_MODULE =
+  "plugins/framework/plugins/tooling/plugins/boundaries/core/portability.ts";
+
 /**
- * Every server barrel's portability in `repo`, derived once per snapshot: one
+ * Every server barrel's portability in `repo`, derived once per file set: one
  * shared promise per `RepoFiles`, so codegen's consumers (through
  * `buildRegistryGenContext`, a `WeakMap` on the same set) and the checks of
- * one pass share one union build.
+ * one pass share one derivation.
+ *
+ * The closure is the plugin-records module graph's BUNDLER view (dynamic
+ * imports cut, unused TypeScript imports dropped — what `importClosures`
+ * measures, proven equal by `plugin-records/scripts/closure-equivalence.ts`),
+ * and each module's facts are file records: from the build's snapshot, only a
+ * module whose blob changed is read.
  */
 export function serverPortabilityOf(
   repo: RepoFiles,
 ): Promise<ServerPortability> {
   let p = memo.get(repo);
   if (p === undefined) {
-    p = serverPortability(
-      repo.root,
-      repo.all().filter((path) => SERVER_BARREL_RE.test(path)),
-      (path) => repo.read(path),
-    );
+    p = (async () => {
+      const barrels = repo
+        .all()
+        .filter((path) => SERVER_BARREL_RE.test(path))
+        .sort();
+      // Every module a server barrel loads is a member of the file set: a
+      // gitignored one would resolve to nothing, which throws below.
+      const input = {
+        snapshot: repo,
+        store: currentRecordStore(),
+        readOutside: () => null,
+      };
+      const graph = await buildModuleGraph(input, barrels);
+      const closure = graph.bundledClosure(barrels);
+      for (const m of closure.modules) {
+        const unresolved = graph.modules.get(m)!.unresolved;
+        if (unresolved.length > 0)
+          throw new Error(
+            `${m} imports ${unresolved.map((u) => JSON.stringify(u)).join(", ")}, which resolves to no file of the checkout: a server barrel's closure is measured over the file set.`,
+          );
+      }
+      const ts = await loadTypescript();
+      return derivePortability({
+        barrels,
+        closure,
+        read: (path) => repo.read(path),
+        facts: (modules) =>
+          scanFilesCached(input, modules, {
+            module: PORTABILITY_MODULE,
+            scan: (src, rel) => factsOf(ts, rel, src),
+          }),
+      });
+    })();
     memo.set(repo, p);
   }
   return p;

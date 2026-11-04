@@ -73,7 +73,7 @@ Every input is read from per-node **facet data** already serialized into the
 tree (`node.facets[id]`, via `getFacet`). No `fs`, no `path`, no barrel imports.
 It runs identically at build time, in the `plugin-view.tree` /
 `composition.data` live values' loaders, and client-side in Studio. `buildPluginTree(...,
-{ skipBarrelImport: true })` populates everything the engine consumes.
+{ facets: true })` populates everything the engine consumes.
 
 The one runtime import outside this plugin is `BASE_EXCLUSIONS_ID` from
 `@plugins/infra/plugins/namespace/core`, which is a zero-import leaf for exactly

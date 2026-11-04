@@ -23,11 +23,15 @@ put("server/internal/__tests__/tables.ts", 'pgTable("t", {});\n');
 put("server/internal/schema.test.ts", "export {};\n");
 
 test("lists schema files by name or content, and never test code", () => {
-  const data = facet.extract({ dir, pluginId: "x" } as ExtractContext) as {
+  const data = facet.extract({
+    dir,
+    relDir: "fixtures/x",
+    pluginId: "x",
+  } as ExtractContext) as {
     dbFiles: string[];
   };
-  expect(data.dbFiles.map((f) => f.slice(dir.length + 1))).toEqual([
-    "server/internal/tables.ts",
-    "server/internal/views.ts",
+  expect(data.dbFiles).toEqual([
+    "fixtures/x/server/internal/tables.ts",
+    "fixtures/x/server/internal/views.ts",
   ]);
 });
