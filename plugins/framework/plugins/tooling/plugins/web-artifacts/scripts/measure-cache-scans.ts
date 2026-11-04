@@ -7,7 +7,12 @@
 //
 //   ./equin run plugins/framework/plugins/tooling/plugins/web-artifacts/scripts/measure-cache-scans.ts
 
-import { readdirSync, readlinkSync, realpathSync, statSync } from "node:fs";
+import {
+  readdirSync,
+  readlinkSync,
+  realpathSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { worktreesDir } from "@plugins/infra/plugins/paths/core";
 import { checkCacheDir } from "@plugins/framework/plugins/tooling/plugins/checks/data-dirs";
