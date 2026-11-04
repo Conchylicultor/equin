@@ -1,4 +1,4 @@
-// @hash 32b53cf952ff
+// @hash a601fa7b0be3
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -12,6 +12,7 @@
     "debug.queue-health:job-queue",
     "debug.sentinel:machine-watcher",
     "infra.health:connection",
+    "infra.host.io-health:host-io",
     "infra.launcher.gateway-drift:gateway",
     "infra.mcp.browser:agent-browser",
     "infra.mcp.health:mcp-server",

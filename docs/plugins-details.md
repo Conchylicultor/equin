@@ -31448,6 +31448,54 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/attempt-work`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/pool.ts` (debt)
+        - **`io-health`** — Host file-I/O health, shown: the health report's Disk I/O row (attention while a finding holds — critical for a metadata stall — or while the fs-latency monitor is not installed or has stopped writing; never green before the read lands) and the one-line Debug → Reports summary of the host-io-degraded kind.
+          - Web:
+            - Contributes:
+              - `Reports.KindView` → `HostIoDegradedSummary`
+              - `HealthReport.Row` "Disk I/O"
+            - Uses:
+              - `network/live.useLive`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/inline.Inline`
+              - `reports.Reports`
+              - `shell/health-report.HealthReport`
+          - Server:
+            - Contributes:
+              - `report-kind` "host-io-degraded"
+              - `resource.declare` "host.io-health"
+            - Resources: `host.io-health` (push, notified)
+          - Machine:
+            - Uses: `network/live.serveValue`
+            - Register: `defineFileWatcher('io-health.fs-latency-log')`
+          - Core:
+            - Uses: `network/live.liveValue`
+            - Exports (types):
+              - `DetectorStep`
+              - `Evidence`
+              - `Finding`
+              - `IoHealth`
+              - `IoHealthDetector`
+              - `IoHealthRule`
+              - `LatestTick`
+              - `MonitorTick`
+            - Exports (values):
+              - `ACTIVE_FINDINGS_MAX`
+              - `createIoHealthDetector`
+              - `evaluateWindow`
+              - `EVIDENCE_MAX`
+              - `findingKey`
+              - `FindingSchema`
+              - `FS_LATENCY_LOG_NAME`
+              - `HOST_IO_DEGRADED_KIND`
+              - `HostIoDegradedPayloadSchema`
+              - `hostIoHealth`
+              - `IO_HEALTH_RULES`
+              - `IO_HEALTH_THRESHOLDS`
+              - `IoHealthSchema`
+              - `LatestTickSchema`
+              - `MONITOR_INTERVAL_MS`
+              - `MonitorTickSchema`
+              - `parseTickLine`
         - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, and sleptDuring(start, end) — the sleep this process saw inside a wall-clock span.
           - Server:
             - Contributes: `resource.declare` "machine.sleep"
@@ -35011,12 +35059,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 317 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 318 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×84
           - `conversations` ×52
           - `debug` ×32
           - `tasks` ×32
-          - `infra` ×21
+          - `infra` ×22
           - `page` ×15
           - `active-data` ×13
           - `build` ×10
@@ -41417,7 +41465,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 170 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 171 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×34
               - `conversations` ×25
@@ -41426,9 +41474,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×10
               - `plugin-meta` ×8
               - `build` ×5
+              - `infra` ×4
               - `review` ×4
               - `fields` ×3
-              - `infra` ×3
               - `page` ×3
               - `apps-core` ×2
               - `runs` ×2
@@ -41850,7 +41898,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 101 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 102 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×21
               - `debug` ×15
               - `reports` ×15
@@ -41867,6 +41915,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/settings`
               - `database/query-deadline`
               - `fields/bool/table`
+              - `infra/host/io-health`
               - `network/live/live-state`
               - `reorder/editor`
               - `runs/run-outcome`
@@ -49414,8 +49463,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 31 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×31
+    - Slot contributors: 32 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×32
     - Contributes:
       - `IdKinds.Kind` "report"
       - `ConfigV2.WebRegister` "reports"
@@ -49510,15 +49559,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 56 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 57 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×25
       - `debug` ×14
       - `database` ×4
       - `conversations` ×3
       - `framework` ×2
+      - `infra` ×2
       - `active-data/report`
       - `backup`
-      - `infra/jobs/deadline-audit`
       - `network/live/boot-snapshot`
       - `page/place/google`
       - `stats/cost`
@@ -50785,6 +50834,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` ← `debug.queue-health`
           - `HealthReport.Row` ← `debug.sentinel`
           - `HealthReport.Row` ← `infra.health`
+          - `HealthReport.Row` ← `infra.host.io-health`
           - `HealthReport.Row` ← `infra.launcher.gateway-drift`
           - `HealthReport.Row` ← `infra.mcp.browser`
           - `HealthReport.Row` ← `infra.mcp.health`
@@ -50843,6 +50893,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/queue-health`
           - `debug/sentinel`
           - `infra/health`
+          - `infra/host/io-health`
           - `infra/launcher/gateway-drift`
           - `infra/mcp/browser`
           - `infra/mcp/health`

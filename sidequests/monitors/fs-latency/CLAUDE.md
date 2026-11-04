@@ -21,6 +21,18 @@ make up the stall, and this monitor separates them:
 
 Findings and benchmarks live on the investigation's track page, not here.
 
+## In the app
+
+equin reads this log itself: `plugins/infra/plugins/host/plugins/io-health`
+follows it with a file watcher, runs every tick through a detector (daemon CPU,
+device ms/op, metadata stalls, relaunch loops, cache collapse — thresholds from
+the 2026-11-03/04 history), files `host-io-degraded` reports on main, and
+shows the **Disk I/O** row in the health report — including when this monitor
+is not installed or has stopped writing. Its tick schema
+(`io-health/core`) is the contract with this script: a new or renamed field
+the detector should read goes there too. Replay a log through the detector
+with `./equin run plugins/infra/plugins/host/plugins/io-health/scripts/replay-monitor-log.ts --log <copy>`.
+
 ## What it captures (per tick)
 
 | key | meaning |
@@ -31,7 +43,8 @@ Findings and benchmarks live on the investigation's track page, not here.
 | `vnodes`, `maxvnodes`, `new_vnodes_s`, `recycled_vnodes_s` | vnode table and churn |
 | `disk_read_ops_s`, `disk_write_ops_s`, `disk_read_mb_s`, `disk_read_ms_per_op` | IOBlockStorageDriver statistics delta (`ms_per_op` = device time, so device slowness is told apart from throttling) |
 | `load1`, `daemon_cpu` | load and %CPU of fseventsd, syspolicyd, XprotectService, mds, mds_stores, corecaptured |
-| `corecaptured` | `{pid, age_s}` of corecaptured, or null. No root needed. A pid that changes every ~5 min (age never past ~300 s) is its relaunch loop, the client behind the fseventsd history replay (below) |
+| `daemon_procs` | `{name: {pid, age_s}}` of each watched daemon that is running. No root needed. A pid that changes tick after tick is a relaunch loop (the app's `relaunch-loop` finding) |
+| `corecaptured` | `{pid, age_s}` of corecaptured, or null (also in `daemon_procs`; kept for older readers). No root needed. A pid that changes every ~5 min (age never past ~300 s) is its relaunch loop, the client behind the fseventsd history replay (below) |
 | `disk_readers_mb_s` | root only: the top 8 processes by disk bytes read since the last tick (`proc_pid_rusage`, root daemons included), MB/s by process name |
 | `disk_read_attributed_mb_s`, `disk_read_born_mb_s` | root only: the same reads summed over EVERY live process, and the part of it from processes born since the last tick (counted from 0, so short-lived git and hook runs are not dropped). `disk_read_mb_s` minus `disk_read_attributed_mb_s` is what no live process explains: processes that started and exited between two ticks, and the kernel |
 | `fseventsd_logs` | root only: the `.fseventsd` log files fseventsd holds open (hex event ids). The newest is the one being written; one far behind it, advancing tick after tick, is a history replay for a client that subscribed from an old event id |

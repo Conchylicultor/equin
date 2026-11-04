@@ -1,4 +1,4 @@
-// @hash 32b53cf952ff
+// @hash a601fa7b0be3
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -24,6 +24,8 @@
     "debug.queue-health:job-queue",
     // About the whole machine, not the server you are on.
     "debug.sentinel:machine-watcher",
+    // The machine's disk and file system, as the host monitor outside the app sees them.
+    "infra.host.io-health:host-io",
     // The socket is up and the server reaches its database, and yet a read can still fail.
     "reports.resource-errors:live-reads",
     // The infrastructure the page runs on, ending with the front door's own currency.

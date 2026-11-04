@@ -148,6 +148,7 @@ probes, is mounted per page.
     - `HealthReport.Row` ← `debug.queue-health`
     - `HealthReport.Row` ← `debug.sentinel`
     - `HealthReport.Row` ← `infra.health`
+    - `HealthReport.Row` ← `infra.host.io-health`
     - `HealthReport.Row` ← `infra.launcher.gateway-drift`
     - `HealthReport.Row` ← `infra.mcp.browser`
     - `HealthReport.Row` ← `infra.mcp.health`
@@ -206,6 +207,7 @@ probes, is mounted per page.
     - `debug/queue-health`
     - `debug/sentinel`
     - `infra/health`
+    - `infra/host/io-health`
     - `infra/launcher/gateway-drift`
     - `infra/mcp/browser`
     - `infra/mcp/health`

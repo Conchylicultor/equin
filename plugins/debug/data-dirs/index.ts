@@ -19,7 +19,7 @@ export const monitorLogsDir = defineDataDir({
   name: "monitors",
   owner: "debug",
   description:
-    "Output of the host-level launchd monitors in sidequests/monitors/ (FD-leak watcher) — observability from outside the app",
+    "Output of the host-level launchd monitors in sidequests/monitors/ (FD-leak watcher, fs-latency monitor — read live by infra/host/io-health) — observability from outside the app",
   // Observability output written by a process nothing in the app supervises.
   // Losing it costs the record of a past host-level incident, never anything a
   // running monitor needs.

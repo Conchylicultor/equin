@@ -55,7 +55,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
   - Exports (types): `InlineProps`
   - Exports (values): `Inline`
 - Cross-plugin:
-  - Imported by: 101 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 102 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×21
     - `debug` ×15
     - `reports` ×15
@@ -72,6 +72,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `config_v2/settings`
     - `database/query-deadline`
     - `fields/bool/table`
+    - `infra/host/io-health`
     - `network/live/live-state`
     - `reorder/editor`
     - `runs/run-outcome`

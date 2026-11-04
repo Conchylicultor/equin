@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-host-io-health",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Host file-I/O health from the fs-latency monitor's log: a detector over its ticks (daemon CPU, device ms/op, metadata stalls, relaunch loops, cache collapse) raising host-io-degraded reports and the health report's Disk I/O row."
+}

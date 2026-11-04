@@ -24,7 +24,8 @@ one JSON line to ~/.equin/logs/monitors/fs-latency.jsonl, and exits):
               (IOBlockStorageDriver Statistics), load average.
   daemons     %CPU of the system daemons that were suspects (fseventsd,
               syspolicyd, XprotectService, mds, mds_stores, corecaptured), and
-              corecaptured's pid and age: a pid that changes every ~5 min is
+              each one's pid and age (`daemon_procs`; `corecaptured` kept on
+              its own for old readers): a pid that changes every ~5 min is
               its relaunch loop, each launch replaying fseventsd's history
               from a purge marker that never advances (CLAUDE.md).
   readers     root only: the processes reading the most from disk since the
@@ -208,10 +209,12 @@ def disk_stats():
     return best or {}
 
 
+DAEMONS = ("fseventsd", "syspolicyd", "XprotectService", "mds", "mds_stores", "corecaptured")
+
+
 def daemon_cpu():
     out = run_out(["/bin/ps", "-Ao", "pcpu=,comm="], check=True)
-    want = {"fseventsd": 0.0, "syspolicyd": 0.0, "XprotectService": 0.0, "mds": 0.0, "mds_stores": 0.0,
-            "corecaptured": 0.0}
+    want = {name: 0.0 for name in DAEMONS}
     for line in out.splitlines():
         parts = line.strip().split(None, 1)
         if len(parts) != 2:
@@ -285,14 +288,25 @@ def fseventsd_logs():
     return sorted({ln.rsplit("/", 1)[1] for ln in out.splitlines() if ln.startswith("n") and "/.fseventsd/" in ln})
 
 
-def corecaptured_proc():
-    """corecaptured's pid and age (s), or None when it is not running. No root needed."""
+def daemon_procs():
+    """pid and age (s) of each watched daemon that is running (the oldest process of that name). No root needed.
+
+    A pid that changes tick after tick is a relaunch loop (corecaptured's, on
+    2026-11-03/04, each run replaying fseventsd's history); the app's
+    io-health detector reads it as `relaunch-loop`.
+    """
     out = run_out(["/bin/ps", "-Ao", "pid=,etime=,comm="])
+    procs = {}
     for line in out.splitlines():
         parts = line.split(None, 2)
-        if len(parts) == 3 and os.path.basename(parts[2]) == "corecaptured":
-            return {"pid": int(parts[0]), "age_s": etime_s(parts[1])}
-    return None
+        if len(parts) != 3:
+            continue
+        name = os.path.basename(parts[2])
+        if name in DAEMONS:
+            p = {"pid": int(parts[0]), "age_s": etime_s(parts[1])}
+            if name not in procs or p["age_s"] > procs[name]["age_s"]:
+                procs[name] = p
+    return procs
 
 
 def etime_s(etime):
@@ -377,8 +391,10 @@ def main():
         **rates,
         "load1": float(load[0]),
         "daemon_cpu": daemon_cpu(),
-        "corecaptured": corecaptured_proc(),
     }
+    procs = daemon_procs()
+    rec["daemon_procs"] = procs
+    rec["corecaptured"] = procs.get("corecaptured")
     if os.geteuid() == 0:
         top, attributed, born = disk_readers(now, state)
         rec["disk_readers_mb_s"] = top

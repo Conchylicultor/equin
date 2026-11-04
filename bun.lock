@@ -4231,6 +4231,10 @@
       "name": "@equin/plugin-infra-host-host-read-pool",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/host/plugins/io-health": {
+      "name": "@equin/plugin-infra-host-io-health",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/host/plugins/machine-sleep": {
       "name": "@equin/plugin-infra-host-machine-sleep",
       "version": "0.0.1",
@@ -9213,6 +9217,8 @@
     "@equin/plugin-infra-host-host-admission": ["@equin/plugin-infra-host-host-admission@workspace:plugins/infra/plugins/host/plugins/host-admission"],
 
     "@equin/plugin-infra-host-host-read-pool": ["@equin/plugin-infra-host-host-read-pool@workspace:plugins/infra/plugins/host/plugins/host-read-pool"],
+
+    "@equin/plugin-infra-host-io-health": ["@equin/plugin-infra-host-io-health@workspace:plugins/infra/plugins/host/plugins/io-health"],
 
     "@equin/plugin-infra-host-machine-sleep": ["@equin/plugin-infra-host-machine-sleep@workspace:plugins/infra/plugins/host/plugins/machine-sleep"],
 

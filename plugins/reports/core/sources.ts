@@ -33,6 +33,10 @@ export const SERVER_REPORT_SOURCES = [
   // is a scheduled observation of another repository, not an error anyone
   // caught.
   "server-upstream-monitor",
+  // The host file-I/O detector (infra/host/io-health): the fs-latency
+  // monitor's log showed a sustained degradation of this machine's disk or
+  // file system. A scheduled observation of the host, not an error anyone caught.
+  "server-host-io-monitor",
   "server-cost-monitor",
   // Model discovery (conversations/model-provider/catalog): the Claude CLI's
   // model menu named something outside the model id grammar, or left out a
