@@ -35,6 +35,7 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-sourc
 import {
   inFlightTurnsOf,
   pendingTurnsOf,
+  takenByAgent,
   useOptimisticConversationStatus,
   usePendingTurns,
 } from "../internal/pending";
@@ -172,6 +173,29 @@ afterEach(() => {
   fake.calls.length = 0;
   posts.next = "ok";
   posts.open = [];
+});
+
+describe("takenByAgent — where a card sits against the streaming reply", () => {
+  it("only an accepted turn goes above the reply; the rest stay at the end", () => {
+    const cards = pendingTurnsOf(
+      [
+        row("c", "t4", "failed"),
+        row("c", "t3", "typed"),
+        row("c", "t2", "held"),
+        row("c", "t1", "accepted"),
+      ],
+      [],
+      NO_EVENTS,
+    );
+    expect(cards.filter(takenByAgent).map((c) => c.state)).toEqual([
+      "accepted",
+    ]);
+    expect(cards.filter((c) => !takenByAgent(c)).map((c) => c.state)).toEqual([
+      "held",
+      "typed",
+      "failed",
+    ]);
+  });
 });
 
 describe("pendingTurnsOf — which ledger states draw a card", () => {

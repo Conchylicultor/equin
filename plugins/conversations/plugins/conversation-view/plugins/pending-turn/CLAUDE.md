@@ -60,7 +60,7 @@ ledger window and tab sends, filtered to the echo states).
 
 | State | Card |
 |---|---|
-| `sending` (tab only) / `held` / `typing` / `typed` / `accepted` | echo, **until the agent confirmed it and the transcript holds its line** (a user message under the uuid it was confirmed as, or a window beginning after its confirmation) — "Sending…" under it, "Waiting for the agent to start…" when held, and **Queued · Send now** when typed while a turn runs: the agent's CLI holds it until the next tool boundary or the turn's end. Mounted after the transcript, the echo stays last while the agent's steps land above it; Send now interrupts the running turn (`POST /api/conversations/:id/interrupt`), and the CLI starts the queued message next |
+| `sending` (tab only) / `held` / `typing` / `typed` / `accepted` | echo, **until the agent confirmed it and the transcript holds its line** (a user message under the uuid it was confirmed as, or a window beginning after its confirmation) — "Sending…" under it, "Waiting for the agent to start…" when held, and **Queued · Send now** when typed while a turn runs: the agent's CLI holds it until the next tool boundary or the turn's end. Mounted after the transcript, a turn still on its way stays last while the agent's steps land above it; one the agent took (`accepted`, `takenByAgent`) is drawn above the reply it is streaming, where its line will land — so the first message never sits under the agent's first thinking; Send now interrupts the running turn (`POST /api/conversations/:id/interrupt`), and the CLI starts the queued message next |
 | `returned` / `withdrawn` | nothing: the draft has it |
 | `failed` / `unsent` (tab only) | Retry + Copy to draft, with the error |
 
@@ -172,6 +172,7 @@ render (`reports/turn-unconfirmed`).
   - Exports (values):
     - `conversationPromptDraft`
     - `PendingTurnCard`
+    - `takenByAgent`
     - `useOptimisticConversationStatus`
     - `usePendingTurns`
     - `useSendConversationTurn`

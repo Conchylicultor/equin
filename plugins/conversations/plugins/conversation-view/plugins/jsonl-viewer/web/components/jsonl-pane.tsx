@@ -30,6 +30,7 @@ import {
   usePendingTurns,
   useSentTurnFollowKey,
   PendingTurnCard,
+  takenByAgent,
   type PendingTurn,
   type RenderEcho,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
@@ -181,6 +182,21 @@ function JsonlPaneInner({
       : null;
 
   const agentStarting = conversation.status === "starting";
+  // A turn the agent took stands in for a line ABOVE the reply it is
+  // streaming (its first thinking lands under it, never over it); one still on
+  // its way stays at the very end, under the running turn's steps.
+  const takenTurns = pendingTurns.filter(takenByAgent);
+  const queuedTurns = pendingTurns.filter((turn) => !takenByAgent(turn));
+  const renderCard = (turn: PendingTurn) => (
+    <PendingTurnCard
+      key={turn.id}
+      conversationId={conversation.id}
+      turn={turn}
+      agentStarting={agentStarting}
+      turnRunning={isTurnRunning(conversation)}
+      renderEcho={renderEcho}
+    />
+  );
   // The foot's activity line (see TranscriptActivity): the agent's phase. A
   // message still on its way to an idle agent says so under its own echo.
   // An unverified status claims no phase, and no idle either.
@@ -236,6 +252,7 @@ function JsonlPaneInner({
       // view draws via `useTranscriptEvents()`.
       overlay={<JsonlViewer.Overlay.Render />}
     >
+      {takenTurns.map(renderCard)}
       <StreamingMessage conversationId={conversation.id} />
       <JsonlViewer.TranscriptEnd.Render>
         {(item) => <item.component conversation={conversation} />}
@@ -246,16 +263,7 @@ function JsonlPaneInner({
           waitingFor={conversation.waitingFor}
         />
       )}
-      {pendingTurns.map((turn) => (
-        <PendingTurnCard
-          key={turn.id}
-          conversationId={conversation.id}
-          turn={turn}
-          agentStarting={agentStarting}
-          turnRunning={isTurnRunning(conversation)}
-          renderEcho={renderEcho}
-        />
-      ))}
+      {queuedTurns.map(renderCard)}
       {activity !== null && !isStarting && (
         <TranscriptActivity phase={activity} startAt={workingStartAt} />
       )}

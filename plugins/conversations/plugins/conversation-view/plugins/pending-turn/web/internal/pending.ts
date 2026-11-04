@@ -121,6 +121,17 @@ export function pendingTurnsOf(
 }
 
 /**
+ * Whether the agent already took the turn (`accepted`: its CLI started it), so
+ * its echo stands in for a transcript line that comes BEFORE whatever the agent
+ * is writing now — a host draws it above the streaming reply, not below it. A
+ * turn still on its way (being sent, held, queued) or one that failed stays at
+ * the transcript's very end, under the running turn's steps.
+ */
+export function takenByAgent(turn: Pick<PendingTurn, "state">): boolean {
+  return turn.state === "accepted";
+}
+
+/**
  * The turns a conversation's transcript ends with a card for — its live ledger
  * (`turn-ledger.turns`) merged with this tab's sends whose row has not arrived,
  * less the ones `events` (the transcript the caller renders) already shows.

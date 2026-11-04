@@ -9,6 +9,7 @@ export {
   useTurnRunning,
   useTurnAwaitingStart,
   useTurnsInFlight,
+  takenByAgent,
 } from "./internal/pending";
 export type {
   InFlightTurn,
