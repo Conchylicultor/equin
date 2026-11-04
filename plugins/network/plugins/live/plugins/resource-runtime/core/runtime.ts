@@ -88,12 +88,20 @@ import {
 // facade's WsHandler (a Bun `ServerWebSocket` satisfies `RuntimeSocket`).
 
 /**
- * The socket the runtime talks to: all it ever does with one is `send` a text
- * frame and use it as a Map key (its identity). A Bun `ServerWebSocket`
- * satisfies it structurally; so does an in-memory pair end in a browser host.
+ * The socket the runtime talks to: it `send`s text frames, closes it, and uses
+ * it as a Map key (its identity). A Bun `ServerWebSocket` satisfies it
+ * structurally; so does an in-memory pair end in a browser host.
+ *
+ * `send` answers whether the frame was ACCEPTED, in Bun's own convention: `0`
+ * = not accepted (the frame is gone — Bun discards a frame sent while the
+ * connection's buffer is past its `backpressureLimit`); anything else = sent
+ * or queued. A frame the socket did not accept is never lost: the runtime
+ * holds it, and every later frame behind it, in order, and sends them on
+ * `drain` (see `deliver`).
  */
 export interface RuntimeSocket {
-  send(data: string): void;
+  send(data: string): number;
+  close(code?: number, reason?: string): void;
 }
 
 // Local, cycle-free copy of the WS types (see server-core/central-core types.ts).
@@ -105,6 +113,8 @@ export interface WsHandler {
   open(ws: RuntimeSocket): void;
   message(ws: RuntimeSocket, msg: string | { toString(): string }): void;
   close(ws: RuntimeSocket, code: number, reason: string): void;
+  /** The socket's send buffer drained after a `send` it did not accept. */
+  drain(ws: RuntimeSocket): void;
 }
 
 export type ResourceMode = "push" | "invalidate" | "keyed";
@@ -1661,7 +1671,26 @@ interface SocketState {
   ws: RuntimeSocket;
   /** key -> paramsKey -> record (subscriptions this socket holds, tagged by tab). */
   subs: Map<string, Map<string, SocketSubRecord>>;
+  /**
+   * Frames the socket did not accept, oldest first, waiting for its `drain` —
+   * and every frame sent after them, so none overtakes one held back. Absent
+   * while the socket accepts every frame. See `deliver`.
+   */
+  backlog?: { frames: string[]; chars: number; since: number };
+  /** The runtime closed it (`closeBacklogged`): nothing more is sent. */
+  closing?: true;
 }
+
+/**
+ * How much a socket may hold back, and for how long, before it is closed
+ * instead: a peer that stopped reading. Its tabs reconnect and replay their
+ * whole sub set, which re-reads every value — lossless, where holding on would
+ * grow without end (or, with no `drain` ever coming, leave the tabs on stale
+ * values). A 2026-11-04 restart replay of a six-tab socket was ~45 MB. The age
+ * is checked on every frame, the heartbeat's included.
+ */
+const BACKLOG_MAX_CHARS = 64 * 1024 * 1024;
+const BACKLOG_MAX_AGE_MS = 60_000;
 
 /** One loader run's own read capture, as `RunCapture` handed it (sorted). */
 interface RunReads {
@@ -2781,6 +2810,9 @@ export function createResourceRuntime(
   // is how we learn whether the pre-commit join the 2026-08-08 incident rode on
   // still happens in production — and is now refused rather than shipped.
   const staleFlightSupersedes = new Map<string, number>();
+  // How many times a socket's buffer filled and the runtime held frames for
+  // its drain (`deliver`), this boot.
+  let backlogEpisodes = 0;
   function recordStaleFlightSupersede(key: string): void {
     staleFlightSupersedes.set(key, (staleFlightSupersedes.get(key) ?? 0) + 1);
     opts.onStaleFlightSupersede?.(key);
@@ -5343,16 +5375,100 @@ export function createResourceRuntime(
   // new field or kind is an edit there, which moves `PROTOCOL` — so tabs
   // reading the old vocabulary never share a socket with tabs reading the new
   // one.
+  // Every frame the runtime sends goes through here. A frame the socket does
+  // not accept (Bun discards one sent past the connection's backpressureLimit
+  // — a post-restart replay of every tab's sub set on one shared socket, with
+  // the boot catch-up's pushes behind it, reaches it) would otherwise be lost
+  // with no trace: the tab keeps the value it had, the server's version moves
+  // on, and nothing ever tells the tab — the "missed-updates" the client's
+  // probe found after restarts. So an unaccepted frame opens the socket's
+  // BACKLOG: it and every later frame wait there in order (a delta must never
+  // overtake the frame it builds on) and go out on `drain`. A send that throws
+  // (a socket already closing) is the close handler's to clean up.
+  function deliver(state: SocketState, str: string): void {
+    if (state.closing) return;
+    const backlog = state.backlog;
+    if (backlog !== undefined) {
+      backlog.frames.push(str);
+      backlog.chars += str.length;
+      if (
+        backlog.chars > BACKLOG_MAX_CHARS ||
+        Date.now() - backlog.since > BACKLOG_MAX_AGE_MS
+      )
+        closeBacklogged(state);
+      return;
+    }
+    let accepted: number;
+    try {
+      accepted = state.ws.send(str);
+      // eslint-disable-next-line promise-safety/no-bare-catch
+    } catch {
+      return; // close handler will clean up
+    }
+    if (accepted === 0) {
+      state.backlog = { frames: [str], chars: str.length, since: Date.now() };
+      backlogEpisodes++;
+      console.warn(
+        `[resource-runtime] socket buffer full: holding frames until it drains (${backlogEpisodes} episode(s) this boot)`,
+      );
+    }
+  }
+
+  // The socket drained: send what it held back, in order, until it refuses
+  // one again (that one stays first in line for the next drain).
+  function flushBacklog(state: SocketState): void {
+    const backlog = state.backlog;
+    if (backlog === undefined) return;
+    let sent = 0;
+    for (const str of backlog.frames) {
+      let accepted: number;
+      try {
+        accepted = state.ws.send(str);
+        // eslint-disable-next-line promise-safety/no-bare-catch
+      } catch {
+        return; // close handler will clean up
+      }
+      if (accepted === 0) break;
+      sent++;
+      backlog.chars -= str.length;
+    }
+    backlog.frames.splice(0, sent);
+    if (backlog.frames.length === 0) {
+      console.warn(
+        `[resource-runtime] socket buffer drained: held frames delivered after ${Date.now() - backlog.since}ms`,
+      );
+      state.backlog = undefined;
+    }
+  }
+
+  // A peer that stopped reading (or a drain that never came): close it rather
+  // than hold without bound. Its
+  // tabs reconnect and replay — every value re-read, so nothing is lost.
+  function closeBacklogged(state: SocketState): void {
+    const held = state.backlog;
+    state.backlog = undefined;
+    state.closing = true;
+    reportLoaderError(
+      "live-state socket closed: its peer stopped reading",
+      new Error(
+        `held ${held?.frames.length ?? 0} frame(s) (${held?.chars ?? 0} chars) for ${held ? Date.now() - held.since : 0}ms past the socket's buffer; closed so its tabs reconnect and replay`,
+      ),
+    );
+    try {
+      state.ws.close(1013, "live-state backlog over its bound");
+      // eslint-disable-next-line promise-safety/no-bare-catch
+    } catch {
+      // already closing — the close handler cleans up
+    }
+  }
+
   function sendJson<F extends ServerFrame>(
     ws: RuntimeSocket,
     obj: ExactServerFrame<F>,
   ): void {
-    try {
-      ws.send(JSON.stringify(obj));
-      // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch {
-      // close handler will clean up
-    }
+    const state = sockets.get(ws);
+    if (state === undefined) return; // closed: nothing holds it
+    deliver(state, JSON.stringify(obj));
   }
 
   // Broadcast one frame to N subscribers: serialize ONCE, send the string to
@@ -5361,8 +5477,7 @@ export function createResourceRuntime(
   // delivery path's allocation churn by subscriber count (the ±60–70 MB/10 s
   // GC sawtooth; research/perfs/2026-07-16-main-paging-victim-investigation-PLAN.md
   // §B2). Synchronous end-to-end so the no-await-before-send property of the
-  // push path (H5a) is untouched. Per-socket try/catch mirrors sendJson: a
-  // dead socket's close handler cleans up, the rest still receive.
+  // push path (H5a) is untouched.
   // Returns the serialized frame's length in UTF-16 chars (0 when nothing was
   // sent) — the delivery's `frameChars` measure, read off the one string that
   // was already built, so measuring costs nothing extra.
@@ -5372,14 +5487,7 @@ export function createResourceRuntime(
   ): number {
     if (subs.length === 0) return 0;
     const str = JSON.stringify(obj);
-    for (const s of subs) {
-      try {
-        s.ws.send(str);
-        // eslint-disable-next-line promise-safety/no-bare-catch
-      } catch {
-        // close handler will clean up
-      }
-    }
+    for (const s of subs) deliver(s, str);
     return str.length;
   }
 
@@ -7531,6 +7639,10 @@ export function createResourceRuntime(
           return;
         }
       }
+    },
+    drain(ws) {
+      const state = sockets.get(ws);
+      if (state) flushBacklog(state);
     },
     close(ws) {
       const timer = heartbeats.get(ws);

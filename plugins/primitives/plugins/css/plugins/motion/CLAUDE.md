@@ -43,9 +43,13 @@ whose geometry something else already animates.
 
 `useSizeMotion(ref, enabled)` watches the element `ref` holds:
 
-- A `MutationObserver` stamps the last content change; the `ResizeObserver`
-  (delivered after layout, before paint) tweens only a size change following
-  one. A window resize or a parent's re-layout lands at once.
+- A `MutationObserver` (after the commit, before the frame's layout) measures
+  the new box and starts the tween there, so the first frame drawn is already
+  the old size. The `ResizeObserver` only records the resting box: it never
+  resizes the element it was just handed — a tween started from the size
+  report raised "ResizeObserver loop completed with undelivered
+  notifications" on every grow / shrink. A window resize or a parent's
+  re-layout lands at once.
 - Only the dimensions that changed animate, from the last resting box, over
   240 ms on the hints/dock glide curve; a box with `overflow: visible` is
   clipped meanwhile.

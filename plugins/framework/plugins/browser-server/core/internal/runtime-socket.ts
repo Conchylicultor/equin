@@ -36,10 +36,14 @@ export function connectRuntimeSocket(
 ): BrowserServerSocket {
   let closed = false;
   // One stable object per connection: the runtime keys its socket state by it.
+  // An in-memory pair has no buffer to fill: every frame is accepted (a frame
+  // after the close goes nowhere, as on a closed network socket).
   const socket: RuntimeSocket = {
     send: (frame) => {
       if (!closed) peer.deliver(frame);
+      return frame.length;
     },
+    close: (code = 1000, reason = "") => open.get(end)?.(code, reason),
   };
   const end: BrowserServerSocket = {
     send(frame) {

@@ -213,11 +213,13 @@ export function createHarness(
         const msg = JSON.parse(raw) as Record<string, unknown> & {
           kind: string;
         };
-        if (msg.kind === "ping") return; // ignore heartbeats
+        if (msg.kind === "ping") return raw.length; // ignore heartbeats
         // Spread verbatim so key presence (etag/value) is faithful for the reval
         // assertions; only seq/socket are synthesized.
         frames.push({ seq: seq++, socket: socketIdx, ...msg } as RecordedFrame);
+        return raw.length;
       },
+      close() {},
     };
     handler.open(ws);
     wsList.push(ws);

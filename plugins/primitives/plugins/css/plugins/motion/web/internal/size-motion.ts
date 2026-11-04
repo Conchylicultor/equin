@@ -7,9 +7,9 @@ import { prefersReducedMotion } from "./reduced-motion";
 export const SIZE_MS = 240;
 export const SIZE_EASING = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 
-/** A size change counts as the content's doing when a mutation inside the
- *  surface landed this recently before it (a commit and its layout are one
- *  frame apart; a window resize carries no mutation at all). */
+/** A tween that lands catches up with the content only when a mutation
+ *  inside the surface landed this recently past its own run (a commit and its
+ *  layout are one frame apart; a window resize carries no mutation at all). */
 const CONTENT_WINDOW_MS = 120;
 
 interface Box {
@@ -135,18 +135,36 @@ function tween(w: Watch, el: HTMLElement, from: Box, to: Box): void {
   };
 }
 
-/** A size report: tween it when the content caused it. */
-function onResize(w: Watch): void {
+/** The content just changed (a mutation, before the browser lays the frame
+ *  out): measure the new box now and tween to it from the last resting one.
+ *  Starting here — not in the size report — is what keeps the tween from
+ *  resizing an element in the middle of its own ResizeObserver delivery: the
+ *  animation's first frame is the old box, which is exactly the size the
+ *  observer last reported, so the frame's layout reports nothing at all. A
+ *  tween started from the report instead resized the element the observer
+ *  had just been handed, and the browser raised "ResizeObserver loop
+ *  completed with undelivered notifications" on every grow / shrink. */
+function onContentChange(w: Watch): void {
+  w.changedAt = performance.now();
   const el = w.el;
   if (el === null || w.running) return;
   const to = measure(el);
   const from = w.rest;
   w.rest = to;
   if (from === null || sameBox(from, to)) return;
-  if (performance.now() - w.changedAt > CONTENT_WINDOW_MS) return;
   if (from.w === 0 || from.h === 0 || to.w === 0 || to.h === 0) return;
   if (prefersReducedMotion() || othersMoveLayout(w, el)) return;
   tween(w, el, from, to);
+}
+
+/** A size report: the new resting box, landed at once. It never animates —
+ *  a size change with no content change behind it (a window resize, a
+ *  parent's re-layout) is the layout's, and changing the observed element's
+ *  size inside its own report is a ResizeObserver loop. */
+function onResize(w: Watch): void {
+  const el = w.el;
+  if (el === null || w.running) return;
+  w.rest = measure(el);
 }
 
 /**
@@ -154,11 +172,12 @@ function onResize(w: Watch): void {
  * it — a card turning into a pill, a list drilling into a detail, a thread
  * growing — instead of letting it jump. `enabled` false watches nothing.
  *
- * - A `MutationObserver` stamps when the content last changed; the size
- *   report (`useResizeObserver`, undebounced: delivered after layout, before
- *   paint — so the first frame drawn is already the old size) tweens only a
- *   change that follows one. A window resize or a parent's re-layout lands
- *   at once.
+ * - A `MutationObserver` sees the content change after the commit, before
+ *   the browser lays the frame out: it measures the new box there and starts
+ *   the tween, so the first frame drawn is already the old size. The size
+ *   report (`useResizeObserver`) only records the resting box — it never
+ *   resizes what it observes, so the tween raises no ResizeObserver loop. A
+ *   window resize or a parent's re-layout lands at once.
  * - The tween runs on the element itself: width / height / corner radius
  *   from the last resting box to the new one, the content clipped meanwhile.
  *   Only the dimensions that changed move, so a width the layout owns stays
@@ -193,9 +212,7 @@ export function useSizeMotion(
     w.rest = el ? measure(el) : null;
     w.mutations = null;
     if (el) {
-      const mutations = new MutationObserver(() => {
-        w.changedAt = performance.now();
-      });
+      const mutations = new MutationObserver(() => onContentChange(w));
       mutations.observe(el, {
         childList: true,
         subtree: true,

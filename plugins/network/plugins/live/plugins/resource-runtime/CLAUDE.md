@@ -72,6 +72,20 @@ it once and re-presents its types as its own public surface.
 - **Throttle** (`debounceMs`, a served value's `throttleMs`) is leading-edge: at
   most one drain per window, released only by `debounceDue`. Another entry's flush
   or a cascade into it does not drain it early.
+- **No frame is dropped on the way out (`deliver`).** `RuntimeSocket.send`
+  answers whether the frame was accepted (Bun's convention: `0` = not
+  accepted). Bun discards a frame sent past a connection's
+  `backpressureLimit` (16 MB default) — a restart's replay of every tab's sub
+  set on one shared socket, with the boot catch-up's pushes behind it,
+  reaches it, and each dropped `update` left a tab on its old value while the
+  server's version moved on (the "missed-updates across a server restart"
+  reports). So an unaccepted frame opens the socket's backlog: it and every
+  later frame wait there in order and go out on the handler's `drain`. A
+  backlog past `BACKLOG_MAX_CHARS` or `BACKLOG_MAX_AGE_MS` (a drain that never
+  comes) closes the socket (1013) instead — its tabs
+  reconnect and replay, re-reading every value. Every send goes through
+  `deliver`; never call `ws.send` directly. Pinned by
+  `runtime-backpressure.test.ts`.
 - **Heartbeat `pushStallMs`**: age of the oldest undelivered change.
   - It is the oldest of the running pass's start (re-taken per re-drain pass),
     an in-flight lane's start, and the oldest queued pending's `enqueuedAt`.
