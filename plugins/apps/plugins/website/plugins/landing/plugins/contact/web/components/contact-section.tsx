@@ -43,7 +43,7 @@ export function ContactSection() {
                 Interested in supporting this vision?
               </Text>
               <Text as="p" variant="body" tone="muted">
-                Investors, collaborators, and anyone who thinks software should
+                Collaborators, investors, and anyone who thinks software should
                 evolve itself. Write to <MailAddress />
               </Text>
             </Stack>
