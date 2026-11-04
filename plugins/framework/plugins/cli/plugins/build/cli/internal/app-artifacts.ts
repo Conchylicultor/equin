@@ -76,7 +76,11 @@ import {
   type MigrationAnswer,
 } from "@plugins/framework/plugins/cli/plugins/migrations/cli";
 import { planCompositionSet } from "./composition-set";
-import { distStagingPath, publishDistAtomic } from "./dist-publish";
+import {
+  distStagingPath,
+  publishDistAtomic,
+  type DistPublication,
+} from "./dist-publish";
 import { stampExperimentalMarker } from "./experimental-marker";
 import {
   MAIN_COMPOSITION_ID,
@@ -771,6 +775,12 @@ export type ArtifactBuildResult =
        */
       livePath: string;
       /**
+       * The publish itself, still open: the release it replaced is kept until
+       * the caller says `keep()` (the deploy stands) or `revert()` (it failed
+       * after publishing — put the previous frontend back).
+       */
+      publication: DistPublication;
+      /**
        * The commit this build answered for (`opts.headAtStart`), echoed back for
        * the callers that report it; `""` when git could not answer.
        */
@@ -1240,8 +1250,16 @@ export async function buildAndPublishWebDist(
     "build:frontend",
     "atomic publish",
   );
-  await publishDistAtomic({ dir: livePath, stagingPath });
+  const publication = await publishDistAtomic({ dir: livePath, stagingPath });
   endPublish();
 
-  return { ok: true, steps, stagingPath, livePath, buildCommit, graphHash };
+  return {
+    ok: true,
+    steps,
+    stagingPath,
+    livePath,
+    publication,
+    buildCommit,
+    graphHash,
+  };
 }

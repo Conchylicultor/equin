@@ -67,21 +67,60 @@ describe("publishDistAtomic", () => {
     expect(existsSync(stagingPath)).toBe(false);
   });
 
-  test("republish: repoints the symlink and reclaims the previous release", async () => {
-    const parent = join(tmp, "repub");
+  /** A `dist` serving "old" from `dist.live.999`, with a staged "new" beside it. */
+  function republishFixture(name: string) {
+    const parent = join(tmp, name);
     const dir = join(parent, "dist");
     mkdirSync(join(parent, "dist.live.999"), { recursive: true });
     writeFileSync(join(parent, "dist.live.999", "index.html"), "old");
     symlinkSync("dist.live.999", dir);
-
     const stagingPath = distStagingPath(dir);
     mkdirSync(stagingPath, { recursive: true });
     writeFileSync(join(stagingPath, "index.html"), "new");
-    await publishDistAtomic({ dir, stagingPath });
+    return { parent, dir, stagingPath };
+  }
+
+  test("republish: repoints the symlink, keeping the previous release until kept", async () => {
+    const { parent, dir, stagingPath } = republishFixture("repub");
+    const publication = await publishDistAtomic({ dir, stagingPath });
 
     expect(readlinkSync(dir)).toBe(`dist.live.${process.pid}`);
     expect(readFileSync(join(dir, "index.html"), "utf8")).toBe("new");
+    expect(publication.revertible).toBe(true);
+    expect(existsSync(join(parent, "dist.live.999"))).toBe(true);
+
+    await publication.keep();
+    expect(readFileSync(join(dir, "index.html"), "utf8")).toBe("new");
     expect(existsSync(join(parent, "dist.live.999"))).toBe(false);
+  });
+
+  test("revert: the previous release is served again and the new one reclaimed", async () => {
+    const { parent, dir, stagingPath } = republishFixture("revert");
+    const publication = await publishDistAtomic({ dir, stagingPath });
+    await publication.revert();
+
+    expect(readlinkSync(dir)).toBe("dist.live.999");
+    expect(readFileSync(join(dir, "index.html"), "utf8")).toBe("old");
+    expect(existsSync(join(parent, `dist.live.${process.pid}`))).toBe(false);
+  });
+
+  test("a publication settles once", async () => {
+    const { dir, stagingPath } = republishFixture("settle-once");
+    const publication = await publishDistAtomic({ dir, stagingPath });
+    await publication.keep();
+    expect(publication.revert()).rejects.toThrow("already settled");
+  });
+
+  test("first publish has nothing to revert to: it stays live", async () => {
+    const dir = join(tmp, "first-revert", "web");
+    const stagingPath = distStagingPath(dir);
+    mkdirSync(stagingPath, { recursive: true });
+    writeFileSync(join(stagingPath, "index.html"), "v1");
+    const publication = await publishDistAtomic({ dir, stagingPath });
+
+    expect(publication.revertible).toBe(false);
+    await publication.revert();
+    expect(readFileSync(join(dir, "index.html"), "utf8")).toBe("v1");
   });
 
   test("legacy real-directory dist is replaced by the symlink scheme", async () => {

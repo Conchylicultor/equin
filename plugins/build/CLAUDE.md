@@ -241,6 +241,20 @@ updated", or "Build failed" with a solid-destructive dot — and, when a reload
 is due, the **Reload pill** nested at its end. A failed build rings the tray in
 `destructive-solid` at 45%.
 
+**A reload is advised only when a reload can help.** `useReloadAdvice` and
+`useServerBehind` (`hooks/use-reload-advice.ts`) read the same two facts — the
+server's `skew` refusals of this tab's live reads, and whether this tab runs
+exactly the served bundle (`useStaleFrontend().current`). A tab that does not
+(or is not known to) is out of date: Reload. A tab that does is current, so the
+refusals mean the backend's own code is behind the bundle it serves — a deploy
+that published the frontend and never got its backend up — and a reload would
+fetch the same bundle into the same refusals. The tray then says **Server out
+of date** (red ring, no Reload pill; the collapsed bar's activity ring says the
+same), and it clears on its own once the backend catches up: live-state drops a
+tuple's refusal the moment that tuple is answered. The deploy now rolls the
+frontend back when its backend fails to come up (`cli/plugins/build`'s
+`deploy-namespace.ts`), so this is the backstop, not the common case.
+
 `ReloadButton` (`components/reload-button.tsx`) is the ONE Reload control: a
 filled pill at the control height in the solid fills (`info-solid` when the tab
 is only stale, `destructive-solid` when something already fails), named by its

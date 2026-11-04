@@ -396,6 +396,9 @@ export async function runHermeticBuild(opts: {
           process.exit(1);
         }
 
+        // A release dist is served by nobody, so there is no backend whose
+        // readiness the publish waits on: it stands at once.
+        await artifact.publication.keep();
         published.push({
           composition: target.composition,
           live: artifact.livePath,

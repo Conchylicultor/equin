@@ -17,6 +17,11 @@ import { deployment } from "@plugins/build/plugins/deployment/core";
 // mismatch.
 export function useStaleFrontend(): {
   stale: boolean;
+  /**
+   * The tab runs exactly the bundle the server serves — both graphs known and
+   * equal. Not `!stale`: an unknown graph is neither stale nor current.
+   */
+  current: boolean;
   serverGraph: string | null;
 } {
   const res = useLive(deployment);
@@ -28,9 +33,9 @@ export function useStaleFrontend(): {
   // Unavailable (a subtree with no computer behind it, the demo) is the same
   // "graph unknown": the page's own staleness is the page transport's read.
   return foldResource(res, {
-    loading: () => ({ stale: false, serverGraph: null }),
-    error: () => ({ stale: false, serverGraph: null }),
-    unavailable: () => ({ stale: false, serverGraph: null }),
+    loading: () => ({ stale: false, current: false, serverGraph: null }),
+    error: () => ({ stale: false, current: false, serverGraph: null }),
+    unavailable: () => ({ stale: false, current: false, serverGraph: null }),
     ready: (data) => {
       // An unresolved pin (no dist yet, or one published before the trailer
       // existed) means the graph is UNKNOWN, and unknown must not arm the
@@ -40,8 +45,10 @@ export function useStaleFrontend(): {
       const serverGraph =
         web !== undefined && web.graph.resolved ? web.graph.value : null;
       const baked = import.meta.env.VITE_BUILD_GRAPH ?? "dev";
-      const stale = !!serverGraph && baked !== "dev" && serverGraph !== baked;
-      return { stale, serverGraph };
+      const known = !!serverGraph && baked !== "dev";
+      const stale = known && serverGraph !== baked;
+      const current = known && serverGraph === baked;
+      return { stale, current, serverGraph };
     },
   });
 }

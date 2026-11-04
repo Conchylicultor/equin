@@ -4,12 +4,13 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { buildHistory } from "@plugins/build/core";
 import { isMainCompositionBuild } from "../../shared";
 import { latestRunState } from "../internal/latest-run-state";
+import { useServerBehind } from "./use-reload-advice";
 
 /**
  * The build as background work, for the collapsed floating bar's ring
  * (`ActionBar.Activity`): running while the newest run has no verdict, failed
- * while its verdict is a real failure, else nothing. Words match the Build
- * button's label.
+ * while its verdict is a real failure or the server's code is behind the bundle
+ * it serves, else nothing. Words match the Build button's label.
  *
  * A history that is still loading or failed to load shows no ring: the ring is
  * an ornament on the health dot, not a claim that no build exists, and the
@@ -18,6 +19,7 @@ import { latestRunState } from "../internal/latest-run-state";
 export function useBuildActivity(): Activity | null {
   const history = useLive(buildHistory);
   const { worktree } = useNotificationsChannelStatuses();
+  const serverBehind = useServerBehind();
   switch (history.status) {
     case "loading":
       return null;
@@ -29,6 +31,9 @@ export function useBuildActivity(): Activity | null {
   }
   const latestRun = history.data[0];
   const state = latestRunState(latestRun);
+  if (state !== "running" && serverBehind.behind) {
+    return { state: "failed", label: "Server out of date" };
+  }
   if (state === null || latestRun === undefined) return null;
   if (state === "failed") return { state, label: "Build failed" };
   // During a build the CLI restarts this very backend; the dropped channel is

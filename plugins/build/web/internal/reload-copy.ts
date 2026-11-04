@@ -1,4 +1,4 @@
-import type { ReloadAdvice } from "../hooks/use-reload-advice";
+import type { ReloadAdvice, ServerBehind } from "../hooks/use-reload-advice";
 
 export type ShownAdvice = Exclude<ReloadAdvice, { kind: "none" }>;
 
@@ -21,4 +21,17 @@ export function reloadMessageFor(advice: ShownAdvice): string {
 /** Something already fails (outdated reads, a plugin that did not load) — red, not blue. */
 export function reloadIsFailing(advice: ShownAdvice): boolean {
   return advice.kind === "broken" || advice.kind === "outdated";
+}
+
+/**
+ * Why the Build tray says "Server out of date": the backend still runs an
+ * older build than the bundle it serves, so it refuses some of this tab's
+ * reads — and a reload would fetch the same bundle into the same refusals.
+ */
+export function serverBehindMessage(
+  behind: Extract<ServerBehind, { behind: true }>,
+): string {
+  const what =
+    behind.count === 1 ? "one kind of data" : `${behind.count} kinds of data`;
+  return `The server is still running an older build than this page, so ${what} can't load — a reload won't help; it needs a successful build`;
 }

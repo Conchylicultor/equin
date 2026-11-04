@@ -21,7 +21,13 @@ import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { buildHistory, buildRoute } from "@plugins/build/core";
 import { isMainCompositionBuild, type BuildRun } from "../../shared";
-import { useReloadAdvice, type ReloadAdvice } from "../hooks/use-reload-advice";
+import {
+  useReloadAdvice,
+  useServerBehind,
+  type ReloadAdvice,
+  type ServerBehind,
+} from "../hooks/use-reload-advice";
+import { serverBehindMessage } from "../internal/reload-copy";
 import { ReloadButton } from "./reload-button";
 import { BuildTray } from "./build-tray";
 import { latestRunState } from "../internal/latest-run-state";
@@ -38,12 +44,14 @@ function BuildButtonInner({
   open,
   setOpen,
   advice,
+  serverBehind,
   wsStatus,
   historyData,
 }: {
   open: boolean;
   setOpen: (v: boolean) => void;
   advice: ReloadAdvice;
+  serverBehind: ServerBehind;
   wsStatus: string;
   historyData: BuildRun[];
 }) {
@@ -66,18 +74,24 @@ function BuildButtonInner({
   //
   // Priority: an active build wins the label, since the Reload pill already
   // says the tab is stale — so a stale tab mid-build shows the spinner AND the
-  // Reload pill side by side. With no build running, a stale tab reads
-  // "Server updated"; otherwise the last outcome.
-  const status: "idle" | "building" | "restarting" | "updated" | "failed" =
+  // Reload pill side by side. With no build running, a server whose code is
+  // behind the bundle it serves says so first — it is the one state where
+  // something fails and no reload fixes it (the last build, if it failed, is
+  // usually why: the popover shows it). Then a stale tab reads "Server
+  // updated"; otherwise the last outcome.
+  const status:
+    "idle" | "building" | "restarting" | "behind" | "updated" | "failed" =
     building && wsStatus !== "open"
       ? "restarting"
       : building
         ? "building"
-        : staleTab
-          ? "updated"
-          : failed
-            ? "failed"
-            : "idle";
+        : serverBehind.behind
+          ? "behind"
+          : staleTab
+            ? "updated"
+            : failed
+              ? "failed"
+              : "idle";
 
   // A composition build names what it is building: "Building sonata…", or
   // "Building sonata, website…" for a multi-target invocation. A plain build of
@@ -91,6 +105,7 @@ function BuildButtonInner({
     idle: "Builds",
     building: buildingComposition ? `Building ${targetsLabel}` : "Building",
     restarting: "Server restarting…",
+    behind: "Server out of date",
     updated: "Server updated",
     failed: "Build failed",
   }[status];
@@ -108,6 +123,7 @@ function BuildButtonInner({
         wsStatus,
         staleTab,
         advice: advice.kind,
+        serverBehind: serverBehind.behind,
         targets: targetsLabel,
         finishedAt: latestRun?.finishedAt,
       }),
@@ -118,6 +134,7 @@ function BuildButtonInner({
     wsStatus,
     staleTab,
     advice.kind,
+    serverBehind.behind,
     targetsLabel,
     latestRun?.finishedAt,
   ]);
@@ -136,6 +153,9 @@ function BuildButtonInner({
       variant="ghost"
       aspect={status === "idle" ? "icon" : "text"}
       aria-label={status === "idle" ? "Builds" : undefined}
+      tooltip={
+        serverBehind.behind ? serverBehindMessage(serverBehind) : undefined
+      }
       // Its leading mark (spinner, dot) sits at the tray's start, so that end
       // keeps the plain control padding; only a label that ENDS the tray takes
       // the pill's extra room there. With the Reload pill nested after it, both
@@ -143,7 +163,9 @@ function BuildButtonInner({
       className={cn("rounded-full", !reloadDue && "pill-end")}
     >
       {spinning && <Spinner shape="ring" className="size-3.5" />}
-      {status === "failed" && <StatusDot colorClass="bg-destructive-solid" />}
+      {(status === "failed" || status === "behind") && (
+        <StatusDot colorClass="bg-destructive-solid" />
+      )}
       {status === "idle" ? <Icon icon={buildIcon} className="size-4" /> : label}
       {status === "building" && latestRun && (
         <ElapsedTime
@@ -200,7 +222,7 @@ function BuildButtonInner({
 
   if (quiet) return popover;
   return (
-    <BuildTray failed={status === "failed"}>
+    <BuildTray failed={status === "failed" || status === "behind"}>
       {popover}
       <ReloadButton advice={advice} />
     </BuildTray>
@@ -212,6 +234,8 @@ export function BuildButton() {
 
   // --- Does this tab need a reload? (stale bundle, or a plugin failed to load) ---
   const advice = useReloadAdvice();
+  // --- Is the server's code behind the bundle it serves? (no reload fixes it) ---
+  const serverBehind = useServerBehind();
 
   // --- Worktree live-state channel status (backend liveness) ---
   // During a build the `./equin build` process restarts this very backend,
@@ -238,6 +262,7 @@ export function BuildButton() {
           open={open}
           setOpen={setOpen}
           advice={advice}
+          serverBehind={serverBehind}
           wsStatus={wsStatus}
           historyData={historyResult.data}
         />

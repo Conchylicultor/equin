@@ -623,6 +623,38 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       ]);
     });
 
+    test("a refusal stands until that tuple is answered — a server that caught up clears it", async () => {
+      const { client, socket, qc } = await setup();
+      vi.spyOn(qc, "prefetchQuery").mockResolvedValue();
+      const store = renderHook(() => useResourceContractMismatches());
+      client.observe("lw", {}, undefined, { schema: pushSchema });
+      await flush();
+      socket.serverSend({
+        kind: "sub-error",
+        key: "lw",
+        params: {},
+        reason: "unknown-key",
+        verdict: "skew",
+      });
+      await flush();
+      store.rerender();
+      expect(store.result.current).toEqual([
+        { key: "lw", reason: "unknown-key", verdict: "skew" },
+      ]);
+      // The backend restarted onto the build this tab runs: the replayed sub
+      // is answered.
+      socket.serverSend({
+        kind: "sub-ack",
+        key: "lw",
+        params: {},
+        value: { status: "ok" },
+        version: 1,
+      });
+      await flush();
+      store.rerender();
+      expect(store.result.current).toEqual([]);
+    });
+
     test("a loader-failed sub-error is the server's own failure: the store stays empty", async () => {
       const { client, socket } = await setup();
       const store = renderHook(() => useResourceContractMismatches());

@@ -4,7 +4,9 @@
 // release, then repoints `dir` by renaming a fresh `<base>.swap.<pid>` symlink
 // over it. That final rename is a POSIX-atomic replace of a symlink, so `dir`
 // always resolves to a *complete* release — there is no window where it is
-// absent. (`<base>.old.` is the legacy move-aside scheme; still swept for
+// absent. The replaced release survives the swap until the publisher keeps or
+// reverts it (`DistPublication`), so a deploy whose backend never comes up puts
+// the previous frontend back rather than serving a new bundle from old code. (`<base>.old.` is the legacy move-aside scheme; still swept for
 // back-compat.)
 //
 // Three publishers share this machinery, and all three publish under
@@ -123,23 +125,47 @@ export async function sweepDistLeftovers(dir: string): Promise<void> {
 }
 
 /**
+ * What a publish left behind: the new release is live, and the one it replaced
+ * is still on disk until the caller decides — so a deploy whose backend then
+ * fails to come up can put the frontend back instead of leaving a new bundle
+ * served by old code. Exactly one of the two is the caller's last word:
+ *
+ * - `keep()` — the deploy stands: reclaim the replaced release.
+ * - `revert()` — the deploy failed: repoint the live symlink at the replaced
+ *   release (the same atomic swap) and reclaim the new one. A first publish
+ *   replaced nothing, so there is nothing to go back to: it is left live.
+ *
+ * Neither ever runs if the process dies first; the next build's
+ * `sweepDistLeftovers` then reclaims whichever release the symlink no longer
+ * names.
+ */
+export interface DistPublication {
+  /** True when the publish replaced a release `revert()` can go back to. */
+  revertible: boolean;
+  keep(): Promise<void>;
+  revert(): Promise<void>;
+}
+
+/**
  * Publish `stagingPath` as the new release behind the `dir` symlink, gaplessly:
- * rename staging → `<base>.live.<pid>`, atomically repoint `dir` via a swap
- * symlink, then reclaim the previous release. On the one-time migration from a
- * legacy real-directory `dir`, it is removed just before the swap — that single
- * publish has a brief gap; every subsequent one is gapless.
+ * rename staging → `<base>.live.<pid>`, then atomically repoint `dir` via a
+ * swap symlink. The previous release stays on disk until the returned
+ * publication is kept or reverted. On the one-time migration from a legacy
+ * real-directory `dir`, it is removed just before the swap — that single
+ * publish has a brief gap and nothing to revert to; every subsequent one is
+ * gapless.
  */
 export async function publishDistAtomic(opts: {
   dir: string;
   stagingPath: string;
-}): Promise<void> {
+}): Promise<DistPublication> {
   const { parent, releaseName, releasePath, swapPath } = distNames(opts.dir);
   await mkdir(parent, { recursive: true });
   await rename(opts.stagingPath, releasePath);
 
-  // Reclaim the release `dir` currently points at after the swap. If `dir` is
-  // a legacy real directory, remove it first — a symlink cannot be renamed
-  // over a non-empty directory.
+  // The release `dir` currently points at, kept until the caller decides. If
+  // `dir` is a legacy real directory, remove it first — a symlink cannot be
+  // renamed over a non-empty directory.
   let prevRelease: string | null = null;
   const liveStat = lstatSync(opts.dir, { throwIfNoEntry: false });
   if (liveStat?.isSymbolicLink()) {
@@ -147,11 +173,39 @@ export async function publishDistAtomic(opts: {
   } else if (liveStat?.isDirectory()) {
     await rm(opts.dir, { recursive: true, force: true });
   }
+  if (prevRelease === releaseName) prevRelease = null;
 
-  await symlink(releaseName, swapPath); // relative target, resolved within parent
-  await rename(swapPath, opts.dir); // atomic replace of the live symlink
+  await repoint(opts.dir, releaseName, swapPath);
 
-  if (prevRelease !== null && prevRelease !== releaseName) {
-    await rm(join(parent, prevRelease), { recursive: true, force: true });
-  }
+  let settled = false;
+  const settle = (): void => {
+    if (settled)
+      throw new Error(`dist publication of ${opts.dir} already settled`);
+    settled = true;
+  };
+  return {
+    revertible: prevRelease !== null,
+    async keep() {
+      settle();
+      if (prevRelease !== null) {
+        await rm(join(parent, prevRelease), { recursive: true, force: true });
+      }
+    },
+    async revert() {
+      settle();
+      if (prevRelease === null) return;
+      await repoint(opts.dir, prevRelease, swapPath);
+      await rm(releasePath, { recursive: true, force: true });
+    },
+  };
+}
+
+/** Atomically repoint the `dir` symlink at `release` (a sibling basename). */
+async function repoint(
+  dir: string,
+  release: string,
+  swapPath: string,
+): Promise<void> {
+  await symlink(release, swapPath); // relative target, resolved within parent
+  await rename(swapPath, dir); // atomic replace of the live symlink
 }

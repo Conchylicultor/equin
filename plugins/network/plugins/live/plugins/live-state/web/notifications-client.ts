@@ -42,7 +42,10 @@ import {
   type ServerFrame,
   type SubErrorReason,
 } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
-import { markResourceContractMismatch } from "./resource-contract-store";
+import {
+  clearResourceContractMismatch,
+  markResourceContractMismatch,
+} from "./resource-contract-store";
 import { unansweredSubReportSink } from "./unanswered-sub-reporter";
 import { toResourceError } from "./resource-error";
 import {
@@ -99,12 +102,14 @@ function clientBuild(): string {
  */
 function noteContractRefusal(
   key: string,
+  params: ResourceParams,
   reason: SubErrorReason | undefined,
   verdict: ContractVerdict | undefined,
 ): void {
   if (reason !== "contract-mismatch" && reason !== "unknown-key") return;
   markResourceContractMismatch({
     key,
+    params,
     reason,
     ...(verdict !== undefined ? { verdict } : {}),
   });
@@ -1566,7 +1571,7 @@ export class NotificationsClient {
       // needless 304 never leaves the cache empty/stale, then take the write path.
       res = await this.fetchImpl(url, { cache: "no-store", headers: build });
     }
-    if (!res.ok) await throwReadFailure(key, res, read);
+    if (!res.ok) await throwReadFailure(key, params, res, read);
     const body = await readEnvelope(key, res, read);
     this.noteHttpEtag(key, params, origin, res.headers.get("ETag"));
 
@@ -1791,9 +1796,11 @@ export class NotificationsClient {
       cache: "no-store",
       headers: buildHeader(),
     });
-    if (!res.ok) await throwReadFailure(key, res, read);
+    if (!res.ok) await throwReadFailure(key, params, res, read);
     const body = await readEnvelope(key, res, read);
-    return read.schema.parse(body.value);
+    const value = read.schema.parse(body.value);
+    clearResourceContractMismatch(key, params);
+    return value;
   }
 
   /** Bump the consecutive-drop counter for (key, params) and emit the running
@@ -2300,7 +2307,7 @@ export class NotificationsClient {
       // Mark the store first (a contract refusal means this bundle is out of
       // date), then heal through the one error channel: the HTTP read now gets
       // the typed 409/404 body, so `q.error` names the reason.
-      noteContractRefusal(msg.key, msg.reason, msg.verdict);
+      noteContractRefusal(msg.key, msg.params, msg.reason, msg.verdict);
       entry.derivation = undefined;
       this.fetchAfterSubError(channel, msg.key, msg.params);
       return;
@@ -2661,6 +2668,9 @@ export class NotificationsClient {
    *  is reset on a successful apply. */
   private markApplied(entry: ActiveSub, key: string): void {
     entry.lastAppliedAt = Date.now();
+    // The server answered this tuple, so it no longer refuses it — a refusal
+    // from a backend that has since caught up must not keep the advice up.
+    clearResourceContractMismatch(key, entry.params);
     entry.appliedSeq = ++this.applySeq;
     this.staleDropCounts.delete(`${key}\0${paramsKey(entry.params)}`);
     if (verboseTraceOn()) {
@@ -2850,6 +2860,7 @@ function buildHeader(): Record<string, string> {
  */
 async function throwReadFailure(
   key: string,
+  params: ResourceParams,
   res: Response,
   read: ResourceRead<unknown>,
 ): Promise<never> {
@@ -2864,7 +2875,7 @@ async function throwReadFailure(
     (errBody.code === undefined ||
       !(read.refusals ?? []).includes(errBody.code))
   ) {
-    noteContractRefusal(key, "contract-mismatch", "skew");
+    noteContractRefusal(key, params, "contract-mismatch", "skew");
     throw new ResourceHttpError(
       key,
       res.status,
@@ -2875,7 +2886,7 @@ async function throwReadFailure(
         `(${JSON.stringify(read.refusals ?? [])}): ${errBody.detail ?? ""}`,
     );
   }
-  noteContractRefusal(key, errBody?.reason, errBody?.verdict);
+  noteContractRefusal(key, params, errBody?.reason, errBody?.verdict);
   throw new ResourceHttpError(
     key,
     res.status,

@@ -45,7 +45,11 @@ import { namedBackendCommand } from "./named-backend";
  * plain build).
  *
  *   marker → dist → database → config → (marker again) + spec → restart → health
- *   probe
+ *   probe → keep the dist, or put the previous one back
+ *
+ * The dist is published before the restart (the new backend reads its graph at
+ * boot), so a deploy that fails after it rolls the frontend back: a namespace
+ * is never left serving a new bundle from old backend code.
  *
  * It exists as its own module for the reason the plan for this phase gives:
  * `run.ts`'s terminal funnel closes over eleven invocation-scoped values, and
@@ -476,148 +480,187 @@ export async function deployNamespace(
     };
   }
 
-  // DATABASE — opposite operations, not one function with a flag.
-  //
-  // The checkout's own app runs on the worktree FORK: it carries main's data and
-  // is created by a graphile job at conversation time, so creating one empty
-  // here would be actively wrong. The caller has already waited for it — that
-  // wait is hoisted into the invocation prefix because the `build_runs` row this
-  // build opened lives in that same database, and because a missing fork must
-  // fail in seconds rather than after the frontend build. So there is nothing
-  // left to do for it here.
-  //
-  // Every other composition gets an EMPTY database, created race-safely; the
-  // backend's boot migrator fills in the schema on its first spawn.
-  if (!target.isMainComposition) {
-    await span("ensureDatabase", "build:database", "ensure database", () =>
-      ensureDatabase(ns),
+  // From here the new frontend is LIVE, and the release it replaced is still on
+  // disk (`DistPublication`). The deploy below settles it exactly once: kept
+  // when the namespace ends up served by a backend built from this tree, put
+  // back when it does not — a failed restart leaves the OLD backend serving,
+  // and a new bundle over old code is the worst split there is: every tab,
+  // freshly loaded or not, asks the backend for resources it has never heard
+  // of, and no reload can fix it (2026-11-04: main served 739020c's frontend
+  // over a backend from the tree before it for hours).
+  const { publication } = artifact;
+  // Whether the gateway was asked to restart. Before that, a throw leaves the
+  // old backend serving for certain, so the frontend goes back with it; after,
+  // an unexpected throw says nothing about which backend serves, so the
+  // publication is left as it stands (the next build sweeps it).
+  let backendAsked = false;
+  const serve = async (): Promise<DeployNamespaceResult> => {
+    // DATABASE — opposite operations, not one function with a flag.
+    //
+    // The checkout's own app runs on the worktree FORK: it carries main's data and
+    // is created by a graphile job at conversation time, so creating one empty
+    // here would be actively wrong. The caller has already waited for it — that
+    // wait is hoisted into the invocation prefix because the `build_runs` row this
+    // build opened lives in that same database, and because a missing fork must
+    // fail in seconds rather than after the frontend build. So there is nothing
+    // left to do for it here.
+    //
+    // Every other composition gets an EMPTY database, created race-safely; the
+    // backend's boot migrator fills in the schema on its first spawn.
+    if (!target.isMainComposition) {
+      await span("ensureDatabase", "build:database", "ensure database", () =>
+        ensureDatabase(ns),
+      );
+    }
+
+    // Saved settings follow plugin moves BEFORE propagation reads them: replay
+    // the committed move ledger onto this namespace's user-layer config, so the
+    // dir is shaped like the code being deployed (see relocate's apply-moves).
+    await span(
+      "applyPluginMoves",
+      "build:codegen",
+      "apply plugin moves to user config",
+      async () => {
+        for (const a of applyPluginMoves({
+          root,
+          userConfigDir: configDir.file(ns),
+        })) {
+          console.log(
+            `Plugin move ${a.move.from} → ${a.move.to}: moved ${a.moved.length} saved config file(s), ` +
+              `rewrote ${a.rewritten.length}` +
+              (a.kept.length > 0
+                ? `; kept ${a.kept.length} at the old path (destination already had one): ${a.kept.join(", ")}`
+                : ""),
+          );
+        }
+      },
     );
-  }
 
-  // Saved settings follow plugin moves BEFORE propagation reads them: replay
-  // the committed move ledger onto this namespace's user-layer config, so the
-  // dir is shaped like the code being deployed (see relocate's apply-moves).
-  await span(
-    "applyPluginMoves",
-    "build:codegen",
-    "apply plugin moves to user config",
-    async () => {
-      for (const a of applyPluginMoves({
-        root,
-        userConfigDir: configDir.file(ns),
-      })) {
-        console.log(
-          `Plugin move ${a.move.from} → ${a.move.to}: moved ${a.moved.length} saved config file(s), ` +
-            `rewrote ${a.rewritten.length}` +
-            (a.kept.length > 0
-              ? `; kept ${a.kept.length} at the old path (destination already had one): ${a.kept.join(", ")}`
-              : ""),
-        );
-      }
-    },
-  );
+    await span(
+      "propagateConfig",
+      "build:codegen",
+      "propagate config to user",
+      async () => {
+        console.log("Propagating config to user...");
+        const { migrations } = await propagateConfigToUser({
+          root,
+          userConfigDir: configDir.file(ns),
+        });
+        for (const m of migrations) {
+          console.log(
+            `Config migration ${m.key}: rewrote ${m.rewritten.length} saved config file(s)`,
+          );
+        }
+      },
+    );
 
-  await span(
-    "propagateConfig",
-    "build:codegen",
-    "propagate config to user",
-    async () => {
-      console.log("Propagating config to user...");
-      const { migrations } = await propagateConfigToUser({
-        root,
-        userConfigDir: configDir.file(ns),
-      });
-      for (const m of migrations) {
-        console.log(
-          `Config migration ${m.key}: rewrote ${m.rewritten.length} saved config file(s)`,
-        );
-      }
-    },
-  );
-
-  // SPEC LAST of the filesystem writes (mirrors `bootSelfContainedApp`): the
-  // gateway discovers a namespace only once its DB and dist exist, so a
-  // freshly-spawned backend never races DB creation — a 3D000 boot crash is not
-  // retried.
-  const endRegister = hooks.span(
-    "registerWorktree",
-    "build:deploy",
-    "register worktree",
-  );
-  console.log("Registering worktree...");
-  // MARKER AGAIN, in the same breath as the spec. The spec write is the instant
-  // the namespace becomes live, so it is also the instant its provenance has to
-  // be true — and between the claim above and here this build spent minutes in
-  // its heavy section (it once spent them parked on the host CPU grant), during
-  // which the namespace dir is just a directory on a shared filesystem. One did
-  // get removed mid-wait (2026-08-19), and because every other artifact in the dir is written down
-  // here, the namespace came up live and served with no marker: unre-servable,
-  // unresettable, reported as not served. The write is atomic, idempotent and
-  // byte-identical to the claim, so when nothing went wrong this line does
-  // nothing at all; when something did, it is the line that repairs it. It
-  // throws if the marker cannot be read back, so a marker-less namespace can
-  // never reach the spec write at all.
-  stampMarker();
-  writeWorktreeSpec({
-    name: ns,
-    // The back-pointer a reader follows the other way: `deploysForCheckout`
-    // matches specs against this same constant to answer which deploys a
-    // checkout published, so writer and reader share one spelling.
-    server: resolve(root, SERVER_CORE_RELATIVE),
-    web: artifact.livePath,
-    // This build's own Bun, under the namespace's name.
-    command: namedBackendCommand(ns, asAppPath(process.execPath)),
-    // The `server` tree is this checkout's, shared with every namespace it
-    // serves, so this is the only thing that tells the spawned backend WHICH
-    // registry to load — the committed one for the main composition, the
-    // filtered `<dir>.composition.<id>.generated.ts` for any other.
-    composition: target.composition,
-  });
-  endRegister();
-
-  if (!opts.restart) {
-    notes.push(`restart skipped (${ns})`);
-    return { ok: true, notes };
-  }
-
-  // Snapshot the currently-served backend's per-process identity BEFORE the
-  // restart. probeHealth compares against it to prove the NEW backend took over,
-  // rather than the old one still answering ok with stale code.
-  const previousStartedAt = await readHealthStartedAt(ns);
-  const restart = await span(
-    "restartBackend",
-    "build:deploy",
-    "restart backend",
-    () => restartBackend(ns, site),
-  );
-  if (restart.kind === "failed") {
-    return {
-      ok: false,
-      failedLabels: ["backend crashed"],
-      reason: restart.reason,
-    };
-  }
-
-  // Smoke-test the server boot. tsc catches static import errors but the server
-  // can still fail to evaluate (missing env, init-time cycle, …) and surface as
-  // a 502 on first request. Hit /api/health to force a boot and fail the build
-  // if the server can't come up.
-  if (restart.gatewayUp) {
-    const health = await span(
-      "probeHealth",
+    // SPEC LAST of the filesystem writes (mirrors `bootSelfContainedApp`): the
+    // gateway discovers a namespace only once its DB and dist exist, so a
+    // freshly-spawned backend never races DB creation — a 3D000 boot crash is not
+    // retried.
+    const endRegister = hooks.span(
+      "registerWorktree",
       "build:deploy",
-      "health probe",
-      () => probeHealth(ns, previousStartedAt, restart.restartError),
+      "register worktree",
     );
-    if (health.kind === "failed") {
+    console.log("Registering worktree...");
+    // MARKER AGAIN, in the same breath as the spec. The spec write is the instant
+    // the namespace becomes live, so it is also the instant its provenance has to
+    // be true — and between the claim above and here this build spent minutes in
+    // its heavy section (it once spent them parked on the host CPU grant), during
+    // which the namespace dir is just a directory on a shared filesystem. One did
+    // get removed mid-wait (2026-08-19), and because every other artifact in the dir is written down
+    // here, the namespace came up live and served with no marker: unre-servable,
+    // unresettable, reported as not served. The write is atomic, idempotent and
+    // byte-identical to the claim, so when nothing went wrong this line does
+    // nothing at all; when something did, it is the line that repairs it. It
+    // throws if the marker cannot be read back, so a marker-less namespace can
+    // never reach the spec write at all.
+    stampMarker();
+    writeWorktreeSpec({
+      name: ns,
+      // The back-pointer a reader follows the other way: `deploysForCheckout`
+      // matches specs against this same constant to answer which deploys a
+      // checkout published, so writer and reader share one spelling.
+      server: resolve(root, SERVER_CORE_RELATIVE),
+      web: artifact.livePath,
+      // This build's own Bun, under the namespace's name.
+      command: namedBackendCommand(ns, asAppPath(process.execPath)),
+      // The `server` tree is this checkout's, shared with every namespace it
+      // serves, so this is the only thing that tells the spawned backend WHICH
+      // registry to load — the committed one for the main composition, the
+      // filtered `<dir>.composition.<id>.generated.ts` for any other.
+      composition: target.composition,
+    });
+    endRegister();
+
+    if (!opts.restart) {
+      notes.push(`restart skipped (${ns})`);
+      return { ok: true, notes };
+    }
+
+    // Snapshot the currently-served backend's per-process identity BEFORE the
+    // restart. probeHealth compares against it to prove the NEW backend took over,
+    // rather than the old one still answering ok with stale code.
+    backendAsked = true;
+    const previousStartedAt = await readHealthStartedAt(ns);
+    const restart = await span(
+      "restartBackend",
+      "build:deploy",
+      "restart backend",
+      () => restartBackend(ns, site),
+    );
+    if (restart.kind === "failed") {
       return {
         ok: false,
-        failedLabels: ["backend never ready"],
-        reason: health.reason,
+        failedLabels: ["backend crashed"],
+        reason: restart.reason,
       };
     }
-    if (health.note !== null) notes.push(health.note);
-  }
 
-  return { ok: true, notes };
+    // Smoke-test the server boot. tsc catches static import errors but the server
+    // can still fail to evaluate (missing env, init-time cycle, …) and surface as
+    // a 502 on first request. Hit /api/health to force a boot and fail the build
+    // if the server can't come up.
+    if (restart.gatewayUp) {
+      const health = await span(
+        "probeHealth",
+        "build:deploy",
+        "health probe",
+        () => probeHealth(ns, previousStartedAt, restart.restartError),
+      );
+      if (health.kind === "failed") {
+        return {
+          ok: false,
+          failedLabels: ["backend never ready"],
+          reason: health.reason,
+        };
+      }
+      if (health.note !== null) notes.push(health.note);
+    }
+
+    return { ok: true, notes };
+  };
+
+  let result: DeployNamespaceResult;
+  try {
+    result = await serve();
+  } catch (err) {
+    if (!backendAsked) await publication.revert();
+    throw err;
+  }
+  if (result.ok) {
+    await publication.keep();
+    return result;
+  }
+  await publication.revert();
+  return {
+    ...result,
+    reason: [
+      ...result.reason,
+      publication.revertible
+        ? `The new frontend was rolled back with it: ${site} serves the previous build, frontend and backend alike.`
+        : `There was no previous frontend to roll back to, so the new one stays published.`,
+    ],
+  };
 }

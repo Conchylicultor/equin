@@ -226,8 +226,11 @@ tabs.
   (`ResourceHttpError` with `reason`/`verdict`) or heals.
 - **Contract refusals are version skew, surfaced once.**
   - `contract-mismatch` / `unknown-key` (from `sub-error` or HTTP) land in
-    `resource-contract-store.ts` (`useResourceContractMismatches()`); build's
-    `useReloadAdvice` shows the Reload segment.
+    `resource-contract-store.ts` (`useResourceContractMismatches()`, one entry
+    per key); build's `useReloadAdvice` / `useServerBehind` read it.
+  - A refusal stands per TUPLE until that tuple is answered (`markApplied`, an
+    unobserved read's success): an out-of-date tab is never answered, while a
+    backend that was behind and restarted answers the replayed subs.
   - Every `sub`/`sub-batch` carries `build` (per frame — the socket is shared
     across bundles); HTTP reads `BUILD_GRAPH_HEADER`.
   - `isTerminalResourceError` — `contract-mismatch`, `unknown-key`, `unserved` —
@@ -846,8 +849,9 @@ Details:
   - Exempted by: `apps/file-explorer/git` (0 debt)
 - Test helpers:
   - Web: `@plugins/network/plugins/live/plugins/live-state/web/testing`
+    - `clearResourceContractMismatch` — The server answered `key` at `params`: whatever refused it before no longer does.
     - `createLiveStateHarness` — A fresh `NotificationsClient` and the `QueryClient` it owns, under a transport, for ONE test — what the app's `TransportProvider` + `NotificationsProvider` mount, minus the page's pipeline (which keeps the first cache it was built with, so a second test would mount a cache nothing writes).
-    - `markResourceContractMismatch` — Record that the server refused `key` for this tab.
+    - `markResourceContractMismatch` — Record that the server refused `key` at `params` for this tab.
     - `mergeKeyedDelta` — Merge a row-keyed delta into the prior cached array.
     - `noteResourceTxAcks` — Record the server-acknowledged source-transaction ids for (key, params), then notify subscribers (emit-after-note: a listener reading `hasResourceTxAck` inside its callback already sees the freshly-noted acks).
     - `noteResourceWatermark` — Adopt a frame's commit watermark for (key, params), monotonically: an equal or older watermark than the stored one is a no-op (compared causally via `compareTxWatermark`, never as strings).

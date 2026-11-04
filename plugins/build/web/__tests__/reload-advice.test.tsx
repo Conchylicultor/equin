@@ -19,6 +19,7 @@ import {
 } from "@testing-library/react";
 import { queryKeyFor } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
+  clearResourceContractMismatch,
   createLiveStateHarness,
   markResourceContractMismatch,
   resetResourceContractMismatches,
@@ -29,7 +30,11 @@ import {
   deployment,
   type DeploymentState,
 } from "@plugins/build/plugins/deployment/core";
-import { useReloadAdvice, type ReloadAdvice } from "../hooks/use-reload-advice";
+import {
+  useReloadAdvice,
+  useServerBehind,
+  type ReloadAdvice,
+} from "../hooks/use-reload-advice";
 import { ReloadButton } from "../components/reload-button";
 
 /**
@@ -129,17 +134,20 @@ describe("useReloadAdvice", () => {
 
   it("is outdated when the server refused resources for skew, counting them", () => {
     markResourceContractMismatch({
+      params: {},
       key: "build.history",
       reason: "contract-mismatch",
       verdict: "skew",
     });
     markResourceContractMismatch({
+      params: {},
       key: "gone.key",
       reason: "unknown-key",
       verdict: "skew",
     });
     // A same-build / unknown verdict is a bug, not an out-of-date tab.
     markResourceContractMismatch({
+      params: {},
       key: "bug.key",
       reason: "contract-mismatch",
       verdict: "same-build",
@@ -152,13 +160,14 @@ describe("useReloadAdvice", () => {
 
   it("precedence: broken > outdated > stale", () => {
     markResourceContractMismatch({
+      params: {},
       key: "build.history",
       reason: "contract-mismatch",
       verdict: "skew",
     });
     markDeferredPluginsFailed(["apps/plugins/story/plugins/lenses"]);
     const { result } = renderHook(() => useReloadAdvice(), {
-      wrapper: wrapperServing(BAKED),
+      wrapper: wrapperServing("graph-newer"),
     });
     // An outdated tab is a stale one: the broken copy names both.
     expect(result.current).toEqual({
@@ -168,13 +177,84 @@ describe("useReloadAdvice", () => {
     });
   });
 
-  it("turns outdated the moment a mismatch is recorded, without a remount", () => {
-    const { result, rerender } = renderHook(() => useReloadAdvice(), {
+  it("a skew refusal of a tab running the served bundle is the server's, not a reload", () => {
+    markResourceContractMismatch({
+      params: {},
+      key: "db-lock-watch",
+      reason: "unknown-key",
+      verdict: "skew",
+    });
+    const wrapper = wrapperServing(BAKED);
+    const advice = renderHook(() => useReloadAdvice(), { wrapper });
+    const behind = renderHook(() => useServerBehind(), { wrapper });
+    expect(advice.result.current).toEqual({ kind: "none" });
+    expect(behind.result.current).toEqual({ behind: true, count: 1 });
+  });
+
+  it("a plugin failure under a server that is behind does not call the tab stale", () => {
+    markResourceContractMismatch({
+      params: {},
+      key: "db-lock-watch",
+      reason: "unknown-key",
+      verdict: "skew",
+    });
+    markDeferredPluginsFailed(["apps/plugins/story/plugins/lenses"]);
+    const { result } = renderHook(() => useReloadAdvice(), {
       wrapper: wrapperServing(BAKED),
     });
-    expect(result.current.kind).toBe("none");
+    expect(result.current).toEqual({
+      kind: "broken",
+      stale: false,
+      failedCount: 1,
+    });
+  });
+
+  it("a server that catches up clears it: the refused tuple is answered", () => {
+    const { result, rerender } = renderHook(() => useServerBehind(), {
+      wrapper: wrapperServing(BAKED),
+    });
     act(() =>
       markResourceContractMismatch({
+        params: {},
+        key: "db-lock-watch",
+        reason: "unknown-key",
+        verdict: "skew",
+      }),
+    );
+    rerender();
+    expect(result.current.behind).toBe(true);
+    act(() => clearResourceContractMismatch("db-lock-watch", {}));
+    rerender();
+    expect(result.current).toEqual({ behind: false });
+  });
+
+  it("keeps the old reading while the served graph is unknown", () => {
+    markResourceContractMismatch({
+      params: {},
+      key: "build.history",
+      reason: "contract-mismatch",
+      verdict: "skew",
+    });
+    // No deployment seeded: the read is still loading.
+    const live = createLiveStateHarness();
+    const { result } = renderHook(() => useReloadAdvice(), {
+      wrapper: live.Wrapper,
+    });
+    expect(result.current).toEqual({
+      kind: "outdated",
+      stale: false,
+      count: 1,
+    });
+  });
+
+  it("turns outdated the moment a mismatch is recorded, without a remount", () => {
+    const { result, rerender } = renderHook(() => useReloadAdvice(), {
+      wrapper: wrapperServing("graph-newer"),
+    });
+    expect(result.current.kind).toBe("stale");
+    act(() =>
+      markResourceContractMismatch({
+        params: {},
         key: "build.history",
         reason: "contract-mismatch",
         verdict: "skew",
@@ -183,7 +263,7 @@ describe("useReloadAdvice", () => {
     rerender();
     expect(result.current).toEqual({
       kind: "outdated",
-      stale: false,
+      stale: true,
       count: 1,
     });
   });

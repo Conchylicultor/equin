@@ -13,6 +13,7 @@ vi.mock(
 const state = vi.hoisted(() => ({
   history: {} as Record<string, unknown>,
   advice: { kind: "none" } as { kind: string; [k: string]: unknown },
+  serverBehind: { behind: false } as { behind: boolean; count?: number },
 }));
 vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -20,6 +21,7 @@ vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
 }));
 vi.mock("../hooks/use-reload-advice", () => ({
   useReloadAdvice: () => state.advice,
+  useServerBehind: () => state.serverBehind,
 }));
 vi.mock(
   "@plugins/network/plugins/live/plugins/live-state/web",
@@ -51,6 +53,7 @@ const OUTDATED =
 afterEach(() => {
   cleanup();
   state.advice = { kind: "none" };
+  state.serverBehind = { behind: false };
 });
 
 describe("BuildButton without history", () => {
@@ -160,5 +163,15 @@ describe("BuildButton with history", () => {
     const status = getByRole("button", { name: "Build failed" });
     expect(trayOf(status)?.className).toContain("ring-destructive-solid/45");
     expect(status.querySelector(".bg-destructive-solid")).not.toBeNull();
+  });
+
+  it("server behind the bundle it serves: says so, red, and offers no Reload", () => {
+    state.history = { status: "ready", data: [run({ exitCode: 1 })] };
+    state.serverBehind = { behind: true, count: 1 };
+    const { getByRole, queryByRole } = render(<BuildButton />);
+    const status = getByRole("button", { name: "Server out of date" });
+    expect(trayOf(status)?.className).toContain("ring-destructive-solid/45");
+    expect(status.querySelector(".bg-destructive-solid")).not.toBeNull();
+    expect(queryByRole("button", { name: /reload/i })).toBeNull();
   });
 });

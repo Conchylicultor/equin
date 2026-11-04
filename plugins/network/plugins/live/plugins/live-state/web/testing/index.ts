@@ -6,8 +6,10 @@ export { noteResourceTxAcks } from "../tx-ack-registry";
 // The client class itself, for a test that spies on one of its methods.
 export { NotificationsClient } from "../notifications-client";
 // The page-global contract-mismatch store starts empty for every suite.
-// `mark…` is the transport's writer, stood in for by a test with no server.
+// `mark…` / `clear…` are the transport's writers (a refusal, then that tuple
+// answered), stood in for by a test with no server.
 export {
+  clearResourceContractMismatch,
   markResourceContractMismatch,
   resetResourceContractMismatches,
 } from "../resource-contract-store";
