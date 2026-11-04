@@ -582,9 +582,27 @@ All but the version are co-produced by the starter. A push drain mints
   - `sub-ack` / `up-to-date` carry `epoch` (`bootEpoch`, per runtime instance).
   - A `sub` echoing a `{ version, epoch }` of THIS boot equal to the current
     counter, on a `versionIsComplete` resource, gets `up-to-date` with no load.
-  - Relies on: *the per-pk version counter is the complete change signal within a
-    tracking span*. So **every span opens with a fresh version** (bumped at global
+  - Relies on: *the per-pk version is the complete change signal within a
+    tracking span*. So **every span opens with a fresh version** (minted at global
     0→1 in `registerSubOnSocket`); a pre-span version never matches.
+  - **One runtime-wide version clock** (`versionClock`, `mintVersion`): every
+    version, and every span number (`entry.spans` = the opener's version), is
+    `++clock`, so none is ever reused. `entry.versions` holds exactly the tracked
+    tuples (deleted at N→0; a mint for an untracked tuple is not stored).
+    Comparisons read `entry.versions` (an untracked tuple equals nothing); a
+    READ reports `versionOf` = the version, else the clock — never 0, so a
+    WebSocket-down HTTP body is not dropped as older than what the tab holds. A
+    claimed (inherited) version raises the clock to it.
+  - **Linger** (`detached`, `SOCKET_LINGER_MS` = 30 s): a socket `close` is not
+    a tab leaving, so its subs stay held — every tuple tracked — until the tab's
+    `complete` replay registered on another socket (then released, so a
+    restated tuple never passes through 0 and short-circuits), its `unsub-tab`
+    arrives, or the bound passes. A change in the gap still mints, so the
+    replay reloads exactly what changed. Senders walk `sockets` only; every
+    enumeration of tracked tuples (`subscribedParamsFor` = `entry.tracked`,
+    `unregisterTupleEverywhere`) includes lingering ones. `_debug.linger`
+    counts them. Pinned by `runtime-reconnect-linger.test.ts`;
+    `research/2026-11-04-global-live-reconnect-linger-and-version-clock.md`.
   - `versionIsComplete`: every non-`revalidate` resource, and a `revalidate` one
     declared `notified` (its notify stream is its whole change signal; its ETag
     answers only another boot's replay — `config-v2.values`). An undeclared
@@ -608,7 +626,7 @@ All but the version are co-produced by the starter. A push drain mints
     change or notify reaching a shadow dirties it too.
   - A claim answers `up-to-date` at the old version only for a clean shadow at
     the echoed version, on a tuple this process has not served (its span
-    opened at 1, no snapshot / pending / drain) or opened by an earlier claim
+    opened at its first mint, no snapshot / pending / drain) or opened by an earlier claim
     and unchanged since. Everything else — no record, a load or replay
     failure, history pruned past the cut, a mismatch — takes the full path.
     Refusals are counted in `_debug.resume.refusals`, inheritances per key in

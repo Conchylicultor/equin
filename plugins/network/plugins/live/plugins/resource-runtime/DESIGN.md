@@ -429,8 +429,23 @@ used to run the full loader behind the 6-slot read gate
   unsubscribe. A version minted before (acked to a tab whose socket then
   dropped, or read over HTTP with nobody subscribed) could otherwise match a
   stale value.
-  - A reconnect on a new socket takes the full path; a replay on the same socket
-    registers before it reconciles, keeps its span and still short-circuits.
+  - A replay on the same socket registers before it reconciles, keeps its span
+    and still short-circuits.
+- **Linger, not a cleanness proof**
+  ([research](../../../../../../research/2026-11-04-global-live-reconnect-linger-and-version-clock.md)):
+  a closed socket's subs stay held until the tab replays elsewhere (or 30 s),
+  so a reconnect keeps its span — sound for every resource kind, because the
+  tuple is still tracked. Rejected: proving an UNTRACKED gap clean from an
+  entry-level change stamp — only a routed, fully-fed point read has a
+  complete untracked signal (the handoff's `inheritable` set), so files, git,
+  watchers, externals and every window would still reload. Cost: a tab that
+  never returns keeps its tuples tracked (read on change, pushed to nobody) for
+  the bound; a gap longer than it reloads.
+- **One version clock**: a per-pk counter restarted at a new span could equal a
+  version an old tab holds, so it could never be deleted; one runtime-wide
+  clock never reuses a value, so the version dies with its span and the map is
+  bounded by the tracked tuples. An untracked read reports the clock (≥ every
+  version handed out), not 0, which the client's strict `<` guard would drop.
 - **Epoch**: versions are per-boot memory, so a cross-boot echo is
   incomparable.
 - **`revalidate` exempt**: its truth may live outside the notify stream (e.g.

@@ -7,16 +7,18 @@
  * `up-to-date`/`up-to-date-batch` from memory even when the truth changed
  * while the tab's WebSocket was down and nobody else was subscribed — the
  * per-pk version counter it compared against was never bumped for an
- * untracked tuple, so an echoed version could still match. The fix
- * (`registerSubOnSocket` in resource-runtime/core/runtime.ts) makes every
- * subscription span open with a FRESH version on the global 0→1 transition,
- * so a replay that arrives after the old socket's `close` was processed can
- * never short-circuit — it always takes the full path and gets a real
- * `sub-ack`.
+ * untracked tuple, so an echoed version could still match. Today a closed
+ * socket's subs LINGER (resource-runtime's `detached`,
+ * research/2026-11-04-global-live-reconnect-linger-and-version-clock.md): the
+ * tuple stays tracked through the gap, so the change made in it moves the
+ * version, and the replay — which would short-circuit had nothing changed —
+ * must take the full path and get a real `sub-ack` carrying the change. (A gap
+ * past the linger opens a new span at a fresh version: also a full path.)
  *
  * Resource under test: the notifications bell's `notifications` collection
  * (`plugins/shell/plugins/notifications`) — a `liveCollection` window
- * (bounded, DB-backed, preloaded at boot), changeable from outside the page
+ * (bounded, DB-backed, preloaded at boot, so subscribed with no UI open),
+ * changeable from outside the page
  * with one HTTP call (`POST /api/notifications`), harmless and reversible
  * (the created row is dismissed in a `finally`).
  *
@@ -26,15 +28,13 @@
  * normally except for the one thing this script controls:
  *
  *   1. drop the connection (`tap.drop`) — the backend sees a real close and
- *      releases the tab's subs, ending the tracking span for every tuple it
- *      held;
+ *      detaches the tab's subs (they linger, still tracked, for the replay);
  *   2. HOLD the reconnect — `tap.hold` (armed before the drop) parks every new
  *      connection attempt in the worker until `tap.release`;
  *   3. make the HTTP change while the reconnect is held, wait ~1s, then
  *      release;
- *   4. assert the page shows the change within a few seconds, and record
- *      which frame answered the `notifications` replay on the new connection
- *      — the fixed server must answer `sub-ack` (fresh data), never
+ *   4. assert the frame that answered the `notifications` replay on the new
+ *      connection is a `sub-ack` carrying the new row — never
  *      `up-to-date-batch`.
  *
  * WRITES: creates one notification via the app's own endpoint and dismisses
@@ -48,34 +48,29 @@ import {
   boot,
   pathUrl,
   report,
-  snap,
   waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
-import type { Page } from "playwright";
+import { notificationIdKind } from "@plugins/shell/plugins/notifications/core";
 
-const OUT = "/tmp/claude-501/reconnect-after-gap";
 const r = report(
   "network/live · a reconnect after a subscription gap replays a fresh value",
 );
 
 /** How long the reconnect is held while the HTTP change lands. */
 const RECONNECT_HOLD_MS = 1000;
-/** How long the DOM may take to reflect the reconnect's replay. */
+/** How long a socket or a replay answer may take. */
 const SETTLE_TIMEOUT_MS = 10_000;
 
 const NOTIFICATIONS_WS = "/ws/notifications";
-
-const bell = (page: Page) =>
-  page.getByRole("button", { name: /^Notifications/ });
-const rows = (page: Page) =>
-  page.locator('[data-testid="notification-list"] li');
 
 /** One frame that answered a resource's replay on a given connection. */
 interface ReplayFrame {
   kind: "sub-ack" | "up-to-date-batch";
   conn: string | null;
+  /** The frame carries the row the run created in the gap. */
+  carriesNew: boolean;
 }
 
 await withBrowser(async (h) => {
@@ -90,6 +85,9 @@ await withBrowser(async (h) => {
   // Every server→page frame is inspected to record which frame answered which
   // resource's replay, on which server connection.
   const tap = await tapSharedSocket(page);
+  const stamp = Date.now();
+  const id = notificationIdKind.mint();
+  const title = `e2e reconnect-after-gap ${stamp}`;
   const replaysFor: Record<string, ReplayFrame[]> = {};
   tap.onFrame((f) => {
     if (f.url !== NOTIFICATIONS_WS) return;
@@ -100,35 +98,31 @@ await withBrowser(async (h) => {
       entries?: Array<{ key?: string }>;
     };
     if (msg.kind === "sub-ack" && msg.key) {
-      (replaysFor[msg.key] ??= []).push({ kind: "sub-ack", conn: f.conn });
+      (replaysFor[msg.key] ??= []).push({
+        kind: "sub-ack",
+        conn: f.conn,
+        carriesNew: f.data.includes(id),
+      });
     } else if (msg.kind === "up-to-date-batch" && Array.isArray(msg.entries)) {
       for (const e of msg.entries) {
         if (!e.key) continue;
         (replaysFor[e.key] ??= []).push({
           kind: "up-to-date-batch",
           conn: f.conn,
+          carriesNew: false,
         });
       }
     }
   });
 
-  const stamp = Date.now();
-  const id = `e2e-reconnect-gap-${stamp}`;
-  const title = `e2e reconnect-after-gap ${stamp}`;
   let created = false;
 
   try {
     await boot(page, pathUrl("/"), { settleMs: 1500 });
 
-    await bell(page).click();
-    await page
-      .locator('[data-testid="notification-list"]')
-      .waitFor({ timeout: SETTLE_TIMEOUT_MS });
-    await snap(page, OUT, "1-before");
-
-    // The initial popover paint can come straight from the boot-snapshot
-    // cache, so the live socket may not have connected yet even once the
-    // list is visible — poll for it rather than asserting immediately.
+    // `notifications` is boot-preloaded, so the page holds it with no UI open
+    // (hydrated from the boot snapshot, subscribed once the socket opens) —
+    // poll for the socket rather than asserting immediately.
     const opened = await waitFor(
       () => Promise.resolve(tap.connections(NOTIFICATIONS_WS)),
       (conns) => conns.length > 0,
@@ -142,8 +136,8 @@ await withBrowser(async (h) => {
     const dropped = opened.value.at(-1);
 
     // Arm the hold for the RECONNECT, then drop the CURRENT connection: the
-    // backend sees a real close and releases this tab's subs — every tuple it
-    // held (including `notifications`) ends its tracking span right here.
+    // backend sees a real close and detaches this tab's subs — every tuple it
+    // held (including `notifications`) lingers, still tracked, for the replay.
     await tap.hold(NOTIFICATIONS_WS);
     r.note(`dropping connection ${dropped}`);
     await tap.drop(NOTIFICATIONS_WS);
@@ -163,13 +157,13 @@ await withBrowser(async (h) => {
       `status=${held.value}`,
     );
 
-    // The HTTP change, made entirely inside the gap: nobody is subscribed to
-    // `notifications` right now (the socket that held it is closed, and the
-    // reconnect is parked), so this is exactly the "changed while untracked"
-    // case the fix targets.
+    // The HTTP change, made entirely inside the gap: no live socket holds
+    // `notifications` right now (the one that held it is closed, and the
+    // reconnect is parked) — the "changed while the tab was away" case.
     await post("/api/notifications", {
       id,
       type: "e2e-reconnect-gap",
+      category: "other",
       title,
       description: "seeded by reconnect-after-gap.ts",
       variant: "info",
@@ -182,25 +176,22 @@ await withBrowser(async (h) => {
     r.note("releasing the reconnect");
     await tap.release(NOTIFICATIONS_WS);
 
-    // The page shows the change within a few seconds — poll (read, then
-    // re-read to a deadline), never a fixed sleep.
-    const settled = await waitFor(
-      () => rows(page).filter({ hasText: title }).count(),
-      (n) => n > 0,
-      { timeoutMs: SETTLE_TIMEOUT_MS },
-    );
-    r.ok(
-      `the new notification appears after the reconnect (${settled.waitedMs}ms, ${settled.attempts} attempt(s))`,
-      settled.ok,
-      `rows matching title = ${settled.value}`,
-    );
-    await snap(page, OUT, "2-after");
-
     // Which frame answered the `notifications` replay on the reconnect?
-    const reconnected = tap.connections(NOTIFICATIONS_WS).at(-1);
-    const onReconnect = (replaysFor["notifications"] ?? []).filter(
-      (f) => f.conn !== null && f.conn === reconnected && f.conn !== dropped,
+    const replayed = await waitFor(
+      () => {
+        const reconnected = tap.connections(NOTIFICATIONS_WS).at(-1);
+        return Promise.resolve(
+          (replaysFor["notifications"] ?? []).filter(
+            (f) =>
+              f.conn !== null && f.conn === reconnected && f.conn !== dropped,
+          ),
+        );
+      },
+      (answers) => answers.length > 0,
+      { timeoutMs: SETTLE_TIMEOUT_MS, intervalMs: 100 },
     );
+    const onReconnect = replayed.value;
+    const reconnected = tap.connections(NOTIFICATIONS_WS).at(-1);
     r.note(
       `notifications replay frame(s) on connection ${reconnected}: ${JSON.stringify(onReconnect)}`,
     );
@@ -208,10 +199,14 @@ await withBrowser(async (h) => {
       "the `notifications` resource replayed on the reconnect",
       onReconnect.length > 0,
     );
-    r.eq(
-      "…and it was answered with a `sub-ack` (fresh data), never `up-to-date-batch` — the reconnect fix",
-      onReconnect.map((f) => f.kind),
-      onReconnect.length > 0 ? ["sub-ack"] : [],
+    r.ok(
+      "…and every tuple of it was answered with a `sub-ack` (fresh data), never `up-to-date-batch`",
+      onReconnect.length > 0 && onReconnect.every((f) => f.kind === "sub-ack"),
+      JSON.stringify(onReconnect.map((f) => f.kind)),
+    );
+    r.ok(
+      `…carrying the notification made in the gap (${title})`,
+      onReconnect.some((f) => f.carriesNew),
     );
   } finally {
     if (created) {

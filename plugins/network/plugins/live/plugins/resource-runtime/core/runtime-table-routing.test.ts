@@ -634,11 +634,13 @@ describe("reverse routes", () => {
     ]);
     expect(f.clientValue(W3)).toEqual(f.full(W3));
     expect(f.clientValue(E)).toEqual(f.full(E));
-    // The next real change ships at the sub-ack's version + 1.
+    // The next real change ships above the sub-ack's version: one runtime-wide
+    // clock, which E's recompute advanced — the skip minted nothing (its only
+    // frame was the ack above).
     f.w.hosts.get("h1")!.n = 1.5;
     f.change("hosts", "U", { ids: ["h1"] });
     await settle();
-    expect(deltas(f.pushesOf(W3)).at(-1)!.version).toBe(base + 1);
+    expect(deltas(f.pushesOf(W3)).at(-1)!.version).toBeGreaterThan(base);
   });
 
   // The same skip on a PERSISTED alias: it runs before the persisted branch,

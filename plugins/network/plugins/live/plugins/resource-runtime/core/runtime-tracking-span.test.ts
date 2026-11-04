@@ -10,6 +10,11 @@
  * acked to a tab before its socket dropped, or read over HTTP while nobody
  * subscribed — can never match again, and the replay takes the full path.
  *
+ * A closed socket's subs linger (`SOCKET_LINGER_MS`) for its tabs to replay:
+ * the span — and its tracking — continues across the gap, so a change in it
+ * still moves the version (the first two cases); a gap longer than the linger
+ * ends the span.
+ *
  * Each case below is a way the old short-circuit answered `up-to-date` over a
  * change nothing tracked. The same-socket replay (the missed-update probe, the
  * chronic replay the short-circuit exists for) keeps its span and still
@@ -24,6 +29,8 @@ import {
   type Harness,
   type RecordedFrame,
 } from "./test-support";
+import { SOCKET_LINGER_MS } from "./runtime";
+import { withFakeClock } from "./testing/fake-clock";
 import { feedChange, wholeReach } from "./testing/routed-fixture";
 
 /** A param'd push value reading table `t` whole (a reach plan). */
@@ -112,26 +119,30 @@ describe("a replay after a tracking gap is never up-to-date", () => {
   });
 
   test("another socket resubscribed in between: its fresh load does not vouch for the old version", async () => {
-    const h = createHarness({ sockets: 3 });
-    let truth = "v1";
-    defineDbp(h, () => truth);
-    await h.subscribe("dbp", { id: "a" }, { socket: 0 });
-    const ack = h.frames.find((f) => f.kind === "sub-ack")!;
+    await withFakeClock(async (clock) => {
+      const h = createHarness({ sockets: 3 });
+      let truth = "v1";
+      defineDbp(h, () => truth);
+      await h.subscribe("dbp", { id: "a" }, { socket: 0 });
+      const ack = h.frames.find((f) => f.kind === "sub-ack")!;
 
-    h.closeSocket(0);
-    truth = "v2"; // untracked: no subscriber
-    await h.subscribe("dbp", { id: "a" }, { socket: 1 }); // B loads v2
-    expect(answerOn(h.frames, 1, "dbp")).toMatchObject({ value: "v2" });
+      h.closeSocket(0);
+      // The tab did not come back within the linger: the span ends.
+      await clock.advance(SOCKET_LINGER_MS);
+      truth = "v2"; // untracked: no subscriber
+      await h.subscribe("dbp", { id: "a" }, { socket: 1 }); // B loads v2
+      expect(answerOn(h.frames, 1, "dbp")).toMatchObject({ value: "v2" });
 
-    // A's tab reconnects on C, echoing the version it held with v1 — not first
-    // any more (B holds the tuple), but the version names another span.
-    await h.subscribeBatch(
-      [{ key: "dbp", params: { id: "a" }, version: ack.version }],
-      { socket: 2, epoch: ack.epoch },
-    );
-    expect(answerOn(h.frames, 2, "dbp")).toMatchObject({
-      kind: "sub-ack",
-      value: "v2",
+      // A's tab reconnects on C, echoing the version it held with v1 — not
+      // first any more (B holds the tuple), but the version names another span.
+      await h.subscribeBatch(
+        [{ key: "dbp", params: { id: "a" }, version: ack.version }],
+        { socket: 2, epoch: ack.epoch },
+      );
+      expect(answerOn(h.frames, 2, "dbp")).toMatchObject({
+        kind: "sub-ack",
+        value: "v2",
+      });
     });
   });
 

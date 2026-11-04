@@ -1432,10 +1432,13 @@ interface RegistryEntry {
    */
   orderSigs?: Map<string, Map<string, string>>;
   /**
-   * Monotonic count of state changes (notifies) per params-tuple. Bumped in
-   * flushNotifies — a real state change — and once when a tracking span opens
-   * (the global 0→1 in `registerSubOnSocket`: nothing tracked the tuple before
-   * it, so no earlier version may match again). sub-acks and the HTTP fallback
+   * The current version of each TRACKED params-tuple, minted from the
+   * runtime-wide clock (`mintVersion`) — present exactly while the tuple is
+   * subscribed (set when its span opens, deleted at N→0), so the map is bounded
+   * by the tracked tuples. Advanced in flushNotifies — a real state change —
+   * and when a tracking span opens (the global 0→1 in `registerSubOnSocket`:
+   * nothing tracked the tuple before it, and the clock is above every version
+   * ever handed out, so no earlier version may match again). sub-acks and the HTTP fallback
    * REPORT this value without bumping (a read is not a change), and a
    * resubscribe of a tuple the server still holds opens no span — so a forced
    * resync on the same socket (which re-subscribes every sub) does not make the
@@ -2606,6 +2609,14 @@ export type PersistedValueCheck =
 
 const HEARTBEAT_MS = 20_000;
 
+// How long a closed socket's subs stay held for its tabs to replay them on a
+// new socket (the runtime's `detached` linger). The client reconnects after
+// 0.25–0.75 s, then backs off to at most 7.5 s (networking's
+// `reconnect-backoff`), so a few attempts fit; the bound only matters for a
+// tab that never comes back, whose tuples stay tracked — read on a change,
+// pushed to nobody — until it passes.
+export const SOCKET_LINGER_MS = 30_000;
+
 // How recently a commit-watermark capture must have started for a flight to
 // share it (`captureSharedWatermark`): long enough to span one herd wave of
 // cold reads (an xmin round trip measured ~18 ms under boot load), short
@@ -2696,8 +2707,34 @@ export function createResourceRuntime(
 ): ResourceRuntime {
   const registry = new Map<string, RegistryEntry>();
   const inflight = createInflight();
-  // The last tracking span handed out (see `RegistryEntry.spans`).
-  let lastSpan = 0;
+  // The runtime-wide version clock: the last version handed out, for any
+  // tuple of any entry. Every version is minted from it (`mintVersion`, the
+  // span opener in `registerSubOnSocket`), so a version is never reused —
+  // which is what lets a tuple's version die with its span (`versions` is
+  // deleted at N→0) while an old tab still holds it: whatever span opens next
+  // opens above every version ever handed out. Tracking spans are numbered
+  // by the same clock (`RegistryEntry.spans` holds the span opener's version).
+  let versionClock = 0;
+
+  // A real state change of a tuple: the next version. Stored only while the
+  // tuple is tracked (`versions` lives exactly as long as its span) — a mint
+  // for an untracked tuple (a persisted `{}` recomputed with nobody
+  // subscribed, a drain that outlived its span) is reported, never kept.
+  function mintVersion(entry: RegistryEntry, pk: string): number {
+    const version = ++versionClock;
+    if (entry.tracked.has(pk)) entry.versions.set(pk, version);
+    return version;
+  }
+
+  // The version a READ reports for a tuple: its current version while
+  // tracked, else the clock — above every version a client was ever handed for
+  // it, so a WebSocket-down HTTP body is never dropped as older than what the
+  // tab holds, and below every version a later span mints, so no later
+  // short-circuit can match it. Comparisons read `entry.versions` directly:
+  // an untracked tuple equals nothing.
+  function versionOf(entry: RegistryEntry, pk: string): number {
+    return entry.versions.get(pk) ?? versionClock;
+  }
   // Per-runtime read-admission gate (see READ_LOAD_CONCURRENCY). Its `onWait`
   // charges queue-wait to the enclosing entry via the injected hook (server:
   // chargeWait), so a saturated gate is observable rather than hidden.
@@ -2770,6 +2807,19 @@ export function createResourceRuntime(
   // barriers between levels to preserve cascade-into-downstream ordering.
   let topoLevels: RegistryEntry[][] = [];
   const sockets = new Map<RuntimeSocket, SocketState>();
+  // Linger: a CLOSED socket's state, its subs still held, with the timer that
+  // releases what is left of it at the bound. A close is not a tab leaving (a
+  // tab leaving says so: its `unsub-tab` will), so the tab is expected back on
+  // a new socket — a network blip, a wake from sleep, a worker restart. Until
+  // then every tuple it held stays TRACKED (routed, notified, watched), so a
+  // change in the gap still mints a version and the replay's echoed version
+  // matches only when nothing changed: the same-socket short-circuit, carried
+  // across the gap, for every resource kind. A detached record is released
+  // when its tab's complete replay registered on another socket, when its
+  // tab's `unsub-tab` arrives, or at `SOCKET_LINGER_MS`. Never sent to:
+  // senders walk `sockets` only.
+  // research/2026-11-04-global-live-reconnect-linger-and-version-clock.md
+  const detached = new Map<SocketState, ReturnType<typeof setTimeout>>();
   // The flush scheduler, as ONE state whose every transition is synchronous:
   //   idle    — nothing pending a flush;
   //   queued  — a `flushNotifies` microtask is pending;
@@ -4020,7 +4070,7 @@ export function createResourceRuntime(
       sole !== undefined &&
       entry.subCounts.get(pk) === 1 &&
       sole.state.subs.get(entry.key)?.get(pk)?.tabs.size === 1 &&
-      (entry.versions.get(pk) ?? 0) === sole.version
+      entry.versions.get(pk) === sole.version
     ) {
       entry.held.set(
         pk,
@@ -6348,8 +6398,7 @@ export function createResourceRuntime(
   ): Promise<void> {
     const { params } = pendingEntry;
     const pk = paramsKey(params);
-    const version = (entry.versions.get(pk) ?? 0) + 1;
-    entry.versions.set(pk, version);
+    const version = mintVersion(entry, pk);
     const subs = subscribersFor(entry.key, pk);
     const owner = snapshotOwner(entry, pk);
     // The snapshot must be maintained whenever it could be needed later: a
@@ -6500,6 +6549,13 @@ export function createResourceRuntime(
       // membership diff has a base. An untracked tuple seeds nothing — no
       // drain would keep that snapshot current.
       diffKeyed(entry, pk, value);
+    } else if (owns && subs.length === 0 && !keepsIdleSnapshot(entry)) {
+      // Tracked, yet nobody to send to: only lingering sockets hold the tuple
+      // (`detached`), and this change moved past the snapshot without reading
+      // it. Kept, it would be the stale base every later diff — and routing —
+      // reads. Dropped, the replay (which this version makes reload) reseeds
+      // it from its own read.
+      evictSnapshot(entry, pk);
     }
     // The order-signature map's lifecycle mirrors the snapshot's: whenever the
     // FULL value replaced the snapshot above, reseed the sigs from it too —
@@ -6823,8 +6879,7 @@ export function createResourceRuntime(
     if (persisted && changed) armFloorPersist(entry, pk);
     const subs = subscribersFor(entry.key, pk);
     if (changed) {
-      const version = (entry.versions.get(pk) ?? 0) + 1;
-      entry.versions.set(pk, version);
+      const version = mintVersion(entry, pk);
       if (subs.length > 0) {
         // Membership-scoped deltas stamp the PENDING's sourceTx directly:
         // scoped/backfill refills are ctx loads, which never coalesce (they
@@ -7185,8 +7240,7 @@ export function createResourceRuntime(
       let version = 0;
       let subs: SocketState[] = [];
       if (!deferMint) {
-        version = (entry.versions.get(pk) ?? 0) + 1;
-        entry.versions.set(pk, version);
+        version = mintVersion(entry, pk);
         subs = subscribersFor(entry.key, pk);
       }
 
@@ -7302,8 +7356,7 @@ export function createResourceRuntime(
       if (unchanged) {
         broadcastAckOnly(entry, pendingEntry);
       } else if (deferMint) {
-        version = (entry.versions.get(pk) ?? 0) + 1;
-        entry.versions.set(pk, version);
+        version = mintVersion(entry, pk);
         subs = subscribersFor(entry.key, pk);
       }
 
@@ -7461,7 +7514,9 @@ export function createResourceRuntime(
           // Best-effort tab departure (pagehide): release everything this tab
           // holds on this socket. Subs other tabs still hold are untouched.
           const m = msg as ReceivedFrame<"unsub-tab">;
-          releaseTabSubs(state, typeof m.tabId === "string" ? m.tabId : "");
+          const tabId = typeof m.tabId === "string" ? m.tabId : "";
+          releaseTabSubs(state, tabId);
+          releaseDetachedTab(tabId);
           return;
         }
       }
@@ -7471,16 +7526,17 @@ export function createResourceRuntime(
       if (timer) clearInterval(timer);
       heartbeats.delete(ws);
       const state = sockets.get(ws);
-      if (state) {
-        // Release once per (key, pk) regardless of how many tabs held it — the
-        // socket-level refcount was bumped once per pk. Legacy `""`-bucket subs
-        // release here too (their only teardown path).
-        for (const [key, inner] of state.subs) {
-          for (const [pk, rec] of inner)
-            releaseSubRefcount(key, pk, rec.params);
-        }
-      }
       sockets.delete(ws);
+      if (state) releaseReattachedTabs(state);
+      // Its subs linger until their tabs replay them elsewhere (`detached`).
+      if (state && state.subs.size > 0) {
+        const timer = setTimeout(
+          () => releaseDetached(state),
+          SOCKET_LINGER_MS,
+        );
+        (timer as { unref?: () => void }).unref?.();
+        detached.set(state, timer);
+      }
     },
   };
 
@@ -7863,7 +7919,7 @@ export function createResourceRuntime(
     if ((entry.subCounts.get(pk) ?? 0) === 0) {
       return { ok: false, reason: "unsubscribed" };
     }
-    const current = entry.versions.get(pk) ?? 0;
+    const current = entry.versions.get(pk);
     const slot = tupleSlot(entry.key, pk);
     const at = inherited.get(slot);
     if (at !== undefined) {
@@ -7873,10 +7929,10 @@ export function createResourceRuntime(
         : { ok: false, reason: "changed-here" };
     }
     // Fresh here: the only version this process minted for the tuple is the
-    // span opener of its first registration, and nothing loaded, queued or
+    // opener of its span (`spans` holds it), and nothing loaded, queued or
     // drained it since — so this process has no value of its own for it.
     if (
-      current !== 1 ||
+      current !== entry.spans.get(pk) ||
       entry.snapshots?.has(pk) === true ||
       entry.pendingNotifies.has(pk) ||
       entry.draining.has(pk)
@@ -7884,6 +7940,9 @@ export function createResourceRuntime(
       return { ok: false, reason: "served-here" };
     }
     entry.versions.set(pk, version);
+    // Every later mint must land above the adopted version (another boot's
+    // clock), or the tuple's version would go backwards.
+    versionClock = Math.max(versionClock, version);
     inherited.set(slot, version);
     return { ok: true, version };
   }
@@ -7936,9 +7995,8 @@ export function createResourceRuntime(
     const prev = entry.subCounts.get(pk) ?? 0;
     entry.subCounts.set(pk, prev + 1);
     if (prev === 0) {
-      entry.versions.set(pk, (entry.versions.get(pk) ?? 0) + 1);
       entry.tracked.set(pk, params);
-      entry.spans.set(pk, ++lastSpan);
+      entry.spans.set(pk, mintVersion(entry, pk));
     }
     return { firstGlobal: prev === 0 };
   }
@@ -8074,7 +8132,7 @@ export function createResourceRuntime(
       if (entry.pendingNotifies.has(spk) || entry.draining.has(spk)) {
         return "source-busy";
       }
-      if ((entry.versions.get(spk) ?? 0) !== s.version) return "source-moved";
+      if (entry.versions.get(spk) !== s.version) return "source-moved";
       // The snapshot's iteration order IS the window order (every write
       // rebuilds it from the wire order — `diffKeyedScopedMembership`).
       const order = [...snap.keys()];
@@ -8190,7 +8248,7 @@ export function createResourceRuntime(
           ...req,
           key,
           params,
-          version: entry.versions.get(pk) ?? 0,
+          version: versionOf(entry, pk),
           epoch: bootEpoch,
           derived: outcome,
         });
@@ -8238,7 +8296,7 @@ export function createResourceRuntime(
     // carries `epoch: bootEpoch` alongside the version, so the client can tell a
     // fresh same-boot body apart from a stale-boot cache — the epoch-aware guard
     // that fixes the cross-boot cache-poisoning drop (Fix B).
-    const currentVersion = entry.versions.get(pk) ?? 0;
+    const currentVersion = entry.versions.get(pk);
     if (
       !firstGlobal &&
       versionIsComplete(entry) &&
@@ -8251,7 +8309,7 @@ export function createResourceRuntime(
         ...req,
         key,
         params,
-        version: currentVersion,
+        version: m.version,
         epoch: bootEpoch,
       });
       recordSubShortCircuit(key);
@@ -8311,7 +8369,7 @@ export function createResourceRuntime(
     // least 1, which the client's -1 "nothing applied yet" baseline accepts.
     // Read up front because both the `up-to-date` short-circuit and the
     // loader-path sub-ack report it.
-    const version = entry.versions.get(pk) ?? 0;
+    const version = versionOf(entry, pk);
 
     // Conditional revalidation (ETag / 304 semantics): if this resource declares
     // a cheap signature, answer "is what you already have still current?" without
@@ -8611,6 +8669,10 @@ export function createResourceRuntime(
     // not restate. Runs strictly AFTER registration (see the function comment).
     if (m.complete === true) {
       releaseTabSubs(state, tabId, retained);
+      // …and everything it still held on a closed socket: what it restated is
+      // held here now (registered above, so it never went through 0 — the
+      // short-circuit below can answer it), the rest it no longer wants.
+      releaseDetachedTab(tabId);
     }
 
     // Pass 2 — synchronous short-circuit collection; everything else detaches
@@ -8624,7 +8686,7 @@ export function createResourceRuntime(
     // Entries echoing another boot's version the epoch handoff may answer.
     const claims: typeof prepared = [];
     for (const p of prepared) {
-      const version = p.entry.versions.get(p.pk) ?? 0;
+      const version = p.entry.versions.get(p.pk);
       if (
         !p.firstGlobal &&
         versionIsComplete(p.entry) &&
@@ -8636,7 +8698,12 @@ export function createResourceRuntime(
         // Never a 0→1 entry: its registration opened a tracking span, so it —
         // and its `onFirstSubscribe` — always takes the full path below.
         recordSubShortCircuit(p.key);
-        upToDate.push({ id: p.id, key: p.key, params: p.params, version });
+        upToDate.push({
+          id: p.id,
+          key: p.key,
+          params: p.params,
+          version: p.version,
+        });
         continue;
       }
       if (asksHandoff(p.entry, m.epoch, p.version)) {
@@ -8766,6 +8833,8 @@ export function createResourceRuntime(
     for (const state of sockets.values()) {
       if (unregisterSubOnSocket(state, key, pk)) onDropped(state);
     }
+    // A lingering socket holds it too; nobody there to tell.
+    for (const state of detached.keys()) unregisterSubOnSocket(state, key, pk);
   }
 
   // `op: "sub-acks"` — flip one tab's ack request on a sub it already holds on
@@ -8811,6 +8880,55 @@ export function createResourceRuntime(
     }
   }
 
+  // A lingering socket's bound passed: release whatever its tabs did not
+  // replay elsewhere, once per (key, pk) regardless of how many tabs held it —
+  // the socket-level refcount was bumped once per pk. Legacy `""`-bucket subs
+  // release here too (their only teardown path).
+  function releaseDetached(state: SocketState): void {
+    const timer = detached.get(state);
+    if (timer === undefined) return;
+    clearTimeout(timer);
+    detached.delete(state);
+    for (const [key, inner] of state.subs) {
+      for (const [pk, rec] of inner) releaseSubRefcount(key, pk, rec.params);
+    }
+    state.subs.clear();
+  }
+
+  // A closing socket's tabs that already hold subs on a live socket: their
+  // replay landed before this close (a reconnect raced it), so what they want
+  // is held there — release their records here at once rather than at the
+  // linger's end. Releasing early can only cost a reload, never a stale answer.
+  function releaseReattachedTabs(closing: SocketState): void {
+    const live = new Set<string>();
+    for (const st of sockets.values()) {
+      for (const inner of st.subs.values()) {
+        for (const rec of inner.values()) {
+          for (const tab of rec.tabs) live.add(tab);
+        }
+      }
+    }
+    const here = new Set<string>();
+    for (const inner of closing.subs.values()) {
+      for (const rec of inner.values()) {
+        for (const tab of rec.tabs) here.add(tab);
+      }
+    }
+    for (const tab of here) if (live.has(tab)) releaseTabSubs(closing, tab);
+  }
+
+  // `tabId` replayed or left: release what it held on every lingering socket,
+  // and drop a socket nothing is left on.
+  function releaseDetachedTab(tabId: string): void {
+    for (const [state, timer] of detached) {
+      releaseTabSubs(state, tabId);
+      if (state.subs.size === 0) {
+        clearTimeout(timer);
+        detached.delete(state);
+      }
+    }
+  }
+
   function releaseSubRefcount(
     key: string,
     pk: string,
@@ -8827,6 +8945,9 @@ export function createResourceRuntime(
       // The tuple leaves the router's targets, and its memoized read-set with it.
       entry.tracked.delete(pk);
       entry.spans.delete(pk);
+      // The version dies with its span: the clock never hands it out again,
+      // so a tab still holding it can match no later span (`versionClock`).
+      entry.versions.delete(pk);
       entry.held.delete(pk);
       entry.routing?.uses.delete(pk);
       entry.routing?.loaded.delete(pk);
@@ -8963,7 +9084,7 @@ export function createResourceRuntime(
     // RQ's `retry: 1` refetches. The version is unbumped either way (serving a
     // read is not a state change; only `flushNotifies` advances it).
     const pk = paramsKey(resourceParams);
-    const version = entry.versions.get(pk) ?? 0;
+    const version = versionOf(entry, pk);
 
     let value: unknown;
     let raw: unknown;
@@ -9300,6 +9421,16 @@ export function createResourceRuntime(
             refusals: Object.fromEntries(resumeRefusals),
             shadows: [...shadows.values()].reduce((n, m) => n + m.size, 0),
           },
+          // Closed sockets whose subs still linger (`detached`), and the
+          // (key, pk) records they hold.
+          linger: {
+            sockets: detached.size,
+            records: [...detached.keys()].reduce(
+              (n, st) =>
+                n + [...st.subs.values()].reduce((k, m) => k + m.size, 0),
+              0,
+            ),
+          },
           resources: out,
         },
         null,
@@ -9409,19 +9540,12 @@ export function createResourceRuntime(
     return targets.length;
   }
 
-  // Distinct currently-subscribed params tuples for a resource key, recovered
-  // from every socket's `subs` map (the `ResourceParams` objects are stored there
-  // at sub time). Deduped by pk across sockets.
+  // Distinct currently-subscribed params tuples for a resource key: its
+  // tracked tuples — a lingering socket's included (`detached`), which is what
+  // keeps a change in a reconnect's gap reaching the tuples the replay will ask.
   function subscribedParamsFor(key: string): ResourceParams[] {
-    const byPk = new Map<string, ResourceParams>();
-    for (const st of sockets.values()) {
-      const inner = st.subs.get(key);
-      if (!inner) continue;
-      for (const [pk, rec] of inner) {
-        if (!byPk.has(pk)) byPk.set(pk, rec.params);
-      }
-    }
-    return [...byPk.values()];
+    const entry = registry.get(key);
+    return entry === undefined ? [] : [...entry.tracked.values()];
   }
 
   // --- Scoped change routing (routed entries) ---

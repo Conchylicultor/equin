@@ -176,7 +176,7 @@ export interface Harness {
   ) => Promise<void>;
   /** Send `op:unsub-tab` (best-effort tab departure) and await the next macrotask. */
   unsubTab: (tabId: string, o?: { socket?: number }) => Promise<void>;
-  /** Close a socket (runs the runtime's close handler, releasing its subs). */
+  /** Close a socket (runs the runtime's close handler: its subs linger until their tabs replay them). */
   closeSocket: (socketIdx?: number) => void;
   /** Frames for `key`, excluding the initial sub-ack. Optionally scoped to one socket. */
   pushesFor: (key: string, socketIdx?: number) => RecordedFrame[];

@@ -17,7 +17,9 @@
 
 import { test, expect, describe, mock } from "bun:test";
 import { z } from "zod";
+import { SOCKET_LINGER_MS } from "./runtime";
 import { createHarness, tick } from "./test-support";
+import { withFakeClock } from "./testing/fake-clock";
 
 describe("sub-batch — whole-set replay for one tab", () => {
   test("mixed batch: one up-to-date-batch for the current entries, individual sub-acks for the rest", async () => {
@@ -152,27 +154,32 @@ describe("sub-batch — whole-set replay for one tab", () => {
     expect(h.pushesFor("k")).toHaveLength(1); // no new frame — nobody holds k
   });
 
-  test("a per-tab unsub releases only that tab's hold; legacy untagged subs release on socket close", async () => {
-    const last = mock((_p: unknown) => {});
-    const h = createHarness();
-    h.runtime.defineExternalResource({
-      key: "k",
-      mode: "push",
-      schema: z.string(),
-      loader: async () => "v",
-      onLastUnsubscribe: last,
+  test("a per-tab unsub releases only that tab's hold; legacy untagged subs release when the closed socket's linger ends", async () => {
+    await withFakeClock(async (clock) => {
+      const last = mock((_p: unknown) => {});
+      const h = createHarness();
+      h.runtime.defineExternalResource({
+        key: "k",
+        mode: "push",
+        schema: z.string(),
+        loader: async () => "v",
+        onLastUnsubscribe: last,
+      });
+
+      // A tagged and a legacy untagged sub share the pk on this socket.
+      await h.subscribe("k", {}, { tabId: "tA" });
+      await h.subscribe("k"); // untagged → the "" bucket
+      // The tagged tab's unsub releases only its own hold; "" keeps the sub live.
+      await h.unsub("k", {}, { tabId: "tA" });
+      expect(last).toHaveBeenCalledTimes(0);
+
+      // The legacy bucket's only teardown path is the socket close — no tab
+      // replays it — so it releases the (key, pk) exactly once, when the
+      // closed socket's linger ends.
+      h.closeSocket();
+      expect(last).toHaveBeenCalledTimes(0);
+      await clock.advance(SOCKET_LINGER_MS);
+      expect(last).toHaveBeenCalledTimes(1);
     });
-
-    // A tagged and a legacy untagged sub share the pk on this socket.
-    await h.subscribe("k", {}, { tabId: "tA" });
-    await h.subscribe("k"); // untagged → the "" bucket
-    // The tagged tab's unsub releases only its own hold; "" keeps the sub live.
-    await h.unsub("k", {}, { tabId: "tA" });
-    expect(last).toHaveBeenCalledTimes(0);
-
-    // The legacy bucket's only teardown path is the socket close — which
-    // releases the (key, pk) exactly once.
-    h.closeSocket();
-    expect(last).toHaveBeenCalledTimes(1);
   });
 });

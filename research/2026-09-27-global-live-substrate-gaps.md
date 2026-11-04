@@ -273,13 +273,14 @@ Left, with the reason:
   reviewer also found that `measureSubscribeCycle` (boot-bench) fires the hooks without registering, so a concurrent
   real 0→1 can have its watcher stopped by the benchmark's teardown (`pairLifecycle`'s one record per tuple) —
   pre-existing, follow-up.
-- **Reconnect and leader-handover cost (#4).** Accepted as designed; a leader handover (closing the leader tab) also
+- **Reconnect and leader-handover cost (#4).** *Done 2026-11-04: a closed socket's subs linger until the tab replays
+  (research/2026-11-04-global-live-reconnect-linger-and-version-clock.md).* Accepted as designed; a leader handover (closing the leader tab) also
   makes every remaining tab replay onto a new socket and reload. The two cheaper sound options — a server-side linger
   on socket close, or bumping a DB entry's span version only when an entry-level change counter moved since its last
   N→0 — are follow-ups, to be sized by `subShortCircuits` vs sub-ack loads around reconnects. (The design's "not
   chosen" note undersold one of them: param-less DB tuples are continuously tracked by `applyDbChange`'s `{}`
   fallback, except when fed by a `toSubscribed` edge.)
-- **`entry.versions` growth (#5).** One entry per distinct tuple ever subscribed, reset per boot — `:rows` tuples are
+- **`entry.versions` growth (#5).** *Done 2026-11-04: one runtime-wide clock, the version deleted at N→0 (same doc).* One entry per distinct tuple ever subscribed, reset per boot — `:rows` tuples are
   keyed by whole id sets, and main runs for days. Follow-up: mint every version from one runtime-wide clock, delete
   `versions[pk]` at N→0, and have an untracked read report the clock (never `0`, or a WebSocket-down HTTP fallback
   body would be dropped as older than the tab's held version).
