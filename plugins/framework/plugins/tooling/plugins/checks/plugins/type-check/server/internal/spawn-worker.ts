@@ -28,7 +28,6 @@ import {
   type TypeCheckWorkerJob,
   type TypeCheckWorkerResult,
 } from "../../core";
-import { readCheckTree } from "../../shared/repo-view";
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { reportMisses, type MissReportSink } from "./miss-reports";
@@ -36,6 +35,22 @@ import { typeCheckWorkerPool } from "./worker-pool";
 
 // A wedge-breaker for one metadata read, not a latency budget.
 const GIT_TIMEOUT_MS = 30_000;
+
+/**
+ * The run's input tree, read when no caller handed one. `repo-view` parses the
+ * tsconfig with the TypeScript compiler, so it is loaded HERE, on the first run
+ * that needs it, and not at module scope: this module is in every backend's
+ * boot closure (the backstop plugin spawns workers), and a static edge put the
+ * whole of `typescript` (8.9 MB, ~250 ms warm) on every boot for a function no
+ * boot calls. `boot:closure-no-dev-tooling` keeps it out.
+ */
+async function readTree(
+  root: AppPath,
+  tsconfigPath: string,
+): Promise<TypeCheckTree> {
+  const { readCheckTree } = await import("../../shared/repo-view");
+  return (await readCheckTree(root, tsconfigPath)).tree;
+}
 
 /** The real outbox, and the checkout's HEAD. */
 function outboxSink(root: string): MissReportSink {
@@ -143,7 +158,7 @@ export async function spawnTypeCheckWorker(opts: {
   const typedParts = opts.typedParts ?? { split: [], whole: [] };
   const lintBase = opts.lintBase ?? null;
   const walkBase = opts.walkBase ?? { kind: "hint" };
-  const tree = opts.tree ?? (await readCheckTree(root, tsconfigPath)).tree;
+  const tree = opts.tree ?? (await readTree(root, tsconfigPath));
   const batch = opts.batch ?? { k: TYPE_CHECK_BATCH_FILES };
   const queuedAt = performance.now();
   const run = await typeCheckWorkerPool.run(

@@ -33,6 +33,7 @@ Findings and benchmarks live on the investigation's track page, not here.
 | `load1`, `daemon_cpu` | load and %CPU of fseventsd, syspolicyd, XprotectService, mds, mds_stores, corecaptured |
 | `corecaptured` | `{pid, age_s}` of corecaptured, or null. No root needed. A pid that changes every ~5 min (age never past ~300 s) is its relaunch loop, the client behind the fseventsd history replay (below) |
 | `disk_readers_mb_s` | root only: the top 8 processes by disk bytes read since the last tick (`proc_pid_rusage`, root daemons included), MB/s by process name |
+| `disk_read_attributed_mb_s`, `disk_read_born_mb_s` | root only: the same reads summed over EVERY live process, and the part of it from processes born since the last tick (counted from 0, so short-lived git and hook runs are not dropped). `disk_read_mb_s` minus `disk_read_attributed_mb_s` is what no live process explains: processes that started and exited between two ticks, and the kernel |
 | `fseventsd_logs` | root only: the `.fseventsd` log files fseventsd holds open (hex event ids). The newest is the one being written; one far behind it, advancing tick after tick, is a history replay for a client that subscribed from an old event id |
 | `incident` | root only: path of a 5 s `fs_usage -w -f filesys` capture taken on a stall (cooldown `INCIDENT_COOLDOWN_S`, 600 s) — who is doing the lookups |
 

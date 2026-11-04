@@ -20,7 +20,6 @@ import {
   databaseExists,
   dropDatabase,
 } from "@plugins/database/plugins/admin/server";
-import { listNamedCompositionRegistries } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
   ensureMainWorktreeRoot,
@@ -180,8 +179,9 @@ async function removeFilteredRegistries(
   // unknown owner could cause here — so the unknown arm does nothing. Stated as a
   // decision, not an oversight: `checkout.reason` carries why.
   if (!checkout.known) return;
-  for (const registry of listNamedCompositionRegistries(checkout.root)) {
-    if (registry.name !== composition) continue;
-    await rm(registry.file, { force: true });
+  // Loaded here, not at module scope: see ./named-registries.
+  const { namedRegistryFiles } = await import("./named-registries");
+  for (const file of namedRegistryFiles(checkout.root, composition)) {
+    await rm(file, { force: true });
   }
 }

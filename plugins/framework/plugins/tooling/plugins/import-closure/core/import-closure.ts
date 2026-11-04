@@ -594,6 +594,12 @@ export interface UnionImportClosure {
    * {@link modules}.
    */
   children: (module: string) => string[];
+  /**
+   * Every npm specifier ANY of the entrypoints statically reaches, mapped to
+   * its repo-relative importers — the union of each one's
+   * {@link ImportClosure.external}, from the same build.
+   */
+  external: Map<string, string[]>;
 }
 
 /**
@@ -627,7 +633,7 @@ export async function importClosures(
   }
   const root = asAppPath(realpathSync(givenRoot));
   const record = newClosureRecord();
-  const { loaded, edges } = record;
+  const { loaded, edges, external } = record;
   const result = await Bun.build({
     entrypoints: entries.map((e) => join(root, e)),
     target: "bun",
@@ -689,5 +695,5 @@ export async function importClosures(
     relChildren.set(module, out);
     return out;
   };
-  return { modules: loaded, importChain, children };
+  return { modules: loaded, importChain, children, external };
 }

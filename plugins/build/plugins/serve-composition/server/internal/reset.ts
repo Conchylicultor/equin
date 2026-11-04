@@ -33,11 +33,6 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { rm } from "node:fs/promises";
 import {
-  propagateConfigToUser,
-  readEffectiveConfigFromDisk,
-} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import {
   ensureMainWorktreeRoot,
   hasCompositionMarker,
   namespaceCollision,
@@ -51,7 +46,6 @@ import {
 import {
   activatedCompositionIds,
   assertServableCompositionNamespace,
-  compositionsConfig,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { checkoutRef } from "@plugins/infra/plugins/paths/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
@@ -60,12 +54,6 @@ import {
   namespaceFor,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
-
-// The `compositions` config's owning-plugin path — its jsonc files live under
-// `config/<this>/` and the per-worktree user config dir (mirrors compose-serve).
-const COMPOSITIONS_HIERARCHY_PATH = asPath(
-  asPluginId("plugin-meta.composition"),
-);
 
 /** A refused reset — a guard rejected the target before any data was touched. */
 export class CompositionResetError extends Error {
@@ -107,17 +95,20 @@ export async function resetCompositionData(
 
   const root = REPO_ROOT;
 
+  // Loaded here, not at module scope: see ./config-propagation.
+  const { readCompositionManifests, repropagateConfig } =
+    await import("./config-propagation");
+
   // THIS CHECKOUT's resolved manifest, read once and judged by both remaining
   // guards. It used to be read main-authoritatively, because the serve stage ran
   // inside main's build and main's config was the only one that mattered; a
   // serve build now reads the manifest of the checkout it runs in, so a guard
   // reading main's would judge the wrong document. Two reads with different
   // options would let the guards disagree about what the manifest says.
-  const values = readEffectiveConfigFromDisk(compositionsConfig, {
+  const values = readCompositionManifests(
     root,
-    userConfigDir: configDir.file(manifestNamespace),
-    hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
-  });
+    configDir.file(manifestNamespace),
+  );
 
   // Guard 3 — no collision with a real git worktree dir, git branch, or a
   // marker-less spec dir of that name. The composition side of the symmetric
@@ -164,7 +155,7 @@ export async function resetCompositionData(
 
   // Wipe the config dir and re-propagate the git-layer first-launch defaults.
   await rm(configDir.file(ns), { recursive: true, force: true });
-  await propagateConfigToUser({ root, userConfigDir: configDir.file(ns) });
+  await repropagateConfig(root, configDir.file(ns));
 
   await restartNamespace(ns);
 }

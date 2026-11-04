@@ -237,26 +237,43 @@ class RusageV2(ctypes.Structure):
 
 
 def disk_readers(now, state):
-    """Root only: top disk readers since the last tick, by process name (MB/s)."""
-    out = run_out(["/bin/ps", "-Ao", "pid=,comm="])
+    """Root only: disk bytes read since the last tick, by process name (MB/s).
+
+    Returns (top, attributed, born): the top readers by name; the total over
+    EVERY live process; and the part of it read by processes born since the
+    last tick. A process born mid-tick is counted from 0 (its whole read is
+    this tick's), else the short-lived ones a busy fleet spawns (git, hook
+    runs) are dropped at their first sight. What none of them explains —
+    `disk_read_mb_s` minus `attributed` — is processes that started and exited
+    between two ticks, and the kernel's own reads.
+    """
+    out = run_out(["/bin/ps", "-Ao", "pid=,etime=,comm="])
     prev, prev_t = state.get("readers_prev", {}), state.get("readers_t")
-    cur, by_name = {}, {}
+    cur, by_name, born = {}, {}, 0
     for line in out.splitlines():
-        parts = line.strip().split(None, 1)
-        if len(parts) != 2:
+        parts = line.strip().split(None, 2)
+        if len(parts) != 3:
             continue
         pid, ru = int(parts[0]), RusageV2()
         if libproc.proc_pid_rusage(pid, RUSAGE_INFO_V2, ctypes.byref(ru)) != 0:
             continue
         cur[str(pid)] = ru.diskio_read
         if str(pid) in prev and ru.diskio_read >= prev[str(pid)]:
-            name = os.path.basename(parts[1])
-            by_name[name] = by_name.get(name, 0) + ru.diskio_read - prev[str(pid)]
+            delta = ru.diskio_read - prev[str(pid)]
+        elif prev_t and etime_s(parts[1]) < now - prev_t:
+            delta = ru.diskio_read
+            born += delta
+        else:
+            continue
+        name = os.path.basename(parts[2])
+        by_name[name] = by_name.get(name, 0) + delta
     state["readers_prev"], state["readers_t"] = cur, now
     if not prev_t or now <= prev_t:
-        return None
+        return None, None, None
+    dt = now - prev_t
     top = sorted(by_name.items(), key=lambda kv: -kv[1])[:TOP_READERS]
-    return {n: round(b / (now - prev_t) / 1e6, 1) for n, b in top}
+    return ({n: round(b / dt / 1e6, 1) for n, b in top},
+            round(sum(by_name.values()) / dt / 1e6, 1), round(born / dt / 1e6, 1))
 
 
 def fseventsd_logs():
@@ -363,7 +380,10 @@ def main():
         "corecaptured": corecaptured_proc(),
     }
     if os.geteuid() == 0:
-        rec["disk_readers_mb_s"] = disk_readers(now, state)
+        top, attributed, born = disk_readers(now, state)
+        rec["disk_readers_mb_s"] = top
+        rec["disk_read_attributed_mb_s"] = attributed
+        rec["disk_read_born_mb_s"] = born
         rec["fseventsd_logs"] = fseventsd_logs()
     if rec["stall"]:
         path = maybe_incident(now, state)

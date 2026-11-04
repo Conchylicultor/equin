@@ -72,6 +72,10 @@ def main():
               f"fseventsd %CPU {pct([r.get('daemon_cpu', {}).get('fseventsd') for r in all_ticks], .5)}")
         print(f"window: {len(all_ticks)} ticks, stalls (> threshold) {sum(1 for r in all_ticks if r['stall'])}, "
               f"slowest op {worst['max_op_ms']:.0f} ms at {worst['iso']}, cache lifetime {lifetime(all_ticks)}")
+        if any(r.get("disk_read_attributed_mb_s") is not None for r in all_ticks):
+            print(f"window p50: rd MB/s by live processes {p50('disk_read_attributed_mb_s')} "
+                  f"(of which born mid-tick {p50('disk_read_born_mb_s')}); the rest of rd MB/s is processes "
+                  f"gone before a tick saw them, and the kernel")
     print("(latencies in ms; lstat = p50 of 40 cold lstats; rd500 = one cold 500-entry readdir)")
 
 
