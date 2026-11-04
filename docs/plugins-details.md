@@ -15278,6 +15278,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "conversation-progress:rows"
           - `trigger` "conversation-progress.classify"
           - `trigger` "conversation-progress.mark-pushed"
+          - `conversations.close.teardown` "conversation-progress.unfollow"
         - Uses:
           - `database.db`
           - `infra/entity-extensions.defineExtension`
