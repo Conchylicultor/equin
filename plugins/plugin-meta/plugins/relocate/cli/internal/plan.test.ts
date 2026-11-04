@@ -293,13 +293,14 @@ describe("package names", () => {
 });
 
 describe("free-text mentions", () => {
-  test("path mentions are rewritten once, dot mentions only reported", () => {
+  test("path and fs-path mentions are rewritten once, dot mentions only reported", () => {
     const src = [
       `import "@plugins/db/plugins/feed/core";`,
       `const CORE = "@plugins/db/plugins/feed/core";`,
       `// see plugins/db/plugins/feed/plugins/sub/CLAUDE.md`,
       `const id = asPluginId("db.feed");`,
       `const job = "db.feed.sweep";`,
+      `serverEntryFor("db/plugins/feed/plugins/sub");`,
     ].join("\n");
     const p = plan(move("db.feed", "net.feed"), {
       [P("x/web/a.test.ts")]: src,
@@ -313,10 +314,12 @@ describe("free-text mentions", () => {
         `// see plugins/net/plugins/feed/plugins/sub/CLAUDE.md`,
         `const id = asPluginId("db.feed");`,
         `const job = "db.feed.sweep";`,
+        `serverEntryFor("net/plugins/feed/plugins/sub");`,
       ].join("\n"),
     );
     expect(p.counts.get("path:specifier")).toBe(1);
     expect(p.counts.get("mention:path")).toBe(2);
+    expect(p.counts.get("mention:fs-path")).toBe(1);
     expect(p.dotMentions.map((m) => `${m.line} ${m.value}`)).toEqual([
       "4 db.feed",
       "5 db.feed",

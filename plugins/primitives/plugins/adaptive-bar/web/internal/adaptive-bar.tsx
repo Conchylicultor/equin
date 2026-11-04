@@ -1007,7 +1007,7 @@ function AdaptiveBarShell({
     // it is the ABSENCE of one, and this app keeps whole surfaces mounted-but-
     // not-rendered as a matter of course — an unfocused tab
     // (`apps-core/plugins/surface/web/components/surface-body.tsx`), a minimized
-    // floating window (`apps-core/plugins/surface/plugins/floating/…`), a
+    // desktop window (`apps/plugins/desktop/plugins/windows/…`), a
     // collapsed miller column (`layouts/plugins/miller/web/components/column.tsx`).
     // That is a first-class state, not a broken host. Treating its 0 as a width
     // is an absorbable failure value (root `CLAUDE.md`), and the act it triggers

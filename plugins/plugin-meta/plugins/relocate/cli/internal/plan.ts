@@ -114,7 +114,7 @@ export function mapPluginId(move: Move, id: PluginId): PluginId | null {
 }
 
 /** A `[start, end)` replacement in one file's text: a located ref, or a
- *  free-text mention of the moved plugin's path. */
+ *  free-text mention of the moved plugin's path or fs path. */
 export interface PlannedEdit {
   ref: PluginRef | PluginMention;
   replacement: string;
@@ -125,10 +125,14 @@ export type EditKind =
   | `path:${PathRefSyntax}`
   | `dot:${DotRefSite}`
   | `relative:${RelativeRefSyntax}`
-  | "mention:path";
+  | "mention:path"
+  | "mention:fs-path";
 
 export function editKind(ref: PluginRef | PluginMention): EditKind {
-  if (!("kind" in ref)) return "mention:path";
+  if (!("kind" in ref)) {
+    if (ref.form === "dot") throw new Error(`a dot mention is never an edit`);
+    return `mention:${ref.form}`;
+  }
   switch (ref.kind) {
     case "path":
       return `path:${ref.syntax}`;
@@ -329,8 +333,9 @@ export interface MovePlanInput {
   /** Whether `config/<old slash path>` holds any file. */
   hasConfigDir: boolean;
   refs: readonly PluginRef[];
-  /** `findPluginMentions` of the moved plugin's id: path mentions no ref
-   *  covers are rewritten, dot mentions are reported (`dotMentions`). */
+  /** `findPluginMentions` of the moved plugin's id: path and fs-path
+   *  mentions no ref covers are rewritten, dot mentions are reported
+   *  (`dotMentions`). */
   mentions: readonly PluginMention[];
   /** Text of every file a ref sits in and every moved `package.json`. */
   read: (file: string) => string | null;
@@ -384,7 +389,8 @@ export function planMove(input: MovePlanInput): MovePlan {
   }
 
   // A mention a located ref already edits is that ref's (a specifier's range
-  // is exactly the moved dir); the rest of the path mentions are rewritten.
+  // is exactly the moved dir); the rest of the path and fs-path mentions are
+  // rewritten.
   const covered = (m: PluginMention) =>
     (byFile.get(m.file) ?? []).some(
       (e) => m.range.start < e.ref.range.end && e.ref.range.start < m.range.end,
@@ -396,16 +402,19 @@ export function planMove(input: MovePlanInput): MovePlan {
       dotMentions.push(m);
       continue;
     }
-    const replacement = swapPrefix(m.value, move.from.dir, move.to.dir);
+    const [from, to] =
+      m.form === "path"
+        ? [move.from.dir, move.to.dir]
+        : [asFsPath(move.from.id), asFsPath(move.to.id)];
+    const replacement = swapPrefix(m.value, from, to);
     if (replacement === null) {
-      throw new Error(
-        `${m.file}:${m.line}: mention ${m.value} is not ${move.from.dir}`,
-      );
+      throw new Error(`${m.file}:${m.line}: mention ${m.value} is not ${from}`);
     }
     const list = byFile.get(m.file) ?? [];
     list.push({ ref: m, replacement });
     byFile.set(m.file, list);
-    counts.set("mention:path", (counts.get("mention:path") ?? 0) + 1);
+    const kind = editKind(m);
+    counts.set(kind, (counts.get(kind) ?? 0) + 1);
   }
 
   const rewrites: FileRewrite[] = [];

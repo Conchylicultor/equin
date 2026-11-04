@@ -15,6 +15,11 @@ import type { RefRange } from "./types";
  *  - `path` — `plugins/a/plugins/b` (also inside `@plugins/…`, and followed by
  *    anything: `/web/x.ts`, `/CLAUDE.md`, a child's `/plugins/c`). `value` is
  *    the target's plugin dir; what follows it is outside the range.
+ *  - `fs-path` — the same path without its leading `plugins/`
+ *    (`a/plugins/b`, the form a registry lookup like `serverEntryFor(…)` takes,
+ *    and a descendant's `a/plugins/b/plugins/c`). A top-level target's own fs
+ *    path is a bare word, so it counts only when a descendant follows it
+ *    (`a/plugins/b` for target `a`). `value` is the target's fs path.
  *  - `dot` — the dot id `a.b` (or a descendant's `a.b.c`), for targets whose id
  *    has a dot; a top-level id is a bare word and has no free-text spelling.
  *    `value` is the target's id.
@@ -26,7 +31,7 @@ import type { RefRange } from "./types";
  */
 export interface PluginMention {
   file: string;
-  form: "path" | "dot";
+  form: "path" | "fs-path" | "dot";
   /** The target that is mentioned (one of the ids asked for). */
   id: PluginId;
   range: RefRange;
@@ -90,11 +95,28 @@ export function mentionScanner(
   const byPath = new Map(
     ids.map((id) => [`${PLUGINS_DIR}/${asFsPath(id)}`, id]),
   );
+  // A nested id's fs path holds `/plugins/`, so it reads as a plugin path on
+  // its own; a top-level one is a word until `/plugins/<child>` follows it.
+  // `BEFORE_PATH` leaves the `plugins/<fs path>` spelling to the path form.
+  const byFsPath = new Map(ids.map((id) => [asFsPath(id), id]));
   const dotted = ids.filter((id) => id.includes("."));
+  const topLevel = ids.filter((id) => !id.includes("."));
   const alternation = (names: Iterable<string>) =>
     [...names].sort(byLengthDesc).map(escape).join("|");
   const pathRe = new RegExp(
     `${BEFORE_PATH}(?:${alternation(byPath.keys())})${AFTER}`,
+    "g",
+  );
+  const fsPathAlternatives = [
+    ...(dotted.length > 0
+      ? [`(?:${alternation(dotted.map(asFsPath))})${AFTER}`]
+      : []),
+    ...(topLevel.length > 0
+      ? [`(?:${alternation(topLevel)})(?=/${PLUGINS_DIR}/[${SEG}])`]
+      : []),
+  ];
+  const fsPathRe = new RegExp(
+    `${BEFORE_PATH}(?:${fsPathAlternatives.join("|")})`,
     "g",
   );
   const dotRe =
@@ -121,7 +143,12 @@ export function mentionScanner(
         out.push({
           file,
           form,
-          id: form === "path" ? byPath.get(m[0])! : asPluginId(m[0]),
+          id:
+            form === "path"
+              ? byPath.get(m[0])!
+              : form === "fs-path"
+                ? byFsPath.get(m[0])!
+                : asPluginId(m[0]),
           range: { start: m.index, end: m.index + m[0].length },
           line: lineOf(m.index),
           value: m[0],
@@ -129,6 +156,7 @@ export function mentionScanner(
       }
     };
     collect(pathRe, "path");
+    collect(fsPathRe, "fs-path");
     if (dotRe !== null) collect(dotRe, "dot");
     return out.sort((a, b) => a.range.start - b.range.start);
   };

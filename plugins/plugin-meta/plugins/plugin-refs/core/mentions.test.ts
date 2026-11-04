@@ -28,6 +28,9 @@ describe("findPluginMentions", () => {
       `const nested = "plugins/y/plugins/db/plugins/feed";`,
       `const rel = "../plugins/db/plugins/feed";`,
       `const word = "xdb.feed";`,
+      `serverEntryFor("db/plugins/feed"); serverEntryFor("db/plugins/feed/plugins/sub");`,
+      `const near = ["db/plugins/feed-two", "x/db/plugins/feed", "../db/plugins/feed"];`,
+      `const child = "solo/plugins/kid"; const bare = "solo/web"; const word2 = "solo";`,
     ].join("\n"),
     // A relative link is a relative ref, not a mention; its code span is one.
     [P("y/CLAUDE.md")]:
@@ -41,7 +44,7 @@ describe("findPluginMentions", () => {
   }
   const repo = repoFilesOver(root, Object.keys(files).sort());
 
-  test("finds path and dot spellings of the asked ids, bounded on both sides", async () => {
+  test("finds path, fs-path and dot spellings of the asked ids, bounded on both sides", async () => {
     const found = await findPluginMentions(repo, [
       asPluginId("db.feed"),
       asPluginId("solo"),
@@ -52,6 +55,9 @@ describe("findPluginMentions", () => {
       "plugins/x/core/vocab.ts:1 path plugins/db/plugins/feed",
       "plugins/x/core/vocab.ts:2 path plugins/db/plugins/feed",
       "plugins/x/core/vocab.ts:3 dot db.feed",
+      "plugins/x/core/vocab.ts:8 fs-path db/plugins/feed",
+      "plugins/x/core/vocab.ts:8 fs-path db/plugins/feed",
+      "plugins/x/core/vocab.ts:10 fs-path solo",
       "plugins/y/CLAUDE.md:1 path plugins/db/plugins/feed",
       "plugins/y/CLAUDE.md:1 dot db.feed",
       "plugins/y/top.ts:1 path plugins/solo",

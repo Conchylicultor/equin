@@ -38,7 +38,7 @@ function currentId(id: PluginId, later: readonly PluginMove[]): PluginId {
 const movedPluginsUnnamed: Check = {
   id: RULE,
   description:
-    "no file names a plugin path or dot id the plugin-move ledger moved away, and none sits under its old directory",
+    "no file names a plugin path (with or without its leading plugins/) or dot id the plugin-move ledger moved away, and none sits under its old directory",
   exemptable: {
     [RULE]:
       "still names a moved-away plugin on purpose (a record of the move, a stored identity kept under its old name)",
@@ -73,7 +73,12 @@ const movedPluginsUnnamed: Check = {
     for (const m of await findPluginMentions(repo, [...gone.keys()])) {
       if (exempt.skips(m.file)) continue;
       const now = gone.get(m.id)!;
-      const spelled = m.form === "path" ? dirOf(now) : now;
+      const spelled =
+        m.form === "path"
+          ? dirOf(now)
+          : m.form === "fs-path"
+            ? asFsPath(now)
+            : now;
       problems.push(`  ${m.file}:${m.line} — ${m.value} (now ${spelled})`);
     }
     if (problems.length === 0) return { ok: true };

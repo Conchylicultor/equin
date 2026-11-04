@@ -48,10 +48,15 @@ private scan in a check.
 plugins is written in any text file — a comment, a lint message, a test
 fixture, a specifier held as data (`LIVE_STATE_CORE =
 "@plugins/…/live-state/core"`, which the resource scanners match imports
-against and nothing else validated), prose. Two spellings: the path
+against and nothing else validated), prose. Three spellings: the path
 `plugins/a/plugins/b` (inside `@plugins/…` too; nothing path-like may sit
-before it, nothing extending its last segment after it) and, for an id with a
-dot, the dot id `a.b`. A mention inside a markdown/CSS relative link's target is
+before it, nothing extending its last segment after it); the **fs path**
+`a/plugins/b`, the same path without its leading `plugins/` — what registry
+lookups (`serverEntryFor("a/plugins/b")`) and `pluginPath` fields take, same
+boundaries (a top-level id's fs path is a bare word, so `a` counts only as
+`a/plugins/<child>`); and, for an id with a dot, the dot id `a.b`. The slash id
+`a/b` (prose's short form) is not one: it is ordinary text too often (measured
+2026-11-04 over the ledger: 0 stale, 2 false positives in migration data). A mention inside a markdown/CSS relative link's target is
 not one (that is a `relative` ref). Nothing is excluded by policy — each
 consumer drops what it does not own (research, derived files).
 
@@ -59,8 +64,8 @@ Free text is safe here only because the caller names the plugins: a fixture's
 fake `plugins/a/web` is never looked for, and a mention is never *resolved*.
 Consumers:
 
-- the mover asks for the plugin it moves, rewrites the **path** mentions no ref
-  covers, and only reports the **dot** ones (a dot id can be a stored identity);
+- the mover asks for the plugin it moves, rewrites the **path** and **fs
+  path** mentions no ref covers, and only reports the **dot** ones (a dot id can be a stored identity);
 - `relocate:moved-plugins-unnamed` asks for every plugin the move ledger moved
   away, and fails on any mention left.
 

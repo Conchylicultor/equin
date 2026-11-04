@@ -23,7 +23,8 @@ and every descendant in one step. Design:
      source's new location (`./` kept where it was written, and always for CSS
      — a bare `@import` is a package);
    - a **path mention** no ref covers (a comment, a message, a fixture, a
-     specifier held as data) → swap the dir prefix;
+     specifier held as data) → swap the dir prefix; an **fs-path mention**
+     (`a/plugins/b`, a registry lookup's spelling) → swap the fs-path prefix;
    - a **dot mention** no ref covers → left as written and listed under REVIEW.
      A dot id can be a stored identity (a job name, a config key, a row's
      plugin id); renaming it in code would orphan what is stored under it, so
@@ -56,7 +57,7 @@ mover rewrote, so anything it missed fails there.
 entry whose old directory is not a plugin again (no tracked `package.json`
 there — a reused name belongs to its new owner), fails on:
 
-- any **mention** of the old path or dot id (`findPluginMentions`) outside
+- any **mention** of the old path, fs path or dot id (`findPluginMentions`) outside
   `research/` and derived files — what the mover only reported, and what
   arrived after it;
 - any **file under the old directory** — work that landed on the old path
