@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import type { Components } from "react-markdown";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import { langFromClassName, nodeToText } from "./helpers";
@@ -157,11 +158,12 @@ export function buildBaseComponents(
     },
     pre: ({ children }) => <>{children}</>,
     table: (p) => (
+      // A table wider than the text column scrolls sideways in its own box, so
+      // its host (a transcript, a page) never has to: only the table moves.
       // clear-both: a table cannot wrap around a float — it starts below it.
-      <table
-        className="my-flow-block w-full clear-both border-collapse"
-        {...p}
-      />
+      <Scroll axis="x" className="my-flow-block clear-both">
+        <table className="w-full border-collapse" {...p} />
+      </Scroll>
     ),
     th: ({ children, ...p }) => (
       <th

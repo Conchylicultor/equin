@@ -47,6 +47,7 @@ Design rationale lives in:
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/clip.Clip`
     - `primitives/css/grow.growClass`
+    - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.ControlSizeProvider`

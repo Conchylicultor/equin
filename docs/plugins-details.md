@@ -42168,10 +42168,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 95 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 96 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×26
               - `apps` ×21
-              - `primitives` ×14
+              - `primitives` ×15
               - `debug` ×13
               - `page` ×5
               - `build` ×2
@@ -45667,6 +45667,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/clip.Clip`
           - `primitives/css/grow.growClass`
+          - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.ControlSizeProvider`

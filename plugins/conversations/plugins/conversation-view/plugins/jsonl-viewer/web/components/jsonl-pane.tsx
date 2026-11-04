@@ -306,7 +306,7 @@ export function JsonlPane({
           fallback={
             // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column (mirrors TranscriptView)
             <div className="relative min-h-0 flex-1 isolate">
-              <Scroll axis="both" data-pane-scroll className="h-full">
+              <Scroll data-pane-scroll className="h-full">
                 <Loading className="px-md py-sm" />
               </Scroll>
             </div>
@@ -314,7 +314,7 @@ export function JsonlPane({
           errorFallback={(err) => (
             // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column (mirrors TranscriptView)
             <div className="relative min-h-0 flex-1 isolate">
-              <Scroll axis="both" data-pane-scroll className="h-full">
+              <Scroll data-pane-scroll className="h-full">
                 <Text
                   as="div"
                   variant="caption"

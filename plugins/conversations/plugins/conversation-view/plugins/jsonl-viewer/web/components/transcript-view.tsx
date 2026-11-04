@@ -398,8 +398,10 @@ function TranscriptViewInner({
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column; hosts the scroller plus the Pin'd overlays as siblings so they don't scroll
     <div className="relative min-h-0 flex-1 isolate">
+      {/* Vertical only: the reading column stays centred over the prompt.
+          Anything wider (a markdown table, a code block) scrolls sideways in
+          its own box; a long unbroken word wraps rather than overflowing. */}
       <Scroll
-        axis="both"
         ref={attachScroll}
         data-pane-scroll
         className={`h-full transition-opacity ${dimmed ? "opacity-50" : ""}`}
@@ -428,7 +430,7 @@ function TranscriptViewInner({
         >
           <Stack
             gap="sm"
-            className="mx-auto min-h-full max-w-reading p-sm pb-2xl"
+            className="mx-auto min-h-full max-w-reading break-words p-sm pb-2xl"
           >
             {older?.growing && <Loading className="px-md py-sm" />}
             {visibleEvents.length === 0 ? (
