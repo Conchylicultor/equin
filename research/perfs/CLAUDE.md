@@ -7,9 +7,8 @@ rather than inheriting it.
 
 > **MANDATORY:** before any perf investigation, profiling pass, or perf fix, agents
 > **MUST** follow the [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md)
-> skill. It encodes the method below as enforced phases + stopping gates (rate×cost,
-> trace-to-origin-not-hotspot, sufficiency/legitimacy/counterfactual gates,
-> containment-vs-cure altitudes). The summary below is the index; the skill is the procedure.
+> skill (perf as nested layers: split the cost, recurse into the biggest part, fix the
+> cause — never hide it). The summary below is the index; the skill is the philosophy.
 
 > **KEEP THESE DOCS CURRENT — non-negotiable.** This index **and** the per-issue docs are *living*
 > documents. Every time you make a new discovery — name a hotspot, kill a hypothesis (with the gate
