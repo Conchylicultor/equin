@@ -187,6 +187,38 @@ describe("planConversationUpdate — live session", () => {
     });
   });
 
+  describe("the agent coming up delivers what was held for it", () => {
+    test("out of starting", () => {
+      expect(
+        planConversationUpdate(row({ status: "starting" }), live(), ctx()),
+      ).toMatchObject({ kind: "patch", agentCameUp: true });
+    });
+
+    test("out of gone — a spawn that outlived the starting sweep", () => {
+      expect(
+        planConversationUpdate(
+          row({ status: "gone" }),
+          live({ workingOn: "turn" }),
+          ctx(),
+        ),
+      ).toMatchObject({
+        kind: "patch",
+        patch: { status: "working" },
+        agentCameUp: true,
+      });
+    });
+
+    test("not for an agent that was already up", () => {
+      const plan = planConversationUpdate(
+        row({ status: "waiting" }),
+        live({ workingOn: "turn" }),
+        ctx(),
+      );
+      expect(plan).toMatchObject({ kind: "patch" });
+      expect(plan).not.toHaveProperty("agentCameUp");
+    });
+  });
+
   describe("session id gate", () => {
     test("a new id is a candidate only when it differs from the stored one", () => {
       expect(sessionCandidate(row(), live())).toBe(null);
@@ -409,6 +441,7 @@ describe("planConversationUpdate — no live session", () => {
       kind: "patch",
       patch: { resumingSince: null },
       adoptedSessionId: null,
+      agentCameUp: true,
     });
   });
 

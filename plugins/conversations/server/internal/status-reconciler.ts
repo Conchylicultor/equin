@@ -367,19 +367,16 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
     });
   }
 
-  // Leaving `starting` for a live status: deliver any turn the user sent while
-  // it was starting (turns.ts). A row swept to gone/done keeps its held
-  // turns for the Resume that respawns it. Enqueued AFTER the status write on purpose — the write is
-  // an UPDATE of the row every accept locks, so a turn the accept held before
-  // it is already committed when the flush looks, and a turn accepted after it
-  // saw the new status and was sent directly.
-  // A hibernation resume's process answering (`resumingSince` cleared) is
-  // the same flip, its status never having left `waiting`.
-  if (
-    (row.status === "starting" &&
-      (plan.patch.status === "working" || plan.patch.status === "waiting")) ||
-    (row.resumingSince !== null && plan.patch.resumingSince === null)
-  ) {
+  // The agent came up (`agentCameUp`): deliver any turn sent while there was
+  // none to take it (turns.ts) — out of `starting`, out of a hibernation
+  // resume, or out of `gone` (a spawn job that outlived the starting sweep
+  // launched it anyway: conv-1793754150-6mltwn, 2026-11-04, whose held message
+  // stayed held under a working agent). A row swept to gone/done keeps its
+  // held turns until then. Enqueued AFTER the status write on purpose — the
+  // write is an UPDATE of the row every accept locks, so a turn the accept
+  // held before it is already committed when the flush looks, and a turn
+  // accepted after it saw the new status and was sent directly.
+  if (plan.agentCameUp) {
     await deliverHeldTurnsJob.enqueue({ conversationId: id });
   }
 

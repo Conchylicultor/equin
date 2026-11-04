@@ -137,6 +137,15 @@ export type UpdatePlan =
        * agent has rested holding the unstarted turn — the shell reports it.
        */
       stuckSince?: Date;
+      /**
+       * Set when this write is the agent coming up: a row with no running
+       * agent (`starting`, `gone`, `done`) taking a live status, or a
+       * hibernation resume's process answering. The shell then delivers every
+       * turn held while there was no agent to take it — whichever path brought
+       * the agent up (a launch, a resume, a spawn job that outlived the
+       * starting sweep and revived a `gone` row).
+       */
+      agentCameUp?: true;
     };
 
 /**
@@ -356,7 +365,13 @@ function planLive(
     ...(live.status === "stuck" && row.waitingFor !== STUCK_TURN_WAITING_FOR
       ? { stuckSince: live.since }
       : {}),
+    ...(resumed || !hadRunningAgent(row.status) ? { agentCameUp: true } : {}),
   };
+}
+
+/** The row already showed a running agent: `working` or `waiting`. */
+function hadRunningAgent(status: PlanRow["status"]): boolean {
+  return status === "working" || status === "waiting";
 }
 
 function planAbsent(row: PlanRow, ctx: PlanContext): UpdatePlan {
