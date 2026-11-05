@@ -61,7 +61,7 @@ import {
   compareWithLabel,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 import { REAL_APP_LABEL } from "@plugins/apps/plugins/prototypes/plugins/compare/core";
-import { pickFromLauncher as pickTile } from "@plugins/apps-core/plugins/app-launcher/e2e";
+import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 
 const OUT = arg("out") ?? "/tmp/demo-prototypes";
 
@@ -93,14 +93,6 @@ const RENDER_TIMEOUT_MS = 20_000;
 
 function embedRoot(page: Page): Locator {
   return page.locator("[data-app-embed]").first();
-}
-
-/** Pick the tile named `name` from the embed's launcher, then leave it. */
-async function pickFromLauncher(page: Page, name: RegExp): Promise<boolean> {
-  if (!(await pickTile(embedRoot(page), name))) return false;
-  await page.keyboard.press("Escape");
-  await page.mouse.move(0, 0);
-  return true;
 }
 
 /** Frame A's live document (the iframe on screen), once it has loaded. */
@@ -214,7 +206,7 @@ await withBrowser(async (h) => {
   // ── 1. the gallery ──────────────────────────────────────────────────────
   r.ok(
     "the launcher offers Prototypes",
-    await pickFromLauncher(page, /Prototypes/),
+    await pickFromLauncher(embedRoot(page), /Prototypes/),
   );
   await renders(
     "the embed switches to Prototypes",
@@ -326,7 +318,7 @@ await withBrowser(async (h) => {
   await snap(page, OUT, "5-restored");
 
   // Back to the gallery: the restored folder is v0's bytes, whose PNG is seeded.
-  await pickFromLauncher(page, /Prototypes/);
+  await pickFromLauncher(embedRoot(page), /Prototypes/);
   await renders(
     "the restored prototype's thumbnail is a cache hit",
     () => thumbnailLoaded(page, LUMEN.title),
@@ -370,7 +362,7 @@ await withBrowser(async (h) => {
   await noteFrames();
   await snap(page, OUT, "6-compare-route");
 
-  await pickFromLauncher(page, /Prototypes/);
+  await pickFromLauncher(embedRoot(page), /Prototypes/);
   await galleryCard(page, COMPOSER).click();
   await addSource(page, REAL_APP_LABEL);
   await renders(

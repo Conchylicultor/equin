@@ -18,6 +18,7 @@
  *   ./equin run plugins/apps/plugins/demo/e2e/persistence.ts [--out /tmp/demo-persistence] [--headed]
  */
 import type { Locator, Page } from "playwright";
+import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import {
   arg,
   boot,
@@ -50,17 +51,10 @@ function sidebarEntries(page: Page, title: string): Locator {
 
 /** Switch the embed to Pages through its launcher. */
 async function openPages(r: Report, page: Page, step: string): Promise<void> {
-  await embedRoot(page)
-    .getByRole("button", { name: "All apps" })
-    .first()
-    .hover();
-  const menu = page.locator('[aria-label="Apps"]').last();
-  await menu.waitFor({ timeout: 10_000 });
-  await menu
-    .locator('[data-row-key][role="button"]')
-    .filter({ hasText: /^\s*Pages\s*$/ })
-    .first()
-    .click();
+  r.ok(
+    `${step}: the launcher offers Pages`,
+    await pickFromLauncher(embedRoot(page), /^\s*Pages\s*$/),
+  );
   const settled = await waitFor(
     () => embedRoot(page).getAttribute("data-app-embed"),
     (id) => id === "pages",

@@ -71,6 +71,7 @@ import type { Locator, Page, Request, WebSocket } from "playwright";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 import { CANVAS_FRAME_ATTR } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 import {
+  closeLauncherGrid,
   launcherTiles,
   openLauncherGrid,
 } from "@plugins/apps-core/plugins/app-launcher/e2e";
@@ -669,8 +670,7 @@ await withBrowser(async (h) => {
     .filter({ hasText: /Prototypes/ })
     .first()
     .click();
-  await page.keyboard.press("Escape");
-  await page.mouse.move(0, 0);
+  await closeLauncherGrid(grid);
   await page
     .locator("[data-app-embed]")
     .first()
@@ -702,32 +702,14 @@ await withBrowser(async (h) => {
 
   // ── 4. every app the launcher lists: what it draws stays in the scope ───
   const embed = page.locator("[data-app-embed]").first();
-  const openLauncher = async (): Promise<Locator> => {
-    await embed.getByRole("button", { name: "All apps" }).first().hover();
-    const menu = page.locator('[aria-label="Apps"]').last();
-    await menu.waitFor({ timeout: 5_000 });
-    return menu;
-  };
-  const tiles = await (
-    await openLauncher()
-  )
-    .locator('[data-row-key][role="button"]')
-    .evaluateAll((els) =>
-      els.map((el) => ({
-        key: el.getAttribute("data-row-key") ?? "",
-        name: (el.textContent ?? "").replace(/\s+/g, " ").trim(),
-      })),
-    );
-  const closeLauncher = async (): Promise<void> => {
-    await page.keyboard.press("Escape");
-    await page.mouse.move(0, 0);
-    // Shut before the next hover, so `openLauncher` never finds the closing one.
-    await page
-      .locator('[aria-label="Apps"]')
-      .last()
-      .waitFor({ state: "hidden", timeout: 5_000 });
-  };
-  await closeLauncher();
+  const firstGrid = await openLauncherGrid(embed);
+  const tiles = await launcherTiles(firstGrid).evaluateAll((els) =>
+    els.map((el) => ({
+      key: el.getAttribute("data-row-key") ?? "",
+      name: (el.textContent ?? "").replace(/\s+/g, " ").trim(),
+    })),
+  );
+  await closeLauncherGrid(firstGrid);
   r.ok(
     "the launcher lists apps to visit",
     tiles.length > 0,
@@ -735,13 +717,12 @@ await withBrowser(async (h) => {
   );
   for (const tile of tiles) {
     const leakedBefore = leaked.length;
-    await (
-      await openLauncher()
-    )
-      .locator(`[data-row-key="${tile.key}"][role="button"]`)
+    const grid = await openLauncherGrid(embed);
+    await launcherTiles(grid)
+      .and(page.locator(`[data-row-key="${tile.key}"]`))
       .first()
       .click();
-    await closeLauncher();
+    await closeLauncherGrid(grid);
     // The landing's own reads and loads (covers, thumbnails), and what renders
     // once they answer: until the page has sent nothing for two seconds.
     const quiet = await waitFor(

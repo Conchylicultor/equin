@@ -41,6 +41,7 @@
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { isWorkerTreePath } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
+import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import {
   arg,
   boot,
@@ -205,24 +206,10 @@ await withBrowser(async (h) => {
     );
 
     // ── 1. launcher → Sonata, its library ─────────────────────────────────
-    await embedRoot(page)
-      .getByRole("button", { name: "All apps" })
-      .first()
-      .hover();
-    const menu = page.locator('[aria-label="Apps"]').last();
-    await menu.waitFor({ timeout: 5_000 });
-    const tile = menu
-      .locator('[data-row-key][role="button"]')
-      .filter({ hasText: /^\s*Sonata\s*$/ })
-      .first();
-    await renders(
+    r.ok(
       `${pass}: the launcher offers Sonata`,
-      () => tile.count(),
-      (n) => n > 0,
+      await pickFromLauncher(embedRoot(page), /^\s*Sonata\s*$/),
     );
-    await tile.click();
-    await page.keyboard.press("Escape");
-    await page.mouse.move(0, 0);
     await renders(
       `${pass}: the embed switches to Sonata`,
       () => embedRoot(page).getAttribute("data-app-embed"),

@@ -22,6 +22,7 @@
  *   ./equin run plugins/apps/plugins/demo/e2e/desktop-in-demo.ts [--out /tmp/demo-desktop] [--headed]
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
+import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import {
   arg,
   boot,
@@ -141,24 +142,10 @@ await withBrowser(async (h) => {
   const storageBefore = await pageShellStorage(page);
 
   // ── 1. launcher → Desktop ───────────────────────────────────────────────
-  await embedRoot(page)
-    .getByRole("button", { name: "All apps" })
-    .first()
-    .hover();
-  const menu = page.locator('[aria-label="Apps"]').last();
-  await menu.waitFor({ timeout: 5_000 });
-  const tile = menu
-    .locator('[data-row-key][role="button"]')
-    .filter({ hasText: /^\s*Desktop\s*$/ })
-    .first();
-  await renders(
+  r.ok(
     "the launcher offers Desktop",
-    () => tile.count(),
-    (n) => n > 0,
+    await pickFromLauncher(embedRoot(page), /^\s*Desktop\s*$/),
   );
-  await tile.click();
-  await page.keyboard.press("Escape");
-  await page.mouse.move(0, 0);
   const firstWindow = await renders(
     "the embed is a desktop: the Agent Manager is its one window",
     () => windowIds(embedRoot(page)),
