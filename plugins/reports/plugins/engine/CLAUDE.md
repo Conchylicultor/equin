@@ -158,8 +158,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
 - Cross-plugin:
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `debug` ×9
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×8
     - `database` ×3
     - `conversations` ×2
     - `reports` ×2

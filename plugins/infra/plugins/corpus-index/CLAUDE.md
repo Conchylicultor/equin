@@ -48,23 +48,28 @@ const index = defineCorpusIndex({
   entire corpus on every worktree boot.)
 - `entries()` — the current per-file partials keyed by path. The **rollup stays in
   the consumer**.
-- `markDirty()` — force the next `ensureFresh()` to re-walk **even on main**. This
-  is load-bearing, not convenience: `ensureFresh` short-circuits on
-  `!dirty && isMain()`, and `dirty` is otherwise only re-set by `startWatcher()`'s
-  onChange. See the "own your own watcher" pattern below.
-- **Boot catch-up reads the journal, not the disk.** Every full walk saves, in
-  the index file itself, one file-system journal cursor per root (file-watcher's
-  `journalCursor`, FSEvents on macOS) taken before the walk. A process's FIRST
-  full pass replays the journal from them (`journalChangesSince`) and re-checks
-  only the paths it names (`refreshCorpusPaths`) — O(changes since), where the
-  walk was O(corpus): `~/Downloads` for Sonata's MIDI folders is 26k dirs,
-  2.7–9 s per boot. Fail-closed: no cursor, a root added or dropped, a root on
-  another volume, symlinked or replaced, a cursor over 7 days old, a reset
-  journal or a dropped-events history ⇒
-  walk. Only that first pass: a later `markDirty()` or lost-events report
-  walks. A watcher batch's pass never advances the cursors (events still in a
-  debounce window at a crash would be skipped). A backend that does not persist
-  (a `host` index off main) replays main's saved cursors.
+- `markDirty()` — force the next `ensureFresh()` to walk every root, even where
+  a watch keeps the index fresh: the answer to a watch that reported dropped
+  events. A watch that heard every change reports it instead (`startWatcher`'s
+  own, or a consumer's through `markChanged`) — a walk is O(corpus).
+- **Catch-up reads the journal, not the disk — per root.** Every pass saves,
+  in the index file itself, one file-system journal cursor per root it walked
+  or caught up (file-watcher's `journalCursor`, FSEvents on macOS), taken
+  before the pass. A root this process has not caught up yet replays the
+  journal from ITS cursor (`journalChangesSince`) and re-checks only the paths
+  it names (`refreshCorpusPaths`) — O(changes since), where the walk was
+  O(corpus): `~/Downloads` for Sonata's MIDI folders is 26k dirs, 2.7–9 s per
+  walk. Fail-closed, per root: no cursor, a root on another volume, symlinked
+  or replaced, a cursor over 7 days old, a reset journal or a dropped-events
+  history ⇒ that root alone is walked; the others are left alone. A root that
+  leaves the root set keeps its entries and cursor on disk (`entries()` hands
+  out the current roots' only), so when it comes back it is caught up, not
+  walked — a folder that read `checking` at one boot no longer costs a walk at
+  the next. A caught-up root walks only when a walk is asked for
+  (`markDirty`, a lost-events report). A watcher batch's pass never advances
+  a cursor (events still in a debounce window at a crash would be skipped). A
+  backend that does not persist (a `host` index off main) replays main's
+  saved cursors.
   This is why the format's code stamps the index: a walk used to repair a
   changed `match` / `parse` on the next boot; a journal catch-up re-checks only
   paths that moved, so files that newly match would stay missing until a walk.
@@ -79,21 +84,29 @@ const index = defineCorpusIndex({
   Consumers with extra warm work (e.g. pricing) write their own `defineWarmup`
   that calls `ensureFresh`/`startWatcher` instead.
 
-### Own your own watcher (`markDirty`)
+### Own your own watcher (`watchedBy: "consumer"`)
 
-A consumer that already runs its own file watcher over the same corpus must **not**
-call `startWatcher()` — that would double-watch, and `startWatcher()` is
-`isMain()`-gated anyway. But on the main backend `ensureFresh()` short-circuits
-while `!dirty`, so without an invalidation signal every refresh after the first
-would silently reuse a **stale** index. `markDirty()` is that signal: call it from
-your own watcher's onChange, then call `ensureFresh()`.
+A consumer that already watches the same roots on every backend (Sonata's MIDI
+folders: its watch imports each file it hears) must **not** call
+`startWatcher()` (it double-watches, is `isMain()`-gated, and throws on such an
+index). It declares `watchedBy: "consumer"` and feeds its watch to the index:
+
+- `markChanged(paths)` — each batch's paths. The next `ensureFresh()` re-checks
+  only those, on every backend (an unwatched index off main walks every time).
+- `markWatchOpened(root)` — a root's watch just (re)opened: whatever moved
+  under it before went unheard, so the next pass catches it up from the
+  journal. Open the watch BEFORE the root enters `roots`, so no stretch of it
+  is caught up that nothing was listening to.
+- `markDirty()` — only for the watch's dropped-events report (`onLost`).
 
 ```ts
-const index = defineCorpusIndex<MyPartial>({ /* …, no startWatcher() call… */ });
-myWatcher.onChange(() => {
-  index.markDirty();      // invalidate — the ONLY seam when you own the watcher
-  void index.ensureFresh(); // re-walk in the background
+const index = defineCorpusIndex({ /* …, */ watchedBy: "consumer" });
+myWatcher.start({
+  dirs: [dir],
+  onChange: (events) => index.markChanged(events.map((e) => e.path)),
+  onLost: () => { index.markDirty(); void index.ensureFresh(); },
 });
+index.markWatchOpened(dir);
 ```
 
 ### Enumerate-only (no `parse`)

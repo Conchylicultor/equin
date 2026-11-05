@@ -79,6 +79,18 @@ nothing did. That judgement covers the whole spec, both reads: one bad entry in
 a host-global registry of ~70 must not be able to break every checkout on the
 machine.
 
+**Where it looks: the specs a build could have written, not the registry.**
+`lookupCheckoutDeploy(root, composition?)` reads only the namespaces a build of
+this checkout can mint — `namespaceFor(composition, …)` as the main checkout and
+as a worktree named by the root's basename (as given and through symlinks) —
+and still decides by each spec's `server` field, so a candidate somebody else
+published is simply not a match. A few reads, where the scan read and resolved
+~180 specs synchronously (3–5 s stalls on main per browser-MCP call under host
+load). `resolveCheckoutDeploy` is that lookup, plus the scan on a miss only —
+the refusal names what this checkout DOES serve, which only the whole registry
+can say. A spec naming this checkout under a name no build mints (a
+`serve-app --name`, a renamed namespace) is not resolved, only listed.
+
 ## The data root is a registry, not a string
 
 Everything under `~/.equin/` is a **declared directory with an owner**.
@@ -360,6 +372,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `listWorktreeDirs`
     - `LOG_FILE_RE`
     - `logPatternMatches`
+    - `lookupCheckoutDeploy`
     - `planMigration`
     - `PLUGINS_DIR`
     - `pruneWorktreeCheckArtifacts`
@@ -381,8 +394,8 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `debug` ×8
+  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×7
     - `infra` ×6
     - `framework` ×5
     - `backup` ×4

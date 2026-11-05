@@ -701,3 +701,153 @@ test("a backend that does not persist reads the saved cursors and leaves them", 
   expect((await worktree.ensureFresh()).addedPaths).toEqual([added]);
   expect(await savedIndex()).toEqual(before);
 });
+
+// ─── per-root catch-up ─────────────────────────────────────────────────────────
+// A journal answering per root, counting replays per root, so a test sees
+// which roots were caught up from it and which were walked.
+
+function perRootJournal(
+  answer: (root: string) => string[] | "unknown",
+): CorpusJournal & {
+  replayed: string[];
+} {
+  let seq = 0;
+  const j = {
+    replayed: [] as string[],
+    cursor: async (r: string) => ({
+      kind: "cursor" as const,
+      cursor: {
+        root: r,
+        dev: 1,
+        ino: 1,
+        eventId: String(++seq),
+        takenAt: 0,
+        snapshot: "",
+      },
+    }),
+    changesSince: async (cursor: { root: string }) => {
+      j.replayed.push(cursor.root);
+      const a = answer(cursor.root);
+      return a === "unknown"
+        ? { kind: "unknown" as const, reason: "test" }
+        : { kind: "changes" as const, paths: a };
+    },
+  };
+  return j;
+}
+
+test("a root joining the set is caught up alone; the caught-up roots are not walked again", async () => {
+  const other = join(root, "other");
+  await mkdir(other);
+  await writeFile(join(other, "o.txt"), "o");
+  const journal = perRootJournal(() => []);
+  // A previous process indexed both roots and saved a cursor for each.
+  await createCorpusIndex(
+    spec({ roots: [corpusRoot, other] }),
+    env({ journal }),
+  ).ensureFresh();
+
+  // This one starts with one root (the other unreadable for now) …
+  let roots = [corpusRoot];
+  const idx = createCorpusIndex(spec({ roots: () => roots }), env({ journal }));
+  journal.replayed.length = 0;
+  await idx.ensureFresh();
+  expect(journal.replayed).toEqual([corpusRoot]);
+  // … the absent root's entries are kept on disk, but are not the corpus.
+  expect(idx.entries().has(join(other, "o.txt"))).toBe(false);
+  expect(
+    Object.keys((await savedIndex()).files).includes(join(other, "o.txt")),
+  ).toBe(true);
+  expect((await savedIndex()).cursors?.map((c) => c.root).sort()).toEqual(
+    [corpusRoot, other].sort(),
+  );
+
+  // The root comes back: caught up from ITS cursor, the other left alone.
+  const added = join(other, "added.txt");
+  await writeFile(added, "added");
+  const unnamed = join(corpusRoot, "a", "unnamed.txt");
+  await writeFile(unnamed, "x");
+  roots = [corpusRoot, other];
+  // The next process, against the same saved cursors: the journal names
+  // `added` under the returning root, nothing under the other.
+  const j2 = perRootJournal((r) => (r === other ? [added] : []));
+  const back = createCorpusIndex(
+    spec({ roots: () => roots }),
+    env({ journal: j2 }),
+  );
+  await back.ensureFresh();
+  expect(j2.replayed.sort()).toEqual([corpusRoot, other].sort());
+  expect(back.entries().has(join(other, "o.txt"))).toBe(true);
+  expect(back.entries().has(added)).toBe(true);
+  // Not named by the journal ⇒ not walked into.
+  expect(back.entries().has(unnamed)).toBe(false);
+});
+
+test("consumer-watched: a pass re-checks only what the consumer named, on any backend", async () => {
+  const journal = perRootJournal(() => []);
+  await createCorpusIndex(
+    spec({ scope: "host" }),
+    env({ journal }),
+  ).ensureFresh();
+
+  const idx = createCorpusIndex(
+    spec({ scope: "host", watchedBy: "consumer" }),
+    env({ journal, isMain: () => false }),
+  );
+  await idx.ensureFresh(); // the catch-up
+  expect(idx.startWatcher()).rejects.toThrow("watchedBy");
+
+  const named = join(corpusRoot, "a", "named.txt");
+  const unnamed = join(corpusRoot, "b", "unnamed.txt");
+  await writeFile(named, "n");
+  await writeFile(unnamed, "u");
+  journal.replayed.length = 0;
+  // Nothing named ⇒ nothing done (no walk, no replay).
+  expect((await idx.ensureFresh()).addedPaths).toEqual([]);
+  idx.markChanged([named]);
+  expect((await idx.ensureFresh()).addedPaths).toEqual([named]);
+  expect(idx.entries().has(unnamed)).toBe(false);
+  expect(journal.replayed).toEqual([]);
+
+  // The watch re-opened: caught up from the journal again, not walked.
+  idx.markWatchOpened(corpusRoot);
+  await idx.ensureFresh();
+  expect(journal.replayed).toEqual([corpusRoot]);
+  expect(idx.entries().has(unnamed)).toBe(false);
+
+  // A dropped-events report walks.
+  idx.markDirty();
+  await idx.ensureFresh();
+  expect(idx.entries().has(unnamed)).toBe(true);
+});
+
+test("markChanged / markWatchOpened refuse an index its own watch keeps fresh", () => {
+  const idx = createCorpusIndex(spec(), env());
+  expect(() => idx.markChanged([corpusRoot])).toThrow();
+  expect(() => idx.markWatchOpened(corpusRoot)).toThrow();
+});
+
+test("a watch reopened while a pass runs leaves its root to be caught up again", async () => {
+  await createCorpusIndex(
+    spec({ scope: "host" }),
+    env({ journal: perRootJournal(() => []) }),
+  ).ensureFresh();
+  let reopen = (): void => {};
+  // The watch reopens while this root's replay is under way.
+  const journal = perRootJournal(() => {
+    reopen();
+    reopen = () => {};
+    return [];
+  });
+  const idx = createCorpusIndex(
+    spec({ scope: "host", watchedBy: "consumer" }),
+    env({ journal, isMain: () => false }),
+  );
+  reopen = () => idx.markWatchOpened(corpusRoot);
+  await idx.ensureFresh();
+  await idx.ensureFresh();
+  expect(journal.replayed).toEqual([corpusRoot, corpusRoot]);
+  // Caught up by the second pass, which no reopen interrupted.
+  await idx.ensureFresh();
+  expect(journal.replayed).toEqual([corpusRoot, corpusRoot]);
+});

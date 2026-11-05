@@ -8,18 +8,24 @@ import {
   readFileSync,
   realpathSync,
 } from "@plugins/packages/plugins/timed-fs/core";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import {
   MAIN_COMPOSITION_ID,
   MAIN_WORKTREE_NAME,
   asNamespace,
   isNamespace,
+  namespaceFor,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
 // Relative siblings: this file lives INSIDE the `paths` plugin, so the
 // `@plugins/infra/plugins/paths/core` alias would cycle back through the barrel
 // that re-exports it. Same reasoning as `data-dirs-manifest.ts`.
-import { SERVER_CORE_RELATIVE, worktreeArtifacts, worktreesDir } from "./paths";
+import {
+  SERVER_CORE_RELATIVE,
+  checkoutWorktreeName,
+  worktreeArtifacts,
+  worktreesDir,
+} from "./paths";
 import { listWorktreeDirs } from "./worktree-dirs";
 
 // Which deploys a CHECKOUT published — read back out of the registry that
@@ -306,6 +312,120 @@ export function deploysForCheckout(root: AppPath): CheckoutDeploy[] {
 }
 
 /**
+ * The namespaces a build of `root` could have published `composition` under —
+ * never more than three, so the answer is a few spec reads, not a scan of the
+ * whole registry (~180 specs, each read and its `server` path resolved,
+ * synchronously: 3–5 s event-loop stalls on main per browser-MCP call under
+ * host load).
+ *
+ * `./equin build` mints the namespace it publishes with `namespaceFor(composition,
+ * checkoutRef(root))`, and `checkoutRef` is one of two things: the main
+ * checkout, or a worktree named by the checkout's basename. Which one it is
+ * takes git and the main namespace's owner to say — so ask both, by the
+ * basename as given and as resolved through symlinks. A candidate is only a
+ * place to look: what decides is its spec naming this checkout's backend, the
+ * same provenance the scan reads, so a candidate somebody else published is
+ * simply not a match.
+ */
+function candidateNamespaces(
+  ours: string,
+  root: AppPath,
+  composition: string,
+): Namespace[] {
+  const names = new Set([checkoutWorktreeName(root), basename(ours)]);
+  const candidates = new Set<Namespace>([
+    namespaceFor(composition, { kind: "main" }),
+  ]);
+  for (const name of names) {
+    // A basename the namespace grammar refuses names no namespace a build
+    // could have minted (the build would have refused it first).
+    if (!isNamespace(name) || name.includes(".")) continue;
+    candidates.add(namespaceFor(composition, { kind: "worktree", name }));
+  }
+  return [...candidates];
+}
+
+/**
+ * The checkout's deploy of `composition` (its own app when omitted), read from
+ * the specs of the few namespaces a build of it could have published — see
+ * {@link candidateNamespaces}. `none` says only that there is none: a caller
+ * that must explain why (which deploys this checkout DOES serve) asks
+ * {@link resolveCheckoutDeploy}, which scans the registry for that, on the
+ * refusal path only.
+ *
+ * @throws when a candidate's spec cannot be used AND no candidate matched — it
+ *   may be the one naming this checkout (the scan's rule, over the candidates).
+ */
+export function lookupCheckoutDeploy(
+  root: AppPath,
+  composition?: string,
+): { kind: "resolved"; deploy: CheckoutDeploy } | { kind: "none" } {
+  const wanted = composition ?? MAIN_COMPOSITION_ID;
+  const ours = comparablePath(joinAppPath(root, SERVER_CORE_RELATIVE));
+  const matches: CheckoutDeploy[] = [];
+  const malformed: string[] = [];
+  for (const namespace of candidateNamespaces(
+    comparablePath(root),
+    root,
+    wanted,
+  )) {
+    const path = worktreeArtifacts.spec(namespace);
+    const read = readDeploySpec(path);
+    if (read.kind === "absent") continue;
+    if (read.kind === "malformed") {
+      malformed.push(`${path}: ${read.reason}`);
+      continue;
+    }
+    if (read.composition !== wanted) continue;
+    // The server dir a spec the app wrote names: app-owned by that claim.
+    const server = comparableSpecPath(asAppPath(read.server));
+    if (server.kind === "fault") {
+      malformed.push(`${path}: ${server.reason}`);
+      continue;
+    }
+    if (server.path !== ours) continue;
+    matches.push({
+      namespace,
+      composition: read.composition,
+      isMainComposition: read.composition === MAIN_COMPOSITION_ID,
+    });
+  }
+  // By name, so the pick is the same on every call.
+  matches.sort((a, b) => a.namespace.localeCompare(b.namespace));
+  const [deploy, ...alsoMatched] = matches;
+  if (deploy === undefined) {
+    if (malformed.length > 0) {
+      throw new Error(
+        `Cannot say which deploy this checkout published: no readable spec ` +
+          `names it, and ${malformed.length} it may have published could not be ` +
+          `used — one of them may be the one:\n  ${malformed.join("\n  ")}\n` +
+          `Repair or remove them (a build of that namespace rewrites its spec), then re-run.`,
+      );
+    }
+    return { kind: "none" };
+  }
+  if (malformed.length > 0) {
+    console.warn(
+      `Ignoring ${malformed.length} unusable spec(s) while resolving this ` +
+        `checkout's deploy:\n  ${malformed.join("\n  ")}`,
+    );
+  }
+  // Both the main-checkout and the worktree form naming this checkout: it was
+  // built once as each (the main namespace's owner moved). Only one can be the
+  // deploy it publishes now, and that takes git to say; the pick is
+  // deterministic, so what it needs is to be VISIBLE.
+  if (alsoMatched.length > 0) {
+    console.warn(
+      `This checkout is registered to ${matches.length} namespaces for composition "${wanted}": ` +
+        `using ${deploy.namespace}, ignoring ${alsoMatched.map((d) => d.namespace).join(", ")}. ` +
+        `Only one of them can be the deploy it published — remove the stale spec(s) ` +
+        `under ${worktreesDir()} (a build of a namespace rewrites its own).`,
+    );
+  }
+  return { kind: "resolved", deploy };
+}
+
+/**
  * The one deploy a caller means: this checkout's own app, or the named
  * composition's namespace.
  *
@@ -317,35 +437,12 @@ export function resolveCheckoutDeploy(
   root: AppPath,
   composition?: string,
 ): CheckoutDeployResolution {
+  const found = lookupCheckoutDeploy(root, composition);
+  if (found.kind === "resolved") return found;
+  // The refusal path: say what this checkout DOES serve, which only the whole
+  // registry can.
   const { deploys, scanned } = scanCheckout(root);
-  const matches = deploys.filter((d) =>
-    composition === undefined
-      ? d.isMainComposition
-      : d.composition === composition,
-  );
-  const [deploy, ...alsoMatched] = matches;
-  if (deploy === undefined) return { kind: "none", others: deploys, scanned };
-
-  // Two namespaces answering for the same composition of the same checkout is a
-  // silently-chosen deploy — the shape this whole module exists to abolish —
-  // and it is reachable: `serve-app --name other` beside an ordinary build, or a
-  // spec left behind when a namespace was renamed. It gets a warning rather than
-  // an `ambiguous` arm because every caller would then have to branch on a state
-  // whose repair is deleting one directory; the pick is deterministic
-  // (alphabetical, main composition first), so what it needs is to be VISIBLE.
-  if (alsoMatched.length > 0) {
-    const wanted =
-      composition === undefined
-        ? `this checkout's own app (composition "${MAIN_COMPOSITION_ID}")`
-        : `composition "${composition}"`;
-    console.warn(
-      `This checkout is registered to ${matches.length} namespaces for ${wanted}: ` +
-        `using ${deploy.namespace}, ignoring ${alsoMatched.map((d) => d.namespace).join(", ")}. ` +
-        `Only one of them can be the deploy it published — remove the stale spec(s) ` +
-        `under ${worktreesDir()} (a build of a namespace rewrites its own).`,
-    );
-  }
-  return { kind: "resolved", deploy };
+  return { kind: "none", others: deploys, scanned };
 }
 
 /**

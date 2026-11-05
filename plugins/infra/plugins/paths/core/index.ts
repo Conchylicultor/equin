@@ -61,6 +61,7 @@ export {
 export type { CheckoutMinterRead } from "./internal/checkout-minter";
 export {
   deploysForCheckout,
+  lookupCheckoutDeploy,
   resolveCheckoutDeploy,
 } from "./internal/checkout-deploys";
 export type {

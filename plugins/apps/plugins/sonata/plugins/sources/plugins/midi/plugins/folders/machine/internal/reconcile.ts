@@ -9,7 +9,8 @@ import {
   listFolderImportedSongs,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server";
 import { sonataDir } from "@plugins/apps/plugins/sonata/data-dirs";
-import { readableDirs, refreshFolderStatuses } from "./folder-status";
+import { refreshFolderStatuses } from "./folder-status";
+import { watchedDirs } from "./watched-dirs";
 import { importMidiFileJob } from "./import-job";
 import { midiFileFormat } from "./midi-format";
 
@@ -33,13 +34,31 @@ const midiIndex = defineCorpusIndex({
   name: "sonata.midi-folders",
   description:
     "Remembers which MIDI files exist in the watched folders so changes can be detected quickly without rescanning.",
-  // Only the readable folders: an unreadable one is shown in the library, never
-  // walked — one bad root would otherwise abort the walk for every folder.
-  roots: readableDirs,
+  // Only the watched folders — the readable ones, once their watch is open: an
+  // unreadable one is shown in the library, never walked (one bad root would
+  // otherwise abort the walk for every folder), and a folder nothing hears yet
+  // is not caught up (its catch-up would cover a stretch no watch followed).
+  roots: watchedDirs,
   format: midiFileFormat,
   indexPath: sonataDir.file("midi-folders-index.json"),
   scope: "host",
+  // Our own watcher (`watcher.ts`) watches the same folders on every backend
+  // and reports each batch here, so a reconcile re-checks only what moved
+  // (plus the journal catch-up of a folder not yet caught up) — never a walk
+  // of `~/Downloads`' 26k dirs, which every boot's late-probe reconcile used
+  // to make in every backend.
+  watchedBy: "consumer",
 });
+
+/** What a batch of the folder watcher named: the index re-checks those alone. */
+export function markMidiPathsChanged(paths: Iterable<string>): void {
+  midiIndex.markChanged(paths);
+}
+
+/** A folder's watch just opened: the index catches it up before trusting it. */
+export function markMidiFolderWatched(dir: string): void {
+  midiIndex.markWatchOpened(dir);
+}
 
 /**
  * Injectable dependencies for {@link reconcileWith} — the testability seam,
@@ -49,7 +68,6 @@ const midiIndex = defineCorpusIndex({
  * is verified without a filesystem or a database.
  */
 export interface ReconcileDeps {
-  markDirty: () => void;
   ensureFresh: () => Promise<CorpusDelta>;
   /** The authoritative on-disk set after the refresh (corpus `entries()`). */
   entries: () => Map<string, unknown>;
@@ -77,10 +95,9 @@ export interface ReconcileDeps {
  *   missing. Songs under a no-longer-watched dir are left untouched.
  */
 export async function reconcileWith(deps: ReconcileDeps): Promise<void> {
-  // We own our own watcher (see CLAUDE.md — "own your own watcher"), so on the
-  // main backend `ensureFresh()` would short-circuit on a clean `dirty` flag and
-  // silently reuse a stale index. `markDirty()` is the ONLY invalidation seam.
-  deps.markDirty();
+  // The index is kept fresh by our own watcher's batches (`markChanged`), a
+  // folder not yet caught up is caught up from the journal, and a dropped-events
+  // report walks (`reconcileAfterLostEvents`) — so this is never a walk by itself.
   // ONLY `modifiedPaths` — never `addedPaths`. A path is "added" when the index
   // held no fingerprint for it, which on a cold index is EVERY file: this index
   // is `scope: "host"`, so a worktree backend never persists it and starts every
@@ -123,6 +140,15 @@ export async function reconcileWith(deps: ReconcileDeps): Promise<void> {
   }
 }
 
+/**
+ * The watch dropped events: anything under the folders may have moved unheard,
+ * so the index walks them, then the DB is reconciled against the result.
+ */
+export async function reconcileAfterLostEvents(): Promise<void> {
+  midiIndex.markDirty();
+  await reconcile();
+}
+
 /** Reconcile the DB against disk, wiring {@link reconcileWith} to the real index + DB. */
 export async function reconcile(): Promise<void> {
   // Re-probe first: a folder that became readable (access granted, drive
@@ -131,10 +157,9 @@ export async function reconcile(): Promise<void> {
   // about reads `checking` and is walked once its answer lands.
   await refreshFolderStatuses();
   await reconcileWith({
-    markDirty: () => midiIndex.markDirty(),
     ensureFresh: () => midiIndex.ensureFresh(),
     entries: () => midiIndex.entries(),
-    watchedDirs: readableDirs,
+    watchedDirs,
     listImported: listFolderImportedSongs,
     // `enqueue` resolves to the new `{ jobId }`; reconcile has no use for it
     // (the job is fire-and-forget, deduped by sourcePath), so await and discard.

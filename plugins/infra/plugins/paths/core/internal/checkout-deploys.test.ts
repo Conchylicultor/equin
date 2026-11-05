@@ -23,7 +23,11 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { deploysForCheckout, resolveCheckoutDeploy } from "./checkout-deploys";
+import {
+  deploysForCheckout,
+  lookupCheckoutDeploy,
+  resolveCheckoutDeploy,
+} from "./checkout-deploys";
 import { SERVER_CORE_RELATIVE } from "./paths";
 
 // Every test owns its own data root and its own checkouts on disk, because both
@@ -337,14 +341,13 @@ describe("resolveCheckoutDeploy", () => {
     });
   });
 
-  test("two namespaces for one composition warn, naming the chosen and the ignored", () => {
+  test("built both as the main checkout and as a worktree: warns, naming the chosen and the ignored", () => {
     const fx = fixture();
     const root = fx.checkout("att-9");
-    // What `./equin build` published, and what a `serve-app --name` (or a
-    // spec left behind by a rename) published beside it. Both claim to be this
-    // checkout's own app; only one can be.
+    // Both forms a build of this checkout can mint name it — it was built
+    // once as each. Only one can be the deploy it publishes now.
     fx.register("att-9", { server: serverOf(root) });
-    fx.register("preview", { server: serverOf(root) });
+    fx.register(MAIN_WORKTREE_NAME, { server: serverOf(root) });
 
     const { result, warnings } = capturingWarnings(() =>
       resolveCheckoutDeploy(root),
@@ -352,7 +355,51 @@ describe("resolveCheckoutDeploy", () => {
     expect(result.kind).toBe("resolved");
     if (result.kind !== "resolved") throw new Error("unreachable");
     expect(result.deploy.namespace).toBe(asNamespace("att-9"));
-    expect(warnings.join("\n")).toContain("using att-9, ignoring preview");
+    expect(warnings.join("\n")).toContain(
+      `using att-9, ignoring ${MAIN_WORKTREE_NAME}`,
+    );
+  });
+
+  test("the lookup reads only the namespaces a build could have minted; the refusal still lists the rest", () => {
+    const fx = fixture();
+    const root = fx.checkout("att-10");
+    // A spec naming this checkout under a name no build of it mints (a
+    // `serve-app --name`, a renamed namespace): never a candidate.
+    fx.register("preview", { server: serverOf(root) });
+
+    expect(lookupCheckoutDeploy(root)).toEqual({ kind: "none" });
+    expect(resolveCheckoutDeploy(root)).toEqual({
+      kind: "none",
+      others: [
+        {
+          namespace: asNamespace("preview"),
+          composition: MAIN_WORKTREE_NAME,
+          isMainComposition: true,
+        },
+      ],
+      scanned: 1,
+    });
+  });
+
+  test("the lookup finds a checkout reached through a symlink under another name", () => {
+    const fx = fixture();
+    const real = fx.checkout("att-11");
+    const linked = joinAppPath(appPathParent(real), "via-link");
+    symlinkSync(real, linked);
+    fx.register("att-11", { server: serverOf(real) });
+
+    const resolution = lookupCheckoutDeploy(linked);
+    expect(resolution.kind).toBe("resolved");
+    if (resolution.kind !== "resolved") throw new Error("unreachable");
+    expect(resolution.deploy.namespace).toBe(asNamespace("att-11"));
+  });
+
+  test("an unusable candidate spec with no match is raised, not read as unbuilt", () => {
+    const fx = fixture();
+    const root = fx.checkout("att-12");
+    fx.register("att-12", "{ not json");
+
+    expect(() => lookupCheckoutDeploy(root)).toThrow(/att-12/);
   });
 
   test("a named composition resolves its own namespace", () => {

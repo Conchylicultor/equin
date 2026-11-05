@@ -14,10 +14,12 @@ carries.
 
 Two mechanisms keep the DB in sync with disk:
 
-- **Live watcher** (`watcher.ts`) — a `@parcel/watcher` over the configured dirs.
-  Create/update enqueues `importMidiFileJob`; delete badges the song
-  `sourceMissing`. Rebuilt whenever the `midi-folders` config changes (via
-  `watchConfig`), so there is no polling.
+- **Live watcher** (`watcher.ts`) — a `@parcel/watcher` per readable configured
+  folder (`watched-dirs.ts`). Create/update enqueues `importMidiFileJob`;
+  delete badges the song `sourceMissing`; every batch is also reported to the
+  corpus index (`markChanged`). A config or readable-set change opens and
+  closes only the folders that changed — a folder that stays keeps its watch,
+  so nothing under it goes unheard — so there is no polling.
 - **A file being written is not a failure.** A writer that fills the final
   file in place (instead of renaming a finished temp file over it) fires
   events before its bytes are complete. The job skips a 0-byte file, and a
@@ -27,14 +29,17 @@ Two mechanisms keep the DB in sync with disk:
   and retries.
 - **Drift reconcile** (`reconcile.ts`) — catches what the watcher cannot: files
   that changed while the backend was down, and pre-existing files in a
-  newly-added folder (the watcher emits no events for those). It runs at boot
-  (the warm-up below), on a real config change, and when the watch reports
-  lost events (`onLost`: FSEvents / inotify dropped some) — **never on a
-  timer**. One reconcile is a recursive walk of every watched folder, and a
-  watched folder can be a big tree (`~/Downloads`: 26k dirs holding 31 MIDI
-  files, ~2.6 s of `readdir` per walk); the former 30 s `reconcileMs` backstop
-  re-walked it every 30 s in every backend to find nothing changed.
-
+  newly-watched folder (the watcher emits no events for those). It runs at boot
+  (the warm-up below), on a real config change, on a readable-set change, and
+  when the watch reports lost events (`onLost`: FSEvents / inotify dropped
+  some) — **never on a timer**. It is **not a walk**: the index is kept fresh
+  by the watcher's batches, and a folder not yet caught up in this process is
+  caught up from the file-system journal (see Corpus index below). Only a
+  lost-events report walks the folders (`reconcileAfterLostEvents`). A watched
+  folder can be a big tree (`~/Downloads`: 26k dirs holding 31 MIDI files, 2.6–
+  6 s per walk), and every backend used to walk it again at boot whenever the
+  folder's probe answered after its 1 s budget (the late answer re-mounted
+  and reconciled with a forced walk).
 ### An unreadable folder is a state, never a skip
 
 Every configured folder is **probed** (`machine/internal/folder-status.ts`:
@@ -101,10 +106,14 @@ round-trip is gone: reconcile loads the whole folder-imported set once with
   index is cold on every boot and `modifiedPaths` is empty there until main has
   written the shared index — edits-while-down are detected against main's
   fingerprints, which is exactly why `addedPaths` must not trigger work.
-- **Own-your-watcher** — this plugin runs its own watcher over the same dirs, so
-  it must NOT call the index's `startWatcher()` (double-watch, and it is
-  `isMain()`-gated). `reconcile()` calls `markDirty()` before every
-  `ensureFresh()` — the only invalidation seam when you own the watcher.
+- **Own-your-watcher** — this plugin runs its own watcher over the same dirs on
+  every backend, so the index is declared `watchedBy: "consumer"`: each batch
+  is `markChanged`, each newly opened folder `markWatchOpened` (caught up from
+  the journal by the next reconcile), and `markDirty()` only follows a
+  lost-events report. The index's roots are the WATCHED folders
+  (`watchedDirs()`), not the readable ones: a folder is caught up only once a
+  watch hears it, and reverse drift only marks missing under a folder the
+  index covers.
 
 The initial boot reconcile is a declared **`midiFoldersWarmup`**
 (`defineWarmup`, `scope: "worktree"`) drained after `onAllReady`, not run inside

@@ -42,7 +42,6 @@ function harness(opts: {
   };
 
   const deps: ReconcileDeps = {
-    markDirty: () => {},
     ensureFresh: () => Promise.resolve(delta),
     entries: () => new Map(opts.onDisk.map((p) => [p, null])),
     watchedDirs: () => opts.watchedDirs,

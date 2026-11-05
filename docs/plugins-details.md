@@ -21629,6 +21629,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `debug/boot-watchdog`
           - `debug/timeline`
+      - Machine:
+        - Exports (values):
+          - `clearBootUnsettled`
+          - `markBootUnsettled`
+          - `readBootUnsettled`
+          - `stampBootUnsettledIndexed`
     - **`boot-monitor`** — Boot-monitor web presence: registers the time-to-ready budget config (enabled, readyBudgetMs) for Settings → Config. The minted signals flow through the existing slow-op report kind and the boot trace lane — no new renderer. Time-to-ready boot monitor: a cheap per-worktree scheduled job that, once the server is ready (markServerReady stamped the profiler's timeToReadyMs), mints ONE 'boot' slow-op row (operation server-ready) + coherent trace per boot that took longer than its budget to become ready — evidence-first, deduped per boot epoch — folding in the gateway-observed readiness wait when the gateway POSTed /api/boot/gateway-report. Post-ready warm-ups are not judged here (each has its own budget).
       - Web:
         - Contributes: `ConfigV2.WebRegister` "boot-monitor"
@@ -21760,7 +21766,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `debug/trace/client-boot`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
-    - **`boot-watchdog`** — Boot-wedge report renderer: a one-line Debug → Reports summary for the boot-wedge kind, plus the boot-watchdog budget/lookback config registration. Boot-watchdog monitor: a main-only per-minute scheduled job that sweeps every worktree's boot channel off the shared filesystem and files a deduped boot-wedge report for any backend that never reached its `ready` line within the boot budget — superseded (post-hoc, once) or open (gateway-confirmed wedged-now, re-filed each tick). Structurally main-only: a perWorktree job cannot observe its own wedged boot.
+    - **`boot-watchdog`** — Boot-wedge report renderer: a one-line Debug → Reports summary for the boot-wedge kind, plus the boot-watchdog budget/lookback config registration. Boot-watchdog, every host's half: registers the boot-watchdog config (budget, lookback) and the boot-wedge report kind. The monitor that files the reports is the machine/ half's.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "boot-watchdog"
@@ -21776,13 +21782,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "boot-wedge"
         - Uses:
           - `config_v2.ConfigV2`
-          - `config_v2.getConfig`
-          - `debug/boot-events.readBootEvents`
-          - `infra/jobs.defineJob`
-          - `infra/paths.listWorktreeDirs`
           - `primitives/log-channels/log-files.logsDirFor`
           - `reports.ReportKind`
-          - `reports/engine.recordReport`
+      - Machine:
+        - Uses:
+          - `debug/boot-events.clearBootUnsettled`
+          - `debug/boot-events.markBootUnsettled`
+          - `debug/boot-events.readBootUnsettled`
+          - `debug/boot-events.stampBootUnsettledIndexed`
         - Register: `defineJob('debug.boot-watchdog-monitor')`
       - Core:
         - Uses:
@@ -32101,11 +32108,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 59 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 58 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×16
           - `infra` ×11
           - `conversations` ×8
-          - `debug` ×7
+          - `debug` ×6
           - `tasks` ×5
           - `database` ×3
           - `page` ×3
@@ -32871,6 +32878,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `listWorktreeDirs`
           - `LOG_FILE_RE`
           - `logPatternMatches`
+          - `lookupCheckoutDeploy`
           - `planMigration`
           - `PLUGINS_DIR`
           - `pruneWorktreeCheckArtifacts`
@@ -32892,8 +32900,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `debug` ×8
+        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `debug` ×7
           - `infra` ×6
           - `framework` ×5
           - `backup` ×4
@@ -49885,8 +49893,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 22 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
-          - `debug` ×9
+        - Imported by: 21 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+          - `debug` ×8
           - `database` ×3
           - `conversations` ×2
           - `reports` ×2

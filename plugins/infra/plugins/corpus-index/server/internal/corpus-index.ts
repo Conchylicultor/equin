@@ -68,6 +68,15 @@ export interface CorpusIndexSpec<TPartial> {
   scope: "host" | "worktree";
   /** Bounded readdir/stat/parse concurrency (defaults to {@link DEFAULT_CONCURRENCY}). */
   concurrency?: number;
+  /**
+   * Who hears the corpus change. `index` (the default): the index's own
+   * main-only watch ({@link CorpusIndex.startWatcher}); off main, every
+   * refresh walks. `consumer`: the consumer already watches the roots on every
+   * backend and reports each batch's paths through
+   * {@link CorpusIndex.markChanged} — a refresh then re-checks only those, on
+   * every backend, and the index opens no watch of its own.
+   */
+  watchedBy?: "index" | "consumer";
 }
 
 /**
@@ -106,15 +115,25 @@ export interface CorpusIndex<TPartial> {
   /** The current per-file partials, keyed by path. The rollup stays in the consumer. */
   entries(): Map<string, TPartial>;
   /**
-   * Force the next {@link ensureFresh} to re-walk even on main. LOAD-BEARING (not
-   * convenience): on main `ensureFresh` short-circuits while nothing is
-   * stale, and only {@link startWatcher}'s watch otherwise marks it stale. A
-   * consumer that owns its OWN file watcher must NOT call `startWatcher()` (it
-   * double-watches and is `isMain()`-gated), so `markDirty()` is its ONLY way to
-   * invalidate the index — without it every refresh after the first would
-   * silently reuse a stale index on the main backend.
+   * Force the next {@link ensureFresh} to re-walk every root, even where a
+   * watch keeps it fresh — the answer to a watch that reported dropped events.
+   * A consumer whose own watch heard every change reports it through
+   * {@link markChanged} instead: a walk is O(corpus).
    */
   markDirty(): void;
+  /**
+   * For an index declared `watchedBy: "consumer"` (throws otherwise): the
+   * paths a batch of the consumer's own watch named. The next
+   * {@link ensureFresh} re-checks only those (on every backend), never a walk.
+   */
+  markChanged(paths: Iterable<string>): void;
+  /**
+   * For an index declared `watchedBy: "consumer"` (throws otherwise): the
+   * consumer's watch of `root` just opened — whatever moved under it before
+   * went unheard, so the next {@link ensureFresh} catches that root up from
+   * the journal (walking it when the journal cannot vouch).
+   */
+  markWatchOpened(root: string): void;
   /**
    * Main-only push freshness via `@parcel/watcher`: a change batch marks the
    * paths it named stale and re-checks THOSE in the background (never a full
@@ -308,9 +327,9 @@ export interface RefreshResult extends CorpusDelta {
 }
 
 /**
- * Incremental refresh: enumerate the corpus, `stat` every file, re-parse only
+ * Incremental refresh: enumerate `deps.roots`, `stat` every file, re-parse only
  * those whose `(mtimeMs,size)` fingerprint changed (or are new), drop entries
- * for files that vanished. Mutates `index` in place; persists (once) if a change
+ * under those roots for files that vanished. Mutates `index` in place; persists (once) if a change
  * occurred and `deps.persist` is set.
  */
 export async function refreshCorpus<TPartial>(
@@ -325,9 +344,11 @@ export async function refreshCorpus<TPartial>(
     removedPaths: [],
   };
 
-  // Drop entries for files that no longer exist.
+  // Drop entries for files that no longer exist — under the roots walked. An
+  // entry under another root (one not walked by this pass, or one out of the
+  // root set for now) keeps it: that root is caught up from its own cursor.
   for (const path of Object.keys(index.files)) {
-    if (!live.has(path)) {
+    if (!live.has(path) && deps.roots.some((r) => isUnder(path, r))) {
       delete index.files[path];
       delta.removedPaths.push(path);
     }
@@ -505,47 +526,55 @@ export interface CorpusJournal {
 // ─── boot catch-up from the journal ────────────────────────────────────────────
 
 /**
- * The cursors to save with the pass about to run — one per root, taken BEFORE
- * the pass, so a change landing during it is replayed again next time (the
- * fingerprint gate makes a re-check free). `undefined` when a root has no
- * journal: the next boot walks.
+ * The journal cursor to save for one root with the pass about to run, taken
+ * BEFORE the pass, so a change landing during it is replayed again next time
+ * (the fingerprint gate makes a re-check free). `undefined` when the root has
+ * no journal: the next process walks it.
  */
-async function takeCursors(
-  roots: string[],
+async function takeCursor(
+  root: string,
   journal: CorpusJournal,
-): Promise<JournalCursor[] | undefined> {
-  const cursors: JournalCursor[] = [];
-  for (const root of roots) {
-    const result = await journal.cursor(root);
-    if (result.kind === "unsupported") return undefined;
-    cursors.push(result.cursor);
-  }
-  return cursors;
+): Promise<JournalCursor | undefined> {
+  const result = await journal.cursor(root);
+  return result.kind === "cursor" ? result.cursor : undefined;
 }
 
 /**
- * Every path that may have moved under `roots` since the persisted index was
- * true — read from the journal, not by walking — or `unknown` when the
- * journal cannot vouch for all of it (no cursor, a root added or dropped
- * since, or any root's replay unknown). Fail-closed: `unknown` ⇒ walk.
+ * Every path that may have moved under `root` since its saved cursor — read
+ * from the journal, not by walking — or `unknown` when the journal cannot
+ * vouch for all of it (no cursor saved for the root, or its replay unknown).
+ * Fail-closed: `unknown` ⇒ walk that root.
  */
-async function replayJournal(
-  cursors: JournalCursor[] | undefined,
-  roots: string[],
+async function replayRoot(
+  cursor: JournalCursor | undefined,
   journal: CorpusJournal,
 ): Promise<JournalReplay> {
-  if (cursors === undefined)
+  if (cursor === undefined)
     return { kind: "unknown", reason: "no journal cursor saved" };
-  const byRoot = new Map(cursors.map((c) => [c.root, c]));
-  if (byRoot.size !== roots.length || roots.some((r) => !byRoot.has(r)))
-    return { kind: "unknown", reason: "the roots changed" };
-  const paths: string[] = [];
-  for (const root of roots) {
-    const replay = await journal.changesSince(byRoot.get(root)!);
-    if (replay.kind === "unknown") return replay;
-    paths.push(...replay.paths);
-  }
-  return { kind: "changes", paths };
+  return await journal.changesSince(cursor);
+}
+
+/** Whether `path` is `root` or below it. */
+function isUnder(path: string, root: string): boolean {
+  return path === root || path.startsWith(`${root}/`);
+}
+
+function emptyResult(): RefreshResult {
+  return {
+    changed: false,
+    addedPaths: [],
+    modifiedPaths: [],
+    removedPaths: [],
+  };
+}
+
+function mergeResults(a: RefreshResult, b: RefreshResult): RefreshResult {
+  return {
+    changed: a.changed || b.changed,
+    addedPaths: [...a.addedPaths, ...b.addedPaths],
+    modifiedPaths: [...a.modifiedPaths, ...b.modifiedPaths],
+    removedPaths: [...a.removedPaths, ...b.removedPaths],
+  };
 }
 
 /**
@@ -566,11 +595,19 @@ export function createCorpusIndex<TPartial>(
   // batch named since the last pass (empty ⇒ nothing moved, on main).
   let stale: "all" | Set<string> = "all";
   let refreshInflight: Promise<CorpusDelta> | null = null;
-  // Whether this process has done its first full pass. Only that one may be
-  // answered from the journal: it is the catch-up on what moved while no
-  // process watched. A later full pass (`markDirty`, a lost-events report)
-  // asks for a walk, and gets one.
-  let caughtUp = false;
+  // The roots this process has caught up — walked, or replayed from the
+  // journal — and kept fresh since. A root not in it is caught up from its own
+  // saved cursor on the next pass (the catch-up on what moved while no process
+  // watched it), every other root left alone; a root in it walks only when a
+  // walk is asked for (`markDirty`, a lost-events report). A root that leaves
+  // the root set leaves it too: nothing watches it while it is out.
+  const caughtUp = new Set<string>();
+  // How many times the consumer's watch of each root (re)opened.
+  const watchEpoch = new Map<string, number>();
+  // Who hears the corpus change, so a clean index may skip the pass: the
+  // index's own watch (main) or the consumer's, which reports through
+  // `markChanged` on every backend. Off both, every refresh walks.
+  const consumerWatched = spec.watchedBy === "consumer";
   let watcherStarted = false;
   let watchArmed = false;
   const changeListeners = new Set<() => void>();
@@ -581,8 +618,8 @@ export function createCorpusIndex<TPartial>(
   const resolveRoots = (): string[] =>
     typeof spec.roots === "function" ? spec.roots() : spec.roots;
 
-  const refreshDeps = (): RefreshDeps<TPartial> => ({
-    roots: resolveRoots(),
+  const refreshDeps = (roots: string[]): RefreshDeps<TPartial> => ({
+    roots,
     match,
     parse,
     indexPath: spec.indexPath,
@@ -593,25 +630,56 @@ export function createCorpusIndex<TPartial>(
   });
 
   /**
-   * The whole corpus, brought up to date: from the journal on the process's
-   * first pass when it can vouch for everything since the saved cursors (the
-   * paths it names go through the same targeted re-check a watcher batch
-   * does), by walking otherwise. Either way the cursors taken before the pass
-   * are saved with its result. A watcher batch's targeted pass never advances
-   * them: events still in a debounce window at a crash would be skipped.
+   * One pass over the corpus. `work` is what the watch said moved since the
+   * last pass (a set of paths), or `"all"` when a walk was asked for. Every
+   * root not yet caught up in this process is caught up from the journal when
+   * its saved cursor can vouch for everything since (the paths it names go
+   * through the same targeted re-check a watcher batch does), by walking that
+   * root otherwise; with `"all"`, the caught-up roots are walked too. Each
+   * root walked or replayed has its cursor, taken before the pass, saved with
+   * the result; a root only re-checked for watcher-named paths keeps its old
+   * one (events still in a debounce window at a crash would be skipped).
    */
-  async function fullPass(idx: CorpusFile<TPartial>): Promise<RefreshResult> {
-    const deps = refreshDeps();
-    const saved = idx.cursors;
-    // Only a persisting backend saves cursors; the others read the saved ones.
-    const next = deps.persist
-      ? await takeCursors(deps.roots, env.journal)
+  async function pass(
+    idx: CorpusFile<TPartial>,
+    roots: string[],
+    work: "all" | Set<string>,
+  ): Promise<RefreshResult> {
+    const persist = computePersist(spec.scope, env.isMain());
+    const saved = idx.cursors ?? [];
+    const savedFor = (root: string): JournalCursor | undefined =>
+      saved.find((c) => c.root === root);
+    const walk: string[] = [];
+    const paths = new Set<string>(work === "all" ? [] : work);
+    const passed: string[] = [];
+    const taken: JournalCursor[] = [];
+    // Each root's watch epoch as the pass starts: a watch reopened meanwhile
+    // (`markWatchOpened`) leaves its root NOT caught up by this pass.
+    const epochs = new Map(roots.map((r) => [r, watchEpoch.get(r) ?? 0]));
+    for (const root of roots) {
+      const caught = caughtUp.has(root);
+      if (caught && work !== "all") continue;
+      // Only a persisting backend saves cursors; the others read the saved
+      // ones. Taken BEFORE this root's replay or walk, so a change landing
+      // during it is replayed again next time.
+      if (persist) {
+        const cursor = await takeCursor(root, env.journal);
+        if (cursor !== undefined) taken.push(cursor);
+      }
+      if (caught) walk.push(root);
+      else {
+        const replay = await replayRoot(savedFor(root), env.journal);
+        if (replay.kind === "changes")
+          for (const p of replay.paths) paths.add(p);
+        else walk.push(root);
+      }
+      passed.push(root);
+    }
+    const next = persist
+      ? [...saved.filter((c) => !passed.includes(c.root)), ...taken]
       : saved;
-    const replay: JournalReplay = caughtUp
-      ? { kind: "unknown", reason: "a walk was asked for" }
-      : await replayJournal(saved, deps.roots, env.journal);
-    const setCursors = (c: JournalCursor[] | undefined): void => {
-      if (c === undefined) delete idx.cursors;
+    const setCursors = (c: JournalCursor[]): void => {
+      if (c.length === 0) delete idx.cursors;
       else idx.cursors = c;
     };
     // Set before the pass, so the save it makes when something moved carries
@@ -619,22 +687,32 @@ export function createCorpusIndex<TPartial>(
     setCursors(next);
     let result: RefreshResult;
     try {
-      result =
-        replay.kind === "changes"
-          ? await refreshCorpusPaths(idx, replay.paths, deps)
-          : await refreshCorpus(idx, deps);
+      const walked =
+        walk.length > 0
+          ? await refreshCorpus(idx, refreshDeps(walk))
+          : emptyResult();
+      // A path under a walked root was just re-checked by the walk.
+      const targeted = [...paths].filter(
+        (p) => !walk.some((r) => isUnder(p, r)),
+      );
+      const rechecked =
+        targeted.length > 0
+          ? await refreshCorpusPaths(idx, targeted, refreshDeps(roots))
+          : emptyResult();
+      result = mergeResults(walked, rechecked);
     } catch (err) {
       setCursors(saved);
       throw err;
     }
-    caughtUp = true;
+    for (const root of passed)
+      if ((watchEpoch.get(root) ?? 0) === epochs.get(root)) caughtUp.add(root);
     // A pass that moved nothing saved nothing: save the advanced cursors.
     if (
-      deps.persist &&
+      persist &&
       !result.changed &&
       JSON.stringify(next) !== JSON.stringify(saved)
     ) {
-      await saveCorpusFile(deps.indexPath, idx);
+      await saveCorpusFile(spec.indexPath, idx);
     }
     return result;
   }
@@ -644,30 +722,41 @@ export function createCorpusIndex<TPartial>(
       spec.indexPath,
       await env.digest(spec.format.code),
     );
-    // Main clears `stale` after a refresh and relies on the watcher (or an
-    // explicit markDirty) to set it again. Worktree backends have no watcher, so
-    // they always re-walk. Nothing moved ⇒ an empty delta (a real empty success).
-    const main = env.isMain();
-    if (main && stale !== "all" && stale.size === 0) {
+    // Watched (main's own watch, or the consumer's): only what the watch
+    // named, plus any root not caught up. Unwatched: walk everything.
+    const watched = consumerWatched || env.isMain();
+    // Nothing moved and every root caught up ⇒ an empty delta (a real empty
+    // success). A root that left the set is no longer caught up.
+    if (
+      watched &&
+      refreshInflight === null &&
+      stale !== "all" &&
+      stale.size === 0 &&
+      resolveRoots().every((r) => caughtUp.has(r))
+    ) {
       return { addedPaths: [], modifiedPaths: [], removedPaths: [] };
     }
     // Single-flight: a concurrent second caller joins THIS promise and so
     // receives the same delta the refresh computed — never a silent empty one.
     refreshInflight ??= (async (): Promise<CorpusDelta> => {
+      const roots = resolveRoots();
+      for (const root of [...caughtUp])
+        if (!roots.includes(root)) caughtUp.delete(root);
       // Taken BEFORE the pass: a change landing mid-pass (which may already
       // have scanned past its path) is recorded again, so the next call
       // re-checks rather than trusting this pass. A failed pass re-walks all.
-      const work = main ? stale : "all";
+      const work = watched ? stale : "all";
       stale = new Set();
       try {
         // A watcher batch names what moved: re-check those paths alone. A
         // full walk is O(corpus) — ~1.2k dirs and ~4k stats for the transcript
         // corpus — and used to run on every batch, i.e. every couple of
         // seconds while any agent was writing.
-        const { addedPaths, modifiedPaths, removedPaths } =
-          work === "all"
-            ? await fullPass(index!)
-            : await refreshCorpusPaths(index!, work, refreshDeps());
+        const { addedPaths, modifiedPaths, removedPaths } = await pass(
+          index!,
+          roots,
+          work,
+        );
         if (
           addedPaths.length + modifiedPaths.length + removedPaths.length >
           0
@@ -685,29 +774,56 @@ export function createCorpusIndex<TPartial>(
     return await refreshInflight;
   }
 
-  // See the interface doc: the ONLY invalidation seam for a consumer that owns
-  // its own watcher (and therefore must not call startWatcher()).
+  // See the interface doc: forces the next pass to walk every root.
   function markDirty(): void {
     stale = "all";
   }
 
-  /** A watcher batch: remember what it named, unless a full walk is due anyway. */
-  function markPathsStale(paths: readonly string[]): void {
+  /** A watch batch: remember what it named, unless a full walk is due anyway. */
+  function markPathsStale(paths: Iterable<string>): void {
     if (stale === "all") return;
     for (const p of paths) stale.add(p);
+  }
+
+  function markChanged(paths: Iterable<string>): void {
+    if (!consumerWatched) {
+      throw new Error(
+        `corpus index "${spec.name}": markChanged() is for an index declared watchedBy: "consumer" — this one is kept fresh by its own watch (startWatcher)`,
+      );
+    }
+    markPathsStale(paths);
+  }
+
+  function markWatchOpened(root: string): void {
+    if (!consumerWatched) {
+      throw new Error(
+        `corpus index "${spec.name}": markWatchOpened() is for an index declared watchedBy: "consumer"`,
+      );
+    }
+    caughtUp.delete(root);
+    watchEpoch.set(root, (watchEpoch.get(root) ?? 0) + 1);
   }
 
   function entries(): Map<string, TPartial> {
     const out = new Map<string, TPartial>();
     if (index) {
+      // Only the current roots: the index keeps an out-of-set root's entries
+      // (and cursor) so it is caught up from the journal when it comes back,
+      // but they are not part of the corpus while it is out.
+      const roots = resolveRoots();
       for (const [path, e] of Object.entries(index.files)) {
-        out.set(path, e.partial);
+        if (roots.some((r) => isUnder(path, r))) out.set(path, e.partial);
       }
     }
     return out;
   }
 
   async function startWatcher(): Promise<void> {
+    if (consumerWatched) {
+      throw new Error(
+        `corpus index "${spec.name}" is declared watchedBy: "consumer": its consumer's watch reports through markChanged(), so the index opens none`,
+      );
+    }
     if (watcherStarted || !env.isMain()) return;
     watcherStarted = true;
     await env.startFileWatcher({
@@ -755,6 +871,8 @@ export function createCorpusIndex<TPartial>(
     ensureFresh,
     entries,
     markDirty,
+    markChanged,
+    markWatchOpened,
     startWatcher,
     watching: () => watchArmed,
     onChange,

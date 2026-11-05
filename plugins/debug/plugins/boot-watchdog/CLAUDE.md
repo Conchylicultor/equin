@@ -25,7 +25,10 @@ never the row's own worktree.
 
 ## Superseded vs open
 
-Each tick sweeps every worktree's boot channel (`readBootEvents(wt, lookbackMs)`)
+Each tick reads the gateway fleet (`GET /gateway/worktrees`, 2 s timeout) and
+sweeps the boot channel (`readBootEvents(wt, lookbackMs)`) of the worktrees that
+can hold a wedge — every one the gateway runs a backend for (any state but
+`idle`, `broken` included) and every one boot-events' unsettled marks name —
 for boots with no `ready` line whose un-ready duration has crossed
 `bootReadyBudgetMs` (default 120 s). A boot that **exited** before ready
 (`exitedAt`, boot-events' `exited` line) is skipped: it crashed, it did not
@@ -37,17 +40,32 @@ agent took to rebuild (a 3 s boot assert filed as "un-ready 172s").
   set). A closed, past outage. Filed **once** (a module-level
   `Set<wt:processStartedAt>`, boot-budget's dedup pattern) so it is on record
   post-hoc without re-filing the same dead outage every minute.
-- **open** — the latest attempt, no successor. Could be wedged NOW or torn down.
-  The gateway fleet list (`GET /gateway/worktrees`, 2 s timeout) is the
-  discriminator: **any presence** — regardless of the gateway's `state` string —
-  means the worktree still exists and its backend is being run, so a missing
-  ready line is a live wedge. Gateway-`running` is a LOWER bar than our
-  app-`ready` line (process up + socket open, but `onReady` may never have
-  fired), so we must NOT gate on `state === "running"` (that would miss the exact
-  wedged-now boots this exists to catch). Filed **each tick** (no dedup Set), so
-  the row's `count` ≈ minutes wedged and the bell re-arms per the 15-min
-  cooldown. If the gateway is unreadable this tick (`readFleet` → null), open
-  evaluation is skipped rather than guessed.
+- **open** — the latest attempt, no successor, on a worktree the gateway still
+  lists (any state, `idle` included): the worktree exists and is unusable until
+  a boot becomes ready. Gateway-`running` is a LOWER bar than our app-`ready`
+  line (process up + socket open, but `onReady` may never have fired), so
+  nothing here gates on `state === "running"`. Filed **each tick** (no dedup
+  Set), so the row's `count` ≈ minutes wedged and the bell re-arms per the
+  15-min cooldown. A worktree out of the fleet (torn down) is not alerted.
+
+**Which worktrees a tick reads.** Not every worktree dir: that was ~240–300
+synchronous `boot.jsonl` tail reads on main's event loop each minute (4–7 s
+stalls under host load) to evaluate the ~10 that can hold a wedge. A tick reads:
+
+- every worktree the gateway runs a backend for (`starting` / `running` /
+  `restarting` / `stopping` / `broken`) — where every boot happens, and where
+  a superseding boot (so a superseded wedge) is;
+- every worktree **marked unsettled** (`boot-events`' marks,
+  `~/.equin/cache/boot-unsettled/<wt>`): a backend marks its worktree right
+  after its `start` line, and only this sweep clears a mark, after reading that
+  worktree's boot as settled (ready or exited) or finding it torn down. So a
+  never-ready worktree the gateway lists `idle` — after a gateway restart, a
+  stop, a kill — is still read and filed every tick. The marks are complete
+  once stamped `.indexed`; until then (first tick after deploy, or the dir was
+  deleted) one full sweep marks every worktree with an open boot.
+
+If the gateway is unreadable this tick (`readFleet` → null), the tick is
+skipped rather than guessed; both wedge kinds stay fileable next tick.
 
 ## Load-bearing literals
 
@@ -61,7 +79,7 @@ into a report: the `boot` channel is only its evidence and declares no reader.
 
 ## Plugin reference
 
-- Description: Boot-wedge report renderer: a one-line Debug → Reports summary for the boot-wedge kind, plus the boot-watchdog budget/lookback config registration. Boot-watchdog monitor: a main-only per-minute scheduled job that sweeps every worktree's boot channel off the shared filesystem and files a deduped boot-wedge report for any backend that never reached its `ready` line within the boot budget — superseded (post-hoc, once) or open (gateway-confirmed wedged-now, re-filed each tick). Structurally main-only: a perWorktree job cannot observe its own wedged boot.
+- Description: Boot-wedge report renderer: a one-line Debug → Reports summary for the boot-wedge kind, plus the boot-watchdog budget/lookback config registration. Boot-watchdog, every host's half: registers the boot-watchdog config (budget, lookback) and the boot-wedge report kind. The monitor that files the reports is the machine/ half's.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "boot-watchdog"
@@ -77,13 +95,14 @@ into a report: the `boot` channel is only its evidence and declares no reader.
     - `report-kind` "boot-wedge"
   - Uses:
     - `config_v2.ConfigV2`
-    - `config_v2.getConfig`
-    - `debug/boot-events.readBootEvents`
-    - `infra/jobs.defineJob`
-    - `infra/paths.listWorktreeDirs`
     - `primitives/log-channels/log-files.logsDirFor`
     - `reports.ReportKind`
-    - `reports/engine.recordReport`
+- Machine:
+  - Uses:
+    - `debug/boot-events.clearBootUnsettled`
+    - `debug/boot-events.markBootUnsettled`
+    - `debug/boot-events.readBootUnsettled`
+    - `debug/boot-events.stampBootUnsettledIndexed`
   - Register: `defineJob('debug.boot-watchdog-monitor')`
 - Core:
   - Uses:

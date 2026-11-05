@@ -3,9 +3,16 @@ import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { readBootEvents } from "@plugins/debug/plugins/boot-events/server";
-import { listWorktreeDirs } from "@plugins/infra/plugins/paths/server";
+import {
+  clearBootUnsettled,
+  markBootUnsettled,
+  readBootUnsettled,
+  stampBootUnsettledIndexed,
+} from "@plugins/debug/plugins/boot-events/machine";
 import { bootWatchdogConfig } from "../../core";
 import { readFleet } from "./read-fleet";
+import { listWorktreeDirs } from "@plugins/infra/plugins/paths/server";
+import type { BootEvent } from "@plugins/debug/plugins/boot-events/server";
 
 // Per-process set of superseded wedges ALREADY filed. A superseded wedge is a
 // closed, past outage: the boot channel keeps returning it every tick for as
@@ -47,13 +54,62 @@ export const bootWatchdogMonitorJob = defineJob({
     if (!cfg.enabled) return;
 
     const now = Date.now();
-    // Read the gateway fleet ONCE per tick (null = unreadable this tick). Only
-    // the OPEN branch consults it; a superseded wedge is a past fact needing no
-    // liveness check.
+    // Read the gateway fleet ONCE per tick (null = unreadable this tick).
     const fleet = await readFleet();
+    // Unreadable fleet ⇒ no sweep this tick: it is the only source of which
+    // worktrees exist and which have a backend. Both wedge kinds stay
+    // fileable on the next readable tick (an open one stays open; a
+    // superseded one stays inside the lookback window).
+    if (fleet === null) return;
 
-    for (const wt of listWorktreeDirs()) {
-      for (const ev of readBootEvents(wt, cfg.lookbackMs)) {
+    // WHICH worktrees to read — the ones that can hold a wedge, not every
+    // worktree dir (~240–300 synchronous `boot.jsonl` tail reads on main's
+    // event loop each minute: 4–7 s stalls under host load, to evaluate ~10):
+    //
+    //  • every worktree the gateway runs a backend for — any state but `idle`
+    //    (starting / running / restarting / stopping / broken). A boot that
+    //    never becomes ready is born here: `starting`, then `broken` when the
+    //    gateway abandons it at its readiness deadline, which lasts until the
+    //    next spawn. A superseding boot is itself a backend, so a superseded
+    //    wedge is read here too.
+    //  • every worktree MARKED unsettled (boot-events' marks): a backend marks
+    //    its worktree right after its `start` line, and only this sweep clears
+    //    the mark, once it has read that worktree's boot as settled (ready or
+    //    exited). So a never-ready worktree the gateway lists `idle` (after a
+    //    gateway restart, a stop, a kill) is still read every tick and still
+    //    filed as open while it stays unusable — whatever the timing.
+    //
+    // Marks are complete once stamped `indexed`; until then (first run, or the
+    // dir was deleted) one full sweep marks every worktree with an open boot.
+    let marks = await readBootUnsettled();
+    if (!marks.indexed) {
+      for (const wt of listWorktreeDirs()) {
+        if (hasUnsettledBoot(readBootEvents(wt, cfg.lookbackMs)))
+          markBootUnsettled(wt);
+      }
+      stampBootUnsettledIndexed();
+      marks = await readBootUnsettled();
+    }
+    const sweep = new Set([
+      ...[...fleet].filter(([, state]) => state !== "idle").map(([wt]) => wt),
+      ...marks.worktrees,
+    ]);
+
+    for (const wt of sweep) {
+      const events = readBootEvents(wt, cfg.lookbackMs);
+      // Open ⇒ marked, whoever wrote its start line (a backend whose code
+      // predates the marks): from here on it is read every tick, idle or not,
+      // until it settles. Settled ⇒ the mark is cleared, unless it is newer
+      // than the settling (a boot started since). A mark is never cleared
+      // while its boot is open — out of the fleet included (a worktree the
+      // gateway drops and re-adds is still read).
+      if (hasUnsettledBoot(events)) {
+        if (!marks.worktrees.includes(wt)) markBootUnsettled(wt);
+      } else if (marks.worktrees.includes(wt)) {
+        await clearBootUnsettled(wt, settledAtMs(events, cfg.lookbackMs, now));
+      }
+      if (!fleet.has(wt)) continue; // torn down: never alerted
+      for (const ev of events) {
         if (ev.readyAt !== null) continue; // became ready — not wedged
         // Exited before ready: a boot crash, not a wedge. The crash is its
         // own report — boot-events files it, error and stack, through the
@@ -87,12 +143,9 @@ export const bootWatchdogMonitorJob = defineJob({
           continue;
         }
 
-        // Open (latest attempt): distinguish wedged-NOW from torn-down. Only the
-        // gateway fleet knows — presence (any state string) means the worktree
-        // still exists and its backend is being run, so a missing ready line is a
-        // live wedge. Absence means teardown → do not alert.
-        if (fleet === null) continue; // gateway unreadable — skip open eval this tick
-        if (!fleet.has(wt)) continue; // torn down, not wedged-now
+        // Open (latest attempt) on a worktree the gateway still lists — any
+        // state, `idle` included: present means the worktree exists and is
+        // unusable until a boot becomes ready.
         // Re-file each tick (NO dedup Set) so `count` ≈ minutes wedged and the
         // bell re-arms per the kind's cooldown.
         void recordReport({
@@ -112,3 +165,30 @@ export const bootWatchdogMonitorJob = defineJob({
     }
   },
 });
+
+/** The worktree's latest boot neither became ready nor exited (open). */
+function hasUnsettledBoot(events: readonly BootEvent[]): boolean {
+  return events.some(
+    (e) =>
+      e.readyAt === null && e.exitedAt === null && e.supersededAtMs === null,
+  );
+}
+
+/**
+ * When the worktree's latest boot settled (its ready or exit time). No boot in
+ * the lookback window: nothing settled inside it, so a mark older than the
+ * window's start is a leftover (a worktree whose boot.jsonl is gone, or
+ * quiet) and a newer one may still have its `start` line coming.
+ */
+function settledAtMs(
+  events: readonly BootEvent[],
+  lookbackMs: number,
+  now: number,
+): number {
+  let latest = now - lookbackMs;
+  for (const e of events) {
+    const at = e.readyAt ?? e.exitedAt;
+    if (at !== null && at > latest) latest = at;
+  }
+  return latest;
+}
