@@ -13,7 +13,7 @@ import { backfillNoiseWarmup } from "./internal/backfill-noise";
 import { reportsRetention } from "./internal/retention";
 import {
   flushBufferedReports,
-  installProcessHooks,
+  processCrashHandler,
 } from "./internal/process-hooks";
 import { fatalReportHandler } from "./internal/fatal";
 
@@ -44,7 +44,7 @@ export type { StormSummary, StormRosterEntry } from "./internal/fan-out";
 // is the seed, read-only.
 export default {
   description:
-    "Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, installs the process crash hooks and replays the on-disk crash buffer, and owns the reports table's change producer, retention and fork exclusion.",
+    "Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, files every crash the process's listeners catch (processCrashSink, in every boot mode: the crash buffer from a ready serving backend, the report outbox from anything else) and replays the on-disk crash buffer, and owns the reports table's change producer, retention and fork exclusion.",
   httpRoutes: {
     [submitReport.route]: handleReport,
   },
@@ -84,22 +84,23 @@ export default {
     // A report filed synchronously before a deliberate exit — in an exec child
     // too, which never runs `onReady` (./internal/fatal.ts).
     fatalReportHandler,
+    // Every uncaught exception and unhandled rejection the process's listeners
+    // catch — server-core installs them at each process entry point, so an
+    // exec child's crash is filed too (./internal/process-hooks.ts).
+    processCrashHandler,
   ],
   onReady: async () => {
-    // Cheap, serving-critical error-capture wiring stays EAGER: it installs the
-    // process crash hooks and drains the on-disk crash buffer from the
-    // previous boot (crashes, and fatal reports a deliberate exit filed). These
-    // are near-instant (register a listener; flush a small JSONL buffer) and
-    // must run before first request so crashes are captured from t=0. Only the
-    // heavy `_reports` scan moved to the deferred/throttled backfill warm-up
-    // (see backfillNoiseWarmup).
+    // Drain the on-disk crash buffer from the previous boot (crashes, and fatal
+    // reports a deliberate exit filed). Near-instant (a small JSONL file); the
+    // heavy `_reports` scan is the deferred backfill warm-up
+    // (backfillNoiseWarmup). Serve-only, as `onReady` is: only the serving
+    // backend writes the buffer.
     //
     // A buffered line's kind must be registered by some plugin in the
     // composition for the replay to resolve. It is: `collectContributions()`
     // runs over every plugin BEFORE any `onReady` (server-core
     // `bin/index.ts`), so every ReportKind contribution is in the registry by
     // the time this flush reads the file.
-    installProcessHooks();
     await flushBufferedReports();
   },
 } satisfies ServerPluginDefinition;

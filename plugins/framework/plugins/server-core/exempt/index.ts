@@ -15,4 +15,11 @@ export default [
     reason:
       "The substrate: defines the old live-resource spellings, or is compiled onto them (the live API, the optimistic overlay, the runtime and its server / central facades).",
   },
+  {
+    rule: "server-core/no-process-crash-listener",
+    paths: ["core/process-crash-listeners.ts"],
+    kind: "sanctioned",
+    reason:
+      "The one owner of the process's crash listeners: installed by each process entry point before the graph loads, dispatching to processCrashSink.",
+  },
 ] satisfies Exemptions;

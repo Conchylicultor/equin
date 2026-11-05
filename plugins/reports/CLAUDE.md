@@ -6,7 +6,7 @@ read `reports.list`, the `ReportKind` / `ReportNoiseRule` slots every kind and
 rule contributes to, the fan-out ceiling config, and the two contracts the
 engine and the investigations automation meet on (`reportInvestigationSink`,
 `reportRecordedSignal`). Everything that WRITES reports — `recordReport`, the
-routes, the crash hooks and buffer, the change producer, retention, the noise
+routes, the process-crash handler and buffer, the change producer, retention, the noise
 backfill, investigation — is the engine,
 [`plugins/engine`](plugins/engine/CLAUDE.md), a non-portable `server/` barrel.
 So a kind's own server code imports `ReportKind` / `ReportRow` from here and
@@ -171,7 +171,7 @@ host first.
   - **`collab-hydration`** — Collab-hydration collector: drains the page editor's collabHydrationReportSink into a report whenever a block's rendered text stops agreeing with its content doc (a binding that never hydrated) or…
   - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
-  - **`engine`** [exempt] — Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand…
+  - **`engine`** [exempt] — Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, files…
   - **`host-check`** — Host-check report kind's Debug → Reports summary view: one line naming the failing host-scoped check and the first line of its message. Filed by main's hourly host audit through the report outbox…
   - **`icon-family-gap`** — Icon-family-gap collector: drains the icons plugin's iconFamilyGapReportSink into a deduped report whenever a scope whose icon family is strict draws a symbol the family does not map (it shows the…
   - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.

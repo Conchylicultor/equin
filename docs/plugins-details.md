@@ -21756,6 +21756,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `debug/boot-watchdog`
           - `debug/timeline`
+      - Exemptions:
+        - Exempts itself from: `server-core/no-process-crash-listener` — `machine/internal/boot-crash.ts` (sanctioned)
       - Machine:
         - Exports (values):
           - `clearBootUnsettled`
@@ -27512,6 +27514,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PersistedValueCheck`
           - `PersistMeta`
           - `PhaseId`
+          - `ProcessCrash`
+          - `ProcessCrashEvent`
           - `ProcMemory`
           - `ProfilerHooks`
           - `ProfilerLeafOptions`
@@ -27568,6 +27572,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installMemoryProbe`
           - `installPeerMemoryProbe`
           - `installSnapHash`
+          - `isProcessCrashHandled`
           - `isServerReady`
           - `keptSnapshotValue`
           - `loadResourceByKey`
@@ -27584,6 +27589,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `persistedDefinitions`
           - `persistedKeys`
           - `physFootprintBytes`
+          - `processCrashSink`
           - `procMemory`
           - `profilerStart`
           - `provideHostServicesUnbooted`
@@ -27626,6 +27632,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `detached-work-safety/no-raw-set-interval` — `bin/serve.ts` (sanctioned)
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
+          - `server-core/no-process-crash-listener` — `core/process-crash-listeners.ts` (sanctioned)
+        - Exempted by:
+          - `debug/boot-events` (0 debt)
+          - `framework/server-core` (0 debt)
       - Cli:
         - Exports (values): `runExec`
       - Test helpers:
@@ -50314,7 +50324,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.EndpointErrorInfo`
           - `infra/endpoints.endpointErrorSink`
           - `reports.report`
-    - **`engine`** — Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, installs the process crash hooks and replays the on-disk crash buffer, and owns the reports table's change producer, retention and fork exclusion.
+    - **`engine`** — Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, files every crash the process's listeners catch (processCrashSink, in every boot mode: the crash buffer from a ready serving backend, the report outbox from anything else) and replays the on-disk crash buffer, and owns the reports table's change producer, retention and fork exclusion.
       - Server:
         - Contributes:
           - `change-producer` "reports"

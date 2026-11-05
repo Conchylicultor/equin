@@ -32,6 +32,7 @@ import {
   runSettledPhase,
   runShutdownHooks,
 } from "../core/boot-stages";
+import { installProcessCrashListeners } from "../core/process-crash-listeners";
 // The desktop's native probes (memory, snapshot hash), installed into `core`
 // before the graph loads — see `./host-probes`.
 import "./host-probes";
@@ -75,6 +76,12 @@ export async function serve({
   server,
   machine,
 }: BackendRegistries): Promise<void> {
+  // ── Crash listeners ─────────────────────────────────────────────
+  // First, so a throw anywhere below is caught: the framework's listeners,
+  // dispatching to `processCrashSink` (`core/process-crash-listeners.ts`). `runExec`
+  // installs the same ones, so an exec child's crash is filed too.
+  installProcessCrashListeners();
+
   // ── Slow file calls (fs-wait) ───────────────────────────────────
   // A process root names its own fs-wait record, once: this one is a serving
   // backend. The CLI root (`framework/cli/bin/cli.ts`) does the same for every

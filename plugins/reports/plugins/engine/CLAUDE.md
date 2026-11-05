@@ -3,7 +3,7 @@
 The reports ENGINE: everything that writes the `reports` table, and the
 process crash capture that feeds it — `recordReport` (and its debounced
 variant), the HTTP routes (`POST /api/reports`, `POST /api/reports/:id/investigate`),
-the crash hooks and the on-disk crash buffer, the change producer, the noise
+the process-crash handler and the on-disk crash buffer, the change producer, the noise
 backfill, retention, investigation and the uninvestigated reads, and the fork
 exclusion.
 
@@ -107,6 +107,20 @@ line naming its kind to its crash buffer (replayed by its next boot's
 `flushBufferedReports`); any other process (an exec child) hands it to
 `reportOutboxFatalSink`, which `reports/outbox` writes synchronously.
 
+## Process crashes: `processCrashSink`
+
+An uncaught exception or unhandled rejection is caught by server-core's own
+listeners, which each process entry point (`serve`, `runExec`) installs before
+the graph loads, and dispatched to `processCrashSink`. The engine handles it
+through `sinkHandlers` (`server/internal/process-hooks.ts`), so an exec child's
+crash — a supervised job's body throwing outside its await chain — is filed
+too. The serving backend, once ready, appends it to its crash buffer (a
+rejection, which the process survives, is flushed at once); anything else (an
+exec child, or a serving backend still booting, which may crash again before
+it flushes) hands it to `reportOutboxFatalSink`. Before the handler attaches,
+the serving backend's boot crashes belong to `debug/boot-events`. The engine
+installs no listener itself: `server-core/no-process-crash-listener` forbids it.
+
 ## Noise is judged when recorded, re-judged only when the rules change
 
 `noise` (and the bell's `muted`) is computed by `recordReport` from the
@@ -139,7 +153,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 
 ## Plugin reference
 
-- Description: Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, installs the process crash hooks and replays the on-disk crash buffer, and owns the reports table's change producer, retention and fork exclusion.
+- Description: Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, files every crash the process's listeners catch (processCrashSink, in every boot mode: the crash buffer from a ready serving backend, the report outbox from anything else) and replays the on-disk crash buffer, and owns the reports table's change producer, retention and fork exclusion.
 - Server:
   - Contributes:
     - `change-producer` "reports"

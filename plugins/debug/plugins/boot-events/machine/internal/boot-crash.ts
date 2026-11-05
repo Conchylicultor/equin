@@ -1,6 +1,7 @@
 import { relative, sep } from "node:path";
 import {
   getBootMode,
+  isProcessCrashHandled,
   type Registration,
 } from "@plugins/framework/plugins/server-core/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
@@ -12,9 +13,12 @@ import {
   type ProcessReport,
 } from "@plugins/reports/plugins/outbox/core";
 
-// A boot that throws must reach Reports. The reports engine's own crash hooks
-// install in its `onReady`, so an error thrown before then — a failed
-// migration, a boot assert, a bad config — was on the backend's stderr only:
+// A boot that throws must reach Reports. The process's crash listeners
+// (server-core's, installed before the graph loads) dispatch to the reports
+// engine's handler on `processCrashSink`, which attaches in the engine's
+// `onReadyBlocking` — so an error thrown before then — a failed migration, a
+// boot assert, a bad config — would reach no handler, and was on the backend's
+// stderr only:
 // the build that spawned it prints it, but a boot no build watches (a cold
 // start on a page load, the gateway respawning main) reached nothing. The boot
 // watchdog used to catch those under the wrong name (a crash read as a
@@ -101,14 +105,12 @@ export async function fileBootCrashAndExit(
 // failure path, and never reaches `ready` to disarm.
 let crashing = false;
 
-function onBootCrash(
-  err: unknown,
-  event: "uncaughtException" | "unhandledRejection",
-): void {
-  // Another listener means the reports engine's hooks are installed (its
-  // onReady can run before ours): they own the process's crashes from then on,
-  // including keeping it alive on a rejection they treat as recoverable.
-  if (process.listenerCount(event) > 1) return;
+function onBootCrash(err: unknown): void {
+  // Once a handler is attached to `processCrashSink` (the reports engine's),
+  // the framework's listener files through it and owns the process's crashes
+  // from then on — including keeping it alive on a rejection it treats as
+  // recoverable. Until then, that listener stands down for this one.
+  if (isProcessCrashHandled()) return;
   // A second throw while the first is being filed changes nothing: the
   // process is already on its way out with the first.
   if (crashing) return;
@@ -117,21 +119,17 @@ function onBootCrash(
     fileBootCrashAndExit(runtimeNamespace(), err),
   );
 }
-const onUncaughtBootException = (err: unknown): void =>
-  onBootCrash(err, "uncaughtException");
-const onUnhandledBootRejection = (err: unknown): void =>
-  onBootCrash(err, "unhandledRejection");
 
 export const bootCrashRegistration: Registration = {
   register() {
     if (getBootMode() !== "serve") return;
-    process.on("uncaughtException", onUncaughtBootException);
-    process.on("unhandledRejection", onUnhandledBootRejection);
+    process.on("uncaughtException", onBootCrash);
+    process.on("unhandledRejection", onBootCrash);
   },
 };
 
-/** Once ready, the reports engine's hooks own the process's crashes. */
+/** Once ready, `processCrashSink`'s handler owns the process's crashes. */
 export function disarmBootCrash(): void {
-  process.off("uncaughtException", onUncaughtBootException);
-  process.off("unhandledRejection", onUnhandledBootRejection);
+  process.off("uncaughtException", onBootCrash);
+  process.off("unhandledRejection", onBootCrash);
 }

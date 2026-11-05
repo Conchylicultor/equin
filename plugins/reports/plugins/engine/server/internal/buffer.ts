@@ -45,8 +45,11 @@ function appendLine(line: Omit<BufferedReport, "at">): BufferAppend {
 /** Whether a buffered line landed. */
 export type BufferAppend = { ok: true } | { ok: false; error: unknown };
 
-export function appendReportSync(source: ReportSource, err: Error): void {
-  appendLine({
+export function appendReportSync(
+  source: ReportSource,
+  err: Error,
+): BufferAppend {
+  return appendLine({
     source,
     errorType: err.name,
     message: err.message,

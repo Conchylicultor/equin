@@ -4,6 +4,7 @@ import { holdTreeRead } from "@plugins/infra/plugins/git/plugins/tree-lock/core"
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { recordMemoryCheckpoint } from "../core/profiler";
 import { bootPluginGraph, runShutdownHooks } from "../core/boot-stages";
+import { installProcessCrashListeners } from "../core/process-crash-listeners";
 
 // ── `exec` — the short-lived boot mode ───────────────────────────────────────
 //
@@ -124,6 +125,12 @@ export async function runExec(
   } = {},
 ): Promise<never> {
   declareRuntimeNamespace(namespace);
+  // The same crash listeners `serve` installs (`../core/process-crash-listeners.ts`): a
+  // throw or rejection that escapes `body`'s await chain (a detached promise, a
+  // timer) is filed through `processCrashSink` like the serving backend's.
+  // `body`'s own throw is not a crash: it is caught below and exits with the
+  // run's failure status, which the supervising ledger records.
+  installProcessCrashListeners();
   recordMemoryCheckpoint("boot-start");
   let ordered;
   // The plugin graph loads from the checkout's live tree, which a push's

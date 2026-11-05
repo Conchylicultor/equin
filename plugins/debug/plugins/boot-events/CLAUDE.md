@@ -43,13 +43,17 @@ listeners, armed in its register phase (`machine/internal/boot-crash.ts`): the e
 backend's last stderr lines back to the build), filed as a `crash` report
 through the report outbox (`reports/outbox` — with the checkout's merge-base
 and the stack's repo files, so main drops it once it has changed that code),
-and the process exits 1. The reports engine's own crash hooks install only in
-its `onReady`, so before this a boot that threw reached Reports through
-nothing — or, when no build was watching (a cold start on a page load, the
-gateway respawning main), through the boot watchdog misreading it as a wedge.
-The listeners come off at `ready`, and step aside as soon as the engine's
-hooks are installed (another listener on the event), which then own the
-process's crashes.
+and the process exits 1. Server-core's own crash listeners (installed by the
+entry point before the graph loads) dispatch to `processCrashSink`, whose
+handler — the reports engine's — attaches only in the engine's
+`onReadyBlocking`, so before this a boot that threw earlier reached Reports
+through nothing — or, when no build was watching (a cold start on a page load,
+the gateway respawning main), through the boot watchdog misreading it as a
+wedge. The listeners come off at `ready`, and step aside as soon as a
+`processCrashSink` handler is attached (`isProcessCrashHandled()`), which then
+owns the process's crashes; until then the framework's listener stands down
+for these. They are the one plugin-installed crash listener
+(`server-core/no-process-crash-listener`, sanctioned in `exempt/`).
 
 ```json
 { "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "phase": "start" }
@@ -135,6 +139,8 @@ boots from before the marks.
   - Imported by:
     - `debug/boot-watchdog`
     - `debug/timeline`
+- Exemptions:
+  - Exempts itself from: `server-core/no-process-crash-listener` — `machine/internal/boot-crash.ts` (sanctioned)
 - Machine:
   - Exports (values):
     - `clearBootUnsettled`

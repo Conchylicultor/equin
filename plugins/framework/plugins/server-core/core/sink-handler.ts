@@ -63,3 +63,8 @@ export function sinkHandler<H>(
 
 // The sinks a handler is attached to now, and which.
 const attached = new WeakMap<object, SinkHandler>();
+
+/** Whether a `sinkHandlers` entry is attached to `sink` now. */
+export function hasAttachedSinkHandler(sink: object): boolean {
+  return attached.has(sink);
+}

@@ -66,6 +66,7 @@ there, not in a composition root, unless it is genuinely serve-only.
 | change-feed assertion (D3), `onReady` / `onAllReady` | yes | no   | yes       |
 | seed (after the post-ready phases, before serving) | no  | no     | yes       |
 | settled phase (`onSettled`: the warm-up drain) | yes     | no     | yes (not awaited) |
+| process crash listeners (before the graph loads) | yes | yes    | no        |
 | QoS boost, signal handlers, orphan-exit poll   | yes     | no     | no        |
 
 The **change-feed assertion** (`assertDbReadsHaveChangeFeed`, D3 of
@@ -155,6 +156,23 @@ before a deliberate `process.exit()` — on `serverFatalSink`, a REQUEST sink
 (never held: a report held past the exit is lost) whose handler answers
 whether the durable write landed; with none attached it says so on stderr.
 There is no `set*Reporter` setter to call from a hook an exec child skips.
+
+The process's crash listeners (`uncaughtException` / `unhandledRejection`) are
+the framework's for the same reason (`core/process-crash.ts`, the listeners in
+`core/process-crash-listeners.ts` — outside the barrel, which a browser host
+loads): each process
+entry point — `serve` and `runExec` — calls `installProcessCrashListeners()`
+before the graph loads (never `bootPluginGraph`, which a test runner also
+boots), and they dispatch each crash to `processCrashSink`, a REQUEST sink
+whose handler (the reports engine's) answers whether its synchronous write
+landed. The error is always printed. An uncaught exception then exits 1; a
+rejection is survived once a handler is attached (whether it was filed is
+asked of `isProcessCrashHandled()`, never read off the answer: a handler that
+throws answers `undefined` too). With no handler yet, another listener
+owns it (the serving backend's boot-crash filer, which stands down once
+`isProcessCrashHandled()`), else it is the runtime's default — exit 1, saying it
+was not filed. `server-core/no-process-crash-listener` rejects any other
+`process.on("uncaughtException" | "unhandledRejection", …)`.
 
 ### Two standing constraints — read before adding a boot hook
 
@@ -530,6 +548,8 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `PersistedValueCheck`
     - `PersistMeta`
     - `PhaseId`
+    - `ProcessCrash`
+    - `ProcessCrashEvent`
     - `ProcMemory`
     - `ProfilerHooks`
     - `ProfilerLeafOptions`
@@ -586,6 +606,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `installMemoryProbe`
     - `installPeerMemoryProbe`
     - `installSnapHash`
+    - `isProcessCrashHandled`
     - `isServerReady`
     - `keptSnapshotValue`
     - `loadResourceByKey`
@@ -602,6 +623,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `persistedDefinitions`
     - `persistedKeys`
     - `physFootprintBytes`
+    - `processCrashSink`
     - `procMemory`
     - `profilerStart`
     - `provideHostServicesUnbooted`
@@ -644,6 +666,10 @@ The server itself is spawned and supervised by the gateway; never start it manua
   - Exempts itself from:
     - `detached-work-safety/no-raw-set-interval` — `bin/serve.ts` (sanctioned)
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
+    - `server-core/no-process-crash-listener` — `core/process-crash-listeners.ts` (sanctioned)
+  - Exempted by:
+    - `debug/boot-events` (0 debt)
+    - `framework/server-core` (0 debt)
 - Cli:
   - Exports (values): `runExec`
 - Test helpers:
