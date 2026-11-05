@@ -44,13 +44,25 @@ the bulk work below default, and raise main's event-loop thread above it.
   process for the async body, so everything else the process runs meanwhile
   is lifted too.
 - `leaveDarwinBackground()` — the permanent self-promotion: out of darwinbg
-  for the rest of the process's life, answering the state read back. Its one
-  caller is a serving backend once ready (server-core `bin/index.ts`): the
-  gateway spawns a background-started backend under `taskpolicy -b` and means
-  it to serve at default priority, but its `taskpolicy -B -p <pid>` promote is
-  a silent no-op (2026-10-31: every promoted worktree backend still darwinbg,
-  starved for 30–95 s behind the foreground grant holders), so the backend
-  does it itself and logs `[boot] scheduling tier once ready: …`.
+  for the rest of the process's life, answering the state read back. Its
+  callers are a serving backend (server-core `bin/index.ts`): once ready, and
+  earlier on the gateway's word (`followGatewayBootTier`). The gateway spawns
+  a background-started backend under `taskpolicy -b` and means it to serve at
+  default priority, but a `taskpolicy -B -p <pid>` from outside is a silent
+  no-op (2026-10-31: every promoted worktree backend still darwinbg, starved
+  for 30–95 s behind the foreground grant holders), so the backend does it
+  itself and logs `[boot] scheduling tier once ready: …`.
+- `followGatewayBootTier(req)` / `BOOT_TIER_HEADER` / `BOOT_TIERS` — the
+  gateway's readiness probe carries the tier it wants a booting backend in
+  (`X-Equin-Boot-Tier: background | foreground`); the first probe saying
+  `foreground` (a browser joined the start, or the boot escalated past its
+  base deadline) takes the backend out of darwinbg for good. Called first in
+  the backend's socket handler, so it lands while the plugin graph is still
+  loading. Before it, a demoted boot crawled to its deadline: 60–100 s of
+  imports under load vs 2–9 s in the foreground (2026-11-05: the same
+  ~5,850-file read+transpile took 8.7–21 s darwinbg and 0.9–1.5 s foreground
+  at load 25–30). The Go constants are pinned to these by the
+  `spawn-priority:boot-tier-in-sync` check.
 - `spawnInForeground(spawn)` — the same self-promotion around ONE
   **synchronous** spawn call: lift, call `spawn` (`Bun.spawn` forks before it
   returns), restore. darwinbg is inherited at spawn, so the child starts in
@@ -113,6 +125,9 @@ re-exports what server consumers use (same-plugin re-export), and
     - `backgroundArgv`
     - `backgroundPrefix`
     - `backgroundShellPrefix`
+    - `BOOT_TIER_HEADER`
+    - `BOOT_TIERS`
+    - `followGatewayBootTier`
     - `leaveDarwinBackground`
     - `readDarwinBackground`
     - `spawnAtTier`
@@ -130,6 +145,7 @@ re-exports what server consumers use (same-plugin re-export), and
     - `backgroundArgv`
     - `backgroundPrefix`
     - `boostInteractiveQos`
+    - `followGatewayBootTier`
     - `leaveDarwinBackground`
     - `readDarwinBackground`
     - `withForegroundPriority`

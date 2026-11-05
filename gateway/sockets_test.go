@@ -48,7 +48,7 @@ func TestWaitReadyOverUDS(t *testing.T) {
 	}()
 
 	exitCh := make(chan struct{})
-	if err := waitReady(socketPath, 2*time.Second, 2*time.Second, false, nil, exitCh); err != nil {
+	if err := waitReady(socketPath, 2*time.Second, 2*time.Second, false, nil, nil, exitCh); err != nil {
 		t.Fatalf("waitReady: %v", err)
 	}
 }
@@ -57,7 +57,7 @@ func TestWaitReadyTimesOutWhenSocketAbsent(t *testing.T) {
 	socketPath := filepath.Join(t.TempDir(), "nope.sock")
 	exitCh := make(chan struct{})
 	start := time.Now()
-	err := waitReady(socketPath, 200*time.Millisecond, 5*time.Second, false, nil, exitCh)
+	err := waitReady(socketPath, 200*time.Millisecond, 5*time.Second, false, nil, nil, exitCh)
 	elapsed := time.Since(start)
 	if err == nil {
 		t.Fatal("waitReady should have timed out, got nil")
@@ -86,7 +86,7 @@ func TestWaitReadyReturnsWhenBackendExits(t *testing.T) {
 		close(exitCh)
 	}()
 
-	err := waitReady(socketPath, 5*time.Second, 5*time.Second, false, nil, exitCh)
+	err := waitReady(socketPath, 5*time.Second, 5*time.Second, false, nil, nil, exitCh)
 	if err == nil {
 		t.Fatal("waitReady should have errored on early exit, got nil")
 	}
@@ -129,7 +129,7 @@ func TestWaitReadyEscalatesWhileBooting(t *testing.T) {
 	serve503ThenReady(t, socketPath, 400*time.Millisecond)
 
 	escalations := 0
-	err := waitReady(socketPath, 150*time.Millisecond, 5*time.Second, false, func(responded bool) {
+	err := waitReady(socketPath, 150*time.Millisecond, 5*time.Second, false, nil, func(responded bool) {
 		escalations++
 		if !responded {
 			t.Error("escalation for a 503-answering backend should report respondedHTTP=true")
@@ -155,7 +155,7 @@ func TestWaitReadyEscalatesDemotedSilentBackend(t *testing.T) {
 	}()
 
 	escalations := 0
-	err := waitReady(socketPath, 100*time.Millisecond, 5*time.Second, true, func(responded bool) {
+	err := waitReady(socketPath, 100*time.Millisecond, 5*time.Second, true, nil, func(responded bool) {
 		escalations++
 		if responded {
 			t.Error("silent demoted backend should escalate with respondedHTTP=false")
@@ -176,7 +176,7 @@ func TestWaitReadyEscalationBounded(t *testing.T) {
 	serve503ThenReady(t, socketPath, time.Hour) // 503 forever
 
 	start := time.Now()
-	err := waitReady(socketPath, 100*time.Millisecond, 200*time.Millisecond, false, nil, make(chan struct{}))
+	err := waitReady(socketPath, 100*time.Millisecond, 200*time.Millisecond, false, nil, nil, make(chan struct{}))
 	elapsed := time.Since(start)
 	if err == nil {
 		t.Fatal("waitReady should time out after the escalation extension, got nil")
@@ -513,7 +513,7 @@ func TestEnsureReturnsProxyDuringRestart(t *testing.T) {
 	// Ensure() should return the old backend during a restart, not block or error.
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	got, err := wt.Ensure(ctx, StartBackground)
+	got, err := wt.Ensure(ctx, StartBackground, "test")
 	if err != nil {
 		t.Fatalf("Ensure during restart should not error: %v", err)
 	}

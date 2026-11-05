@@ -291,7 +291,7 @@ func main() {
 	// central's plugins can connect immediately.
 	if wt := reg.Get("central"); wt != nil {
 		go func() {
-			if _, err := wt.Ensure(ctx, StartBackground); err != nil {
+			if _, err := wt.Ensure(ctx, StartDeploy, "eager central start"); err != nil {
 				slog.Warn("eager central spawn failed", "err", err)
 			}
 		}()

@@ -185,9 +185,14 @@ export function profilerStart(
       physFootprintEndMb: footprintMb(),
     };
     spans.push(span);
+    // A span that journaled its `open` journals its close whatever it took:
+    // otherwise a fast step reads, at the journal's end, as the one a killed
+    // boot was still in.
     if (
       opts?.journal !== false &&
-      (phase === "load" || durationMs >= JOURNAL_SPAN_FLOOR_MS)
+      (phase === "load" ||
+        opts?.members !== undefined ||
+        durationMs >= JOURNAL_SPAN_FLOOR_MS)
     )
       journal?.({
         e: "span",

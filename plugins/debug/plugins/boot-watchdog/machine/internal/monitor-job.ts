@@ -2,29 +2,37 @@ import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
-import { readBootEvents } from "@plugins/debug/plugins/boot-events/server";
+import {
+  readBootEvents,
+  readBootJournals,
+} from "@plugins/debug/plugins/boot-events/server";
 import {
   clearBootUnsettled,
   markBootUnsettled,
   readBootUnsettled,
   stampBootUnsettledIndexed,
 } from "@plugins/debug/plugins/boot-events/machine";
-import { bootWatchdogConfig } from "../../core";
+import {
+  bootWatchdogConfig,
+  describeBootWedge,
+  type BootWedgePayload,
+} from "../../core";
+import { classifyNeverReady } from "./classify-wedge";
 import { readFleet } from "./read-fleet";
 import { listWorktreeDirs } from "@plugins/infra/plugins/paths/server";
 import type { BootEvent } from "@plugins/debug/plugins/boot-events/server";
 
-// Per-process set of superseded wedges ALREADY filed. A superseded wedge is a
-// closed, past outage: the boot channel keeps returning it every tick for as
+// Per-process set of closed wedges (superseded, restart-failed, killed)
+// ALREADY filed. A closed wedge is a past fact: the boot channel keeps returning it every tick for as
 // long as it sits inside the lookback window, so without a guard the watchdog
 // would re-file the SAME dead outage each minute. Keying on `wt:processStartedAt`
 // (the boot's identity) makes each superseded attempt file at most once per main
 // process. Across a main restart the module reloads with a fresh Set, so a
 // superseded wedge still inside the window re-files once — but collapses onto its
 // stable fingerprint row (`boot-wedge:<worktree>`), bumping `count`. This is
-// boot-budget's exact dedup pattern; OPEN wedges deliberately bypass it (see
-// below) so the bell re-arms while the outage is still live.
-const reportedSuperseded = new Set<string>();
+// boot-budget's exact dedup pattern; booting / failed wedges deliberately bypass
+// it (see below) so the bell re-arms while the worktree is still unusable.
+const reportedOnce = new Set<string>();
 
 // Main-only wedged-boot watchdog. Runs every minute in the MAIN backend only —
 // NO perWorktree — because this is structurally impossible to do per-worktree: a
@@ -91,7 +99,9 @@ export const bootWatchdogMonitorJob = defineJob({
       marks = await readBootUnsettled();
     }
     const sweep = new Set([
-      ...[...fleet].filter(([, state]) => state !== "idle").map(([wt]) => wt),
+      ...[...fleet]
+        .filter(([, entry]) => entry.state !== "idle")
+        .map(([wt]) => wt),
       ...marks.worktrees,
     ]);
 
@@ -109,57 +119,58 @@ export const bootWatchdogMonitorJob = defineJob({
         await clearBootUnsettled(wt, settledAtMs(events, cfg.lookbackMs, now));
       }
       if (!fleet.has(wt)) continue; // torn down: never alerted
+      // The journal only for a worktree with a never-ready boot to describe
+      // (it is ~100 lines a boot).
+      let journals: ReturnType<typeof readBootJournals> | null = null;
       for (const ev of events) {
-        if (ev.readyAt !== null) continue; // became ready — not wedged
-        // Exited before ready: a boot crash, not a wedge. The crash is its
-        // own report — boot-events files it, error and stack, through the
-        // report outbox — and measured to the next start its "un-ready" time
-        // would be however long the agent took to rebuild.
-        if (ev.exitedAt !== null) continue;
-        // The wedge duration: to the superseding attempt's start (closed
-        // outage) or to now (latest attempt, possibly wedged right now).
-        const endMs = ev.supersededAtMs ?? now;
-        const wedgedMs = endMs - ev.processStartedAt;
-        if (wedgedMs < cfg.bootReadyBudgetMs) continue; // within budget — still booting, likely fine
-
-        if (ev.supersededAtMs !== null) {
-          // Superseded: the outage is over. File ONCE so it is on record.
+        // A boot that exited before ready is a crash, not a wedge: its own
+        // report — boot-events files it, error and stack, through the report
+        // outbox — and measured to the next start its "un-ready" time would be
+        // however long the agent took to rebuild (classifyNeverReady skips it).
+        const verdict = classifyNeverReady(
+          ev,
+          fleet,
+          now,
+          cfg.bootReadyBudgetMs,
+        );
+        if (verdict === null) continue;
+        // Superseded, restart-failed and killed are closed facts (a later
+        // boot replaced it; the old backend kept serving; the gateway no
+        // longer holds the failure and boots it on the next request): filed
+        // ONCE. Booting and failed are true NOW — the worktree has no ready
+        // backend — so they are re-filed each tick (NO dedup Set): `count` ≈
+        // minutes unusable, and the bell re-arms per the kind's cooldown.
+        if (
+          verdict.state === "superseded" ||
+          verdict.state === "restart-failed" ||
+          verdict.state === "killed"
+        ) {
           const key = `${wt}:${ev.processStartedAt}`;
-          if (reportedSuperseded.has(key)) continue;
-          reportedSuperseded.add(key);
-          void recordReport({
-            kind: "boot-wedge",
-            source: "server-boot-watchdog",
-            data: {
-              worktree: wt,
-              processStartedAt: ev.processStartedAt,
-              wedgedMs,
-              state: "superseded",
-              supersededAtMs: ev.supersededAtMs,
-              budgetMs: cfg.bootReadyBudgetMs,
-            },
-            message: `${wt} boot never became ready — un-ready ${Math.round(wedgedMs / 1000)}s, then superseded`,
-          });
-          continue;
+          if (reportedOnce.has(key)) continue;
+          reportedOnce.add(key);
         }
-
-        // Open (latest attempt) on a worktree the gateway still lists — any
-        // state, `idle` included: present means the worktree exists and is
-        // unusable until a boot becomes ready.
-        // Re-file each tick (NO dedup Set) so `count` ≈ minutes wedged and the
-        // bell re-arms per the kind's cooldown.
+        journals ??= readBootJournals(wt);
+        const journal = journals.get(ev.processStartedAt);
+        const data: BootWedgePayload = {
+          worktree: wt,
+          processStartedAt: ev.processStartedAt,
+          budgetMs: cfg.bootReadyBudgetMs,
+          ...verdict,
+          ...(journal && {
+            journal: {
+              lastEntryAtMs: journal.lastEntryAtMs,
+              importedAtMs: journal.importedAtMs,
+              diedIn: journal.diedIn?.id ?? null,
+              slowest: journal.slowest,
+              darwinbgMs: journal.darwinbgMs,
+            },
+          }),
+        };
         void recordReport({
           kind: "boot-wedge",
           source: "server-boot-watchdog",
-          data: {
-            worktree: wt,
-            processStartedAt: ev.processStartedAt,
-            wedgedMs,
-            state: "open",
-            budgetMs: cfg.bootReadyBudgetMs,
-            fleetState: fleet.get(wt),
-          },
-          message: `${wt} backend wedged — un-ready ${Math.round(wedgedMs / 1000)}s and still live`,
+          data,
+          message: describeBootWedge(data),
         });
       }
     }

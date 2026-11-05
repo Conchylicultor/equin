@@ -37,7 +37,9 @@ import {
 import { serverEntries, machineEntries, coreBarrel } from "./active-runtime";
 import {
   boostInteractiveQos,
+  followGatewayBootTier,
   leaveDarwinBackground,
+  readDarwinBackground,
 } from "@plugins/packages/plugins/spawn-priority/server";
 import {
   isMain,
@@ -45,6 +47,8 @@ import {
   runtimeNamespace,
 } from "@plugins/infra/plugins/runtime-identity/core";
 import { recordFsWaits } from "@plugins/debug/plugins/profiling/plugins/fs-wait/server";
+import { writeBootStartEvent } from "@plugins/debug/plugins/boot-events/server";
+import { markBootUnsettled } from "@plugins/debug/plugins/boot-events/machine";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import {
   channelFileSink,
@@ -111,6 +115,18 @@ installBootJournal((entry) => {
 });
 
 recordMemoryCheckpoint("boot-start");
+// This boot's `start` line and unsettled mark (boot-events), before any
+// plugin import: a boot killed while importing still counts as an attempt,
+// and the boot watchdog still reads its worktree (see writeBootStartEvent).
+writeBootStartEvent();
+markBootUnsettled(runtimeNamespace());
+// Which tier this boot starts in, journaled: a background-started backend
+// boots darwinbg (gateway `taskpolicy -b`) until the gateway's probe says
+// otherwise (`left-darwinbg` below) or it is ready — so a slow boot's journal
+// says how much of it ran demoted.
+if (readDarwinBackground().kind === "darwinbg") {
+  recordMemoryCheckpoint("darwinbg-at-start");
+}
 
 // ── Route tables ────────────────────────────────────────────────
 // Every plugin's HTTP routes go to the shared router (framework/http-router:
@@ -218,6 +234,19 @@ Bun.serve<WsData>({
   // 120s-default websocket.idleTimeout — not this key.)
   idleTimeout: 60,
   fetch(req, server) {
+    // The gateway's word on this boot's priority, on its readiness probe: a
+    // background-started backend boots darwinbg until the gateway says
+    // foreground (a browser joined, or the boot escalated), and only this
+    // process can move itself (spawn-priority's `followGatewayBootTier`). Ahead
+    // of everything, so it lands while the plugin graph is still loading.
+    const moved = followGatewayBootTier(req);
+    if (moved) {
+      console.log(
+        `[boot] scheduling tier on the gateway's word: ${moved.kind === "unsupported" ? `unsupported (${moved.reason})` : moved.kind}`,
+      );
+      recordMemoryCheckpoint("left-darwinbg");
+    }
+
     // Still loading the plugin graph: no route exists yet, the readiness
     // probe included. Not ready, but alive — which is what the gateway reads.
     if (!handleHttp) {

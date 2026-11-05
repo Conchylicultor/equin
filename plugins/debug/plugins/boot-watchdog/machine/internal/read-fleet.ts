@@ -1,8 +1,11 @@
 const GATEWAY_WORKTREES_URL = "http://localhost:9000/gateway/worktrees";
 
+import type { FleetEntry } from "./classify-wedge";
+
 interface GatewayWorktree {
   name: string;
   state: string;
+  lastSpawnErr?: string;
 }
 
 // The gateway's live view of the fleet: worktree name → its lifecycle state
@@ -24,17 +27,23 @@ interface GatewayWorktree {
 //   • Absence, conversely, means the worktree was torn down — an open wedge for
 //     it is a dead leftover, not a live outage, and must NOT re-alert.
 //
-// Hence: ANY presence in the list ⇒ treat as live. Bounded 2s fetch mirrors the
+// Hence presence is "the worktree exists"; the state string then says whether
+// the gateway is still waiting on a boot (classify-wedge.ts). Bounded 2s fetch mirrors the
 // sentinel's `readFleetFromGateway`; ANY failure returns null ("fleet unreadable
 // this tick") so the job can skip open-wedge evaluation rather than misjudge it.
-export async function readFleet(): Promise<Map<string, string> | null> {
+export async function readFleet(): Promise<Map<string, FleetEntry> | null> {
   try {
     const res = await fetch(GATEWAY_WORKTREES_URL, {
       signal: AbortSignal.timeout(2_000),
     });
     if (!res.ok) throw new Error(`gateway responded ${res.status}`);
     const list = (await res.json()) as GatewayWorktree[];
-    return new Map(list.map((w): [string, string] => [w.name, w.state]));
+    return new Map(
+      list.map((w): [string, FleetEntry] => [
+        w.name,
+        { state: w.state, lastSpawnErr: w.lastSpawnErr ?? "" },
+      ]),
+    );
     // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- null IS the discriminated "fleet unreadable this tick" state, consumed as such by the monitor job (which skips OPEN-wedge evaluation rather than mis-file a torn-down worktree); mirrors the sentinel's readFleetFromGateway. Any propagation would be wrong — network down / gateway restarting / timeout / malformed body all map to the same "unreadable" verdict.
   } catch {
     return null;

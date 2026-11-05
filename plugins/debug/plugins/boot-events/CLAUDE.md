@@ -9,16 +9,21 @@ interval bars** on cross-worktree timelines — including a backend that
 Both lines go to the persisted `boot` log channel →
 `~/.equin/worktrees/<wt>/logs/boot.jsonl`:
 
-- **`phase: "start"`** — written from the plugin's **register phase**, the
-  earliest per-process hook, before migrations and any `onReadyBlocking` work.
-  (The register phase is documented "no I/O"; this one ~140-byte synchronous
-  append is the deliberate exception — its entire point is landing before the
-  boot work that can wedge.) **Serve mode only** — an `exec` child (the
-  backup) runs `register` but never `onReady`, so its `start` would never pair.
+- **`phase: "start"`** — written by the serving entry point itself
+  (`writeBootStartEvent`, from server-core's `bin/index.ts` beside its
+  `boot-start` checkpoint), before any plugin import. It used to be the
+  register phase's, which runs only after every import — 60–100 s under load
+  on 2026-11-04, so a boot the gateway killed while importing left no line and
+  its predecessor read as the latest attempt. No host service is up that
+  early, so it appends through the channel's own memoised file sink
+  (`channelFileSink`, the one the desktop's log persistence writes the later
+  lines through). **Serve mode only**, by construction — only the serving
+  entry point calls it; an `exec` child never reaches `onReady`, so its
+  `start` would never pair.
 - **`phase: "ready"`** — written from `onReady` (post-`onReadyBlocking`
   readiness — a migrated DB and ready registry), carrying `readyAt`.
 - **`phase: "exited"`** — written from the process's `exit` event (armed by
-  the same register token) when it fires before `ready`, carrying `exitedAt`:
+  the same call) when it fires before `ready`, carrying `exitedAt`:
   a boot that threw (a failed migration, a boot assert) exited, it did not
   wedge. Without it a crashed boot read exactly like a wedge, and the boot
   watchdog filed one whose "un-ready" time ran until the next build's boot. A
@@ -59,6 +64,15 @@ a 128 MB cap (3 rotated files kept) — at two ~140-byte lines per boot that is
 effectively unbounded history, so there is deliberately **no custom rotation**
 here (the plan's "~256 KB tiny cap" is subsumed by the substrate's rotation).
 
+**The boot journal, read back**: `readBootJournals(worktree)` summarises
+server-core's `boot-journal` channel per boot (`boot-journal.ts`, pure +
+tested): when its imports finished (`after-import`), its longest import waves
+and blocking hooks, the step still open when the journal ends (`diedIn` — a
+load wave or blocking hook opens a journal line as it starts, so a SIGKILLed
+boot names where it was), and how long it ran darwinbg (`darwinbg-at-start` →
+`left-darwinbg`). The boot watchdog puts it in its report. Read only for a
+worktree with a never-ready boot: the journal is ~100 lines a boot.
+
 **Reading**: `readBootEvents(worktree, windowMs)` pairs the lines by
 `processStartedAt` (`pair-boot-lines.ts`, pure + tested) into `BootEvent`s
 whose interval overlaps the window. A start without a ready line is a boot
@@ -73,8 +87,9 @@ edge, pulsing) when it is the latest attempt. Mirrors health-monitor's
 ## Unsettled-boot marks
 
 `machine/internal/unsettled-marks.ts`: one empty file per worktree under
-`~/.equin/cache/boot-unsettled/` (`data-dirs`), written at the register phase
-(`bootMarkRegistration`, serve only) — the index of worktrees whose boot channel
+`~/.equin/cache/boot-unsettled/` (`data-dirs`), written by the serving entry
+point beside the boot's `start` line, before any plugin import
+(`markBootUnsettled` from server-core's `bin/index.ts`) — the index of worktrees whose boot channel
 can hold an open boot. The boot watchdog also marks any open boot it reads (a
 backend predating the marks, or a mark that raced its read), and is the only one
 to clear a mark (`clearBootUnsettled`, after reading the channel as settled; a
@@ -87,18 +102,23 @@ boots from before the marks.
 
 ## Plugin reference
 
-- Description: Durable per-boot event lines: a `start` line at the register phase (so a backend wedged during migrations/boot is visible as an open-ended bar) and a `ready` line from the onReady hook, paired by processStartedAt into the wall-clock interval readBootEvents(worktree, windowMs) returns — so deploy-restart bursts render on cross-worktree timelines, with no DB table (survives re-forks, readable while a backend is wedged).
+- Description: Durable per-boot event lines: a `start` line as the serving process starts, before its plugin imports (so a backend wedged during migrations/boot is visible as an open-ended bar) and a `ready` line from the onReady hook, paired by processStartedAt into the wall-clock interval readBootEvents(worktree, windowMs) returns — so deploy-restart bursts render on cross-worktree timelines, with no DB table (survives re-forks, readable while a backend is wedged).
 - Server:
   - Uses:
     - `primitives/log-channels.defineLogSink`
+    - `primitives/log-channels/log-files.channelFileSink`
+    - `primitives/log-channels/log-files.logEnvelope`
     - `primitives/log-channels/log-files.readChannelJson`
   - DB schema: `plugins/debug/plugins/boot-events/server/internal/schema.ts`
   - Exports (types):
     - `BootEvent`
+    - `BootJournalSummary`
     - `BootLine`
   - Exports (values):
     - `BootLineSchema`
     - `readBootEvents`
+    - `readBootJournals`
+    - `writeBootStartEvent`
 - Cross-plugin:
   - Imported by:
     - `debug/boot-watchdog`

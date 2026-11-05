@@ -23,30 +23,50 @@ backend is wedged, so it is the only place this observation can be made. The
 subject lives in the **fingerprint** (`boot-wedge:<worktree>`) and the payload,
 never the row's own worktree.
 
-## Superseded vs open
+## What a never-ready boot is now
 
-Each tick reads the gateway fleet (`GET /gateway/worktrees`, 2 s timeout) and
-sweeps the boot channel (`readBootEvents(wt, lookbackMs)`) of the worktrees that
-can hold a wedge — every one the gateway runs a backend for (any state but
-`idle`, `broken` included) and every one boot-events' unsettled marks name —
-for boots with no `ready` line whose un-ready duration has crossed
-`bootReadyBudgetMs` (default 120 s). A boot that **exited** before ready
-(`exitedAt`, boot-events' `exited` line) is skipped: it crashed, it did not
-wedge, and the crash is already its own report — boot-events files it as a
-`crash` (error and stack) through the report outbox. Measured to the next start it would read as a wedge as long as the
-agent took to rebuild (a 3 s boot assert filed as "un-ready 172s").
+Each tick sweeps the boot channels (`readBootEvents(wt, lookbackMs)`) of the worktrees below for boots
+with no `ready` line whose un-ready time has crossed `bootReadyBudgetMs`
+(default 120 s), and asks the one witness of whether such a process still runs:
+the gateway fleet (`GET /gateway/worktrees`, 2 s timeout — its `state` and
+`lastSpawnErr`). A boot the gateway kills at its readiness deadline is a
+SIGKILL, which writes no exit line, so the boot channel alone reads exactly
+like a live wedge; before 2026-11-05 this watchdog filed such dead boots as
+"un-ready 113592s and still live" every minute for 31 h. The verdict is
+`classifyNeverReady` (`machine/internal/classify-wedge.ts`, pure + tested):
 
-- **superseded** — a later boot attempt already replaced it (`supersededAtMs`
-  set). A closed, past outage. Filed **once** (a module-level
-  `Set<wt:processStartedAt>`, boot-budget's dedup pattern) so it is on record
-  post-hoc without re-filing the same dead outage every minute.
-- **open** — the latest attempt, no successor, on a worktree the gateway still
-  lists (any state, `idle` included): the worktree exists and is unusable until
-  a boot becomes ready. Gateway-`running` is a LOWER bar than our app-`ready`
-  line (process up + socket open, but `onReady` may never have fired), so
-  nothing here gates on `state === "running"`. Filed **each tick** (no dedup
-  Set), so the row's `count` ≈ minutes wedged and the bell re-arms per the
-  15-min cooldown. A worktree out of the fleet (torn down) is not alerted.
+- A boot that **exited** before ready (`exitedAt`) is skipped: it crashed, and
+  the crash is its own report (boot-events files it, error and stack, through
+  the report outbox). Measured to the next start it would read as a wedge as
+  long as the agent took to rebuild (a 3 s boot assert filed as "un-ready 172s").
+- **superseded** — a later attempt replaced it. A closed, past outage: filed
+  **once** (a module-level `Set<wt:processStartedAt>`, boot-budget's pattern).
+- the latest attempt, on a worktree still in the fleet, by the fleet state:
+  - **booting** — `starting` / `restarting`: the gateway is still waiting on
+    it, past its budget.
+  - **restart-failed** — `running`: a backend serves, so this was a hot
+    restart's new process, killed while the old one kept serving — a failed
+    deploy, not an outage. Filed once.
+  - **failed** — `broken`: the gateway gave up on it (its `lastSpawnErr`
+    quoted) and retries it only on a deploy or a browser start (gateway
+    "A failed boot is not retried by traffic"). The worktree is **unusable**,
+    so this keeps alerting.
+  - **killed** — `idle` / `stopping`: killed before ready, but the gateway runs
+    nothing for it and no longer holds the failure (it restarted, or the idle
+    sweeper ran) — the next request boots it again. Filed once.
+  - **booting** and **failed** are true *now*: filed **each tick** (no dedup
+    Set), so the row's `count` ≈ minutes unusable and the bell re-arms per the
+    15-min cooldown. It stops when a boot becomes ready.
+- A worktree gone from the fleet (torn down) is not alerted; an unreadable
+  fleet skips the latest attempts this tick rather than guessing.
+
+**Every report names where the boot's time went** — from its own boot journal
+(boot-events' `readBootJournals`): the step it was in when it stopped (a load
+wave or blocking hook opens a journal line as it starts), when its imports
+finished, its longest import waves and blocking hooks, and how long it ran
+darwinbg. Rendered once (`core/describe.ts`) for the message, the task text
+and the Reports row. Legacy `open` rows (the old "still live" state) still
+parse and render.
 
 **Which worktrees a tick reads.** Not every worktree dir: that was ~240–300
 synchronous `boot.jsonl` tail reads on main's event loop each minute (4–7 s
@@ -56,11 +76,11 @@ stalls under host load) to evaluate the ~10 that can hold a wedge. A tick reads:
   `restarting` / `stopping` / `broken`) — where every boot happens, and where
   a superseding boot (so a superseded wedge) is;
 - every worktree **marked unsettled** (`boot-events`' marks,
-  `~/.equin/cache/boot-unsettled/<wt>`): a backend marks its worktree right
-  after its `start` line, and only this sweep clears a mark, after reading that
+  `~/.equin/cache/boot-unsettled/<wt>`): a backend marks its worktree with its
+  `start` line, at process start, and only this sweep clears a mark, after reading that
   worktree's boot as settled (ready or exited) or finding it torn down. So a
   never-ready worktree the gateway lists `idle` — after a gateway restart, a
-  stop, a kill — is still read and filed every tick. The marks are complete
+  stop, a kill — is still read (and filed once, as `killed`). The marks are complete
   once stamped `.indexed`; until then (first tick after deploy, or the dir was
   deleted) one full sweep marks every worktree with an open boot.
 
@@ -109,10 +129,16 @@ into a report: the `boot` channel is only its evidence and declares no reader.
     - `config_v2.defineConfig`
     - `fields/bool/config.boolField`
     - `fields/int/config.intField`
-  - Exports (types): `BootWedgePayload`
+  - Exports (types):
+    - `BootWedgeJournal`
+    - `BootWedgePayload`
+    - `BootWedgeState`
   - Exports (values):
     - `bootWatchdogConfig`
     - `BootWedgePayloadSchema`
+    - `describeBootPhases`
+    - `describeBootWedge`
+    - `humanMs`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --muted-foreground`
 

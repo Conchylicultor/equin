@@ -160,21 +160,33 @@ type StartReason int
 const (
 	// StartBackground: nobody is watching this boot — an agent's MCP call, a
 	// script, another server, a deploy. Spawned darwinbg (when the host
-	// supports it) so the boot burst stays off the cores the user is on;
-	// promoted once ready, or on escalation.
+	// supports it) so the boot burst stays off the cores the user is on; told
+	// to leave it on escalation (see bootTierHeader), and it leaves on its own
+	// once ready.
 	StartBackground StartReason = iota
 	// StartBrowser: a browser is waiting on this backend — a document load or
 	// the app's WebSocket (an agent's Playwright browser included). Spawned at
 	// default priority; joining an in-flight background spawn promotes it.
 	StartBrowser
+	// StartDeploy: a deploy asked for this backend (the restart route a build
+	// POSTs, the eager central start) — new code or a new spec, so the one
+	// background-priority start that may retry a failed boot (see Ensure).
+	StartDeploy
 )
 
 func (r StartReason) String() string {
-	if r == StartBrowser {
+	switch r {
+	case StartBrowser:
 		return "browser"
+	case StartDeploy:
+		return "deploy"
 	}
 	return "background"
 }
+
+// ErrBootFailed: the worktree's last boot failed and background traffic does
+// not retry it (see Ensure). Wraps the failure, and says what does retry it.
+var ErrBootFailed = errors.New("the backend's last boot failed, and background requests do not retry it — redeploy it (./equin build, or POST /gateway/worktrees/<name>/restart) or open it in a browser")
 
 // backend groups the per-process fields for one running backend instance.
 // A Worktree holds at most one active *backend; a second may exist briefly
@@ -185,7 +197,7 @@ type backend struct {
 	startedAt  int64         // epoch ms of spawn; bounds the stderr tail an early exit reports
 	socketPath string
 	proxy      *httputil.ReverseProxy // nil until waitReady succeeds
-	demoted    bool                   // running darwinbg (taskpolicy -b) until promoted; guarded by the owning Worktree's mu
+	demoted    bool                   // the gateway wants it darwinbg (spawned under taskpolicy -b, not yet promoted); guarded by the owning Worktree's mu
 
 	// connMu guards both connection counters. httpConns tracks in-flight HTTP
 	// requests — bounded, short-lived, and waited on at drain so they finish
@@ -356,7 +368,7 @@ func (w *Worktree) restartTargetPath() string {
 // Concurrent callers share a single in-flight spawn via readyCh. reason sets
 // the priority of a spawn this call begins; a StartBrowser caller joining a
 // background spawn promotes it at once.
-func (w *Worktree) Ensure(ctx context.Context, reason StartReason) (*backend, error) {
+func (w *Worktree) Ensure(ctx context.Context, reason StartReason, cause string) (*backend, error) {
 	w.mu.Lock()
 
 	switch w.state {
@@ -395,7 +407,23 @@ func (w *Worktree) Ensure(ctx context.Context, reason StartReason) (*backend, er
 		return nil, ErrStopping
 
 	case StateBroken:
-		if time.Now().Before(w.brokenUntil) {
+		// A failed boot is not retried by traffic. Whatever made it fail — a
+		// boot that cannot finish by its deadline, a crash — is still there
+		// for the next request, and a client polling a dead worktree (an
+		// agent's `until curl …; do sleep 5; done`, 2026-11-04: 43 spawns of
+		// one worktree, each SIGKILLed at ~105 s) turned the gateway into a
+		// blind restart loop whose only output was load. A deploy (new code,
+		// a new spec) or a browser start (a person asking) retries it; the
+		// pinned central keeps the cooldown (backends depend on it).
+		if reason == StartBackground && !w.Pinned() {
+			err := fmt.Errorf("%w: %v", ErrBootFailed, w.lastSpawnErr)
+			w.mu.Unlock()
+			return nil, err
+		}
+		// A deploy is new code or a new spec — not a retry of the same boot —
+		// so it does not wait out the cooldown; a browser start does (a tab
+		// reconnecting in a loop must not respawn back to back).
+		if reason != StartDeploy && time.Now().Before(w.brokenUntil) {
 			err := w.lastSpawnErr
 			w.mu.Unlock()
 			if err == nil {
@@ -415,6 +443,11 @@ func (w *Worktree) Ensure(ctx context.Context, reason StartReason) (*backend, er
 	spec := w.Spec()
 	socketPath := w.primarySocketPath()
 	w.mu.Unlock()
+
+	// Who asked: the one record of which request a spawn answered — a backend
+	// that cannot boot is respawned by whoever keeps asking for it, and
+	// nothing else names them.
+	slog.Info("backend start requested", "worktree", w.Name, "reason", reason, "cause", cause)
 
 	// Run the spawn outside the lock so concurrent callers see Starting and wait.
 	var stats bootStats
@@ -737,39 +770,39 @@ func detectTaskpolicy() string {
 	return taskpolicyPath
 }
 
-// promoteBackend lifts a darwinbg-demoted backend back to default priority
-// (taskpolicy -B -p <pid>) once it is ready — the boot burst is over, and
-// steady-state serving (the user browsing the worktree's app) should run on
-// all cores. Best-effort: a failed promote just leaves the backend on the
-// efficiency cores, which is safe. Idempotent and safe to race: the caller
-// that flips bk.demoted (under w.mu) is the one that runs taskpolicy, so the
-// post-ready call after an escalation or a browser join is a no-op. A failed
-// promote puts the flag back so a later caller retries.
-// taskpolicy runs with the declared base environment like every other child,
-// so no gateway exec falls back to Go's implicit inherit.
+// promoteBackend records that bk should no longer run darwinbg: a browser
+// joined its background start, its boot escalated, or it became ready. Only
+// the backend can act on it — a process can leave darwinbg itself, but
+// `taskpolicy -B -p <pid>` from outside exits 0 and changes nothing (measured
+// 2026-10-31 and 2026-11-05; spawn-priority's CLAUDE.md) — so the gateway does
+// not try: the flag is what the readiness probe tells the backend
+// (bootTierHeader, read per probe by waitReady), and the backend leaves
+// darwinbg on the first probe that says foreground. Once ready it leaves on
+// its own (server-core bin/index.ts), so the post-ready call only keeps the
+// flag honest. Idempotent and safe to race (under w.mu).
 func (w *Worktree) promoteBackend(bk *backend) {
 	if bk == nil {
 		return
 	}
 	w.mu.Lock()
-	if !bk.demoted || bk.cmd == nil || bk.cmd.Process == nil {
+	if !bk.demoted {
 		w.mu.Unlock()
 		return
 	}
 	bk.demoted = false
-	pid := bk.cmd.Process.Pid
 	w.mu.Unlock()
+	slog.Info("backend told to leave darwinbg on its next readiness probe", "worktree", w.Name, "pid", backendPID(bk))
+}
 
-	out, err := w.cfg.ChildEnv.Command(w.cfg.Taskpolicy, "-B", "-p", fmt.Sprint(pid)).CombinedOutput()
-	if err != nil {
-		w.mu.Lock()
-		bk.demoted = true
-		w.mu.Unlock()
-		slog.Warn("taskpolicy -B failed; backend stays demoted",
-			"worktree", w.Name, "pid", pid, "err", err, "out", strings.TrimSpace(string(out)))
-		return
+// bootTier is the scheduling tier the gateway wants bk in, as the readiness
+// probe states it (bootTierHeader).
+func (w *Worktree) bootTier(bk *backend) string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if bk.demoted {
+		return bootTierBackground
 	}
-	slog.Info("backend promoted to default priority", "worktree", w.Name, "pid", pid)
+	return bootTierForeground
 }
 
 // mainNamespace is the main app's namespace — LEGACY_IDS.mainNamespace in
@@ -782,7 +815,7 @@ const mainNamespace = "singularity"
 // start, only where taskpolicy exists, and never main or "central" — the
 // interactive / always-on backends.
 func (w *Worktree) demotes(reason StartReason) bool {
-	return reason == StartBackground && w.cfg.Taskpolicy != "" &&
+	return reason != StartBrowser && w.cfg.Taskpolicy != "" &&
 		w.Name != mainNamespace && w.Name != "central"
 }
 
@@ -827,9 +860,9 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string, reason StartReaso
 	// (taskpolicy -b execs the target in place, so cmd.Process.Pid stays the
 	// backend pid) so its boot burst (catch-up, derived-table rebuild, pool
 	// warm) runs on the efficiency cores and cannot starve the interactive
-	// main backend. Once ready, w.promoteBackend lifts the demotion (-B -p) so
-	// steady-state serving is back on all cores. A browser start skips it: a
-	// person is waiting on this boot.
+	// main backend. The backend leaves darwinbg itself: on the readiness probe
+	// that says so (escalation, a browser joining — promoteBackend), else once
+	// ready. A browser start skips it: a person is waiting on this boot.
 	// See research/2026-07-07-global-background-work-priority-isolation.md.
 	demoted := w.demotes(reason)
 	if demoted {
@@ -954,7 +987,8 @@ func (w *Worktree) awaitBackendReady(bk *backend, socketPath string) (wait ready
 	w.mu.Unlock()
 	wait.deadline = base
 	start := time.Now()
-	err = waitReady(socketPath, base, w.cfg.ReadyTimeoutMax, demoted, func(responded bool) {
+	tier := func() string { return w.bootTier(bk) }
+	err = waitReady(socketPath, base, w.cfg.ReadyTimeoutMax, demoted, tier, func(responded bool) {
 		wait.escalated = true
 		wait.respondedHTTP = responded
 		wait.deadline = time.Since(start) + w.cfg.ReadyTimeoutMax
@@ -1040,6 +1074,23 @@ func withStderrTail(err error, tail []logEntry) error {
 	return fmt.Errorf("%w; its last stderr lines:\n%s", err, strings.Join(lines, "\n"))
 }
 
+// bootTierHeader carries, on every readiness probe, the scheduling tier the
+// gateway wants the booting backend in: bootTierBackground while it should
+// stay darwinbg, bootTierForeground once it should leave (a browser joined
+// its start, or its boot escalated). The backend applies it to itself — the
+// only way out of darwinbg (see promoteBackend). Without it a demoted boot
+// ran darwinbg to the end: 6–15× slower file reads under load (2026-11-05:
+// 60–100 s of plugin imports, then SIGKILLed at the deadline). Stripped from
+// every proxied request (Proxy.ServeHTTP), so only this probe sets it. Pinned
+// to the backend's BOOT_TIER_HEADER by the `spawn-priority:boot-tier-in-sync`
+// check.
+const bootTierHeader = "X-Equin-Boot-Tier"
+
+const (
+	bootTierBackground = "background"
+	bootTierForeground = "foreground"
+)
+
 // waitReady polls the backend's `GET /api/health/ready` over its Unix socket
 // until the backend reports ready, exits, or the deadline expires. This gates
 // the hot-swap on genuine readiness (migrations applied, DB warm, registry
@@ -1063,11 +1114,12 @@ func withStderrTail(err error, tail []logEntry) error {
 //     self-amplifying under sustained contention).
 //
 // In both cases onEscalate fires once (the caller lifts the demotion so the
-// boot finishes at default priority) and the deadline extends by extension.
+// boot finishes at default priority — tier then answers foreground, which the
+// next probe tells the backend) and the deadline extends by extension.
 // Only a silent, never-demoted backend is declared wedged at base. A real
 // crash is still caught instantly via exitCh, so the generous extension never
 // delays crash detection.
-func waitReady(socketPath string, base, extension time.Duration, demoted bool, onEscalate func(respondedHTTP bool), exitCh <-chan struct{}) error {
+func waitReady(socketPath string, base, extension time.Duration, demoted bool, tier func() string, onEscalate func(respondedHTTP bool), exitCh <-chan struct{}) error {
 	client := &http.Client{
 		Timeout: 2 * time.Second,
 		Transport: &http.Transport{
@@ -1085,6 +1137,9 @@ func waitReady(socketPath string, base, extension time.Duration, demoted bool, o
 			return err
 		}
 		readyReq.Header.Set(principalHeader, principalOwner)
+		if tier != nil {
+			readyReq.Header.Set(bootTierHeader, tier())
+		}
 		resp, err := client.Do(readyReq)
 		if err == nil {
 			status := resp.StatusCode

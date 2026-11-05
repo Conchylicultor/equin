@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -15,12 +16,14 @@ import (
 
 // TestHelperBackend is not a test: it is the backend the priority tests spawn,
 // by re-executing this test binary (argv: -test.run=^TestHelperBackend$ --
-// [spawns=F] [gate=F] --namespace N --socket S). It records its start in the
-// spawns file, binds the socket, answers 503 until the gate file exists (no
-// gate: ready at once) and 200 to everything after. Run directly, it has no
-// --socket and returns.
+// [spawns=F] [gate=F] [tiers=F] [crash] --namespace N --socket S). It records
+// its start in the spawns file (and, with crash, exits 1 right there), binds the socket, records the boot tier each
+// readiness probe carries in the tiers file, answers 503 until the gate file
+// exists (no gate: ready at once) and 200 to everything after. Run directly,
+// it has no --socket and returns.
 func TestHelperBackend(t *testing.T) {
-	var socket, spawns, gate string
+	var socket, spawns, gate, tiers string
+	crash := false
 	args := os.Args
 	for i, a := range args {
 		switch {
@@ -30,6 +33,10 @@ func TestHelperBackend(t *testing.T) {
 			spawns = strings.TrimPrefix(a, "spawns=")
 		case strings.HasPrefix(a, "gate="):
 			gate = strings.TrimPrefix(a, "gate=")
+		case strings.HasPrefix(a, "tiers="):
+			tiers = strings.TrimPrefix(a, "tiers=")
+		case a == "crash":
+			crash = true
 		}
 	}
 	if socket == "" {
@@ -43,11 +50,20 @@ func TestHelperBackend(t *testing.T) {
 		fmt.Fprintf(f, "%d\n", os.Getpid())
 		_ = f.Close()
 	}
+	if crash {
+		os.Exit(1)
+	}
 	l, err := net.Listen("unix", socket)
 	if err != nil {
 		os.Exit(2)
 	}
 	_ = http.Serve(l, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if tier := r.Header.Get(bootTierHeader); tiers != "" && tier != "" {
+			if f, err := os.OpenFile(tiers, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
+				fmt.Fprintf(f, "%s\n", tier)
+				_ = f.Close()
+			}
+		}
 		if gate != "" {
 			if _, err := os.Stat(gate); err != nil {
 				w.WriteHeader(http.StatusServiceUnavailable)
@@ -61,13 +77,15 @@ func TestHelperBackend(t *testing.T) {
 
 // priorityFixture is the static-proxy fixture whose worktree spawns the helper
 // backend through a fake taskpolicy that logs each call ("-b -- …" for a
-// demoted spawn, "-B -p <pid>" for a promote) and execs the target.
+// demoted spawn; anything else would be the old no-op "-B -p <pid>" promote,
+// which the gateway no longer makes) and execs the target.
 type priorityFixture struct {
 	staticFixture
 	wt      *Worktree
 	tpLog   string // the fake taskpolicy's call log
 	spawns  string // one line per helper backend started
 	gate    string // create to make the backend ready
+	tiers   string // one line per readiness probe: the boot tier it carried
 	cleanup func()
 }
 
@@ -85,6 +103,7 @@ func newPriorityFixture(t *testing.T, name string, gated bool) priorityFixture {
 		tpLog:         filepath.Join(dir, "taskpolicy.log"),
 		spawns:        filepath.Join(dir, "spawns"),
 		gate:          filepath.Join(dir, "gate"),
+		tiers:         filepath.Join(dir, "tiers"),
 	}
 	tp := filepath.Join(dir, "taskpolicy")
 	script := "#!/bin/sh\necho \"$*\" >> " + pf.tpLog + "\nif [ \"$1\" = \"-b\" ]; then shift 2; exec \"$@\"; fi\nexit 0\n"
@@ -99,7 +118,7 @@ func newPriorityFixture(t *testing.T, name string, gated bool) priorityFixture {
 	wt.cfg.ShutdownGrace = time.Second
 	wt.cfg.BrokenCooldown = time.Second
 
-	command := []string{os.Args[0], "-test.run=^TestHelperBackend$", "--", "spawns=" + pf.spawns}
+	command := []string{os.Args[0], "-test.run=^TestHelperBackend$", "--", "spawns=" + pf.spawns, "tiers=" + pf.tiers}
 	if gated {
 		command = append(command, "gate="+pf.gate)
 	}
@@ -128,10 +147,15 @@ func readLines(path string) []string {
 	return strings.Fields(strings.ReplaceAll(string(b), " ", "_"))
 }
 
-// demotedSpawns / promotes count the fake taskpolicy's two kinds of call.
-func (pf priorityFixture) demotedSpawns() int { return countPrefix(readLines(pf.tpLog), "-b_--") }
-func (pf priorityFixture) promotes() int      { return countPrefix(readLines(pf.tpLog), "-B_-p") }
-func (pf priorityFixture) spawnCount() int    { return len(readLines(pf.spawns)) }
+// demotedSpawns counts the fake taskpolicy's demoted spawns; outsidePromotes
+// its "-B -p <pid>" calls (a no-op on a real host, so never made); probesAt
+// the readiness probes that carried tier.
+func (pf priorityFixture) demotedSpawns() int   { return countPrefix(readLines(pf.tpLog), "-b_--") }
+func (pf priorityFixture) outsidePromotes() int { return countPrefix(readLines(pf.tpLog), "-B") }
+func (pf priorityFixture) probesAt(tier string) int {
+	return countPrefix(readLines(pf.tiers), tier)
+}
+func (pf priorityFixture) spawnCount() int { return len(readLines(pf.spawns)) }
 
 func countPrefix(lines []string, prefix string) int {
 	n := 0
@@ -204,8 +228,9 @@ func TestDeepLinkDocumentLoadStartsBackend(t *testing.T) {
 	}
 }
 
-// A non-browser /api call (an agent's MCP tool, a script) keeps today's
-// behavior: demoted spawn, promoted once ready.
+// A non-browser /api call (an agent's MCP tool, a script) spawns demoted, and
+// its readiness probe says so: the backend stays darwinbg until ready (and
+// leaves on its own then). No promote from outside — it would change nothing.
 func TestNonBrowserAPIStartsDemoted(t *testing.T) {
 	pf := newPriorityFixture(t, "alpha", false)
 	rec := get(pf.proxy, "alpha.localhost:9000", "/api/tasks", nil)
@@ -215,8 +240,27 @@ func TestNonBrowserAPIStartsDemoted(t *testing.T) {
 	if n := pf.demotedSpawns(); n != 1 {
 		t.Fatalf("taskpolicy -b calls = %d, want 1", n)
 	}
-	if n := pf.promotes(); n != 1 {
-		t.Fatalf("taskpolicy -B calls = %d, want 1 (post-ready promote)", n)
+	if n := pf.probesAt(bootTierBackground); n < 1 {
+		t.Fatalf("probes at %s = %d, want ≥ 1", bootTierBackground, n)
+	}
+	if n := pf.probesAt(bootTierForeground); n != 0 {
+		t.Fatalf("probes at %s = %d, want 0 (nothing promoted it before ready)", bootTierForeground, n)
+	}
+	if n := pf.outsidePromotes(); n != 0 {
+		t.Fatalf("taskpolicy -B calls = %d, want 0", n)
+	}
+}
+
+// A client cannot speak for the gateway: a proxied request's boot-tier header
+// is stripped, so only the readiness probe ever carries one.
+func TestClientBootTierHeaderIsStripped(t *testing.T) {
+	pf := newPriorityFixture(t, "alpha", false)
+	rec := get(pf.proxy, "alpha.localhost:9000", "/api/tasks", map[string]string{bootTierHeader: "client-sent"})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("api: status %d", rec.Code)
+	}
+	if n := pf.probesAt("client-sent"); n != 0 {
+		t.Fatalf("the backend saw the client's boot tier %d times", n)
 	}
 }
 
@@ -280,17 +324,17 @@ func TestBrowserJoiningBackgroundStartPromotes(t *testing.T) {
 	ctx := context.Background()
 
 	bgDone := make(chan error, 1)
-	go func() { _, err := pf.wt.Ensure(ctx, StartBackground); bgDone <- err }()
-	waitFor(t, "the demoted background spawn", func() bool {
-		return pf.demotedSpawns() == 1 && pf.spawnCount() == 1
+	go func() { _, err := pf.wt.Ensure(ctx, StartBackground, "test"); bgDone <- err }()
+	waitFor(t, "the demoted background spawn probed at background", func() bool {
+		return pf.demotedSpawns() == 1 && pf.spawnCount() == 1 && pf.probesAt(bootTierBackground) > 0
 	})
-	if pf.promotes() != 0 {
-		t.Fatal("background spawn promoted before anyone joined")
+	if pf.probesAt(bootTierForeground) != 0 {
+		t.Fatal("background spawn told to leave darwinbg before anyone joined")
 	}
 
 	brDone := make(chan error, 1)
-	go func() { _, err := pf.wt.Ensure(ctx, StartBrowser); brDone <- err }()
-	waitFor(t, "the browser join's promote", func() bool { return pf.promotes() == 1 })
+	go func() { _, err := pf.wt.Ensure(ctx, StartBrowser, "test"); brDone <- err }()
+	waitFor(t, "a probe telling the backend to leave darwinbg", func() bool { return pf.probesAt(bootTierForeground) > 0 })
 	if s := pf.state(); s != "starting" {
 		t.Fatalf("state = %q, want starting (promote must precede readiness)", s)
 	}
@@ -304,15 +348,15 @@ func TestBrowserJoiningBackgroundStartPromotes(t *testing.T) {
 	if pf.spawnCount() != 1 {
 		t.Fatalf("spawns = %d, want 1 (the join shares the spawn)", pf.spawnCount())
 	}
-	if n := pf.promotes(); n != 1 {
-		t.Fatalf("taskpolicy -B calls = %d, want 1 (the post-ready promote is a no-op)", n)
+	if n := pf.outsidePromotes(); n != 0 {
+		t.Fatalf("taskpolicy -B calls = %d, want 0", n)
 	}
 }
 
 // A page load on a running backend spawns nothing, and counts as activity.
 func TestDocumentLoadOnRunningBackendDoesNotRespawn(t *testing.T) {
 	pf := newPriorityFixture(t, "alpha", false)
-	if _, err := pf.wt.Ensure(context.Background(), StartBrowser); err != nil {
+	if _, err := pf.wt.Ensure(context.Background(), StartBrowser, "test"); err != nil {
 		t.Fatalf("Ensure: %v", err)
 	}
 	before := pf.wt.Snapshot().LastActivity
@@ -357,5 +401,58 @@ func TestHeadlessDocumentLoadDoesNotStartBackend(t *testing.T) {
 	time.Sleep(300 * time.Millisecond)
 	if s := pf.state(); s != "idle" || pf.spawnCount() != 0 {
 		t.Fatalf("state = %q, spawns = %d; want idle, 0", s, pf.spawnCount())
+	}
+}
+
+// A failed boot is not retried by background traffic: the request gets the
+// failure (ErrBootFailed) and nothing spawns — however often it polls. A
+// deploy retries it at once (new code is not a retry); a browser start too,
+// once the cooldown has passed.
+func TestFailedBootIsNotRetriedByBackgroundTraffic(t *testing.T) {
+	pf := newPriorityFixture(t, "alpha", false)
+	spec := *pf.wt.Spec()
+	spec.Command = append(append([]string{}, spec.Command...), "crash")
+	pf.wt.UpdateSpec(&spec)
+	pf.wt.cfg.BrokenCooldown = time.Hour
+	ctx := context.Background()
+
+	if _, err := pf.wt.Ensure(ctx, StartBackground, "test"); !errors.Is(err, ErrSpawnFailed) {
+		t.Fatalf("first boot: err = %v, want ErrSpawnFailed", err)
+	}
+	if s := pf.state(); s != "broken" {
+		t.Fatalf("state = %q, want broken", s)
+	}
+	for i := 0; i < 3; i++ {
+		_, err := pf.wt.Ensure(ctx, StartBackground, "test")
+		if !errors.Is(err, ErrBootFailed) || !strings.Contains(err.Error(), "exited before ready") {
+			t.Fatalf("poll %d: err = %v, want ErrBootFailed naming the failure", i, err)
+		}
+	}
+	rec := get(pf.proxy, "alpha.localhost:9000", "/api/tasks", nil)
+	if rec.Code != http.StatusBadGateway || !strings.Contains(rec.Body.String(), "redeploy") {
+		t.Fatalf("api: status %d body %q, want 502 saying how to retry", rec.Code, rec.Body.String())
+	}
+	if n := pf.spawnCount(); n != 1 {
+		t.Fatalf("spawns = %d, want 1 (background traffic retried a failed boot)", n)
+	}
+
+	// Inside the hour-long cooldown: a deploy spawns, a browser start waits.
+	if _, err := pf.wt.Ensure(ctx, StartDeploy, "test"); !errors.Is(err, ErrSpawnFailed) {
+		t.Fatalf("deploy: err = %v, want a new (failed) spawn", err)
+	}
+	if _, err := pf.wt.Ensure(ctx, StartBrowser, "test"); err == nil {
+		t.Fatal("browser inside the cooldown: want the last failure")
+	}
+	if n := pf.spawnCount(); n != 2 {
+		t.Fatalf("spawns = %d, want 2 (the deploy's, not the browser's inside the cooldown)", n)
+	}
+	pf.wt.mu.Lock()
+	pf.wt.brokenUntil = time.Time{}
+	pf.wt.mu.Unlock()
+	if _, err := pf.wt.Ensure(ctx, StartBrowser, "test"); !errors.Is(err, ErrSpawnFailed) {
+		t.Fatalf("browser past the cooldown: err = %v, want a new (failed) spawn", err)
+	}
+	if n := pf.spawnCount(); n != 3 {
+		t.Fatalf("spawns = %d, want 3 (deploy and browser each retried)", n)
 	}
 }

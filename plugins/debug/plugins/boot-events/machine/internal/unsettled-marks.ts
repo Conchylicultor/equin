@@ -1,36 +1,27 @@
 import { mkdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
-import { getBootMode } from "@plugins/framework/plugins/server-core/core";
-import type { Registration } from "@plugins/framework/plugins/server-core/core";
-import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { bootUnsettledDir } from "../../data-dirs";
 
 // The unsettled-boot marks (see `data-dirs/index.ts`): an index of the
 // worktrees whose boot channel can hold an open boot, so the boot watchdog
 // reads those and not every worktree's. A mark is added by the backend that
-// boots (`bootMarkRegistration`, in its register phase) and by the watchdog
+// boots (server-core's `bin/index.ts`, beside its `start` line) and by the watchdog
 // for any open boot it reads; it is cleared only by the watchdog, after
 // reading the channel as settled (`clearBootUnsettled`).
 
 const INDEXED = ".indexed";
 
-/** Mark `worktree` as holding a boot not yet seen to settle. Synchronous: the register phase writes it. */
+/**
+ * Mark `worktree` as holding a boot not yet seen to settle. Synchronous, and
+ * written by the serving entry point beside the boot's `start` line, before
+ * any plugin import (server-core `bin/index.ts`): a boot killed while
+ * importing still leaves its mark. SERVE ONLY, by construction — an `exec`
+ * child never reaches ready, and never runs that entry point.
+ */
 export function markBootUnsettled(worktree: string): void {
   mkdirSync(bootUnsettledDir.path, { recursive: true });
   writeFileSync(bootUnsettledDir.file(worktree), "");
 }
-
-/**
- * The register-phase mark, SERVE ONLY (an `exec` child never reaches ready —
- * see the server half's start line). One small synchronous write, beside the
- * start line's: it must land before the boot work that can wedge.
- */
-export const bootMarkRegistration: Registration = {
-  register() {
-    if (getBootMode() !== "serve") return;
-    markBootUnsettled(runtimeNamespace());
-  },
-};
 
 /**
  * The marked worktrees, and whether the marks are complete — `indexed: false`

@@ -18,4 +18,9 @@ export {
 } from "./internal/darwin-background";
 export type { DarwinBackground } from "./internal/darwin-background";
 export { spawnAtTier } from "./internal/tier";
+export {
+  BOOT_TIER_HEADER,
+  BOOT_TIERS,
+  followGatewayBootTier,
+} from "./internal/boot-tier";
 export type { SpawnTier } from "./internal/tier";

@@ -417,7 +417,17 @@ async function runGraphPhase(
       const handlers = hook === "onReadyBlocking" ? (p.sinkHandlers ?? []) : [];
       const fn = p[hook];
       if (!fn && handlers.length === 0) return;
-      const end = profilerStart(`${hook}:${p.id}`, hook, p.id, p.id);
+      // A blocking hook is journaled as it OPENS too: the barrier is where a
+      // boot the gateway kills at its deadline usually is, and a span is
+      // otherwise journaled only once it ends — which a SIGKILL never lets it.
+      // The last `open` with no `span` is the hook it died in.
+      const end = profilerStart(
+        `${hook}:${p.id}`,
+        hook,
+        p.id,
+        p.id,
+        hook === "onReadyBlocking" ? { members: [p.id] } : undefined,
+      );
       try {
         for (const h of handlers) h.attach();
         await fn?.call(p);

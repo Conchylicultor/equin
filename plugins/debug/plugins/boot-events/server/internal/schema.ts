@@ -6,9 +6,9 @@ import { z } from "zod";
 // start), the pairing key between a boot's start and ready lines. `sampledAt`
 // mirrors the health-sample convention (== the line's write time).
 //
-// `start` is written at the register phase — the earliest per-process plugin
-// hook, before migrations and any `onReadyBlocking` work — so a backend that
-// wedges mid-boot still left a mark. `ready` is written when `onReady` reaches
+// `start` is written as the serving process starts — before its plugin
+// imports, migrations and any `onReadyBlocking` work — so a backend that
+// wedges (or is killed) mid-boot still left a mark. `ready` is written when `onReady` reaches
 // this plugin (post-onReadyBlocking readiness). `exited` is written from the
 // process's `exit` event when it fires before `ready` — a boot that threw (a
 // failed migration, a boot assert) — so the reader can tell a crashed boot

@@ -8,6 +8,7 @@ export { boostInteractiveQos } from "./internal/spawn-priority";
 export {
   backgroundArgv,
   backgroundPrefix,
+  followGatewayBootTier,
   leaveDarwinBackground,
   readDarwinBackground,
   withForegroundPriority,

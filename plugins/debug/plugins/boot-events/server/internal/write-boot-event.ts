@@ -1,12 +1,14 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
-import { getBootMode } from "@plugins/framework/plugins/server-core/core";
-import type { Registration } from "@plugins/framework/plugins/server-core/core";
+import {
+  channelFileSink,
+  logEnvelope,
+} from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import type { BootLine } from "./schema";
 
 // Writes the per-boot lines to the persisted `boot` log channel →
-// ~/.equin/worktrees/<wt>/logs/boot.jsonl: one `start` line at the
-// register phase, one `ready` line from `onReady` — or, when the process
+// ~/.equin/worktrees/<wt>/logs/boot.jsonl: one `start` line as the process
+// starts, one `ready` line from `onReady` — or, when the process
 // exits before it, one `exited` line from its `exit` event. The two pair by
 // processStartedAt (readBootEvents), so a backend that wedges during
 // migrations / onReadyBlocking leaves an unpaired start — visible on the
@@ -18,28 +20,35 @@ import type { BootLine } from "./schema";
 // 128 MB cap — at two ~140-byte lines per boot that is effectively unbounded
 // history, so no custom rotation here.
 
-const channel = defineLogSink({
+const BOOT_CHANNEL = {
   id: "boot",
   description:
-    "Per-boot start/ready lines (boot-events): a start line at the register phase and a ready line at onReady, so a wedged-mid-boot backend is visible on cross-worktree timelines.",
-});
+    "Per-boot start/ready lines (boot-events): a start line as the serving process starts (before its plugin imports) and a ready line at onReady, so a wedged-mid-boot backend is visible on cross-worktree timelines.",
+};
+const channel = defineLogSink(BOOT_CHANNEL);
 
 function publish(line: BootLine): void {
   channel.publish(JSON.stringify(line));
 }
 
-// The register phase is documented "no I/O" — this token is the deliberate,
-// single exception: one synchronous ~140-byte file append whose entire point
-// is landing BEFORE the boot work (migrations, onReadyBlocking) that can
-// wedge. Routing it through onReady would re-create the blind spot it exists
-// to close.
+// The `start` line is the first thing a serving backend writes, before it
+// imports its plugin graph: `writeBootStartEvent`, called by server-core's
+// `bin/index.ts` beside its `boot-start` checkpoint. It used to be written in
+// the register phase, which runs only once every plugin is imported — under
+// load a cold import took 60–100 s (2026-11-04), so a boot the gateway killed
+// at its deadline while still importing left no line, and the watchdog and
+// the timeline read its predecessor as the latest attempt. That early, no
+// host service is up yet (`defineLogSink` resolves its file through one), so
+// it appends through the channel's file sink itself — the same memoised sink
+// (`channelFileSink` is one per channel id) and envelope the desktop's log
+// persistence writes this channel's later lines through.
 //
-// SERVE ONLY. An `exec` child (e.g. the nightly backup) runs this register
-// phase too, under its parent's worktree name, but never reaches `onReady` —
-// so its `start` would never pair with a `ready`, and the boot watchdog would
-// report the healthy serving backend as wedged for as long as it stayed up.
+// SERVE ONLY, by construction: only the serving entry point calls it. An
+// `exec` child (e.g. the nightly backup) runs under its parent's worktree name
+// but never reaches `onReady`, so its `start` would never pair with a `ready`,
+// and the boot watchdog would report the healthy serving backend as wedged.
 //
-// The same token arms the `exited` line: a boot that throws (a failed
+// The same call arms the `exited` line: a boot that throws (a failed
 // migration, a boot assert) exits before `ready`, and without a terminal line
 // it reads exactly like a wedge — the boot watchdog filed one, its un-ready
 // time running until the next build's boot. The `exit` listener is
@@ -51,30 +60,31 @@ function publish(line: BootLine): void {
 // (`machine/internal/boot-crash.ts`), since filing it needs the computer.
 let ready = false;
 
-export const bootStartRegistration: Registration = {
-  register() {
-    if (getBootMode() !== "serve") return;
-    const worktree = runtimeNamespace();
-    const processStartedAt = Math.round(performance.timeOrigin);
-    publish({
-      sampledAt: Date.now(),
+export function writeBootStartEvent(): void {
+  const worktree = runtimeNamespace();
+  const processStartedAt = Math.round(performance.timeOrigin);
+  const file = channelFileSink(BOOT_CHANNEL);
+  const append = (line: BootLine): void =>
+    file.append(
+      logEnvelope({
+        t: line.sampledAt,
+        stream: "stdout",
+        line: JSON.stringify(line),
+      }),
+    );
+  append({ sampledAt: Date.now(), worktree, processStartedAt, phase: "start" });
+  process.once("exit", () => {
+    if (ready) return;
+    const now = Date.now();
+    append({
+      sampledAt: now,
       worktree,
       processStartedAt,
-      phase: "start",
+      exitedAt: now,
+      phase: "exited",
     });
-    process.once("exit", () => {
-      if (ready) return;
-      const now = Date.now();
-      publish({
-        sampledAt: now,
-        worktree,
-        processStartedAt,
-        exitedAt: now,
-        phase: "exited",
-      });
-    });
-  },
-};
+  });
+}
 
 export function writeBootReadyEvent(): void {
   ready = true;

@@ -52,6 +52,9 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	principal := principalOf(r, p.publicHosts)
 	r.Header.Del(principalHeader)
 	r.Header.Set(principalHeader, principal)
+	// The boot tier is the gateway's word to a booting backend, on its own
+	// readiness probe only (waitReady) — never a client's to send.
+	r.Header.Del(bootTierHeader)
 	if principal == principalAnonymous {
 		if strings.HasPrefix(r.URL.Path, "/gateway/") && r.Method != http.MethodGet && r.Method != http.MethodHead {
 			writeCrossSiteRefusal(w, r)
@@ -196,7 +199,7 @@ func prestartBackend(r *http.Request, wt *Worktree) {
 	}
 	ctx := context.WithoutCancel(r.Context())
 	go func() {
-		if _, err := wt.Ensure(ctx, StartBrowser); err != nil {
+		if _, err := wt.Ensure(ctx, StartBrowser, startCause(r, "page load")); err != nil {
 			slog.Warn("page-load backend start failed", "worktree", wt.Name, "err", err)
 			return
 		}
@@ -258,7 +261,7 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 // request is counted against the serving backend for the duration so a hot
 // restart drains it before terminating the process (avoids mid-request 502s).
 func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request, wt *Worktree) {
-	bk, err := wt.Ensure(r.Context(), startReasonOf(r))
+	bk, err := wt.Ensure(r.Context(), startReasonOf(r), startCause(r, "http"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
@@ -274,7 +277,7 @@ func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request, wt *Worktree)
 // is pinned to the backend that was active at dial time — a hot restart swaps
 // new requests to the new backend without disturbing open connections.
 func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Worktree) {
-	bk, err := wt.Ensure(r.Context(), startReasonOf(r))
+	bk, err := wt.Ensure(r.Context(), startReasonOf(r), startCause(r, "websocket"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
@@ -398,7 +401,7 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			case "idle", "broken":
-				if _, err := wt.Ensure(ctx, StartBackground); err != nil {
+				if _, err := wt.Ensure(ctx, StartDeploy, startCause(r, "restart route")); err != nil {
 					http.Error(w, "cold start failed: "+err.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -540,6 +543,16 @@ var hostAliases = map[string]string{
 
 func isBackendPath(p string) bool {
 	return strings.HasPrefix(p, "/api/") || strings.HasPrefix(p, "/ws/")
+}
+
+// startCause describes the request that asks for a backend, for the spawn's
+// log line (Ensure logs it only when the call begins a spawn): what kind of
+// request, its method and path, and the headers that say who sent it — fetch
+// metadata, Origin, User-Agent. A backend that cannot boot is respawned by
+// whoever keeps asking; this is the only record of who that is.
+func startCause(r *http.Request, kind string) string {
+	return fmt.Sprintf("%s %s %s dest=%q mode=%q origin=%q ua=%q", kind, r.Method, r.URL.Path,
+		r.Header.Get("Sec-Fetch-Dest"), r.Header.Get("Sec-Fetch-Mode"), r.Header.Get("Origin"), r.Header.Get("User-Agent"))
 }
 
 // startReasonOf classifies a backend-bound request: StartBrowser for a

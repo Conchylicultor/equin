@@ -1,9 +1,15 @@
 import { ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
 import { logsDirFor } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
-import { BootWedgePayloadSchema, type BootWedgePayload } from "../../core";
+import {
+  BootWedgePayloadSchema,
+  describeBootPhases,
+  describeBootWedge,
+  humanMs,
+  type BootWedgePayload,
+} from "../../core";
 
-// Re-alert the bell at most once per ~15 min while a boot stays wedged. A boot
+// Re-alert the bell at most once per ~15 min while a worktree stays unusable. A boot
 // that never comes up is an active outage, not a one-shot condition, so the
 // cooldown re-surfaces it periodically (each open tick bumps `count`; the
 // cooldown decides when the bell re-arms) without spamming a fresh row per
@@ -31,30 +37,41 @@ export const bootWedgeKind = ReportKind({
   renderTask: (row: ReportRow) => {
     const d = BootWedgePayloadSchema.parse(row.data);
     return {
-      title: `[boot-wedge] ${d.worktree} never became ready (${Math.round(d.wedgedMs / 1000)}s)`,
+      title: `[boot-wedge] ${describeBootWedge(d)}`,
       description: renderDescription(row, d),
     };
   },
 });
 
-function humanMs(ms: number): string {
-  const s = Math.round(ms / 1000);
-  if (s < 90) return `${s}s`;
-  return `${Math.round(s / 60)}m`;
-}
-
 function renderDescription(row: ReportRow, d: BootWedgePayload): string {
   const lines: string[] = [];
-  const stateWord =
-    d.state === "open"
-      ? "is wedged RIGHT NOW (still the latest attempt, and the gateway fleet still lists it as live)"
-      : "never became ready before a later attempt superseded it";
+  lines.push(`**${describeBootWedge(d)}**`);
+  lines.push("");
+  const stateWord = {
+    booting:
+      "is still booting past its budget — the gateway is still waiting on it (fleet state `starting`)",
+    failed:
+      "was killed before it became ready, and the gateway gave up on it (fleet state `broken`: killed at its readiness deadline, a SIGKILL, so it wrote no exit line). No backend runs, nothing has become ready since, and the gateway retries it only on a deploy (`./equin build`) or a browser start — the worktree is unusable until then",
+    killed:
+      "was killed before it became ready; the gateway now runs nothing for the worktree and no longer holds the failure (it restarted, or swept the worktree idle), so the next request boots it again",
+    "restart-failed":
+      "was a hot restart's new process, killed before it became ready, while the previous backend kept serving — a failed deploy, not an outage",
+    superseded: "never became ready before a later attempt superseded it",
+    open: "was the latest attempt while the gateway still listed the worktree (legacy report — it may already have been dead)",
+  }[d.state];
   lines.push(
-    `The backend for worktree \`${d.worktree}\` ${stateWord}: its process ` +
-      `started ${new Date(d.processStartedAt).toISOString()} but never wrote a ` +
-      `boot \`ready\` line within its **${d.budgetMs}ms** budget — it has been ` +
-      `un-ready for **${humanMs(d.wedgedMs)}**.`,
+    `The backend for worktree \`${d.worktree}\` ${stateWord}. Its process ` +
+      `started ${new Date(d.processStartedAt).toISOString()} and never wrote a ` +
+      `boot \`ready\` line within its **${d.budgetMs}ms** budget; the worktree ` +
+      `has had no ready backend from it for **${humanMs(d.wedgedMs)}**.`,
   );
+  const phases = describeBootPhases(d.journal);
+  if (phases !== null) {
+    lines.push("");
+    lines.push(
+      `**Where its time went** (its boot journal, ms since process start): ${phases}.`,
+    );
+  }
   lines.push("");
   lines.push(
     `A never-ready boot serves nothing: no requests, no live-state, no jobs. It ` +
@@ -66,12 +83,14 @@ function renderDescription(row: ReportRow, d: BootWedgePayload): string {
   );
   lines.push("");
   lines.push(
-    `**What to do:** open the worktree's boot/health logs ` +
-      `(\`${logsDirFor(d.worktree)}\`) and the Timeline around ` +
-      `this window. A boot that wedges past its budget is almost always stuck in ` +
-      `migrations, an \`onReadyBlocking\` hook, or host duress (a concurrent ` +
-      `duress episode starves the boot) — the boot-budget reports and the ` +
-      `duress-episode band on the same window are the next place to look.`,
+    `**What to do:** the step above is where it was when it stopped. Its ` +
+      `\`boot-journal\` channel (\`${logsDirFor(d.worktree)}\`) has every ` +
+      `step, and the gateway's \`gateway.log\` the kill (\`backend abandoned\`) ` +
+      `and who asked for each start (\`backend start requested … cause=\`). A ` +
+      `boot that ran darwinbg throughout was never moved by the gateway's ` +
+      `escalation (a gateway older than its boot-tier probe); long imports ` +
+      `with no darwinbg point at host load — the duress band on the Timeline ` +
+      `around this window says.`,
   );
   lines.push("");
   lines.push(`**Worktree:** \`${d.worktree}\``);
@@ -84,7 +103,10 @@ function renderDescription(row: ReportRow, d: BootWedgePayload): string {
       `**Superseded at:** ${new Date(d.supersededAtMs).toISOString()} (outage bounded)`,
     );
   }
-  if (d.fleetState !== undefined) lines.push(`**Gateway fleet state:** ${d.fleetState}`);
+  if (d.fleetState !== undefined)
+    lines.push(`**Gateway fleet state:** ${d.fleetState}`);
+  if (d.gatewayError !== undefined)
+    lines.push(`**Gateway's last start error:** ${d.gatewayError}`);
   lines.push("");
   lines.push(`**Occurrences (watchdog sightings):** ${row.count}`);
   lines.push(`**First seen:** ${row.firstSeenAt.toISOString()}`);

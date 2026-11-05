@@ -21617,18 +21617,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BootBudgetPayloadSchema`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
-    - **`boot-events`** — Durable per-boot event lines: a `start` line at the register phase (so a backend wedged during migrations/boot is visible as an open-ended bar) and a `ready` line from the onReady hook, paired by processStartedAt into the wall-clock interval readBootEvents(worktree, windowMs) returns — so deploy-restart bursts render on cross-worktree timelines, with no DB table (survives re-forks, readable while a backend is wedged).
+    - **`boot-events`** — Durable per-boot event lines: a `start` line as the serving process starts, before its plugin imports (so a backend wedged during migrations/boot is visible as an open-ended bar) and a `ready` line from the onReady hook, paired by processStartedAt into the wall-clock interval readBootEvents(worktree, windowMs) returns — so deploy-restart bursts render on cross-worktree timelines, with no DB table (survives re-forks, readable while a backend is wedged).
       - Server:
         - Uses:
           - `primitives/log-channels.defineLogSink`
+          - `primitives/log-channels/log-files.channelFileSink`
+          - `primitives/log-channels/log-files.logEnvelope`
           - `primitives/log-channels/log-files.readChannelJson`
         - DB schema: `plugins/debug/plugins/boot-events/server/internal/schema.ts`
         - Exports (types):
           - `BootEvent`
+          - `BootJournalSummary`
           - `BootLine`
         - Exports (values):
           - `BootLineSchema`
           - `readBootEvents`
+          - `readBootJournals`
+          - `writeBootStartEvent`
       - Cross-plugin:
         - Imported by:
           - `debug/boot-watchdog`
@@ -21800,10 +21805,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.defineConfig`
           - `fields/bool/config.boolField`
           - `fields/int/config.intField`
-        - Exports (types): `BootWedgePayload`
+        - Exports (types):
+          - `BootWedgeJournal`
+          - `BootWedgePayload`
+          - `BootWedgeState`
         - Exports (values):
           - `bootWatchdogConfig`
           - `BootWedgePayloadSchema`
+          - `describeBootPhases`
+          - `describeBootWedge`
+          - `humanMs`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`broadcasts`** — View and edit the CLI's broadcasts.json (plugins/framework/plugins/cli/broadcasts.json in the main checkout): the broadcast messages printed on stale worktrees. View and edit the CLI's broadcasts.json from the UI: the broadcasts.entries live value (watched through the dir hub) and its PUT.
@@ -36418,6 +36429,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backgroundArgv`
           - `backgroundPrefix`
           - `backgroundShellPrefix`
+          - `BOOT_TIER_HEADER`
+          - `BOOT_TIERS`
+          - `followGatewayBootTier`
           - `leaveDarwinBackground`
           - `readDarwinBackground`
           - `spawnAtTier`
@@ -36435,6 +36449,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backgroundArgv`
           - `backgroundPrefix`
           - `boostInteractiveQos`
+          - `followGatewayBootTier`
           - `leaveDarwinBackground`
           - `readDarwinBackground`
           - `withForegroundPriority`
