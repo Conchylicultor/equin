@@ -63,6 +63,24 @@ it contains any per-target failure (log + a deduped `worktree-reap-failed`
 report) and the retry is structural — the checkout is gone, so its stranded
 namespaces are precisely what the marker-owned branch enumerates next tick.
 
+## What "clean" means: nothing only the checkout holds
+
+The clean path (72 h) and the minted-checkout rule reap only a checkout whose
+`GitHygiene.isDirty` is false (`server/internal/safety.ts`), and that verdict is
+"no work exists only in this checkout": no uncommitted change, and no commit its
+HEAD (or a per-worktree ref, `refs/worktree/*` / `refs/bisect/*`) reaches that
+no branch, remote ref or tag does (`git rev-list -n 1 HEAD --glob=… --not
+--branches --remotes --tags`, run only on a clean tree; never `--all`, which
+adds every other worktree's HEAD). Commits on a
+branch are NOT counted, by design: the reap removes the dir and `git worktree
+prune`s it, and nothing deletes a branch, so a branch's unmerged commits — a
+push that committed but failed to merge — survive in `claude-web/<id>`. What
+prune does destroy is the checkout's own HEAD and reflog, so a commit made on a
+detached HEAD (a stopped rebase, `git checkout <sha>`) is the one kind of
+committed work a reap could lose; it now keeps the checkout until the 90-day
+floor, like dirty files (the panel shows it as "commits on no branch").
+`stranded-commits.test.ts` pins both halves against a real repo.
+
 ## The hourly sweep runs detached
 
 `worktree-cleanup.reap-stale` is a `defineSupervisedJob` with a `run` body: the

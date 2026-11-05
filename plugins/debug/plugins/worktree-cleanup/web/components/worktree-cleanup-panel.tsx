@@ -94,11 +94,13 @@ const TASK_STATUS_OPTIONS: FieldOption[] = [
 ];
 
 /** What is left of a worktree on disk and in the cluster, in one word. */
-type Remains = "fully-clean" | "no-dir" | "clean" | "uncommitted";
+type Remains =
+  "fully-clean" | "no-dir" | "clean" | "uncommitted" | "stranded-commits";
 
 function remainsOf(entry: WorktreeEntry): Remains {
   if (!entry.dirExists && !entry.dbExists) return "fully-clean";
   if (!entry.dirExists) return "no-dir";
+  if (entry.strandedCommit !== null) return "stranded-commits";
   return entry.isDirty ? "uncommitted" : "clean";
 }
 
@@ -200,6 +202,12 @@ export function WorktreeCleanupPanel() {
           {
             value: "uncommitted",
             label: "uncommitted",
+            variant: "warning",
+            icon: warningIcon,
+          },
+          {
+            value: "stranded-commits",
+            label: "commits on no branch",
             variant: "warning",
             icon: warningIcon,
           },
@@ -432,7 +440,10 @@ function DeleteAction({ entry }: { entry: WorktreeEntry }): ReactElement {
           if (!entry.isSafe && entry.dirExists) {
             void confirmDialog({
               title: "Delete anyway?",
-              description: entry.isDirty
+              description:
+                entry.strandedCommit !== null
+                  ? `This worktree's detached HEAD holds commits no branch keeps (${entry.strandedCommit.slice(0, 10)}); deleting it loses them.`
+                  : entry.isDirty
                 ? "This worktree has uncommitted changes."
                 : "This worktree is not finished (open conversation, open task, or under 72 h old).",
               confirmLabel: "Delete",

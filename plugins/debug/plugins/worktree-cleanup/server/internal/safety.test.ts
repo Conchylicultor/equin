@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   classifyGitStatus,
+  classifyStrandedCommits,
   isSafeToReap,
   isTaskDeletable,
   needsHygiene,
@@ -90,6 +91,27 @@ describe("classifyGitStatus", () => {
 
   test("unparseable output is conservative", () => {
     expect(classifyGitStatus("fatal: not a git repository\n")).toEqual({
+      isDirty: true,
+    });
+  });
+});
+
+describe("classifyStrandedCommits", () => {
+  test("no commit outside every ref reads clean", () => {
+    expect(classifyStrandedCommits("")).toEqual({ isDirty: false });
+    expect(classifyStrandedCommits("\n")).toEqual({ isDirty: false });
+  });
+
+  test("a commit only HEAD reaches reads dirty, naming it", () => {
+    const sha = "73be6f4e9860a9801bfdc60ff93c50093c812f08";
+    expect(classifyStrandedCommits(`${sha}\n`)).toEqual({
+      isDirty: true,
+      strandedCommit: sha,
+    });
+  });
+
+  test("unparseable output is conservative", () => {
+    expect(classifyStrandedCommits("fatal: bad revision 'HEAD'\n")).toEqual({
       isDirty: true,
     });
   });

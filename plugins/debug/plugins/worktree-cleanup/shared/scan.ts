@@ -14,7 +14,10 @@ export const WorktreeEntrySchema = z.object({
   createdAt: z.string(),
   dirExists: z.boolean(),
   dbExists: z.boolean(),
+  /** The checkout holds work nothing outside it keeps (server/internal/safety.ts). */
   isDirty: z.boolean(),
+  /** Of that work, a commit only its detached HEAD reaches; `null` otherwise. */
+  strandedCommit: z.string().nullable(),
   isSafe: z.boolean(),
 });
 export type WorktreeEntry = z.infer<typeof WorktreeEntrySchema>;

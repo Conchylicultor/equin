@@ -127,8 +127,9 @@ export type ClassifyResult = ReapTarget | null | typeof NEEDS_HYGIENE;
 //   - ORPHAN: worktree dir gone but a fork DB and/or registry entry linger →
 //     drop them. Age-free, so its caller MUST confirm the "dir is gone" input
 //     with a real stat (see collectReapable).
-//   - CLEAN PATH (72h): dir present, no uncommitted changes + task done/dropped
-//     + ≥72h —
+//   - CLEAN PATH (72h): dir present, nothing only the checkout holds (no
+//     uncommitted change, no commit only a detached HEAD reaches — safety.ts)
+//     + task done/dropped + ≥72h —
 //     the hygiene-aware "nothing to lose" set. The only branch needing a probe.
 //   - HARD FLOOR (≥90d): abandonment backstop — takes even dirty dirs
 //     and held tasks, which the clean path deliberately never reaps.
@@ -292,7 +293,8 @@ export interface ClassifyMintedContext {
 // here, its database still holds the record and nothing is decided; once the
 // minter is gone (reaped, so its database dropped with it), nothing anywhere
 // can resume the checkout's conversation, and it is reclaimed on the same
-// terms as the clean path — no uncommitted change, at least 72 h old.
+// terms as the clean path — nothing only it holds (safety.ts's GitHygiene),
+// at least 72 h old.
 //
 // Never a target:
 //   - no stamp (every checkout older than the stamp), or a malformed one:

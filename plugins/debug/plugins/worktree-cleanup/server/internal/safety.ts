@@ -3,26 +3,44 @@ import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
-// The one git fact that decides whether a checkout has anything to lose:
-// uncommitted state (modified, staged, deleted or untracked files). Commits are
-// deliberately NOT part of it — not pushed, not ahead-of-upstream, not merged.
-// Reaping removes the worktree DIR and leaves the branch ref in the main repo
-// (nothing in reapAttempt deletes a branch), so every commit an attempt made
-// survives the reap and `git worktree add <path> <branch>` restores it. Only
-// what was never committed lives exclusively in the checkout.
+// The one git fact that decides whether a checkout has anything to lose: work
+// that exists ONLY in the checkout, so removing its dir destroys it. Two kinds:
+//
+//   - uncommitted state (modified, staged, deleted or untracked files);
+//   - commits its HEAD reaches that no shared ref does — a detached HEAD that
+//     was committed on (a stopped rebase, a `git checkout <sha>` then commit).
+//     Such commits are held by the checkout's own HEAD and its per-worktree
+//     reflog, both of which `git worktree prune` deletes with the checkout's
+//     admin dir; gc then collects the commits.
+//
+// Commits on a BRANCH are deliberately NOT part of it — not pushed, not
+// ahead-of-upstream, not merged into main. Reaping removes the worktree DIR and
+// leaves every ref in the main repo standing (nothing in reapAttempt, nor
+// anywhere else, deletes a branch), so a branch's commits survive the reap and
+// `git worktree add <path> <branch>` restores them. A `./equin push` that
+// committed but failed to merge is exactly this case: its commit is on
+// `claude-web/<id>`, which outlives the checkout.
 //
 // This used to carry an `unpushedCount` read from `# branch.ab`, with a missing
 // upstream read as "never pushed". `./equin push` lands work by merging
 // into local main and many branches never get an upstream, so ~200 clean,
 // finished checkouts failed that term on every hourly sweep and none was ever
 // reaped — while the term protected nothing the branch ref does not already keep.
+// The stranded-commit term asks the question that term meant to: is there a
+// commit nothing outside this checkout holds?
 export interface GitHygiene {
+  // The verdict: the checkout holds work no ref outside it keeps (either kind
+  // above), or the probe could not prove otherwise.
   isDirty: boolean;
   // The first changed path `git status` named, repo-relative — the reaper's
   // witness that the tree is still dirty (hygiene-witness.ts). Absent when the
-  // tree is clean, when the answer is the conservative unknown, or when git
-  // quoted the path (an unusual name: no witness, the tree is just re-probed).
+  // tree is clean, when the answer is the conservative unknown, when git
+  // quoted the path (an unusual name: no witness, the tree is just re-probed),
+  // or when the work is a stranded commit (re-probed every sweep: rare).
   dirtyPath?: string;
+  // Set when the tree is clean but HEAD reaches a commit no branch, remote
+  // ref or tag does: the first such commit. `isDirty` is then true.
+  strandedCommit?: string;
 }
 
 // The conservative answer: "assume there is something to lose". Returned for
@@ -120,13 +138,67 @@ export async function getGitHygiene(
           },
         );
         if (r.timedOut || r.exitCode !== 0) return HYGIENE_UNKNOWN;
-        return classifyGitStatus(r.stdout);
+        const status = classifyGitStatus(r.stdout);
+        if (status.isDirty) return status;
+        return await strandedHygiene(wtPath, opts);
         // eslint-disable-next-line promise-safety/no-bare-catch -- git spawn can fail for many reasons (binary missing, worktree deleted mid-flight, not a git repo); all map to the same conservative safe default (assume dirty = not safe to delete), so every error is correctly handled here
       } catch {
         return HYGIENE_UNKNOWN;
       }
     }),
   );
+}
+
+// The second half of the verdict, for a tree `git status` found clean: the
+// first commit HEAD (or a per-worktree ref — refs/worktree/*, refs/bisect/*,
+// which prune deletes with the admin dir) reaches that no branch,
+// remote-tracking ref or tag does. Never `--all`: it adds every OTHER
+// worktree's HEAD, so one detached checkout would hold every other one.
+// On a branch that is always none (the branch itself holds HEAD), so this only
+// ever finds something on a detached HEAD. Cheap: the walk stops at the first
+// commit a ref holds (~50 ms over ~10k refs). Failure is conservative, like the
+// status probe it follows.
+async function strandedHygiene(
+  wtPath: string,
+  opts: { background?: boolean },
+): Promise<GitHygiene> {
+  const r = await spawnCaptured(
+    [
+      GIT,
+      "--no-optional-locks",
+      "-C",
+      wtPath,
+      "rev-list",
+      "-n",
+      "1",
+      "HEAD",
+      // Per-worktree refs: they live in the checkout's admin dir and go with it.
+      "--glob=refs/worktree/*",
+      "--glob=refs/bisect/*",
+      "--not",
+      "--branches",
+      "--remotes",
+      "--tags",
+    ],
+    {
+      timeoutMs: 30_000,
+      tier: opts.background ? "background" : "inherit",
+    },
+  );
+  if (r.timedOut || r.exitCode !== 0) return HYGIENE_UNKNOWN;
+  return classifyStrandedCommits(r.stdout);
+}
+
+/**
+ * PURE helper (exported for unit testing): classify `git rev-list -n 1 HEAD
+ * --not --branches --remotes --tags` output — empty when every commit HEAD
+ * reaches is held by a ref that outlives the checkout.
+ */
+export function classifyStrandedCommits(revListOut: string): GitHygiene {
+  const commit = revListOut.trim();
+  if (commit === "") return { isDirty: false };
+  if (!/^[0-9a-f]{40,64}$/.test(commit)) return HYGIENE_UNKNOWN;
+  return { isDirty: true, strandedCommit: commit };
 }
 
 // Allowlist of task statuses known to have no live agent session AND nothing the
