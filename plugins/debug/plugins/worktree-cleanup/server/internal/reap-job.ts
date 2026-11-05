@@ -7,6 +7,7 @@ import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
 import {
   dropRetiredBranchReflogs,
+  describeHarvest,
   emptyWorktreeTrash,
   WorktreeGitTimeoutError,
 } from "@plugins/infra/plugins/worktree/server";
@@ -83,7 +84,9 @@ export const worktreeReapJob = defineSupervisedJob({
     // whatever is left there is disk space only, never a half-removed checkout.
     const trashed = await emptyWorktreeTrash(Date.now());
     if (trashed > 0)
-      log(`auto-reap: emptied ${trashed} leftover trash entries`);
+      log(
+        `auto-reap: emptied ${trashed} leftover trash entries and expired dependency stores`,
+      );
 
     const scan = await collectReapable(Date.now());
     const targets = scan.targets;
@@ -167,7 +170,12 @@ export const worktreeReapJob = defineSupervisedJob({
     // (two-tier fairness, mirroring host-read-pool's per-worktree tier).
     await pMap(targets, 3, (t: ReapTarget) =>
       contain(t.id, async () => {
-        await reapAttempt(t.id, { worktreePath: t.worktreePath });
+        const removal = await reapAttempt(t.id, {
+          worktreePath: t.worktreePath,
+        });
+        if (removal.kind === "removed") {
+          log(`reaped ${t.id}; ${describeHarvest(removal.depStore)}`);
+        }
         reaped++;
       }),
     );

@@ -118,7 +118,8 @@ signals the backend's whole process group (see
 
 ## Every checkout is installed (`server/internal/install-checkout.ts`)
 
-`installCheckout(path, signal?)` runs the checkout's OWN CLI, `<path>/equin
+`installCheckout(repoRoot, path, opts, signal?)` adopts a waiting dependency
+store into a checkout that has no `node_modules` (below), then runs the checkout's OWN CLI, `<path>/equin
 install`, with `EQUIN_FROZEN_LOCKFILE=1` (so creation never rewrites `bun.lock`),
 background tier, output captured into the thrown error. Its own CLI because
 `server` may not import `cli`, and the checkout's copy is the install code and
@@ -129,11 +130,55 @@ every path settles (fresh add, claimed spare — whose switch may move `bun.lock
 gate. Without it, a checkout's first program (the guard hook, not `./equin`)
 resolved npm packages by walking up into main's `node_modules`.
 
+## A removed checkout's dependency store goes to the next one (`server/internal/dep-store-pool.ts`)
+
+A cold install clones each of ~1,100 package directories out of bun's cache, and
+a directory `clonefile` holds the volume's rename lock while it runs — every
+`rename` on the disk (main's `writeAtomic`) waits behind it: 0.2–1.9 s per
+install, at any tier. It ran per launch, and the reap then deleted the same
+75k-entry store. So the store is reused instead
+(`research/2026-11-05-global-bulk-tree-mutations-rename-lock.md`):
+
+- **Harvest** — `removeWorktree`, after the rename into the trash: the trashed
+  checkout's `node_modules/.bun` moves to `.claude/worktree-dep-stores/<ms>-<name>/store`
+  (staged, published by one rename), the newest 2 kept. Only when `ensureDeps`'
+  stamp exists (the install finished) and no store entry is newer than it — a
+  file edited in place is the one change bun's re-link would not undo.
+- **Adopt** — `installCheckout`, before the install: a checkout with no
+  `node_modules` takes the newest entry under 7 days old as its
+  `node_modules/.bun`; the install (no stamp came with it) re-links it, cloning
+  only what the lock changed.
+- **An entry is only ever taken by renaming it to a claimed name**
+  (`.claimed-…`) — by an adopter or by a delete (eviction past the newest 2,
+  expiry). The rename is exclusive, so two adopters, or an adopter and a
+  delete, are told apart by it, and an adopter can never move a store an
+  `rm -rf` is half-way through.
+- **Never fails a removal**: the harvest runs after the removal is committed,
+  so its failure is a result (`HarvestResult.failed`), and the store is
+  deleted with the checkout.
+- **Results, not log lines**: `installCheckout`/`setupWorktree`/
+  `createSpareWorktree` answer an `AdoptResult`, `removeWorktree` a
+  `WorktreeRemoval`; the jobs log them on their channels with
+  `describeAdoption` / `describeHarvest` (`worktree-prepare`,
+  `worktree-spare-refill`, `worktree-cleanup`) — the count of cold installs
+  and kept stores per day.
+- **Only the store**: the top-level links, `.bin` and the workspace-local
+  `node_modules` are links bun recreates, and bun never prunes a top-level
+  entry the lock dropped — carrying them could keep a removed dependency
+  resolvable.
+- **Sweep** — `emptyWorktreeTrash` (the reaper's tick) deletes expired entries
+  and transient names (`.staging-…`, `.claimed-…`) older than an hour — a
+  process that died holding them.
+- **Not caught**: a store file edited in place AND then a later successful
+  install in the same checkout (the stamp is rewritten after the edit). Only
+  content hashes would see it.
+
 ## Removal is a rename (`removeWorktree`)
 
 Inside the mutate gate: unlock → `rename` the dir into `.claude/worktree-trash/<ms>-<name>`
-(same volume: atomic, instant) → `git worktree prune`. Outside the gate: a
-background-tier `rm -rf` of the trash entry. The branch ref is kept.
+(same volume: atomic, instant) → `git worktree prune`. Outside the gate: the
+dependency store's harvest (above), then a background-tier `rm -rf` of the
+trash entry. The branch ref is kept.
 
 It used to be `git worktree remove --force` under a 300 s kill, holding a slot
 while it deleted file by file. A kill left a half-deleted checkout in place, which
@@ -214,10 +259,12 @@ pid liveness.
     - `infra/paths.worktreesDir`
     - `packages/flock.flockTry`
   - Exports (types):
+    - `AdoptResult`
     - `CheckoutHead`
     - `CheckoutSource`
     - `CheckoutState`
     - `CompositionMarker`
+    - `HarvestResult`
     - `NamespaceClaimant`
     - `NamespaceProbe`
     - `RetiredReflogSweep`
@@ -226,6 +273,7 @@ pid liveness.
     - `WorktreeOp`
     - `WorktreeOpInfo`
     - `WorktreeOpMarker`
+    - `WorktreeRemoval`
     - `WorktreeSetup`
     - `WorktreeSpec`
   - Exports (values):
@@ -234,6 +282,8 @@ pid liveness.
     - `checkoutState`
     - `countReadySpares`
     - `createSpareWorktree`
+    - `describeAdoption`
+    - `describeHarvest`
     - `dropRetiredBranchReflogs`
     - `emptyWorktreeTrash`
     - `ensureMainWorktreeRoot`
@@ -277,7 +327,7 @@ pid liveness.
 - Exemptions:
   - Exempts itself from:
     - `worktree/no-raw-worktree-git` — `.` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/install-checkout.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
     - `user-path/no-unproven-claim` — `server/internal/worktree.ts` (sanctioned)
   - Exempted by: `infra/worktree` (0 debt)
 - Core:

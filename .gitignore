@@ -76,6 +76,8 @@ skills-lock.json
 # Removed checkouts awaiting deletion (worktreeTrashDir, infra/worktree): an
 # untracked entry appearing mid-build fails main's main-tree guard.
 .claude/worktree-trash/
+# Removed checkouts' dependency stores awaiting the next checkout (depStorePoolDir, infra/worktree).
+.claude/worktree-dep-stores/
 .claude/scheduled_tasks.lock
 # Guard bypass files (BYPASS_TOKENS in tooling/guards): per-checkout overrides, never committed.
 .allow-*

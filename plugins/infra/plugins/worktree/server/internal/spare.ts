@@ -8,6 +8,7 @@ import {
   stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "node:path";
+import type { AdoptResult } from "./dep-store-pool";
 import { installCheckout } from "./install-checkout";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 import { isSpareName, newSpareName, SPARE_LOCK_REASON } from "./spare-name";
@@ -83,17 +84,26 @@ export async function createSpareIn(
 /** Write one ready spare under the host-wide `worktree-mutate` gate. */
 export async function createSpareWorktree(
   signal?: AbortSignal,
-): Promise<string> {
+): Promise<{ path: string; depStore: AdoptResult }> {
   const repoRoot = await ensureMainWorktreeRoot(signal);
-  return withWorktreeMutateSlot(
+  let depStore: AdoptResult = { kind: "none" };
+  const path = await withWorktreeMutateSlot(
     () =>
       createSpareIn(
         repoRoot,
-        (path, sig) => installCheckout(path, { frozen: true }, sig),
+        async (path, sig) => {
+          depStore = await installCheckout(
+            repoRoot,
+            path,
+            { frozen: true },
+            sig,
+          );
+        },
         signal,
       ),
     signal,
   );
+  return { path, depStore };
 }
 
 // The mtime of the spare's admin dir (`.git/worktrees/spare-…`), read through
@@ -124,7 +134,7 @@ async function adminDirMtime(path: string): Promise<number | null> {
 export async function pruneSparesIn(
   repoRoot: AppPath,
   now: number,
-  remove: (path: string) => Promise<void>,
+  remove: (path: string) => Promise<unknown>,
   signal?: AbortSignal,
 ): Promise<string[]> {
   const dir = gitWorktreesDir(repoRoot);

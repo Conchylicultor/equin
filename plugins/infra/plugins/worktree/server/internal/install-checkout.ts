@@ -1,7 +1,9 @@
 import { join } from "node:path";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { type AdoptResult, adoptDepStore } from "./dep-store-pool";
 
 /**
  * A cold `bun install` of this repo plus its postinstall provisions. Like the
@@ -30,12 +32,20 @@ const OUTPUT_TAIL_CHARS = 8000;
  * are the agent's work in progress, and a dependency it added but has not
  * locked yet must not stop its conversation from relaunching. Throws with install's captured output on failure; the
  * caller's launch or refill fails with it.
+ *
+ * A checkout with no `node_modules` yet (a fresh add, a new spare) first adopts
+ * a removed checkout's dependency store (`adoptDepStore`), so its install
+ * re-links it instead of cloning every package directory again — the cold
+ * install's directory clones hold the volume's rename lock. Answers what the
+ * install started from, for the caller's log.
  */
 export async function installCheckout(
+  repoRoot: AppPath,
   path: string,
   opts: { frozen: boolean },
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<AdoptResult> {
+  const depStore = await adoptDepStore(repoRoot, path, Date.now());
   const argv = [join(path, CLI_NAME), "install"];
   // Demoted like the checkout itself: background work relative to the
   // interactive backends.
@@ -64,4 +74,5 @@ export async function installCheckout(
       `${argv.join(" ")} ${how}; the checkout is not installed:\n${tail}`,
     );
   }
+  return depStore;
 }

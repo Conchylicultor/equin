@@ -31,6 +31,12 @@ import {
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { attemptBranchName, attemptBranchRef } from "../../core";
 import { namespaceCollision, probeNamespace } from "./composition-namespace";
+import {
+  type AdoptResult,
+  emptyDepStorePool,
+  type HarvestResult,
+  harvestDepStore,
+} from "./dep-store-pool";
 import { installCheckout } from "./install-checkout";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 import { isSpareName, SPARE_LOCK_REASON } from "./spare-name";
@@ -557,22 +563,24 @@ async function deleteTrashEntry(path: string): Promise<void> {
 
 /**
  * Delete every trash entry older than the grace period — the files of removals
- * whose own delete was killed or whose process died. Called by the reaper once
- * per sweep. Entries inside the grace period belong to a removal that may still
- * be deleting them, so they are left alone; an entry whose name carries no time
- * is not one `removeWorktree` wrote, but it is in our trash dir, so it goes too.
+ * whose own delete was killed or whose process died — and every pooled
+ * dependency store past its bound (`emptyDepStorePool`). Called by the reaper
+ * once per sweep; returns how many of either it deleted. Entries inside the
+ * grace period belong to a removal that may still be deleting them, so they
+ * are left alone; an entry whose name carries no time is not one
+ * `removeWorktree` wrote, but it is in our trash dir, so it goes too.
  */
 export async function emptyWorktreeTrash(now: number): Promise<number> {
   const repoRoot = await ensureMainWorktreeRoot();
+  let deleted = await emptyDepStorePool(repoRoot, now);
   const dir = worktreeTrashDir(repoRoot);
   let entries: string[];
   try {
     entries = await readdir(dir);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return 0;
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return deleted;
     throw err;
   }
-  let deleted = 0;
   for (const entry of entries) {
     const at = trashedAtMs(entry);
     if (at !== undefined && now - at < TRASH_GRACE_MS) continue;
@@ -1251,9 +1259,10 @@ export async function checkoutAttempt(
   return source;
 }
 
-/** What `setupWorktree` did: claimed a spare, added a fresh checkout, or found one in place. */
+/** What `setupWorktree` did: claimed a spare, added a fresh checkout, or found one in place — and what its install started from. */
 export interface WorktreeSetup {
   source: CheckoutSource | "existing";
+  depStore: AdoptResult;
 }
 
 /**
@@ -1274,7 +1283,7 @@ export async function convergeExistingCheckout(
   wtPath: string,
   gate: <T>(fn: () => Promise<T>) => Promise<T>,
   signal?: AbortSignal,
-): Promise<WorktreeSetup> {
+): Promise<Pick<WorktreeSetup, "source">> {
   if (await isUnfinishedCheckout(repoRoot, wtPath, signal)) {
     const source = await gate(async () => {
       await discardPartialCheckout(id, repoRoot, wtPath);
@@ -1335,7 +1344,7 @@ export async function setupWorktree(
   // guaranteed means a checkout cannot stay unlocked just because it predates
   // this code or something released its lock.
   if (await pathExists(wtPath)) {
-    const setup = await convergeExistingCheckout(
+    const { source } = await convergeExistingCheckout(
       repoRoot,
       id,
       wtPath,
@@ -1346,9 +1355,14 @@ export async function setupWorktree(
     // before checkouts installed themselves, and a retry whose install failed.
     // ~140 ms of freshness check when already installed. Not frozen: its
     // package.jsons are the agent's own edits (see installCheckout).
-    await installCheckout(wtPath, { frozen: false }, signal);
+    const depStore = await installCheckout(
+      repoRoot,
+      wtPath,
+      { frozen: false },
+      signal,
+    );
     stampMinter(id, minter);
-    return setup;
+    return { source, depStore };
   }
 
   // A checkout's namespace is its own name (the main composition's prefix
@@ -1382,9 +1396,14 @@ export async function setupWorktree(
   // installed, but its switch may have moved `bun.lock` (a frozen re-install);
   // a fresh add installs from scratch. Thrown, so the launch fails loudly with
   // install's own output.
-  await installCheckout(wtPath, { frozen: true }, signal);
+  const depStore = await installCheckout(
+    repoRoot,
+    wtPath,
+    { frozen: true },
+    signal,
+  );
   stampMinter(id, minter);
-  return { source };
+  return { source, depStore };
 }
 
 // Once the checkout exists, never before: a stamp-only `<ns>/` dir with no
@@ -1415,11 +1434,15 @@ function stampMinter(id: string, minter: Namespace): void {
  *
  * The branch ref is untouched, as it was with `git worktree remove`: every
  * commit the checkout made survives in the main repo.
+ *
+ * Answers what became of the checkout's dependency store (kept for the next
+ * checkout, or deleted with it), for the caller's log; `absent` when there was
+ * no dir to move (only the registration was dropped).
  */
 export async function removeWorktree(
   wtPath: string,
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<WorktreeRemoval> {
   const repoRoot = await ensureMainWorktreeRoot(signal);
   // Re-assert the canonical-path invariant here rather than trusting the caller —
   // the dir is about to be moved into the trash and deleted, and the guard must
@@ -1469,5 +1492,15 @@ export async function removeWorktree(
     }
     return moved;
   }, signal);
-  if (trashed) await deleteTrashEntry(trashPath);
+  if (!trashed) return { kind: "absent" };
+  // Its dependency store goes to the next checkout instead of being deleted
+  // while that one clones it again (dep-store-pool.ts). Outside the gate, like
+  // the delete: a read-only walk of the store and a rename of it. Never throws.
+  const depStore = await harvestDepStore(repoRoot, trashPath, Date.now());
+  await deleteTrashEntry(trashPath);
+  return { kind: "removed", depStore };
 }
+
+/** What `removeWorktree` did with the checkout's dir. */
+export type WorktreeRemoval =
+  { kind: "removed"; depStore: HarvestResult } | { kind: "absent" };

@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { getConfig } from "@plugins/config_v2/server";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
-import { setupWorktree } from "@plugins/infra/plugins/worktree/server";
+import {
+  describeAdoption,
+  setupWorktree,
+} from "@plugins/infra/plugins/worktree/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { spareRefillJob } from "@plugins/infra/plugins/worktree/plugins/spare-pool/server";
 import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
@@ -50,14 +53,14 @@ export const worktreePrepareJob = defineSupervisedJob({
     // included) rather than inside `infra/worktree`, which must stay importable
     // from the CLI.
     log(`checkout ${attemptId} at ${path}: starting`);
-    const { source } = await setupWorktree(
+    const { source, depStore } = await setupWorktree(
       attemptId,
       path,
       new Set(getConfig(compositionsConfig).manifests.map((m) => m.id)),
       // This backend: its database is where the attempt row lives.
       runtimeNamespace(),
     );
-    log(`checkout ${attemptId}: ${source}`);
+    log(`checkout ${attemptId}: ${source}; ${describeAdoption(depStore)}`);
   },
   // A checkout was made — from a spare (the pool is now one short) or cold
   // (the pool was empty) — so top the pool back up for the next launch. Here

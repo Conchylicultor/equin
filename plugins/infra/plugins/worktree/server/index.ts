@@ -18,6 +18,7 @@ export {
   addCheckout,
   type CheckoutHead,
   removeWorktree,
+  type WorktreeRemoval,
   emptyWorktreeTrash,
   WorktreeGitTimeoutError,
 } from "./internal/worktree";
@@ -31,6 +32,12 @@ export {
   dropRetiredBranchReflogs,
   type RetiredReflogSweep,
 } from "./internal/retired-reflogs";
+export {
+  type AdoptResult,
+  type HarvestResult,
+  describeAdoption,
+  describeHarvest,
+} from "./internal/dep-store-pool";
 export { isCanonicalWorktreeName } from "./internal/worktree-name";
 export {
   type WorktreeOp,

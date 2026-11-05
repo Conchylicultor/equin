@@ -10,6 +10,7 @@ import {
   isCanonicalWorktreePath,
   removeWorktree,
   removeWorktreeSpec,
+  type WorktreeRemoval,
 } from "@plugins/infra/plugins/worktree/server";
 import {
   namespacesOwnedByCheckout,
@@ -35,13 +36,16 @@ export async function dirExists(path: string): Promise<boolean> {
 //
 // `onStep` lets the streaming delete handlers surface per-step progress to the
 // UI without duplicating the sequence; the background job passes nothing.
+// Answers what the checkout's removal did (its dependency store kept or
+// deleted), for the sweep's log.
 export async function reapAttempt(
   id: string,
   opts: {
     worktreePath?: string;
     onStep?: (step: ReapStep) => void;
   },
-): Promise<void> {
+): Promise<WorktreeRemoval> {
+  let removal: WorktreeRemoval = { kind: "absent" };
   if (opts.worktreePath) {
     const root = await ensureMainWorktreeRoot();
     // Deliberately NOT gated on the directory still existing, which is what this
@@ -54,7 +58,7 @@ export async function reapAttempt(
     // removes a live registration, and falls through to prune when there is none.
     if (isCanonicalWorktreePath(opts.worktreePath, root)) {
       opts.onStep?.("worktree");
-      await removeWorktree(opts.worktreePath);
+      removal = await removeWorktree(opts.worktreePath);
     }
   }
 
@@ -113,6 +117,7 @@ export async function reapAttempt(
         `owned could not be reclaimed: ${derivedFailures.join("; ")}`,
     );
   }
+  return removal;
 }
 
 // Reclaim every namespace owned by this checkout, returning one message per

@@ -5,6 +5,7 @@ import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import {
   countReadySpares,
   createSpareWorktree,
+  describeAdoption,
   pruneSpares,
 } from "@plugins/infra/plugins/worktree/server";
 
@@ -51,8 +52,8 @@ export const spareRefillJob = defineSupervisedJob({
     const pruned = await pruneSpares();
     if (pruned.length > 0) log(`pruned ${pruned.join(", ")}`);
     while ((await countReadySpares()) < SPARE_TARGET) {
-      await createSpareWorktree();
-      log("wrote a ready spare");
+      const { depStore } = await createSpareWorktree();
+      log(`wrote a ready spare; ${describeAdoption(depStore)}`);
     }
   },
 });
