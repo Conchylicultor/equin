@@ -91,6 +91,8 @@ demo's browser host serves (and prunes) it too.
     - `network/live/live-state.mapResource`
     - `network/live/live-state.ResourceResult`
     - `primitives/dom/web-storage.defineStore`
+    - `primitives/dom/web-storage.Store`
+    - `primitives/dom/web-storage.useStore`
     - `primitives/persistent-draft.legacyDraftKeys`
     - `primitives/persistent-draft.readDraft`
     - `primitives/persistent-draft.writeDraft`

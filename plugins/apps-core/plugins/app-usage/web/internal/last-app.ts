@@ -8,6 +8,7 @@ import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage
 // every first app of a page load counts as a launch - a slight over-count.
 const lastAppStore = defineStore({
   owner: "app-usage.last-app",
+  pageWide: { reason: "the app the page's own tabs last focused" },
   label: "Last focused app",
   area: "session",
   cap: "1 KB",

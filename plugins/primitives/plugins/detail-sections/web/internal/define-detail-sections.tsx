@@ -18,7 +18,11 @@ import {
   useDraft,
   writeDraft,
 } from "@plugins/primitives/plugins/persistent-draft/web";
-import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import {
+  defineStore,
+  useStore,
+  type Store,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
 import { SectionCard } from "@plugins/primitives/plugins/section-card/web";
 import {
@@ -325,15 +329,16 @@ export function defineDetailSections<
   }
 
   function useRevealSection(): (sectionId: string) => void {
+    const store = useStore(sectionOpenStore);
     return (sectionId: string) => {
-      writeOpen(sectionId);
+      writeOpen(store, sectionId);
       setReveal({ sectionId, at: Date.now() });
     };
   }
 
   /** Persist "open" for a section from outside a component (the reveal's write). */
-  function writeOpen(sectionId: string): void {
-    writeDraft(sectionOpenStore, true, {
+  function writeOpen(store: Store<boolean | null>, sectionId: string): void {
+    writeDraft(store, true, {
       scope: `${Section.id}.${sectionId}.open`,
     });
   }

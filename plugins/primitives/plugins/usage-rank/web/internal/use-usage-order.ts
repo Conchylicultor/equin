@@ -5,7 +5,11 @@ import {
   readDraft,
   writeDraft,
 } from "@plugins/primitives/plugins/persistent-draft/web";
-import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import {
+  defineStore,
+  useStore,
+  type Store,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
 import {
   sortByUsage,
@@ -53,10 +57,11 @@ interface OrderSnapshot {
  * ranked would be indistinguishable from a real ranking.
  */
 function seedOrder(
+  store: Store<string[]>,
   namespace: string,
   keys: readonly string[],
 ): readonly string[] {
-  const cached = readDraft(orderStore, { scope: namespace });
+  const cached = readDraft(store, { scope: namespace });
   if (cached === null) return [...keys];
 
   const present = new Set(keys);
@@ -113,6 +118,7 @@ export function useUsageOrder(
   keys: readonly string[],
   resnapshotKey: string,
 ): readonly string[] {
+  const store = useStore(orderStore);
   const ids = keys.map((key) => usageKey(namespace, key));
   // The canonical (sorted, deduped, comma-joined) id set — the SAME encoding
   // `useLive(c, { ids })` subscribes with, so the signature and the
@@ -132,7 +138,11 @@ export function useUsageOrder(
   let snapshot: OrderSnapshot;
   if (held === null || held.stamp !== stamp) {
     // New window (context switched, or the key set itself changed): re-seed.
-    snapshot = { stamp, order: seedOrder(namespace, keys), settled: false };
+    snapshot = {
+      stamp,
+      order: seedOrder(store, namespace, keys),
+      settled: false,
+    };
   } else if (!held.settled && result.status === "ready") {
     // The one and only re-derivation for this window: server truth landed.
     // (A failed read keeps the seed order — usage ranking is a nicety, and the
@@ -153,8 +163,8 @@ export function useUsageOrder(
     // Cache only a SETTLED order: re-writing the seed would re-persist a
     // possibly-stale order and refresh its TTL on nothing but a mount.
     if (!snapshot.settled) return;
-    writeDraft(orderStore, [...snapshot.order], { scope: namespace });
-  }, [snapshot, namespace]);
+    writeDraft(store, [...snapshot.order], { scope: namespace });
+  }, [store, snapshot, namespace]);
 
   return snapshot.order;
 }

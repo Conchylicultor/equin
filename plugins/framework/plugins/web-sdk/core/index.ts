@@ -25,6 +25,7 @@ export {
   useRawContributions,
   SLOT_READ_TIMING_PREFIX,
   PluginScope,
+  usePluginScopeId,
 } from "./context";
 export type {
   CompositionIdentity,

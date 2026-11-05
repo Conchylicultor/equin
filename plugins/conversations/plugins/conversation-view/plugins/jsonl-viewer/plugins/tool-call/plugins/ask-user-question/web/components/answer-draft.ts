@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { attachmentRefsOf } from "@plugins/conversations/core";
-import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import {
+  defineStore,
+  type StorageScope,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import {
   DEFAULT_DRAFT_TTL,
   legacyDraftKeys,
@@ -108,8 +111,12 @@ function formAnswers(
   });
 }
 
-/** Pre-fill a question's answer form in `convId` with a previously sent answer. */
+/**
+ * Pre-fill a question's answer form in `convId` with a previously sent answer,
+ * in storage scope `storage` (the caller's `useStorageScope()`).
+ */
 export function restoreAnswerDraft(
+  storage: StorageScope,
   convId: string,
   toolUseId: string,
   questions: Question[],
@@ -117,18 +124,23 @@ export function restoreAnswerDraft(
 ): void {
   const scope = answerDraftScope(convId, toolUseId);
   const { answers, reply } = parseMarkerAnswer(answerText, questions);
-  writeDraft(answerDraftStore, formAnswers(questions, answers), { scope });
+  writeDraft(answerDraftStore.in(storage), formAnswers(questions, answers), {
+    scope,
+  });
   if (reply !== null) {
-    writeDraft(responseDraftStore, attachmentRefsOf(reply), { scope });
+    writeDraft(responseDraftStore.in(storage), attachmentRefsOf(reply), {
+      scope,
+    });
   }
 }
 
 /**
  * Pre-fill a question's answer form in `convId` with an answer given as the
  * tool's real result — its structured record (the line's `toolUseResult`),
- * the free-text reply included.
+ * the free-text reply included. In storage scope `storage`.
  */
 export function restoreAnswerDraftFromRecord(
+  storage: StorageScope,
   convId: string,
   toolUseId: string,
   questions: Question[],
@@ -136,7 +148,7 @@ export function restoreAnswerDraftFromRecord(
 ): void {
   const scope = answerDraftScope(convId, toolUseId);
   writeDraft(
-    answerDraftStore,
+    answerDraftStore.in(storage),
     formAnswers(questions, answersFromRecord(record)),
     {
       scope,
@@ -144,6 +156,8 @@ export function restoreAnswerDraftFromRecord(
   );
   const reply = replyOf(record);
   if (reply !== undefined) {
-    writeDraft(responseDraftStore, attachmentRefsOf(reply), { scope });
+    writeDraft(responseDraftStore.in(storage), attachmentRefsOf(reply), {
+      scope,
+    });
   }
 }

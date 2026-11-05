@@ -13,7 +13,11 @@ import {
   readDraft,
   writeDraft,
 } from "@plugins/primitives/plugins/persistent-draft/web";
-import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import {
+  defineStore,
+  useStore,
+  type Store,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -63,6 +67,7 @@ import {
   restoreCanvas,
   SavedCanvasSchema,
   serializeCanvas,
+  type SavedCanvas,
 } from "./internal/saved-canvas";
 import { FrameSource, PrototypeDetailWrap } from "./slots";
 
@@ -89,6 +94,8 @@ const savedCanvasStore = defineStore({
   legacy: legacyDraftKeys("prototypes.canvas"),
 });
 
+type SavedCanvases = Store<SavedCanvas>;
+
 /**
  * A canvas handed to the NEXT detail pane this browser tab opens on a
  * prototype, keyed by prototype ({@link openCanvasInApp}). Taken once: the pane
@@ -97,6 +104,10 @@ const savedCanvasStore = defineStore({
  */
 const handedCanvasStore = defineStore({
   owner: "prototypes.canvas-handoff",
+  pageWide: {
+    reason:
+      "a one-minute hand-off across a document load of this browser tab, taken by whichever page opens the prototype next",
+  },
   label: "Prototype canvas hand-offs",
   area: "session",
   cap: "64 KB",
@@ -125,7 +136,11 @@ export function openCanvasInApp(name: string, state: CanvasState): void {
  * so a second read of the same open (StrictMode runs initializers twice) finds
  * it there.
  */
-function takeHandedCanvas(slot: string, name: string): CanvasState | null {
+function takeHandedCanvas(
+  canvases: SavedCanvases,
+  slot: string,
+  name: string,
+): CanvasState | null {
   const handed = handedCanvasStore.read(name);
   if (handed.kind === "none") return null;
   handedCanvasStore.remove(name);
@@ -134,7 +149,7 @@ function takeHandedCanvas(slot: string, name: string): CanvasState | null {
     console.warn(`Handed canvas for ${name} not opened: ${restored.reason}`);
     return null;
   }
-  writeDraft(savedCanvasStore, serializeCanvas(restored.state), {
+  writeDraft(canvases, serializeCanvas(restored.state), {
     scope: slot,
   });
   return restored.state;
@@ -145,13 +160,16 @@ function takeHandedCanvas(slot: string, name: string): CanvasState | null {
  * else a fresh one at `size` — the size the prototype declares.
  */
 function openCanvas(
+  canvases: SavedCanvases,
   slot: string,
   name: string,
   size: PrototypeViewport,
 ): CanvasState {
-  const raw = readDraft(savedCanvasStore, { scope: slot });
+  const raw = readDraft(canvases, { scope: slot });
   if (raw === null) {
-    return takeHandedCanvas(slot, name) ?? initialCanvasState({ size });
+    return (
+      takeHandedCanvas(canvases, slot, name) ?? initialCanvasState({ size })
+    );
   }
   const restored = restoreCanvas(raw);
   if (restored.kind === "restored") return restored.state;
@@ -346,6 +364,7 @@ function DetailProvider({
   // pointed at another prototype in place. A saved canvas is read synchronously
   // here, so the first paint is already it rather than the defaults swapped out
   // a moment later.
+  const canvases = useStore(savedCanvasStore);
   const slot =
     remember !== undefined && !isEmbeddedDocument()
       ? `${remember}:${name}`
@@ -355,7 +374,7 @@ function DetailProvider({
     slot,
     state:
       slot !== null
-        ? openCanvas(slot, name, size)
+        ? openCanvas(canvases, slot, name, size)
         : initialCanvasState({
             size: initialSize ?? size,
             version: initialVersion,
@@ -414,7 +433,7 @@ function DetailProvider({
     setHeld({ name, slot, state });
     // A drag's preview changes every move and is never saved.
     if (slot !== null && !isTransientAction(action)) {
-      writeDraft(savedCanvasStore, serializeCanvas(state), { scope: slot });
+      writeDraft(canvases, serializeCanvas(state), { scope: slot });
     }
     for (const effect of effects) runEffect(effect);
   });

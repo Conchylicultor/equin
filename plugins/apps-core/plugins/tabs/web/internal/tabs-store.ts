@@ -124,6 +124,10 @@ const LEGACY_PREFIX = "app-tabs:";
  */
 const tabsStore = defineStore({
   owner: "apps-core.tabs",
+  pageWide: {
+    reason:
+      "the page's own app tab strip (an embedded app keeps its own non-live pane store)",
+  },
   label: "Open tabs",
   area: "session",
   cap: "512 KB",

@@ -1,6 +1,13 @@
 import { z } from "zod";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
-import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { useMemo } from "react";
+import {
+  defineStore,
+  useStore,
+  type Store,
+  isKeyInScope,
+  onStorageScopeCleared,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import type { DraftMap } from "./draft-values";
 
 /**
@@ -21,40 +28,59 @@ const viewDrafts = defineStore({
 
 const EMPTY: DraftMap = Object.freeze({});
 
+type DraftStore = Store<Record<string, { type: string }>>;
+
 /**
- * The tab's drafts per surface, as last written or read. Module-level so every
- * mount of one surface reads the SAME map (and the same draft objects — the
- * getters downstream key their memos on them) and an edit made in one is seen
- * by the others through the store's subscription. sessionStorage is the tab's
- * own, so nothing but this module writes it while the page lives.
+ * The tab's drafts per surface (and composition scope — the store's full key),
+ * as last written or read. Module-level so every mount of one surface reads the
+ * SAME map (and the same draft objects — the getters downstream key their
+ * memos on them) and an edit made in one is seen by the others through the
+ * store's subscription. sessionStorage is the tab's own, so nothing but this
+ * module writes it while the page lives.
  */
 const cache = new Map<string, DraftMap>();
+// A wiped scope (the demo's Reset) takes its drafts with it, here too.
+onStorageScopeCleared((id) => {
+  for (const key of [...cache.keys()])
+    if (isKeyInScope(key, id)) cache.delete(key);
+});
 
-/** The surface's drafts: the in-memory map, read from storage on first use. */
-export function readDrafts(storageKey: string): DraftMap {
-  const held = cache.get(storageKey);
-  if (held !== undefined) return held;
-  const read = viewDrafts.read(storageKey);
-  const map: DraftMap =
-    read.kind === "value"
-      ? (read.value as Record<string, VariantValue>)
-      : EMPTY;
-  cache.set(storageKey, map);
-  return map;
+/** One surface's drafts, in the composition scope the caller renders in. */
+export interface SurfaceDrafts {
+  /** The surface's drafts: the in-memory map, read from storage on first use. */
+  read(): DraftMap;
+  /** Replace the surface's drafts: memory first (what every reader sees), then
+   *  storage — an empty map removes the entry rather than storing `{}`. */
+  write(next: DraftMap): void;
+  /** Notify on every write to the surface's drafts (from any mount in this tab). */
+  subscribe(onChange: () => void): () => void;
 }
 
-/** Replace the surface's drafts: memory first (what every reader sees), then
- *  storage — an empty map removes the entry rather than storing `{}`. */
-export function writeDrafts(storageKey: string, next: DraftMap): void {
-  cache.set(storageKey, next);
-  if (Object.keys(next).length === 0) viewDrafts.remove(storageKey);
-  else viewDrafts.write(storageKey, next);
+function surfaceDrafts(store: DraftStore, storageKey: string): SurfaceDrafts {
+  const key = store.key(storageKey);
+  return {
+    read() {
+      const held = cache.get(key);
+      if (held !== undefined) return held;
+      const read = store.read(storageKey);
+      const map: DraftMap =
+        read.kind === "value"
+          ? (read.value as Record<string, VariantValue>)
+          : EMPTY;
+      cache.set(key, map);
+      return map;
+    },
+    write(next) {
+      cache.set(key, next);
+      if (Object.keys(next).length === 0) store.remove(storageKey);
+      else store.write(storageKey, next);
+    },
+    subscribe: (onChange) => store.subscribe(storageKey, onChange),
+  };
 }
 
-/** Notify on every write to the surface's drafts (from any mount in this tab). */
-export function subscribeDrafts(
-  storageKey: string,
-  onChange: () => void,
-): () => void {
-  return viewDrafts.subscribe(storageKey, onChange);
+/** The drafts of the surface `storageKey`, where this renders (stable per surface and scope). */
+export function useSurfaceDrafts(storageKey: string): SurfaceDrafts {
+  const store = useStore(viewDrafts);
+  return useMemo(() => surfaceDrafts(store, storageKey), [store, storageKey]);
 }

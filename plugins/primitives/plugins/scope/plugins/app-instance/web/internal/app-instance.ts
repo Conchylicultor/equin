@@ -25,6 +25,9 @@ const LEGACY_REGISTRY_PREFIX = `${LEGACY_IDS.browserKeyPrefix}.appInstances:`;
  */
 const registryStore = defineStore({
   owner: "scope.app-instance",
+  pageWide: {
+    reason: "the page's SPA instance generations, a fact about the browser tab",
+  },
   label: "App instances",
   area: "session",
   cap: "16 KB",

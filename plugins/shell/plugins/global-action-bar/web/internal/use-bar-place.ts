@@ -27,6 +27,9 @@ const HOME: BarPlace = { kind: "home" };
  */
 const barPlaceStore = defineStore({
   owner: "global-action-bar.place",
+  pageWide: {
+    reason: "where the page's own action bar sits, outside every scope",
+  },
   label: "Action bar position",
   area: "local",
   cap: "1 KB",

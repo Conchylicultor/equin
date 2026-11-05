@@ -81,7 +81,7 @@ import {
   toNodes,
 } from "./internal/optimistic-block-ops";
 import { serializeForest } from "./serialize-blocks";
-import { claimCutPages, markCutsPasted } from "./internal/cut-claims";
+import { useCutClaims } from "./internal/cut-claims";
 import { landCaret, landCaretAtOwnEdge } from "./internal/caret-landing";
 import { createCaretAuthority } from "./internal/caret-authority";
 import type {
@@ -1837,6 +1837,7 @@ export function BlockEditorProviderInner({
   // of this plugin's CLAUDE.md). A cut sub-page's first paste keeps its id —
   // the server then MOVES that page rather than copying it (`PageSource`);
   // everything else is minted.
+  const { claimCutPages, markCutsPasted } = useCutClaims();
   const prepareForest = useCallback(
     (blocks: SerializedBlock[]): IdentifiedBlock[] => {
       const forest = withPasteIds(
@@ -1846,7 +1847,7 @@ export function BlockEditorProviderInner({
       if (forest.length > 0) markCutsPasted(pageSourcesOf(blocks));
       return forest;
     },
-    [],
+    [claimCutPages, markCutsPasted],
   );
 
   // Paste a serialized forest — a plain `dispatchOp`, which is the whole point:

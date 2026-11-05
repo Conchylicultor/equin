@@ -1,6 +1,6 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { setConversationPromptDraft } from "@plugins/conversations/plugins/conversation-view/plugins/prompt-input/web";
+import { useSetConversationPromptDraft } from "@plugins/conversations/plugins/conversation-view/plugins/prompt-input/web";
 import { useGoBackToMessage, type RewindMode } from "../hooks/use-go-back";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -26,6 +26,7 @@ function GoBackAction({
   mode: RewindMode;
 }) {
   const { convId } = conversationPane.useParams();
+  const setConversationPromptDraft = useSetConversationPromptDraft();
   const { available, busy, run } = useGoBackToMessage({
     convId,
     uuid: event.kind === "user-text" ? event.uuid : undefined,

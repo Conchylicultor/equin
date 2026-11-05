@@ -18,6 +18,9 @@ const REFRESH_MS = 60 * 60 * 1000;
 
 const clientIdStore = defineStore({
   owner: "paste-images.client-id",
+  pageWide: {
+    reason: "this browser's id, the same whatever scope drafts from it",
+  },
   label: "Browser ids",
   area: "local",
   cap: "1 KB",

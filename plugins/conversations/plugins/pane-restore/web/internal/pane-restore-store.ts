@@ -30,6 +30,10 @@ const savedSlotsSchema = z.array(
 
 const paneRoutes = defineStore({
   owner: "conversations.pane-restore",
+  pageWide: {
+    reason:
+      "recorded from the page's own navigation (the global route), which no embedded surface writes",
+  },
   label: "Conversation layouts",
   area: "local",
   cap: "256 KB",

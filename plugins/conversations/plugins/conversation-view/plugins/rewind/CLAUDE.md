@@ -104,7 +104,7 @@ rename throws before anything has changed.
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
-    - `conversations/conversation-view/prompt-input.setConversationPromptDraft`
+    - `conversations/conversation-view/prompt-input.useSetConversationPromptDraft`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useFetchEndpoint`
     - `infra/endpoints.useMachineAvailability`

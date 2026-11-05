@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { BrowserTabsStore } from "../nav-store";
-import { SAVED_TABS_ID, savedTabs } from "../internal/saved-tabs";
+import { SAVED_TABS_ID, useSavedTabs } from "../internal/saved-tabs";
 import { mergeSaved, toSaved } from "../internal/saved-tabs-model";
 
 /**
@@ -13,6 +13,7 @@ import { mergeSaved, toSaved } from "../internal/saved-tabs-model";
  */
 export function PersistBrowserTabs() {
   const store = BrowserTabsStore.useStoreApi();
+  const savedTabs = useSavedTabs();
 
   useEffect(() => {
     const initial = savedTabs.read(SAVED_TABS_ID);
@@ -50,7 +51,7 @@ export function PersistBrowserTabs() {
       unsubscribeStore();
       unsubscribeSaved();
     };
-  }, [store]);
+  }, [store, savedTabs]);
 
   return null;
 }

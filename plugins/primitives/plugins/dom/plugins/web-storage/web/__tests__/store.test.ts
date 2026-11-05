@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
+  clearStorageScope,
   defineStore,
   onStorageFailure,
   removeEntriesWhere,
@@ -8,7 +9,10 @@ import {
   type StorageFailure,
 } from "../internal/store";
 import { scanArea } from "../internal/scan";
-import { installStorage, QuotaStorage } from "../testing";
+import { installStorage, QuotaStorage, storageScopeOf } from "../testing";
+
+/** The page's own scope: these suites test a store's behaviour, not scoping. */
+const ROOT = storageScopeOf(null);
 
 let local: QuotaStorage;
 let n = 0;
@@ -38,7 +42,7 @@ describe("defineStore", () => {
       ttl: Infinity,
       whenFull: "refuse",
       schema: z.string(),
-    });
+    }).in(ROOT);
     expect(s.write("a", "hello")).toEqual({ ok: true });
     expect(JSON.parse(local.getItem(`s:${o}:a`)!)).toMatchObject({
       v: "hello",
@@ -90,7 +94,7 @@ describe("defineStore", () => {
       ttl: Infinity,
       whenFull: "refuse",
       schema: z.string(),
-    });
+    }).in(ROOT);
     expect(s.write("a", "x".repeat(300)).ok).toBe(true);
     expect(s.write("b", "x".repeat(300))).toEqual({
       ok: false,
@@ -113,7 +117,7 @@ describe("defineStore", () => {
       ttl: Infinity,
       whenFull: "evict-oldest",
       schema: z.string(),
-    });
+    }).in(ROOT);
     s.write("a", "x".repeat(400));
     s.write("b", "x".repeat(400));
     expect(s.write("c", "x".repeat(400)).ok).toBe(true);
@@ -136,7 +140,7 @@ describe("defineStore", () => {
       ttl: Infinity,
       whenFull: "refuse",
       schema: z.string(),
-    });
+    }).in(ROOT);
     expect(s.write("a", "y".repeat(50))).toEqual({
       ok: false,
       reason: "quota",
@@ -165,7 +169,7 @@ describe("defineStore", () => {
       ttl: 5_000,
       whenFull: "refuse",
       schema: z.string(),
-    });
+    }).in(ROOT);
     expect(s.ids()).toEqual(["new"]);
     expect(local.getItem(`s:${o}:old`)).toBeNull();
   });
@@ -182,7 +186,7 @@ describe("defineStore", () => {
       ttl: Infinity,
       whenFull: "refuse",
       schema: z.string(),
-    });
+    }).in(ROOT);
     expect(s.read("a")).toEqual({ kind: "none", why: "corrupt" });
     expect(local.getItem(`s:${o}:a`)).toBeNull();
     expect(seen).toEqual([
@@ -217,7 +221,7 @@ describe("defineStore", () => {
           }
         },
       },
-    });
+    }).in(ROOT);
     expect(s.read("a")).toMatchObject({ kind: "value", value: "kept" });
     expect(s.read("b").kind).toBe("none");
     expect(local.getItem("old.a")).toBeNull();
@@ -234,7 +238,7 @@ describe("defineStore", () => {
       ttl: Infinity,
       whenFull: "refuse",
       schema: z.string(),
-    });
+    }).in(ROOT);
     let calls = 0;
     s.subscribe("a", () => calls++);
     s.write("a", "1");
@@ -261,7 +265,7 @@ describe("defineStore", () => {
       ttl: Infinity,
       whenFull: "refuse",
       schema: z.string(),
-    });
+    }).in(ROOT);
     const b = defineStore({
       owner: owner("rb"),
       label: "X",
@@ -270,7 +274,7 @@ describe("defineStore", () => {
       ttl: Infinity,
       whenFull: "refuse",
       schema: z.string(),
-    });
+    }).in(ROOT);
     a.write("t1:old", "x");
     b.write("t1:old", "y");
     b.write("t1:new", "z");
@@ -302,5 +306,131 @@ describe("scanArea", () => {
     expect(byId.get(o)?.keys).toBe(1);
     expect(byId.get(`legacy:${o}`)?.keys).toBe(1);
     expect(byId.get("unowned")?.largest[0]?.key).toBe("frimousse/data/en");
+  });
+});
+
+describe("composition scopes", () => {
+  const spec = (o: string) =>
+    ({
+      owner: o,
+      label: "Drafts",
+      area: "local",
+      cap: "1 KB",
+      ttl: Infinity,
+      whenFull: "refuse",
+      schema: z.string(),
+    }) as const;
+  const demo = storageScopeOf("agent-manager-demo");
+
+  it("keeps the page's own keys as they were and puts a PluginScope's under s:<owner>@<scope>:", () => {
+    const o = owner("scoped");
+    const s = defineStore(spec(o));
+    s.in(ROOT).write("welcome", "desktop draft");
+    s.in(demo).write("welcome", "demo draft");
+    expect(JSON.parse(local.getItem(`s:${o}:welcome`)!)).toMatchObject({
+      v: "desktop draft",
+    });
+    expect(
+      JSON.parse(local.getItem(`s:${o}@agent-manager-demo:welcome`)!),
+    ).toMatchObject({ v: "demo draft" });
+    expect(s.in(ROOT).read("welcome")).toMatchObject({
+      value: "desktop draft",
+    });
+    expect(s.in(demo).read("welcome")).toMatchObject({ value: "demo draft" });
+    expect(s.in(ROOT).ids()).toEqual(["welcome"]);
+    expect(s.in(demo).ids()).toEqual(["welcome"]);
+  });
+
+  it("reads an entry stored before scopes as the page's own", () => {
+    const o = owner("pre");
+    local.setItem(`s:${o}:a`, JSON.stringify({ v: "kept", ts: Date.now() }));
+    const s = defineStore(spec(o));
+    expect(s.in(ROOT).read("a")).toMatchObject({ value: "kept" });
+    expect(s.in(demo).read("a")).toEqual({ kind: "none", why: "absent" });
+  });
+
+  it("hands back one handle per scope", () => {
+    const s = defineStore(spec(owner("same")));
+    expect(s.in(demo)).toBe(s.in(storageScopeOf("agent-manager-demo")));
+    expect(s.in(demo)).not.toBe(s.in(ROOT));
+  });
+
+  it("counts every scope against the owner's one cap", () => {
+    const s = defineStore(spec(owner("cap")));
+    const big = "x".repeat(300);
+    expect(s.in(ROOT).write("a", big)).toEqual({ ok: true });
+    expect(s.in(demo).write("a", big)).toEqual({
+      ok: false,
+      reason: "over-cap",
+    });
+  });
+
+  it("clearStorageScope removes one PluginScope's entries only", () => {
+    const o = owner("clear");
+    const s = defineStore(spec(o));
+    s.in(ROOT).write("a", "page");
+    s.in(demo).write("a", "demo");
+    const heard: string[] = [];
+    s.in(demo).subscribe("a", () => heard.push("demo"));
+    clearStorageScope("agent-manager-demo");
+    expect(s.in(demo).read("a")).toEqual({ kind: "none", why: "absent" });
+    expect(s.in(ROOT).read("a")).toMatchObject({ value: "page" });
+    expect(heard).toEqual(["demo"]);
+  });
+
+  it("a page-wide store reads and writes directly, under the page's keys", () => {
+    const o = owner("page");
+    const s = defineStore({ ...spec(o), pageWide: { reason: "test" } });
+    s.write("a", "v");
+    expect(local.getItem(`s:${o}:a`)).not.toBeNull();
+  });
+
+  it("the health scan files a scoped key under its owner", () => {
+    const o = owner("scan");
+    defineStore(spec(o)).in(demo).write("a", "v");
+    const scan = scanArea("local");
+    if (scan.kind !== "ok") throw new Error("scan unavailable");
+    expect(scan.buckets.find((b) => b.id === o)?.keys).toBe(1);
+  });
+});
+
+describe("eviction across scopes", () => {
+  const demo = storageScopeOf("agent-manager-demo");
+  const spec = (o: string, whenFull: "refuse" | "evict-oldest") =>
+    ({
+      owner: o,
+      label: "Things",
+      area: "local",
+      cap: "1 KB",
+      ttl: Infinity,
+      whenFull,
+      schema: z.string(),
+    }) as const;
+  const big = "x".repeat(300);
+
+  it("a PluginScope never evicts the page's own entries", () => {
+    const s = defineStore(spec(owner("ev-nested"), "evict-oldest"));
+    s.in(ROOT).write("a", big);
+    expect(s.in(demo).write("b", big)).toEqual({
+      ok: false,
+      reason: "over-cap",
+    });
+    expect(s.in(ROOT).read("a")).toMatchObject({ value: big });
+  });
+
+  it("the page's own write evicts a scope's entries first, even in a refuse store", () => {
+    const s = defineStore(spec(owner("ev-root"), "refuse"));
+    s.in(demo).write("a", big);
+    expect(s.in(ROOT).write("b", big)).toEqual({ ok: true });
+    expect(s.in(demo).read("a")).toEqual({ kind: "none", why: "absent" });
+  });
+
+  it("a refuse store still refuses rather than evict the page's own", () => {
+    const s = defineStore(spec(owner("ev-refuse"), "refuse"));
+    s.in(ROOT).write("a", big);
+    expect(s.in(ROOT).write("b", big)).toEqual({
+      ok: false,
+      reason: "over-cap",
+    });
   });
 });

@@ -207,6 +207,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/in-view.useInView`
     - `primitives/dom/web-storage.defineStore`
+    - `primitives/dom/web-storage.useStore`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
     - `ui/icons.Icon`

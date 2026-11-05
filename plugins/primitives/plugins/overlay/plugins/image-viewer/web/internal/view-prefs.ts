@@ -20,6 +20,9 @@ export interface ViewPrefs {
 /** A preference, not a draft: kept for a year of not opening the viewer. */
 const prefsStore = defineStore({
   owner: "image-viewer.prefs",
+  pageWide: {
+    reason: "how this device likes the viewer shown, not any app's data",
+  },
   label: "Image viewer preferences",
   area: "local",
   cap: "4 KB",

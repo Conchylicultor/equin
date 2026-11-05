@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useStorageScope } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { useTranscriptEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { RowActionButton } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { useGoBackToMessage } from "@plugins/conversations/plugins/conversation-view/plugins/rewind/web";
@@ -45,6 +46,7 @@ export function ChangeAnswersAction({ event }: { event: JsonlEvent }) {
 
 function ChangeAnswersMenu({ event }: { event: ToolCallEvent }) {
   const { convId } = conversationPane.useParams();
+  const storage = useStorageScope();
   // The transcript this row is drawn in: a window of a long conversation
   // still holds every event after this call, which is where its answer is.
   const events = useTranscriptEvents();
@@ -58,6 +60,7 @@ function ChangeAnswersMenu({ event }: { event: ToolCallEvent }) {
         answerUuid={answerTurn.uuid}
         restore={(targetConvId, questions, answerText) =>
           restoreAnswerDraft(
+            storage,
             targetConvId,
             event.toolUseId,
             questions,
@@ -78,6 +81,7 @@ function ChangeAnswersMenu({ event }: { event: ToolCallEvent }) {
       answerUuid={answerUuid}
       restore={(targetConvId, questions) =>
         restoreAnswerDraftFromRecord(
+          storage,
           targetConvId,
           event.toolUseId,
           questions,

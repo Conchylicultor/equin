@@ -12,7 +12,7 @@ import {
   useColumnMaximize,
   useMaximizedId,
 } from "../hooks/use-column-maximize";
-import { hasStoredWidth, useColumnWidth } from "../hooks/use-column-widths";
+import { useColumnWidth, useHasStoredWidth } from "../hooks/use-column-widths";
 import { CollapsedBar } from "./collapsed-bar";
 import { ResizeHandle } from "./resize-handle";
 
@@ -57,6 +57,7 @@ export function Column({
   });
 
   const setWidthRef = useLatestRef(setWidth);
+  const hasStoredWidth = useHasStoredWidth();
   const paneId = entry.pane.id;
 
   useLayoutEffect(() => {
@@ -69,7 +70,7 @@ export function Column({
       // width: split the space 50/50 so both columns start roughly equal.
       setWidthRef.current(Math.round(capturedWidthRef.current / 2));
     }
-  }, [isLast, paneId, tabId]);
+  }, [isLast, paneId, tabId, hasStoredWidth]);
 
   const paneLayout = useMemo(
     () => ({

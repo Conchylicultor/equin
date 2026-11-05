@@ -151,10 +151,11 @@ ordinary `MarkerAnswerForm` renders with the old answer already in its draft.
     - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
     - `primitives/persistent-draft` ×4
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
+    - `primitives/dom/web-storage` ×3
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
     - `conversations/conversation-view/jsonl-viewer` ×2
     - `conversations/conversation-view/pending-turn` ×2
@@ -171,7 +172,6 @@ ordinary `MarkerAnswerForm` renders with the old answer already in its draft.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/working-dots.WorkingText`
-    - `primitives/dom/web-storage.defineStore`
     - `primitives/text-editor.TextEditor`
     - `ui/icons.Icon`
   - Exports (types):

@@ -10,7 +10,10 @@ import {
   type ReactElement,
 } from "react";
 import { z } from "zod";
-import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import {
+  defineStore,
+  useStore,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useInView } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
@@ -171,6 +174,7 @@ export function useStickyScroll(
   opts: UseStickyScrollOptions = {},
 ): StickyScrollHandle {
   const { threshold = DEFAULT_THRESHOLD, followKey, persist } = opts;
+  const positions = useStore(positionStore);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -206,7 +210,7 @@ export function useStickyScroll(
     const cfg = persistRef.current;
     if (!cfg) return;
     if (modeRef.current.kind === "following") {
-      positionStore.write(cfg.key, { kind: "following" });
+      positions.write(cfg.key, { kind: "following" });
       return;
     }
     const el = scrollRef.current;
@@ -217,12 +221,12 @@ export function useStickyScroll(
     // Parked with nothing identifiable on screen (an empty or unanchored list):
     // leave whatever was stored alone rather than overwriting it with a guess.
     if (anchor === null) return;
-    positionStore.write(cfg.key, {
+    positions.write(cfg.key, {
       kind: "anchored",
       key: anchor.name,
       offset: anchor.top - viewTop,
     });
-  }, []);
+  }, [positions]);
 
   const schedulePersist = useCallback(() => {
     if (!persistRef.current) return;
@@ -314,7 +318,7 @@ export function useStickyScroll(
     }
 
     const cfg = persistRef.current;
-    const read = cfg ? positionStore.read(cfg.key) : null;
+    const read = cfg ? positions.read(cfg.key) : null;
     const saved = read?.kind === "value" ? read.value : null;
     const outcome = resolveRestore(saved, (key) =>
       cfg
@@ -344,7 +348,7 @@ export function useStickyScroll(
       // The row this named is gone (filter set changed, transcript compacted, a
       // key-scheme change). Drop the stale record so it cannot keep failing, and
       // fall back to the bottom.
-      positionStore.remove(cfg.key);
+      positions.remove(cfg.key);
     }
     modeRef.current = { kind: "following" };
     setIsFollowing(true);
@@ -354,7 +358,7 @@ export function useStickyScroll(
     // empty dep array. The pane remounts per conversation (PaneResolveGuard
     // keys on the route params), which is what makes a `resetKey` option
     // unnecessary.
-  }, [sentinelEl, writeToBottom, persistRef, applyAnchoring]);
+  }, [sentinelEl, writeToBottom, persistRef, applyAnchoring, positions]);
 
   // ---- the sensor ----------------------------------------------------------
   // The getter carries the "no scroll container, no sensor" guard the effect used

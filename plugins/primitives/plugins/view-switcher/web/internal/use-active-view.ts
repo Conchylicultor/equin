@@ -1,6 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
-import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import {
+  defineStore,
+  useStore,
+  type Store,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 
 /**
  * Device-local active-instance selection. The active-id is *model* state (which
@@ -31,8 +35,8 @@ const activeViews = defineStore({
   },
 });
 
-function readActive(storageKey: string): string | null {
-  const read = activeViews.read(storageKey);
+function readActive(store: Store<string>, storageKey: string): string | null {
+  const read = store.read(storageKey);
   return read.kind === "value" ? read.value : null;
 }
 
@@ -50,16 +54,17 @@ export interface ActiveViewState {
  * URL from the active view (`useViewModel`), so this store stays URL-agnostic.
  */
 export function useActiveViewId(storageKey: string): ActiveViewState {
+  const store = useStore(activeViews);
   const [activeViewId, setActiveViewId] = useState<string | null>(() =>
-    readActive(storageKey),
+    readActive(store, storageKey),
   );
 
   const setActiveView = useCallback(
     (viewId: string) => {
-      activeViews.write(storageKey, viewId);
+      store.write(storageKey, viewId);
       setActiveViewId(viewId);
     },
-    [storageKey],
+    [store, storageKey],
   );
 
   return useMemo(

@@ -11,7 +11,10 @@ import {
   readDraft,
   writeDraft,
 } from "@plugins/primitives/plugins/persistent-draft/web";
-import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import {
+  defineStore,
+  useStore,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
@@ -177,9 +180,10 @@ function useRememberedCamera(
   initialCamera: CameraView | null;
   remember: ((view: CameraView) => void) | undefined;
 } {
+  const cameras = useStore(cameraStore);
   const [initialCamera] = useState(() => {
     if (cameraKey === undefined || cameraOpen === "framed") return null;
-    return readDraft(cameraStore, { scope: cameraKey });
+    return readDraft(cameras, { scope: cameraKey });
   });
   const framing = useLatestRef(framesSomething);
   const remember = useMemo(
@@ -188,9 +192,9 @@ function useRememberedCamera(
         ? undefined
         : ({ center, zoom }: CameraView) => {
             if (!framing.current) return;
-            writeDraft(cameraStore, { center, zoom }, { scope: cameraKey });
+            writeDraft(cameras, { center, zoom }, { scope: cameraKey });
           },
-    [cameraKey, framing],
+    [cameras, cameraKey, framing],
   );
   return { initialCamera, remember };
 }

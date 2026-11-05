@@ -1,4 +1,4 @@
-import { entryBytes, KEY_ROOT, type StorageArea } from "../../core";
+import { entryBytes, parseStoreKey, type StorageArea } from "../../core";
 import { legacyOwnerOf, openArea } from "./store";
 
 /** One group of an area's keys, by who holds them. */
@@ -21,7 +21,7 @@ const LARGEST = 5;
 /**
  * Every key of an area grouped by holder — the health row's detail. A full
  * scan, so it runs only while the detail is open, never per write. A key
- * under `s:<owner>:` is that owner's even when the owner's plugin has not
+ * under `s:<owner>:` (or `s:<owner>@<scope>:`) is that owner's even when the owner's plugin has not
  * loaded in this page yet.
  */
 export function scanArea(area: StorageArea): AreaScan {
@@ -42,11 +42,9 @@ export function scanArea(area: StorageArea): AreaScan {
       total += bytes;
       let b: AreaBucket;
       const legacy = legacyOwnerOf(key);
-      if (key.startsWith(KEY_ROOT) && key.indexOf(":", KEY_ROOT.length) > 0) {
-        b = bucket(
-          key.slice(KEY_ROOT.length, key.indexOf(":", KEY_ROOT.length)),
-          "owner",
-        );
+      const parsed = parseStoreKey(key);
+      if (parsed !== null) {
+        b = bucket(parsed.owner, "owner");
       } else if (legacy !== null) {
         b = bucket(`legacy:${legacy}`, "legacy");
       } else {

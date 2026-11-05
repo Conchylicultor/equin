@@ -3,10 +3,11 @@ import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
 import {
   AREA_BUDGET,
   entryBytes,
-  KEY_ROOT,
   OWNER_PATTERN,
   ownerPrefix,
   parseStorageSize,
+  parseStoreKey,
+  SCOPE_PATTERN,
   type StorageArea,
   type StorageSize,
 } from "../../core";
@@ -19,6 +20,13 @@ import {
  * check statically), so no owner can be refused by the browser because
  * ANOTHER owner grew — the 2026-10-19 incident, where the theme cache filled
  * localStorage and every draft write failed from then on.
+ *
+ * A store's entries are per composition scope unless it is declared
+ * `pageWide`: what `/demo`'s embedded app writes (inside its `PluginScope`)
+ * lands under `s:<owner>@<scope>:`, never in the page's own `s:<owner>:` keys.
+ * A scoped store has no read or write of its own — only `in(scope)` /
+ * `useStore`, with a `StorageScope` only `useStorageScope()` mints — so scoped
+ * code has no unscoped spelling.
  */
 
 /** What a store does with a write that would take it over its cap. */
@@ -41,9 +49,18 @@ export interface StoreSpec<T> {
   /** Decodes a stored value; an entry that fails it is corrupt (dropped, reported). */
   schema: z.ZodType<T>;
   /**
+   * Set only for state about the page itself, never about what an app inside
+   * it shows (the tab's id, the app tab strip, a page-level diagnostics flag):
+   * its entries are the page's, wherever they are written from, and the handle
+   * reads and writes directly. Absent, the store is per composition scope
+   * (`ScopedStore`).
+   */
+  pageWide?: { reason: string };
+  /**
    * Keys this owner wrote before the primitive existed: deleted on the store's
    * first use (drawn as "Legacy" in the health row until then), after `adopt`
-   * — when given — carries each one over as an entry of this store. Remove once
+   * — when given — carries each one over as an entry of this store (in the
+   * page's own scope: they predate scopes). Remove once
    * every browser has loaded a build that migrated them.
    */
   legacy?: LegacyKeys;
@@ -118,13 +135,63 @@ export interface Store<T> {
   subscribe(id: string, listener: () => void): () => void;
 }
 
+declare const scopeBrand: unique symbol;
+
+/**
+ * Which composition scope a store's entries are read and written in: the
+ * innermost `PluginScope` (`id`), or the page's own deploy (`null`). Minted
+ * only by `useStorageScope()` (from where the code renders), so no caller can
+ * name another scope's keys.
+ */
+export interface StorageScope {
+  readonly [scopeBrand]: true;
+  readonly id: string | null;
+}
+
+const scopes = new Map<string | null, StorageScope>();
+
+/**
+ * The scope a `PluginScope` id stands for, one object per id (a stable hook
+ * dependency) — for `useStorageScope` only (not in the barrel).
+ */
+export function storageScope(id: string | null): StorageScope {
+  let scope = scopes.get(id);
+  if (scope) return scope;
+  if (id !== null && !SCOPE_PATTERN.test(id))
+    throw new Error(
+      `web-storage: scope "${id}" must match ${SCOPE_PATTERN} (a composition id)`,
+    );
+  // The brand exists only in the type: this is the one place it is minted.
+  scope = { id } as StorageScope;
+  scopes.set(id, scope);
+  return scope;
+}
+
+/**
+ * A store whose entries are per composition scope: no read or write of its
+ * own. `useStore(store)` binds it to where the calling component renders;
+ * `in(scope)` binds it to a scope a component read (`useStorageScope()`) for
+ * an imperative caller. One bound handle per scope, so its identity is stable.
+ */
+export interface ScopedStore<T> {
+  readonly owner: string;
+  readonly label: string;
+  readonly area: StorageArea;
+  readonly ttl: number;
+  in(scope: StorageScope): Store<T>;
+}
+
 type Entry = { bytes: number; ts: number };
 
 interface OwnerState<T> {
   spec: StoreSpec<T>;
   cap: number;
+  /** The page's own scope's prefix — where legacy keys are adopted. */
   prefix: string;
-  /** `null` until first touch; `"unavailable"` when the area cannot be opened. */
+  /**
+   * Every entry of the owner, in every scope, by full key (the cap covers them
+   * all). `null` until first touch; `"unavailable"` when the area cannot be opened.
+   */
   entries: Map<string, Entry> | "unavailable" | null;
   used: number;
   evicted: number;
@@ -227,7 +294,7 @@ function load<T>(state: OwnerState<T>): Map<string, Entry> | null {
         legacy.push(key);
         continue;
       }
-      if (!key.startsWith(state.prefix)) continue;
+      if (parseStoreKey(key)?.owner !== state.spec.owner) continue;
       const raw = store.getItem(key) ?? "";
       const env = parseEnvelope(raw);
       if (!env || expired(state, env.ts)) {
@@ -325,12 +392,9 @@ function installCrossTabListener(): void {
       notifyChanged();
       return;
     }
-    if (!e.key.startsWith(KEY_ROOT)) return;
-    const owner = e.key.slice(
-      KEY_ROOT.length,
-      e.key.indexOf(":", KEY_ROOT.length),
-    );
-    const state = owners.get(owner);
+    const parsed = parseStoreKey(e.key);
+    if (parsed === null) return;
+    const state = owners.get(parsed.owner);
     if (!state || state.spec.area !== area || !(state.entries instanceof Map))
       return;
     forget(state, state.entries, e.key);
@@ -353,9 +417,16 @@ function areaTotal(area: StorageArea): number {
 
 /**
  * Declare a storage owner. Call once, at module scope, with literal values —
- * the `budget-fits` check reads every declaration statically.
+ * the `budget-fits` check reads every declaration statically. Per composition
+ * scope (a `ScopedStore`) unless declared `pageWide`.
  */
-export function defineStore<T>(spec: StoreSpec<T>): Store<T> {
+export function defineStore<T>(
+  spec: StoreSpec<T> & { pageWide: { reason: string } },
+): Store<T>;
+export function defineStore<T>(
+  spec: StoreSpec<T> & { pageWide?: undefined },
+): ScopedStore<T>;
+export function defineStore<T>(spec: StoreSpec<T>): Store<T> | ScopedStore<T> {
   if (!OWNER_PATTERN.test(spec.owner))
     throw new Error(
       `web-storage: owner "${spec.owner}" must match ${OWNER_PATTERN}`,
@@ -382,8 +453,59 @@ export function defineStore<T>(spec: StoreSpec<T>): Store<T> {
       `web-storage: declaring "${spec.owner}" (${spec.cap}) takes the ${spec.area} owners' caps over the area budget of ${AREA_BUDGET[spec.area]} — lower a cap`,
     );
   }
+  if (spec.pageWide) return bind(state, null);
+  const bound = new Map<string | null, Store<T>>();
+  return {
+    owner: spec.owner,
+    label: spec.label,
+    area: spec.area,
+    ttl: spec.ttl,
+    in(scope) {
+      let store = bound.get(scope.id);
+      if (!store) bound.set(scope.id, (store = bind(state, scope.id)));
+      return store;
+    },
+  };
+}
 
-  const key = (id = "") => `${state.prefix}${id}`;
+/**
+ * Which of an owner's entries a write of `k` in `scope` may evict to fit its
+ * cap, in eviction order — the cap is the owner's across every scope, but no
+ * scope pays for another's growth: a `PluginScope` (the demo) evicts only its
+ * own entries, so it can never cost the page's own a draft or a layout; the
+ * page's own scope evicts the scopes' entries first (oldest first — state a
+ * Reset throws away anyway), then, for an `evict-oldest` cache, its own.
+ * A `refuse` store never evicts in its own scope: what the user typed there is
+ * refused loudly instead.
+ */
+function victimsFor(
+  k: string,
+  scope: string | null,
+  entries: Map<string, Entry>,
+  whenFull: WhenFull,
+): [string, Entry][] {
+  const own: [string, Entry][] = [];
+  const nested: [string, Entry][] = [];
+  for (const e of entries) {
+    if (e[0] === k) continue;
+    const entryScope = parseStoreKey(e[0])?.scope ?? null;
+    if (entryScope === scope) own.push(e);
+    else if (scope === null) nested.push(e);
+  }
+  // Oldest first: Map order is insertion order, not ts order, so sort.
+  const oldest = (a: [string, Entry], b: [string, Entry]) => a[1].ts - b[1].ts;
+  return [
+    ...nested.sort(oldest),
+    ...(whenFull === "evict-oldest" ? own.sort(oldest) : []),
+  ];
+}
+
+/** The handle over one owner's entries in one scope (`null`: the page's own). */
+function bind<T>(state: OwnerState<T>, scope: string | null): Store<T> {
+  const { spec } = state;
+  const cap = state.cap;
+  const prefix = ownerPrefix(spec.owner, scope);
+  const key = (id = "") => `${prefix}${id}`;
 
   return {
     owner: spec.owner,
@@ -438,21 +560,22 @@ export function defineStore<T>(spec: StoreSpec<T>): Store<T> {
           if (key !== k && expired(state, entry.ts)) removeKey(state, key);
       }
       const others = state.used - (entries.get(k)?.bytes ?? 0);
-      if (bytes > cap || (others + bytes > cap && spec.whenFull === "refuse")) {
-        fail(state, { reason: "over-cap" });
-        return { ok: false, reason: "over-cap" };
-      }
       if (others + bytes > cap) {
-        // Oldest first: Map order is insertion order, not ts order, so sort.
-        const victims = [...entries]
-          .filter(([key]) => key !== k)
-          .sort((a, b) => a[1].ts - b[1].ts);
-        let room = others + bytes - cap;
+        const room = others + bytes - cap;
+        const victims = victimsFor(k, scope, entries, spec.whenFull);
+        if (
+          bytes > cap ||
+          victims.reduce((sum, [, entry]) => sum + entry.bytes, 0) < room
+        ) {
+          fail(state, { reason: "over-cap" });
+          return { ok: false, reason: "over-cap" };
+        }
+        let left = room;
         for (const [victim, entry] of victims) {
-          if (room <= 0) break;
+          if (left <= 0) break;
           removeKey(state, victim);
           state.evicted++;
-          room -= entry.bytes;
+          left -= entry.bytes;
           listenersOf(state, victim);
         }
       }
@@ -483,8 +606,9 @@ export function defineStore<T>(spec: StoreSpec<T>): Store<T> {
       const entries = load(state);
       if (!entries) return [];
       return [...entries]
+        .filter(([k]) => k.startsWith(prefix))
         .sort((a, b) => a[1].ts - b[1].ts)
-        .map(([k]) => k.slice(state.prefix.length));
+        .map(([k]) => k.slice(prefix.length));
     },
 
     subscribe(id, listener) {
@@ -554,11 +678,9 @@ export function removeEntriesWhere(
   try {
     for (let i = 0; i < store.length; i++) {
       const key = store.key(i);
-      if (key === null || !key.startsWith(KEY_ROOT)) continue;
-      const sep = key.indexOf(":", KEY_ROOT.length);
-      if (sep < 0) continue;
-      if (match(key.slice(sep + 1)))
-        doomed.push({ key, owner: key.slice(KEY_ROOT.length, sep) });
+      const parsed = key === null ? null : parseStoreKey(key);
+      if (key === null || parsed === null) continue;
+      if (match(parsed.id)) doomed.push({ key, owner: parsed.owner });
     }
     for (const { key } of doomed) store.removeItem(key);
   } catch (err) {
@@ -572,4 +694,65 @@ export function removeEntriesWhere(
     listenersOf(state, key);
   }
   if (doomed.length > 0) notifyChanged();
+}
+
+/**
+ * Remove every entry written inside the `PluginScope` of composition `id`, of
+ * every owner and in both areas — for a scope whose whole state is thrown away
+ * at once (the demo's Reset). By the scope's id rather than a `StorageScope`:
+ * the one who ends a scope renders outside it. The page's own entries have no
+ * scope id, so they can never be wiped this way.
+ */
+const scopeClearedListeners = new Set<(id: string) => void>();
+
+/**
+ * Observe `clearStorageScope` — for a module that keeps what it read from a
+ * scoped store in memory (keyed by the store's full key), so a wiped scope is
+ * not served from a copy that outlived it. Returns the unsubscribe.
+ */
+export function onStorageScopeCleared(
+  listener: (id: string) => void,
+): () => void {
+  scopeClearedListeners.add(listener);
+  return () => scopeClearedListeners.delete(listener);
+}
+
+/** Whether `key` (a store's full key) was written in the scope `id`. */
+export function isKeyInScope(key: string, id: string): boolean {
+  return parseStoreKey(key)?.scope === id;
+}
+
+export function clearStorageScope(id: string): void {
+  if (!SCOPE_PATTERN.test(id))
+    throw new Error(
+      `web-storage: scope "${id}" must match ${SCOPE_PATTERN} (a composition id)`,
+    );
+  let changed = false;
+  for (const area of ["local", "session"] as const) {
+    const store = openArea(area);
+    if (!store) continue;
+    const doomed: { key: string; owner: string }[] = [];
+    try {
+      for (let i = 0; i < store.length; i++) {
+        const key = store.key(i);
+        const parsed = key === null ? null : parseStoreKey(key);
+        if (key !== null && parsed?.scope === id)
+          doomed.push({ key, owner: parsed.owner });
+      }
+      for (const { key } of doomed) store.removeItem(key);
+    } catch (err) {
+      if (err instanceof DOMException) continue;
+      throw err;
+    }
+    for (const { key, owner } of doomed) {
+      changed = true;
+      const state = owners.get(owner);
+      if (state?.spec.area !== area || !(state.entries instanceof Map))
+        continue;
+      forget(state, state.entries, key);
+      listenersOf(state, key);
+    }
+  }
+  for (const l of scopeClearedListeners) l(id);
+  if (changed) notifyChanged();
 }

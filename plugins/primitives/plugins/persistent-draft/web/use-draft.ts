@@ -6,7 +6,11 @@ import {
   useRef,
   useState,
 } from "react";
-import type { Store } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import {
+  useStore,
+  type ScopedStore,
+  type Store,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import {
   clearDraft as clearStoredDraft,
   readDraft,
@@ -18,7 +22,9 @@ function read<T>(store: Store<T>, scope: string | undefined, fallback: T): T {
 }
 
 /**
- * Drop-in for useState backed by a web-storage store, one entry per scope.
+ * Drop-in for useState backed by a web-storage store, one entry per scope —
+ * in the composition scope this renders in (`useStore`), so a draft typed in
+ * an embedded demo is never the page's.
  * All useDraft calls on the same store and scope stay in sync, within the tab
  * and across tabs (the store's subscription covers both).
  *
@@ -27,10 +33,11 @@ function read<T>(store: Store<T>, scope: string | undefined, fallback: T): T {
  * directly — same store, same entry.
  */
 export function useDraft<T>(
-  store: Store<T>,
+  scopedStore: ScopedStore<T> | Store<T>,
   initialValue: T | (() => T),
   options?: { scope?: string },
 ): [T, Dispatch<SetStateAction<T>>, () => void] {
+  const store = useStore(scopedStore);
   const scope = options?.scope;
   const id = scope ?? "";
 

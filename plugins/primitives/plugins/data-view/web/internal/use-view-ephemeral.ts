@@ -1,6 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
-import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import {
+  defineStore,
+  useStore,
+  type Store,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 
 /**
@@ -110,13 +114,13 @@ const viewQueries = defineStore({
   },
 });
 
-function readLocalMap(storageKey: string): LocalMap {
-  const read = viewStates.read(storageKey);
+function readLocalMap(store: Store<LocalMap>, storageKey: string): LocalMap {
+  const read = store.read(storageKey);
   return read.kind === "value" ? read.value : {};
 }
 
-function readQueryMap(storageKey: string): QueryMap {
-  const read = viewQueries.read(storageKey);
+function readQueryMap(store: Store<QueryMap>, storageKey: string): QueryMap {
+  const read = store.read(storageKey);
   return read.kind === "value" ? read.value : {};
 }
 
@@ -146,11 +150,13 @@ export interface EphemeralViewState {
  * sort/filter live on the config row.
  */
 export function useViewEphemeral(storageKey: string): EphemeralViewState {
+  const states = useStore(viewStates);
+  const queries = useStore(viewQueries);
   const [localMap, setLocalMap] = useState<LocalMap>(() =>
-    readLocalMap(storageKey),
+    readLocalMap(states, storageKey),
   );
   const [queryMap, setQueryMap] = useState<QueryMap>(() =>
-    readQueryMap(storageKey),
+    readQueryMap(queries, storageKey),
   );
 
   const writeLocal = useCallback(
@@ -158,11 +164,11 @@ export function useViewEphemeral(storageKey: string): EphemeralViewState {
       setLocalMap((prev) => {
         const current = prev[viewId] ?? EMPTY_LOCAL;
         const next = { ...prev, [viewId]: mutate(current) };
-        viewStates.write(storageKey, next);
+        states.write(storageKey, next);
         return next;
       });
     },
-    [storageKey],
+    [states, storageKey],
   );
 
   const localFor = useCallback(
@@ -178,11 +184,11 @@ export function useViewEphemeral(storageKey: string): EphemeralViewState {
     (viewId: string, query: string) => {
       setQueryMap((prev) => {
         const next = { ...prev, [viewId]: query };
-        viewQueries.write(storageKey, next);
+        queries.write(storageKey, next);
         return next;
       });
     },
-    [storageKey],
+    [queries, storageKey],
   );
 
   const setExpanded = useCallback(

@@ -1,6 +1,10 @@
 import { useSyncExternalStore } from "react";
 import { z } from "zod";
-import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import {
+  defineStore,
+  useStore,
+  type Store,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import {
   type PaneStore,
   usePaneStore,
@@ -44,13 +48,14 @@ const storeId = (tabId: string, paneId: string) => `${tabId}.${paneId}`;
 
 function read(
   s: SurfaceCollapse,
+  persisted: Store<boolean>,
   tabId: string | undefined,
   paneId: string,
 ): boolean {
   if (s.state.has(paneId)) return s.state.get(paneId)!;
   let v = false;
   if (tabId !== undefined && typeof window !== "undefined") {
-    const stored = collapsedColumns.read(storeId(tabId, paneId));
+    const stored = persisted.read(storeId(tabId, paneId));
     v = stored.kind === "value" && stored.value;
   }
   s.state.set(paneId, v);
@@ -60,6 +65,7 @@ function read(
 export function useColumnCollapse(paneId: string): [boolean, () => void] {
   const store = usePaneStore();
   const tabId = useSurfaceTabId();
+  const persisted = useStore(collapsedColumns);
   const s = stateFor(store);
 
   const collapsed = useSyncExternalStore(
@@ -67,15 +73,14 @@ export function useColumnCollapse(paneId: string): [boolean, () => void] {
       s.subscribers.add(cb);
       return () => s.subscribers.delete(cb);
     },
-    () => read(s, tabId, paneId),
+    () => read(s, persisted, tabId, paneId),
     () => false,
   );
 
   const toggle = () => {
     const next = !s.state.get(paneId);
     s.state.set(paneId, next);
-    if (tabId !== undefined)
-      collapsedColumns.write(storeId(tabId, paneId), next);
+    if (tabId !== undefined) persisted.write(storeId(tabId, paneId), next);
     for (const fn of s.subscribers) fn();
   };
 

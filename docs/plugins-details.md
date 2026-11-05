@@ -849,6 +849,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/dom/web-storage.defineStore`
+              - `primitives/dom/web-storage.Store`
+              - `primitives/dom/web-storage.useStore`
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/slot-render.defineMountSlot`
               - `primitives/slot-render.defineRenderSlot`
@@ -6583,12 +6585,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 89 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 91 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `primitives/data-view` ×6
               - `infra/endpoints` ×5
               - `primitives/collapsible` ×5
               - `hints` ×3
+              - `primitives/dom/web-storage` ×3
               - `primitives/embed/frame` ×3
               - `primitives/hover-reveal` ×3
               - `primitives/persistent-draft` ×3
@@ -6623,7 +6626,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/yield.yieldClass`
               - `primitives/dom/element-size.useElementSize`
               - `primitives/dom/scroll-reveal.useRevealOnActive`
-              - `primitives/dom/web-storage.defineStore`
               - `primitives/embed.isEmbeddedDocument`
               - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/launch.LaunchAgentPopover`
@@ -17549,10 +17551,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-                    - Uses: 37 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
+                    - Uses: 39 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
                       - `primitives/css/ui-kit` ×6
                       - `primitives/persistent-draft` ×4
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
+                      - `primitives/dom/web-storage` ×3
                       - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
                       - `conversations/conversation-view/jsonl-viewer` ×2
                       - `conversations/conversation-view/pending-turn` ×2
@@ -17569,7 +17572,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/working-dots.WorkingText`
-                      - `primitives/dom/web-storage.defineStore`
                       - `primitives/text-editor.TextEditor`
                       - `ui/icons.Icon`
                     - Exports (types):
@@ -18501,18 +18503,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tryItHint`
         - **`pending-turn`** — The single entry point for sending a turn from the browser (useSendConversationTurn, bound to the subtree's transport: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed until the transcript holds its line, Retry + Copy to draft when it failed), useSentTurnFollowKey is the transcript's followKey (moves only when the user sends a turn, never on an automatic event turn or a retiring echo), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) sends through it and differs only in its delivery. Contributes the turn-send-safety lint rule.
           - Web:
-            - Uses: 25 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/pending-turn/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/pending-turn/REFERENCE.md)
+            - Uses: 26 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/pending-turn/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/pending-turn/REFERENCE.md)
               - `infra/endpoints` ×5
               - `network/live/live-state` ×4
               - `primitives/persistent-draft` ×3
               - `primitives/css/ui-kit` ×2
+              - `primitives/dom/web-storage` ×2
               - `primitives/networking` ×2
               - `conversations/conversation-view/user-message.UserMessageText`
               - `network/live.useLive`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/working-dots.WorkingText`
-              - `primitives/dom/web-storage.defineStore`
               - `primitives/sync-status.useReportSync`
               - `shell/toast.showToast`
               - `ui/icons.Icon`
@@ -18589,12 +18591,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/pending-turn.conversationPromptDraft`
               - `conversations/conversation-view/pending-turn.useSendConversationTurn`
               - `conversations/conversation-view/pending-turn.useTurnSendAvailability`
+              - `primitives/dom/web-storage.useStore`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/persistent-draft.useDraft`
               - `primitives/persistent-draft.writeDraft`
               - `primitives/prompt-editor.PromptEditor`
               - `shell/notifications.useToast`
-            - Exports (values): `setConversationPromptDraft`
+            - Exports (values): `useSetConversationPromptDraft`
           - Cross-plugin:
             - Imported by: `conversations/conversation-view/rewind`
         - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear) and its one split chip (TemplateChip: ✎ name inserts, ➤ sends) for other template-like surfaces. Named template chips that prepend text to the conversation prompt editor for editing before sending.
@@ -18814,7 +18817,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
-              - `conversations/conversation-view/prompt-input.setConversationPromptDraft`
+              - `conversations/conversation-view/prompt-input.useSetConversationPromptDraft`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useFetchEndpoint`
               - `infra/endpoints.useMachineAvailability`
@@ -26734,6 +26737,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
+                  - `primitives/dom/web-storage.clearStorageScope`
                   - `primitives/loading.Loading`
                   - `primitives/log-channels.clientLog`
                   - `primitives/networking.TransportProvider`
@@ -28889,6 +28893,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useDeferredLoadComplete`
           - `useFailedPluginPaths`
           - `useHasLoadErrorUnder`
+          - `usePluginScopeId`
           - `useRawContributions`
           - `webCollectedDir`
       - Cross-plugin:
@@ -34345,9 +34350,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `PaneLayoutHost`
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
       - Web:
-        - Uses: 30 symbols — full list in [`plugins/layouts/plugins/miller/REFERENCE.md`](../plugins/layouts/plugins/miller/REFERENCE.md)
+        - Uses: 32 symbols — full list in [`plugins/layouts/plugins/miller/REFERENCE.md`](../plugins/layouts/plugins/miller/REFERENCE.md)
           - `primitives/pane` ×12
           - `primitives/dom/auto-scroll` ×3
+          - `primitives/dom/web-storage` ×3
           - `primitives/hover-reveal` ×2
           - `primitives/sortable-list` ×2
           - `layouts/route-fallback.DeferredRouteFallback`
@@ -34355,7 +34361,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
-          - `primitives/dom/web-storage.defineStore`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/scope/surface-id.useSurfaceTabId`
@@ -34419,8 +34424,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Contributes:
       - `ThemeEngine.FixedTheme` "Map controls (dark tiles)"
       - `ThemeEngine.FixedTheme` "Map controls (light tiles)"
-    - Uses: 21 symbols — full list in [`plugins/map/REFERENCE.md`](../plugins/map/REFERENCE.md)
+    - Uses: 22 symbols — full list in [`plugins/map/REFERENCE.md`](../plugins/map/REFERENCE.md)
       - `primitives/persistent-draft` ×3
+      - `primitives/dom/web-storage` ×2
       - `primitives/slot-render` ×2
       - `primitives/css/center.Center`
       - `primitives/css/coords.Placed`
@@ -34433,7 +34439,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/text.Text`
       - `primitives/css/theme-boundary.Theme`
       - `primitives/css/ui-kit.cn`
-      - `primitives/dom/web-storage.defineStore`
       - `primitives/latest-ref.useLatestRef`
       - `primitives/loading.Loading`
       - `ui/icons.useIconMarkup`
@@ -37396,8 +37401,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
         - Contributes: `IdKinds.Kind` "block"
-        - Uses: 92 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 96 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `network/live/live-state` ×6
+          - `primitives/dom/web-storage` ×5
           - `primitives/text-editor/caret-trigger` ×5
           - `infra/endpoints` ×4
           - `primitives/css/spacing` ×4
@@ -37430,7 +37436,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/dom/auto-scroll.useEdgeAutoScroll`
           - `primitives/dom/scroll-reveal.useRevealOnActive`
-          - `primitives/dom/web-storage.defineStore`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
           - `primitives/scope/dom-scope.defineDomScope`
@@ -43372,7 +43377,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 134 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 136 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×21
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
@@ -43382,6 +43387,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/collapsible` ×3
           - `primitives/css/text` ×3
           - `primitives/css/toggle-chip` ×3
+          - `primitives/dom/web-storage` ×3
           - `primitives/tree` ×3
           - `config_v2` ×2
           - `primitives/css/fill` ×2
@@ -43417,7 +43423,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/auto-scroll.KeepAnchorAcross`
           - `primitives/dom/in-view.createInViewWatcher`
-          - `primitives/dom/web-storage.defineStore`
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/tooltip.Kbd`
@@ -44188,8 +44193,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
           - Web:
             - Contributes: `IdKinds.Kind` "view"
-            - Uses: 45 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
+            - Uses: 49 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
               - `primitives/css/ui-kit` ×15
+              - `primitives/dom/web-storage` ×5
               - `config_v2` ×3
               - `primitives/css/text` ×3
               - `network/live/live-state` ×2
@@ -44205,7 +44211,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/toggle-chip.ToggleChip`
-              - `primitives/dom/web-storage.defineStore`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/overlay/popover.InlinePopover`
@@ -44413,6 +44418,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/dom/scroll-reveal.revealElement`
           - `primitives/dom/web-storage.defineStore`
+          - `primitives/dom/web-storage.Store`
+          - `primitives/dom/web-storage.useStore`
           - `primitives/persistent-draft.DEFAULT_DRAFT_TTL`
           - `primitives/persistent-draft.useDraft`
           - `primitives/persistent-draft.writeDraft`
@@ -44512,6 +44519,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/dom/in-view.useInView`
               - `primitives/dom/web-storage.defineStore`
+              - `primitives/dom/web-storage.useStore`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
               - `ui/icons.Icon`
@@ -44736,7 +44744,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `scroll-safety/no-adhoc-scroll-into-view` — `web/internal/use-reveal-on-active.ts` (sanctioned)
               - `scroll-safety/no-adhoc-scroll-write` — `web/internal/use-reveal-on-active.ts` (sanctioned)
-        - **`web-storage`** — The one door to browser storage (localStorage / sessionStorage): defineStore declares an owner — key prefix s:<owner>:, byte cap, TTL, what to do when full (evict-oldest for caches, refuse for what the user typed), a zod schema — and returns a typed read/write/remove/subscribe handle with one {v, ts} envelope. The caps of an area's owners sum under the browser's quota (asserted at declaration and statically by the budget-fits check), so no owner can fill storage for another. Every refused write and unreadable entry is announced (onStorageFailure); useStorageUsage and scanArea feed the health row; the no-raw-web-storage lint rule bans touching Web Storage anywhere else.
+        - **`web-storage`** — The one door to browser storage (localStorage / sessionStorage): defineStore declares an owner — key prefix s:<owner>:, byte cap, TTL, what to do when full (evict-oldest for caches, refuse for what the user typed), a zod schema — and returns a typed read/write/remove/subscribe handle with one {v, ts} envelope — per composition scope by default (a ScopedStore, bound by useStore / in(useStorageScope()): a PluginScope subtree such as /demo writes s:<owner>@<scope>:, never the page's own s:<owner>: keys; pageWide: { reason } for state about the page itself), and clearStorageScope wipes one scope. The caps of an area's owners sum under the browser's quota (asserted at declaration and statically by the budget-fits check), so no owner can fill storage for another. Every refused write and unreadable entry is announced (onStorageFailure); useStorageUsage and scanArea feed the health row; the no-raw-web-storage lint rule bans touching Web Storage anywhere else.
           - Web:
             - Slots: `WebStorageSlots.Root`
             - Slot contributors:
@@ -44747,7 +44755,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AreaBucket`
               - `AreaScan`
               - `LegacyKeys`
+              - `ScopedStore`
               - `StorageFailure`
+              - `StorageScope`
               - `Store`
               - `StoreRead`
               - `StoreSpec`
@@ -44756,21 +44766,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WhenFull`
               - `WriteFailureReason`
             - Exports (values):
+              - `clearStorageScope`
               - `defineStore`
+              - `isKeyInScope`
               - `onStorageFailure`
+              - `onStorageScopeCleared`
               - `removeEntriesWhere`
               - `scanArea`
               - `storageFailureReportSink`
+              - `useStorageScope`
               - `useStorageUsage`
+              - `useStore`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 45 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
-              - `primitives` ×14
+            - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+              - `primitives` ×15
               - `apps` ×12
-              - `conversations` ×5
+              - `conversations` ×6
               - `apps-core` ×2
               - `reports` ×2
               - `config_v2`
+              - `framework/browser-server/demo/scope`
               - `hints/ask`
               - `layouts/miller`
               - `map`
@@ -44787,6 +44803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `StorageArea`
               - `StorageSize`
+              - `StoreKey`
             - Exports (values):
               - `AREA_BUDGET`
               - `AREA_QUOTA`
@@ -44795,10 +44812,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `OWNER_PATTERN`
               - `ownerPrefix`
               - `parseStorageSize`
+              - `parseStoreKey`
+              - `SCOPE_PATTERN`
+              - `SCOPE_SEPARATOR`
           - Test helpers:
             - Web: `@plugins/primitives/plugins/dom/plugins/web-storage/web/testing`
               - `installStorage` — Make `window.<area>Storage` this storage for the rest of the test file.
               - `QuotaStorage` — An in-memory Storage with a byte quota, throwing the browser's `QuotaExceededError` past it — the condition the 2026-10-19 incident hit and jsdom never produces.
+              - `storageScopeOf` — The storage scope a component would read with `useStorageScope()` — `null` for the page's own, a composition id for a `PluginScope` — for a test that reads or writes a scoped store outside React.
           - Plugins:
             - **`health`** — Makes browser storage visible: an error toast once per owner per page load when a write is refused (over the owner's cap, the area full, or storage blocked — the value then lives only in memory), and the health report's Browser storage row (critical when the browser refused a write, attention when an owner hit or nears its cap; its detail lists every owner's use against its cap plus the legacy and unowned keys).
               - Web:
@@ -47414,17 +47435,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Exports (values): `yieldToMain`
     - **`persistent-draft`** — Drafts over a web-storage store: useDraft is the reactive useState drop-in (all calls on one store and scope stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency; onDraftWritten observes every write and clear in the tab; legacyDraftKeys carries drafts written before web-storage into a store. The store (defineStore) owns the cap, TTL and loud refusal.
-      - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
-          - `apps` ×10
-          - `conversations` ×7
-          - `primitives` ×7
-          - `hints/ask`
-          - `map`
-          - `menu-bar`
-          - `page/editor`
-          - `tasks/task-draft-form`
       - Web:
+        - Uses:
+          - `primitives/dom/web-storage.ScopedStore`
+          - `primitives/dom/web-storage.Store`
+          - `primitives/dom/web-storage.useStore`
         - Exports (types):
           - `DraftOptions`
           - `DraftWrite`
@@ -47436,6 +47451,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readDraft`
           - `useDraft`
           - `writeDraft`
+      - Cross-plugin:
+        - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
+          - `apps` ×10
+          - `conversations` ×7
+          - `primitives` ×7
+          - `hints/ask`
+          - `map`
+          - `menu-bar`
+          - `page/editor`
+          - `tasks/task-draft-form`
     - **`prompt-editor`** — Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).
       - Web:
         - Slots: `PromptEditorSlots.FloatingAction`
@@ -48973,6 +48998,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state.mapResource`
           - `network/live/live-state.ResourceResult`
           - `primitives/dom/web-storage.defineStore`
+          - `primitives/dom/web-storage.Store`
+          - `primitives/dom/web-storage.useStore`
           - `primitives/persistent-draft.legacyDraftKeys`
           - `primitives/persistent-draft.readDraft`
           - `primitives/persistent-draft.writeDraft`
@@ -49017,6 +49044,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/toggle-chip.SegmentedControl`
           - `primitives/dom/web-storage.defineStore`
+          - `primitives/dom/web-storage.Store`
+          - `primitives/dom/web-storage.useStore`
           - `ui/icons.Icon`
         - Exports (types):
           - `ActiveViewState`

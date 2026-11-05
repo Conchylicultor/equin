@@ -6,6 +6,10 @@ import { AskPositionSchema, type AskPosition } from "../../core";
 /** Where the user left the card (one entry): it opens there again after a reload. */
 export const askPositionStore = defineStore<AskPosition>({
   owner: "hints.ask.position",
+  pageWide: {
+    reason:
+      "the page's one Ask equin card, mounted at Core.Root above every tab",
+  },
   label: "Ask equin card positions",
   area: "local",
   cap: "4 KB",
@@ -17,6 +21,10 @@ export const askPositionStore = defineStore<AskPosition>({
 /** The first question while it is typed (one entry): a reload keeps it. */
 export const askQuestionDraft = defineStore<string>({
   owner: "hints.ask.question",
+  pageWide: {
+    reason:
+      "the page's one Ask equin card, mounted at Core.Root above every tab",
+  },
   label: "Ask equin questions",
   area: "local",
   cap: "64 KB",
@@ -33,6 +41,10 @@ export const askQuestionDraft = defineStore<string>({
  */
 export const askSeenPageStore = defineStore<string>({
   owner: "hints.ask.seen-page",
+  pageWide: {
+    reason:
+      "the page's one Ask equin card, mounted at Core.Root above every tab",
+  },
   label: "Ask equin pages sent",
   area: "local",
   cap: "16 KB",
@@ -48,6 +60,10 @@ export const askSeenPageStore = defineStore<string>({
  */
 export const askCardStore = defineStore<AskCardSnapshot>({
   owner: "hints.ask.card",
+  pageWide: {
+    reason:
+      "the page's one Ask equin card, mounted at Core.Root above every tab",
+  },
   label: "Ask equin cards",
   area: "session",
   cap: "4 KB",

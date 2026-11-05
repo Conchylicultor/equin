@@ -10,6 +10,7 @@ import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage
 // later session, where a forgotten preview would read as lost settings.
 const previewStore = defineStore({
   owner: "config-v2.git-defaults-preview",
+  pageWide: { reason: "a per-tab developer view mode of the whole page" },
   label: "Git defaults preview",
   area: "session",
   cap: "1 KB",

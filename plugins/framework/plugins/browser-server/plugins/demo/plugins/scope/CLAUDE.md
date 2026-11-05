@@ -85,6 +85,7 @@ in-realm `MessageChannel` standing in for the worker).
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
+    - `primitives/dom/web-storage.clearStorageScope`
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
     - `primitives/networking.TransportProvider`

@@ -43,6 +43,8 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/dom/web-storage.defineStore`
+    - `primitives/dom/web-storage.Store`
+    - `primitives/dom/web-storage.useStore`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/slot-render.defineMountSlot`
     - `primitives/slot-render.defineRenderSlot`

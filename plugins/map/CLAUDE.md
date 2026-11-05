@@ -210,8 +210,9 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
   - Contributes:
     - `ThemeEngine.FixedTheme` "Map controls (dark tiles)"
     - `ThemeEngine.FixedTheme` "Map controls (light tiles)"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/persistent-draft` ×3
+    - `primitives/dom/web-storage` ×2
     - `primitives/slot-render` ×2
     - `primitives/css/center.Center`
     - `primitives/css/coords.Placed`
@@ -224,7 +225,6 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
-    - `primitives/dom/web-storage.defineStore`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
     - `ui/icons.useIconMarkup`

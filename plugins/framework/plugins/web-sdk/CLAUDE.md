@@ -239,6 +239,10 @@ and an out-of-composition read has no spelling inside the demo.
   apps root and the embed (scoped, the inner sync would wipe out-of-scope
   panes for the whole page). The richer slot-render constructors (render,
   mount, wrapper, dispatch) do not take the option yet.
+- **Browser storage follows the scope**: `PluginScope` sets
+  `usePluginScopeId()` (its composition id; `null` outside every scope), which
+  `web-storage` keys every per-composition store by — so what a scoped
+  subtree keeps in localStorage / sessionStorage is never the page's.
 - **Identity kept**: a read that filters nothing returns the parent array;
   `subscribe` delegates to the parent; nested scopes intersect; `replace`
   throws.
@@ -412,6 +416,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `useDeferredLoadComplete`
     - `useFailedPluginPaths`
     - `useHasLoadErrorUnder`
+    - `usePluginScopeId`
     - `useRawContributions`
     - `webCollectedDir`
 - Cross-plugin:

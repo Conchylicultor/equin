@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import type { PageState } from "@plugins/apps/plugins/browser/plugins/engine/core";
 import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
-import { SAVED_TABS_ID, savedTabs } from "./internal/saved-tabs";
-import { restoreState } from "./internal/saved-tabs-model";
+import type { Store } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { SAVED_TABS_ID } from "./internal/saved-tabs";
+import { restoreState, type SavedTabs } from "./internal/saved-tabs-model";
 
 /**
  * A navigation command the app asks of a tab's remote page. Recorded by the
@@ -95,20 +96,24 @@ function freshTab(opts: FreshTabOptions = {}): BrowserTab {
   };
 }
 
-/** The saved tab set, or — the first time — one start-page tab. */
-function initialState(): BrowserTabsState {
-  const saved = savedTabs.read(SAVED_TABS_ID);
-  if (saved.kind === "value") return restoreState(saved.value);
+/** One start-page tab: the state before anything was saved. */
+function freshState(): BrowserTabsState {
   const first = freshTab();
   return { tabs: [first], activeId: first.id, seq: 1, pendingCloses: [] };
 }
 
+/** The saved tab set, or — the first time — one start-page tab. */
+export function initialBrowserTabs(saved: Store<SavedTabs>): BrowserTabsState {
+  const read = saved.read(SAVED_TABS_ID);
+  return read.kind === "value" ? restoreState(read.value) : freshState();
+}
+
 /**
  * Per-surface store (each surface gets its own isolated instance, seeded from
- * the saved tab set). A factory, so the state is read at each mount.
+ * the saved tab set by its Provider's `initial` — `initialBrowserTabs`, read
+ * at each mount in the composition scope the surface renders in).
  */
-export const BrowserTabsStore =
-  defineScopedStore<BrowserTabsState>(initialState);
+export const BrowserTabsStore = defineScopedStore<BrowserTabsState>(freshState);
 
 type SetState = (fn: (s: BrowserTabsState) => BrowserTabsState) => void;
 

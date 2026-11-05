@@ -16,7 +16,7 @@ import {
 } from "./resolve-instances";
 import { useViewsConfig, type ViewsConfigHandle } from "./use-views-config";
 import { cleanView, type DraftMap, sameView, withDraft } from "./draft-values";
-import { readDrafts, subscribeDrafts, writeDrafts } from "./view-drafts";
+import { useSurfaceDrafts } from "./view-drafts";
 import { useActiveViewId } from "@plugins/primitives/plugins/view-switcher/web";
 import { resolveActiveId } from "./resolve-active-id";
 import { usableTypes } from "./usable-types";
@@ -218,6 +218,7 @@ export function useViewModel<T extends ViewTypeMeta>(
   // exist per source", not "default instances".
   const cfg = useViewsConfig(storageKey, descriptorMap, entries);
   const active = useActiveViewId(storageKey);
+  const surfaceDrafts = useSurfaceDrafts(storageKey);
   const url = opts?.activeViewUrl ?? null;
   const urlViewId = url?.value;
   const setUrl = url?.set;
@@ -227,10 +228,10 @@ export function useViewModel<T extends ViewTypeMeta>(
   const drafted = useSyncExternalStore(
     useCallback(
       (onChange: () => void) =>
-        draftsOn ? subscribeDrafts(storageKey, onChange) : noSubscription(),
-      [draftsOn, storageKey],
+        draftsOn ? surfaceDrafts.subscribe(onChange) : noSubscription(),
+      [draftsOn, surfaceDrafts],
     ),
-    () => (draftsOn ? readDrafts(storageKey) : NO_DRAFTS),
+    () => (draftsOn ? surfaceDrafts.read() : NO_DRAFTS),
   );
 
   // A drafted view renders its working copy: its instance is rebuilt from the
@@ -277,11 +278,11 @@ export function useViewModel<T extends ViewTypeMeta>(
   // CURRENT map — not this render's — so two writes in one tick compose.
   const setDraft = useCallback(
     (id: string, view: VariantValue | null) => {
-      const current = readDrafts(storageKey);
+      const current = surfaceDrafts.read();
       const next = withDraft(current, id, view);
-      if (next !== current) writeDrafts(storageKey, next);
+      if (next !== current) surfaceDrafts.write(next);
     },
-    [storageKey],
+    [surfaceDrafts],
   );
 
   // A drafted write: over the working copy (else the saved value), dropped
@@ -295,11 +296,11 @@ export function useViewModel<T extends ViewTypeMeta>(
       }
       const saved = savedViewFor(id);
       if (saved === undefined) return;
-      const base = readDrafts(storageKey)[id] ?? saved;
+      const base = surfaceDrafts.read()[id] ?? saved;
       const next = cleanView(o?.merge ? { ...base, ...view } : view);
       setDraft(id, sameView(next, saved, canonical) ? null : next);
     },
-    [draftsOn, saveView, savedViewFor, storageKey, setDraft, canonical],
+    [draftsOn, saveView, savedViewFor, surfaceDrafts, setDraft, canonical],
   );
 
   const deriveDirty = useCallback(
@@ -420,7 +421,7 @@ export function useViewModel<T extends ViewTypeMeta>(
       setViewIcon: cfg.setViewIcon,
       duplicateView: (id) => {
         // What you see is what you copy: a drafted view's working copy.
-        const draft = draftsOn ? readDrafts(storageKey)[id] : undefined;
+        const draft = draftsOn ? surfaceDrafts.read()[id] : undefined;
         setActiveView(
           cfg.duplicateView(
             id,
@@ -441,7 +442,7 @@ export function useViewModel<T extends ViewTypeMeta>(
       cfg,
       setActiveView,
       draftsOn,
-      storageKey,
+      surfaceDrafts,
       setDraft,
       updateView,
     ],
@@ -452,13 +453,13 @@ export function useViewModel<T extends ViewTypeMeta>(
       draftsOn
         ? {
             save: (id) => {
-              const draft = readDrafts(storageKey)[id];
+              const draft = surfaceDrafts.read()[id];
               if (draft === undefined) return;
               saveView(id, draft);
               setDraft(id, null);
             },
             discard: (id) => {
-              const draft = readDrafts(storageKey)[id] ?? null;
+              const draft = surfaceDrafts.read()[id] ?? null;
               setDraft(id, null);
               return draft;
             },
@@ -468,7 +469,7 @@ export function useViewModel<T extends ViewTypeMeta>(
               setDraft(id, sameView(view, saved, canonical) ? null : view);
             },
             saveAsNew: (id, row) => {
-              const view = readDrafts(storageKey)[id] ?? savedViewFor(id);
+              const view = surfaceDrafts.read()[id] ?? savedViewFor(id);
               if (view === undefined) {
                 throw new Error(
                   `view-core(${storageKey}): saveAsNew("${id}") names no view`,
@@ -488,6 +489,7 @@ export function useViewModel<T extends ViewTypeMeta>(
     [
       draftsOn,
       storageKey,
+      surfaceDrafts,
       saveView,
       setDraft,
       savedViewFor,

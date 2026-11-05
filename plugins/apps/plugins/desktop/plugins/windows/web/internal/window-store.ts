@@ -168,6 +168,10 @@ const persistedStoreSchema = z.object({
  */
 const windowsStore = defineStore({
   owner: "desktop.windows",
+  pageWide: {
+    reason:
+      "only the page's own desktop is persisted (createWindowStore({ persisted })); an embedded desktop keeps nothing",
+  },
   label: "Desktop windows",
   area: "session",
   cap: "512 KB",

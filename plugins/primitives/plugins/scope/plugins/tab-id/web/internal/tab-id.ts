@@ -7,6 +7,9 @@ const LEGACY_KEY = `${LEGACY_IDS.browserKeyPrefix}.tabId`;
 
 const tabIdStore = defineStore({
   owner: "scope.tab-id",
+  pageWide: {
+    reason: "the browser tab's own id, the same for every scope it renders",
+  },
   label: "Tab ids",
   area: "session",
   cap: "1 KB",

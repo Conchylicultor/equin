@@ -16,6 +16,7 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { writeDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { useStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { conversationPromptDraft } from "../internal/prompt-draft";
 import type { PendingTurn } from "../internal/pending";
 import { useDismissSentTurn, useResendTurn } from "../internal/send";
@@ -26,13 +27,6 @@ import {
 } from "../internal/delivery";
 
 const scheduleIcon = symbol("schedule");
-
-// Restore the turn's text into the conversation's shared prompt draft — the
-// store prompt-input's useDraft reads, which picks the write up through the
-// store's subscription.
-function copyToDraft(conversationId: string, text: string): void {
-  writeDraft(conversationPromptDraft, text, { scope: conversationId });
-}
 
 /** Run a card action against the server; a refusal is a toast, not a crash. */
 async function act(verb: string, run: () => Promise<void>): Promise<void> {
@@ -61,6 +55,10 @@ interface CardActions {
  */
 function useCardActions(conversationId: string): CardActions {
   const fetchEndpoint = useFetchEndpoint();
+  // Restore a turn's text into the conversation's shared prompt draft — the
+  // store prompt-input's useDraft reads, which picks the write up through the
+  // store's subscription.
+  const promptDrafts = useStore(conversationPromptDraft);
   const resendTurn = useResendTurn();
   const dismissSentTurn = useDismissSentTurn();
   return {
@@ -77,7 +75,7 @@ function useCardActions(conversationId: string): CardActions {
       );
     },
     takeBack(turn) {
-      copyToDraft(conversationId, turn.text);
+      writeDraft(promptDrafts, turn.text, { scope: conversationId });
       if (turn.state === "unsent") {
         dismissSentTurn(conversationId, turn.id);
         return Promise.resolve();

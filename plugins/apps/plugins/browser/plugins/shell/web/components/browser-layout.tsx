@@ -13,7 +13,8 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Browser } from "../slots";
-import { BrowserTabsStore } from "../nav-store";
+import { BrowserTabsStore, initialBrowserTabs } from "../nav-store";
+import { useSavedTabs } from "../internal/saved-tabs";
 import { PersistBrowserTabs } from "./persist-tabs";
 import "./browser-layout.css";
 
@@ -97,8 +98,9 @@ function BrowserInner() {
  * store in its body).
  */
 export function BrowserLayout() {
+  const saved = useSavedTabs();
   return (
-    <BrowserTabsStore.Provider>
+    <BrowserTabsStore.Provider initial={() => initialBrowserTabs(saved)}>
       <BrowserInner />
     </BrowserTabsStore.Provider>
   );

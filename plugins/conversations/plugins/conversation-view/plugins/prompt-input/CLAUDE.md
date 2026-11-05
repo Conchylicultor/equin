@@ -23,12 +23,13 @@ renders as a pending-turn card in the transcript, never as a restored draft.
     - `conversations/conversation-view/pending-turn.conversationPromptDraft`
     - `conversations/conversation-view/pending-turn.useSendConversationTurn`
     - `conversations/conversation-view/pending-turn.useTurnSendAvailability`
+    - `primitives/dom/web-storage.useStore`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/persistent-draft.useDraft`
     - `primitives/persistent-draft.writeDraft`
     - `primitives/prompt-editor.PromptEditor`
     - `shell/notifications.useToast`
-  - Exports (values): `setConversationPromptDraft`
+  - Exports (values): `useSetConversationPromptDraft`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/rewind`
 

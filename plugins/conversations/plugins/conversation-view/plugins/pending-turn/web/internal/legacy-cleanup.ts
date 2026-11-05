@@ -11,6 +11,7 @@ import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage
 // Safe to delete this module once no browser can still hold one.
 const retiredPendingTurns = defineStore({
   owner: "pending-turn.retired",
+  pageWide: { reason: "only deletes pre-primitive page keys" },
   label: "Retired pending turns",
   area: "local",
   cap: "1 KB",

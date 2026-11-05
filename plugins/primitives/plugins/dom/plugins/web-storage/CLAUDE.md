@@ -10,7 +10,7 @@ and every draft and pane-layout write failed, mostly silently.
 
 ```ts
 export const paneRoutes = defineStore({
-  owner: "conversations.pane-restore", // [a-z0-9.-]; keys are `s:<owner>:<id>`
+  owner: "conversations.pane-restore", // [a-z0-9.-]; keys are `s:<owner>[@<scope>]:<id>`
   label: "Conversation layouts",       // plural, read by the user (toast, health row)
   area: "local",                       // or "session" (one tab's own, dies with it)
   cap: "256 KB",                       // literal: the budget-fits check reads it
@@ -21,11 +21,45 @@ export const paneRoutes = defineStore({
 });
 ```
 
-Once, at module scope, with literal `owner` / `area` / `cap`. The handle:
+Once, at module scope, with literal `owner` / `area` / `cap`. The handle
+(`useStore(store)` — see "Scoped by composition"):
 `read(id)` → `{kind:"value", value, ts} | {kind:"none", why}`, `write(id, v)` →
 `{ok:true} | {ok:false, reason}` (never throws on a DOMException), `remove`,
 `ids()` (oldest first), `subscribe(id, fn)` (same tab and other tabs), `key(id)`.
 A draft the user types goes through `persistent-draft` over such a store.
+
+## Scoped by composition
+
+Web Storage is one pool per origin, but a page can render ANOTHER deploy inside
+it: `/demo` embeds the Agent Manager in a `<PluginScope>` served by a browser
+host. What such a subtree keeps in the browser must be its own, the way its
+server state is. So a store is **per composition scope by default**:
+
+- `defineStore({...})` returns a `ScopedStore<T>`, which has no read or write.
+  `useStore(store)` binds it to where the calling component renders;
+  `store.in(scope)` binds it to a `StorageScope` a component read with
+  `useStorageScope()` (for an imperative helper — take the scope, or the bound
+  `Store<T>`, as a parameter). A `StorageScope` is minted only from the
+  innermost `PluginScope` (web-sdk's `usePluginScopeId()`, which `PluginScope`
+  itself sets), so code inside a scope cannot spell another scope's keys.
+- The page's own deploy (outside every scope) keeps `s:<owner>:<id>` — the
+  keys every entry had before scopes, so nothing stored moved. A scope writes
+  `s:<owner>@<scope>:<id>`. `parseStoreKey` (core) is the one parser.
+- `pageWide: { reason }` declares a store about the page itself, not about
+  what an app inside it shows (the tab's id, the app tab strip, a page-level
+  debug flag, the one Ask equin card): it is a plain `Store<T>`, under the
+  page's keys wherever it is used from. `useStore` hands one back unchanged,
+  so a primitive over stores (`useDraft`) takes either kind.
+- An owner's cap covers its entries in every scope (so the budget holds), but
+  no scope pays for another's growth: a scope evicts only its own entries, and
+  the page's own scope evicts the scopes' entries first (even in a `refuse`
+  store — state a Reset throws away anyway) before its own oldest.
+- `clearStorageScope(id)` removes every entry of one `PluginScope` — the
+  demo's Reset (`DemoScope`), after its subtree unmounted. The page's own
+  entries have no scope id, so it cannot reach them. A module that keeps what
+  it read in memory drops it on `onStorageScopeCleared` (`isKeyInScope`).
+
+Tests outside React use `storageScopeOf(id)` from `web/testing`.
 
 ## The guarantees
 
@@ -55,7 +89,7 @@ for an id grammar one primitive owns the lifetime of (app-instance generations).
 
 ## Plugin reference
 
-- Description: The one door to browser storage (localStorage / sessionStorage): defineStore declares an owner — key prefix s:<owner>:, byte cap, TTL, what to do when full (evict-oldest for caches, refuse for what the user typed), a zod schema — and returns a typed read/write/remove/subscribe handle with one {v, ts} envelope. The caps of an area's owners sum under the browser's quota (asserted at declaration and statically by the budget-fits check), so no owner can fill storage for another. Every refused write and unreadable entry is announced (onStorageFailure); useStorageUsage and scanArea feed the health row; the no-raw-web-storage lint rule bans touching Web Storage anywhere else.
+- Description: The one door to browser storage (localStorage / sessionStorage): defineStore declares an owner — key prefix s:<owner>:, byte cap, TTL, what to do when full (evict-oldest for caches, refuse for what the user typed), a zod schema — and returns a typed read/write/remove/subscribe handle with one {v, ts} envelope — per composition scope by default (a ScopedStore, bound by useStore / in(useStorageScope()): a PluginScope subtree such as /demo writes s:<owner>@<scope>:, never the page's own s:<owner>: keys; pageWide: { reason } for state about the page itself), and clearStorageScope wipes one scope. The caps of an area's owners sum under the browser's quota (asserted at declaration and statically by the budget-fits check), so no owner can fill storage for another. Every refused write and unreadable entry is announced (onStorageFailure); useStorageUsage and scanArea feed the health row; the no-raw-web-storage lint rule bans touching Web Storage anywhere else.
 - Web:
   - Slots: `WebStorageSlots.Root`
   - Slot contributors:
@@ -66,7 +100,9 @@ for an id grammar one primitive owns the lifetime of (app-instance generations).
     - `AreaBucket`
     - `AreaScan`
     - `LegacyKeys`
+    - `ScopedStore`
     - `StorageFailure`
+    - `StorageScope`
     - `Store`
     - `StoreRead`
     - `StoreSpec`
@@ -75,21 +111,27 @@ for an id grammar one primitive owns the lifetime of (app-instance generations).
     - `WhenFull`
     - `WriteFailureReason`
   - Exports (values):
+    - `clearStorageScope`
     - `defineStore`
+    - `isKeyInScope`
     - `onStorageFailure`
+    - `onStorageScopeCleared`
     - `removeEntriesWhere`
     - `scanArea`
     - `storageFailureReportSink`
+    - `useStorageScope`
     - `useStorageUsage`
+    - `useStore`
     - `WebStorageSlots`
 - Cross-plugin:
-  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×14
+  - Imported by: 48 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×15
     - `apps` ×12
-    - `conversations` ×5
+    - `conversations` ×6
     - `apps-core` ×2
     - `reports` ×2
     - `config_v2`
+    - `framework/browser-server/demo/scope`
     - `hints/ask`
     - `layouts/miller`
     - `map`
@@ -106,6 +148,7 @@ for an id grammar one primitive owns the lifetime of (app-instance generations).
   - Exports (types):
     - `StorageArea`
     - `StorageSize`
+    - `StoreKey`
   - Exports (values):
     - `AREA_BUDGET`
     - `AREA_QUOTA`
@@ -114,10 +157,14 @@ for an id grammar one primitive owns the lifetime of (app-instance generations).
     - `OWNER_PATTERN`
     - `ownerPrefix`
     - `parseStorageSize`
+    - `parseStoreKey`
+    - `SCOPE_PATTERN`
+    - `SCOPE_SEPARATOR`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/dom/plugins/web-storage/web/testing`
     - `installStorage` — Make `window.<area>Storage` this storage for the rest of the test file.
     - `QuotaStorage` — An in-memory Storage with a byte quota, throwing the browser's `QuotaExceededError` past it — the condition the 2026-10-19 incident hit and jsdom never produces.
+    - `storageScopeOf` — The storage scope a component would read with `useStorageScope()` — `null` for the page's own, a composition id for a `PluginScope` — for a test that reads or writes a scoped store outside React.
 - Sub-plugins:
   - **`health`** — Makes browser storage visible: an error toast once per owner per page load when a write is refused (over the owner's cap, the area full, or storage blocked — the value then lives only in memory)…
 

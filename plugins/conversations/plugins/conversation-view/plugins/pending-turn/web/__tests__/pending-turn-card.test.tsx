@@ -42,6 +42,7 @@ import {
   type PendingTurn,
   type PendingTurnState,
 } from "../internal/pending";
+import { storageScopeOf } from "@plugins/primitives/plugins/dom/plugins/web-storage/web/testing";
 import { conversationPromptDraft } from "../internal/prompt-draft";
 
 const CONV = "conv-card";
@@ -196,7 +197,7 @@ describe("PendingTurnCard", () => {
         "POST /api/conversations/:id/turns/:turnId/withdraw",
       ]),
     );
-    const stored = conversationPromptDraft.read(CONV);
+    const stored = conversationPromptDraft.in(storageScopeOf(null)).read(CONV);
     expect(stored.kind === "value" ? stored.value : null).toBe("fix the build");
   });
 

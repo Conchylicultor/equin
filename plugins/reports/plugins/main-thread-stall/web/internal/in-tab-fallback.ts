@@ -23,6 +23,7 @@ import { LOG_CHANNEL } from "./log-channel";
 
 const markerStore = defineStore({
   owner: "reports.main-thread-stall",
+  pageWide: { reason: "a heartbeat of the browser tab's main thread" },
   label: "Main-thread stall heartbeat (fallback detector)",
   area: "session",
   cap: "2 KB",

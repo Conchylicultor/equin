@@ -1,6 +1,10 @@
-import { useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { z } from "zod";
-import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import {
+  defineStore,
+  useStore,
+  type Store,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import {
   type PaneStore,
   usePaneStore,
@@ -44,43 +48,52 @@ const widths = defineStore({
 
 const storeId = (tabId: string, paneId: string) => `${tabId}.${paneId}`;
 
-export function hasStoredWidth(
+/** Whether a column has a width the user set, in the composition scope this renders in. */
+export function useHasStoredWidth(): (
   tabId: string | undefined,
   paneId: string,
-): boolean {
-  if (tabId === undefined) return false;
-  return widths.read(storeId(tabId, paneId)).kind === "value";
+) => boolean {
+  const persisted = useStore(widths);
+  return useCallback(
+    (tabId, paneId) =>
+      tabId !== undefined &&
+      persisted.read(storeId(tabId, paneId)).kind === "value",
+    [persisted],
+  );
 }
 
 function readStored(
+  persisted: Store<number>,
   tabId: string | undefined,
   paneId: string,
 ): number | undefined {
   if (tabId === undefined) return undefined;
-  const read = widths.read(storeId(tabId, paneId));
+  const read = persisted.read(storeId(tabId, paneId));
   return read.kind === "value" ? read.value : undefined;
 }
 
 function persistWidth(
+  persisted: Store<number>,
   tabId: string | undefined,
   paneId: string,
   width: number,
 ) {
   if (tabId === undefined) return;
   // A refused write is reported by the store.
-  widths.write(storeId(tabId, paneId), width);
+  persisted.write(storeId(tabId, paneId), width);
 }
 
 type WidthUpdater = number | ((prev: number) => number);
 
 function getWidth(
   s: SurfaceWidths,
+  persisted: Store<number>,
   tabId: string | undefined,
   paneId: string,
   defaultWidth: number,
 ): number {
   if (!s.state.has(paneId)) {
-    s.state.set(paneId, readStored(tabId, paneId) ?? defaultWidth);
+    s.state.set(paneId, readStored(persisted, tabId, paneId) ?? defaultWidth);
   }
   return s.state.get(paneId)!;
 }
@@ -91,6 +104,7 @@ export function useColumnWidth(
 ): [number, (next: WidthUpdater) => void] {
   const store = usePaneStore();
   const tabId = useSurfaceTabId();
+  const persisted = useStore(widths);
   const s = stateFor(store);
 
   const width = useSyncExternalStore(
@@ -98,7 +112,7 @@ export function useColumnWidth(
       s.subscribers.add(cb);
       return () => s.subscribers.delete(cb);
     },
-    () => getWidth(s, tabId, paneId, defaultWidth),
+    () => getWidth(s, persisted, tabId, paneId, defaultWidth),
     () => defaultWidth,
   );
 
@@ -108,7 +122,7 @@ export function useColumnWidth(
     const clamped = Math.max(MIN_WIDTH, value);
     if (clamped === s.state.get(paneId)) return;
     s.state.set(paneId, clamped);
-    persistWidth(tabId, paneId, clamped);
+    persistWidth(persisted, tabId, paneId, clamped);
     for (const fn of s.subscribers) fn();
   };
 

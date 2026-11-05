@@ -188,6 +188,7 @@ function trace(line: string): void {
 // (no config_v2 server plumbing for a debug switch).
 const verboseTraceFlag = defineStore({
   owner: "live-state.verbose-trace",
+  pageWide: { reason: "a page-level debug flag" },
   label: "Debug flags",
   area: "local",
   cap: "1 KB",

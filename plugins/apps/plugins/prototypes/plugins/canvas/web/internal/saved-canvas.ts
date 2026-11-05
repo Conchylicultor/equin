@@ -61,7 +61,7 @@ export const SavedCanvasSchema = z.object({
   linked: z.array(z.string()),
 });
 
-type SavedCanvas = z.infer<typeof SavedCanvasSchema>;
+export type SavedCanvas = z.infer<typeof SavedCanvasSchema>;
 
 /**
  * The canvas as it is written to storage (`linked` is a Set in memory). A

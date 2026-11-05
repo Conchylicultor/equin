@@ -455,6 +455,7 @@ function FixedThemeScopeStyles({
 // A store whose only job is its `legacy` key: the first touch deletes it.
 const retiredThemeCache = defineStore({
   owner: "theme-engine.retired",
+  pageWide: { reason: "only deletes a pre-primitive page key" },
   label: "Retired theme cache",
   area: "local",
   cap: "1 KB",

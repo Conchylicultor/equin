@@ -33,6 +33,7 @@ import {
 } from "@plugins/framework/plugins/browser-server/web";
 import type { DemoScenario } from "@plugins/framework/plugins/browser-server/plugins/demo/core";
 import { NotificationsProvider } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { clearStorageScope } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -231,6 +232,10 @@ export function DemoScope({
   // Bumped when the host is reset, to start a fresh one.
   const [generation, setGeneration] = useState(0);
   useEffect(() => {
+    // A reset throws away the scope's browser-side state with its data (the
+    // drafts and view state its plugins kept in Web Storage, in every tab):
+    // here, once the old subtree has unmounted and written its last.
+    if (generation > 0) clearStorageScope(scenario.host.id);
     // Started here, not in a useState initialiser: the host is a disposable
     // resource owned by this mount, so StrictMode's mount → unmount → mount
     // ends the first and keeps the second (an initialiser would start one a
