@@ -43,17 +43,17 @@ const { readSubagentTranscriptOf, resolveTranscriptTargets } =
 
 const CONV = "conv-1";
 
-/** This conversation's sub-agent roots, under its anchored transcript. */
+/** This conversation's sub-agent roots, under its resolved transcript. */
 const roots = () => subagentDirsOf(keptPaths);
-/** The dir-scoped finder, bound to this conversation's anchored directories. */
+/** The dir-scoped finder, bound to this conversation's resolved directories. */
 const find = (toolUseId: string, requestedName?: string) =>
   findSubagentIn(CONV, roots(), { toolUseId, requestedName });
-/** The activity scan, bound to this conversation's anchored directories. */
+/** The activity scan, bound to this conversation's resolved directories. */
 const scanActivity = () => scanActivityIn(CONV, roots());
-/** One sub-agent's transcript, under this conversation's anchored transcript. */
+/** One sub-agent's transcript, under this conversation's resolved transcript. */
 const readTranscript = (ref: SubagentRef) =>
   readSubagentTranscriptOf(CONV, ref, keptPaths);
-/** What a sub-agent's room watches, under this conversation's anchored transcript. */
+/** What a sub-agent's room watches, under this conversation's resolved transcript. */
 const transcriptTargets = (ref: SubagentRef) =>
   resolveTranscriptTargets(CONV, ref, keptPaths);
 const dirs: string[] = [];
@@ -215,11 +215,11 @@ describe("subagent discovery", () => {
     });
   });
 
-  test("a session the anchor DROPPED never has its subagents/ directory scanned", async () => {
+  test("a session the resolve DROPPED never has its subagents/ directory scanned", async () => {
     // Two sessions side by side on disk, each with its own sub-agent. Only one is
-    // this conversation's: the other resolved to a different projects dir, so
-    // `resolveAnchoredChain` classified it `foreign` and the anchored paths
-    // never held it.
+    // this conversation's: the other sits in another projects dir, so
+    // `resolveTranscriptPathsOf` never found it and the resolved paths never
+    // held it.
     const projects = await newProjectsDir();
     const mine = await writeSession(projects, "sess-mine", [
       {
@@ -604,7 +604,7 @@ describe("agents a Workflow run spawned", () => {
     expect(result.kind).toBe("linked");
   });
 
-  test("a run under a session the anchor DROPPED is never walked", async () => {
+  test("a run under a session the resolve DROPPED is never walked", async () => {
     const projects = await newProjectsDir();
     const mine = await writeSession(projects, "sess-mine", []);
     await writeSession(projects, "sess-foreign", []);

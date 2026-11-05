@@ -341,6 +341,8 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `CLAUDE_PROJECTS_DIR`
     - `CLAUDE_SESSIONS_DIR`
     - `CLAUDE_USER_CONFIG`
+    - `claudeProjectDirName`
+    - `claudeTranscriptPath`
     - `DATA_DIR_KINDS`
     - `DATA_DIR_NAME`
     - `dataRoot`
@@ -379,14 +381,14 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×8
     - `infra` ×6
     - `framework` ×5
     - `backup` ×4
+    - `conversations` ×3
     - `release` ×3
     - `build` ×2
-    - `conversations` ×2
     - `plugin-meta` ×2
     - `primitives` ×2
     - `apps/deploy/deployments`
@@ -425,6 +427,8 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `CLAUDE_DIR`
     - `CLAUDE_PROJECTS_DIR`
     - `CLAUDE_SESSIONS_DIR`
+    - `claudeProjectDirName`
+    - `claudeTranscriptPath`
     - `DATA_DIR_KINDS`
     - `dataRoot`
     - `dataRootLayout`

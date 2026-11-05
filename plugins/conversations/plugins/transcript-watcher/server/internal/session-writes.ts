@@ -9,8 +9,10 @@ import type { FileChangeEvent } from "@plugins/infra/plugins/file-watcher/server
 // sessions-file write that woke it — so it waits for this.
 
 type Listener = (sessionIds: ReadonlySet<string>) => void;
+/** The written session transcripts: session id → its file. */
+type SessionListener = (written: ReadonlyMap<string, string>) => void;
 
-const listeners = new Set<Listener>();
+const listeners = new Set<SessionListener>();
 const ownerListeners = new Set<Listener>();
 
 /** A top-level session transcript is `<projects>/<dir>/<uuid>.jsonl`. */
@@ -18,24 +20,26 @@ const SESSION_FILE_RE = /^([0-9a-f-]{36})\.jsonl$/;
 const SESSION_ID_RE = /^[0-9a-f-]{36}$/;
 
 /**
- * The session ids whose top-level transcript a batch created or appended to.
- * Sub-agent files sit deeper (`<dir>/<session>/subagents/…`) and are not
- * sessions. Creates and updates are both counted: FSEvents may coalesce a
- * file's birth with its first write into one `update`, and a listener filters
- * by the ids it is waiting on anyway.
+ * The top-level session transcripts a batch created or appended to, by session
+ * id — with the file, so a listener can see WHERE a session was written (the
+ * status reconciler checks it is the projects dir it expected). Sub-agent files
+ * sit deeper (`<dir>/<session>/subagents/…`) and are not sessions. Creates and
+ * updates are both counted: FSEvents may coalesce a file's birth with its first
+ * write into one `update`, and a listener filters by the ids it is waiting on
+ * anyway.
  */
-export function writtenSessionIds(
+export function writtenSessions(
   events: readonly FileChangeEvent[],
   projectsDir: string,
-): Set<string> {
-  const ids = new Set<string>();
+): Map<string, string> {
+  const written = new Map<string, string>();
   for (const event of events) {
     if (event.type === "delete") continue;
     if (dirname(dirname(event.path)) !== projectsDir) continue;
     const match = SESSION_FILE_RE.exec(basename(event.path));
-    if (match) ids.add(match[1]!);
+    if (match) written.set(match[1]!, event.path);
   }
-  return ids;
+  return written;
 }
 
 /**
@@ -69,12 +73,14 @@ export function writtenOwnerSessionIds(
 }
 
 /**
- * Hear about every session transcript written on this host, as the set of
- * session ids each watcher batch touched. Called on the watcher's batch, so a
- * listener must be cheap (a map lookup) and must not throw. Returns the
- * unsubscribe.
+ * Hear about every session transcript written on this host, as the session
+ * ids each watcher batch touched and the file each was written to
+ * ({@link writtenSessions}). Called on the watcher's batch, so a listener must
+ * be cheap (a map lookup) and must not throw. Returns the unsubscribe.
  */
-export function onSessionTranscriptWritten(listener: Listener): () => void {
+export function onSessionTranscriptWritten(
+  listener: SessionListener,
+): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
@@ -97,8 +103,8 @@ export function notifySessionTranscriptWrites(
   projectsDir: string,
 ): void {
   if (listeners.size > 0) {
-    const ids = writtenSessionIds(events, projectsDir);
-    if (ids.size > 0) for (const listener of listeners) listener(ids);
+    const written = writtenSessions(events, projectsDir);
+    if (written.size > 0) for (const listener of listeners) listener(written);
   }
   if (ownerListeners.size > 0) {
     const ids = writtenOwnerSessionIds(events, projectsDir);

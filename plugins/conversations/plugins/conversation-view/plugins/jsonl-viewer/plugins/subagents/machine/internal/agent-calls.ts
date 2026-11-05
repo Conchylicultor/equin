@@ -36,7 +36,7 @@ import {
  * nested card rendered inside its parent's own pane still joins, because that
  * surface holds the event and passes the name directly.
  *
- * The parent's anchored transcript paths are the memo's INPUT, resolved by the
+ * The parent's resolved transcript paths are the memo's INPUT, resolved by the
  * caller from the chain its value follows (a loader, a watcher room), so
  * the cached signature fingerprints exactly the files read.
  */

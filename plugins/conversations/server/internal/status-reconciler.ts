@@ -45,12 +45,10 @@ import {
   findTranscriptPath,
   onSessionTranscriptWritten,
   refreshConversationChain,
-  resolveAnchoredChain,
+  reportForeignSession,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
-import {
-  listSessionChain,
-  recordSessionId,
-} from "@plugins/conversations/plugins/session-chain/server";
+import { recordSessionId } from "@plugins/conversations/plugins/session-chain/server";
+import { claudeTranscriptPath } from "@plugins/infra/plugins/paths/server";
 
 // Keeps every conversation row's status, waitingFor and session id in step
 // with its live agent session — from PUSH SIGNALS, not a poll.
@@ -132,77 +130,77 @@ async function collectLive(
 }
 
 /**
- * Should this conversation adopt `candidate` as its live session id?
+ * Should this conversation adopt `candidate` as its live session id? Only once
+ * its transcript exists — in THIS conversation's projects dir.
  *
- * Two gates, in cost order — this runs only on the rare reconcile where the
- * runtime reports an id different from the stored one (`sessionCandidate`),
- * never on the steady-state path.
+ * Runs only on the rare reconcile where the runtime reports an id different
+ * from the stored one (`sessionCandidate`), never on the steady-state path, and
+ * costs one `access`: the transcript is looked up where the conversation's
+ * working directory files it (`findTranscriptPath`), not searched for.
  *
- * 1. **A transcript must exist.** Otherwise a freshly-resumed session that dies
- *    before the user types anything would overwrite the (still-resumable) id
- *    with one that has no transcript on disk, breaking the next Resume. This
- *    refusal is only "not yet": `planFor` records it in `awaitingTranscript`,
- *    and the transcript's birth wakes the conversation again.
+ * Otherwise a freshly-resumed session that dies before the user types anything
+ * would overwrite the (still-resumable) id with one that has no transcript on
+ * disk, breaking the next Resume. The refusal is only "not yet": `planFor`
+ * records it in `awaitingTranscript`, and the transcript's birth wakes the
+ * conversation again.
  *
- * 2. **That transcript must sit in THIS conversation's projects directory.**
- *    Gate 1 alone only asks whether a transcript exists *somewhere on the host*
- *    — `findTranscriptPath` globs every `~/.claude/projects/<dir>/`, so another
- *    conversation's session id in another worktree passes it cleanly. That is
- *    exactly how `conv-1786969506-7e03` adopted a stranger's session on
- *    2026-08-19 (`research/2026-08-19-global-pane-session-ownership.md`). All of
- *    a conversation's sessions run in one worktree, hence in one projects dir,
- *    so an id resolving elsewhere is somebody else's.
- *
- * A null anchor — nothing in the known chain resolves yet, i.e. the
- * conversation's first session — accepts, and the candidate becomes the anchor.
- *
- * Defense in depth, deliberately **not** load-bearing: the runtime resolver is
- * what must stop offering a foreign id in the first place. So this refuses
- * SILENTLY, exactly like "no transcript yet" always has — a broken pane would
- * hand us the same wrong id on every reconcile, and a report per reconcile is
- * noise, not an alarm. Standing corruption is the periodic monitor's signal to
- * raise.
+ * The lookup is also the ownership gate. All of a conversation's sessions run
+ * in its one worktree, so a session whose transcript is anywhere else is
+ * somebody else's — `conv-1786969506-7e03` adopted a stranger's session on
+ * 2026-08-19 when this gate searched every projects dir
+ * (`research/2026-08-19-global-pane-session-ownership.md`). Such an id is
+ * never found here; its birth in another dir is reported (see
+ * `startStatusReconciler`).
  */
 async function sessionGate(
-  conversationId: string,
-  storedSessionId: string | null,
+  row: Conversation,
   candidate: string,
-): Promise<SessionGate> {
-  const candidatePath = await findTranscriptPath(candidate);
-  if (!candidatePath) return "no-transcript";
-
-  // What we already believe about this conversation: its full chain, or — before
-  // the chain has any row — the stored tail on its own.
-  const chain = await listSessionChain(conversationId);
-  const known = chain.length
-    ? chain.map((entry) => entry.claudeSessionId)
-    : storedSessionId
-      ? [storedSessionId]
-      : [];
-
-  const { anchorDir } = await resolveAnchoredChain(known);
-  return anchorDir === null || dirname(candidatePath) === anchorDir
-    ? "accepted"
-    : "foreign";
+): Promise<"accepted" | "no-transcript" | "no-workspace"> {
+  // No checkout path yet: nothing names the transcript's dir. Not awaited —
+  // the sweep asks again once the attempt has its path.
+  if (row.worktreePath === "") return "no-workspace";
+  return (await findTranscriptPath(row.worktreePath, candidate)) === null
+    ? "no-transcript"
+    : "accepted";
 }
 
-/** Why a session-id candidate was (not) adopted. */
-type SessionGate = "accepted" | "no-transcript" | "foreign";
-
 // Conversation id → the session id it was refused ONLY because that session's
-// transcript did not exist yet. The CLI writes the sessions file (the signal
-// that woke the reconcile) a moment BEFORE it creates `<sessionId>.jsonl`, and
-// no later sessions-file write is due until the turn ends — so without a wake
-// on the transcript's birth the id waited for the turn end or the sweep
+// transcript did not exist yet, and where that transcript is expected. The CLI
+// writes the sessions file (the signal that woke the reconcile) a moment
+// BEFORE it creates `<sessionId>.jsonl`, and no later sessions-file write is
+// due until the turn ends — so without a wake on the transcript's birth the id
+// waited for the turn end or the sweep
 // (research/2026-10-07-conversations-status-shadow-audit-retirement.md, class A).
 // Kept current by every plan of the row (`planFor`); bounded by the active rows.
-const awaitingTranscript = new Map<string, string>();
+const awaitingTranscript = new Map<
+  string,
+  { sessionId: string; expectedPath: string }
+>();
 
-/** The conversations waiting on any of `sessionIds`' transcripts to appear. */
-function awaitingAny(sessionIds: ReadonlySet<string>): string[] {
+/**
+ * The conversations a batch of written transcripts can wake: each waiting on
+ * a session written right where it expected. One written anywhere else will
+ * never be found by the gate — waking would refuse it again — so it is
+ * reported instead: another conversation's session offered to this one, or
+ * Claude Code naming projects dirs differently from `claudeProjectDirName`
+ * (then every new conversation lands here).
+ */
+function awaitingWritten(written: ReadonlyMap<string, string>): string[] {
   const out: string[] = [];
-  for (const [conversationId, sessionId] of awaitingTranscript) {
-    if (sessionIds.has(sessionId)) out.push(conversationId);
+  for (const [conversationId, awaited] of awaitingTranscript) {
+    const path = written.get(awaited.sessionId);
+    if (path === undefined) continue;
+    if (path === awaited.expectedPath) {
+      out.push(conversationId);
+      continue;
+    }
+    reportForeignSession({
+      reason: "directory-mismatch",
+      conversationId,
+      foreignSessionId: awaited.sessionId,
+      foreignDir: dirname(path),
+      anchorDir: dirname(awaited.expectedPath),
+    });
   }
   return out;
 }
@@ -235,10 +233,7 @@ async function planFor(
 ): Promise<{ plan: UpdatePlan; liveness: Liveness }> {
   const liveness = livenessOf(row, live);
   const candidate = sessionCandidate(row, liveness);
-  const gate =
-    candidate === null
-      ? null
-      : await sessionGate(row.id, row.claudeSessionId, candidate);
+  const gate = candidate === null ? null : await sessionGate(row, candidate);
   const plan = planConversationUpdate(row, liveness, {
     onMain: isMain(),
     now: Date.now(),
@@ -250,7 +245,10 @@ async function planFor(
   });
   const rowStaysLive = plan.kind === "noop" || plan.kind === "patch";
   if (candidate !== null && gate === "no-transcript" && rowStaysLive) {
-    awaitingTranscript.set(row.id, candidate);
+    awaitingTranscript.set(row.id, {
+      sessionId: candidate,
+      expectedPath: claudeTranscriptPath(row.worktreePath, candidate),
+    });
   } else {
     awaitingTranscript.delete(row.id);
   }
@@ -518,8 +516,8 @@ export async function startStatusReconciler(): Promise<void> {
   }
   // The one state no runtime signal carries: a refused session id's transcript
   // appearing (see `awaitingTranscript`).
-  onSessionTranscriptWritten((sessionIds) => {
-    const conversationIds = awaitingAny(sessionIds);
+  onSessionTranscriptWritten((written) => {
+    const conversationIds = awaitingWritten(written);
     if (conversationIds.length > 0) onSignal({ conversationIds });
   });
   // The ledger's evidence moved: a turn just confirmed submitting is working

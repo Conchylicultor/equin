@@ -241,3 +241,26 @@ export async function getConversationClaudeSessionId(
   if (!row) return undefined;
   return row.claudeSessionId;
 }
+
+/**
+ * Where a conversation's transcripts are: its session tail and the directory
+ * its agent runs in (its attempt's checkout — the cwd Claude Code names the
+ * transcripts' projects dir after). `undefined` when the row does not exist.
+ */
+export async function getConversationTranscriptTail(id: string): Promise<
+  | {
+      claudeSessionId: string | null;
+      worktreePath: Conversation["worktreePath"];
+    }
+  | undefined
+> {
+  const [row] = await db
+    .select({
+      claudeSessionId: conversations.claudeSessionId,
+      worktreePath: conversations.worktreePath,
+    })
+    .from(conversations)
+    .where(eq(conversations.id, id))
+    .limit(1);
+  return row;
+}

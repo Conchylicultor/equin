@@ -4,7 +4,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { ForeignSessionPayloadSchema } from "@plugins/conversations/plugins/transcript-source/core";
 
 // One-line summary for the Debug, Reports list, e.g.
-// "`conv-1786969506-7e03` holds 2bf76e71 — it lives in …-att-1787096858-0t1l,
+// "`conv-1786969506-7e03` was offered 2bf76e71 — born in …-att-1787096858-0t1l,
 // not …-att-1786969505-xoj5". Session ids shorten to their first segment and
 // directories to their basename (the full values live in the filed task) so the
 // row stays readable at list width.
@@ -20,7 +20,7 @@ export function ForeignSessionSummary({ report }: { report: Report }) {
       </Badge>
       {d.reason === "directory-mismatch" ? (
         <span>
-          holds {shortId(d.foreignSessionId)} — it lives in{" "}
+          was offered {shortId(d.foreignSessionId)} — born in{" "}
           {baseName(d.foreignDir)}, not {baseName(d.anchorDir)}
         </span>
       ) : (

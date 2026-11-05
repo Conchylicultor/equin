@@ -11,7 +11,7 @@ export { subagentDirOf, listSubagentEntries } from "./internal/discovery";
 
 export default {
   description:
-    "The sub-agents' desktop-only half: discovery of a conversation's sub-agents from the `subagents/` directory beside each of its anchored session transcripts (what conversations/usage accounts over), and the live values — what every sub-agent of a conversation is doing right now and one sub-agent's own transcript, both read and watched from the `subagents/` directories on disk, so a host without the computer answers them unavailable.",
+    "The sub-agents' desktop-only half: discovery of a conversation's sub-agents from the `subagents/` directory beside each of its session transcripts (what conversations/usage accounts over), and the live values — what every sub-agent of a conversation is doing right now and one sub-agent's own transcript, both read and watched from the `subagents/` directories on disk, so a host without the computer answers them unavailable.",
   contributions: [
     ...subagentActivityServed.declare,
     ...subagentTranscriptServed.declare,

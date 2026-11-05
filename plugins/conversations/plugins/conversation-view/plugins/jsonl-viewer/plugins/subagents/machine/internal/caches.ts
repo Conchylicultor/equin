@@ -31,7 +31,7 @@ import { evictAgentCallNames } from "./agent-calls";
 // probe byte-identical strings, so a prime is a real hit rather than a silent
 // miss that degrades every push into a full re-read.
 //
-// Both take the parent conversation's anchored transcript paths as their INPUT,
+// Both take the parent conversation's resolved transcript paths as their INPUT,
 // resolved from the chain the value follows (`resolveTranscriptPathsOf`) — by
 // the loader, and by the watcher room from the rows its start was handed — so
 // no memo half reads Postgres, an entry read under another chain is never a

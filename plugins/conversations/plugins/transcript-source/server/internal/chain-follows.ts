@@ -1,17 +1,22 @@
 import { conversationSessionsServed } from "@plugins/conversations/plugins/session-chain/server";
-import { conversationSessionTailsServed } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  conversationSessionTailsServed,
+  conversationWorkspacesServed,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import type { FollowBuilder } from "@plugins/network/plugins/live/server";
+import { conversationWorkspaceOf } from "@plugins/tasks/plugins/tasks-core/core";
 import { transcriptChainOf, type TranscriptChain } from "../../core";
 
 /**
  * The transcript chain's facts as `follows` (network/live), declared once:
  * every served value whose loader reads a conversation's transcript follows
  * the conversation's recorded session chain (`conversationSessions`, scoped by
- * conversation) and its live tail (`conversationSessionTails`, its
- * `claude_session_id`) — so a session recorded on, or a tail written to, one
- * conversation recomputes only that conversation's tuples, and a write to any
- * other column of `conversations` (the poller's `viewed`, a retitle) reaches
- * none. Its subject is anything naming the conversation as `id` (the params,
+ * conversation), its live tail (`conversationSessionTails`, its
+ * `claude_session_id`) and its working directory (`conversationWorkspaces`,
+ * its attempt's checkout — which names the projects dir the files are in) —
+ * so a session recorded on, or a tail written to, one conversation recomputes
+ * only that conversation's tuples, and a write to any other column of
+ * `conversations` (the poller's `viewed`, a retitle) reaches none. Its subject is anything naming the conversation as `id` (the params,
  * or a paged value's question).
  *
  * Spread into the value's `follows`, then hand `followed` to
@@ -33,6 +38,9 @@ export function transcriptChainFollows<S extends { readonly id: string }>(
     chainTail: follow(conversationSessionTailsServed, ({ id }) => ({
       ids: [id],
     })),
+    chainWorkspace: follow(conversationWorkspacesServed, ({ id }) => ({
+      ids: [id],
+    })),
   };
 }
 
@@ -40,6 +48,11 @@ export function transcriptChainFollows<S extends { readonly id: string }>(
 export function followedTranscriptChain(followed: {
   readonly chainSessions: readonly { readonly claudeSessionId: string }[];
   readonly chainTail: readonly { readonly claudeSessionId: string | null }[];
+  readonly chainWorkspace: readonly { readonly worktreePath: string }[];
 }): TranscriptChain {
-  return transcriptChainOf(followed.chainSessions, followed.chainTail[0]);
+  return transcriptChainOf(
+    followed.chainSessions,
+    followed.chainTail[0],
+    conversationWorkspaceOf(followed.chainWorkspace)?.worktreePath,
+  );
 }

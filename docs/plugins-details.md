@@ -14346,7 +14346,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `conversations/workspace` ×3
       - `infra/claude-cli/availability` ×3
       - `tasks/auto-start` ×3
-      - `conversations/session-chain` ×2
       - `database` ×2
       - `infra/endpoints` ×2
       - `infra/events` ×2
@@ -14354,9 +14353,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reports` ×2
       - `conversations/model-provider/catalog.getModelCatalog`
       - `conversations/preprompts.resolvePrepromptItem`
+      - `conversations/session-chain.recordSessionId`
       - `conversations/workspace/launch-option.getTaskWorkspace`
       - `database/fork-point.databaseForkedAt`
       - `infra/attachments.getAttachment`
+      - `infra/paths.claudeTranscriptPath`
       - `reports/engine.recordReport`
       - `shell/notifications.recordNotification`
       - `tasks/task-category.setTaskCategory`
@@ -20143,6 +20144,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `conversations/session-chain.conversationSessionsServed`
           - `tasks/tasks-core.conversationSessionTailsServed`
+          - `tasks/tasks-core.conversationWorkspacesServed`
         - Exports (types):
           - `ArchivedTranscript`
           - `TranscriptByteRead`
@@ -20254,13 +20256,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/file-watcher.defineFileWatcher`
           - `infra/file-watcher.FileWatcher`
           - `infra/paths.CLAUDE_PROJECTS_DIR`
+          - `infra/paths.claudeTranscriptPath`
           - `reports.ReportKind`
           - `reports/engine.DEFAULT_REPORT_DEBOUNCE_MS`
           - `reports/engine.recordReportDebounced`
-          - `tasks/tasks-core.getConversationClaudeSessionId`
+          - `tasks/tasks-core.getConversationTranscriptTail`
         - Exports (types):
-          - `AnchoredChain`
-          - `AnchoredEntry`
           - `PathsSnapshot`
           - `TranscriptSnapshot`
           - `WatchSpec`
@@ -20274,7 +20275,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readJsonlEvents`
           - `readJsonlEventsFromChain`
           - `refreshConversationChain`
-          - `resolveAnchoredChain`
+          - `reportForeignSession`
           - `resolveConversationTranscriptPaths`
           - `resolveTranscriptPathsOf`
           - `transcriptChainSignature`
@@ -20291,7 +20292,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/transcript-retention`
           - `debug/read-set`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/find-transcript-path.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/chain-signature.ts`, `server/internal/find-transcript-path.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
     - **`turn-ledger`** — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, confirmTurn (the agent's confirmation that it took a turn, applied to that row by the turn id it echoed, with the transcript line's uuid; resolvePromptSubmit is its temporary equality-matched fallback for an agent started before turn ids), Stop's and rewind's returnTurnByPromptUuid (the turn taken back, by its transcript line), the turn-ledger.turns live collection, the conversation.userTurnSent event (emitted once the agent confirmed a user's turn) and the 7-day retention sweep of settled rows.
       - Web:
         - Contributes: `IdKinds.Kind` "turn"
@@ -27614,7 +27615,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations` (3 debt)
               - `conversations/conversation-view/code` (2 debt)
               - `conversations/transcript-retention` (1 debt)
-              - `conversations/transcript-watcher` (5 debt)
+              - `conversations/transcript-watcher` (4 debt)
               - `conversations/workspace/scratch` (3 debt)
               - `conversations/workspace/worktree` (1 debt)
               - `database` (1 debt)
@@ -32814,6 +32815,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CLAUDE_PROJECTS_DIR`
           - `CLAUDE_SESSIONS_DIR`
           - `CLAUDE_USER_CONFIG`
+          - `claudeProjectDirName`
+          - `claudeTranscriptPath`
           - `DATA_DIR_KINDS`
           - `DATA_DIR_NAME`
           - `dataRoot`
@@ -32852,14 +32855,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `debug` ×8
           - `infra` ×6
           - `framework` ×5
           - `backup` ×4
+          - `conversations` ×3
           - `release` ×3
           - `build` ×2
-          - `conversations` ×2
           - `plugin-meta` ×2
           - `primitives` ×2
           - `apps/deploy/deployments`
@@ -32898,6 +32901,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CLAUDE_DIR`
           - `CLAUDE_PROJECTS_DIR`
           - `CLAUDE_SESSIONS_DIR`
+          - `claudeProjectDirName`
+          - `claudeTranscriptPath`
           - `DATA_DIR_KINDS`
           - `dataRoot`
           - `dataRootLayout`
@@ -54115,6 +54120,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getConversation`
           - `getConversationClaudeSessionId`
           - `getConversationRuntime`
+          - `getConversationTranscriptTail`
           - `getTask`
           - `getTaskDependencyIds`
           - `hasAttemptDelivery`

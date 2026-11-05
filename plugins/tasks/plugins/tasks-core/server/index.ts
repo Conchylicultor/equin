@@ -170,6 +170,7 @@ export {
   getConversation,
   getConversationRuntime,
   getConversationClaudeSessionId,
+  getConversationTranscriptTail,
   listHibernationCandidates,
   RECENT_GONE_LIMIT,
 } from "./internal/queries/conversations";

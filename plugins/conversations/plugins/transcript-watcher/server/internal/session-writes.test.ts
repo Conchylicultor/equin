@@ -5,7 +5,7 @@ import {
   onSessionTranscriptWritten,
   onTranscriptWritten,
   writtenOwnerSessionIds,
-  writtenSessionIds,
+  writtenSessions,
 } from "./session-writes";
 
 const PROJECTS = "/home/u/.claude/projects";
@@ -16,9 +16,9 @@ function ev(type: FileChangeEvent["type"], path: string): FileChangeEvent {
   return { type, path };
 }
 
-describe("writtenSessionIds", () => {
+describe("writtenSessions", () => {
   test("names top-level session transcripts created or appended to", () => {
-    const ids = writtenSessionIds(
+    const written = writtenSessions(
       [
         ev("create", `${PROJECTS}/-wt-a/${A}.jsonl`),
         ev("update", `${PROJECTS}/-wt-b/${B}.jsonl`),
@@ -26,11 +26,14 @@ describe("writtenSessionIds", () => {
       ],
       PROJECTS,
     );
-    expect([...ids].sort()).toEqual([A, B].sort());
+    expect(Object.fromEntries(written)).toEqual({
+      [A]: `${PROJECTS}/-wt-a/${A}.jsonl`,
+      [B]: `${PROJECTS}/-wt-b/${B}.jsonl`,
+    });
   });
 
   test("ignores deletions, sub-agent files and non-session names", () => {
-    const ids = writtenSessionIds(
+    const written = writtenSessions(
       [
         ev("delete", `${PROJECTS}/-wt-a/${A}.jsonl`),
         ev("create", `${PROJECTS}/-wt-a/${A}/subagents/agent-1.jsonl`),
@@ -39,14 +42,16 @@ describe("writtenSessionIds", () => {
       ],
       PROJECTS,
     );
-    expect(ids.size).toBe(0);
+    expect(written.size).toBe(0);
   });
 });
 
 describe("onSessionTranscriptWritten", () => {
   test("a batch reaches every listener once, until it unsubscribes", () => {
-    const heard: string[][] = [];
-    const off = onSessionTranscriptWritten((ids) => heard.push([...ids]));
+    const heard: [string, string][][] = [];
+    const off = onSessionTranscriptWritten((written) =>
+      heard.push([...written]),
+    );
     notifySessionTranscriptWrites(
       [
         ev("create", `${PROJECTS}/-wt-a/${A}.jsonl`),
@@ -61,7 +66,7 @@ describe("onSessionTranscriptWritten", () => {
       [ev("create", `${PROJECTS}/-wt-b/${B}.jsonl`)],
       PROJECTS,
     );
-    expect(heard).toEqual([[A]]);
+    expect(heard).toEqual([[[A, `${PROJECTS}/-wt-a/${A}.jsonl`]]]);
   });
 });
 

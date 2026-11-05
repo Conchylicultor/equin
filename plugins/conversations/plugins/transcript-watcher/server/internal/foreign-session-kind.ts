@@ -12,16 +12,16 @@ import {
 const FOREIGN_SESSION_NOTIF_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
 /**
- * The `conversation-foreign-session` report kind: a session id in one
- * conversation's chain that belongs to another conversation.
+ * The `conversation-foreign-session` report kind: a session id offered to, or
+ * recorded in, one conversation's chain that belongs elsewhere.
  *
- * Deduped per `(conversationId, foreignSessionId)` — the unit of repair is one
- * `conversation_sessions` row — so a chain that stays corrupted collapses to a
- * single task whose `count` is how many reads (or monitor ticks) saw it.
+ * Deduped per `(conversationId, foreignSessionId)`, so a standing condition
+ * collapses to a single task whose `count` is how many times it was seen.
  *
- * Variant `warning`: nothing crashes. The read path already refuses to merge the
- * foreign transcript, so the user sees a correct conversation; what is still
- * wrong is the stored row, and it stays wrong until somebody deletes it.
+ * Variant `warning`: nothing crashes. A `directory-mismatch` id is refused at
+ * adoption, and the read path only ever opens files in the conversation's own
+ * projects dir; what may still be wrong is a stored `shared-session-id` row,
+ * which stays wrong until somebody deletes it.
  */
 export const foreignSessionKind = ReportKind({
   kind: "conversation-foreign-session",
@@ -45,69 +45,96 @@ export const foreignSessionKind = ReportKind({
 
 function renderDescription(row: ReportRow, d: ForeignSessionPayload): string {
   const lines: string[] = [];
-  lines.push(
-    `Conversation \`${d.conversationId}\` has \`${d.foreignSessionId}\` in its ` +
-      `recorded session chain (\`conversation_sessions\`), but that session ` +
-      `belongs to a **different conversation**.`,
-  );
-  lines.push("");
-
   if (d.reason === "directory-mismatch") {
     lines.push(
-      `**How it was seen:** the read path resolved the id to a transcript in ` +
-        `\`${d.foreignDir}\`, while this conversation's own sessions live in ` +
-        `\`${d.anchorDir}\`. All of a conversation's sessions run in one ` +
-        `worktree (a fork must inherit its source's attempt), so two projects ` +
-        `directories in one chain can only mean mis-attribution.`,
+      `Conversation \`${d.conversationId}\` was offered session ` +
+        `\`${d.foreignSessionId}\`, whose transcript was written in ` +
+        `\`${d.foreignDir}\` — not in \`${d.anchorDir}\`, the projects dir ` +
+        `its working directory names. The status reconciler refused the id.`,
     );
+    lines.push("");
+    lines.push(
+      `**Two causes look like this.** (a) The runtime offered another ` +
+        `conversation's session (mis-attribution — all of a conversation's ` +
+        `sessions run in its one worktree). (b) Claude Code changed how it ` +
+        `names a projects dir after the cwd (\`claudeProjectDirName\`, ` +
+        `infra/paths): then EVERY new conversation is refused and reads empty, ` +
+        `so many of these at once, each with a plausible-looking dir, means (b) ` +
+        `— fix the encoding.`,
+    );
+    lines.push("");
+    lines.push(
+      `**Why (a) matters.** Adopting the id would make another agent's ` +
+        `transcript this conversation's tail: a rewind would cut it and ` +
+        `\`claude --resume\` would attach to it.`,
+    );
+    lines.push("");
   } else {
+    lines.push(
+      `Conversation \`${d.conversationId}\` has \`${d.foreignSessionId}\` in its ` +
+        `recorded session chain (\`conversation_sessions\`), but that session ` +
+        `belongs to a **different conversation**.`,
+    );
+    lines.push("");
     lines.push(
       `**How it was seen:** the same \`claude_session_id\` appears in the chain ` +
         `of ${d.otherConversationIds.length} other conversation(s): ` +
         `${d.otherConversationIds.map((id) => `\`${id}\``).join(", ")}. ` +
         `A Claude session belongs to exactly one conversation.`,
     );
+    lines.push("");
+    lines.push(
+      `**Why it matters.** The stored row does not self-heal: writes ` +
+        `target the chain tail, so while a foreign id is the tail, a rewind ` +
+        `cuts another agent's transcript, and \`claude --resume\` on the stored ` +
+        `\`conversations.claude_session_id\` attaches to that agent's session.`,
+    );
+    lines.push("");
   }
 
-  lines.push("");
-  lines.push(
-    `**Why it matters.** The read path drops the foreign file, so the ` +
-      `transcript renders correctly. The stored row does not self-heal: writes ` +
-      `target the chain tail, so while a foreign id is the tail, a rewind ` +
-      `cuts another agent's transcript, and \`claude --resume\` on the stored ` +
-      `\`conversations.claude_session_id\` attaches to that agent's session.`,
-  );
-  lines.push("");
   lines.push(`**Triage**`);
-  lines.push(
-    `1. Confirm both sides: ` +
-      `\`select conversation_id, claude_session_id, seen_at from ` +
-      `conversation_sessions where claude_session_id = ` +
-      `'${d.foreignSessionId}' order by seen_at\`.`,
-  );
-  lines.push(
-    `2. Decide which conversation genuinely ran the session (its transcript's ` +
-      `directory names the worktree).`,
-  );
-  lines.push(
-    `3. Repair through a guarded DML data migration scoped to the wrong ` +
-      `conversation alone — delete its \`conversation_sessions\` row and, if ` +
-      `\`conversations.claude_session_id\` still holds the foreign value, patch ` +
-      `it back to the real tail. \`conversation_sessions\` is append-only for ` +
-      `the application; a migration is the sanctioned repair path. See ` +
-      `\`research/2026-08-19-global-pane-session-ownership.md\` §4.`,
-  );
-  lines.push(
-    `4. Ask how it got in. A standing report here after the resolver fix (§1) ` +
-      `means a **new** adoption shape, not a regression on a known one.`,
-  );
-  lines.push("");
+  if (d.reason === "directory-mismatch") {
+    lines.push(
+      `1. Read the transcript's first \`cwd\` field: it is the directory the ` +
+        `session really ran in. Encoded (every non-alphanumeric → \`-\`), does ` +
+        `it give \`${d.foreignDir}\`'s name? If not, the encoding changed — (b).`,
+    );
+    lines.push(
+      `2. Otherwise find which conversation ran that cwd and why the runtime ` +
+        `reported its session for \`${d.conversationId}\` — (a).`,
+    );
+    lines.push("");
+  } else {
+    lines.push(
+      `1. Confirm both sides: ` +
+        `\`select conversation_id, claude_session_id, seen_at from ` +
+        `conversation_sessions where claude_session_id = ` +
+        `'${d.foreignSessionId}' order by seen_at\`.`,
+    );
+    lines.push(
+      `2. Decide which conversation genuinely ran the session (its transcript's ` +
+        `directory names the worktree).`,
+    );
+    lines.push(
+      `3. Repair through a guarded DML data migration scoped to the wrong ` +
+        `conversation alone — delete its \`conversation_sessions\` row and, if ` +
+        `\`conversations.claude_session_id\` still holds the foreign value, patch ` +
+        `it back to the real tail. \`conversation_sessions\` is append-only for ` +
+        `the application; a migration is the sanctioned repair path. See ` +
+        `\`research/2026-08-19-global-pane-session-ownership.md\` §4.`,
+    );
+    lines.push(
+      `4. Ask how it got in. A standing report here after the resolver fix (§1) ` +
+        `means a **new** adoption shape, not a regression on a known one.`,
+    );
+    lines.push("");
+  }
   lines.push(`**Conversation:** \`${d.conversationId}\``);
   lines.push(`**Foreign session:** \`${d.foreignSessionId}\``);
   lines.push(`**Reason:** ${d.reason}`);
   if (d.reason === "directory-mismatch") {
-    lines.push(`**Anchor dir:** \`${d.anchorDir}\``);
-    lines.push(`**Foreign dir:** \`${d.foreignDir}\``);
+    lines.push(`**Its own dir:** \`${d.anchorDir}\``);
+    lines.push(`**Born in:** \`${d.foreignDir}\``);
   } else {
     lines.push(
       `**Also held by:** ${d.otherConversationIds.map((id) => `\`${id}\``).join(", ")}`,

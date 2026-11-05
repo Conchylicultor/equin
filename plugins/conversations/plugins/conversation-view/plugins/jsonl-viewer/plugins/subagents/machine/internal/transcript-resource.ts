@@ -36,7 +36,7 @@ async function transcriptOf(
   chain: TranscriptChain,
 ): Promise<SubagentTranscript> {
   return subagentTranscriptMemo.get(transcriptMemoKey(id, { by, key }), {
-    input: await resolveTranscriptPathsOf(id, chain),
+    input: await resolveTranscriptPathsOf(chain),
   });
 }
 
@@ -71,7 +71,7 @@ export const subagentTranscriptServed = serveValue(subagentTranscript, {
     over: (followed) => followedTranscriptChain(followed),
     start: ({ id, by, key }, { over: chain, notify }) => {
       const ref = { by, key };
-      const parentPaths = () => resolveTranscriptPathsOf(id, chain);
+      const parentPaths = () => resolveTranscriptPathsOf(chain);
       const memoKey = transcriptMemoKey(id, ref);
       const unsub = watchPaths<SubagentTranscript>(
         {

@@ -8,16 +8,16 @@ import type { ForeignSessionPayload } from "@plugins/conversations/plugins/trans
  * File a `conversation-foreign-session` report, debounced per
  * `(conversationId, foreignSessionId)`.
  *
- * The debounce is not cosmetic rate-limiting: the caller is
- * `resolveTranscriptPathsOf`, which runs on every transcript read and
- * on every live push of an active conversation — several times a second while an
- * agent is talking — and a corrupt chain stays corrupt, so the condition is
- * persistent. `recordReport` is a DB upsert; without a gate in FRONT of it a
- * single corrupted chain would put the report engine on the hot read path.
+ * The debounce is not cosmetic rate-limiting: the caller is the status
+ * reconciler's transcript-write listener, which hears every append to the
+ * session's file — several times a second while an agent is talking — and the
+ * condition stands as long as that session runs. `recordReport` is a DB upsert;
+ * without a gate in FRONT of it one such session would put the report engine
+ * on the watcher's hot path.
  *
  * `recordReportDebounced` never throws into the caller and never hands it a
  * promise to wait on: a report that cannot be written must not be able to break
- * reading a conversation.
+ * the watcher's fan-out.
  */
 export function reportForeignSession(payload: ForeignSessionPayload): void {
   recordReportDebounced(

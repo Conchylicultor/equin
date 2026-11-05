@@ -256,7 +256,7 @@ takes a `debt` exemption on the check's id.
     - `conversations` (3 debt)
     - `conversations/conversation-view/code` (2 debt)
     - `conversations/transcript-retention` (1 debt)
-    - `conversations/transcript-watcher` (5 debt)
+    - `conversations/transcript-watcher` (4 debt)
     - `conversations/workspace/scratch` (3 debt)
     - `conversations/workspace/worktree` (1 debt)
     - `database` (1 debt)

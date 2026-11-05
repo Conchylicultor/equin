@@ -21,8 +21,8 @@ import { activityTargetsIn, scanActivityIn } from "./activity-scan";
 import { subagentDirsOf } from "./discovery";
 
 /** The conversation's sub-agent roots under the chain its value follows. */
-async function rootsOf(id: string, chain: TranscriptChain): Promise<string[]> {
-  return subagentDirsOf(await resolveTranscriptPathsOf(id, chain));
+async function rootsOf(chain: TranscriptChain): Promise<string[]> {
+  return subagentDirsOf(await resolveTranscriptPathsOf(chain));
 }
 
 // Pushed (the declaration's default) as a delivery choice: the payload is a
@@ -39,17 +39,11 @@ export const subagentActivityServed = serveValue(subagentActivity, {
   follows: (follow) => transcriptChainFollows(follow),
   loader: async ({ id }, { followed }) =>
     subagentActivityMemo.get(id, {
-      input: await resolveTranscriptPathsOf(
-        id,
-        followedTranscriptChain(followed),
-      ),
+      input: await resolveTranscriptPathsOf(followedTranscriptChain(followed)),
     }),
   revalidate: async ({ id }, { followed }) =>
     subagentActivityMemo.signature(id, {
-      input: await resolveTranscriptPathsOf(
-        id,
-        followedTranscriptChain(followed),
-      ),
+      input: await resolveTranscriptPathsOf(followedTranscriptChain(followed)),
     }),
   // Watch the conversation's `subagents/` directories while a card is on
   // screen. The start is synchronous (`watchPaths` hands back its unsubscribe
@@ -70,12 +64,12 @@ export const subagentActivityServed = serveValue(subagentActivity, {
           // exist. Routing by exact path would drop a sub-agent's file at the
           // moment it is created — which is every sub-agent, every time — and the
           // card would never appear.
-          resolve: async () => activityTargetsIn(await rootsOf(id, chain)),
+          resolve: async () => activityTargetsIn(await rootsOf(chain)),
           // The RAW scan, not the memo: the room IS the authoritative reader, and
           // it primes the memo with the pair it just produced. Reading through the
           // memo here would probe a second signature and prime under a different
           // one than the value was read at.
-          read: async () => scanActivityIn(id, await rootsOf(id, chain)),
+          read: async () => scanActivityIn(id, await rootsOf(chain)),
         },
         ({ value, signature }) => {
           // Prime BEFORE notify: the room holds both halves of the pair, so the

@@ -1,21 +1,20 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/core";
+import { dirname } from "node:path";
+import { claudeTranscriptPath } from "@plugins/infra/plugins/paths/core";
 
 /**
- * Where the film's session files go: one project folder of their own under
- * Claude Code's projects dir, which is where the desktop's transcript watcher
- * finds a session by id (`transcript-watcher`'s `findTranscriptPath`).
+ * Write one session's JSONL (overwriting the last seed's) where Claude Code
+ * would have written it for a session run in `cwd` — the projects dir its
+ * cwd names — which is where the desktop's transcript watcher looks it up
+ * (`transcript-watcher`'s `findTranscriptPath`).
  */
-const FILM_PROJECT_DIR = join(CLAUDE_PROJECTS_DIR, "-equin-promo-film");
-
-/** Write one session's JSONL (overwriting the last seed's). */
 export async function writeSessionFile(
+  cwd: string,
   sessionId: string,
   jsonl: string,
 ): Promise<string> {
-  await mkdir(FILM_PROJECT_DIR, { recursive: true });
-  const path = join(FILM_PROJECT_DIR, `${sessionId}.jsonl`);
+  const path = claudeTranscriptPath(cwd, sessionId);
+  await mkdir(dirname(path), { recursive: true });
   await writeFile(path, jsonl);
   return path;
 }

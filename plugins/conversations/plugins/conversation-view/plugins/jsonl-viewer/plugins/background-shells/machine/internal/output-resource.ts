@@ -135,17 +135,11 @@ export const shellOutputServed = serveValue(shellOutput, {
   follows: (follow) => transcriptChainFollows(follow),
   loader: async ({ id, shellId }, { followed }) =>
     outputMemo.get(memoKey(id, shellId), {
-      input: await resolveTranscriptPathsOf(
-        id,
-        followedTranscriptChain(followed),
-      ),
+      input: await resolveTranscriptPathsOf(followedTranscriptChain(followed)),
     }),
   revalidate: async ({ id, shellId }, { followed }) =>
     outputMemo.signature(memoKey(id, shellId), {
-      input: await resolveTranscriptPathsOf(
-        id,
-        followedTranscriptChain(followed),
-      ),
+      input: await resolveTranscriptPathsOf(followedTranscriptChain(followed)),
     }),
   // Watch the one file while anyone is looking at it (see shellOutputWatcher).
   // Re-started over a moved chain (a session switch), which re-resolves it.
@@ -155,7 +149,7 @@ export const shellOutputServed = serveValue(shellOutput, {
       const key = memoKey(id, shellId);
       const target = await resolveTarget(
         key,
-        await resolveTranscriptPathsOf(id, chain),
+        await resolveTranscriptPathsOf(chain),
       );
       // Unknown shell, or its directory is already gone: nothing to watch, and
       // the loader answers `unknown-shell` / `gone` on its own. The memo entry

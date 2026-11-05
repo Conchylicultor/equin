@@ -1,21 +1,28 @@
 /**
  * A conversation's transcript chain as recorded FACTS: the Claude session ids
- * its transcript is read from, oldest → newest. Which files those ids name is
- * the host's business (on the desktop, a projects-dir glob anchored to the
- * conversation's own directory — transcript-watcher's
- * `resolveTranscriptPathsOf`); the ids themselves come from Postgres, read by
- * a live value through its `follows` (transcript-source's
+ * its transcript is read from, oldest → newest, and the directory its agent
+ * runs in. Which files those name is the host's business (on the desktop, one
+ * `<projects>/<cwd encoded>/<id>.jsonl` per id — transcript-watcher's
+ * `resolveTranscriptPathsOf`); the facts themselves come from Postgres, read
+ * by a live value through its `follows` (transcript-source's
  * `transcriptChainFollows`) or by a plain caller from the tables directly.
  */
 export interface TranscriptChain {
   readonly sessionIds: readonly string[];
+  /**
+   * The conversation's working directory — its attempt's checkout, where every
+   * one of its sessions runs (a fork must keep its source's attempt) — or
+   * `null` when it has none yet, which names no file.
+   */
+  readonly cwd: string | null;
 }
 
 /**
- * The chain from its two facts: the recorded session chain (the
- * `conversation_sessions` rows, oldest → newest) and the conversation's live
+ * The chain from its facts: the recorded session chain (the
+ * `conversation_sessions` rows, oldest → newest), the conversation's live
  * tail (`conversations.claude_session_id` — `undefined` for no such
- * conversation, a `null` id for one with no session yet).
+ * conversation, a `null` id for one with no session yet) and its working
+ * directory (`""` / `null` / absent: none yet).
  *
  * **The one place the fallback rule lives.** The recorded chain ENRICHES a
  * guaranteed floor rather than replacing it: the status reconciler appends to
@@ -27,10 +34,15 @@ export interface TranscriptChain {
 export function transcriptChainOf(
   sessions: readonly { readonly claudeSessionId: string }[],
   tail: { readonly claudeSessionId: string | null } | undefined,
+  cwd: string | null | undefined,
 ): TranscriptChain {
+  const where = cwd ? cwd : null;
   if (sessions.length > 0) {
-    return { sessionIds: sessions.map((s) => s.claudeSessionId) };
+    return {
+      sessionIds: sessions.map((s) => s.claudeSessionId),
+      cwd: where,
+    };
   }
   const id = tail?.claudeSessionId;
-  return { sessionIds: id ? [id] : [] };
+  return { sessionIds: id ? [id] : [], cwd: where };
 }

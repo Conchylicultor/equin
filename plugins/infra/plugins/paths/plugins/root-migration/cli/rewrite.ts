@@ -104,11 +104,3 @@ export function cacheEntryOf(rel: string): string | null {
 export function looksLikeText(bytes: Uint8Array): boolean {
   return !bytes.subarray(0, 8192).includes(0);
 }
-
-/**
- * Claude Code's name for a session's transcript dir: its cwd with every
- * character outside `[A-Za-z0-9]` replaced by `-`.
- */
-export function claudeProjectDirName(cwd: string): string {
-  return cwd.replace(/[^a-zA-Z0-9]/g, "-");
-}

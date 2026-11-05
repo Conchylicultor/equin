@@ -6,7 +6,7 @@ import { conversationsEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
 
 /**
  * One conversation's usage totals — the conversation's own transcripts (every
- * session of its anchored chain) plus every sub-agent's, workflow agents
+ * session of its resolved chain) plus every sub-agent's, workflow agents
  * included. Stored in the `conversations_ext_usage` extension table
  * (`server/internal/tables.ts`), recomputed from the per-file scan state by
  * `syncConversationUsage`.

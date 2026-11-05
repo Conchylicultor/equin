@@ -10,7 +10,7 @@ session chain on disk — and `machine/` provides `transcript-source`'s
 
 One `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers all active conversations. A per-conversation room resolves the conversation's **session chain** — every JSONL file it has run under, oldest → newest — and registers all of them in a reverse index for O(1) dispatch. No timer: when the watch reports dropped events (`onLost`), every room re-resolves.
 
-**The chain, not one file.** Claude Code relocates a live session into a new id (a fork copies its ancestor's lines; a fresh daemon-hosted session inherits nothing). `resolveConversationTranscriptPaths(conversationId)` composes the recorded chain ([`session-chain`](../session-chain)) with the projects-dir glob (`findTranscriptPath`) and is the **only** sanctioned way to go from a conversation to its files — for a caller outside any live value. A served value FOLLOWS the chain's facts (transcript-source's `transcriptChainFollows`) and resolves them with `resolveTranscriptPathsOf(conversationId, chain)`, the same anchored glob over the filesystem alone, so its Postgres read is routed per conversation (the desktop `TranscriptSource` provider takes the chain the same way). It returns `string[]`: empty means "nothing on disk yet"; a DB or glob failure throws. Reads go through `readJsonlEventsFromChain` / `readTurnsFromChain`, which merge the chain and dedup by `uuid`.
+**The chain, not one file.** Claude Code relocates a live session into a new id (a fork copies its ancestor's lines; a fresh daemon-hosted session inherits nothing). `resolveConversationTranscriptPaths(conversationId)` composes the recorded chain ([`session-chain`](../session-chain)) with the per-session lookup (`findTranscriptPath(cwd, sessionId)`) and is the **only** sanctioned way to go from a conversation to its files — for a caller outside any live value. A served value FOLLOWS the chain's facts (transcript-source's `transcriptChainFollows`: the session ids and the conversation's working directory) and resolves them with `resolveTranscriptPathsOf(chain)`, the same lookup over the filesystem alone, so its Postgres read is routed per conversation (the desktop `TranscriptSource` provider takes the chain the same way). It returns `string[]`: empty means "nothing on disk yet"; a DB or filesystem failure throws. Reads go through `readJsonlEventsFromChain` / `readTurnsFromChain`, which merge the chain and dedup by `uuid`.
 
 **Writes go to the tail only.** `paths.at(-1)` is the live file `claude --resume` appends to. Anything destructive (`rewindLastUserTurn`) must target it and nothing else — truncating an ancestor corrupts the history the read path merges.
 
@@ -20,36 +20,40 @@ One `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers all active conversations. A p
 
 **Restart recovery**: room creation triggers an immediate seed read, so any events that landed during server downtime are delivered to subscribers on reconnect. `turn-emitter`'s `hasPendingTrigger` logic hooks into this seed callback.
 
-## One conversation, one projects directory
+## One conversation, one projects directory — looked up, never searched
 
-A chain is a list of session ids *someone else* recorded, and it can name another
-conversation's session. `resolveAnchoredChain(sessionIds)` (`anchor.ts`) is the
-guard: the **first id that resolves anchors** the conversation to that
-`~/.claude/projects/<dir>/`, and anything resolving elsewhere is `foreign`.
-`resolveConversationTranscriptPaths` returns only `kept`, so a foreign entry can
-neither be merged into the transcript nor become the write tail (which
-`rewindLastUserTurn` truncates — a foreign tail is a Stop button that destroys
-another agent's live file).
-
-The invariant: **all of a conversation's sessions run in one worktree** — enforced
-by `createConversation`'s `forkFromConversationId` branch
+Claude Code files a session's transcript under `~/.claude/projects/<dir>/`, the
+dir named after the session's cwd (`claudeProjectDirName`, `infra/paths` — the
+one copy of that encoding). **All of a conversation's sessions run in one
+worktree** — enforced by `createConversation`'s `forkFromConversationId` branch
 (`conversations/server/internal/lifecycle.ts`), which rejects a fork whose
-`attemptId` differs from the source's and then takes the source's attempt.
+`attemptId` differs from the source's and then takes the source's attempt — so
+`findTranscriptPath(cwd, sessionId)` is one `access` of
+`claudeTranscriptPath(worktreePath, sessionId)`, and a chain resolves only
+to its own conversation's files. A chain entry naming another conversation's
+session is simply not found, so it can neither be merged into the transcript
+nor become the write tail (which `rewindLastUserTurn` truncates — a foreign tail
+is a Stop button that destroys another agent's live file).
 
-**Do not replace the anchor with a derivation.** Deriving the expected dir from
-`attempts.worktree_path` through Claude's cwd→dirname encoding (`/`, `_`, `.` →
-`-`) looks tighter, but nothing in this repo re-implements that encoding, so
-nothing would notice if Claude changed it — and the day it did, it would match
-nothing and blank *every* conversation. The anchor's worst failure is resolving
-one fewer id, which this path already does daily for GC'd transcripts.
+**It used to be a search.** Each id was globbed (`*/<id>.jsonl`) over every
+projects dir — ~1,700 on a busy host — and a miss (every chain id whose
+transcript retention had removed: most of them) paid it every time; on
+2026-11-04 that was 6+ minutes a day of `fs-glob` waits behind the status
+reconciler and room resolves. The search also needed its own ownership guard
+(an anchor dir, a foreign partition) that the lookup gets for free.
 
-A refusal files a `conversation-foreign-session` report (kind + emitter in
-`server/internal/`, schema in `core/`, renderer in `web/`), debounced 5 min per
-`(conversation, session)` — the read path runs on every push, so the debounce is
-in *front* of `recordReport`, and the emitter never throws into the read. The
-read self-heals; the DB row does not, which is what the report is for. (Its
-`shared-session-id` arm was filed by the retired `debug/session-divergence`
-detector; old rows still render.) Design:
+**What could break it, and how we'd hear.** If Claude Code ever named the dir
+differently, every new transcript would be unfindable. The status reconciler
+watches for exactly that: it adopts a session only once its transcript exists
+at the expected path, and waits on the transcript's birth
+(`onSessionTranscriptWritten`, which hands each written session's file); a
+session born anywhere else is filed as a `conversation-foreign-session` report
+(`directory-mismatch`: another conversation's session offered to this one — or,
+when many arrive at once, the encoding moved). The kind lives in
+`server/internal/`, schema in `core/`, renderer in `web/`, debounced 5 min per
+`(conversation, session)` in front of `recordReport`. (Its `shared-session-id`
+arm was filed by the retired `debug/session-divergence` detector; old rows
+still render.) Design:
 [`research/2026-08-19-global-pane-session-ownership.md`](../../../../research/2026-08-19-global-pane-session-ownership.md).
 
 ## The chain signature, and why a listener gets `{ events, signature }`
@@ -102,13 +106,12 @@ memo degrades to a full chain re-read on every push.
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/paths.CLAUDE_PROJECTS_DIR`
+    - `infra/paths.claudeTranscriptPath`
     - `reports.ReportKind`
     - `reports/engine.DEFAULT_REPORT_DEBOUNCE_MS`
     - `reports/engine.recordReportDebounced`
-    - `tasks/tasks-core.getConversationClaudeSessionId`
+    - `tasks/tasks-core.getConversationTranscriptTail`
   - Exports (types):
-    - `AnchoredChain`
-    - `AnchoredEntry`
     - `PathsSnapshot`
     - `TranscriptSnapshot`
     - `WatchSpec`
@@ -122,7 +125,7 @@ memo degrades to a full chain re-read on every push.
     - `readJsonlEvents`
     - `readJsonlEventsFromChain`
     - `refreshConversationChain`
-    - `resolveAnchoredChain`
+    - `reportForeignSession`
     - `resolveConversationTranscriptPaths`
     - `resolveTranscriptPathsOf`
     - `transcriptChainSignature`
@@ -139,6 +142,6 @@ memo degrades to a full chain re-read on every push.
     - `conversations/transcript-retention`
     - `debug/read-set`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/find-transcript-path.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/chain-signature.ts`, `server/internal/find-transcript-path.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
 
 <!-- AUTOGENERATED:END -->

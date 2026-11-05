@@ -14,6 +14,8 @@ export {
   CLAUDE_PROJECTS_DIR,
   CLAUDE_USER_CONFIG,
   CLAUDE_SESSIONS_DIR,
+  claudeProjectDirName,
+  claudeTranscriptPath,
   isRelease,
   isHostSingleton,
   releaseIdentity,

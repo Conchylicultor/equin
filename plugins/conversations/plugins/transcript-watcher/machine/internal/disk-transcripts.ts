@@ -73,10 +73,10 @@ const diskImageIo: TranscriptImageIo = {
  * from the line (or file) its key names.
  */
 export const diskTranscripts: TranscriptSourceImpl = {
-  signature: async (id, chain) =>
-    transcriptChainSignature(await resolveTranscriptPathsOf(id, chain)),
-  events: async (id, chain) =>
-    readJsonlEventsFromChain(await resolveTranscriptPathsOf(id, chain)),
+  signature: async (_id, chain) =>
+    transcriptChainSignature(await resolveTranscriptPathsOf(chain)),
+  events: async (_id, chain) =>
+    readJsonlEventsFromChain(await resolveTranscriptPathsOf(chain)),
   watch: watchTranscript,
   image: (key) => readImageKey(key, diskImageIo),
 };

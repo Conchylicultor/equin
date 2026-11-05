@@ -60,6 +60,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
   - Uses:
     - `conversations/session-chain.conversationSessionsServed`
     - `tasks/tasks-core.conversationSessionTailsServed`
+    - `tasks/tasks-core.conversationWorkspacesServed`
   - Exports (types):
     - `ArchivedTranscript`
     - `TranscriptByteRead`

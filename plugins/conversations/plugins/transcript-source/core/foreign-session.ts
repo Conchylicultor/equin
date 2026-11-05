@@ -2,15 +2,17 @@ import { z } from "zod";
 
 /**
  * The jsonb payload for a `conversation-foreign-session` report: a session id
- * sitting in one conversation's chain that demonstrably belongs to another.
+ * offered to, or sitting in, one conversation's chain that demonstrably belongs
+ * to another.
  *
  * Two arms, because there are two independent ways to see the same corruption
  * and they know different things:
  *
- * - `directory-mismatch` — the read path resolved the id to a transcript in a
- *   different `~/.claude/projects/<dir>/` than the one anchoring this
- *   conversation. It knows both directories and nothing about the other
- *   conversation (a directory does not name its owner).
+ * - `directory-mismatch` — the id's transcript was written in a different
+ *   `~/.claude/projects/<dir>/` than the one this conversation's working
+ *   directory names (the status reconciler sees it when the session the runtime
+ *   offered it is born; it then refuses the id). It knows both directories and
+ *   nothing about the other conversation (a directory does not name its owner).
  * - `shared-session-id` — a pure-SQL detector found one `claude_session_id` in
  *   two conversations' chains. It knows exactly who else holds the id and
  *   touches no filesystem at all, so it works for hibernated conversations
@@ -30,7 +32,7 @@ export const ForeignSessionPayloadSchema = z.discriminatedUnion("reason", [
     foreignSessionId: z.string(),
     /** The projects dir the foreign id's transcript actually lives in. */
     foreignDir: z.string(),
-    /** The projects dir the conversation's first resolvable session anchored. */
+    /** The projects dir this conversation's working directory names. */
     anchorDir: z.string(),
   }),
   z.object({

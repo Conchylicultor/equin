@@ -140,6 +140,7 @@ export async function seedPromoFilm(): Promise<PromoFilmSeedReport> {
         ? practiceTurns(runWorkspace(run), readPiano)
         : briefTurns(run);
     const path = await writeSessionFile(
+      runWorkspace(run),
       run.sessionId,
       transcriptJsonl(run, turns, runWorkspace(run), now),
     );

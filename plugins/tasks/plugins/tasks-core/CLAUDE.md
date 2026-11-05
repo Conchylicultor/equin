@@ -455,6 +455,7 @@ serves them.
     - `getConversation`
     - `getConversationClaudeSessionId`
     - `getConversationRuntime`
+    - `getConversationTranscriptTail`
     - `getTask`
     - `getTaskDependencyIds`
     - `hasAttemptDelivery`

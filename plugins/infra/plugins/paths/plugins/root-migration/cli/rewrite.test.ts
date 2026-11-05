@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
   cacheEntryOf,
-  claudeProjectDirName,
   isHistoryRecord,
   rewriteDbValue,
   rewriteText,
@@ -62,10 +61,4 @@ test("cacheEntryOf", () => {
   );
   expect(cacheEntryOf("cache/check")).toBe("cache/check");
   expect(cacheEntryOf("state/x")).toBeNull();
-});
-
-test("claudeProjectDirName", () => {
-  expect(claudeProjectDirName("/home/u/.equin/state/workspaces/att-1")).toBe(
-    "-home-u--equin-state-workspaces-att-1",
-  );
 });

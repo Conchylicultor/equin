@@ -59,7 +59,6 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `conversations/workspace` ×3
     - `infra/claude-cli/availability` ×3
     - `tasks/auto-start` ×3
-    - `conversations/session-chain` ×2
     - `database` ×2
     - `infra/endpoints` ×2
     - `infra/events` ×2
@@ -67,9 +66,11 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `reports` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
     - `conversations/preprompts.resolvePrepromptItem`
+    - `conversations/session-chain.recordSessionId`
     - `conversations/workspace/launch-option.getTaskWorkspace`
     - `database/fork-point.databaseForkedAt`
     - `infra/attachments.getAttachment`
+    - `infra/paths.claudeTranscriptPath`
     - `reports/engine.recordReport`
     - `shell/notifications.recordNotification`
     - `tasks/task-category.setTaskCategory`

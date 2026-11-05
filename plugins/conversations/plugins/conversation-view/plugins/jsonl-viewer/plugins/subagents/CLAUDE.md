@@ -22,30 +22,30 @@ renderer already draws them. And **nothing holds the files open** — Claude Cod
 opens, appends and closes per line — so the existing recursive watcher over
 `CLAUDE_PROJECTS_DIR` already delivers every append.
 
-## Discovery derives from the anchored chain, and must keep doing so
+## Discovery derives from the resolved chain, and must keep doing so
 
 A sub-agent directory is a kept session transcript's path, minus `.jsonl`, plus
 `/subagents` (`subagentDirsOf`). The paths come from
-`resolveTranscriptPathsOf`, which returns only what `resolveAnchoredChain`
-**kept**, over the chain the served values FOLLOW (transcript-source's
-`transcriptChainFollows`): the loaders, and the watcher rooms from the rows
-their start was handed (a recorded session moves the followed rows, and the
-framework restarts the room over the new chain). The resolved paths are the
-memos' input, so nothing in this plugin reads Postgres.
+`resolveTranscriptPathsOf`, which looks each id up only in the projects dir the
+conversation's own working directory names, over the chain the served values
+FOLLOW (transcript-source's `transcriptChainFollows`): the loaders, and the
+watcher rooms from the rows their start was handed (a recorded session moves
+the followed rows, and the framework restarts the room over the new chain). The
+resolved paths are the memos' input, so nothing in this plugin reads Postgres.
 
 That is the whole ownership story, and it is load-bearing. A session chain is a
 list of ids *somebody else* recorded, and it can name another conversation's
-session; the anchor guard is what refuses those
+session; resolving in the conversation's own dir is what drops those
 ([`transcript-watcher/CLAUDE.md`](../../../../../transcript-watcher/CLAUDE.md)).
-Deriving from the kept entries means a sub-agent directory is unreachable unless
-its parent transcript already passed that guard — for free, with nothing to
-remember.
+Deriving from the resolved paths means a sub-agent directory is unreachable
+unless its parent transcript sits in the conversation's own dir — for free,
+with nothing to remember.
 
-**Never re-resolve from raw session ids.** Globbing each id independently would
-resolve the foreign entry too, and we would scan — and stream — another agent's
-sub-agent transcripts. That is exactly the cross-conversation leak
+**Never re-resolve from raw session ids.** Searching for each id in every
+projects dir would find the foreign entry too, and we would scan — and stream —
+another agent's sub-agent transcripts. That is exactly the cross-conversation leak
 [`research/2026-08-19-global-pane-session-ownership.md`](../../../../../../../../research/2026-08-19-global-pane-session-ownership.md)
-closed. A test pins it: a session the anchor dropped never has its `subagents/`
+closed. A test pins it: a session the resolve dropped never has its `subagents/`
 directory scanned, even with its files sitting right there on disk.
 
 ## The dispatch has to be by DIRECTORY, not by path
@@ -366,7 +366,7 @@ A `Workflow` tool call runs its agents somewhere else on disk:
 
 **Discovered below the same roots, never resolved from elsewhere.**
 `listSubagentEntries` walks `<root>/workflows/wf_*` under each `subagentDirsOf`
-root and tags those entries with their `workflowRunId`, so the anchored-chain
+root and tags those entries with their `workflowRunId`, so the resolved-chain
 ownership above still holds. The watcher routes by exact parent directory, so
 `subagentWatchDirs` adds `workflows/` and every run folder to the watched set —
 without them a write inside a run wakes nothing. Each run's `journal.jsonl` is
@@ -427,10 +427,10 @@ created heals on the next scan.
 
 ## Every reader takes its directories as an argument
 
-`subagentDirsOf(parentPaths)` — over the anchored paths above — is the ONE
+`subagentDirsOf(parentPaths)` — over the resolved paths above — is the ONE
 place that decides which directories this plugin may look at.
 `listSubagentEntries`, `scanActivityIn` and `findSubagentIn` all take the
-directory list, and every reader above them takes the parent's anchored paths,
+directory list, and every reader above them takes the parent's resolved paths,
 never a conversation id it would resolve itself.
 
 That keeps the ownership boundary structural rather than conventional: nothing

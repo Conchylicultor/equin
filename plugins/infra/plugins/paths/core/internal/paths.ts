@@ -656,6 +656,42 @@ export function webDistDir(): AppPath {
 export const CLAUDE_DIR = asAppPath(join(HOME_DIR, ".claude"));
 export const CLAUDE_PROJECTS_DIR = joinAppPath(CLAUDE_DIR, "projects");
 export const CLAUDE_SESSIONS_DIR = joinAppPath(CLAUDE_DIR, "sessions");
+
+// Claude Code caps a projects dir name at this many characters, then appends
+// a hash of the whole cwd so two long cwds sharing a prefix stay apart.
+const CLAUDE_PROJECT_DIR_MAX = 200;
+
+/**
+ * Claude Code's name for the projects dir a session's transcripts go in: its
+ * cwd with every character outside `[A-Za-z0-9]` replaced by `-` — past 200
+ * characters, the first 200 then `-<hash>` (the cwd's 32-bit `h*31+c` string
+ * hash, absolute, base 36), as Claude Code itself spells it. The one copy of
+ * that encoding — a transcript is found by it (`claudeTranscriptPath`) and a
+ * moved data root renames dirs by it (`paths/root-migration`).
+ */
+export function claudeProjectDirName(cwd: string): string {
+  const name = cwd.replace(/[^a-zA-Z0-9]/g, "-");
+  if (name.length <= CLAUDE_PROJECT_DIR_MAX) return name;
+  let hash = 0;
+  for (let i = 0; i < cwd.length; i++)
+    hash = ((hash << 5) - hash + cwd.charCodeAt(i)) | 0;
+  return `${name.slice(0, CLAUDE_PROJECT_DIR_MAX)}-${Math.abs(hash).toString(36)}`;
+}
+
+/**
+ * Where Claude Code writes the transcript of `sessionId` run in `cwd`. An
+ * empty `cwd` names no directory, so it throws rather than answer a path in
+ * the projects dir itself.
+ */
+export function claudeTranscriptPath(cwd: string, sessionId: string): AppPath {
+  if (cwd === "")
+    throw new Error(`claudeTranscriptPath: no cwd for session ${sessionId}`);
+  return joinAppPath(
+    CLAUDE_PROJECTS_DIR,
+    claudeProjectDirName(cwd),
+    `${sessionId}.jsonl`,
+  );
+}
 // Claude Code's user config file (beside `~/.claude/`, not in it): per-directory
 // state such as trust answers (`projects[<dir>].hasTrustDialogAccepted`).
 export const CLAUDE_USER_CONFIG = asAppPath(join(HOME_DIR, ".claude.json"));

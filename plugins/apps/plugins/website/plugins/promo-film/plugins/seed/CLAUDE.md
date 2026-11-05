@@ -32,9 +32,10 @@ seed` → record, and get the same state. Design:
   (Prototypes) — or the rows its own mutations write (tasks, attempts and
   conversations backdated as rows, as Lumen does).
 - **The conversation is an ordinary one**: `waiting`, never ended or
-  hibernated, its transcript a Claude Code session file under
-  `~/.claude/projects/-equin-promo-film/<session>.jsonl` (where the desktop's
-  transcript watcher finds a session by id). Its `read_page` call is RUN
+  hibernated, its transcript a Claude Code session file under the projects
+  dir its attempt's worktree names (`claudeTranscriptPath(worktree, session)`,
+  where Claude Code would have written it and the desktop's transcript watcher
+  looks it up). Its `read_page` call is RUN
   through the real tool at seed. Its attempt's worktree is a real folder
   (`promoFilmWorkspaceDir`, `~/.equin/cache/promo-film/att-…/`) holding the
   files the transcript leaves: the notes, and the recital piece's MIDI

@@ -91,16 +91,17 @@ export function subagentDirOf(transcriptPath: string): string {
  * The `subagents/` directories of one conversation — **the one place that
  * decides what this plugin may look at.**
  *
- * Derived from the conversation's ALREADY-ANCHORED session files — only ever
+ * Derived from the conversation's ALREADY-RESOLVED session files — only ever
  * `resolveTranscriptPathsOf` / `resolveConversationTranscriptPaths` output,
- * which return only what `resolveAnchoredChain` kept. That derivation is the whole ownership story. A session chain is a list
- * of ids *somebody else* recorded and can name another conversation's session;
- * deriving from the kept entries means a sub-agent directory is unreachable
- * unless its parent transcript already passed the one-conversation-one-projects-
- * dir guard — for free, with nothing to remember.
+ * which look each id up only in the projects dir the conversation's working
+ * directory names. That derivation is the whole ownership story. A session
+ * chain is a list of ids *somebody else* recorded and can name another
+ * conversation's session; deriving from the resolved paths means a sub-agent
+ * directory is unreachable unless its parent transcript sits in the
+ * conversation's own projects dir — for free, with nothing to remember.
  *
- * **Never re-resolve from raw session ids.** Globbing each id independently would
- * resolve the foreign entry too, and we would scan — and stream — another
+ * **Never re-resolve from raw session ids.** Searching every projects dir for
+ * each id would find the foreign entry too, and we would scan — and stream — another
  * agent's sub-agent transcripts. That is the cross-conversation leak
  * `research/2026-08-19-global-pane-session-ownership.md` closed.
  *
@@ -174,8 +175,8 @@ function workflowsDirOf(root: string): string {
  * Every `Workflow` run folder under the given roots, in a stable order.
  *
  * Walked BELOW each root and nowhere else: the roots are `subagentDirs`'
- * anchored output, so a run folder is reachable only if its session already
- * passed the ownership guard. A `wf_*` name that is not a directory is skipped
+ * output, so a run folder is reachable only if its session resolved in the
+ * conversation's own projects dir. A `wf_*` name that is not a directory is skipped
  * by its own empty listing, not by a stat per name.
  */
 export async function listWorkflowRuns(

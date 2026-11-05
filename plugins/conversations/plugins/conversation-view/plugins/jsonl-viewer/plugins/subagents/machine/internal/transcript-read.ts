@@ -20,7 +20,7 @@ import { requestedNameFor } from "./agent-calls";
  * is memoized on the parent chain's signature, so it costs one read per parent
  * write, not one per sub-agent append.
  *
- * `parentPaths` is the parent's anchored transcript, resolved by the caller
+ * `parentPaths` is the parent's resolved transcript, resolved by the caller
  * from the chain it follows (`resolveTranscriptPathsOf`).
  */
 async function lookup(
@@ -99,7 +99,7 @@ export async function readSubagentTranscriptIn(
 }
 
 /**
- * `readSubagentTranscriptIn`, bound to a conversation's own anchored
+ * `readSubagentTranscriptIn`, bound to a conversation's own resolved
  * directories — the parent's transcript the caller resolved from its followed
  * chain.
  */
