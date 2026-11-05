@@ -66,6 +66,75 @@ export function onBeforeFinish(fn: () => Promise<void>): () => void {
   };
 }
 
+/**
+ * The reports whose `finish()` has not run yet, newest last — so a run that
+ * ends on a throw (`failRun`) still ends through the script's own report, with
+ * the checks it counted so far.
+ */
+const openReports: Report[] = [];
+
+/**
+ * End the run on a throw that escaped the script — never returns.
+ *
+ * An uncaught throw (a Playwright `TimeoutError`, say) used to end the process
+ * with a stack trace and no verdict: no FAILURES line, no count, nothing a
+ * batch runner grepping for the verdict could see. And `withBrowser`'s
+ * `finally` then ran the teardown, so a teardown that threw too (a recording
+ * that could not be filed) REPLACED the script's error — the transcript showed
+ * only the teardown's.
+ *
+ * So the throw is recorded FIRST, as a failure of the newest open report (one
+ * made here when the script has none), and the run ends through its
+ * `finish()`: the registered teardown drains after it, a teardown error is a
+ * second FAIL line under it, and the verdict counts both with every check made
+ * so far. `label` names what threw.
+ */
+export async function failRun(
+  err: unknown,
+  label = "script threw",
+): Promise<never> {
+  const r = openReports.at(-1) ?? report();
+  recordError(label, err, (name) => r.fail(name));
+  return r.finish();
+}
+
+/**
+ * Record a thrown error as one failure named by `label` and the error itself
+ * (`script threw: TimeoutError: waitFor: Timeout 1000ms exceeded.`), so the
+ * verdict's list says what threw, then print the rest of its message and its
+ * frames under it: this replaces the runtime's own uncaught-error print.
+ */
+function recordError(
+  label: string,
+  err: unknown,
+  fail: (name: string) => void,
+): void {
+  if (!(err instanceof Error)) {
+    fail(`${label}: ${String(err)}`);
+    return;
+  }
+  // A Playwright message runs on for lines (its call log): its first line
+  // names the failure, the rest is detail.
+  const [headline = "", ...detail] = err.message.split("\n");
+  fail(`${label}: ${err.name}: ${headline}`);
+  const frames = (err.stack ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("at "));
+  for (const line of [...detail, ...frames]) {
+    if (line.trim() !== "") console.log(`      ${line.trim()}`);
+  }
+  // A wrapper's cause is usually the root of it: print the chain.
+  for (let cause = err.cause; cause !== undefined;) {
+    const head =
+      cause instanceof Error
+        ? `${cause.name}: ${cause.message}`
+        : String(cause);
+    console.log(`      caused by ${head.split("\n").join("\n      ")}`);
+    cause = cause instanceof Error ? cause.cause : undefined;
+  }
+}
+
 function watchAsyncFailures(): void {
   if (watchingAsyncFailures) return;
   watchingAsyncFailures = true;
@@ -126,7 +195,7 @@ export function report(title?: string): Report {
     console.log(`FAIL  ${name}${detail ? ` — ${detail}` : ""}`);
   };
 
-  return {
+  const self: Report = {
     failures,
 
     ok(name, condition, detail) {
@@ -166,6 +235,8 @@ export function report(title?: string): Report {
     },
 
     async finish(): Promise<never> {
+      const open = openReports.indexOf(self);
+      if (open >= 0) openReports.splice(open, 1);
       // Registered teardown first, and its failures are FAILURES. A revert that
       // could not restore the user's config must not be followed by ALL CHECKS
       // PASSED — same reasoning as asyncFailures below: a green verification
@@ -178,10 +249,7 @@ export function report(title?: string): Report {
         try {
           await teardown();
         } catch (err) {
-          record(
-            "harness teardown",
-            err instanceof Error ? err.message : String(err),
-          );
+          recordError("harness teardown", err, (name) => record(name));
         }
       }
 
@@ -215,4 +283,6 @@ export function report(title?: string): Report {
       process.exit(1);
     },
   };
+  openReports.push(self);
+  return self;
 }

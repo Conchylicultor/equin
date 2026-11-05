@@ -30,7 +30,7 @@ import {
 import { arg, flag, usage } from "./args";
 import { capture, type Captured } from "./capture";
 import { detectOsColorScheme, type ColorScheme } from "./color-scheme";
-import { onBeforeFinish } from "./report";
+import { failRun, onBeforeFinish } from "./report";
 import { createRecorder } from "./recorder";
 import { repairAgentWrites, settleAgentWrites } from "./agent-writes";
 import { assertDeployIdentity } from "./deploy-identity";
@@ -257,9 +257,54 @@ export async function withBrowser<T>(
       usage(
         "this script needs a steady caret (withBrowser steadyCaret: true); --attach drives the agent browser, which is not launched that way.",
       );
-    return withSteadyCaret(() => runBrowser(fn, opts));
   }
-  return runBrowser(fn, opts);
+  // A throw out of the run — the script's own, or the harness's before it —
+  // ends with a verdict, never a bare stack trace: `failRun` records it, then
+  // drains the teardown it left registered, so a teardown error is reported
+  // after it rather than instead of it.
+  try {
+    return await (opts.steadyCaret
+      ? withSteadyCaret(() => runBrowser(fn, opts))
+      : runBrowser(fn, opts));
+  } catch (err) {
+    // After `withSteadyCaret` has put the caret back: `failRun` exits.
+    return await (err instanceof TeardownError
+      ? failRun(err.error, "harness teardown")
+      : failRun(err));
+  }
+}
+
+/** A teardown that threw on the return path, carried up to `withBrowser`. */
+class TeardownError extends Error {
+  constructor(readonly error: unknown) {
+    super("harness teardown failed", { cause: error });
+  }
+}
+
+/**
+ * Run the script with its teardown registered (see `onBeforeFinish`), and on a
+ * return, tear down here. On a throw the teardown stays registered and the
+ * throw goes up to `withBrowser`, whose `failRun` records it FIRST and then
+ * drains the teardown — a teardown in a `finally` here would run, and could
+ * throw, before the script's error was ever reported.
+ */
+async function runWithTeardown<T>(
+  fn: () => Promise<T>,
+  teardown: () => Promise<void>,
+): Promise<T> {
+  // `finish()` ends in `process.exit()`, which skips everything after it — and
+  // 86 of the 136 scripts here call `finish()` INSIDE the callback. So
+  // registering the teardown is what makes it run for them. (That is also why
+  // `browser.close()` lives in the teardown: it was being skipped for those
+  // same scripts, leaking a Chromium process per run.)
+  const release = onBeforeFinish(teardown);
+  const result = await fn();
+  // Deregister first: whichever path fires, the teardown runs exactly once.
+  release();
+  await teardown().catch((err: unknown) => {
+    throw new TeardownError(err);
+  });
+  return result;
 }
 
 async function runBrowser<T>(
@@ -347,59 +392,49 @@ async function runBrowser<T>(
     if (recording !== null) throw recording.err;
   };
 
-  // `finish()` ends in `process.exit()`, which skips `finally` — and 86 of the
-  // 136 scripts here call `finish()` INSIDE this callback. So the `finally`
-  // below is not reachable for most of the fleet, and registering the teardown
-  // is what makes it run for them. (That is also why `browser.close()` moved in
-  // here: it was being skipped for those same scripts, leaking a Chromium
-  // process per run, despite this file's docblock claiming otherwise.)
-  const release = onBeforeFinish(teardown);
-
-  try {
-    return await fn({
-      browser,
-      async session(opts: SessionOptions = {}): Promise<Session> {
-        const context = await browser.newContext({
-          viewport: opts.viewport ?? { ...DEFAULT_VIEWPORT },
-          deviceScaleFactor: opts.deviceScaleFactor,
-          colorScheme: opts.colorScheme ?? detectOsColorScheme(),
-          // Provenance, declared once for the whole harness. `extraHTTPHeaders`
-          // applies to EVERY request the context issues — including the SPA's
-          // own `fetch` calls — so this single line marks all existing scripts,
-          // every future script, and ad-hoc `screenshot.ts --click` drives, with
-          // nothing to opt into and nothing to remember. Server-side the mark
-          // drives two things: the agent-origin plugin turns it into a swept,
-          // segregated page, and every agent-write ledger (config documents,
-          // prototype option picks, …) records what a marked request
-          // overwrites so this harness can put it back (see `agent-writes.ts`).
-          // research/2026-07-29-global-agent-origin-provenance-for-pages.md
-          // research/2026-09-16-global-shared-prototype-option-picks.md
-          extraHTTPHeaders: agentOriginHeaders(originSource()),
-        });
-        await keepOriginHeadersOnTarget(context);
-        // Before the first page, so every page is filmed from its first paint.
-        recorder?.attach(context);
-        // Before the first page, so every page is tracked from its first
-        // request (see `network-idle.ts`).
-        trackContextNetwork(context);
-        const page = await context.newPage();
-        const label = opts.label ?? "";
-        return {
-          context,
-          page,
-          label,
-          captured:
-            opts.capture === false
-              ? { pageErrors: [], consoleErrors: [], failedRequests: [] }
-              : capture(page, opts.label),
-        };
-      },
-    });
-  } finally {
-    // Deregister first: whichever path fires, the teardown runs exactly once.
-    release();
-    await teardown();
-  }
+  return runWithTeardown(
+    () =>
+      fn({
+        browser,
+        async session(opts: SessionOptions = {}): Promise<Session> {
+          const context = await browser.newContext({
+            viewport: opts.viewport ?? { ...DEFAULT_VIEWPORT },
+            deviceScaleFactor: opts.deviceScaleFactor,
+            colorScheme: opts.colorScheme ?? detectOsColorScheme(),
+            // Provenance, declared once for the whole harness. `extraHTTPHeaders`
+            // applies to EVERY request the context issues — including the SPA's
+            // own `fetch` calls — so this single line marks all existing scripts,
+            // every future script, and ad-hoc `screenshot.ts --click` drives, with
+            // nothing to opt into and nothing to remember. Server-side the mark
+            // drives two things: the agent-origin plugin turns it into a swept,
+            // segregated page, and every agent-write ledger (config documents,
+            // prototype option picks, …) records what a marked request
+            // overwrites so this harness can put it back (see `agent-writes.ts`).
+            // research/2026-07-29-global-agent-origin-provenance-for-pages.md
+            // research/2026-09-16-global-shared-prototype-option-picks.md
+            extraHTTPHeaders: agentOriginHeaders(originSource()),
+          });
+          await keepOriginHeadersOnTarget(context);
+          // Before the first page, so every page is filmed from its first paint.
+          recorder?.attach(context);
+          // Before the first page, so every page is tracked from its first
+          // request (see `network-idle.ts`).
+          trackContextNetwork(context);
+          const page = await context.newPage();
+          const label = opts.label ?? "";
+          return {
+            context,
+            page,
+            label,
+            captured:
+              opts.capture === false
+                ? { pageErrors: [], consoleErrors: [], failedRequests: [] }
+                : capture(page, opts.label),
+          };
+        },
+      }),
+    teardown,
+  );
 }
 
 /**
@@ -491,43 +526,40 @@ async function withAttachedBrowser<T>(
     assertPageWasConsumed();
     if (recording !== null) throw recording.err;
   };
-  const release = onBeforeFinish(teardown);
-
   let handedOut = false;
-  try {
-    return await fn({
-      browser,
-      async session(opts: SessionOptions = {}): Promise<Session> {
-        if (handedOut) {
-          throw new Error(
-            "--attach drives ONE session (the ticket's tab), and this script opens another. Run it without --attach.",
-          );
-        }
-        handedOut = true;
-        await page.setViewportSize(opts.viewport ?? { ...DEFAULT_VIEWPORT });
-        await page.emulateMedia({
-          colorScheme: opts.colorScheme ?? detectOsColorScheme(),
-        });
-        const context = page.context();
-        recorder?.attach(context);
-        recorder?.film(page);
-        trackContextNetwork(context);
-        const label = opts.label ?? "";
-        return {
-          context,
-          page,
-          label,
-          captured:
-            opts.capture === false
-              ? { pageErrors: [], consoleErrors: [], failedRequests: [] }
-              : capture(page, opts.label),
-        };
-      },
-    });
-  } finally {
-    release();
-    await teardown();
-  }
+  return runWithTeardown(
+    () =>
+      fn({
+        browser,
+        async session(opts: SessionOptions = {}): Promise<Session> {
+          if (handedOut) {
+            throw new Error(
+              "--attach drives ONE session (the ticket's tab), and this script opens another. Run it without --attach.",
+            );
+          }
+          handedOut = true;
+          await page.setViewportSize(opts.viewport ?? { ...DEFAULT_VIEWPORT });
+          await page.emulateMedia({
+            colorScheme: opts.colorScheme ?? detectOsColorScheme(),
+          });
+          const context = page.context();
+          recorder?.attach(context);
+          recorder?.film(page);
+          trackContextNetwork(context);
+          const label = opts.label ?? "";
+          return {
+            context,
+            page,
+            label,
+            captured:
+              opts.capture === false
+                ? { pageErrors: [], consoleErrors: [], failedRequests: [] }
+                : capture(page, opts.label),
+          };
+        },
+      }),
+    teardown,
+  );
 }
 
 /**

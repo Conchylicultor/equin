@@ -66,6 +66,7 @@ double close in our own code loud at its source.
 - Cross-plugin:
   - Imported by:
     - `database/migrations`
+    - `debug/browser-recordings/writer`
     - `framework/tooling/checks`
     - `framework/tooling/guards`
     - `framework/tooling/web-artifacts`

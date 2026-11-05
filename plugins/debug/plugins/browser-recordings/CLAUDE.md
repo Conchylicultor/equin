@@ -23,6 +23,18 @@ never pulls `node:fs`): frames as they come, the manifest LAST — a run without
 one is invisible — then the newest 200 runs are kept. No Playwright trace and
 no DOM snapshots: nobody opens them.
 
+Every recording on the machine prunes this one root when it closes — each
+`browser_*` call of every agent, each e2e run — so prunes overlap all the time.
+They run one at a time under an flock on `<root>/.prune.lock`; a close that
+finds it held waits its turn (`waitForFlock`, push-based) rather than skipping —
+the holder may have listed the root before this run's manifest existed, and
+only a prune after it puts the run in the recorded-calls index. Before
+the lock, one prune deleted a call directory it had just emptied between
+another's root listing and its `readdir` of it, and the ENOENT surfaced from an
+e2e run's teardown in place of the run's own failure. An emptied call
+directory is removed with `rmdir`, never a recursive `rm`: a writer (which
+takes no lock) may have just opened a run in it.
+
 ## Producers
 
 - **e2e** — `e2e-harness/e2e/recorder.ts` (it owns the browser lifecycle it

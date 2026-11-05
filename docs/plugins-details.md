@@ -21962,6 +21962,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/browser-recordings.RecordingSource`
               - `debug/browser-recordings.RecordingStep`
               - `framework/tooling/guards.TOOL_USE_ID_RE`
+              - `infra/host-fs/user-path.AppPath`
+              - `infra/host-fs/user-path.joinAppPath`
+              - `packages/flock.flockTry`
+              - `packages/flock.waitForFlock`
+              - `packages/owned-fd.openOwnedFd`
               - `packages/timed-fs.readdir`
               - `packages/timed-fs.stat`
             - Exports (types):
@@ -31908,7 +31913,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 29 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+            - Imported by: 30 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
               - `framework` ×8
               - `infra` ×8
               - `packages` ×3
@@ -31916,6 +31921,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×2
               - `config_v2/ledger`
               - `database/migrations`
+              - `debug/browser-recordings/writer`
               - `reports/outbox`
               - `toolchain`
               - `ui/icons/icon-sets`
@@ -36127,6 +36133,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `waitForFlock`
       - Cross-plugin:
         - Imported by:
+          - `debug/browser-recordings/writer`
           - `framework/tooling/checks`
           - `framework/tooling/web-artifacts`
           - `infra/spawn`
@@ -36259,6 +36266,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `database/migrations`
+          - `debug/browser-recordings/writer`
           - `framework/tooling/checks`
           - `framework/tooling/guards`
           - `framework/tooling/web-artifacts`

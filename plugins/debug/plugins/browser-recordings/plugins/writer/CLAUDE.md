@@ -13,6 +13,11 @@
     - `debug/browser-recordings.RecordingSource`
     - `debug/browser-recordings.RecordingStep`
     - `framework/tooling/guards.TOOL_USE_ID_RE`
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.joinAppPath`
+    - `packages/flock.flockTry`
+    - `packages/flock.waitForFlock`
+    - `packages/owned-fd.openOwnedFd`
     - `packages/timed-fs.readdir`
     - `packages/timed-fs.stat`
   - Exports (types):

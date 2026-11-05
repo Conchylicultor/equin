@@ -1,8 +1,14 @@
 import { createHash } from "node:crypto";
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, rename, rm, rmdir, writeFile } from "node:fs/promises";
 import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join } from "node:path";
 import { TOOL_USE_ID_RE } from "@plugins/framework/plugins/tooling/plugins/guards/core";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { flockTry, waitForFlock } from "@plugins/packages/plugins/flock/core";
+import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import {
   MANIFEST_FILE,
   RECORDED_CALLS_FILE,
@@ -13,6 +19,16 @@ import {
 
 /** How many runs the recordings directory keeps, newest first, across all calls. */
 const KEEP_RUNS = 200;
+
+/**
+ * The prune's host-wide lock, at the root. Every recording on the machine — each
+ * `browser_*` MCP call of every agent, each e2e run — prunes the same root when
+ * it closes, so prunes overlap routinely. Unserialized, one prune removed a call
+ * directory it had just emptied between another's root listing and its
+ * `readdir` of that directory, and the other threw ENOENT from inside an e2e
+ * run's teardown.
+ */
+const PRUNE_LOCK_FILE = ".prune.lock";
 
 export type FrameFormat = "png" | "jpeg";
 
@@ -37,7 +53,7 @@ export interface Recording {
  * run killed midway leaves frames nobody lists (and the pruning removes them).
  */
 export function openRecording(opts: {
-  root: string;
+  root: AppPath;
   toolUseId: string | null;
   source: RecordingSource;
   /** A short, filename-safe name for the run directory, e.g. the script's basename. */
@@ -92,8 +108,37 @@ export function openRecording(opts: {
   };
 }
 
-/** Delete all but the newest `keep` run directories (`<root>/<call>/<run>`). */
-async function pruneRuns(root: string, keep: number): Promise<void> {
+/**
+ * Delete all but the newest `keep` run directories (`<root>/<call>/<run>`) —
+ * one prune at a time on the host. When another process holds the lock this
+ * one waits its turn (push-based: `waitForFlock`'s child is woken by the
+ * kernel) rather than skipping: the holder listed the root before this run's
+ * manifest may have existed, so only a prune after it is sure to put this run
+ * in the recorded-calls index.
+ */
+async function pruneRuns(root: AppPath, keep: number): Promise<void> {
+  const path = joinAppPath(root, PRUNE_LOCK_FILE);
+  // "a": create without truncating — the lock file's content is never read.
+  const lock = openOwnedFd(path, "a");
+  if (flockTry(lock.fd)) {
+    try {
+      await pruneRunsLocked(root, keep);
+    } finally {
+      // Closing the descriptor releases its lock.
+      lock.close();
+    }
+    return;
+  }
+  lock.close();
+  const held = await waitForFlock(path);
+  try {
+    await pruneRunsLocked(root, keep);
+  } finally {
+    await held.release();
+  }
+}
+
+async function pruneRunsLocked(root: AppPath, keep: number): Promise<void> {
   const runs: { path: string; mtimeMs: number }[] = [];
   for (const call of await readdir(root, { withFileTypes: true })) {
     if (!call.isDirectory()) continue;
@@ -109,9 +154,14 @@ async function pruneRuns(root: string, keep: number): Promise<void> {
     await rm(run.path, { recursive: true, force: true });
     // A call whose last run went goes too, so the directory lists only the
     // calls that still have a recording (`browser-recordings.recorded-calls`).
+    // `rmdir`, never a recursive rm after a listing: a recording opening a
+    // run in this call (a writer takes no lock) may land between the two, and
+    // a recursive rm would delete that live run under it.
     const callDir = dirname(run.path);
-    if ((await readdir(callDir)).length === 0)
-      await rm(callDir, { recursive: true, force: true });
+    await rmdir(callDir).catch((err: unknown) => {
+      if (!(err instanceof Error && "code" in err && err.code === "ENOTEMPTY"))
+        throw err;
+    });
   }
   // The calls that still have a run, for the view's preloaded set
   // (`browser-recordings.recorded-calls`). Written whole and renamed into

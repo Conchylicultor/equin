@@ -347,6 +347,24 @@ returns a promise and why `no-floating-promises` requires `await r.finish()`.
 Before this, `await browser.close()` in `withBrowser`'s `finally` was silently
 skipped for those scripts, leaking a Chromium process per run.
 
+## A throwing script still ends with a verdict
+
+A throw that escapes the `withBrowser` callback (an uncaught Playwright
+`TimeoutError`, say) does not end the run with a bare stack trace: `withBrowser`
+hands it to `failRun` (`e2e/report.ts`), which records it as `FAIL  script
+threw: <ErrorName>: <first line of its message>` (the rest of the message and
+its frames under it) on the script's newest unfinished report —
+one made on the spot when it has none — and ends through that report's
+`finish()`. So the run prints `FAILURES: n/total` counting every check made so
+far, and exits 1; a batch runner grepping for the verdict always finds one.
+
+The teardown is NOT run in a `finally`: it stays registered, and `finish()`
+drains it after the throw is recorded. A teardown that throws too (a recording
+that could not be filed, a page that was not consumed) is a second FAIL line,
+`harness teardown: …`, under the script's own — never in place of it. On a normal
+return the teardown runs in `withBrowser`, and an error there ends the run the
+same way.
+
 ## A one-colour capture is a failure, not a screenshot
 
 A page that has not painted yet is one flat colour, and on a loaded machine

@@ -88,6 +88,7 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
     - `waitForFlock`
 - Cross-plugin:
   - Imported by:
+    - `debug/browser-recordings/writer`
     - `framework/tooling/checks`
     - `framework/tooling/web-artifacts`
     - `infra/spawn`

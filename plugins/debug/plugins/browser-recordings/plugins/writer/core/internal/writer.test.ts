@@ -1,11 +1,20 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  utimes,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   MANIFEST_FILE,
+  RECORDED_CALLS_FILE,
   RecordingManifestSchema,
 } from "@plugins/debug/plugins/browser-recordings/core";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { openRecording } from "./writer";
 
 let root = "";
@@ -17,7 +26,7 @@ describe("openRecording", () => {
   test("stores a picture once and writes the manifest on close", async () => {
     root = await mkdtemp(join(tmpdir(), "rec-"));
     const rec = openRecording({
-      root,
+      root: asAppPath(root),
       toolUseId: "toolu_1",
       source: { kind: "mcp", tool: "browser_act" },
       name: "browser_act",
@@ -46,11 +55,52 @@ describe("openRecording", () => {
   test("an id that is not a path segment is refused", () => {
     expect(() =>
       openRecording({
-        root: "/nowhere",
+        root: asAppPath("/nowhere"),
         toolUseId: "../x",
         source: { kind: "e2e", script: "x.ts" },
         name: "x",
       }),
     ).toThrow("not a tool-use id");
+  });
+
+  test("recordings closing at once prune the shared root without tripping on each other", async () => {
+    root = await mkdtemp(join(tmpdir(), "rec-"));
+    // Past the keep bound, one run per call, all older than the new ones: every
+    // prune empties call directories, and the ones that overlap race on them.
+    const old = new Date(Date.now() - 60_000);
+    for (let i = 0; i < 230; i++) {
+      const run = join(root, `toolu_old${i}`, "run");
+      await mkdir(run, { recursive: true });
+      await utimes(run, old, old);
+    }
+    const recs = Array.from({ length: 12 }, (_, i) =>
+      openRecording({
+        root: asAppPath(root),
+        toolUseId: `toolu_new${i}`,
+        source: { kind: "mcp", tool: "browser_act" },
+        name: "browser_act",
+      }),
+    );
+    await Promise.all(recs.map((rec) => rec.close([])));
+    // Every new run survived and is listed: a close that found the lock held
+    // waited for its own prune instead of trusting the holder's listing.
+    const listed: unknown = JSON.parse(
+      await readFile(join(root, RECORDED_CALLS_FILE), "utf8"),
+    );
+    for (let i = 0; i < recs.length; i++)
+      expect(listed).toContain(`toolu_new${i}`);
+    // A later close brings the root to its bound.
+    for (const rec of recs)
+      expect(await readdir(rec.dir)).toEqual([MANIFEST_FILE]);
+    await openRecording({
+      root: asAppPath(root),
+      toolUseId: "toolu_last",
+      source: { kind: "mcp", tool: "browser_act" },
+      name: "browser_act",
+    }).close([]);
+    const calls = (await readdir(root, { withFileTypes: true })).filter((e) =>
+      e.isDirectory(),
+    );
+    expect(calls.length).toBe(200);
   });
 });
