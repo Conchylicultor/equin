@@ -13823,6 +13823,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/type-scale --font-weight-medium`
         - Imported by: `conversations/conversation-view/code/file-pane`
+      - Exemptions:
+        - Exempts itself from: `repo-walk-safety/no-adhoc-repo-listing` — `machine/internal/resolve-path.ts` (sanctioned)
       - Shared:
         - Exports (types): `ResolvedFile`
         - Exports (values):
@@ -15301,6 +15303,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PHASE_ORDER`
           - `PHASE_STEPS`
           - `PROGRESS_SUMMARY`
+      - Exemptions:
+        - Exempts itself from: `repo-walk-safety/no-adhoc-repo-listing` — `machine/internal/phase-git.ts` (sanctioned)
       - Machine:
         - Register: `defineJob('conversation-progress.classify')`
     - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
@@ -15825,6 +15829,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `boundaries/no-platform-api` — `server/internal/compute-edited-files.ts`, `server/internal/edited-files-signature.ts` (debt)
               - `no-raw-websocket` — `e2e/edited-files-cost.ts` (sanctioned)
+              - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/edited-files-signature.ts` (sanctioned)
           - Plugins:
             - **`file-pane`** — Hosts the file-peek pane: a checkout file opened from a conversation (chat file links, review, commits), shown through primitives/file-viewer with the conversation's edited-file status as context.
               - Web:
@@ -27619,15 +27624,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pathspecToRegex`
           - `pathsUnder`
           - `repoFilesOver`
+          - `repoSnapshotOver`
       - Cross-plugin:
         - Imported by:
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
           - `framework/tooling/lint`
           - `framework/tooling/web-artifacts`
-          - `plugin-meta/plugin-tree`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `core/repo-files.ts` (debt)
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `core/repo-files.ts` (debt)
+          - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-files.ts` (sanctioned)
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
@@ -27751,7 +27758,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/asset-mirror/bundle` (1 debt)
               - `infra/corpus-index` (1 debt)
               - `infra/deps/mise` (2 debt)
-              - `infra/deps/npm` (2 debt)
+              - `infra/deps/npm` (1 debt)
               - `infra/deps/playwright-browser` (1 debt)
               - `infra/deps/python/uv-updater` (1 debt)
               - `infra/deps/rust/cargo-updater` (1 debt)
@@ -27817,8 +27824,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons/icon-sets` (1 debt)
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 66 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
-              - `framework/tooling` ×10
+            - Uses: 67 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+              - `framework/tooling` ×11
               - `framework/tooling/exempt` ×7
               - `reports/check-thread-stall` ×7
               - `infra/stack-sampler` ×5
@@ -27902,6 +27909,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/tree-hash.ts` (sanctioned)
               - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts` (debt)
+              - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-set.ts` (sanctioned)
+              - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-files.ts` (sanctioned)
+              - `repo-walk-safety/no-adhoc-repo-listing` — `core/tree-hash.ts` (sanctioned)
           - Cli:
             - Exports (values): `openGrepIndexStore`
           - Test helpers:
@@ -27989,6 +27999,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live` (0 debt)
             - **`no-disabled-flag`**
             - **`no-gitlinks`**
+              - Exemptions:
+                - Exempts itself from: `repo-walk-safety/no-adhoc-repo-listing` — `check/index.ts` (sanctioned)
             - **`no-hand-built-link-to`**
             - **`no-hardcoded-colors`**
             - **`no-plugin-imports-in-core`**
@@ -28034,8 +28046,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`tailwind-scan-covers-classes`**
-              - Exemptions:
-                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`theme-bridge-reads`**
             - **`theme-declarations-in-sync`**
             - **`token-group-vars-in-sync`**
@@ -28086,6 +28096,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
                   - `user-path/no-unproven-claim` — `shared/worker.ts`, `shared/batch-worker.ts` (sanctioned)
                   - `check-thread-safety/no-blocking-check-work` — `check/import-graph.ts` (debt)
+                  - `repo-walk-safety/no-adhoc-repo-listing` — `shared/repo-view.ts` (sanctioned)
               - Cli:
                 - Exports (values): `readTypeCheckTree`
               - Plugins:
@@ -28101,7 +28112,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 136 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 137 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×20
               - `config_v2` ×16
               - `framework/plugin-id` ×15
@@ -28114,17 +28125,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/composition` ×5
               - `plugin-meta/facets` ×5
               - `infra/host-fs/user-path` ×4
-              - `plugin-meta/plugin-tree` ×3
+              - `framework/tooling` ×3
               - `config_v2/ledger` ×2
               - `framework/tooling/boundaries` ×2
               - `framework/tooling/format` ×2
               - `infra/paths` ×2
               - `network/live/resource-protocol` ×2
+              - `plugin-meta/plugin-tree` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
               - `framework/tooling/lint.loadLintContributions`
               - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
-              - `framework/tooling.loadRepoSnapshot`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `packages/macrotask-yield.yieldMacrotask`
               - `packages/semaphore.createSemaphore`
@@ -28309,6 +28320,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
               - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
+              - `repo-walk-safety/no-adhoc-repo-listing` — `core/barrel-free-tree.ts`, `core/evaluated-barrels.ts`, `core/plugin-registry-gen.ts` (debt)
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
             - Imported by:
@@ -28568,6 +28580,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/exempt.FileCategory`
               - `framework/tooling/exempt.isLintRuleId`
               - `framework/tooling/exempt.loadExemptions`
+              - `framework/tooling/exempt.ManifestSource`
               - `framework/tooling/exempt.NON_APP_FILE_CATEGORIES`
               - `framework/tooling/exempt.ResolvedExemption`
               - `framework/tooling/exempt.ruleIdProblems`
@@ -28581,7 +28594,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BuildLintConfigOptions`
               - `ClassRuleFactory`
               - `LintContribution`
-              - `LintExemptionMode`
+              - `LintExemptions`
               - `LintRuleDocs`
               - `LintRuleKind`
               - `LintRuleSelection`
@@ -28618,6 +28631,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries/no-platform-api` — `core/declared-utilities.ts`, `core/plugin-dirs.ts` (debt)
               - `rule-kind-safety/no-raw-rule-creator` — `core/rule-creator.ts` (sanctioned)
               - `rule-kind-safety/no-raw-rule-tester` — `core/testing/rule-tester.ts` (sanctioned)
+              - `repo-walk-safety/no-adhoc-repo-listing` — `core/ide-lint-config.ts` (sanctioned)
           - Test helpers:
             - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
               - `createRuleTester` — A syntactic rule's tester: no program, no project.
@@ -28655,7 +28669,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/tooling/checks/plugin-boundaries` (2 debt)
                   - `framework/tooling/checks/plugins-have-claudemd` (1 debt)
                   - `framework/tooling/checks/table-defs-in-schema-glob` (1 debt)
-                  - `framework/tooling/checks/tailwind-scan-covers-classes` (1 debt)
                   - `framework/tooling/checks/type-check` (1 debt)
                   - `framework/tooling/test-layout` (1 debt)
                   - `infra/launcher` (1 debt)
@@ -28713,11 +28726,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`polling-safety`** — polling-safety lint rule: no-refetch-interval
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
-            - **`repo-walk-safety`** — repo-walk-safety lint rule: no-adhoc-repo-walk
+            - **`repo-walk-safety`** — repo-walk-safety lint rules: no-adhoc-repo-walk (no hand-written build-output deny-list), no-adhoc-repo-listing (no working-tree listing — git ls-files, loadRepoFiles — outside a pass root: take the caller's file set)
               - Exemptions:
                 - Exempted by:
+                  - `code-explorer/file-resolve` (0 debt)
+                  - `conversations/conversation-progress` (0 debt)
+                  - `conversations/conversation-view/code` (0 debt)
                   - `framework/cli/bootstrap` (0 debt)
+                  - `framework/tooling` (0 debt)
                   - `framework/tooling/checks` (0 debt)
+                  - `framework/tooling/checks/no-gitlinks` (0 debt)
+                  - `framework/tooling/checks/type-check` (0 debt)
+                  - `framework/tooling/codegen` (3 debt)
+                  - `framework/tooling/lint` (0 debt)
+                  - `framework/tooling/web-artifacts` (0 debt)
+                  - `infra/deps/build` (0 debt)
+                  - `infra/deps/npm` (0 debt)
+                  - `infra/deps/python/uv-updater` (0 debt)
+                  - `infra/deps/rust/cargo-updater` (0 debt)
+                  - `plugin-meta/plugin-tree` (0 debt)
+                  - `review/plugin-changes` (0 debt)
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
               - Exemptions:
                 - Exempted by: `primitives/dom/element-size` (0 debt)
@@ -28859,6 +28887,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `user-path/no-unproven-claim` — `core/internal/identity.ts`, `core/internal/plan.ts`, `core/internal/vendors.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/vendor-cache.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/global-css.ts`, `core/internal/package-assets.ts`, `core/internal/staged-verify.ts` (sanctioned)
+              - `repo-walk-safety/no-adhoc-repo-listing` — `core/internal/pipeline.ts` (sanctioned)
           - Plugins:
             - **`prune`** — The hourly web-artifacts.prune job: prunes the shared write-once web caches (artifact store, vendor sets, CSS cache, package assets) off every build's path — dist links read unlocked, only changed dists re-read under the store lock.
               - Server:
@@ -30436,6 +30465,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher`
               - `packages/signal-origin`
               - `packages/spawn-disclaim`
+          - Exemptions:
+            - Exempts itself from: `repo-walk-safety/no-adhoc-repo-listing` — `deps/internal/build.ts` (sanctioned)
         - **`download`** — The download installer kind of infra/deps: download({ files: [{ name, url, sha256 }], derive? }) (its deps barrel) declares a dependency on pinned files — identity = every url + sha256 plus derive.version — fetched with curl into env/<name>.part (progress in the install log), sha256-checked and renamed, then optionally post-processed in place by derive.run; downloadedFile(ready, name) is the path of one of them.
           - Cross-plugin:
             - Imported by:
@@ -30483,9 +30514,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/updates.Outdated`
               - `infra/deps/updates.OutdatedWaiting`
               - `infra/deps/updates.utcDay`
-              - `infra/spawn.spawnCaptured`
-              - `packages/semaphore.createSemaphore`
-              - `packages/timed-fs.readFile`
             - Exports (types):
               - `Packument`
               - `Plan`
@@ -30503,7 +30531,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `workspaceManifests`
               - `wrappersUndeclared`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `core/internal/workspace.ts`, `server/internal/npm-updater.ts` (debt)
+            - Exempts itself from:
+              - `boundaries/no-platform-api` — `server/internal/npm-updater.ts` (debt)
+              - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/npm-updater.ts` (sanctioned)
         - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that version (resolved through this plugin's module graph) plus the platform — installed by the workspace's own playwright CLI with PLAYWRIGHT_BROWSERS_PATH = the install's env/, which then records the headed and headless-shell executables as Playwright reports them in env/executables.json (what isIntact checks); launchChromium(ready, opts) launches the recorded binary for the mode.
           - Core:
             - Uses:
@@ -30562,7 +30592,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes: `updater` "uv"
                 - Uses: `infra/deps/updates.UpdaterDeclare`
               - Exemptions:
-                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/uv-updater.ts` (debt)
+                - Exempts itself from:
+                  - `boundaries/no-platform-api` — `server/internal/uv-updater.ts` (debt)
+                  - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/uv-updater.ts` (sanctioned)
               - Core:
                 - Exports (values):
                   - `UV_HOLDS`
@@ -30591,7 +30623,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes: `updater` "cargo"
                 - Uses: `infra/deps/updates.UpdaterDeclare`
               - Exemptions:
-                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/cargo-updater.ts` (debt)
+                - Exempts itself from:
+                  - `boundaries/no-platform-api` — `server/internal/cargo-updater.ts` (debt)
+                  - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/cargo-updater.ts` (sanctioned)
               - Core:
                 - Exports (values):
                   - `CARGO_HOLDS`
@@ -33546,7 +33580,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/checks`
           - `framework/tooling/format`
           - `infra/deps/mise`
-          - `infra/deps/npm`
           - `infra/git/remotes`
           - `infra/paths`
           - `reports/outbox`
@@ -36375,7 +36408,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
           - `framework/tooling/web-artifacts`
-          - `infra/deps/npm`
           - `infra/endpoints`
           - `network/live/resource-runtime`
           - `packages/inflight`
@@ -36601,9 +36633,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call past FS_WAIT_FLOOR_MS handed to onSlowFsCall subscribers as a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 35 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `framework` ×13
-          - `infra` ×7
+          - `infra` ×6
           - `plugin-meta` ×4
           - `packages` ×3
           - `database` ×2
@@ -40822,8 +40854,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/plugin-id.asPluginId`
           - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
           - `framework/plugin-id.PluginId`
-          - `framework/tooling.loadRepoFiles`
-          - `framework/tooling.RepoFiles`
           - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.appPathParent`
           - `infra/host-fs/user-path.joinAppPath`
@@ -40855,7 +40885,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/composition`
           - `plugin-meta/plugin-tree/faceted`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
+          - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/structure-tree-cache.ts` (sanctioned)
       - Plugins:
         - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and `./equin plugin-tree-facets`, which writes it as JSON for the serving backend to read as data.
           - Core:
@@ -50666,7 +50698,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes/api-changes`
           - `review/plugin-changes/file-changes`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/push-plugin-changes.ts` (debt)
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `server/internal/push-plugin-changes.ts` (debt)
+          - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/plugin-tree-cache.ts` (sanctioned)
       - Plugins:
         - **`api-changes`** (excluded) — API surface diff section for per-plugin review cards.
           - Web:

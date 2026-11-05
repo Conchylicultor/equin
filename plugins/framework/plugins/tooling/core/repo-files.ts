@@ -255,12 +255,7 @@ export async function loadRepoSnapshot(
     toHash.forEach((p, i) => blobs.set(p, ids[i]!));
   }
 
-  return repoSnapshotOver(
-    root,
-    paths,
-    (path) => blobs.get(path) ?? null,
-    opts,
-  );
+  return repoSnapshotOver(root, paths, (path) => blobs.get(path) ?? null, opts);
 }
 
 /**
