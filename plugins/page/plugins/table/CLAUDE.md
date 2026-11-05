@@ -55,6 +55,7 @@ editor's line-claim escape, not this file's.
     - `page/editor.Editor`
     - `page/editor.useBlockActivate`
     - `page/editor.usePageMarkdownContext`
+    - `page/editor.WideBlock`
     - `page/read-only-view.RunsRenderer`
     - `primitives/css/pin.Pin`
     - `primitives/css/scroll.Scroll`

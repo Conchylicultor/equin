@@ -123,17 +123,24 @@ export function TableBlock({ block, editor }: BlockRendererProps) {
 
   if (draft === null) {
     return (
-      <div className={cn(hoverRevealGroup, "relative")}>
-        <TableView data={data} />
-        <Pin to="top-right" offset="xs" layer="raised">
-          <IconButton
-            icon={editSourceIcon}
-            label="Edit source"
-            tooltip="Edit as markdown"
-            className={cn(hoverRevealTarget, "bg-background/80 backdrop-blur")}
-            onClick={openSource}
-          />
-        </Pin>
+      <div className={hoverRevealGroup}>
+        <TableView
+          data={data}
+          overlay={
+            <Pin to="top-right" offset="xs" layer="raised">
+              <IconButton
+                icon={editSourceIcon}
+                label="Edit source"
+                tooltip="Edit as markdown"
+                className={cn(
+                  hoverRevealTarget,
+                  "bg-background/80 backdrop-blur",
+                )}
+                onClick={openSource}
+              />
+            </Pin>
+          }
+        />
       </div>
     );
   }

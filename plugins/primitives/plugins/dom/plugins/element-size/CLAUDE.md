@@ -62,7 +62,7 @@ different need, extend the primitive rather than allowlisting a copy.
     - `useResizeObserver`
     - `useResizeObserverSet`
 - Cross-plugin:
-  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×22
     - `apps` ×10
     - `shell` ×2
@@ -70,6 +70,7 @@ different need, extend the primitive rather than allowlisting a copy.
     - `conversations/conversation-view/jsonl-viewer`
     - `hints`
     - `menu-bar`
+    - `page/editor`
     - `reorder`
     - `screenshot`
     - `ui/ambient-field`

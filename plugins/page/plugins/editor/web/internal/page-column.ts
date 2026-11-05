@@ -204,3 +204,24 @@ export function framePadX(frames: number): string {
 export function framePadY(frames: number): string {
   return frames <= 0 ? "0px" : `calc(${frames} * ${spaceLength(FRAME_PAD_Y)})`;
 }
+
+/**
+ * The CSS variable the editor's full-width interaction surface publishes on
+ * itself: its own width, in px. Inherited by every block, it is the one length
+ * a block cannot otherwise know — how much room the pane has BEYOND the reading
+ * column — and what lets a {@link WideBlock} grow past the column into it.
+ *
+ * Measured rather than read from a container query: `container-type` on the
+ * surface would make it a fixed-position containing block for the overlays the
+ * editor hosts (the format toolbar, the caret chip), which the viewport-escape
+ * auditor reports. Unset on a surface that does not publish it (the read-only
+ * renderer), where a wide block simply stays in its column.
+ */
+export const SURFACE_WIDTH_VAR = "--block-surface-width";
+
+/**
+ * The widest a wide block may grow: the surface, less one `BLOCK_GUTTER` on
+ * each side — the same margin the rail keeps on the left, mirrored, so a wide
+ * table stands off the pane's edges as far as the column's own rows do.
+ */
+export const WIDE_BLOCK_MAX = `calc(var(${SURFACE_WIDTH_VAR}, 100%) - ${2 * BLOCK_GUTTER}px)`;

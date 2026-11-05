@@ -46,6 +46,7 @@ import {
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
 import { useEdgeAutoScroll } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import {
   canIndent,
   canOutdent,
@@ -109,6 +110,7 @@ import { SelectionBands } from "./selection-bands";
 import { TextSpanHighlight, type SpanLinePaint } from "./text-span-highlight";
 import {
   BLOCK_GUTTER,
+  SURFACE_WIDTH_VAR,
   blockContentLeft,
   framePadX,
   framePadY,
@@ -980,6 +982,17 @@ function SelectionLayer({
     attachContainer(containerRef.current);
     return () => attachContainer(null);
   }, [attachContainer, containerRef]);
+
+  // The surface's width, published as a CSS variable for a `WideBlock` to grow
+  // into (see `SURFACE_WIDTH_VAR`). Written on the element, not through React
+  // state: no row re-renders for a pane resize. The observer is RAF-debounced,
+  // so a wide block reflowing the surface's HEIGHT in response is not a
+  // ResizeObserver loop.
+  useResizeObserver(containerRef, () => {
+    const surface = containerRef.current;
+    if (!surface) return;
+    surface.style.setProperty(SURFACE_WIDTH_VAR, `${surface.clientWidth}px`);
+  });
 
   // ---- Clipboard (DOM copy/cut/paste on the focused container) -------------
   //

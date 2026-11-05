@@ -69,6 +69,7 @@ export type {
   UndoConflictReport,
 } from "./internal/undo-conflict-report";
 export { PageContentColumn } from "./components/page-content-column";
+export { WideBlock } from "./components/wide-block";
 export {
   BLOCK_INSET,
   BLOCK_INDENT,

@@ -116,6 +116,9 @@ export function LinkChip({
       type="button"
       icon={leading}
       mono={mono}
+      // A chip names a record whose name can be any length; it reads as a
+      // reference, never as the record's whole title — the tooltip has that.
+      bounded
       colorClass="bg-muted"
       className={cn(CHIP_CHROME, textClass, className)}
       {...rest}

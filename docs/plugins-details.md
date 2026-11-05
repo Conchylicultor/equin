@@ -37471,7 +37471,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
         - Contributes: `IdKinds.Kind` "block"
-        - Uses: 96 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 97 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `network/live/live-state` ×6
           - `primitives/dom/web-storage` ×5
           - `primitives/text-editor/caret-trigger` ×5
@@ -37505,6 +37505,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/dom/auto-scroll.useEdgeAutoScroll`
+          - `primitives/dom/element-size.useResizeObserver`
           - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
@@ -37627,6 +37628,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSelectionControl`
           - `useSetFrameHover`
           - `useVoidCaret`
+          - `WideBlock`
       - Server:
         - Contributes:
           - `ids.kind` "block"
@@ -39214,6 +39216,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.Editor`
           - `page/editor.useBlockActivate`
           - `page/editor.usePageMarkdownContext`
+          - `page/editor.WideBlock`
           - `page/read-only-view.RunsRenderer`
           - `primitives/css/pin.Pin`
           - `primitives/css/scroll.Scroll`
@@ -41649,11 +41652,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Badge`
               - `formatStatusLabel`
           - Cross-plugin:
-            - Uses tokens: 25 vars — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Uses tokens: 26 vars — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `ui/tokens/color-palette` ×10
               - `ui/tokens/density` ×6
               - `ui/tokens/type-scale` ×6
-              - `ui/tokens/shape` ×2
+              - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
             - Imported by: 172 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
@@ -44699,7 +44702,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserver`
               - `useResizeObserverSet`
           - Cross-plugin:
-            - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+            - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×22
               - `apps` ×10
               - `shell` ×2
@@ -44707,6 +44710,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer`
               - `hints`
               - `menu-bar`
+              - `page/editor`
               - `reorder`
               - `screenshot`
               - `ui/ambient-field`
