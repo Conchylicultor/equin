@@ -194,9 +194,20 @@ async function run(
   }
 }
 
-/** Rasterize an SVG string to a PNG at `size`×`size` (pure-Wasm, no native deps). */
-function renderPng(svg: string, size = 512): Uint8Array {
-  return new Resvg(svg, { fitTo: { mode: "width", value: size } })
+/**
+ * Rasterize an SVG string to a PNG at `size`×`size` (pure-Wasm, no native deps).
+ * Only `fontFiles` are loaded: an SVG that draws text names the fonts its
+ * `font-family` asks for (lint `no-resvg-system-fonts`).
+ */
+function renderPng(
+  svg: string,
+  size = 512,
+  fontFiles: string[] = [],
+): Uint8Array {
+  return new Resvg(svg, {
+    fitTo: { mode: "width", value: size },
+    font: { loadSystemFonts: false, fontFiles },
+  })
     .render()
     .asPng();
 }
@@ -207,6 +218,11 @@ const DMG_ICON_SIZE = 128;
 const DMG_ICON_Y = 170;
 const DMG_APP_X = 130;
 const DMG_APPLICATIONS_X = 410;
+/** The caption's `font-family` (a DMG is built on macOS, which ships both). */
+const DMG_CAPTION_FONTS = [
+  "/System/Library/Fonts/HelveticaNeue.ttc",
+  "/System/Library/Fonts/Helvetica.ttc",
+];
 
 /** XML-escape a string for safe interpolation into the SVG background. */
 function escapeXml(s: string): string {
@@ -241,8 +257,11 @@ function writeDmgBackground(productName: string, outPath: string): void {
   <text x="${W / 2}" y="${H - 42}" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="15" fill="#6e6e73">Drag ${escapeXml(productName)} to the Applications folder</text>
 </svg>`;
   // @1x must match the window point-size so Finder draws it 1:1; @2x is double.
-  writeFileSync(outPath, renderPng(svg, W));
-  writeFileSync(outPath.replace(/\.png$/, "@2x.png"), renderPng(svg, W * 2));
+  writeFileSync(outPath, renderPng(svg, W, DMG_CAPTION_FONTS));
+  writeFileSync(
+    outPath.replace(/\.png$/, "@2x.png"),
+    renderPng(svg, W * 2, DMG_CAPTION_FONTS),
+  );
 }
 
 /**

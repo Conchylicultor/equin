@@ -9,6 +9,7 @@
 
 export type ExemptableRuleId = 
   | "agent-origin-safety/no-unmarked-app-fetch"
+  | "app-manifest/no-resvg-system-fonts"
   | "apps-core/no-raw-history-nav"
   | "aria-safety/no-orphan-composite-role"
   | "bar/no-adhoc-bar"

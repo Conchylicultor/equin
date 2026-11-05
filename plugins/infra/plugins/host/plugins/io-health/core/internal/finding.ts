@@ -12,6 +12,8 @@ export const IO_HEALTH_RULES = [
   "device-latency",
   /** A single cold metadata op (lstat / readdir) took over a second. */
   "metadata-stall",
+  /** Renames on the volume were held for hundreds of ms, tick after tick. */
+  "rename-stall",
   /** A watched daemon is relaunched over and over (a new pid each run). */
   "relaunch-loop",
   /** The file cache drops files within minutes although nothing churns it. */
@@ -32,7 +34,7 @@ export const EVIDENCE_MAX = 8;
 
 export const FindingSchema = z.object({
   rule: z.enum(IO_HEALTH_RULES),
-  /** What the rule is about: a daemon's name, or `disk` / `probe` / `cache` / `root-daemon`. */
+  /** What the rule is about: a daemon's name, or `disk` / `probe` / `volume` / `cache` / `root-daemon`. */
   subject: z.string(),
   severity: z.enum(["attention", "critical"]),
   /** One sentence, the report's message and the health row's summary. */

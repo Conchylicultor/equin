@@ -15,6 +15,8 @@ const WHAT_TO_DO: Record<IoHealthRule, string> = {
     "Find who reads the disk: the root monitor's `disk_readers_mb_s` (top readers per tick) and `disk_read_attributed_mb_s`, or `census.py` without root. A system daemon at the top (fseventsd, syspolicyd, mds_stores) is the first suspect; a busy fleet alone keeps the device under 1 ms/op.",
   "metadata-stall":
     "The root monitor captured a 5 s `fs_usage -w -f filesys` sample at the stall (`incident` field of that tick, under `fs-latency-incidents/`): it names who was doing the lookups. Without root, compare the `fg` and `bg` probes: only `bg` slow is the darwinbg I/O throttle under load.",
+  "rename-stall":
+    "A rename anywhere on the volume waits while another process mutates a directory tree in bulk: measured 2026-11-05, every `bun install` (package dirs moved into place) and `rm -rf` of a `node_modules` held the probe's renames 0.3–1.3 s, at any I/O tier, and a darwinbg install runs 8–16× longer, so it holds them that much longer. Main's `renameSync` calls (`writeAtomic`, `cloneNamedBinary`) stall with it. The `in uninterruptible wait then` line names who was stuck beside the probe; as root, a rename over 1 s also takes the `fs_usage` capture (`incident`), which names who was renaming and removing. Find what installs or deletes trees that often (worktree spare refill, worktree removal, agents' installs).",
   "relaunch-loop":
     "Read the daemon's own lines in the unified log (`log show --last 15m --predicate 'process == \"<name>\"'`) and `launchctl print system/<label>` (its `runs` count): what makes it exit, and what relaunches it. Each run may cost far more than the process itself (corecaptured's each replayed 17 days of FSEvents history).",
   "cache-collapse":

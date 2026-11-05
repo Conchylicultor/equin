@@ -21,7 +21,12 @@
  *              once in darwinbg (the switch spawn-priority uses). 10 dirs ×
  *              500 files visited round-robin, so a probe touches a file again
  *              only every ~10 ticks: the reading is the cold cost unless the
- *              cache outlives that interval.
+ *              cache outlives that interval. Then a burst of renames of one
+ *              file within its own directory: a rename waits on nothing cold,
+ *              only on the volume's rename serialization, which a bulk
+ *              directory-tree mutation elsewhere holds.
+ *   blocked    the processes in uninterruptible wait (ps state U) as the
+ *              tick ran, by name: who was stuck beside a stalled probe.
  *   residency  12 canary groups × 50 files, one re-read per tick. Before it,
  *              every group's resident-page fraction (mincore) beside its age
  *              since its last read — the age where residency drops IS the
@@ -33,7 +38,7 @@
  *   readers    root only: the processes reading the most from disk since the
  *              last tick, and the fseventsd log files fseventsd holds open.
  *
- * A tick whose slowest single op exceeds STALL_MS writes `"stall": true`; as
+ * A tick whose slowest single op (a rename included) exceeds STALL_MS writes `"stall": true`; as
  * root it also captures a 5 s `fs_usage -f filesys` sample (one per
  * INCIDENT_COOLDOWN_S).
  *
@@ -81,6 +86,8 @@ const INCIDENT_COOLDOWN_S = 600;
 const PROBE_DIRS = 10;
 const PROBE_DIR_FILES = 500;
 const LSTAT_PER_TICK = 40;
+const RENAMES_PER_TICK = 20;
+const BLOCKED_NAMES = 8;
 const CANARY_GROUPS = 12;
 const CANARY_FILES = 50;
 const CANARY_BYTES = 16_384;
@@ -193,11 +200,36 @@ const canaryDir = (corpus: string, g: number) =>
 const canary = (dir: string, f: number) =>
   join(dir, `c${String(f).padStart(3, "0")}`);
 
-/** Cold lstat + readdir in one tier (ms). */
+/**
+ * One tier's file, renamed back and forth in its own directory (created on
+ * first use: a corpus made before the rename probe has none). Returns the
+ * slowest rename (ms).
+ */
+function renameBurst(corpus: string, bg: boolean): number {
+  const tier = bg ? "bg" : "fg";
+  const a = join(corpus, `rename-${tier}-a`);
+  const b = join(corpus, `rename-${tier}-b`);
+  let [from, to] = existsSync(b) ? [b, a] : [a, b];
+  if (!existsSync(from)) writeFileSync(from, "");
+  let max = 0;
+  for (let i = 0; i < RENAMES_PER_TICK; i++) {
+    const f = from;
+    const t = to;
+    max = Math.max(
+      max,
+      timed(() => renameSync(f, t)),
+    );
+    [from, to] = [to, from];
+  }
+  return max;
+}
+
+/** Cold lstat + readdir, then a rename burst, in one tier (ms). */
 function probe(corpus: string, bg: boolean, tick: number): ProbeReading {
   setDarwinbg(bg);
   let lst: number[];
   let rd: number;
+  let rn: number;
   try {
     // The two tiers of a tick each get their own directory, so neither warms the other's.
     const dLstat = (2 * tick + (bg ? 1 : 0)) % PROBE_DIRS;
@@ -215,6 +247,7 @@ function probe(corpus: string, bg: boolean, tick: number): ProbeReading {
     }
     const rdPath = join(corpus, `probe-${String(dReaddir).padStart(2, "0")}`);
     rd = timed(() => readdirSync(rdPath).length);
+    rn = renameBurst(corpus, bg);
   } finally {
     setDarwinbg(false);
   }
@@ -228,6 +261,7 @@ function probe(corpus: string, bg: boolean, tick: number): ProbeReading {
     ),
     readdir500: round(rd, 2),
     max_op: round(Math.max(lst.at(-1)!, rd), 2),
+    rename_max: round(rn, 2),
   };
 }
 
@@ -320,6 +354,20 @@ function daemonProcs(): WrittenTick["daemon_procs"] {
       procs[name] = p;
   }
   return procs;
+}
+
+/** Processes in uninterruptible wait right now, counted by name, the busiest few. */
+function uninterruptible(): Record<string, number> {
+  const byName = new Map<string, number>();
+  for (const line of run(["ps", "-Ao", "stat=,comm="]).split("\n")) {
+    const m = /^\s*(\S+)\s+(.+)$/.exec(line);
+    if (m === null || !m[1]!.startsWith("U")) continue;
+    const name = basename(m[2]!.trim());
+    byName.set(name, (byName.get(name) ?? 0) + 1);
+  }
+  return Object.fromEntries(
+    [...byName].sort((a, b) => b[1] - a[1]).slice(0, BLOCKED_NAMES),
+  );
 }
 
 /**
@@ -449,6 +497,8 @@ function runTick(spec: RootDaemonSpec): void {
 
   const fg = probe(corpus, false, tick);
   const bg = probe(corpus, true, tick);
+  // Right after the probes, so it names who was stuck at the probes' moment.
+  const blocked = uninterruptible();
 
   const lastRead = state.canary_read_at ?? {};
   const canaries: WrittenTick["canary"] = [];
@@ -514,13 +564,14 @@ function runTick(spec: RootDaemonSpec): void {
     k["vm.loadavg"]!.replace(/[{}]/g, "").trim().split(/\s+/)[0],
   );
   const maxOp = Math.max(fg.max_op, bg.max_op);
+  const maxRename = Math.max(fg.rename_max, bg.rename_max);
   const rec: WrittenTick = {
     t: round(now, 3),
     iso: new Date(now * 1000).toISOString().replace(/\.\d+Z$/, "Z"),
     fg,
     bg,
     max_op_ms: maxOp,
-    stall: maxOp > STALL_MS,
+    stall: Math.max(maxOp, maxRename) > STALL_MS,
     canary: canaries,
     vnodes: int(k, "kern.num_vnodes"),
     maxvnodes: int(k, "kern.maxvnodes"),
@@ -528,6 +579,7 @@ function runTick(spec: RootDaemonSpec): void {
     load1,
     daemon_cpu: daemonCpu(),
     daemon_procs: daemonProcs(),
+    uninterruptible: blocked,
   };
   if (rootDaemon !== undefined) rec.root_daemon = rootDaemon;
   if (isRoot) {

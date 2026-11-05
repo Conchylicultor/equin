@@ -50,8 +50,8 @@ export const MonitorTickSchema = z.object({
   iso: z.string(),
   /** Slowest single cold probe op of the tick (ms), either tier. */
   max_op_ms: z.number(),
-  fg: z.object({ max_op: z.number() }),
-  bg: z.object({ max_op: z.number() }),
+  fg: z.object({ max_op: z.number(), rename_max: z.number().optional() }),
+  bg: z.object({ max_op: z.number(), rename_max: z.number().optional() }),
   /** Per canary group: page residency vs seconds since it was last read. */
   canary: z.array(z.object({ age_s: z.number(), resident: z.number() })),
   load1: z.number(),
@@ -70,6 +70,8 @@ export const MonitorTickSchema = z.object({
   disk_readers_mb_s: z.record(z.string(), z.number()).nullable().optional(),
   /** User agent only: a root daemon is installed but not writing (absent when none is installed). */
   root_daemon: RootDaemonStatusSchema.optional(),
+  /** Processes in uninterruptible wait as the tick ran, by name (from 2026-11-05). */
+  uninterruptible: z.record(z.string(), z.number()).optional(),
 });
 export type MonitorTick = z.infer<typeof MonitorTickSchema>;
 
@@ -91,7 +93,16 @@ export interface ProbeReading {
   lstat_max: number;
   lstat_sum: number;
   readdir500: number;
+  /** The slowest lstat or readdir: the cold metadata ops (`metadata-stall`). */
   max_op: number;
+  /**
+   * The slowest of a burst of renames of one file within its own directory.
+   * Not part of `max_op`: a rename waits on the volume's rename serialization
+   * (a bulk directory-tree mutation elsewhere on the volume — `bun install`
+   * moving package dirs, `rm -rf` of a tree — holds every rename), not on a cold
+   * lookup, so it is its own rule (`rename-stall`).
+   */
+  rename_max: number;
 }
 
 type DaemonProc = z.infer<typeof ProcSchema>;
@@ -133,6 +144,8 @@ export interface WrittenTick {
   incident?: string;
   /** User agent only, while a root daemon's plist is installed but it does not write. */
   root_daemon?: RootDaemonStatus;
+  /** Processes in uninterruptible wait (ps state U) as the tick ran: count by name, the busiest few. */
+  uninterruptible: Record<string, number>;
 }
 
 type Holds<T extends true> = T;

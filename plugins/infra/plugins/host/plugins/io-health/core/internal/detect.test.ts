@@ -80,6 +80,27 @@ describe("io-health detector", () => {
     expect(d.active()).toEqual([]);
   });
 
+  test("renames held on several ticks of the hour are a rename stall naming who was blocked; one burst is not", () => {
+    const one = run(120, (i) =>
+      i === 5 ? { fg: { max_op: 1, rename_max: 900 } } : {},
+    );
+    expect(one.raised).toEqual([]);
+    const { raised, d } = run(130, (i) =>
+      i % 20 === 5
+        ? {
+            bg: { max_op: 1, rename_max: 300 + i },
+            uninterruptible: { "bun install": 2, "equin · server": 1 },
+          }
+        : {},
+    );
+    expect(raised).toEqual([{ i: 45, key: "rename-stall:volume" }]);
+    const f = d.active().find((x) => x.rule === "rename-stall")!;
+    expect(f.evidence).toContainEqual({
+      label: "in uninterruptible wait then",
+      value: "bun install ×2, equin · server",
+    });
+  });
+
   test("a daemon with a new pid every few minutes is a relaunch loop (legacy corecaptured field too)", () => {
     const viaProcs = run(60, (i) => ({
       daemon_procs: {

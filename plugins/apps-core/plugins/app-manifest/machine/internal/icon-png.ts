@@ -29,9 +29,13 @@ export function appIconPng(app: AppRef, size: number): Uint8Array<ArrayBuffer> {
   const hit = cache.get(key);
   if (hit !== undefined) return hit;
   // Copied into an ArrayBuffer of its own: resvg hands back a Node Buffer
-  // (any ArrayBufferLike), which a Response body does not take.
+  // (any ArrayBufferLike), which a Response body does not take. The icon draws
+  // no text, so no font is loaded (lint `no-resvg-system-fonts`).
   const png = new Uint8Array(
-    new Resvg(appIconSvg(app, size), { fitTo: { mode: "width", value: size } })
+    new Resvg(appIconSvg(app, size), {
+      fitTo: { mode: "width", value: size },
+      font: { loadSystemFonts: false },
+    })
       .render()
       .asPng(),
   );

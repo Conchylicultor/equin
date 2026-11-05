@@ -55,6 +55,15 @@ export const IO_HEALTH_THRESHOLDS = {
   cacheMinQuietTicks: 20,
   /** Below this median residency the canaries count as evicted. */
   cacheResident: 0.5,
+  /**
+   * A tick's slowest rename over this is a held rename. Measured 2026-11-05 with
+   * a 10 Hz probe renaming one file in its own directory: ≤ 14 ms in every
+   * quiet window (p99 ~5 ms), 290–1300 ms while a `bun install` or an
+   * `rm -rf node_modules` ran elsewhere on the volume, at any I/O tier.
+   */
+  renameStallMs: 250,
+  /** Held-rename ticks in the hour before it is a finding: one install's burst is load, a stream of them is the defect. */
+  renameStallTicks: 3,
 } as const;
 
 /** What one tick changed. */
@@ -219,6 +228,53 @@ function metadataStall(win: readonly MonitorTick[]): Observation[] {
   ];
 }
 
+function renameMax(r: MonitorTick): number {
+  return Math.max(r.fg.rename_max ?? 0, r.bg.rename_max ?? 0);
+}
+
+/** The processes in uninterruptible wait on a tick, busiest first: who was stuck beside the probe. */
+function blockedEvidence(r: MonitorTick): Evidence[] {
+  const blocked = Object.entries(r.uninterruptible ?? {}).sort(
+    (a, b) => b[1] - a[1],
+  );
+  return blocked.length === 0
+    ? []
+    : [
+        {
+          label: "in uninterruptible wait then",
+          value: blocked
+            .slice(0, 5)
+            .map(([name, n]) => (n > 1 ? `${name} ×${n}` : name))
+            .join(", "),
+        },
+      ];
+}
+
+function renameStall(win: readonly MonitorTick[]): Observation[] {
+  const held = win.filter((r) => renameMax(r) > T.renameStallMs);
+  if (held.length < T.renameStallTicks) return [];
+  const worst = held.reduce((a, b) => (renameMax(b) > renameMax(a) ? b : a));
+  const tier =
+    (worst.bg.rename_max ?? 0) >= (worst.fg.rename_max ?? 0)
+      ? "darwinbg"
+      : "foreground";
+  return [
+    {
+      rule: "rename-stall",
+      subject: "volume",
+      severity: "attention",
+      summary: `Renames were held up to ${fmt(renameMax(worst) / 1000, 2)} s on ${held.length} ticks of the last hour — something keeps mutating directory trees in bulk`,
+      evidence: [
+        { label: "slowest rename (ms)", value: fmt(renameMax(worst), 0) },
+        { label: "tier", value: tier },
+        { label: "held ticks in the last hour", value: String(held.length) },
+        { label: "at", value: worst.iso },
+        ...blockedEvidence(worst),
+      ],
+    },
+  ];
+}
+
 function procsOf(
   r: MonitorTick,
 ): Record<string, { pid: number; age_s: number }> {
@@ -339,6 +395,7 @@ const RULES: ((win: readonly MonitorTick[], held: Held) => Observation[])[] = [
   daemonCpu,
   deviceLatency,
   metadataStall,
+  renameStall,
   relaunchLoop,
   cacheCollapse,
   rootDaemon,
