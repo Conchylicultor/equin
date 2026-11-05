@@ -78,6 +78,10 @@ describe("Avatar tile presentation", () => {
     );
     const el = box(container);
     expect(el.classList).toContain("size-full");
+    // Block-level: an inline size container would sit on its parent's
+    // baseline and slide out of the box it fills.
+    expect(el.classList).toContain("flex");
+    expect(el.classList).not.toContain("inline-flex");
     expect(el.classList).toContain("rounded-squircle");
     expect(el.classList).not.toContain("size-avatar-md");
     for (const cls of avatarFlatClass(avatarColorPick(null, "home")).split(

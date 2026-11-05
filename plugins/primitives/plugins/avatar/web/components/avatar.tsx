@@ -64,6 +64,12 @@ export interface AvatarProps extends DensityControlled {
 }
 
 interface Geometry {
+  /** Whether the box is block-level: a tile fills its parent and never sits
+   *  in running text, and an inline size container's baseline is its bottom
+   *  edge — on its parent's line box it would sit on the baseline and slide
+   *  down by the strut's descent, out of the parent it is meant to fill (the
+   *  window titlebar's clipped app tile). A badge stays inline. */
+  block?: boolean;
   box: string;
   icon: string;
   /** Font size of the fallback letter, as a share of the box's height (`cqh` —
@@ -123,6 +129,7 @@ const SIZE_MAP: Record<ControlSize, Geometry> = {
 /** Tile geometry: the box fills the host-sized parent, so the glyph (svg, or
  *  the letter) is 46% of it; the dot carries no ring. */
 const TILE_GEOMETRY: Geometry = {
+  block: true,
   box: "size-full",
   icon: "size-[46%]",
   glyph: "text-[length:46cqh]",
@@ -230,10 +237,12 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
       // (a control panel's icon column, `cp-panel` in ui-kit's app.css).
       data-avatar=""
       style={custom ? ({ "--avatar-fill": fill } as CSSProperties) : undefined}
-      // eslint-disable-next-line layout/no-adhoc-layout -- rigid inline-level avatar disc: inline-flex center on a shrink-0 leaf that sits inline in flex rows; Center is block-level grid and would break inline placement
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid avatar disc: a flex-centred shrink-0 leaf, inline-level as a badge (it sits inline in flex rows; Center is block-level grid and would break inline placement), block-level as a tile (Geometry.block)
       className={cn(
         // A size container, so the glyph's `cqh` share resolves against the box.
-        "relative inline-flex shrink-0 items-center justify-center @container-[size]",
+        "relative",
+        sz.block ? "flex" : "inline-flex",
+        "shrink-0 items-center justify-center @container-[size]",
         SHAPE_CLASS[shape],
         sz.box,
         paint,
