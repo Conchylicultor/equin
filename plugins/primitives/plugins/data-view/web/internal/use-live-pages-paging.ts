@@ -80,17 +80,19 @@ export function useLivePagesPaging<Row, F, S extends string, Cols = never>(
   const narrowing = usePagesNarrowing(collection, options?.narrowBy);
   const narrowed = useMemo((): ReadQuery | null => {
     if (query === null) return null;
+    // Every other key rides as the caller wrote it (`orderBy`, `now`, a live
+    // tree's `include`).
+    const { where: written, columns: writtenColumns, ...rest } = query;
     // The caller's `where`, checked where it was written, read as the filter
     // language it canonicalizes to.
-    const own = query.where as Filter | undefined;
-    const brought = (query.columns ?? []) as readonly LiveColumnsDeclaration[];
+    const own = written as Filter | undefined;
+    const brought = (writtenColumns ?? []) as readonly LiveColumnsDeclaration[];
     const columns =
       narrowing.kind === "none" ? brought : [...brought, ...narrowing.columns];
     const where = narrowing.kind === "none" ? own : narrowWhere(own, narrowing);
     return {
+      ...rest,
       ...(where !== undefined ? { where } : {}),
-      ...(query.orderBy !== undefined ? { orderBy: query.orderBy } : {}),
-      ...(query.now !== undefined ? { now: query.now } : {}),
       ...(columns.length > 0 ? { columns } : {}),
     };
   }, [query, narrowing]);

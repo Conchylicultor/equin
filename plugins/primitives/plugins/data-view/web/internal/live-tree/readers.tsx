@@ -5,7 +5,6 @@ import type {
   LiveColumnsDeclaration,
   LiveOrderBy,
   LiveTreeCollection,
-  LiveWhere,
 } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
@@ -49,14 +48,11 @@ export function ChildWindowReader(props: {
   onResult: (parentId: string, report: ChildReport) => void;
 }): ReactNode {
   const { collection, parentId, query, onResult } = props;
-  const read = useLive(
-    collection as LiveCollection<unknown, Record<string, never>, string>,
-    {
-      where: query.where as LiveWhere<Record<string, never>>,
-      orderBy: query.orderBy,
-      ...(query.columns.length > 0 ? { columns: query.columns } : {}),
-    },
-  );
+  const read = useLive(collection, {
+    where: query.where,
+    orderBy: query.orderBy,
+    ...(query.columns.length > 0 ? { columns: query.columns } : {}),
+  });
   const loadMore = useEventCallback(() => {
     switch (read.status) {
       case "ready":

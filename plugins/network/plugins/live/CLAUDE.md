@@ -1645,10 +1645,14 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LivePreloadedParamValueSpec`
     - `LiveQuery`
     - `LiveQueryCodec`
+    - `LiveQueryFilterable`
+    - `LiveQueryGroupable`
     - `LiveQueryParams`
     - `LiveQuerySchema`
+    - `LiveQuerySortable`
     - `LiveQueryValue`
     - `LiveQueryValueSpec`
+    - `LiveQueryWhere`
     - `LiveRefusals`
     - `LiveRefusalsBrand`
     - `LiveRelated`

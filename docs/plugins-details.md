@@ -31043,6 +31043,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ExposesDecl`
           - `ExposureRow`
           - `ExposureRowSchema`
+          - `ExposureSlice`
           - `ExtensionFields`
           - `ExtensionServerOnly`
           - `ExtensionShape`
@@ -35308,10 +35309,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LivePreloadedParamValueSpec`
           - `LiveQuery`
           - `LiveQueryCodec`
+          - `LiveQueryFilterable`
+          - `LiveQueryGroupable`
           - `LiveQueryParams`
           - `LiveQuerySchema`
+          - `LiveQuerySortable`
           - `LiveQueryValue`
           - `LiveQueryValueSpec`
+          - `LiveQueryWhere`
           - `LiveRefusals`
           - `LiveRefusalsBrand`
           - `LiveRelated`
