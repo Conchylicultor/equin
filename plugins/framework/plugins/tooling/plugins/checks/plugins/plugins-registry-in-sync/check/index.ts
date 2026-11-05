@@ -4,9 +4,7 @@ import type {
   CheckContext,
 } from "@plugins/framework/plugins/tooling/core";
 import {
-  discoverCollectedDirsIn,
   renderCollectedDirRegistry,
-  collectedDirRegistryPath,
   committedRegistryBundle,
   collectEntriesWithDeps,
   buildRegistryGenContext,
@@ -16,6 +14,8 @@ import {
   renderBrowserHost,
   renderBrowserHostScope,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { discoverCollectedDirsIn } from "@plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery/core";
+import { collectedDirRegistryPath } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
 // Every `id: "<plugin.id>"` a rendered registry carries. The generator emits

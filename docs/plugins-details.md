@@ -13630,9 +13630,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/studio/compositions/draft-actions`
           - `apps/studio/compositions/release`
       - Exemptions:
-        - Exempts itself from:
-          - `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
-          - `boot:closure-digestable` — `server/index.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
     - **`server-build-id`** — Served-bundle pin leaf: reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
       - Server:
         - Uses: `infra/paths.webDistDir`
@@ -14030,14 +14028,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 125 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 126 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×35
       - `conversations` ×14
       - `backup` ×13
       - `debug` ×12
       - `ui` ×11
+      - `config_v2` ×7
       - `auth` ×6
-      - `config_v2` ×6
       - `tasks` ×5
       - `primitives` ×3
       - `framework` ×2
@@ -14120,6 +14118,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/google-maps/usage`
           - `stats/commits`
           - `tasks/launch-options`
+    - **`disk-read`** — A config's resolved value read straight off disk, with no server runtime and no build tooling: readEffectiveConfigFromDisk (this checkout's git layer as propagation will write it, under a namespace's user overrides) and fileConfigProxy (one JSONC config file as a ConfigProxy).
+      - Core:
+        - Uses:
+          - `config_v2.CONFIG_HASH_RE`
+          - `config_v2.effective`
+          - `config_v2.readonlyProxy`
+          - `config_v2.readTypedConfig`
+          - `infra/host-fs/user-path.AppPath`
+          - `infra/host-fs/user-path.appPathParent`
+          - `infra/host-fs/user-path.joinAppPath`
+          - `packages/timed-fs.existsSync`
+          - `packages/timed-fs.readFileSync`
+        - Exports (values):
+          - `fileConfigProxy`
+          - `readEffectiveConfigFromDisk`
+      - Cross-plugin:
+        - Imported by: `framework/tooling/codegen`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/effective-on-disk.ts` (debt)
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Web:
         - Slots:
@@ -27293,6 +27310,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/server-core`
           - `framework/tooling/boundaries`
           - `framework/tooling/codegen`
+          - `framework/tooling/collected-dir/discovery`
           - `framework/tooling/guards`
           - `framework/tooling/web-artifacts`
           - `framework/web-sdk`
@@ -27713,6 +27731,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/serve-composition` (1 debt)
               - `build/server-build-id` (2 debt)
               - `code-explorer` (5 debt)
+              - `config_v2/disk-read` (1 debt)
               - `config_v2/ledger` (1 debt)
               - `conversations` (3 debt)
               - `conversations/conversation-view/code` (2 debt)
@@ -27754,7 +27773,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/boundaries` (2 debt)
               - `framework/tooling/checks` (11 debt)
               - `framework/tooling/checks/type-check` (17 debt)
-              - `framework/tooling/codegen` (22 debt)
+              - `framework/tooling/codegen` (21 debt)
+              - `framework/tooling/codegen/composition-registries` (1 debt)
+              - `framework/tooling/collected-dir/discovery` (1 debt)
               - `framework/tooling/format` (5 debt)
               - `framework/tooling/guards` (11 debt)
               - `framework/tooling/import-closure` (1 debt)
@@ -28118,10 +28139,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 137 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
-              - `plugin-meta/parse-utils` ×20
-              - `config_v2` ×16
-              - `framework/plugin-id` ×15
+            - Uses: 138 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+              - `plugin-meta/parse-utils` ×19
+              - `config_v2` ×14
+              - `framework/plugin-id` ×13
               - `network/live/resource-vocabulary` ×10
               - `plugin-meta/plugin-records` ×10
               - `framework/slot-declaration` ×6
@@ -28130,14 +28151,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/closure` ×5
               - `plugin-meta/composition` ×5
               - `plugin-meta/facets` ×5
-              - `infra/host-fs/user-path` ×4
+              - `framework/tooling/codegen/composition-registries` ×4
               - `framework/tooling` ×3
+              - `infra/host-fs/user-path` ×3
               - `config_v2/ledger` ×2
               - `framework/tooling/boundaries` ×2
+              - `framework/tooling/collected-dir/discovery` ×2
               - `framework/tooling/format` ×2
               - `infra/paths` ×2
               - `network/live/resource-protocol` ×2
               - `plugin-meta/plugin-tree` ×2
+              - `config_v2/disk-read.fileConfigProxy`
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
               - `framework/tooling/lint.loadLintContributions`
@@ -28160,7 +28184,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CollectedRawEntry`
               - `DeclaredApp`
               - `DerivedBrowserHostGraph`
-              - `DiscoveredCollectedDir`
               - `EagerTierResult`
               - `GenerateDocsOptions`
               - `HostConfigRegistration`
@@ -28194,8 +28217,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `collectAllPlugins`
               - `collectBareSpecifiers`
               - `collectDataViews`
-              - `collectedDirNamedCompositionRegistryPath`
-              - `collectedDirRegistryPath`
               - `collectEntriesWithDeps`
               - `collectExemptRuleIds`
               - `collectFieldEagerBarrels`
@@ -28208,18 +28229,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `colorTokenRefPath`
               - `committedRegistryBundle`
               - `companionManifestPath`
-              - `compositionFilteredRegistries`
-              - `compositionRegistryFileName`
-              - `compositionRegistryPath`
-              - `compositionRegistryRedirects`
               - `computeEagerTier`
               - `customUtilitiesManifestPath`
               - `dataViewsManifestPath`
               - `declareSlotsFromBarrels`
               - `deriveBrowserHostGraph`
               - `discoverBrowserHosts`
-              - `discoverCollectedDirs`
-              - `discoverCollectedDirsIn`
               - `eagerTierManifestPath`
               - `evaluateAllBarrels`
               - `evaluateWebBarrels`
@@ -28227,7 +28242,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `exemptRuleIdsPath`
               - `extractRuntimeImportSpecifiers`
               - `fieldsEagerManifestPath`
-              - `fileConfigProxy`
               - `formatGenerated`
               - `generateBarrelStubs`
               - `generateBrowserHosts`
@@ -28248,13 +28262,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `iconManifestPath`
               - `inferBrowserHostGraph`
               - `isAppContent`
-              - `listNamedCompositionRegistries`
               - `listReviewMarkedOverrides`
               - `loadConfigDescriptorsByOriginPath`
               - `mainBundle`
               - `mainComposition`
               - `parseCustomUtilities`
-              - `parseNamedCompositionRegistryFileName`
               - `parseSpaceRamp`
               - `pluginClaudeMdPath`
               - `pluginCompactDocPath`
@@ -28266,7 +28278,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readCompositionManifestsFromDisk`
               - `readDeclaredApps`
               - `readDefineApp`
-              - `readEffectiveConfigFromDisk`
               - `readGitLayerConfig`
               - `recordSlotNaming`
               - `regenerateManifestCodegen`
@@ -28311,9 +28322,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setDefaultOriginDefaults`
               - `setDefaultOriginDefaultsPreparer`
               - `spaceRampManifestPath`
-              - `standardPluginDirs`
-              - `standardPluginDirsFromSnapshot`
-              - `standardPluginDirsIn`
               - `themeDeclarationsManifestPath`
               - `tokenGroupVarsManifestPath`
               - `withPackageName`
@@ -28323,10 +28331,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/shadow --shadow`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
+              - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
               - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/barrel-free-tree.ts`, `core/evaluated-barrels.ts`, `core/plugin-registry-gen.ts` (debt)
+          - Plugins:
+            - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, and every per-name registry and backend entry on disk — without the build pipeline, so a serving backend (worktree reclaim) can list them.
+              - Core:
+                - Uses:
+                  - `framework/tooling/collected-dir/discovery.discoverCollectedDirs`
+                  - `framework/tooling/collected-dir/discovery.DiscoveredCollectedDir`
+                  - `infra/host-fs/user-path.AppPath`
+                  - `infra/host-fs/user-path.joinAppPath`
+                  - `infra/namespace.MAIN_COMPOSITION_ID`
+                  - `infra/paths.SERVER_CORE_RELATIVE`
+                  - `packages/timed-fs.readdirSync`
+                  - `plugin-meta/composition.assertCompositionName`
+                - Exports (values):
+                  - `collectedDirNamedCompositionRegistryPath`
+                  - `collectedDirRegistryPath`
+                  - `COMPOSITION_RUNTIME_DIRS`
+                  - `compositionFilteredRegistries`
+                  - `compositionRegistryFileName`
+                  - `compositionRegistryPath`
+                  - `compositionRegistryRedirects`
+                  - `listNamedCompositionRegistries`
+                  - `parseNamedCompositionRegistryFileName`
+              - Cross-plugin:
+                - Imported by: `framework/tooling/codegen`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `core/registry-files.ts` (debt)
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
             - Imported by:
@@ -28355,6 +28389,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineCollectedDir`
               - `isCollectedDirDef`
               - `loadCollectedDir`
+          - Plugins:
+            - **`discovery`** — Collected-dir discovery: which `defineCollectedDir("<dir>")` markers the checkout declares, read from its file set (discoverCollectedDirsIn over a RepoFiles, discoverCollectedDirs with one blocking git ls-files, standardPluginDirsFromSnapshot over a tree build's snapshot) — no directory walk and no build tooling, so a serving backend can ask too.
+              - Core:
+                - Uses:
+                  - `framework/plugin-id.PLUGIN_FOLDERS`
+                  - `framework/plugin-id.PluginFolder`
+                  - `infra/host-fs/user-path.AppPath`
+                  - `infra/host-fs/user-path.joinAppPath`
+                  - `packages/timed-fs.readFileSync`
+                  - `plugin-meta/parse-utils.findMarkerCalls`
+                  - `plugin-meta/parse-utils.FsSnapshot`
+                - Exports (types): `DiscoveredCollectedDir`
+                - Exports (values):
+                  - `discoverCollectedDirs`
+                  - `discoverCollectedDirsIn`
+                  - `standardPluginDirs`
+                  - `standardPluginDirsFromSnapshot`
+                  - `standardPluginDirsIn`
+              - Cross-plugin:
+                - Imported by:
+                  - `framework/tooling/codegen`
+                  - `framework/tooling/codegen/composition-registries`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `core/discover.ts` (debt)
         - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./equin deps install chromium`). Also owns the two generic tools (screenshot, perf).
           - Core:
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
@@ -31982,13 +32040,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
-              - `framework` ×8
+            - Imported by: 34 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+              - `framework` ×10
               - `infra` ×8
               - `plugin-meta` ×4
               - `packages` ×3
+              - `config_v2` ×2
               - `fields` ×2
-              - `config_v2/ledger`
               - `database/migrations`
               - `debug/browser-recordings/writer`
               - `reports/outbox`
@@ -32900,6 +32958,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/website/shell`
           - `build`
           - `framework/tooling/codegen`
+          - `framework/tooling/codegen/composition-registries`
           - `framework/tooling/guards`
           - `framework/tooling/web-artifacts`
           - `infra/paths`
@@ -33011,9 +33070,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 41 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `debug` ×7
-          - `framework` ×6
+          - `framework` ×7
           - `infra` ×6
           - `backup` ×4
           - `conversations` ×3
@@ -33942,9 +34001,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/serve-composition`
               - `debug/worktree-cleanup`
           - Exemptions:
-            - Exempts itself from:
-              - `boundaries/no-platform-api` — `server/internal/owned-namespaces.ts`, `server/internal/reclaim-namespace.ts` (debt)
-              - `boot:closure-digestable` — `server/index.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/owned-namespaces.ts`, `server/internal/reclaim-namespace.ts` (debt)
         - **`spare-pool`** — Spare worktree pool: the worktree.spare-refill job (enqueued after every launch's checkout, at main's boot, and daily) keeps one locked, detached checkout of main ready under .claude/worktrees/spare-*, so setupWorktree claims it with a rename and a branch switch instead of a cold git worktree add.
           - Server:
             - Uses:
@@ -36639,13 +36696,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call past FS_WAIT_FLOOR_MS handed to onSlowFsCall subscribers as a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 34 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `framework` ×13
+        - Imported by: 37 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `framework` ×15
           - `infra` ×6
           - `plugin-meta` ×4
           - `packages` ×3
+          - `config_v2` ×2
           - `database` ×2
-          - `config_v2/ledger`
           - `conversations/workspace/scratch`
           - `debug/browser-recordings/writer`
           - `reports/outbox`
@@ -39788,6 +39845,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/studio/graph`
           - `build/serve-composition`
           - `framework/tooling/codegen`
+          - `framework/tooling/codegen/composition-registries`
           - `plugin-meta/plugin-view/dependencies`
           - `plugin-meta/plugin-view/inclusion`
     - **`contributions-table`** — Registry for the Studio Contributions aggregated-table surface: FacetTable + RowActivation slots and factories.
@@ -40617,6 +40675,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
+          - `framework/tooling/collected-dir/discovery`
           - `framework/tooling/test-layout`
           - `network/live/resource-vocabulary`
           - `plugin-meta/plugin-refs`

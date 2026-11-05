@@ -31,31 +31,17 @@ export {
 // at module scope, so a pass-through from here would keep the vocabulary
 // unreachable from those runtimes while looking available.
 export {
-  collectedDirRegistryPath,
   committedRegistryBundle,
-  collectedDirNamedCompositionRegistryPath,
-  compositionRegistryFileName,
-  compositionRegistryPath,
-  compositionFilteredRegistries,
-  compositionRegistryRedirects,
   collectBareSpecifiers,
   collectEntriesWithDeps,
-  discoverCollectedDirs,
-  discoverCollectedDirsIn,
   generateCompositionRegistry,
   generatePluginRegistry,
-  listNamedCompositionRegistries,
   renderBackendEntry,
-  parseNamedCompositionRegistryFileName,
   renderCollectedDirRegistry,
   renderEmptyCollectedDirRegistry,
   resolveRegistryHome,
   buildRegistryGenContext,
-  standardPluginDirs,
-  standardPluginDirsFromSnapshot,
-  standardPluginDirsIn,
   type CollectedRawEntry,
-  type DiscoveredCollectedDir,
   type RegistryComposition,
   type RegistryGenContext,
 } from "./plugin-registry-gen";
@@ -82,10 +68,8 @@ export {
 // plugin-tree/facets, which codegen depends on).
 
 export {
-  fileConfigProxy,
   generateConfigOrigins,
   propagateConfigToUser,
-  readEffectiveConfigFromDisk,
   renderConfigOriginContent,
   loadConfigDescriptorsByOriginPath,
   resolveOriginAnnotations,

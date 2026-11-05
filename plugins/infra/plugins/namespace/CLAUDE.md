@@ -134,6 +134,7 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `apps/website/shell`
     - `build`
     - `framework/tooling/codegen`
+    - `framework/tooling/codegen/composition-registries`
     - `framework/tooling/guards`
     - `framework/tooling/web-artifacts`
     - `infra/paths`

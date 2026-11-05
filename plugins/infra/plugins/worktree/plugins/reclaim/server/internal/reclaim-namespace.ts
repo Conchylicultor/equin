@@ -30,6 +30,7 @@ import {
   type CompositionMarker,
 } from "@plugins/infra/plugins/worktree/server";
 import { assertServableCompositionNamespace } from "@plugins/plugin-meta/plugins/composition/core";
+import { listNamedCompositionRegistries } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 
 /** A refused reclaim — a guard rejected the target before anything was touched. */
 export class NamespaceReclaimError extends Error {
@@ -179,9 +180,7 @@ async function removeFilteredRegistries(
   // unknown owner could cause here — so the unknown arm does nothing. Stated as a
   // decision, not an oversight: `checkout.reason` carries why.
   if (!checkout.known) return;
-  // Loaded here, not at module scope: see ./named-registries.
-  const { namedRegistryFiles } = await import("./named-registries");
-  for (const file of namedRegistryFiles(checkout.root, composition)) {
-    await rm(file, { force: true });
+  for (const { name, file } of listNamedCompositionRegistries(checkout.root)) {
+    if (name === composition) await rm(file, { force: true });
   }
 }

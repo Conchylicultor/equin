@@ -1,12 +1,12 @@
 import { builtinModules } from "node:module";
 import { relative } from "node:path";
 import {
-  collectedDirRegistryPath,
-  discoverCollectedDirsIn,
   postWebManifests,
   preBarrelManifests,
   writePreBarrelManifest,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { discoverCollectedDirsIn } from "@plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery/core";
+import { collectedDirRegistryPath } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import {

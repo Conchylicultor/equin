@@ -1,6 +1,6 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { readEffectiveConfigFromDisk } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { readEffectiveConfigFromDisk } from "@plugins/config_v2/plugins/disk-read/core";
 import {
   assertCompositionId,
   compositionsConfig,

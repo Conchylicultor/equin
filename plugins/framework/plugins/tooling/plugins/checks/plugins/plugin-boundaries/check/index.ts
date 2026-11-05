@@ -2,7 +2,7 @@ import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/co
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join, relative, resolve, sep } from "path";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { standardPluginDirsIn } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { standardPluginDirsIn } from "@plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery/core";
 import { runtimeNames } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import {
   packageNameFor,

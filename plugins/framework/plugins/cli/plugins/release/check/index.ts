@@ -1,8 +1,6 @@
 import type { Check } from "@plugins/framework/plugins/tooling/core";
-import {
-  compositionFilteredRegistries,
-  renderEmptyCollectedDirRegistry,
-} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { renderEmptyCollectedDirRegistry } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { compositionFilteredRegistries } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { join } from "node:path";
 import {

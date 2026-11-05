@@ -165,10 +165,10 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 137 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `plugin-meta/parse-utils` ×20
-    - `config_v2` ×16
-    - `framework/plugin-id` ×15
+  - Uses: 138 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `plugin-meta/parse-utils` ×19
+    - `config_v2` ×14
+    - `framework/plugin-id` ×13
     - `network/live/resource-vocabulary` ×10
     - `plugin-meta/plugin-records` ×10
     - `framework/slot-declaration` ×6
@@ -177,14 +177,17 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `plugin-meta/closure` ×5
     - `plugin-meta/composition` ×5
     - `plugin-meta/facets` ×5
-    - `infra/host-fs/user-path` ×4
+    - `framework/tooling/codegen/composition-registries` ×4
     - `framework/tooling` ×3
+    - `infra/host-fs/user-path` ×3
     - `config_v2/ledger` ×2
     - `framework/tooling/boundaries` ×2
+    - `framework/tooling/collected-dir/discovery` ×2
     - `framework/tooling/format` ×2
     - `infra/paths` ×2
     - `network/live/resource-protocol` ×2
     - `plugin-meta/plugin-tree` ×2
+    - `config_v2/disk-read.fileConfigProxy`
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
     - `framework/tooling/guards/agent-policy.agentPolicySettings`
     - `framework/tooling/lint.loadLintContributions`
@@ -207,7 +210,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `CollectedRawEntry`
     - `DeclaredApp`
     - `DerivedBrowserHostGraph`
-    - `DiscoveredCollectedDir`
     - `EagerTierResult`
     - `GenerateDocsOptions`
     - `HostConfigRegistration`
@@ -241,8 +243,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `collectAllPlugins`
     - `collectBareSpecifiers`
     - `collectDataViews`
-    - `collectedDirNamedCompositionRegistryPath`
-    - `collectedDirRegistryPath`
     - `collectEntriesWithDeps`
     - `collectExemptRuleIds`
     - `collectFieldEagerBarrels`
@@ -255,18 +255,12 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `colorTokenRefPath`
     - `committedRegistryBundle`
     - `companionManifestPath`
-    - `compositionFilteredRegistries`
-    - `compositionRegistryFileName`
-    - `compositionRegistryPath`
-    - `compositionRegistryRedirects`
     - `computeEagerTier`
     - `customUtilitiesManifestPath`
     - `dataViewsManifestPath`
     - `declareSlotsFromBarrels`
     - `deriveBrowserHostGraph`
     - `discoverBrowserHosts`
-    - `discoverCollectedDirs`
-    - `discoverCollectedDirsIn`
     - `eagerTierManifestPath`
     - `evaluateAllBarrels`
     - `evaluateWebBarrels`
@@ -274,7 +268,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `exemptRuleIdsPath`
     - `extractRuntimeImportSpecifiers`
     - `fieldsEagerManifestPath`
-    - `fileConfigProxy`
     - `formatGenerated`
     - `generateBarrelStubs`
     - `generateBrowserHosts`
@@ -295,13 +288,11 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `iconManifestPath`
     - `inferBrowserHostGraph`
     - `isAppContent`
-    - `listNamedCompositionRegistries`
     - `listReviewMarkedOverrides`
     - `loadConfigDescriptorsByOriginPath`
     - `mainBundle`
     - `mainComposition`
     - `parseCustomUtilities`
-    - `parseNamedCompositionRegistryFileName`
     - `parseSpaceRamp`
     - `pluginClaudeMdPath`
     - `pluginCompactDocPath`
@@ -313,7 +304,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `readCompositionManifestsFromDisk`
     - `readDeclaredApps`
     - `readDefineApp`
-    - `readEffectiveConfigFromDisk`
     - `readGitLayerConfig`
     - `recordSlotNaming`
     - `regenerateManifestCodegen`
@@ -358,9 +348,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `setDefaultOriginDefaults`
     - `setDefaultOriginDefaultsPreparer`
     - `spaceRampManifestPath`
-    - `standardPluginDirs`
-    - `standardPluginDirsFromSnapshot`
-    - `standardPluginDirsIn`
     - `themeDeclarationsManifestPath`
     - `tokenGroupVarsManifestPath`
     - `withPackageName`
@@ -370,9 +357,11 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
   - Uses tokens: `ui/tokens/shadow --shadow`
 - Exemptions:
   - Exempts itself from:
-    - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
+    - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
     - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/barrel-free-tree.ts`, `core/evaluated-barrels.ts`, `core/plugin-registry-gen.ts` (debt)
+- Sub-plugins:
+  - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored…
 
 <!-- AUTOGENERATED:END -->

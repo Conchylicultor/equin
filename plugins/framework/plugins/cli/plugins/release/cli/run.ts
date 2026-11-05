@@ -48,11 +48,13 @@ import type { SymbolName } from "@plugins/ui/plugins/icons/core";
 import { appIconToSvg } from "@plugins/apps-core/plugins/app-icon/core";
 import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/plugins/bundle/cli";
 import {
-  compositionRegistryFileName,
-  compositionRegistryRedirects,
   propagateConfigToUser,
   readDefineApp,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  compositionRegistryFileName,
+  compositionRegistryRedirects,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 import {
   FIXED_ENTRIES,
   registryRedirectPlugin,

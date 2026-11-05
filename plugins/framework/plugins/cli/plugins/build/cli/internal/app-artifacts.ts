@@ -9,12 +9,12 @@ import { resolve } from "node:path";
 import {
   buildBarrelFreeTree,
   generateCompositionRegistry,
-  listNamedCompositionRegistries,
   regenerateManifestCodegen,
   regenerateRegistryCodegen,
   seedAuthoredOverrides,
   type CodegenStep,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { listNamedCompositionRegistries } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 import { repoProgram } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { readTypeCheckTree } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/cli";
 import { spawnTypeCheckWorker } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/server";

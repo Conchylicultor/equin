@@ -27,7 +27,7 @@ import {
   manifestItemToManifest,
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import { readEffectiveConfigFromDisk } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { readEffectiveConfigFromDisk } from "@plugins/config_v2/plugins/disk-read/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { refuse, type DeployTarget } from "./target";

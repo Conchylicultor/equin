@@ -413,6 +413,7 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `apps/studio/graph`
     - `build/serve-composition`
     - `framework/tooling/codegen`
+    - `framework/tooling/codegen/composition-registries`
     - `plugin-meta/plugin-view/dependencies`
     - `plugin-meta/plugin-view/inclusion`
 

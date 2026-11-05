@@ -16,9 +16,11 @@
 //
 // Why config is RE-PROPAGATED, not just deleted: a bare `rm -rf` of the config
 // dir would fall back to *code* defaults, not a genuine first-launch. Re-running
-// propagateConfigToUser restores the shipped *git-layer* defaults compose-serve
-// installs (`serveOne` calls the same function), so the reset lands on the exact
-// first-launch config, not a code-default approximation.
+// propagateConfigToUser (as `./equin config-propagate`, in a child: it evaluates
+// every plugin barrel, build tooling that never runs in a serving backend)
+// restores the shipped *git-layer* defaults a serve build installs (the build
+// calls the same function), so the reset lands on the exact first-launch config,
+// not a code-default approximation.
 //
 // OUT OF SCOPE — central secrets / auth tokens: they live in one global encrypted
 // store (~/.equin/state/secrets/) shared by every namespace by the
@@ -54,6 +56,10 @@ import {
   namespaceFor,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
+import {
+  readCompositionManifests,
+  repropagateConfig,
+} from "./config-propagation";
 
 /** A refused reset — a guard rejected the target before any data was touched. */
 export class CompositionResetError extends Error {
@@ -94,10 +100,6 @@ export async function resetCompositionData(
   }
 
   const root = REPO_ROOT;
-
-  // Loaded here, not at module scope: see ./config-propagation.
-  const { readCompositionManifests, repropagateConfig } =
-    await import("./config-propagation");
 
   // THIS CHECKOUT's resolved manifest, read once and judged by both remaining
   // guards. It used to be read main-authoritatively, because the serve stage ran

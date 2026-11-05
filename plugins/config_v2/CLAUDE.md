@@ -604,14 +604,14 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
-  - Imported by: 125 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 126 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×35
     - `conversations` ×14
     - `backup` ×13
     - `debug` ×12
     - `ui` ×11
+    - `config_v2` ×7
     - `auth` ×6
-    - `config_v2` ×6
     - `tasks` ×5
     - `primitives` ×3
     - `framework` ×2
@@ -638,6 +638,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
   - **`browser-store`** (excluded) — The user config layer of a host without the computer (a browser worker host): held in memory (ConfigStore) and written through to the host's declared storage (kept across reloads when it is…
   - **`bundled-layer`** (excluded) — The committed config layer bundled as text: provides the ConfigGitLayer host service from the repo's config/ inlined at build time, for a host without the repo on disk (a browser worker host). Never…
   - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear…
+  - **`disk-read`** [exempt] — A config's resolved value read straight off disk, with no server runtime and no build tooling: readEffectiveConfigFromDisk (this checkout's git layer as propagation will write it, under a…
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
   - **`git-defaults-preview`** — The git-defaults preview, for developers: a switch in the action bar's view-options popover makes this tab read every config from the committed layer (what a brand-new user sees) instead of the…
   - **`ledger`** [exempt] — The rewrite-saved-config-once ledger: replays keyed entries (plugin moves, config migrations) onto a namespace's user-layer config before propagation, recording each per namespace and keeping the…

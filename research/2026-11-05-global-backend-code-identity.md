@@ -39,7 +39,7 @@ few edges:
 | `server-core/bin` | registry selection (`plugins-active.ts`) and `coreBarrel` | **fixed:** each composition has its own serving entry (`bin/index.ts` for main, a generated `bin/index.composition.<id>.generated.ts` otherwise) importing its registries by literal path; the spec's `command` runs it and `serve` checks it against the spec's `composition`. Core barrels warm through a literal `core` loader per registry entry |
 | `plugin-tree/server`, `composition/server`, `deploy-secrets/approvals/server` | the facet framework (`load-facets.ts`, which hides `facet.generated` behind a computed specifier on purpose), and through it codegen, web-artifacts, exempt and lint | **fixed:** `facets/core` holds only the data accessors (the loader moved to `facets/loader`), the faceted build moved out of `plugin-tree/core` into `plugin-tree/faceted`, and the backend reads the faceted tree as JSON from `./equin plugin-tree-facets` (a child reading the shared plugin records) |
 | `type-check/server`, `type-check/backstop/server` (a `run` body) | `checks/core` runner | **fixed:** the backstop's `argv` body runs `./equin type-check-backstop`; `spawnTypeCheckWorker` takes a required `tree`, read by CLI callers through `type-check/cli`'s `readTypeCheckTree` |
-| `worktree/reclaim/server`, `serve-composition/server` | codegen's barrel, used for a registry listing and a reset | task-1793843090-eqagj3 |
+| `worktree/reclaim/server`, `serve-composition/server` | codegen's barrel, used for a registry listing and a reset | **fixed:** the per-composition registry grammar and listing moved to `codegen/composition-registries` (over the new `collected-dir/discovery`), the off-disk config read to `config_v2/disk-read`; the reset's re-propagation (which evaluates every barrel) runs as `./equin config-propagate` in a child |
 
 The headline finding is that **main runs build tooling in-process**. The
 clearest case is the facet framework: Studio and the deploy-secrets gate build
@@ -64,8 +64,8 @@ that tooling, not by any app logic.
    digest cannot disagree. It charges each finding to the entry (the bin or one
    barrel) whose own subgraph reaches it, stopping at other entries. The
    owning plugin either fixes the edge or holds it as tracked debt in its
-   `exempt/`. Four entries are debt today, each tied to one of the tasks
-   above. A new computed load anywhere else fails the check.
+   `exempt/`. The entries it held as debt when it landed are all fixed (the
+   table above), so a new computed load anywhere fails the check.
 4. **The identity** (after the chain above, part of the restart-skip work)
    is: `sourceDigest` over the serving entry, plus the non-code inputs below.
    The build compares the new tree's identity with the one the running backend

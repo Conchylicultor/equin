@@ -1676,6 +1676,9 @@
     "plugins/config_v2/plugins/config-link": {
       "name": "@equin/plugin-config_v2-config-link",
     },
+    "plugins/config_v2/plugins/disk-read": {
+      "name": "@equin/plugin-config_v2-disk-read",
+    },
     "plugins/config_v2/plugins/fields": {
       "name": "@equin/plugin-config_v2-fields",
     },
@@ -3760,8 +3763,16 @@
       "name": "@equin/plugin-framework-tooling-codegen",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries": {
+      "name": "@equin/plugin-framework-tooling-codegen-composition-registries",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/collected-dir": {
       "name": "@equin/plugin-framework-tooling-collected-dir",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery": {
+      "name": "@equin/plugin-framework-tooling-collected-dir-discovery",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/e2e-harness": {
@@ -8044,6 +8055,8 @@
 
     "@equin/plugin-config_v2-config-link": ["@equin/plugin-config_v2-config-link@workspace:plugins/config_v2/plugins/config-link"],
 
+    "@equin/plugin-config_v2-disk-read": ["@equin/plugin-config_v2-disk-read@workspace:plugins/config_v2/plugins/disk-read"],
+
     "@equin/plugin-config_v2-fields": ["@equin/plugin-config_v2-fields@workspace:plugins/config_v2/plugins/fields"],
 
     "@equin/plugin-config_v2-git-defaults-preview": ["@equin/plugin-config_v2-git-defaults-preview@workspace:plugins/config_v2/plugins/git-defaults-preview"],
@@ -9060,7 +9073,11 @@
 
     "@equin/plugin-framework-tooling-codegen": ["@equin/plugin-framework-tooling-codegen@workspace:plugins/framework/plugins/tooling/plugins/codegen"],
 
+    "@equin/plugin-framework-tooling-codegen-composition-registries": ["@equin/plugin-framework-tooling-codegen-composition-registries@workspace:plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries"],
+
     "@equin/plugin-framework-tooling-collected-dir": ["@equin/plugin-framework-tooling-collected-dir@workspace:plugins/framework/plugins/tooling/plugins/collected-dir"],
+
+    "@equin/plugin-framework-tooling-collected-dir-discovery": ["@equin/plugin-framework-tooling-collected-dir-discovery@workspace:plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery"],
 
     "@equin/plugin-framework-tooling-e2e-harness": ["@equin/plugin-framework-tooling-e2e-harness@workspace:plugins/framework/plugins/tooling/plugins/e2e-harness"],
 

@@ -209,6 +209,7 @@ snapshot they read the disk and compute, unchanged.
     - `framework/tooling/boundaries`
     - `framework/tooling/checks`
     - `framework/tooling/codegen`
+    - `framework/tooling/collected-dir/discovery`
     - `framework/tooling/test-layout`
     - `network/live/resource-vocabulary`
     - `plugin-meta/plugin-refs`

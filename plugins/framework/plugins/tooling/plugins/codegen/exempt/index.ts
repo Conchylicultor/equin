@@ -20,7 +20,6 @@ export default [
       "core/import-graph.ts",
       "core/override-legend-stamp.ts",
       "core/package-names.ts",
-      "core/plugin-registry-gen.ts",
       "core/pre-barrel-guard.ts",
       "core/slot-declaration-guard.ts",
       "core/space-ramp-gen.ts",

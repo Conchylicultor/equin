@@ -4,7 +4,7 @@ import {
   createFacet,
   type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
-import { standardPluginDirsFromSnapshot } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { standardPluginDirsFromSnapshot } from "@plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery/core";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import {
   readIfExists,
