@@ -98,7 +98,12 @@ vi.mock("../internal/use-data-view-model", async () => {
 });
 
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
-import { useSyncExternalStore, type ReactElement } from "react";
+import {
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+  type ReactElement,
+} from "react";
 import {
   PluginProvider,
   type LoadedPlugin,
@@ -111,7 +116,10 @@ import {
   type LiveCollection,
 } from "@plugins/network/plugins/live/core";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
-import { useTreeModel } from "@plugins/primitives/plugins/tree/web";
+import {
+  flatExpandAll,
+  useTreeModel,
+} from "@plugins/primitives/plugins/tree/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type {
   DataViewId,
@@ -172,6 +180,7 @@ const row = (
 
 // ── the view: the real nested pipeline, its painted lines as text ──────────
 const moveErrors: unknown[] = [];
+let reportCount = 0;
 let moveArgs: Parameters<
   NonNullable<LiveHierarchyConfig<Node>["onMove"]>
 > | null = null;
@@ -201,6 +210,26 @@ function TestNested(props: DataViewRenderProps<unknown>): ReactElement {
   );
   const h = useHierarchyTree({ props, primaryField, options: {} });
   const model = useTreeModel({ ...h.treeArgs, rows: h.rows, search: h.search });
+  // Reported up as the nested table does (`reportExpandAll`): a report is a
+  // host state write, so a view whose inputs change identity on every render
+  // turns it into an update loop.
+  const expandAll = useMemo(() => {
+    const state = flatExpandAll(model.scoped);
+    return state.hasExpandable
+      ? { allExpanded: state.allExpanded, changes: state.changes }
+      : null;
+  }, [model.scoped]);
+  const report = props.reportExpandAll;
+  useEffect(() => {
+    // A report per render of the host is an update loop: fail it here,
+    // rather than spin inside `act` forever.
+    if (++reportCount > 50) {
+      throw new Error(
+        "TestNested: expand-all reported 50+ times — an update loop",
+      );
+    }
+    report?.(expandAll);
+  }, [report, expandAll]);
   return (
     <div>
       {h.grouped ? (
@@ -478,6 +507,7 @@ beforeEach(() => {
   fake.mounted.clear();
   moveArgs = null;
   moveErrors.length = 0;
+  reportCount = 0;
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -808,6 +838,34 @@ describe("DataView — a live tree in hits mode", () => {
       ancestorsPending: false,
     });
     await waitFor(() => expect(lines()).toEqual(["hit"]));
+  });
+
+  it("hits mode grouped and sorted settles (no update loop)", async () => {
+    const c = nodes();
+    const errors = vi.spyOn(console, "error");
+    mount(c, {
+      ...base,
+      query: "hit",
+      sort: [{ fieldId: "title", direction: "desc" }],
+      groupBy: { fieldId: "kind", groupingId: "value" },
+    });
+    const hitsRead = () =>
+      reads(c).find((r) => r.viewport && json(r.query.where).includes("hit"));
+    await waitFor(() => expect(hitsRead()).toBeDefined(), { timeout: 1000 });
+    answer(
+      hitsRead(),
+      pages([row("hit", "p", "a0", 0, "x"), row("hit2", null, "a1", 0, "y")], {
+        ancestors: [row("p", null, "a0", 1, "x")],
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("sections").textContent).toBe("x:hit,p|y:hit2"),
+    );
+    await new Promise((r) => setTimeout(r, 300));
+    expect(
+      errors.mock.calls.filter((c) => String(c[0]).includes("Maximum update")),
+    ).toEqual([]);
+    errors.mockRestore();
   });
 
   it("draws a chevron only on a node with drawn children, never from its child count", async () => {

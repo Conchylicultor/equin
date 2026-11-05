@@ -84,9 +84,11 @@ export const pageTagVocabulary = liveCollection("page-tags.vocabulary", {
 });
 
 /**
- * Every tagged page's tags, whole. The sidebar marks and filters every page by
- * its tags, and `pages.tree` — what it renders — is already whole-set; this is
- * at most one row per page and usually a handful.
+ * Every tagged page's tags, whole: the sidebar's row markers read a page's tags
+ * from this one index (`usePageTagIndex`) — at most one row per TAGGED page,
+ * usually a handful. Filtering pages by tag is not this read's: the sidebar's
+ * tree (`pagesTree`, a bounded window) filters on its exposed `tags` field
+ * server-side.
  */
 export const pageTagAssignments = liveCollection("page-tags.assignments", {
   from: pageTagAssignmentShape,
@@ -95,7 +97,7 @@ export const pageTagAssignments = liveCollection("page-tags.assignments", {
     orderBy: [["pageId", "asc"]],
     unbounded: {
       reason:
-        "one row per TAGGED page, read whole by the sidebar beside the whole-set pages.tree",
+        "one row per TAGGED page — the sidebar row markers' tag index; usually a handful",
     },
   },
 });

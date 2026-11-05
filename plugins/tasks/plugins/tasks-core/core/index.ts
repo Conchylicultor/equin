@@ -53,6 +53,7 @@ export {
   TASK_CLUSTER_MAX,
   taskWindow,
   type TaskRow,
+  type TaskTreeRow,
   taskDescriptions,
   attemptRows,
   attemptWorkspaces,

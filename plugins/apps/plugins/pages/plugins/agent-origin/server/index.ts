@@ -14,7 +14,7 @@ export default {
   // startup, so no onReady enqueue is needed.
   register: [agentPagesSweep],
   contributions: [
-    // `origin`, folded into every list whose rows are blocks (pages.tree).
+    // `origin`, folded into every list whose rows are blocks (pages.tree.v2).
     LiveColumns.Expose(pageBlocksOrigin),
     // Stamps the marker after the block row lands. The editor dispatches this
     // generically and never names this plugin — which is the whole reason the

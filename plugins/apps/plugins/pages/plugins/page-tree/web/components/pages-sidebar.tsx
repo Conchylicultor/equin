@@ -15,6 +15,8 @@ import {
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
+  liveDataSource,
   type CreateOption,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
@@ -30,7 +32,6 @@ import {
 } from "@plugins/page/plugins/editor/core";
 import { pageLinkSources } from "@plugins/page/plugins/links/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
-import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { usePageReferenceTint } from "@plugins/page/plugins/page-reference/web";
 import { pageDetailPane, pagesTreePane } from "../panes";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
@@ -59,45 +60,31 @@ const SECTIONS: SectionsToolbar = {
 /** The open page's row reads in the title tier: strong text, medium weight. */
 const ACTIVE_LABEL = cn("font-medium text-strong-foreground");
 
-const NO_LINK_PARENTS: readonly string[] = [];
+const NO_LINK_CHILDREN: readonly string[] = [];
 
 /**
- * The pages in sidebar order: by `docRank`. The tree keeps each parent's
- * INCOMING child order (`buildTree`), so the rows must arrive sorted — and the
- * set's own order is `createdAt` (a key that never moves, so a re-mint is a
- * row refill rather than an `orderOf`). `docRank` is unique and ordered only
- * WITHIN one `pageId` group, so a global sort lands every group in its own
- * order; across groups it means nothing, and the sort is stable. Module scope:
- * `useLive`'s `select` must be a stable function.
- */
-function inDocOrder(pages: readonly PagesTreeRow[]): PagesTreeRow[] {
-  return [...pages].sort((a, b) => Rank.compare(a.docRank, b.docRank));
-}
-
-/**
- * Every field but the title is `pagesTree`'s, derived — its own `editedAt`
- * and every field an extension of a block exposes (`starred`, `origin`,
- * `tags`), each presented by its owner; the sidebar names none of them.
+ * The pages as a live TREE source (`pagesTree` declares `tree: { parent:
+ * "pageId", rank: "docRank" }`): every section reads bounded windows — the
+ * Private / Scratch outlines their root level plus one window per open page,
+ * each level in `docRank` order; Favorites and Recent (flat `list` views)
+ * their own filtered / sorted window. Search ("Search pages…") matches the
+ * `title` column server-side, its hits drawn with their ancestors.
  *
- * The title, the one field the sidebar computes itself: the page payload's
- * `title`, renamed in place (the tree's inline editor) by `updateBlock`.
+ * The hierarchy is `pageId` (the denormalized nearest PAGE ancestor), NOT the
+ * raw block-forest `parentId`: a sub-page's direct parent may be a content
+ * block (nested under a text line, a toggle, …), which would orphan it to the
+ * root. `pageId` is also invariant under intra-page block moves. Siblings
+ * order by `docRank`, NOT the storage `rank` (comparable only within one
+ * `(parent_id, rank)` space, which a sibling group can span several of).
  */
-function titleField(
-  update: (id: string, data: PageData) => void,
-): FieldDef<PagesTreeRow> {
-  return {
-    id: "title",
-    label: "Title",
-    primary: true,
-    value: (b) => pageData(b).title,
-    onEdit: (b, next) => {
-      update(b.id, {
-        ...pageData(b),
-        title: String(next ?? "").trim() || "Untitled",
-      });
-    },
-  };
-}
+const pagesSource = liveDataSource(pagesTree, {
+  surface: PAGES_SIDEBAR_VIEW,
+  searchable: ["title"],
+  unscoped: {
+    reason:
+      "the pages sidebar has no custom columns: every field is the page row's own or an extension's exposure",
+  },
+});
 
 /** The page's icon: the row's lead (the tree's icon box, the list's glyph). */
 const ICON_FIELD: FieldDef<PagesTreeRow> = {
@@ -111,25 +98,40 @@ const ICON_FIELD: FieldDef<PagesTreeRow> = {
   value: (b) => b.id,
   cell: (b) => <PageIcon icon={pageData(b).icon} className="size-4" />,
 };
+const EXTRA_FIELDS: FieldDef<PagesTreeRow>[] = [ICON_FIELD];
 
-/** The sidebar's own fields, bound to the subtree's transport; stable per it. */
-function useSidebarExtraFields(): FieldDef<PagesTreeRow>[] {
+/**
+ * Every field but the icon is `pagesTree`'s, derived — its `title`,
+ * `editedAt` and every field an extension of a block exposes (`starred`,
+ * `origin`, `tags`), each presented by its owner; the sidebar names none of
+ * them. What it changes: the title is the row's label, renamed in place (the
+ * tree's inline editor) by `updateBlock` on the page payload; the parent
+ * column is the tree's structure, never printed.
+ */
+function useSidebarOverrides() {
   const updateBlockData = useEndpointMutation(updateBlock);
   return useMemo(
-    () => [
-      ICON_FIELD,
-      titleField((id, data) =>
-        updateBlockData.mutate({ params: { id }, body: { data } }),
-      ),
-    ],
+    () =>
+      fieldOverrides(pagesTree, {
+        title: {
+          primary: true,
+          onEdit: (b, next) => {
+            const data: PageData = {
+              ...pageData(b),
+              title: String(next ?? "").trim() || "Untitled",
+            };
+            updateBlockData.mutate({ params: { id: b.id }, body: { data } });
+          },
+        },
+        pageId: { visible: false },
+      }),
     [updateBlockData],
   );
 }
 
 export function PagesSidebar() {
   const fetchEndpoint = useFetchEndpoint();
-  const sidebarExtraFields = useSidebarExtraFields();
-  const result = useLive(pagesTree, { select: inDocOrder });
+  const overrides = useSidebarOverrides();
   const links = useLive(pageLinkSources);
   const openPane = useOpenPane();
   const tintOf = usePageReferenceTint();
@@ -148,42 +150,26 @@ export function PagesSidebar() {
   const inOwnColumn = useCurrentPane()?.id === pagesTreePane.id;
   const openMode = inOwnColumn ? ("swap" as const) : ("push" as const);
 
-  // page id → the pages that link to it. Feeds the tree's alias edges, so a
-  // page linked from another page shows up as a reference child of the
-  // linking page. While the sources are still loading — or when their read
-  // failed — the tree simply renders without aliases (they pop in — never a
-  // wrong hierarchy; the aliases are an enrichment, the pages read is the
-  // tree).
-  const linkSourcesById = useMemo(() => {
-    const map = new Map<string, readonly string[]>();
+  // linking page id → the pages it links to. Feeds the tree's alias edges,
+  // asked from the parent's side (`getAliasChildren`): a page linked from
+  // another page shows up as a read-only reference child of the linking page
+  // (a target no window holds is read by id while its alias parent is open).
+  // `pageLinkSources` holds, per page, the pages linking TO it; inverted here.
+  // While the sources are still loading — or when their read failed — the
+  // tree simply renders without aliases (they pop in — never a wrong
+  // hierarchy; the aliases are an enrichment, the pages read is the tree).
+  const linkTargetsBySource = useMemo(() => {
+    const map = new Map<string, string[]>();
     if (links.status === "loading" || links.status === "error") return map;
     for (const row of links.data) {
-      if (row.linkedFrom.length > 0) map.set(row.id, row.linkedFrom);
+      for (const source of row.linkedFrom) {
+        const targets = map.get(source);
+        if (targets) targets.push(row.id);
+        else map.set(source, [row.id]);
+      }
     }
     return map;
   }, [links]);
-
-  // Build rows only under the ready guard (never the `pending ? [] : data`
-  // collapse that makes loading look like a confirmed-empty tree); the DataView
-  // gets `readiness={result}`, so the section headers paint immediately and
-  // only their bodies show the skeleton — or the failure, with Retry. A
-  // `hideWhenEmpty` section (Favorites, Scratch) stays absent until the rows
-  // are known, rather than flashing in empty.
-  let rows: PagesTreeRow[] = [];
-  if (result.status === "ready") {
-    rows = result.data;
-  }
-
-  // id → page block, for resolving a drop/create target's PHYSICAL parent (its
-  // raw `parentId`, which may be a content block) from the tree's positional
-  // intent — the display hierarchy below runs on `pageId`, a different relation.
-  // Keyed on `result` (stable between pushes), not the per-render `rows` array.
-  const pagesById = useMemo(() => {
-    const map = new Map<string, PagesTreeRow>();
-    if (result.status === "loading" || result.status === "error") return map;
-    for (const b of result.data) map.set(b.id, b);
-    return map;
-  }, [result]);
 
   // Plain literals (not the view children's options helpers) to respect
   // data-view's collection-consumer separation — consumers never import a view
@@ -267,13 +253,10 @@ export function PagesSidebar() {
     <Scroll fill>
       <div className="pt-2xs pb-xs">
         <DataView<PagesTreeRow>
-          rows={rows}
-          readiness={result}
-          collection={pagesTree}
-          extraFields={sidebarExtraFields}
-          rowKey={(b) => b.id}
+          source={pagesSource}
+          overrides={overrides}
+          extraFields={EXTRA_FIELDS}
           views={["table", "list"]}
-          storageKey={PAGES_SIDEBAR_VIEW}
           toolbar={SECTIONS}
           searchPlaceholder="Search pages…"
           creators={creators}
@@ -282,29 +265,10 @@ export function PagesSidebar() {
             openPane.to(pageDetailPane, { pageId: b.id }, { mode: openMode })
           }
           hierarchy={{
-            // The page hierarchy is `pageId` (the denormalized nearest PAGE
-            // ancestor), NOT the raw block-forest `parentId`: a sub-page's direct
-            // parent may be a content block (nested under a text line, a toggle,
-            // …), which would orphan it to the sidebar's root. `pageId` is also
-            // invariant under intra-page block moves — indenting a sub-page block
-            // inside its page never changes which page it belongs to.
-            getParentId: (b) => b.pageId,
             // Pages a page links to (page-link blocks, inline [[links]]) appear
             // as read-only reference children of the linking page.
-            getAliasParents: (b) =>
-              linkSourcesById.get(b.id) ?? NO_LINK_PARENTS,
-            // `docRank`, NOT the storage `rank`: a `rank` is comparable only
-            // within one `(parent_id, rank)` space, and this sibling group (pages
-            // sharing a `pageId`) can span several — some sub-pages are direct
-            // children of the page, others sit under a text line / toggle. The
-            // server keeps `docRank` per group in true document order (a stored
-            // column) and the rows arrive sorted by it (`inDocOrder`), so
-            // display order, array order, and `computeFlatReorder`'s rank-sorted
-            // neighbourhood are ONE order. They silently disagreed before:
-            // display followed the array (a global rank sort), the DnD arithmetic
-            // re-sorted the sibling set — so a drop resolved against neighbours
-            // the user never saw, or hit a cross-space duplicate rank and aborted.
-            getRank: (b) => b.docRank,
+            getAliasChildren: (parentId) =>
+              linkTargetsBySource.get(parentId) ?? NO_LINK_CHILDREN,
             // No expand hooks — the sidebar chevron and the in-document sub-page
             // arrow are deliberately decoupled. This chevron is device-local view
             // state owned by the data-view primitive (per surface + view
@@ -315,45 +279,37 @@ export function PagesSidebar() {
             // document, stamped `updatedAt`, and fanned out `blocksChanged` (a
             // search reindex plus a history snapshot). Matches Notion, whose
             // sidebar arrow only reveals nav children.
-            // Sibling drops resolve against the TARGET's physical parent: the
-            // display parent (`dest.parentId`) is the page-level `pageId`
-            // relation, while `moveBlock` validates `targetId` against the raw
-            // block forest — and the target block may physically sit under a
-            // content block within that page. A child drop (`targetId: null`)
-            // parents directly under the destination page block.
+            //
+            // A sibling drop names only the TARGET: the server lands the page
+            // among the target's PHYSICAL siblings (`moveBlock` reads the
+            // target's raw `parentId`, which may be a content block inside the
+            // display parent page) — the sidebar never holds, nor needs, the
+            // physical forest. A child drop (`targetId: null`) parents directly
+            // under the destination page block.
             onMove: (id, dest) => {
-              const target =
-                dest.targetId === null
-                  ? undefined
-                  : pagesById.get(dest.targetId);
               void fetchEndpoint(
                 moveBlock,
                 { id },
                 {
-                  body: {
-                    parentId: target ? target.parentId : dest.parentId,
-                    targetId: dest.targetId,
-                    zone: dest.zone,
-                  },
+                  body:
+                    dest.targetId === null
+                      ? {
+                          parentId: dest.parentId,
+                          targetId: null,
+                          zone: dest.zone,
+                        }
+                      : { targetId: dest.targetId, zone: dest.zone },
                 },
               );
             },
-            // Same physical-parent resolution for "Add page below": the new page
-            // must be a sibling of `afterId`'s BLOCK, wherever it physically sits.
-            onCreate: (args) => {
-              const after =
-                args.afterId === undefined
-                  ? undefined
-                  : pagesById.get(args.afterId);
-              return after
-                ? createPageWithSeed(fetchEndpoint, {
-                    parentId: after.parentId,
-                    afterId: after.id,
-                  })
-                : createPageWithSeed(fetchEndpoint, {
-                    parentId: args.parentId,
-                  });
-            },
+            // Same for "Add page below": `afterId` places the new page right
+            // after that page's BLOCK, wherever it physically sits (the server
+            // reads its parent); without one, it is the display parent's child.
+            onCreate: (args) =>
+              createPageWithSeed(fetchEndpoint, {
+                parentId: args.parentId,
+                afterId: args.afterId,
+              }),
           }}
           viewOptions={viewOptions}
           itemActions={PageTree.RowActions}

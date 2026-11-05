@@ -1,5 +1,11 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { Fragment, useMemo, type CSSProperties, type ReactNode } from "react";
+import {
+  Fragment,
+  useCallback,
+  useMemo,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import {
   cn,
   ControlSizeProvider,
@@ -122,21 +128,29 @@ const useNoRowDecoration = (): DataTableRowDecoration | undefined => undefined;
 export const VIRTUALIZE_THRESHOLD = 100;
 
 /**
- * Compose two callback refs into one. A row can be a drag source (decoration
- * ref) AND a virtualizer measurement target (measure ref) at the same time, and
- * a DOM node takes one `ref`. The repo has no `mergeRefs`/`composeRefs` helper
- * today; lift this into a primitive if a second caller needs it.
+ * Compose two callback refs into one, STABLE while both are. A row can be a
+ * drag source (decoration ref) AND a virtualizer measurement target (measure
+ * ref) at the same time, and a DOM node takes one `ref`. A new composed
+ * function per render would make React detach the old one (`null`) and attach
+ * the new one on every commit — and a ref that writes state (the column fit's
+ * grid) would then update on every commit, a render loop as soon as anything
+ * else re-renders the table. Lift this into a primitive if a second caller
+ * needs it.
  */
-function composeRefs<E extends Element>(
+function useComposedRef<E extends Element>(
   a: ((el: E | null) => void) | undefined,
   b: ((el: E | null) => void) | undefined,
 ): ((el: E | null) => void) | undefined {
+  const both = useCallback(
+    (el: E | null) => {
+      a?.(el);
+      b?.(el);
+    },
+    [a, b],
+  );
   if (!a) return b;
   if (!b) return a;
-  return (el) => {
-    a(el);
-    b(el);
-  };
+  return both;
 }
 
 /** The windowed body's first guess, px per row — replaced before paint by a
@@ -361,6 +375,8 @@ export function DataTable<TRow>({
     nested: !!tree,
     hasActionsTrack,
   });
+  // The grid's ref: the keyboard host's and the column fit's, one stable callback.
+  const gridRef = useComposedRef<HTMLElement>(tree?.containerRef, fitGridRef);
   const { rows, sortState, toggleSort } = useDataTable(
     data,
     columns,
@@ -667,7 +683,7 @@ export function DataTable<TRow>({
           // host: a key on a focused row walks the painted lines.
           role={tree ? "treegrid" : undefined}
           aria-multiselectable={tree?.multiSelectable ? true : undefined}
-          ref={composeRefs<HTMLElement>(tree?.containerRef, fitGridRef)}
+          ref={gridRef}
           // The fold's host: its direct children are the body's lines.
           {...fold.hostProps}
           onKeyDown={tree?.onKeyDown}
@@ -894,7 +910,7 @@ function DataTableRow<TRow>({
   // A decorated row in a windowed body is BOTH a drag source and a measurement
   // target, so the two refs compose (they were mutually exclusive back when
   // decoration disabled virtualization).
-  const rowRef = composeRefs<HTMLElement>(decorationRef, measure?.ref);
+  const rowRef = useComposedRef<HTMLElement>(decorationRef, measure?.ref);
   const look = ROW_LOOK[presentation];
   const selected = decorationSelected ?? key === selectedRowId;
   return (

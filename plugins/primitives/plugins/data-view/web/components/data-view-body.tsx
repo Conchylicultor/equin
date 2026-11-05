@@ -1412,6 +1412,31 @@ function DataViewBodyInner<TRow>(
     [paging, declaredSections],
   );
 
+  // In memory without paging the rows are the whole set; a paged read
+  // says when it has read to the end, which of the held rows it pages, and —
+  // while no search or filter hides rows of it (a live source asks for one
+  // only then), or the filter is one it was narrowed by whole — its total.
+  // One object while those parts hold: a view memoizes on it (the nested
+  // table's sections), so a fresh one per render would re-derive them all.
+  const pagingTotal = paging?.total ?? null;
+  const totalShown =
+    matchesView === null ||
+    (pagingTotal?.filter !== undefined &&
+      pagingTotal.filter === activeState.filter &&
+      activeState.query.trim() === "");
+  const pagingComplete = !paging || paging.complete;
+  const pagedRows = paging?.isPaged ?? ALL_ROWS;
+  const rowsComplete = useMemo(
+    () =>
+      pagingComplete
+        ? true
+        : {
+            growable: pagedRows,
+            total: totalShown ? pagingTotal : null,
+          },
+    [pagingComplete, pagedRows, totalShown, pagingTotal],
+  );
+
   // The active view's expand-all, as the view last reported it — filed under
   // the instance that reported it, so a report from a view switched away from
   // is never offered for the next one. The toolbar reads the bound form off
@@ -1583,18 +1608,8 @@ function DataViewBodyInner<TRow>(
           // pages, and — while no search or filter hides rows of it (a live
           // source asks for one only then), or the filter is one it was
           // narrowed by whole — its total.
-          rowsComplete: (!paging || paging.complete
-            ? true
-            : {
-                growable: paging.isPaged ?? ALL_ROWS,
-                total:
-                  matchesView === null ||
-                  (paging.total?.filter !== undefined &&
-                    paging.total.filter === activeState.filter &&
-                    activeState.query.trim() === "")
-                    ? (paging.total ?? null)
-                    : null,
-              }) as DataViewRenderProps<unknown>["rowsComplete"],
+          rowsComplete:
+            rowsComplete as DataViewRenderProps<unknown>["rowsComplete"],
           sectioning: sectioning as DataViewRenderProps<unknown>["sectioning"],
           collapsedSections: viewModel.collapsedSectionsFor(activeViewId),
           setSectionCollapsed: (key, collapsed) =>

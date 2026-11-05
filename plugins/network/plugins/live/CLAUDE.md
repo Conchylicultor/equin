@@ -206,10 +206,17 @@ export const nodes = liveCollection("x.nodes", {
   default: { orderBy: [["rank", "asc"]], limit: 100 }, maxLimit: 500,
   tree: { parent: "parentId", rank: "rank" },
 });
-// server/ — the materialized count (query-resource's `materializeJoin`)
+// server/ — the materialized count (query-resource's `materializeJoin`):
+// the table's own rows grouped by parent, the collection's `where` applied
+const kids = materializeJoin(childrenJoin({
+  alias: "kids", table: _nodes, fk: _nodes.parentId,
+  where: (c) => sql`${c.kids.kind} = 'page'`,
+  aggregates: () => ({ count: aggregate(sql`count(*)::int`,
+    { decoder: Number, sqlType: "integer", notNull: true, ifNone: sql`0` }) }),
+}), { host: _nodes, table: _nodeChildren }); // contributions: [DerivedTable(kids.rollup)]
 serveCollection(nodes, {
-  from: _nodes, joins: [kids.join()],
-  childCount: { of: kids, count: (j) => j.kids.count },
+  from: nodesEntity, where: eq(_nodes.kind, "page"),
+  childCount: { of: kids, count: "count" }, // joined by the collection itself
 });
 // web/
 useLive(nodes, { where, orderBy, include: "ancestors" }, { viewport });
@@ -223,11 +230,16 @@ useLive(nodes, { id, include: "ancestors" }); // ready: row + ancestors (root-fi
 - **`$childCount`** — every row of a tree (`TreeRow<Row>`): how many rows of the
   collection name it as parent (its served `where` applied, never a read's).
   Declared on the row schema beside `$columns` (so every parse keeps it),
-  never in `rowKeys`. `serveCollection` REQUIRES `childCount` on a tree
-  (`ChildCountOption`, tsc) and refuses one elsewhere; at bind it checks the
-  count's children join counts `from`'s table by the column `tree.parent`
-  binds to. `TreeChildCount` is a narrow stand-in for `materializeJoin`'s result
-  until task-1793848785-7tzicj lands (TODO(7tzicj)).
+  never in `rowKeys`. `serveCollection` REQUIRES `childCount: { of, count }`
+  on a tree (`ChildCountOption`, tsc; a throw elsewhere): `of` a
+  `MaterializedJoin` of a children join, `count` a column of its table
+  (tsc). The collection joins `of.join()` itself — listing it in `joins` too is
+  a duplicate-alias throw — so a count cannot be read unjoined. At bind it
+  checks, through `of.source`, that the join is a children join over `from`'s
+  table by the column `tree.parent` binds to, and that `count` is a non-null
+  integer, not the key. The count's own `where` is the collection's to keep
+  in step with its served `where`. A move recounts both parents (the feed
+  carries old ∪ new `fk`).
 - **`${key}:ancestors`** — a seed set (the point codec, `maxIds` like `:rows`)
   answering the seeds and their whole chains up `parent`, deduped, projected
   like `:rows` (query-resource's `compileAncestorsQuery`, *Ancestors*). At most
@@ -247,8 +259,9 @@ useLive(nodes, { id, include: "ancestors" }); // ready: row + ancestors (root-fi
   page, a page whose rows moved) has not answered. A row read is `loading`
   whenever its parent's tuple has not answered (a re-parented row included).
   Its own read kinds (`*-ancestors`), latched like the others.
-- Tests: `server/internal/serve-collection-tree-oracle.test.ts` (real feed),
-  `resource-vocabulary`'s `mints.test.ts`.
+- Tests: `server/internal/serve-collection-tree-oracle.test.ts` (real feed,
+  a real `materializeJoin`: insert / delete / re-parent / `where` flip
+  recount on the window and `:rows`), `resource-vocabulary`'s `mints.test.ts`.
 
 ### Serve — `serveCollection(c, { from, joins?, where?, defaults?, columns?, … })`
 
@@ -377,6 +390,15 @@ state or limit change.
   - any page's failure is the `error` arm with rows as `stale`;
   - a boot-hydrated page 0 can't seed its first split (logs `seed refused`,
     loads in full).
+
+  **`useLive(c, query, { resetKey })`** — a query change under the same
+  `resetKey` keeps the previous rows, `ready`, until the new query's first
+  page lands (a picker filtering as the user types: no empty flash, Enter
+  still has a row); a change of `resetKey` starts over, `loading`. Same
+  handoff as the viewport read's `resetKey`, same 3-argument overload (its
+  options — `LiveListReadOptions` vs `LivePagesOptions` — pick the result).
+  On any other read (id, ids, grouping, count) it throws; `include:
+  "ancestors"` takes it. Test: `web/__tests__/use-live-reset-key.test.tsx`.
 - **Grouping** `{ groupBy, where?, limit? }` → `LiveListResult<{ value: V |
   null; count }>`. `groupBy` is a filterable `text` / `number` / `boolean`
   column. Ordered count desc then value; NULL is its own group (`{ isEmpty:
@@ -450,8 +472,9 @@ state or limit change.
   - Every value signature takes its trailing arguments as a rest that is an
     impossible arity for a collection (`ValueArgs` / `PagedArgs`), so a
     collection call has ONE candidate — never TS2769 against another overload.
-    Kept separate: 1-argument `useLive(c)` / `useLive(all)`, the viewport reads
-    (3 arguments), and a count whose collection may be `null` (still TS2769,
+    Kept separate: 1-argument `useLive(c)` / `useLive(all)`, the 3-argument
+    window reads (ONE overload: a viewport, or a plain read's `resetKey`), and
+    a count whose collection may be `null` (still TS2769,
     as are a non-live source and a value misuse).
   - **Pinned by `live:read-misuse-diagnostics`** (`check/`): every misuse in
     `web/__tests__/use-live-query-types.test.ts` is a multi-line call with its
@@ -1414,8 +1437,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `useLive`
     - `useLiveReader`
 - Server:
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live/query-resource` ×40
+  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live/query-resource` ×41
     - `database/sql-column` ×3
     - `network/live/filter.filterSql`
   - Exports (types):
@@ -1451,7 +1474,6 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `ServePagedValueOptions`
     - `ServeUnionOptions`
     - `ServeValueOptions`
-    - `TreeChildCount`
     - `TreeChildCountBinding`
     - `UnionArmBinding`
     - `UnionArmColumns`
@@ -1711,11 +1733,11 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValueOn`
     - `sliceRange`
 - Cross-plugin:
-  - Imported by: 337 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 336 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×86
     - `conversations` ×70
     - `debug` ×32
-    - `tasks` ×29
+    - `tasks` ×28
     - `infra` ×22
     - `page` ×15
     - `active-data` ×13

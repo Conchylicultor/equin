@@ -22,7 +22,7 @@ Design: [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../.
   `type="page"` blocks are marked, roots and nested pages alike.
 - **The origin is an EXPOSED presence field** (`shared/resources.ts`:
   `exposes.presence: { id: "origin", values: { present: "agent", absent:
-  "user" } }`). It folds into every list whose rows are blocks — `pages.tree`,
+  "user" } }`). It folds into every list whose rows are blocks — `pages.tree.v2`,
   the pages sidebar — served by `LiveColumns.Expose(pageBlocksOrigin)`
   (server) and presented by `FieldPresentation.Register({ owner:
   agentPageShape.exposure })` (web): a `CASE` on the side row's existence, so

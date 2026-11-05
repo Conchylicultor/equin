@@ -41,7 +41,7 @@ export default {
     IdKinds.Kind({ kind: pageTagIdKind }),
     ...pageTagVocabularyServed.declare,
     ...pageTagAssignmentsServed.declare,
-    // `tags`, folded into every list whose rows are blocks (pages.tree).
+    // `tags`, folded into every list whose rows are blocks (pages.tree.v2).
     LiveColumns.Expose(pageBlocksTags),
   ],
   httpRoutes: {

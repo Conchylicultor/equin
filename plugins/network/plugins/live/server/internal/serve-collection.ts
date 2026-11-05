@@ -31,6 +31,7 @@ import {
   type AllJoinSpec,
   type AllQueryParams,
   type ExprField,
+  type ChildrenJoin,
   type ExtensionJoin,
   type JoinColumns,
   type JoinRef,
@@ -50,6 +51,7 @@ import {
   pointQueryResource,
   windowQueryResource,
   type AncestorsClosure,
+  type MaterializedJoin,
   type FollowablePlan,
   type CompiledCount,
   type CompiledGroups,
@@ -207,49 +209,37 @@ type BoundFields<Row> = Exclude<
 >;
 
 /**
- * The materialized child count a tree collection's `$childCount` reads —
- * query-resource's `materializeJoin(childrenJoin({ table, fk, where?,
- * aggregates }), { host, table })`: the children join it materializes (its
- * `table` is the served table, its `fk` the column `tree.parent` binds to),
- * and the extension join reading the materialized table.
- *
- * TODO(7tzicj): a narrow stand-in for `materializeJoin`'s result (task
- * task-1793848785-7tzicj), until it lands on main — then this is its type.
+ * How a tree collection's rows get `$childCount`: `of` — the materialized
+ * count of the rows naming each row as their parent (query-resource's
+ * `materializeJoin(childrenJoin({ alias, table: <the served table>, fk: <the
+ * column tree.parent binds to>, where?, aggregates }), { host, table })`) —
+ * and `count`, the property of its rollup table holding the count. The
+ * collection joins `of.join()` itself (never listed in `joins`), so a count
+ * that is not joined cannot be spelled. Checked at bind: a children join over
+ * the served table by the parent column, `count` an integer aggregate that is
+ * never NULL.
  */
-export interface TreeChildCount {
-  readonly children: { readonly table: PgTable; readonly fk: PgColumn };
-  join(): ExtensionJoin;
+export interface TreeChildCountBinding<CT extends PgTable = PgTable> {
+  of: MaterializedJoin<string, CT, ChildrenJoin>;
+  count: keyof CT["_"]["columns"] & string;
 }
 
 /**
- * How a tree collection's rows get `$childCount` (see `ServeCollectionOptions.childCount`):
- * the materialized count (`of`), and its count column read off its join
- * (`(j) => j.kids.count` — the join declared in `joins`).
- */
-export interface TreeChildCountBinding<
-  T extends CollectionSource,
-  J extends readonly JoinSpec[],
-> {
-  of: TreeChildCount;
-  count: FieldBinding<T, J, number>;
-}
-
-/**
- * A tree collection (declared `tree`) REQUIRES its `childCount` — the
- * materialized count of the rows naming each row as their parent, joined in
- * `joins` and read through `count`; its children join's `table` must be
- * `from`'s and its `fk` the column `tree.parent` binds to (a bind-time throw),
- * so the count is of THIS tree. On any other collection it is refused at
+ * A tree collection (declared `tree`) REQUIRES its `childCount`
+ * ({@link TreeChildCountBinding}). On any other collection it is refused at
  * bind (a throw) — not typed `never`, so options typed before the call
  * (`ServeCollectionOptions`) stay assignable.
  */
-export type ChildCountOption<
-  Tr,
-  T extends CollectionSource,
-  J extends readonly JoinSpec[],
-> = [Tr] extends [LiveTree]
-  ? { childCount: TreeChildCountBinding<T, J> }
+export type ChildCountOption<Tr, CT extends PgTable> = [Tr] extends [LiveTree]
+  ? { childCount: TreeChildCountBinding<CT> }
   : unknown;
+
+/** What `childCount` checks of the join it materializes (see `MaterializedJoin.source`). */
+interface GroupedJoinLike {
+  kind: string;
+  table?: PgTable;
+  fk?: PgColumn;
+}
 
 export type ServeCollectionOptions<
   T extends CollectionSource,
@@ -312,7 +302,7 @@ export type ServeCollectionOptions<
    * A tree collection's `$childCount` — required there (`ChildCountOption`,
    * tsc), refused elsewhere (a bind-time throw).
    */
-  childCount?: TreeChildCountBinding<T, J>;
+  childCount?: TreeChildCountBinding;
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
 } & ColumnOverrides<T, Row, BoundFields<Row>, J> &
@@ -578,9 +568,15 @@ export function compileCollection<
   handles.push(...exposedHandles);
   // A row carries `$columns` when it reaches an entity others may expose on.
   const foldsColumns = exposes !== null;
+  // A tree's materialized child count is joined by the collection itself
+  // (`childCount.of.join()`), so its count can only be read joined.
+  const childCount = (opts as { childCount?: TreeChildCountBinding })
+    .childCount;
+  const childCountJoin = childCount?.of.join();
   const joinSpecs: readonly JoinSpec[] = [
     ...(opts.joins ?? []),
     ...foldedSets.map((c) => c.join),
+    ...(childCountJoin === undefined ? [] : [childCountJoin]),
   ];
   // A ref interpolated into an expression renders through the plan — compiled
   // below, once the id (which keys it) is resolved; nothing renders before.
@@ -689,17 +685,15 @@ export function compileCollection<
   // A tree's `$childCount`: the materialized count of the rows naming each
   // row as their parent — checked to be THIS tree's count.
   const tree = (collection as { tree?: LiveTree | null }).tree ?? null;
-  const childCount = (opts as { childCount?: TreeChildCountBinding<T, J> })
-    .childCount;
   let treeParent: PgColumn | null = null;
   if (tree === null) {
     if (childCount !== undefined) {
       fail("`childCount` beside a collection that is not a `tree`.");
     }
   } else {
-    if (childCount === undefined) {
-      fail(
-        `a tree collection's rows carry \`${LIVE_CHILD_COUNT_KEY}\` — pass \`childCount\`: the materialized count of its children (\`materializeJoin(childrenJoin({ table, fk: <${tree.parent}'s column> … }))\`).`,
+    if (childCount === undefined || childCountJoin === undefined) {
+      return fail(
+        `a tree collection's rows carry \`${LIVE_CHILD_COUNT_KEY}\` — pass \`childCount: { of, count }\`: the materialized count of its children (\`materializeJoin(childrenJoin({ table, fk: <${tree.parent}'s column>, … }), …)\`).`,
       );
     }
     const parentRef = boundRefs.get(tree.parent);
@@ -709,30 +703,41 @@ export function compileCollection<
       );
     }
     treeParent = parentRef!.col as PgColumn;
-    const { of, count } = childCount!;
-    if (of.children.table !== table) {
+    const { of, count } = childCount;
+    const counted = of.source as GroupedJoinLike;
+    if (counted.kind !== "children") {
       fail(
-        `\`childCount\` counts rows of "${getTableName(of.children.table)}", not of the served "${getTableName(table)}" — a tree's children are its own rows.`,
+        `\`childCount\` materializes a ${counted.kind} join — a child count is a children join over the served table.`,
       );
     }
-    if (of.children.fk !== treeParent) {
+    if (counted.table !== table) {
       fail(
-        `\`childCount\` counts children by "${of.children.fk.name}", but the tree's parent "${tree.parent}" binds to "${treeParent.name}".`,
+        `\`childCount\` counts rows of "${getTableName(counted.table!)}", not of the served "${getTableName(table)}" — a tree's children are its own rows.`,
       );
     }
-    const alias = of.join().alias;
-    if (!joinSpecs.some((j) => j.alias === alias)) {
+    if (counted.fk !== treeParent) {
       fail(
-        `\`childCount\`'s join "${alias}" is not declared in \`joins\` — add \`${alias}.join()\` there.`,
+        `\`childCount\` counts children by "${counted.fk!.name}", but the tree's parent "${tree.parent}" binds to "${treeParent.name}".`,
       );
     }
-    const binding = count(refs as never);
-    if (isExprField(binding) || (binding as ColumnRef).from !== alias) {
+    const countCol =
+      (getTableColumns(of.rollup.handle) as Record<string, PgColumn>)[count] ??
       fail(
-        `\`childCount.count\` reads no column of its join "${alias}" — bind it to the count column (\`(j) => j.${alias}.<count>\`).`,
+        `\`childCount.count\` "${count}" is no column of "${getTableName(of.rollup.handle)}".`,
+      );
+    if (
+      countCol.primary ||
+      countCol.getSQLType() !== "integer" ||
+      !countCol.notNull
+    ) {
+      fail(
+        `\`childCount.count\` "${count}" is ${countCol.primary ? "the host key" : `a ${countCol.notNull ? "" : "nullable "}${countCol.getSQLType()}`} — a child count is an integer aggregate that is never NULL (\`count(*)::int\`, \`notNull: true\`, \`ifNone\` 0).`,
       );
     }
-    bound.set(LIVE_CHILD_COUNT_KEY, joins.render(binding as ColumnRef));
+    bound.set(
+      LIVE_CHILD_COUNT_KEY,
+      joins.render({ from: childCountJoin.alias, col: countCol }),
+    );
   }
   // Exposed columns: each set's fields, read through its own join (by
   // property name) and projected flat under their wire names
@@ -1250,10 +1255,11 @@ export interface ServeCollectionOverloads<H> {
     T extends ServedSource,
     const J extends readonly JoinSpec[] = readonly [],
     Tr extends LiveTree | null = null,
+    CT extends PgTable = PgTable,
   >(
     collection: SingleTableCollection<Row, F, S> & H & { tree: Tr },
     opts: ServeCollectionOptions<T, Row, J, keyof F & string> &
-      ChildCountOption<Tr, T, J>,
+      ChildCountOption<Tr, CT>,
   ): ServedWindowCollection<Row>;
   <
     Row,

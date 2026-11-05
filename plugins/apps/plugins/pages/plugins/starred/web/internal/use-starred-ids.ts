@@ -16,7 +16,7 @@ function toIdSet(rows: readonly StarredPageRow[]): ReadonlySet<string> {
  * The ONE read of `starredPages`, shared by both star toggles — so they can
  * never disagree about what is starred, and every mount lands on the set's one
  * `{}` tuple (one subscription for the whole app, rather than one per rendered
- * row). (The sidebar's `starred` field is the exposure, read off `pages.tree`.)
+ * row). (The sidebar's `starred` field is the exposure, read off `pages.tree.v2`.)
  *
  * Not known yet is its own arm, never an empty set: a toggle renders a
  * not-known-yet state (a hollow star would claim "not a favorite").

@@ -23,7 +23,14 @@ const RECENT_LIMIT = 6;
 
 export function RecentPagesSection(): ReactElement | null {
   const openPane = useOpenPane();
-  const result = useLive(pagesTree);
+  // The most recently edited pages, newest first: a window sorted by
+  // `editedAt` server-side (not `updatedAt`: a content edit moves only the
+  // former — the page row's own stamp moves on a rename, a cover or a kind
+  // change).
+  const result = useLive(pagesTree, {
+    orderBy: [["editedAt", "desc"]],
+    limit: RECENT_LIMIT,
+  });
 
   if (result.status === "loading" || result.status === "error") {
     return (
@@ -49,12 +56,7 @@ export function RecentPagesSection(): ReactElement | null {
   // there are no pages yet rather than rendering an empty header.
   if (result.data.length === 0) return null;
 
-  const recent = result.data
-    .slice()
-    // `editedAt`, not `updatedAt`: a content edit moves only the former (the
-    // page row's own stamp moves on a rename, a cover or a kind change).
-    .sort((a, b) => b.editedAt.getTime() - a.editedAt.getTime())
-    .slice(0, RECENT_LIMIT);
+  const recent = result.data;
 
   return (
     <Stack gap="md">

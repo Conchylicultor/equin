@@ -1,5 +1,4 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -40,25 +39,28 @@ export function DeletePageAction({ row }: ItemActionProps<Block>) {
   const { undo } = useUndoRedo();
   const openPane = useOpenPane();
   const paneStore = usePaneStore();
-  // The whole set: the open page's ancestry is a walk up its `pageId` chain.
-  const pages = useLive(pagesTree);
   const openPageId = pageDetailPane.useRouteEntry()?.params.pageId;
+  // The open page with its chain up `pageId` (its PAGE ancestors): one row
+  // read with its ancestors — every row's action asks the same tuple.
+  const openPage = useLive(pagesTree, {
+    id: openPageId ?? null,
+    include: "ancestors",
+  });
 
   const onDelete = async () => {
     // Deleting the page the detail pane is showing (or one of its page
     // ancestors) would leave the pane rendering a page that is no longer in the
     // tree — so fall back to the Pages landing surface (the empty route
     // re-resolves to the app's index pane). The `onUndo` hook re-opens it, so
-    // Cmd+Z puts the user back exactly where they were. With the pages list
-    // unknown (loading or failed) the ancestry cannot be told, so the pane is
-    // left as it is.
+    // Cmd+Z puts the user back exactly where they were. With the open page's
+    // chain unknown (loading or failed) the ancestry cannot be told, so the
+    // pane is left as it is.
     const reopenId =
       openPageId !== undefined &&
-      foldResource(pages, {
-        loading: () => false,
-        error: () => false,
-        ready: (list) => isSelfOrPageAncestor(list, pageId, openPageId),
-      })
+      openPage.status === "ready" &&
+      openPage.found &&
+      (pageId === openPageId ||
+        openPage.ancestors.some((page) => page.id === pageId))
         ? openPageId
         : undefined;
 
@@ -93,27 +95,4 @@ export function DeletePageAction({ row }: ItemActionProps<Block>) {
       }}
     />
   );
-}
-
-/**
- * Is `candidateId` the open page itself, or one of its PAGE ancestors? Walks the
- * denormalized `pageId` chain (each page's nearest page ancestor), which is the
- * true page hierarchy — `parentId` may point at a content block (a sub-page
- * nested inside a toggle), so it is not the chain to walk here.
- */
-function isSelfOrPageAncestor(
-  pages: Block[],
-  candidateId: string,
-  openPageId: string,
-): boolean {
-  if (candidateId === openPageId) return true;
-  const byId = new Map(pages.map((p) => [p.id, p]));
-  let cursor = byId.get(openPageId)?.pageId ?? null;
-  const seen = new Set<string>();
-  while (cursor !== null && !seen.has(cursor)) {
-    if (cursor === candidateId) return true;
-    seen.add(cursor);
-    cursor = byId.get(cursor)?.pageId ?? null;
-  }
-  return false;
 }

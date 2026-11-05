@@ -1,6 +1,6 @@
 {
-  "id": "8c6c8422-f80b-4402-b20d-1afdc9a32f44",
-  "prevId": "fec7dc19-91b4-405f-8c3e-4d7cd4ffa73b",
+  "id": "fa138b7e-9a47-4771-b3a1-15addadafd8e",
+  "prevId": "8c6c8422-f80b-4402-b20d-1afdc9a32f44",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -10490,6 +10490,28 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "page_blocks_page_tree_idx": {
+          "name": "page_blocks_page_tree_idx",
+          "columns": [
+            {
+              "expression": "page_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "doc_rank",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "type = 'page' AND deleted_at IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}

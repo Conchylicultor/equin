@@ -92,6 +92,19 @@ export interface LivePagesOptions {
   resetKey?: string;
 }
 
+/**
+ * A plain window read's options — `useLive(c, query, { resetKey })`, no
+ * viewport (every page live, capped at `maxLimit` rows): which query changes
+ * keep the previous rows on screen until the new query's first page settles
+ * (the read stays `ready` on them meanwhile) — a change whose `resetKey`
+ * equals the previous one's (a search typed into a picker); any other change
+ * starts over, loading. The same handoff as {@link LivePagesOptions.resetKey}.
+ */
+export interface LiveListReadOptions {
+  resetKey: string;
+  viewport?: never;
+}
+
 /** A page's read failing under rows that stay on screen. */
 export interface LivePageError<C extends string = string> {
   /** The failing read's identity — unique among the result's errors (a React key). */
@@ -251,11 +264,12 @@ export function useViewportPages<Row, F, S extends string, Meta, Q, QIn>(
 export function useAllPages<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S>,
   query: LiveQuery<F, S> | undefined,
+  options: LiveListReadOptions | undefined,
 ): PagedResourceResult<Row> {
   const { limit, ...rest } = query ?? {};
   const read = usePages(pageSourceOf(collection), rest, {
     viewport: null,
-    resetKey: undefined,
+    resetKey: options?.resetKey,
     step: limit,
   });
   return useMemo(() => listResultOf(read), [read]);
@@ -307,11 +321,12 @@ export function useTreeViewportPages<Row, F, S extends string>(
 export function useTreeAllPages<Row, F, S extends string>(
   collection: LiveTreeCollection<Row, F, S>,
   query: LiveQuery<F, S> | undefined,
+  options: LiveListReadOptions | undefined,
 ): WithAncestors<PagedResourceResult<Row>, Row> {
   const { limit, ...rest } = query ?? {};
   const read = usePages(pageSourceOf(collection), rest, {
     viewport: null,
-    resetKey: undefined,
+    resetKey: options?.resetKey,
     step: limit,
   });
   const ancestors = useSegmentAncestors(

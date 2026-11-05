@@ -225,13 +225,26 @@ serves them.
   `where: null` until the row is known), with the `TaskGraph` built once per
   snapshot. Why clusters (and not per-task closures):
   `research/2026-11-05-tasks-bounded-task-rows.md` § Cluster bound.
-- **`taskWindow`** (`tasks.window`) — the same row as a WINDOW (`createdAt`
-  desc, 100 / 500, not preloaded), served with the same joins
-  (`taskWindowServeOptions`): `status` and the other derived fields filter and
-  sort on the server, and a task whose status moves enters or leaves a
-  filtered window. The sidequest launch list reads
-  `{ status: "new", tasks_ext_track.track: "sidequest" }` through it. The step
-  towards `taskRows` itself as a window
+- **`taskWindow`** (`tasks.tree`) — the tasks TREE: the same row as a
+  WINDOW (`rank` then `createdAt`, 100 / 500, not preloaded), served with the
+  same joins (`taskWindowServeOptions`), declared `tree: { parent:
+  "folderId", rank: "rank" }` (network/live *Trees*). `status` and the other
+  derived fields filter and sort on the server, and a task whose status moves
+  enters or leaves a filtered window. `folderId` is LISTED here (a tree's
+  parent is a filterable field; labelled "Folder" on the entity), carried on
+  `taskRows` — the wire row is the same. Every row carries `$childCount`: the
+  `task_child_count` rollup (`taskChildCount`, a `materializeJoin` of the
+  tasks counting their own rows by `folder_id`, backed by
+  `tasks_folder_rank_idx`), so a filing, a move (both folders) or a delete
+  recounts the folders it touches; it mints `tasks.tree:ancestors`. Read by
+  the task list (task-list's `TasksListView`, a live DataView tree) and the
+  sidequest launch list (`{ status: "new", tasks_ext_track.track:
+  "sidequest" }`, its own `createdAt desc` order). The key is the flat
+  window's: the change was additive (C39). Pinned by
+  `server/internal/task-tree-oracle.test.ts` (every level converges on the
+  tree script plus folder writes; every `$childCount` against a direct
+  count; an old bundle parses the default tuple). The step towards
+  `taskRows` itself as a window
   (`research/2026-11-05-tasks-bounded-task-rows.md`).
 - **`taskDescriptions`** (`task-descriptions`, lookup-only: `:rows`) — one
   task's `description`, the heavy text the set omits, by id
@@ -379,9 +392,9 @@ serves them.
     - `useTaskCluster`
     - `useTaskConversations`
 - Server:
-  - Contributes: 55 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `resource.declare` ×38
-    - `derived-table` ×5
+  - Contributes: 57 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `resource.declare` ×39
+    - `derived-table` ×6
     - `derived-view` ×4
     - `ids.kind` ×3
     - `attachments.link` ×2
@@ -597,9 +610,10 @@ serves them.
     - `tasks:rows` (keyed, point)
     - `tasks.attachment-links` (keyed)
     - `tasks.attachment-links:rows` (keyed, point)
-    - `tasks.window` (keyed, window)
-    - `tasks.window:groups` (push)
-    - `tasks.window:rows` (keyed, point)
+    - `tasks.tree` (keyed, window)
+    - `tasks.tree:ancestors` (keyed, window)
+    - `tasks.tree:groups` (push)
+    - `tasks.tree:rows` (keyed, point)
 - Core:
   - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/model-provider` ×3
@@ -641,6 +655,7 @@ serves them.
     - `TaskRow`
     - `TasksFileGrant`
     - `TaskStatus`
+    - `TaskTreeRow`
     - `TrackFilingGrant`
     - `TrailerCommit`
   - Exports (values):

@@ -31,7 +31,9 @@ import {
 export const blockFields = {
   id: textField(),
   // The nearest `type="page"` ancestor; NULL for a page at the tree root.
-  pageId: nullable(textField()),
+  // Labelled: `pagesTree` LISTS it (picks it) — the page tree's parent, a
+  // level being read as `where: { pageId }`.
+  pageId: nullable(textField({ label: "Parent page" })),
   parentId: nullable(textField()),
   type: textField(),
   // The payload, per block type; `pageData()` reads a page's.

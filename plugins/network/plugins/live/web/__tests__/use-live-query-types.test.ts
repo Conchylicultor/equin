@@ -143,6 +143,31 @@ function useTreeReads(id: string, viewport: VisibleRange) {
   return [list, row, pages, plain];
 }
 
+// `{ resetKey }` — the plain window read keeping its previous rows across a
+// query change: the window's own query (with `limit`), its list result; any
+// other read beside it is refused on its own property.
+function useResetKeyReads(id: string) {
+  const list: LiveListResult<Row> = useLive(
+    windowed,
+    { where: { n: 1 }, limit: 2 },
+    { resetKey: "picker" },
+  );
+  const tree_: LiveListResult<TreeFxRow> = useLive(
+    tree,
+    { include: "ancestors" },
+    { resetKey: "picker" },
+  );
+  useLive(
+    windowed,
+    {
+      // @ts-expect-error TS2322 — id with resetKey
+      id,
+    },
+    { resetKey: "picker" },
+  );
+  return [list, tree_];
+}
+
 const withIdParam = liveValue("fx.value-with-id", {
   schema: z.object({ n: z.number() }),
   params: ["id"],
@@ -1120,6 +1145,7 @@ describe("useLive's collection read types", () => {
       useGenericMisuse,
       useUnionWherePositives,
       useTreeReads,
+      useResetKeyReads,
     ]) {
       expect(typeof hook).toBe("function");
     }

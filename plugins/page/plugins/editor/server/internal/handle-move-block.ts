@@ -15,11 +15,31 @@ import { assertNotIntoOwnSubtree } from "./ancestry";
 export const handleMoveBlock = implement(
   moveBlock,
   async ({ params, body }) => {
-    if (body.parentId === params.id) {
-      throw new HttpError(400, "Cannot parent a block to itself");
-    }
     if (body.targetId === params.id) {
       throw new HttpError(400, "Cannot position a block relative to itself");
+    }
+    // The destination parent: stated, or — beside a target — the target's own
+    // parent (read outside the lock like the source below: it decides which
+    // locks to take; the sibling check under them re-validates it). A trashed
+    // or unknown target is the same 404 an unknown id gets.
+    let parentId: string | null;
+    if (body.parentId !== undefined) {
+      parentId = body.parentId;
+    } else {
+      const targetId = body.targetId;
+      if (targetId === null) {
+        throw new HttpError(400, "parentId is required when targetId is null");
+      }
+      const [target] = await db
+        .select({ parentId: liveBlocks.parentId })
+        .from(liveBlocks)
+        .where(eq(liveBlocks.id, targetId))
+        .limit(1);
+      if (!target) throw new HttpError(404, "Target not found");
+      parentId = target.parentId;
+    }
+    if (parentId === params.id) {
+      throw new HttpError(400, "Cannot parent a block to itself");
     }
 
     // Name the two forests this move permutes — the block's own page and the
@@ -35,7 +55,7 @@ export const handleMoveBlock = implement(
       .where(eq(liveBlocks.id, params.id))
       .limit(1);
     if (!source) throw new HttpError(404, "Not found");
-    const destPageId = await computePageId(body.parentId);
+    const destPageId = await computePageId(parentId);
 
     // The page lock subsumes the bespoke read-the-siblings-inside-the-tx defence
     // this handler used to hand-roll: every read here is already under it.
@@ -53,13 +73,13 @@ export const handleMoveBlock = implement(
           .where(eq(liveBlocks.id, params.id))
           .limit(1);
         if (!before) throw new HttpError(404, "Not found");
-        await assertNotIntoOwnSubtree(ctx.tx, [params.id], body.parentId);
+        await assertNotIntoOwnSubtree(ctx.tx, [params.id], parentId);
 
         // Guards that the destination parent is LIVE (404 otherwise) and returns it
         // alongside its complete live sibling set — see `loadLiveSiblings`.
         const { parent: destParent, siblings } = await loadLiveSiblings(
           ctx.tx,
-          body.parentId,
+          parentId,
         );
         if (
           body.targetId !== null &&
@@ -72,7 +92,7 @@ export const handleMoveBlock = implement(
         }
         const rank = rankAdjacentTo(
           siblings,
-          body.parentId,
+          parentId,
           body.targetId,
           body.zone,
           new Set([params.id]),
@@ -88,9 +108,9 @@ export const handleMoveBlock = implement(
         // moved row being a page, since an ordinary container's `expanded` is
         // legitimate state that travels with it.
         const arrivesFolded =
-          before.type === PAGE_BLOCK_TYPE && before.parentId !== body.parentId;
+          before.type === PAGE_BLOCK_TYPE && before.parentId !== parentId;
         await updateBlockFields(ctx.tx, params.id, {
-          parentId: body.parentId,
+          parentId: parentId,
           rank: rank.toJSON(),
           ...(arrivesFolded ? { expanded: false } : {}),
         });

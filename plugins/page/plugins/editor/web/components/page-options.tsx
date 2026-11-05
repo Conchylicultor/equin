@@ -22,42 +22,51 @@ export type PageOption =
 /** The picker options read: the pages read's own states, mapped to options. */
 export type PageOptionsResult = ResourceResult<PageOption[]>;
 
+/** How many pages a picker lists at most: the closest matches, never the whole tree. */
+const PICKER_LIMIT = 20;
+
 /**
- * Ordered picker options for a query: pages whose title matches, followed by an
- * optional "Create '<query>'" row when `allowCreate` and the query is non-empty.
- * Backed by the live `pagesTree` set, so the full list is always in memory and
- * filtering is local. Shared by the page-link block picker and the inline `[[`
+ * Ordered picker options for a query: the most recently edited pages whose
+ * title contains it (case-insensitive, searched server-side — a window over
+ * `pagesTree` filtered on its `title` column, at most {@link PICKER_LIMIT}),
+ * followed by an optional "Create '<query>'" row when `allowCreate` and the
+ * query is non-empty. Shared by the page-link block picker and the inline `[[`
  * typeahead so both surfaces stay identical.
  *
  * The pages read's own result, mapped: consumers render a distinct loading
  * state (instead of a premature "No pages found") and a failed read as a
- * failure.
+ * failure. A new query is a new window; under the read's `resetKey` it keeps
+ * the previous query's pages (`ready`) until its own land, so typing never
+ * flashes the menu empty and Enter always commits a row.
  */
 export function usePageOptions(
   query: string,
   opts?: { allowCreate?: boolean },
 ): PageOptionsResult {
-  const resourceResult = useLive(pagesTree);
+  const q = query.trim();
+  const resourceResult = useLive(
+    pagesTree,
+    {
+      where: q === "" ? undefined : { title: { contains: q } },
+      orderBy: [["editedAt", "desc"]],
+      limit: PICKER_LIMIT,
+    },
+    { resetKey: "page-options" },
+  );
   const allowCreate = opts?.allowCreate ?? false;
   return useMemo(
     () =>
       mapResource(resourceResult, (pages) => {
-        const q = query.trim().toLowerCase();
-        const matched = q
-          ? pages.filter((d) =>
-              (pageData(d).title || "Untitled").toLowerCase().includes(q),
-            )
-          : pages;
-        const items: PageOption[] = matched.map((page) => ({
+        const items: PageOption[] = pages.map((page) => ({
           kind: "page",
           page,
         }));
-        if (allowCreate && query.trim()) {
-          items.push({ kind: "create", title: query.trim() });
+        if (allowCreate && q) {
+          items.push({ kind: "create", title: q });
         }
         return items;
       }),
-    [resourceResult, query, allowCreate],
+    [resourceResult, q, allowCreate],
   );
 }
 

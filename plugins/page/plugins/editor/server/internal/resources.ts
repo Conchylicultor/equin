@@ -23,7 +23,7 @@ import { BLOCK_WIRE_COLUMNS } from "./wire-columns";
 /**
  * A page row's edit time as a select field: {@link pageEditedAtSql} over the
  * row's own `updated_at` and the LEFT-joined `page_content_edited_at` rollup —
- * the expression the `pagesTree` set's `editedAt` field compiles.
+ * the expression the `pagesTree` row's `editedAt` field compiles.
  */
 const editedAtOf = () =>
   pageEditedAtSql(liveBlocks.updatedAt, _pageContentEditedAt.editedAt).mapWith(
@@ -34,7 +34,7 @@ const editedAtOf = () =>
  * All live pages (`type="page"` blocks), each carrying its stored `docRank`,
  * ordered by `(page_id, doc_rank)` — so **array order ≡ `docRank` order**
  * within every sidebar sibling group. The read behind `GET /api/pages` (D8);
- * the live set is `pagesTree`, served below over the same column.
+ * the live tree is `pagesTree`, served below over the same column.
  *
  * A plain select: membership is the live page rows, order is the
  * `(page_id, doc_rank)` the structural-write chokepoint maintains
@@ -75,10 +75,12 @@ export async function loadPages(
   });
 }
 
-// Every live page and its `:rows` point sibling, routed over the `page_blocks`
-// table and the `page_content_edited_at` rollup (`./page-rows.ts`): a page-row
-// write is that row's refill, a content block's write — the typing projection
-// included — the refill of its page's one row (its `editedAt` moved).
+// The live pages as a tree window, with its `:rows`, `:groups` and
+// `:ancestors` siblings, routed over the `page_blocks` table and its two
+// materialized joins (`./page-rows.ts`): a page-row write is that row's
+// refill, a content block's write — the typing projection included — the
+// refill of its page's one row (its `editedAt` moved), a page's create, move
+// or trash its parent's recount.
 export const pagesTreeServed = serveCollection(pagesTree, pageRowsServeOptions);
 
 // A page's content forest (`pageBlocks`, one tuple per page): EVERY block whose

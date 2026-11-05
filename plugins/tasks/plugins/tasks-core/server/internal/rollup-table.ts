@@ -1,9 +1,16 @@
-import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 import {
   ATTEMPT_CONV_AGG_TABLE,
   ATTEMPT_PUSH_AGG_TABLE,
   TASK_ATTEMPT_FACTS_TABLE,
   TASK_BLOCKING_TABLE,
+  TASK_CHILD_COUNT_TABLE,
   TASK_DEPENDENCY_LIST_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
 
@@ -76,4 +83,11 @@ export const _taskDependencyList = pgTable(TASK_DEPENDENCY_LIST_TABLE, {
 export const _taskBlocking = pgTable(TASK_BLOCKING_TABLE, {
   hostId: text("host_id").primaryKey(),
   has: boolean("has").notNull(),
+});
+
+// The `tasks.tree` tree's child count (`task-rows.ts`' `taskChildCount`):
+// per task, how many tasks name it as their folder.
+export const _taskChildCount = pgTable(TASK_CHILD_COUNT_TABLE, {
+  hostId: text("host_id").primaryKey(),
+  count: integer("count").notNull(),
 });

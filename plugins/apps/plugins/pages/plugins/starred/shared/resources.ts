@@ -31,7 +31,7 @@ export type StarredPageRow = z.infer<typeof StarredPageRowSchema>;
 // star toggles (`useStarredPageIds`) read starred-ness for whichever page they
 // sit on, and the set holds at most one row per page, so its reader holds it
 // entire — no favorite ever reads as unstarred past a window's edge. (The
-// sidebar's `starred` field is the exposure above, folded into `pages.tree`.)
+// sidebar's `starred` field is the exposure above, folded into `pages.tree.v2`.)
 //
 // Rows key on `blockId` (the side-table pk — the starred page's id); the
 // server half is served from the extension handle in

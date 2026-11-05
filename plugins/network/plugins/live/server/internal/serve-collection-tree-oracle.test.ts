@@ -10,14 +10,14 @@
  *   oracle (the closure walked in JS over the whole table);
  * - a chain 24 deep is answered whole; one past `LIVE_TREE_MAX_DEPTH` and a
  *   cycle are loud loader errors;
- * - `$childCount` is projected from the materialized count's join (absent
- *   → its `absent` default), on the window and on `:rows`;
+ * - `$childCount` is a REAL materialized count (`materializeJoin` of a
+ *   self-referencing children join: the table counting its own rows by
+ *   parent, its `where` the collection's): inserting / deleting a child,
+ *   re-parenting one (both parents recount) and a `where` flip reach the
+ *   subscribed window and `:rows` views; a host with no children reads the
+ *   count's `ifNone` (0);
  * - the compile refuses a tree served without `childCount`, and a count of
  *   another table or column.
- *
- * The count's join is a STAND-IN here (a plain side table the test writes):
- * the materialized count itself is query-resource's `materializeJoin`
- * (task-1793848785-7tzicj) — TODO(7tzicj): drive it with the real one.
  *
  * Requires a running Postgres cluster (started by ./equin build).
  * Run: `./equin test plugins/network/plugins/live`.
@@ -26,10 +26,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { eq, sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { integer, pgTable, text } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, text } from "drizzle-orm/pg-core";
 import { Client } from "pg";
 import { nullable } from "@plugins/fields/core";
-import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
   createTestDb,
@@ -55,46 +54,65 @@ import {
   type ClientView,
   type RecordedFrame,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core/testing";
-import type { ExtensionJoin } from "@plugins/network/plugins/live/plugins/query-resource/core";
+import {
+  aggregate,
+  childrenJoin,
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   compileAncestorsQuery,
+  materializeJoin,
   type QueryDb,
 } from "@plugins/network/plugins/live/plugins/query-resource/server";
+import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";
+import { ATTEMPT_CONV_AGG_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { compileWindowQuery } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import {
   LIVE_TREE_MAX_DEPTH,
   liveCollection,
 } from "@plugins/network/plugins/live/core";
-import { compileCollection, type TreeChildCount } from "./serve-collection";
+import { compileCollection } from "./serve-collection";
 
 const NODES = "otr_nodes";
-const KIDS = "otr_kids";
+// A rollup's table must be an allowlisted imperative name (defineRollup
+// asserts it); a throwaway database borrows one, as query-resource's
+// rollup-routes tests do — its real shape is irrelevant here.
+const KIDS = ATTEMPT_CONV_AGG_TABLE;
 
-const nodes = pgTable(NODES, {
-  id: text("id").primaryKey(),
-  title: text("title").notNull(),
-  parentId: text("parent_id"),
-  rank: text("rank").notNull(),
-  kind: text("kind").notNull(),
-});
-const kids = pgTable(KIDS, {
+const nodes = pgTable(
+  NODES,
+  {
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    parentId: text("parent_id"),
+    rank: text("rank").notNull(),
+    kind: text("kind").notNull(),
+  },
+  (t) => [index("otr_nodes_parent_rank").on(t.parentId, t.rank)],
+);
+const kidsTable = pgTable(KIDS, {
   parentId: text("parent_id").primaryKey(),
   count: integer("count").notNull(),
 });
 
-const kidsJoin: ExtensionJoin<"kids", typeof kids> = {
-  kind: "extension",
-  alias: "kids",
-  table: kids,
-  key: kids.parentId,
-  parentKey: nodes.id,
-  absent: { count: 0 },
-};
-// TODO(7tzicj): `materializeJoin(childrenJoin({ table: nodes, fk: nodes.parentId, … }))`.
-const kidsCount: TreeChildCount = {
-  children: { table: nodes, fk: nodes.parentId },
-  join: () => kidsJoin,
-};
+// The tree's child count: the table's own rows grouped by parent, the
+// collection's `where` applied — materialized as a rollup keyed by the parent.
+const kids = materializeJoin(
+  childrenJoin({
+    alias: "kids",
+    table: nodes,
+    fk: nodes.parentId,
+    where: (c) => sql`${c.kids.kind} = 'page'`,
+    aggregates: () => ({
+      count: aggregate(sql`count(*)::int`, {
+        decoder: Number,
+        sqlType: "integer",
+        notNull: true,
+        ifNone: sql`0`,
+      }),
+    }),
+  }),
+  { host: nodes, table: kidsTable },
+);
 
 const tree = liveCollection("test.live.tree-oracle.nodes", {
   fields: {
@@ -102,7 +120,6 @@ const tree = liveCollection("test.live.tree-oracle.nodes", {
     title: textField({ label: "Title" }),
     parentId: nullable(textField({ label: "Parent" })),
     rank: textField({ label: "Rank" }),
-    n: intField({ label: "N", filterable: false }),
   },
   id: "id",
   sortable: ["rank", "title"],
@@ -146,10 +163,8 @@ async function until(cond: () => boolean, what: () => string): Promise<void> {
 const served = () =>
   compileCollection(tree, {
     from: nodes,
-    joins: [kidsJoin],
-    columns: { n: (j) => j.kids.count },
     where: eq(nodes.kind, "page"),
-    childCount: { of: kidsCount, count: (j) => j.kids.count },
+    childCount: { of: kids, count: "count" },
     db: db as unknown as QueryDb,
   });
 
@@ -165,10 +180,10 @@ beforeAll(async () => {
       `CREATE TABLE ${NODES} (id text PRIMARY KEY, title text NOT NULL,
                               parent_id text REFERENCES ${NODES}(id) ON DELETE SET NULL,
                               rank text NOT NULL, kind text NOT NULL);
-       CREATE INDEX ON ${NODES} (parent_id, rank);
-       CREATE TABLE ${KIDS} (parent_id text PRIMARY KEY, count integer NOT NULL);`,
+       CREATE INDEX otr_nodes_parent_rank ON ${NODES} (parent_id, rank);`,
     ),
   );
+  await installRollups(db, [kids.rollup]);
   const specs = served();
   const ancestors = specs.ancestors!;
   const ancestorsOpts = compileAncestorsQuery(
@@ -445,44 +460,88 @@ describe("a tree collection — :ancestors and $childCount on the real feed", ()
     );
   });
 
-  test("$childCount rides every read, from the count's join (absent → its default)", async () => {
-    await insert("k1", null);
-    await insert("k2", "k1");
-    await db.execute(sql`INSERT INTO ${kids} VALUES ('k1', 1)`);
-    const rows = (await truthRows(tree.rows.point.encode(["k1", "k2"]))) as {
-      id: string;
-      $childCount: number;
-    }[];
-    expect(Object.fromEntries(rows.map((r) => [r.id, r.$childCount]))).toEqual({
-      k1: 1,
-      k2: 0,
+  test("$childCount: a child inserted, deleted, re-parented or flipped out of the `where` recounts its parents on the window and on :rows", async () => {
+    await insert("kp1", null);
+    await insert("kp2", null);
+    await insert("kc1", "kp1");
+    const winParams = tree.window.window.encode({
+      where: { id: { in: ["kp1", "kp2"] } },
     });
-    const window = (await truthWindow(
-      tree.window.window.encode({ where: { parentId: "k1" } }),
-    )) as { id: string; $childCount: number }[];
-    expect(window.map((r) => [r.id, r.$childCount])).toEqual([["k2", 0]]);
-    expect(tree.row.safeParse(rows[0]).success).toBe(true);
+    const rowsParams = tree.rows.point.encode(["kp1", "kp2"]);
+    await subscribe(tree.key, winParams);
+    await subscribe(tree.rows.key, rowsParams);
+    const counts = (rows: unknown) =>
+      Object.fromEntries(
+        (rows as { id: string; $childCount: number }[]).map((r) => [
+          r.id,
+          r.$childCount,
+        ]),
+      );
+    const expectCounts = async (
+      want: Record<string, number>,
+      what: string,
+    ): Promise<void> => {
+      // A fresh load reads the stored count …
+      expect(counts(await truthWindow(winParams))).toEqual(want);
+      expect(counts(await truthRows(rowsParams))).toEqual(want);
+      // … and both views were told.
+      for (const [key, params] of [
+        [tree.key, winParams],
+        [tree.rows.key, rowsParams],
+      ] as const) {
+        await until(
+          () =>
+            JSON.stringify(counts(viewOf(key, params).value)) ===
+            JSON.stringify(want),
+          () =>
+            `${what}: ${key} holds ${JSON.stringify(counts(viewOf(key, params).value))}, want ${JSON.stringify(want)}`,
+        );
+      }
+    };
+    await expectCounts({ kp1: 1, kp2: 0 }, "initial");
+    await insert("kc2", "kp2");
+    await expectCounts({ kp1: 1, kp2: 1 }, "insert kc2 under kp2");
+    await db.execute(
+      sql`UPDATE ${nodes} SET parent_id = 'kp2' WHERE id = 'kc1'`,
+    );
+    await expectCounts({ kp1: 0, kp2: 2 }, "re-parent kc1 kp1 → kp2");
+    await db.execute(sql`DELETE FROM ${nodes} WHERE id = 'kc2'`);
+    await expectCounts({ kp1: 0, kp2: 1 }, "delete kc2");
+    await db.execute(sql`UPDATE ${nodes} SET kind = 'other' WHERE id = 'kc1'`);
+    await expectCounts({ kp1: 0, kp2: 0 }, "kc1 leaves the `where`");
+    await db.execute(
+      sql`UPDATE ${nodes} SET kind = 'page', parent_id = 'kp1' WHERE id = 'kc1'`,
+    );
+    await expectCounts({ kp1: 1, kp2: 0 }, "kc1 back, under kp1");
+    expect(
+      tree.row.safeParse(((await truthRows(rowsParams)) as unknown[])[0])
+        .success,
+    ).toBe(true);
+    for (const [key, params] of [
+      [tree.key, winParams],
+      [tree.rows.key, rowsParams],
+    ] as const) {
+      handler.message(ws, JSON.stringify({ op: "unsub", key, params }));
+      views.delete(tupleKey(key, params));
+    }
   });
 
-  test("the compile refuses a tree without its count, and a count of another tree", () => {
+  test("the compile refuses a tree without its count, a count of another tree, a count that is no integer", () => {
     const base = {
       from: nodes,
-      joins: [kidsJoin],
-      columns: { n: (j: { kids: { count: unknown } }) => j.kids.count },
+      where: eq(nodes.kind, "page"),
       db: db as unknown as QueryDb,
     };
     expect(() => compileCollection(tree, base as never)).toThrow(
-      /pass `childCount`/,
+      /pass `childCount: \{ of, count \}`/,
     );
+    const counting = (source: object) => ({ ...kids, source, join: kids.join });
     expect(() =>
       compileCollection(tree, {
         ...base,
         childCount: {
-          of: {
-            children: { table: nodes, fk: nodes.rank },
-            join: () => kidsJoin,
-          },
-          count: (j: { kids: { count: unknown } }) => j.kids.count,
+          of: counting({ kind: "children", table: nodes, fk: nodes.rank }),
+          count: "count",
         },
       } as never),
     ).toThrow(/counts children by "rank"/);
@@ -490,13 +549,20 @@ describe("a tree collection — :ancestors and $childCount on the real feed", ()
       compileCollection(tree, {
         ...base,
         childCount: {
-          of: {
-            children: { table: kids, fk: kids.parentId },
-            join: () => kidsJoin,
-          },
-          count: (j: { kids: { count: unknown } }) => j.kids.count,
+          of: counting({
+            kind: "children",
+            table: kidsTable,
+            fk: kidsTable.parentId,
+          }),
+          count: "count",
         },
       } as never),
-    ).toThrow(/counts rows of "otr_kids"/);
+    ).toThrow(/counts rows of "attempt_conv_agg"/);
+    expect(() =>
+      compileCollection(tree, {
+        ...base,
+        childCount: { of: kids, count: "parentId" },
+      }),
+    ).toThrow(/is the host key/);
   });
 });

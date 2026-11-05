@@ -35,7 +35,7 @@ preloaded), bounded by construction:
 
 - `useTaskTrack(taskId)` — point read, exact, a `ResourceResult<TaskTrack>`: `loading` until known (never a
   stand-in "main").
-- Nothing reads every track: the sidequest launch list filters `tasks.window`
+- Nothing reads every track: the sidequest launch list filters `tasks.tree`
   by the exposed track on the server. The whole set (`task-tracks.all`,
   preloaded at boot) was dropped on 2026-11-05 with a key rename, so an older
   tab subscribing `{}` gets `unknown-key`.

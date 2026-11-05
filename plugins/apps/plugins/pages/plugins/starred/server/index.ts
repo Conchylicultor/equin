@@ -13,7 +13,7 @@ export default {
     "Starred-pages side-table (page_blocks_ext_starred): presence-only marker plus the star toggle endpoint, and its presence exposed as the `starred` field of every list whose rows are blocks (LiveColumns.Expose).",
   contributions: [
     ...starredPagesServed.declare,
-    // `starred`, folded into every list whose rows are blocks (pages.tree).
+    // `starred`, folded into every list whose rows are blocks (pages.tree.v2).
     LiveColumns.Expose(pageBlocksStarred),
   ],
   httpRoutes: {

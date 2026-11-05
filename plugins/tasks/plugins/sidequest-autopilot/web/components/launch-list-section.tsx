@@ -102,13 +102,15 @@ const trackColumns = exposedColumns(taskTrackShape.exposure);
 // exits the window. The track is an exposed column (task-track's side table),
 // which a typed `where` cannot spell — no own field of the collection — so the
 // query names it by wire name and brings its column set, as data-view's
-// narrowing does. Newest first, at the window's cap.
+// narrowing does. Newest first (the window's own default is the tree's rank
+// order), at the window's cap.
 const READY_SIDEQUESTS = {
   columns: [trackColumns],
   where: {
     status: "new",
     [trackColumns.column("track").name]: "sidequest",
   } as LiveWhereOf<typeof taskWindow>,
+  orderBy: [["createdAt", "desc"] as const],
   limit: 500,
 } satisfies LiveQuery<unknown, string>;
 

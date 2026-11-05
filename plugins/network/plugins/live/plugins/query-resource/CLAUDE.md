@@ -319,7 +319,7 @@ renderAggregate(sql, { name, relation, reads, nullable, sqlType, decoder });
 A children or closure join stored as a derived-tables rollup keyed by the
 host id, so ANY compile — a window, a grouping, a count, `:rows`, an `all` set
 — reads its aggregates as plain columns, and a window filters, sorts and
-groups by them (`tasks.window`'s `status`):
+groups by them (`tasks.tree`'s `status`):
 
 ```ts
 const facts = materializeJoin(childrenJoin({ alias: "att", … }), {
@@ -351,6 +351,10 @@ const facts = materializeJoin(childrenJoin({ alias: "att", … }), {
   declares exactly what its select reads.
 - An unmaterialized children / closure join stays `all`-only (A29 below); the
   materialized form is how a window gets one.
+- `m.source` is the grouped join as declared — for a reader that must check
+  WHAT is aggregated (network/live's tree `childCount`: a children join over
+  the served table by its parent column; a self-referencing one, so a move
+  recounts both parents through the feed's old ∪ new `fk`). Never recompiled.
 
 ### Rollup routes — a rollup is routed through its SOURCES
 
@@ -961,6 +965,7 @@ query.
     - `conversations/agents`
     - `network/live`
     - `page/attachment-block`
+    - `page/editor`
     - `primitives/data-view/custom-columns/values`
     - `primitives/data-view/view-order`
     - `runs`

@@ -44,13 +44,28 @@ export type UpdateBlockBody = z.infer<typeof UpdateBlockBodySchema>;
  * `targetId: null` addresses the sibling-list boundary instead of a neighbour:
  * `"after"` appends at the end of `parentId`'s children, `"before"` prepends at
  * the start. That is what a tree "drop onto this row as a child" gesture means.
- * A non-null `targetId` MUST already be a child of `parentId`.
+ * A non-null `targetId` MUST already be a child of `parentId` — or `parentId`
+ * is omitted and read off the target.
  */
-export const MoveBlockBodySchema = z.object({
-  parentId: z.string().nullable(),
-  targetId: z.string().nullable(),
-  zone: z.enum(["before", "after"]),
-});
+export const MoveBlockBodySchema = z
+  .object({
+    /**
+     * The destination parent. Optional beside a `targetId`: the block then
+     * lands among the TARGET's siblings, wherever it physically sits — the
+     * server reads the target's parent (as `CreateBlockBodySchema.afterId`
+     * does), so a surface showing a projection of the forest (the Pages
+     * sidebar, whose hierarchy is `pageId` while a page's physical parent may
+     * be a content block) never has to know the target's raw `parentId`. Given
+     * beside a `targetId`, it must BE the target's parent (400 otherwise).
+     */
+    parentId: z.string().nullable().optional(),
+    targetId: z.string().nullable(),
+    zone: z.enum(["before", "after"]),
+  })
+  .refine((b) => b.targetId !== null || b.parentId !== undefined, {
+    message: "parentId is required when targetId is null",
+    path: ["parentId"],
+  });
 export type MoveBlockBody = z.infer<typeof MoveBlockBodySchema>;
 
 // Pages are blocks of `type="page"`, in document order per sidebar sibling group

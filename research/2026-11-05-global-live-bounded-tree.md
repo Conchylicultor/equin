@@ -319,3 +319,32 @@ Reused rather than rebuilt:
 - `docRank` is per `page_id` group and re-minted by the writer. Window order must
   stay stable under re-mints, which are in-place refills today.
 - In hits mode an ancestor's position can shift as later pages load (above).
+
+## Results (2026-11-05)
+
+Landed in two pushes: the primitive (fd218c5847), then the Pages sidebar and
+the Tasks tree. Deviations from the plan above, all toward one mechanism:
+
+- `$childCount` is an instance of task-1793848785-7tzicj's materialized
+  aggregates (`materializeJoin` of a self-referencing `childrenJoin`), bound
+  by `serveCollection(c, { childCount: { of, count } })` — not a separate
+  rollup lift. Pages' `editedAt` became one too.
+- The Tasks tree is `taskWindow` itself (key `tasks.tree`, was the flat
+  `tasks.window`); `pagesTree` became the window tree (key `pages.tree.v2`) and
+  every Pages reader moved to bounded reads (breadcrumb / delete via
+  `{ id, include: "ancestors" }`, Recent and the `[[` pickers via windows —
+  the pickers keep their previous rows while typing: `useLive(c, q, { resetKey })`).
+- Aliases are asked from the parent (`getAliasChildren(parentId)`).
+- The flat Parent field reads the parent per visible row (`rowRead` collection form).
+
+Measured, Tasks pane open, one tab, restart replay
+(`replay-bytes.ts --tabs 1 --path /agents/tasks`):
+
+| | main (before) | this branch (after) |
+|---|---|---|
+| whole replay | 6.04 M chars, 161 frames | 0.27 M chars, 19 frames |
+| task rows | `tasks` 5.70 M | `tasks.tree` 0.10 M + `tasks.tree:ancestors` 0.10 M |
+
+Boot snapshot (main, warm): 10.33 MB raw / 1.36 MB gzip, `tasks` 5.59 MB /
+606 KB — unchanged by this task: `taskRows` is still `preload: "boot"` for its
+remaining whole-set readers; dropping it is task-1793840408-hau52q (−5.6 MB).

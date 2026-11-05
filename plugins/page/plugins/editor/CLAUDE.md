@@ -9,8 +9,8 @@ Pages sidebar's sibling group (pages sharing a `pageId`) spans several, so two r
 can hold the same rank (`Rank.between("a1","a1")` throws in `computeDrop`). The
 server therefore stores the order: `page_blocks.doc_rank` (nullable `rank_text`,
 NULL on content rows), emitted as `PageRow.docRank` by `pagesTree` and
-`GET /api/pages`. Display order, array order and `computeFlatReorder`'s
-neighbourhood are one order (the sidebar sorts by `docRank` via `inDocOrder`).
+`GET /api/pages`. A tree level's window is ordered by it server-side, so
+display order and the level's order are one order.
 
 > **Invariant I-DR.** For each group P (live page rows sharing `page_id`; NULL is
 > the root group), ordering by `doc_rank` equals document order — `docOrderRows` +
@@ -53,40 +53,64 @@ Rules:
 `doc-rank.test.ts` is the writer oracle (random op sequences asserting I-DR after
 every step).
 
-## The page tree is a routed collection (`pagesTree`, key `pages.tree`)
+## The page tree is a tree window (`pagesTree`, key `pages.tree.v2`)
 
-Every live page:
+The live pages, as a bounded TREE (network/live `tree`; design
+`research/2026-11-05-global-live-bounded-tree.md`):
 
 ```ts
-liveCollection("pages.tree", {
+liveCollection("pages.tree.v2", {
   from: pagesEntityRef,
-  fields: { editedAt },
+  pick: ["pageId"],
+  fields: { title, editedAt },
   carry,
-  all: { orderBy: createdAt, unbounded },
+  sortable: ["docRank", "title", "editedAt", "createdAt"],
+  default: { orderBy: [["docRank", "asc"]], limit: 100 },
+  maxLimit: 500,
+  tree: { parent: "pageId", rank: "docRank" },
 });
 ```
 
 - **Served** by `serveCollection` over the `page_blocks` table
   (`server/internal/page-rows.ts`, the one spelling server and tests compile),
-  `where type='page' AND deleted_at IS NULL`.
-- **`docRank` is bound to `doc_rank` by name** (a leaked NULL fails the row
-  schema's `RankSchema` loudly).
-- **Readers**: `useLive(pagesTree)` for the set (sidebar, `usePageOptions`,
-  breadcrumb, Recent pages…), `useLive(pagesTree, { id })` for one page.
+  `where type='page' AND deleted_at IS NULL`; a level reads the partial index
+  `page_blocks_page_tree_idx (page_id, doc_rank) WHERE type='page' AND
+  deleted_at IS NULL`.
+- **`pageId` is the tree's parent, `docRank` its sibling rank**, both bound by
+  name (a leaked NULL `doc_rank` fails the row schema's `RankSchema` loudly).
+  A level's window order IS document order — no client sort.
+- **Readers — every one bounded, none holds the whole set**:
+  - the sidebar: `liveDataSource(pagesTree, { searchable: ["title"] })` + a
+    `LiveHierarchyConfig` (root level + one window per open page; a search /
+    filter as hits with ancestors);
+  - one page: `useLive(pagesTree, { id })`; the breadcrumb and the delete
+    action's "is the open page under it": `{ id, include: "ancestors" }`;
+  - Recent pages: `{ orderBy: [["editedAt", "desc"]], limit }`;
+  - the `[[` / page-link pickers (`usePageOptions`): `{ where: { title:
+    { contains } }, orderBy: editedAt desc, limit }` — server-side search.
+- **`title`** = `coalesce(data->>'title', '')`, the payload's one queryable
+  projection (the payload stays carried whole).
+- **Two materialized joins** (`server/internal/rollup-spec.ts`, query-resource
+  `materializeJoin`, both ON the change feed, contributed as `PAGE_ROLLUPS`):
+  - `page_content_edited_at` — `max(updated_at)` over a page's live content;
+    `editedAt` = `pageEditedAtSql` = `greatest(row updated_at, it)`;
+    `readPageEditedAt` (markdown-apply's `<page-meta>`) reads the same
+    expression, so header, sidebar, Recent pages and `<page-meta>` agree;
+  - `page_tree_children` — how many live pages name a page as `page_id`: the
+    tree's `$childCount`. Its `where` is kept in step with the served one.
+- **Moves send the target only**: the sidebar's sibling drop posts
+  `moveBlock { targetId, zone }` (no `parentId`); the server lands the page
+  among the target's PHYSICAL siblings (its raw `parentId` may be a content
+  block). "Add page below" is `createBlock { afterId }`, likewise.
 - **Declared by fields over the entity**: the table is
   `defineEntity(pagesEntityRef, { docRank, deletedAt, trashEntryId }, meta)`
   (`server/internal/tables.ts`), so ref and table cannot disagree.
-  Block-extension fields fold in under `$columns` (starred, `origin`, `tags`).
-  Row pinned to `PageRow` (`_PinPagesTreeRow`).
-- **Order is `createdAt` because it never moves** — a `doc_rank` re-mint is an in-place
-  refill, never an `orderOf`. Renderers sort by `docRank`.
-- **`editedAt`** = `pageEditedAtSql` (`page-rows.ts`, one spelling):
-  - `greatest(page row updated_at, page_content_edited_at rollup)`;
-  - the rollup (`server/internal/rollup-spec.ts`) is a `derived-tables` rollup of
-    `max(updated_at)` per page;
-  - `readPageEditedAt` (markdown-apply's `<page-meta>`) reads the same expression,
-    so header, sidebar, Recent pages and `<page-meta>` agree.
-- Costs are pinned per step by `server/internal/pages-tree-oracle.test.ts`.
+  Block-extension fields fold in under `$columns` (starred, `origin`, `tags`),
+  filterable server-side. Row pinned to `PageRow & { title }`
+  (`_PinPagesTreeRow`).
+- Pinned by `server/internal/pages-tree-oracle.test.ts` (levels in document
+  order, `editedAt` and `$childCount` recomputed from scratch, no drift, the
+  typing / fold costs, C39 for `pages.tree` and `pages`).
 
 **`blockLocations`** (`page.block-locations`, lookup-only `:rows`): any live block's
 `{ id, type, pageId }`; `useBlockTarget` resolves a bare block id through it.
@@ -2253,9 +2277,12 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `resource.declare` "page-blocks.v2"
     - `resource.declare` "page-blocks.v2:rows"
     - `resource.declare` "page.block-locations:rows"
-    - `resource.declare` "pages.tree"
-    - `resource.declare` "pages.tree:rows"
+    - `resource.declare` "pages.tree.v2"
+    - `resource.declare` "pages.tree.v2:ancestors"
+    - `resource.declare` "pages.tree.v2:groups"
+    - `resource.declare` "pages.tree.v2:rows"
     - `derived-table` "page_content_edited_at"
+    - `derived-table` "page_tree_children"
     - `page.block-data` "page"
     - `page.block-annotation`
   - Uses:
@@ -2274,6 +2301,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `infra/trash.recordTrashEntry`
     - `network/live.ServeAllCollectionOptions`
     - `network/live.serveCollection`
+    - `network/live/query-resource.materializeJoin`
     - `primitives/rank.nextRankUnder`
     - `primitives/rank.rankAdjacentTo`
     - `primitives/rank.rankAfterSibling`
@@ -2329,8 +2357,10 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `page-blocks.v2` (keyed)
     - `page-blocks.v2:rows` (keyed, point)
     - `page.block-locations:rows` (keyed, point)
-    - `pages.tree` (keyed)
-    - `pages.tree:rows` (keyed, point)
+    - `pages.tree.v2` (keyed, window)
+    - `pages.tree.v2:ancestors` (keyed, window)
+    - `pages.tree.v2:groups` (push)
+    - `pages.tree.v2:rows` (keyed, point)
   - Routes:
     - `GET /api/pages`
     - `GET /api/pages/:pageId/blocks`
@@ -2345,7 +2375,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `POST /api/pages/:pageId/blocks/op`
     - `POST /api/pages/:pageId/blocks/patch`
 - Core:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collab-doc` ×3
     - `primitives/text-editor/token-extension` ×3
     - `primitives/tree` ×3
@@ -2355,6 +2385,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `fields/date/config.dateField`
     - `fields/json/config.jsonField`
     - `fields/rank/config.rankValueField`
+    - `fields/text/config.textField`
     - `ids.defineIdKind`
     - `infra/endpoints.defineEndpoint`
     - `infra/trash.TrashOutcomeSchema`
@@ -2404,6 +2435,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `PageKind`
     - `PageRow`
     - `PageSource`
+    - `PagesTreeFields`
     - `PagesTreeRow`
     - `RichText`
     - `RowData`

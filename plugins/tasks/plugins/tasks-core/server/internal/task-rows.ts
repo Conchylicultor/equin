@@ -13,6 +13,7 @@ import { materializeJoin } from "@plugins/network/plugins/live/plugins/query-res
 import type {
   ServeAllCollectionOptions,
   ServeCollectionOptions,
+  TreeChildCountBinding,
 } from "@plugins/network/plugins/live/server";
 import { TaskStatusSchema, type TaskListItem } from "../../core";
 import {
@@ -27,6 +28,7 @@ import {
   _attemptPushAgg,
   _taskAttemptFacts,
   _taskBlocking,
+  _taskChildCount,
   _taskDependencyList,
 } from "./rollup-table";
 import { _attempts, _taskDependencies, _tasks } from "./tables";
@@ -182,11 +184,35 @@ export const taskBlocking = materializeJoin(
   { host: _tasks, table: _taskBlocking },
 );
 
+// The tree's child count (`taskWindow` declares `tree: { parent: "folderId" }`):
+// the tasks counting their own rows by `folder_id`, stored per parent — every
+// window row's `$childCount` (network/live's `childCount`, joined by the
+// collection itself). The window serves every task (no `where`), so the count
+// counts every child. A move between folders recounts both: the change feed
+// carries the old and the new `folder_id`. Backed by `tasks_folder_rank_idx`.
+export const taskChildCount = materializeJoin(
+  childrenJoin({
+    alias: "kids",
+    table: _tasks,
+    fk: _tasks.folderId,
+    aggregates: () => ({
+      count: aggregate(sql`count(*)::int`, {
+        decoder: Number,
+        sqlType: "integer",
+        notNull: true,
+        ifNone: sql`0`,
+      }),
+    }),
+  }),
+  { host: _tasks, table: _taskChildCount },
+);
+
 /** The materialized joins' rollups, readers last (`TASK_ROLLUPS`). */
 export const TASK_MATERIALIZED_ROLLUPS = [
   taskAttemptFacts.rollup,
   taskDependencyList.rollup,
   taskBlocking.rollup,
+  taskChildCount.rollup,
 ] as const;
 
 const joins = [
@@ -252,9 +278,20 @@ export const taskRowsServeOptions = {
   typeof joins
 >;
 
-/** The same row as a window (`taskWindow`): the stored aggregates filter and sort like columns. */
+/**
+ * The same row as a window (`taskWindow`, the tasks TREE): the stored
+ * aggregates filter and sort like columns, and every row carries
+ * `$childCount` (`taskChildCount`).
+ */
 export const taskWindowServeOptions = {
   from: _tasks,
   joins,
   columns: { ...derivedColumns, dependencies: (j) => j.deps.list },
-} satisfies ServeCollectionOptions<typeof _tasks, TaskListItem, typeof joins>;
+  childCount: { of: taskChildCount, count: "count" },
+} satisfies ServeCollectionOptions<
+  typeof _tasks,
+  TaskListItem,
+  typeof joins
+> & {
+  childCount: TreeChildCountBinding<typeof _taskChildCount>;
+};

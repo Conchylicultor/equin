@@ -108,6 +108,14 @@ const blocksEntity = defineEntity(
         t.rank,
       ),
       index("page_blocks_page_id_idx").on(t.pageId),
+      // One level of the page TREE (`pagesTree`, a window): the live pages of a
+      // `pageId` group in `doc_rank` order — the read every open sidebar node
+      // and the root level page through, and its `:ancestors` walk up `page_id`.
+      // Partial on the collection's served `where`, so it holds only the
+      // (~1%) page rows of the forest.
+      index("page_blocks_page_tree_idx")
+        .on(t.pageId, t.docRank)
+        .where(sql`type = 'page' AND deleted_at IS NULL`),
       // Siblings order by `rank`, so two of them sharing one is not a near-miss —
       // it is an unordered pair, and `Rank.between(r, r)` throws rather than
       // inventing a key. That crash is how this was found: the sidebar minted a

@@ -5798,10 +5798,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 83 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+            - Uses: 85 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
               - `primitives/pane` ×9
               - `page/editor` ×7
-              - `primitives/data-view` ×5
+              - `primitives/data-view` ×7
               - `infra/endpoints` ×4
               - `primitives/css/ui-kit` ×4
               - `primitives/overlay/image-viewer` ×4
@@ -21033,10 +21033,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LIVE_STATE_TRIGGER_STATE_TABLE`
           - `MIGRATIONS_TABLE_NAME`
           - `PAGE_CONTENT_EDITED_AT_TABLE`
+          - `PAGE_TREE_CHILDREN_TABLE`
           - `READ_ALIAS_SCHEMA`
           - `readAliasStem`
           - `TASK_ATTEMPT_FACTS_TABLE`
           - `TASK_BLOCKING_TABLE`
+          - `TASK_CHILD_COUNT_TABLE`
           - `TASK_DEPENDENCY_LIST_TABLE`
           - `TASK_LATEST_CONVERSATION_TABLE`
           - `topoSortViews`
@@ -26624,13 +26626,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 78 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 79 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×21
               - `conversations` ×15
               - `tasks` ×10
               - `infra` ×6
               - `debug` ×4
-              - `page` ×3
+              - `page` ×4
               - `primitives` ×3
               - `build` ×2
               - `fields` ×2
@@ -35116,8 +35118,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useLive`
           - `useLiveReader`
       - Server:
-        - Uses: 44 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `network/live/query-resource` ×40
+        - Uses: 45 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `network/live/query-resource` ×41
           - `database/sql-column` ×3
           - `network/live/filter.filterSql`
         - Exports (types):
@@ -35153,7 +35155,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ServePagedValueOptions`
           - `ServeUnionOptions`
           - `ServeValueOptions`
-          - `TreeChildCount`
           - `TreeChildCountBinding`
           - `UnionArmBinding`
           - `UnionArmColumns`
@@ -35413,11 +35414,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 337 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 336 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×86
           - `conversations` ×70
           - `debug` ×32
-          - `tasks` ×29
+          - `tasks` ×28
           - `infra` ×22
           - `page` ×15
           - `active-data` ×13
@@ -35784,12 +35785,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 300 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 299 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×83
               - `conversations` ×48
               - `debug` ×29
               - `ui` ×25
-              - `tasks` ×23
+              - `tasks` ×22
               - `page` ×16
               - `primitives` ×14
               - `infra` ×8
@@ -36043,6 +36044,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/agents`
               - `network/live`
               - `page/attachment-block`
+              - `page/editor`
               - `primitives/data-view/custom-columns/values`
               - `primitives/data-view/view-order`
               - `runs`
@@ -37810,9 +37812,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "page-blocks.v2"
           - `resource.declare` "page-blocks.v2:rows"
           - `resource.declare` "page.block-locations:rows"
-          - `resource.declare` "pages.tree"
-          - `resource.declare` "pages.tree:rows"
+          - `resource.declare` "pages.tree.v2"
+          - `resource.declare` "pages.tree.v2:ancestors"
+          - `resource.declare` "pages.tree.v2:groups"
+          - `resource.declare` "pages.tree.v2:rows"
           - `derived-table` "page_content_edited_at"
+          - `derived-table` "page_tree_children"
           - `page.block-data` "page"
           - `page.block-annotation`
         - Uses:
@@ -37831,6 +37836,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/trash.recordTrashEntry`
           - `network/live.ServeAllCollectionOptions`
           - `network/live.serveCollection`
+          - `network/live/query-resource.materializeJoin`
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.rankAdjacentTo`
           - `primitives/rank.rankAfterSibling`
@@ -37886,8 +37892,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page-blocks.v2` (keyed)
           - `page-blocks.v2:rows` (keyed, point)
           - `page.block-locations:rows` (keyed, point)
-          - `pages.tree` (keyed)
-          - `pages.tree:rows` (keyed, point)
+          - `pages.tree.v2` (keyed, window)
+          - `pages.tree.v2:ancestors` (keyed, window)
+          - `pages.tree.v2:groups` (push)
+          - `pages.tree.v2:rows` (keyed, point)
         - Routes:
           - `GET /api/pages`
           - `GET /api/pages/:pageId/blocks`
@@ -37902,7 +37910,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/pages/:pageId/blocks/op`
           - `POST /api/pages/:pageId/blocks/patch`
       - Core:
-        - Uses: 23 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `primitives/collab-doc` ×3
           - `primitives/text-editor/token-extension` ×3
           - `primitives/tree` ×3
@@ -37912,6 +37920,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/date/config.dateField`
           - `fields/json/config.jsonField`
           - `fields/rank/config.rankValueField`
+          - `fields/text/config.textField`
           - `ids.defineIdKind`
           - `infra/endpoints.defineEndpoint`
           - `infra/trash.TrashOutcomeSchema`
@@ -37961,6 +37970,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageKind`
           - `PageRow`
           - `PageSource`
+          - `PagesTreeFields`
           - `PagesTreeRow`
           - `RichText`
           - `RowData`
@@ -46091,13 +46101,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 226 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 225 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×68
           - `ui` ×23
           - `conversations` ×22
           - `debug` ×19
           - `primitives` ×19
-          - `tasks` ×15
+          - `tasks` ×14
           - `page` ×11
           - `build` ×6
           - `plugin-meta` ×5
@@ -53863,9 +53873,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/endpoints.FetchEndpoint`
           - `infra/endpoints.useFetchEndpoint`
-          - `network/live.useLive`
-          - `network/live/live-state.foldResource`
-          - `network/live/live-state.ResourceView`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/data-view.DataView`
@@ -53873,9 +53880,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view.defineItemActions`
           - `primitives/data-view.fieldOverrides`
           - `primitives/data-view.HierarchyConfig`
+          - `primitives/data-view.liveDataSource`
           - `primitives/icon-button.IconButton`
           - `primitives/launch.LaunchControl`
-          - `primitives/loading.Loading`
           - `tasks.usePatchTask`
         - Exports (values):
           - `buildTreeOptions`
@@ -54421,9 +54428,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTaskCluster`
           - `useTaskConversations`
       - Server:
-        - Contributes: 55 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `resource.declare` ×38
-          - `derived-table` ×5
+        - Contributes: 57 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `resource.declare` ×39
+          - `derived-table` ×6
           - `derived-view` ×4
           - `ids.kind` ×3
           - `attachments.link` ×2
@@ -54639,9 +54646,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks:rows` (keyed, point)
           - `tasks.attachment-links` (keyed)
           - `tasks.attachment-links:rows` (keyed, point)
-          - `tasks.window` (keyed, window)
-          - `tasks.window:groups` (push)
-          - `tasks.window:rows` (keyed, point)
+          - `tasks.tree` (keyed, window)
+          - `tasks.tree:ancestors` (keyed, window)
+          - `tasks.tree:groups` (push)
+          - `tasks.tree:rows` (keyed, point)
       - Core:
         - Uses: 34 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations/model-provider` ×3
@@ -54683,6 +54691,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskRow`
           - `TasksFileGrant`
           - `TaskStatus`
+          - `TaskTreeRow`
           - `TrackFilingGrant`
           - `TrailerCommit`
         - Exports (values):

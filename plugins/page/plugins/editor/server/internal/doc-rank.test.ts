@@ -68,7 +68,7 @@ import {
 import { planPartitionDocRanks } from "./doc-rank";
 import { reconcileDocRanksAtBoot } from "./doc-rank-boot";
 import { loadPages } from "./resources";
-import { pageContentEditedAt } from "./rollup-spec";
+import { PAGE_ROLLUPS } from "./rollup-spec";
 
 // Stand-ins for the concrete block types (each imports this plugin, so
 // importing them back would be a cycle). `para` is the default text type, so
@@ -122,7 +122,7 @@ beforeAll(async () => {
   await runMigrations(t.db);
   // `loadPages` reads each page's `editedAt` off the content rollup, which a
   // backend installs at boot (`installRollups` is the boot rollup install) — the same path.
-  await installRollups(t.db, [pageContentEditedAt]);
+  await installRollups(t.db, PAGE_ROLLUPS);
   countingPool = new Pool({
     connectionString: t.connectionString,
     max: 1,

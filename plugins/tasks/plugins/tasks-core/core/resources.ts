@@ -81,6 +81,23 @@ const TASK_ROW_ORDER = [
   ["createdAt", "asc"],
 ] as const;
 
+// The tree's spelling of the same row (`taskWindow`): `folderId` LISTED, since
+// a tree's parent is a filterable field — the wire row is the same.
+const TASK_TREE_PICK = [...TASK_ROW_PICK, "folderId"] as const;
+const TASK_TREE_CARRY = {
+  pick: [
+    "id",
+    "groupId",
+    "clusterId",
+    "titleAuto",
+    "author",
+    "droppedAt",
+    "heldAt",
+    "createdAt",
+  ],
+  fields: TASK_ROW_CARRY.fields,
+} as const;
+
 // Every task — the WHOLE ordered set (`all`): the task list, the dependency
 // graph and every per-task chip read a value for every task (a status, the
 // dependency edges), so its readers hold the set entire. Served over the base
@@ -169,25 +186,46 @@ export const taskClusterRows = liveCollection("task-cluster", {
 export type TaskRow =
   typeof taskRows extends LiveRowsCollection<infer R> ? R : never;
 
-// The same task row as a WINDOW: a bounded read that filters and sorts on the
-// server, `status` included — its derived fields are stored aggregates
-// (`../server/internal/task-rows.ts`: query-resource's `materializeJoin`), so a
-// write anywhere in a task's attempts or prerequisite closure reaches a window
-// as a write to the task's side rows, and moves it in or out. Filterable by
-// every listed field and every folded exposure (`track`, `category`, …):
-// `useLive(taskWindow, { where: { status: "new", "track.track": "sidequest" } })`.
-// Newest first; not preloaded. The step towards `taskRows` as a window
+// The tasks TREE: the same task row as a WINDOW — a bounded read that filters
+// and sorts on the server, `status` included: its derived fields are stored
+// aggregates (`../server/internal/task-rows.ts`: query-resource's
+// `materializeJoin`), so a write anywhere in a task's attempts or
+// prerequisite closure reaches a window as a write to the task's side rows,
+// and moves it in or out. Filterable by every listed field and every folded
+// exposure (`track`, `category`, …).
+//
+// A tree (network/live's `tree`): `folderId` names a task's parent (listed —
+// a tree's parent is a filterable field — as "Folder"; the task list hides it
+// from its pickers), `rank` orders siblings, so every level is an ordinary
+// bounded read (`{ folderId: { isEmpty: true } }` for the roots, `{ folderId:
+// x }` for a folder's children), every row carries `$childCount` (the stored
+// count of the tasks filed under it) and `tasks.tree:ancestors` answers a
+// set of tasks with their folder chains. The task list (task-list's
+// `TasksListView`) is a live DataView over it. Default order: the tree's,
+// `rank` then `createdAt`; a reader wanting another passes its own `orderBy`.
+// Not preloaded. The step towards `taskRows` as a window
 // (research/2026-11-05-tasks-bounded-task-rows.md, step 5).
-export const taskWindow = liveCollection("tasks.window", {
+//
+// Key `tasks.tree` (it was `tasks.window`, the flat window): the default read
+// changed meaning — tree order (`rank`, `createdAt`) instead of newest first —
+// so a tab on an older bundle reading the default window under the old key
+// would get a different set at its limit. A new key makes such a tab's read a
+// `skew` (the Reload prompt) instead (C39).
+export const taskWindow = liveCollection("tasks.tree", {
   from: tasksEntityRef,
-  pick: TASK_ROW_PICK,
+  pick: TASK_TREE_PICK,
   fields: TASK_ROW_FIELDS,
-  carry: TASK_ROW_CARRY,
+  carry: TASK_TREE_CARRY,
   id: "id",
-  sortable: ["createdAt", "updatedAt"],
-  default: { orderBy: [["createdAt", "desc"]], limit: 100 },
+  sortable: ["rank", "createdAt", "updatedAt", "title"],
+  default: { orderBy: TASK_ROW_ORDER, limit: 100 },
   maxLimit: 500,
+  tree: { parent: "folderId", rank: "rank" },
 });
+
+/** A task as the tasks tree (`taskWindow`) delivers it: a {@link TaskRow} and its `$childCount`. */
+export type TaskTreeRow =
+  typeof taskWindow extends LiveRowsCollection<infer R> ? R : never;
 
 // One task's `description` — the heavy text the `tasks` set leaves out — read
 // by id (`useLive(taskDescriptions, { id })`): lookup-only, so it loads only

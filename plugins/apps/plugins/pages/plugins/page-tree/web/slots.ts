@@ -103,7 +103,7 @@ export const PageDetail = {
  *    row actions without editing the row component. Contributors receive the
  *    full page `row` (derive id/title from it) via `ItemActionProps<PagesTreeRow>`.
  *
- * There is no field seam: the sidebar's fields are `pages.tree`'s, derived —
+ * There is no field seam: the sidebar's fields are `pages.tree.v2`'s, derived —
  * a plugin that adds a field to every page (starred, origin, tags) EXPOSES it
  * on its `page_blocks` extension (`defineExtensionShape({ exposes })`), so
  * "Favorites" is just a filtered `list` view over the exposed `starred`.

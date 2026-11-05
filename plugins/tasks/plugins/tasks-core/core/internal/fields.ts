@@ -39,7 +39,9 @@ import {
 export const taskFields = {
   id: textField(),
   // Display-only organization hierarchy (a "folder"). NOT a dependency.
-  folderId: nullable(textField()),
+  // Labelled: the tasks tree (`taskWindow`) lists it — a tree's parent is a
+  // filterable field.
+  folderId: nullable(textField({ label: "Folder" })),
   groupId: nullable(textField()),
   // Monotone dependency-tree membership label (union-find representative =
   // min(id) over the cluster). A new task is its own singleton (`clusterId =

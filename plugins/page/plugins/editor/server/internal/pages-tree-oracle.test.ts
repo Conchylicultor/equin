@@ -1,10 +1,11 @@
 /**
- * `pages.tree` as an `all` collection, on the TREE ORACLE (tasks-core's
- * `server/testing`): the real declaration compiled with the real serve options
- * (`./page-rows.ts`) against a throwaway database, through the real feed, with
- * the `page_blocks` derived `updated_at` trigger installed as a backend
- * installs it. Not preloaded, so not persisted: the set is subscribed, never
- * an L2 alias.
+ * `pages.tree.v2` — the live pages as a TREE window — on the TREE ORACLE
+ * (tasks-core's `server/testing`): the real declaration compiled with the
+ * real serve options (`./page-rows.ts`) against a throwaway database, through
+ * the real feed, with the `page_blocks` derived `updated_at` trigger and the
+ * plugin's two materialized joins (`PAGE_ROLLUPS`: the content edit time and
+ * the tree's child count, both ON the feed) installed as a backend installs
+ * them.
  *
  * The workload is the page tree's own (the oracle's task script is not run):
  * a page W whose sub-pages span two rank spaces — A and B under a toggle, D a
@@ -13,39 +14,38 @@
  * `doc_rank` is what the structural-write chokepoint stores. The other steps
  * are one SQL transaction each, in the shape a writer emits.
  *
- * After every step:
+ * Subscribed: the tuples the sidebar and its neighbours read — the ROOT level
+ * (`pageId isEmpty`), W's level (`pageId = W`), Recent (every page by
+ * `editedAt` desc) — and two `:rows` point tuples: A, D (two pages) and A, P
+ * (a page and a content paragraph, the shape `useBlockTarget` once
+ * subscribed). After every step:
  *
- * - the subscribed `{}` view and both `:rows` point views equal a fresh FULL
- *   load: one over A, D (two pages), and one over A, P — a page and a content
- *   paragraph, the shape `useBlockTarget` once subscribed;
- * - each `pageId` group of the set, sorted by `docRank`, is document order —
- *   `docOrderRows` + `compareDocOrder`, the order the old `pages` loader
- *   derived on every load (parity);
+ * - every view equals a fresh FULL load (`converged`);
+ * - each level, in window order, IS document order — `docOrderRows` +
+ *   `compareDocOrder`, the order the old `pages` loader derived on every load
+ *   (parity): the window's own `doc_rank` order, never a client sort;
  * - every row's `editedAt` is its page's edit time recomputed from scratch —
- *   the newest `updated_at` over the page row and its live content — and the
- *   `page_content_edited_at` rollup has no drift from its aggregate;
- * - both readers' costs are exact: a keystroke's projection on a content block
- *   is the refill of its page's one row (its `editedAt` moved); a rename is
- *   that page's refill, plus its parent page's (the sub-page row is content of
- *   it); a toggle drag refills exactly the pages the reconcile re-minted and
- *   the page holding the toggle; an insert or a restore is one refill and one
- *   `orderOf`; a trash an exit after its one-id probe;
+ *   the newest `updated_at` over the page row and its live content — and its
+ *   `$childCount` the number of live pages naming it as `page_id`, recounted
+ *   from scratch; neither materialized table drifts from its aggregate;
+ * - the costs that pin the routing: a fold toggle loads nothing, a keystroke's
+ *   projection on a content block refills its page's ONE row (in the tuples
+ *   holding it) and nothing in the point tuples;
  * - nothing is ever loaded FULL after the subscribe.
  *
  * The `editedAt` steps: an edit moves its page's `editedAt` forward, trashing
  * the block holding the newest stamp moves it back, and a block moving
- * between pages refills both, each recomputed.
+ * between pages moves both, each recomputed. The `$childCount` steps: a page
+ * inserted under W, a trash and a restore of X, P turned into a page and back
+ * — each a recount of the parent, held equal to the recount from scratch.
  *
- * The A, P tuple then walks P through every membership edge: a value-only
- * write to P while it is no member loads NOTHING in it (the point tuple drops
- * a value-only change to an id it does not hold); turning P into a page is an
- * entrant (the positive control), a write to it then a refill, turning it back
- * an exit, and a trash / restore of it as content stays membership — probed,
- * and nothing enters. Every write to P as content refills W, the page whose
- * content it is (never in either point tuple, so neither loads it).
+ * The A, P tuple then walks P through every membership edge: turning P into a
+ * page is an entrant, turning it back an exit, and a trash / restore of it as
+ * content stays out.
  *
- * Then C39: a tab still running a bundle that subscribed the old key `pages`
- * is refused `unknown-key`, a `skew` verdict (the Reload prompt).
+ * Then C39: a tab still running a bundle that subscribed an old key — the
+ * whole set `pages.tree`, or the legacy push resource `pages` — is refused
+ * `unknown-key`, a `skew` verdict (the Reload prompt).
  *
  * Requires a running Postgres cluster (started by ./equin build).
  * Run: `./equin test plugins/page/plugins/editor`.
@@ -65,6 +65,8 @@ import { registeredDerivedUpdatedAt } from "@plugins/database/plugins/derived-up
 import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
+import { compileWindowQuery } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
+import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";
 import {
   compileCollection,
   subscribeAsOldDescriptor,
@@ -78,18 +80,14 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server/testing";
 import { defineBlock, textBlockSchema } from "../../core";
 import { pagesTree } from "../../core/resources";
-import {
-  pageBlockHandle,
-  PageRowSchema,
-  type PageRow,
-} from "../../core/schemas";
+import { pageBlockHandle, PageRowSchema } from "../../core/schemas";
 import { Editor } from "./block-registry";
 import { insertBlocks } from "./forest-writer";
 import { applyPageBlockOp } from "./handle-apply-block-op";
 import { compareDocOrder, docOrderRows } from "./page-doc-order";
 import { withPageForest } from "./page-forest";
 import { pageRowsServeOptions } from "./page-rows";
-import { pageContentEditedAt } from "./rollup-spec";
+import { PAGE_ROLLUPS } from "./rollup-spec";
 import { parseBlockData } from "./parse-block-data";
 import { _blocks } from "./tables";
 
@@ -97,8 +95,8 @@ setDefaultTimeout(120_000);
 
 const KEY = pagesTree.key;
 const ROWS_KEY = pagesTree.rows.key;
-/** The key the page tree had as a legacy push resource, before the rename. */
-const OLD_KEY = "pages";
+/** The keys the page tree had before: the whole set, and the legacy push resource. */
+const OLD_KEYS = ["pages.tree", "pages"] as const;
 
 // Stand-ins for the content block types (each concrete one imports this
 // plugin, so importing it back would be a cycle).
@@ -176,18 +174,19 @@ async function docRanks(): Promise<Map<string, string | null>> {
   return new Map(rows.map((r) => [r.id, r.docRank]));
 }
 
-/** Page ids per group: the set's rows sorted by `docRank`. */
-function setOrder(rows: readonly PageRow[]): Record<string, string[]> {
-  const out: Record<string, PageRow[]> = {};
-  for (const row of rows) (out[row.pageId ?? "<root>"] ??= []).push(row);
-  return Object.fromEntries(
-    Object.entries(out).map(([group, list]) => [
-      group,
-      [...list]
-        .sort((a, b) => Rank.compare(a.docRank, b.docRank))
-        .map((r) => r.id),
-    ]),
-  );
+// The subscribed window tuples: the root level, W's level, Recent.
+const level = (q: Parameters<typeof pagesTree.window.window.encode>[0]) =>
+  pagesTree.window.window.encode(q);
+const ROOT = level({ where: { pageId: { isEmpty: true } } });
+const W_LEVEL = level({ where: { pageId: W } });
+const RECENT = level({ orderBy: [["editedAt", "desc"]] });
+
+/** A window view's rows, parsed as the page rows they are (plus the tree's count). */
+function viewRows(params: Record<string, string>) {
+  const raw = oracle.view(KEY, params) as readonly { $childCount: number }[];
+  return PageRowSchema.array()
+    .parse(raw)
+    .map((row, i) => ({ ...row, childCount: raw[i]!.$childCount }));
 }
 
 /** Page ids per group in document order — the old loader's derivation. */
@@ -205,88 +204,115 @@ async function documentOrder(): Promise<Record<string, string[]>> {
 }
 
 /**
- * Every live page's edit time recomputed from scratch, by id: the newest
- * `updated_at` over the page row and its live content — `readPageEditedAt`'s
- * definition, spelled here without the rollup it reads.
+ * Every live page's edit time and child count recomputed from scratch, by id:
+ * the newest `updated_at` over the page row and its live content —
+ * `readPageEditedAt`'s definition, spelled here without the materialized
+ * table it reads — and how many live pages name it as `page_id`.
  */
-async function editedFromScratch(): Promise<Record<string, number>> {
-  const res = await oracle.db.execute<{ id: string; edited_at: Date }>(
+async function fromScratch(): Promise<
+  Record<string, { edited: number; childCount: number }>
+> {
+  const res = await oracle.db.execute<{
+    id: string;
+    edited_at: Date;
+    child_count: number;
+  }>(
     sql.raw(`
-      SELECT p.id, greatest(p.updated_at, (
+      SELECT p.id,
+             greatest(p.updated_at, (
                SELECT max(c.updated_at) FROM page_blocks c
                 WHERE c.page_id = p.id AND c.deleted_at IS NULL
-             )) AS edited_at
+             )) AS edited_at,
+             (SELECT count(*)::int FROM page_blocks k
+               WHERE k.page_id = p.id AND k.type = 'page'
+                 AND k.deleted_at IS NULL) AS child_count
         FROM page_blocks p
        WHERE p.type = 'page' AND p.deleted_at IS NULL`),
   );
   return Object.fromEntries(
-    res.rows.map((r) => [r.id, new Date(r.edited_at).getTime()]),
+    res.rows.map((r) => [
+      r.id,
+      { edited: new Date(r.edited_at).getTime(), childCount: r.child_count },
+    ]),
   );
 }
 
-/** The keys whose rollup row differs from its aggregate (none, when exact). */
+/** The keys whose materialized row differs from its aggregate (none, when exact). */
 async function rollupDrift(): Promise<string[]> {
-  const res = await oracle.db.execute<{ keys: string[] }>(
-    sql.raw(pageContentEditedAt.driftSql),
-  );
-  return res.rows[0]!.keys;
+  const keys: string[] = [];
+  for (const rollup of PAGE_ROLLUPS) {
+    const res = await oracle.db.execute<{ keys: string[] }>(
+      sql.raw(rollup.driftSql),
+    );
+    keys.push(...(res.rows[0]?.keys ?? []));
+  }
+  return keys;
 }
 
-/** The set's `editedAt` per page, as epoch ms. */
+/** Recent's `editedAt` per page, as epoch ms (Recent holds every page). */
 function viewEdited(): Record<string, number> {
   return Object.fromEntries(
-    PageRowSchema.array()
-      .parse(oracle.view(KEY))
-      .map((r) => [r.id, r.editedAt.getTime()]),
+    viewRows(RECENT).map((r) => [r.id, r.editedAt.getTime()]),
   );
 }
 
 async function expectParity(label: string): Promise<void> {
-  const view = PageRowSchema.array().parse(oracle.view(KEY));
+  const order = await documentOrder();
+  const truth = await fromScratch();
+  const seen: Record<string, { edited: number; childCount: number }> = {};
+  for (const params of [ROOT, W_LEVEL, RECENT]) {
+    for (const row of viewRows(params)) {
+      seen[row.id] = {
+        edited: row.editedAt.getTime(),
+        childCount: row.childCount,
+      };
+    }
+  }
+  const recent = viewRows(RECENT).map((r) => r.editedAt.getTime());
   expect({
     step: label,
-    order: setOrder(view),
-    edited: viewEdited(),
+    root: viewRows(ROOT).map((r) => r.id),
+    w: viewRows(W_LEVEL).map((r) => r.id),
+    rows: seen,
+    recentSorted: recent.every((t, i) => i === 0 || recent[i - 1]! >= t),
     drift: await rollupDrift(),
   }).toEqual({
     step: label,
-    order: await documentOrder(),
-    edited: await editedFromScratch(),
+    root: order["<root>"] ?? [],
+    w: order[W] ?? [],
+    rows: truth,
+    recentSorted: true,
     drift: [],
   });
 }
 
-/**
- * What a step must cost: the set's loads and `orderOf` calls, and the `:rows`
- * readers' loads — both tuples' together (a load names its ids, not its
- * tuple), compared as a multiset since the two tuples drain in either order.
- */
-interface StepCost {
-  loads: TreeLoad[];
-  orderOf: number;
-  rowLoads: TreeLoad[];
-}
-const NOTHING: StepCost = { loads: [], orderOf: 0, rowLoads: [] };
-
-/** Loads in a fixed order, so two tuples' loads compare whatever order they drained in. */
+/** Loads in a fixed order, so several tuples' loads compare whatever order they drained in. */
 function sortedLoads(loads: readonly TreeLoad[]): TreeLoad[] {
   return [...loads].sort((a, b) =>
     JSON.stringify(a.ids) < JSON.stringify(b.ids) ? -1 : 1,
   );
 }
 
-async function runSql(step: TreeStep, cost: StepCost): Promise<void> {
+/**
+ * Run one step and hold it to parity. `cost`, when given, pins the step's
+ * loads: the window tuples' together (`loads`, a multiset — each tuple
+ * holding a refilled row loads it) and the point tuples' (`rowLoads`).
+ */
+async function runSql(
+  step: TreeStep,
+  cost?: { loads: TreeLoad[]; rowLoads: TreeLoad[] },
+): Promise<void> {
   const got = await oracle.run(step);
   await oracle.converged(step.label);
   await expectParity(step.label);
+  if (cost === undefined) return;
   expect({
     step: step.label,
-    loads: got.loads[KEY] ?? [],
-    orderOf: got.orderOf[KEY] ?? 0,
+    loads: sortedLoads(got.loads[KEY] ?? []),
     rowLoads: sortedLoads(got.loads[ROWS_KEY] ?? []),
   }).toEqual({
     step: step.label,
-    ...cost,
+    loads: sortedLoads(cost.loads),
     rowLoads: sortedLoads(cost.rowLoads),
   });
 }
@@ -301,18 +327,13 @@ function rowIds(params: Record<string, string>): string[] {
 
 /**
  * Run a REAL writer, then a no-cost sync write (a fold toggle on the content
- * paragraph: no member of the set, and a value-only write to an id the A, P
- * tuple does not hold — so it loads nothing) through the oracle so the
- * runtime has gone quiet over both. The writer's own changes commit — and so
- * route — first; the loads since the writer started are its cost. (`orderOf`
- * is counted per `run`, so a writer step pins loads only.)
+ * paragraph: it moves no stored aggregate and no column any tuple reads) so
+ * the runtime has gone quiet over both.
  */
 async function runWriter(
   label: string,
   write: () => Promise<unknown>,
-): Promise<{ loads: readonly TreeLoad[]; rowLoads: readonly TreeLoad[] }> {
-  const from = oracle.loadsOf(KEY).length;
-  const rowsFrom = oracle.loadsOf(ROWS_KEY).length;
+): Promise<void> {
   await write();
   await oracle.run({
     label: `${label}.sync`,
@@ -322,10 +343,6 @@ async function runWriter(
   });
   await oracle.converged(label);
   await expectParity(label);
-  return {
-    loads: oracle.loadsOf(KEY).slice(from),
-    rowLoads: oracle.loadsOf(ROWS_KEY).slice(rowsFrom),
-  };
 }
 
 const pagePayload = (title: string) =>
@@ -342,13 +359,14 @@ beforeAll(async () => {
       ],
     },
   ]);
-  // The content rollup `editedAt` reads, installed through the boot path; its
-  // source (`page_blocks`) carries the route.
   oracle = await createTreeOracle({
     prefix: "pages_tree_oracle",
     persisted: [],
-    rollups: [pageContentEditedAt],
   });
+  // The materialized joins the rows read, installed through the boot path.
+  // Not the oracle's `rollups` (those are feed-exempt, routed by their
+  // sources): these are ON the feed — readers are routed by their own rows.
+  await installRollups(oracle.db, PAGE_ROLLUPS);
   // The derived `updated_at` trigger, as a backend installs it at boot: a
   // rename moves `updatedAt` in the same row, as in production.
   await installDbTriggers(
@@ -358,7 +376,7 @@ beforeAll(async () => {
       .map((spec) => spec.triggerSet),
   );
   specs = compilePagesTree();
-  oracle.registerAll(pagesTree, specs);
+  oracle.registerWindow(pagesTree, specs);
   // The seed, through the real writers (before the feed starts: nothing is
   // subscribed yet).
   await seed({ id: W, parentId: null, pageId: null, type: "page", rank: "a0" });
@@ -387,9 +405,11 @@ afterAll(async () => {
   await oracle?.stop();
 });
 
-describe("pages.tree — an `all` collection on the tree oracle", () => {
-  test("every step converges to a fresh FULL load at its exact cost, in document order; nothing loads FULL", async () => {
-    await oracle.subscribe(KEY);
+describe("pages.tree.v2 — a tree window on the tree oracle", () => {
+  test("every step converges to a fresh FULL load, each level in document order, counts and edit times exact; nothing loads FULL", async () => {
+    for (const params of [ROOT, W_LEVEL, RECENT]) {
+      await oracle.subscribe(KEY, params);
+    }
     const pointParams = pagesTree.rows.point.encode([A, D]);
     await oracle.subscribe(ROWS_KEY, pointParams);
     // A page and a content paragraph: P is requested but no member.
@@ -398,17 +418,20 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
     await oracle.converged("seed");
     await expectParity("seed");
     expect(rowIds(contentParams)).toEqual([A]);
-    expect(setOrder(PageRowSchema.array().parse(oracle.view(KEY)))).toEqual({
-      "<root>": [W, X],
-      [W]: [A, B, D],
-    });
+    expect(viewRows(ROOT).map((r) => [r.id, r.childCount])).toEqual([
+      [W, 3],
+      [X, 0],
+    ]);
+    expect(viewRows(W_LEVEL).map((r) => r.id)).toEqual([A, B, D]);
     const baseline = oracle.loadsOf(KEY).length;
 
     // A keystroke burst's `data.text` projection on a content block: no page
-    // row changed, but W's content did — its `editedAt` moves, so W's one row
-    // refills (never the legacy loader's membership select + doc-order CTE).
-    // Not in the A, P tuple, which requests P: a `data`-only write moves no
-    // column its membership reads, P is no member, and W is not held.
+    // row changed, but W's content did — its stored edit time moves, so W's
+    // one row refills in each tuple holding it (the root level and Recent).
+    // Recent (no level filter) also probes P by id in the same load: a `data`
+    // write reaches a window whose columns read `data` (`title`), and only a
+    // load can tell a non-page (the base `where`) — it finds nothing. Nothing
+    // in the point tuples: P is no member, and W is not held.
     const beforeTyping = viewEdited()[W]!;
     await runSql(
       {
@@ -417,13 +440,12 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
           `UPDATE page_blocks SET data = '{"text":[{"text":"typing…"}]}'::jsonb WHERE id = '${P}'`,
         ],
       },
-      { loads: [{ ids: [W] }], orderOf: 0, rowLoads: [] },
+      { loads: [{ ids: [W] }, { ids: [W, P] }], rowLoads: [] },
     );
-    // The edit moved W's edit time forward (recomputed by `expectParity`).
     expect(viewEdited()[W]!).toBeGreaterThan(beforeTyping);
 
-    // A fold toggle on a content block moves no column the rollup reads
-    // (`updated_at` is derived and ignores `expanded`): nothing loads.
+    // A fold toggle on a content block moves no stored aggregate and no
+    // column any tuple reads: nothing loads.
     await runSql(
       {
         label: "fold",
@@ -431,26 +453,21 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
           `UPDATE page_blocks SET expanded = NOT expanded WHERE id = '${T}'`,
         ],
       },
-      NOTHING,
+      { loads: [], rowLoads: [] },
     );
 
-    // A rename is the page row's refill, in both readers — and W's, whose
-    // content the sub-page row D is.
-    await runSql(
-      {
-        label: "rename",
-        statements: [
-          `UPDATE page_blocks SET data = '${pagePayload("renamed")}'::jsonb WHERE id = '${D}'`,
-        ],
-      },
-      { loads: [{ ids: [D, W].sort() }], orderOf: 0, rowLoads: [{ ids: [D] }] },
-    );
+    // A rename is the page row's refill — and W's, whose content the sub-page
+    // row D is (its edit time moved).
+    await runSql({
+      label: "rename",
+      statements: [
+        `UPDATE page_blocks SET data = '${pagePayload("renamed")}'::jsonb WHERE id = '${D}'`,
+      ],
+    });
 
     // Drag the toggle (holding A and B) after D: no page row is named, yet
-    // the group's document order becomes D, A, B. The reconcile re-mints the
-    // fewest keys that restore it, and exactly those pages are refilled.
-    const before = await docRanks();
-    const drag = await runWriter("toggle.drag", () =>
+    // the group's document order becomes D, A, B — W's level re-orders.
+    await runWriter("toggle.drag", () =>
       applyPageBlockOp(
         W,
         {
@@ -463,175 +480,109 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
         oracle.db,
       ),
     );
-    const after = await docRanks();
-    const reminted = [...after.keys()]
-      .filter((id) => after.get(id) !== before.get(id))
-      .sort();
-    expect(reminted.length).toBeGreaterThan(0);
-    // Plus W, whose content T is (the move stamps T's `updated_at`), and T
-    // itself: the writer's later statements on T arrive while W's refill is
-    // pending, so the set is no longer quiescent and the runtime keeps T's
-    // value-only change rather than dropping it (a non-member: its one-id
-    // probe finds nothing to load).
-    expect(drag.loads).toEqual([{ ids: [...reminted, W, T].sort() }]);
-    // Each point tuple refills the re-minted pages it holds; the sync fold
-    // toggle on P costs the A, P tuple nothing (a value-only write, no member).
-    const heldBy = (ids: readonly string[]): TreeLoad[] => {
-      const held = reminted.filter((id) => ids.includes(id));
-      return held.length > 0 ? [{ ids: held }] : [];
-    };
-    expect(sortedLoads(drag.rowLoads)).toEqual(
-      sortedLoads([...heldBy([A, D]), ...heldBy([A, P])]),
-    );
-    expect(setOrder(PageRowSchema.array().parse(oracle.view(KEY)))[W]).toEqual([
-      D,
-      A,
-      B,
-    ]);
+    expect(viewRows(W_LEVEL).map((r) => r.id)).toEqual([D, A, B]);
 
     // A page created at the end of W, as a writer emits it: the row, then its
-    // `doc_rank`, in one transaction. One refill and one `orderOf` — the
-    // refill W's too, whose content the new sub-page row is.
+    // `doc_rank`, in one transaction — an entrant in W's level, W recounted.
     const lastKey = [...(await docRanks()).entries()]
       .filter(([id]) => [A, B, D].includes(id as typeof A))
       .map(([, k]) => k!)
       .sort()
       .at(-1)!;
-    await runSql(
-      {
-        label: "insert",
-        statements: [
-          "BEGIN",
-          `INSERT INTO page_blocks (id, page_id, parent_id, type, data, rank)
-           VALUES ('${E}', '${W}', '${W}', 'page', '${pagePayload(E)}'::jsonb, 'a8')`,
-          `UPDATE page_blocks SET doc_rank = '${Rank.between(Rank.from(lastKey), null).toString()}' WHERE id = '${E}'`,
-          "COMMIT",
-        ],
-      },
-      { loads: [{ ids: [E, W].sort() }], orderOf: 1, rowLoads: [] },
-    );
+    await runSql({
+      label: "insert",
+      statements: [
+        "BEGIN",
+        `INSERT INTO page_blocks (id, page_id, parent_id, type, data, rank)
+         VALUES ('${E}', '${W}', '${W}', 'page', '${pagePayload(E)}'::jsonb, 'a8')`,
+        `UPDATE page_blocks SET doc_rank = '${Rank.between(Rank.from(lastKey), null).toString()}' WHERE id = '${E}'`,
+        "COMMIT",
+      ],
+    });
+    expect(viewRows(ROOT).find((r) => r.id === W)?.childCount).toBe(4);
 
-    // A trash is a where-flip exit: the row is probed by id (the base
-    // `where` reads `deleted_at`), found gone, and leaves — one one-id load, no
-    // `orderOf`. Its restore is an entrant.
-    await runSql(
-      {
-        label: "trash",
-        statements: [
-          `UPDATE page_blocks SET deleted_at = now(), trash_entry_id = 'te-x' WHERE id = '${X}'`,
-        ],
-      },
-      { loads: [{ ids: [X] }], orderOf: 0, rowLoads: [] },
-    );
-    await runSql(
-      {
-        label: "restore",
-        statements: [
-          `UPDATE page_blocks SET deleted_at = NULL, trash_entry_id = NULL WHERE id = '${X}'`,
-        ],
-      },
-      { loads: [{ ids: [X] }], orderOf: 1, rowLoads: [] },
-    );
+    // E moves under X: an exit from W's level, both parents recounted.
+    await runSql({
+      label: "E.move-to-X",
+      statements: [
+        `UPDATE page_blocks SET parent_id = '${X}', page_id = '${X}' WHERE id = '${E}'`,
+      ],
+    });
+    expect(viewRows(ROOT).map((r) => [r.id, r.childCount])).toEqual([
+      [W, 3],
+      [X, 1],
+    ]);
 
-    // P through every membership edge, in the A, P tuple. A positive control
-    // first: turning P into a page (a `type` write, with the `doc_rank` the
-    // reconcile would mint — first in W's group, before D) is an entrant, in
-    // the set (one refill, one `orderOf`) and in the tuple.
+    // A trash is a where-flip exit; its restore an entrant.
+    await runSql({
+      label: "trash",
+      statements: [
+        `UPDATE page_blocks SET deleted_at = now(), trash_entry_id = 'te-x' WHERE id = '${X}'`,
+      ],
+    });
+    expect(viewRows(ROOT).map((r) => r.id)).toEqual([W]);
+    await runSql({
+      label: "restore",
+      statements: [
+        `UPDATE page_blocks SET deleted_at = NULL, trash_entry_id = NULL WHERE id = '${X}'`,
+      ],
+    });
+
+    // P through every membership edge, in the A, P tuple. Turning P into a
+    // page (a `type` write, with the `doc_rank` the reconcile would mint —
+    // first in W's group) is an entrant in W's level and the tuple, and W's
+    // recount.
     const ranks = await docRanks();
     const firstInW = Rank.between(null, Rank.from(ranks.get(D)!)).toString();
-    await runSql(
-      {
-        label: "P.turn-into-page",
-        statements: [
-          `UPDATE page_blocks SET type = 'page', data = '${pagePayload(P)}'::jsonb,
-                  doc_rank = '${firstInW}' WHERE id = '${P}'`,
-        ],
-      },
-      {
-        loads: [{ ids: [P, W].sort() }],
-        orderOf: 1,
-        rowLoads: [{ ids: [P] }],
-      },
-    );
+    await runSql({
+      label: "P.turn-into-page",
+      statements: [
+        `UPDATE page_blocks SET type = 'page', data = '${pagePayload(P)}'::jsonb,
+                doc_rank = '${firstInW}' WHERE id = '${P}'`,
+      ],
+    });
     expect(rowIds(contentParams)).toEqual([P, A].sort());
+    expect(viewRows(W_LEVEL)[0]!.id).toBe(P);
 
-    // A data write to P, now a member: its refill, in the set and the tuple.
-    await runSql(
-      {
-        label: "P.member-write",
-        statements: [
-          `UPDATE page_blocks SET data = '${pagePayload("P typed")}'::jsonb WHERE id = '${P}'`,
-        ],
-      },
-      { loads: [{ ids: [P, W].sort() }], orderOf: 0, rowLoads: [{ ids: [P] }] },
-    );
-
-    // Back into content: a where-flip exit — one one-id probe in each reader,
-    // found gone, no `orderOf`.
-    await runSql(
-      {
-        label: "P.turn-into-content",
-        statements: [
-          `UPDATE page_blocks SET type = '${paraStub.type}',
-                  data = '{"text":[{"text":"back"}]}'::jsonb, doc_rank = NULL
-           WHERE id = '${P}'`,
-        ],
-      },
-      { loads: [{ ids: [P, W].sort() }], orderOf: 0, rowLoads: [{ ids: [P] }] },
-    );
+    // Back into content: a where-flip exit, W recounted.
+    await runSql({
+      label: "P.turn-into-content",
+      statements: [
+        `UPDATE page_blocks SET type = '${paraStub.type}',
+                data = '{"text":[{"text":"back"}]}'::jsonb, doc_rank = NULL
+         WHERE id = '${P}'`,
+      ],
+    });
     expect(rowIds(contentParams)).toEqual([A]);
 
-    // A trash and a restore of P as content: `deleted_at` is a column the
-    // membership reads, so each stays a membership change — probed by id in
-    // the set and the tuple — yet P is no page either way, so nothing enters.
-    // P holds W's newest stamp (it was just written), so trashing it moves
-    // W's `editedAt` BACK to the newest of what is left.
+    // A trash and a restore of P as content: P is no page either way, so
+    // nothing enters. P holds W's newest stamp (it was just written), so
+    // trashing it moves W's `editedAt` BACK to the newest of what is left.
     const beforeTrash = viewEdited()[W]!;
-    await runSql(
-      {
-        label: "P.trash",
-        statements: [
-          `UPDATE page_blocks SET deleted_at = now(), trash_entry_id = 'te-p' WHERE id = '${P}'`,
-        ],
-      },
-      { loads: [{ ids: [P, W].sort() }], orderOf: 0, rowLoads: [{ ids: [P] }] },
-    );
+    await runSql({
+      label: "P.trash",
+      statements: [
+        `UPDATE page_blocks SET deleted_at = now(), trash_entry_id = 'te-p' WHERE id = '${P}'`,
+      ],
+    });
     expect(viewEdited()[W]!).toBeLessThan(beforeTrash);
-    await runSql(
-      {
-        label: "P.restore",
-        statements: [
-          `UPDATE page_blocks SET deleted_at = NULL, trash_entry_id = NULL WHERE id = '${P}'`,
-        ],
-      },
-      { loads: [{ ids: [P, W].sort() }], orderOf: 0, rowLoads: [{ ids: [P] }] },
-    );
+    await runSql({
+      label: "P.restore",
+      statements: [
+        `UPDATE page_blocks SET deleted_at = NULL, trash_entry_id = NULL WHERE id = '${P}'`,
+      ],
+    });
     expect(rowIds(contentParams)).toEqual([A]);
 
-    // And typing into P, a non-member again: W's refill (its content moved),
-    // nothing in either point tuple.
-    await runSql(
-      {
-        label: "P.typing-again",
-        statements: [
-          `UPDATE page_blocks SET data = '{"text":[{"text":"typing again…"}]}'::jsonb WHERE id = '${P}'`,
-        ],
-      },
-      { loads: [{ ids: [W] }], orderOf: 0, rowLoads: [] },
-    );
-
-    // P moves from W to the root page X: `page_id` is the rollup's carry, so
-    // both pages re-aggregate and refill — X gains P's stamp, W loses it.
+    // P moves from W to the root page X: `page_id` is the joins' fk, so both
+    // pages re-aggregate — X gains P's stamp, W loses it.
     const beforeMove = viewEdited();
-    await runSql(
-      {
-        label: "P.move-to-X",
-        statements: [
-          `UPDATE page_blocks SET parent_id = '${X}', page_id = '${X}' WHERE id = '${P}'`,
-        ],
-      },
-      { loads: [{ ids: [W, X].sort() }], orderOf: 0, rowLoads: [] },
-    );
+    await runSql({
+      label: "P.move-to-X",
+      statements: [
+        `UPDATE page_blocks SET parent_id = '${X}', page_id = '${X}' WHERE id = '${P}'`,
+      ],
+    });
     const afterMove = viewEdited();
     expect(afterMove[X]!).toBeGreaterThan(beforeMove[X]!);
     expect(afterMove[W]!).toBeLessThan(beforeMove[W]!);
@@ -644,28 +595,36 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
     ).toBe(false);
     oracle.unsubscribe(ROWS_KEY, contentParams);
     oracle.unsubscribe(ROWS_KEY, pointParams);
-    oracle.unsubscribe(KEY);
+    for (const params of [ROOT, W_LEVEL, RECENT]) {
+      oracle.unsubscribe(KEY, params);
+    }
   });
 
   test("a live page with no doc_rank fails the load loudly — never sorted anywhere", async () => {
     await oracle.db.execute(
       sql.raw(`UPDATE page_blocks SET doc_rank = NULL WHERE id = '${D}'`),
     );
-    const rows = await specs.all.loader({});
-    expect(() => pagesTree.all.schema.parse(rows)).toThrow();
+    const { loader } = compileWindowQuery(
+      pagesTree.window,
+      specs.window,
+    ).serverOpts;
+    const rows = await loader(W_LEVEL as never);
+    expect(() => pagesTree.window.schema.parse(rows)).toThrow();
   });
 });
 
-describe("C39 — a tab on the old `pages` resource", () => {
-  test("is refused `unknown-key`, a `skew` verdict", async () => {
-    const old = await subscribeAsOldDescriptor(
-      { key: OLD_KEY, schema: z.array(PageRowSchema) },
-      { handler: oracle.runtime.notificationsWsHandler },
-    );
-    expect(old).toEqual({
-      kind: "refused",
-      reason: "unknown-key",
-      verdict: "skew",
+describe("C39 — a tab on an old key", () => {
+  for (const key of OLD_KEYS) {
+    test(`"${key}" is refused \`unknown-key\`, a \`skew\` verdict`, async () => {
+      const old = await subscribeAsOldDescriptor(
+        { key, schema: z.array(PageRowSchema) },
+        { handler: oracle.runtime.notificationsWsHandler },
+      );
+      expect(old).toEqual({
+        kind: "refused",
+        reason: "unknown-key",
+        verdict: "skew",
+      });
     });
-  });
+  }
 });

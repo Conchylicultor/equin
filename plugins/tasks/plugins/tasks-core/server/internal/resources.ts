@@ -98,10 +98,12 @@ export const taskClusterRowsServed = serveCollection(
   taskRowsServeOptions,
 );
 
-// The same task row as a window (`taskWindow`, key `tasks.window`): the
-// stored aggregates (`./task-rows.ts`) are side tables on the change feed, so
-// a status move anywhere in a task's closure is a write to its side row —
-// one routed refill, and an entrant / exit of a window filtered on it.
+// The tasks tree (`taskWindow`, key `tasks.tree`): the stored aggregates
+// (`./task-rows.ts`) are side tables on the change feed, so a status move
+// anywhere in a task's closure is a write to its side row — one routed
+// refill, and an entrant / exit of a window filtered on it. Every row's
+// `$childCount` is the stored `task_child_count` (a filing, a move or a
+// delete recounts the folders it left and joined).
 export const taskWindowServed = serveCollection(
   taskWindow,
   taskWindowServeOptions,

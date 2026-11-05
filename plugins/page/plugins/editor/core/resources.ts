@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import {
   liveCollection,
@@ -9,49 +10,67 @@ import { pagesEntityRef } from "@plugins/page/plugins/block-entity/core";
 import { rankValueField } from "@plugins/fields/plugins/rank/plugins/config/core";
 import type { Block, PageRow } from "./schemas";
 
-// All live pages (`type="page"` blocks), the WHOLE set (`all`): the sidebar
-// renders every page, and the `[[` / page-link pickers filter it by title
-// locally; the by-id readers (the page header, cover and kind control, the
-// link chips, the pane resolvers) read one row of it through `:rows`
-// (`useLive(c, { id })`). The sidebar tree is built by `pageId` (the nearest page
-// ancestor — `parentId` may point at a content block) and ordered by `docRank`
-// — the persisted, writer-derived document-order key (see `PageRowSchema`),
-// NOT the raw storage `rank`; the set's own order is `createdAt`, which never
-// changes, so a re-minted `docRank` is an in-place row refill, never an
-// `orderOf`.
+// The live pages (`type="page"` blocks) as a TREE window: every page reader
+// reads a bounded slice of it, never the whole set.
+//
+//  - The sidebar (`liveDataSource(pagesTree, …)` + DataView's live tree): the
+//    root level (`where: { pageId: { isEmpty: true } }`) and one window per
+//    open node (`where: { pageId }`), each ordered by `docRank` and paged;
+//    a search / filter reads its hits plus their ancestors
+//    (`include: "ancestors"`).
+//  - The by-id readers (the page header, cover and kind control, the link
+//    chips, the pane resolvers): one row through `:rows`
+//    (`useLive(c, { id })`); the breadcrumb a row and its ancestors
+//    (`{ id, include: "ancestors" }`).
+//  - Recent pages: a window sorted by `editedAt`; the `[[` / page-link
+//    pickers: a window filtered by `title` (`contains`), server-side.
+//
+// The tree is built by `pageId` (the nearest page ancestor — `parentId` may
+// point at a content block), its siblings ordered by `docRank` — the
+// persisted, writer-derived document-order key (see `PageRowSchema`), NOT the
+// raw storage `rank` (comparable only within one `(parent_id, rank)` space).
+// Every row carries `$childCount`: how many live pages name it as `pageId`.
 //
 // Served over the `page_blocks` TABLE (`../server/internal/page-rows.ts`):
 // a rename, an icon, cover or kind change is that page's refill, a re-mint the
-// refill of exactly the re-minted pages, a create / restore an entrant, a trash
-// an exit — and a write to a CONTENT block (the ~1s `data.text` typing
-// projection) the refill of its page's ONE row: every row carries `editedAt`
-// (`PageRowSchema`), read off a trigger-maintained rollup of its content's
-// newest `updated_at` (`../server/internal/rollup-spec.ts`), so the edit moves
-// it. A write the rollup does not read (a fold toggle) loads nothing.
+// refill of exactly the re-minted pages, a create / restore an entrant (and
+// its parent's recount), a trash an exit — and a write to a CONTENT block (the
+// ~1s `data.text` typing projection) the refill of its page's ONE row: every
+// row carries `editedAt` (`PageRowSchema`), read off a materialized aggregate
+// of its content's newest `updated_at` (`../server/internal/rollup-spec.ts`),
+// so the edit moves it. A write the aggregates do not read (a fold toggle)
+// loads nothing.
 //
-// The key is NEW (`pages.tree`; it was the legacy push resource `pages`): a
-// tab still running a bundle that subscribed the old key gets `unknown-key` — a
-// `skew` verdict, the Reload prompt — rather than keyed deltas its non-keyed
-// read cannot apply. Pinned by `../server/internal/pages-tree-oracle.test.ts`.
+// The key is NEW (`pages.tree.v2`; `pages.tree` was the param-less WHOLE set,
+// and before it the legacy push resource `pages`): a tab still running a
+// bundle that subscribed an old key gets `unknown-key` — a `skew` verdict,
+// the Reload prompt — rather than window rows its whole-set read would parse
+// as the entire tree (C39). Pinned by
+// `../server/internal/pages-tree-oracle.test.ts`.
 //
 // Not preloaded: nothing reads it until the Pages app (or a page chip) mounts.
 //
 // Declared by FIELDS: the rows ARE `page_blocks` rows (`from`), so every
 // extension exposing fields of a block folds into them under `$columns` —
 // starred, agent-origin and tags today, each served by its own plugin's
-// `LiveColumns.Expose` and presented by its own `FieldPresentation`. A list
-// (the sidebar) derives those fields; it names none of them. The one field a
-// list shows of the row itself is `editedAt` (own: an expression over the
-// rollup, bound by `columns` server-side); the title is a list's own
-// projection of `data`. The row is otherwise carried, field for field the
-// `PageRowSchema` the HTTP read keeps (pinned equal below).
-export const pagesTree = liveCollection("pages.tree", {
+// `LiveColumns.Expose` and presented by its own `FieldPresentation`, and each
+// filterable server-side (the sidebar's Favorites / Private / Scratch). A list
+// derives those fields; it names none of them. Its own listed fields: the
+// parent (`pageId`, picked — a level is `where: { pageId }`), `title` (the
+// payload's title as text, so it is searched server-side) and `editedAt` (an
+// expression over the materialized aggregate) — each bound server-side. The
+// row is otherwise carried, field for field the `PageRowSchema` the HTTP read
+// keeps (pinned equal below).
+export const pagesTree = liveCollection("pages.tree.v2", {
   from: pagesEntityRef,
-  fields: { editedAt: dateField({ label: "Edited" }) },
+  pick: ["pageId"],
+  fields: {
+    title: textField({ label: "Title" }),
+    editedAt: dateField({ label: "Edited" }),
+  },
   carry: {
     pick: [
       "id",
-      "pageId",
       "parentId",
       "type",
       "data",
@@ -64,33 +83,41 @@ export const pagesTree = liveCollection("pages.tree", {
       rank: rankValueField(),
       // The page row's place in its sidebar group: set on every live page row
       // (invariant I-DR), so carried non-null here though its (server-only)
-      // column is NULL on content rows.
+      // column is NULL on content rows. The tree's sibling rank.
       docRank: rankValueField(),
     },
   },
   id: "id",
-  all: {
-    orderBy: [["createdAt", "asc"]],
-    unbounded: {
-      reason:
-        "the sidebar renders every page; the [[ and link pickers filter by title locally",
-    },
-  },
+  sortable: ["docRank", "title", "editedAt", "createdAt"],
+  // A level in document order; the id breaks ties (`docRank` is unique within
+  // a `pageId` group, so it never has to).
+  default: { orderBy: [["docRank", "asc"]], limit: 100 },
+  maxLimit: 500,
+  tree: { parent: "pageId", rank: "docRank" },
 });
 
-/** A row as `pagesTree` delivers it: the page row plus every exposed field under `$columns`. */
+/**
+ * A row as `pagesTree` delivers it: the page row, its `title`, its
+ * `$childCount` and every exposed field under `$columns`.
+ */
 export type PagesTreeRow =
   typeof pagesTree extends LiveRowsCollection<infer R> ? R : never;
+
+/** The fields a `pagesTree` row binds server-side: the page row and its `title`. */
+export type PagesTreeFields = PageRow & { title: string };
 
 type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 type Assert<T extends true> = T;
 /**
- * The derived row IS the `PageRow` the HTTP read and the oracle parse
- * (`Required`: zod infers the `z.unknown()` payload as optional, a field
- * never is).
+ * The derived row IS the `PageRow` the HTTP read and the oracle parse, plus
+ * the searchable `title` (`Required`: zod infers the `z.unknown()` payload as
+ * optional, a field never is).
  */
 export type _PinPagesTreeRow = Assert<
-  Equal<Omit<PagesTreeRow, "$columns">, Required<PageRow>>
+  Equal<
+    Omit<PagesTreeRow, "$columns" | "$childCount">,
+    Required<PageRow> & { title: string }
+  >
 >;
 
 // A page's content forest: every block whose nearest page ancestor is

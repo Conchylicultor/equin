@@ -6,7 +6,10 @@ import {
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import type { TaskRow } from "@plugins/tasks/plugins/tasks-core/core";
+import type {
+  TaskRow,
+  TaskTreeRow,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { moveTaskInDepsTree } from "@plugins/tasks/core";
 import {
   Tasks,
@@ -114,8 +117,11 @@ export function CreatedSource({
   const taskFieldSchema = useTaskFieldSchema();
   // The rows are already the exact member set, so no subtree scoping —
   // out-of-set parents make their children render as roots (the creation forest).
+  // Each carries its child count, as the tasks tree's rows do (the task row
+  // actions read it): counted over the whole cluster, which holds every child —
+  // a folder edge never leaves its cluster.
   const rows = useMemo(
-    () => allTasks.filter((t) => memberIds.has(t.id)),
+    () => withChildCounts(allTasks, memberIds),
     [allTasks, memberIds],
   );
   const treeOptions = useMemo(
@@ -124,7 +130,7 @@ export function CreatedSource({
   );
   return (
     <>
-      {render<TaskRow>({
+      {render<TaskTreeRow>({
         rows,
         ...taskFieldSchema,
         rowKey: (t) => t.id,
@@ -137,4 +143,24 @@ export function CreatedSource({
       })}
     </>
   );
+}
+
+/**
+ * The members of `cluster`, each with its `$childCount` — how many tasks of
+ * the cluster are filed under it. Exact: a folder edge never leaves a cluster
+ * (tasks-core's cluster invariant), so the cluster holds every child.
+ */
+function withChildCounts(
+  cluster: readonly TaskRow[],
+  memberIds: ReadonlySet<string>,
+): TaskTreeRow[] {
+  const counts = new Map<string, number>();
+  for (const t of cluster) {
+    if (t.folderId !== null) {
+      counts.set(t.folderId, (counts.get(t.folderId) ?? 0) + 1);
+    }
+  }
+  return cluster
+    .filter((t) => memberIds.has(t.id))
+    .map((t) => ({ ...t, $childCount: counts.get(t.id) ?? 0 }));
 }

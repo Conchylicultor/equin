@@ -51,6 +51,7 @@ import {
   useTreeViewportPages,
   useValuePages,
   useViewportPages,
+  type LiveListReadOptions,
   type LivePagesOptions,
   type LivePagesResult,
   type LiveValuePagesOptions,
@@ -726,6 +727,12 @@ export function useLive<V>(
  *   On a tree collection, `include: "ancestors"` adds `ancestors` to the ready
  *   arm (one `:ancestors` read per loaded page) — the collection is then never
  *   `null` (a `null` query reads nothing).
+ * - `useLive(c, query, { resetKey })` — the plain window read (no viewport,
+ *   `LiveListResult<Row>`, `query` with its `limit`) whose query changes under
+ *   one `resetKey` keep the previous rows, `ready`, until the new query's
+ *   first page lands (a search typed into a picker); a new `resetKey` starts
+ *   over. The same overload: its options pick the read (`LiveListReadOptions`
+ *   vs `LivePagesOptions`). The collection is never `null` here.
  */
 export function useLive<
   Row,
@@ -734,12 +741,26 @@ export function useLive<
   NM extends MachineFeature | undefined = undefined,
   D extends object = object,
   In extends "ancestors" | undefined = undefined,
+  O extends LivePagesOptions | LiveListReadOptions = LivePagesOptions,
 >(
   collection: (LiveCollection<Row, F, S> & MachineDecl<NM> & D) | null,
   query:
-    (LivePagesQuery<F, S> & IncludeFor<D> & { readonly include?: In }) | null,
-  options: LivePagesOptions,
-): WithMachine<NM, Included<LivePagesResult<CollectionRow<Row>>, In, Row>>; /**
+    | ((O extends LiveListReadOptions
+        ? LiveQuery<F, S>
+        : LivePagesQuery<F, S>) &
+        IncludeFor<D> & { readonly include?: In })
+    | null,
+  options: O,
+): WithMachine<
+  NM,
+  Included<
+    O extends LiveListReadOptions
+      ? LiveListResult<CollectionRow<Row>>
+      : LivePagesResult<CollectionRow<Row>>,
+    In,
+    Row
+  >
+>; /**
  * - `useLive(all)` — a collection declared `all`: every row, in its declared
  *   order, as `ResourceResult<Row[]>` (settled on its first render when the
  *   boot snapshot hydrated it). Read straight off the cache with no row map
@@ -979,7 +1000,11 @@ export function useLive<Row, F, S extends string>(
     | Record<string, string>
     | readonly unknown[]
     | null,
-  options?: LivePagesOptions | LiveValuePagesOptions | LiveValueListOptions,
+  options?:
+    | LivePagesOptions
+    | LiveListReadOptions
+    | LiveValuePagesOptions
+    | LiveValueListOptions,
   // A value overload's `ValueArgs` never-arm (an impossible arity) — never passed.
   ..._unreachable: never[]
 ):
@@ -1083,6 +1108,7 @@ export function useLive<Row, F, S extends string>(
         source as LiveCollection<Row, F, S>,
         usePinnedClock(source, query as LiveQuery<F, S> | null | undefined) ??
           undefined,
+        options as LiveListReadOptions | undefined,
       );
     case "row":
       return useRow(
@@ -1105,6 +1131,7 @@ export function useLive<Row, F, S extends string>(
           source,
           withoutInclude(query as LiveQuery<F, S> | null | undefined),
         ) ?? undefined,
+        options as LiveListReadOptions | undefined,
       );
     case "row-ancestors":
       return useTreeRow(
@@ -1192,7 +1219,11 @@ function readKindOf(
   query: object | null | undefined,
   options: object | undefined,
 ): ReadKind {
-  const kind = plainReadKindOf(source, query, options);
+  const kind = withResetKey(
+    source,
+    plainReadKindOf(source, query, options),
+    options,
+  );
   const include =
     query == null ? undefined : (query as { include?: unknown }).include;
   if (include === undefined) return kind;
@@ -1230,6 +1261,25 @@ function readKindOf(
         `useLive("${key}"): \`include: "ancestors"\` goes with a window or a row read — not with a ${READ_KIND[kind]}.`,
       );
   }
+}
+
+/**
+ * A plain read's `resetKey` (`LiveListReadOptions`): only a collection's
+ * window read keeps its previous rows across a query change — beside any other
+ * read (an id, a count, a value, or no collection at all) it would mean
+ * nothing, so it throws.
+ */
+function withResetKey(
+  source: object | null,
+  kind: ReadKind,
+  options: object | undefined,
+): ReadKind {
+  const o = options as { resetKey?: unknown; viewport?: unknown } | undefined;
+  if (o?.viewport !== undefined || o?.resetKey === undefined) return kind;
+  if (kind === "all-pages") return kind;
+  throw new Error(
+    `useLive("${keyOf(source)}"): \`{ resetKey }\` keeps a collection's window rows across a query change — not a ${source === null ? "read with no collection" : READ_KIND[kind]}.`,
+  );
 }
 
 function plainReadKindOf(

@@ -57,15 +57,24 @@ import type { QueryDb } from "./spec";
 export interface MaterializedJoin<
   A extends string = string,
   T extends PgTable = PgTable,
+  J extends GroupedJoin = GroupedJoin,
 > {
   readonly alias: A;
+  /**
+   * The grouped join it materializes, as declared — for a reader that must
+   * check WHAT is aggregated, not only read it (network/live's tree
+   * `childCount`: a children join over the served table by its parent
+   * column). Never compiled again from here.
+   */
+  readonly source: J;
   /** The rollup to contribute: `DerivedTable(m.rollup)`. */
   readonly rollup: Rollup<T>;
   /** The join any compile reads the stored aggregates through (`j.<alias>.<aggregate>`). */
   join(): ExtensionJoin<A, T>;
 }
 
-type GroupedJoin = ChildrenJoin | ClosureJoin;
+/** The join kinds a `MaterializedJoin` stores. */
+export type GroupedJoin = ChildrenJoin | ClosureJoin;
 
 const SCOPE_OPEN = "/*<rollup-scope>*/";
 const SCOPE_CLOSE = "/*</rollup-scope>*/";
@@ -85,7 +94,7 @@ const SCOPE_RE = /\/\*<rollup-scope>\*\/(.*?)\/\*<\/rollup-scope>\*\//gs;
 export function materializeJoin<J extends GroupedJoin, T extends PgTable>(
   join: J,
   opts: { host: PgTable; table: T },
-): MaterializedJoin<J["alias"], T> {
+): MaterializedJoin<J["alias"], T, J> {
   type A = J["alias"];
   const label = `materializeJoin("${join.alias}" → ${getTableName(opts.table)})`;
   const fail = (message: string): never => {
@@ -181,7 +190,11 @@ export function materializeJoin<J extends GroupedJoin, T extends PgTable>(
       }),
     ],
     sql`, `,
-  )} FROM ${cte}`;
+    // A group whose key is NULL — the children with no host, e.g. a
+    // self-referencing tree's ROOTS (`parent IS NULL`) — is no host's: the
+    // `all` compiler's LEFT JOIN on `__k` never matches it, so the rollup
+    // stores none (a NULL key could only read as drift on every reconcile).
+  )} FROM ${cte} WHERE ${cte}.__k IS NOT NULL`;
   // Plain SQL text (a maintain function's body, a temp view), never a
   // prepared statement: every parameter inlined by drizzle's own escaping.
   const rendered = new PgDialect().sqlToQuery(query.inlineParams());
@@ -280,6 +293,7 @@ export function materializeJoin<J extends GroupedJoin, T extends PgTable>(
   ) as Record<string, SQL | null>;
   return Object.freeze({
     alias: join.alias as A,
+    source: join,
     rollup,
     join: (): ExtensionJoin<A, T> => ({
       kind: "extension",

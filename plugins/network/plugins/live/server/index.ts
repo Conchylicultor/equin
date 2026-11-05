@@ -60,7 +60,6 @@ export type {
   ServedCollection,
   ServedLookupCollection,
   ServedWindowCollection,
-  TreeChildCount,
   TreeChildCountBinding,
 } from "./internal/serve-collection";
 

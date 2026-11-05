@@ -516,35 +516,60 @@ export function useLiveSource<TRow>(args: {
     [pagesPaging, totalCount],
   );
 
-  if (!source) return null;
-  if (lowering.kind === "error") {
-    return {
+  // The answer keeps its identity while what it says does not change: a view
+  // memoizes on it, and a fresh object every render would re-derive (and
+  // re-report) everything downstream on every render of the host.
+  const loweringError = lowering.kind === "error" ? lowering.error : null;
+  const errorView = useMemo(
+    (): FlatSourceView<TRow> | null =>
+      loweringError === null
+        ? null
+        : {
+            kind: "flat",
+            rows: NO_ROWS as readonly TRow[],
+            ancestors: NO_ROWS as readonly TRow[],
+            ancestorsPending: false,
+            loading: false,
+            error: loweringError,
+            readError: null,
+            paging: NOT_PAGING as DataViewPaging<TRow>,
+            sectionOrder: "bucket",
+          },
+    [loweringError],
+  );
+  const loading = lowering.kind !== "ok" || pages.status === "loading";
+  const readError = pages.status === "error" ? pages : null;
+  const sectionOrder =
+    lowering.kind === "ok" && lowering.grouped.kind === "rows"
+      ? lowering.grouped.sectionOrder
+      : "bucket";
+  const flatView = useMemo(
+    (): FlatSourceView<TRow> => ({
       kind: "flat",
-      rows: NO_ROWS as readonly TRow[],
-      ancestors: NO_ROWS as readonly TRow[],
-      ancestorsPending: false,
-      loading: false,
-      error: lowering.error,
-      readError: null,
-      paging: NOT_PAGING as DataViewPaging<TRow>,
-      sectionOrder: "bucket",
-    };
-  }
+      rows,
+      ancestors,
+      ancestorsPending,
+      loading,
+      error: null,
+      readError,
+      paging: paging as DataViewPaging<TRow>,
+      sectionOrder,
+    }),
+    [
+      rows,
+      ancestors,
+      ancestorsPending,
+      loading,
+      readError,
+      paging,
+      sectionOrder,
+    ],
+  );
+
+  if (!source) return null;
+  if (errorView !== null) return errorView;
   if (sectioned !== null) return sectioned;
-  return {
-    kind: "flat",
-    rows,
-    ancestors,
-    ancestorsPending,
-    loading: lowering.kind !== "ok" || pages.status === "loading",
-    error: null,
-    readError: pages.status === "error" ? pages : null,
-    paging: paging as DataViewPaging<TRow>,
-    sectionOrder:
-      lowering.kind === "ok" && lowering.grouped.kind === "rows"
-        ? lowering.grouped.sectionOrder
-        : "bucket",
-  };
+  return flatView;
 }
 
 /** How the view's group-by lowered. */
@@ -745,41 +770,53 @@ function useSectionedReads<TRow>(args: {
     [full],
   );
 
+  const loading = shown === null || shown.status === "loading";
+  const readError = shown?.status === "error" ? shown : null;
+  // The reads and the answer keep their identity while what they say does
+  // not change (see `useLiveSource`).
+  const readers = useMemo(
+    () =>
+      lowering === null || source === undefined || groupsKey === null ? null : (
+        <>
+          <GroupsRead
+            source={source as LiveDataSource<unknown>}
+            column={lowering.grouped.column.name}
+            where={lowering.where}
+            columns={lowering.columns}
+            readKey={groupsKey}
+            onResult={onGroups}
+          />
+          {[...active].map((key) => (
+            <SectionRead
+              key={key}
+              source={source as LiveDataSource<unknown>}
+              sectionKey={key}
+              query={queries.get(key)!}
+              resetKey={lowering.resetKey}
+              onResult={onSection}
+            />
+          ))}
+        </>
+      ),
+    [lowering, source, groupsKey, onGroups, active, queries, onSection],
+  );
+  const view = useMemo(
+    (): SectionedSourceView<TRow> => ({
+      kind: "sectioned",
+      rows,
+      sections,
+      groupsPaging,
+      readers,
+      loading,
+      error: null,
+      readError,
+    }),
+    [rows, sections, groupsPaging, readers, loading, readError],
+  );
   if (lowering === null || source === undefined || groupsKey === null) {
     return null;
   }
-  const readers = (
-    <>
-      <GroupsRead
-        source={source as LiveDataSource<unknown>}
-        column={lowering.grouped.column.name}
-        where={lowering.where}
-        columns={lowering.columns}
-        readKey={groupsKey}
-        onResult={onGroups}
-      />
-      {[...active].map((key) => (
-        <SectionRead
-          key={key}
-          source={source as LiveDataSource<unknown>}
-          sectionKey={key}
-          query={queries.get(key)!}
-          resetKey={lowering.resetKey}
-          onResult={onSection}
-        />
-      ))}
-    </>
-  );
-  return {
-    kind: "sectioned",
-    rows,
-    sections,
-    groupsPaging,
-    readers,
-    loading: shown === null || shown.status === "loading",
-    error: null,
-    readError: shown?.status === "error" ? shown : null,
-  };
+  return view;
 }
 
 type GroupsReady = Extract<GroupsResult, { status: "ready" }>;

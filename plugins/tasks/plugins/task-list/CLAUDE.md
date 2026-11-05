@@ -1,7 +1,26 @@
 # task-list
 
-The Tasks pane's tree/list DataView over `taskRows` (tasks-core), and the row
-actions every task DataView shares (`Tasks.TaskActions`).
+The Tasks pane's tree/list DataView, and the row actions every task DataView
+shares (`Tasks.TaskActions`).
+
+## The Tasks pane is a live tree
+
+`TasksListView` is a live DataView over tasks-core's `taskWindow` (a `tree`
+collection: parent `folderId`, rank `rank`) — `liveDataSource(taskWindow, {
+surface, searchable: ["title"] })` with `hierarchy={{ onMove, onCreate }}`
+(`useTaskTreeWrites`): it never holds the whole set of tasks. data-view reads
+it per its *Live trees* modes: no filter and no search → the root window plus
+one window per open task (Load more per level); a filter (scope `rows`) or a
+search → its hits with their folder chains as context rows, group-by over
+the loaded roots; Sub-items flat (or a list view) → the flat window. Sorts,
+filters and group-bys on the listed fields and every exposure run on the
+server. `folderId` is listed on the collection only because a tree's parent
+is filterable; `useTaskTreeOverrides` hides it from every picker.
+
+`Tasks.TaskActions` acts on tree rows (`TaskTreeRow`): the child count and
+Drop's leaf gate read the row's own `$childCount`, never the loaded rows. The
+deps tree's Created source (in memory over one cluster) hands them its rows
+with a `$childCount` counted over the cluster, which holds every child.
 
 ## Fields
 
@@ -14,9 +33,10 @@ extension that wants a column in every task list exposes it on its shape
 (`defineExtensionShape({ exposes })`) and registers its presentation; this
 plugin names none of them.
 
-`taskFieldSchema` (`web/internal/tasks-data-view.tsx`) is the one bundle every
-task DataView spreads — `collection: taskRows` plus `fieldOverrides(taskRows,
-…)`: the title's inline edit, the status badge cell, end alignment. The
+`useTaskFieldSchema` (`web/internal/tasks-data-view.tsx`) is the one bundle
+every in-memory task DataView (the deps tree's sources) spreads —
+`collection: taskRows` plus `fieldOverrides(taskRows, …)`: the title's inline
+edit. The tree's `useTaskTreeOverrides` is the same edit over `taskWindow`. The
 saved-view field ids are pinned where they are declared: `taskRows`' in
 tasks-core (`core/internal/task-rows-fields.test.ts`), each exposure's beside
 its shape (task-track, task-category, automations).
@@ -38,9 +58,6 @@ its shape (task-track, task-category, automations).
   - Uses:
     - `infra/endpoints.FetchEndpoint`
     - `infra/endpoints.useFetchEndpoint`
-    - `network/live.useLive`
-    - `network/live/live-state.foldResource`
-    - `network/live/live-state.ResourceView`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/data-view.DataView`
@@ -48,9 +65,9 @@ its shape (task-track, task-category, automations).
     - `primitives/data-view.defineItemActions`
     - `primitives/data-view.fieldOverrides`
     - `primitives/data-view.HierarchyConfig`
+    - `primitives/data-view.liveDataSource`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.LaunchControl`
-    - `primitives/loading.Loading`
     - `tasks.usePatchTask`
   - Exports (values):
     - `buildTreeOptions`

@@ -7,7 +7,7 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
   Presence = starred; there is no rank/order column.
 - **`starred` is an EXPOSED presence field** (`shared/resources.ts`:
   `exposes.presence: { id: "starred" }`, a boolean). It folds into every list
-  whose rows are blocks — `pages.tree`, the pages sidebar — served by
+  whose rows are blocks — `pages.tree.v2`, the pages sidebar — served by
   `LiveColumns.Expose(pageBlocksStarred)` (server: `parent_id IS NOT NULL` on
   the joined side row, so it filters on the server like any column) and
   presented by `FieldPresentation.Register({ owner: starredPageShape.exposure

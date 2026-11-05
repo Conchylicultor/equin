@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { taskRows } from "../resources";
+import { taskRows, taskWindow } from "../resources";
 import { tasksEntityRef } from "../entity-refs";
 import { TaskListItemSchema, TASK_STATUS_OPTIONS } from "./schema";
 
@@ -43,5 +43,27 @@ describe("taskRows fields", () => {
   test("the rows are the tasks entity's, folding its exposures", () => {
     expect(taskRows.from).toBe(tasksEntityRef);
     expect(taskRows.exposes).toEqual({ base: tasksEntityRef });
+  });
+});
+
+describe("taskWindow — the tasks tree", () => {
+  test("lists the task list's fields, plus the folder its tree reads", () => {
+    // The saved views' ids are `taskRows`' (the task list moved from one to
+    // the other); `folderId` is listed only because a tree's parent is a
+    // filterable column (task-list hides it from every picker).
+    expect(Object.keys(taskWindow.fields)).toEqual([
+      "title",
+      "updatedAt",
+      "folderId",
+      "status",
+    ]);
+    expect(taskWindow.tree).toEqual({ parent: "folderId", rank: "rank" });
+  });
+
+  test("its row is `taskRows`' row — the same keys, `$childCount` beside them", () => {
+    expect([...taskWindow.rowKeys].sort()).toEqual(
+      [...taskRows.rowKeys].sort(),
+    );
+    expect(taskWindow.row.shape).toHaveProperty("$childCount");
   });
 });

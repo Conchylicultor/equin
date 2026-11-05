@@ -20,7 +20,7 @@ import {
   pagesTreeServed,
   pageBlocksServed,
 } from "./internal/resources";
-import { pageContentEditedAt } from "./internal/rollup-spec";
+import { PAGE_ROLLUPS } from "./internal/rollup-spec";
 import {
   restoreTrashedBlocks,
   purgeTrashedBlocks,
@@ -166,8 +166,9 @@ export default {
     ...pagesTreeServed.declare,
     ...blockLocationsServed.declare,
     ...pageBlocksServed.declare,
-    // The per-page content edit time `pagesTree`'s `editedAt` reads.
-    DerivedTable(pageContentEditedAt),
+    // The page rows' materialized joins: the per-page content edit time
+    // `pagesTree`'s `editedAt` reads, and the tree's `$childCount`.
+    ...PAGE_ROLLUPS.map((rollup) => DerivedTable(rollup)),
     // `page` is owned here, not by the `sub-page` renderer: page rows are written
     // directly by turn-into-page / restorePageContent, so their validation must not
     // depend on the sub-page plugin being enabled. sub-page contributes only its web

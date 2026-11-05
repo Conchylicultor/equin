@@ -167,10 +167,11 @@ export const ATTEMPT_PUSH_AGG_TABLE = "attempt_push_agg";
 /**
  * A trigger-maintained materialized rollup ("hand-rolled IVM"): per page, the
  * newest `updated_at` over its live content blocks (`page_id = P`, sub-page
- * rows included), which the `pages.tree` set joins to give every page row its
- * `editedAt`. Maintained incrementally by STATEMENT triggers on `page_blocks`
- * and reconciled from source on boot. Created imperatively by
- * `prepareRollupTables` (from the `defineRollup` declaration in
+ * rows included), which the `pages.tree.v2` tree joins to give every page row
+ * its `editedAt`. A query-resource `materializeJoin` (ON the change feed),
+ * maintained incrementally by STATEMENT triggers on `page_blocks` and
+ * reconciled from source on boot. Created imperatively by
+ * `prepareRollupTables` (from the declaration in
  * `plugins/page/plugins/editor/server/internal/rollup-spec.ts`). Not present in
  * the drizzle snapshot; the orphaned-db-tables check treats it as declared.
  * `defineRollup` generates its `CREATE TABLE` from the read handle, so the line
@@ -192,6 +193,26 @@ export const PAGE_CONTENT_EDITED_AT_TABLE = "page_content_edited_at";
 export const TASK_ATTEMPT_FACTS_TABLE = "task_attempt_facts";
 export const TASK_DEPENDENCY_LIST_TABLE = "task_dependency_list";
 export const TASK_BLOCKING_TABLE = "task_prerequisite_blocking";
+
+/**
+ * The `tasks.tree` tree's child count (query-resource's `materializeJoin` of
+ * the tasks counting their own rows by `folder_id`, in
+ * `plugins/tasks/plugins/tasks-core/server/internal/task-rows.ts`): per task,
+ * how many tasks name it as their folder — every row's `$childCount`
+ * (network/live's `tree`). A rollup on the change feed, created and reconciled
+ * by `rebuildDerivedTables` like the three above.
+ */
+export const TASK_CHILD_COUNT_TABLE = "task_child_count";
+
+/**
+ * The `pages.tree.v2` tree's child count (query-resource's `materializeJoin` of
+ * `page_blocks` counting its own live page rows by `page_id`, in
+ * `plugins/page/plugins/editor/server/internal/rollup-spec.ts`): per page, how
+ * many live pages name it as their nearest page ancestor — every row's
+ * `$childCount` (network/live's `tree`). A rollup on the change feed, created
+ * and reconciled by `rebuildDerivedTables` like the ones above.
+ */
+export const PAGE_TREE_CHILDREN_TABLE = "page_tree_children";
 
 /**
  * The full allowlist of public tables created imperatively (outside drizzle),
@@ -233,6 +254,8 @@ export const IMPERATIVE_PUBLIC_TABLES = {
   TASK_ATTEMPT_FACTS_TABLE,
   TASK_DEPENDENCY_LIST_TABLE,
   TASK_BLOCKING_TABLE,
+  TASK_CHILD_COUNT_TABLE,
+  PAGE_TREE_CHILDREN_TABLE,
 } as const satisfies Record<string, string>;
 
 /**

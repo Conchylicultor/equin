@@ -1,7 +1,7 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+import type { TaskTreeRow } from "@plugins/tasks/plugins/tasks-core/core";
 import { usePatchTask } from "@plugins/tasks/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -9,13 +9,12 @@ const deleteIcon = symbol("delete");
 
 // "Delete" is a soft drop: it marks the task dropped (reversible via the
 // task header's Undrop), never removing the row. Tasks are never hard-deleted.
-export function DeleteTaskAction({
-  row,
-  hasChildren,
-}: ItemActionProps<TaskListItem>) {
+// Gated on the row's own child count (every task filed under it, loaded or
+// not, in whatever view it is drawn), never on what the view holds.
+export function DeleteTaskAction({ row }: ItemActionProps<TaskTreeRow>) {
   const taskId = row.id;
   const patchTask = usePatchTask();
-  const disabled = hasChildren;
+  const disabled = row.$childCount > 0;
   const title = disabled
     ? "Only leaf tasks can be dropped here — drop the children first"
     : "Drop task";

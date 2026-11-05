@@ -61,7 +61,8 @@ import { docOrderPaths } from "./page-doc-order";
 import { reconcileDocRanksAtBoot } from "./doc-rank-boot";
 import { loadPages } from "./resources";
 import { pageRowsServeOptions } from "./page-rows";
-import { pageContentEditedAt } from "./rollup-spec";
+import { compileWindowQuery } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
+import { PAGE_ROLLUPS } from "./rollup-spec";
 
 // Stand-ins for the content block types the seeds nest sub-pages under. The
 // concrete `page/text` + `page/toggle` plugins import THIS plugin, so importing
@@ -84,7 +85,7 @@ beforeAll(async () => {
   await runMigrations(t.db);
   // `loadPages` reads each page's `editedAt` off the content rollup, which a
   // backend installs at boot (`installRollups` is the boot rollup install) — the same path.
-  await installRollups(t.db, [pageContentEditedAt]);
+  await installRollups(t.db, PAGE_ROLLUPS);
   collectContributions([
     {
       id: "page-doc-order-test",
@@ -377,18 +378,22 @@ describe("read-set (Hole A)", () => {
     }
   });
 
-  test("pages.tree routes every page_blocks column its rows read", () => {
-    const { routes } = compileCollection(pagesTree, pageRowsServeOptions).all
-      .routes;
+  test("pages.tree.v2 routes every page_blocks column its rows read", () => {
+    const { serverOpts } = compileWindowQuery(
+      pagesTree.window,
+      compileCollection(pagesTree, pageRowsServeOptions).window,
+    );
+    const routes = serverOpts.routes.routes;
     const blocks = routes.filter((r) => r.table === "page_blocks");
     expect(blocks.length).toBeGreaterThan(0);
     const columns = new Set(blocks.flatMap((r) => r.columns));
-    // Membership (`type`, `deleted_at`), the order (`created_at`), the stored
-    // document-order key and the payload a rename / icon / kind write moves.
+    // Membership (`type`, `deleted_at`), the tree's parent and sibling order
+    // (`page_id`, the stored document-order key) and the payload a rename /
+    // icon / kind write moves.
     for (const column of [
       "type",
       "deleted_at",
-      "created_at",
+      "page_id",
       "doc_rank",
       "data",
     ]) {

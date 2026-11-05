@@ -56,31 +56,44 @@ traversal would silently drop the page from the sidebar.
 bypassed the marks; the next structural write in that group, or the next boot,
 repairs it. Minting at read time would hide the bypass.
 
-## The page tree is a routed collection (`pagesTree`, key `pages.tree`)
+## The page tree is a tree window (`pagesTree`, key `pages.tree.v2`)
+
+**Why a window, not the whole set.** It was `all` (every page, held by the
+sidebar, the pickers, the breadcrumb and Recent pages alike). A tree window
+makes every reader a bounded read: a level is `where: { pageId }`, a page
+`{ id }`, a path `{ id, include: "ancestors" }`, a search a `title` filter.
+The sidebar is DataView's live tree (root level + one window per open page),
+the second consumer of network/live's `tree` after Tasks.
 
 **Why a leaked NULL `docRank` fails the whole tuple.** The binding states no
-non-null claim: the `all` compiler refuses an `expr` that is exactly one
-column, and a base column's nullability is not checked. So a NULL is caught
-where it lands — the row schema's `RankSchema` fails the load or refill and the
-sidebar shows the error, rather than one row silently sorting anywhere.
+non-null claim (a base column's nullability is not checked). So a NULL is
+caught where it lands — the row schema's `RankSchema` fails the load or refill
+and the sidebar shows the error, rather than one row silently sorting anywhere.
 
-**Why `editedAt` reads a rollup.** A content edit stamps only the edited
-block's row, never the page row, so the page's own `updated_at` misses typing.
-The rollup is per page, indexed on `page_blocks_page_id_idx`: a typing write
-re-aggregates one page and refills its one row.
+**Why `editedAt` and `$childCount` read MATERIALIZED joins.** A content edit
+stamps only the edited block's row, never the page row, so the page's own
+`updated_at` misses typing; and a child count is an aggregate. A window may
+filter, sort and page on neither unless it is stored: both are
+`materializeJoin`s keyed by the page id, ON the change feed, so a reader hears
+of a page exactly when a stored value changed (a typing write re-aggregates
+one page; a create, move or trash recounts its parents).
+
+**Why moves name only the target.** The sidebar's hierarchy is `pageId`; a
+page's physical parent may be a content block inside its display parent. The
+sidebar no longer holds every page, so it cannot look the target's raw
+`parentId` up — and it never had to: `moveBlock` reads it on the server
+(`parentId` optional beside a `targetId`), as `createBlock { afterId }`
+always did.
 
 **Costs** (pinned by `server/internal/pages-tree-oracle.test.ts`):
 
-- a content block's write (typing projection): its page's refill;
-- a write the rollup does not read (a fold toggle): nothing;
-- rename / icon / cover / kind: that page's refill;
-- a toggle drag: refills exactly the pages the reconcile re-minted;
-- create or restore: one refill and one `orderOf`;
-- trash: an exit after a one-id probe (the `where` reads `deleted_at`).
+- a content block's write (typing projection): its page's refill, in each
+  tuple holding it (a filterless window also probes the written id);
+- a write no stored aggregate reads (a fold toggle): nothing.
 
-**Why a fresh key.** A tab running an old bundle is refused `unknown-key` — the
-skew / Reload prompt — instead of being handed keyed deltas its non-keyed read
-cannot apply.
+**Why a fresh key.** `pages.tree` was the param-less whole set: an old bundle
+would subscribe `{}` and parse a window page as the entire tree. A tab running
+an old bundle is refused `unknown-key` — the skew / Reload prompt.
 
 **`blockLocations` reaches no reader on a content edit**: only its projected
 columns (`id`, `type`, `pageId`) route.

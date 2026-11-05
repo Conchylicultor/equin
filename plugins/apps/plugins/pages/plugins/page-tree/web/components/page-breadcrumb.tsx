@@ -13,7 +13,6 @@ import {
 } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { pageAncestors } from "../ancestors";
 import { pageDetailPane } from "../panes";
 
 /**
@@ -55,8 +54,11 @@ export function PageBreadcrumb({
   leaf?: BreadcrumbSegment;
 }): ReactElement | null {
   const openPane = useOpenPane();
-  // The whole set: the trail walks the `pageId` chain up through it.
-  const result = useLive(pagesTree);
+  // The page and its chain up `pageId` (the nearest PAGE ancestor — never the
+  // raw `parentId`, which may be a content block), root-first: one row read
+  // with its ancestors, answered in one round trip by the tree's
+  // `:ancestors` walk.
+  const result = useLive(pagesTree, { id: pageId, include: "ancestors" });
   if (result.status === "loading") return null;
   if (result.status === "error") {
     return (
@@ -68,10 +70,9 @@ export function PageBreadcrumb({
       />
     );
   }
-
-  const current = result.data.find((p) => p.id === pageId);
-  if (!current) return null;
-  const ancestors = pageAncestors(result.data, pageId);
+  if (!result.found) return null;
+  const current = result.row;
+  const ancestors = result.ancestors;
 
   const chain = [...ancestors, current];
   const segments: BreadcrumbSegment[] = chain.map((page) => ({
