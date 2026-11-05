@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { scanDataViewIds } from "./data-views-gen";
+import { scanDataViewIds } from "./data-views.scan";
 
 describe("scanDataViewIds", () => {
   test("records every literal id, in source order", () => {

@@ -5,7 +5,8 @@ import type {
 import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
 import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { loadsAtRuntime, platformOffenders } from "../core/portability";
+import { platformOffenders } from "../core/portability";
+import { loadsAtRuntime } from "../core/portability-facts.scan";
 
 const MACHINE_PORTABLE_DECLARATION = "boundaries:machine-portable-declaration";
 

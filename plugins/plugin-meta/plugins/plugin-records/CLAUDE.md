@@ -94,7 +94,10 @@ and nothing names that code by hand:
   key, from a graph that reads no record (`fileFactsIdentity`);
 - a file scan names its code by `url: import.meta.url` (`FileScan`), resolved
   to the repo module (`repoModuleOf`) — a scan moved to another file cannot go
-  on being keyed by the one it left;
+  on being keyed by the one it left. That module is a `*.scan.ts` file holding
+  only the scan and the code it runs (asserted on every scan): defined inside
+  its generator, a scan was keyed by the generator's 300+-module closure and
+  ~1 main commit in 4 re-keyed every file's record;
 - a facet record by its facet's module and the harness that runs it
   (`facet-records.ts`), evaluated records by the evaluator's modules — each a
   Merkle key over its whole closure — plus the runtime and the lockfile.

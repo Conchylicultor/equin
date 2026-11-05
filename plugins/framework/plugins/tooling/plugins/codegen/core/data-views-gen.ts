@@ -4,17 +4,11 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join, relative } from "path";
 import { writeGenerated } from "./write-generated";
-import {
-  lineAt,
-  markerCallSpans,
-  maskSource,
-  parseStaticCallId,
-  unresolvableCallIdMessage,
-  sourceFilesIn,
-} from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { sourceFilesIn } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { mainBundle } from "./main-bundle";
-import { scanFiles, type FileScan } from "./file-scans";
+import { scanFiles } from "./file-scans";
+import { DATA_VIEW_SCAN } from "./data-views.scan";
 import type { CodegenPass } from "./codegen-pass";
 
 /**
@@ -51,43 +45,6 @@ const MANIFEST_HEADER = [
   "// The `data-views-in-sync` check fails on drift.",
 ].join("\n");
 
-const DATA_VIEW_MARKER = "defineDataView";
-
-/**
- * Every `defineDataView("<id>")` id in one source file, in source order.
- *
- * The file is FULL-masked (so a marker written inside a comment, string or
- * template literal is never matched) and each id is read back from the ORIGINAL
- * by offset. THROWS — naming `displayPath`, the line, and the offending
- * expression — on a call whose id is not a static string literal. Unlike the slot
- * scanner there is no legitimate unresolvable shape here: `defineDataView` is
- * only ever called, never declared in a plugin's `web/**`, and no factory
- * produces data views. So there is nothing to exempt and no escape hatch.
- */
-export function scanDataViewIds(src: string, displayPath: string): string[] {
-  const out: string[] = [];
-  for (const span of markerCallSpans(maskSource(src), DATA_VIEW_MARKER)) {
-    const id = parseStaticCallId(src, span);
-    if (id.kind !== "value") {
-      throw new Error(
-        unresolvableCallIdMessage({
-          marker: DATA_VIEW_MARKER,
-          file: displayPath,
-          line: lineAt(src, span.identifier),
-          expr: id.kind === "dynamic" ? id.expr : "",
-          hint:
-            "The data-views manifest is built from source text, so every id must be a " +
-            "literal at the call site — a data view whose id this scanner cannot read " +
-            "would silently register no config descriptor and lose its saved views. " +
-            "Inline the literal instead of hoisting or interpolating it.",
-        }),
-      );
-    }
-    out.push(id.value);
-  }
-  return out;
-}
-
 export interface DataViewEntry {
   id: string;
   /** Hierarchy id of the plugin whose web/** owns the `defineDataView` marker. */
@@ -115,12 +72,6 @@ export interface DataViewEntry {
  * manifest it feeds is imported by plugin barrels at module-load, so it has to
  * be regenerated BEFORE the first barrel import freezes the ESM cache.
  */
-const DATA_VIEW_SCAN: FileScan<string[]> = {
-  url: import.meta.url,
-  scan: (src, rel) =>
-    src.includes(DATA_VIEW_MARKER) ? [...scanDataViewIds(src, rel)] : [],
-};
-
 export async function collectDataViews(
   pass: CodegenPass,
 ): Promise<DataViewEntry[]> {

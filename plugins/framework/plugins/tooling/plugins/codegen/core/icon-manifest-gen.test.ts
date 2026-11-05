@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { scanIconNames } from "./icon-manifest-gen";
+import { scanIconNames } from "./icon-manifest.scan";
 
 const IMPORT = `import { symbol, brand, seti } from "@plugins/ui/plugins/icons/core";\n`;
 

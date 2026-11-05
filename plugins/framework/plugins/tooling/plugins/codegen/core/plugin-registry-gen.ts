@@ -4,10 +4,6 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { COMPOSITION_SPECIFIERS } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
 import { type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import {
-  findImports,
-  maskSource,
-} from "@plugins/plugin-meta/plugins/parse-utils/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
@@ -49,7 +45,11 @@ import {
 import { resolveMainComposition } from "./main-bundle";
 import { readDeclaredApps, type DeclaredApp } from "./declared-apps";
 import { timeSlicer } from "./scan-pacing";
-import { scanFiles, type FileScan } from "./file-scans";
+import { scanFiles } from "./file-scans";
+import {
+  DEFAULT_EXPORT_SCAN,
+  IMPORT_SPECIFIER_SCAN,
+} from "./plugin-registry.scan";
 import { writeGenerated } from "./write-generated";
 
 const HEADER = [
@@ -74,17 +74,6 @@ export interface CollectedRawEntry {
   /** `@plugins/<path>/core` when the plugin has a core barrel, else null —
    *  rendered only into a `CORE_WARMED_DIRS` registry. */
   coreImportPath: string | null;
-}
-
-function hasDefaultExport(text: string): boolean {
-  // Mask comments/regex/strings so a commented-out or string-embedded `export
-  // default` can't make an entryless barrel look like an entry. These are pure
-  // code-construct detectors — the string interior is never read back.
-  const src = maskSource(text);
-  return (
-    /(^|\n)\s*export\s+default\b/.test(src) ||
-    /(^|\n)\s*export\s*\{[^}]*\bdefault\b[^}]*\}/.test(src)
-  );
 }
 
 // ── Registry-generation context ────────────────────────────────────
@@ -345,18 +334,6 @@ function nodeKeyFor(dir: string, pluginPath: string): string {
 function identifierForDir(dir: string): string {
   return dir.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
 }
-
-// Per-file scans, cached as file records (`file-scans.ts`).
-const DEFAULT_EXPORT_SCAN: FileScan<boolean> = {
-  url: import.meta.url,
-  params: ["default-export"],
-  scan: (src) => hasDefaultExport(src),
-};
-const IMPORT_SPECIFIER_SCAN: FileScan<string[]> = {
-  url: import.meta.url,
-  params: ["import-specifiers"],
-  scan: (src) => findImports(src).map((imp) => imp.specifier),
-};
 
 const LEAF_FOLDER_SET: ReadonlySet<string> = new Set(LEAF_FOLDERS);
 

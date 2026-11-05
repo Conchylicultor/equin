@@ -26,11 +26,31 @@ export interface FileScan<T> {
    * anything it imports) rescans. Taken from the module itself, never typed
    * as a path, so a scan moved to another file cannot go on being keyed by
    * the file it left.
+   *
+   * That module must be a `*.scan.ts` file holding the scan and the code it
+   * runs, nothing else ({@link SCAN_MODULE_SUFFIX}): a scan defined inside
+   * its consumer (a generator, a check) is keyed by the consumer's whole
+   * closure — 300+ modules, re-keying every file's record on about one main
+   * commit in four while the answers almost never change.
    */
   url: string;
   /** Parameters the scan reads besides the file (part of the key). */
   params?: readonly string[];
   scan(src: string, rel: string): T;
+}
+
+/**
+ * The file name a scan's defining module ends with. A module of its own makes
+ * the key as narrow as the scan's code; the suffix makes that module visible
+ * to its next editor, who sees that whatever it imports keys every record.
+ */
+const SCAN_MODULE_SUFFIX = ".scan.ts";
+
+function assertScanModule(url: string): void {
+  if (!new URL(url).pathname.endsWith(SCAN_MODULE_SUFFIX))
+    throw new Error(
+      `[plugin-records] a file scan is defined in ${url}: define it in a module of its own named *${SCAN_MODULE_SUFFIX}, holding only the scan and the code it runs — its records are keyed by that module's whole import closure, so a scan defined inside its consumer is re-keyed by every edit to the consumer's closure`,
+    );
 }
 
 function isSnapshot(repo: RepoFiles): repo is RepoSnapshot {
@@ -91,6 +111,7 @@ export async function scanFilesCached<T>(
   files: readonly string[],
   scanner: FileScan<T>,
 ): Promise<T[]> {
+  assertScanModule(scanner.url);
   const repo = input.snapshot;
   const read = async (rel: string): Promise<string> => {
     const src = await repo.read(rel);

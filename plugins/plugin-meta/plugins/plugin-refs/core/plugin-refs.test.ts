@@ -9,12 +9,12 @@ import {
   scanCompositionManifestRefs,
   scanReorderItemRefs,
 } from "./config-refs";
+import { findPluginRefs } from "./find";
 import {
   BOUNDARY_CONFIG,
   COMPOSITIONS_MANIFEST,
   COMPOSITIONS_SOURCE,
-  findPluginRefs,
-} from "./find";
+} from "./refs.scan";
 import { maskMarkdown, scanCssRefs, scanMarkdownRefs } from "./relative-refs";
 import {
   pluginDirOfPath,

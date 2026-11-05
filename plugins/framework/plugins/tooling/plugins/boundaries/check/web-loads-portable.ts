@@ -7,11 +7,11 @@ import { isBunTestPath } from "@plugins/framework/plugins/tooling/plugins/test-l
 import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
-  loadsAtRuntime,
   platformTaint,
   type Offender,
   type PlatformTaint,
 } from "../core/portability";
+import { loadsAtRuntime } from "../core/portability-facts.scan";
 
 const WEB_LOADS_PORTABLE = "boundaries:web-loads-portable";
 

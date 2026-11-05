@@ -21,8 +21,8 @@ import {
 } from "@plugins/framework/plugins/tooling/core";
 import { classifyEdges } from "@plugins/plugin-meta/plugins/closure/core";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { preloadedKeysIn } from "./eager-tier.scan";
 import {
-  preloadedKeysIn,
   computeEagerTier,
   isAppContent,
   renderEagerTierManifest,

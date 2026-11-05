@@ -13,8 +13,8 @@ export {
   BOUNDARY_CONFIG,
   COMPOSITIONS_MANIFEST,
   COMPOSITIONS_SOURCE,
-  findPluginRefs,
-} from "./find";
+} from "./refs.scan";
+export { findPluginRefs } from "./find";
 export type { FindPluginRefsOptions, ScanFiles } from "./find";
 export { findPluginMentions } from "./mentions";
 export type { PluginMention } from "./mentions";
