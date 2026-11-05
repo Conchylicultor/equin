@@ -6,4 +6,9 @@
 import { serveThreadPool } from "@plugins/packages/plugins/thread-pool/cli";
 import { runRecordJobRequest, type RecordJobRequest } from "../core";
 
-serveThreadPool<RecordJobRequest, unknown>(runRecordJobRequest);
+// The module a request names is loaded here, by computed path: this entry is
+// run by path in a worker thread, never imported, so no other closure carries
+// the load (see `runRecordJobRequest`).
+serveThreadPool<RecordJobRequest, unknown>((req) =>
+  runRecordJobRequest(req, (module) => import(module)),
+);

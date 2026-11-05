@@ -35,6 +35,9 @@ const digest = await sourceDigest([myCode]);
   closure — server-core's boot sequence, which every compiled live read
   reaches through the core barrel, takes its core-barrel loaders from the
   composition root (`BootSpec.coreBarrel`, `bin/active-runtime.ts`).
+  `computedLoads(path, text)` is that reading on its own, for a guard that
+  keeps a closure digestable (`boot:closure-digestable` holds the serving
+  backend's).
 - **Once per process, as early as boot.** The plugin's `onReadyBlocking`
   starts every defined set's digest without waiting. A digest reads the files
   when it runs; a file edited after its module was imported would be counted
@@ -64,7 +67,10 @@ import.meta`, carried by `Resource.Declare`) — the L2 stamps judged by
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/digest.ts` (sanctioned)
 - Server:
-  - Exports (values): `sourceDigest`
+  - Exports (types): `ComputedLoads`
+  - Exports (values):
+    - `computedLoads`
+    - `sourceDigest`
 - Core:
   - Exports (types): `SourceSet`
   - Exports (values):

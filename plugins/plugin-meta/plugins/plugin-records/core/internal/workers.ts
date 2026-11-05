@@ -6,8 +6,9 @@
  *
  * A JOB is a named function of plain data (`defineRecordJob`), defined at the
  * top level of the module that owns the work. A worker answers a request by
- * importing that module and running the job it registered, so the code that
- * runs in a worker is exactly the code that runs in-process — there is no
+ * importing that module (its entry's own `import`) and running the job it
+ * registered, so the code that runs in a worker is exactly the code that runs
+ * in-process — there is no
  * second implementation to drift. Requests and replies are structured-cloned:
  * plain data only, never a handle.
  *
@@ -58,14 +59,21 @@ export function defineRecordJob<Req, Rep>(
   return job;
 }
 
-/** The worker half: run the job a request names, importing its module first. */
+/**
+ * The worker half: run the job a request names, loading its module first with
+ * `load` — the worker entry's own `import` (`bin/record-worker.ts`). The load
+ * by computed path is the worker's, never this barrel's: every process that
+ * imports `core` (a serving backend, through the plugin tree) would otherwise
+ * carry a load `sourceDigest` cannot follow, for a step only a worker runs.
+ */
 export async function runRecordJobRequest(
   req: RecordJobRequest,
+  load: (module: string) => Promise<unknown>,
 ): Promise<unknown> {
   let job = jobs.get(req.id);
   if (!job) {
     const hash = req.id.lastIndexOf("#");
-    await import(req.id.slice(0, hash));
+    await load(req.id.slice(0, hash));
     job = jobs.get(req.id);
     if (!job)
       throw new Error(

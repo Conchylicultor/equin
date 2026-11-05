@@ -36,7 +36,7 @@ describe("record jobs", () => {
       size: 3,
       run: async (req) => {
         sent.push(req);
-        return runRecordJobRequest(req);
+        return runRecordJobRequest(req, (m) => import(m));
       },
     });
     expect(recordWorkerCount()).toBe(3);
@@ -60,7 +60,10 @@ describe("record jobs", () => {
 
   test("a request naming a job its module does not define throws", () => {
     expect(
-      runRecordJobRequest({ id: `${import.meta.url}#nope`, request: 1 }),
+      runRecordJobRequest(
+        { id: `${import.meta.url}#nope`, request: 1 },
+        (m) => import(m),
+      ),
     ).rejects.toThrow('defines no record job "nope"');
   });
 });

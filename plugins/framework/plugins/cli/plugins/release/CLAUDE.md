@@ -62,6 +62,7 @@ flag at run time, from `PLATFORM_TAGS` itself, in `resolvePlatformTag`.
 - Cli:
   - Uses:
     - `framework/cli/op-runtime.FATAL_SIGNAL_EXITS`
+    - `infra/asset-mirror/bundle.runAssetMirrorPrewarm`
     - `infra/jobs/supervised-job.cliExecContext`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `shared/entrypoints.ts` (debt)

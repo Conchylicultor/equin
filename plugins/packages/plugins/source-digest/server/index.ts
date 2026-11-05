@@ -4,7 +4,8 @@ import {
 } from "@plugins/framework/plugins/server-core/core";
 import { prewarmSourceDigests } from "./internal/digest";
 
-export { sourceDigest } from "./internal/digest";
+export { computedLoads, sourceDigest } from "./internal/digest";
+export type { ComputedLoads } from "./internal/digest";
 
 export default {
   description:

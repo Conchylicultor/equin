@@ -300,7 +300,7 @@ takes a `debt` exemption on the check's id.
     - `framework/tooling/lint` (2 debt)
     - `framework/tooling/web-artifacts` (19 debt)
     - `framework/web-core` (1 debt)
-    - `infra/asset-mirror/bundle` (3 debt)
+    - `infra/asset-mirror/bundle` (1 debt)
     - `infra/corpus-index` (1 debt)
     - `infra/deps/mise` (2 debt)
     - `infra/deps/npm` (2 debt)

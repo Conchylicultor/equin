@@ -2266,6 +2266,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DeploySecretValueSchema`
                   - `SECRETS_SECTION_ID`
                   - `setDeploySecretValue`
+              - Exemptions:
+                - Exempts itself from: `boot:closure-digestable` — `server/index.ts` (debt)
         - **`deployments`** — Sites — the Deploy app's primary entity, a deployment: the sites index (the app's landing page, a DataView of every deployment with its server and status), the site page (site/:deploymentId/:tab?) — a header (mark, hostname, status pill, hostnames, composition, contributed SiteHeader actions), the production strip (SiteStrip cells, its Server cell this plugin's own) with the first applicable SiteBanner, and the SiteTabs host bound to the URL's :tab?, whose Overview (a two-column host over SiteOverview.Card plus a Checks card over SiteCheck) and Settings (the DeploymentDetail sections — General, Install and a Danger zone of its own — under a left anchor rail) tabs are this plugin's, the sidebar's Overview entry and Sites section (status dot per site from useSiteStatus, + opening the add dialog), and the Deployments section of a server's page (that server's sites as a DataView, an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run). Old server/:serverId/dep/:deploymentId links forward to the site. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./equin deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. Before any leg spawns, every DeployGates.Gate contribution is asked; a run one of them refuses ends needs-approval having converged and shipped nothing. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
           - Web:
             - Slots:
@@ -13628,7 +13630,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/studio/compositions/draft-actions`
           - `apps/studio/compositions/release`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
+          - `boot:closure-digestable` — `server/index.ts` (debt)
     - **`server-build-id`** — Served-bundle pin leaf: reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
       - Server:
         - Uses: `infra/paths.webDistDir`
@@ -27150,6 +27154,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cli:
             - Uses:
               - `framework/cli/op-runtime.FATAL_SIGNAL_EXITS`
+              - `infra/asset-mirror/bundle.runAssetMirrorPrewarm`
               - `infra/jobs/supervised-job.cliExecContext`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `shared/entrypoints.ts` (debt)
@@ -27492,6 +27497,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `detached-work-safety/no-raw-set-interval` — `bin/index.ts` (sanctioned)
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
+          - `boot:closure-digestable` — `bin/index.ts` (debt)
       - Cli:
         - Exports (values): `runExec`
       - Test helpers:
@@ -27708,7 +27714,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/lint` (2 debt)
               - `framework/tooling/web-artifacts` (19 debt)
               - `framework/web-core` (1 debt)
-              - `infra/asset-mirror/bundle` (3 debt)
+              - `infra/asset-mirror/bundle` (1 debt)
               - `infra/corpus-index` (1 debt)
               - `infra/deps/mise` (2 debt)
               - `infra/deps/npm` (2 debt)
@@ -28026,6 +28032,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
                   - `user-path/no-unproven-claim` — `shared/worker.ts`, `shared/batch-worker.ts` (sanctioned)
                   - `check-thread-safety/no-blocking-check-work` — `check/import-graph.ts` (debt)
+                  - `boot:closure-digestable` — `server/index.ts` (debt)
               - Plugins:
                 - **`backstop`** — The two-program type check's backstop: a daily main-only job runs the type-check worker in dual mode (the two-program check beside a full check of a fresh whole program, compared file by file) and files a type-check-divergence report for every file whose result differs.
                   - Server:
@@ -28038,6 +28045,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/log-channels.defineLogSink`
                       - `reports.ReportKind`
                     - Register: `defineSupervisedJob('type-check.backstop')`
+                  - Exemptions:
+                    - Exempts itself from: `boot:closure-digestable` — `server/index.ts` (debt)
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
             - Uses: 134 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
@@ -29476,15 +29485,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/audio/soundfont`
           - `ui/icons/emoji`
       - Plugins:
-        - **`bundle`** — The asset mirror's release bundle, host-only: runAssetMirrorPrewarm downloads every prewarm-declared file of a composition's closure into a release bundle, and seedAssetMirrorCache copies a bundle's files into a fresh install's mirror cache (copy-if-absent).
+        - **`bundle`** — The asset mirror's release bundle, host-only: runAssetMirrorPrewarm (cli/, for ./equin release) downloads every prewarm-declared file of a composition's closure into a release bundle, and seedAssetMirrorCache copies a bundle's files into a fresh install's mirror cache (copy-if-absent).
           - Cross-plugin:
-            - Imported by: `infra/launcher`
+            - Imported by:
+              - `framework/cli/release`
+              - `infra/launcher`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/fetch-to-disk.ts`, `server/internal/run-prewarm.ts`, `server/internal/seed-cache.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/seed-cache.ts` (debt)
           - Server:
-            - Exports (values):
-              - `runAssetMirrorPrewarm`
-              - `seedAssetMirrorCache`
+            - Exports (values): `seedAssetMirrorCache`
+          - Cli:
+            - Exports (values): `runAssetMirrorPrewarm`
     - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments: rows plus bytes in the host's blob store (AttachmentBlobs — on the desktop UUID-named files under ~/.equin/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable, linkRef) over a link entity their own core declares, serve its scoped link collection and contribute it as Attachments.Link — attachments.by-owner follows each contributed set (built at bind), naming no owner; orphan sweep reclaims unreferenced rows past TTL. holdAttachments keeps an attachment an unsent draft references alive for the draft's lifetime.
       - Server:
         - Contributes:
@@ -33841,7 +33852,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/serve-composition`
               - `debug/worktree-cleanup`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/owned-namespaces.ts`, `server/internal/reclaim-namespace.ts` (debt)
+            - Exempts itself from:
+              - `boundaries/no-platform-api` — `server/internal/owned-namespaces.ts`, `server/internal/reclaim-namespace.ts` (debt)
+              - `boot:closure-digestable` — `server/index.ts` (debt)
         - **`spare-pool`** — Spare worktree pool: the worktree.spare-refill job (enqueued after every launch's checkout, at main's boot, and daily) keeps one locked, detached checkout of main ready under .claude/worktrees/spare-*, so setupWorktree claims it with a rename and a branch switch instead of a cold git worktree add.
           - Server:
             - Uses:
@@ -36400,7 +36413,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/digest.ts` (sanctioned)
       - Server:
-        - Exports (values): `sourceDigest`
+        - Exports (types): `ComputedLoads`
+        - Exports (values):
+          - `computedLoads`
+          - `sourceDigest`
       - Core:
         - Exports (types): `SourceSet`
         - Exports (values):
@@ -39662,6 +39678,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/codegen`
           - `plugin-meta/plugin-view/dependencies`
           - `plugin-meta/plugin-view/inclusion`
+      - Exemptions:
+        - Exempts itself from: `boot:closure-digestable` — `server/index.ts` (debt)
     - **`contributions-table`** — Registry for the Studio Contributions aggregated-table surface: FacetTable + RowActivation slots and factories.
       - Web:
         - Slots:
@@ -40746,7 +40764,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/codegen`
           - `plugin-meta/composition`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/fs-snapshot.ts`, `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `core/internal/fs-snapshot.ts`, `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
+          - `boot:closure-digestable` — `server/index.ts` (debt)
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections.
       - Web:
         - Slots:

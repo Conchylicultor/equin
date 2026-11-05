@@ -3,11 +3,7 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "boundaries/no-platform-api",
-    paths: [
-      "server/internal/fetch-to-disk.ts",
-      "server/internal/run-prewarm.ts",
-      "server/internal/seed-cache.ts",
-    ],
+    paths: ["server/internal/seed-cache.ts"],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason:

@@ -15,4 +15,12 @@ export default [
     reason:
       "The substrate: defines the old live-resource spellings, or is compiled onto them (the live API, the optimistic overlay, the runtime and its server / central facades).",
   },
+  {
+    rule: "boot:closure-digestable",
+    paths: ["bin/index.ts"],
+    kind: "debt",
+    task: "task-1793843058-8yr0wg",
+    reason:
+      "The bin picks its registry (bin/plugins-active.ts) and warms core barrels (bin/active-runtime.ts coreBarrel) by computed import paths, so the closure measured from the bin stops at the registry.",
+  },
 ] satisfies Exemptions;

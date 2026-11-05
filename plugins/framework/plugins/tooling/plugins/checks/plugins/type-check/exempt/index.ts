@@ -41,4 +41,12 @@ export default [
     reason:
       "Per-file synchronous work on the shared check thread (a blocking fs/process call made per item, or a direct maskSource / createSourceFile) that predates the rule; move it onto ctx.repo() / fs/promises and checks/core's maskedSource / parsedTsSource.",
   },
+  {
+    rule: "boot:closure-digestable",
+    paths: ["server/index.ts"],
+    kind: "debt",
+    task: "task-1793843085-tgrdel",
+    reason:
+      "spawnTypeCheckWorker lazily reaches checks/core (shared/repo-view), whose check registry, codegen and lint load modules by computed paths.",
+  },
 ] satisfies Exemptions;

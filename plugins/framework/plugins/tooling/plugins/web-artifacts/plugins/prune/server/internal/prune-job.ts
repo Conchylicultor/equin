@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { pruneWebArtifactCaches } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 
@@ -8,8 +9,6 @@ const pruneLog = defineLogSink({
   description:
     "Web-artifact cache prune log: one line per hourly run — what it read, how long it held the store lock, what it removed.",
 });
-
-const s = (ms: number): string => `${(ms / 1000).toFixed(2)}s`;
 
 /**
  * Keeps the shared web caches bounded without any build paying for it. The
@@ -23,6 +22,11 @@ const s = (ms: number): string => `${(ms / 1000).toFixed(2)}s`;
  * backends pruning would only queue on the store lock). In a supervised child,
  * so the synchronous scan never blocks a backend's event loop and no job slot
  * is held. `runAttempts: 1`: the next tick is the retry.
+ *
+ * The child is the `web-artifacts-prune` command (`../../cli`), not a `run`
+ * body: a `run` body is imported by the backend that schedules it, and this
+ * one would carry the web-artifact builder's barrel into the serving
+ * backend's closure (`boot:closure-digestable`).
  */
 export const webArtifactsPruneJob = defineSupervisedJob({
   name: "web-artifacts.prune",
@@ -32,11 +36,8 @@ export const webArtifactsPruneJob = defineSupervisedJob({
   channel: pruneLog,
   schedule: { cron: "17 * * * *" },
   runAttempts: 1,
-  async run(_input, { log }) {
-    const r = await pruneWebArtifactCaches();
-    log(
-      `survey ${s(r.surveyMs)} (${r.dists} dists, ${r.distsLinksRead} read off their links, ${r.distTargets} linked entries, ${r.surveyedEntries} unlinked entries stat'd); ` +
-        `lock wait ${s(r.lockWaitMs)}; locked ${s(r.lockedMs)} (${r.distsReread} dists re-read, ${r.removed} removed)`,
-    );
-  },
+  argv: () => ({
+    argv: [`./${CLI_NAME}`, "web-artifacts-prune"],
+    cwd: REPO_ROOT,
+  }),
 });

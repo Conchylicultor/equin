@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { pruneCheckCache } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 
@@ -18,6 +19,11 @@ const pruneLog = defineLogSink({
  * Hourly, main only (a schedule's default: the cache is host-global). In a
  * supervised child, so the synchronous sweep never blocks a backend's event
  * loop and no job slot is held. `runAttempts: 1`: the next tick is the retry.
+ *
+ * The child is the `check-cache-prune` command (`../../cli`), not a `run`
+ * body: a `run` body is imported by the backend that schedules it, and this
+ * one would carry the check runner's barrel — the whole check registry — into
+ * the serving backend's closure (`boot:closure-digestable`).
  */
 export const checkCachePruneJob = defineSupervisedJob({
   name: "checks.cache-prune",
@@ -27,11 +33,8 @@ export const checkCachePruneJob = defineSupervisedJob({
   channel: pruneLog,
   schedule: { cron: "47 * * * *" },
   runAttempts: 1,
-  async run(_input, { log }) {
-    const t0 = performance.now();
-    const r = pruneCheckCache();
-    log(
-      `${r.entries} entries, ${r.flightFiles} flight files; ${r.removed} entries removed in ${((performance.now() - t0) / 1000).toFixed(2)}s`,
-    );
-  },
+  argv: () => ({
+    argv: [`./${CLI_NAME}`, "check-cache-prune"],
+    cwd: REPO_ROOT,
+  }),
 });

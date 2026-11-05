@@ -94,17 +94,17 @@ export function resolvePlaywright(root: string): ResolvedPlaywright {
 }
 
 /**
- * The one-line child that records the executables. It asks Playwright's own
- * registry — with `PLAYWRIGHT_BROWSERS_PATH` set to the install's dir — for the
- * headed and headless-shell executables, and writes what it answers. A child,
- * not this process: the registry fixes its browsers path when it is first
- * loaded, and this process may already have loaded it with another one.
+ * The child that records the executables (`scripts/record-executables.ts`,
+ * run by path). It asks Playwright's own registry — with
+ * `PLAYWRIGHT_BROWSERS_PATH` set to the install's dir — for the headed and
+ * headless-shell executables, and writes what it answers. A child, not this
+ * process: the registry fixes its browsers path when it is first loaded, and
+ * this process may already have loaded it with another one.
  */
-const RECORD_EXECUTABLES =
-  `const [, b, out, v] = process.argv; const r = require(b).registry.registry; ` +
-  `require("node:fs").writeFileSync(out, JSON.stringify({ playwrightCore: v, ` +
-  `headed: r.findExecutable("chromium").executablePath(), ` +
-  `headlessShell: r.findExecutable("chromium-headless-shell").executablePath() }));`;
+const RECORD_EXECUTABLES = resolve(
+  import.meta.dir,
+  "../../scripts/record-executables.ts",
+);
 
 /**
  * The installer kind for a browser build Playwright pins.
@@ -155,7 +155,6 @@ export function playwrightBrowser(opts: {
       await ctx.run(
         [
           process.execPath,
-          "-e",
           RECORD_EXECUTABLES,
           pw.coreBundle,
           join(ctx.dir, BROWSER_EXECUTABLES_FILE),

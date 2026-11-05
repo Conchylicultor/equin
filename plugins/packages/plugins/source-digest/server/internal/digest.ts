@@ -157,23 +157,57 @@ function assertEveryImportSeen(
   text: string,
   imports: readonly { kind: string }[],
 ): void {
+  const unseen = unseenLoads(transpiler, text, imports);
+  for (const kind of ["import", "require"] as const) {
+    if (unseen[kind] > 0) {
+      throw new Error(
+        `[source-digest] ${file} has ${unseen[kind]} \`${kind}(…)\` whose path is not a literal — the digest cannot follow it, so it cannot vouch for the code it loads`,
+      );
+    }
+  }
+}
+
+/** How many `import(…)` / `require(…)` calls of `text` the scan did not report. */
+function unseenLoads(
+  transpiler: Bun.Transpiler,
+  text: string,
+  imports: readonly { kind: string }[],
+): ComputedLoads {
   // Most files hold no such call at all: no need to transpile them twice.
-  if (!HAS_DYNAMIC_LOAD.test(text)) return;
+  if (!HAS_DYNAMIC_LOAD.test(text)) return { import: 0, require: 0 };
   const calls = { import: 0, require: 0 };
   for (const m of transpiler.transformSync(text).matchAll(DYNAMIC_LOAD)) {
     calls[m[1] as "import" | "require"]++;
   }
-  const seen = {
-    import: imports.filter((i) => i.kind === "dynamic-import").length,
-    require: imports.filter((i) => i.kind === "require-call").length,
+  return {
+    import: Math.max(
+      0,
+      calls.import - imports.filter((i) => i.kind === "dynamic-import").length,
+    ),
+    require: Math.max(
+      0,
+      calls.require - imports.filter((i) => i.kind === "require-call").length,
+    ),
   };
-  for (const kind of ["import", "require"] as const) {
-    if (calls[kind] > seen[kind]) {
-      throw new Error(
-        `[source-digest] ${file} has ${calls[kind] - seen[kind]} \`${kind}(…)\` whose path is not a literal — the digest cannot follow it, so it cannot vouch for the code it loads`,
-      );
-    }
-  }
+}
+
+/** A module's loads the digest cannot follow, by kind. */
+export interface ComputedLoads {
+  import: number;
+  require: number;
+}
+
+/**
+ * The loads of the module at `path` (source `text`) whose path is not a
+ * literal — exactly what makes {@link sourceDigest} refuse a closure holding
+ * it. For a guard that keeps a closure digestable (`boot:closure-digestable`):
+ * the same reading as the digest's, so the guard and the digest cannot
+ * disagree on what counts.
+ */
+export function computedLoads(path: string, text: string): ComputedLoads {
+  if (!CODE_FILE.test(path)) return { import: 0, require: 0 };
+  const transpiler = transpilerFor(path);
+  return unseenLoads(transpiler, text, transpiler.scanImports(text));
 }
 
 /** The deepest directory every path is under. */

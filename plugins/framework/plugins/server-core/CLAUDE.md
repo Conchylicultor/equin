@@ -622,6 +622,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
   - Exempts itself from:
     - `detached-work-safety/no-raw-set-interval` — `bin/index.ts` (sanctioned)
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
+    - `boot:closure-digestable` — `bin/index.ts` (debt)
 - Cli:
   - Exports (values): `runExec`
 - Test helpers:
