@@ -125,18 +125,27 @@ afterAll(async () => {
 describe("an unrouted table keeps the PK-only feed", () => {
   test("its trigger DDL is byte-identical to the PK-only feed's", () => {
     expect(compileTableTriggerDdl("rt_plain", "id")).toEqual([
-      `DROP TRIGGER IF EXISTS "live_state_rt_plain_i" ON "rt_plain"`,
-      `DROP TRIGGER IF EXISTS "live_state_rt_plain_u" ON "rt_plain"`,
-      `DROP TRIGGER IF EXISTS "live_state_rt_plain_d" ON "rt_plain"`,
-      `CREATE TRIGGER "live_state_rt_plain_i" AFTER INSERT ON "rt_plain"
+      {
+        name: "live_state_rt_plain_i",
+        table: "rt_plain",
+        ddl: `CREATE OR REPLACE TRIGGER "live_state_rt_plain_i" AFTER INSERT ON "rt_plain"
            REFERENCING NEW TABLE AS new_rows
            FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify('id')`,
-      `CREATE TRIGGER "live_state_rt_plain_u" AFTER UPDATE ON "rt_plain"
+      },
+      {
+        name: "live_state_rt_plain_u",
+        table: "rt_plain",
+        ddl: `CREATE OR REPLACE TRIGGER "live_state_rt_plain_u" AFTER UPDATE ON "rt_plain"
            REFERENCING NEW TABLE AS new_rows
            FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify('id')`,
-      `CREATE TRIGGER "live_state_rt_plain_d" AFTER DELETE ON "rt_plain"
+      },
+      {
+        name: "live_state_rt_plain_d",
+        table: "rt_plain",
+        ddl: `CREATE OR REPLACE TRIGGER "live_state_rt_plain_d" AFTER DELETE ON "rt_plain"
            REFERENCING OLD TABLE AS old_rows
            FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify('id')`,
+      },
     ]);
   });
 

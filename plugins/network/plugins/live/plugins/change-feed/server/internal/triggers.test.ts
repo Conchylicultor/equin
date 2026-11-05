@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { sql } from "drizzle-orm";
 import { Client } from "pg";
+import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
 import { ensureChangelogTable, rebuildTriggers } from "./triggers";
 import { assertNoOtherDeferredTriggers } from "./txn-end";
 import {
@@ -8,24 +9,18 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 
-// Real-DB trigger-rebuild suite, pinning the SKIP-WHAT-IS-UNCHANGED fast-path
-// (per table: a change rebuilds only the tables it changed) AND the
-// single-relation rebuild contract.
+// Real-DB trigger-install suite. The feed's triggers are one `db-triggers` set
+// installed one table per transaction, so it pins: (1) a steady-state install
+// re-runs NOTHING (no table lock at all); (2) a change re-runs exactly the
+// tables it changed; (3) each table commits on its own — the property that
+// makes a lock cycle with the previous backend's writers impossible during a
+// hot swap (build-1784288281433-w62dep died of one); (4) the former
+// installer's triggers are adopted, not re-created.
 //
-// On a hot-swap restart the previous backend is still reading these tables, so a
-// rebuild that held AccessExclusive locks on many tables in ONE transaction could
-// deadlock and take boot down with it — build build-1784288281433-w62dep died
-// exactly that way. Two properties now keep that from recurring, both load-bearing
-// and under test here: (1) the rebuild is SKIPPED entirely when the live trigger
-// layer already IS the desired one (no locks at all), and (2) when a rebuild does
-// run, it is split into ONE transaction per table, so no transaction ever holds
-// more than a single relation's lock and a deadlock cycle is impossible by
-// construction.
-//
-// The witness for skip-vs-rebuild is TRIGGER OID IDENTITY: a rebuild is
-// DROP+CREATE, which necessarily mints a new pg_trigger row (new oid). Unchanged
-// oids across two calls therefore prove no DROP+CREATE ran — the actual property,
-// observed directly rather than through a spy or a log line.
+// The witness for re-run vs skip is the trigger row's VERSION (oid + xmin):
+// `CREATE OR REPLACE TRIGGER` rewrites the pg_trigger row (new xmin), a
+// re-create mints a new oid, and a COMMENT (an adoption's restamp) touches
+// neither — observed directly rather than through a spy or a log line.
 //
 // Requires a running Postgres cluster (started by ./equin build). If the
 // cluster is unreachable, createTestDb() throws loudly rather than skipping.
@@ -40,11 +35,11 @@ const NO_EXCLUSIONS = {
   produced: new Set<string>(),
 };
 
-// The feed's own trigger rows, keyed name → oid, for the tables this suite makes
-// (the changelog's end marker is the shared layer's — see `markerOid`).
+// The feed's own trigger rows, keyed name → version, for the tables this suite
+// makes (the changelog's end marker is not the set's — see `markerOid`).
 async function triggerOids(): Promise<Map<string, string>> {
-  const res = await testDb.db.execute<{ tgname: string; oid: string }>(
-    sql`SELECT t.tgname, t.oid::text AS oid
+  const res = await testDb.db.execute<{ tgname: string; version: string }>(
+    sql`SELECT t.tgname, t.oid::text || ':' || t.xmin::text AS version
         FROM pg_trigger t
         JOIN pg_class c ON c.oid = t.tgrelid
         JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -54,7 +49,18 @@ async function triggerOids(): Promise<Map<string, string>> {
           AND c.relname <> 'live_state_changelog'
         ORDER BY t.tgname`,
   );
-  return new Map(res.rows.map((r) => [r.tgname, r.oid]));
+  return new Map(res.rows.map((r) => [r.tgname, r.version]));
+}
+
+// One trigger's COMMENT (its installer's stamp), or null.
+async function stampOf(table: string, name: string): Promise<string | null> {
+  const res = await testDb.db.execute<{ comment: string | null }>(
+    sql.raw(
+      `SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger
+        WHERE tgrelid = '${table}'::regclass AND tgname = '${name}'`,
+    ),
+  );
+  return res.rows[0]?.comment ?? null;
 }
 
 // The end-of-transaction marker's trigger row on the changelog, or undefined.
@@ -86,7 +92,7 @@ afterAll(async () => {
 });
 
 describe("rebuildTriggers", () => {
-  test("installs the feed on a public table", async () => {
+  test("installs the feed on a public table, stamped as the change-feed set", async () => {
     await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
 
     const oids = await triggerOids();
@@ -95,35 +101,52 @@ describe("rebuildTriggers", () => {
       "live_state_widgets_i",
       "live_state_widgets_u",
     ]);
+    expect(await stampOf("widgets", "live_state_widgets_i")).toStartWith(
+      "db-triggers:change-feed:",
+    );
   });
 
-  test("skips an unchanged rebuild — same trigger oids, no DROP+CREATE", async () => {
+  test("re-runs nothing when unchanged — same trigger rows", async () => {
     const before = await triggerOids();
     await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
-    const after = await triggerOids();
-
-    // Identical oids ⇒ the rows were never dropped and recreated ⇒ the rebuild
-    // (and its per-table lock windows) was skipped.
-    expect(after).toEqual(before);
+    expect(await triggerOids()).toEqual(before);
   });
 
-  test("rebuilds when a trigger was dropped out of band — the signature alone is not trusted", async () => {
+  test("re-creates a trigger dropped out of band", async () => {
     const before = await triggerOids();
     await testDb.db.execute(sql`DROP TRIGGER live_state_widgets_u ON widgets`);
-
-    // The stored signature still matches (nothing about the desired layer changed),
-    // so only the physical-presence guard can catch this.
     await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
 
     const after = await triggerOids();
     expect([...after.keys()]).toEqual([...before.keys()]);
-    // Fresh oids: a real rebuild ran rather than a false skip.
-    expect(after.get("live_state_widgets_i")).not.toBe(
-      before.get("live_state_widgets_i"),
+    expect(after.get("live_state_widgets_u")).not.toBe(
+      before.get("live_state_widgets_u"),
+    );
+    // Its siblings were current: untouched.
+    expect(after.get("live_state_widgets_i")).toBe(
+      before.get("live_state_widgets_i")!,
     );
   });
 
-  test("a new table installs its own feed and rebuilds no other table", async () => {
+  test("re-runs a trigger replaced out of band — its stamp kept, its definition not", async () => {
+    await testDb.db.execute(
+      sql`CREATE OR REPLACE TRIGGER live_state_widgets_i AFTER INSERT ON widgets
+          REFERENCING NEW TABLE AS new_rows
+          FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify('')`,
+    );
+    const replaced = await triggerOids();
+    await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
+    expect((await triggerOids()).get("live_state_widgets_i")).not.toBe(
+      replaced.get("live_state_widgets_i"),
+    );
+    const args = await testDb.db.execute<{ args: string }>(
+      sql`SELECT encode(tgargs, 'escape') AS args FROM pg_trigger
+          WHERE tgrelid = 'widgets'::regclass AND tgname = 'live_state_widgets_i'`,
+    );
+    expect(args.rows[0]!.args).toBe("id\\000");
+  });
+
+  test("a new table installs its own feed and re-runs no other table", async () => {
     const before = await triggerOids();
     await testDb.db.execute(sql`CREATE TABLE gadgets (id text PRIMARY KEY)`);
 
@@ -138,7 +161,6 @@ describe("rebuildTriggers", () => {
       "live_state_widgets_i",
       "live_state_widgets_u",
     ]);
-    // widgets' compiled DDL did not change: its triggers were not touched.
     for (const op of ["i", "u", "d"]) {
       expect(after.get(`live_state_widgets_${op}`)).toBe(
         before.get(`live_state_widgets_${op}`)!,
@@ -146,21 +168,28 @@ describe("rebuildTriggers", () => {
     }
   });
 
-  test("skips again once the new table's feed is installed", async () => {
-    const before = await triggerOids();
-    await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
-    expect(await triggerOids()).toEqual(before);
-  });
-
-  test("a route changing one table's layout rebuilds that table alone", async () => {
+  test("a route changing one table's layout replaces that table's triggers in place, alone", async () => {
     const before = await triggerOids();
     await rebuildTriggers(testDb.db, NO_EXCLUSIONS, [
       { table: "gadgets", carry: [], reads: [] },
     ]);
     const after = await triggerOids();
+    // Replaced in place — the UPDATE trigger's REFERENCING clause gains OLD
+    // TABLE — so the same oid, a new row version.
+    const [oidBefore] = before.get("live_state_gadgets_u")!.split(":");
+    const [oidAfter] = after.get("live_state_gadgets_u")!.split(":");
+    expect(oidAfter).toBe(oidBefore!);
     expect(after.get("live_state_gadgets_u")).not.toBe(
       before.get("live_state_gadgets_u"),
     );
+    const def = await testDb.db.execute<{ def: string }>(
+      sql`SELECT pg_get_triggerdef(oid) AS def FROM pg_trigger
+          WHERE tgrelid = 'gadgets'::regclass AND tgname = 'live_state_gadgets_u'`,
+    );
+    expect(def.rows[0]!.def).toContain(
+      "REFERENCING OLD TABLE AS old_rows NEW TABLE AS new_rows",
+    );
+    expect(def.rows[0]!.def).toContain("live_state_notify_routed(");
     for (const op of ["i", "u", "d"]) {
       expect(after.get(`live_state_widgets_${op}`)).toBe(
         before.get(`live_state_widgets_${op}`)!,
@@ -177,41 +206,150 @@ describe("rebuildTriggers", () => {
     );
   });
 
-  test("a dropped table's signature is forgotten, and nothing else rebuilds", async () => {
+  test("drops the feed of a table now excluded, and nothing else", async () => {
+    const before = await triggerOids();
+    await rebuildTriggers(
+      testDb.db,
+      { ...NO_EXCLUSIONS, optedOut: new Set(["gadgets"]) },
+      [],
+    );
+    expect(await triggerOids()).toEqual(
+      new Map([...before].filter(([name]) => name.includes("widgets"))),
+    );
+    await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
+    expect([...(await triggerOids()).keys()]).toEqual([...before.keys()]);
+  });
+
+  test("commits each table on its own: one table's writer never holds back another's install", async () => {
+    // Both tables' triggers are stale; a writer holds ROW EXCLUSIVE on
+    // widgets (the later of the two in the fixed order). gadgets' replacement
+    // must commit — visible from another session — while the install still
+    // waits on widgets.
+    await testDb.db.execute(
+      sql`COMMENT ON TRIGGER live_state_gadgets_i ON gadgets IS NULL`,
+    );
+    await testDb.db.execute(
+      sql`COMMENT ON TRIGGER live_state_widgets_i ON widgets IS NULL`,
+    );
+    const before = await triggerOids();
+    // The suite's `db` is one connection, busy with the install while it
+    // waits: watch from a session of our own.
+    const writer = new Client({ connectionString: testDb.connectionString });
+    const observer = new Client({ connectionString: testDb.connectionString });
+    await writer.connect();
+    await observer.connect();
+    const gadgetsVersion = async () =>
+      (
+        await observer.query<{ version: string }>(
+          `SELECT oid::text || ':' || xmin::text AS version FROM pg_trigger
+            WHERE tgrelid = 'gadgets'::regclass AND tgname = 'live_state_gadgets_i'`,
+        )
+      ).rows[0]?.version;
+    try {
+      await writer.query("BEGIN");
+      await writer.query("INSERT INTO widgets VALUES ('w-held', 'x')");
+      const install = rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
+      const deadline = Date.now() + 10_000;
+      let gadgets = before.get("live_state_gadgets_i");
+      while (
+        gadgets === before.get("live_state_gadgets_i") &&
+        Date.now() < deadline
+      ) {
+        await new Promise((r) => setTimeout(r, 50));
+        gadgets = await gadgetsVersion();
+      }
+      expect(gadgets).not.toBe(before.get("live_state_gadgets_i"));
+      const widgets = await observer.query<{ version: string }>(
+        `SELECT oid::text || ':' || xmin::text AS version FROM pg_trigger
+          WHERE tgrelid = 'widgets'::regclass AND tgname = 'live_state_widgets_i'`,
+      );
+      expect(widgets.rows[0]?.version).toBe(
+        before.get("live_state_widgets_i")!,
+      );
+      await writer.query("ROLLBACK");
+      await install;
+    } finally {
+      await writer.end();
+      await observer.end();
+    }
+    expect((await triggerOids()).get("live_state_widgets_i")).not.toBe(
+      before.get("live_state_widgets_i"),
+    );
+  }, 30_000);
+
+  test("a dropped table's feed goes with it, and nothing else re-runs", async () => {
     const before = await triggerOids();
     await testDb.db.execute(sql`DROP TABLE gadgets`);
     await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
     expect(await triggerOids()).toEqual(
       new Map([...before].filter(([name]) => name.includes("widgets"))),
     );
-    const rows = await testDb.db.execute<{ relname: string }>(
-      sql`SELECT relname FROM live_state_trigger_state ORDER BY relname`,
+  });
+});
+
+// What the feed's former installer ran for widgets (PK `id`, no layout), and
+// the signature it kept for it in `live_state_trigger_state`.
+const FORMER_WIDGETS_DDL = [
+  `DROP TRIGGER IF EXISTS "live_state_widgets_i" ON "widgets"`,
+  `DROP TRIGGER IF EXISTS "live_state_widgets_u" ON "widgets"`,
+  `DROP TRIGGER IF EXISTS "live_state_widgets_d" ON "widgets"`,
+  `CREATE TRIGGER "live_state_widgets_i" AFTER INSERT ON "widgets"
+           REFERENCING NEW TABLE AS new_rows
+           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify('id')`,
+  `CREATE TRIGGER "live_state_widgets_u" AFTER UPDATE ON "widgets"
+           REFERENCING NEW TABLE AS new_rows
+           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify('id')`,
+  `CREATE TRIGGER "live_state_widgets_d" AFTER DELETE ON "widgets"
+           REFERENCING OLD TABLE AS old_rows
+           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify('id')`,
+];
+
+async function formerInstall(signature: string): Promise<void> {
+  for (const stmt of FORMER_WIDGETS_DDL) await testDb.db.execute(sql.raw(stmt));
+  await testDb.db.execute(
+    sql`CREATE TABLE IF NOT EXISTS live_state_trigger_state (relname text PRIMARY KEY, signature text NOT NULL)`,
+  );
+  await testDb.db.execute(
+    sql`INSERT INTO live_state_trigger_state VALUES ('widgets', ${signature})
+        ON CONFLICT (relname) DO UPDATE SET signature = EXCLUDED.signature`,
+  );
+}
+
+async function stateTableExists(): Promise<boolean> {
+  const res = await testDb.db.execute<{ t: string | null }>(
+    sql`SELECT to_regclass('public.live_state_trigger_state')::text AS t`,
+  );
+  return res.rows[0]!.t !== null;
+}
+
+describe("the former installer's triggers", () => {
+  test("are adopted (restamped, never re-created) when its signature matches, and its state table dropped", async () => {
+    await formerInstall(sha256Hex(FORMER_WIDGETS_DDL.join("\n")));
+    const before = await triggerOids();
+    expect(await stampOf("widgets", "live_state_widgets_i")).toBeNull();
+
+    await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
+
+    expect(await triggerOids()).toEqual(before);
+    expect(await stampOf("widgets", "live_state_widgets_i")).toStartWith(
+      "db-triggers:change-feed:",
     );
-    // The shared layer's row ('') and widgets'.
-    expect(rows.rows.map((r) => r.relname)).toEqual(["", "widgets"]);
+    expect(await stateTableExists()).toBe(false);
   });
 
-  test("the first, one-row state table is replaced — one rebuild of every table, then skips", async () => {
-    await testDb.db.execute(sql`DROP TABLE live_state_trigger_state`);
-    await testDb.db.execute(
-      sql`CREATE TABLE live_state_trigger_state (id boolean PRIMARY KEY DEFAULT true CHECK (id), signature text NOT NULL)`,
-    );
-    await testDb.db.execute(
-      sql`INSERT INTO live_state_trigger_state (signature) VALUES ('old')`,
-    );
+  test("are re-run when its signature does not match", async () => {
+    await formerInstall("not-this-ddl");
     const before = await triggerOids();
     await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
-    const after = await triggerOids();
-    expect(after.get("live_state_widgets_i")).not.toBe(
+    expect((await triggerOids()).get("live_state_widgets_i")).not.toBe(
       before.get("live_state_widgets_i"),
     );
-    await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
-    expect(await triggerOids()).toEqual(after);
+    expect(await stateTableExists()).toBe(false);
   });
 });
 
 describe("the end-of-transaction marker", () => {
-  test("is installed with the shared layer: deferred, and kept by a skipped rebuild", async () => {
+  test("is installed by the prelude: deferred, and kept by a later install", async () => {
     await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
     const marker = await markerOid();
     expect(marker).toMatchObject({ deferrable: true, deferred: true });
@@ -219,7 +357,7 @@ describe("the end-of-transaction marker", () => {
     expect((await markerOid())?.oid).toBe(marker!.oid);
   });
 
-  test("is re-created when dropped out of band — and no table rebuilds for it", async () => {
+  test("is re-created when dropped out of band — and no table re-runs for it", async () => {
     const before = await triggerOids();
     await testDb.db.execute(
       sql`DROP TRIGGER live_state_txn_end ON live_state_changelog`,

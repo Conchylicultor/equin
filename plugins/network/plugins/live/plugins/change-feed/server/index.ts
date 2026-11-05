@@ -15,7 +15,9 @@ import {
   feedExemptTables,
   rollupSources,
 } from "@plugins/database/plugins/derived-tables/server";
+import { DbTriggerClaim } from "@plugins/database/plugins/db-triggers/server";
 import { excludedTableNames } from "./internal/exclusion";
+import { CHANGE_FEED_TRIGGER_SET } from "./internal/triggers";
 import { installFeed } from "./internal/install-feed";
 import {
   dropPendingProducerChanges,
@@ -87,6 +89,17 @@ export type {
 export default {
   description:
     "L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible. A table written only by this backend at high rate may instead declare an in-process change producer (defineChangeProducer): no trigger, its `mutate` owns the write and routes the returned ids, coalesced at the source and volatile.",
+  // The feed's trigger set is installed by its own `installDbTriggers` call
+  // (in `onReadyBlocking`, one transaction per table), never by the boot schema
+  // layer: it is derived from the booted resource registry, which the layer's
+  // dry run cannot build. The claim keeps the layer's sweep from dropping it.
+  contributions: [
+    DbTriggerClaim({
+      id: CHANGE_FEED_TRIGGER_SET,
+      reason:
+        "derived from the booted resource registry (exclusions, routed layouts) and installed one table per transaction in change-feed's onReadyBlocking",
+    }),
+  ],
   // Triggers are deterministic, data-less DDL rebuilt from the live schema on
   // every boot (like derived-views), NOT a migration. This runs in the blocking
   // barrier so the feed's triggers exist before any traffic — and the listener

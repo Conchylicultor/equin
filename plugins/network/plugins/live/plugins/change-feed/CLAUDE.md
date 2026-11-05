@@ -46,113 +46,64 @@ bases this plugin sets in `onReadyBlocking`). The G0 spike that pins the
 Postgres behaviours the feed leans on, on PGlite, is
 `database/plugins/pglite/server/internal/notifications.test.ts`.
 
-## The trigger rebuild: fingerprint fast-path, then single-relation transactions
+## The trigger install: one `db-triggers` set, one transaction per table
 
-`rebuildTriggers` (`internal/triggers.ts`) installs the feed by `DROP+CREATE
-TRIGGER`ing every non-excluded public table. Boot is the worst possible moment to
-hold table locks:
+`rebuildTriggers` (`internal/triggers.ts`) installs the feed on every
+non-excluded public table. The previous backend is still serving reads and
+writes of those tables during a hot swap. Its blocking hook starts after the
+database plugin's: blocking hooks are sequenced by `dependsOn`, so the schema
+layer (migrations → the one `db-triggers` call → rollup reconcile → view
+rebuild) has already committed.
 
-- the **previous backend is still serving reads** of those same tables (the
-  hot-swap is ready-gated — it does not stop until the new backend is ready,
-  holding `AccessShare` locks throughout), and
-- this hook runs alongside the database plugin's own `onReadyBlocking` (migrations
-  → rollup reconcile → view rebuild): `onReadyBlocking` hooks run under a flat
-  `Promise.all` with no topo order.
+- **Prelude, its own transaction, every boot:**
+  - `ensureChangelogTable`;
+  - `CREATE OR REPLACE` of the end marker's function;
+  - its deferred trigger, created only when the catalog says it is missing or
+    different.
 
-### Fast-path: skip what is unchanged, per object
+  Nothing in the prelude takes a user-table lock. It touches the changelog
+  only for a piece the catalog says is missing: every trigger INSERTs into
+  the changelog, and `ALTER … ADD COLUMN IF NOT EXISTS` or `CREATE INDEX IF
+  NOT EXISTS` lock it even with nothing to do.
+- **The `change-feed` trigger set**: both notify functions plus three
+  `CREATE OR REPLACE TRIGGER`s per table (`compileTableTriggerDdl`), handed to
+  `installDbTriggers(db, [set], { commit: "per-table" })`. The installer's
+  protocol (`database/db-triggers` CLAUDE.md) gives the feed:
+  - **Per-object stamps.** A steady-state boot re-runs nothing and takes ZERO
+    table locks. A new table, a dropped exclusion or a route's changed layout
+    re-runs exactly the tables whose triggers change. A trigger dropped,
+    disabled or replaced out of band is re-run.
+  - **Replace in place.** A changed layout (REFERENCING clause included) is
+    SHARE ROW EXCLUSIVE, never a DROP's ACCESS EXCLUSIVE, so the old backend's
+    readers never wait on it.
+  - **Ownership by function.** A `live_state_*` trigger left on a table now
+    excluded (opt-out, rollup, produced) calls a feed function and is dropped.
+  - **Asserted after.** Boot never proceeds on a half-installed feed.
+- **One transaction per table.** The old design DROP+CREATEd every table in
+  ONE transaction: it held exclusive locks on an alphabetical prefix while
+  asking for more, and the old backend's reads closed a cycle
+  (build-1784288281433-w62dep, `attempts` ⇄ `conversations`, 40P01). A
+  transaction that only ever locks one relation cannot be a node in a wait
+  cycle, so the deadlock is impossible, not retried. This is also why the feed
+  is NOT in the schema layer's one-transaction call, beside the set being
+  derived from the booted resource registry, which the layer's dry run cannot
+  build. The plugin contributes `DbTriggerClaim("change-feed")` so the
+  layer's sweep spares it. Decision:
+  `research/2026-11-05-global-change-feed-triggers-vs-db-triggers.md`.
+- **No object is ever half-built.** The notify functions commit first, so old
+  and new triggers both call the current function. A table's three triggers
+  are replaced together.
+- **Adopting the former installer** (compatibility). A table whose row in the
+  former `live_state_trigger_state` matches what that installer stamped for
+  today's layout is restamped (COMMENT only), not re-created. The state table
+  is then dropped, so an older build on a fork rebuilds instead of trusting
+  stale rows. Delete once no supported database predates the switch.
 
-Mirroring the fast-path in
-[`derived-views`](../../../../../database/plugins/derived-views/server/internal/rebuild.ts): the trigger layer
-is a pure function of (schema, denylist, routed layouts, emitted DDL), so its
-compiled DDL is fingerprinted into `live_state_trigger_state` — **one row per
-object**: a row per triggered table (the hash of its compiled statements) and one
-for the shared layer (the two notify functions and the changelog DDL, under the
-empty name). `planRebuild` compares each against the desired one and **rebuilds
-only what differs**. A steady-state restart — the overwhelming majority of boots,
-since any frontend-only commit leaves the trigger set untouched — takes **zero
-table locks**; a new table, a dropped exclusion or a route's changed layout locks
-exactly the tables whose triggers change. (The first design stored ONE
-whole-layer signature, so any one change rebuilt all ~200 tables, each taking an
-exclusive lock in turn during the hot swap — and routes change layouts far more
-often than the schema changes. A state table still in that one-row shape is
-replaced, which costs one rebuild of every table.)
-
-**A signature is never trusted alone.** `planRebuild` re-verifies from the catalog
-that both functions, the changelog and the end marker (its function and its
-deferred trigger) exist, that each table's three triggers are
-physically present, and that no `live_state_*` trigger lingers on an excluded
-table. Anything dropped out of band is rebuilt. (It reads only catalogs — no
-user-table locks, which is the whole point.)
-
-The signature rows live in the DB so a worktree fork carries them with its
-triggers (`CREATE DATABASE … TEMPLATE` copies both), so a fork skips the rebuild
-too rather than paying a spurious first-boot one.
-
-### The real rebuild: one transaction per relation (deadlock impossible)
-
-When a rebuild *is* needed, it is **never** one transaction over the whole schema.
-The old design `DROP+CREATE TRIGGER`d every table in **one** transaction, so
-mid-rebuild it held `AccessExclusive` locks on an alphabetically-ordered prefix of
-the database *while still asking for more* — textbook hold-and-wait. During the
-hot-swap the old backend's reads lock those same tables in the opposite order,
-closing a lock cycle; Postgres shot the rebuild transaction, the error escaped
-`onReadyBlocking`, and the deploy failed leaving the old code live (build
-`build-1784288281433-w62dep` died exactly this way: `attempts` ⇄ `conversations`,
-SQLSTATE `40P01`).
-
-The fix is structural: **the rebuild is split so no transaction ever holds more
-than one relation's exclusive lock.** A transaction that only ever locks one
-relation cannot be a node in a wait cycle — it acquires that one lock or blocks on
-exactly one holder (an old-backend reader, which is not itself waiting on us for a
-second relation). The wait-for graph is a forest by construction; **the deadlock
-is impossible, not retried** (there is no `lock_timeout`, no retry loop). A
-per-table tx can still *block* briefly on a live reader's `AccessShare` lock, but
-the old backend's reads are short (ms), so this is a wait, not a hang.
-
-The tables it must skip beyond its own plumbing — derived-table rollups and
-`ExcludeFromChangeFeed` opt-outs — are contribution sets, so `rebuildTriggers(db,
-exclusions)` takes them as an argument (`TriggerExclusions`): the boot hook reads
-them (contributions are collected by then), and a suite on a throwaway database
-passes its own (`getContributions` throws in a process that never booted).
-
-The rebuild runs in two phases, each step its own `db.transaction`:
-
-1. **Prelude tx** (only when the shared layer changed or lost an object) —
-   `ensureChangelogTable` + `CREATE OR REPLACE FUNCTION live_state_notify` /
-   `live_state_notify_routed` / `live_state_txn_end` + the end marker's trigger
-   on the changelog (only when missing or different) + the layer's signature. The functions must exist
-   and be committed before any trigger references them. None of it takes a
-   user-table lock, and `ensureChangelogTable` touches the changelog only for a
-   piece the catalog says is missing: every trigger on every table INSERTs into
-   the changelog, and `ALTER TABLE … ADD COLUMN IF NOT EXISTS` (ACCESS EXCLUSIVE)
-   or `CREATE INDEX IF NOT EXISTS` (SHARE) lock it even when there is nothing to
-   do — behind one open writing transaction, every writer in the database would
-   queue on that lock request.
-2. **Per-relation txs** — one transaction **per changed table**: its full
-   `DROP…IF EXISTS` + `CREATE` set for all three ops, plus the upsert of its own
-   signature row; for each stale (now-excluded) table still carrying
-   `live_state_*` triggers, just its drops and the deletion of its row. Each
-   touches exactly one table. Rows of tables that no longer exist are deleted
-   last (bookkeeping, no table lock).
-
-Three self-healing invariants make this safe:
-
-- **No object is ever half-built.** Each table's `DROP…IF EXISTS` + `CREATE` is in
-  one tx, so the table always has a *complete* trigger set — old or new, never
-  none. The notify functions are committed first, so old and new triggers both
-  call the current function. **No feed event is lost**: a write mid-rebuild fires
-  whichever trigger version is installed, and both emit a compatible NOTIFY
-  through the same committed function.
-- **A signature is exactly what is installed.** Each object's signature is
-  stamped IN the transaction that installs it, and is trusted only alongside the
-  catalog re-verify. A boot that dies anywhere leaves each object either rebuilt
-  and stamped, or untouched with its old stamp — the next boot rebuilds exactly
-  the rest, and a rolled-back deploy finds each table's stamp matching what is
-  really there.
-- **Partial state is "old-but-working," never "broken."** The only thing lost vs.
-  one-big-tx is "all tables flip in the same instant," which nothing consumes
-  (triggers are independent, all call the same function). Worst case is a loud
-  error on a concurrent write, self-healed next boot — never silent corruption.
+The tables it must skip beyond its own plumbing — derived-table rollups,
+`ExcludeFromChangeFeed` opt-outs, produced tables — are contribution sets, so
+`rebuildTriggers(db, exclusions, layouts)` takes them as an argument
+(`TriggerExclusions`). The boot hook reads them; a suite on a throwaway
+database passes its own.
 
 ## The routed trigger layout (P3)
 
@@ -192,12 +143,12 @@ after contributions are collected, both before this barrier) and handed to
   the readers, as before), while `unchanged` — column names, bounded by the
   gate whatever the row count — stays, so a bulk write of a column no route reads still
   reaches nothing. Only if the payload is still over the cap does it drop too.
-- The function is `live_state_notify_routed(pk, carry_json, gate_json)`, created
-  beside `live_state_notify()` in the prelude. **Every other table's trigger is
+- The function is `live_state_notify_routed(pk, carry_json, gate_json)`, in the
+  `change-feed` set beside `live_state_notify()`. **Every other table's trigger is
   byte-identical to the PK-only feed's** — DDL (`compileTableTriggerDdl` with no
   layout) and payload (`{t, op, ids, x, at}`), pinned by `routed-trigger.test.ts`.
   A routed table's layout rides its trigger arguments, so a changed layout changes
-  that table's compiled statements and signature: that table alone is rebuilt.
+  that table's DDL and stamp: that table alone is re-run (replaced in place).
 - **`live_state_changelog` gains `keys jsonb` and `unchanged text[]`** (created
   with the table, and ALTERed into an older one once — only when the catalog
   says they are missing), written by the routed function with the post-cap
@@ -381,12 +332,12 @@ been sent yet, and flashes the old value.
   channels share one queue, so the order holds across channels. It emits once
   per transaction (a transaction-local `live.txn_end` setting holds the xid):
   `pg_notify('live_state_end', {x, n})`, `n` the xid's changelog row count
-  (`live_state_changelog_xid_idx`). It is part of the shared layer: installed in
-  the prelude, fingerprinted with it, and re-verified by `planRebuild` (the
-  function exists; the trigger is on the changelog, calls it, is deferred and
-  enabled). The trigger is created only when the catalog says it is missing or
-  different — `CREATE TRIGGER` locks the changelog every writer INSERTs into.
-  `planRebuild`'s stale-trigger sweep skips it (the changelog is denylisted).
+  (`live_state_changelog_xid_idx`). It is NOT in the `change-feed` set (a
+  CONSTRAINT trigger cannot be replaced in place, and it calls no feed
+  function, so the set never owns it): the prelude `CREATE OR REPLACE`s its
+  function every boot and creates the trigger only when the catalog says it is
+  missing or different (on the changelog, calling it, deferred, enabled) —
+  `CREATE TRIGGER` locks the changelog every writer INSERTs into.
 - **The router.** A change carrying an xid is held under it; on the xid's end its
   changes move, in arrival order, to the ready queue, routed from one macrotask. A
   change with no xid routes on the next macrotask. The guarantee is exact: the
@@ -481,7 +432,9 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
 
 - Description: L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible. A table written only by this backend at high rate may instead declare an in-process change producer (defineChangeProducer): no trigger, its `mutate` owns the write and routes the returned ids, coalesced at the source and volatile.
 - Server:
-  - Contributes: `fork-data-exclusion` "live_state_changelog"
+  - Contributes:
+    - `db-trigger-claim` "change-feed"
+    - `fork-data-exclusion` "live_state_changelog"
   - Uses:
     - `database.DatabaseDriver`
     - `database.DatabaseDriverImpl`
@@ -489,6 +442,11 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `database.ListenSession`
     - `database.loadKnownRelations`
     - `database.snapshotWatermark`
+    - `database/db-triggers.DbTriggerClaim`
+    - `database/db-triggers.DbTriggerDdl`
+    - `database/db-triggers.DbTriggerSet`
+    - `database/db-triggers.defineDbTriggers`
+    - `database/db-triggers.installDbTriggers`
     - `database/derived-tables.feedExemptTables`
     - `database/derived-tables.rollupSources`
     - `primitives/log-channels.defineLogSink`

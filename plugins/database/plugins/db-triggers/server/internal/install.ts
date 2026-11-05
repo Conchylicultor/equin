@@ -1,3 +1,4 @@
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
@@ -35,9 +36,10 @@ import {
 // one of its functions. What it owns but no longer declares is dropped — a
 // trigger first (ACCESS EXCLUSIVE, for that one statement's table), then the
 // function. With `sweep: { schema }`, the caller declares EVERY set living in
-// that schema (the boot schema layer for `public`), and a set stamped there
-// that nobody declares any more — a removed rollup, a removed table's
-// `updatedAt` — is dropped whole.
+// that schema (the boot schema layer for `public`) — its own, plus the ids
+// another call installs (`installedElsewhere`, from `DbTriggerClaim`) — and a
+// set stamped there that nobody declares any more — a removed rollup, a
+// removed table's `updatedAt` — is dropped whole.
 //
 // LOCK ORDER (C12). A trigger change takes SHARE ROW EXCLUSIVE on its table (a
 // drop, ACCESS EXCLUSIVE) and, inside the boot schema layer, holds it until
@@ -48,6 +50,9 @@ import {
 // it, never both. A writer in another order can still close a cycle; Postgres
 // aborts one side, and when that is the installer it fails loudly naming the
 // table (a loud failure, never a hang). A current table takes no lock at all.
+// With `commit: "per-table"` (on the pool) each table is its own transaction
+// instead, so the install never holds two tables' locks and cannot be part of
+// a cycle at all — for a set over many tables (the change feed's).
 //
 // SERIALIZED. A stale set's work runs under a transaction-scoped advisory lock
 // per set (taken in id order) and is re-planned under them, so two installers
@@ -254,7 +259,7 @@ function touched(p: Plan): string[] {
 function plan(
   catalog: Catalog,
   sets: readonly DbTriggerSet[],
-  sweep: { readonly schema: string } | undefined,
+  sweep: Sweep | undefined,
 ): Plan {
   const functions: { set: DbTriggerSet; f: DbFunctionDdl }[] = [];
   const triggers: { set: DbTriggerSet; t: DbTriggerDdl }[] = [];
@@ -263,6 +268,12 @@ function plan(
   const dropFunctions: DropFunction[] = [];
 
   const declaredIds = new Set(sets.map((s) => s.id));
+  // A set stamped in the swept schema is removed only when nobody declares
+  // it: not this call, and not another call it is told about.
+  const swept = (id: string, schema: string): boolean =>
+    sweep !== undefined &&
+    schema === sweep.schema &&
+    !(sweep.installedElsewhere ?? []).includes(id);
   const declaredTriggers = new Set(
     sets.flatMap((s) => s.triggers.map(triggerKey)),
   );
@@ -306,9 +317,7 @@ function plan(
     const owner =
       (stamped !== null && declaredIds.has(stamped) ? stamped : null) ??
       fnOwner.get(r.fn) ??
-      (stamped !== null && sweep !== undefined && r.schema === sweep.schema
-        ? stamped
-        : null);
+      (stamped !== null && swept(stamped, r.schema) ? stamped : null);
     if (owner === null) continue;
     dropTriggers.push({
       owner,
@@ -322,10 +331,7 @@ function plan(
     if (declaredOids.has(f.oid)) continue;
     const stamped = stampOwner(f.comment);
     if (stamped === null) continue;
-    if (
-      declaredIds.has(stamped) ||
-      (sweep !== undefined && f.schema === sweep.schema)
-    ) {
+    if (declaredIds.has(stamped) || swept(stamped, f.schema)) {
       dropFunctions.push({ owner: stamped, regprocedure: f.regprocedure });
     }
   }
@@ -350,12 +356,42 @@ function legacyDbTriggersStamp(set: DbTriggerSet): string {
 
 const DefRow = z.object({ def: z.string() });
 
-async function apply(
+/** Every table a plan touches, in the one fixed order. */
+function planTables(p: Plan): string[] {
+  return [
+    ...new Set([
+      ...p.triggers.map((x) => tableKey(x.t)),
+      ...p.restamps.map((x) => tableKey(x.t)),
+      ...p.dropTriggers.map((d) => `${d.schema}.${d.table}`),
+    ]),
+  ].sort();
+}
+
+/** The part of a plan that is one table's: its trigger creates, restamps and drops. */
+function tableSlice(p: Plan, table: string): Plan {
+  return {
+    functions: [],
+    triggers: p.triggers.filter((x) => tableKey(x.t) === table),
+    restamps: p.restamps.filter((x) => tableKey(x.t) === table),
+    dropTriggers: p.dropTriggers.filter(
+      (d) => `${d.schema}.${d.table}` === table,
+    ),
+    dropFunctions: [],
+  };
+}
+
+/** Functions no set declares any more — last, once nothing calls them. */
+function dropSlice(p: Plan): Plan {
+  return { ...p, functions: [], triggers: [], restamps: [], dropTriggers: [] };
+}
+
+// Each installing set's own assert, then its functions: `CREATE OR REPLACE`
+// takes no table lock.
+async function applyFunctions(
   tx: DbTriggerExec,
   sets: readonly DbTriggerSet[],
   p: Plan,
 ): Promise<void> {
-  // 1. Each set's own assert, before any of its DDL.
   const installing = new Set([
     ...p.functions.map((x) => x.set.id),
     ...p.triggers.map((x) => x.set.id),
@@ -365,8 +401,6 @@ async function apply(
       await set.beforeInstall(tx);
     }
   }
-
-  // 2. Functions: `CREATE OR REPLACE` takes no table lock.
   for (const { set, f } of p.functions) {
     await tx.execute(sql.raw(f.ddl));
     const [row] = await executeRows(tx, {
@@ -382,62 +416,64 @@ async function apply(
       ),
     );
   }
+}
 
-  // 3. Triggers an older installer left as written: the stamp only. COMMENT
-  // takes SHARE UPDATE EXCLUSIVE, which conflicts with no writer.
-  for (const { set, t, def } of p.restamps) {
-    await tx.execute(
-      sql.raw(
-        `COMMENT ON TRIGGER ${qi(t.name)} ON ${qi(schemaOf(t))}.${qi(t.table)} IS ${lit(`${ddlStamp(set, t.ddl)}:${def}`)}`,
-      ),
+// One table's triggers, in a savepoint: drops, creates, then restamps of what
+// an older installer left as written (COMMENT only: SHARE UPDATE EXCLUSIVE,
+// which conflicts with no writer). `order` is the whole install's table order,
+// named in the error.
+async function applyTable(
+  tx: DbTriggerExec,
+  table: string,
+  p: Plan,
+  order: readonly string[],
+): Promise<void> {
+  const {
+    triggers: creates,
+    restamps,
+    dropTriggers: drops,
+  } = tableSlice(p, table);
+  try {
+    await tx.transaction(async (sp) => {
+      for (const d of drops) {
+        await sp.execute(
+          sql.raw(
+            `DROP TRIGGER ${qi(d.name)} ON ${qi(d.schema)}.${qi(d.table)}`,
+          ),
+        );
+      }
+      for (const { set, t } of creates) {
+        await sp.execute(sql.raw(t.ddl));
+        const on = `${qi(schemaOf(t))}.${qi(t.table)}`;
+        const [row] = await executeRows(sp, {
+          query: sql.raw(
+            `SELECT md5(pg_get_triggerdef(oid)) AS def FROM pg_trigger
+              WHERE tgrelid = ${lit(on)}::regclass AND tgname = ${lit(t.name)}`,
+          ),
+          row: DefRow,
+          label: `db-triggers: definition of ${triggerKey(t)}`,
+        });
+        await sp.execute(
+          sql.raw(
+            `COMMENT ON TRIGGER ${qi(t.name)} ON ${on} IS ${lit(`${ddlStamp(set, t.ddl)}:${row!.def}`)}`,
+          ),
+        );
+      }
+      for (const { set, t, def } of restamps) {
+        await sp.execute(
+          sql.raw(
+            `COMMENT ON TRIGGER ${qi(t.name)} ON ${qi(schemaOf(t))}.${qi(t.table)} IS ${lit(`${ddlStamp(set, t.ddl)}:${def}`)}`,
+          ),
+        );
+      }
+    });
+  } catch (e) {
+    throw new Error(
+      `db-triggers: installing the triggers on "${table}" failed. Tables are installed in the fixed order [${order.join(", ")}]; inside one transaction a writer taking them in another order during a hot swap can deadlock with the boot (SQLSTATE 40P01), which fails it loudly here — retry the deploy once that writer is gone. Cause: ${(e as Error).message}`,
+      { cause: e },
     );
   }
-
-  // 4. Triggers: one table per savepoint, in the one fixed order.
-  const tables = [
-    ...new Set([
-      ...p.triggers.map((x) => tableKey(x.t)),
-      ...p.dropTriggers.map((d) => `${d.schema}.${d.table}`),
-    ]),
-  ].sort();
-  for (const table of tables) {
-    const drops = p.dropTriggers.filter(
-      (d) => `${d.schema}.${d.table}` === table,
-    );
-    const creates = p.triggers.filter((x) => tableKey(x.t) === table);
-    try {
-      await tx.transaction(async (sp) => {
-        for (const d of drops) {
-          await sp.execute(
-            sql.raw(
-              `DROP TRIGGER ${qi(d.name)} ON ${qi(d.schema)}.${qi(d.table)}`,
-            ),
-          );
-        }
-        for (const { set, t } of creates) {
-          await sp.execute(sql.raw(t.ddl));
-          const on = `${qi(schemaOf(t))}.${qi(t.table)}`;
-          const [row] = await executeRows(sp, {
-            query: sql.raw(
-              `SELECT md5(pg_get_triggerdef(oid)) AS def FROM pg_trigger
-                WHERE tgrelid = ${lit(on)}::regclass AND tgname = ${lit(t.name)}`,
-            ),
-            row: DefRow,
-            label: `db-triggers: definition of ${triggerKey(t)}`,
-          });
-          await sp.execute(
-            sql.raw(
-              `COMMENT ON TRIGGER ${qi(t.name)} ON ${on} IS ${lit(`${ddlStamp(set, t.ddl)}:${row!.def}`)}`,
-            ),
-          );
-        }
-      });
-    } catch (e) {
-      throw new Error(
-        `db-triggers: installing the triggers on "${table}" failed. Tables are installed one savepoint each, in the fixed order [${tables.join(", ")}]; a writer taking them in another order during a hot swap can deadlock with the boot (SQLSTATE 40P01), which fails it loudly here — retry the deploy once that writer is gone. Cause: ${(e as Error).message}`,
-        { cause: e },
-      );
-    }
+  if (creates.length + drops.length > 0) {
     log.publish(
       `[db-triggers] ${table}: ${[
         ...creates.map((x) => `installed ${x.t.name} (${x.set.id})`),
@@ -445,14 +481,26 @@ async function apply(
       ].join(", ")}`,
     );
   }
+}
 
-  // 5. Functions no set declares any more, once nothing calls them.
+async function applyFunctionDrops(tx: DbTriggerExec, p: Plan): Promise<void> {
   for (const d of p.dropFunctions) {
     await tx.execute(sql.raw(`DROP FUNCTION ${d.regprocedure}`));
     log.publish(
       `[db-triggers] dropped function ${d.regprocedure} (${d.owner})`,
     );
   }
+}
+
+async function apply(
+  tx: DbTriggerExec,
+  sets: readonly DbTriggerSet[],
+  p: Plan,
+): Promise<void> {
+  await applyFunctions(tx, sets, p);
+  const order = planTables(p);
+  for (const table of order) await applyTable(tx, table, p, order);
+  await applyFunctionDrops(tx, p);
 }
 
 // ── Entry point ─────────────────────────────────────────────────────────────
@@ -463,13 +511,60 @@ export interface DbTriggerInstall {
   readonly outcome: "installed" | "unchanged" | "dropped";
 }
 
+interface Sweep {
+  readonly schema: string;
+  /**
+   * Set ids another `installDbTriggers` call installs in `schema` — claimed
+   * by their plugin with `DbTriggerClaim`. The sweep leaves them alone.
+   */
+  readonly installedElsewhere?: readonly string[];
+}
+
 export interface InstallDbTriggersOptions {
   /**
-   * `sets` are EVERY set whose objects live in `schema`: a set stamped there
-   * that is not among them is dropped whole. Only the boot schema layer, which
-   * holds the complete list, passes it.
+   * `sets` (plus `installedElsewhere`) are EVERY set whose objects live in
+   * `schema`: a set stamped there that is not among them is dropped whole.
+   * Only the boot schema layer, which holds the complete list, passes it.
    */
-  readonly sweep?: { readonly schema: string };
+  readonly sweep?: Sweep;
+}
+
+/**
+ * Per-table commit: the functions are committed first, then each table's
+ * triggers in their own transaction (in the one fixed order), then the
+ * dropped functions. No transaction ever holds more than one table's lock, so
+ * the install can never be a node of a lock cycle, whatever order anyone else
+ * takes tables in. For a set spanning many tables a writer is live on during
+ * a hot swap (the change feed's), installed outside the schema layer. A set's
+ * `beforeInstall` runs in the functions' transaction.
+ */
+export interface InstallDbTriggersPerTableOptions extends InstallDbTriggersOptions {
+  readonly commit: "per-table";
+}
+
+// Lock every set `select(plan)` touches (advisory, transaction-scoped, in id
+// order), re-planning under the locks until no new set appears: a racing
+// installer may have done the work — or made another set stale.
+async function lockAndPlan(
+  tx: DbTriggerExec,
+  sets: readonly DbTriggerSet[],
+  sweep: Sweep | undefined,
+  first: Plan,
+  select: (p: Plan) => Plan,
+): Promise<Plan> {
+  const locked = new Set<string>();
+  let p = select(first);
+  for (;;) {
+    const unlocked = touched(p).filter((id) => !locked.has(id));
+    if (unlocked.length === 0) return p;
+    for (const id of unlocked.sort()) {
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtext('db_triggers'), hashtext(${id}))`,
+      );
+      locked.add(id);
+    }
+    p = select(plan(await readCatalog(tx, sets), sets, sweep));
+  }
 }
 
 /**
@@ -477,40 +572,71 @@ export interface InstallDbTriggersOptions {
  * at boot every set the app declares, in a test the sets its suite needs on a
  * throwaway database. Must run after migrations: every table must exist. `db`
  * may be a transaction (boot's schema layer): each table is then a savepoint,
- * and every lock is held until the outer commit. Then asserts every set is
- * installed as written and throws if one is not — a boot never proceeds
- * without an invariant its plugin declared.
+ * and every lock is held until the outer commit — or, with `commit:
+ * "per-table"`, the pool, each table its own transaction. Then asserts every
+ * set is installed as written and throws if one is not — a boot never
+ * proceeds without an invariant its plugin declared.
  */
 export async function installDbTriggers(
   db: DbTriggerExec,
   sets: readonly DbTriggerSet[],
-  options: InstallDbTriggersOptions = {},
+  options?: InstallDbTriggersOptions,
+): Promise<readonly DbTriggerInstall[]>;
+export async function installDbTriggers(
+  db: NodePgDatabase,
+  sets: readonly DbTriggerSet[],
+  options: InstallDbTriggersPerTableOptions,
+): Promise<readonly DbTriggerInstall[]>;
+export async function installDbTriggers(
+  db: DbTriggerExec,
+  sets: readonly DbTriggerSet[],
+  options: InstallDbTriggersOptions | InstallDbTriggersPerTableOptions = {},
 ): Promise<readonly DbTriggerInstall[]> {
-  assertDistinct(sets);
-  const first = plan(await readCatalog(db, sets), sets, options.sweep);
-  let done: string[] = [];
-  if (!isEmpty(first)) {
-    done = await db.transaction(async (tx) => {
-      // Re-planned under the locks: a racing installer may have done it — or
-      // made another set stale, whose lock is then taken before anything runs.
-      const locked = new Set<string>();
-      let p = first;
-      for (;;) {
-        const unlocked = touched(p).filter((id) => !locked.has(id));
-        if (unlocked.length === 0) break;
-        for (const id of unlocked) {
-          await tx.execute(
-            sql`SELECT pg_advisory_xact_lock(hashtext('db_triggers'), hashtext(${id}))`,
-          );
-          locked.add(id);
-        }
-        p = plan(await readCatalog(tx, sets), sets, options.sweep);
-      }
-      await apply(tx, sets, p);
-      return touched(p);
-    });
+  assertDistinct(sets, options.sweep?.installedElsewhere ?? []);
+  const perTable = "commit" in options;
+  if (perTable && "rollback" in db) {
+    throw new Error(
+      `db-triggers: commit "per-table" commits each table on its own, so it takes the pool, never a transaction.`,
+    );
   }
-  const after = plan(await readCatalog(db, sets), sets, options.sweep);
+  const sweep = options.sweep;
+  const first = plan(await readCatalog(db, sets), sets, sweep);
+  const done = new Set<string>();
+  const run = async (
+    select: (p: Plan) => Plan,
+    body: (tx: DbTriggerExec, p: Plan) => Promise<void>,
+  ) => {
+    await db.transaction(async (tx) => {
+      const p = await lockAndPlan(tx, sets, sweep, first, select);
+      await body(tx, p);
+      for (const id of touched(p)) done.add(id);
+    });
+  };
+  if (!isEmpty(first)) {
+    if (!perTable) {
+      await run(
+        (p) => p,
+        (tx, p) => apply(tx, sets, p),
+      );
+    } else {
+      // The whole plan, so a set's `beforeInstall` runs whenever it has
+      // anything to (re)install — triggers included; only its functions are
+      // created here.
+      await run(
+        (p) => p,
+        (tx, p) => applyFunctions(tx, sets, p),
+      );
+      const order = planTables(first);
+      for (const table of order) {
+        await run(
+          (p) => tableSlice(p, table),
+          (tx, p) => applyTable(tx, table, p, order),
+        );
+      }
+      await run(dropSlice, (tx, p) => applyFunctionDrops(tx, p));
+    }
+  }
+  const after = plan(await readCatalog(db, sets), sets, sweep);
   if (!isEmpty(after)) {
     throw new Error(
       `db-triggers: trigger set missing or out of date after install: ${touched(after).join(", ")}.`,
@@ -520,17 +646,19 @@ export async function installDbTriggers(
   return [
     ...sets.map((s) => ({
       id: s.id,
-      outcome: done.includes(s.id)
-        ? ("installed" as const)
-        : ("unchanged" as const),
+      outcome: done.has(s.id) ? ("installed" as const) : ("unchanged" as const),
     })),
-    ...done
+    ...[...done]
       .filter((id) => !declared.has(id))
+      .sort()
       .map((id) => ({ id, outcome: "dropped" as const })),
   ];
 }
 
-function assertDistinct(sets: readonly DbTriggerSet[]): void {
+function assertDistinct(
+  sets: readonly DbTriggerSet[],
+  installedElsewhere: readonly string[],
+): void {
   const seen = new Map<string, string>();
   const claim = (key: string, id: string) => {
     const prior = seen.get(key);
@@ -545,5 +673,12 @@ function assertDistinct(sets: readonly DbTriggerSet[]): void {
     claim(`set ${s.id}`, s.id);
     for (const f of s.functions) claim(`function ${fnKey(f)}`, s.id);
     for (const t of s.triggers) claim(`trigger ${triggerKey(t)}`, s.id);
+  }
+  for (const id of installedElsewhere) {
+    if (seen.has(`set ${id}`)) {
+      throw new Error(
+        `db-triggers: set "${id}" is both declared here and claimed as installed elsewhere.`,
+      );
+    }
   }
 }

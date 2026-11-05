@@ -20654,6 +20654,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Contributes: `host-service:database.driver` "database.driver"
     - Uses:
       - `database/db-triggers.DbTrigger`
+      - `database/db-triggers.DbTriggerClaim`
       - `database/derived-tables.DerivedTable`
       - `database/derived-tables.publishReconciledRollups`
       - `database/derived-updated-at.registeredDerivedUpdatedAt`
@@ -20917,17 +20918,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Server: `@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server/testing`
               - `worktreeDbScenario` — Run one scenario against the REAL worktree database inside a transaction that is always rolled back, returning whatever the body read just before the rollback.
               - Types: `DbExecutor`
-    - **`db-triggers`** — The one trigger installer: defineDbTriggers names a set of plpgsql functions and the triggers that call them (asserted at module eval to create what they are named, schema included), contributed as DbTrigger; installDbTriggers installs every declared set — a plugin's invariants, the derived updatedAt triggers, the rollups' maintain triggers, graphile's superseded trigger — by one protocol: a per-object stamp in each COMMENT (DDL hash + catalog-definition hash, so an out-of-band replacement is seen), only stale objects re-run, every table in one fixed order one savepoint each, owned-but-undeclared objects dropped (a whole removed set under sweep), advisory-locked, asserted after.
+    - **`db-triggers`** — The one trigger installer: defineDbTriggers names a set of plpgsql functions and the triggers that call them (asserted at module eval to create what they are named, schema included), contributed as DbTrigger (or claimed with DbTriggerClaim by a plugin installing a set itself, which the schema layer's sweep then spares); installDbTriggers installs every declared set — a plugin's invariants, the derived updatedAt triggers, the rollups' maintain triggers, graphile's superseded trigger, the change feed's NOTIFY triggers — by one protocol: a per-object stamp in each COMMENT (DDL hash + catalog-definition hash, so an out-of-band replacement is seen), only stale objects re-run, every table in one fixed order one savepoint each (or, commit: "per-table", one transaction each), owned-but-undeclared objects dropped (a whole removed set under sweep), advisory-locked, asserted after.
       - Server:
         - Uses: `primitives/log-channels.defineLogSink`
         - Exports (types):
           - `DbFunctionDdl`
+          - `DbTriggerClaimSpec`
           - `DbTriggerDdl`
           - `DbTriggerInstall`
           - `DbTriggerSet`
           - `InstallDbTriggersOptions`
         - Exports (values):
           - `DbTrigger`
+          - `DbTriggerClaim`
           - `defineDbTriggers`
           - `installDbTriggers`
       - Cross-plugin:
@@ -20937,6 +20940,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/derived-updated-at`
           - `database/migrations`
           - `infra/jobs`
+          - `network/live/change-feed`
           - `tasks/tasks-core`
     - **`derived-tables`** — Trigger-maintained materialized rollup tables as data: defineRollup generates a rollup's table, a maintain function and triggers per source (diffing the columns it reads, advisory-locked per key) and a diff-first reconcile; each rollup's functions and triggers a db-triggers set (rollup.<table>) the one trigger installer installs; the boot schema layer prepares the tables, installs every trigger set at once, reconciles, and reports what each reconcile healed (reconciledRollups). rollupSources() maps each rollup to the tables whose writes move it.
       - Server:
@@ -35535,7 +35539,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `canonicalParams`
         - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible. A table written only by this backend at high rate may instead declare an in-process change producer (defineChangeProducer): no trigger, its `mutate` owns the write and routes the returned ids, coalesced at the source and volatile.
           - Server:
-            - Contributes: `fork-data-exclusion` "live_state_changelog"
+            - Contributes:
+              - `db-trigger-claim` "change-feed"
+              - `fork-data-exclusion` "live_state_changelog"
             - Uses:
               - `database.DatabaseDriver`
               - `database.DatabaseDriverImpl`
@@ -35543,6 +35549,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database.ListenSession`
               - `database.loadKnownRelations`
               - `database.snapshotWatermark`
+              - `database/db-triggers.DbTriggerClaim`
+              - `database/db-triggers.DbTriggerDdl`
+              - `database/db-triggers.DbTriggerSet`
+              - `database/db-triggers.defineDbTriggers`
+              - `database/db-triggers.installDbTriggers`
               - `database/derived-tables.feedExemptTables`
               - `database/derived-tables.rollupSources`
               - `primitives/log-channels.defineLogSink`

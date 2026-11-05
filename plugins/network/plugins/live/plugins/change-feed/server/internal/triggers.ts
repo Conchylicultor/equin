@@ -3,9 +3,12 @@ import { sql as drizzleSql } from "drizzle-orm";
 import { z } from "zod";
 import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
 import {
-  executeOne,
-  executeRows,
-} from "@plugins/database/plugins/sql-rows/core";
+  defineDbTriggers,
+  installDbTriggers,
+  type DbTriggerDdl,
+  type DbTriggerSet,
+} from "@plugins/database/plugins/db-triggers/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import {
   MIGRATIONS_TABLE_NAME,
   LIVE_STATE_CHANGELOG_TABLE,
@@ -15,13 +18,7 @@ import {
 } from "@plugins/database/plugins/derived-views/core";
 import type { TableLayoutRequirement } from "@plugins/framework/plugins/server-core/core";
 import { changeFeedLog as log } from "./log-sink";
-import {
-  ensureTxnEndTrigger,
-  TXN_END_FUNCTION_DDL,
-  TXN_END_INSTALLED_SQL,
-  TXN_END_TRIGGER,
-  TXN_END_TRIGGER_DDL,
-} from "./txn-end";
+import { ensureTxnEndTrigger, TXN_END_FUNCTION_DDL } from "./txn-end";
 
 // Infrastructure tables the change-feed must NEVER trigger on — its own plumbing,
 // independent of any feature plugin's opt-out. Keep this minimal.
@@ -54,12 +51,11 @@ import {
 // backend that writes it, so a trigger on it would make its writes reach their
 // readers twice — once from the producer, once from the feed. All three are
 // contribution sets, so the CALLER reads them (see `TriggerExclusions`).
-// `live_state_trigger_state` (this layer's own content signature — see
-// `rebuildTriggers`) is denylisted for the same reason as the snapshot table: it
-// is written only by the rebuild itself and read only at boot, so it is pure
-// plumbing no live-state loader ever reads. Triggering on it would also make the
-// rebuild's own signature write re-enter the feed. `live_state_handoff` (the
-// epoch handoff live-state-snapshot writes at shutdown) is plumbing too.
+// `live_state_trigger_state` (the former installer's signatures, read once to
+// adopt its triggers and then dropped — see "Adopting" below; an older build
+// booting on a fork recreates it) is plumbing no live-state loader ever reads.
+// `live_state_handoff` (the epoch handoff live-state-snapshot writes at
+// shutdown) is plumbing too.
 function buildDenylist(exclusions: TriggerExclusions): Set<string> {
   return new Set<string>([
     MIGRATIONS_TABLE_NAME,
@@ -89,8 +85,8 @@ export interface TriggerExclusions {
   produced: ReadonlySet<string>;
 }
 
-// L2 durable outbox DDL. Created INSIDE rebuildTriggers' transaction, before the
-// trigger function is (re)defined, so the table the function INSERTs into is
+// L2 durable outbox DDL. Created in rebuildTriggers' prelude transaction, before
+// the trigger functions are installed, so the table the functions INSERT into is
 // guaranteed to exist before any data-change trigger can fire. Derived-state
 // table (CREATE TABLE IF NOT EXISTS on boot, like derived_view_state)
 // — NOT a drizzle migration. See
@@ -177,8 +173,8 @@ export async function ensureChangelogTable(db: NodePgDatabase): Promise<void> {
 }
 
 // The generic STATEMENT-level trigger function. It is deterministic, data-less
-// DDL — created with CREATE OR REPLACE on every boot (never a migration), exactly
-// like derived-views.
+// DDL (never a migration), installed with the feed's trigger set whenever its
+// stamp says it is stale.
 //
 // One function serves every table and every op:
 //  - INSERT / UPDATE read the `new_rows` transition table; DELETE reads
@@ -412,8 +408,8 @@ function quoteLiteral(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
 }
 
-// Deterministic trigger names so DROP IF EXISTS + CREATE is idempotent across
-// boots. One trigger per op so each can declare its own transition table.
+// Deterministic trigger names, one per op so each can declare its own
+// transition table.
 function triggerName(table: string, op: "i" | "u" | "d"): string {
   return `live_state_${table}_${op}`;
 }
@@ -425,19 +421,8 @@ function triggerName(table: string, op: "i" | "u" | "d"): string {
 // as a raw Postgres literal string; see the sql-rows plugin's CLAUDE.md.
 const TableNameRowSchema = z.object({ relname: z.string() });
 
-// One installed `live_state_*` trigger and the table it sits on. Shared by the
-// stale-trigger discovery and the rebuild plan, which read the same catalog
-// query.
-const LiveStateTriggerRowSchema = z.object({
-  tgname: z.string(),
-  relname: z.string(),
-});
-
 // Every public-schema user table minus the exclusion set (infra denylist ∪
 // derived-table rollups ∪ feature-contributed `ExcludeFromChangeFeed` tables).
-// The caller passes the set (built once via `buildDenylist(…)`) so the same
-// snapshot drives table enumeration, the stale-trigger drop, and the coverage
-// check within one rebuild.
 async function listPublicTables(
   db: NodePgDatabase,
   exclude: Set<string>,
@@ -475,62 +460,60 @@ async function singleColumnPk(
   return row ? row.attname : "";
 }
 
-// The statements that install one table's feed: a DROP IF EXISTS + CREATE per op,
-// so the pair is idempotent across boots. Compiled once and used for BOTH
-// execution and the content signature, so the fingerprint can never drift from the
-// SQL we actually emit — change this template and every table's signature changes,
-// forcing the rebuild that the change requires (mirrors derived-views compiling
-// `compileCreateView` once and hashing that same string).
+// One table's feed: the three per-op triggers, as the one trigger installer
+// takes them (`CREATE OR REPLACE`, so a changed layout is replaced in place —
+// SHARE ROW EXCLUSIVE, never the ACCESS EXCLUSIVE of a DROP, so the previous
+// backend's readers never wait on it).
 //
 // A table with a `layout` (one a route reads) calls `live_state_notify_routed`
 // with its layout as arguments, and its UPDATE trigger declares both transition
 // tables; without one the statements are exactly the PK-only feed's, byte for
-// byte — an unrouted table's trigger never changes (and never rebuilds) because
-// routing exists.
+// byte — an unrouted table's trigger never changes (and is never re-run)
+// because routing exists.
 export function compileTableTriggerDdl(
   table: string,
   pkCol: string,
   layout?: TriggerLayout,
-): string[] {
+): DbTriggerDdl[] {
   const tbl = quoteIdent(table);
-  const ti = triggerName(table, "i");
-  const tu = triggerName(table, "u");
-  const td = triggerName(table, "d");
+  const trigger = (
+    op: "i" | "u" | "d",
+    event: string,
+    referencing: string,
+    call: string,
+  ): DbTriggerDdl => {
+    const name = triggerName(table, op);
+    return {
+      name,
+      table,
+      ddl: `CREATE OR REPLACE TRIGGER ${quoteIdent(name)} AFTER ${event} ON ${tbl}
+           REFERENCING ${referencing}
+           FOR EACH STATEMENT EXECUTE FUNCTION ${call}`,
+    };
+  };
   if (layout !== undefined) {
     const args = [
       quoteLiteral(pkCol),
       quoteLiteral(JSON.stringify(layout.carry)),
       quoteLiteral(JSON.stringify(layout.gate)),
     ].join(", ");
+    const call = `live_state_notify_routed(${args})`;
     return [
-      `DROP TRIGGER IF EXISTS ${quoteIdent(ti)} ON ${tbl}`,
-      `DROP TRIGGER IF EXISTS ${quoteIdent(tu)} ON ${tbl}`,
-      `DROP TRIGGER IF EXISTS ${quoteIdent(td)} ON ${tbl}`,
-      `CREATE TRIGGER ${quoteIdent(ti)} AFTER INSERT ON ${tbl}
-           REFERENCING NEW TABLE AS new_rows
-           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify_routed(${args})`,
-      `CREATE TRIGGER ${quoteIdent(tu)} AFTER UPDATE ON ${tbl}
-           REFERENCING OLD TABLE AS old_rows NEW TABLE AS new_rows
-           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify_routed(${args})`,
-      `CREATE TRIGGER ${quoteIdent(td)} AFTER DELETE ON ${tbl}
-           REFERENCING OLD TABLE AS old_rows
-           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify_routed(${args})`,
+      trigger("i", "INSERT", "NEW TABLE AS new_rows", call),
+      trigger(
+        "u",
+        "UPDATE",
+        "OLD TABLE AS old_rows NEW TABLE AS new_rows",
+        call,
+      ),
+      trigger("d", "DELETE", "OLD TABLE AS old_rows", call),
     ];
   }
-  const arg = quoteLiteral(pkCol); // empty string ⇒ FULL-for-table
+  const call = `live_state_notify(${quoteLiteral(pkCol)})`; // '' ⇒ FULL-for-table
   return [
-    `DROP TRIGGER IF EXISTS ${quoteIdent(ti)} ON ${tbl}`,
-    `DROP TRIGGER IF EXISTS ${quoteIdent(tu)} ON ${tbl}`,
-    `DROP TRIGGER IF EXISTS ${quoteIdent(td)} ON ${tbl}`,
-    `CREATE TRIGGER ${quoteIdent(ti)} AFTER INSERT ON ${tbl}
-           REFERENCING NEW TABLE AS new_rows
-           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify(${arg})`,
-    `CREATE TRIGGER ${quoteIdent(tu)} AFTER UPDATE ON ${tbl}
-           REFERENCING NEW TABLE AS new_rows
-           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify(${arg})`,
-    `CREATE TRIGGER ${quoteIdent(td)} AFTER DELETE ON ${tbl}
-           REFERENCING OLD TABLE AS old_rows
-           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify(${arg})`,
+    trigger("i", "INSERT", "NEW TABLE AS new_rows", call),
+    trigger("u", "UPDATE", "NEW TABLE AS new_rows", call),
+    trigger("d", "DELETE", "OLD TABLE AS old_rows", call),
   ];
 }
 
@@ -593,65 +576,121 @@ export function resolveLayout(
   return { carry: requirement.carry, gate: [...gate].sort() };
 }
 
-type CompiledTable = { table: string; stmts: string[]; signature: string };
+/** The feed's trigger set id: its stamps, its install lock, its sweep claim. */
+export const CHANGE_FEED_TRIGGER_SET = "change-feed";
 
-// The same digest `node:crypto` gives, in plain JS so the feed runs on any
-// host — a stored signature from before the swap still matches.
-const sha256 = sha256Hex;
+// The feed as one `db-triggers` set: both notify functions, and every
+// triggered table's three triggers. Ownership is by function, so a
+// `live_state_*` trigger left on a table now excluded (opted out, a rollup, a
+// produced table) calls one of them and is dropped by the install.
+function feedTriggerSet(
+  triggers: readonly TableTrigger[],
+  adopted: ReadonlySet<string>,
+): DbTriggerSet {
+  return defineDbTriggers({
+    id: CHANGE_FEED_TRIGGER_SET,
+    functions: [
+      { name: "live_state_notify", args: "", ddl: NOTIFY_FUNCTION_DDL },
+      {
+        name: "live_state_notify_routed",
+        args: "",
+        ddl: ROUTED_NOTIFY_FUNCTION_DDL,
+      },
+    ],
+    triggers: triggers.flatMap(({ table, pkCol, layout }) =>
+      compileTableTriggerDdl(table, pkCol, layout).map((t) =>
+        adopted.has(table) ? { ...t, legacyStamp: null } : t,
+      ),
+    ),
+  });
+}
 
-// Bookkeeping for the trigger layer's content signatures — the twin of
-// derived-views' `derived_view_state`, created idempotently here (not via a
-// migration) because, like the triggers it tracks, it is derived-layer state,
-// not schema in the migration chain. It lives in the DB so a worktree fork
-// carries the signatures with its triggers (`CREATE DATABASE … TEMPLATE` copies
-// the rows), avoiding a spurious first-boot rebuild on every fork.
+// ── Adopting the feed's own former installer ─────────────────────────────────
 //
-// ONE ROW PER OBJECT, so a change rebuilds only what it changed: a row per
-// triggered table (its compiled statements' hash, stamped in the same
-// transaction that installs them — so the row is exactly what is installed,
-// whatever boot dies where), and the `LAYER_ROW` row for the shared layer (the
-// two notify functions and the changelog DDL, stamped in the prelude that
-// creates them). A route adding a column to one table's layout rebuilds that
-// table alone; every other table's triggers are left untouched.
-const TRIGGER_STATE_DDL = `
-CREATE TABLE IF NOT EXISTS "public"."${LIVE_STATE_TRIGGER_STATE_TABLE}" (
-  relname   text PRIMARY KEY,
-  signature text NOT NULL
-)`;
-// The shared layer's row — never a table name (Postgres has no empty identifier).
-const LAYER_ROW = "";
+// Until the feed moved onto `db-triggers`, it DROP+CREATEd each table's
+// triggers and kept a per-table signature (sha256 of those statements) in
+// `live_state_trigger_state`. A table whose stored signature is exactly the
+// one that installer would have stamped for today's layout carries today's
+// triggers: they are adopted (COMMENT only) rather than re-created, so the
+// first boot of the one installer locks no table. The state table is then
+// dropped, so an older build booting on this database (a fork) finds no
+// signature and rebuilds rather than trusting rows nothing keeps current.
+// Compatibility only: delete this section, and the table's place in the
+// derived-views allowlist, once no supported database predates the switch.
 
-// The state table in its per-object shape. The first shape was ONE row
-// (`id boolean PRIMARY KEY`, one whole-layer signature): it is dropped and
-// recreated, which costs one rebuild of every table — its own signature said
-// nothing about which table was up to date. Only the rebuild reads or writes
-// this table, so replacing it locks nothing anyone else is waiting on.
-async function ensureTriggerStateTable(db: NodePgDatabase): Promise<void> {
+/** What the former installer ran for one table — its signature's input. */
+function legacyTableStatements(t: TableTrigger): string[] {
+  const tbl = quoteIdent(t.table);
+  const names = (["i", "u", "d"] as const).map((op) =>
+    quoteIdent(triggerName(t.table, op)),
+  );
+  const drops = names.map((n) => `DROP TRIGGER IF EXISTS ${n} ON ${tbl}`);
+  const call =
+    t.layout === undefined
+      ? `live_state_notify(${quoteLiteral(t.pkCol)})`
+      : `live_state_notify_routed(${[
+          quoteLiteral(t.pkCol),
+          quoteLiteral(JSON.stringify(t.layout.carry)),
+          quoteLiteral(JSON.stringify(t.layout.gate)),
+        ].join(", ")})`;
+  const update =
+    t.layout === undefined
+      ? "REFERENCING NEW TABLE AS new_rows"
+      : "REFERENCING OLD TABLE AS old_rows NEW TABLE AS new_rows";
+  return [
+    ...drops,
+    `CREATE TRIGGER ${names[0]} AFTER INSERT ON ${tbl}
+           REFERENCING NEW TABLE AS new_rows
+           FOR EACH STATEMENT EXECUTE FUNCTION ${call}`,
+    `CREATE TRIGGER ${names[1]} AFTER UPDATE ON ${tbl}
+           ${update}
+           FOR EACH STATEMENT EXECUTE FUNCTION ${call}`,
+    `CREATE TRIGGER ${names[2]} AFTER DELETE ON ${tbl}
+           REFERENCING OLD TABLE AS old_rows
+           FOR EACH STATEMENT EXECUTE FUNCTION ${call}`,
+  ];
+}
+
+const SignatureRowSchema = z.object({
+  relname: z.string(),
+  signature: z.string(),
+});
+
+/** The tables whose former signature says their triggers are today's. */
+async function adoptableTables(
+  db: NodePgDatabase,
+  triggers: readonly TableTrigger[],
+): Promise<Set<string>> {
+  if (!(await relationExists(db, LIVE_STATE_TRIGGER_STATE_TABLE))) {
+    return new Set();
+  }
+  // The first, one-row shape named no table: nothing to adopt from it.
   if (
-    (await relationExists(db, LIVE_STATE_TRIGGER_STATE_TABLE)) &&
     !(await tableColumns(db, LIVE_STATE_TRIGGER_STATE_TABLE)).includes(
       "relname",
     )
   ) {
-    await db.execute(
-      drizzleSql.raw(`DROP TABLE "public"."${LIVE_STATE_TRIGGER_STATE_TABLE}"`),
-    );
+    return new Set();
   }
-  await db.execute(drizzleSql.raw(TRIGGER_STATE_DDL));
-}
-
-// Record one object's signature — inside the transaction that installed it.
-async function stampSignature(
-  tx: NodePgDatabase,
-  relname: string,
-  signature: string,
-): Promise<void> {
-  await tx.execute(
-    drizzleSql`
-      INSERT INTO "public".${drizzleSql.raw(`"${LIVE_STATE_TRIGGER_STATE_TABLE}"`)} (relname, signature)
-      VALUES (${relname}, ${signature})
-      ON CONFLICT (relname) DO UPDATE SET signature = EXCLUDED.signature
-    `,
+  const stored = new Map(
+    (
+      await executeRows(db, {
+        query: drizzleSql.raw(
+          `SELECT relname, signature FROM "public"."${LIVE_STATE_TRIGGER_STATE_TABLE}"`,
+        ),
+        row: SignatureRowSchema,
+        label: "change-feed: former signatures",
+      })
+    ).map((r) => [r.relname, r.signature]),
+  );
+  return new Set(
+    triggers
+      .filter(
+        (t) =>
+          stored.get(t.table) ===
+          sha256Hex(legacyTableStatements(t).join("\n")),
+      )
+      .map((t) => t.table),
   );
 }
 
@@ -661,69 +700,40 @@ async function stampSignature(
 // route names and no read-set base is reaches nothing, so sweeping all of them
 // is safe and total.
 //
-// Set from the DESIRED set on every boot, including the skip-when-unchanged path
-// (where "desired" is proven to equal "installed") — `assertRouteTablesCovered`
-// reads it via `getCoveredTables()` immediately after, so it must be populated
-// whether or not we rebuilt.
+// Set from the DESIRED set on every boot — `assertRouteTablesCovered` reads it
+// via `getCoveredTables()` right after, and the install has just asserted
+// every desired trigger is installed as written.
 let coveredTables: string[] = [];
 
 export function getCoveredTables(): readonly string[] {
   return coveredTables;
 }
 
-// Rebuilds the change-feed trigger layer from source — only the parts whose
-// compiled DDL changed.
+// Installs the change-feed trigger layer from source — only the parts that
+// differ from the live database.
 //
-// Deterministic, data-less DDL (NOT a migration) — mirrors rebuildDerivedViews:
-// enumerate the live schema, CREATE OR REPLACE the functions, then DROP+CREATE
-// the per-table triggers. Any failure throws and blocks boot loudly rather than
-// running with a half-installed feed.
+// Deterministic, data-less DDL (NOT a migration): enumerate the live schema,
+// then hand the feed's trigger set to the one trigger installer
+// (`database/db-triggers`), which re-runs only the stale objects (per-object
+// stamps — DDL hash + catalog definition — so a trigger dropped, disabled or
+// replaced out of band is re-run, and a steady-state boot takes ZERO table
+// locks), drops a `live_state_*` trigger left on a now-excluded table, and
+// asserts the set is installed as written. Any failure throws and blocks boot
+// loudly rather than running with a half-installed feed.
+//
+// ONE TRANSACTION PER TABLE (`commit: "per-table"`), never the schema layer's
+// one transaction: the feed spans every public table, and the previous backend
+// is still serving them during a hot swap. A transaction that only ever locks
+// one relation cannot be a node in a wait cycle — it acquires that one lock or
+// blocks on exactly one holder — so the deadlock that killed
+// build-1784288281433-w62dep (one transaction over an alphabetical prefix of
+// the schema, `attempts` ⇄ `conversations`, 40P01) is impossible, not retried.
+// The notify functions are committed first, so every trigger, old or new, calls
+// the current function; each table's three triggers are replaced together.
 //
 // `db` is passed in (like rebuildDerivedViews / runMigrations) so this module
 // never imports @plugins/database/server — that would cycle (database/server
 // calls into the change-feed plugin's onReadyBlocking).
-//
-// SKIP WHAT IS UNCHANGED, PER OBJECT — the trigger layer is a pure function of
-// (schema, denylist, routed layouts, emitted DDL). Each table's compiled
-// statements are fingerprinted on their own, and so is the shared layer (the
-// two functions and the changelog DDL); `planRebuild` compares each against
-// its stored signature AND the catalog, and only what differs is rebuilt. A
-// steady-state restart — the overwhelming majority of boots — takes ZERO table
-// locks; a new table, a dropped exclusion or a route's changed layout locks
-// exactly the tables whose triggers change. (A whole-layer signature rebuilt
-// every table, each taking an exclusive lock in turn during the hot swap,
-// whenever any one of them changed — and routes change layouts far more often
-// than the schema does.)
-//
-// SINGLE-RELATION TRANSACTIONS — a rebuild is one `db.transaction` PER TABLE
-// (plus the prelude), never one transaction over the whole schema.
-// `DROP+CREATE TRIGGER` takes an AccessExclusive lock on its table until commit;
-// the old one-transaction rebuild held exclusive locks on an alphabetically-
-// ordered PREFIX of the database while still asking for more — textbook
-// hold-and-wait. During a hot-swap restart the PREVIOUS backend is still serving
-// reads (the swap is ready-gated) holding AccessShare locks on those same tables,
-// so a reader touching two tables in the opposite order closed a lock cycle;
-// Postgres shot the rebuild transaction, the exception escaped onReadyBlocking,
-// and the deploy failed with the old code still live
-// (build-1784288281433-w62dep died this way: attempts ⇄ conversations,
-// SQLSTATE 40P01). A transaction that only ever holds ONE relation's exclusive
-// lock cannot be a node in a wait cycle — it acquires that one lock or blocks on
-// exactly one holder (an old-backend reader, which is not waiting on us for a
-// second relation). The wait-for graph is a forest by construction; the deadlock
-// is impossible, not retried. A per-table tx can still BLOCK briefly on a live
-// reader's AccessShare lock, but the old backend's reads are short (ms), so this
-// is a wait, not a hang. (Each per-table tx also upserts that table's own row of
-// the state table, which only the rebuild touches.)
-//
-// Self-healing (see change-feed/CLAUDE.md): each table's DROP+CREATE is in one tx
-// so it always has a COMPLETE trigger set (old or new, never none); the notify
-// functions are committed FIRST so old and new triggers both call the current
-// function (no feed event lost — a mid-rebuild write fires whichever trigger
-// version is installed, both emitting a compatible NOTIFY); and every signature
-// is stamped IN the transaction that installs what it describes, so a stored
-// signature is always the installed one — a boot that dies anywhere leaves each
-// object either rebuilt and stamped or untouched with its old stamp, and the
-// next boot rebuilds exactly the rest.
 export async function rebuildTriggers(
   db: NodePgDatabase,
   exclusions: TriggerExclusions,
@@ -735,9 +745,6 @@ export async function rebuildTriggers(
    */
   requirements: readonly TableLayoutRequirement[],
 ): Promise<void> {
-  // Infra plumbing + derived-table rollups + feature `ExcludeFromChangeFeed`
-  // opt-outs, all unioned. One snapshot drives enumeration, the stale-trigger
-  // drop below, and the coverage check.
   const exclude = buildDenylist(exclusions);
   const optedOut = exclusions.optedOut;
   if (optedOut.size > 0) {
@@ -752,7 +759,6 @@ export async function rebuildTriggers(
   }
 
   const tables = await listPublicTables(db, exclude);
-
   const required = new Map(requirements.map((r) => [r.table, r]));
   const triggers: TableTrigger[] = [];
   for (const table of tables) {
@@ -772,266 +778,45 @@ export async function rebuildTriggers(
           },
     );
   }
-
-  // Compile once — this is both what we execute below and what we fingerprint,
-  // so a signature can never drift from the SQL it describes.
-  const compiled: CompiledTable[] = triggers.map(({ table, pkCol, layout }) => {
-    const stmts = compileTableTriggerDdl(table, pkCol, layout);
-    return { table, stmts, signature: sha256(stmts.join("\n")) };
-  });
-  const layerSignature = sha256(
-    [
-      NOTIFY_FUNCTION_DDL,
-      ROUTED_NOTIFY_FUNCTION_DDL,
-      CHANGELOG_TABLE_DDL,
-      CHANGELOG_INDEX_DDL,
-      JSON.stringify(CHANGELOG_LATER_COLUMNS),
-      TXN_END_FUNCTION_DDL,
-      TXN_END_TRIGGER_DDL,
-    ].join("\n--\n"),
-  );
-
-  // Populated on BOTH paths — assertRouteTablesCovered reads it right after.
   coveredTables = triggers.map((t) => t.table);
 
-  const plan = await planRebuild(db, layerSignature, compiled, exclude);
-  if (
-    !plan.layer &&
-    plan.tables.length === 0 &&
-    plan.stale.size === 0 &&
-    plan.forget.length === 0
-  ) {
-    log.publish(
-      `[change-feed] up to date (${coveredTables.length} table(s), signatures unchanged) — skipping rebuild`,
-    );
-    // The plan just PROVED every expected trigger is installed, which is the
-    // same property warnOnCoverageGaps queries for — so the coverage sweep
-    // below would be a guaranteed-empty re-verification. Skip it too.
+  // The prelude, in its own transaction: the changelog every notify function
+  // INSERTs into, and the end marker (a deferred CONSTRAINT trigger, which the
+  // installer does not take: Postgres cannot replace one in place). Neither
+  // takes a user-table lock, and `ensureChangelogTable` / `ensureTxnEndTrigger`
+  // touch the changelog only for a piece the catalog says is missing —
+  // `onReadyBlocking` order makes the feed own the changelog's creation.
+  await db.transaction(async (tx) => {
+    await ensureChangelogTable(tx);
+    await tx.execute(drizzleSql.raw(TXN_END_FUNCTION_DDL));
+    await ensureTxnEndTrigger(tx);
+  });
+
+  if (triggers.length === 0) {
+    // A set is functions and the triggers calling them: with no table to feed
+    // there is nothing to install (a throwaway database with no tables).
+    log.publish(`[change-feed] no table to feed — nothing installed`);
     return;
   }
-
-  // PHASE 1 — Prelude tx, only when the shared layer changed or lost an
-  // object. The changelog the trigger functions INSERT into MUST exist before
-  // the functions are defined, and the functions MUST exist and be COMMITTED
-  // before any per-table trigger that references them is created. Both are set
-  // up here in their own transaction, committed before phase 2 opens. Neither
-  // takes a user-table lock (`ensureChangelogTable` touches the changelog only
-  // for a piece the catalog says is missing; CREATE OR REPLACE FUNCTION locks
-  // no table), so the prelude cannot be part of a deadlock cycle.
-  // `onReadyBlocking` hooks run in parallel, so change-feed owns the
-  // changelog's creation itself rather than relying on any other plugin's boot
-  // ordering.
-  if (plan.layer) {
-    await db.transaction(async (tx) => {
-      await ensureChangelogTable(tx);
-      await tx.execute(drizzleSql.raw(NOTIFY_FUNCTION_DDL));
-      await tx.execute(drizzleSql.raw(ROUTED_NOTIFY_FUNCTION_DDL));
-      // The end-of-transaction marker (./txn-end): its function, then its
-      // deferred trigger on the changelog — created only when the catalog says
-      // it is missing, since CREATE TRIGGER locks the changelog every writer
-      // INSERTs into.
-      await tx.execute(drizzleSql.raw(TXN_END_FUNCTION_DDL));
-      await ensureTxnEndTrigger(tx);
-      await stampSignature(tx, LAYER_ROW, layerSignature);
-    });
-  }
-
-  // PHASE 2 — Per-relation txs. Each transaction touches exactly ONE table's
-  // triggers, so it holds at most that one relation's AccessExclusive lock and
-  // can never be a node in a wait cycle. `plan.tables` only holds DESIRED
-  // (non-excluded) tables and `plan.stale` only excluded ones, so no table is
-  // touched by two of these transactions.
-  //
-  // Stale-drop: one tx per now-excluded table, dropping just its live_state_*
-  // triggers (and forgetting its signature).
-  for (const [relname, tgnames] of plan.stale) {
-    await db.transaction(async (tx) => {
-      for (const tgname of tgnames) {
-        await tx.execute(
-          drizzleSql.raw(
-            `DROP TRIGGER IF EXISTS ${quoteIdent(tgname)} ON ${quoteIdent(relname)}`,
-          ),
-        );
-      }
-      await forgetSignatures(tx, [relname]);
-    });
-  }
-
-  // Desired: one tx per changed table, running that table's full DROP+CREATE
-  // set (3 DROP IF EXISTS + 3 CREATE) together — so the table always has a
-  // COMPLETE trigger set (the DROPs and CREATEs commit atomically, never leaving
-  // it trigger-less) — and stamping the signature of what it installed.
-  for (const { table, stmts, signature } of plan.tables) {
-    await db.transaction(async (tx) => {
-      for (const stmt of stmts) {
-        await tx.execute(drizzleSql.raw(stmt));
-      }
-      await stampSignature(tx, table, signature);
-    });
-  }
-
-  // Signatures of tables no longer triggered (dropped, or excluded with no
-  // trigger left to drop): bookkeeping only, no table lock.
-  if (plan.forget.length > 0) {
-    await forgetSignatures(db, plan.forget);
-  }
-
-  log.publish(
-    `[change-feed] rebuilt the live_state triggers of ${plan.tables.length} of ${coveredTables.length} table(s)` +
-      (plan.layer ? " and the shared layer" : "") +
-      (plan.stale.size > 0
-        ? ` (dropped stale triggers on ${plan.stale.size} now-excluded table(s))`
-        : ""),
-  );
-
-  await warnOnCoverageGaps(db, exclude);
-}
-
-async function forgetSignatures(
-  db: NodePgDatabase,
-  relnames: readonly string[],
-): Promise<void> {
+  const set = feedTriggerSet(triggers, await adoptableTables(db, triggers));
+  const [install] = await installDbTriggers(db, [set], {
+    commit: "per-table",
+  });
   await db.execute(
-    drizzleSql`
-      DELETE FROM "public".${drizzleSql.raw(`"${LIVE_STATE_TRIGGER_STATE_TABLE}"`)}
-      WHERE relname IN (${drizzleSql.join(
-        relnames.map((r) => drizzleSql`${r}`),
-        drizzleSql`, `,
-      )})
-    `,
-  );
-}
-
-// One stored signature per object (`relname`, the shared layer under LAYER_ROW).
-const SignatureRowSchema = z.object({
-  relname: z.string(),
-  signature: z.string(),
-});
-
-// `to_regproc` / `to_regclass` return NULL when the object does not exist — which
-// is exactly what this query asks — so both columns are nullable text.
-const LayerObjectsRowSchema = z.object({
-  fn: z.string().nullable(),
-  routedFn: z.string().nullable(),
-  changelog: z.string().nullable(),
-  txnEndFn: z.string().nullable(),
-  /** The end marker's trigger is installed as the prelude makes it. */
-  txnEnd: z.boolean(),
-});
-
-/** What a rebuild must do — each part only what differs from the live layer. */
-interface RebuildPlan {
-  /** The shared layer (functions, changelog, end marker) must be (re)created. */
-  layer: boolean;
-  /** The desired tables whose triggers must be (re)installed. */
-  tables: CompiledTable[];
-  /** Now-excluded tables still carrying `live_state_*` triggers, by table. */
-  stale: Map<string, string[]>;
-  /** Stored signatures of tables that are no longer triggered at all. */
-  forget: string[];
-}
-
-// Which parts of the live trigger layer are NOT already the desired ones.
-//
-// A stored signature alone is never trusted — it only says "the transaction that
-// installed this object emitted this DDL". Everything it asserts about the
-// CURRENT database is re-verified from the catalog: the functions and the
-// changelog exist, and each table's three triggers are physically present — so
-// anything dropped out of band (a manual DROP TRIGGER, a restored dump, a
-// half-cleaned fork) is rebuilt: this mirrors derived-views' `allPresent` guard.
-// Reads only catalogs + the signature rows — no user-table locks, which is the
-// entire point.
-async function planRebuild(
-  db: NodePgDatabase,
-  layerSignature: string,
-  compiled: CompiledTable[],
-  exclude: Set<string>,
-): Promise<RebuildPlan> {
-  await ensureTriggerStateTable(db);
-
-  const stored = new Map(
-    (
-      await executeRows(db, {
-        query: drizzleSql.raw(
-          `SELECT relname, signature FROM "public"."${LIVE_STATE_TRIGGER_STATE_TABLE}"`,
-        ),
-        row: SignatureRowSchema,
-        label: "planRebuild/signatures",
-      })
-    ).map((r) => [r.relname, r.signature]),
-  );
-
-  // The trigger functions and the changelog table they INSERT into must all
-  // still exist — a trigger whose function vanished would fire and error on
-  // every write — and so must the end marker's function and deferred trigger:
-  // without it every transaction's changes wait out the listener's deadline.
-  // A `SELECT` with no `FROM` returns exactly one row, so this is `executeOne`.
-  const objs = await executeOne(db, {
-    query: drizzleSql.raw(
-      `SELECT to_regproc('public.live_state_notify')::text        AS fn,
-              to_regproc('public.live_state_notify_routed')::text AS "routedFn",
-              to_regclass('public.${LIVE_STATE_CHANGELOG_TABLE}')::text AS changelog,
-              to_regproc('public.live_state_txn_end')::text       AS "txnEndFn",
-              ${TXN_END_INSTALLED_SQL} AS "txnEnd"`,
+    drizzleSql.raw(
+      `DROP TABLE IF EXISTS "public"."${LIVE_STATE_TRIGGER_STATE_TABLE}"`,
     ),
-    row: LayerObjectsRowSchema,
-    label: "planRebuild/objects",
-  });
-  const layer =
-    stored.get(LAYER_ROW) !== layerSignature ||
-    !objs.fn ||
-    !objs.routedFn ||
-    !objs.changelog ||
-    !objs.txnEndFn ||
-    !objs.txnEnd;
-
-  // Every installed live_state_* trigger, by table — but the end marker on
-  // the changelog, which belongs to the shared layer (verified above), not to
-  // a table's feed: the changelog is denylisted, so it would read as stale.
-  const installedRows = await executeRows(db, {
-    query: drizzleSql.raw(
-      `SELECT t.tgname, c.relname
-       FROM pg_trigger t
-       JOIN pg_class c ON c.oid = t.tgrelid
-       JOIN pg_namespace n ON n.oid = c.relnamespace
-       WHERE n.nspname = 'public'
-         AND NOT t.tgisinternal
-         AND t.tgname LIKE 'live_state_%'
-         AND NOT (c.relname = '${LIVE_STATE_CHANGELOG_TABLE}' AND t.tgname = '${TXN_END_TRIGGER}')`,
-    ),
-    row: LiveStateTriggerRowSchema,
-    label: "planRebuild/installed",
-  });
-  const installed = new Set(installedRows.map((r) => r.tgname));
-
-  // A desired table is rebuilt when its signature moved or a trigger is gone.
-  const tables = compiled.filter(
-    (c) =>
-      stored.get(c.table) !== c.signature ||
-      !(["i", "u", "d"] as const).every((op) =>
-        installed.has(triggerName(c.table, op)),
-      ),
   );
-
-  // A live_state_* trigger lingering on a now-excluded table — e.g. a table
-  // that had a feed on prior boots and was just opted out via
-  // ExcludeFromChangeFeed. Catalog-driven (find-then-drop by name) so it names
-  // no specific table and self-heals a rename/drift, mirroring how the rest of
-  // this layer is rebuilt from the live schema rather than tracked.
-  const stale = new Map<string, string[]>();
-  for (const { tgname, relname } of installedRows) {
-    if (!exclude.has(relname)) continue;
-    const names = stale.get(relname) ?? [];
-    names.push(tgname);
-    stale.set(relname, names);
+  if (install?.outcome === "unchanged") {
+    log.publish(
+      `[change-feed] up to date (${coveredTables.length} table(s)) — nothing re-run`,
+    );
+    return;
   }
-
-  const desired = new Set(compiled.map((c) => c.table));
-  const forget = [...stored.keys()].filter(
-    (r) => r !== LAYER_ROW && !desired.has(r) && !stale.has(r),
+  log.publish(
+    `[change-feed] installed the live_state trigger set over ${coveredTables.length} table(s) (the db-triggers log names each table re-run)`,
   );
-
-  return { layer, tables, stale, forget };
+  await warnOnCoverageGaps(db, exclude);
 }
 
 const TriggerNameRowSchema = z.object({ tgname: z.string() });

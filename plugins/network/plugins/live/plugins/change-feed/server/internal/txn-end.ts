@@ -22,9 +22,11 @@ import { LIVE_STATE_CHANGELOG_TABLE } from "@plugins/database/plugins/derived-vi
 // still running older code during a hot swap, which does not LISTEN on it,
 // never sees a payload it cannot read.
 //
-// Installed with the shared layer (the prelude transaction), and fingerprinted
-// with it. `planRebuild` re-verifies the function and the trigger from the
-// catalog like every other object of the layer.
+// Installed by the rebuild's prelude transaction on every boot, outside the
+// feed's `db-triggers` set: a CONSTRAINT trigger cannot be replaced in place,
+// which the installer's protocol rests on. The function is `CREATE OR REPLACE`d
+// (no table lock); the trigger is read from the catalog and created only when
+// missing or different.
 
 /** The channel every table change is NOTIFYed on. */
 export const FEED_CHANNEL = "live_state";
@@ -54,16 +56,16 @@ END;
 $live_state$ LANGUAGE plpgsql;
 `;
 
-export const TXN_END_TRIGGER_DDL = `CREATE CONSTRAINT TRIGGER ${TXN_END_TRIGGER} AFTER INSERT ON ${LIVE_STATE_CHANGELOG_TABLE}
+const TXN_END_TRIGGER_DDL = `CREATE CONSTRAINT TRIGGER ${TXN_END_TRIGGER} AFTER INSERT ON ${LIVE_STATE_CHANGELOG_TABLE}
        DEFERRABLE INITIALLY DEFERRED
        FOR EACH ROW EXECUTE FUNCTION live_state_txn_end()`;
 
 /**
  * True when the marker trigger is installed as `TXN_END_TRIGGER_DDL` makes it:
  * on the changelog, calling `live_state_txn_end()`, deferred, enabled. A SQL
- * boolean expression, read by `planRebuild` and `ensureTxnEndTrigger`.
+ * boolean expression, read by `ensureTxnEndTrigger`.
  */
-export const TXN_END_INSTALLED_SQL = `EXISTS (
+const TXN_END_INSTALLED_SQL = `EXISTS (
   SELECT 1 FROM pg_trigger t
   WHERE t.tgrelid = to_regclass('public.${LIVE_STATE_CHANGELOG_TABLE}')
     AND t.tgname = '${TXN_END_TRIGGER}'

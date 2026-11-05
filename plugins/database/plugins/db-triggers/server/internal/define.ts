@@ -60,17 +60,29 @@ export interface DbTriggerSet {
   readonly beforeInstall?: (exec: DbTriggerExec) => Promise<void>;
 }
 
-// `[<schema>.]<name>`, each part optionally double-quoted: group 2 is the
-// schema when present, group 4 the name (backreferences are numbered for the
-// position this is spliced at: the start of its regex).
-const QUALIFIED_NAME = `(?:("?)([a-z_][a-z0-9_]*)\\1\\.)?("?)([a-z_][a-z0-9_]*)\\3`;
+// An identifier as Postgres reads it: unquoted (folded to lower case), or
+// double-quoted (verbatim, `""` an embedded quote — a mixed-case or hyphenated
+// table name, e.g. a `defineEvent` triggers table). Two groups: quoted body,
+// unquoted word.
+const IDENT = `(?:"((?:[^"]|"")+)"|([A-Za-z_][A-Za-z0-9_$]*))`;
+
+/** The name an `IDENT` match at `at` (its quoted group) denotes, or undefined. */
+function identAt(m: RegExpExecArray | null, at: number): string | undefined {
+  if (m === null) return undefined;
+  const quoted = m[at];
+  if (quoted !== undefined) return quoted.replace(/""/g, '"');
+  return m[at + 1]?.toLowerCase();
+}
+
+// `[<schema>.]<name>`: groups 1–2 the schema when present, 3–4 the name.
+const QUALIFIED_NAME = `(?:${IDENT}\\.)?${IDENT}`;
 
 const FUNCTION_HEAD = new RegExp(
   `^\\s*CREATE OR REPLACE FUNCTION ${QUALIFIED_NAME}\\s*\\(`,
   "i",
 );
 const TRIGGER_HEAD = new RegExp(
-  `^\\s*CREATE OR REPLACE TRIGGER ("?)([a-z_][a-z0-9_]*)\\1\\s`,
+  `^\\s*CREATE OR REPLACE TRIGGER ${IDENT}\\s`,
   "i",
 );
 const TRIGGER_ON = new RegExp(`\\sON\\s+${QUALIFIED_NAME}\\s`, "i");
@@ -98,8 +110,8 @@ export function defineDbTriggers(spec: DbTriggerSet): DbTriggerSet {
   const fnKeys = new Set<string>();
   for (const f of spec.functions) {
     const head = FUNCTION_HEAD.exec(f.ddl);
-    const schema = head?.[2] ?? "public";
-    if (head?.[4] !== f.name || schema !== schemaOf(f)) {
+    const schema = identAt(head, 1) ?? "public";
+    if (identAt(head, 3) !== f.name || schema !== schemaOf(f)) {
       fail(
         `function "${f.name}"'s DDL must start with \`CREATE OR REPLACE FUNCTION ${schemaOf(f) === "public" ? "" : `${schemaOf(f)}.`}${f.name}(\`.`,
       );
@@ -110,14 +122,16 @@ export function defineDbTriggers(spec: DbTriggerSet): DbTriggerSet {
   }
   const triggerKeys = new Set<string>();
   for (const t of spec.triggers) {
-    const head = TRIGGER_HEAD.exec(t.ddl);
-    if (head?.[2] !== t.name) {
+    if (identAt(TRIGGER_HEAD.exec(t.ddl), 1) !== t.name) {
       fail(
         `trigger "${t.name}"'s DDL must start with \`CREATE OR REPLACE TRIGGER ${t.name}\`.`,
       );
     }
     const on = TRIGGER_ON.exec(t.ddl);
-    if (on?.[4] !== t.table || (on[2] ?? "public") !== schemaOf(t)) {
+    if (
+      identAt(on, 3) !== t.table ||
+      (identAt(on, 1) ?? "public") !== schemaOf(t)
+    ) {
       fail(
         `trigger "${t.name}"'s DDL must be \`ON ${schemaOf(t)}.${t.table}\`.`,
       );

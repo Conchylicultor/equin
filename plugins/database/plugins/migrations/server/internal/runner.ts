@@ -602,6 +602,11 @@ export interface SchemaLayerInputs {
   derivedTables: readonly Rollup[];
   updatedAtSpecs: readonly DerivedUpdatedAtSpec[];
   triggers: readonly DbTriggerSet[];
+  /**
+   * Ids of the sets a plugin installs by its own call (`DbTriggerClaim`): the
+   * layer's sweep of `public` leaves them alone.
+   */
+  claimedTriggerSets: readonly string[];
 }
 
 // Force-rollback sentinel: thrown to abort a non-committing layer so it never
@@ -803,7 +808,12 @@ export async function applySchemaLayerFrom(
           ...inputs.triggers,
           ...prepared.triggerSets,
         ],
-        { sweep: { schema: "public" } },
+        {
+          sweep: {
+            schema: "public",
+            installedElsewhere: inputs.claimedTriggerSets,
+          },
+        },
       );
       rollups = await reconcileRollups(tx, inputs.derivedTables, {
         recreated: prepared.recreated,

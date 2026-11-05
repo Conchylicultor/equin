@@ -60,13 +60,13 @@ export const DERIVED_VIEW_STATE_TABLE_NAME = "derived_view_state";
 export const LIVE_STATE_CHANGELOG_TABLE = "live_state_changelog";
 
 /**
- * Public table created imperatively by the change-feed trigger rebuilder
- * (`plugins/network/plugins/live/plugins/change-feed/server/internal/triggers.ts`) — holds
- * the trigger layer's content signature, the twin of
- * `DERIVED_VIEW_STATE_TABLE_NAME`. It is what lets a steady-state restart skip
- * the rebuild (and its whole-database AccessExclusive lock window) entirely. Not
- * present in the drizzle snapshot; the orphaned-db-tables check treats it as
- * declared.
+ * The change feed's FORMER per-table trigger signatures, from before its
+ * triggers moved onto `database/db-triggers`
+ * (`plugins/network/plugins/live/plugins/change-feed/server/internal/triggers.ts`):
+ * read once to adopt those triggers, then dropped — and recreated by an older
+ * build booting on a fork. Not present in the drizzle snapshot; the
+ * orphaned-db-tables check treats it as declared. Compatibility only: remove
+ * with the adoption once no supported database predates the switch.
  */
 export const LIVE_STATE_TRIGGER_STATE_TABLE = "live_state_trigger_state";
 

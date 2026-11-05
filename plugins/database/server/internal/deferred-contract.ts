@@ -1,7 +1,10 @@
 import { View } from "@plugins/database/plugins/derived-views/server";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
 import { registeredDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
-import { DbTrigger } from "@plugins/database/plugins/db-triggers/server";
+import {
+  DbTrigger,
+  DbTriggerClaim,
+} from "@plugins/database/plugins/db-triggers/server";
 import {
   completeDeferredContract,
   generationsKnowing,
@@ -19,6 +22,7 @@ export function derivedInputs(): SchemaLayerInputs {
     derivedTables: DerivedTable.getContributions(),
     updatedAtSpecs: registeredDerivedUpdatedAt(),
     triggers: DbTrigger.getContributions(),
+    claimedTriggerSets: DbTriggerClaim.getContributions().map((c) => c.id),
   };
 }
 

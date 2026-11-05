@@ -72,6 +72,7 @@ const NO_DERIVED = {
   derivedTables: [],
   updatedAtSpecs: [],
   triggers: [],
+  claimedTriggerSets: [],
 };
 
 function committedMigrations(): Migration[] {

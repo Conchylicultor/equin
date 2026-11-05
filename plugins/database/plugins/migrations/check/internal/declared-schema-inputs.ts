@@ -13,7 +13,10 @@ import {
 import { View } from "@plugins/database/plugins/derived-views/server";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
 import { registeredDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
-import { DbTrigger } from "@plugins/database/plugins/db-triggers/server";
+import {
+  DbTrigger,
+  DbTriggerClaim,
+} from "@plugins/database/plugins/db-triggers/server";
 import type { SchemaLayerInputs } from "@plugins/database/plugins/migrations/server";
 
 export type DeclaredSchemaInputsResult =
@@ -66,6 +69,7 @@ export async function declaredSchemaInputs(
     derivedTables: DerivedTable.from(definitions),
     updatedAtSpecs: registeredDerivedUpdatedAt(),
     triggers: DbTrigger.from(definitions),
+    claimedTriggerSets: DbTriggerClaim.from(definitions).map((c) => c.id),
   };
   if (inputs.views.length === 0) {
     return {

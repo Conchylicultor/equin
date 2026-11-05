@@ -468,6 +468,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
   - Contributes: `host-service:database.driver` "database.driver"
   - Uses:
     - `database/db-triggers.DbTrigger`
+    - `database/db-triggers.DbTriggerClaim`
     - `database/derived-tables.DerivedTable`
     - `database/derived-tables.publishReconciledRollups`
     - `database/derived-updated-at.registeredDerivedUpdatedAt`
