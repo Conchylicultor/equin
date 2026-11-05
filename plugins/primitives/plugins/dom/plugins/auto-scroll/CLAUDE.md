@@ -16,6 +16,8 @@ that wants it. Today that is six roles:
 - **scroll kept across a wholesale swap** — `KeepScrollAcross` (or
   `restoreScrollOffset`, for a class that already snapshots its offset)
 - **the reader's anchor kept across a resize above it** — `KeepAnchorAcross`
+- **an inner scroller's offset kept across a page reload** — `useScrollAcrossReload`
+  (every `PaneScroll` wears it)
 - **scroll carried to a clone** — `cloneWithScroll` (a stand-in drawn while
   React removes the original, e.g. a miller column fading out)
 - **scroll-container discovery** — `findScrollParent`
@@ -160,6 +162,34 @@ A reloaded prototype frame keeping its reader's place is not here: the
 document is on another origin (the content host), so the frame primitive's
 agent carries the offsets inside it (`primitives/embed/frame`).
 
+## `useScrollAcrossReload` — a reload opens where the reader left
+
+The browser restores only the document's own scroll, and gives up before async
+content arrives; every pane body is an inner scroller, so a reload opened every
+pane at its top. The hook saves the offset (session storage, trailing debounce,
+flushed on `pagehide` since a reload unmounts nothing) under a caller key that
+survives a reload (`PaneScroll` keys by tab, pane, address and views). After a
+reload it puts the offset back as content arrives — every DOM change under the
+scroller re-applies it, clamped, so a windowed list reaching its end loads more
+and the restore carries on — until the reader takes over (wheel, touch,
+pointer down, a key pressed in it, `announceNavigation`).
+
+**Held, not just reached.** Content above keeps settling after the offset is
+first reachable (late blocks, highlighting), and the browser's scroll anchoring
+then carries the reader along with the half-built layout — measured: 5000 px
+drifted to 9394 px on a long page, and a reload saved the drift. The offset was
+read off the settled layout the reload reproduces, so while pending the hook
+sets `overflow-anchor: none` and keeps re-applying it until the reader acts.
+
+**A mutation observer, not a size observer.** A pane body overflows from inside
+a full-height box (the content scope is `h-full`), so the scroller's children
+never change size as the page loads. The subtree observer exists only while a
+restore is pending, and is disconnected the moment it lands or the reader acts.
+
+**Only across documents.** Each entry is stamped with the document that wrote
+it: an entry from THIS document is an in-app revisit, which opens at the top the
+way following a link does. A restore is a compensation: it announces nothing.
+
 ## `useEdgeAutoScroll` — the gesture contract
 
 While a gesture's pointer sits in the top or bottom edge band of its scroll
@@ -199,7 +229,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
 
 ## Plugin reference
 
-- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), and the shared findScrollParent discovery.
+- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over), and the shared findScrollParent discovery.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.Button`
@@ -240,6 +270,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `scrollToBottom`
     - `scrollToTop`
     - `useEdgeAutoScroll`
+    - `useScrollAcrossReload`
     - `useStickyScroll`
 - Cross-plugin:
   - Uses tokens:
@@ -261,6 +292,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `primitives/log-channels`
     - `primitives/outline/scroll-spy`
     - `primitives/overlay/image-viewer`
+    - `primitives/pane`
     - `primitives/virtual-rows`
 - Exemptions:
   - Exempts itself from: `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)

@@ -32,12 +32,13 @@ export { keepInPlace } from "./keep-in-place";
 export type { KeepScrollAcrossProps } from "./keep-scroll-across";
 export { cloneWithScroll } from "./clone-with-scroll";
 export { restoreScrollOffset } from "./restore-scroll-offset";
+export { useScrollAcrossReload } from "./use-scroll-across-reload";
 export { announceNavigation } from "./announce-navigation";
 export { findScrollParent } from "./internal/find-scroll-parent";
 export type { FindScrollParentOptions } from "./internal/find-scroll-parent";
 
 export default {
   description:
-    "The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), and the shared findScrollParent discovery.",
+    "The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over), and the shared findScrollParent discovery.",
   contributions: [],
 } satisfies PluginDefinition;

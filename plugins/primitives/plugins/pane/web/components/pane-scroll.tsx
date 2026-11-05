@@ -1,5 +1,8 @@
 import { Scroll, type ScrollProps } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useScrollAcrossReload } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import { useMemo, type Ref, type RefCallback } from "react";
+import { usePaneInstanceKey } from "../pane";
 
 /**
  * `PaneScroll` props mirror `Scroll` minus the two axes the pane body fixes:
@@ -16,10 +19,36 @@ export type PaneScrollProps = Omit<ScrollProps, "axis" | "fill">;
  * makes "the pane owns exactly one scroll" a grep/doc target and keeps
  * `VirtualRows.findScrollParent` binding to a predictable viewport.
  *
- * No new mechanics over `Scroll`: it forwards `ref` (consumers may need the
- * scroll-container element), `as`, `hideScrollbar`, `isolate`, and composes
- * `className` last.
+ * It keeps its offset across a page reload (auto-scroll's
+ * `useScrollAcrossReload`), keyed by the pane instance it is drawn in — tab,
+ * pane, address and views — so a reloaded page opens where the reader left it.
+ *
+ * It forwards `ref` (consumers may need the scroll-container element), `as`,
+ * `hideScrollbar`, `isolate`, and composes `className` last.
  */
-export function PaneScroll({ className, ...rest }: PaneScrollProps) {
-  return <Scroll axis="y" fill className={cn("h-full", className)} {...rest} />;
+export function PaneScroll({ className, ref, ...rest }: PaneScrollProps) {
+  const keep = useScrollAcrossReload(usePaneInstanceKey());
+  // Stable across renders: a new callback ref would detach and re-attach the
+  // scroller on every render.
+  const scrollRef = useMemo(() => bothRefs(keep, ref), [keep, ref]);
+  return (
+    <Scroll
+      axis="y"
+      fill
+      className={cn("h-full", className)}
+      ref={scrollRef}
+      {...rest}
+    />
+  );
+}
+
+function bothRefs(
+  own: RefCallback<HTMLElement>,
+  theirs: Ref<HTMLElement> | undefined,
+): RefCallback<HTMLElement> {
+  return (el) => {
+    own(el);
+    if (typeof theirs === "function") theirs(el);
+    else if (theirs) theirs.current = el;
+  };
 }

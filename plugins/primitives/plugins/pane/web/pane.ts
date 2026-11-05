@@ -2349,6 +2349,29 @@ export function usePaneEntry(internal: PaneInternal): MatchEntry | null {
   return match.panes.find((e) => e.pane === internal) ?? null;
 }
 
+/**
+ * What the enclosing pane instance shows, as a string that survives a reload:
+ * the surface (tab) it is drawn in, the pane, its address and its on-screen
+ * views. Two panes showing the same page in two tabs get two keys. `undefined`
+ * outside a pane instance (an exhibit, a test) — there is nothing to key on.
+ */
+export function usePaneInstanceKey(): string | undefined {
+  const match = useContext(PaneMatchContext);
+  const instanceId = useContext(PaneInstanceContext);
+  const surfaceId = useContext(SurfaceIdContext);
+  if (!match || instanceId === undefined || surfaceId === undefined) {
+    return undefined;
+  }
+  const entry = match.panes.find((e) => e.instanceId === instanceId);
+  if (!entry) return undefined;
+  const sorted = (rec: Readonly<Record<string, string>>) =>
+    Object.entries(rec).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  return `${surfaceId}:${entry.pane.id}:${JSON.stringify([
+    sorted(entry.fullParams),
+    sorted(entry.views),
+  ])}`;
+}
+
 export function useCurrentPane(): PaneInternal | null {
   const match = useMatchOrThrow();
   const instanceId = useContext(PaneInstanceContext);
