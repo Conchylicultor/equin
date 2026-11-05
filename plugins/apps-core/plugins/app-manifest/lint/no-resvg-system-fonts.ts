@@ -68,7 +68,8 @@ export default createRule({
       ImportDeclaration(node) {
         if (node.source.value !== RESVG_MODULE) return;
         for (const s of node.specifiers) {
-          if (s.type === "ImportNamespaceSpecifier") namespaces.add(s.local.name);
+          if (s.type === "ImportNamespaceSpecifier")
+            namespaces.add(s.local.name);
           if (
             s.type === "ImportSpecifier" &&
             s.imported.type === "Identifier" &&
