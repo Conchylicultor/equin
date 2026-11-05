@@ -56,7 +56,7 @@ export interface TabDragCommit {
 interface WindowTabStripProps {
   /** The window this strip belongs to (source of a drag started from it). */
   windowId: string;
-  /** The window's current size — a tear-off opens at it (capped). */
+  /** The window's current size — a tear-off opens at it. */
   windowSize: { w: number; h: number };
   members: WindowMember[];
   activeTabId: string;
@@ -76,8 +76,6 @@ interface WindowTabStripProps {
 const DRAG_THRESHOLD = 5;
 /** Where the tear-off box sits under the pointer (mockup: 80px in, 16px down). */
 const TEAR_OFFSET = { x: 80, y: 16 };
-/** A tear-off never opens larger than this (mockup). */
-const TEAR_MAX = { w: 640, h: 460 };
 
 /**
  * The mockup's tab-chip metrics (`.tab`, `.tab-x`, `.tab-add`). Window chrome
@@ -263,10 +261,8 @@ export function WindowTabStrip({
         origin,
       );
       let dragging = false;
-      const tearSize = {
-        w: Math.min(windowSize.w, TEAR_MAX.w),
-        h: Math.min(windowSize.h, TEAR_MAX.h),
-      };
+      // A torn-off tab keeps its window's size.
+      const tearSize = { w: windowSize.w, h: windowSize.h };
 
       const onMove = (ev: PointerEvent) => {
         if (!dragging) {

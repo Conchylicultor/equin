@@ -45,7 +45,7 @@ export interface TabDragSession {
   label: string;
   /** The drag ghost's app tile (the member's app), if any. */
   app?: DesktopTileApp;
-  /** The box a tear-off would open at (the source window's size, capped — mockup 640 × 460). */
+  /** The box a tear-off would open at (the source window's size). */
   tearSize: { w: number; h: number };
   /** Resolved drop target, or null before the first move resolves one. */
   drop: TabDragDrop | null;
