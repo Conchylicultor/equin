@@ -52,6 +52,27 @@ Which files may violate a rule is declared by the plugin owning them, in its
 own `exempt/index.ts` — see [`tooling/exempt`](../exempt/CLAUDE.md). The
 owner-side `ignores` key no longer exists: a barrel carrying it is a tsc error and fails at load.
 
+## The editor loads the config under Node
+
+The editor's ESLint (and a plain `bunx eslint`) is a **Node** process that
+loads `eslint.config.ts` through ESLint's own jiti. The `type-check` worker
+builds the same config under Bun, which resolves `@plugins/*` and runs
+Bun-only code natively, so it cannot see what breaks the editor. Three rules
+follow:
+
+- `eslint.config.ts` imports only npm packages and node builtins at runtime;
+  everything from `plugins/` goes through its aliased jiti. The IDE entry
+  (`core/ide-lint-config.ts`) takes no argument for that reason.
+- Nothing the config reaches (builder, every lint barrel and rule, what they
+  import) may need Bun: no `Bun.*`, `bun:ffi`, or `infra/spawn`. A rule
+  needing a tiny constant from a big barrel gets it from a leaf instead (as
+  `guards/module-extension` was split out of `guards/core`).
+- Contributions load one at a time: jiti hands a concurrent `import()` a
+  half-built shared module.
+
+`lint:eslint-config-loads` runs `node node_modules/eslint/bin/eslint.js
+--print-config eslint.config.ts` and fails with ESLint's own message.
+
 ## Two kinds of rule: syntactic and type-aware
 
 A rule is **type-aware** iff it declares `meta.docs.requiresTypeChecking:
@@ -147,7 +168,6 @@ its disable does not cover. Parameters and imports have no in-file value.
 - Core:
   - Uses:
     - `framework/product-name.SOURCE_REPO_URL`
-    - `framework/tooling.loadRepoFiles`
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `framework/tooling/exempt.categoryGlobs`
     - `framework/tooling/exempt.FILE_CATEGORIES`
@@ -206,6 +226,7 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `rule-kind-safety/no-raw-rule-creator` — `core/rule-creator.ts` (sanctioned)
     - `rule-kind-safety/no-raw-rule-tester` — `core/testing/rule-tester.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/ide-lint-config.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `core/ide-lint-config.ts` (sanctioned)
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
     - `createRuleTester` — A syntactic rule's tester: no program, no project.

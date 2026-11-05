@@ -29,4 +29,11 @@ export default [
     reason:
       "The editor's ESLint config is its own pass: ESLint loads it once per session, and its exemption manifests are read off that one listing.",
   },
+  {
+    rule: "boundaries/no-platform-api",
+    paths: ["core/ide-lint-config.ts"],
+    kind: "sanctioned",
+    reason:
+      "Not host code: loaded by path only by the root eslint.config.ts, inside the editor's ESLint process (Node), never through a barrel. It lists the manifests with node:child_process because infra/spawn's runner is Bun-only, and the editor's ESLint is a Node process.",
+  },
 ] satisfies Exemptions;

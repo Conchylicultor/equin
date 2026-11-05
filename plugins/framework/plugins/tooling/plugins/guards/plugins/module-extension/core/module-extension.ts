@@ -20,7 +20,7 @@
  * directory tree regardless of what the file is written in), so there is no
  * reason to treat any of them differently.
  *
- * Lives in `guards/core/` rather than beside the CLI command because this path
+ * Lives in its own leaf plugin, not beside the CLI command, because this path
  * must stay loadable with NO `node_modules`: the guard fires from a PreToolUse
  * hook, before anything is installed. Node builtins and repo-local imports only
  * — and this file has neither.

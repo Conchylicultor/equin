@@ -1,4 +1,3 @@
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * Repo ESLint config — for the editor/IDE integration and ad-hoc `bunx eslint`.
  *
@@ -15,7 +14,10 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
  * created here with that alias: everything the builder reaches — lint core, the
  * exempt primitive, every lint barrel and rule — then resolves `@plugins/*`
  * exactly as Bun does for the type-check worker, and no file below has to stay
- * alias-free for this one loader's sake.
+ * alias-free for this one loader's sake. This file itself imports only npm
+ * packages and node builtins at runtime (a type-only import is erased); the
+ * `lint:eslint-config-loads` check loads it through ESLint's own loader, so a
+ * runtime `@plugins/*` import here fails the check, not just the editor.
  *
  * `exemptions: "config-off"`: an exempted file gets the rule switched off in
  * the config, so the editor shows no squiggle there — the manifests read off
@@ -46,6 +48,6 @@ const { buildIdeLintConfig } = await jiti.import<{
 
 // Annotated so the declaration emitter can name the export through eslint's
 // public types rather than a non-portable path into `@eslint/core` (TS2883).
-const config: Linter.Config[] = await buildIdeLintConfig(asAppPath(here));
+const config: Linter.Config[] = await buildIdeLintConfig();
 
 export default config;

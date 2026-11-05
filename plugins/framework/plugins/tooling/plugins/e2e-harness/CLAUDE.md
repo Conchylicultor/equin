@@ -391,7 +391,7 @@ own `requestfailed` listener calls it too. Diagnosis:
 
 - Description: Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./equin deps install chromium`). Also owns the two generic tools (screenshot, perf).
 - Core:
-  - Uses: `framework/tooling/guards.MODULE_EXTENSION`
+  - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
   - Exports (values): `isE2eScriptPath`
 - Cross-plugin:
   - Imported by: 183 plugins — full list in [REFERENCE.md](./REFERENCE.md)

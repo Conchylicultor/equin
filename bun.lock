@@ -3795,6 +3795,10 @@
       "name": "@equin/plugin-framework-tooling-guards-agent-policy",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/guards/plugins/module-extension": {
+      "name": "@equin/plugin-framework-tooling-guards-module-extension",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/guards/plugins/refusal-format": {
       "name": "@equin/plugin-framework-tooling-guards-refusal-format",
       "version": "0.0.1",
@@ -9092,6 +9096,8 @@
     "@equin/plugin-framework-tooling-guards": ["@equin/plugin-framework-tooling-guards@workspace:plugins/framework/plugins/tooling/plugins/guards"],
 
     "@equin/plugin-framework-tooling-guards-agent-policy": ["@equin/plugin-framework-tooling-guards-agent-policy@workspace:plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy"],
+
+    "@equin/plugin-framework-tooling-guards-module-extension": ["@equin/plugin-framework-tooling-guards-module-extension@workspace:plugins/framework/plugins/tooling/plugins/guards/plugins/module-extension"],
 
     "@equin/plugin-framework-tooling-guards-refusal-format": ["@equin/plugin-framework-tooling-guards-refusal-format@workspace:plugins/framework/plugins/tooling/plugins/guards/plugins/refusal-format"],
 

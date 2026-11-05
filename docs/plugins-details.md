@@ -27664,7 +27664,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
-          - `framework/tooling/lint`
           - `framework/tooling/web-artifacts`
       - Exemptions:
         - Exempts itself from:
@@ -28428,7 +28427,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `repo-walk-safety/no-adhoc-repo-listing` — `core/discover.ts` (debt)
         - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./equin deps install chromium`). Also owns the two generic tools (screenshot, perf).
           - Core:
-            - Uses: `framework/tooling/guards.MODULE_EXTENSION`
+            - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
             - Imported by: 183 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
@@ -28528,7 +28527,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries/no-platform-api` — `core/internal/changed-files.ts`, `core/internal/format-sources.ts`, `core/internal/format-thread.ts`, `core/internal/format-worker.ts`, `core/internal/prettier.ts` (debt)
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
-            - Uses: 27 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+            - Uses: 28 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
               - `packages/timed-fs` ×4
               - `framework/cli/cli-name` ×3
               - `infra/host-fs/user-path` ×3
@@ -28540,6 +28539,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/namespace` ×2
               - `packages/owned-fd` ×2
               - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
+              - `framework/tooling/guards/module-extension.MODULE_EXTENSION`
               - `infra/paths/repo-root.REPO_ROOT`
             - Exports (types):
               - `AllowVerdict`
@@ -28571,7 +28571,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fileHint`
               - `GUARDS`
               - `matchesTool`
-              - `MODULE_EXTENSION`
               - `parseArgv`
               - `parseShell`
               - `readTaskReport`
@@ -28583,9 +28582,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WINDOW_MS`
               - `WINDOW_SIZE`
           - Cross-plugin:
-            - Imported by:
-              - `debug/browser-recordings/writer`
-              - `framework/tooling/e2e-harness`
+            - Imported by: `debug/browser-recordings/writer`
           - Exemptions:
             - Exempts itself from:
               - `timed-fs/no-untimed-fs-read` — `bin/bootstrap.ts` (sanctioned)
@@ -28611,6 +28608,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/compaction-context`
                   - `conversations/stop-gate`
                   - `framework/tooling/codegen`
+            - **`module-extension`** — MODULE_EXTENSION: the extensions bun loads as a module (.ts/.tsx/.js/.jsx and their m/c forms) — the one set the bun-script guard denies and `./equin run` accepts. A leaf with no imports, so the e2e path convention (and the lint rule reading it) reaches the constant without the guard runtime.
+              - Cross-plugin:
+                - Imported by:
+                  - `framework/tooling/e2e-harness`
+                  - `framework/tooling/guards`
+              - Core:
+                - Exports (values): `MODULE_EXTENSION`
             - **`refusal-format`** — The text format of a guard's denial — the did-not-run banner, then 'Why it was blocked:' and the guard's own reason — written (joinRefusal) and read back (refusalReason) in one place, so a transcript viewer can show the reason without the banner.
               - Cross-plugin:
                 - Imported by:
@@ -28650,7 +28654,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `framework/product-name.SOURCE_REPO_URL`
-              - `framework/tooling.loadRepoFiles`
               - `framework/tooling/collected-dir.defineCollectedDir`
               - `framework/tooling/exempt.categoryGlobs`
               - `framework/tooling/exempt.FILE_CATEGORIES`
@@ -28709,6 +28712,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `rule-kind-safety/no-raw-rule-creator` — `core/rule-creator.ts` (sanctioned)
               - `rule-kind-safety/no-raw-rule-tester` — `core/testing/rule-tester.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/ide-lint-config.ts` (sanctioned)
+              - `boundaries/no-platform-api` — `core/ide-lint-config.ts` (sanctioned)
           - Test helpers:
             - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
               - `createRuleTester` — A syntactic rule's tester: no program, no project.

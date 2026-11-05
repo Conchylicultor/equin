@@ -19,7 +19,6 @@ export type { TaskReport } from "./task-reports";
 export { defineGuard } from "./define-guard";
 export { fileHint } from "./file-hint";
 export type { FileHintSpec } from "./file-hint";
-export { MODULE_EXTENSION } from "./module-extension";
 export { parseShell } from "./parse-shell";
 export { TOOL_USE_ID_RE, toolUseIdFrom } from "./tool-use-id";
 export { parseArgv, redirectionTargets } from "./argv";

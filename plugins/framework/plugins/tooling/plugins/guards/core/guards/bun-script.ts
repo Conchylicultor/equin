@@ -1,7 +1,7 @@
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { rewriteCalls } from "../call-splice";
 import { defineGuard } from "../define-guard";
-import { MODULE_EXTENSION } from "../module-extension";
+import { MODULE_EXTENSION } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/module-extension/core";
 import { classifyRepo } from "../git-target";
 import { findCall, type ShellCall } from "../parse-shell";
 import type { BashInput } from "../types";

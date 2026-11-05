@@ -237,7 +237,15 @@ export async function loadLintContributions(
 ): Promise<LoadedLintContribution[]> {
   const toolkit = createLintToolkit(readDeclaredUtilities(root));
   const lintEntries = await loadLintEntries();
-  const results = await Promise.allSettled(lintEntries.map((e) => e.loader()));
+  // One at a time, not `Promise.all`: under the editor's jiti (Node), an
+  // `import()` landing while another is still evaluating a shared module
+  // (lint/core, which every rule file imports) gets that module half-built —
+  // 118 of 122 contributions failed with `undefined.lintRuleCreator`. Under
+  // Bun the order costs nothing: module evaluation is synchronous either way.
+  const results: PromiseSettledResult<{ default: unknown }>[] = [];
+  for (const e of lintEntries) {
+    results.push((await Promise.allSettled([e.loader()]))[0]!);
+  }
   const contributions: LoadedLintContribution[] = [];
   const failures: string[] = [];
   for (let i = 0; i < results.length; i++) {

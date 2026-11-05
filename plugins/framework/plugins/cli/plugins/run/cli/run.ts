@@ -8,7 +8,7 @@ import type { CliAction } from "@plugins/framework/plugins/cli/core";
 // caller with nowhere to go. One declaration is what makes that unspellable;
 // see its docblock. The import sits here, in the deferred implementation, and
 // never in `./index.ts`, which `cli:command-declarations-light` measures.
-import { MODULE_EXTENSION } from "@plugins/framework/plugins/tooling/plugins/guards/core";
+import { MODULE_EXTENSION } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/module-extension/core";
 import { isE2eScriptPath } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
 import { withDirectOp } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import {

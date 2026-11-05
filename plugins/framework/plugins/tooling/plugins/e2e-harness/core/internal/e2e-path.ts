@@ -1,4 +1,4 @@
-import { MODULE_EXTENSION } from "@plugins/framework/plugins/tooling/plugins/guards/core";
+import { MODULE_EXTENSION } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/module-extension/core";
 
 /**
  * Does this repo-relative path follow the e2e-script convention —
