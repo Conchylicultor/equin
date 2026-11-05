@@ -48,7 +48,6 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `report-kind` "conversation-spawn-failed"
     - `report-kind` "conversation-stuck-turn"
     - `report-kind` "held-turn-undelivered"
-    - `resource.declare` "conversations.context-usage"
     - `resource.declare` "conversations.partial-message"
   - Uses: 85 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×27
@@ -123,9 +122,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `defineJob('conversations.deliver-held-turns')`
     - `defineTriggerEvent('conversation.turn-completed')`
     - `defineJob('conversations.status-sweep')`
-  - Resources:
-    - `conversations.context-usage` (push, notified, whole: the harness's own breakdown of one context window: a handful of categories, whole: the CLAUDE.md / memory files one agent loaded: a handful, whole: the MCP tools one agent process was handed: tens, fixed by its config)
-    - `conversations.partial-message` (push, notified, whole: one model turn's content blocks, held only while it streams)
+  - Resources: `conversations.partial-message` (push, notified, whole: one model turn's content blocks, held only while it streams)
   - Routes:
     - `GET /api/conversations`
     - `GET /api/conversations/:id`
@@ -182,9 +179,6 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `tasks/tasks-core.ConversationSchema`
   - Exports (types):
     - `BackgroundWork`
-    - `ContextCategory`
-    - `ContextReading`
-    - `ContextUsage`
     - `ConversationEntry`
     - `CreateConversationBody`
     - `CutLosses`
@@ -206,10 +200,6 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `BackgroundWorkSchema`
     - `canSendTurn`
     - `closeConversation`
-    - `ContextCategorySchema`
-    - `ContextReadingSchema`
-    - `ContextUsageSchema`
-    - `conversationContextUsage`
     - `conversationPartialMessage`
     - `conversationRoute`
     - `CONVERSATIONS_CATEGORY_ID`
@@ -273,6 +263,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   - **`close`** — Closing a conversation, portable half: POST /api/conversations/:id/close marks it done on every host (markConversationClosed) — the demo's in-browser server included — then runs every CloseTeardown…
   - **`commit-conversation`** — The commit row action that opens the conversation which wrote a commit (its conversation trailer) in a new browser tab.
   - **`compaction-context`** [exempt] — The compaction-context backend: the CompactionContext contribution (a plugin's restore(conversationId) — re-record what the compacted agent no longer holds, return the text to hand back) and the…
+  - **`context-usage`** — Each conversation's last context reading — what fills its agent's context window, as the harness measured it — in the conversations_ext_context_usage table: recordContextUsage, which a conversation…
   - **`conversation-category`** [exempt] — Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. The conversation-category assignments, portable half: the…
   - **`conversation-preprompt`** — Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's icon (resolved live from the library, with…
   - **`conversation-progress`** — 4-step progress bar (started → designed → implemented → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation →…
@@ -337,7 +328,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
           - **`tool-call`** [exempt] [21 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
           - **`transcript-stats`** — The transcript's status strip: the readings pinned at the foot of the conversation, and the TranscriptStats.Item slot they come from. Owns the reading position — the strip reports the transcript as…
             - Plugins:
-              - **`context`** — The context window as a transcript stat: a ring at the end of the strip showing how full the agent's window is against where the harness compacts it (the harness's own measure…
+              - **`context`** — The context window as a transcript stat: a ring at the end of the strip showing how full the agent's window is against where the harness compacts it (the harness's own measure as the agent last…
               - **`token-budget`** — The agent's work allowance as a transcript stat: how many tokens the harness has charged against it up to the reading position, summed across the re-anchor it performs on every new request. Reports…
               - **`usage`** — Context and output token usage as a transcript stat: the current context window and the output produced, folded from each message's own usage record up to the reading position. Serves the usage…
           - **`user-image`** — Renders inline image thumbnails for user-image events.

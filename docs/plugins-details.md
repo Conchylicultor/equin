@@ -14339,7 +14339,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "conversation-spawn-failed"
       - `report-kind` "conversation-stuck-turn"
       - `report-kind` "held-turn-undelivered"
-      - `resource.declare` "conversations.context-usage"
       - `resource.declare` "conversations.partial-message"
     - Uses: 85 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×27
@@ -14414,9 +14413,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `defineJob('conversations.deliver-held-turns')`
       - `defineTriggerEvent('conversation.turn-completed')`
       - `defineJob('conversations.status-sweep')`
-    - Resources:
-      - `conversations.context-usage` (push, notified, whole: the harness's own breakdown of one context window: a handful of categories, whole: the CLAUDE.md / memory files one agent loaded: a handful, whole: the MCP tools one agent process was handed: tens, fixed by its config)
-      - `conversations.partial-message` (push, notified, whole: one model turn's content blocks, held only while it streams)
+    - Resources: `conversations.partial-message` (push, notified, whole: one model turn's content blocks, held only while it streams)
     - Routes:
       - `GET /api/conversations`
       - `GET /api/conversations/:id`
@@ -14473,9 +14470,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/tasks-core.ConversationSchema`
     - Exports (types):
       - `BackgroundWork`
-      - `ContextCategory`
-      - `ContextReading`
-      - `ContextUsage`
       - `ConversationEntry`
       - `CreateConversationBody`
       - `CutLosses`
@@ -14497,10 +14491,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `BackgroundWorkSchema`
       - `canSendTurn`
       - `closeConversation`
-      - `ContextCategorySchema`
-      - `ContextReadingSchema`
-      - `ContextUsageSchema`
-      - `conversationContextUsage`
       - `conversationPartialMessage`
       - `conversationRoute`
       - `CONVERSATIONS_CATEGORY_ID`
@@ -15077,6 +15067,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `endpoints/no-raw-web-fetch` — `shared/client.ts` (sanctioned)
       - Machine:
         - Exports (values): `compactionHookEntry`
+    - **`context-usage`** — Each conversation's last context reading — what fills its agent's context window, as the harness measured it — in the conversations_ext_context_usage table: recordContextUsage, which a conversation runtime calls with each reading its agent reports, and the lookup-only conversations.context-usage collection the context ring reads. No read ever asks the agent.
+      - Server:
+        - Contributes: `resource.declare` "conversations.context-usage:rows"
+        - Uses:
+          - `infra/entity-extensions.defineExtension`
+          - `network/live.serveCollection`
+          - `tasks/tasks-core._conversations`
+        - DB schema: `plugins/conversations/plugins/context-usage/server/internal/tables.ts`
+        - Entity extension of: `tasks/tasks-core` (table `conversations_ext_context_usage`)
+        - Exports (values): `recordContextUsage`
+        - Resources: `conversations.context-usage:rows` (keyed, point)
+      - Core:
+        - Uses:
+          - `fields/json/config.jsonField`
+          - `infra/entity-extensions.defineExtensionShape`
+          - `network/live.liveCollection`
+          - `packages/list-bound.wholeList`
+        - Exports (types):
+          - `ContextCategory`
+          - `ContextUsage`
+          - `ConversationContext`
+        - Exports (values):
+          - `ContextCategorySchema`
+          - `ContextUsageSchema`
+          - `conversationContextShape`
+          - `conversationContextUsage`
     - **`conversation-category`** — Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. The conversation-category assignments, portable half: the categories config, the configured avatars' saved-icon source, the table, the lookup-only conversation-categories collection over it, the cross-plugin per-category item read, and clearing one assignment. The Haiku classifier and setting an item are the machine/ half's.
       - Web:
         - Contributes:
@@ -18100,16 +18116,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `foldEvents`
                   - `TRANSCRIPT_FOLD_PARAMS`
               - Plugins:
-                - **`context`** — The context window as a transcript stat: a ring at the end of the strip showing how full the agent's window is against where the harness compacts it (the harness's own measure, conversations.context-usage), opening a card with the breakdown — the conversation's messages, the setup it starts with (system prompt, tools, memory files, skills, MCP) and what is free — and a Compact action that sends /compact with optional compaction instructions.
+                - **`context`** — The context window as a transcript stat: a ring at the end of the strip showing how full the agent's window is against where the harness compacts it (the harness's own measure as the agent last reported it — once ready and after every turn — read from conversations.context-usage, never asked of the agent), opening a card with the breakdown — the conversation's messages, the setup it starts with (system prompt, tools, memory files, skills, MCP) and what is free — and a Compact action that sends /compact with optional compaction instructions.
                   - Web:
                     - Contributes: `TranscriptStats.Item` "context" → `ContextStat`
-                    - Uses: 25 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/REFERENCE.md)
+                    - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/REFERENCE.md)
                       - `primitives/css/ui-kit` ×4
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats` ×3
                       - `conversations/conversation-view/jsonl-viewer` ×3
                       - `conversations/conversation-view/pending-turn` ×2
                       - `primitives/css/spacing` ×2
-                      - `network/live/live-state.matchResource`
                       - `network/live.useLive`
                       - `primitives/collapsible.FoldMotion`
                       - `primitives/css/clip.Clip`
@@ -25692,12 +25707,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 29 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+            - Imported by: 30 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
               - `apps` ×5
+              - `conversations` ×4
               - `debug` ×4
               - `infra` ×4
               - `tasks` ×4
-              - `conversations` ×3
               - `backup` ×2
               - `page` ×2
               - `active-data`
@@ -30821,10 +30836,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 43 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 44 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×17
           - `tasks` ×13
-          - `conversations` ×9
+          - `conversations` ×10
           - `page` ×3
           - `plugin-meta/plugin-health`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger(). Contributes a BackgroundTriggerSource so the Background activity catalog names the events that start each job.
@@ -35163,9 +35178,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 340 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 341 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×86
-          - `conversations` ×69
+          - `conversations` ×70
           - `tasks` ×33
           - `debug` ×32
           - `infra` ×22
@@ -35533,9 +35548,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 305 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 304 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×83
-              - `conversations` ×50
+              - `conversations` ×49
               - `debug` ×29
               - `tasks` ×25
               - `ui` ×25
@@ -36122,10 +36137,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 96 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 97 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×17
+          - `conversations` ×14
           - `infra` ×14
-          - `conversations` ×13
           - `debug` ×12
           - `tasks` ×6
           - `build` ×4
@@ -54342,8 +54357,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 78 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×28
+        - Imported by: 79 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×29
           - `tasks` ×25
           - `active-data` ×5
           - `debug` ×5
@@ -54358,6 +54373,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-health`
           - `wish`
         - Extended by:
+          - `conversations/context-usage` (table `conversations_ext_context_usage`)
           - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
           - `apps/places/ask` (table `conversations_ext_places_ask`)
           - `conversations/conversation-preprompt` (table `conversations_ext_preprompt`)

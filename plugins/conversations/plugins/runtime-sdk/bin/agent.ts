@@ -66,6 +66,7 @@ import {
   type AgentAnswer,
   type AgentCommand,
   type AgentEvent,
+  type AgentLifecycle,
   type CommandReply,
   type HelloReply,
   type OpenRequest,
@@ -531,12 +532,41 @@ void session.initializationResult().then(
     ready = true;
     emit({ kind: "agent", payload: { event: "ready", cliVersion } });
     log(`● ready · claude ${cliVersion ?? "?"}`);
+    measureContext();
   },
   (err: unknown) => {
     log(`● initialize failed: ${err instanceof Error ? err.message : err}`);
     shutdown("initialize failed");
   },
 );
+
+// ── context window: measured here, written as an event ──────────────────────
+// The window moves when a turn ends (a compaction ends one too), so it is
+// measured then — and once at ready, the setup a session starts with — and
+// written as a `context_usage` line the backend records. No reader asks this
+// process: on 2026-11-04 a host under duress starved an agent past the 10 s
+// socket bound, and the read that asked it (once a second, per open tab)
+// failed every time. Measures run one at a time, so lines land in the order
+// they were taken.
+let measuring: Promise<void> = Promise.resolve();
+function measureContext(): void {
+  measuring = measuring.then(async () => {
+    if (closed) return;
+    let payload: AgentLifecycle;
+    try {
+      const usage = await session.getContextUsage({ detail: "summary" });
+      payload = { event: "context_usage", usage };
+    } catch (err) {
+      payload = {
+        event: "context_usage_failed",
+        error: err instanceof Error ? err.message : String(err),
+      };
+      log(`context usage: ${payload.error}`);
+    }
+    // Nothing is numbered after `exited`: a measure the exit overtook is moot.
+    if (!closed) emit({ kind: "agent", payload });
+  });
+}
 
 // ── command socket ────────────────────────────────────────────────────────
 async function run(cmd: AgentCommand): Promise<unknown> {
@@ -554,7 +584,6 @@ async function run(cmd: AgentCommand): Promise<unknown> {
         cliVersion,
         openRequests: [...openRequests.values()],
         stream: true,
-        contextUsage: true,
         turnIds: true,
         mcpReconnect: true,
       };
@@ -580,8 +609,6 @@ async function run(cmd: AgentCommand): Promise<unknown> {
       return session.setModel(cmd.model);
     case "rewindFiles":
       return session.rewindFiles(cmd.userMessageId);
-    case "contextUsage":
-      return session.getContextUsage({ detail: "summary" });
     case "reconnectMcp":
       return session.reconnectMcpServer(cmd.server);
     case "shutdown":
@@ -798,5 +825,6 @@ for await (const msg of session) {
   // A failed turn's message never lands in the transcript. A successful one
   // does, a few ms later: its text stays until the page sees it there.
   if (msg.type === "result" && msg.is_error) clearPartial();
+  if (msg.type === "result") measureContext();
 }
 shutdown("SDK stream ended");

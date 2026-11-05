@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import type { ContextReading, ContextUsage } from "@plugins/conversations/core";
+import type { ContextUsage } from "@plugins/conversations/plugins/context-usage/core";
 import { formatTokenCount } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import {
   useSendConversationTurn,
@@ -57,11 +57,12 @@ const USED_FLOOR = 0.5;
  */
 export function ContextCard({
   conversationId,
-  reading,
+  usage,
   onCompacted,
 }: {
   conversationId: string;
-  reading: ContextReading;
+  /** The agent's last reading; null when it has reported none yet. */
+  usage: ContextUsage | null;
   onCompacted: () => void;
 }) {
   const [instructions, setInstructions] = useState("");
@@ -79,13 +80,12 @@ export function ContextCard({
   };
   return (
     <Stack gap="md">
-      {reading.kind === "ready" ? (
-        <Breakdown usage={reading.usage} />
+      {usage !== null ? (
+        <Breakdown usage={usage} />
       ) : (
         <Text variant="caption" tone="muted">
-          {reading.reason === "not-running"
-            ? "The context is measured while the agent is running."
-            : "This agent started before context readings existed; it reports them from its next start."}
+          No reading yet. The agent measures its context when it starts and
+          after every turn.
         </Text>
       )}
       <Separator />

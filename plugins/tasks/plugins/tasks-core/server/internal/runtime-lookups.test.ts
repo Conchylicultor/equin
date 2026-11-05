@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { runtimeOfConversationLookup } from "./runtime-lookups";
 
-// The runtime lookup's route is what `conversations.context-usage` is reached
-// by: matched on the conversation's own id, gated on exactly the columns the
+// The runtime lookup's route is what `conversations.partial-message` is
+// reached by: matched on the conversation's own id, gated on exactly the columns the
 // lookup reads — so another conversation's write, or this one's
 // `waiting_for` / `last_viewed_at` / `working_on`, re-asks no agent.
 

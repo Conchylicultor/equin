@@ -18,8 +18,14 @@ import { z } from "zod";
 //
 // Additions that an older peer can ignore do not bump the version (every
 // running agent would then refuse every command): an agent advertises them in
-// `hello` (`stream`, `contextUsage`, `mcpReconnect`), and a backend uses them only when
+// `hello` (`stream`, `mcpReconnect`), and a backend uses them only when
 // advertised.
+//
+// The context window is not a command: the agent measures it itself and
+// writes it as a `context_usage` event (`AgentLifecycleSchema`), so no reader
+// waits on the agent. An agent started while `contextUsage` was a command
+// still advertises it in `hello`, stripped on parse; it writes no reading
+// until its next start.
 //
 // Turn ids (`turnIds`) are such an addition: every agent has always echoed a
 // `turn` command's `turnId` in its `turn_started`, so a backend sending its
@@ -79,12 +85,6 @@ export const AgentCommandSchema = z.discriminatedUnion("type", [
    */
   z.object({ type: z.literal("subscribe") }),
   /**
-   * What fills the context window now: the SDK's `getContextUsage()` (its
-   * cheap `summary` detail), relayed unchanged. Only sent to an agent whose
-   * `hello` says `contextUsage: true`.
-   */
-  z.object({ type: z.literal("contextUsage") }),
-  /**
    * Reconnect the named MCP server (the SDK's `reconnectMcpServer`): the CLI
    * initializes it again and lists its tools again, so a conversation whose
    * mandate changed gets the server instructions and the tools of its new
@@ -124,8 +124,6 @@ export const HelloReplySchema = z.object({
   openRequests: z.array(OpenRequestSchema),
   /** The agent takes `subscribe`. Absent from an agent started before it existed. */
   stream: z.literal(true).optional(),
-  /** The agent takes `contextUsage`. Absent from an agent started before it existed. */
-  contextUsage: z.literal(true).optional(),
   /**
    * Every turn the agent takes carries the backend's turn id, its launch
    * prompt included (`AgentLaunchPrompt`). Absent from an agent started before.
@@ -149,6 +147,10 @@ const envelope = { seq: z.number().int(), t: z.number() };
  * - `started` — the process is up (its pid, what it resumed, the Claude
  *   account it runs on — absent from an agent started before it was written);
  * - `ready` — the CLI finished its initialize (its version);
+ * - `context_usage` — what fills the context window, the SDK's
+ *   `getContextUsage()` (its `summary` detail) relayed unchanged: measured
+ *   once the CLI is ready and after every turn's `result` (a compaction ends
+ *   one) — or `context_usage_failed`, why that measure failed;
  * - `turn_started` — the CLI started a user turn: the agent has it (the ledger
  *   confirms it from this). Not when it was handed to the SDK — a busy CLI
  *   holds it in its command queue until the next tool boundary (folded into
@@ -180,6 +182,8 @@ export const AgentLifecycleSchema = z.discriminatedUnion("event", [
     promptUuid: z.string(),
     text: z.string(),
   }),
+  z.object({ event: z.literal("context_usage"), usage: z.unknown() }),
+  z.object({ event: z.literal("context_usage_failed"), error: z.string() }),
   z.object({ event: z.literal("exited"), reason: z.string() }),
   // After `exited`: process.exit returned, did not end the process within the
   // grace period, or a SIGTERM came first. Written by the hard exit just

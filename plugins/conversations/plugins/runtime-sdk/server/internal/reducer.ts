@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  ContextUsageSchema,
+  type ContextUsage,
+} from "@plugins/conversations/plugins/context-usage/core";
 import type { AgentEvent, AgentLifecycle, OpenRequest } from "../../core";
 
 // Event lines → the conversation's projection, plus the side effects the
@@ -120,7 +124,14 @@ export type AgentEffect =
    * turn handed to it before `at` and not started by then was in its CLI's
    * queue, which died with it — the turn ledger fails it.
    */
-  | { kind: "turns-dropped"; at: Date };
+  | { kind: "turns-dropped"; at: Date }
+  /**
+   * The agent measured its context window: the conversation's reading is
+   * recorded. Only a batch's latest — an earlier one in it is already stale.
+   */
+  | { kind: "context-measured"; usage: ContextUsage }
+  /** The agent could not measure its context window: reported. */
+  | { kind: "context-unmeasured"; seq: number; error: string };
 
 /** Lines the file skipped over: more rotations than the sink keeps were missed. */
 export interface SeqGap {
@@ -129,13 +140,15 @@ export interface SeqGap {
 }
 
 /**
- * A line of a kind the projection reads (a `system` subtype below) whose shape
- * did not parse: applied as nothing — the cursor still moves past it, so one
- * bad line never stalls the stream — and reported by the consumer.
+ * A line of a kind the projection reads (a `system` subtype below, or the
+ * agent's `context_usage`) whose shape did not parse: applied as nothing — the
+ * cursor still moves past it, so one bad line never stalls the stream — and
+ * reported by the consumer.
  */
 export interface MalformedEvent {
   seq: number;
-  subtype: string;
+  /** Which line: `system/<subtype>` or `agent/<event>`. */
+  event: string;
   issue: string;
 }
 
@@ -291,6 +304,30 @@ export function reduceEvents(
             s.openRequestId = null;
             s.openToolUseId = null;
             break;
+          case "context_usage": {
+            const parsed = ContextUsageSchema.safeParse(p.usage);
+            if (!parsed.success) {
+              malformed.push({
+                seq: e.seq,
+                event: "agent/context_usage",
+                issue: parsed.error.message,
+              });
+              break;
+            }
+            const stale = effects.findIndex(
+              (x) => x.kind === "context-measured",
+            );
+            if (stale >= 0) effects.splice(stale, 1);
+            effects.push({ kind: "context-measured", usage: parsed.data });
+            break;
+          }
+          case "context_usage_failed":
+            effects.push({
+              kind: "context-unmeasured",
+              seq: e.seq,
+              error: p.error,
+            });
+            break;
           case "exit_stalled":
             // Follows `exited`, which already cleared the state.
             stalls.push({ ...p, seq: e.seq });
@@ -326,7 +363,7 @@ export function reduceEvents(
               if (!parsed.success) {
                 malformed.push({
                   seq: e.seq,
-                  subtype,
+                  event: `system/${subtype}`,
                   issue: parsed.error.message,
                 });
                 break;
@@ -344,7 +381,7 @@ export function reduceEvents(
               if (!parsed.success) {
                 malformed.push({
                   seq: e.seq,
-                  subtype,
+                  event: `system/${subtype}`,
                   issue: parsed.error.message,
                 });
                 break;

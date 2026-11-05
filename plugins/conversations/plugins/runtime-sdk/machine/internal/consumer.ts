@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { relative, sep } from "node:path";
 import type { RuntimeSignal } from "@plugins/conversations/server";
+import { recordContextUsage } from "@plugins/conversations/plugins/context-usage/server";
 import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { createKeyedCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
@@ -264,7 +265,7 @@ async function catchUp(id: string, progress: CatchUpProgress): Promise<void> {
     await recordReport({
       kind: "crash",
       source: "server-caught",
-      message: `SDK agent ${id}: event ${bad.seq} (system/${bad.subtype}) in ${path} did not parse, so it was skipped; the conversation's status may be wrong until a later event corrects it — ${bad.issue}`,
+      message: `SDK agent ${id}: event ${bad.seq} (${bad.event}) in ${path} did not parse, so it was skipped; the conversation's status (or context reading) may be wrong until a later event corrects it — ${bad.issue}`,
       data: { errorType: "SdkMalformedEvent", label: "runtime-sdk.events" },
     });
   }
@@ -392,6 +393,20 @@ async function runEffect(id: string, effect: AgentEffect): Promise<void> {
       return;
     case "question-closed":
       await retireQuestion(id, effect.toolUseId);
+      return;
+    case "context-measured":
+      await recordContextUsage(id, effect.usage);
+      return;
+    case "context-unmeasured":
+      await recordReport({
+        kind: "crash",
+        source: "server-caught",
+        message: `SDK agent ${id}: it could not measure its context window (event ${String(effect.seq)}), so the conversation keeps its previous reading — ${effect.error}`,
+        data: {
+          errorType: "SdkContextUsageFailed",
+          label: "runtime-sdk.context-usage",
+        },
+      });
       return;
   }
 }

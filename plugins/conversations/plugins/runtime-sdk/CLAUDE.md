@@ -132,6 +132,20 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   projection's `lastPromptUuid`, the transcript line of the turn taken back.
   The conversations server returns the ledger row confirmed as that line and
   hands back the row's own text; the agent's prompt text is never read back.
+- **The context window is pushed, never asked.** The agent measures it
+  itself (`getContextUsage`, summary detail) once its CLI is ready and after
+  every `result` (a compaction ends a turn too), one measure at a time, and
+  writes a `context_usage` line (`context_usage_failed` when the measure
+  threw). The reducer keeps a batch's latest as a `context-measured` effect,
+  which the consumer records with conversations/context-usage's
+  `recordContextUsage`; a
+  failure is reported (`SdkContextUsageFailed`), a reading that does not parse
+  is a malformed event. `conversations.context-usage` reads that row — no
+  loader waits on the agent. Why: 2026-11-04, a host under duress starved an
+  agent past the 10 s socket bound, and the read that asked it (`hello` +
+  `contextUsage`, once a second per open tab) failed as a loader crash every
+  time. An agent started before it measured itself reports nothing until its
+  next start (the ring says "No reading yet").
 - `core/partial.ts` — token streaming: the agent folds the SDK's
   `stream_event`s (`includePartialMessages`) into frames — never written to
   `events.jsonl` — and streams them on `subscribe` connections; the backend

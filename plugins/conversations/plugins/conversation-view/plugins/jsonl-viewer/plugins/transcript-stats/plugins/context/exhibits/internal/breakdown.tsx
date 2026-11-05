@@ -1,4 +1,4 @@
-import type { ContextUsage } from "@plugins/conversations/core";
+import type { ContextUsage } from "@plugins/conversations/plugins/context-usage/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Breakdown } from "../../web/components/context-card";
 

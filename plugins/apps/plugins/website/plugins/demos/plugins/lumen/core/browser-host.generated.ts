@@ -866,7 +866,7 @@ export const hostReads: readonly {
   { key: "conversations-system", needsMachine: false },
   { key: "conversations.all", needsMachine: false },
   { key: "conversations.by-id", needsMachine: false },
-  { key: "conversations.context-usage", needsMachine: true },
+  { key: "conversations.context-usage", needsMachine: false },
   { key: "conversations.conversation-view.artifacts", needsMachine: false },
   { key: "conversations.history", needsMachine: false },
   { key: "conversations.partial-message", needsMachine: true },

@@ -349,8 +349,8 @@ export const conversationSessionTails = liveCollection(
 );
 
 // A conversation's runtime and status — lookup-only, followed by
-// `{ ids: [id] }` (conversations' partial-message / context-usage: which
-// agent runtime to ask, and whether it still runs).
+// `{ ids: [id] }`: which agent runtime runs a conversation, and whether it
+// still runs.
 export const conversationRuntimes = liveCollection("conversation-runtimes", {
   from: conversationsEntityRef,
   carry: { pick: ["id", "runtime", "status"] },

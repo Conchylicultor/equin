@@ -1,8 +1,8 @@
 import { useState } from "react";
 import {
   conversationContextUsage,
-  type ContextReading,
-} from "@plugins/conversations/core";
+  type ContextUsage,
+} from "@plugins/conversations/plugins/context-usage/core";
 import {
   formatTokenCount,
   useJsonlConversationId,
@@ -13,15 +13,15 @@ import {
   type StatTone,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { ContextCard } from "./context-card";
 import { contextLimit } from "./context-math";
 
 /**
  * The context ring at the end of the strip: how full the agent's window is
- * against the point the harness compacts it, as the harness itself measures
- * it now — not at the reading position, since the window has only a present.
+ * against the point the harness compacts it, as the harness itself last
+ * measured it (the agent reports a reading once ready and after every turn) —
+ * not at the reading position, since the window has only a present.
  * Opens the breakdown and the Compact action.
  *
  * Only in the conversation's own transcript: a sub-agent's pane would name the
@@ -35,60 +35,61 @@ export function ContextStat() {
 }
 
 function ContextStatFor({ conversationId }: { conversationId: string }) {
-  const reading = useLive(conversationContextUsage, { id: conversationId });
+  const read = useLive(conversationContextUsage, { id: conversationId });
   const [open, setOpen] = useState(false);
   // A reading in the strip: nothing until it is known.
-  return matchResource(reading, {
-    loading: () => null,
-    error: (err) => (
-      <StatBadge tone="alert" tooltip={err.message}>
+  if (read.status === "loading") return null;
+  if (read.status === "error")
+    return (
+      <StatBadge tone="alert" tooltip={read.error.message}>
         context unavailable
       </StatBadge>
-    ),
-    ready: (value) => (
-      <InlinePopover
-        open={open}
-        onOpenChange={setOpen}
-        side="top"
-        align="end"
-        width="xl"
-        trigger={
-          <StatBadge
-            as="button"
-            tone={toneOf(value)}
-            aria-label="Context window"
-            tooltip={tooltipOf(value)}
-          >
-            <Ring reading={value} />
-          </StatBadge>
-        }
-      >
-        <ContextCard
-          conversationId={conversationId}
-          reading={value}
-          onCompacted={() => setOpen(false)}
-        />
-      </InlinePopover>
-    ),
-  });
+    );
+  // `found: false` is determinate: the agent has reported no reading yet.
+  const usage = read.found ? read.row.usage : null;
+  return (
+    <InlinePopover
+      open={open}
+      onOpenChange={setOpen}
+      side="top"
+      align="end"
+      width="xl"
+      trigger={
+        <StatBadge
+          as="button"
+          tone={toneOf(usage)}
+          aria-label="Context window"
+          tooltip={tooltipOf(usage)}
+        >
+          <Ring usage={usage} />
+        </StatBadge>
+      }
+    >
+      <ContextCard
+        conversationId={conversationId}
+        usage={usage}
+        onCompacted={() => setOpen(false)}
+      />
+    </InlinePopover>
+  );
 }
 
-function fractionOf(reading: ContextReading): number | null {
-  if (reading.kind !== "ready") return null;
-  return Math.min(1, reading.usage.totalTokens / contextLimit(reading.usage));
+function fractionOf(usage: ContextUsage | null): number | null {
+  if (usage === null) return null;
+  return Math.min(1, usage.totalTokens / contextLimit(usage));
 }
 
-function toneOf(reading: ContextReading): StatTone {
-  const fraction = fractionOf(reading);
+function toneOf(usage: ContextUsage | null): StatTone {
+  const fraction = fractionOf(usage);
   if (fraction === null) return "muted";
   if (fraction >= 0.9) return "alert";
   if (fraction >= 0.75) return "attention";
   return "muted";
 }
 
-function tooltipOf(reading: ContextReading): string {
-  if (reading.kind !== "ready") return "Context window — compact";
-  const { totalTokens, rawMaxTokens } = reading.usage;
+function tooltipOf(usage: ContextUsage | null): string {
+  if (usage === null) return "Context window — compact";
+  const { totalTokens, rawMaxTokens } = usage;
   return `Context: ${formatTokenCount(totalTokens)} / ${formatTokenCount(rawMaxTokens)}`;
 }
 
@@ -96,8 +97,8 @@ const RADIUS = 5;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 /** A 12px ring in the badge's ink: a faint track, the used share drawn over it. */
-function Ring({ reading }: { reading: ContextReading }) {
-  const fraction = fractionOf(reading) ?? 0;
+function Ring({ usage }: { usage: ContextUsage | null }) {
+  const fraction = fractionOf(usage) ?? 0;
   return (
     <svg
       viewBox="0 0 14 14"

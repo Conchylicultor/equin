@@ -8,7 +8,7 @@ import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugi
 import { readTurnsFromChain, type Turn } from "./claude-transcript";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import type { ConversationRuntimeId } from "@plugins/conversations/plugins/runtime-catalog/core";
-import type { ContextReading, PartialMessage } from "../../core";
+import type { PartialMessage } from "../../core";
 
 export type { Turn };
 
@@ -168,12 +168,9 @@ export interface ConversationRuntime {
     conversationId: string,
     onChange: (message: PartialMessage | null) => void,
   ): () => void;
-  /**
-   * What fills the agent's context window now, as the harness measures it.
-   * `unavailable` when no agent process is running or it cannot be asked;
-   * throws when the agent was asked and failed.
-   */
-  contextUsage(conversationId: string): Promise<ContextReading>;
+  // No context-window read: a runtime records each reading its agent reports
+  // (conversations/context-usage's `recordContextUsage`), so no reader waits
+  // on the agent process.
   /**
    * Make the agent reconnect the MCP server named `server`: its client
    * initializes it again and lists its tools again, exactly as at the

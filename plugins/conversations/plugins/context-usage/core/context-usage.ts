@@ -1,8 +1,10 @@
 import { z } from "zod";
-import { liveValue } from "@plugins/network/plugins/live/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
+import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
-// What fills the agent's context window right now, as the harness itself
+// What fills the agent's context window, as the harness itself
 // measures it (the Agent SDK's `getContextUsage()`, the data behind `/context`).
 // Only the fields a surface reads are parsed; the SDK evolves its shape
 // additively, so unknown fields are dropped rather than refused.
@@ -59,31 +61,32 @@ export const ContextUsageSchema = z.object({
 });
 export type ContextUsage = z.infer<typeof ContextUsageSchema>;
 
-/**
- * A conversation's context reading: the harness's own numbers, or why there
- * are none — no agent process is running (a hibernated or finished
- * conversation), or the running one predates the command.
- */
-export const ContextReadingSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("ready"), usage: ContextUsageSchema }),
-  z.object({
-    kind: z.literal("unavailable"),
-    reason: z.enum(["not-running", "unsupported"]),
-  }),
-]);
-export type ContextReading = z.infer<typeof ContextReadingSchema>;
+// The `conversations_ext_context_usage` row: a conversation's LAST context
+// reading, as its agent measured it. The agent measures itself and the
+// runtime records it here (`recordContextUsage`, its server half) — the
+// SDK agent once its CLI is ready and after every turn (a compaction ends
+// one), written as an event in the stream the runtime already applies. No
+// reader ever asks the agent: a busy or starved agent leaves its last reading
+// in place rather than failing every read, and a stopped one keeps the window
+// it will resume with.
+export const conversationContextShape = defineExtensionShape({
+  key: "conversationId",
+  fields: { usage: jsonField({ schema: ContextUsageSchema }) },
+  wireTimestamps: ["updatedAt"],
+});
+export type ConversationContext = z.infer<
+  typeof conversationContextShape.schema
+>;
 
 /**
- * A conversation's context reading, re-measured whenever its conversation row
- * moves (a turn starting or ending, a compaction). Served by
- * `conversations/machine` through the conversation's runtime.
+ * One conversation's last context reading, by its id — lookup-only (nothing
+ * lists every conversation's window): `useLive(conversationContextUsage,
+ * { id })`, where `found: false` is "no reading yet" (an agent that has not
+ * reported one — started before agents measured themselves, or not yet
+ * ready). A load is one primary-key seek, and a reading reaches only its own
+ * conversation's readers.
  */
-export const conversationContextUsage = liveValue(
+export const conversationContextUsage = liveCollection(
   "conversations.context-usage",
-  {
-    schema: ContextReadingSchema,
-    params: ["id"],
-    // The reading comes from the agent process, on the computer.
-    needsMachine: { feature: "Showing what fills the agent's context" },
-  },
+  { from: conversationContextShape, id: "conversationId" },
 );

@@ -394,9 +394,9 @@ describe("reduceEvents", () => {
       sdk(5, { type: "system", subtype: "init", session_id: 7 }),
       result(6),
     ]);
-    expect(malformed.map((m) => [m.seq, m.subtype])).toEqual([
-      [4, "background_tasks_changed"],
-      [5, "init"],
+    expect(malformed.map((m) => [m.seq, m.event])).toEqual([
+      [4, "system/background_tasks_changed"],
+      [5, "system/init"],
     ]);
     expect(state).toMatchObject({
       cursorSeq: 6,
@@ -435,5 +435,51 @@ describe("reduceEvents", () => {
     expect(first.state).toMatchObject({ cursorSeq: 8, agentPid: null });
     // Replayed from the cursor: not reported again.
     expect(reduceEvents(first.state, [stalled]).stalls).toEqual([]);
+  });
+
+  test("records only a batch's latest context reading; a bad or failed one is reported", () => {
+    const usage = (total: number) => ({
+      model: "test-model",
+      totalTokens: total,
+      rawMaxTokens: 200_000,
+      isAutoCompactEnabled: true,
+      categories: [{ name: "Messages", tokens: total, kind: "used" }],
+      memoryFiles: [],
+      mcpTools: [],
+      extraFieldTheSdkAdded: 1,
+    });
+    const reading = (seq: number, u: unknown): AgentEvent => ({
+      seq,
+      t: at(),
+      kind: "agent",
+      payload: { event: "context_usage", usage: u },
+    });
+    const { effects, malformed } = reduceEvents(EMPTY_PROJECTION, [
+      ...stream.slice(0, 2),
+      reading(3, usage(1_000)),
+      result(4),
+      reading(5, usage(2_000)),
+      reading(6, { totalTokens: "lots" }),
+      {
+        seq: 7,
+        t: at(),
+        kind: "agent",
+        payload: { event: "context_usage_failed", error: "CLI gone" },
+      },
+    ]);
+    const measured = effects.filter((x) => x.kind === "context-measured");
+    expect(measured).toHaveLength(1);
+    expect(measured[0]).toMatchObject({
+      usage: { totalTokens: 2_000, rawMaxTokens: 200_000 },
+    });
+    expect(measured[0]).not.toHaveProperty("usage.extraFieldTheSdkAdded");
+    expect(malformed.map((m) => [m.seq, m.event])).toEqual([
+      [6, "agent/context_usage"],
+    ]);
+    expect(effects).toContainEqual({
+      kind: "context-unmeasured",
+      seq: 7,
+      error: "CLI gone",
+    });
   });
 });

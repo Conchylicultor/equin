@@ -1,7 +1,7 @@
 import type {
   ContextCategory,
   ContextUsage,
-} from "@plugins/conversations/core";
+} from "@plugins/conversations/plugins/context-usage/core";
 
 /**
  * What "full" means for the ring: where the harness compacts on its own when
