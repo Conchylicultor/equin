@@ -6,8 +6,8 @@
 
 - Description: The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and `./equin plugin-tree-facets`, which writes it as JSON for the serving backend to read as data.
 - Core:
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `plugin-meta/plugin-records` ×7
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `plugin-meta/plugin-records` ×8
     - `plugin-meta/facets` ×4
     - `framework/plugin-id` ×3
     - `packages/timed-fs` ×3

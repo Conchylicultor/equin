@@ -113,8 +113,7 @@ export function scanIconNames(src: string, displayPath: string): IconManifest {
 }
 
 const ICON_SCAN: FileScan<IconManifest> = {
-  module:
-    "plugins/framework/plugins/tooling/plugins/codegen/core/icon-manifest-gen.ts",
+  url: import.meta.url,
   scan: (src, rel) => scanIconNames(src, rel),
 };
 

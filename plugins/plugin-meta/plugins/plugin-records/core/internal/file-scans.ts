@@ -3,6 +3,7 @@ import type {
   RepoSnapshot,
 } from "@plugins/framework/plugins/tooling/core";
 import { recordKey } from "./keys";
+import { currentRecordStore } from "./store";
 import { buildModuleGraph, type ModuleGraphInput } from "./module-graph";
 
 /**
@@ -20,10 +21,13 @@ import { buildModuleGraph, type ModuleGraphInput } from "./module-graph";
  */
 export interface FileScan<T> {
   /**
-   * The repo-relative module whose code IS the scan — its Merkle key keys the
-   * records, so editing the scanner (or anything it imports) rescans.
+   * `import.meta.url` of the module that defines the scan — its code IS the
+   * scan, so its Merkle key keys the records and editing the scanner (or
+   * anything it imports) rescans. Taken from the module itself, never typed
+   * as a path, so a scan moved to another file cannot go on being keyed by
+   * the file it left.
    */
-  module: string;
+  url: string;
   /** Parameters the scan reads besides the file (part of the key). */
   params?: readonly string[];
   scan(src: string, rel: string): T;
@@ -35,14 +39,36 @@ function isSnapshot(repo: RepoFiles): repo is RepoSnapshot {
 
 const identities = new WeakMap<RepoFiles, Map<string, Promise<string>>>();
 
+/**
+ * The repo-relative path of the module at `url`: the longest of its path's
+ * `plugins/…` suffixes that is a member of the set — so a checkout reached
+ * through another spelling of its root (a symlink, a realpath) resolves the
+ * same.
+ */
+export function repoModuleOf(repo: RepoFiles, url: string): string {
+  const path = decodeURIComponent(new URL(url).pathname);
+  for (
+    let i = path.indexOf("/plugins/");
+    i >= 0;
+    i = path.indexOf("/plugins/", i + 1)
+  ) {
+    const rel = path.slice(i + 1);
+    if (repo.has(rel)) return rel;
+  }
+  throw new Error(
+    `[plugin-records] ${url} is not a module of the checkout at ${repo.root}: a scan's identity is its defining module`,
+  );
+}
+
 function scannerIdentity(
   input: ModuleGraphInput & { snapshot: RepoSnapshot },
-  module: string,
+  url: string,
 ): Promise<string> {
   let byModule = identities.get(input.snapshot);
   if (!byModule) identities.set(input.snapshot, (byModule = new Map()));
-  let id = byModule.get(module);
+  let id = byModule.get(url);
   if (!id) {
+    const module = repoModuleOf(input.snapshot, url);
     id = buildModuleGraph(input, [module]).then((graph) =>
       recordKey(
         "scan",
@@ -54,7 +80,7 @@ function scannerIdentity(
           : "-",
       ),
     );
-    byModule.set(module, id);
+    byModule.set(url, id);
   }
   return id;
 }
@@ -83,7 +109,7 @@ export async function scanFilesCached<T>(
   }
   const identity = await scannerIdentity(
     { ...input, snapshot: repo },
-    scanner.module,
+    scanner.url,
   );
   const params = scanner.params ?? [];
   const keys = files.map((rel) =>
@@ -102,4 +128,22 @@ export async function scanFilesCached<T>(
   );
   if (fresh.length > 0) input.store.putMany("file", fresh);
   return out;
+}
+
+/**
+ * `files` (members of `repo`) scanned as file records in the process's
+ * installed store ({@link currentRecordStore}): the one-call form for a scan
+ * whose scanner's closure is all in the set (a gitignored module it imports
+ * throws, never reads the disk).
+ */
+export function scanRepoFiles<T>(
+  repo: RepoFiles,
+  files: readonly string[],
+  scanner: FileScan<T>,
+): Promise<T[]> {
+  return scanFilesCached(
+    { snapshot: repo, store: currentRecordStore(), readOutside: () => null },
+    files,
+    scanner,
+  );
 }

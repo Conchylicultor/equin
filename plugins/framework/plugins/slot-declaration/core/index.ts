@@ -5,6 +5,7 @@ export {
   collectSlots,
   declaredSlotSources,
   declarePluginSlots,
+  declarationPassCount,
   moduleEvaluation,
   settleSlotNaming,
   slotSite,

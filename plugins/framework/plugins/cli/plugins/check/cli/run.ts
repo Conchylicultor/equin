@@ -9,6 +9,13 @@ import {
 } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { openGrepIndexStore } from "@plugins/framework/plugins/tooling/plugins/checks/cli";
+import { installRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import {
+  describeVerification,
+  openRecordStore,
+  verificationPassed,
+  verifyRecordsAgainst,
+} from "@plugins/plugin-meta/plugins/plugin-records/cli";
 import { inheritedGrant } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { cpuBudget } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
@@ -273,6 +280,7 @@ const run: CliAction<
     runId?: string;
     jobs?: string;
     fileReports?: boolean;
+    verifyRecords?: boolean;
   }
 > = async (checks, opts) => {
   // Validate before anything else: an unrecognized scope must NOT fall
@@ -375,7 +383,10 @@ const run: CliAction<
   // slot. Handed to `runChecks` so the cache is keyed on the same reading.
   // `--no-cache` / EQUIN_CHECK_NO_CACHE mean "really run": no hash, no
   // flight — exactly what the runner does with them.
-  const noCache = opts.cache === false || readEnv("CHECK_NO_CACHE") === "1";
+  // `--verify-records` recomputes every record, so its checks must really run.
+  const verifyRecords = opts.verifyRecords === true;
+  const noCache =
+    verifyRecords || opts.cache === false || readEnv("CHECK_NO_CACHE") === "1";
   const treeHash = noCache
     ? undefined
     : { value: await computeTreeHash(await getWorktreeRoot()) };
@@ -410,6 +421,17 @@ const run: CliAction<
       // rather than passed in, so the path this prints and the path the runner
       // writes are the same expression.
       const checkLogPath = worktreeArtifacts.checkLog(ctx.slug, ctx.opId);
+      // The shared plugin records, as the build reads them: a pass computes
+      // only the facets, evaluated barrels and file scans no checkout has made
+      // yet. Safe because a record's key is the hash of every input its value
+      // is a function of, the producer's code included — and checked, daily on
+      // main, by `--verify-records`: every record computed again and compared
+      // with the store's under the same key.
+      const sharedRecords = openRecordStore();
+      const verification = verifyRecords
+        ? verifyRecordsAgainst(sharedRecords)
+        : undefined;
+      installRecordStore(verification?.store ?? sharedRecords);
       const { profiler } = ctx;
       const failures: { id: string; result: CheckResult }[] = [];
       const inconclusive: string[] = [];
@@ -445,7 +467,7 @@ const run: CliAction<
             Date.now() - (performance.now() - wallStartMs),
           );
         },
-        noCache: opts.cache === false,
+        noCache,
         treeHash,
         // `--no-cache` means "really run": every grep runs whole as well.
         grepIndex: opts.cache === false ? undefined : openGrepIndexStore(),
@@ -471,6 +493,16 @@ const run: CliAction<
       );
       // Last line, so it survives `./equin check | tail`.
       if (!ok) console.error(`\nFull check output: ${checkLogPath}`);
+      if (verification) {
+        const agree = verificationPassed(verification);
+        for (const line of describeVerification(verification))
+          (agree ? console.log : console.error)(line);
+        if (!ok)
+          console.error(
+            "Check failures above are context: a --verify-records run's verdict is the records'.",
+          );
+        return agree ? "success" : "failed";
+      }
       // Only a run whose every non-passing check became a report has
       // delivered its verdict. An inconclusive check files nothing, so it
       // keeps the run failed — the job's own failure report then names it.

@@ -68,10 +68,10 @@ export function createMemoryRecordStore(environment = "memory"): RecordStore {
   };
 }
 
-// The process's store. The build installs the shared one (`plugin-records/cli`)
-// before codegen runs; any other process (a check pass, a script) keeps the
-// in-memory default, which computes everything once per process — exactly what
-// it did before records existed.
+// The process's store. The build, `regen-generated` and every check pass
+// install the shared one (`plugin-records/cli`) before anything reads a record;
+// any other process (a script, a test) keeps the in-memory default, which
+// computes everything once per process.
 let installed: RecordStore | undefined;
 
 /** Install the store every record read and write of this process goes through. */

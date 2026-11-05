@@ -1,4 +1,5 @@
 import {
+  declarationPassCount,
   declarePluginSlots,
   declaredSlotSources,
   isSlot,
@@ -298,7 +299,14 @@ export async function evaluateBarrels(
         dependent,
       };
       records.set(keyOf(b.path), rec);
-      freshBarrels.push([keyOf(b.path), JSON.stringify(rec)]);
+      // A dependent barrel's module holds what the last declaration pass of
+      // THIS process filled in — an input its key does not name. Its record is
+      // its state before any pass (what every fresh process imports), so a
+      // process that already ran one keeps its own reading and stores none
+      // (found by `--verify-records`: reorder's contributions stored full by a
+      // build, read empty by a fresh check).
+      if (!dependent || declarationPassCount() === 0)
+        freshBarrels.push([keyOf(b.path), JSON.stringify(rec)]);
     }
     store.putMany("evaluated", freshBarrels);
   }

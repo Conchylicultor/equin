@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { buildModuleGraph } from "./module-graph";
@@ -9,7 +11,14 @@ import { createMemoryRecordStore, type RecordStore } from "./store";
 // (no plugin of this checkout is named).
 const P = "plugins";
 
-function snapshotOf(files: Record<string, string>): RepoSnapshot {
+// The file-facts scan, as a checkout holds it: every graph keys its facts by
+// this module's Merkle key, so a fixture set carries the real one.
+const SCAN = readFileSync(join(import.meta.dir, "scan-imports.ts"), "utf8");
+const SCAN_PATH =
+  "plugins/plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts";
+
+function snapshotOf(fixture: Record<string, string>): RepoSnapshot {
+  const files: Record<string, string> = { ...fixture, [SCAN_PATH]: SCAN };
   const paths = Object.keys(files).sort();
   return {
     root: asAppPath("/repo"),
@@ -129,19 +138,44 @@ describe("buildModuleGraph", () => {
     expect(g2.keyOf("x/a.ts")).not.toBe(g1.keyOf("x/a.ts"));
   });
 
-  test("file facts come from the store: a second build reads no source", async () => {
+  test("file facts come from the store: a second build reads no source but the scan's own", async () => {
     const store = createMemoryRecordStore();
     await graphOf(base, [`${P}/a/web/index.ts`], { store });
     const snap = snapshotOf(base);
-    let reads = 0;
+    const reads: string[] = [];
     await buildModuleGraph(
       {
-        snapshot: { ...snap, read: (p) => (reads++, snap.read(p)) },
+        snapshot: { ...snap, read: (p) => (reads.push(p), snap.read(p)) },
         store,
         readOutside: () => null,
       },
       [`${P}/a/web/index.ts`],
     );
-    expect(reads).toBe(0);
+    // The facts' identity is the scan's Merkle key, from a graph that reads no
+    // record: its one module, read once per set.
+    expect(reads).toEqual([SCAN_PATH]);
+  });
+
+  test("editing the scan re-keys every file fact", async () => {
+    const store = createMemoryRecordStore();
+    await graphOf(base, [`${P}/a/web/index.ts`], { store });
+    const snap = snapshotOf(base);
+    const edited: RepoSnapshot = {
+      ...snap,
+      read: (p) =>
+        p === SCAN_PATH ? Promise.resolve(`${SCAN}\n// edited`) : snap.read(p),
+      blobOf: (p) =>
+        p === SCAN_PATH ? gitBlobId(`${SCAN}\n// edited`) : snap.blobOf(p),
+    };
+    const reads: string[] = [];
+    await buildModuleGraph(
+      {
+        snapshot: { ...edited, read: (p) => (reads.push(p), edited.read(p)) },
+        store,
+        readOutside: () => null,
+      },
+      [`${P}/a/web/index.ts`],
+    );
+    expect(reads).toContain(`${P}/a/web/index.ts`);
   });
 });

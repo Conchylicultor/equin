@@ -19,7 +19,7 @@ import { scanModuleImports, type ImportSpec } from "./scan-imports";
  * record is stored under: importing a barrel is a function of the code its
  * closure loads, and of nothing else that a key can see — what escapes it (a
  * module that reads a file at load, the process environment) is what
- * `--verify-records` catches.
+ * `./equin check --verify-records` (main's daily plugin-records.verify) catches.
  */
 
 /** What scanning a module yields — stored under its blob, so it must be a function of the bytes. */
@@ -27,10 +27,11 @@ interface FileFacts {
   imports: ImportSpec[];
 }
 
-// Bump when the scan changes what it reads out of a file: the file facts are
-// keyed by it. Not a hand-maintained identity of anything else — the evaluated
-// records' keys carry their evaluator's own Merkle key.
-const FILE_FACTS_VERSION = "file-facts-3";
+// The module whose code IS the file-facts scan: the facts are keyed by its
+// Merkle key (and the runtime's, whose transpiler it reads imports with), so
+// editing the scan re-scans every file and nothing is bumped by hand.
+const SCAN_MODULE =
+  "plugins/plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts";
 
 const SCANNED = /\.(m?[jt]sx?|c[jt]s)$/;
 const PLUGINS_ALIAS = "@plugins/";
@@ -116,6 +117,51 @@ export async function buildModuleGraph(
   input: ModuleGraphInput,
   entries: readonly string[],
 ): Promise<ModuleGraph> {
+  return buildGraph(input, entries, await fileFactsIdentity(input));
+}
+
+const factsIdentities = new WeakMap<object, Promise<string>>();
+
+/** The lockfile's blob: the npm code a producer can run (a set with no blob ids: its content's). */
+async function lockBlob(set: RepoFiles | RepoSnapshot): Promise<string> {
+  if (!set.has("bun.lock")) return "-";
+  if (typeof (set as Partial<RepoSnapshot>).blobOf === "function")
+    return (set as RepoSnapshot).blobOf("bun.lock");
+  const text = await set.read("bun.lock");
+  if (text === null) throw new Error("[plugin-records] cannot read bun.lock");
+  return gitBlobId(text);
+}
+
+/**
+ * The file facts' identity over `input`'s set: the Merkle key of the scan's own
+ * closure, from a graph that reads no record (its facts would need this very
+ * identity) — a handful of files, scanned directly.
+ */
+function fileFactsIdentity(input: ModuleGraphInput): Promise<string> {
+  let id = factsIdentities.get(input.snapshot);
+  if (!id) {
+    id = Promise.all([
+      buildGraph(input, [SCAN_MODULE], null),
+      lockBlob(input.snapshot),
+    ]).then(([g, lock]) =>
+      recordKey(
+        "file-facts",
+        g.keyOf(SCAN_MODULE),
+        input.store.environment,
+        lock,
+      ),
+    );
+    factsIdentities.set(input.snapshot, id);
+  }
+  return id;
+}
+
+/** The graph; `factsId` keys its file records, or null to read and write none. */
+async function buildGraph(
+  input: ModuleGraphInput,
+  entries: readonly string[],
+  factsId: string | null,
+): Promise<ModuleGraph> {
   const { snapshot, store } = input;
   const outsideContent = new Map<string, string | null>();
   const contentOutside = (rel: string): string | null => {
@@ -180,11 +226,14 @@ export async function buildModuleGraph(
   const queued = new Set(level);
   while (level.length > 0) {
     const blobs = await Promise.all(level.map(blobOf));
-    const factKey = (blob: string): string =>
-      recordKey(FILE_FACTS_VERSION, blob);
+    const factKey = (blob: string): string => recordKey(factsId!, blob);
     const hits = store.getMany(
       "file",
-      level.flatMap((p, i) => (SCANNED.test(p) ? [factKey(blobs[i]!)] : [])),
+      factsId === null
+        ? []
+        : level.flatMap((p, i) =>
+            SCANNED.test(p) ? [factKey(blobs[i]!)] : [],
+          ),
     );
     const fresh: [string, string][] = [];
     const next: string[] = [];
@@ -193,8 +242,8 @@ export async function buildModuleGraph(
         const blob = blobs[i]!;
         let facts: FileFacts = { imports: [] };
         if (SCANNED.test(path)) {
-          const k = factKey(blob);
-          const hit = hits.get(k);
+          const k = factsId === null ? null : factKey(blob);
+          const hit = k === null ? undefined : hits.get(k);
           if (hit !== undefined) facts = JSON.parse(hit) as FileFacts;
           else {
             const src =
@@ -205,7 +254,7 @@ export async function buildModuleGraph(
             if (src === null)
               throw new Error(`[plugin-records] cannot read module ${path}`);
             facts = { imports: scanModuleImports(src, path) };
-            fresh.push([k, JSON.stringify(facts)]);
+            if (k !== null) fresh.push([k, JSON.stringify(facts)]);
           }
         }
         const node: ModuleNode = {
@@ -232,7 +281,7 @@ export async function buildModuleGraph(
         modules.set(path, node);
       }),
     );
-    if (fresh.length > 0) store.putMany("file", fresh);
+    if (factsId !== null && fresh.length > 0) store.putMany("file", fresh);
     for (const path of level) {
       const node = modules.get(path)!;
       for (const d of [...node.staticDeps, ...node.dynamicDeps]) {

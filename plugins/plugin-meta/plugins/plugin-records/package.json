@@ -1,5 +1,6 @@
 {
   "name": "@equin/plugin-plugin-meta-plugin-records",
+  "description": "Content-addressed records of what the build learns about each plugin (file facts, facet extracts, evaluated barrels), shared by every worktree's build and check pass; the daily plugin-records.verify job recomputes them on main and fails on any record that disagrees with its key.",
   "private": true,
   "version": "0.0.1"
 }

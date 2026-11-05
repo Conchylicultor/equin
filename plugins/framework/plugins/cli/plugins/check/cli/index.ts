@@ -42,6 +42,7 @@ export default defineCliCommand<
     runId?: string;
     jobs?: string;
     fileReports?: boolean;
+    verifyRecords?: boolean;
   }
 >({
   name: "check",
@@ -85,6 +86,15 @@ export default defineCliCommand<
         "Deliver each failing check as a host-check report through the report outbox instead " +
         "of failing the exit code (exit 1 only if a report could not be written). Only with " +
         "--scope host: what main's hourly checks.host-audit job runs.",
+    },
+    {
+      flags: "--verify-records",
+      description:
+        "Compute every plugin record again and compare it with the shared store's value under " +
+        "the same key, writing nothing: a disagreement is a key that missed an input. The exit " +
+        "status is the records' verdict — check failures are printed, but are not this run's " +
+        "verdict. Implies --no-cache (the checks must really run). What main's daily " +
+        "plugin-records.verify job runs.",
     },
     {
       flags: "--always-run",

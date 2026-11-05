@@ -27093,6 +27093,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/op-runtime.DirectOpFlight`
               - `framework/cli/op-runtime.withDirectOp`
               - `framework/tooling/checks.openGrepIndexStore`
+              - `plugin-meta/plugin-records.describeVerification`
+              - `plugin-meta/plugin-records.openRecordStore`
+              - `plugin-meta/plugin-records.verificationPassed`
+              - `plugin-meta/plugin-records.verifyRecordsAgainst`
           - Exemptions:
             - Exempts itself from: `check-runner-safety/no-adhoc-check-runner` — `cli/run.ts` (sanctioned)
         - **`cli-name`** — The CLI's own name, as data: CLI_NAME (`equin`, what agents type and the CLI calls itself), CLI_NAMES (every repo-root executable that runs it, the legacy shim included), isCliName and CLI_NAME_PATTERN for matchers over command text. A dependency-free leaf, so a guard, a spawn site or a browser bundle can import it.
@@ -27668,6 +27672,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotSource`
         - Exports (values):
           - `collectSlots`
+          - `declarationPassCount`
           - `declaredSlotSources`
           - `declarePluginSlots`
           - `findUndeclaredSlots`
@@ -32595,7 +32600,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `cliExecContext`
               - `runAttached`
           - Cross-plugin:
-            - Imported by: 21 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+            - Imported by: 22 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
               - `framework` ×9
               - `infra` ×4
               - `apps` ×3
@@ -32603,6 +32608,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/workspace/worktree`
               - `database/fork`
               - `debug/worktree-cleanup`
+              - `plugin-meta/plugin-records/verify`
               - `release`
           - Exemptions:
             - Exempts itself from:
@@ -40914,10 +40920,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --success`
           - `ui/tokens/color-palette --warning`
           - `ui/tokens/shape --spacing`
-    - **`plugin-records`**
+    - **`plugin-records`** — Content-addressed records of what the build learns about each plugin (file facts, facet extracts, evaluated barrels), shared by every worktree's build and check pass; the daily plugin-records.verify job recomputes them on main and fails on any record that disagrees with its key.
       - Core:
         - Uses:
           - `framework/plugin-id.asPluginId`
+          - `framework/slot-declaration.declarationPassCount`
           - `framework/slot-declaration.declaredSlotSources`
           - `framework/slot-declaration.declarePluginSlots`
           - `framework/slot-declaration.isSlot`
@@ -40961,26 +40968,42 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RECORD_TABLES`
           - `recordKey`
           - `recordWorkerCount`
+          - `repoModuleOf`
           - `reviveValue`
           - `runRecordJobRequest`
           - `runRecordJobs`
           - `scanFilesCached`
+          - `scanRepoFiles`
           - `serializeValue`
       - Cli:
         - Uses: `packages/thread-pool.createThreadPool`
+        - Exports (types):
+          - `RecordDisagreement`
+          - `RecordVerification`
         - Exports (values):
           - `createPooledRecordWorkers`
+          - `describeVerification`
           - `idealRecordWorkerThreads`
           - `openRecordStore`
+          - `verificationPassed`
+          - `verifyRecordsAgainst`
       - Cross-plugin:
         - Imported by:
           - `framework/cli/build`
+          - `framework/cli/check`
           - `framework/cli/regen-generated`
           - `framework/tooling/boundaries`
           - `framework/tooling/codegen`
           - `plugin-meta/plugin-tree/faceted`
       - Exemptions:
         - Exempts itself from: `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
+      - Plugins:
+        - **`verify`** — The daily plugin-records.verify job: on main, recomputes every plugin record a tree check pass reads (`./equin check --verify-records`) and fails when one disagrees with the shared store under the same key.
+          - Server:
+            - Uses:
+              - `infra/jobs/supervised-job.defineSupervisedJob`
+              - `primitives/log-channels.defineLogSink`
+            - Register: `defineSupervisedJob('plugin-records.verify')`
     - **`plugin-refs`** — The one plugin-reference locator: every place the repo names a plugin (path literals, @plugins specifiers, structurally-read dot ids, relative markdown/CSS links), each with an exact character range a mover rewrites by.
       - Core:
         - Uses:
@@ -41010,6 +41033,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RelativeRef`
           - `RelativeRefSyntax`
           - `ResolvedRelativeRef`
+          - `ScanFiles`
         - Exports (values):
           - `BOUNDARY_CONFIG`
           - `COMPOSITIONS_MANIFEST`
@@ -41101,8 +41125,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and `./equin plugin-tree-facets`, which writes it as JSON for the serving backend to read as data.
           - Core:
-            - Uses: 28 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
-              - `plugin-meta/plugin-records` ×7
+            - Uses: 29 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
+              - `plugin-meta/plugin-records` ×8
               - `plugin-meta/facets` ×4
               - `framework/plugin-id` ×3
               - `packages/timed-fs` ×3
@@ -46324,7 +46348,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×11
           - `debug` ×9
           - `infra` ×7
@@ -46339,6 +46363,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build`
           - `integrations/youtube/audio-fetch`
           - `menu-bar`
+          - `plugin-meta/plugin-records/verify`
           - `primitives/log-channels/memory-persistence`
           - `release`
           - `stats/cost`

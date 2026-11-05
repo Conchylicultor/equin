@@ -38,6 +38,10 @@ export type {
   EvaluatedBarrels,
   EvaluationInput,
 } from "./internal/evaluate";
-export { scanFilesCached } from "./internal/file-scans";
+export {
+  repoModuleOf,
+  scanFilesCached,
+  scanRepoFiles,
+} from "./internal/file-scans";
 export type { FileScan } from "./internal/file-scans";
 export type { BundledClosure } from "./internal/module-graph";

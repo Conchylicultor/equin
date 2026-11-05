@@ -1,3 +1,4 @@
+import { scanRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -350,7 +351,7 @@ describe("findPluginRefs over a fixture repo", () => {
   const repo = repoFilesOver(root, Object.keys(files).sort());
 
   test("collects every kind, skipping generated files and test-code asPluginId", async () => {
-    const refs = await findPluginRefs(repo);
+    const refs = await findPluginRefs(repo, { scanFiles: scanRepoFiles });
     const summary = refs.map((r) => `${r.file} ${r.kind} ${r.value}`);
     expect(summary).toEqual([
       "config/plugin-meta/composition/compositions.origin.jsonc dot apps.home",
@@ -368,13 +369,19 @@ describe("findPluginRefs over a fixture repo", () => {
   });
 
   test("kinds narrows the scan", async () => {
-    const refs = await findPluginRefs(repo, { kinds: ["relative"] });
+    const refs = await findPluginRefs(repo, {
+      kinds: ["relative"],
+      scanFiles: scanRepoFiles,
+    });
     expect(new Set(refs.map((r) => r.kind))).toEqual(new Set(["relative"]));
   });
 
   test("a missing fixed input throws rather than reporting no refs", async () => {
     const partial = repoFilesOver(root, ["plugins/tasks/core/x.ts"]);
-    const outcome = await findPluginRefs(partial, { kinds: ["dot"] }).then(
+    const outcome = await findPluginRefs(partial, {
+      kinds: ["dot"],
+      scanFiles: scanRepoFiles,
+    }).then(
       () => "resolved",
       (err: unknown) => String(err),
     );

@@ -122,6 +122,7 @@ links **into** research from anywhere else are.
     - `RelativeRef`
     - `RelativeRefSyntax`
     - `ResolvedRelativeRef`
+    - `ScanFiles`
   - Exports (values):
     - `BOUNDARY_CONFIG`
     - `COMPOSITIONS_MANIFEST`

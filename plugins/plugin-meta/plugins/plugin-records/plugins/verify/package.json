@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-plugin-meta-plugin-records-verify",
+  "description": "The daily plugin-records.verify job: on main, recomputes every plugin record a tree check pass reads (`./equin check --verify-records`) and fails when one disagrees with the shared store under the same key.",
+  "version": "0.0.1",
+  "private": true
+}

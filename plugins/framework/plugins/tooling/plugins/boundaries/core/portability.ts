@@ -478,10 +478,6 @@ export async function serverPortability(
 
 const memo = new WeakMap<RepoFiles, Promise<ServerPortability>>();
 
-/** This module: what the per-module portability facts are keyed by. */
-const PORTABILITY_MODULE =
-  "plugins/framework/plugins/tooling/plugins/boundaries/core/portability.ts";
-
 /**
  * Every server barrel's portability in `repo`, derived once per file set: one
  * shared promise per `RepoFiles`, so codegen's consumers (through
@@ -527,7 +523,7 @@ export function serverPortabilityOf(
         read: (path) => repo.read(path),
         facts: (modules) =>
           scanFilesCached(input, modules, {
-            module: PORTABILITY_MODULE,
+            url: import.meta.url,
             scan: (src, rel) => factsOf(ts, rel, src),
           }),
       });

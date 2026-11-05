@@ -9,6 +9,7 @@ import {
   defineRecordJob,
   recordKey,
   recordWorkerCount,
+  repoModuleOf,
   runRecordJobs,
   type RecordStore,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
@@ -34,12 +35,13 @@ import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
  * invalidate it.
  */
 
-/** The modules whose code shapes every extraction (what the snapshot holds, how it is read). */
-const HARNESS_MODULES = [
-  "plugins/plugin-meta/plugins/plugin-tree/core/internal/plugin-tree.ts",
-  "plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core/internal/faceted-tree.ts",
-  "plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core/internal/facet-records.ts",
-];
+/**
+ * The extraction harness: THIS module, which runs every extraction (the
+ * strict snapshot it builds, the job a worker runs). Its Merkle key covers what
+ * it imports; what decides WHICH plugin is extracted (its dir, id and files) is
+ * in each record's key already, so the tree builder above it is not.
+ */
+const HARNESS_URL = import.meta.url;
 
 export interface FacetRecordsInput {
   snapshot: RepoSnapshot;
@@ -58,11 +60,12 @@ async function facetIdentities(
   facets: readonly Facet[],
 ): Promise<Map<string, string>> {
   const sources = await loadFacetSources(facets);
+  const harnessModule = repoModuleOf(input.snapshot, HARNESS_URL);
   const graph = await buildModuleGraph(input, [
-    ...HARNESS_MODULES,
+    harnessModule,
     ...sources.values(),
   ]);
-  const harness = HARNESS_MODULES.map((m) => graph.keyOf(m));
+  const harness = [graph.keyOf(harnessModule)];
   const env = [
     input.store.environment,
     input.snapshot.has("bun.lock") ? input.snapshot.blobOf("bun.lock") : "-",

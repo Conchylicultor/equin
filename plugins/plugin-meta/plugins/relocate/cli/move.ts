@@ -1,3 +1,4 @@
+import { scanRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { rmdirSync } from "node:fs";
 import {
@@ -264,7 +265,7 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
   );
 
   // Locate BEFORE anything moves: the refs carry old paths and old offsets.
-  const refs = await findPluginRefs(repo);
+  const refs = await findPluginRefs(repo, { scanFiles: scanRepoFiles });
   const mentions = await findPluginMentions(repo, [from.id]);
   const texts = new Map<string, string>();
   const need = new Set<string>([

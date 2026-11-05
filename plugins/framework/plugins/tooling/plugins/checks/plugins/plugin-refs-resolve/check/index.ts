@@ -1,3 +1,4 @@
+import { scanRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type {
   Check,
@@ -39,7 +40,10 @@ const check: Check = {
     const pathSet = new Set([...tree.byPath.keys()].map((p) => `plugins/${p}`));
     const idSet = new Set([...tree.byDir.values()].map((n) => n.id as string));
 
-    const refs = await findPluginRefs(repo, { kinds: ["path", "dot"] });
+    const refs = await findPluginRefs(repo, {
+      kinds: ["path", "dot"],
+      scanFiles: scanRepoFiles,
+    });
     const unresolved: Array<PathRef | DotRef> = [];
     for (const ref of refs) {
       if (ref.kind === "path" && !pathSet.has(ref.value)) unresolved.push(ref);

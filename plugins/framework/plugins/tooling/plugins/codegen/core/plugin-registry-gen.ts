@@ -347,15 +347,13 @@ function identifierForDir(dir: string): string {
 }
 
 // Per-file scans, cached as file records (`file-scans.ts`).
-const SCANNER_MODULE =
-  "plugins/framework/plugins/tooling/plugins/codegen/core/plugin-registry-gen.ts";
 const DEFAULT_EXPORT_SCAN: FileScan<boolean> = {
-  module: SCANNER_MODULE,
+  url: import.meta.url,
   params: ["default-export"],
   scan: (src) => hasDefaultExport(src),
 };
 const IMPORT_SPECIFIER_SCAN: FileScan<string[]> = {
-  module: SCANNER_MODULE,
+  url: import.meta.url,
   params: ["import-specifiers"],
   scan: (src) => findImports(src).map((imp) => imp.specifier),
 };

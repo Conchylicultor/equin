@@ -116,8 +116,7 @@ export interface DataViewEntry {
  * be regenerated BEFORE the first barrel import freezes the ESM cache.
  */
 const DATA_VIEW_SCAN: FileScan<string[]> = {
-  module:
-    "plugins/framework/plugins/tooling/plugins/codegen/core/data-views-gen.ts",
+  url: import.meta.url,
   scan: (src, rel) =>
     src.includes(DATA_VIEW_MARKER) ? [...scanDataViewIds(src, rel)] : [],
 };

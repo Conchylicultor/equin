@@ -310,8 +310,7 @@ function watchedSlotIn(text: string): string | null {
 /** One file's eager-tier answers: its first watched slot, and its preloaded keys. */
 const EAGER_TIER_SCAN: FileScan<{ watched: string | null; preload: string[] }> =
   {
-    module:
-      "plugins/framework/plugins/tooling/plugins/codegen/core/eager-tier-gen.ts",
+    url: import.meta.url,
     scan: (text, rel) => ({
       watched: watchedSlotIn(text),
       preload: preloadedKeysIn(text, rel, { ownerPlugin: false }),

@@ -640,6 +640,21 @@ const declarationListeners = new Set<SlotDeclarationListener>();
 // spelling on that path and there is nothing left to count.
 let lastNaming: SlotNaming = makeNaming([], new Map(), "registry");
 
+// How many live declaration passes this process has run: a declaration-
+// dependent module's state is a function of them, which a reader serializing
+// that state as data has to know.
+let passes = 0;
+
+/**
+ * How many live declaration passes ({@link declarePluginSlots}) this process
+ * has run. A module subscribed to passes holds state the last one filled, so
+ * a reader recording such a module as data — the same for every process — can
+ * record it only as it stands before the first pass (`0`).
+ */
+export function declarationPassCount(): number {
+  return passes;
+}
+
 /**
  * Subscribe to declaration passes. The listener is invoked immediately with the
  * latest naming (an empty one before the first pass), so a subscriber that
@@ -695,6 +710,7 @@ export function declarePluginSlots(
   // here (and anything it calls) already sees the pass it is being notified
   // about. A pass that threw above never publishes — it settled no ownership.
   lastNaming = naming;
+  passes++;
   for (const listener of declarationListeners) listener(naming);
   return naming;
 }

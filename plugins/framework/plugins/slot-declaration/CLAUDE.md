@@ -49,6 +49,7 @@ import — keep it that way.
     - `SlotSource`
   - Exports (values):
     - `collectSlots`
+    - `declarationPassCount`
     - `declaredSlotSources`
     - `declarePluginSlots`
     - `findUndeclaredSlots`

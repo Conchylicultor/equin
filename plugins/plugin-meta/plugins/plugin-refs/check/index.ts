@@ -1,3 +1,4 @@
+import { scanRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import type {
   Check,
   CheckContext,
@@ -33,7 +34,10 @@ const relativeLinksResolve: Check = {
       path === "" || repo.has(path) || repo.under(path).length > 0;
 
     const broken: Array<{ ref: RelativeRef; why: string }> = [];
-    for (const ref of await findPluginRefs(repo, { kinds: ["relative"] })) {
+    for (const ref of await findPluginRefs(repo, {
+      kinds: ["relative"],
+      scanFiles: scanRepoFiles,
+    })) {
       if (ref.kind !== "relative") continue;
       if (!ctx.inScope(ref.file)) continue;
       const resolved = resolveRelativeRef(ref);
@@ -81,7 +85,10 @@ const compositionsSourceCoversOrigin: Check = {
   description:
     "every plugin id in the compositions origin is written where the plugin-refs locator reads it in the compositions source",
   async run(ctx: CheckContext): Promise<CheckResult> {
-    const refs = await findPluginRefs(await ctx.repo(), { kinds: ["dot"] });
+    const refs = await findPluginRefs(await ctx.repo(), {
+      kinds: ["dot"],
+      scanFiles: scanRepoFiles,
+    });
     const inSource = new Set<string>();
     for (const r of refs) {
       if (r.kind === "dot" && r.site === "composition-source")
