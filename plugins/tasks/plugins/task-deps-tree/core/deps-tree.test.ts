@@ -15,7 +15,7 @@ function task(
   opts: {
     folderId?: string | null;
     status?: TaskStatus;
-    clusterId?: string | null;
+    clusterId?: string;
   } = {},
 ): TaskListItem {
   const status = opts.status ?? "new";
@@ -23,7 +23,7 @@ function task(
     id,
     folderId: opts.folderId ?? null,
     groupId: null,
-    clusterId: opts.clusterId ?? null,
+    clusterId: opts.clusterId ?? id,
     title: id,
     titleAuto: true,
     author: "user",

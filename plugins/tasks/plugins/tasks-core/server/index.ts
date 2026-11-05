@@ -5,6 +5,7 @@ import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
 import { TASK_ROLLUPS } from "./internal/rollup-spec";
 import {
   taskRowsServed,
+  taskClusterRowsServed,
   taskDescriptionsServed,
   attemptRowsServed,
   attemptWorkspacesServed,
@@ -205,8 +206,8 @@ export type {
 } from "./internal/mutations/tasks";
 
 // Monotone dependency-tree membership (`tasks.clusterId`). Every writer of a
-// membership edge (dependency edge or `folderId`) must union at or before the
-// edge write; nothing ever un-unions.
+// membership edge (dependency edge, `folderId` or `groupId`) must union at or
+// before the edge commits; nothing ever un-unions.
 export {
   clusterLabelOf,
   unionTaskClusters,
@@ -333,6 +334,7 @@ export default {
     IdKinds.Kind({ kind: attemptIdKind }),
     IdKinds.Kind({ kind: conversationIdKind }),
     ...taskRowsServed.declare,
+    ...taskClusterRowsServed.declare,
     ...taskDescriptionsServed.declare,
     ...attemptRowsServed.declare,
     ...attemptWorkspacesServed.declare,

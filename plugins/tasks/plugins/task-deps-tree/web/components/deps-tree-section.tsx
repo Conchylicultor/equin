@@ -1,4 +1,3 @@
-import { useLive } from "@plugins/network/plugins/live/web";
 import { useCallback, useMemo } from "react";
 import {
   foldResource,
@@ -9,7 +8,8 @@ import {
   DataViewSwitcher,
   defineDataView,
 } from "@plugins/primitives/plugins/data-view/web";
-import { taskRows, type TaskRow } from "@plugins/tasks/plugins/tasks-core/core";
+import type { TaskRow } from "@plugins/tasks/plugins/tasks-core/core";
+import { useTaskCluster } from "@plugins/tasks/plugins/tasks-core/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { taskClusterIds } from "@plugins/tasks/plugins/task-deps-tree/core";
 import { DepsSources } from "../internal/deps-sources";
@@ -28,25 +28,29 @@ const DEPS_TREE_VIEW = defineDataView("task-deps-tree");
  * edges — see the note on the same gate below.
  */
 export function useHasDepsCluster({ taskId }: { taskId: string }): boolean {
-  const result = useLive(taskRows);
+  const result = useTaskCluster(taskId);
   // Still loading ⇒ keep the card painted (the body shows its own Loading), so
   // it does not pop in a frame after the pane. `false` here would collapse
   // "unknown yet" into "definitely a lone task". Failed ⇒ painted too: the
-  // body renders the failure with Retry.
+  // body renders the failure with Retry. No such task ⇒ nothing to draw.
   return foldResource(result, {
     loading: () => true,
     error: () => true,
-    ready: (tasks) => taskClusterIds(tasks, taskId).size > 1,
+    ready: (cluster) =>
+      cluster !== null && taskClusterIds(cluster.rows, taskId).size > 1,
   });
 }
 
 export function DepsTreeSection({ taskId }: { taskId: string }) {
-  const result = useLive(taskRows);
+  // The task's own cluster: every member the section renders, and nothing else.
+  const result = useTaskCluster(taskId);
   return (
     <ResourceView resource={result}>
-      {(allTasks) => (
-        <DepsTreeSectionLoaded taskId={taskId} allTasks={allTasks} />
-      )}
+      {(cluster) =>
+        cluster === null ? null : (
+          <DepsTreeSectionLoaded taskId={taskId} allTasks={cluster.rows} />
+        )
+      }
     </ResourceView>
   );
 }

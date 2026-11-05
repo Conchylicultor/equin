@@ -1,4 +1,4 @@
-import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useMemo, useCallback, type ReactElement } from "react";
 import {
@@ -13,12 +13,14 @@ import {
 import { addTaskDependency, removeTaskDependency } from "@plugins/tasks/core";
 import {
   isSettled,
-  taskRows,
-  TaskGraph,
   conversationName,
   type Conversation as ConversationRecord,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  useTaskCluster,
+  type TaskCluster,
+} from "@plugins/tasks/plugins/tasks-core/web";
 import {
   EndpointError,
   useFetchEndpoint,
@@ -49,10 +51,11 @@ const resolvedIcon = symbol("swap-vert");
 export function DependenciesButton(): ReactElement | null {
   const { convId } = conversationPane.useParams();
   const conversation = rowOrStale(useConversationById(convId));
-  const tasksResult = useLive(taskRows);
+  // The task's links are all in its cluster.
+  const clusterResult = useTaskCluster(conversation?.taskId);
   const activeResult = useActiveConversations();
   const combined = useCombinedResources({
-    tasks: tasksResult,
+    cluster: clusterResult,
     active: activeResult,
   });
   if (!conversation?.taskId) return null;
@@ -67,11 +70,13 @@ export function DependenciesButton(): ReactElement | null {
         refetch={combined.refetch}
       />
     );
+  // No such task: no links to show.
+  if (combined.data.cluster === null) return null;
   return (
     <DependenciesButtonInner
       conversation={conversation}
       taskId={conversation.taskId}
-      allTasks={combined.data.tasks}
+      cluster={combined.data.cluster}
       active={combined.data.active}
     />
   );
@@ -80,12 +85,12 @@ export function DependenciesButton(): ReactElement | null {
 function DependenciesButtonInner({
   conversation,
   taskId,
-  allTasks,
+  cluster,
   active,
 }: {
   conversation: ConversationRecord;
   taskId: string;
-  allTasks: TaskListItem[];
+  cluster: TaskCluster;
   active: ConversationRecord[];
 }) {
   const [open, setOpen] = useState(false);
@@ -93,11 +98,7 @@ function DependenciesButtonInner({
   const fetchEndpoint = useFetchEndpoint();
   const toast = useToast();
 
-  const graph = useMemo(() => TaskGraph.from(allTasks), [allTasks]);
-  const byId = useMemo(
-    () => new Map(allTasks.map((t) => [t.id, t])),
-    [allTasks],
-  );
+  const { graph, byId } = cluster;
   const linkedTasks = useCallback(
     (ids: string[]) =>
       ids.flatMap((id) => {

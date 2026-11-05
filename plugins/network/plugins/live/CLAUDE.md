@@ -334,6 +334,8 @@ state or limit change.
   re-renders nothing. Pass a stable selector (live-state CLAUDE.md, *Slice
   selectors*). **Scoped**: `useLive(c, { where: { pageId }[, select] })` —
   exactly the `by` fields as strings (tsc); a scope change reads `loading`.
+  `{ where: null }` is the skip — a scope another read is still loading
+  (a task's `clusterId` off its row): `pending`, nothing read.
 - **One row — `useLive(c, { id })`**, `id: string | null`, on every
   collection kind (window, lookup-only, `all`) → `LiveRowResult<Row>`:
   `loading | error (stale?) | ready+found+row | ready+!found`, with `refetch`
@@ -1642,11 +1644,11 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValueOn`
     - `sliceRange`
 - Cross-plugin:
-  - Imported by: 341 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 337 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×86
     - `conversations` ×70
-    - `tasks` ×33
     - `debug` ×32
+    - `tasks` ×29
     - `infra` ×22
     - `page` ×15
     - `active-data` ×13

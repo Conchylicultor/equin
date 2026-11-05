@@ -58,7 +58,11 @@ import {
   removeTaskDependency,
   updateTask,
 } from "./tasks";
-import { clusterLabelOf, unionTaskClusters } from "./clusters";
+import {
+  clusterEdgeViolations,
+  clusterLabelOf,
+  unionTaskClusters,
+} from "./clusters";
 
 // Any registered mandate id: these tests never resolve it.
 const TEST_MANDATE = defineMandate({ id: "interactive", label: "Interactive" });
@@ -68,25 +72,24 @@ const TEST_MANDATE = defineMandate({ id: "interactive", label: "Interactive" });
 type Exec = DbExecutor | NodePgDatabase;
 
 /**
- * Seed bare task rows. `cluster_id` is deliberately OMITTED: the column is
- * nullable and `NULL` means "never unioned ⇒ own singleton", which is the
- * starting state every test here wants. Tasks are `dropped` so their computed
+ * Seed bare task rows, each its own singleton (`cluster_id = id`, what
+ * `createTask` writes) — the starting state every test here wants. Tasks are `dropped` so their computed
  * status is edge-independent and no move/edge write ever flips it.
  */
 async function seedTasks(exec: Exec, ids: string[]): Promise<void> {
   for (let i = 0; i < ids.length; i++) {
     await exec.execute(sql`
-      INSERT INTO tasks (id, title, title_auto, rank, dropped_at, created_at, updated_at, mandate_ref)
-      VALUES (${ids[i]}, ${ids[i]}, true, ${"a" + i}, now(), now(), now(), 'interactive')
+      INSERT INTO tasks (id, cluster_id, title, title_auto, rank, dropped_at, created_at, updated_at, mandate_ref)
+      VALUES (${ids[i]}, ${ids[i]}, ${ids[i]}, true, ${"a" + i}, now(), now(), now(), 'interactive')
     `);
   }
 }
 
-/** Raw `cluster_id` per id — NULL included, so "was the row written?" is visible. */
+/** Raw `cluster_id` per id. */
 async function readRawLabels(
   exec: Exec,
   ids: string[],
-): Promise<Map<string, string | null>> {
+): Promise<Map<string, string>> {
   const rows = await exec
     .select({ id: _tasks.id, clusterId: _tasks.clusterId })
     .from(_tasks)
@@ -94,13 +97,13 @@ async function readRawLabels(
   return new Map(rows.map((r) => [r.id, r.clusterId]));
 }
 
-/** The effective label per id (`cluster_id ?? id`) — what readers actually see. */
+/** The label per id, in `ids` order. */
 async function readLabels(
   exec: Exec,
   ids: string[],
 ): Promise<Map<string, string>> {
   const raw = await readRawLabels(exec, ids);
-  return new Map(ids.map((id) => [id, raw.get(id) ?? id]));
+  return new Map(ids.map((id) => [id, raw.get(id)!]));
 }
 
 /**
@@ -166,7 +169,7 @@ describe("unionTaskClusters", () => {
     await unionTaskClusters(B, A, tdb);
 
     const raw = await readRawLabels(t.db, [A, B]);
-    // Neither endpoint may be left NULL: a NULL loser would still READ as its
+    // The loser's whole cluster moves: an endpoint left on its own label would
     // own singleton, which is exactly the split this label exists to prevent.
     expect(raw.get(A)).toBe(A);
     expect(raw.get(B)).toBe(A);
@@ -200,7 +203,7 @@ describe("unionTaskClusters", () => {
       ],
     ];
     for (const order of orders) {
-      await t.db.execute(sql`UPDATE tasks SET cluster_id = NULL`);
+      await t.db.execute(sql`UPDATE tasks SET cluster_id = id`);
       for (const [x, y] of order) await unionTaskClusters(x, y, tdb);
       expect(await expectOneCluster(t.db, [A, B, C])).toBe(A);
     }
@@ -226,12 +229,12 @@ describe("unionTaskClusters", () => {
   // This is the only test that proves the `SELECT … FOR UPDATE` is load-bearing.
   // Two concurrent transactions overlapping on B:
   //
-  //   T1 union(A,B): reads NULL,NULL → winner A → UPDATE … id IN (A,B)
-  //   T2 union(B,C): reads NULL,NULL → winner B → UPDATE … id IN (B,C)
+  //   T1 union(A,B): reads A,B → winner A → UPDATE … WHERE cluster_id = B
+  //   T2 union(B,C): reads B,C → winner B → UPDATE … WHERE cluster_id = C
   //
   // WITHOUT the row lock T2's SELECT does not block, so it computes min(B,C)=B
   // from the pre-T1 snapshot. Its UPDATE then blocks on B, re-evaluates after
-  // T1 commits, finds B no longer NULL, and writes only C — stranding C on
+  // T1 commits, and writes only C (onto B) — stranding C on
   // label B, which nobody else carries. That is the reported bug in a form no
   // edge removal explains, and both transactions commit cleanly, so nothing
   // else would ever surface it.
@@ -350,16 +353,16 @@ describe("union points", () => {
     expect(new Set(labels.values()).size).toBe(1);
   });
 
-  test("createTask with no folder starts as its own singleton (cluster_id NULL)", async () => {
+  test("createTask with no folder starts as its own singleton (cluster_id = id)", async () => {
     const raw = await worktreeDbScenario(async (tx) => {
       const solo = await createTask(
         { title: "solo", mandate: TEST_MANDATE },
         tx,
       );
-      return readRawLabels(tx, [solo.id]);
+      return { id: solo.id, raw: await readRawLabels(tx, [solo.id]) };
     });
 
-    expect([...raw.values()]).toEqual([null]);
+    expect([...raw.raw.values()]).toEqual([raw.id]);
   });
 
   test("a folder re-file unions the task into the folder's cluster", async () => {
@@ -388,13 +391,13 @@ describe("union points", () => {
       return readRawLabels(tx, [solo]);
     });
 
-    expect(raw.get(solo)).toBeNull();
+    expect(raw.get(solo)).toBe(solo);
   });
 
   test("a re-file rejected by the descendant guard does not union", async () => {
     // `child` is already filed under `parent`; filing `parent` under `child`
     // would invert the hierarchy. The raw folder seed deliberately bypasses
-    // `updateTask`, so both start unlabelled and a stray union would show.
+    // `updateTask`, so both start on their own labels and a stray union would show.
     const [parent, child] = [P + "u3", P + "u4"];
     const raw = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [parent, child]);
@@ -407,7 +410,10 @@ describe("union points", () => {
       return readRawLabels(tx, [parent, child]);
     });
 
-    expect([...raw.values()]).toEqual([null, null]);
+    expect(Object.fromEntries(raw)).toEqual({
+      [parent]: parent,
+      [child]: child,
+    });
   });
 
   test("a REJECTED edge leaves both labels exactly as they were", async () => {
@@ -420,7 +426,7 @@ describe("union points", () => {
       return readRawLabels(tx, [a]);
     });
 
-    expect(raw.get(a)).toBeNull();
+    expect(raw.get(a)).toBe(a);
   });
 
   test("a rejected CYCLE leaves the (already shared) label untouched", async () => {
@@ -438,5 +444,54 @@ describe("union points", () => {
     });
 
     expect(after).toEqual(before);
+  });
+
+  test("createTask with a group unions it into the group's cluster", async () => {
+    // A group is a membership edge in its own right — not only because the
+    // callers that set one also add a dependency edge.
+    const group = P + "g0";
+    const labels = await worktreeDbScenario(async (tx) => {
+      await seedTasks(tx, [group]);
+      const member = await createTask(
+        { groupId: group, title: "member", mandate: TEST_MANDATE },
+        tx,
+      );
+      return readLabels(tx, [group, member.id]);
+    });
+
+    expect(new Set(labels.values())).toEqual(new Set([group]));
+  });
+
+  test("every union point keeps every edge inside one cluster; a forged edge is named", async () => {
+    // THE invariant the cluster-scoped read rests on, driven through every
+    // writer of a membership edge: dependency, folder (create and re-file) and
+    // group. Read over the whole database inside the scenario — so it holds of
+    // the worktree's own rows too, not only of the ones made here.
+    const [a, b, c, folder, moved] = [
+      P + "e0",
+      P + "e1",
+      P + "e2",
+      P + "e3",
+      P + "e4",
+    ];
+    const { clean, forged } = await worktreeDbScenario(async (tx) => {
+      await seedTasks(tx, [a, b, c, folder, moved]);
+      await addTaskDependency(b, a, tx);
+      const child = await createTask({ folderId: folder, title: "child" }, tx);
+      await createTask(
+        { groupId: c, title: "grouped", mandate: TEST_MANDATE },
+        tx,
+      );
+      await updateTask(moved, { folderId: child.id }, tx);
+      const clean = await clusterEdgeViolations(tx);
+      // An edge written past the union points: the check must see it.
+      await tx.execute(
+        sql`INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES (${c}, ${a})`,
+      );
+      return { clean, forged: await clusterEdgeViolations(tx) };
+    });
+
+    expect(clean).toEqual([]);
+    expect(forged).toEqual([{ kind: "dependency", from: c, to: a }]);
   });
 });

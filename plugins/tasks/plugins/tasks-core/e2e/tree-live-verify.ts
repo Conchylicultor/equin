@@ -280,7 +280,7 @@ async function tasksPhase(
 
   let at = frames.length;
   await db.query(
-    "INSERT INTO tasks (id, title, title_auto, rank, mandate_ref) VALUES ($1, $2, false, $3, 'interactive')",
+    "INSERT INTO tasks (id, cluster_id, title, title_auto, rank, mandate_ref) VALUES ($1, $1, $2, false, $3, 'interactive')",
     [otherId, `${otherId} task`, `zz${otherId}`],
   );
   const entered = await upsertWhere(otherId, at, () => true);
@@ -941,7 +941,7 @@ try {
   const taskId = `${SEED_PREFIX}${tag}`;
   const taskTitle = `${taskId} task`;
   await db.query(
-    "INSERT INTO tasks (id, title, title_auto, rank, mandate_ref) VALUES ($1, $2, false, $3, 'interactive')",
+    "INSERT INTO tasks (id, cluster_id, title, title_auto, rank, mandate_ref) VALUES ($1, $1, $2, false, $3, 'interactive')",
     [taskId, taskTitle, `zz${tag}`],
   );
 

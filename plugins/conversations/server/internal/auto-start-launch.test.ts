@@ -89,7 +89,7 @@ const nextId = (kind: string): string => `${kind}-${++seq}-${Date.now()}`;
 async function seedArmedTask(): Promise<string> {
   const id = nextId("task");
   await t.db.execute(sql`
-    INSERT INTO tasks (id, title, rank, mandate_ref) VALUES (${id}, ${`title ${id}`}, ${`a${seq}`}, 'interactive')
+    INSERT INTO tasks (id, cluster_id, title, rank, mandate_ref) VALUES (${id}, ${id}, ${`title ${id}`}, ${`a${seq}`}, 'interactive')
   `);
   await t.db.execute(sql`
     INSERT INTO tasks_ext_auto_start (parent_id, auto_start_at, auto_start_model)
@@ -356,7 +356,7 @@ describe("launchArmedTask", () => {
     const taskId = await seedArmedTask();
     const blocker = nextId("task");
     await t.db.execute(sql`
-      INSERT INTO tasks (id, title, rank, mandate_ref) VALUES (${blocker}, 'blocker', ${`b${seq}`}, 'interactive')
+      INSERT INTO tasks (id, cluster_id, title, rank, mandate_ref) VALUES (${blocker}, ${taskId}, 'blocker', ${`b${seq}`}, 'interactive')
     `);
     await t.db.execute(sql`
       INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES (${taskId}, ${blocker})

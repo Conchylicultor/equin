@@ -1,6 +1,7 @@
-import { and, asc, eq, inArray, isNull, or } from "drizzle-orm";
+import { asc, eq, inArray, ne } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@plugins/database/server";
-import { _tasks } from "../tables";
+import { _taskDependencies, _tasks } from "../tables";
 import type { DbExecutor } from "../status-batch";
 
 // Union-find over `tasks.cluster_id`: the persisted, MONOTONE membership label
@@ -11,12 +12,9 @@ import type { DbExecutor } from "../status-batch";
 // `research/2026-08-03-tasks-monotone-deps-tree-membership.md`.
 
 /**
- * The cluster label a task currently carries: its own `clusterId`, or its own id
- * when it has never been unioned.
- *
- * `NULL` is a total, well-defined default rather than an absorbed failure — a
- * task that was never unioned genuinely is its own singleton cluster. A missing
- * task, by contrast, is a caller bug and throws.
+ * The cluster label a task currently carries (`clusterId`: total — a task never
+ * unioned carries its own id, written on insert). A missing task is a caller
+ * bug and throws.
  *
  * A pure READ. Deliberately unlocked, so it must never be the read half of a
  * read-then-write that decides a label — a concurrent union can move the cluster
@@ -29,12 +27,12 @@ export async function clusterLabelOf(
   exec: DbExecutor = db,
 ): Promise<string> {
   const [row] = await exec
-    .select({ id: _tasks.id, clusterId: _tasks.clusterId })
+    .select({ clusterId: _tasks.clusterId })
     .from(_tasks)
     .where(eq(_tasks.id, taskId))
     .limit(1);
   if (!row) throw new Error(`Task not found: ${taskId}`);
-  return row.clusterId ?? taskId;
+  return row.clusterId;
 }
 
 /**
@@ -61,13 +59,10 @@ export async function clusterLabelOf(
  * transactions unioning the same pair from opposite directions queue instead of
  * deadlocking.
  *
- * **The second disjunct of the relabel** (`cluster_id IS NULL AND id IN (a,b)`)
- * materialises a never-unioned endpoint straight onto the winner. It is correct
- * precisely *because* the row is `NULL`: a `NULL` row has provably never been
- * unioned, so it is a singleton and no other row is labelled with it that would
- * also need rewriting. Folding it into the same statement keeps the hot path on
- * the plain `tasks_cluster_id_idx` rather than a `COALESCE(cluster_id, id)`
- * expression the index cannot serve.
+ * **The relabel is one `WHERE cluster_id = $loser`**, on the plain
+ * `tasks_cluster_id_idx`: the label is total (a never-unioned task carries its
+ * own id), so the loser's whole cluster — a singleton included — is exactly
+ * the rows carrying it.
  *
  * **Why `min` wins** — and explicitly NOT "the oldest": ids carry `task-`,
  * `claude-` and `legacy-claude-` prefixes, so lexicographic order is not
@@ -118,8 +113,8 @@ async function unionOnTx(
   if (!rowA) throw new Error(`Task not found: ${a}`);
   if (!rowB) throw new Error(`Task not found: ${b}`);
 
-  const la = rowA.clusterId ?? a;
-  const lb = rowB.clusterId ?? b;
+  const la = rowA.clusterId;
+  const lb = rowB.clusterId;
   if (la === lb) return;
 
   const winner = la < lb ? la : lb;
@@ -128,10 +123,52 @@ async function unionOnTx(
   await exec
     .update(_tasks)
     .set({ clusterId: winner })
-    .where(
-      or(
-        eq(_tasks.clusterId, loser),
-        and(isNull(_tasks.clusterId), inArray(_tasks.id, [a, b])),
-      ),
-    );
+    .where(eq(_tasks.clusterId, loser));
+}
+
+/** An edge whose two ends carry different cluster labels. */
+export interface ClusterEdgeViolation {
+  kind: "dependency" | "folder" | "group";
+  from: string;
+  to: string;
+}
+
+/**
+ * Every edge that leaves a cluster — THE invariant the cluster-scoped read
+ * (`taskClusterRows`) rests on: a task's dependencies (both ways), its folder
+ * chain and its group are all inside its cluster, so a reader walking them
+ * from one task needs that cluster's rows and no other. Each edge kind is a
+ * union point — `addTaskDependency`, `createTask` (folder and group) and
+ * `prepareRefile` union before the edge commits — and no edge write happens
+ * anywhere else. Empty is the only correct answer; the union-point suite
+ * holds every writer to it.
+ */
+export async function clusterEdgeViolations(
+  exec: DbExecutor = db,
+): Promise<ClusterEdgeViolation[]> {
+  const other = alias(_tasks, "other");
+  const dependencies = await exec
+    .select({
+      from: _taskDependencies.taskId,
+      to: _taskDependencies.dependsOnTaskId,
+    })
+    .from(_taskDependencies)
+    .innerJoin(_tasks, eq(_tasks.id, _taskDependencies.taskId))
+    .innerJoin(other, eq(other.id, _taskDependencies.dependsOnTaskId))
+    .where(ne(_tasks.clusterId, other.clusterId));
+  const folders = await exec
+    .select({ from: _tasks.id, to: other.id })
+    .from(_tasks)
+    .innerJoin(other, eq(other.id, _tasks.folderId))
+    .where(ne(_tasks.clusterId, other.clusterId));
+  const groups = await exec
+    .select({ from: _tasks.id, to: other.id })
+    .from(_tasks)
+    .innerJoin(other, eq(other.id, _tasks.groupId))
+    .where(ne(_tasks.clusterId, other.clusterId));
+  return [
+    ...dependencies.map((e) => ({ kind: "dependency" as const, ...e })),
+    ...folders.map((e) => ({ kind: "folder" as const, ...e })),
+    ...groups.map((e) => ({ kind: "group" as const, ...e })),
+  ];
 }

@@ -1,9 +1,8 @@
 import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 
-// A task's membership label: its persisted `clusterId`, or its own id when it
-// has never been unioned. NULL is a total default, not a missing value — a task
-// that was never unioned genuinely is its own singleton cluster.
-const label = (t: TaskListItem) => t.clusterId ?? t.id;
+// A task's membership label: its persisted `clusterId` (total — a task never
+// unioned carries its own id).
+const label = (t: TaskListItem) => t.clusterId;
 
 /**
  * The unified member set both trees in the deps-tree section render — the same

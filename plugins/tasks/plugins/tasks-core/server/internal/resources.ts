@@ -13,6 +13,7 @@ import {
 // which reads key / schema / params off the declaration.
 import {
   taskRows,
+  taskClusterRows,
   taskDescriptions,
   attemptRows,
   attemptWorkspaces,
@@ -87,6 +88,14 @@ export const taskRowsServed = serveCollection(taskRows, {
   ...taskRowsServeOptions,
   preloadRows: { idsOf: conversationsActive, field: "taskId" },
 });
+
+// One cluster's tasks (`taskClusterRows`, scoped by `clusterId`) — the same
+// binding as `taskRows`, so a row reads the same in both. A relabel (a union)
+// is the loser cluster's rows leaving its tuple and entering the winner's.
+export const taskClusterRowsServed = serveCollection(
+  taskClusterRows,
+  taskRowsServeOptions,
+);
 
 // One attempt's workspace by id (`attemptWorkspaces`, lookup-only), over the
 // `attempts` table.

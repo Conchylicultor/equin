@@ -107,8 +107,8 @@ async function seedTask(
 ): Promise<string> {
   const id = nextId("task");
   await t.db.execute(sql`
-    INSERT INTO tasks (id, title, rank, held_at, dropped_at, mandate_ref)
-    VALUES (${id}, ${`title ${id}`}, ${`a${seq}`},
+    INSERT INTO tasks (id, cluster_id, title, rank, held_at, dropped_at, mandate_ref)
+    VALUES (${id}, ${id}, ${`title ${id}`}, ${`a${seq}`},
             ${opts.held ? sql`now()` : sql`NULL`},
             ${opts.dropped ? sql`now()` : sql`NULL`}, 'interactive')
   `);

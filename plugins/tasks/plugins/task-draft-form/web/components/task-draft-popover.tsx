@@ -1,4 +1,3 @@
-import { useLive } from "@plugins/network/plugins/live/web";
 import {
   type ReactElement,
   type ReactNode,
@@ -23,9 +22,9 @@ import {
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
 import {
-  taskRows,
-  type TaskListItem,
-} from "@plugins/tasks/plugins/tasks-core/core";
+  useTaskCluster,
+  type TaskCluster,
+} from "@plugins/tasks/plugins/tasks-core/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import {
   TaskDraftForm,
@@ -165,10 +164,11 @@ export interface TaskDraftPopoverProps {
   hintAnchors?: TaskDraftHintAnchors;
 }
 
-// Inner component that receives settled tasks — all tasks-dependent derivations
-// run here so the form never computes from a fake-empty snapshot while loading.
+// Inner component that receives the settled relate cluster — every derivation
+// over it runs here, so the form never computes from a fake-empty snapshot
+// while loading.
 function TaskDraftFormContent({
-  tasks,
+  relateCluster,
   draft,
   patchDraft,
   setCards,
@@ -191,7 +191,8 @@ function TaskDraftFormContent({
   headInsertRef,
   hintAnchors,
 }: {
-  tasks: readonly TaskListItem[];
+  /** The cluster of the task the draft relates to; `null` when none does. */
+  relateCluster: TaskCluster | null;
   draft: TaskDraftState;
   patchDraft: PatchDraft;
   setCards: (next: CardDraft[]) => void;
@@ -231,20 +232,18 @@ function TaskDraftFormContent({
 
   const relateTaskChildren = useMemo(
     () =>
-      effectiveRelateTaskId && effectiveRelateMode === "followup"
-        ? tasks
-            .filter((t) => t.dependencies.includes(effectiveRelateTaskId))
+      relateCluster && effectiveRelateMode === "followup"
+        ? relateCluster.rows
+            .filter((t) => t.dependencies.includes(relateCluster.task.id))
             .map((t) => ({ id: t.id, title: t.title }))
         : [],
-    [tasks, effectiveRelateTaskId, effectiveRelateMode],
+    [relateCluster, effectiveRelateMode],
   );
 
-  const relateTaskHasDeps = useMemo(() => {
-    if (!effectiveRelateTaskId || effectiveRelateMode !== "prerequisite")
-      return false;
-    const t = tasks.find((t) => t.id === effectiveRelateTaskId);
-    return t ? t.dependencies.length > 0 : false;
-  }, [tasks, effectiveRelateTaskId, effectiveRelateMode]);
+  const relateTaskHasDeps =
+    relateCluster !== null &&
+    effectiveRelateMode === "prerequisite" &&
+    relateCluster.task.dependencies.length > 0;
 
   // The stored choice applies only to the task it was made against, and only
   // to children that still exist; otherwise it is the all-children default.
@@ -402,7 +401,12 @@ export function TaskDraftPopover({
   const activeRelate = useActiveRelateContext();
   const hasAmbientRelate = !relate && activeRelate !== null;
 
-  const tasksResult = useLive(taskRows);
+  // What the form reads of the task it relates to: its direct dependents (the
+  // follow-up's insert-before choices) and its own dependencies — all in its
+  // cluster. Nothing relates ⇒ a `null` id, read as no task, nothing loaded.
+  const relateResult = useTaskCluster(
+    relate?.taskId ?? (hasAmbientRelate ? activeRelate?.taskId : null) ?? null,
+  );
 
   const seenIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -511,12 +515,12 @@ export function TaskDraftPopover({
       finalFocus={() => returnFocusOnCloseRef.current}
     >
       <ResourceView
-        resource={tasksResult}
+        resource={relateResult}
         fallback={<Loading variant="rows" />}
       >
-        {(tasks) => (
+        {(relateCluster) => (
           <TaskDraftFormContent
-            tasks={tasks}
+            relateCluster={relateCluster}
             draft={draft}
             patchDraft={patchDraft}
             setCards={setCards}

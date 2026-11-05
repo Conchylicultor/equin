@@ -19,26 +19,21 @@ disagreeing is the design, not drift.
 - Description: Renders the dependency-DAG as a card at the foot of a task's detail when the task has dependents or dependencies.
 - Web:
   - Contributes: `TaskDetailSlots.Section` "Graph" → `TaskGraph`
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/graph-canvas` ×4
+    - `primitives/css/ui-kit` ×2
+    - `tasks/task-detail` ×2
+    - `tasks/tasks-core` ×2
     - `infra/endpoints.useFetchEndpoint`
-    - `network/live.useLive`
     - `network/live/live-state.foldResource`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/graph-canvas.GraphCanvas`
-    - `primitives/graph-canvas.GraphCanvasEdge`
-    - `primitives/graph-canvas.GraphCanvasGroup`
-    - `primitives/graph-canvas.GraphCanvasNode`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
-    - `tasks.usePatchTask`
-    - `tasks/task-detail.taskDetailPane`
-    - `tasks/task-detail.TaskDetailSlots`
     - `tasks/task-status.STATUS_META`
+    - `tasks.usePatchTask`
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:

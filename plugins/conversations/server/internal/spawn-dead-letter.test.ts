@@ -109,8 +109,8 @@ const CONV = "conv-spawn-dead-letter";
 
 test("a spawn job that dead-letters takes its conversation out of starting, its failure shown", async () => {
   await t.db.execute(sql`
-    INSERT INTO tasks (id, title, rank, mandate_ref)
-    VALUES (${TASK}, 'dead-letter launch', 'a0', 'interactive')
+    INSERT INTO tasks (id, cluster_id, title, rank, mandate_ref)
+    VALUES (${TASK}, ${TASK}, 'dead-letter launch', 'a0', 'interactive')
   `);
   await t.db.execute(sql`
     INSERT INTO attempts (id, task_id, worktree_path)

@@ -1,13 +1,13 @@
-import { useLive } from "@plugins/network/plugins/live/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { addTaskDependency, type TaskChainTarget } from "@plugins/tasks/core";
+import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import {
-  taskRows,
-  type TaskListItem,
-} from "@plugins/tasks/plugins/tasks-core/core";
+  useTaskCluster,
+  type TaskCluster,
+} from "@plugins/tasks/plugins/tasks-core/web";
 import {
   useTaskCategoryMap,
   type TaskCategoryMap,
@@ -50,11 +50,11 @@ function targetForSibling(
  * never split the way the read-only lists were.
  */
 export function TaskDependenciesActions({ taskId }: { taskId: string }) {
-  const tasksResult = useLive(taskRows);
+  const tasksResult = useTaskCluster(taskId);
   const categoryResult = useTaskCategoryMap();
   const fetchEndpoint = useFetchEndpoint();
 
-  // No header actions until the task list and the categories are known (the
+  // No header actions until the task's cluster and the categories are known (the
   // draft's target is the task's category — an unknown one is not "root"). A
   // failed tasks read shows none: the card's body reads the same tasks and
   // renders that failure with Retry. The body never reads categories, so a
@@ -77,15 +77,16 @@ export function TaskDependenciesActions({ taskId }: { taskId: string }) {
       />
     );
   }
-  const tasks = tasksResult.data;
-  const task = tasks.find((t) => t.id === taskId);
-  if (!task) return null;
+  const cluster = tasksResult.data;
+  if (cluster === null) return null;
+  const { task } = cluster;
 
+  // The folder is in the task's cluster (filing under it unioned them).
   const folderId = task.folderId;
   const folderCandidate =
     !folderId || task.dependencies.includes(folderId)
       ? null
-      : (tasks.find((t) => t.id === folderId) ?? null);
+      : (cluster.byId.get(folderId) ?? null);
 
   const addFolderAsDep = async () => {
     if (!folderCandidate) return;
@@ -129,7 +130,7 @@ export function TaskDependenciesActions({ taskId }: { taskId: string }) {
  * vertical space plus a second title to scan.
  */
 export function TaskDependencies({ taskId }: { taskId: string }) {
-  const tasksResult = useLive(taskRows);
+  const tasksResult = useTaskCluster(taskId);
 
   if (tasksResult.status === "loading") return <Loading variant="rows" />;
   if (tasksResult.status === "error") {
@@ -143,10 +144,12 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
     );
   }
 
-  const tasks = tasksResult.data;
+  const cluster = tasksResult.data;
+  // No such task: the pane's own resolve answers it; nothing to list here.
+  if (cluster === null) return null;
   const groups = RELATION_DIRECTIONS.map((direction) => ({
     direction,
-    ids: direction.idsFor(taskId, tasks),
+    ids: direction.idsFor(cluster),
   })).filter((g) => g.ids.length > 0);
 
   if (groups.length === 0) {
@@ -167,7 +170,7 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
           taskId={taskId}
           direction={direction}
           ids={ids}
-          tasks={tasks}
+          cluster={cluster}
         />
       ))}
     </Stack>
@@ -184,12 +187,12 @@ function RelationGroup({
   taskId,
   direction,
   ids,
-  tasks,
+  cluster,
 }: {
   taskId: string;
   direction: RelationDirection;
   ids: readonly string[];
-  tasks: readonly TaskListItem[];
+  cluster: TaskCluster;
 }) {
   return (
     <Stack direction="col" gap="xs">
@@ -201,7 +204,7 @@ function RelationGroup({
             taskId={taskId}
             otherId={otherId}
             direction={direction}
-            tasks={tasks}
+            cluster={cluster}
           />
         ))}
       </Cluster>

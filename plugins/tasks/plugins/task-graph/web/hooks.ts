@@ -1,51 +1,48 @@
 import { useMemo } from "react";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
-import {
-  taskRows,
-  TaskGraph as TaskGraphValue,
-  type TaskListItem,
+import type {
+  TaskListItem,
+  TaskRow,
 } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  useTaskCluster,
+  type TaskCluster,
+} from "@plugins/tasks/plugins/tasks-core/web";
 
 export interface TaskClosure {
   /** The task's dependency closure, including the task itself. */
   closure: readonly TaskListItem[];
-  /** Every task — the graph reads folder membership off the full list. */
+  /** The task's cluster — the graph reads folder membership off it (a folder
+   * and its children never leave one cluster). */
   allTasks: readonly TaskListItem[];
 }
 
 /**
- * The task's dependency closure, or `null` while the task list is still
- * loading (or failed to load) — NOT an empty closure, which is a task with no edges and means
- * something else entirely (it decides whether the section is painted at all).
+ * The task's dependency closure, or `null` while its cluster is still loading
+ * (or failed to load, or there is no such task) — NOT an empty closure, which
+ * is a task with no edges and means something else entirely (it decides
+ * whether the section is painted at all).
  */
 export function useTaskClosure(taskId: string): TaskClosure | null {
-  const result = useLive(taskRows);
+  const result = useTaskCluster(taskId);
   return useMemo((): TaskClosure | null => {
     return foldResource(result, {
       loading: () => null,
-      // The graph is an optional section: a failed task list paints no card
-      // (the task list's own surfaces report the failure).
+      // The graph is an optional section: a failed read paints no card (the
+      // task's own surfaces report the failure).
       error: () => null,
-      ready: (allTasks) => closureOf(allTasks, taskId),
+      ready: (cluster) => (cluster === null ? null : closureOf(cluster)),
     });
-  }, [taskId, result]);
+  }, [result]);
 }
 
-function closureOf(
-  allTasks: readonly TaskListItem[],
-  taskId: string,
-): TaskClosure {
-  const byId = new Map(allTasks.map((t) => [t.id, t]));
-  const root = byId.get(taskId);
+function closureOf({ task, rows, byId, graph }: TaskCluster): TaskClosure {
   // closure() excludes the queried id; re-include the root so it renders.
-  const ids = TaskGraphValue.from(allTasks)
-    .closure(taskId, { includeGroups: true })
-    .map((n) => n.id);
-  const closure = [...(root ? [taskId] : []), ...ids]
+  const ids = graph.closure(task.id, { includeGroups: true }).map((n) => n.id);
+  const closure = [task.id, ...ids]
     .map((id) => byId.get(id))
-    .filter((t): t is TaskListItem => !!t);
-  return { closure, allTasks };
+    .filter((t): t is TaskRow => !!t);
+  return { closure, allTasks: rows };
 }
 
 /**

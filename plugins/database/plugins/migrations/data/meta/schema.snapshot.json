@@ -1,6 +1,6 @@
 {
-  "id": "aa274962-ff32-4eab-8eef-cffd545a145c",
-  "prevId": "90ccefb7-b8a0-47a9-9f52-2ae5f5f45c25",
+  "id": "fec7dc19-91b4-405f-8c3e-4d7cd4ffa73b",
+  "prevId": "aa274962-ff32-4eab-8eef-cffd545a145c",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -13918,7 +13918,7 @@
           "name": "cluster_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "title": {
           "name": "title",

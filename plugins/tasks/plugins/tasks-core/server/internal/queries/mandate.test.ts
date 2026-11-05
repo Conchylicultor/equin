@@ -125,8 +125,8 @@ describe("root mandate invariant", () => {
     expect(
       worktreeDbScenario((tx) =>
         tx.execute(sql`
-          INSERT INTO tasks (id, title, title_auto, rank)
-          VALUES ('mandate-test-bare-root', 'bare', false, 'a0')`),
+          INSERT INTO tasks (id, cluster_id, title, title_auto, rank)
+          VALUES ('mandate-test-bare-root', 'mandate-test-bare-root', 'bare', false, 'a0')`),
       ),
     ).rejects.toThrow(/tasks_root_has_mandate/);
   });

@@ -49,6 +49,7 @@ export type { ConversationSummary, AttemptWithConversations } from "./schemas";
 // keyed-ness; the server resources are built from these). See ./resources.ts.
 export {
   taskRows,
+  taskClusterRows,
   type TaskRow,
   taskDescriptions,
   attemptRows,

@@ -202,6 +202,17 @@ serves them.
   task's dependents'; an edge write the edge's task and its dependents; an
   insert an entrant, a delete an exit; a write no row field reads (a
   conversation's `waiting_for`) nothing.
+- **`taskClusterRows`** (`task-cluster`) — one dependency cluster's tasks, a
+  scoped `all` by `clusterId` over the same row and binding as `taskRows`
+  (`taskRowsServeOptions`). `tasks.cluster_id` is the monotone union-find label
+  (`server/internal/mutations/clusters.ts`), total (`= id` on insert): every
+  dependency, folder and group edge is a union point, so no edge leaves a
+  cluster (`clusterEdgeViolations`, held empty by `clusters.test.ts`). Readers
+  walking a task's edges (graph, deps tree, dependency card and button,
+  dependent counts, the draft popover's relate) read `useTaskCluster(taskId)`
+  (`web/cluster.ts`): the task's row by id, then its cluster
+  (`{ where: { clusterId } }`, skipped with `where: null` until the row is
+  known), with the `TaskGraph` built once per snapshot.
 - **`taskDescriptions`** (`task-descriptions`, lookup-only: `:rows`) — one
   task's `description`, the heavy text the set omits, by id
   (`useLive(taskDescriptions, { id })`). A description autosave is that row's
@@ -320,7 +331,7 @@ serves them.
 
 ## Plugin reference
 
-- Description: tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
+- Description: tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
 - Load-bearing: yes
 - Web:
   - Contributes:
@@ -333,14 +344,19 @@ serves them.
     - `network/live.FieldPresentation`
     - `network/live.LiveFieldOption`
     - `network/live.LiveFieldOptionsRead`
+    - `network/live.mapRow`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
     - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
+  - Exports (types): `TaskCluster`
   - Exports (values):
     - `useTaskAttempts`
+    - `useTaskCluster`
     - `useTaskConversations`
 - Server:
-  - Contributes: 46 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `resource.declare` ×33
+  - Contributes: 48 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `resource.declare` ×35
     - `derived-view` ×4
     - `ids.kind` ×3
     - `attachments.link` ×2
@@ -554,6 +570,8 @@ serves them.
     - `pushes` (keyed, window)
     - `pushes:groups` (push)
     - `pushes:rows` (keyed, point)
+    - `task-cluster` (keyed)
+    - `task-cluster:rows` (keyed, point)
     - `task-descriptions:rows` (keyed, point)
     - `task-dropped-states:rows` (keyed, point)
     - `task-mandates:rows` (keyed, point)
@@ -651,6 +669,7 @@ serves them.
     - `TASK_STATUS_OPTIONS`
     - `taskAttachmentLinks`
     - `taskAttachmentLinksEntityRef`
+    - `taskClusterRows`
     - `taskDependenciesEntityRef`
     - `taskDescriptions`
     - `taskDetailRoute`
@@ -672,9 +691,9 @@ serves them.
     - `TRAILER_LOG_FORMAT`
     - `UNATTRIBUTED_TRAILER_KEY`
 - Cross-plugin:
-  - Imported by: 79 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×29
-    - `tasks` ×25
+  - Imported by: 84 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×30
+    - `tasks` ×29
     - `active-data` ×5
     - `debug` ×5
     - `page` ×3

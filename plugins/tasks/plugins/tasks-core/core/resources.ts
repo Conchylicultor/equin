@@ -44,6 +44,43 @@ export const RECENT_GONE_LIMIT = 30;
 // than in the `tasks` umbrella, so the tasks-core server
 // can import them without forming a `tasks ⇄ tasks-core` plugin cycle. Consumers
 // import these directly from `@plugins/tasks/plugins/tasks-core/core`.
+// The task row both task collections deliver (`taskRows`, `taskClusterRows`),
+// one spelling each declaration names (the scanners read a spec's own keys,
+// so the pieces are shared rather than the spec spread).
+const TASK_ROW_PICK = ["title", "updatedAt"] as const;
+const TASK_ROW_FIELDS = {
+  status: enumTextField(TaskStatusSchema.options, {
+    label: "Status",
+    options: TASK_STATUS_OPTIONS,
+  }),
+};
+const TASK_ROW_CARRY = {
+  pick: [
+    "id",
+    "folderId",
+    "groupId",
+    "clusterId",
+    "titleAuto",
+    "author",
+    "droppedAt",
+    "heldAt",
+    "createdAt",
+  ],
+  fields: {
+    // The wire `Rank` value object over the stored key (`rankValueField`).
+    rank: rankValueField(),
+    active: boolField(),
+    finishedAt: nullable(dateField()),
+    dependencies: stringListField(),
+  },
+} as const;
+
+// Ordered as the old list was: `rank`, then `createdAt` (the id breaks ties).
+const TASK_ROW_ORDER = [
+  ["rank", "asc"],
+  ["createdAt", "asc"],
+] as const;
+
 // Every task — the WHOLE ordered set (`all`): the task list, the dependency
 // graph and every per-task chip read a value for every task (a status, the
 // dependency edges), so its readers hold the set entire. Served over the base
@@ -76,39 +113,12 @@ export const RECENT_GONE_LIMIT = 30;
 // snapshot. Named `taskRows` because `tasks` is the server's view handle.
 export const taskRows = liveCollection("tasks", {
   from: tasksEntityRef,
-  pick: ["title", "updatedAt"],
-  fields: {
-    status: enumTextField(TaskStatusSchema.options, {
-      label: "Status",
-      options: TASK_STATUS_OPTIONS,
-    }),
-  },
-  carry: {
-    pick: [
-      "id",
-      "folderId",
-      "groupId",
-      "clusterId",
-      "titleAuto",
-      "author",
-      "droppedAt",
-      "heldAt",
-      "createdAt",
-    ],
-    fields: {
-      // The wire `Rank` value object over the stored key (`rankValueField`).
-      rank: rankValueField(),
-      active: boolField(),
-      finishedAt: nullable(dateField()),
-      dependencies: stringListField(),
-    },
-  },
+  pick: TASK_ROW_PICK,
+  fields: TASK_ROW_FIELDS,
+  carry: TASK_ROW_CARRY,
   id: "id",
   all: {
-    orderBy: [
-      ["rank", "asc"],
-      ["createdAt", "asc"],
-    ],
+    orderBy: TASK_ROW_ORDER,
     unbounded: {
       reason:
         "the task list, the dependency graph and the task chips need every task's status and dependency edges",
@@ -119,6 +129,31 @@ export const taskRows = liveCollection("tasks", {
   // conversation by id (`conversationsActive`, a whole set — ~30 today), as
   // `queueRanks` reads their ranks: 2000 is far over any live set, still bounded.
   maxIds: 2000,
+});
+
+// One dependency cluster's tasks (`useLive(taskClusterRows, { where: {
+// clusterId } })`), the same rows as `taskRows` (one spec, one server binding:
+// `taskRowsServeOptions`). `clusterId` is the monotone union-find label
+// (`../server/internal/mutations/clusters.ts`): every dependency, folder and
+// group edge stays inside one cluster (`clusterEdgeViolations` is empty), so a
+// reader walking those edges from one task — the dependency graph, the deps
+// tree, the dependency card, a dependent count, the draft popover's relate —
+// needs exactly its task's cluster. A union moves the loser's rows out of its
+// tuple into the winner's.
+export const taskClusterRows = liveCollection("task-cluster", {
+  from: tasksEntityRef,
+  pick: TASK_ROW_PICK,
+  fields: TASK_ROW_FIELDS,
+  carry: TASK_ROW_CARRY,
+  id: "id",
+  all: {
+    by: ["clusterId"],
+    orderBy: TASK_ROW_ORDER,
+    unbounded: {
+      reason:
+        "one dependency cluster: the edges the graph, the deps tree and the dependency card walk never leave it (largest 137 tasks on main, 2026-11-05)",
+    },
+  },
 });
 
 /** A task as `taskRows` delivers it: a `TaskListItem` and its exposed fields under `$columns`. */

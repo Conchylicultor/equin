@@ -15922,17 +15922,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`dependencies`** — The task's links in the conversation header: ↑ open blockers · ↓ open dependents (shown only on header hover when none is open: a faint ↕ when all are resolved, a link icon when there are none), one popover listing and editing every link of both directions.
           - Web:
             - Contributes: `conversationPane.Actions` "dependencies" → `DependenciesButton`
-            - Uses: 28 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/dependencies/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/dependencies/REFERENCE.md)
+            - Uses: 29 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/dependencies/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/dependencies/REFERENCE.md)
               - `conversations` ×2
               - `infra/endpoints` ×2
               - `network/live/live-state` ×2
-              - `network/live` ×2
               - `primitives/css/control-panel` ×2
               - `primitives/css/text` ×2
               - `primitives/css/ui-kit` ×2
               - `primitives/search` ×2
+              - `tasks/tasks-core` ×2
               - `conversations/conversation-ui/item.ConversationItem`
               - `conversations/conversation-view.conversationPane`
+              - `network/live.rowOrStale`
               - `primitives/css/clip.Clip`
               - `primitives/css/fill.Fill`
               - `primitives/css/row.Row`
@@ -35247,11 +35248,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 341 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 337 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×86
           - `conversations` ×70
-          - `tasks` ×33
           - `debug` ×32
+          - `tasks` ×29
           - `infra` ×22
           - `page` ×15
           - `active-data` ×13
@@ -51980,6 +51981,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `network/live.useLive`
       - `network/live/live-state.mapResource`
       - `network/live/live-state.ResourceResult`
+      - `tasks/tasks-core.useTaskCluster`
     - Exports (types): `TaskPatch`
     - Exports (values):
       - `useActiveDependentCount`
@@ -53193,7 +53195,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `TaskDetailSlots.Section` "Dependencies" → `TaskDependencies`
         - Uses:
           - `infra/endpoints.useFetchEndpoint`
-          - `network/live.useLive`
           - `network/live/live-state.ResourceErrorInline`
           - `primitives/css/cluster.Cluster`
           - `primitives/css/row.Row`
@@ -53210,6 +53211,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-draft-form.TaskDraftPopover`
+          - `tasks/tasks-core.TaskCluster`
+          - `tasks/tasks-core.useTaskCluster`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
@@ -53234,11 +53237,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit` ×2
           - `tasks/task-detail` ×2
           - `infra/endpoints.useFetchEndpoint`
-          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
           - `primitives/icon-button.IconButton`
           - `primitives/pane.useOpenPane`
+          - `tasks/tasks-core.useTaskCluster`
           - `ui/icons.Icon`
       - Cross-plugin:
         - Uses tokens:
@@ -53345,7 +53348,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `TaskDraftFormSlots.Action`
         - Slot contributors: `TaskDraftFormSlots.Action` ← `wish.element-picker`
         - Contributes: `ConfigV2.WebRegister` "config"
-        - Uses: 46 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
+        - Uses: 47 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
           - `tasks/launch-options` ×5
           - `infra/endpoints` ×3
           - `primitives/css/ui-kit` ×3
@@ -53356,11 +53359,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/overlay/tooltip` ×2
           - `primitives/shortcuts` ×2
           - `shell/notifications` ×2
+          - `tasks/tasks-core` ×2
           - `apps-core.useCurrentAppId`
           - `framework/cli/build/experimental-marks.useShowExperimentalMarks`
           - `hints.useHintAnchor`
           - `network/live/live-state.ResourceView`
-          - `network/live.useLive`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
           - `primitives/css/pin.Pin`
@@ -53507,26 +53510,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`task-graph`** — Renders the dependency-DAG as a card at the foot of a task's detail when the task has dependents or dependencies.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Graph" → `TaskGraph`
-        - Uses:
+        - Uses: 21 symbols — full list in [`plugins/tasks/plugins/task-graph/REFERENCE.md`](../plugins/tasks/plugins/task-graph/REFERENCE.md)
+          - `primitives/graph-canvas` ×4
+          - `primitives/css/ui-kit` ×2
+          - `tasks/task-detail` ×2
+          - `tasks/tasks-core` ×2
           - `infra/endpoints.useFetchEndpoint`
-          - `network/live.useLive`
           - `network/live/live-state.foldResource`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.Button`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/graph-canvas.GraphCanvas`
-          - `primitives/graph-canvas.GraphCanvasEdge`
-          - `primitives/graph-canvas.GraphCanvasGroup`
-          - `primitives/graph-canvas.GraphCanvasNode`
           - `primitives/loading.Loading`
           - `primitives/pane.useOpenPane`
-          - `tasks.usePatchTask`
-          - `tasks/task-detail.taskDetailPane`
-          - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-status.STATUS_META`
+          - `tasks.usePatchTask`
           - `ui/icons.Icon`
       - Cross-plugin:
         - Uses tokens:
@@ -54155,7 +54153,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --radius`
         - Imported by: `tasks/sidequest-autopilot`
-    - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
+    - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Web:
         - Contributes:
           - `FieldPresentation.Register` "exposure:tasks_ext_mandate"
@@ -54167,14 +54165,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.FieldPresentation`
           - `network/live.LiveFieldOption`
           - `network/live.LiveFieldOptionsRead`
+          - `network/live.mapRow`
           - `network/live.useLive`
+          - `network/live/live-state.foldResource`
           - `network/live/live-state.mapResource`
+          - `network/live/live-state.ResourceResult`
+        - Exports (types): `TaskCluster`
         - Exports (values):
           - `useTaskAttempts`
+          - `useTaskCluster`
           - `useTaskConversations`
       - Server:
-        - Contributes: 46 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `resource.declare` ×33
+        - Contributes: 48 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `resource.declare` ×35
           - `derived-view` ×4
           - `ids.kind` ×3
           - `attachments.link` ×2
@@ -54388,6 +54391,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pushes` (keyed, window)
           - `pushes:groups` (push)
           - `pushes:rows` (keyed, point)
+          - `task-cluster` (keyed)
+          - `task-cluster:rows` (keyed, point)
           - `task-descriptions:rows` (keyed, point)
           - `task-dropped-states:rows` (keyed, point)
           - `task-mandates:rows` (keyed, point)
@@ -54485,6 +54490,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TASK_STATUS_OPTIONS`
           - `taskAttachmentLinks`
           - `taskAttachmentLinksEntityRef`
+          - `taskClusterRows`
           - `taskDependenciesEntityRef`
           - `taskDescriptions`
           - `taskDetailRoute`
@@ -54506,9 +54512,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 79 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×29
-          - `tasks` ×25
+        - Imported by: 84 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×30
+          - `tasks` ×29
           - `active-data` ×5
           - `debug` ×5
           - `page` ×3

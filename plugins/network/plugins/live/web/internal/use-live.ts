@@ -305,6 +305,16 @@ type NotScopeFields<Row, B extends string> = {
   readonly [K in Exclude<keyof Row & string, B>]?: never;
 };
 
+/**
+ * A scoped set's skip (`{ where: null }`): its scope is not known yet (another
+ * read is still loading it) — `pending`, nothing read. `never` elsewhere.
+ */
+type ScopeSkip<D> = D extends { window: object }
+  ? never
+  : [LiveWhereOf<D>] extends [never]
+    ? never
+    : null;
+
 /** A scoped set's scope record. */
 type ScopeWhere<Row, B extends string> = {
   readonly [K in B]: string;
@@ -451,7 +461,10 @@ type CollectionForms<D, Row, F, S extends string, B extends string, G> =
           // tsc's second pass, after the kind was first read as none.
           [B] extends [never]
           ? OnlyKind<"select"> & { select: unknown }
-          : OnlyKind<"select"> & { where: ScopeWhere<Row, B>; select?: unknown }
+          : OnlyKind<"select"> & {
+              where: ScopeWhere<Row, B> | null;
+              select?: unknown;
+            }
         : never);
 
 /**
@@ -628,7 +641,7 @@ export function useLive<
         KindKeyValues<Row, I, Ids, C, G, R> &
         KindGuard<QueryKindValues<D, I, Ids, C, G, R, N>> &
         SkipGuard<N> &
-        KnownKeysOnly<K, QueryKeyName, LiveWhereOf<D>>)
+        KnownKeysOnly<K, QueryKeyName, LiveWhereOf<D> | ScopeSkip<D>>)
     | QueryHoles<D, N>,
 ): WithMachine<
   NM,
@@ -701,7 +714,9 @@ export function useLive<
  *   `all: { by }`: every row OF ONE SCOPE, in the declared order (the
  *   `where` record is its tuple: exactly the `by` fields — `LiveScopedAllQuery`);
  *   with `select`, a slice of it. Read and gated exactly like the whole set;
- *   a scope change is a new tuple (loading). `useLive(scoped)` without one is
+ *   a scope change is a new tuple (loading). `{ where: null }` is its skip —
+ *   a scope another read is still loading: `pending`, nothing read (the
+ *   `{ id: null }` of a set). `useLive(scoped)` without one is
  *   a tsc error, and a `where` on a set without `by` too (both throw for an
  *   untyped caller).
  *
@@ -1357,6 +1372,8 @@ function useAll<Row>(
   // server would refuse the tuple as a contract mismatch, far from here).
   const scoped = (all.all as { by?: readonly string[] }).by !== undefined;
   const where = query?.where;
+  // `{ where: null }`: a scope not known yet — the substrate's skip (pending,
+  // nothing read), like a `null` id.
   if (scoped && where === undefined) {
     throw new Error(
       `useLive("${all.key}"): the set is declared \`all: { by }\` — read one scope, \`{ where: { ${(all.all.by ?? []).join(", ")} } }\`.`,
@@ -1372,7 +1389,7 @@ function useAll<Row>(
 
 /** What `useAll` reads: a scope (a scoped set's), a slice, both or neither. */
 type AllQuery<Row> = {
-  where?: Record<string, string>;
+  where?: Record<string, string> | null;
   select?: (rows: Row[]) => unknown;
 };
 

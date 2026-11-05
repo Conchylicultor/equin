@@ -31,6 +31,7 @@ beforeAll(async () => {
   await runMigrations(t.db);
   await t.db.insert(_tasks).values({
     id: "task-s",
+    clusterId: "task-s",
     title: "Fix the flaky upload test",
     titleAuto: false,
     rank: "a0",

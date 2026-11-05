@@ -7,9 +7,9 @@ import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   taskRows,
-  TaskGraph,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
+import { useTaskCluster } from "@plugins/tasks/plugins/tasks-core/web";
 import { updateTask } from "../core";
 
 // No `rank`: repositioning goes through the `moveTask` endpoint, which carries
@@ -72,29 +72,13 @@ export function useTasksById(
   );
 }
 
-// One TaskGraph per task-set snapshot, shared by every caller in a render pass.
-// A plain `useLive(taskRows)` read hands every observer the SAME cached array,
-// a fresh one whenever the set changes and never mutated in place, so the
-// array's identity IS the graph's cache key — and the entry dies with the
-// snapshot. Without this, a list of rows each showing a count
-// rebuilds the whole graph once per row.
-const GRAPH_BY_SNAPSHOT = new WeakMap<readonly TaskListItem[], TaskGraph>();
-
-function graphFor(tasks: readonly TaskListItem[]): TaskGraph {
-  const cached = GRAPH_BY_SNAPSHOT.get(tasks);
-  if (cached) return cached;
-  const graph = TaskGraph.from(tasks);
-  GRAPH_BY_SNAPSHOT.set(tasks, graph);
-  return graph;
-}
-
 /**
  * The number of ACTIVE tasks transitively blocked on `id` — the single
  * derivation shared by every surface that shows or acts on that count (the
  * conversation Tasks button, the per-row conversation chip, the drop-dependents
  * action), so two of them can never disagree about how many tasks are waiting.
  *
- * A resource result over the count: loading until the task set is known, error
+ * A resource result over the count: loading until the task's cluster is known, error
  * when it failed to load. A count of `0` is a real answer ("nothing is waiting
  * on it"); the loading arm is what "we don't know yet" looks like, so a surface
  * can render a loading affordance instead of quietly claiming zero.
@@ -102,9 +86,10 @@ function graphFor(tasks: readonly TaskListItem[]): TaskGraph {
 export function useActiveDependentCount(
   id: string | null | undefined,
 ): ResourceResult<number> {
-  const result = useLive(taskRows);
-  // No task ⇒ zero once the set is known: nothing can wait on it.
-  return mapResource(result, (tasks) =>
-    id ? graphFor(tasks).activeDependents(id).length : 0,
+  // Its dependents are all in its cluster. No such task ⇒ zero once that is
+  // known: nothing can wait on it.
+  const cluster = useTaskCluster(id);
+  return mapResource(cluster, (c) =>
+    c === null ? 0 : c.graph.activeDependents(c.task.id).length,
   );
 }

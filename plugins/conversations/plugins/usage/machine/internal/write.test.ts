@@ -51,6 +51,7 @@ beforeAll(async () => {
   await installDerivedUpdatedAt(t.db, spec);
   await t.db.insert(_tasks).values({
     id: "task-w",
+    clusterId: "task-w",
     title: "usage write",
     titleAuto: false,
     rank: "a0",

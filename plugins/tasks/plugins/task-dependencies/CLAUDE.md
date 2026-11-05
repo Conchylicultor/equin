@@ -9,7 +9,6 @@
   - Contributes: `TaskDetailSlots.Section` "Dependencies" → `TaskDependencies`
   - Uses:
     - `infra/endpoints.useFetchEndpoint`
-    - `network/live.useLive`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/row.Row`
@@ -26,6 +25,8 @@
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-detail.TaskDetailSlots`
     - `tasks/task-draft-form.TaskDraftPopover`
+    - `tasks/tasks-core.TaskCluster`
+    - `tasks/tasks-core.useTaskCluster`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`

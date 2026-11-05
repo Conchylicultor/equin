@@ -56,11 +56,11 @@ fields read.
     - `primitives/css/ui-kit` ×2
     - `tasks/task-detail` ×2
     - `infra/endpoints.useFetchEndpoint`
-    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/icon-button.IconButton`
     - `primitives/pane.useOpenPane`
+    - `tasks/tasks-core.useTaskCluster`
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:

@@ -4,11 +4,8 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { removeTaskDependency } from "@plugins/tasks/core";
-import {
-  TaskGraph,
-  isSettled,
-  type TaskListItem,
-} from "@plugins/tasks/plugins/tasks-core/core";
+import { isSettled } from "@plugins/tasks/plugins/tasks-core/core";
+import type { TaskCluster } from "@plugins/tasks/plugins/tasks-core/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -29,8 +26,9 @@ export interface RelationDirection {
   id: "prerequisites" | "dependents";
   /** Group label in the card body. Verb phrase read off the shown task. */
   label: string;
-  /** The ids related to `taskId` in this direction. */
-  idsFor(taskId: string, tasks: readonly TaskListItem[]): readonly string[];
+  /** The ids related to the cluster's task in this direction (both ends of an
+   * edge are always in one cluster). */
+  idsFor(cluster: TaskCluster): readonly string[];
   /**
    * The `removeTaskDependency` edge for (shown task, related task). The two
    * directions are the same row read from opposite ends, which is exactly the
@@ -45,18 +43,15 @@ export const RELATION_DIRECTIONS: readonly RelationDirection[] = [
   {
     id: "prerequisites",
     label: "Runs after",
-    idsFor: (taskId, tasks) =>
-      tasks.find((t) => t.id === taskId)?.dependencies ?? [],
+    idsFor: ({ task }) => task.dependencies,
     edge: (taskId, otherId) => ({ id: taskId, depId: otherId }),
     removeLabel: (title) => `Remove dependency ${title}`,
   },
   {
     id: "dependents",
     label: "Blocks",
-    idsFor: (taskId, tasks) =>
-      TaskGraph.from(tasks)
-        .directDependents(taskId)
-        .map((t) => t.id),
+    idsFor: ({ task, graph }) =>
+      graph.directDependents(task.id).map((t) => t.id),
     edge: (taskId, otherId) => ({ id: otherId, depId: taskId }),
     removeLabel: (title) => `Remove dependent ${title}`,
   },
@@ -67,14 +62,14 @@ export function RelationChip({
   taskId,
   otherId,
   direction,
-  tasks,
+  cluster,
 }: {
   taskId: string;
   otherId: string;
   direction: RelationDirection;
-  tasks: readonly TaskListItem[];
+  cluster: TaskCluster;
 }) {
-  const other = tasks.find((t) => t.id === otherId) ?? null;
+  const other = cluster.byId.get(otherId) ?? null;
   const title = other?.title ?? otherId;
   const isTerminal = other ? isSettled(other.status) : false;
   const openPane = useOpenPane();

@@ -42,9 +42,11 @@ export const taskFields = {
   folderId: nullable(textField()),
   groupId: nullable(textField()),
   // Monotone dependency-tree membership label (union-find representative =
-  // min(id) over the cluster). NULL ⇒ never unioned ⇒ its own singleton cluster.
-  // Grows on edge creation, NEVER shrinks on edge removal — that is the point.
-  clusterId: nullable(textField()),
+  // min(id) over the cluster). A new task is its own singleton (`clusterId =
+  // id`, written on insert); grows on edge creation, NEVER shrinks on edge
+  // removal — that is the point. Total, so every task names its scope: the
+  // cluster-scoped read (`taskClusterRows`) is one tuple per label.
+  clusterId: textField(),
   // Labels and the title flag are what every task list shows (the fields
   // spelling: `liveCollection({ from: tasksEntityRef, pick })`).
   title: textField({ label: "Title", primary: true }),

@@ -184,6 +184,10 @@ function useNegatives(
     // @ts-expect-error TS2322 — where on unscoped all
     where: { pageId: "p" },
   });
+  useLive(whole, {
+    // @ts-expect-error TS2322 — a scope skip on an unscoped all set
+    where: null,
+  });
   useLive(
     windowed,
     // @ts-expect-error TS2345 — mixed kind: a union naming two reads (reported on the argument)

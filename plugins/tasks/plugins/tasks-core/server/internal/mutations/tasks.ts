@@ -88,10 +88,11 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
   // creation, so that first emit is a no-op for them; emitting unconditionally
   // keeps the mutation/event surface uniform with updateTask.
   await withTaskStatusChange(id, exec, async () => {
-    // No `clusterId` here: it is derived from `folderId`, never an input, and it
-    // is written by the union below rather than computed inline.
+    // `clusterId` is never an input: a new task is its own singleton, and the
+    // unions below move it into its folder's and its group's cluster.
     await exec.insert(_tasks).values({
       id,
+      clusterId: id,
       folderId,
       mandateRef: input.folderId == null ? input.mandate.id : null,
       groupId: input.groupId ?? null,
@@ -111,6 +112,11 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
   // vanishing-from-its-tree failure this column exists to prevent, and it needs
   // no crash, just ordinary concurrency.
   if (folderId) await unionTaskClusters(id, folderId, exec);
+  // A group is a membership edge too: the readers that walk a task's group
+  // (the dependency card, the draft popover's relate) read one cluster, so the
+  // group must be inside it — by construction here, not because every caller
+  // that sets a group happens to add a dependency edge as well.
+  if (input.groupId) await unionTaskClusters(id, input.groupId, exec);
   await refreshEffectiveMandates([id], exec);
   // On the creating executor, so the event commits (or rolls back) with the
   // row. Same PgTransaction ⇄ EmitTx cast as `withTaskStatusChange`'s emit.

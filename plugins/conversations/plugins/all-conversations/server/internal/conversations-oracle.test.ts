@@ -358,6 +358,7 @@ const tick = () => new Date(T0 + ++clock * 60_000);
 async function insertTask(id: string, title: string): Promise<void> {
   await testDb.db.insert(_tasks).values({
     id,
+    clusterId: id,
     title,
     titleAuto: false,
     rank: `r${id}`,

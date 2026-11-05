@@ -417,6 +417,34 @@ describe("useLive(scoped, { where }) — a set declared `all: { by }`", () => {
     ).toBeUndefined();
   });
 
+  it("`{ where: null }` is the skip: pending, nothing read, until the scope arrives", async () => {
+    const c = scopedCollection();
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(c.key, { pageId: "pa" }), PA);
+    const { result, rerender } = renderHook(
+      ({ pageId }: { pageId: string | null }) =>
+        useLive(c, { where: pageId === null ? null : { pageId } }),
+      {
+        wrapper: live.Wrapper,
+        initialProps: { pageId: null as string | null },
+      },
+    );
+    expect(result.current.status).toBe("loading");
+    // No tuple was read: neither the param-less one nor an empty scope.
+    expect(
+      live.queryClient.getQueryState(queryKeyFor(c.key, undefined)),
+    ).toBeUndefined();
+    expect(
+      live.queryClient.getQueryState(queryKeyFor(c.key, {})),
+    ).toBeUndefined();
+    rerender({ pageId: "pa" });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(readyData(result.current)).toEqual(PA);
+    // The type: a scoped set's skip types as its read.
+    const typed: ResourceResult<ScopedRow[]> = result.current;
+    expect(typed).toBe(result.current);
+  });
+
   it("an untyped read without a scope, or a scope on a whole set, throws", () => {
     const c = scopedCollection();
     const whole = allCollection();
