@@ -3,8 +3,8 @@ import {
   isTestCodePath,
   PLUGIN_FOLDERS,
 } from "@plugins/framework/plugins/plugin-id/core";
-import { parseRuntimeException } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
-import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/core";
+import { parseRuntimeException } from "@plugins/framework/plugins/tooling/plugins/boundaries/plugins/runtime-exception/core";
+import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/plugins/entry-pattern/core";
 import {
   findImports,
   markerCallSpans,
@@ -235,7 +235,7 @@ const MANIFEST_FIELD_RE = /\b(?:entryPoints|selectedContributors)\s*:\s*\[/g;
  * Every plugin id in the compositions manifest's SOURCE (the `defineConfig`
  * seeds its `.origin.jsonc` is generated from): each string literal in the
  * array literal of an `entryPoints:` / `selectedContributors:` property, read
- * through the closure engine's `parseEntryPattern`. The range spans the base id,
+ * through the entry-pattern grammar's `parseEntryPattern`. The range spans the base id,
  * so `!` and `.**` survive a rewrite; the root pattern `**` names no plugin.
  *
  * An id written anywhere else in that file (a helper argument, a const array)

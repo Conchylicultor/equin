@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-plugin-meta-closure-entry-pattern",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The composition entry-point pattern grammar (an exact plugin id, a trailing .** for its subtree, the root ** for every plugin, a leading ! to trim): EntryPattern, ParsedPattern and parseEntryPattern, which never throws. A leaf over plugin-id alone, so a reader of the grammar (the plugin-refs file scan, Studio's entry editor, the release CLI) does not load the closure engine."
+}

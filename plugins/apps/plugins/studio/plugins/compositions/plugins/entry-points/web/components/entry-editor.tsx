@@ -16,11 +16,11 @@ import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popov
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { updateActiveDraft } from "@plugins/plugin-meta/plugins/composition/web";
+import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
 import {
   parseEntryPattern,
-  type CompositionManifest,
   type EntryPattern,
-} from "@plugins/plugin-meta/plugins/closure/core";
+} from "@plugins/plugin-meta/plugins/closure/plugins/entry-pattern/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";

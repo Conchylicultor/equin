@@ -13,6 +13,7 @@ import {
   PLUGIN_FOLDERS,
   VERIFYING_FOLDERS,
 } from "@plugins/framework/plugins/plugin-id/core";
+import { parseRuntimeException } from "@plugins/framework/plugins/tooling/plugins/boundaries/plugins/runtime-exception/core";
 import type { BoundaryConfig } from "./types";
 import { buildZoneMap, type UnfolderedReason } from "./resolve";
 import { detectCycle, evaluateEdges, judgeImport } from "./evaluate";
@@ -71,24 +72,6 @@ const UNFOLDERED_WHY: Record<UnfolderedReason, (name: string) => string> = {
   "misplaced-testing": (name) =>
     `"${name}/" — a testing/ folder sits directly under a runtime folder (not e2e/), e.g. core/testing/`,
 };
-
-/**
- * Split a `runtimeExceptions` entry (`"<zone>.<plugin id>.<folder> -> <zone>.<plugin id>.<folder>"`)
- * into its two sides. Throws on any other shape. Exported so the plugin-reference
- * locator (`plugin-meta/plugin-refs`) reads the entries through the same grammar.
- */
-export function parseRuntimeException(expr: string): {
-  source: string;
-  target: string;
-} {
-  const parts = expr.split("->").map((s) => s.trim());
-  if (parts.length !== 2 || !parts[0] || !parts[1]) {
-    throw new Error(
-      `invalid runtime exception: "${expr}" — expected "source.runtime -> target.runtime"`,
-    );
-  }
-  return { source: parts[0], target: parts[1] };
-}
 
 export function createBoundaryCheck(config: BoundaryConfig): Check {
   return {

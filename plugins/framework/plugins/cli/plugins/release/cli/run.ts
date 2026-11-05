@@ -41,7 +41,7 @@ import {
   buildPluginTree,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/core";
+import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/plugins/entry-pattern/core";
 import {
   compositionsConfig,
   manifestItemToManifest,

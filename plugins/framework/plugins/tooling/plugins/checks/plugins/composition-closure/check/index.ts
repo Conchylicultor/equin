@@ -11,12 +11,12 @@ import {
   flattenManifest,
   graphForHosts,
   matchEntryPattern,
-  parseEntryPattern,
   removalClosure,
   resolveComposition,
   stepLabel,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
+import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/plugins/entry-pattern/core";
 import {
   BASE_EXCLUSIONS_ID,
   MAIN_COMPOSITION_ID,

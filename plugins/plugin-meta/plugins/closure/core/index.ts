@@ -7,8 +7,7 @@ export {
   removalClosure,
   expandEntrySeeds,
 } from "./resolve-composition";
-export { parseEntryPattern, matchEntryPattern } from "./entry-pattern";
-export type { EntryPattern, ParsedPattern } from "./entry-pattern";
+export { matchEntryPattern } from "./entry-pattern";
 export { flattenManifest } from "./flatten-manifest";
 export { graphForHosts } from "./host-view";
 export { explainInclusion } from "./explain";

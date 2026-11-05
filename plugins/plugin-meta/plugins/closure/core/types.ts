@@ -4,9 +4,7 @@ import type {
   RuntimeFolder,
 } from "@plugins/framework/plugins/plugin-id/core";
 import type { KeySpace } from "@plugins/framework/plugins/slot-declaration/core";
-import type { EntryPattern } from "./entry-pattern";
-
-export type { EntryPattern } from "./entry-pattern";
+import type { EntryPattern } from "@plugins/plugin-meta/plugins/closure/plugins/entry-pattern/core";
 
 /** How a cross-plugin dependency binds: a hard `import` (mandatory) or a soft
  *  slot `contribution` (prunable). */

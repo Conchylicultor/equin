@@ -136,6 +136,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tooling`** [exempt] — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Plugins:
         - **`boundaries`** [exempt] — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
+          - Plugins:
+            - **`runtime-exception`** — The boundary config's runtimeExceptions entry grammar ("<zone>.<plugin id>.<folder> -> <zone>.<plugin id>.<folder>"): parseRuntimeException splits one into its two sides. A leaf with no imports, so…
         - **`checks`** [test helpers] [exempt] [57 sub-plugins] — Check runner and built-in checks for ./equin check
         - **`codegen`** [exempt] — Plugin doc generation and registry codegen
           - Plugins:
@@ -278,6 +280,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`barrel-import`** [test helpers] [exempt] — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
     - **`closure`**
+      - Plugins:
+        - **`entry-pattern`** — The composition entry-point pattern grammar (an exact plugin id, a trailing .** for its subtree, the root ** for every plugin, a leading ! to trim): EntryPattern, ParsedPattern and…
     - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact…
     - **`contributions-table`** — Registry for the Studio Contributions aggregated-table surface: FacetTable + RowActivation slots and factories.
     - **`exhibits`** — Exhibit catalog: a plugin shows one of its REAL components standalone from an exhibits/ folder (isolatedExhibit / regionExhibit / appExhibit), collected into one generated registry. useExhibits() /…

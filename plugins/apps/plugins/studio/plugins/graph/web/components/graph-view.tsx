@@ -23,7 +23,7 @@ import {
   useActiveMembership,
   useGraph,
 } from "@plugins/plugin-meta/plugins/composition/web";
-import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/core";
+import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/plugins/entry-pattern/core";
 import { STATE_LEGEND } from "@plugins/apps/plugins/studio/plugins/membership-tint/web";
 import { focusSubgraph, toCanvas, type Direction } from "../internal/subgraph";
 import { symbol } from "@plugins/ui/plugins/icons/core";

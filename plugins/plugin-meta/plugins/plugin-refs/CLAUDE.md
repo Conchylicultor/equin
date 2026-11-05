@@ -102,9 +102,9 @@ links **into** research from anywhere else are.
     - `framework/plugin-id.isTestCodePath`
     - `framework/plugin-id.PLUGIN_FOLDERS`
     - `framework/plugin-id.PluginId`
-    - `framework/tooling/boundaries.parseRuntimeException`
+    - `framework/tooling/boundaries/runtime-exception.parseRuntimeException`
     - `packages/macrotask-yield.createTimeSlicer`
-    - `plugin-meta/closure.parseEntryPattern`
+    - `plugin-meta/closure/entry-pattern.parseEntryPattern`
     - `plugin-meta/parse-utils.findImports`
     - `plugin-meta/parse-utils.markerCallSpans`
     - `plugin-meta/parse-utils.maskSource`

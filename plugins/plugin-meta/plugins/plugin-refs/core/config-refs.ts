@@ -6,7 +6,7 @@ import {
   type ParseError,
 } from "jsonc-parser";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/core";
+import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/plugins/entry-pattern/core";
 import { assertRange, lineIndex } from "./resolve";
 import type { DotRef } from "./types";
 

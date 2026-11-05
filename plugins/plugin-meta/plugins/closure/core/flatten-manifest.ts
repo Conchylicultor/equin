@@ -1,6 +1,7 @@
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { BASE_EXCLUSIONS_ID } from "@plugins/infra/plugins/namespace/core";
-import type { CompositionManifest, EntryPattern } from "./types";
+import type { EntryPattern } from "@plugins/plugin-meta/plugins/closure/plugins/entry-pattern/core";
+import type { CompositionManifest } from "./types";
 
 /**
  * Resolve a manifest's `extends` chain into a single flat manifest. The result's

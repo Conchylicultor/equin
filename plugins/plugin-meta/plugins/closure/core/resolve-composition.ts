@@ -6,11 +6,8 @@ import type {
 import { classifyEdges } from "./classify-edges";
 import { graphForHosts } from "./host-view";
 import { inclusionPathWithin } from "./inclusion-path";
-import {
-  allNodeIds,
-  matchEntryPattern,
-  parseEntryPattern,
-} from "./entry-pattern";
+import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/plugins/entry-pattern/core";
+import { allNodeIds, matchEntryPattern } from "./entry-pattern";
 import type {
   Composition,
   CompositionManifest,

@@ -3543,6 +3543,10 @@
       "name": "@equin/plugin-framework-tooling-boundaries",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/boundaries/plugins/runtime-exception": {
+      "name": "@equin/plugin-framework-tooling-boundaries-runtime-exception",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks": {
       "name": "@equin/plugin-framework-tooling-checks",
       "version": "0.0.1",
@@ -5154,6 +5158,10 @@
     },
     "plugins/plugin-meta/plugins/closure": {
       "name": "@equin/plugin-plugin-meta-closure",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/closure/plugins/entry-pattern": {
+      "name": "@equin/plugin-plugin-meta-closure-entry-pattern",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/composition": {
@@ -9007,6 +9015,8 @@
 
     "@equin/plugin-framework-tooling-boundaries": ["@equin/plugin-framework-tooling-boundaries@workspace:plugins/framework/plugins/tooling/plugins/boundaries"],
 
+    "@equin/plugin-framework-tooling-boundaries-runtime-exception": ["@equin/plugin-framework-tooling-boundaries-runtime-exception@workspace:plugins/framework/plugins/tooling/plugins/boundaries/plugins/runtime-exception"],
+
     "@equin/plugin-framework-tooling-checks": ["@equin/plugin-framework-tooling-checks@workspace:plugins/framework/plugins/tooling/plugins/checks"],
 
     "@equin/plugin-framework-tooling-checks-app-css-utilities-in-sync": ["@equin/plugin-framework-tooling-checks-app-css-utilities-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync"],
@@ -9748,6 +9758,8 @@
     "@equin/plugin-plugin-meta-barrel-import": ["@equin/plugin-plugin-meta-barrel-import@workspace:plugins/plugin-meta/plugins/barrel-import"],
 
     "@equin/plugin-plugin-meta-closure": ["@equin/plugin-plugin-meta-closure@workspace:plugins/plugin-meta/plugins/closure"],
+
+    "@equin/plugin-plugin-meta-closure-entry-pattern": ["@equin/plugin-plugin-meta-closure-entry-pattern@workspace:plugins/plugin-meta/plugins/closure/plugins/entry-pattern"],
 
     "@equin/plugin-plugin-meta-composition": ["@equin/plugin-plugin-meta-composition@workspace:plugins/plugin-meta/plugins/composition"],
 

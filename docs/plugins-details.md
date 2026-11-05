@@ -27915,8 +27915,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
           - `VERIFYING_FOLDERS`
       - Cross-plugin:
-        - Imported by: 42 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
-          - `plugin-meta` ×19
+        - Imported by: 43 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
+          - `plugin-meta` ×20
           - `framework` ×10
           - `apps` ×4
           - `active-data/plugin-link`
@@ -28311,11 +28311,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
-            - Uses: 24 symbols — full list in [`plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md)
               - `framework/plugin-id` ×6
               - `plugin-meta/parse-utils` ×6
               - `framework/tooling/import-closure` ×4
               - `plugin-meta/plugin-records` ×3
+              - `framework/tooling/boundaries/runtime-exception.parseRuntimeException`
               - `infra/host-fs/user-path.joinAppPath`
               - `infra/spawn.getWorktreeRoot`
               - `packages/macrotask-yield.yieldMacrotask`
@@ -28337,7 +28338,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineBoundaries`
               - `deny`
               - `isPlatformApi`
-              - `parseRuntimeException`
               - `platformValueUsesIn`
               - `runtimeNames`
               - `serverPortabilityOf`
@@ -28346,7 +28346,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `framework/cli/build`
               - `framework/tooling/codegen`
-              - `plugin-meta/plugin-refs`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/check.ts`, `core/resolve.ts` (debt)
             - Exempted by:
@@ -28501,6 +28500,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `stats/cost` (3 debt)
               - `toolchain` (1 debt)
               - `ui/icons/icon-sets` (1 debt)
+          - Plugins:
+            - **`runtime-exception`** — The boundary config's runtimeExceptions entry grammar ("<zone>.<plugin id>.<folder> -> <zone>.<plugin id>.<folder>"): parseRuntimeException splits one into its two sides. A leaf with no imports, so the plugin-reference locator reads the entries through the checker's own grammar without loading the checker — its file scan's record key follows this module, not the boundaries barrel.
+              - Cross-plugin:
+                - Imported by:
+                  - `framework/tooling/boundaries`
+                  - `plugin-meta/plugin-refs`
+              - Core:
+                - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
             - Uses: 67 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
@@ -40908,13 +40915,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`closure`**
       - Core:
         - Uses:
-          - `framework/plugin-id.asPluginId`
           - `framework/plugin-id.HostId`
           - `framework/plugin-id.hostRuntimeFolders`
           - `framework/plugin-id.PluginId`
           - `framework/plugin-id.RuntimeFolder`
           - `framework/plugin-id.SHIPPED_RUNTIME_FOLDERS`
           - `infra/namespace.BASE_EXCLUSIONS_ID`
+          - `plugin-meta/closure/entry-pattern.parseEntryPattern`
           - `plugin-meta/facets.getFacet`
           - `plugin-meta/facets/contributions.contributionsFacetDef`
           - `plugin-meta/facets/cross-refs.crossRefsFacetDef`
@@ -40927,13 +40934,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Edge`
           - `EdgeGraph`
           - `EdgeKind`
-          - `EntryPattern`
           - `HardEdge`
           - `HardEdgeVia`
           - `InclusionPath`
           - `InclusionStep`
           - `MembershipState`
-          - `ParsedPattern`
           - `SerializedEdgeGraph`
           - `UnsatisfiedExclusion`
           - `UsageRule`
@@ -40949,7 +40954,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `impactOfPruning`
           - `impactOfSelecting`
           - `matchEntryPattern`
-          - `parseEntryPattern`
           - `removalClosure`
           - `resolveComposition`
           - `serializeEdgeGraph`
@@ -40959,15 +40963,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/deploy/deploy-secrets/approvals`
           - `apps/studio/compositions/contributors`
-          - `apps/studio/compositions/entry-points`
-          - `apps/studio/graph`
           - `framework/cli/build`
           - `framework/cli/deploy`
-          - `framework/cli/release`
           - `framework/tooling/codegen`
           - `plugin-meta/composition`
-          - `plugin-meta/plugin-refs`
           - `plugin-meta/plugin-view/inclusion`
+      - Plugins:
+        - **`entry-pattern`** — The composition entry-point pattern grammar (an exact plugin id, a trailing .** for its subtree, the root ** for every plugin, a leading ! to trim): EntryPattern, ParsedPattern and parseEntryPattern, which never throws. A leaf over plugin-id alone, so a reader of the grammar (the plugin-refs file scan, Studio's entry editor, the release CLI) does not load the closure engine.
+          - Core:
+            - Uses:
+              - `framework/plugin-id.asPluginId`
+              - `framework/plugin-id.PluginId`
+            - Exports (types):
+              - `EntryPattern`
+              - `ParsedPattern`
+            - Exports (values): `parseEntryPattern`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/studio/compositions/entry-points`
+              - `apps/studio/graph`
+              - `framework/cli/release`
+              - `plugin-meta/closure`
+              - `plugin-meta/plugin-refs`
     - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config.
       - Web:
         - Contributes: `ConfigV2.WebRegister` "compositions"
@@ -42125,9 +42142,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/plugin-id.isTestCodePath`
           - `framework/plugin-id.PLUGIN_FOLDERS`
           - `framework/plugin-id.PluginId`
-          - `framework/tooling/boundaries.parseRuntimeException`
+          - `framework/tooling/boundaries/runtime-exception.parseRuntimeException`
           - `packages/macrotask-yield.createTimeSlicer`
-          - `plugin-meta/closure.parseEntryPattern`
+          - `plugin-meta/closure/entry-pattern.parseEntryPattern`
           - `plugin-meta/parse-utils.findImports`
           - `plugin-meta/parse-utils.markerCallSpans`
           - `plugin-meta/parse-utils.maskSource`

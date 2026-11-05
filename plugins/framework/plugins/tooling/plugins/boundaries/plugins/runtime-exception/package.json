@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-boundaries-runtime-exception",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The boundary config's runtimeExceptions entry grammar (\"<zone>.<plugin id>.<folder> -> <zone>.<plugin id>.<folder>\"): parseRuntimeException splits one into its two sides. A leaf with no imports, so the plugin-reference locator reads the entries through the checker's own grammar without loading the checker — its file scan's record key follows this module, not the boundaries barrel."
+}
