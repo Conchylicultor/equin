@@ -15,7 +15,9 @@ from `./equin start` with no `sudo`.
   **no repo module at run time** — only the type `WrittenTick` from
   `io-health/core`, which tsc holds to the reader's `MonitorTickSchema` (every
   written line parses; every field the reader knows is written). Paths come on
-  argv (`--dir`, `--defer-to`), so no constant is spelled twice.
+  argv (`--dir`, `--root-label`, `--interval-s`), so no constant is spelled
+  twice. `root-daemon.ts`: the root opt-in (below); `run.ts`: every command it
+  spawns, in a UTF-8 locale of its own.
 - `deps/` — `fs-latency-monitor`, a `build` dependency: `bun build --compile`
   of the program (≈90 MB, the Bun runtime inside), identity = `bin/**/*.ts` +
   the Bun version. The build first bundles the program with a metafile and
@@ -27,10 +29,9 @@ from `./equin start` with no `sudo`.
   a foreground reading) login service, macOS only (`platforms`). It runs from
   the equin app bundle like every login service, and follows main's builds by
   itself once a `start` registered it.
-- `core/` — the labels and the root-daemon plist paths; `START_MONITOR_COMMAND`,
-  which the Disk I/O row shows when the monitor is not installed.
+- `core/` — the label; `START_MONITOR_COMMAND`, which the Disk I/O row shows
+  when the monitor is not installed.
 - `scripts/report.ts` — the hourly summary (archives + live log).
-  `scripts/root-daemon-plist.ts` — the root daemon's plist (below).
 
 ## Install
 
@@ -47,42 +48,37 @@ As root the same binary also records the top disk readers per process
 (`disk_readers_mb_s`, `disk_read_attributed_mb_s`, `disk_read_born_mb_s`),
 fseventsd's open log files (`fseventsd_logs`) and a 5 s `fs_usage` capture on
 a stall (`incident`) — diagnosis after the alert, not the alert. Root cannot be
-provisioned silently, so it is a step the user takes:
+provisioned silently, so it is a step the user takes — one command, from any
+directory, run by the binary the login service installed into the equin app
+(so the daemon follows main's builds too):
 
 ```sh
-P=/Library/LaunchDaemons/dev.equin.fs-latency-monitor.plist
-./equin run plugins/infra/plugins/host/plugins/io-health/plugins/monitor/scripts/root-daemon-plist.ts | sudo tee $P >/dev/null
-sudo chown root:wheel $P && sudo chmod 644 $P
-sudo launchctl bootstrap system $P
+sudo ~/.equin/state/macos-app/equin.app/Contents/MacOS/fs-latency-monitor install-root \
+  --dir ~/.equin/logs/monitors --root-label dev.equin.fs-latency-monitor --interval-s 30
 ```
 
-The root daemon runs the binary the login service installed into the equin app
-(a stable path), so it follows main's builds too. **One writer per log**: while
-a root daemon plist of the monitor exists (`ROOT_DAEMON_PLISTS`: this label, or
-the legacy `com.epot.fs-latency-monitor`), the user agent's tick exits at once.
-Back to the user agent — root leaves root-owned files the user agent must be
-able to write:
+It renders the plist to a temporary file beside
+`/Library/LaunchDaemons/dev.equin.fs-latency-monitor.plist`, checks it with
+`plutil -lint`, renames it into place, bootstraps it and checks launchd holds
+it — and removes it again when launchd refuses, so a failed install leaves
+nothing behind. Running it again replaces the daemon. Back to the user agent
+alone: the same binary's `uninstall-root --dir … --root-label …` (sudo) boots it
+out, removes the plist and hands every file back to you.
 
-```sh
-sudo launchctl bootout system/dev.equin.fs-latency-monitor
-sudo rm /Library/LaunchDaemons/dev.equin.fs-latency-monitor.plist
-sudo chown -R "$(id -un)" ~/.equin/logs/monitors
-```
+**One writer per log, and never none.** The user agent stands aside while the
+root daemon is *writing* — a root tick within the last four intervals
+(`root_tick_at` in the state file) — not while its plist merely exists. When
+the plist is installed and the root daemon is not writing, the user agent ticks
+in its place and says why in the tick's `root_daemon` (`empty`, `invalid`,
+`not-loaded` or `not-writing`, with the plist, the daemon's own log and the
+exact reinstall command): io-health raises it as the `root-daemon` finding (the
+Disk I/O row, a `host-io-degraded` report). Each root tick hands what it wrote
+back to the log directory's owner, so the user agent can always take over.
 
-### Migrating from the sidequest's root daemon
-
-The hand-installed daemon (`com.epot.fs-latency-monitor`) runs the frozen
-Python copy in `sidequests/monitors/fs-latency` through the
-`~/.equin/logs/monitors/fs-latency-src` symlink. The login service defers to
-it while its plist exists, so the order below never leaves the monitor
-stopped: (1) `./equin start --only dev.equin.fs-latency-monitor`, (2) remove
-the legacy daemon (`sudo launchctl bootout system/com.epot.fs-latency-monitor;
-sudo rm /Library/LaunchDaemons/com.epot.fs-latency-monitor.plist; sudo chown
--R "$(id -un)" ~/.equin/logs/monitors`) — the user agent ticks within 30 s —
-optionally (3) the root daemon above. Then `rm
-~/.equin/logs/monitors/fs-latency-src ~/Library/LaunchAgents/com.epot.fs-latency-monitor.plist`.
-The new monitor reads the old state file and corpus as they are, so the log
-continues without a gap or a reset.
+Why: on 2026-11-04 the documented install was `./equin run … | sudo tee
+<plist>`, run outside a checkout. `./equin` was not found, `tee` still wrote
+an empty plist, `launchctl bootstrap` failed with error 5 — and the user agent,
+deferring to the file's existence, stopped too. Nothing ticked for hours.
 
 ## What it captures (per tick)
 
@@ -96,6 +92,7 @@ continues without a gap or a reset.
 | `load1`, `daemon_cpu` | load and %CPU of fseventsd, syspolicyd, XprotectService, mds, mds_stores, corecaptured |
 | `daemon_procs` | `{name: {pid, age_s}}` of each watched daemon that is running. A pid that changes tick after tick is a relaunch loop |
 | root only | `disk_readers_mb_s`, `disk_read_attributed_mb_s`, `disk_read_born_mb_s`, `fseventsd_logs`, `incident` (above) |
+| `root_daemon` | user agent only, while a root daemon's plist is installed but it does not write (above) |
 
 Rates are deltas, so a monitor's first tick has none. The Python monitor also
 wrote `corecaptured` (`{pid, age_s}` before `daemon_procs` existed); the reader
@@ -161,15 +158,12 @@ a second `ps`, one `proc_pid_rusage` per process and an `lsof` of fseventsd.
   - Exports (values): `fsLatencyMonitorBinary`
 - Exemptions:
   - Exempts itself from:
-    - `timed-fs/no-untimed-fs-read` — `bin/fs-latency-monitor.ts`, `bin/rotate.ts` (sanctioned)
+    - `timed-fs/no-untimed-fs-read` — `bin/fs-latency-monitor.ts`, `bin/rotate.ts`, `bin/root-daemon.ts` (sanctioned)
     - `owned-fd/no-raw-fd-close` — `bin/fs-latency-monitor.ts`, `bin/native.ts` (sanctioned)
     - `sink-safety/no-adhoc-file-sink` — `bin/fs-latency-monitor.ts` (sanctioned)
 - Core:
   - Exports (values):
     - `FS_LATENCY_MONITOR_LABEL`
-    - `LEGACY_MONITOR_LABEL`
-    - `ROOT_DAEMON_PLISTS`
-    - `rootDaemonPlist`
     - `START_MONITOR_COMMAND`
 
 <!-- AUTOGENERATED:END -->

@@ -21,7 +21,7 @@ in a file nobody read.
     `WrittenTick` — the line as the monitor writes it, held to the schema by
     tsc (`_WrittenTickParses`, `_ReaderFieldsWritten` in `core/internal/tick.ts`):
     a field the reader adds or renames is a type error in the monitor.
-  - `createIoHealthDetector` — a trailing one-hour window of ticks, five rules
+  - `createIoHealthDetector` — a trailing one-hour window of ticks, six rules
     re-evaluated per tick (`IO_HEALTH_RULES`), each finding's onset carried
     while it holds. Every threshold and the data it was chosen from is on
     `IO_HEALTH_THRESHOLDS` (`core/internal/detect.ts`).
@@ -51,6 +51,7 @@ in a file nobody read.
 | `metadata-stall` | any cold probe op > 1 s — **critical**, at once | the track's exit criterion; none in the recorded history (max 435 ms) |
 | `relaunch-loop` | ≥ 5 distinct pids of one watched daemon | corecaptured made 13–18 an hour; a healthy daemon keeps one pid |
 | `cache-collapse` | canaries read 60–180 s ago mostly evicted although every tick since their read was quiet (< 500 new vnodes/s), ≥ 20 such ticks | the fleet's vnode churn evicts the cache every busy minute (during and after the fix), so only a quiet-machine eviction is news |
+| `root-daemon` | the newest tick carries `root_daemon`: the root daemon's plist is installed but it is not the one writing | the opt-in silently does nothing (and, before the user agent stopped deferring to a plist's existence, the whole monitor stopped) |
 
 Deliberately **not** a rule: read ops/s or MB/s against a baseline. They
 measure the workload — the fleet read more after the fix than during the
@@ -115,6 +116,8 @@ enough ticks.
     - `LatestTick`
     - `MonitorTick`
     - `ProbeReading`
+    - `RootDaemonProblem`
+    - `RootDaemonStatus`
     - `WrittenTick`
   - Exports (values):
     - `ACTIVE_FINDINGS_MAX`
@@ -134,6 +137,8 @@ enough ticks.
     - `MONITOR_INTERVAL_MS`
     - `MonitorTickSchema`
     - `parseTickLine`
+    - `ROOT_DAEMON_PROBLEMS`
+    - `RootDaemonStatusSchema`
 - Sub-plugins:
   - **`monitor`** — The fs-latency monitor, provisioned by equin: a standalone binary (bun build --compile of bin/) that a user LaunchAgent runs every 30 s, appending one tick per run to the monitors' log io-health…
 

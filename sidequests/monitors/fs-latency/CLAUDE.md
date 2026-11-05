@@ -6,15 +6,9 @@ The fs-latency **monitor** is no longer here: it is equin's
 line typed against the app's tick schema, its log rotated into kept archives.
 Install, root opt-in, what a tick holds, `report.ts`: see there.
 
-What stays:
-
-- `census.py`, `fseventsd-bisect.py` — on-demand tools, below. Run them from
-  the main checkout: `MAIN="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"`.
-- `fs-latency-monitor.py` — **frozen legacy**. Only the hand-installed root
-  daemon `com.epot.fs-latency-monitor` runs it (through the
-  `~/.equin/logs/monitors/fs-latency-src` symlink into main's checkout), until
-  it is migrated (the monitor plugin's "Migrating"). Never edit it; delete it
-  with that daemon.
+What stays here are two on-demand tools, below: `census.py` and
+`fseventsd-bisect.py`. Run them from the main checkout:
+`MAIN="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"`.
 
 ## Who is churning, without root
 

@@ -1,7 +1,7 @@
 #!/usr/bin/python3 -I
 """Which client makes fseventsd replay its event history in a loop? Root only.
 
-    sudo /usr/bin/python3 -I ~/.equin/logs/monitors/fs-latency-src/fseventsd-bisect.py [--fseventsd]
+    sudo /usr/bin/python3 -I "$MAIN"/sidequests/monitors/fs-latency/fseventsd-bisect.py [--fseventsd]
 
 A replay shows as fseventsd holding open a `.fseventsd` log file far behind the
 one being written (the newest file in the directory). This script:

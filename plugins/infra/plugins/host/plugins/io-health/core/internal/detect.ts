@@ -300,6 +300,38 @@ function cacheCollapse(win: readonly MonitorTick[]): Observation[] {
   ];
 }
 
+const ROOT_PROBLEM_SUMMARY = {
+  empty: "its plist is empty",
+  invalid: "its plist does not parse",
+  "not-loaded": "launchd has not loaded it",
+  "not-writing": "it is loaded but wrote no tick lately",
+} as const;
+
+/**
+ * The newest tick says the root daemon is installed and not writing: the user
+ * agent ticks in its place, so disk health stays watched, but the opt-in the
+ * user made (attribution) silently does nothing. Holds for exactly as long as
+ * the user agent keeps saying so — a root tick clears it.
+ */
+function rootDaemon(win: readonly MonitorTick[]): Observation[] {
+  const r = win.at(-1)?.root_daemon;
+  if (r === undefined) return [];
+  return [
+    {
+      rule: "root-daemon",
+      subject: "root-daemon",
+      severity: "attention",
+      summary: `The fs-latency monitor's root daemon is installed but not running: ${ROOT_PROBLEM_SUMMARY[r.problem]} — the user agent is watching in its place, without attribution`,
+      evidence: [
+        { label: "problem", value: r.problem },
+        { label: "plist", value: r.plist },
+        { label: "its log", value: r.stdio },
+        { label: "reinstall (from any directory)", value: r.fix },
+      ],
+    },
+  ];
+}
+
 /** The keys of the findings holding on the previous tick: a held finding clears at its rule's lower hold bar. */
 type Held = ReadonlySet<string>;
 
@@ -309,6 +341,7 @@ const RULES: ((win: readonly MonitorTick[], held: Held) => Observation[])[] = [
   metadataStall,
   relaunchLoop,
   cacheCollapse,
+  rootDaemon,
 ];
 
 /** Every rule over one window, the newest tick last. Pure. */

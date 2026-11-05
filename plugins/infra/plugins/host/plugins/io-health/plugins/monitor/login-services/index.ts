@@ -9,7 +9,7 @@ import { builtFile } from "@plugins/infra/plugins/deps/plugins/build/deps";
 import { monitorLogsDir } from "@plugins/debug/data-dirs";
 import { MONITOR_INTERVAL_MS } from "@plugins/infra/plugins/host/plugins/io-health/core";
 import { fsLatencyMonitorBinary } from "../deps";
-import { FS_LATENCY_MONITOR_LABEL, ROOT_DAEMON_PLISTS } from "../core";
+import { FS_LATENCY_MONITOR_LABEL } from "../core";
 
 export const fsLatencyMonitorService = defineLoginService({
   id: FS_LATENCY_MONITOR_LABEL,
@@ -33,7 +33,12 @@ export const fsLatencyMonitorService = defineLoginService({
       executable,
       "--dir",
       monitorLogsDir.ensure(),
-      ...ROOT_DAEMON_PLISTS.flatMap((p) => ["--defer-to", p]),
+      // The root daemon of the same label is the one it stands aside for
+      // while it writes, and reports while it is installed but silent.
+      "--root-label",
+      FS_LATENCY_MONITOR_LABEL,
+      "--interval-s",
+      String(MONITOR_INTERVAL_MS / 1000),
     ],
     cwd: ready.dir,
     env: { HOME: HOME_DIR, PATH: "/usr/bin:/bin:/usr/sbin:/sbin" },

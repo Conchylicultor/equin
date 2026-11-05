@@ -9,7 +9,7 @@ const STANDALONE =
 export default [
   {
     rule: "timed-fs/no-untimed-fs-read",
-    paths: ["bin/fs-latency-monitor.ts", "bin/rotate.ts"],
+    paths: ["bin/fs-latency-monitor.ts", "bin/rotate.ts", "bin/root-daemon.ts"],
     kind: "sanctioned",
     reason: `${STANDALONE} And its probes time their own reads — that IS the measurement; there is no span to attribute a stall to.`,
   },

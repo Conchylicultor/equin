@@ -19,6 +19,8 @@ const WHAT_TO_DO: Record<IoHealthRule, string> = {
     "Read the daemon's own lines in the unified log (`log show --last 15m --predicate 'process == \"<name>\"'`) and `launchctl print system/<label>` (its `runs` count): what makes it exit, and what relaunches it. Each run may cost far more than the process itself (corecaptured's each replayed 17 days of FSEvents history).",
   "cache-collapse":
     "Something evicts the file cache without vnode churn: memory pressure (`vm_stat`, the memory compressor) or a process purging (`purge`, a cache-deleting daemon).",
+  "root-daemon":
+    "Run the evidence's reinstall command (sudo, from any directory): it renders the plist to a temporary file, checks it with `plutil -lint`, moves it into place and bootstraps it, or leaves nothing installed. For `not-writing`, read the daemon's own log (evidence) and `sudo launchctl print system/dev.equin.fs-latency-monitor` (`last exit code`). Not wanted any more: `uninstall-root` (the monitor's CLAUDE.md, *Root*).",
 };
 
 function renderTask(row: ReportRow): { title: string; description: string } {
@@ -31,7 +33,7 @@ function renderTask(row: ReportRow): { title: string; description: string } {
     "",
     `**What to do:** ${WHAT_TO_DO[f.rule]}`,
     "",
-    "Read the monitor's history per hour with its `report.py` (`sidequests/monitors/fs-latency/CLAUDE.md`, *Read it*), and replay its log through the detector with `./equin run plugins/infra/plugins/host/plugins/io-health/scripts/replay-monitor-log.ts`. How the monitor was used on the 2026-11-03/04 incident is in the same CLAUDE.md.",
+    "Read the monitor's history per hour with its `report.ts` (`plugins/infra/plugins/host/plugins/io-health/plugins/monitor/CLAUDE.md`, *Read it*), and replay its log through the detector with `./equin run plugins/infra/plugins/host/plugins/io-health/scripts/replay-monitor-log.ts`.",
   ];
   return {
     title: `[host-io] ${f.summary}`,

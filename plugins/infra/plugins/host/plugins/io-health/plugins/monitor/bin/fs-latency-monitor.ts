@@ -5,7 +5,9 @@
  * and exits. No in-process timer: launchd's schedule is the clock, and a run
  * that hangs on a stalled disk delays the next instead of piling up.
  *
- *   fs-latency-monitor --dir <monitors log dir> [--defer-to <plist>]…
+ *   fs-latency-monitor --dir <log dir> --root-label <label> --interval-s <s>
+ *   sudo fs-latency-monitor install-root   --dir … --root-label … --interval-s …
+ *   sudo fs-latency-monitor uninstall-root --dir … --root-label …
  *
  * Compiled into a standalone binary (`bun build --compile`, the monitor's
  * `deps/`): it imports no repo module at run time — only the TYPE of the line
@@ -34,6 +36,12 @@
  * A tick whose slowest single op exceeds STALL_MS writes `"stall": true`; as
  * root it also captures a 5 s `fs_usage -f filesys` sample (one per
  * INCIDENT_COOLDOWN_S).
+ *
+ * The user agent stands aside while the root daemon of `--root-label` is
+ * writing (`root-daemon.ts`); when its plist is installed and it is not, the
+ * user agent ticks in its place and writes what is wrong (`root_daemon`). A
+ * root tick hands every file it wrote back to the log directory's owner, so
+ * the user agent can always take over.
  */
 import { gzipSync } from "node:zlib";
 import {
@@ -55,9 +63,20 @@ import type {
   WrittenTick,
 } from "@plugins/infra/plugins/host/plugins/io-health/core";
 import { diskBytesRead, residentFraction, setDarwinbg } from "./native";
-import { rotateLog } from "./rotate";
+import { ARCHIVE_DIR, rotateLog } from "./rotate";
+import {
+  diagnoseRootDaemon,
+  handBack,
+  installRoot,
+  rootDaemonStatus,
+  rootIsWriting,
+  uninstallRoot,
+  type RootDaemonSpec,
+} from "./root-daemon";
+import { run } from "./run";
 
 const STALL_MS = 1000;
+const INCIDENTS_DIR = "fs-latency-incidents";
 const INCIDENT_COOLDOWN_S = 600;
 const PROBE_DIRS = 10;
 const PROBE_DIR_FILES = 500;
@@ -91,32 +110,53 @@ interface State {
   readers_prev?: Record<string, number>;
   readers_t?: number;
   last_incident?: number;
+  /** Epoch seconds of the root daemon's last tick: the user agent stands aside while it is recent. */
+  root_tick_at?: number;
 }
 
-function args(): { dir: string; deferTo: string[] } {
-  const argv = process.argv.slice(2);
-  let dir: string | undefined;
-  const deferTo: string[] = [];
+const VERBS = ["tick", "install-root", "uninstall-root"] as const;
+type Verb = (typeof VERBS)[number];
+
+function args(): { verb: Verb; spec: RootDaemonSpec } {
+  let argv = process.argv.slice(2);
+  let verb: Verb = "tick";
+  if (argv[0] !== undefined && !argv[0].startsWith("--")) {
+    if (!(VERBS as readonly string[]).includes(argv[0]))
+      throw new Error(`unknown command ${argv[0]} (${VERBS.join(", ")})`);
+    verb = argv[0] as Verb;
+    argv = argv.slice(1);
+  }
+  const opts: Record<string, string> = {};
   for (let i = 0; i < argv.length; i += 2) {
     const v = argv[i + 1];
     if (v === undefined) throw new Error(`${argv[i]} needs a value`);
-    if (argv[i] === "--dir") dir = v;
-    else if (argv[i] === "--defer-to") deferTo.push(v);
-    else throw new Error(`unknown argument ${argv[i]}`);
+    if (!["--dir", "--root-label", "--interval-s"].includes(argv[i]!))
+      throw new Error(`unknown argument ${argv[i]}`);
+    opts[argv[i]!] = v;
   }
-  if (dir === undefined)
-    throw new Error("--dir <monitors log dir> is required");
-  return { dir, deferTo };
-}
-
-function run(argv: string[], check = true): string {
-  const p = Bun.spawnSync(argv, { stdout: "pipe", stderr: "pipe" });
-  if (check && p.exitCode !== 0)
+  const need = (k: string) => {
+    const v = opts[k];
+    if (v === undefined) throw new Error(`${k} is required for ${verb}`);
+    return v;
+  };
+  // A root tick needs neither: only the user agent judges the root daemon
+  // (and a daemon installed before these flags existed keeps ticking).
+  const rootTick = verb === "tick" && process.geteuid?.() === 0;
+  const needsInterval = verb !== "uninstall-root" && !rootTick;
+  const intervalS = needsInterval ? Number(need("--interval-s")) : NaN;
+  if (needsInterval && !(Number.isInteger(intervalS) && intervalS >= 1))
     throw new Error(
-      `${argv.join(" ")} exited ${p.exitCode}: ${p.stderr.toString()}`,
+      "--interval-s is launchd's StartInterval: whole seconds ≥ 1",
     );
-  // ps truncates names to a byte count, which can split a multi-byte character.
-  return new TextDecoder().decode(p.stdout);
+  return {
+    verb,
+    spec: {
+      dir: need("--dir"),
+      label: rootTick ? (opts["--root-label"] ?? "") : need("--root-label"),
+      intervalS,
+      executable: process.execPath,
+    },
+  };
 }
 
 function timed(fn: () => unknown): number {
@@ -356,7 +396,7 @@ function maybeIncident(
   state: State,
 ): string | undefined {
   if (now - (state.last_incident ?? 0) < INCIDENT_COOLDOWN_S) return undefined;
-  const dir = join(root, "fs-latency-incidents");
+  const dir = join(root, INCIDENTS_DIR);
   mkdirSync(dir, { recursive: true });
   const stamp = new Date(now * 1000)
     .toISOString()
@@ -383,20 +423,28 @@ function readState(path: string): State {
   }
 }
 
-function main(): void {
-  const { dir, deferTo } = args();
+function runTick(spec: RootDaemonSpec): void {
+  const { dir } = spec;
   const isRoot = process.geteuid?.() === 0;
-  // The user agent stands aside while a root daemon of this monitor is
-  // installed: one writer per log, and the root one also attributes.
-  if (!isRoot && deferTo.some((p) => existsSync(p))) return;
-
   const corpus = join(dir, "fs-latency-corpus");
   const statePath = join(dir, "fs-latency.state.json");
   const log = join(dir, "fs-latency.jsonl");
   mkdirSync(dir, { recursive: true });
-  ensureCorpus(corpus);
   const state = readState(statePath);
   const now = Date.now() / 1000;
+  // One writer per log: the user agent stands aside while the root daemon
+  // writes (it also attributes) — and only then. One installed but silent is
+  // reported in the tick the user agent writes in its place.
+  let rootDaemon: WrittenTick["root_daemon"];
+  if (!isRoot) {
+    if (rootIsWriting(state.root_tick_at, now, spec.intervalS)) return;
+    const problem = diagnoseRootDaemon(spec.label);
+    if (problem !== null) rootDaemon = rootDaemonStatus(spec, problem);
+  }
+  if (!existsSync(join(corpus, ".complete"))) {
+    ensureCorpus(corpus);
+    if (isRoot) handBack(dir, [corpus], true);
+  }
   const tick = state.tick ?? 0;
 
   const fg = probe(corpus, false, tick);
@@ -481,7 +529,9 @@ function main(): void {
     daemon_cpu: daemonCpu(),
     daemon_procs: daemonProcs(),
   };
+  if (rootDaemon !== undefined) rec.root_daemon = rootDaemon;
   if (isRoot) {
+    state.root_tick_at = now;
     Object.assign(rec, diskReaders(now, state));
     rec.fseventsd_logs = fseventsdLogs();
     if (rec.stall) {
@@ -495,6 +545,16 @@ function main(): void {
   renameSync(statePath + ".tmp", statePath);
   rotateLog(dir, log, now);
   appendFileSync(log, JSON.stringify(rec) + "\n");
+  if (isRoot)
+    handBack(dir, [
+      statePath,
+      log,
+      join(dir, ARCHIVE_DIR),
+      join(dir, INCIDENTS_DIR),
+    ]);
 }
 
-main();
+const { verb, spec } = args();
+if (verb === "install-root") installRoot(spec);
+else if (verb === "uninstall-root") uninstallRoot(spec.label, spec.dir);
+else runTick(spec);

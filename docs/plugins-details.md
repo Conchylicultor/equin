@@ -31558,6 +31558,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LatestTick`
               - `MonitorTick`
               - `ProbeReading`
+              - `RootDaemonProblem`
+              - `RootDaemonStatus`
               - `WrittenTick`
             - Exports (values):
               - `ACTIVE_FINDINGS_MAX`
@@ -31577,6 +31579,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MONITOR_INTERVAL_MS`
               - `MonitorTickSchema`
               - `parseTickLine`
+              - `ROOT_DAEMON_PROBLEMS`
+              - `RootDaemonStatusSchema`
           - Plugins:
             - **`monitor`** — The fs-latency monitor, provisioned by equin: a standalone binary (bun build --compile of bin/) that a user LaunchAgent runs every 30 s, appending one tick per run to the monitors' log io-health reads — typed against io-health's tick schema, its log rotated into kept gzip archives; a root LaunchDaemon of the same binary is an opt-in for attribution.
               - Deps:
@@ -31586,15 +31590,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `fsLatencyMonitorBinary`
               - Exemptions:
                 - Exempts itself from:
-                  - `timed-fs/no-untimed-fs-read` — `bin/fs-latency-monitor.ts`, `bin/rotate.ts` (sanctioned)
+                  - `timed-fs/no-untimed-fs-read` — `bin/fs-latency-monitor.ts`, `bin/rotate.ts`, `bin/root-daemon.ts` (sanctioned)
                   - `owned-fd/no-raw-fd-close` — `bin/fs-latency-monitor.ts`, `bin/native.ts` (sanctioned)
                   - `sink-safety/no-adhoc-file-sink` — `bin/fs-latency-monitor.ts` (sanctioned)
               - Core:
                 - Exports (values):
                   - `FS_LATENCY_MONITOR_LABEL`
-                  - `LEGACY_MONITOR_LABEL`
-                  - `ROOT_DAEMON_PLISTS`
-                  - `rootDaemonPlist`
                   - `START_MONITOR_COMMAND`
         - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, and sleptDuring(start, end) — the sleep this process saw inside a wall-clock span.
           - Server:

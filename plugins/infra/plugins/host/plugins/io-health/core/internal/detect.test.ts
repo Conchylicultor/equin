@@ -118,6 +118,27 @@ describe("io-health detector", () => {
     expect(resident.raised).toEqual([]);
   });
 
+  test("a root daemon installed but silent is raised from the first tick that says so, and cleared by the next that does not", () => {
+    const status = {
+      problem: "empty" as const,
+      plist: "/Library/LaunchDaemons/dev.equin.fs-latency-monitor.plist",
+      stdio: "/tmp/fs-latency-root-stdio.log",
+      fix: "sudo '/x/equin.app/Contents/MacOS/fs-latency-monitor' install-root …",
+    };
+    const { raised, cleared, d } = run(10, (i) =>
+      i >= 2 && i < 6 ? { root_daemon: status } : {},
+    );
+    expect(raised).toEqual([{ i: 2, key: "root-daemon:root-daemon" }]);
+    expect(cleared).toEqual([{ i: 6, key: "root-daemon:root-daemon" }]);
+    expect(d.active()).toEqual([]);
+    const held = run(3, () => ({ root_daemon: status })).d.active()[0]!;
+    expect(held.summary).toContain("its plist is empty");
+    expect(held.evidence).toContainEqual({
+      label: "reinstall (from any directory)",
+      value: status.fix,
+    });
+  });
+
   test("a tick not newer than the last is dropped and counted", () => {
     const d = createIoHealthDetector();
     d.push(tick(3));

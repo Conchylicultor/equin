@@ -14,6 +14,30 @@ export const MONITOR_INTERVAL_MS = 30_000;
 const ProcSchema = z.object({ pid: z.number(), age_s: z.number() });
 
 /**
+ * Why a root daemon whose plist is installed is not the monitor: its plist is
+ * empty, does not parse, is not loaded by launchd, or is loaded and wrote no
+ * tick lately. The user agent ticks in its place and says which.
+ */
+export const ROOT_DAEMON_PROBLEMS = [
+  "empty",
+  "invalid",
+  "not-loaded",
+  "not-writing",
+] as const;
+export type RootDaemonProblem = (typeof ROOT_DAEMON_PROBLEMS)[number];
+
+export const RootDaemonStatusSchema = z.object({
+  problem: z.enum(ROOT_DAEMON_PROBLEMS),
+  /** The installed plist. */
+  plist: z.string(),
+  /** The root daemon's own stdout/stderr log. */
+  stdio: z.string(),
+  /** The one command that reinstalls it (sudo, from any directory). */
+  fix: z.string(),
+});
+export type RootDaemonStatus = z.infer<typeof RootDaemonStatusSchema>;
+
+/**
  * One line of `fs-latency.jsonl`, reduced to what the detector reads (unknown
  * keys are dropped). Fields the monitor added over time are optional, so the
  * recorded history from 2026-11-03 parses as it was written: the first tick
@@ -44,6 +68,8 @@ export const MonitorTickSchema = z.object({
   daemon_procs: z.record(z.string(), ProcSchema).optional(),
   /** Root only: top disk readers since the last tick (MB/s by process name). */
   disk_readers_mb_s: z.record(z.string(), z.number()).nullable().optional(),
+  /** User agent only: a root daemon is installed but not writing (absent when none is installed). */
+  root_daemon: RootDaemonStatusSchema.optional(),
 });
 export type MonitorTick = z.infer<typeof MonitorTickSchema>;
 
@@ -105,6 +131,8 @@ export interface WrittenTick {
   fseventsd_logs?: string[] | null;
   /** Root only: the `fs_usage` capture taken on a stall. */
   incident?: string;
+  /** User agent only, while a root daemon's plist is installed but it does not write. */
+  root_daemon?: RootDaemonStatus;
 }
 
 type Holds<T extends true> = T;

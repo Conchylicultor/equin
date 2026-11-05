@@ -16,6 +16,8 @@ export const IO_HEALTH_RULES = [
   "relaunch-loop",
   /** The file cache drops files within minutes although nothing churns it. */
   "cache-collapse",
+  /** The monitor's root daemon is installed but not the one writing (its plist empty, invalid or unloaded, or it is silent). */
+  "root-daemon",
 ] as const;
 export type IoHealthRule = (typeof IO_HEALTH_RULES)[number];
 
@@ -30,7 +32,7 @@ export const EVIDENCE_MAX = 8;
 
 export const FindingSchema = z.object({
   rule: z.enum(IO_HEALTH_RULES),
-  /** What the rule is about: a daemon's name, or `disk` / `probe` / `cache`. */
+  /** What the rule is about: a daemon's name, or `disk` / `probe` / `cache` / `root-daemon`. */
   subject: z.string(),
   severity: z.enum(["attention", "critical"]),
   /** One sentence, the report's message and the health row's summary. */

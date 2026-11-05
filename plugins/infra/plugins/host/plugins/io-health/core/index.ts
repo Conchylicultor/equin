@@ -2,9 +2,17 @@ export {
   FS_LATENCY_LOG_NAME,
   MONITOR_INTERVAL_MS,
   MonitorTickSchema,
+  ROOT_DAEMON_PROBLEMS,
+  RootDaemonStatusSchema,
   parseTickLine,
 } from "./internal/tick";
-export type { MonitorTick, ProbeReading, WrittenTick } from "./internal/tick";
+export type {
+  MonitorTick,
+  ProbeReading,
+  RootDaemonProblem,
+  RootDaemonStatus,
+  WrittenTick,
+} from "./internal/tick";
 export {
   EVIDENCE_MAX,
   FindingSchema,
