@@ -247,7 +247,7 @@ export function mountZoom(
     paint();
     // a chapter's loop starts over while it is still hidden, so it is seen from its beginning
     timelines.forEach((sc, k) => {
-      if (sc && lastP < k - 0.8 && p >= k - 0.8) sc.tau = 0;
+      if (sc && lastP < k - 0.8 && p >= k - 0.8) sc.restart();
     });
     lastP = p;
     wish.setOn(p < 0.6 && opts.ideaRead());

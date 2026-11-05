@@ -58,7 +58,7 @@ interface Step {
 export class Timeline {
   readonly parts: Record<string, Part> = {};
   private readonly steps: Step[] = [];
-  tau = 0;
+  private tau = 0;
 
   /** `prefix` makes the parts' ids unique in the document (clip paths are looked up by id). */
   constructor(
@@ -209,6 +209,16 @@ export class Timeline {
       }
       apply(p);
     }
+  }
+
+  /**
+   * Start the loop over, and draw its start now: the drawing must never show
+   * the time it had got to before (a frame made visible in the same scroll
+   * update would flash that stale state for one frame).
+   */
+  restart(): void {
+    this.tau = 0;
+    this.render();
   }
 
   /** Always real time: a loop never speeds up. */
