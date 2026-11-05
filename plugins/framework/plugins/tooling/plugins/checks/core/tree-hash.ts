@@ -128,6 +128,88 @@ export async function computeTreeHash(root: AppPath): Promise<string | null> {
   }
 }
 
+/**
+ * The repo's MAIN checkout — the one whose `.git` is the common dir every linked
+ * worktree shares — or null when git cannot say. `root` itself when `root` is
+ * the main checkout. Fail-open like `computeTreeHash`: a null only narrows the
+ * read-set candidates a run tries to its own.
+ */
+export async function mainCheckoutRoot(root: AppPath): Promise<AppPath | null> {
+  const { code, stdout } = await git(root, [
+    "rev-parse",
+    "--path-format=absolute",
+    "--git-common-dir",
+  ]);
+  if (code !== 0 || !stdout.startsWith("/")) return null;
+  return appPathParent(asAppPath(stdout));
+}
+
+/** One blob a pathspec names in a tree. */
+export interface TreePathspecEntry {
+  path: string;
+  blob: string;
+}
+
+/**
+ * Every (path, blob) of `tree` that `pathspecs` name, in index order, by git's
+ * OWN pathspec matcher — the set `git grep <tree> -- <pathspecs>` searches —
+ * without reading a file: `read-tree` into a scratch index beside this
+ * checkout's real one, then `ls-files -s` over it. The scratch index is removed
+ * before returning; one left by a killed run is swept by `computeTreeHash`.
+ * Throws on any git failure: a domain that did not load must not read as empty.
+ */
+export async function listTreePathspec(
+  root: AppPath,
+  tree: string,
+  pathspecs: readonly string[],
+): Promise<TreePathspecEntry[]> {
+  const indexPath = (
+    await git(root, [
+      "rev-parse",
+      "--path-format=absolute",
+      "--git-path",
+      "index",
+    ])
+  ).stdout;
+  if (!indexPath.startsWith("/"))
+    throw new Error(`listTreePathspec: no index path for ${root}`);
+  const nonce = `${process.pid}-${randomBytes(4).toString("hex")}`;
+  const scratch = besideIndex(
+    asAppPath(indexPath),
+    `equin-tree-domain-${nonce}`,
+  );
+  try {
+    const { GIT_INDEX_FILE: _ignored, ...inherited } = process.env;
+    const env = { ...inherited, GIT_INDEX_FILE: scratch };
+    const read = await git(root, ["read-tree", tree], env);
+    if (read.code !== 0)
+      throw new Error(
+        `listTreePathspec: git read-tree ${tree} failed (exit ${read.code})`,
+      );
+    const listed = await git(
+      root,
+      ["ls-files", "-s", "-z", "--", ...pathspecs],
+      env,
+    );
+    if (listed.code !== 0)
+      throw new Error(
+        `listTreePathspec: git ls-files failed (exit ${listed.code})`,
+      );
+    const entries: TreePathspecEntry[] = [];
+    for (const record of listed.stdout.split("\0")) {
+      if (record === "") continue;
+      // `<mode> <blob> <stage>\t<path>`; a gitlink (160000) has no bytes to grep.
+      const tab = record.indexOf("\t");
+      const [mode, blob] = record.slice(0, tab).split(" ");
+      if (mode === "160000" || blob === undefined) continue;
+      entries.push({ path: record.slice(tab + 1), blob });
+    }
+    return entries;
+  } finally {
+    rmSync(scratch, { force: true });
+  }
+}
+
 /** `<index>.<suffix>`, in the index's own directory (git's lock spelling). */
 function besideIndex(index: AppPath, suffix: string): AppPath {
   const name = index.slice(index.lastIndexOf("/") + 1);
@@ -135,7 +217,7 @@ function besideIndex(index: AppPath, suffix: string): AppPath {
 }
 
 // What follows `<index>.equin-` in a scratch index's name (see `nonce`).
-const SCRATCH_SUFFIX = /^(?:tree-hash|refreshed)-(\d+)-[0-9a-f]+$/;
+const SCRATCH_SUFFIX = /^(?:tree-hash|refreshed|tree-domain)-(\d+)-[0-9a-f]+$/;
 
 /**
  * Remove the scratch indexes of runs that died before their `finally` (a

@@ -15,7 +15,9 @@ import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/c
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { createTurnQueue } from "@plugins/packages/plugins/macrotask-yield/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
-import { computeTreeHash } from "./tree-hash";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { computeTreeHash, mainCheckoutRoot } from "./tree-hash";
+import { createGrepIndex, type GrepIndexStore } from "./grep-index";
 import { resolveCacheSignature } from "./cache-signature";
 import { recordingRepo, runRepoFiles } from "./repo-set";
 import { checkFlightDir, openCheckCache } from "./cache";
@@ -25,6 +27,7 @@ import {
   loadTreeSnapshot,
   readTreeSnapshot,
   validate,
+  type ReadSet,
   type TreeSnapshot,
   type QueryFact,
   type ValidateResult,
@@ -173,6 +176,12 @@ export interface RunChecksOptions {
    * nesting. See `checks/CLAUDE.md`.
    */
   jobs?: number;
+  /**
+   * The host-wide grep index store (`grep-index.ts`), opened by the caller at
+   * the CLI boundary (it is SQLite, which `core` cannot open). Omitted, every
+   * grep-based check runs its own whole-tree `git grep`.
+   */
+  grepIndex?: GrepIndexStore;
   log: (line: string, stream: "stdout" | "stderr") => void;
   /** Bypass the tree-hash result cache entirely (lookup + record). */
   noCache?: boolean;
@@ -492,6 +501,30 @@ export async function runChecks(
     anyInputKeyed && root && treeHash
       ? await progress.bootstrap("tree-snapshot", loadSnapshot)
       : null;
+  // The run's grep selections, answered per blob from the host-wide index:
+  // only blobs no run has grepped for a pattern cost a `git grep`.
+  const grep =
+    options.grepIndex !== undefined && root !== null && treeHash !== null
+      ? createGrepIndex({
+          root,
+          tree: treeHash,
+          store: options.grepIndex,
+          grepTree: (grepArg, fixed, pathspecs) =>
+            gitGrepList(root, grepArg, fixed, pathspecs, treeHash),
+        })
+      : null;
+  // Whose recorded read-sets an input-keyed check replays, in order: this
+  // checkout's own (its last pass, usually one edit behind), then the main
+  // checkout's (where a fresh worktree's tree came from). A run records into
+  // its own slot only — see `readSetFile` in `cache.ts` for why one shared
+  // slot missed nearly every time.
+  const readSetCheckouts: readonly AppPath[] =
+    snapshot !== null && root !== null
+      ? await progress.bootstrap("read-set-checkouts", async () => {
+          const main = await mainCheckoutRoot(root);
+          return main === null || main === root ? [root] : [root, main];
+        })
+      : [];
 
   // `ctx.snapshot()`: the run's tree, strictly. With caching on it is the very
   // snapshot loaded above (one memoized load, so the cache key, the replay and
@@ -631,8 +664,37 @@ export async function runChecks(
           : null;
       }
       const { snapshot: snap } = mode;
-      const stored = mode.cache.loadReadSet(check.id, mode.sig);
-      if (stored === null) return null;
+      const reasons: string[] = [];
+      for (const checkout of readSetCheckouts) {
+        const stored = mode.cache.loadReadSet(check.id, mode.sig, checkout);
+        if (stored === null) {
+          reasons.push(`${checkout}: none recorded`);
+          continue;
+        }
+        const verdict = await validateStored(stored, snap);
+        if (verdict.hit) {
+          if (shadow)
+            observations.push({
+              line: `shadow: ${check.id} input-keyed HIT (${checkout})`,
+              stream: "stdout",
+            });
+          return settled({ ok: true }, true);
+        }
+        reasons.push(`${checkout}: ${verdict.reason}`);
+      }
+      if (shadow)
+        observations.push({
+          line: `shadow: ${check.id} input-keyed MISS — ${reasons.join("; ")}`,
+          stream: "stdout",
+        });
+      return null;
+    };
+
+    // One recorded read-set against the run's snapshot.
+    const validateStored = async (
+      stored: ReadSet,
+      snap: TreeSnapshot,
+    ): Promise<ValidateResult> => {
       // Replay a recorded `git grep -l` query against the CURRENT snapshot
       // tree — called by `validate` ONLY when a query's pathspec fingerprint
       // changed (the cheap in-memory gate runs first). Re-runs the SAME grep
@@ -662,14 +724,7 @@ export async function runChecks(
           reason: `validate threw (fail-open → run): ${String(err)}`,
         };
       }
-      if (shadow)
-        observations.push({
-          line: verdict.hit
-            ? `shadow: ${check.id} input-keyed HIT`
-            : `shadow: ${check.id} input-keyed MISS — ${verdict.reason}`,
-          stream: "stdout",
-        });
-      return verdict.hit ? settled({ ok: true }, true) : null;
+      return verdict;
     };
 
     // The miss path: run the body, and record a PASS. Failures are never
@@ -683,15 +738,20 @@ export async function runChecks(
         // requires.
         const view = mode.snapshot.createRecordingView();
         const recordingCtx = { ...ctx, repo: recordingRepo(repo, view) };
-        const result = await withScanView(mode.treeHash, view, () =>
+        const result = await withScanView(mode.treeHash, view, grep, () =>
           runBody(check, recordingCtx),
         );
         const outcome = settled(result, false);
         if (result.ok)
-          mode.cache.recordReadSet(check.id, mode.sig, view.readSet());
+          mode.cache.recordReadSet(
+            check.id,
+            mode.sig,
+            mode.snapshot.root,
+            view.readSet(),
+          );
         return outcome;
       }
-      const result = await withScanView(treeHash, null, () =>
+      const result = await withScanView(treeHash, null, grep, () =>
         runBody(check, ctx),
       );
       const outcome = settled(result, false);

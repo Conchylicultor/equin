@@ -166,6 +166,7 @@ export async function scanDbBackedNotify(
   // The unbounded walk regex-scans many bodies; yield every ~10 ms so the check
   // never holds the runner's shared thread (checks/CLAUDE.md).
   const slice = createTimeSlicer();
+  const bodies = bodyFacts();
   for (const { rel, src } of sources) {
     const root = pluginRootOf(rel);
     const excluded = root === null ? undefined : feedExclusions.get(root);
@@ -188,6 +189,7 @@ export async function scanDbBackedNotify(
         const found = await findRead(
           call,
           modules,
+          bodies,
           (body) => callExcused || excused(body, excluded),
           slice,
         );
@@ -212,6 +214,7 @@ export async function scanDbBackedNotify(
 async function findRead(
   call: Definition,
   modules: ModuleIndex,
+  bodies: BodyFacts,
   isExcused: (body: Definition) => boolean,
   slice: () => Promise<void>,
 ): Promise<string[] | null> {
@@ -223,8 +226,9 @@ async function findRead(
     const next: typeof frontier = [];
     for (const { body, chain } of frontier) {
       await slice();
-      if (dbReads(body).length > 0 && !isExcused(body)) return chain;
-      for (const ref of referencedIdentifiers(body)) {
+      const facts = bodies(body);
+      if (facts.reads && !isExcused(body)) return chain;
+      for (const ref of facts.refs) {
         const def = await modules.resolve(body.module, ref);
         if (!def || seen.has(bodyKey(def))) continue;
         seen.add(bodyKey(def));
@@ -238,6 +242,34 @@ async function findRead(
 }
 
 const bodyKey = (d: Definition) => `${d.module.rel}:${d.start}`;
+
+/** What the walk reads off one body: does it read the DB, and what it references. */
+interface BodyFact {
+  reads: boolean;
+  refs: ReadonlySet<string>;
+}
+type BodyFacts = (body: Definition) => BodyFact;
+
+/**
+ * One body's facts, scanned once per pass: the walks of different calls reach
+ * the same helpers (a plugin's loaders share its query functions), and each
+ * scan is a set of regexes over the whole body.
+ */
+function bodyFacts(): BodyFacts {
+  const memo = new Map<string, BodyFact>();
+  return (body) => {
+    const key = `${bodyKey(body)}:${body.end}`;
+    let fact = memo.get(key);
+    if (!fact) {
+      fact = {
+        reads: dbReads(body).length > 0,
+        refs: referencedIdentifiers(body),
+      };
+      memo.set(key, fact);
+    }
+    return fact;
+  };
+}
 
 function definitionText(def: Definition, which: "src" | "masked"): string {
   return def.module[which].slice(def.start, def.end);

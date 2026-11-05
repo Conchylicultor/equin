@@ -1,12 +1,9 @@
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { listRepoFiles } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { maskNonDeclarations } from "./mask";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 /**
  * Enforces that every token-group CSS var has exactly ONE declaring owner.
@@ -30,7 +27,7 @@ const check: Check = {
   id: "css-vars-single-owner",
   description:
     "Every token-group CSS var has exactly one declaring owner (no cross-group collision; no static-CSS re-declaration outside @theme)",
-  async run() {
+  async run(ctx) {
     const root = await getWorktreeRoot();
 
     // Fresh from the real `defineTokenGroup` descriptors — NOT the committed
@@ -57,15 +54,15 @@ const check: Check = {
     // (b) Static-CSS overlap: token-group vars DECLARED outside @theme blocks.
     // The web app.css lives under plugins/ (web-core), so the plugins glob
     // covers every tracked CSS file.
-    // Selected from `listRepoFiles`'s one git-backed enumeration, never a
+    // Selected from the run's file set (`ctx.repo()`)'s one git-backed enumeration, never a
     // hand-rolled `git ls-files <glob>`: that lists index entries whose file the
     // worktree no longer has, so a CSS file deleted-but-not-yet-committed
     // reached `readFileSync` below and crashed the check on the author's own
-    // deletion. `listRepoFiles` subtracts those, and includes not-yet-tracked
+    // deletion. the run's file set (`ctx.repo()`) subtracts those, and includes not-yet-tracked
     // files — so a brand-new plugin's CSS is checked from its first build.
-    const cssFiles = (await listRepoFiles(root)).filter(
-      (p) => p.startsWith("plugins/") && p.endsWith(".css"),
-    );
+    const cssFiles = (await ctx.repo())
+      .all()
+      .filter((p) => p.startsWith("plugins/") && p.endsWith(".css"));
     const overlaps: { name: string; file: string }[] = [];
     for (const rel of cssFiles) {
       const raw = readFileSync(join(root, rel), "utf8");

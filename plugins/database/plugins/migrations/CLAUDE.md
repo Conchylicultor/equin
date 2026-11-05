@@ -713,6 +713,7 @@ only agreement that matters.
     - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/migration-phases-valid.ts`, `check/orphaned-tables.ts` (debt)
   - Exempted by:
     - `database/migrations` (0 debt)
+    - `framework/tooling/checks` (0 debt)
     - `plugin-meta/plugin-records` (0 debt)
 - Machine:
   - Exports (values):

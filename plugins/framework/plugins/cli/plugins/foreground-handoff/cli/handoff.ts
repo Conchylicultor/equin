@@ -1,5 +1,12 @@
 import { spawn } from "node:child_process";
-import { mkdtempSync, openSync, readSync, watch, writeSync } from "node:fs";
+import {
+  mkdtempSync,
+  openSync,
+  readSync,
+  rmSync,
+  watch,
+  writeSync,
+} from "node:fs";
 import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
 import { constants, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -44,10 +51,12 @@ export async function runHandedOff(
   op: HandoffOp,
   deadlineMs: number,
 ): Promise<never> {
-  const logPath = join(
-    mkdtempSync(join(tmpdir(), `equin-${op}-`)),
-    "output.log",
-  );
+  // This launcher owns the directory: removed once the op has exited in time
+  // (everything in it was streamed out already). Left behind, one per
+  // foreground check / test, it piled up — 2,700+ in /tmp on 2026-11-05.
+  // A handed-off op's log outlives the call on purpose: its path is printed.
+  const logDir = mkdtempSync(join(tmpdir(), `equin-${op}-`));
+  const logPath = join(logDir, "output.log");
   const writeFd = adoptFd(openSync(logPath, "a"));
   const env = { ...process.env };
   unsetEnv("FOREGROUND_DEADLINE", env);
@@ -107,7 +116,10 @@ export async function runHandedOff(
   pump();
   readFd.close();
 
-  if (ending.kind === "exited") process.exit(ending.code);
+  if (ending.kind === "exited") {
+    rmSync(logDir, { recursive: true, force: true });
+    process.exit(ending.code);
+  }
 
   handedOff = true;
   child.unref();

@@ -27,6 +27,31 @@ left in that gitignored directory counted as source and failed its coverage
 gate. Both ask git for tracked + untracked-not-ignored — the same universe
 `computeTreeHash` builds. The `no-adhoc-repo-walk` lint rule enforces it.
 
+## Grep selections are answered per blob (`core/grep-index.ts`)
+
+`grepCode` / `grepImports` / `listCandidateSources` select their candidates
+through the run's **grep index**, not one whole-tree `git grep` each. Whether a
+blob matches a pattern is a pure function of (git version, `-E`/`-F`, pattern,
+blob bytes), so the answer is kept per blob in one host-wide SQLite file
+(`checks/cli`'s `openGrepIndexStore`, opened by the `check` command and handed
+to `runChecks` as `grepIndex`), and a run greps only the blobs no run on the host
+has asked about yet. Before it, a pass ran ~99 whole-tree greps (each ~2.5
+CPU-s over 116 MB of blobs, up to 18 at once): ~60 % of a pass's CPU, and the
+same answers every run.
+
+git stays the authority on both halves, so a selection equals what `git grep -l
+<pattern> <tree> -- <pathspecs>` prints:
+
+- **which files**: `listTreePathspec` (`core/tree-hash.ts`) — `read-tree` of the
+  run's tree into a scratch index, `ls-files -s` over it. Never
+  `pathspecToRegex`, which is only a superset.
+- **whether one matches**: `git grep` itself, over the unknown blobs only (by
+  `:(literal)` path, or the whole query when there are many — whose output must
+  then lie inside the domain, or the run throws).
+
+`gitGrepList` reads `-z` output: a quoted path (non-ASCII, `"`, `\`) would
+otherwise name no file and be recorded as not matching, host-wide.
+
 ## `computeTreeHash` costs O(changed files)
 
 It hashes through a scratch index seeded from the checkout's real one, so `add
@@ -117,13 +142,20 @@ Live, not a dormant scaffold — nine checks set it: `type-check`,
 `no-raw-websocket`, `no-hardcoded-colors`, `no-hand-built-link-to`,
 `no-use-resource-cast`.
 
-The read-set slot is keyed on `(checkId, cacheSignature())` with **no tree hash
-at all** (`readSetFile` in [`core/cache.ts`](core/cache.ts)), so a PASS recorded
+The read-set slot is keyed on `(checkId, cacheSignature(), checkout)` with **no
+tree hash at all** (`readSetFile` in [`core/cache.ts`](core/cache.ts)), so a PASS recorded
 there survives forward into later trees for as long as the replay still
 validates. A wrong answer on the tree-hash slot is confined to the one tree it
 was recorded against; here nothing bounds it. **A check that is not a pure
 function of the checkout must never be moved onto this flag** — fix the impurity
 at its source first.
+
+**One slot per checkout, tried own-then-main.** A run replays the read-set its
+own checkout last recorded, then the main checkout's, and records into its own
+only. With one slot per `(checkId, sig)` every concurrent worktree overwrote
+the others' facts, so a replay almost always compared against someone else's
+edits: 5 hits in 57 type-check runs (2026-11-05). The checkout picks which
+read-set is tried; `validate` alone decides the hit.
 
 Three checks document why they stay off it; read them before adopting:
 [`format-clean`](plugins/format-clean/check/index.ts) and
@@ -404,7 +436,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 65 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×10
     - `framework/tooling/exempt` ×7
     - `reports/check-thread-stall` ×7
@@ -425,6 +457,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `packages/flock.flockTry`
     - `packages/semaphore.createSemaphore`
     - `packages/single-flight.singleFlight`
+    - `packages/string-hash.sha256Hex`
     - `plugin-meta/plugin-tree.buildStructureTreeOnce`
   - Exports (types):
     - `CandidateSource`
@@ -437,6 +470,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `FileFact`
     - `FileSystemView`
     - `GlobFact`
+    - `GrepIndexStore`
     - `ImportMatch`
     - `ListCandidateSourcesOptions`
     - `OutstandingCheck`
@@ -480,11 +514,15 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `sliceCheckThread`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
+  - Imported by: `framework/cli/check`
 - Exemptions:
   - Exempts itself from:
+    - `imperative-create-table-allowlisted` — `cli/internal/grep-index-store.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/tree-hash.ts` (sanctioned)
     - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts` (debt)
+- Cli:
+  - Exports (values): `openGrepIndexStore`
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
     - `createReadSetRepo` — Create the repo holding `files` (repo-relative path → content), committed.

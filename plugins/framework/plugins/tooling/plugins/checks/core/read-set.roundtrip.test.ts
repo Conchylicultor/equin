@@ -72,7 +72,7 @@ async function record(): Promise<ReadSet> {
   const snap = await loadTreeSnapshot(root, treeHash!);
   expect(snap).not.toBeNull();
   const view = snap!.createRecordingView();
-  const matches = await withScanView(treeHash!, view, () =>
+  const matches = await withScanView(treeHash!, view, null, () =>
     grepCode({ root, pattern: /new WebSocket\(/, grepArg: "new WebSocket(", fixed: true }),
   );
   // Sanity: the fixture has exactly one real match, in a.ts.

@@ -33,6 +33,7 @@ export type {
   ValidateOptions,
 } from "./read-set";
 export { currentScanView } from "./scan-context";
+export type { GrepIndexStore } from "./grep-index";
 export {
   grepCode,
   grepImports,

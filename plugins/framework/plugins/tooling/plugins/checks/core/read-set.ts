@@ -24,7 +24,7 @@
 // execute on every check pass.
 //
 // A PASS RECORDED HERE IS NOT BOUNDED BY A TREE. The read-set slot is keyed on
-// `(checkId, cacheSignature())` with no tree hash at all (`cache.ts`
+// `(checkId, cacheSignature(), checkout)` with no tree hash at all (`cache.ts`
 // `readSetFile`), so it survives forward into later trees for as long as the
 // replay still validates — which is the point, and also why a check whose
 // verdict is not a pure function of the checkout must never be moved onto this

@@ -2,6 +2,7 @@ import {
   findImports,
   maskSource,
   matchBracket,
+  type ImportRef,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 // Text-level "go to definition" for no-db-backed-notify: given an identifier a
@@ -18,11 +19,17 @@ export interface ModuleReader {
   read(rel: string): Promise<string | null>;
 }
 
-/** One source file and its masked twin (strings blanked, same offsets). */
+/**
+ * One source file, its masked twin (strings blanked, same offsets) and its
+ * import / export-from statements — each derived once, when the file is
+ * parsed: a resolution consults the imports of every module it passes through,
+ * and the walk resolves the same names from thousands of bodies.
+ */
 export interface ParsedModule {
   rel: string;
   src: string;
   masked: string;
+  imports: readonly ImportRef[];
 }
 
 /** A resolved declaration: the `[start, end)` text of its whole statement. */
@@ -44,6 +51,11 @@ const TS_EXTENSIONS = [".ts", ".tsx"];
 
 export class ModuleIndex {
   private readonly modules = new Map<string, Promise<ParsedModule | null>>();
+  // `resolve` answers per (module, name): a pure function of the files the
+  // index reads, which never change under it. Without it every serve call's
+  // walk re-resolved what the previous calls had — 186,180 resolutions over
+  // 1,026 modules, ~30 s of the check thread per pass (2026-11-05).
+  private readonly resolved = new Map<string, Promise<Definition | null>>();
 
   constructor(private readonly reader: ModuleReader) {}
 
@@ -69,11 +81,14 @@ export class ModuleIndex {
    * The definition `name` refers to inside `module`: a same-file declaration,
    * else the import binding it comes from, resolved in the exporting file.
    */
-  async resolve(
-    module: ParsedModule,
-    name: string,
-  ): Promise<Definition | null> {
-    return this.resolveIn(module, name, 0);
+  resolve(module: ParsedModule, name: string): Promise<Definition | null> {
+    const key = `${module.rel}\0${name}`;
+    let pending = this.resolved.get(key);
+    if (!pending) {
+      pending = this.resolveIn(module, name, 0);
+      this.resolved.set(key, pending);
+    }
+    return pending;
   }
 
   private async resolveIn(
@@ -83,7 +98,7 @@ export class ModuleIndex {
   ): Promise<Definition | null> {
     const local = findDeclaration(module, name);
     if (local) return local;
-    for (const imp of findImports(module.src)) {
+    for (const imp of module.imports) {
       if (imp.keyword !== "import" || imp.typeOnly || imp.sideEffect) continue;
       const imported = namedBindings(imp.clause).get(name);
       if (imported === undefined) continue;
@@ -108,7 +123,7 @@ export class ModuleIndex {
     const local = findDeclaration(module, exported);
     if (local) return local;
     const stars: string[] = [];
-    for (const ref of findImports(module.src)) {
+    for (const ref of module.imports) {
       if (ref.keyword !== "export" || ref.typeOnly || ref.sideEffect) continue;
       if (/^\s*\*\s*$/.test(ref.clause)) {
         stars.push(ref.specifier);
@@ -154,7 +169,12 @@ export class ModuleIndex {
 }
 
 function parse(rel: string, src: string): ParsedModule {
-  return { rel, src, masked: maskSource(src, { strings: true }) };
+  return {
+    rel,
+    src,
+    masked: maskSource(src, { strings: true }),
+    imports: findImports(src),
+  };
 }
 
 function dirnameRel(rel: string): string {

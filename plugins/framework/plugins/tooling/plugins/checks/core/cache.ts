@@ -147,14 +147,24 @@ function entryFile(checkId: string, treeHash: string, sig: string): AppPath {
   return slotName([treeHash, checkId, sha256(sig)], ".json");
 }
 
-// Input-keyed read-set slot: a SINGLE slot per (checkId, sig) — NOT keyed on
-// treeHash — holding the latest recorded read-set. Validate-by-replay
-// (`read-set.ts` `validate`) checks it against a fresh snapshot, so one slot
-// serves the monotonic-forward push-rebase path. Suffixed `.readset.json` so it
-// still ends in `.json` and is swept by the same `pruneCheckCache()` as the legacy slots,
-// while never colliding with a legacy `${sha256(key)}.json` name.
-function readSetFile(checkId: string, sig: string): AppPath {
-  return slotName([checkId, sha256(sig)], ".readset.json");
+// Input-keyed read-set slot: one slot per (checkId, sig, CHECKOUT) — NOT keyed
+// on treeHash — holding the latest read-set that checkout recorded. Validate-by-
+// replay (`read-set.ts` `validate`) checks it against a fresh snapshot, so a
+// checkout's slot serves its own forward path (edit → build → push-rebase).
+//
+// Per checkout because ~10 worktrees run checks at once: with ONE slot per
+// (checkId, sig) each run overwrote the slot with ITS tree's facts, and the next
+// run (another worktree, other edits) validated against them and missed — 5 hits
+// in 57 type-check runs and 4 in 41 for the grep checks (2026-11-05, 50 min of
+// check-progress.jsonl), so the input-keyed path mostly re-ran its body. The
+// checkout only picks WHICH recorded read-set is tried; `validate` alone decides
+// a hit, so the slot address cannot make a verdict stale.
+//
+// Suffixed `.readset.json` so it still ends in `.json` and is swept by the same
+// `pruneCheckCache()` as the legacy slots, while never colliding with a legacy
+// `${sha256(key)}.json` name.
+function readSetFile(checkId: string, sig: string, checkout: AppPath): AppPath {
+  return slotName([checkId, sha256(sig), checkout], ".readset.json");
 }
 
 export interface CheckCache {
@@ -163,17 +173,22 @@ export interface CheckCache {
   /** Record a PASS. Atomic, and safe against concurrent publishers of the same slot. */
   record(checkId: string, treeHash: string, sig: string): void;
   /**
-   * Load the latest recorded read-set for (check, sig), or null if none / on any
-   * read/parse error (fail-open — a corrupt slot must degrade to a cache MISS,
-   * never a false HIT). Validated by `read-set.ts` `validate` before use.
+   * Load the latest read-set `checkout` recorded for (check, sig), or null if
+   * none / on any read/parse error (fail-open — a corrupt slot must degrade to
+   * a cache MISS, never a false HIT). Validated by `read-set.ts` `validate`
+   * before use.
    */
-  loadReadSet(checkId: string, sig: string): ReadSet | null;
+  loadReadSet(checkId: string, sig: string, checkout: AppPath): ReadSet | null;
   /**
-   * Record (overwrite) the read-set for a PASS. Atomic, and safe against
-   * concurrent publishers of the same slot — which is the common case, since
-   * this slot is NOT keyed on treeHash and the cache dir is global.
+   * Record (overwrite) `checkout`'s read-set for a PASS. Atomic, and safe
+   * against concurrent publishers of the same slot (two runs in one checkout).
    */
-  recordReadSet(checkId: string, sig: string, readSet: ReadSet): void;
+  recordReadSet(
+    checkId: string,
+    sig: string,
+    checkout: AppPath,
+    readSet: ReadSet,
+  ): void;
 }
 
 /** Open (and lazily create) the global check-result cache. */
@@ -190,8 +205,8 @@ export function openCheckCache(): CheckCache {
         JSON.stringify({ checkId, treeHash, recordedAt: Date.now() }),
       );
     },
-    loadReadSet(checkId, sig) {
-      const file = readSetFile(checkId, sig);
+    loadReadSet(checkId, sig, checkout) {
+      const file = readSetFile(checkId, sig, checkout);
       if (!existsSync(file)) return null;
       try {
         return JSON.parse(readFileSync(file, "utf8")) as ReadSet;
@@ -200,8 +215,11 @@ export function openCheckCache(): CheckCache {
         return null;
       }
     },
-    recordReadSet(checkId, sig, readSet) {
-      publishAtomic(readSetFile(checkId, sig), JSON.stringify(readSet));
+    recordReadSet(checkId, sig, checkout, readSet) {
+      publishAtomic(
+        readSetFile(checkId, sig, checkout),
+        JSON.stringify(readSet),
+      );
     },
   };
 }

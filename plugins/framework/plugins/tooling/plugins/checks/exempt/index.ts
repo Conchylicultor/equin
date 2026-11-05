@@ -2,6 +2,13 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
+    rule: "imperative-create-table-allowlisted",
+    paths: ["cli/internal/grep-index-store.ts"],
+    kind: "sanctioned",
+    reason:
+      "The grep index is a SQLite file under the data root (bun:sqlite), not a table of the app's Postgres database: the allowlist and the orphaned-db-tables check it feeds are about Postgres schema.",
+  },
+  {
     rule: "repo-walk-safety/no-adhoc-repo-walk",
     paths: ["core/scripts/fix-shared-to-relative.ts"],
     kind: "sanctioned",

@@ -9,7 +9,11 @@ import {
   type SpawnResult,
 } from "@plugins/infra/plugins/spawn/core";
 import { InconclusiveCheckError } from "@plugins/framework/plugins/tooling/core";
-import { currentScanTree, currentScanView } from "./scan-context";
+import {
+  currentGrepIndex,
+  currentScanTree,
+  currentScanView,
+} from "./scan-context";
 import { maskedSource, sliceCheckThread } from "./source-work";
 
 // Both spawns below SCAN — `git grep` walks the tree, `git cat-file --batch`
@@ -256,7 +260,12 @@ async function readCandidates(
 ): Promise<Array<{ rel: string; src: string }>> {
   const tree = currentScanTree();
   const view = currentScanView();
-  const candidates = await gitGrepList(root, grepArg, fixed, pathspecs, tree);
+  const index = currentGrepIndex();
+  // The index is over the run's own checkout: a scan of another root greps it.
+  const candidates =
+    index !== null && index.root === root
+      ? await index.select(grepArg, fixed, pathspecs)
+      : await gitGrepList(root, grepArg, fixed, pathspecs, tree);
 
   // Record this `git grep -l` selection + its pathspec fingerprint into the
   // ambient recording view (no-op when null — the legacy path). Recorded even
@@ -314,7 +323,10 @@ export async function gitGrepList(
   // scan the working tree, adding `--untracked` so even an ad-hoc run still
   // sees not-yet-committed files. Paths from a tree-grep are prefixed with
   // `<tree>:`; strip it so callers always get repo-relative paths.
-  const args = ["git", "grep", "-l", fixed ? "-F" : "-E"];
+  // `-z`: names NUL-terminated and never quoted. Without it git quotes a path
+  // with a non-ASCII byte, `"` or `\` (core.quotePath), which then names no
+  // file — and the grep index would record that file as not matching.
+  const args = ["git", "grep", "-l", "-z", fixed ? "-F" : "-E"];
   if (!tree) args.push("--untracked");
   args.push(grepArg);
   if (tree) args.push(tree);
@@ -324,7 +336,7 @@ export async function gitGrepList(
     cwd: root,
     timeoutMs: GIT_SCAN_TIMEOUT_MS,
   });
-  const stdout = result.stdout.trim();
+  const stdout = result.stdout;
   if (result.timedOut) throw new GitScanTimeoutError(args);
   if (result.exitCode === 1) {
     // `git grep`'s "no matches". Output alongside it would be incoherent.
@@ -336,7 +348,7 @@ export async function gitGrepList(
 
   const prefix = tree ? `${tree}:` : "";
   return stdout
-    .split("\n")
+    .split("\0")
     .filter((l) => l.length > 0)
     .map((l) => (prefix && l.startsWith(prefix) ? l.slice(prefix.length) : l));
 }

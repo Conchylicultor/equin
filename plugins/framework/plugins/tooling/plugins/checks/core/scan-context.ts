@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { FileSystemView } from "./read-set";
+import type { GrepIndex } from "./grep-index";
 
 // Ambient scan context for a single check.run(). Carries:
 //   - `tree`: the git tree-ish the cache key (treeHash) was computed from, so any
@@ -13,9 +14,13 @@ import type { FileSystemView } from "./read-set";
 //     path, not a dormant one: nine checks set `inputKeyed` today (`type-check`,
 //     `plugin-boundaries`, and the seven grepCode pattern checks), so recording
 //     fires on every check pass.
+//   - `grep`: the run's grep index over `tree` (`grep-index.ts`), or null when
+//     the run has no tree or no index store — candidate selection then runs
+//     `git grep` itself.
 const store = new AsyncLocalStorage<{
   tree: string | null;
   view: FileSystemView | null;
+  grep: GrepIndex | null;
 }>();
 
 /**
@@ -26,9 +31,12 @@ const store = new AsyncLocalStorage<{
 export function withScanView<T>(
   tree: string | null,
   view: FileSystemView | null,
+  grep: GrepIndex | null,
   fn: () => Promise<T>,
 ): Promise<T> {
-  return tree === null && view === null ? fn() : store.run({ tree, view }, fn);
+  return tree === null && view === null
+    ? fn()
+    : store.run({ tree, view, grep }, fn);
 }
 
 /** The tree-ish the current check should scan, or null to fall back to the working tree. */
@@ -40,4 +48,14 @@ export function currentScanTree(): string | null {
 /** The recording view for the current check, or null when not input-keyed. */
 export function currentScanView(): FileSystemView | null {
   return store.getStore()?.view ?? null;
+}
+
+/**
+ * The run's grep index, when the current check scans the run's own tree; null
+ * otherwise (no index, or a recording view over a tree the index is not over).
+ */
+export function currentGrepIndex(): GrepIndex | null {
+  const s = store.getStore();
+  if (!s?.grep) return null;
+  return (s.view?.tree ?? s.tree) === s.tree ? s.grep : null;
 }

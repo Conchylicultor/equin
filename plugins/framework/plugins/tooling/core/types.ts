@@ -360,8 +360,8 @@ export interface Check {
    * `no-hand-built-link-to` and `no-use-resource-cast` all set it today.
    *
    * THE EXTRA RULE THIS FLAG CARRIES — read it before adding the tenth adopter.
-   * The read-set slot is keyed on `(checkId, cacheSignature())` with NO TREE HASH
-   * AT ALL (`checks/core/cache.ts` `readSetFile`), so a PASS recorded there
+   * The read-set slot is keyed on `(checkId, cacheSignature(), checkout)` with NO
+   * TREE HASH AT ALL (`checks/core/cache.ts` `readSetFile`), so a PASS recorded there
    * survives forward into LATER trees for as long as the replay still validates.
    * A wrong answer on the tree-hash slot is confined to the one tree it was
    * recorded against; here there is no tree hash to bound it. A check that is not

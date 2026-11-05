@@ -1,11 +1,8 @@
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { listRepoFiles } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 /**
  * Checks the SOURCE-demand class of CSS custom-property gaps: a fallback-less
@@ -33,18 +30,18 @@ const check: Check = {
   id: "css-vars-supplied",
   description:
     "Every fallback-less var(--x) in repo CSS must reference a token supplied by a token-group schema or a CSS declaration",
-  async run() {
+  async run(ctx) {
     const root = await getWorktreeRoot();
 
-    // Selected from `listRepoFiles`'s one git-backed enumeration, never a
+    // Selected from the run's file set (`ctx.repo()`)'s one git-backed enumeration, never a
     // hand-rolled `git ls-files <glob>`: that lists index entries whose file the
     // worktree no longer has, so a CSS file deleted-but-not-yet-committed
     // reached `readFileSync` below and crashed the check on the author's own
-    // deletion. `listRepoFiles` subtracts those, and includes not-yet-tracked
+    // deletion. the run's file set (`ctx.repo()`) subtracts those, and includes not-yet-tracked
     // files — so a brand-new plugin's CSS is checked from its first build.
-    const cssFiles = (await listRepoFiles(root)).filter(
-      (p) => p.startsWith("plugins/") && p.endsWith(".css"),
-    );
+    const cssFiles = (await ctx.repo())
+      .all()
+      .filter((p) => p.startsWith("plugins/") && p.endsWith(".css"));
 
     // DEMAND: fallback-less var(--x) references, mapped to their first file.
     const demand = new Map<string, string>();

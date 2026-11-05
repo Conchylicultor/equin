@@ -98,7 +98,7 @@ test("grepCode scans the ambient scan tree — incl. files untracked when it was
   // Mutate the working copy so a working-tree grep would see DIFFERENT content.
   writeFileSync(f, "const x = 1;\n");
   try {
-    const matches = await withScanView(tree, null, () =>
+    const matches = await withScanView(tree, null, null, () =>
       grepCode({
         root,
         pattern: /new WebSocket\(/,

@@ -21257,6 +21257,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/migration-phases-valid.ts`, `check/orphaned-tables.ts` (debt)
         - Exempted by:
           - `database/migrations` (0 debt)
+          - `framework/tooling/checks` (0 debt)
           - `plugin-meta/plugin-records` (0 debt)
       - Machine:
         - Exports (values):
@@ -26959,6 +26960,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `framework/cli/op-runtime.DirectOpFlight`
               - `framework/cli/op-runtime.withDirectOp`
+              - `framework/tooling/checks.openGrepIndexStore`
           - Exemptions:
             - Exempts itself from: `check-runner-safety/no-adhoc-check-runner` — `cli/run.ts` (sanctioned)
         - **`cli-name`** — The CLI's own name, as data: CLI_NAME (`equin`, what agents type and the CLI calls itself), CLI_NAMES (every repo-root executable that runs it, the legacy shim included), isCliName and CLI_NAME_PATTERN for matchers over command text. A dependency-free leaf, so a guard, a spawn site or a browser bundle can import it.
@@ -27783,7 +27785,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons/icon-sets` (1 debt)
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 65 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 66 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×10
               - `framework/tooling/exempt` ×7
               - `reports/check-thread-stall` ×7
@@ -27804,6 +27806,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/flock.flockTry`
               - `packages/semaphore.createSemaphore`
               - `packages/single-flight.singleFlight`
+              - `packages/string-hash.sha256Hex`
               - `plugin-meta/plugin-tree.buildStructureTreeOnce`
             - Exports (types):
               - `CandidateSource`
@@ -27816,6 +27819,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileFact`
               - `FileSystemView`
               - `GlobFact`
+              - `GrepIndexStore`
               - `ImportMatch`
               - `ListCandidateSourcesOptions`
               - `OutstandingCheck`
@@ -27859,11 +27863,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sliceCheckThread`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
+            - Imported by: `framework/cli/check`
           - Exemptions:
             - Exempts itself from:
+              - `imperative-create-table-allowlisted` — `cli/internal/grep-index-store.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/tree-hash.ts` (sanctioned)
               - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts` (debt)
+          - Cli:
+            - Exports (values): `openGrepIndexStore`
           - Test helpers:
             - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
               - `createReadSetRepo` — Create the repo holding `files` (repo-relative path → content), committed.
@@ -36483,6 +36491,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/prototypes/thumbnails`
           - `framework/server-core`
+          - `framework/tooling/checks`
           - `map`
           - `network/live/resource-protocol`
           - `network/live/resource-runtime`

@@ -8,6 +8,7 @@ import {
   type DirectOpFlight,
 } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { openGrepIndexStore } from "@plugins/framework/plugins/tooling/plugins/checks/cli";
 import { inheritedGrant } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { cpuBudget } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
@@ -369,6 +370,8 @@ const run: CliAction<
           : undefined,
         noCache: opts.cache === false,
         treeHash,
+        // `--no-cache` means "really run": every grep runs whole as well.
+        grepIndex: opts.cache === false ? undefined : openGrepIndexStore(),
         // Commander hands every `<n>` option through as a string, so the
         // conversion happens here and the VALIDATION does not: `runChecks`
         // rejects anything that is not a positive integer, with one message

@@ -39,6 +39,7 @@ None of those defends against a forged collision; they tell contents apart.
   - Imported by:
     - `apps/prototypes/thumbnails`
     - `framework/server-core`
+    - `framework/tooling/checks`
     - `map`
     - `network/live/resource-protocol`
     - `network/live/resource-runtime`

@@ -55,4 +55,25 @@ export const checkProgressLogDir = defineDataDir({
   logs: [{ pattern: "check-progress.jsonl", bound: { kind: "file-sink" } }],
 });
 
-export default [checkCacheDir, retiredTsBuildInfoPoolDir, checkProgressLogDir];
+/**
+ * The grep index: whether a blob matches a grep-based check's pattern, per
+ * (git version, pattern, blob), one SQLite database shared by every worktree,
+ * so a run greps only the blobs no run has asked about yet.
+ *
+ * @see plugins/framework/plugins/tooling/plugins/checks/core/grep-index.ts
+ */
+export const checkGrepIndexDir = defineDataDir({
+  kind: "cache",
+  name: "check-grep-index",
+  owner: "framework/tooling/checks",
+  description:
+    "Per-blob `git grep` answers of the grep-based checks, keyed by (git version, pattern, blob id) and shared by every worktree; rows unread for 14 days are dropped",
+  reclaim: { kind: "safe" },
+});
+
+export default [
+  checkCacheDir,
+  retiredTsBuildInfoPoolDir,
+  checkProgressLogDir,
+  checkGrepIndexDir,
+];

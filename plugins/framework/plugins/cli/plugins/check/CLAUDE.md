@@ -48,6 +48,7 @@ leader's verdict. `--no-cache` means "really run": no hash, no flight. See
   - Uses:
     - `framework/cli/op-runtime.DirectOpFlight`
     - `framework/cli/op-runtime.withDirectOp`
+    - `framework/tooling/checks.openGrepIndexStore`
 - Exemptions:
   - Exempts itself from: `check-runner-safety/no-adhoc-check-runner` — `cli/run.ts` (sanctioned)
 

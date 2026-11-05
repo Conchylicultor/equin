@@ -9,10 +9,10 @@
  * ENOENT propagates out of `runChecks` and aborts the build.
  *
  * This is reachable in normal operation: `CACHE_DIR` is global (deliberately, so
- * main can reuse an agent worktree's passes) and the read-set slot is keyed on
- * `(checkId, sig)` with NO treeHash, where `sig` is `""` for every input-keyed
- * check that declares no `cacheSignature()`. Two worktrees building at once over
- * a cache-cold check collide routinely.
+ * main can reuse an agent worktree's passes) and a legacy slot is keyed on the
+ * tree hash alone, so two worktrees on the same tree (a fresh claim of main,
+ * main's own auto-build) publish the same slot; two runs in one checkout share
+ * its read-set slot (`(checkId, sig, checkout)`, NO treeHash).
  *
  * Uses REAL subprocesses, not in-process interleaving: the failure is a rename
  * race between OS processes, and a single-threaded simulation of it would prove

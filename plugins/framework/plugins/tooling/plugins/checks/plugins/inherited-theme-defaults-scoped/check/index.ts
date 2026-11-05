@@ -2,11 +2,8 @@ import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { matchBracket } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { listRepoFiles } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 /**
  * Enforces that INHERITED, themed CSS defaults are consumed at a theme-scope
@@ -144,7 +141,7 @@ const check: Check = {
   id: "inherited-theme-defaults-scoped",
   description:
     "Inherited themed CSS defaults (font-family, text color, …) and derived custom-property helpers (--chrome-mask, …) are consumed at a theme-scope root (:root, [data-theme-scope]), never on a bare html/body above the scope boundary",
-  async run() {
+  async run(ctx) {
     const root = await getWorktreeRoot();
 
     // Fresh token-group vars (the live descriptors, not the committed manifest —
@@ -153,15 +150,15 @@ const check: Check = {
     const byGroup = await collectTokenGroupVars(root);
     const themedVars = new Set(Object.values(byGroup).flat());
 
-    // Selected from `listRepoFiles`'s one git-backed enumeration, never a
+    // Selected from the run's file set (`ctx.repo()`)'s one git-backed enumeration, never a
     // hand-rolled `git ls-files <glob>`: that lists index entries whose file the
     // worktree no longer has, so a CSS file deleted-but-not-yet-committed
     // reached `readFileSync` below and crashed the check on the author's own
-    // deletion. `listRepoFiles` subtracts those, and includes not-yet-tracked
+    // deletion. the run's file set (`ctx.repo()`) subtracts those, and includes not-yet-tracked
     // files — so a brand-new plugin's CSS is checked from its first build.
-    const cssFiles = (await listRepoFiles(root)).filter(
-      (p) => p.startsWith("plugins/") && p.endsWith(".css"),
-    );
+    const cssFiles = (await ctx.repo())
+      .all()
+      .filter((p) => p.startsWith("plugins/") && p.endsWith(".css"));
     const offenders: { file: string; selector: string; decl: string }[] = [];
 
     for (const rel of cssFiles) {
