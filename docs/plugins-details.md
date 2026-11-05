@@ -23880,12 +23880,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `slow-ops.ops:rows` (keyed, point)
         - Routes: `POST /api/slow-ops/client`
       - Core:
-        - Uses: 23 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
           - `fields` ×3
           - `infra/runtime-profiler` ×3
+          - `packages/list-bound` ×3
           - `config_v2` ×2
           - `network/live` ×2
-          - `packages/list-bound` ×2
           - `debug/trace/engine.traceListRoute`
           - `fields/date/config.dateField`
           - `fields/duration/config.durationField`
@@ -23919,6 +23919,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MAX_CLIENT_SLOW_OP_ITEMS`
           - `MAX_SLOW_OP_MARKERS`
           - `OTHER_VARIANT`
+          - `SAMPLE_HOLDERS_MAX`
           - `slowOpById`
           - `slowOpCallerFields`
           - `slowOpCallers`
@@ -33316,6 +33317,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FlightSpan`
           - `FlightWindow`
           - `GateGauge`
+          - `GateHolder`
           - `OriginClass`
           - `ParentBreakdown`
           - `SlowSpan`
@@ -35967,13 +35969,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/place`
         - **`resource-runtime`**
           - Core:
-            - Uses: 22 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
+            - Uses: 23 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
               - `network/live/resource-protocol` ×15
+              - `packages/semaphore` ×2
               - `packages/string-hash` ×2
               - `packages/value-patch` ×2
               - `network/live/canonical-params.canonicalParams`
               - `packages/inflight.createInflight`
-              - `packages/semaphore.createSemaphore`
             - Exports (types):
               - `AliasMembership`
               - `ChangeSource`
@@ -36366,6 +36368,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LeaseContextRuntime`
           - `LeaseScope`
           - `Semaphore`
+          - `SlotHolder`
           - `SlotOptions`
         - Exports (values):
           - `createSemaphore`

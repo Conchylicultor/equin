@@ -236,8 +236,18 @@ describe("a held slot nested in a yieldable one", () => {
     expect(activeDuringWait).toBe(1); // the read slot stayed held
     io.resolve();
     await Promise.all([first, second]); // no deadlock: both settle
-    expect(reads.stats()).toEqual({ active: 0, queued: 0, max: 1, holders: [] });
-    expect(peeks.stats()).toEqual({ active: 0, queued: 0, max: 1, holders: [] });
+    expect(reads.stats()).toEqual({
+      active: 0,
+      queued: 0,
+      max: 1,
+      holders: [],
+    });
+    expect(peeks.stats()).toEqual({
+      active: 0,
+      queued: 0,
+      max: 1,
+      holders: [],
+    });
   });
 
   test("a plain slot pins yieldable slots inside it and around it", async () => {
