@@ -25,14 +25,16 @@ export interface DatabaseConfig {
 
 const CONFIG_PATH = dbConfigDir.file("database.json");
 
-const SYSTEM_PG_DEFAULTS: DatabaseConfig = {
+// A function, not a const: it reads `USER`, which a module must not read as it
+// loads (barrel-import's load guard).
+const systemPgDefaults = (): DatabaseConfig => ({
   connection: {
     host: "localhost",
     port: 5432,
     user: process.env.USER ?? "postgres",
   },
   services: [],
-};
+});
 
 let cached: DatabaseConfig | null = null;
 
@@ -44,7 +46,7 @@ let cached: DatabaseConfig | null = null;
  * environment before this module is first imported (see the co-located
  * `config.test.ts`, which spawns a child for exactly that reason).
  *
- * ENOENT / malformed JSON are TOLERATED and fall back to `SYSTEM_PG_DEFAULTS`
+ * ENOENT / malformed JSON are TOLERATED and fall back to `systemPgDefaults()`
  * ("no managed services, talk to a plain local Postgres"). That is deliberate:
  * the file is written by `./equin start`, so its absence means "this host
  * has no embedded cluster", not "this call is broken". Callers that genuinely
@@ -66,7 +68,7 @@ export function readDatabaseConfig(): DatabaseConfig {
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code !== "ENOENT" && !(err instanceof SyntaxError)) throw err;
-    cached = SYSTEM_PG_DEFAULTS;
+    cached = systemPgDefaults();
     return cached;
   }
 }

@@ -34,7 +34,10 @@ function localSize(): number {
   return Math.min(host, Math.max(1, local));
 }
 
-const perWorktreeGate = createSemaphore(localSize());
+// Built on first use, not at module load: its size reads the environment,
+// which a module must not read as it loads (barrel-import's load guard).
+let localGate: ReturnType<typeof createSemaphore> | undefined;
+const perWorktreeGate = () => (localGate ??= createSemaphore(localSize()));
 const pool = defineHostPool({
   id: "heavy-read",
   size: heavyReadSize,
@@ -46,7 +49,7 @@ const pool = defineHostPool({
 // `defineHostPool` with TRUE host-wide occupancy. Only the LOCAL per-worktree
 // semaphore's gauge is ours to register — its layer name joins to the
 // same-named `chargeWait` layer below.
-registerGateGauge("heavy-read-local", () => perWorktreeGate.stats());
+registerGateGauge("heavy-read-local", () => perWorktreeGate().stats());
 
 // Ambient "this async context already holds a slot" flag, making the gate
 // REENTRANT. Neither tier's semaphore is reentrant on its own, so without this a
@@ -108,7 +111,7 @@ export function withHeavyReadSlot<T>(
   // loader's span reads as wait-vs-work directly (e.g. edited-files 4032ms = lock
   // 3500 / git diff 532) instead of one opaque number. Context-less callers fall
   // back to a standalone span inside chargeWait.
-  return perWorktreeGate.run(
+  return perWorktreeGate().run(
     () => {
       // The local gate has granted. It could not observe an abort while we were
       // queued on it (see the docblock), so this is the first place we can: stop

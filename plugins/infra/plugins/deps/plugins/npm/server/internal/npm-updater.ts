@@ -77,7 +77,7 @@ async function fetchAll(
 async function fetchTags(repo: string): Promise<string[]> {
   const result = await spawnCaptured(
     ["git", "ls-remote", "--tags", "--refs", repo],
-    { timeoutMs: MINUTE, env: GIT_ENV },
+    { timeoutMs: MINUTE, env: gitEnv() },
   );
   if (result.exitCode !== 0)
     throw new Error(
@@ -90,7 +90,8 @@ async function fetchTags(repo: string): Promise<string[]> {
 }
 
 /** Git without a credential prompt: a public remote that asks for one has moved. */
-const GIT_ENV = { ...process.env, GIT_TERMINAL_PROMPT: "0" };
+// A function: the environment is read per command, not at module load.
+const gitEnv = () => ({ ...process.env, GIT_TERMINAL_PROMPT: "0" });
 
 /**
  * When `tag` of `repo` was made (ISO instant): the tagger date of an annotated
@@ -104,7 +105,7 @@ async function fetchTagDate(repo: string, tag: string): Promise<string> {
     const git = async (argv: string[]): Promise<string> => {
       const r = await spawnCaptured(["git", "-C", dir, ...argv], {
         timeoutMs: MINUTE,
-        env: GIT_ENV,
+        env: gitEnv(),
       });
       if (r.exitCode !== 0)
         throw new Error(

@@ -41,6 +41,12 @@ own time, and each needed a manual investigation to blame the filesystem.
   at the head of the queue. `network/live/resource-runtime/scripts/fs-yield-bench.ts` measured it: behind
   six reads stalled 2 s, unrelated reads answered in 33–49 ms instead of
   ~2 s, and a herd of fs-heavy reads showed no thrash.
+- **The call guard.** `installFsCallGuard(guard | null)` installs one guard
+  every timed call (and glob scan) passes first, synchronously, before it
+  touches the disk; a guard that throws refuses the call at the call site
+  (an async call throws before any promise exists). barrel-import installs one
+  while a barrel's modules evaluate, refusing a load-time read no record key
+  names.
 - **A leaf.** It imports node builtins only. Every process imports it,
   including the CLI bootstrap, file-sink and the profiler's own dependencies,
   so a `@plugins/*` import here would close a cycle. Subscribers are
@@ -69,7 +75,7 @@ its boot journal attribute that.
 
 - Description: The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call past FS_WAIT_FLOOR_MS handed to onSlowFsCall subscribers as a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
 - Cross-plugin:
-  - Imported by: 159 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 160 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×45
     - `framework` ×23
     - `apps` ×15
@@ -77,8 +83,8 @@ its boot journal attribute that.
     - `backup` ×12
     - `conversations` ×12
     - `packages` ×6
+    - `plugin-meta` ×6
     - `database` ×5
-    - `plugin-meta` ×5
     - `build` ×4
     - `config_v2` ×3
     - `primitives` ×3
@@ -109,6 +115,7 @@ its boot journal attribute that.
     - `FS_WAIT_FLOOR_MS`
     - `FS_WAIT_LAYERS`
     - `installFsAwait`
+    - `installFsCallGuard`
     - `lstat`
     - `lstatSync`
     - `onSlowFsCall`

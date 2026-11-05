@@ -165,10 +165,28 @@ export function installFsAwait(wrap: FsAwait): void {
   fsAwait = wrap;
 }
 
+/**
+ * Called synchronously as every timed call (and every glob scan) starts, before
+ * it touches the disk; a guard that throws makes the call throw, synchronously,
+ * so it refuses the read rather than observing it.
+ */
+type FsCallGuard = (op: string, target: string | null) => void;
+let fsCallGuard: FsCallGuard | null = null;
+
+/**
+ * Install (or, with `null`, remove) the one guard every file call of this
+ * process passes first — e.g. barrel-import's refusal of a file read while a
+ * barrel's modules evaluate (an input no evaluated record's key names). One
+ * per process; the leaf cannot import the owner.
+ */
+export function installFsCallGuard(guard: FsCallGuard | null): void {
+  fsCallGuard = guard;
+}
+
 type AnyFn = (...args: any[]) => any;
 
 function timedAsync<F extends AnyFn>(layer: FsWaitLayer, op: string, fn: F): F {
-  return (async (...args: Parameters<F>) => {
+  const timed = async (...args: Parameters<F>) => {
     const concurrent = ++inFlight;
     const t0 = performance.now();
     try {
@@ -177,11 +195,17 @@ function timedAsync<F extends AnyFn>(layer: FsWaitLayer, op: string, fn: F): F {
       inFlight--;
       observe(layer, op, performance.now() - t0, targetOf(args[0]), concurrent);
     }
+  };
+  // The guard runs before the async body, so a refusal throws at the call.
+  return ((...args: Parameters<F>) => {
+    fsCallGuard?.(op, targetOf(args[0]));
+    return timed(...args);
   }) as F;
 }
 
 function timedSync<F extends AnyFn>(layer: FsWaitLayer, op: string, fn: F): F {
   return ((...args: Parameters<F>) => {
+    fsCallGuard?.(op, targetOf(args[0]));
     const t0 = performance.now();
     try {
       return fn(...args);
@@ -293,6 +317,7 @@ export async function* scanGlob(
   pattern: string,
   arg?: GlobScanArg,
 ): AsyncGenerator<string, void, undefined> {
+  fsCallGuard?.("scanGlob", globTarget(pattern, arg));
   // eslint-disable-next-line timed-fs/no-untimed-glob-scan -- the one timed scan
   const it = new Bun.Glob(pattern).scan(arg);
   let inScan = 0;
@@ -329,6 +354,7 @@ export function* scanGlobSync(
   pattern: string,
   arg?: GlobScanArg,
 ): Generator<string, void, undefined> {
+  fsCallGuard?.("scanGlobSync", globTarget(pattern, arg));
   // eslint-disable-next-line timed-fs/no-untimed-glob-scan -- the one timed scan
   const it = new Bun.Glob(pattern).scanSync(arg);
   let inScan = 0;

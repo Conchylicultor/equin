@@ -28480,7 +28480,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/thread-cpu-clock` (1 debt)
               - `packages/ticket-line` (1 debt)
               - `packages/timed-fs` (0 debt)
-              - `plugin-meta/barrel-import` (1 debt)
+              - `plugin-meta/barrel-import` (2 debt)
               - `plugin-meta/parse-utils` (1 debt)
               - `plugin-meta/plugin-refs` (1 debt)
               - `plugin-meta/plugin-tree` (2 debt)
@@ -33482,7 +33482,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 41 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+            - Imported by: 42 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
               - `framework` ×15
               - `infra` ×11
               - `database` ×4
@@ -33491,6 +33491,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth`
               - `build`
               - `conversations/agent-launch`
+              - `plugin-meta/barrel-import`
               - `release`
               - `upstream`
           - Exemptions:
@@ -33945,7 +33946,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 124 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 125 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×31
           - `apps` ×19
           - `framework` ×17
@@ -33953,7 +33954,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations` ×7
           - `build` ×6
           - `backup` ×4
-          - `plugin-meta` ×3
+          - `plugin-meta` ×4
           - `primitives` ×3
           - `release` ×3
           - `code-explorer` ×2
@@ -37848,7 +37849,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call past FS_WAIT_FLOOR_MS handed to onSlowFsCall subscribers as a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 159 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 160 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×45
           - `framework` ×23
           - `apps` ×15
@@ -37856,8 +37857,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup` ×12
           - `conversations` ×12
           - `packages` ×6
+          - `plugin-meta` ×6
           - `database` ×5
-          - `plugin-meta` ×5
           - `build` ×4
           - `config_v2` ×3
           - `primitives` ×3
@@ -37888,6 +37889,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FS_WAIT_FLOOR_MS`
           - `FS_WAIT_LAYERS`
           - `installFsAwait`
+          - `installFsCallGuard`
           - `lstat`
           - `lstatSync`
           - `onSlowFsCall`
@@ -40888,18 +40890,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `framework/slot-declaration.trackSlotSites`
+          - `infra/launcher/env-names.envName`
           - `infra/namespace.asNamespace`
+          - `infra/paths.dataRootLayout`
           - `infra/paths/repo-root.REPO_ROOT`
           - `infra/runtime-identity.declareRuntimeNamespace`
           - `infra/runtime-identity.hasRuntimeNamespace`
           - `infra/stack-sampler.withThreadActivity`
           - `packages/macrotask-yield.yieldMacrotask`
           - `packages/semaphore.createSemaphore`
+          - `packages/timed-fs.installFsCallGuard`
         - Exports (types): `AutoStubEntry`
         - Exports (values):
           - `AUTO_STUB_CSS`
           - `AUTO_STUB_PACKAGES`
           - `BARREL_STUB_WORKTREE`
+          - `barrelLoadInputs`
+          - `BarrelLoadReadError`
           - `importBarrel`
           - `registerBarrelStubs`
           - `setPreBarrelImportGuard`
@@ -40908,7 +40915,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/codegen`
           - `plugin-meta/plugin-records`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/stubs.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/stubs.ts`, `core/internal/load-guard.ts` (debt)
       - Test helpers:
         - Core: `@plugins/plugin-meta/plugins/barrel-import/core/testing`
           - `reactExportsSeen`
@@ -42062,6 +42069,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/slot-declaration.slotSitesTracked`
           - `packages/string-hash.sha1Hex`
           - `packages/string-hash.sha256Hex`
+          - `plugin-meta/barrel-import.barrelLoadInputs`
           - `plugin-meta/barrel-import.importBarrel`
           - `plugin-meta/barrel-import.registerBarrelStubs`
         - Exports (types):

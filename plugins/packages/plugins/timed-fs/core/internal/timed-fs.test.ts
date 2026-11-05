@@ -5,9 +5,12 @@ import { join } from "node:path";
 import {
   FS_WAIT_FLOOR_MS,
   installFsAwait,
+  installFsCallGuard,
   onSlowFsCall,
   readFile,
+  readFileSync,
   scanGlob,
+  scanGlobSync,
   stat,
   statSync,
   type SlowFsCall,
@@ -18,9 +21,13 @@ writeFileSync(join(dir, "a.txt"), "hello");
 writeFileSync(join(dir, "b.txt"), "world");
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-// A disk that answers every call FS_WAIT_FLOOR_MS + 20 ms late.
+// A disk that answers every call FS_WAIT_FLOOR_MS + 20 ms late. The call's own
+// promise is handled at once (allSettled): a rejection left unhandled while the
+// sleep runs is an unhandled rejection, which bun charges to the running test.
 const stall = <T>(p: Promise<T>): Promise<T> =>
-  sleep(FS_WAIT_FLOOR_MS + 20).then(() => p);
+  Promise.allSettled([p, sleep(FS_WAIT_FLOOR_MS + 20)]).then(([r]) =>
+    r!.status === "fulfilled" ? r!.value : Promise.reject(r!.reason as Error),
+  );
 
 const seen: SlowFsCall[] = [];
 const off = onSlowFsCall((c) => seen.push(c));
@@ -51,8 +58,13 @@ test("a call past the floor is handed on with its layer, op and target", async (
 
 test("a failing call still rejects with node's error, and is still timed", async () => {
   installFsAwait(stall);
-  expect(readFile(join(dir, "missing"))).rejects.toThrow("ENOENT");
-  await sleep(FS_WAIT_FLOOR_MS + 60);
+  // Awaited by hand, so the timing assertion below runs after it settled.
+  // Bun's message is "No such file or directory"; the errno is on `code`.
+  const err: unknown = await readFile(join(dir, "missing")).then(
+    () => null,
+    (e: unknown) => e,
+  );
+  expect(err).toMatchObject({ code: "ENOENT" });
   expect(seen.map((c) => c.layer)).toEqual(["fs-read"]);
 });
 
@@ -76,4 +88,32 @@ test("an unsubscribed handler hears nothing", async () => {
   installFsAwait(stall);
   await stat(dir);
   expect(seen).toEqual([]);
+});
+
+test("an installed call guard sees every call first, and its throw refuses the call at once", () => {
+  const calls: string[] = [];
+  installFsCallGuard((op, target) => {
+    calls.push(`${op} ${target}`);
+    if (op !== "statSync") throw new Error(`refused ${op}`);
+  });
+  try {
+    expect(statSync(join(dir, "a.txt")).size).toBe(5);
+    expect(() => readFileSync(join(dir, "a.txt"))).toThrow(
+      "refused readFileSync",
+    );
+    // An async call throws at the call, before any promise exists.
+    expect(() => readFile(join(dir, "a.txt"))).toThrow("refused readFile");
+    expect(() => [...scanGlobSync("*.txt", dir)]).toThrow(
+      "refused scanGlobSync",
+    );
+  } finally {
+    installFsCallGuard(null);
+  }
+  expect(calls).toEqual([
+    `statSync ${join(dir, "a.txt")}`,
+    `readFileSync ${join(dir, "a.txt")}`,
+    `readFile ${join(dir, "a.txt")}`,
+    `scanGlobSync ${dir}/*.txt`,
+  ]);
+  expect(readFileSync(join(dir, "a.txt"), "utf8")).toBe("hello");
 });

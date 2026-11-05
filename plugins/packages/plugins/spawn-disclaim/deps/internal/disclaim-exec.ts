@@ -1,8 +1,12 @@
 import { defineDep } from "@plugins/infra/plugins/deps/deps";
 import { build } from "@plugins/infra/plugins/deps/plugins/build/deps";
 
-/** The C compiler: `$CC` when set, else `cc` — resolved when the declaration loads. */
-const cc = process.env.CC ?? "cc";
+/**
+ * The C compiler: `$CC` when set, else `cc` — resolved by a shell in the
+ * environment each command runs under, never at module load (a module must not
+ * read the environment as it loads: barrel-import's load guard).
+ */
+const CC = ["sh", "-c", '[ -n "$CC" ] && exec "$CC" "$@"; exec cc "$@"', "cc"];
 
 /** Node's arch names in clang's `-arch` terms (the two macOS has). */
 const CLANG_ARCH: Record<string, string> = { arm64: "arm64", x64: "x86_64" };
@@ -25,7 +29,7 @@ export const disclaimExec = defineDep({
   sizeHint: "≈50 KB",
   source: build({
     inputs: ["plugins/packages/plugins/spawn-disclaim/native/**"],
-    tool: { versionArgv: [cc, "--version"] },
+    tool: { versionArgv: [...CC, "--version"] },
     output: "disclaim-exec",
     admission: {
       none: "one ~200 ms compile of one C file, awaited on the way into an agent launch",
@@ -46,7 +50,7 @@ export const disclaimExec = defineDep({
       }
       await ctx.run(
         [
-          cc,
+          ...CC,
           "-O2",
           "-Wall",
           "-Werror",

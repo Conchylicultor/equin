@@ -11,6 +11,7 @@ import {
 } from "@plugins/framework/plugins/slot-declaration/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
+  barrelLoadInputs,
   importBarrel,
   registerBarrelStubs,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
@@ -113,6 +114,35 @@ export interface EvaluatedBarrels {
   readonly imported: number;
 }
 
+/** Stands for the checkout's root in a stored record. */
+const CHECKOUT_ROOT = "<equin:checkout-root>";
+
+/**
+ * A record's text with every spelling of the checkout's root (the whole root,
+ * not the tail of a longer path nor a sibling named after it: no path
+ * character on either side) replaced by {@link CHECKOUT_ROOT},
+ * and back to the first of `roots` (the spelling the runtime gives a module's
+ * own path, its realpath).
+ */
+export function checkoutRelative(roots: readonly string[]): {
+  storeText(text: string): string;
+  readText(text: string): string;
+} {
+  const spellings = [...new Set(roots)]
+    .map((r) => JSON.stringify(r).slice(1, -1))
+    .sort((a, b) => b.length - a.length);
+  const escape = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `(?<![\\w.\\-/])(?:${spellings.map(escape).join("|")})(?![\\w.\\-])`,
+    "g",
+  );
+  const own = JSON.stringify(roots[0]!).slice(1, -1);
+  return {
+    storeText: (text) => text.replace(pattern, CHECKOUT_ROOT),
+    readText: (text) => text.replaceAll(CHECKOUT_ROOT, () => own),
+  };
+}
+
 function pluginDirOf(barrel: string): string {
   // `<plugin>/<runtime>/index.ts` — a barrel's folder is one level below its plugin.
   return barrel.split("/").slice(0, -2).join("/");
@@ -136,6 +166,9 @@ export async function evaluateBarrels(
     ...EVALUATOR_MODULES.map((m) => graph.keyOf(m)),
     store.environment,
     snapshot.has("bun.lock") ? snapshot.blobOf("bun.lock") : "-",
+    // What a barrel may read as it loads (barrel-import's load guard refuses
+    // every other file, environment and cwd read).
+    ...barrelLoadInputs(),
   );
   const memo = (f: (p: string) => string) => {
     const m = new Map<string, string>();
@@ -150,12 +183,23 @@ export async function evaluateBarrels(
     recordKey(evaluator, "module", m, graph.keyOf(m)),
   );
 
+  // A barrel's exports may name its checkout (a path built from
+  // `import.meta.dir` or REPO_ROOT): an input its key cannot name, since
+  // records are shared by every checkout. Stored with the checkout replaced
+  // by a placeholder, read back with this one put in.
+  const { storeText, readText } = checkoutRelative([
+    input.realRoot,
+    input.snapshot.root,
+  ]);
+  const parseRecord = (v: string) => JSON.parse(readText(v)) as EvaluatedRecord;
+  const recordText = (rec: EvaluatedRecord) => storeText(JSON.stringify(rec));
+
   const records = new Map<string, EvaluatedRecord>();
   for (const [k, v] of store.getMany(
     "evaluated",
     barrels.map((b) => keyOf(b.path)),
   ))
-    records.set(k, JSON.parse(v) as EvaluatedRecord);
+    records.set(k, parseRecord(v));
 
   const loaded = graph.staticClosureOf(barrels.map((b) => b.path));
   const moduleRecords = new Map<string, ModuleRecord>();
@@ -306,7 +350,7 @@ export async function evaluateBarrels(
       // (found by `--verify-records`: reorder's contributions stored full by a
       // build, read empty by a fresh check).
       if (!dependent || declarationPassCount() === 0)
-        freshBarrels.push([keyOf(b.path), JSON.stringify(rec)]);
+        freshBarrels.push([keyOf(b.path), recordText(rec)]);
     }
     store.putMany("evaluated", freshBarrels);
   }
@@ -417,10 +461,7 @@ export async function evaluateBarrels(
       );
       if (hits.size === dependents.length) {
         for (const b of dependents) {
-          resolved.set(
-            b.path,
-            JSON.parse(hits.get(declaredKey(b.path))!) as EvaluatedRecord,
-          );
+          resolved.set(b.path, parseRecord(hits.get(declaredKey(b.path))!));
           revived.delete(b.path);
         }
         return;
@@ -457,7 +498,7 @@ export async function evaluateBarrels(
         };
         resolved.set(b.path, rec);
         revived.delete(b.path);
-        fresh.push([declaredKey(b.path), JSON.stringify(rec)]);
+        fresh.push([declaredKey(b.path), recordText(rec)]);
       }
       store.putMany("evaluated", fresh);
     },

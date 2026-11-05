@@ -9,3 +9,4 @@ export {
   AUTO_STUB_CSS,
   type AutoStubEntry,
 } from "./internal/auto-stub-packages";
+export { barrelLoadInputs, BarrelLoadReadError } from "./internal/load-guard";

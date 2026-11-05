@@ -352,7 +352,7 @@ takes a `debt` exemption on the check's id.
     - `packages/thread-cpu-clock` (1 debt)
     - `packages/ticket-line` (1 debt)
     - `packages/timed-fs` (0 debt)
-    - `plugin-meta/barrel-import` (1 debt)
+    - `plugin-meta/barrel-import` (2 debt)
     - `plugin-meta/parse-utils` (1 debt)
     - `plugin-meta/plugin-refs` (1 debt)
     - `plugin-meta/plugin-tree` (2 debt)

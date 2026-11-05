@@ -20,6 +20,7 @@ export {
   scanGlobSync,
   onSlowFsCall,
   installFsAwait,
+  installFsCallGuard,
   FS_WAIT_FLOOR_MS,
   FS_WAIT_LAYERS,
   TIMED_FS_CALLS,

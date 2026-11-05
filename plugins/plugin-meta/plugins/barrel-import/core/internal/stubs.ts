@@ -10,6 +10,7 @@ import { withThreadActivity } from "@plugins/infra/plugins/stack-sampler/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import { relative } from "node:path";
 import { registerAutoStubs } from "./auto-stubs.generated";
+import { guardedImport, registerLoadGuard } from "./load-guard";
 
 let registered = false;
 
@@ -188,6 +189,9 @@ export function registerBarrelStubs(_repoRoot: string): void {
       // To add a package: edit auto-stub-packages.ts and run ./equin build.
       registerAutoStubs(build);
 
+      // ── The load guard's wrapper and span modules ────────────────
+      registerLoadGuard(build);
+
       // ── CSS imports → empty ───────────────────────────────────────
       build.onLoad({ filter: /\.css$/ }, () => ({
         contents: "",
@@ -279,7 +283,9 @@ export function importBarrel(
       // Executable]`, and with the mark it can say which barrel was loading.
       mod = await withThreadActivity(
         { name: "barrel import", detail: relative(REPO_ROOT, barrelPath) },
-        async () => (await import(barrelPath)) as Record<string, unknown>,
+        // Guarded: a file, environment or cwd read while its modules
+        // evaluate throws (see load-guard.ts).
+        () => guardedImport(barrelPath),
       );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

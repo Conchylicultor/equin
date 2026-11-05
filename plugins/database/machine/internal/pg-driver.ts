@@ -60,14 +60,17 @@ import {
 // one. It is still loud and never silently defaulted — a real query in a process
 // that declared no namespace throws here.
 
-const config = readDatabaseConfig();
+// The connection config is read on first use too (`readDatabaseConfig` is
+// memoized), never at module load: a module must not read a file or the
+// environment as it loads (barrel-import's load guard).
+const config = () => readDatabaseConfig();
 // The cluster's own socket. A session-bound LISTEN (`listen` below) must use it:
 // pgbouncer's transaction pooling breaks LISTEN.
-const direct = {
-  host: process.env.PGHOST ?? config.connection.host,
-  port: Number(process.env.PGPORT ?? config.connection.port),
-  user: process.env.PGUSER ?? config.connection.user,
-};
+const direct = () => ({
+  host: process.env.PGHOST ?? config().connection.host,
+  port: Number(process.env.PGPORT ?? config().connection.port),
+  user: process.env.PGUSER ?? config().connection.user,
+});
 // The app's two connection LANES, each its own pool all the way down: an app
 // `pg.Pool` per lane, and behind it a PgBouncer server pool per lane — the lane
 // logs in as its own role (`laneUser`), and PgBouncer pools by (database, user).
@@ -76,16 +79,17 @@ const direct = {
 // use, is never shared with it. Without PgBouncer (a plain system Postgres) both
 // lanes dial the cluster directly as its user: there is no shared server pool to
 // split. See research/2026-11-04-global-pgbouncer-pool-per-lane.md.
-const viaPgbouncer = config.pgbouncer !== undefined;
+const viaPgbouncer = () => config().pgbouncer !== undefined;
 
 function laneConnection(lane: PgbouncerLane) {
-  return config.pgbouncer
+  const { pgbouncer, connection } = config();
+  return pgbouncer
     ? {
-        host: config.pgbouncer.host,
-        port: config.pgbouncer.port,
-        user: laneUser(config.connection.user, lane),
+        host: pgbouncer.host,
+        port: pgbouncer.port,
+        user: laneUser(connection.user, lane),
       }
-    : direct;
+    : direct();
 }
 
 // Each app pool is exactly its lane's PgBouncer `pool_size`: read from the one
@@ -604,8 +608,11 @@ export function tagClientQueriesWithOrigin(client: PoolClient): void {
       !(first as { name?: unknown }).name
     ) {
       // A copy: drizzle reuses its query config object across executions.
-      const config = first as { text: string };
-      a[0] = { ...config, text: tagSqlWithOrigin(config.text, label) };
+      const queryConfig = first as { text: string };
+      a[0] = {
+        ...queryConfig,
+        text: tagSqlWithOrigin(queryConfig.text, label),
+      };
     }
     return clientQuery(...a);
   }) as typeof client.query;
@@ -807,7 +814,7 @@ const LANE_ROLE_LOCK_KEY = "equin.database.lane-roles";
 const PG_IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
 
 async function ensureBackgroundRole(): Promise<void> {
-  const base = config.connection.user;
+  const base = config().connection.user;
   const role = laneUser(base, "background");
   for (const name of [base, role]) {
     if (!PG_IDENTIFIER.test(name)) {
@@ -867,7 +874,7 @@ function isPgbouncerUnknownUser(err: unknown): boolean {
 // its old config however often the files are compared.
 async function awaitBackgroundLane(mayReload: boolean): Promise<void> {
   const { background } = lanePools();
-  const user = laneUser(config.connection.user, "background");
+  const user = laneUser(config().connection.user, "background");
   let lastErr: unknown = null;
   let reloadSent = false;
   await retryUntil(
@@ -881,7 +888,7 @@ async function awaitBackgroundLane(mayReload: boolean): Promise<void> {
           client.release();
         }
       } catch (err) {
-        if (!(viaPgbouncer && isPgbouncerUnknownUser(err))) throw err;
+        if (!(viaPgbouncer() && isPgbouncerUnknownUser(err))) throw err;
         lastErr = err;
         if (mayReload && !reloadSent) {
           reloadSent = true;
@@ -912,7 +919,7 @@ async function awaitBackgroundLane(mayReload: boolean): Promise<void> {
  */
 // The direct socket, like `listen`'s: a session-held lock.
 const generationLocks = createSchemaGenerationLocks({
-  connectionString: () => buildConnectionString(direct, runtimeNamespace()),
+  connectionString: () => buildConnectionString(direct(), runtimeNamespace()),
   log: (line) => dbLog.publish(line),
 });
 
@@ -927,7 +934,7 @@ export const pgDriver: DatabaseDriverImpl = {
     // no-op once they are; it has to happen at a backend boot because the
     // gateway re-runs PgBouncer's start script only when the gateway itself
     // starts. A worktree's code never rewrites the machine's PgBouncer config.
-    const ownsLaneSetup = viaPgbouncer && warm && isHostSingleton();
+    const ownsLaneSetup = viaPgbouncer() && warm && isHostSingleton();
     if (ownsLaneSetup) {
       await ensureBackgroundRole();
       await convergePgbouncerConfig({ reload: "if-changed" });
@@ -948,7 +955,7 @@ export const pgDriver: DatabaseDriverImpl = {
   listen: (channels, handlers) =>
     openListenSession({
       name: "change-feed",
-      connectionString: buildConnectionString(direct, runtimeNamespace()),
+      connectionString: buildConnectionString(direct(), runtimeNamespace()),
       channels,
       handlers,
       endFailed: (err) =>
