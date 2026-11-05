@@ -313,6 +313,44 @@ renderAggregate(sql, { name, relation, reads, nullable, sqlType, decoder });
   - children / closure are grouped CTEs (`server/internal/grouped.ts`), passed
     as `grouped`, never row-wise.
 
+### Materialized aggregate joins — `materializeJoin` (`server/internal/materialize.ts`)
+
+A children or closure join stored as a derived-tables rollup keyed by the
+host id, so ANY compile — a window, a grouping, a count, `:rows`, an `all` set
+— reads its aggregates as plain columns, and a window filters, sorts and
+groups by them (`tasks.window`'s `status`):
+
+```ts
+const facts = materializeJoin(childrenJoin({ alias: "att", … }), {
+  host: _tasks,
+  table: _taskAttemptFacts, // pgTable(<IMPERATIVE const>, { hostId: pk, <aggregate>: … })
+});
+// server contributions: [DerivedTable(facts.rollup)]; serve: joins: [facts.join()]
+```
+
+- **One definition.** The rollup's `select` is `compileGrouped`'s own scoped
+  CTEs projected to one row per host with a group, each aggregate stored as
+  its outer read (COALESCEd with `ifNone`) — what the unmaterialized join
+  reads. `join()` is an `ExtensionJoin` whose `absent` is each `ifNone`
+  (`absent` takes a constant `SQL`), so a host with no group reads the same.
+- **The table is the caller's read handle**, asserted at module eval: one pk
+  column of the host id's type, then one column per aggregate by property
+  name, of its `sqlType`, NOT NULL exactly when it has an `ifNone`.
+- **Sources are read off the join**: the child table by `fk` (reads = the
+  compile's route gates), a nested rollup by its OWN table through the child
+  hop (a rollup on a rollup — it fires only when that aggregate changed), the
+  closure's edges / nodes / ancestor joins with the closure's key expansion
+  (derived-tables' `closure`).
+- **Routed by its own rows**: the rollup is `fed`, so a reader's route is the
+  extension's alias route on the rollup key — a stored value's change is a
+  host U, an entrant / exit of a window filtered on it, however deep in a
+  closure it started. No source route, no dependents probe.
+- The scoped closure reads its ancestor rows through a lateral projecting only
+  the node columns the aggregates read (`nodeGate`), never `*` — the rollup
+  declares exactly what its select reads.
+- An unmaterialized children / closure join stays `all`-only (A29 below); the
+  materialized form is how a window gets one.
+
 ### Rollup routes — a rollup is routed through its SOURCES
 
 The rollup table has no change-feed trigger (A1), so `joinRoutes` emits one
@@ -786,6 +824,7 @@ query.
     - `LookupRead`
     - `LookupResult`
     - `LookupSpec`
+    - `MaterializedJoin`
     - `PointQueryResourceSpec`
     - `QueryDb`
     - `ReadColumn`
@@ -815,6 +854,7 @@ query.
     - `deferredWindowQueryResource`
     - `followRead`
     - `joinRefs`
+    - `materializeJoin`
     - `offFeedReach`
     - `offFeedTablesReach`
     - `pinClock`

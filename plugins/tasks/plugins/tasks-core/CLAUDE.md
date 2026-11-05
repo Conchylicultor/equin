@@ -192,16 +192,19 @@ serves them.
   under the legacy key, so an old-bundle tab subscribing `{}` parses it with its
   own schema (C39, pinned by `tree-oracle.test.ts`); a row change must rename
   the key. Served by `serveCollection` from `server/internal/task-rows.ts` —
-  the ONE spelling the server and the tests compile — over the base tables and
-  the attempt rollups, never a view: `att` (children over `attempts`, each with
-  its two rollup rows), `deps` (the task's own edges → `dependencies`) and
-  `blocking` (a closure over `task_dependencies`, each ancestor with its own
-  attempts). Costs, pinned per step by the tree oracle: a task write is its own
-  row's refill (plus every transitive dependent when it moves `held_at` /
-  `dropped_at`); an attempt / conversation / push write its task's and that
-  task's dependents'; an edge write the edge's task and its dependents; an
-  insert an entrant, a delete an exit; a write no row field reads (a
-  conversation's `waiting_for`) nothing.
+  the ONE spelling the server and the tests compile — over the base table and
+  three MATERIALIZED joins (query-resource's `materializeJoin`, each a `fed`
+  rollup keyed by the task id, read handles in `rollup-table.ts`), never a
+  view: `att` → `task_attempt_facts` (children over `attempts`, each with its
+  two rollup rows), `deps` → `task_dependency_list` (the task's own edges →
+  `dependencies`) and `blocking` → `task_prerequisite_blocking` (a closure over
+  `task_dependencies`, each ancestor with its STORED attempt facts). Costs,
+  pinned per step by the tree oracle: a task write is its own row's refill; a
+  write that moves a stored aggregate (an attempt / conversation / push, an
+  edge, a prerequisite's `held_at` / `dropped_at` / facts) the refill of each
+  task whose side row changed — a dependent only when its blocking really
+  moved; an insert an entrant, a delete an exit; a write no aggregate reads
+  (a conversation's `waiting_for`) nothing.
 - **`taskClusterRows`** (`task-cluster`) — one dependency cluster's tasks, a
   scoped `all` by `clusterId` over the same row and binding as `taskRows`
   (`taskRowsServeOptions`), capped at `TASK_CLUSTER_MAX` (`all: { max }`).
@@ -222,6 +225,14 @@ serves them.
   `where: null` until the row is known), with the `TaskGraph` built once per
   snapshot. Why clusters (and not per-task closures):
   `research/2026-11-05-tasks-bounded-task-rows.md` § Cluster bound.
+- **`taskWindow`** (`tasks.window`) — the same row as a WINDOW (`createdAt`
+  desc, 100 / 500, not preloaded), served with the same joins
+  (`taskWindowServeOptions`): `status` and the other derived fields filter and
+  sort on the server, and a task whose status moves enters or leaves a
+  filtered window. The sidequest launch list reads
+  `{ status: "new", tasks_ext_track.track: "sidequest" }` through it. The step
+  towards `taskRows` itself as a window
+  (`research/2026-11-05-tasks-bounded-task-rows.md`).
 - **`taskDescriptions`** (`task-descriptions`, lookup-only: `:rows`) — one
   task's `description`, the heavy text the set omits, by id
   (`useLive(taskDescriptions, { id })`). A description autosave is that row's
@@ -236,8 +247,9 @@ serves them.
 - **One definition, two readers.** `server/internal/derived.ts` holds the
   tree's derivations (`attemptDerived`, `taskAttemptAggregates`, `taskDerived`,
   `depIsBlocking`); `views.ts` (`attempts_v`, `task_blocking_v`, `tasks_v`) and
-  `task-rows.ts` both interpolate them, and `all-parity.test.ts` holds the
-  shipped `tasks` set equal to `tasks_v` row for row. `tasks_v` reads no
+  `task-rows.ts` (the materialized joins) both interpolate them, and
+  `all-parity.test.ts` holds the shipped `tasks` set equal to `tasks_v` row for
+  row. `tasks_v` reads no
   `conversations` and no `pushes`: "waiting" is `attempt_conv_agg.has_waiting_conv`
   and the first push is `attempt_push_agg.min_push_at`.
 - **`pushRows`** (`pushes`) is a `liveCollection` over the `pushes` table,
@@ -367,36 +379,29 @@ serves them.
     - `useTaskCluster`
     - `useTaskConversations`
 - Server:
-  - Contributes: 49 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `resource.declare` ×35
+  - Contributes: 55 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `resource.declare` ×38
+    - `derived-table` ×5
     - `derived-view` ×4
     - `ids.kind` ×3
     - `attachments.link` ×2
-    - `derived-table` ×2
     - `db-trigger` "tasks.cluster"
     - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
     - `live.columns.expose` "tasks ← tasks_ext_mandate"
-  - Uses:
-    - `database.db`
-    - `database/db-triggers.DbTrigger`
-    - `database/db-triggers.defineDbTriggers`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×3
+    - `primitives/rank` ×3
+    - `database/db-triggers` ×2
+    - `database/sql-projection` ×2
+    - `infra/entities` ×2
+    - `network/live/query-resource` ×2
     - `database/derived-tables.DerivedTable`
     - `database/derived-views.View`
-    - `database/sql-projection.nullable`
-    - `database/sql-projection.parsed`
+    - `database.db`
     - `ids.IdKinds`
     - `infra/attachments.Attachments`
-    - `infra/entities.defaultNow`
-    - `infra/entities.defineEntity`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.defineTriggerEvent`
-    - `network/live.ColumnOverride`
-    - `network/live.LiveColumns`
-    - `network/live.serveCollection`
-    - `network/live/query-resource.compileLookup`
-    - `primitives/rank.nextRankUnder`
-    - `primitives/rank.RankExecutor`
-    - `primitives/rank.withRank`
   - DB schema:
     - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`
@@ -592,6 +597,9 @@ serves them.
     - `tasks:rows` (keyed, point)
     - `tasks.attachment-links` (keyed)
     - `tasks.attachment-links:rows` (keyed, point)
+    - `tasks.window` (keyed, window)
+    - `tasks.window:groups` (push)
+    - `tasks.window:rows` (keyed, point)
 - Core:
   - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/model-provider` ×3
@@ -701,6 +709,7 @@ serves them.
     - `tasksManage`
     - `tasksRootRoute`
     - `TaskStatusSchema`
+    - `taskWindow`
     - `TrackFilingGrantSchema`
     - `TRAILER_LOG_FORMAT`
     - `UNATTRIBUTED_TRAILER_KEY`

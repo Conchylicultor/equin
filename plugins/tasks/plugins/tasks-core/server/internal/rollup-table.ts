@@ -2,6 +2,9 @@ import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import {
   ATTEMPT_CONV_AGG_TABLE,
   ATTEMPT_PUSH_AGG_TABLE,
+  TASK_ATTEMPT_FACTS_TABLE,
+  TASK_BLOCKING_TABLE,
+  TASK_DEPENDENCY_LIST_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
 
 // Drizzle READ handles for the two trigger-maintained rollups backing
@@ -48,4 +51,29 @@ export const _attemptPushAgg = pgTable(ATTEMPT_PUSH_AGG_TABLE, {
   // conversation or not (derived.ts).
   hasDelivery: boolean("has_delivery").notNull(),
   minPushAt: timestamp("min_push_at", { withTimezone: true }),
+});
+
+// The `tasks` collection's materialized joins (`task-rows.ts`,
+// query-resource's `materializeJoin`): one row per task with a group, keyed by
+// the task id, one column per aggregate by property name — asserted against
+// the aggregates at module eval. Each stores the aggregate as the collection
+// reads it (COALESCEd with its `ifNone`), so a NOT NULL column here is an
+// aggregate that never reads NULL.
+export const _taskAttemptFacts = pgTable(TASK_ATTEMPT_FACTS_TABLE, {
+  hostId: text("host_id").primaryKey(),
+  hasAttempt: boolean("has_attempt").notNull(),
+  hasCompleted: boolean("has_completed").notNull(),
+  hasActive: boolean("has_active").notNull(),
+  hasWaiting: boolean("has_waiting").notNull(),
+  minPushAt: timestamp("min_push_at", { withTimezone: true }),
+});
+
+export const _taskDependencyList = pgTable(TASK_DEPENDENCY_LIST_TABLE, {
+  hostId: text("host_id").primaryKey(),
+  list: text("list").array().notNull(),
+});
+
+export const _taskBlocking = pgTable(TASK_BLOCKING_TABLE, {
+  hostId: text("host_id").primaryKey(),
+  has: boolean("has").notNull(),
 });

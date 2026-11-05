@@ -84,10 +84,11 @@ const TASK_ROW_ORDER = [
 // Every task — the WHOLE ordered set (`all`): the task list, the dependency
 // graph and every per-task chip read a value for every task (a status, the
 // dependency edges), so its readers hold the set entire. Served over the base
-// tables and the attempt rollups (`../server/internal/task-rows.ts`): a task
-// write is its own row's refill, an attempt / conversation / push write its
-// task's, an edge write the edge's task and its dependents (the blocking
-// closure), an insert an entrant, a delete an exit — never a whole-set reload.
+// table and its materialized aggregates (`../server/internal/task-rows.ts`): a
+// task write is its own row's refill, a write that moves a stored aggregate
+// (an attempt / conversation / push, an edge, a prerequisite's facts) the
+// refill of each task whose side row changed, an insert an entrant, a delete
+// an exit — never a whole-set reload.
 // Ordered as the old list was: `rank`, then `createdAt` (the id breaks ties).
 //
 // Declared by FIELDS over the `tasks` entity (`from: tasksEntityRef`): the
@@ -167,6 +168,26 @@ export const taskClusterRows = liveCollection("task-cluster", {
 /** A task as `taskRows` delivers it: a `TaskListItem` and its exposed fields under `$columns`. */
 export type TaskRow =
   typeof taskRows extends LiveRowsCollection<infer R> ? R : never;
+
+// The same task row as a WINDOW: a bounded read that filters and sorts on the
+// server, `status` included — its derived fields are stored aggregates
+// (`../server/internal/task-rows.ts`: query-resource's `materializeJoin`), so a
+// write anywhere in a task's attempts or prerequisite closure reaches a window
+// as a write to the task's side rows, and moves it in or out. Filterable by
+// every listed field and every folded exposure (`track`, `category`, …):
+// `useLive(taskWindow, { where: { status: "new", "track.track": "sidequest" } })`.
+// Newest first; not preloaded. The step towards `taskRows` as a window
+// (research/2026-11-05-tasks-bounded-task-rows.md, step 5).
+export const taskWindow = liveCollection("tasks.window", {
+  from: tasksEntityRef,
+  pick: TASK_ROW_PICK,
+  fields: TASK_ROW_FIELDS,
+  carry: TASK_ROW_CARRY,
+  id: "id",
+  sortable: ["createdAt", "updatedAt"],
+  default: { orderBy: [["createdAt", "desc"]], limit: 100 },
+  maxLimit: 500,
+});
 
 // One task's `description` — the heavy text the `tasks` set leaves out — read
 // by id (`useLive(taskDescriptions, { id })`): lookup-only, so it loads only

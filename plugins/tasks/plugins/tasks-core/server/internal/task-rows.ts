@@ -9,7 +9,11 @@ import {
   type ChildRefs,
   type NestedRollupJoin,
 } from "@plugins/network/plugins/live/plugins/query-resource/core";
-import type { ServeAllCollectionOptions } from "@plugins/network/plugins/live/server";
+import { materializeJoin } from "@plugins/network/plugins/live/plugins/query-resource/server";
+import type {
+  ServeAllCollectionOptions,
+  ServeCollectionOptions,
+} from "@plugins/network/plugins/live/server";
 import { TaskStatusSchema, type TaskListItem } from "../../core";
 import {
   depIsBlocking,
@@ -19,7 +23,12 @@ import {
   type SqlOperand,
 } from "./derived";
 import { attemptConvAgg, attemptPushAgg } from "./rollup-spec";
-import { _attemptPushAgg } from "./rollup-table";
+import {
+  _attemptPushAgg,
+  _taskAttemptFacts,
+  _taskBlocking,
+  _taskDependencyList,
+} from "./rollup-table";
 import { _attempts, _taskDependencies, _tasks } from "./tables";
 
 // How `taskRows` (core: the whole ordered set of tasks, key `tasks`) binds to
@@ -28,23 +37,30 @@ import { _attempts, _taskDependencies, _tasks } from "./tables";
 // against a throwaway database; `./all-parity.test.ts`, which holds it equal
 // to `tasks_v`) read, so neither can drift from what ships.
 //
-// It reads the BASE tables and the attempt rollups, never a view (A8): every
-// row field but the four derived ones is a column of `tasks` by name, and the
-// derived ones are `taskDerived` (./derived.ts) — the definition `tasks_v`
-// interpolates — over three grouped joins:
+// It reads the BASE table and three MATERIALIZED joins (query-resource's
+// `materializeJoin`: each a derived-tables rollup keyed by the task id, on the
+// change feed), never a view (A8). Every row field but the four derived ones
+// is a column of `tasks` by name; the derived ones are `taskDerived`
+// (./derived.ts) — the definition `tasks_v` interpolates — over:
 //
-//  - `att`, the task's attempts (children on `attempts.task_id`), each with
-//    its two rollup rows: the per-task facts `taskAttemptAggregates` names.
-//    An attempt / conversation / push write reaches its task through the
-//    children route and the rollups' source routes (`conversations` and
-//    `pushes`, carrying `attempt_id`).
-//  - `deps`, the task's own edges (children on `task_dependencies.task_id`):
-//    `dependencies`, the prerequisite ids in creation order.
-//  - `blocking`, the transitive prerequisites (a closure over
-//    `task_dependencies`, child `task_id` → parent `depends_on_task_id`),
-//    each ancestor with its own attempts: `depIsBlocking` over every one. A
-//    prerequisite's write reaches every task that depends on it, however
-//    deep (the dependents probe).
+//  - `att` (`task_attempt_facts`): the task's attempts (children on
+//    `attempts.task_id`), each with its two rollup rows — the per-task facts
+//    `taskAttemptAggregates` names. Maintained by attempt writes and by the
+//    attempt rollups' own rows (a conversation / push write moves its task's
+//    facts only when it moved the attempt's aggregate).
+//  - `deps` (`task_dependency_list`): the task's own edges (children on
+//    `task_dependencies.task_id`): `dependencies`, the prerequisite ids in
+//    creation order.
+//  - `blocking` (`task_prerequisite_blocking`): the transitive prerequisites (a closure
+//    over `task_dependencies`, child `task_id` → parent `depends_on_task_id`),
+//    each ancestor with its STORED attempt facts (`att`'s table):
+//    `depIsBlocking` over every one. A prerequisite's change re-aggregates
+//    every task that depends on it, however deep (the closure's key
+//    expansion).
+//
+// Because they are stored, a WINDOW over tasks reads them too: `status`
+// filters, sorts and groups like a column, and a write anywhere in a task's
+// closure reaches the window as a write to its side rows.
 
 /** The conversation / push rollup rows of one attempt, as a children join nests them. */
 const conv = {
@@ -86,85 +102,98 @@ const flag = (expression: SQL) =>
     ifNone: sql`false`,
   });
 
-const att = childrenJoin({
-  alias: "att",
-  table: _attempts,
-  fk: _attempts.taskId,
-  rollups: [conv, push],
-  aggregates: (c) => {
-    const a = taskAttemptAggregates({
-      ...attemptFacts(c),
-      hasWaitingConv: c.conv.hasWaitingConv,
-    });
-    return {
-      hasAttempt: flag(a.hasAttempt),
-      hasCompleted: flag(a.hasCompleted),
-      hasActive: flag(a.hasActive),
-      hasWaiting: flag(a.hasWaiting),
-      minPushAt: aggregate(a.minPushAt, {
-        decoder: _attemptPushAgg.minPushAt,
-        sqlType: "timestamp with time zone",
-      }),
-    };
-  },
-});
-
-// Each transitive prerequisite's own attempts: is one of them completed, is
-// one of them active?
-const ancestorAtt = childrenJoin({
-  alias: "att",
-  table: _attempts,
-  fk: _attempts.taskId,
-  rollups: [conv, push],
-  aggregates: (c) => {
-    const a = taskAttemptAggregates({
-      ...attemptFacts(c),
-      hasWaitingConv: c.conv.hasWaitingConv,
-    });
-    return {
-      completed: flag(a.hasCompleted),
-      active: flag(a.hasActive),
-    };
-  },
-});
-
-const deps = childrenJoin({
-  alias: "deps",
-  table: _taskDependencies,
-  fk: _taskDependencies.taskId,
-  aggregates: (c) => ({
-    list: aggregate(
-      sql`array_agg(${c.deps.dependsOnTaskId} ORDER BY ${c.deps.createdAt})`,
-      {
-        decoder: parsed(z.array(z.string()), "tasks.dependencies"),
-        sqlType: "text[]",
-        notNull: true,
-        ifNone: sql`ARRAY[]::text[]`,
-      },
-    ),
+/** A task's attempt facts, stored per task (`task_attempt_facts`). */
+export const taskAttemptFacts = materializeJoin(
+  childrenJoin({
+    alias: "att",
+    table: _attempts,
+    fk: _attempts.taskId,
+    rollups: [conv, push],
+    aggregates: (c) => {
+      const a = taskAttemptAggregates({
+        ...attemptFacts(c),
+        hasWaitingConv: c.conv.hasWaitingConv,
+      });
+      return {
+        hasAttempt: flag(a.hasAttempt),
+        hasCompleted: flag(a.hasCompleted),
+        hasActive: flag(a.hasActive),
+        hasWaiting: flag(a.hasWaiting),
+        minPushAt: aggregate(a.minPushAt, {
+          decoder: _attemptPushAgg.minPushAt,
+          sqlType: "timestamp with time zone",
+        }),
+      };
+    },
   }),
-});
+  { host: _tasks, table: _taskAttemptFacts },
+);
 
-const blocking = closureJoin({
-  alias: "blocking",
-  edges: _taskDependencies,
-  child: _taskDependencies.taskId,
-  parent: _taskDependencies.dependsOnTaskId,
-  nodes: _tasks,
-  ancestorJoins: [ancestorAtt],
-  aggregates: (c) => ({
-    has: flag(
-      sql`bool_or(${depIsBlocking({
-        droppedAt: c.anc.droppedAt,
-        heldAt: c.anc.heldAt,
-        hasCompleted: c.att.completed,
-        hasActive: c.att.active,
-      })})`,
-    ),
+/** A task's prerequisite ids in creation order, stored per task (`task_dependency_list`). */
+export const taskDependencyList = materializeJoin(
+  childrenJoin({
+    alias: "deps",
+    table: _taskDependencies,
+    fk: _taskDependencies.taskId,
+    aggregates: (c) => ({
+      list: aggregate(
+        sql`array_agg(${c.deps.dependsOnTaskId} ORDER BY ${c.deps.createdAt})`,
+        {
+          decoder: parsed(z.array(z.string()), "tasks.dependencies"),
+          sqlType: "text[]",
+          notNull: true,
+          ifNone: sql`ARRAY[]::text[]`,
+        },
+      ),
+    }),
   }),
-});
+  { host: _tasks, table: _taskDependencyList },
+);
 
-const joins = [att, deps, blocking] as const;
+// Each transitive prerequisite's STORED facts: a task without a facts row has
+// no attempt, so it is neither completed nor active.
+const ancestorFacts = {
+  kind: "rollup",
+  alias: "att",
+  rollup: taskAttemptFacts.rollup,
+  on: _tasks.id,
+} as const satisfies NestedRollupJoin;
+
+/** Whether a transitive prerequisite still blocks the task, stored per task (`task_prerequisite_blocking`). */
+export const taskBlocking = materializeJoin(
+  closureJoin({
+    alias: "blocking",
+    edges: _taskDependencies,
+    child: _taskDependencies.taskId,
+    parent: _taskDependencies.dependsOnTaskId,
+    nodes: _tasks,
+    ancestorJoins: [ancestorFacts],
+    aggregates: (c) => ({
+      has: flag(
+        sql`bool_or(${depIsBlocking({
+          droppedAt: c.anc.droppedAt,
+          heldAt: c.anc.heldAt,
+          hasCompleted: sql`COALESCE(${c.att.hasCompleted}, false)`,
+          hasActive: sql`COALESCE(${c.att.hasActive}, false)`,
+        })})`,
+      ),
+    }),
+  }),
+  { host: _tasks, table: _taskBlocking },
+);
+
+/** The materialized joins' rollups, readers last (`TASK_ROLLUPS`). */
+export const TASK_MATERIALIZED_ROLLUPS = [
+  taskAttemptFacts.rollup,
+  taskDependencyList.rollup,
+  taskBlocking.rollup,
+] as const;
+
+const joins = [
+  taskAttemptFacts.join(),
+  taskDependencyList.join(),
+  taskBlocking.join(),
+] as const;
 
 /** A task's facts, as the compile reads them off `j`. */
 interface TaskRefs {
@@ -191,31 +220,41 @@ const derivedOf = (j: TaskRefs) =>
     minPushAt: j.att.minPushAt,
   });
 
+// The three derived fields, one spelling for both forms below.
+const derivedColumns = {
+  status: (j: TaskRefs) =>
+    expr(derivedOf(j).status, {
+      decoder: parsed(TaskStatusSchema, "tasks.status"),
+      sqlType: "text",
+      notNull: true,
+    }),
+  active: (j: TaskRefs) =>
+    expr(derivedOf(j).active, {
+      decoder: Boolean,
+      sqlType: "boolean",
+      notNull: true,
+    }),
+  finishedAt: (j: TaskRefs) =>
+    expr(derivedOf(j).finishedAt, {
+      decoder: _tasks.droppedAt,
+      sqlType: "timestamp with time zone",
+    }),
+};
+
+/** The whole ordered set (`taskRows`). */
 export const taskRowsServeOptions = {
   from: _tasks,
   joins,
-  columns: {
-    status: (j) =>
-      expr(derivedOf(j).status, {
-        decoder: parsed(TaskStatusSchema, "tasks.status"),
-        sqlType: "text",
-        notNull: true,
-      }),
-    active: (j) =>
-      expr(derivedOf(j).active, {
-        decoder: Boolean,
-        sqlType: "boolean",
-        notNull: true,
-      }),
-    finishedAt: (j) =>
-      expr(derivedOf(j).finishedAt, {
-        decoder: _tasks.droppedAt,
-        sqlType: "timestamp with time zone",
-      }),
-    dependencies: (j) => j.deps.list,
-  },
+  columns: { ...derivedColumns, dependencies: (j) => j.deps.list },
 } satisfies ServeAllCollectionOptions<
   typeof _tasks,
   TaskListItem,
   typeof joins
 >;
+
+/** The same row as a window (`taskWindow`): the stored aggregates filter and sort like columns. */
+export const taskWindowServeOptions = {
+  from: _tasks,
+  joins,
+  columns: { ...derivedColumns, dependencies: (j) => j.deps.list },
+} satisfies ServeCollectionOptions<typeof _tasks, TaskListItem, typeof joins>;

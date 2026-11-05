@@ -1,7 +1,7 @@
 import { serveCollection } from "@plugins/network/plugins/live/server";
 import { _attempts, _tasks, pushes } from "./tables";
 import { attemptRowsServeOptions } from "./attempt-rows";
-import { taskRowsServeOptions } from "./task-rows";
+import { taskRowsServeOptions, taskWindowServeOptions } from "./task-rows";
 import {
   conversationsActiveServeOptions,
   conversationsByIdServeOptions,
@@ -14,6 +14,7 @@ import {
 import {
   taskRows,
   taskClusterRows,
+  taskWindow,
   taskDescriptions,
   attemptRows,
   attemptWorkspaces,
@@ -95,6 +96,15 @@ export const taskRowsServed = serveCollection(taskRows, {
 export const taskClusterRowsServed = serveCollection(
   taskClusterRows,
   taskRowsServeOptions,
+);
+
+// The same task row as a window (`taskWindow`, key `tasks.window`): the
+// stored aggregates (`./task-rows.ts`) are side tables on the change feed, so
+// a status move anywhere in a task's closure is a write to its side row —
+// one routed refill, and an entrant / exit of a window filtered on it.
+export const taskWindowServed = serveCollection(
+  taskWindow,
+  taskWindowServeOptions,
 );
 
 // One attempt's workspace by id (`attemptWorkspaces`, lookup-only), over the

@@ -5,6 +5,11 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
+  exposedColumns,
+  type LiveQuery,
+  type LiveWhereOf,
+} from "@plugins/network/plugins/live/core";
+import {
   combineResources,
   foldResource,
   mapResource,
@@ -30,8 +35,8 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import type { FieldOptionMeta } from "@plugins/fields/core";
-import { taskRows } from "@plugins/tasks/plugins/tasks-core/core";
-import { useStoredTracks } from "@plugins/tasks/plugins/task-track/web";
+import { taskWindow } from "@plugins/tasks/plugins/tasks-core/core";
+import { taskTrackShape } from "@plugins/tasks/plugins/task-track/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { usePatchTask } from "@plugins/tasks/web";
 import {
@@ -88,6 +93,25 @@ function triageByTask(
 const NO_ROWS: LaunchListRow[] = [];
 const NO_IDS: string[] = [];
 
+const trackColumns = exposedColumns(taskTrackShape.exposure);
+
+// Every ready sidequest — a task whose derived status is `new` on the
+// sidequest track — as ONE bounded server window: `status` is a stored
+// aggregate (tasks-core's materialized joins), so the server filters on it
+// and a task leaving `new` (launched, held, blocked by a new prerequisite)
+// exits the window. The track is an exposed column (task-track's side table),
+// which a typed `where` cannot spell — no own field of the collection — so the
+// query names it by wire name and brings its column set, as data-view's
+// narrowing does. Newest first, at the window's cap.
+const READY_SIDEQUESTS = {
+  columns: [trackColumns],
+  where: {
+    status: "new",
+    [trackColumns.column("track").name]: "sidequest",
+  } as LiveWhereOf<typeof taskWindow>,
+  limit: 500,
+} satisfies LiveQuery<unknown, string>;
+
 // The title is the row's face; where it stands and the launch order are
 // dimensions to group, filter and sort by, left out of the body.
 const LAUNCH_LIST_OVERRIDES = fieldOverrides(launchListRowKind, {
@@ -137,23 +161,7 @@ const LAUNCH_LIST_TOOLBAR: HostedToolbar = {
 export function LaunchListSection(): ReactElement {
   const openPane = useOpenPane();
   const catalog = useLive(automationsCatalog);
-  const tracks = useStoredTracks();
-  // The sidequests' own rows, read by id — never the whole task set. Every
-  // stored track is a sidequest (main is the absent row), so the track set
-  // names them; `taskRows`' `maxIds` bounds the read loudly.
-  // Still in memory: `status = new` ∩ sidequest becomes one server window
-  // once a window can filter on the derived status (task-1793848785-7tzicj).
-  const sidequestIds = useMemo(
-    () =>
-      foldResource(tracks, {
-        loading: () => NO_IDS,
-        error: () => NO_IDS,
-        ready: (map) =>
-          [...map].filter(([, t]) => t === "sidequest").map(([id]) => id),
-      }),
-    [tracks],
-  );
-  const tasks = useLive(taskRows, { ids: sidequestIds });
+  const tasks = useLive(taskWindow, READY_SIDEQUESTS);
   // Read whole (`all`): the list joins it to every ready sidequest.
   const decisions = useLive(launchDecisions, { select: decisionsByTask });
   const readyIds = useMemo(
@@ -161,8 +169,7 @@ export function LaunchListSection(): ReactElement {
       foldResource(tasks, {
         loading: () => NO_IDS,
         error: () => NO_IDS,
-        ready: (rows) =>
-          rows.filter((t) => t.status === "new").map((t) => t.id),
+        ready: (rows) => rows.map((t) => t.id),
       }),
     [tasks],
   );
@@ -177,8 +184,8 @@ export function LaunchListSection(): ReactElement {
   const [ticks, setTicks] = useState<ReadonlyMap<string, boolean>>(new Map());
 
   const result = useMemo(
-    () => combineResources({ catalog, tracks, tasks, triage, decisions }),
-    [catalog, tracks, tasks, triage, decisions],
+    () => combineResources({ catalog, tasks, triage, decisions }),
+    [catalog, tasks, triage, decisions],
   );
   const rows = useMemo(
     () =>
@@ -188,9 +195,7 @@ export function LaunchListSection(): ReactElement {
         // Never reaches the view: DataView renders the message instead.
         unavailable: () => NO_ROWS,
         ready: (d) => {
-          const ready = d.tasks
-            .filter((t) => t.status === "new")
-            .map((t) => ({
+          const ready = d.tasks.map((t) => ({
               id: t.id,
               title: t.title,
               createdAt: new Date(t.createdAt),

@@ -33,11 +33,31 @@ export const attemptConvAgg = defineRollup({
 - **`select`** returns the rollup's rows, exactly its columns by name;
   `scope(keyExpr)` restricts them to the keys being maintained (`true` in the
   reconcile's drift scan, `keyExpr = ANY(<keys>)` in a maintain function and
-  the reconcile's write). Call it once.
+  the reconcile's write). Call it at least once (a recursive select scopes
+  each place it seeds from).
 - **A source** is a table whose writes move the rollup. `carry` is the source
   column naming the rollup row (the key, or — with `via: { table, match, key }`
   — a value one hop maps to it); `reads` are the other source columns the
   aggregate reads; `ops` narrows the statement kinds (default all three).
+- **`closure: { edges, child, parent }`** — a rollup over a TRANSITIVE
+  relation (a key's row reads its ancestors' rows over `edges`). Every
+  maintain function expands the keys it resolved to their transitive
+  dependents before aggregating: walk, lock the whole set (sorted), walk again
+  in a fresh statement, and repeat only if that walk found a key not yet
+  locked (an edge committed between the two walks). The edge table must be a
+  source carrying `child`; an edge write also locks (never re-aggregates) its
+  `parent`, so a concurrent write of that parent's facts either commits first
+  or sees the edge. Only a repeated pass locks out of sorted order, so two
+  writers racing on one edge can abort with a loud 40P01 — never a stale row.
+- **`fed: true`** — the rollup table is ON the change feed: readers are
+  routed by its own rows, not its sources (not in `feedExemptTables()` nor
+  `rollupSources()`). The guarded upsert means a reader hears of a key exactly
+  when its value changed, even through a closure no source route can follow.
+  What query-resource's `materializeJoin` declares.
+- **A source may be another rollup's table** (a rollup ON a rollup): its
+  trigger fires on the inner rollup's own writes, i.e. only when that
+  aggregate changed, and after it did. The reconcile runs such a reader after
+  the rollups it reads (`readersLast`); a cycle is refused.
 - **Everything is generated** (`core/internal/define-rollup.ts`): the
   `CREATE TABLE` from the handle's columns; per source one
   `<rollup>__<source>_maintain()` function and its
@@ -49,7 +69,8 @@ export const attemptConvAgg = defineRollup({
   that call, which is how `imperative-create-table-allowlisted` accepts it); `key`
   is the table's only pk column; every column belongs to the table it is used
   against; a carry (or via hop) has the key's type; one source per table; `select`
-  calls `scope` once.
+  calls `scope`; a closure's columns have the key's type and its edge table is a
+  source carrying `child`.
 - **Asserted at install** (whenever a rollup's maintain functions are
   (re)installed): the `select`, compiled as a temp view, returns exactly the
   table's columns (the projection reads them by name, so an extra one would be
@@ -179,11 +200,12 @@ is recomputed in `onReady`.
 
 ## Consumers of the collection
 
-- `feedExemptTables()` — the rollup table names; the change-feed merges them into
-  its trigger denylist (a rollup is a read-cache fed by its sources' changes,
-  never an independent write surface).
+- `feedExemptTables()` — the rollup table names (every rollup but a `fed`
+  one); the change-feed merges them into its trigger denylist (a rollup is a
+  read-cache fed by its sources' changes, never an independent write surface).
 - `rollupSources()` — rollup → the source tables whose triggers maintain it
-  (C30), for routing a rollup's readers by its sources' writes.
+  (C30), for routing a rollup's readers by its sources' writes. A `fed`
+  rollup is not in it: it is its own change source.
 - `Rollup.sources` — query-resource's rollup join routes each source (`carry`,
   its `carryType`, `via`, `reads`, `pk`), never the rollup table (A1).
 
@@ -220,6 +242,7 @@ is recomputed in `onReady`.
   - Exports (types):
     - `CompiledRollupSource`
     - `Rollup`
+    - `RollupClosure`
     - `RollupColumn`
     - `RollupOp`
     - `RollupReconcile`

@@ -179,6 +179,21 @@ export const ATTEMPT_PUSH_AGG_TABLE = "attempt_push_agg";
 export const PAGE_CONTENT_EDITED_AT_TABLE = "page_content_edited_at";
 
 /**
+ * Materialized aggregates of the `tasks` collection (query-resource's
+ * `materializeJoin` over the joins in
+ * `plugins/tasks/plugins/tasks-core/server/internal/task-rows.ts`): per task,
+ * its attempts' facts (`task_attempt_facts`), its prerequisite ids
+ * (`task_dependency_list`) and whether a transitive prerequisite still blocks
+ * it (`task_prerequisite_blocking` — not `task_blocking`, which would take the
+ * `agent_read` alias name of the `task_blocking_v` view). Rollups on the change feed, created and reconciled by
+ * `rebuildDerivedTables`; `defineRollup` generates each `CREATE TABLE` from
+ * the read handle, so the line carries `assertImperativePublicTable(…)`.
+ */
+export const TASK_ATTEMPT_FACTS_TABLE = "task_attempt_facts";
+export const TASK_DEPENDENCY_LIST_TABLE = "task_dependency_list";
+export const TASK_BLOCKING_TABLE = "task_prerequisite_blocking";
+
+/**
  * The full allowlist of public tables created imperatively (outside drizzle),
  * keyed BY THE NAME OF THE CONSTANT that holds each table name.
  *
@@ -215,6 +230,9 @@ export const IMPERATIVE_PUBLIC_TABLES = {
   ATTEMPT_CONV_AGG_TABLE,
   ATTEMPT_PUSH_AGG_TABLE,
   PAGE_CONTENT_EDITED_AT_TABLE,
+  TASK_ATTEMPT_FACTS_TABLE,
+  TASK_DEPENDENCY_LIST_TABLE,
+  TASK_BLOCKING_TABLE,
 } as const satisfies Record<string, string>;
 
 /**

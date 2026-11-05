@@ -42,7 +42,7 @@ import {
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import { installTaskDerivedSchema, TREE_IDS, treeSeed } from "../testing";
 import { rollupSourcesOf } from "@plugins/database/plugins/derived-tables/server/testing";
-import { TASK_ROLLUPS } from "./rollup-spec";
+import { TASK_ROLLUPS } from "./task-rollups";
 
 const TASKS_V = "test.view-relation-reads.tasks_v";
 const ATTEMPTS_V = "test.view-relation-reads.attempts_v";
@@ -198,7 +198,9 @@ beforeAll(async () => {
   await rebuildTriggers(
     testDb.db,
     {
-      feedExempt: new Set(TASK_ROLLUPS.map((r) => r.table)),
+      feedExempt: new Set(
+        TASK_ROLLUPS.filter((r) => !r.fed).map((r) => r.table),
+      ),
       optedOut: new Set(),
       produced: new Set(),
     },

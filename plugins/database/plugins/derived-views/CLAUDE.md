@@ -169,6 +169,9 @@ and re-export it from `core/index.ts`. See
     - `PAGE_CONTENT_EDITED_AT_TABLE`
     - `READ_ALIAS_SCHEMA`
     - `readAliasStem`
+    - `TASK_ATTEMPT_FACTS_TABLE`
+    - `TASK_BLOCKING_TABLE`
+    - `TASK_DEPENDENCY_LIST_TABLE`
     - `TASK_LATEST_CONVERSATION_TABLE`
     - `topoSortViews`
 - Cross-plugin:

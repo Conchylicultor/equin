@@ -97,7 +97,7 @@ export async function rebuildDerivedTables(
   const changed = await db.transaction((tx) => installDefinitions(tx, ordered));
 
   const results: RollupReconcile[] = [];
-  for (const r of ordered) {
+  for (const r of readersLast(ordered)) {
     // A transaction of its own (a savepoint inside the schema layer), so the
     // advisory locks are held until the heal commits whoever the caller is.
     const counts = await db.transaction((tx) => reconcile(tx, r));
@@ -121,6 +121,35 @@ export async function rebuildDerivedTables(
 }
 
 // ── the repair half ──────────────────────────────────────────────────────────
+
+// The rollups in reconcile order: one whose source is another rollup's table
+// (a materialized aggregate over the attempt rollups) after that rollup, so
+// its heal reads the healed rows — and the inner heal's writes, which fire the
+// outer's triggers, land before the outer's drift scan. By name otherwise.
+// A cycle cannot be maintained by triggers and is refused.
+function readersLast(ordered: readonly Rollup[]): Rollup[] {
+  const byTable = new Map(ordered.map((r) => [r.table, r]));
+  const out: Rollup[] = [];
+  const state = new Map<string, "visiting" | "done">();
+  const visit = (r: Rollup, path: readonly string[]): void => {
+    const seen = state.get(r.table);
+    if (seen === "done") return;
+    if (seen === "visiting") {
+      throw new Error(
+        `derived-tables: rollups read each other in a cycle (${[...path, r.table].join(" → ")})`,
+      );
+    }
+    state.set(r.table, "visiting");
+    for (const s of r.sources) {
+      const inner = byTable.get(s.table);
+      if (inner !== undefined) visit(inner, [...path, r.table]);
+    }
+    state.set(r.table, "done");
+    out.push(r);
+  };
+  for (const r of ordered) visit(r, []);
+  return out;
+}
 
 async function reconcile(
   tx: Tx,
@@ -648,14 +677,19 @@ function selectProblems(
 
 // ── consumers' views of the collection ──────────────────────────────────────
 
-// The set of rollup table names. The change-feed merges this into its trigger
+// The set of feed-exempt rollup table names (every rollup but a `fed` one,
+// whose readers route by its own rows). The change-feed merges this into its trigger
 // DENYLIST so no NOTIFY trigger is installed on a rollup (it is a pure
 // read-cache fed by its source's change, never an independent write surface — a
 // trigger on it would double-route the source change through the rollup's id
 // space and defeat the correctly-scoped source-driven recompute). Complete at
 // boot — contributions are collected before onReadyBlocking.
 export function feedExemptTables(): Set<string> {
-  return new Set(DerivedTable.getContributions().map((r) => r.table));
+  return new Set(
+    DerivedTable.getContributions()
+      .filter((r) => !r.fed)
+      .map((r) => r.table),
+  );
 }
 
 /**
@@ -671,5 +705,10 @@ export function rollupSources(): Map<string, string[]> {
 export function rollupSourcesOf(
   rollups: readonly Rollup[],
 ): Map<string, string[]> {
-  return new Map(rollups.map((r) => [r.table, r.sources.map((s) => s.table)]));
+  // A fed rollup is its own change source: a reader of it is a base reader.
+  return new Map(
+    rollups
+      .filter((r) => !r.fed)
+      .map((r) => [r.table, r.sources.map((s) => s.table)]),
+  );
 }

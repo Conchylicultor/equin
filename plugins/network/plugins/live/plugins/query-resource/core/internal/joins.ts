@@ -9,6 +9,7 @@
 // drizzle's runtime in. The server compiler (`server/internal/joins.ts`)
 // renders and checks these specs.
 
+import type { SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 
 /** The relation the base table of a compile is named by in a `ColumnRef`. */
@@ -90,9 +91,11 @@ export interface ExtensionJoin<
    * literal its read COALESCEs to — overriding the column's literal DB
    * default — or `null` (read NULL, no COALESCE). An exposing extension's
    * fields (`exposure.fields[f].absent`, derived from each field's declared
-   * default).
+   * default). A `SQL` is a constant expression read as is: a materialized
+   * aggregate's `ifNone` (`materializeJoin`), which may be no literal
+   * (`ARRAY[]::text[]`).
    */
-  absent?: Readonly<Record<string, string | number | boolean | null>>;
+  absent?: Readonly<Record<string, string | number | boolean | null | SQL>>;
   /**
    * Fields read off the side row's EXISTENCE (an exposing extension's
    * presence, by field id): no column — `presenceExpr` renders

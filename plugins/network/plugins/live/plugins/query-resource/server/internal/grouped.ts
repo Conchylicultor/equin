@@ -247,6 +247,14 @@ export interface GroupedPlan {
   aliases: readonly string[];
   /** `j.<alias>`'s aggregate refs. */
   refs: ReadonlyMap<string, Readonly<Record<string, AggregateRefRuntime>>>;
+  /**
+   * Each top-level grouped join's CTE name and declared aggregates (name,
+   * declaration) — what `materializeJoin` projects off the CTE set.
+   */
+  joins: ReadonlyMap<
+    string,
+    { cte: string; aggregates: readonly { name: string; agg: Aggregate }[] }
+  >;
   /** The CTEs (`name AS (…)`) the projection's grouped joins need, in dependency order. */
   ctes(scope: GroupedScope): SQL[];
   /** Whether any CTE is recursive (a closure). */
@@ -272,6 +280,7 @@ const VALUE: TupleUse = { role: "value" };
 export const NO_GROUPED: GroupedPlan = Object.freeze({
   aliases: [],
   refs: new Map(),
+  joins: new Map(),
   ctes: () => [],
   recursive: false,
   outerJoins: () => [],
@@ -799,7 +808,17 @@ export function compileGrouped(
       scope.kind === "full"
         ? sql`JOIN ${nodes} ON ${c.anc.pk} = ${pairs}.__a`
         : // A32: the ancestor row by its pk, one lateral lookup per pair.
-          sql`CROSS JOIN LATERAL (SELECT * FROM ${nodes} WHERE ${c.anc.pk} = ${pairs}.__a OFFSET 0) ${sql.identifier(c.anc.rel)}`;
+          // It projects only the node columns the aggregates and ancestor
+          // joins read (`nodeGate`), never `*`: a materialized closure's
+          // rollup declares exactly what its select reads (derived-tables),
+          // and a whole row would be every column of the node table.
+          sql`CROSS JOIN LATERAL (SELECT ${sql.join(
+            c.nodeGate.map(
+              (name) =>
+                sql`${sql.identifier(c.anc.rel)}.${sql.identifier(name)}`,
+            ),
+            sql`, `,
+          )} FROM ${nodes} WHERE ${c.anc.pk} = ${pairs}.__a OFFSET 0) ${sql.identifier(c.anc.rel)}`;
     const joins = [
       ancestor,
       ...c.ancRollups.map(
@@ -1093,6 +1112,15 @@ export function compileGrouped(
   return {
     aliases: compiled.map((g) => g.rel),
     refs,
+    joins: new Map(
+      compiled.map((g) => [
+        g.rel,
+        {
+          cte: g.cte,
+          aggregates: g.aggregates.map((a) => ({ name: a.name, agg: a.agg })),
+        },
+      ]),
+    ),
     recursive: compiled.some((g) => g.kind === "closure"),
     ctes: (scope) =>
       compiled.flatMap((g) =>

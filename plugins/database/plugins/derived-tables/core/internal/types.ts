@@ -54,6 +54,27 @@ export interface RollupSourceSpec {
   ops?: readonly RollupOp[];
 }
 
+/**
+ * A rollup over a TRANSITIVE relation: a key's row reads the rows of its
+ * ancestors over `edges` (`child` → `parent`, repeatedly), so a write that
+ * moves one key's facts moves every key below it. Every maintain function then
+ * EXPANDS the keys it resolved to their transitive dependents (the keys
+ * reachable by walking the edges from `parent` back to `child`) before it
+ * re-aggregates.
+ *
+ * `edges` must be a source carrying `child` (a new or dropped edge moves its
+ * child's ancestor set, and so every node below it). An edge write also locks
+ * — but does not re-aggregate — the `parent` it names: a concurrent write to
+ * that parent's facts, which expands to its dependents, then either commits
+ * before this edge is aggregated or sees it when it expands (see the maintain
+ * function's lock loop).
+ */
+export interface RollupClosure {
+  edges: PgTable;
+  child: PgColumn;
+  parent: PgColumn;
+}
+
 export interface RollupSpec<T extends PgTable = PgTable> {
   /**
    * The rollup's drizzle READ handle. It lives in a non-glob file (never
@@ -81,6 +102,18 @@ export interface RollupSpec<T extends PgTable = PgTable> {
    */
   select: (scope: (keyExpr: string) => string) => string;
   sources: readonly RollupSourceSpec[];
+  /** Expand every maintained key to its transitive dependents (see `RollupClosure`). */
+  closure?: RollupClosure;
+  /**
+   * The rollup table is ON the change feed: its readers are routed by its own
+   * rows (a row I / U / D is a change to the key it names), not by its
+   * sources. What a materialized aggregate needs (query-resource's
+   * `materializeJoin`): its readers join it like any side table, and a guarded
+   * upsert means they hear of a key exactly when its value changed — even
+   * when the change reached it through a closure no source route could
+   * follow. Absent: the rollup is feed-exempt and read through its sources.
+   */
+  fed?: true;
 }
 
 /** One rollup column, as the generated DDL declares it. */
@@ -146,6 +179,10 @@ export interface Rollup<T extends PgTable = PgTable> {
   /** Every column, key first. */
   readonly columns: readonly RollupColumn[];
   readonly sources: readonly CompiledRollupSource[];
+  /** Whether the rollup table is on the change feed (`RollupSpec.fed`). */
+  readonly fed: boolean;
+  /** The closure its keys expand over (`RollupSpec.closure`), by table and column name. */
+  readonly closure?: { table: string; child: string; parent: string };
   /** `CREATE TABLE IF NOT EXISTS …` */
   readonly createTableDdl: string;
   /**

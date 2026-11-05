@@ -20925,6 +20925,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `CompiledRollupSource`
           - `Rollup`
+          - `RollupClosure`
           - `RollupColumn`
           - `RollupOp`
           - `RollupReconcile`
@@ -21001,6 +21002,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PAGE_CONTENT_EDITED_AT_TABLE`
           - `READ_ALIAS_SCHEMA`
           - `readAliasStem`
+          - `TASK_ATTEMPT_FACTS_TABLE`
+          - `TASK_BLOCKING_TABLE`
+          - `TASK_DEPENDENCY_LIST_TABLE`
           - `TASK_LATEST_CONVERSATION_TABLE`
           - `topoSortViews`
       - Cross-plugin:
@@ -35800,6 +35804,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LookupRead`
               - `LookupResult`
               - `LookupSpec`
+              - `MaterializedJoin`
               - `PointQueryResourceSpec`
               - `QueryDb`
               - `ReadColumn`
@@ -35829,6 +35834,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `deferredWindowQueryResource`
               - `followRead`
               - `joinRefs`
+              - `materializeJoin`
               - `offFeedReach`
               - `offFeedTablesReach`
               - `pinClock`
@@ -53126,7 +53132,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Automations.Section` "sidequest-autopilot" → `LaunchListSection`
           - `Automations.Section` "sidequest-autopilot" → `RunUntilSection`
           - `Automations.Section` "sidequest-autopilot" → `TriageSection`
-        - Uses: 32 symbols — full list in [`plugins/tasks/plugins/sidequest-autopilot/REFERENCE.md`](../plugins/tasks/plugins/sidequest-autopilot/REFERENCE.md)
+        - Uses: 31 symbols — full list in [`plugins/tasks/plugins/sidequest-autopilot/REFERENCE.md`](../plugins/tasks/plugins/sidequest-autopilot/REFERENCE.md)
           - `network/live/live-state` ×4
           - `primitives/data-view` ×3
           - `config_v2` ×2
@@ -53147,7 +53153,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.RelativeTime`
           - `tasks/task-detail.taskDetailPane`
-          - `tasks/task-track.useStoredTracks`
           - `tasks.usePatchTask`
       - Server:
         - Contributes:
@@ -54005,7 +54010,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/notifications.useToast`
         - Exports (values):
           - `TaskTrackControl`
-          - `useStoredTracks`
           - `useTaskTrack`
       - Server:
         - Contributes:
@@ -54256,36 +54260,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTaskCluster`
           - `useTaskConversations`
       - Server:
-        - Contributes: 49 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `resource.declare` ×35
+        - Contributes: 55 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `resource.declare` ×38
+          - `derived-table` ×5
           - `derived-view` ×4
           - `ids.kind` ×3
           - `attachments.link` ×2
-          - `derived-table` ×2
           - `db-trigger` "tasks.cluster"
           - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
           - `live.columns.expose` "tasks ← tasks_ext_mandate"
-        - Uses:
-          - `database.db`
-          - `database/db-triggers.DbTrigger`
-          - `database/db-triggers.defineDbTriggers`
+        - Uses: 21 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `network/live` ×3
+          - `primitives/rank` ×3
+          - `database/db-triggers` ×2
+          - `database/sql-projection` ×2
+          - `infra/entities` ×2
+          - `network/live/query-resource` ×2
           - `database/derived-tables.DerivedTable`
           - `database/derived-views.View`
-          - `database/sql-projection.nullable`
-          - `database/sql-projection.parsed`
+          - `database.db`
           - `ids.IdKinds`
           - `infra/attachments.Attachments`
-          - `infra/entities.defaultNow`
-          - `infra/entities.defineEntity`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.defineTriggerEvent`
-          - `network/live.ColumnOverride`
-          - `network/live.LiveColumns`
-          - `network/live.serveCollection`
-          - `network/live/query-resource.compileLookup`
-          - `primitives/rank.nextRankUnder`
-          - `primitives/rank.RankExecutor`
-          - `primitives/rank.withRank`
         - DB schema:
           - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`
@@ -54481,6 +54478,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks:rows` (keyed, point)
           - `tasks.attachment-links` (keyed)
           - `tasks.attachment-links:rows` (keyed, point)
+          - `tasks.window` (keyed, window)
+          - `tasks.window:groups` (push)
+          - `tasks.window:rows` (keyed, point)
       - Core:
         - Uses: 34 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations/model-provider` ×3
@@ -54590,6 +54590,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasksManage`
           - `tasksRootRoute`
           - `TaskStatusSchema`
+          - `taskWindow`
           - `TrackFilingGrantSchema`
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`

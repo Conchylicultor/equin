@@ -521,7 +521,7 @@ describe("the shapes", () => {
       `"blocking__anc__att"."task_id" = ANY(ARRAY(SELECT DISTINCT __x_blocking.__a FROM __x_blocking))`,
     );
     expect(q.sql).toContain(
-      `CROSS JOIN LATERAL (SELECT * FROM "a_tasks" "blocking__anc" WHERE "blocking__anc"."id" = __x_blocking.__a OFFSET 0) "blocking__anc"`,
+      `CROSS JOIN LATERAL (SELECT "blocking__anc"."id", "blocking__anc"."dropped_at" FROM "a_tasks" "blocking__anc" WHERE "blocking__anc"."id" = __x_blocking.__a OFFSET 0) "blocking__anc"`,
     );
     expect(q.sql).toMatch(
       /WHERE \("a_tasks"\."dropped_at" IS NULL and "a_tasks"\."id" = ANY\(\$\d+::text\[\]\)\)$/,

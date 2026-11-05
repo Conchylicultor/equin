@@ -51,6 +51,7 @@ export {
   taskRows,
   taskClusterRows,
   TASK_CLUSTER_MAX,
+  taskWindow,
   type TaskRow,
   taskDescriptions,
   attemptRows,

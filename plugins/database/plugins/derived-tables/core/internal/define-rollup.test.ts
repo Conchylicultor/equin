@@ -213,9 +213,9 @@ describe("defineRollup — eval-time refusals", () => {
     );
   });
 
-  test("a select that does not call scope exactly once", () => {
+  test("a select that never calls scope", () => {
     expect(() => convAgg({ select: () => `SELECT 1 AS attempt_id` })).toThrow(
-      /scope exactly once/,
+      /select must call scope/,
     );
   });
 });

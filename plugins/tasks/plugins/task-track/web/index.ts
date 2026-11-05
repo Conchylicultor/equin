@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { FieldPresentation } from "@plugins/network/plugins/live/web";
 import { taskTrackShape } from "../core";
 
-export { useStoredTracks, useTaskTrack } from "./hooks";
+export { useTaskTrack } from "./hooks";
 export { TaskTrackControl } from "./components/track-control";
 
 export default {

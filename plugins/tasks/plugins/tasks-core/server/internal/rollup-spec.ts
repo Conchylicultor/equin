@@ -124,8 +124,3 @@ export const attemptPushAgg = defineRollup({
     },
   ],
 });
-
-// Every rollup this plugin contributes (`DerivedTable`, server/index.ts) — the
-// one list the boot contributions, the headless derived-schema install and the
-// relation-bases suite all read, so a new rollup cannot be missed by any.
-export const TASK_ROLLUPS = [attemptConvAgg, attemptPushAgg] as const;

@@ -28,6 +28,8 @@ export type {
   AllCollectionSpec,
   CompiledAllCollection,
 } from "./internal/compile-alias";
+export { materializeJoin } from "./internal/materialize";
+export type { MaterializedJoin } from "./internal/materialize";
 export { compileUnionCollection } from "./internal/compile-union-window";
 export type {
   CompiledUnion,

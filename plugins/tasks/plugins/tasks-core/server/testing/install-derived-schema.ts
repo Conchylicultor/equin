@@ -3,7 +3,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { compileCreateView } from "@plugins/database/plugins/derived-views/core";
 import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";
 import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
-import { TASK_ROLLUPS } from "../internal/rollup-spec";
+import { TASK_ROLLUPS } from "../internal/task-rollups";
 import { taskClusterTriggers } from "../internal/cluster-triggers";
 import {
   attempts,

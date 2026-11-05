@@ -442,7 +442,10 @@ function missingRowRead(
 ): SQL | undefined {
   if (spec.absent !== undefined && Object.hasOwn(spec.absent, key)) {
     const value = spec.absent[key]!;
-    return value === null ? undefined : sql`${sql.param(value)}`;
+    if (value === null) return undefined;
+    // A constant expression (a materialized aggregate's `ifNone`), as is.
+    if (is(value, SQL)) return value;
+    return sql`${sql.param(value)}`;
   }
   const fallback = literalDefault(col);
   return fallback === undefined ? undefined : sql`${sql.param(fallback, col)}`;

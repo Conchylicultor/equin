@@ -4,10 +4,11 @@ import { IdKinds } from "@plugins/ids/server";
 import { DbTrigger } from "@plugins/database/plugins/db-triggers/server";
 import { taskClusterTriggers } from "./internal/cluster-triggers";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
-import { TASK_ROLLUPS } from "./internal/rollup-spec";
+import { TASK_ROLLUPS } from "./internal/task-rollups";
 import {
   taskRowsServed,
   taskClusterRowsServed,
+  taskWindowServed,
   taskDescriptionsServed,
   attemptRowsServed,
   attemptWorkspacesServed,
@@ -329,6 +330,7 @@ export default {
     IdKinds.Kind({ kind: conversationIdKind }),
     ...taskRowsServed.declare,
     ...taskClusterRowsServed.declare,
+    ...taskWindowServed.declare,
     ...taskDescriptionsServed.declare,
     ...attemptRowsServed.declare,
     ...attemptWorkspacesServed.declare,

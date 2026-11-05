@@ -136,7 +136,7 @@ finish and report.
     - `Automations.Section` "sidequest-autopilot" → `LaunchListSection`
     - `Automations.Section` "sidequest-autopilot" → `RunUntilSection`
     - `Automations.Section` "sidequest-autopilot" → `TriageSection`
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×4
     - `primitives/data-view` ×3
     - `config_v2` ×2
@@ -157,7 +157,6 @@ finish and report.
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `tasks/task-detail.taskDetailPane`
-    - `tasks/task-track.useStoredTracks`
     - `tasks.usePatchTask`
 - Server:
   - Contributes:

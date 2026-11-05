@@ -9,6 +9,7 @@ import { ROLLUP } from "./types";
 import type {
   CompiledRollupSource,
   Rollup,
+  RollupClosure,
   RollupColumn,
   RollupOp,
   RollupSourceSpec,
@@ -30,6 +31,9 @@ const MAX_IDENT = 63;
 const CARRIED = "_rollup_carried";
 const KEYS = "_rollup_keys";
 const KEY = "_rollup_key";
+const LOCK_ONLY = "_rollup_lock_only";
+const NEXT = "_rollup_next";
+const SEEN = "_rollup_seen";
 
 /** `"name"`, quoted as an identifier. */
 export function quoteIdent(name: string): string {
@@ -104,6 +108,7 @@ interface Shape {
   columns: readonly RollupColumn[];
   values: readonly string[];
   select: RollupSpec["select"];
+  closure: { table: string; child: string; parent: string } | undefined;
 }
 
 // The `select`, rendered with `scope` — called exactly once.
@@ -116,11 +121,8 @@ function renderSelect(s: Shape, scope: (keyExpr: string) => string): string {
     }
     return scope(keyExpr);
   });
-  if (scoped !== 1) {
-    fail(
-      s.table,
-      `select must call scope exactly once (called ${scoped} times)`,
-    );
+  if (scoped === 0) {
+    fail(s.table, "select must call scope (it never did)");
   }
   if (rendered.includes("$rollup$")) {
     fail(s.table, "select must not contain the $rollup$ dollar-quote tag");
@@ -175,6 +177,54 @@ function writeKeys(s: Shape, keysSql: string): { ctes: string; del: string } {
    WHERE t.${qk} = ANY(${keysSql})
      AND NOT EXISTS (SELECT 1 FROM _rollup_agg AS a WHERE a.${qk} = t.${qk})`,
   };
+}
+
+// A34: one transaction-scoped advisory lock per key, in sorted order.
+function lockKeys(rollup: string): string {
+  return `FOREACH ${KEY} IN ARRAY ${KEYS} LOOP
+    PERFORM pg_advisory_xact_lock(${lockKey(rollup, `${KEY}::text`)});
+  END LOOP;`;
+}
+
+// A closure rollup's keys: the resolved ones plus every transitive dependent
+// (walking the edges from `parent` back to `child`).
+//
+// Walk, lock the whole set in sorted order, then walk again: the second walk
+// is a fresh statement after the locks, so a writer that held one of them (an
+// edge insert locks its parent, a facts write its own key) has committed and
+// its edge is seen. In the steady state the second walk finds nothing new and
+// the locks were taken once, sorted — like any rollup's. Only when an edge
+// appeared between the two walks does the loop lock the grown set again, out
+// of the first pass's order; two writers racing on one edge can then abort
+// with a loud 40P01 — never a stale row.
+function expandAndLock(
+  rollup: string,
+  closure: { table: string; child: string; parent: string },
+  keyType: string,
+  lockOnly: boolean,
+): string {
+  const edges = qualified(closure.table);
+  const child = quoteIdent(closure.child);
+  const parent = quoteIdent(closure.parent);
+  const walk = (into: string): string => `WITH RECURSIVE _rollup_d(n) AS (
+      SELECT x FROM unnest(${KEYS}) AS u(x)
+      UNION
+      SELECT e.${child} FROM ${edges} AS e JOIN _rollup_d AS d ON e.${parent} = d.n WHERE e.${child} IS NOT NULL
+    )
+    SELECT array_agg(d.n ORDER BY d.n) INTO ${into} FROM _rollup_d AS d;`;
+  const toLock = lockOnly
+    ? `ARRAY(SELECT DISTINCT x FROM unnest(${NEXT} || COALESCE(${LOCK_ONLY}, ARRAY[]::${keyType}[])) AS u(x) ORDER BY x)`
+    : NEXT;
+  return `${walk(NEXT)}
+  LOOP
+    FOREACH ${KEY} IN ARRAY ${toLock} LOOP
+      PERFORM pg_advisory_xact_lock(${lockKey(rollup, `${KEY}::text`)});
+    END LOOP;
+    ${walk(SEEN)}
+    EXIT WHEN ${SEEN} <@ ${NEXT};
+    ${NEXT} := ARRAY(SELECT DISTINCT x FROM unnest(${NEXT} || ${SEEN}) AS u(x) ORDER BY x);
+  END LOOP;
+  ${KEYS} := ${NEXT};`;
 }
 
 function compileSource(
@@ -235,7 +285,30 @@ function compileSource(
       watched.map((c) => `o.${quoteIdent(c)}`),
       watched.map((c) => `n.${quoteIdent(c)}`),
     );
-  const qc = quoteIdent(carry);
+  // A closure's edge source also LOCKS the parent each edge names (never
+  // re-aggregates it): see the lock loop below.
+  const lockOnly =
+    shape.closure !== undefined && shape.closure.table === table
+      ? shape.closure.parent
+      : undefined;
+  // The values of `col` the statement touched, into `into` (an UPDATE: only
+  // rows whose carry or a read column moved — both sides).
+  const collect = (col: string, into: string): string => {
+    const qv = quoteIdent(col);
+    return `IF TG_OP = 'INSERT' THEN
+    SELECT array_agg(DISTINCT n.${qv}) INTO ${into} FROM new_rows AS n WHERE n.${qv} IS NOT NULL;
+  ELSIF TG_OP = 'DELETE' THEN
+    SELECT array_agg(DISTINCT o.${qv}) INTO ${into} FROM old_rows AS o WHERE o.${qv} IS NOT NULL;
+  ELSIF TG_OP = 'UPDATE' THEN
+    SELECT array_agg(DISTINCT m.v) INTO ${into} FROM (
+      SELECT o.${qv} AS v FROM old_rows AS o FULL JOIN new_rows AS n ON ${on} WHERE ${moved}
+      UNION ALL
+      SELECT n.${qv} AS v FROM old_rows AS o FULL JOIN new_rows AS n ON ${on} WHERE ${moved}
+    ) AS m WHERE m.v IS NOT NULL;
+  ELSE
+    RAISE EXCEPTION 'rollup maintain ${functionName}: unexpected TG_OP %', TG_OP;
+  END IF;`;
+  };
 
   const resolveKeys =
     via === undefined
@@ -251,25 +324,29 @@ LANGUAGE plpgsql AS $rollup$
 DECLARE
   ${CARRIED} ${carryType}[];
   ${KEYS} ${shape.keyType}[];
-  ${KEY} ${shape.keyType};
+  ${KEY} ${shape.keyType};${
+    shape.closure === undefined
+      ? ""
+      : `
+  ${NEXT} ${shape.keyType}[];
+  ${SEEN} ${shape.keyType}[];${
+    lockOnly === undefined
+      ? ""
+      : `
+  ${LOCK_ONLY} ${shape.keyType}[];`
+  }`
+  }
 BEGIN
   -- Generated by derived-tables' defineRollup: "${rollup}", source "${table}".
   -- The carried values this statement touched (an UPDATE: only rows whose
   -- carry or a read column moved).
-  IF TG_OP = 'INSERT' THEN
-    SELECT array_agg(DISTINCT n.${qc}) INTO ${CARRIED} FROM new_rows AS n WHERE n.${qc} IS NOT NULL;
-  ELSIF TG_OP = 'DELETE' THEN
-    SELECT array_agg(DISTINCT o.${qc}) INTO ${CARRIED} FROM old_rows AS o WHERE o.${qc} IS NOT NULL;
-  ELSIF TG_OP = 'UPDATE' THEN
-    SELECT array_agg(DISTINCT m.v) INTO ${CARRIED} FROM (
-      SELECT o.${qc} AS v FROM old_rows AS o FULL JOIN new_rows AS n ON ${on} WHERE ${moved}
-      UNION ALL
-      SELECT n.${qc} AS v FROM old_rows AS o FULL JOIN new_rows AS n ON ${on} WHERE ${moved}
-    ) AS m WHERE m.v IS NOT NULL;
-  ELSE
-    RAISE EXCEPTION 'rollup maintain ${functionName}: unexpected TG_OP %', TG_OP;
-  END IF;
-  IF ${CARRIED} IS NULL THEN RETURN NULL; END IF;
+  ${collect(carry, CARRIED)}
+  IF ${CARRIED} IS NULL THEN RETURN NULL; END IF;${
+    lockOnly === undefined
+      ? ""
+      : `
+  ${collect(lockOnly, LOCK_ONLY)}`
+  }
 
   -- The rollup keys, sorted: the lock order below.
   ${resolveKeys}
@@ -280,9 +357,7 @@ BEGIN
   -- transaction ends, and its own aggregate — a fresh statement, so a fresh
   -- snapshot — then sees this one's committed rows. Without it, two writers
   -- each aggregate without the other's rows and the later upsert loses one.
-  FOREACH ${KEY} IN ARRAY ${KEYS} LOOP
-    PERFORM pg_advisory_xact_lock(${lockKey(rollup, `${KEY}::text`)});
-  END LOOP;
+  ${shape.closure === undefined ? lockKeys(rollup) : expandAndLock(rollup, shape.closure, shape.keyType, lockOnly !== undefined)}
 
   -- Re-aggregate the keys; write only a row that changed (an unchanged row
   -- keeps its xmin), delete a key the aggregate no longer has.
@@ -388,6 +463,35 @@ SELECT (SELECT count(*) FROM _rollup_upserted)::int AS upserted,
        (SELECT count(*) FROM _rollup_deleted)::int AS deleted`;
 }
 
+function compileClosure(
+  rollup: string,
+  closure: RollupClosure,
+  keyType: string,
+): { table: string; child: string; parent: string } {
+  const child = columnOf(rollup, "closure.child", closure.child, closure.edges);
+  const parent = columnOf(
+    rollup,
+    "closure.parent",
+    closure.parent,
+    closure.edges,
+  );
+  if (child === parent) {
+    fail(rollup, "closure.child and closure.parent are the same column");
+  }
+  for (const [role, col] of [
+    ["child", closure.child],
+    ["parent", closure.parent],
+  ] as const) {
+    if (col.getSQLType() !== keyType) {
+      fail(
+        rollup,
+        `closure.${role} "${col.name}" is ${col.getSQLType()}, the rollup key is ${keyType} — an edge names two keys`,
+      );
+    }
+  }
+  return { table: getTableName(closure.edges), child, parent };
+}
+
 /**
  * Declare a trigger-maintained rollup. Everything is generated from the
  * declaration: the table (from the drizzle handle's columns), and per source a
@@ -427,20 +531,35 @@ export function defineRollup<T extends PgTable>(
     notNull: c.notNull || c.primary,
   }));
   if (spec.sources.length === 0) fail(table, "declares no source");
+  const keyType = spec.key.getSQLType();
 
   const shape: Shape = {
     table,
     key,
-    keyType: spec.key.getSQLType(),
+    keyType,
     columns,
     values: columns.filter((c) => c.name !== key).map((c) => c.name),
     select: spec.select,
+    closure:
+      spec.closure === undefined
+        ? undefined
+        : compileClosure(table, spec.closure, keyType),
   };
   const sources = spec.sources.map((s) => compileSource(shape, s));
   const seen = new Set<string>();
   for (const s of sources) {
     if (seen.has(s.table)) fail(table, `two sources on "${s.table}"`);
     seen.add(s.table);
+  }
+  if (shape.closure !== undefined) {
+    const { table: edges, child } = shape.closure;
+    const src = sources.find((s) => s.table === edges);
+    if (src === undefined || src.carry !== child || src.via !== undefined) {
+      fail(
+        table,
+        `the closure's edge table "${edges}" must be a source carrying "${child}" with no via — a new or dropped edge moves its child's ancestors, and every key below it`,
+      );
+    }
   }
 
   const columnDdl = columns
@@ -463,6 +582,8 @@ ${columnDdl}
     key,
     columns,
     sources,
+    fed: spec.fed === true,
+    ...(shape.closure === undefined ? {} : { closure: shape.closure }),
     createTableDdl,
     // The scope keeps naming the key expression (so its columns count as
     // read) without filtering anything.

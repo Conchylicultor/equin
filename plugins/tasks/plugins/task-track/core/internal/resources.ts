@@ -34,12 +34,10 @@ export type TaskTrackRow = z.infer<typeof TaskTrackRowSchema>;
 //
 // - `useLive(taskTracks, { id: taskId })` — the exact answer for ONE task (the task
 //   detail's Track row, the conversation header chip). `found: false` is main.
-// - `useLive(taskTracks)` — the WHOLE ordered set (`all`), for a surface that
-//   needs every sidequest (the sidequest autopilot's launch list reads the
-//   rows of exactly these tasks by id), so its reader holds the set entire.
-//   A row a task has (or not) is its track: one row per sidequest at most, never a stand-in for one past a
-//   window's edge. (A LIST of tasks reads neither: the track is exposed into
-//   its rows — `exposes` above.)
+// - `useLive(taskTracks)` — the WHOLE ordered set (`all`). No surface reads
+//   it whole any more (the sidequest launch list filters `tasks.window` by the
+//   exposed track on the server); a LIST of tasks reads neither form: the
+//   track is exposed into its rows — `exposes` above.
 //
 // Served from the extension table (`server/internal/resource.ts`): marking a
 // task a sidequest is one entrant, moving it back to main (or the task's

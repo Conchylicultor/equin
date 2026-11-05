@@ -352,39 +352,43 @@ const TASKS_COST: Record<string, TasksCost> = {
     orderOf: 0,
     rowLoads: [ids(T1)],
   },
-  // `held_at` is a blocking input: T3 and what depends on it (T6).
+  // `held_at` is a blocking input, but T3 was already blocking T6 (it has no
+  // completed attempt): T6's stored `blocking` row does not move, so T3 alone.
   "task.hold": {
-    loads: [ids(T3, T6)],
+    loads: [ids(T3)],
     orderOf: 0,
     rowLoads: [ids(T3)],
   },
-  // An attempt, its conversation and its push: the task and its dependents.
+  // An attempt, its conversation and its push: the task. Its dependent T6 is
+  // refilled only when T3's facts move T6's stored `blocking` row — none of
+  // these do (T3, held, keeps blocking).
   "attempt.insert": {
-    loads: [ids(T3, T6)],
+    loads: [ids(T3)],
     orderOf: 0,
     rowLoads: [ids(T3)],
   },
   "conversation.insert": {
-    loads: [ids(T3, T6)],
+    loads: [ids(T3)],
     orderOf: 0,
     rowLoads: [ids(T3)],
   },
-  // T1 completes: every transitive dependent (T2, T4; T3 via T2; T6 via T3).
+  // T1 completes: the dependents whose blocking it ends (T2, T4). T3 and T6
+  // stay blocked (by T2, by T3): their stored rows do not move.
   "conversation.done": {
-    loads: [ids(T1, T2, T3, T4, T6)],
+    loads: [ids(T1, T2, T4)],
     orderOf: 0,
-    rowLoads: [ids(T1, T3)],
+    rowLoads: [ids(T1)],
   },
   // `waiting_for` / `last_viewed_at`: no rollup reads them.
   "conversation.poller": NOTHING,
-  // `status` is a rollup input (`has_waiting_conv`): T3 and its dependent T6.
+  // `status` is a rollup input (`has_waiting_conv`): T3 (T6 stays blocked).
   "conversation.resume": {
-    loads: [ids(T3, T6)],
+    loads: [ids(T3)],
     orderOf: 0,
     rowLoads: [ids(T3)],
   },
   "push.insert": {
-    loads: [ids(T3, T6)],
+    loads: [ids(T3)],
     orderOf: 0,
     rowLoads: [ids(T3)],
   },
@@ -392,23 +396,21 @@ const TASKS_COST: Record<string, TasksCost> = {
   "conversation.retitle": NOTHING,
   // `title` again: T3 alone.
   "task.rename-live": { loads: [ids(T3)], orderOf: 0, rowLoads: [ids(T3)] },
-  // The conversation rollup's source route fires on the insert.
-  "conversation.system": {
-    loads: [ids(T3, T6)],
-    orderOf: 0,
-    rowLoads: [ids(T3)],
-  },
+  // A system conversation moves no stored fact of T3 (it already has a live
+  // conversation): nothing.
+  "conversation.system": NOTHING,
   // `rank` is the order field.
   "task.reorder": { ...NOTHING, loads: [ids(T5)], orderOf: 1 },
-  // Both hosts, and the dependents of each (T2's: T3, T6).
+  // A2 moves from T2 to T4: both hosts' stored facts move. Their dependents'
+  // blocking does not (T3 stays blocked by T2, T6 by T3).
   "attempt.move": {
-    loads: [ids(T2, T3, T4, T6)],
+    loads: [ids(T2, T4)],
     orderOf: 0,
-    rowLoads: [ids(T3)],
+    rowLoads: [],
   },
-  // T3's edge: T3 and its dependent T6.
+  // T3's edge: T3 (T6 stays blocked by T3 itself).
   "edge.delete": {
-    loads: [ids(T3, T6)],
+    loads: [ids(T3)],
     orderOf: 0,
     rowLoads: [ids(T3)],
   },

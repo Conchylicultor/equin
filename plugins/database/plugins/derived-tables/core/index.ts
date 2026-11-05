@@ -2,6 +2,7 @@ export { defineRollup } from "./internal/define-rollup";
 export type {
   CompiledRollupSource,
   Rollup,
+  RollupClosure,
   RollupColumn,
   RollupOp,
   RollupReconcile,

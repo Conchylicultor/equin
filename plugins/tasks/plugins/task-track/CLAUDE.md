@@ -30,14 +30,13 @@ change. `setTaskTrack(id, "main")` deletes the row.
 
 ## Reads
 
-One `liveCollection` (`task-tracks.all`), read two ways:
+One `liveCollection` (`task-tracks.all`):
 
 - `useTaskTrack(taskId)` — point read, exact, a `ResourceResult<TaskTrack>`: `loading` until known (never a
   stand-in "main").
-- `useStoredTracks()` — every stored row as a taskId → track map: the
-  collection is declared `all` (at most one row per task), preloaded
-  (`boot-and-keep`), read with `useLive(taskTracks, { select })` — the
-  sidequest autopilot's launch list reads it; see `core/internal/resources.ts`.
+- The collection is still declared `all` and preloaded (`boot-and-keep`), but
+  no surface reads it whole any more: the sidequest launch list filters
+  `tasks.window` by the exposed track on the server instead.
 
 No list reads either: the shape EXPOSES the track (`exposes`, served by
 `LiveColumns.Expose(tasksTrack)`), so every list whose rows reach a task — the
@@ -77,7 +76,6 @@ sidequest's ops at low host-admission priority, behind the main track.
     - `shell/notifications.useToast`
   - Exports (values):
     - `TaskTrackControl`
-    - `useStoredTracks`
     - `useTaskTrack`
 - Server:
   - Contributes:
