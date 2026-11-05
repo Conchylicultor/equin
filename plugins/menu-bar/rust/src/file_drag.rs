@@ -157,8 +157,12 @@ mod platform {
             let _ = done.send(Ok(Outcome::Cancelled));
             return Ok(());
         }
-        let view: &NSView = wk;
-        let window = view.window().ok_or("the webview is in no window")?;
+        let webview: &NSView = wk;
+        let window = webview.window().ok_or("the webview is in no window")?;
+        // From the window's content view, never the webview itself: WebKit
+        // reads a drag whose source is its own view as its own page drag, not
+        // as files coming in — so the page would not see them as `Files`.
+        let view = window.contentView().ok_or("the window has no content view")?;
         let in_window = window.mouseLocationOutsideOfEventStream();
         let at = view.convertPoint_fromView(in_window, None);
 

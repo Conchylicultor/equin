@@ -13,9 +13,11 @@ use crate::shim;
 
 /// Whether the main frame may load `url`: every page of the window's scope
 /// (its namespace's origin), and the non-web documents a page makes of its
-/// own (`about:blank`, `blob:`, `data:`), which never leave the window.
+/// own (`about:blank`, `blob:`, `data:`), which never leave the window. Never
+/// a `file:` URL: that is WebKit opening a file dropped where the page took no
+/// drop (as Safari opens it in the tab) — in an app window, nothing happens.
 pub fn admits_main_frame(scope: &Url, url: &Url) -> bool {
-    !web(url) || shim::in_scope(scope, url)
+    url.scheme() != "file" && (!web(url) || shim::in_scope(scope, url))
 }
 
 pub fn web(url: &Url) -> bool {
@@ -102,6 +104,8 @@ mod tests {
         let scope = u("http://equin.localhost:9000/");
         assert!(admits_main_frame(&scope, &u("http://equin.localhost:9000/mail")));
         assert!(admits_main_frame(&scope, &u("about:blank")));
+        // A file dropped on the page, unclaimed: never shown, never handed off.
+        assert!(!admits_main_frame(&scope, &u("file:///Users/me/Downloads/a.mp4")));
         assert!(!admits_main_frame(&scope, &u("http://other.localhost:9000/mail")));
         assert!(!admits_main_frame(&scope, &u("http://p1.content.localhost:9000/equin/x")));
         assert!(!admits_main_frame(&scope, &u("https://example.com/")));

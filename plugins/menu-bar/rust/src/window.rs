@@ -258,8 +258,13 @@ pub fn build_window(app: &AppHandle, launch: &Launch, hooks: Hooks) -> tauri::Re
                 decided(url, frame, admitted);
             }
             if !admitted {
-                eprintln!("equin-desktop: {url} is outside the namespace; refused before it loaded, handing it off");
-                scope_gate::hand_off(url.clone(), sink);
+                if web(url) {
+                    eprintln!("equin-desktop: {url} is outside the namespace; refused before it loaded, handing it off");
+                    scope_gate::hand_off(url.clone(), sink);
+                } else {
+                    // A dropped file the page did not take: the drop is nothing.
+                    eprintln!("equin-desktop: refused the main-frame load of {url}");
+                }
             }
             admitted
         }),
