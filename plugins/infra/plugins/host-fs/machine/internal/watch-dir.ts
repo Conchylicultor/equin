@@ -1,4 +1,5 @@
 import { realpath } from "@plugins/packages/plugins/timed-fs/core";
+import { basename, dirname } from "node:path";
 import {
   acquireDirWatch,
   type DirWatchRelease,
@@ -20,9 +21,23 @@ import {
 export type { AcquireDirWatch } from "./watch-entry";
 
 /**
+ * What changed in a watched folder: the entries named (by name, created,
+ * written or removed), or anything at all — the folder itself appeared, went
+ * or was replaced, it lives in an archive whose file changed, or the native
+ * watch lost events — so a reader keeping the folder's entries must read it
+ * all again.
+ */
+export type HostDirChange =
+  { kind: "entries"; names: ReadonlySet<string> } | { kind: "all" };
+
+const ALL: HostDirChange = { kind: "all" };
+
+/**
  * Call `onChange` whenever what the absolute host folder `path` holds may have
  * changed — an entry of it created, written, renamed or removed, the folder
- * itself replaced, removed or (re)created — until the returned release runs.
+ * itself replaced, removed or (re)created — until the returned release runs,
+ * saying which entries (a {@link HostDirChange}), so a reader that keeps the
+ * folder's entries re-reads only those.
  * What a listing (or a peek) of the folder reads, kept fresh:
  *
  * - **On disk:** a children-scope watch of the folder through the shared dir
@@ -45,7 +60,7 @@ export type { AcquireDirWatch } from "./watch-entry";
  */
 export function watchHostDir(
   path: UserPath,
-  onChange: () => void,
+  onChange: (change: HostDirChange) => void,
 ): Promise<DirWatchRelease> {
   return watchHostDirOver(acquireDirWatch, path, onChange);
 }
@@ -54,11 +69,11 @@ export function watchHostDir(
 export async function watchHostDirOver(
   acquire: AcquireDirWatch,
   path: UserPath,
-  onChange: () => void,
+  onChange: (change: HostDirChange) => void,
 ): Promise<DirWatchRelease> {
   const located = await locateHostDir(path);
   if (located.kind === "archive") {
-    return watchHostPathOver(acquire, located.file, onChange);
+    return watchHostPathOver(acquire, located.file, () => onChange(ALL));
   }
   return rearmable(async (rearm) => {
     let dir: UserPath;
@@ -69,7 +84,7 @@ export async function watchHostDirOver(
     } catch (err) {
       // Missing or unreadable: wait for it to appear (or change) instead.
       classifyFsError(err);
-      return watchEntryOver(acquire, path, () => rearm(onChange));
+      return watchEntryOver(acquire, path, () => rearm(() => onChange(ALL)));
     }
     try {
       return await acquire({
@@ -77,19 +92,32 @@ export async function watchHostDirOver(
         scope: "children",
         onChange: (events) => {
           // The folder itself went (removed, or moved away): wait for it.
-          // Any other event naming it (its own mtime) changes nothing about
-          // the watch.
-          if (events.some((e) => e.path === dir && e.type === "delete")) {
-            rearm();
+          // Whatever lands at the path then is another folder — read all of
+          // it, as for one created there. Its own mtime (an `update` naming
+          // it) changes none of its entries.
+          const own = events.filter((e) => e.path === dir);
+          if (own.some((e) => e.type === "delete")) rearm();
+          if (own.some((e) => e.type !== "update")) {
+            onChange(ALL);
+            return;
           }
-          onChange();
+          const names = new Set(
+            events
+              .filter((e) => e.path !== dir && dirname(e.path) === dir)
+              .map((e) => basename(e.path)),
+          );
+          if (names.size > 0) onChange({ kind: "entries", names });
         },
+        // Events may have been dropped — anything in the folder may have
+        // changed — and the watch heard may be dead (its root retired): open
+        // it again, and read all of the folder once it is armed.
+        onLost: () => rearm(() => onChange(ALL)),
       });
     } catch (err) {
       // Gone between the realpath and the watch opening: wait for it instead.
       // Anything else is the hub's failure, and propagates.
       if (!(await isGone(path))) throw err;
-      return watchEntryOver(acquire, path, () => rearm(onChange));
+      return watchEntryOver(acquire, path, () => rearm(() => onChange(ALL)));
     }
   }, path);
 }

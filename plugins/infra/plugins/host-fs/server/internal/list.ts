@@ -1,4 +1,5 @@
 import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { join } from "node:path";
 import { type HostFsEntry, type HostFsListResult } from "../../core";
 import { locateHostDir } from "./archive/locate";
@@ -11,6 +12,15 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
+ * At most this many entries are described (`lstat`, plus a symlink's
+ * `readlink` + `stat`) at once, across every listing in the process. A folder
+ * of thousands (`/tmp`) otherwise fans out one `lstat` per entry in one go,
+ * and every other filesystem read — a tree's peeks — queues behind the flood.
+ */
+const DESCRIBE_CONCURRENCY = 16;
+const describing = createSemaphore(DESCRIBE_CONCURRENCY);
+
+/**
  * List the absolute directory `path`. A symlink to a directory lists its
  * target. An entry that vanishes between `readdir` and its `lstat` is skipped
  * (it is no longer there); an entry that cannot be described because the
@@ -21,15 +31,12 @@ export async function listHostDir(path: UserPath): Promise<HostFsListResult> {
   try {
     const st = await stat(path);
     if (!st.isDirectory()) return { kind: "not-a-dir", path };
-    const names = await readdir(path);
-    const entries = await Promise.all(
-      names.map((name) => describeChild(path, name)),
-    );
+    const described = await describeChildren(path, await readdir(path));
     return {
       kind: "ok",
       path,
       parent: parentOf(path),
-      entries: entries
+      entries: [...described.values()]
         .filter((e): e is HostFsEntry => e.kind !== "vanished")
         .sort(byName),
     };
@@ -38,7 +45,27 @@ export async function listHostDir(path: UserPath): Promise<HostFsListResult> {
   }
 }
 
-type Vanished = { kind: "vanished" };
+/** A child that was named but is no longer there when described. */
+export type Vanished = { kind: "vanished" };
+
+/**
+ * Describe the children `names` of the absolute folder `dir`, a bounded number
+ * at a time: each one's entry, or `vanished` when it is not there (any other
+ * failure — a folder granting read but not search — rejects).
+ */
+export async function describeChildren(
+  dir: UserPath,
+  names: Iterable<string>,
+): Promise<Map<string, HostFsEntry | Vanished>> {
+  return new Map(
+    await Promise.all(
+      [...new Set(names)].map(
+        async (name) =>
+          [name, await describing.run(() => describeChild(dir, name))] as const,
+      ),
+    ),
+  );
+}
 
 async function describeChild(
   dir: UserPath,

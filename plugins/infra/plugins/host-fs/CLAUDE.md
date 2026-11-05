@@ -45,7 +45,7 @@ until the next change (see `infra/file-watcher`'s CLAUDE.md).
 
 | Value | Question → answer | Bound · freshness |
 |---|---|---|
-| `hostFsListing` (`host-fs.list`) | `{ path? }` (none = home) → pages of `HostFsEntry`, by name in CODE-POINT order; meta `hostFsListing.meta` → `{ path, parent, total, within? }` | key-range-paged (`limit` 500, `maxLimit` 10 000 without a viewport); `watchHostDir`, throttle 1 s; every page cut from one held listing per folder |
+| `hostFsListing` (`host-fs.list`) | `{ path? }` (none = home) → pages of `HostFsEntry`, by name in CODE-POINT order; meta `hostFsListing.meta` → `{ path, parent, total, within? }` | key-range-paged (`limit` 500, `maxLimit` 10 000 without a viewport); `watchHostDir`, throttle 1 s; every page cut from one held listing per folder, which a change patches (one `readdir`, then a `lstat` of only the entries the watch named — O(changed), not O(folder)); entries described ≤ 16 at once process-wide |
 | `hostFsDirPeek` (`host-fs.peek`) | `{ path }` → `ok {children}` · `too-many {total}` · `archive` | ≤ `HOST_FS_PEEK_MAX_NAMES` names; `watchHostDir`, throttle 1 s; many folders: `useLive(v, [...])` |
 | `hostFsPathStat` (`host-fs.stat`) | `{ path }` → `{ path, parent, entry, within? }` | one entry; `watchHostPath` |
 | `hostFsCompletions` (`host-fs.complete`) | `{ prefix }` → `{ dir, matches: {name, path}[], truncated }` — folder-only children of `dirname(prefix)` matching `basename(prefix)`, case-insensitive, natural order; dotfolders only for a `.` fragment; on disk only. Refuses `invalid-path` (empty / relative), `missing`, `denied`, `not-a-dir` | ≤ `HOST_FS_COMPLETE_LIMIT` (50) matches; `watchHostDir` of the folder searched, throttle 1 s; one tuple per text typed (the path bar) |
@@ -58,7 +58,10 @@ moving down as the path is created), a symlink's target too, and a folder's
 own entries (a folder's stat follows them). `watchHostDir(path, onChange)` is
 the folder twin: a children-scope watch of the folder, or — while it is not
 there — of its entry, re-armed when it appears or goes; a folder inside an
-archive watches the archive file. Both re-arm from a settled base: a re-arm
+archive watches the archive file. Its `onChange` is told which entries
+changed (`HostDirChange`: `entries {names}`), or `all` when the folder
+appeared, went or was replaced, an archive changed, or the native watch lost
+events. Both re-arm from a settled base: a re-arm
 that fails is reported (`reportServerError`) and retried on the next event.
 Not live: a change one level below a listed folder (a child folder's own
 modified time and size, which only a watch of every child folder would hear)

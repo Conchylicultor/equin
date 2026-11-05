@@ -23,7 +23,7 @@ import type { DirWatchRequest } from "@plugins/infra/plugins/file-watcher/server
 import { checkPagedSource } from "@plugins/network/plugins/live/server/testing";
 import { hostFsListing, type HostFsEntry } from "../../core";
 import { listHostDir } from "../../server/internal/list";
-import { dirPeek, listingMeta, listingPage } from "./listing";
+import { dirPeek, holdListingOver, listingMeta, listingPage } from "./listing";
 import {
   hostFsFileTextServed,
   hostFsPathStatServed,
@@ -31,7 +31,11 @@ import {
 } from "./reads";
 import { completions } from "./complete";
 import { watchHostPathOver } from "./version";
-import { watchHostDirOver, type AcquireDirWatch } from "./watch-dir";
+import {
+  watchHostDirOver,
+  type AcquireDirWatch,
+  type HostDirChange,
+} from "./watch-dir";
 import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 let root: string;
@@ -219,6 +223,37 @@ describe("watchHostDir", () => {
     expect(dirs.live.size).toBe(0);
   });
 
+  test("names the entries that changed; the folder going asks for all of it", async () => {
+    const dir = join(root, "named");
+    mkdirSync(dir);
+    const dirs = fakeDirs();
+    const heard: HostDirChange[] = [];
+    const release = await watchHostDirOver(dirs.acquire, asUserPath(dir), (c) =>
+      heard.push(c),
+    );
+    dirs.emit(join(dir, "a.txt"), "update");
+    // The folder's own mtime changes none of its entries.
+    dirs.emit(dir, "update");
+    expect(heard).toEqual([{ kind: "entries", names: new Set(["a.txt"]) }]);
+    // Events lost: the watch is opened again, then anything may have changed.
+    const lostOn = [...dirs.live][0];
+    lostOn?.onLost?.(new Error("dropped"));
+    await settle();
+    expect(heard.at(-1)).toEqual({ kind: "all" });
+    expect([...dirs.live][0]).not.toBe(lostOn);
+    expect(dirs.watched()).toEqual([dir]);
+    dirs.emit(join(dir, "b.txt"));
+    expect(heard.at(-1)).toEqual({
+      kind: "entries",
+      names: new Set(["b.txt"]),
+    });
+    rmSync(dir, { recursive: true });
+    dirs.emit(dir, "delete");
+    expect(heard.at(-1)).toEqual({ kind: "all" });
+    await settle();
+    release();
+  });
+
   test("waits for a missing folder in its parent, then watches it", async () => {
     const dir = join(root, "later");
     const dirs = fakeDirs();
@@ -300,6 +335,73 @@ describe("watchHostDir", () => {
     } finally {
       console.error = original;
     }
+  });
+});
+
+describe("host-fs.list while held", () => {
+  test("a change re-describes only the entries it names", async () => {
+    const dir = join(root, "held");
+    mkdirSync(dir);
+    for (const name of ["keep.txt", "edit.txt", "gone.txt"]) {
+      writeFileSync(join(dir, name), name);
+    }
+    const dirs = fakeDirs();
+    let notified = 0;
+    const release = await holdListingOver(
+      (path, onChange) => watchHostDirOver(dirs.acquire, path, onChange),
+      asUserPath(dir),
+      () => notified++,
+    );
+    const all = { after: null, until: null, limit: 500 } as const;
+    const before = await listingPage({ path: dir }, all);
+    const keep = before.find((e) => e.name === "keep.txt");
+
+    writeFileSync(join(dir, "edit.txt"), "a longer body");
+    rmSync(join(dir, "gone.txt"));
+    writeFileSync(join(dir, "new.txt"), "n");
+    dirs.emit(join(dir, "edit.txt"), "update");
+    dirs.emit(join(dir, "gone.txt"), "delete");
+    dirs.emit(join(dir, "new.txt"));
+    expect(notified).toBe(3);
+
+    const after = await listingPage({ path: dir }, all);
+    expect(after.map((e) => e.name)).toEqual([
+      "edit.txt",
+      "keep.txt",
+      "new.txt",
+    ]);
+    expect(after.find((e) => e.name === "edit.txt")?.size).toBe(13);
+    // Not re-described: the very row the first read made.
+    expect(after.find((e) => e.name === "keep.txt")).toBe(keep);
+    expect((await listingMeta({ path: dir })).total).toBe(3);
+
+    // An entry created unheard is still found by the next patch's readdir.
+    writeFileSync(join(dir, "quiet.txt"), "q");
+    dirs.emit(join(dir, "keep.txt"), "update");
+    const later = await listingPage({ path: dir }, all);
+    expect(later.map((e) => e.name)).toEqual([
+      "edit.txt",
+      "keep.txt",
+      "new.txt",
+      "quiet.txt",
+    ]);
+
+    // A change heard while a read is in flight is described by the next one.
+    writeFileSync(join(dir, "racing.txt"), "r");
+    dirs.emit(join(dir, "racing.txt"));
+    const inFlight = listingPage({ path: dir }, all);
+    writeFileSync(join(dir, "late.txt"), "l");
+    dirs.emit(join(dir, "late.txt"));
+    expect((await inFlight).map((e) => e.name)).toContain("racing.txt");
+    expect((await listingPage({ path: dir }, all)).map((e) => e.name)).toEqual([
+      "edit.txt",
+      "keep.txt",
+      "late.txt",
+      "new.txt",
+      "quiet.txt",
+      "racing.txt",
+    ]);
+    release();
   });
 });
 
