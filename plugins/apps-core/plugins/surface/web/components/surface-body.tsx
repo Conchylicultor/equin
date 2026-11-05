@@ -117,19 +117,34 @@ export function SurfaceBody() {
 }
 
 /**
- * The placements this tab set can show. A contained tab set (an `AppEmbed`'s,
- * a box on the page) has no viewport to escape to, so a `viewport`-framed
- * placement (solo) is not one of its modes: switching to it resolves to the
- * default, and the capabilities it publishes do not list it.
+ * The placements this tab set can show — every one, in every tab set. A
+ * `viewport` frame means "the tab set's own viewport": the window for the
+ * page's set, and its box for a contained one (an `AppEmbed`'s, whose
+ * `transform-gpu` makes it the containing block). So in a contained set a
+ * `viewport`-framed placement (solo) renders as a `pane` that fills the box —
+ * nothing escapes, so the backdrop keeps its transform and the escape audit has
+ * nothing to check — and it is not the set's boot mode: a box opens as a box
+ * on someone else's page, and filling it is the user's gesture (a window's Full
+ * screen), never what it boots into.
  */
-function useAvailablePlacements(
-  sorted: readonly PlacementDef[],
-): readonly PlacementDef[] {
+function useAvailablePlacements(sorted: readonly PlacementDef[]): {
+  placements: readonly PlacementDef[];
+  defaultId: string;
+} {
   const { contained } = useTabs();
-  return useMemo(
-    () => (contained ? sorted.filter((d) => d.frame !== "viewport") : sorted),
-    [contained, sorted],
-  );
+  return useMemo(() => {
+    // A box with nothing but viewport placements still opens in one of them.
+    const boxed = sorted.filter((d) => d.frame !== "viewport");
+    const opensIn = contained && boxed.length > 0 ? boxed : sorted;
+    return {
+      placements: contained
+        ? sorted.map((d) =>
+            d.frame === "viewport" ? { ...d, frame: "pane" as const } : d,
+          )
+        : sorted,
+      defaultId: opensIn.find((d) => d.default)?.id ?? opensIn[0]?.id ?? "",
+    };
+  }, [contained, sorted]);
 }
 
 /** The surface once its placement order is known — see {@link SurfaceBody}. */
@@ -139,7 +154,7 @@ function SurfaceBodyReady({
   /** The `Surface.Placement` contributions, in the slot's layout order. */
   sorted: readonly PlacementDef[];
 }) {
-  const sorted = useAvailablePlacements(allSorted);
+  const { placements: sorted, defaultId } = useAvailablePlacements(allSorted);
   const {
     id: tabSetId,
     tabs,
@@ -156,10 +171,6 @@ function SurfaceBodyReady({
     for (const d of sorted) m.set(d.id, d);
     return m;
   }, [sorted]);
-  const defaultId = useMemo(
-    () => sorted.find((d) => d.default)?.id ?? sorted[0]?.id ?? "",
-    [sorted],
-  );
 
   // Publish the derived capabilities to the apps-owned registry so apps-side
   // chrome (tab bar `+`, theme scope, use-tabs default) can read them back

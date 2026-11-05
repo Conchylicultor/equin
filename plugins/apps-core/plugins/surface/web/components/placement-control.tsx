@@ -1,10 +1,7 @@
 import { useSlotOrder } from "@plugins/primitives/plugins/slot-render/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useMemo } from "react";
-import {
-  useSurfaceMode,
-  setSurfaceMode,
-} from "@plugins/apps-core/plugins/tabs/web";
+import { useFocusedTabSet } from "@plugins/apps-core/plugins/tabs/web";
 import {
   SegmentedControl,
   type SegmentedOption,
@@ -19,11 +16,12 @@ import { Surface } from "../slots";
 
 /**
  * Surface-mode control contributed into `ActionBar.ViewOption` — a "Layout" row
- * in the action bar's view-options popover. Provider-free: it
- * reads the ONE surface mode from the module-level store (`useSurfaceMode`) and
- * drives it via `setSurfaceMode`, so it renders correctly both inside
- * `TabsProvider` (the docked tab-bar strip's popover) and outside it (the
- * globally-mounted floating overlay's).
+ * in the action bar's view-options popover. Provider-free: it reads and drives
+ * the mode of the tab set the user is in (`useFocusedTabSet`) — the page's, or
+ * an embed's they last pointed at (a demo desktop, a demo window taken full
+ * screen) — so it renders correctly both inside `TabsProvider` (the docked
+ * tab-bar strip's popover) and outside it (the globally-mounted floating
+ * overlay's).
  *
  * The options are derived from the `Surface.Placement` registry, in the slot's
  * layout order (`useSlotOrder`) — never a hardcoded list — so adding / removing a mode sub-plugin
@@ -46,7 +44,7 @@ export function ActionBarPlacementControl() {
       ),
     [defs],
   );
-  const mode = useSurfaceMode();
+  const { handle, mode } = useFocusedTabSet();
   // The options to draw: none while loading (a loading block holds the row),
   // the last-known ones on a failed refresh, nothing on a failure without one.
   const known: "loading" | readonly SegmentedOption<string>[] | null =
@@ -56,7 +54,11 @@ export function ActionBarPlacementControl() {
       error: (_error, stale) => stale ?? null,
       ready: (data) => data,
     });
-  if (known === null || (known !== "loading" && known.length === 0)) {
+  if (
+    handle === undefined ||
+    known === null ||
+    (known !== "loading" && known.length === 0)
+  ) {
     return null;
   }
   return (
@@ -70,8 +72,8 @@ export function ActionBarPlacementControl() {
         ) : (
           <SegmentedControl<string>
             options={known}
-            value={mode}
-            onChange={setSurfaceMode}
+            value={mode ?? ""}
+            onChange={(next) => handle.setMode(next)}
             variant="ghost"
           />
         )

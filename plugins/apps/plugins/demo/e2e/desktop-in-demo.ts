@@ -10,7 +10,11 @@
  *     was (no window outside the embed, the page URL still `/demo`);
  *  2. opens Pages from the shelf: a second window, beside the Agent Manager's,
  *     showing the demo's workspace ("Lumen");
- *  3. checks the page's own state is untouched: its sessionStorage tab set
+ *  3. takes a window full screen from its titlebar's Full screen
+ *     control (as on the real desktop): the windows give way to that one tab,
+ *     filling the embed box — the embed is its tab set's viewport — and the
+ *     page stays as it was; Esc brings the desktop back, both windows intact;
+ *  4. checks the page's own state is untouched: its sessionStorage tab set
  *     and window layout are byte-identical to before (the embed's desktop
  *     keeps its layout in memory, never in the page's storage).
  *
@@ -184,7 +188,57 @@ await withBrowser(async (h) => {
   r.eq("the page URL stays /demo", new URL(page.url()).pathname, "/demo");
   await snap(page, OUT, "2-two-windows");
 
-  // ── 3. the page's own state ─────────────────────────────────────────────
+  // ── 3. Full screen from a window's titlebar, Esc back ───────────────────
+  const fullScreen = embedRoot(page).getByRole("button", {
+    name: "Full screen",
+  });
+  await renders(
+    "every window's titlebar offers Full screen, as on the real desktop",
+    () => fullScreen.count(),
+    (n) => n === 2,
+  );
+  await fullScreen.last().click();
+  await renders(
+    "Full screen leaves no window: the surface shows the one tab",
+    () => windowIds(embedRoot(page)),
+    (ids) => ids.length === 0,
+  );
+  const filled = await renders(
+    "the full-screen tab fills the embed box, not the page",
+    () =>
+      embedRoot(page).evaluate((embed) => {
+        const box = embed.getBoundingClientRect();
+        const shown = [
+          ...embed.querySelectorAll<HTMLElement>("[data-tab-id]"),
+        ].filter((el) => el.style.display !== "none");
+        if (shown.length !== 1) return null;
+        const tab = shown[0]!.getBoundingClientRect();
+        return {
+          scope: shown[0]!.getAttribute("data-theme-scope"),
+          dx: Math.round(Math.abs(tab.left - box.left)),
+          dy: Math.round(Math.abs(tab.top - box.top)),
+          dw: Math.round(Math.abs(tab.width - box.width)),
+          dh: Math.round(Math.abs(tab.height - box.height)),
+        };
+      }),
+    (d) => d !== null && d.dx <= 1 && d.dy <= 1 && d.dw <= 1 && d.dh <= 1,
+  );
+  r.eq(
+    "the full-screen tab is the one the embed shows",
+    filled.value?.scope,
+    `app:${await embedRoot(page).getAttribute("data-app-embed")}`,
+  );
+  r.eq("the page URL stays /demo", new URL(page.url()).pathname, "/demo");
+  await snap(page, OUT, "3-full-screen");
+  await page.keyboard.press("Escape");
+  await renders(
+    "Esc returns to the desktop with both windows",
+    () => windowIds(embedRoot(page)),
+    (ids) => ids.length === 2 && both.value.every((id) => ids.includes(id)),
+  );
+  await snap(page, OUT, "3-back-to-desktop");
+
+  // ── 4. the page's own state ─────────────────────────────────────────────
   await page.waitForTimeout(1_000);
   r.eq(
     "the page's persisted tab set and window layout are unchanged",

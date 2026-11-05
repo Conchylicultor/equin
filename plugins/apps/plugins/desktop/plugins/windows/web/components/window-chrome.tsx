@@ -100,8 +100,9 @@ interface WindowChromeProps {
   /**
    * Take the active tab full-screen: switch it to the solo placement — a single
    * tab full-app over everything — distinct from maximize, which only fills the
-   * work area within the desktop. Absent where the tab set has no solo mode
-   * (a desktop inside an `AppEmbed`, a box on the page): no control then.
+   * work area within the desktop. In an `AppEmbed`'s desktop the tab fills the
+   * embed box (its tab set's viewport). Absent only where no solo placement is
+   * registered: no control then.
    */
   onFullscreen: (() => void) | undefined;
   /** Other windows of this desktop the active tab can be merged into. */

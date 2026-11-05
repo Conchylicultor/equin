@@ -11713,7 +11713,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Web: `@plugins/apps-core/web/testing`
       - `getFocusedAppId`
   - Plugins:
-    - **`app-embed`** — <AppEmbed app route onLeave? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded with app + route, non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo is not one of its modes. Knows nothing about demos or where data comes from.
+    - **`app-embed`** — <AppEmbed app route onLeave? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded with app + route, non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo fills the embed box, and it opens docked. Knows nothing about demos or where data comes from.
       - Web:
         - Uses:
           - `apps-core.Apps`
@@ -12036,8 +12036,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Apps.Surface` "Surface" → `SurfaceBody`
           - `ActionBar.ViewOption` → `ActionBarPlacementControl`
-        - Uses: 25 symbols — full list in [`plugins/apps-core/plugins/surface/REFERENCE.md`](../plugins/apps-core/plugins/surface/REFERENCE.md)
-          - `apps-core/tabs` ×6
+        - Uses: 24 symbols — full list in [`plugins/apps-core/plugins/surface/REFERENCE.md`](../plugins/apps-core/plugins/surface/REFERENCE.md)
+          - `apps-core/tabs` ×5
           - `network/live/live-state` ×3
           - `primitives/css/toggle-chip` ×2
           - `primitives/slot-render` ×2
@@ -12081,8 +12081,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Shortcuts.Shortcut` "surface.exit-solo (Escape)"
             - Uses:
               - `apps-core/surface.Surface`
-              - `apps-core/tabs.exitToPreviousMode`
-              - `apps-core/tabs.getSurfaceMode`
+              - `apps-core/tabs.peekFocusedTabSet`
               - `primitives/shortcuts.defineShortcut`
     - **`tab-bar`** — App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
       - Web:
@@ -12195,6 +12194,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useAppLink`
           - `useAppLinkProps`
           - `useDefaultPlacement`
+          - `useFocusedTabSet`
           - `useFocusedTabTitle`
           - `useNavigate`
           - `usePlacementCapabilities`

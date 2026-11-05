@@ -58,7 +58,12 @@ import {
   usePlacementRegistry,
   type PlacementRegistry,
 } from "./placement-registry";
-import { claimTabSet, PAGE_TAB_SET_ID, registerTabSet } from "./tab-sets";
+import {
+  claimTabSet,
+  PAGE_TAB_SET_ID,
+  registerTabSet,
+  tabSetModeChanged,
+} from "./tab-sets";
 import {
   appPathFor,
   loadPersistedTabs,
@@ -79,8 +84,8 @@ export interface TabsApi {
   id: string;
   /**
    * The tab set renders inside a box on the page (an embedded set, an
-   * `AppEmbed`'s), not the window: a placement that escapes to the viewport
-   * (solo) is not one of its modes.
+   * `AppEmbed`'s), not the window: the box is its viewport, so a placement that
+   * fills the viewport (solo) fills the box, and the set does not boot into it.
    */
   contained: boolean;
   tabs: Tab[];
@@ -1487,6 +1492,8 @@ export function TabsProvider({
   // Register this tab set for out-of-tree callers (`peekFocusedTabSet()`: a
   // shortcut acting on the tab set the user is in).
   const modeForHandle = useLatestRef(mode);
+  const setModeForHandle = useLatestRef(setMode);
+  const exitForHandle = useLatestRef(exitToPreviousMode);
   useEffect(
     () =>
       registerTabSet({
@@ -1495,9 +1502,12 @@ export function TabsProvider({
         mode: () => modeForHandle.current,
         hasTab: (tabId) => tabsRef.current.some((t) => t.tabId === tabId),
         focusedTabId: () => focusedRef.current,
+        setMode: (next) => setModeForHandle.current(next),
+        exitToPreviousMode: () => exitForHandle.current(),
       }),
-    [id, page, modeForHandle],
+    [id, page, modeForHandle, setModeForHandle, exitForHandle],
   );
+  useEffect(() => tabSetModeChanged(), [mode]);
 
   // An embedded set's navigation boundary: every cross-app hop read through it
   // (`useNavigate`, `useAppLink`, `usePromote`, `useBack`, `useOpenPane`,

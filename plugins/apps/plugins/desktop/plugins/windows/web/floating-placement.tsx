@@ -176,10 +176,10 @@ function FloatingChrome({
 
   // Take this window's active tab full-screen: focus it (so it's the tab solo
   // mode shows) and switch the whole surface into solo mode — the windows vanish
-  // (windows mode is no longer active), so nothing can overlap. The solo overlay's
-  // exit button / Esc returns to windows mode (the mode we came from).
-  // Only where the tab set has a solo mode: a contained one (an `AppEmbed`'s)
-  // has no viewport to go full screen in.
+  // (windows mode is no longer active), so nothing can overlap. Esc, or the
+  // action bar's Layout control, returns to windows mode (the mode we came
+  // from). In an `AppEmbed`'s desktop the tab fills the embed box, its tab
+  // set's viewport. Only where a solo placement is registered.
   const placements = usePlacementRegistry().useValue();
   const canGoSolo = placements?.ids.has("solo") ?? false;
   const goSolo = useCallback(() => {

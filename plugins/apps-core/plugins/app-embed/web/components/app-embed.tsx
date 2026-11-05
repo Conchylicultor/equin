@@ -47,7 +47,7 @@ const refuseLeave: AppEmbedLeave = () => {
  * - **Its own theme scope**, `app:<id>` of the focused tab's app, with
  *   `transform-gpu` so `position: fixed` app chrome (a sidebar) resolves
  *   against the embed, not the viewport. A placement that would escape to the
- *   viewport (solo) is not one of its modes.
+ *   viewport (solo) fills the embed box instead — the embed is its viewport.
  *
  * Size it with `className` (it fills its box). `app` / `route` seed the first
  * tab only.

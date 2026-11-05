@@ -22,7 +22,7 @@ import {
 const probe = vi.hoisted(() => ({ mounts: 0, unmounts: 0, minted: 0 }));
 
 /** The surface mode + tab set `SurfaceBody` reads, driven by the tests. */
-const tabsState = vi.hoisted(() => ({ mode: "docked-ish" }));
+const tabsState = vi.hoisted(() => ({ mode: "docked-ish", contained: false }));
 
 /** Every capability set the body publishes (and the disposer it gets back). */
 const registerSpy = vi.hoisted(() => vi.fn((_caps: unknown) => () => {}));
@@ -59,8 +59,8 @@ vi.mock(
 vi.mock("@plugins/apps-core/plugins/tabs/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useTabs: () => ({
-    id: "page",
-    contained: false,
+    id: tabsState.contained ? "embed:test" : "page",
+    contained: tabsState.contained,
     tabs: [{ tabId: "t1", appId: "a1", store: null }],
     focusedTabId: "t1",
     titles: {},
@@ -156,6 +156,7 @@ afterEach(() => {
   probe.unmounts = 0;
   probe.minted = 0;
   tabsState.mode = containedDef.id;
+  tabsState.contained = false;
   registerSpy.mockClear();
 });
 
@@ -356,5 +357,60 @@ describe("while the placement order is not known yet", () => {
     const { container } = render(surface());
     expect(registerSpy).not.toHaveBeenCalled();
     expect(container.querySelector('[data-testid="tab-probe"]')).toBeNull();
+  });
+});
+
+// An `AppEmbed`'s tab set is a box on the page, and that box is its viewport:
+// solo (a desktop window's Full screen) is one of its modes and fills the box,
+// but the box never boots into it.
+describe("a contained tab set", () => {
+  /** Solo's real shape: the viewport frame IS the page's default mode. */
+  const viewportDefault: PlacementDef = { ...viewportDef, default: true };
+  const viewportFirstPlugin = {
+    id: "surface-keepalive-test-viewport-default",
+    description: "the viewport placement first and default, as solo is",
+    contributions: [
+      Surface.Placement(viewportDefault),
+      Surface.Placement({ ...containedDef, default: false }),
+      Surface.Placement(windowDef),
+    ],
+  } as unknown as LoadedPlugin;
+
+  function renderContained(mode: string) {
+    tabsState.contained = true;
+    tabsState.mode = mode;
+    return render(
+      <PluginProvider plugins={[viewportFirstPlugin]}>
+        <SurfaceBody />
+      </PluginProvider>,
+    );
+  }
+
+  it("offers every placement, and boots into the first that is not the viewport", () => {
+    renderContained(containedDef.id);
+    expect(registerSpy.mock.calls[0]![0]).toMatchObject({
+      defaultId: containedDef.id,
+      ids: new Set([viewportDef.id, containedDef.id, windowDef.id]),
+    });
+  });
+
+  it("draws a viewport placement as a pane filling the box, keeping the backdrop's transform", () => {
+    const { container } = renderContained(viewportDef.id);
+    expect(
+      container.querySelector('[data-theme-scope="app:a1"]')!.className,
+    ).toBe(`${CANVAS} absolute inset-0`);
+    expect(container.firstElementChild!.className).toContain("transform-gpu");
+  });
+
+  it("leaves the page's tab set booting into its default viewport placement", () => {
+    tabsState.mode = viewportDef.id;
+    render(
+      <PluginProvider plugins={[viewportFirstPlugin]}>
+        <SurfaceBody />
+      </PluginProvider>,
+    );
+    expect(registerSpy.mock.calls[0]![0]).toMatchObject({
+      defaultId: viewportDef.id,
+    });
   });
 });

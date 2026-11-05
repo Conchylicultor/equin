@@ -31,9 +31,10 @@ around nothing the real instance. Designs:
   render inside an embed reads navigation through those hooks, never the free
   `navigate` / `appLink` / `appLinkProps` (`tabs/no-free-app-nav-in-react`).
 - **Its own theme scope**, the focused tab's app's, with `transform-gpu` so
-  `position: fixed` app chrome resolves against the embed. A placement that
-  escapes to the viewport (solo) is not one of its modes (the tab set is
-  `contained`).
+  `position: fixed` app chrome resolves against the embed. The embed is its
+  tab set's viewport (the set is `contained`): a `viewport`-framed placement
+  (solo — a desktop window's Full screen) fills the embed box, and the embed
+  still opens as a box, never in solo.
 - **Keyboard.** Its tabs register their surface shortcuts (`mod+z`) like any
   tab; pointing at the embed claims the page's focused surface and tab set
   (`claimTabSet`), so shortcuts — the desktop's included — act on it.
@@ -46,7 +47,7 @@ Tests: `web/__tests__/app-embed.test.tsx`.
 
 ## Plugin reference
 
-- Description: <AppEmbed app route onLeave? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded with app + route, non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo is not one of its modes. Knows nothing about demos or where data comes from.
+- Description: <AppEmbed app route onLeave? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded with app + route, non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo fills the embed box, and it opens docked. Knows nothing about demos or where data comes from.
 - Web:
   - Uses:
     - `apps-core.Apps`

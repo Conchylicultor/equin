@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
 import {
   getFocusedSurfaceId,
@@ -25,11 +26,15 @@ export interface TabSetHandle {
   hasTab(tabId: string): boolean;
   /** Its focused tab right now (undefined on an empty surface). */
   focusedTabId(): string | undefined;
+  /** Switch its surface mode (the Layout control, a window's Full screen). */
+  setMode(mode: Placement): void;
+  /** Return it to the mode before the current one (solo's exit). */
+  exitToPreviousMode(): void;
 }
 
 // Keyed by tab-set id: every mounted `TabsProvider` (the page's, and each
-// `AppEmbed`'s) registers itself for its lifetime. A registry of instances, not
-// a store: nothing renders from it.
+// `AppEmbed`'s) registers itself for its lifetime. A registry of instances;
+// what renders from it reads `useFocusedTabSet`, subscribed below.
 const tabSets = new Map<string, TabSetHandle>();
 // The tab set the user last acted in (it moved focus, or was pointed at): one
 // fact per page, read from the window keydown handler. Each claim installs over
@@ -40,11 +45,26 @@ const activeTabSet = defineInstallSink<string>({
   fallback: PAGE_TAB_SET_ID,
 });
 
+// Whoever renders from a tab set's state (`useFocusedTabSet`): told when a set
+// mounts or unmounts, and when one's mode changes (`tabSetModeChanged`).
+const listeners = new Set<() => void>();
+function notify(): void {
+  for (const listener of listeners) listener();
+}
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
 /** Register a mounted tab set; the disposer removes it. */
 export function registerTabSet(handle: TabSetHandle): () => void {
   tabSets.set(handle.id, handle);
+  notify();
   return () => {
     if (tabSets.get(handle.id) === handle) tabSets.delete(handle.id);
+    notify();
     // An embedded set leaving while it held the page's focused surface hands
     // it back to the page's set, so the page's surface shortcuts act again.
     const focused = getFocusedSurfaceId();
@@ -69,4 +89,28 @@ export function claimTabSet(id: string): void {
  */
 export function peekFocusedTabSet(): TabSetHandle | undefined {
   return tabSets.get(activeTabSet.peek()) ?? tabSets.get(PAGE_TAB_SET_ID);
+}
+
+/** A registered tab set's mode changed: re-render whoever reads it. */
+export function tabSetModeChanged(): void {
+  notify();
+}
+
+/**
+ * The tab set the user is in, for chrome outside it that acts on it (the
+ * action bar's Layout control): {@link peekFocusedTabSet}'s answer, kept
+ * current — re-rendered when the user moves to another set, when a set mounts
+ * or unmounts, and when its mode changes. `undefined` before any set mounted.
+ */
+export function useFocusedTabSet(): {
+  handle: TabSetHandle | undefined;
+  mode: Placement | undefined;
+} {
+  const activeId = activeTabSet.useValue();
+  const handle = useSyncExternalStore(
+    subscribe,
+    () => tabSets.get(activeId) ?? tabSets.get(PAGE_TAB_SET_ID),
+  );
+  const mode = useSyncExternalStore(subscribe, () => handle?.mode());
+  return { handle, mode };
 }

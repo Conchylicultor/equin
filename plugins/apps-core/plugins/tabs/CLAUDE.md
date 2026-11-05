@@ -101,8 +101,9 @@ focused app, focused-tab title, live-store pointer, `surfaceEmpty`). It wraps
 its children in its own `AppNavBoundary`: an app in scope → its `navigate`, a
 surface-mode app's base path (`/desktop/…`) → its own `setMode`, anything
 else → `onLeave`. `TabsApi.id` (`"page"` / `embed:<id>`) keys state kept per
-tab set (the desktop's windows); `TabsApi.contained` says it is a box, where
-a `viewport`-framed placement (solo) is not a mode.
+tab set (the desktop's windows); `TabsApi.contained` says it is a box, whose
+own box is its viewport: a `viewport`-framed placement (solo) fills the box,
+and is not what the box boots into.
 
 Each tab set has its **own placement registry** (`usePlacementRegistry()` —
 the surface body registers into the one of the set it is in); the page's is
@@ -110,7 +111,10 @@ the one the page-global readers (`usePlacementCapabilities`, the tab bar, the
 theme scope) read. Code outside React that must act on the tab set the user is
 in — a shortcut's `when` / handler — reads `peekFocusedTabSet()`: the set last
 claimed (`claimTabSet`, by the surface body on pointer-down and by the
-provider on a focus change), else the page's. A surface-mode app's activation
+provider on a focus change), else the page's. Chrome outside every set that
+acts on that one (the action bar's Layout control) reads `useFocusedTabSet()`,
+its reactive twin; its handle switches the set's mode (`setMode`,
+`exitToPreviousMode` — solo's Esc). A surface-mode app's activation
 (`useActivateApp`) switches the mode of the set it is drawn in, the context's.
 Design: `research/2026-11-04-global-desktop-mode-in-browser-demo.md`.
 
@@ -257,6 +261,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useAppLink`
     - `useAppLinkProps`
     - `useDefaultPlacement`
+    - `useFocusedTabSet`
     - `useFocusedTabTitle`
     - `useNavigate`
     - `usePlacementCapabilities`
