@@ -1,5 +1,6 @@
 import { PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/core";
 import type { TagColor } from "@plugins/page/plugins/tags/core";
+import type { Emoji } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 
 /** A content block: its type and its text (a to-do's checked state too). */
 export type PageFixtureBlock =
@@ -11,6 +12,8 @@ export interface PageFixture {
   id: string;
   type: typeof PAGE_BLOCK_TYPE;
   title: string;
+  /** The page's icon; absent = none (the default document glyph). */
+  icon?: Emoji;
   /** Tag names, created in the vocabulary with this colour when absent. */
   tags?: readonly { name: string; color: TagColor }[];
   starred?: true;

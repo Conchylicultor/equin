@@ -7,7 +7,7 @@ the app's; the data is never here (a demo owns its own pages — e.g.
 `research/2026-10-28-global-per-app-demo-seeds-v2.md` §2.
 
 - **`core`: `PageTreeFixture`** — the workspace's root pages in sidebar order,
-  each a `PageFixture` (caller-chosen `id`, `title`, optional `tags`
+  each a `PageFixture` (caller-chosen `id`, `title`, optional `icon` (an `Emoji`), `tags`
   `{ name, color }` and `starred`, `children` in document order) whose
   children are content blocks (`text` / `heading-2` / `prompt` / `to-do`) or
   sub-pages. Ids are the caller's, so a fixture can name its own pages in its

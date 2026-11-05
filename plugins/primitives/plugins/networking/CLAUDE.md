@@ -224,7 +224,7 @@ built on them — see
     - `useTransport`
     - `useTransportScoped`
 - Cross-plugin:
-  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×10
     - `primitives` ×6
     - `conversations` ×5
@@ -236,6 +236,7 @@ built on them — see
     - `debug/worktree-cleanup`
     - `shell/notifications`
     - `tasks/tasks-core`
+    - `ui/icons/emoji`
 - Exemptions:
   - Exempts itself from:
     - `no-raw-websocket` — `web/shared-ws.worker.ts` (sanctioned)

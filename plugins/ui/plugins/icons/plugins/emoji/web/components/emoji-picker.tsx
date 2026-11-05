@@ -1,7 +1,6 @@
 import { createContext, useContext, useState } from "react";
 import {
   EmojiPicker as Frimousse,
-  defaultEmojiDataResolver,
   type EmojiData,
   type EmojiDataResolver,
   type EmojiPickerListCategoryHeaderProps,
@@ -9,7 +8,6 @@ import {
   type EmojiPickerListRowProps,
 } from "frimousse";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { assetMirrorBase } from "@plugins/infra/plugins/asset-mirror/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -18,10 +16,10 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { EmojiSchema, type Emoji } from "../../core";
 import { EmojiGlyph } from "./emoji-glyph";
-import { useAssetUrl } from "@plugins/infra/plugins/endpoints/web";
-import { unavailableMessage } from "@plugins/infra/plugins/endpoints/core";
+import { useTransportScoped } from "@plugins/primitives/plugins/networking/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { EMOJIBASE_LOCALE, EMOJIBASE_MIRROR_ID } from "../../shared/mirror";
+import { EMOJIBASE_LOCALE } from "../../shared/mirror";
+import { emojiDataSources } from "./emoji-data";
 
 /** Today's grid: nine columns. A caller may ask for another count. */
 const DEFAULT_COLUMNS = 9;
@@ -34,8 +32,6 @@ const DEFAULT_COLUMNS = 9;
  * offering an emoji one runtime draws and the other's schema cannot recognise.
  */
 const EMOJI_VERSION = 15.1;
-
-const EMOJIBASE = assetMirrorBase(EMOJIBASE_MIRROR_ID);
 
 /** The picker's current value, read by the (module-level, identity-stable) cell renderer. */
 const SelectedEmoji = createContext<Emoji | null>(null);
@@ -178,13 +174,13 @@ const LIST_COMPONENTS = {
   Emoji: EmojiCell,
 };
 
-/** The default resolver, with `leading` prepended to what it returns. */
-function withLeading(leading: EmojiPickerLeadingCategory): EmojiDataResolver {
+/** `resolve`, with `leading` prepended to what it returns. */
+function withLeading(
+  resolve: EmojiDataResolver,
+  leading: EmojiPickerLeadingCategory,
+): EmojiDataResolver {
   return async (locale, options) =>
-    withLeadingCategory(
-      await defaultEmojiDataResolver(locale, options),
-      leading,
-    );
+    withLeadingCategory(await resolve(locale, options), leading);
 }
 
 export interface EmojiPickerProps {
@@ -208,50 +204,50 @@ export interface EmojiPickerProps {
 
 /**
  * Searchable, categorized emoji grid over frimousse (headless, virtualized).
- * Its emojibase data comes from the same-origin asset mirror
- * (`/api/asset-mirror/emojibase/en/…`), never a CDN, so it works offline after
- * one warm-up. Renders just the emoji block (header + search + grid) — surface
+ * Its emojibase data comes from the asset mirror (`emojibase/en/…`), never a
+ * CDN, so it works offline after one warm-up. Renders just the emoji block (header + search + grid) — surface
  * chrome (popover, footer rows) is the caller's, and like `IconPicker` it
  * applies no content inset of its own, landing on its host panel's rail.
  *
  * Mount it only while visible (e.g. inside an open popover): it loads its data
  * on mount.
  *
- * The mirror is reached by URL (frimousse fetches `<base>/<locale>/data.json`
- * itself, with no fetch hook), so its base comes from `useAssetUrl`: on a host
- * no URL reaches (the demo's in-browser server) the picker says it is
- * unavailable instead of pointing frimousse at the page's own server.
+ * The data is loaded through the subtree's transport (`emojiDataSources`),
+ * handed to frimousse as its resolver — never by URL, which frimousse would
+ * fetch with the page's own `fetch`: so a demo's in-browser server answers it
+ * like the page's server does. Where the mirror's route needs a computer the
+ * transport lacks, the picker says it is unavailable.
  */
 export function EmojiPicker(props: EmojiPickerProps) {
-  const base = useAssetUrl(EMOJIBASE);
-  if (base.kind !== "ready") {
+  const source = useTransportScoped(emojiDataSources);
+  if (source.kind === "unavailable") {
     return (
       <Text as="div" variant="caption" tone="muted">
-        {unavailableMessage({ feature: "The emoji picker" })}
+        {source.message}
       </Text>
     );
   }
-  return <MirroredEmojiPicker {...props} emojibaseUrl={base.url} />;
+  return <MirroredEmojiPicker {...props} resolve={source.resolve} />;
 }
 
 function MirroredEmojiPicker({
-  emojibaseUrl,
+  resolve,
   value,
   onSelect,
   variant = "compact",
   columns = DEFAULT_COLUMNS,
   leadingCategory,
   className,
-}: EmojiPickerProps & { emojibaseUrl: string }) {
+}: EmojiPickerProps & { resolve: EmojiDataResolver }) {
   const panel = variant === "panel";
   const [query, setQuery] = useState("");
   // Fixed at mount (see `leadingCategory`): a resolver frimousse is handed
-  // once, wrapping the default one, so the leading category is part of the
+  // once, wrapping the transport's, so the leading category is part of the
   // DATA — searched, keyboard-navigated and virtualized like any other.
   const [resolveEmojiData] = useState(() =>
     leadingCategory && leadingCategory.emojis.length > 0
-      ? withLeading(leadingCategory)
-      : undefined,
+      ? withLeading(resolve, leadingCategory)
+      : resolve,
   );
   return (
     <Variant.Provider value={variant}>
@@ -261,7 +257,6 @@ function MirroredEmojiPicker({
           locale={EMOJIBASE_LOCALE}
           columns={columns}
           emojiVersion={EMOJI_VERSION}
-          emojibaseUrl={emojibaseUrl}
           resolveEmojiData={resolveEmojiData}
           // A picked emoji is parsed, not cast: an emoji the schema rejects is a
           // broken assumption about the data, and throws here rather than being

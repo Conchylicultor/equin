@@ -11109,6 +11109,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `page/editor.blockIdKind`
                   - `page/inline-page-link.pageLinkToken`
                   - `page/prompt/link.PAGES_CATEGORY_ID`
+                  - `ui/icons/emoji.EmojiSchema`
                   - `wish.WISHES_CATEGORY_ID`
                 - Exports (types):
                   - `DemoAgent`
@@ -46540,7 +46541,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTransport`
           - `useTransportScoped`
       - Cross-plugin:
-        - Imported by: 36 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
           - `apps` ×10
           - `primitives` ×6
           - `conversations` ×5
@@ -46552,6 +46553,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/worktree-cleanup`
           - `shell/notifications`
           - `tasks/tasks-core`
+          - `ui/icons/emoji`
       - Exemptions:
         - Exempts itself from:
           - `no-raw-websocket` — `web/shared-ws.worker.ts` (sanctioned)
@@ -54950,7 +54952,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`emoji`** — The <EmojiPicker>: a searchable, categorized emoji grid over frimousse whose emojibase data is served same-origin by the asset mirror; onSelect hands back a parsed Emoji. Plus <EmojiGlyph>, which draws an emoji in an icon's box (sized by the same size-* class). The page icon picker and <PageIcon> compose them. Registers the emojibase data mirror so the emoji picker's data is served same-origin (offline-capable after one warm-up) rather than fetched from the CDN by the browser.
           - Web:
             - Uses:
-              - `infra/endpoints.useAssetUrl`
+              - `infra/endpoints.assetFetchOver`
               - `primitives/css/center.Center`
               - `primitives/css/fill.fillClasses`
               - `primitives/css/spacing.Stack`
@@ -54958,6 +54960,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/loading.Loading`
+              - `primitives/networking.transportScoped`
+              - `primitives/networking.useTransportScoped`
               - `primitives/search.SearchInput`
             - Exports (types):
               - `EmojiPickerLeadingCategory`
@@ -54976,6 +54980,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape` ×2
             - Imported by:
               - `apps/pages/page-tree`
+              - `apps/website/demos/lumen`
               - `page/editor`
               - `page/links`
           - Core:

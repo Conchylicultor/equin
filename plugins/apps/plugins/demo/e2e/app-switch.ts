@@ -77,6 +77,16 @@ async function embeddedApp(page: Page): Promise<string | null> {
   return embedRoot(page).getAttribute("data-app-embed");
 }
 
+/**
+ * The title of the page a page-detail pane shows (its title field's value —
+ * the header's breadcrumb also carries the page's icon), or null while none
+ * is open.
+ */
+async function pageTitle(pane: Locator): Promise<string | null> {
+  const field = pane.first().locator('input[aria-label="Page title"]').first();
+  return (await field.count()) > 0 ? await field.inputValue() : null;
+}
+
 /** The launcher drawn by the embedded app's brand. */
 function launcherMark(page: Page): Locator {
   return embedRoot(page).getByRole("button", { name: "All apps" }).first();
@@ -248,11 +258,8 @@ await withBrowser(async (h) => {
   const pagePane = embedRoot(page).locator('[data-pane-id="page-detail"]');
   await renders(
     "the Origin chip opens the Bugs page",
-    async () =>
-      (await pagePane.count()) > 0
-        ? pagePane.first().getByText(BUGS_PAGE, { exact: true }).count()
-        : 0,
-    (n) => n > 0,
+    () => pageTitle(pagePane),
+    (title) => title === BUGS_PAGE,
   );
   pathStays("Origin chip");
   await noLeaveToast("Origin chip");
@@ -284,13 +291,8 @@ await withBrowser(async (h) => {
     );
     await renders(
       "Pages opens on the Bugs page",
-      async () => {
-        const pane = embedRoot(page).locator('[data-pane-id="page-detail"]');
-        return (await pane.count()) > 0
-          ? pane.first().getByText(BUGS_PAGE, { exact: true }).count()
-          : 0;
-      },
-      (n) => n > 0,
+      () => pageTitle(embedRoot(page).locator('[data-pane-id="page-detail"]')),
+      (title) => title === BUGS_PAGE,
     );
     pathStays("Open in Pages");
     await noLeaveToast("Open in Pages");

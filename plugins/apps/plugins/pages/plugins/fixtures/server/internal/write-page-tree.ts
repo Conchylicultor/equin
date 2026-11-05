@@ -70,7 +70,11 @@ function forestRows(
     };
     if (node.type === PAGE_BLOCK_TYPE)
       return [
-        { ...row, type: node.type, data: { title: node.title, icon: null } },
+        {
+          ...row,
+          type: node.type,
+          data: { title: node.title, icon: node.icon ?? null },
+        },
         ...forestRows(node.children, node.id, node.id, now),
       ];
     const text = [{ text: node.text }];

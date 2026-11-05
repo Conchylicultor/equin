@@ -3,9 +3,11 @@
  * "Design: a browser host's data kept in browser storage"). In `/demo`, in
  * one fresh browser context (so its IndexedDB starts empty), it:
  *
- *  1. opens Pages in the embed, creates a page ("New page") and names it;
- *  2. reloads the tab: the page is still there, and the seed did not run
- *     again (each seeded root page is listed once);
+ *  1. opens Pages in the embed: a seeded page wears the seed's icon; creates
+ *     a page ("New page"), names it, and picks an icon for it in the emoji
+ *     picker (its data loaded through the demo's worker);
+ *  2. reloads the tab: the page is still there with its icon, and the seed
+ *     did not run again (each seeded root page is listed once);
  *  3. opens a SECOND tab of the demo in the same context: it shows the page
  *     too (one SharedWorker, one database) — then creates another page there,
  *     which the first tab's sidebar shows live;
@@ -34,6 +36,10 @@ const OUT = arg("out") ?? "/tmp/demo-persistence";
 
 /** The seeded root pages (`website/demos/lumen`'s `core/internal/pages.ts`). */
 const ROOT_PAGES = ["Lumen", "Ideas"] as const;
+/** A seeded page and the icon the seed gave it. */
+const SEEDED_ICON = { title: "Ideas", emoji: "💭" } as const;
+/** The emoji the visitor picks for the page it created, and its search word. */
+const PICKED = { search: "rocket", emoji: "🚀" } as const;
 /** How long an app swap, a worker read or a host boot gets to render. */
 const RENDER_TIMEOUT_MS = 30_000;
 const MARKER = 'button:has-text("Conversations")';
@@ -42,11 +48,57 @@ function embedRoot(page: Page): Locator {
   return page.locator("[data-app-embed]").first();
 }
 
-/** The Pages sidebar entries titled exactly `title`. */
+/**
+ * The Pages sidebar entries titled exactly `title` — after the page's icon,
+ * an emoji glyph that is part of the row's text (hidden from assistive tech
+ * only).
+ */
 function sidebarEntries(page: Page, title: string): Locator {
   return embedRoot(page)
     .locator("[data-row-key]")
-    .filter({ hasText: new RegExp(`^\\s*${title}\\s*$`) });
+    .filter({
+      hasText: new RegExp(
+        `^\\s*(?:\\p{Extended_Pictographic}[\\p{Extended_Pictographic}\\p{Emoji_Modifier}\\uFE0F\\u200D]*\\s*)?${title}\\s*$`,
+        "u",
+      ),
+    });
+}
+
+/** The open page's header icon (the large glyph that opens the picker). */
+function headerIcon(page: Page): Locator {
+  return embedRoot(page)
+    .locator('[data-pane-id="page-detail"]')
+    .last()
+    .getByRole("button", { name: "Change page icon" });
+}
+
+/** Open the page titled `title` from the sidebar. */
+async function openPage(page: Page, title: string): Promise<void> {
+  await sidebarEntries(page, title).first().click();
+  await embedRoot(page)
+    .locator('[data-pane-id="page-detail"]')
+    .last()
+    .locator('input[aria-label="Page title"]')
+    .first()
+    .waitFor({ timeout: RENDER_TIMEOUT_MS });
+}
+
+/** Wait until the open page's header icon shows `emoji`. */
+async function showsIcon(
+  r: Report,
+  page: Page,
+  name: string,
+  emoji: string,
+): Promise<void> {
+  const settled = await waitFor(
+    async () =>
+      (await headerIcon(page).count()) === 0
+        ? null
+        : headerIcon(page).first().textContent(),
+    (text) => text?.trim() === emoji,
+    { timeoutMs: RENDER_TIMEOUT_MS },
+  );
+  r.ok(name, settled.ok, `header icon: ${JSON.stringify(settled.value)}`);
 }
 
 /** Switch the embed to Pages through its launcher. */
@@ -138,6 +190,40 @@ await withBrowser(async (h) => {
   await listed(r, page, "the created page is listed", FIRST, "some");
   await snap(page, OUT, "1-created");
 
+  // The header's tools show on hover; "Add icon" opens the emoji picker.
+  const detail = embedRoot(page).locator('[data-pane-id="page-detail"]').last();
+  await detail.locator('input[aria-label="Page title"]').first().hover();
+  await detail.getByRole("button", { name: "Add icon" }).first().click();
+  const search = page.getByPlaceholder("Search emoji…");
+  await search.waitFor({ timeout: RENDER_TIMEOUT_MS });
+  await search.fill(PICKED.search);
+  // The grid finds the emoji: its data loaded, through the demo's worker.
+  // Exactly the emoji: a ZWJ sequence holding it (🧑‍🚀) is another one.
+  const cell = page
+    .locator("button")
+    .filter({ hasText: new RegExp(`^\\s*${PICKED.emoji}\\s*$`, "u") })
+    .first();
+  const found = await waitFor(
+    () => cell.count(),
+    (n) => n > 0,
+    { timeoutMs: RENDER_TIMEOUT_MS },
+  );
+  r.ok(
+    `the emoji picker loads in the demo and finds "${PICKED.search}"`,
+    found.ok,
+    `waited ${found.waitedMs} ms`,
+  );
+  await snap(page, OUT, "1-picker");
+  await cell.click();
+  await showsIcon(r, page, "the picked icon is the page's", PICKED.emoji);
+  await openPage(page, SEEDED_ICON.title);
+  await showsIcon(
+    r,
+    page,
+    `the seeded "${SEEDED_ICON.title}" wears its icon`,
+    SEEDED_ICON.emoji,
+  );
+
   // ── 2. it survives a reload; the seed does not run again ────────────────
   await page.reload();
   await page.locator(MARKER).first().waitFor({ timeout: RENDER_TIMEOUT_MS });
@@ -148,6 +234,13 @@ await withBrowser(async (h) => {
     "after a reload, the created page is still listed",
     FIRST,
     "some",
+  );
+  await openPage(page, FIRST);
+  await showsIcon(
+    r,
+    page,
+    "after a reload, the created page keeps its picked icon",
+    PICKED.emoji,
   );
   for (const title of ROOT_PAGES) {
     await listed(

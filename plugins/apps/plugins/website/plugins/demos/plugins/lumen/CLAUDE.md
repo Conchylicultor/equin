@@ -195,6 +195,7 @@ data and seed; no app folder changes:
     - `page/editor.blockIdKind`
     - `page/inline-page-link.pageLinkToken`
     - `page/prompt/link.PAGES_CATEGORY_ID`
+    - `ui/icons/emoji.EmojiSchema`
     - `wish.WISHES_CATEGORY_ID`
   - Exports (types):
     - `DemoAgent`

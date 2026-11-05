@@ -51,6 +51,7 @@ import {
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { serverPortabilityOf } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import { blockIdKind } from "@plugins/page/plugins/editor/core";
+import { EmojiSchema } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 import { pageLinkToken } from "@plugins/page/plugins/inline-page-link/core";
 import { loadBacklinkSources } from "@plugins/page/plugins/links/server";
 import { loadPageTags } from "@plugins/page/plugins/tags/server";
@@ -97,6 +98,11 @@ const PROVIDERS: Entry[] = [
   ]),
   serverEntryFor("infra/plugins/warmup/plugins/sole-host", [
     "infra/plugins/warmup",
+  ]),
+  // The editor's page icons reach the emoji data mirror, whose cache is a
+  // data-files root.
+  serverEntryFor("infra/plugins/paths/plugins/data-files/plugins/memory", [
+    "infra/plugins/paths/plugins/data-files",
   ]),
 ];
 
@@ -206,6 +212,7 @@ const TREE: PageTreeFixture = [
     id: HOME,
     type: "page",
     title: "Atlas",
+    icon: EmojiSchema.parse("🗺️"),
     tags: [{ name: "Fixture tag", color: "green" }],
     starred: true,
     children: [
@@ -259,14 +266,15 @@ describe.if(IN_CHILD)("writePageTree on a portable host", () => {
       id: string;
       parent_id: string | null;
       title: string;
+      icon: string | null;
     }>(
-      sql`SELECT id, parent_id, data->>'title' AS title FROM page_blocks
+      sql`SELECT id, parent_id, data->>'title' AS title, data->>'icon' AS icon FROM page_blocks
           WHERE type = 'page' AND deleted_at IS NULL ORDER BY id`,
     );
     expect(rows.rows).toEqual([
-      { id: HOME, parent_id: null, title: "Atlas" },
-      { id: SPEC, parent_id: HOME, title: "Atlas spec" },
-      { id: NOTES, parent_id: null, title: "Notes" },
+      { id: HOME, parent_id: null, title: "Atlas", icon: "🗺️" },
+      { id: SPEC, parent_id: HOME, title: "Atlas spec", icon: null },
+      { id: NOTES, parent_id: null, title: "Notes", icon: null },
     ]);
   });
 

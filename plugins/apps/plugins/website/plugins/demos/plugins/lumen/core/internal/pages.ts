@@ -1,3 +1,4 @@
+import { EmojiSchema } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 import { blockIdKind } from "@plugins/page/plugins/editor/core";
 import { pageLinkToken } from "@plugins/page/plugins/inline-page-link/core";
 import type {
@@ -49,6 +50,7 @@ export const DEMO_PAGES: PageTreeFixture = [
     id: DEMO_PAGE_IDS.lumen,
     type: "page",
     title: "Lumen",
+    icon: EmojiSchema.parse("💡"),
     tags: [{ name: "In progress", color: "blue" }],
     starred: true,
     children: [
@@ -70,6 +72,7 @@ export const DEMO_PAGES: PageTreeFixture = [
         id: DEMO_PAGE_IDS.spec,
         type: "page",
         title: "Theme & storage spec",
+        icon: EmojiSchema.parse("📐"),
         children: [
           {
             id: blockId(11),
@@ -92,6 +95,7 @@ export const DEMO_PAGES: PageTreeFixture = [
         id: DEMO_PAGE_IDS.bugs,
         type: "page",
         title: "Bugs",
+        icon: EmojiSchema.parse("🐛"),
         tags: [{ name: "Bug", color: "red" }],
         children: [
           {
@@ -114,6 +118,7 @@ export const DEMO_PAGES: PageTreeFixture = [
     id: DEMO_PAGE_IDS.ideas,
     type: "page",
     title: "Ideas",
+    icon: EmojiSchema.parse("💭"),
     children: [
       { id: blockId(31), type: "text", text: "Share a notebook by link." },
       {
