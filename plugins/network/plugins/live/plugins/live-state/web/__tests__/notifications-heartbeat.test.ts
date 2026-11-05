@@ -162,4 +162,53 @@ describe("NotificationsClient — heartbeat pushStallMs", () => {
     expect(client.getChannelStatuses().worktree).not.toBe("open");
     expect(client.getChannelStatuses().serverPushStallMs.worktree).toBe(0);
   });
+
+  test("a ping's stalledResources lands per channel, notifies on change only, and a drop clears it", async () => {
+    const { client, socket } = await setup();
+    expect(client.getChannelStatuses().serverStalledResources).toEqual({
+      worktree: [],
+      central: [],
+    });
+    const listener = vi.fn();
+    client.subscribeChannelStatuses(listener);
+    listener.mockClear();
+
+    const stalled = [{ key: "host-fs.peek", ms: 93_000 }];
+    socket.serverSend({
+      kind: "ping",
+      pushStallMs: 0,
+      stalledResources: stalled,
+    });
+    await flush();
+    expect(client.getChannelStatuses().serverStalledResources.worktree).toEqual(
+      stalled,
+    );
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    socket.serverSend({
+      kind: "ping",
+      pushStallMs: 0,
+      stalledResources: [{ key: "host-fs.peek", ms: 93_000 }],
+    });
+    await flush();
+    expect(listener).toHaveBeenCalledTimes(1); // same content, no re-render
+
+    socket.serverSend({ kind: "ping", pushStallMs: 0 }); // an older server
+    await flush();
+    expect(client.getChannelStatuses().serverStalledResources.worktree).toEqual(
+      [],
+    );
+
+    socket.serverSend({
+      kind: "ping",
+      pushStallMs: 0,
+      stalledResources: stalled,
+    });
+    await flush();
+    socket.serverClose();
+    await flush();
+    expect(client.getChannelStatuses().serverStalledResources.worktree).toEqual(
+      [],
+    );
+  });
 });

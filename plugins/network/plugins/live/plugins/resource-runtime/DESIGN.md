@@ -65,6 +65,12 @@ Why one parameterized runtime for server and central:
     so a pass-only metric misses it.
   - Why the pass stamp is re-taken per re-drain pass: a steady notify stream
     holds the mutex across many short delivering passes, which is not a stall.
+  - Why a leaf's lane is reported apart (`stalledResources`), not folded into
+    `pushStallMs`: a lane holds only its own entry — the flush moves on — so
+    its age says nothing about the rest. Folded in, one `host-fs.peek` lane
+    hung on the filesystem for 93 s (2026-11-05, report-1793751205-f4r08j)
+    read as "live updates stuck — won't appear until the server restarts"
+    while every other push was delivered.
 
 ## `ScopePolicy` — the two questions a keyed resource must answer
 

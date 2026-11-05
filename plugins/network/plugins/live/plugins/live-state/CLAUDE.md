@@ -216,9 +216,11 @@ tabs.
   - Don't restore an unconditional echo; don't make the ignored `up-to-date`
     force a resub. Adopting an unbacked version drops your own `sub-ack` as
     stale.
-- **Pings carry `pushStallMs`** → `ChannelStatuses.serverPushStallMs` (health
-  Connection row, wedge watchdog); reset to 0 on any socket status change
-  (`notifications-heartbeat.test.ts`).
+- **Pings carry `pushStallMs`** (every push stopped) →
+  `ChannelStatuses.serverPushStallMs`, and **`stalledResources`** (one
+  resource's drain stuck while the rest flow, key + age) →
+  `serverStalledResources` (health Connection row, wedge watchdog); both reset
+  on any socket status change (`notifications-heartbeat.test.ts`).
 - **`sub-error`** (`SubErrorFrame`:
   `{ kind, id?, key, params, reason, verdict? }`) is gated on the local entry
   like any frame, records `noteContractRefusal`, and calls `fetchAfterSubError`:
@@ -741,6 +743,7 @@ Details:
     - `ResourceUnavailable`
     - `ResourceViewProps`
     - `SlowResourceInfo`
+    - `StalledResource`
     - `TransportInfo`
     - `UnansweredSubReport`
     - `WindowParams`

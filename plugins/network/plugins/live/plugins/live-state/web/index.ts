@@ -70,6 +70,7 @@ export type { HttpStaleDropReport } from "./stale-drop-reporter";
 export type {
   ResourceKey,
   ChannelStatuses,
+  StalledResource,
   LiveStateSocketKind,
   DebugSub,
   DebugSnapshot,

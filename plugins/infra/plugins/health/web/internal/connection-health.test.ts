@@ -8,11 +8,13 @@ function sockets(
   worktree: WsStatus,
   central: WsStatus,
   pushStallMs: Partial<ChannelStatuses["serverPushStallMs"]> = {},
+  stalledResources: Partial<ChannelStatuses["serverStalledResources"]> = {},
 ): ChannelStatuses {
   return {
     worktree,
     central,
     serverPushStallMs: { worktree: 0, central: 0, ...pushStallMs },
+    serverStalledResources: { worktree: [], central: [], ...stalledResources },
   };
 }
 
@@ -152,5 +154,90 @@ describe("connectionHealth — live updates stuck behind a server flush", () => 
       summary: "Reconnecting to server…",
       transitioning: true,
     });
+  });
+});
+
+describe("connectionHealth — one resource stuck while the rest flow", () => {
+  test("names the resource and says everything else still updates", () => {
+    expect(
+      connectionHealth(
+        sockets(
+          "open",
+          "open",
+          {},
+          {
+            worktree: [{ key: "host-fs.peek", ms: 93_000 }],
+          },
+        ),
+      ),
+    ).toEqual({
+      state: "attention",
+      summary:
+        "Live updates stuck for 1 min on host-fs.peek — everything else is still updating",
+    });
+  });
+
+  test("names two, then counts the rest, across both servers, with the longest age", () => {
+    expect(
+      connectionHealth(
+        sockets(
+          "open",
+          "open",
+          {},
+          {
+            worktree: [
+              { key: "a", ms: 5 * MIN },
+              { key: "b", ms: 2 * MIN },
+              { key: "c", ms: PUSH_STALL_MS },
+            ],
+            central: [{ key: "d", ms: 7 * MIN }],
+          },
+        ),
+      ).summary,
+    ).toBe(
+      "Live updates stuck for 7 min on a, b and 2 others — everything else is still updating",
+    );
+  });
+
+  test("below 30 s, or on a socket that is not open, nothing changes", () => {
+    expect(
+      connectionHealth(
+        sockets(
+          "open",
+          "open",
+          {},
+          {
+            worktree: [{ key: "a", ms: PUSH_STALL_MS - 1 }],
+          },
+        ),
+      ),
+    ).toEqual({ state: "ok", summary: "Server and central connected" });
+    expect(
+      connectionHealth(
+        sockets(
+          "reconnecting",
+          "open",
+          {},
+          {
+            worktree: [{ key: "a", ms: 10 * MIN }],
+          },
+        ),
+      ).summary,
+    ).toBe("Reconnecting to server…");
+  });
+
+  test("every push stopped outranks one resource stuck", () => {
+    expect(
+      connectionHealth(
+        sockets(
+          "open",
+          "open",
+          { worktree: 2 * MIN },
+          {
+            worktree: [{ key: "a", ms: 10 * MIN }],
+          },
+        ),
+      ).state,
+    ).toBe("critical");
   });
 });

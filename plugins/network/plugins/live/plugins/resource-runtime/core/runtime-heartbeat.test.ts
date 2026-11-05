@@ -1,7 +1,9 @@
 /**
- * The heartbeat ping carries `pushStallMs` — how long the oldest change the
- * runtime owes its sockets has gone undelivered (0 when nothing is owed). Run
- * with `./equin test plugins/network/plugins/live/plugins/resource-runtime`.
+ * The heartbeat ping carries how long the changes the runtime owes its sockets
+ * have gone undelivered, split by who holds them: `pushStallMs` while EVERY push
+ * is stopped (0 when nothing is owed that way), and `stalledResources` — the
+ * leaves whose own drain lane is stuck while every other push flows. Run with
+ * `./equin test plugins/network/plugins/live/plugins/resource-runtime`.
  *
  * The 2026-09-11 incident: a DB socket was closed under a query inside a flush,
  * the query's promise never settled, and — flushes being single-active — every
@@ -15,6 +17,10 @@
  * for 7 minutes while the flush age read 0. A `withNotifyBatch` whose function
  * never settles holds `batchDepth` above 0, so no change ever arms a flush. The
  * queued change's own age is what reports that one.
+ *
+ * The 2026-11-05 incident: one leaf's lane (`host-fs.peek`, loaders hung on the
+ * filesystem) was open 93 s while every other push flowed, and the single age
+ * read as the whole app frozen. A lane's age names its resource instead.
  *
  * The heartbeat interval and the clock are both captured, not waited on: the
  * interval's callback is taken off a `setInterval` spy when a probe socket opens,
@@ -77,31 +83,59 @@ function fakeClock(): { advance: (ms: number) => void; restore: () => void } {
   };
 }
 
+/**
+ * An upstream with a downstream drains on the pass's BARRIER, so a hung loader
+ * there holds the whole flush (a leaf would drain as a lane, off it).
+ */
+function defineBarrierEntry(
+  h: Harness,
+  key: string,
+  loader: () => Promise<number>,
+) {
+  const r = h.runtime.defineExternalResource({
+    key,
+    mode: "push",
+    schema: z.number(),
+    loader,
+  });
+  h.runtime.defineResource({
+    key: `${key}-down`,
+    mode: "push",
+    schema: z.number(),
+    loader: async () => 0,
+    dependsOn: [{ resource: r }],
+  });
+  return r;
+}
+
 describe("heartbeat — pushStallMs", () => {
   test("an idle runtime pings 0", async () => {
     const clock = fakeClock();
     try {
       const h = createHarness();
       const probe = openProbe(h);
-      expect(probe.beat()).toEqual({ kind: "ping", pushStallMs: 0 });
+      expect(probe.beat()).toEqual({
+        kind: "ping",
+        pushStallMs: 0,
+        stalledResources: [],
+      });
       clock.advance(60_000);
-      expect(probe.beat()).toEqual({ kind: "ping", pushStallMs: 0 });
+      expect(probe.beat()).toEqual({
+        kind: "ping",
+        pushStallMs: 0,
+        stalledResources: [],
+      });
     } finally {
       clock.restore();
     }
   });
 
-  test("a flush whose loader never settles pings a growing age, then 0 once it settles", async () => {
+  test("a flush whose barrier loader never settles pings a growing age, then 0 once it settles", async () => {
     const clock = fakeClock();
     try {
       const h = createHarness();
       const stuck = controllable(0);
-      const r = h.runtime.defineExternalResource({
-        key: "stuck",
-        mode: "push",
-        schema: z.number(),
-        loader: stuck.loader,
-      });
+      const r = defineBarrierEntry(h, "stuck", stuck.loader);
       await h.subscribe("stuck");
       const probe = openProbe(h);
 
@@ -130,12 +164,7 @@ describe("heartbeat — pushStallMs", () => {
     try {
       const h = createHarness();
       const slow = controllable(0);
-      const r = h.runtime.defineExternalResource({
-        key: "slow",
-        mode: "push",
-        schema: z.number(),
-        loader: slow.loader,
-      });
+      const r = defineBarrierEntry(h, "slow", slow.loader);
       await h.subscribe("slow");
       const probe = openProbe(h);
 
@@ -204,6 +233,95 @@ describe("heartbeat — pushStallMs", () => {
       await tick();
       expect(h.pushesFor("held")).toHaveLength(1);
       expect(probe.beat().pushStallMs).toBe(0);
+    } finally {
+      clock.restore();
+    }
+  });
+});
+
+describe("heartbeat — stalledResources", () => {
+  /** A leaf (no downstream): its drain runs as a lane, off the flush. */
+  function defineLeaf(h: Harness, key: string, loader: () => Promise<number>) {
+    return h.runtime.defineExternalResource({
+      key,
+      mode: "push",
+      schema: z.number(),
+      loader,
+    });
+  }
+
+  test("a leaf whose loader never settles is named with its age, while every other push flows", async () => {
+    const clock = fakeClock();
+    try {
+      const h = createHarness();
+      const stuck = controllable(0);
+      const stuckR = defineLeaf(h, "host-fs.peek", stuck.loader);
+      let n = 0;
+      const other = defineLeaf(h, "other", async () => ++n);
+      await h.subscribe("host-fs.peek");
+      await h.subscribe("other");
+      const probe = openProbe(h);
+
+      stuck.block();
+      stuck.setValue(1);
+      stuckR.notify();
+      await tick();
+      clock.advance(30_000);
+      // A change landing mid-lane waits for the lane: owed to the same resource.
+      stuckR.notify();
+      other.notify();
+      await tick();
+      expect(h.pushesFor("other").length).toBeGreaterThan(0);
+
+      clock.advance(63_000);
+      expect(probe.beat()).toEqual({
+        kind: "ping",
+        pushStallMs: 0,
+        stalledResources: [{ key: "host-fs.peek", ms: 93_000 }],
+      });
+
+      stuck.release();
+      await tick();
+      await tick();
+      expect(h.pushesFor("host-fs.peek").length).toBeGreaterThan(0);
+      expect(probe.beat()).toEqual({
+        kind: "ping",
+        pushStallMs: 0,
+        stalledResources: [],
+      });
+    } finally {
+      clock.restore();
+    }
+  });
+
+  test("names the oldest five, oldest first", async () => {
+    const clock = fakeClock();
+    try {
+      const h = createHarness();
+      const gates = Array.from({ length: 7 }, () => controllable(0));
+      const resources = gates.map((g, i) =>
+        defineLeaf(h, `leaf-${i}`, g.loader),
+      );
+      for (let i = 0; i < resources.length; i++) await h.subscribe(`leaf-${i}`);
+      const probe = openProbe(h);
+
+      for (let i = 0; i < resources.length; i++) {
+        gates[i]!.block();
+        gates[i]!.setValue(1);
+        resources[i]!.notify();
+        await tick();
+        clock.advance(1_000);
+      }
+      expect(probe.beat().stalledResources).toEqual([
+        { key: "leaf-0", ms: 7_000 },
+        { key: "leaf-1", ms: 6_000 },
+        { key: "leaf-2", ms: 5_000 },
+        { key: "leaf-3", ms: 4_000 },
+        { key: "leaf-4", ms: 3_000 },
+      ]);
+      expect(probe.beat().pushStallMs).toBe(0);
+      for (const g of gates) g.release();
+      await tick();
     } finally {
       clock.restore();
     }

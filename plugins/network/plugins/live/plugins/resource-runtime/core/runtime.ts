@@ -1520,8 +1520,9 @@ interface RegistryEntry {
    * A leaf's (no `downstream`) drain in flight off the flush loop's critical
    * path — see `runFlushPass`. One drain per entry at a time: a pass skips the
    * entry while this is set, and the lane re-arms its held work on settle.
-   * Never rejects. `startedAt` (`performance.now()`) feeds `pushStallMs`: the
-   * pendings it took are no longer in `pendingNotifies`.
+   * Never rejects. `startedAt` (`performance.now()`) feeds `pushStall()`'s
+   * `stalledResources`: the pendings it took are no longer in
+   * `pendingNotifies`, and the stall is this entry's alone.
    */
   lane?: { done: Promise<void>; startedAt: number };
   /**
@@ -2661,6 +2662,10 @@ export type PersistedValueCheck =
 
 const HEARTBEAT_MS = 20_000;
 
+// How many stalled resources one ping names (the oldest first): a hung
+// filesystem can hold several leaves at once, and the row names a few at most.
+const STALLED_RESOURCES_MAX = 5;
+
 // How long a closed socket's subs stay held for its tabs to replay them on a
 // new socket (the runtime's `detached` linger). The client reconnects after
 // 0.25–0.75 s, then backs off to at most 7.5 s (networking's
@@ -2917,29 +2922,49 @@ export function createResourceRuntime(
   // passes, and that is not a stall.
   // research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md
   let flushPassStartedAt: number | null = null;
-  // How long the oldest change this runtime owes its sockets has gone
-  // undelivered (0 when nothing is owed) — the heartbeat's `pushStallMs`, the one
-  // frame that still reaches the tab while pushes are stuck. Two ways a change
-  // waits: inside a flush pass that does not settle (the pass's age), or queued
-  // with no flush ever starting to take it (its pending's `enqueuedAt`) — an
-  // open `withNotifyBatch` that never settles holds every entry's flush, so no
-  // pass opens at all; so did a stranded scheduler request before `flushState`
-  // (2026-10-26: 7 min of no pushes behind a 0 flush age).
-  // A debounced entry's held pending is owed for at most its window, far below
-  // any stall threshold. A leaf's drain off the critical path (`lane`) took its
-  // pendings out of `pendingNotifies`, so its own start counts too.
+  // How long the changes this runtime owes its sockets have gone undelivered,
+  // split by who holds them — the heartbeat's payload, the one frame that still
+  // reaches the tab while pushes are stuck.
+  //
+  // `pushStallMs` — every push stopped (0 when nothing is owed that way). Two
+  // ways a change waits on the whole runtime: inside a flush pass that does
+  // not settle (the pass's age), or queued with no flush ever starting to take
+  // it (its pending's `enqueuedAt`) — an open `withNotifyBatch` that never
+  // settles holds every entry's flush, so no pass opens at all; so did a
+  // stranded scheduler request before `flushState` (2026-10-26: 7 min of no
+  // pushes behind a 0 flush age). A debounced entry's held pending is owed for
+  // at most its window, far below any stall threshold.
+  //
+  // `stalledResources` — ONE resource stopped while every other push flows: a
+  // leaf's drain off the critical path (`lane`) holds only its own entry. It
+  // took its pendings out of `pendingNotifies`, and the ones landing meanwhile
+  // wait for it (a pass skips an entry whose lane is in flight), so the lane's
+  // start and those pendings are that resource's age, never the runtime's.
+  // A lane whose load hangs (2026-11-05: `host-fs.peek` on a stuck filesystem,
+  // 93 s) is named, instead of reading as the whole app frozen. The oldest
+  // `STALLED_RESOURCES_MAX`, oldest first.
   // O(entries + pendings), once per heartbeat.
-  function pushStallMs(): number {
+  function pushStall(): {
+    pushStallMs: number;
+    stalledResources: { key: string; ms: number }[];
+  } {
     const now = performance.now();
     let oldest = flushPassStartedAt ?? now;
+    const lanes: { key: string; ms: number }[] = [];
     for (const entry of registry.values()) {
-      if (entry.lane && entry.lane.startedAt < oldest)
-        oldest = entry.lane.startedAt;
+      let entryOldest = entry.lane ? entry.lane.startedAt : now;
       for (const pending of entry.pendingNotifies.values()) {
-        if (pending.enqueuedAt < oldest) oldest = pending.enqueuedAt;
+        if (pending.enqueuedAt < entryOldest) entryOldest = pending.enqueuedAt;
       }
+      if (entry.lane)
+        lanes.push({ key: entry.key, ms: Math.round(now - entryOldest) });
+      else if (entryOldest < oldest) oldest = entryOldest;
     }
-    return Math.round(now - oldest);
+    lanes.sort((a, b) => b.ms - a.ms || (a.key < b.key ? -1 : 1));
+    return {
+      pushStallMs: Math.round(now - oldest),
+      stalledResources: lanes.slice(0, STALLED_RESOURCES_MAX),
+    };
   }
   let batchDepth = 0;
   const heartbeats = new Map<RuntimeSocket, ReturnType<typeof setInterval>>();
@@ -6389,7 +6414,7 @@ export function createResourceRuntime(
     flushState = "running";
     try {
       for (;;) {
-        // A fresh pass is progress: the previous one settled (see `pushStallMs`).
+        // A fresh pass is progress: the previous one settled (see `pushStall`).
         flushPassStartedAt = performance.now();
         // Each pass runs inside the injected flush wrapper (server:
         // recordEntrySpan("flush", ...)) so each pass is one `flush` entry and the
@@ -7666,11 +7691,12 @@ export function createResourceRuntime(
   const notificationsWsHandler: WsHandler = {
     open(ws) {
       sockets.set(ws, { ws, subs: new Map(), framesSent: 0 });
-      // `pushStallMs`: how long the oldest owed change has gone undelivered (0
-      // when nothing is owed) — see `pushStallMs()`. The client reads a ping
-      // without it as 0.
+      // How long owed changes have gone undelivered — every push stopped
+      // (`pushStallMs`, 0 when nothing is owed) and one resource's drain
+      // stopped (`stalledResources`) — see `pushStall()`. The client reads a
+      // ping without them as 0 / none.
       const timer = setInterval(
-        () => sendJson(ws, { kind: "ping", pushStallMs: pushStallMs() }),
+        () => sendJson(ws, { kind: "ping", ...pushStall() }),
         HEARTBEAT_MS,
       );
       heartbeats.set(ws, timer);

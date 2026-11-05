@@ -208,8 +208,20 @@ const c = <const K extends string, const F extends WireFields>(
  *   stands behind (catch-up replay, a forced resubscribe's answer, …).
  */
 const SERVER_FRAMES = {
-  /** Keepalive, carrying how long the oldest change the server owes has gone undelivered (0 when none). */
-  ping: s("ping", { pushStallMs: w.number }),
+  /**
+   * Keepalive, carrying how long the changes the server owes have gone
+   * undelivered: `pushStallMs` while EVERY push is stopped (a flush pass that
+   * does not settle, or a change no flush takes; 0 when none), and
+   * `stalledResources` — the resources whose own drain is stuck while every
+   * other push flows (key and age, oldest first, a few at most). Optional: a
+   * server that predates it sends none.
+   */
+  ping: s("ping", {
+    pushStallMs: w.number,
+    stalledResources: w.optional(
+      w.array(w.object({ key: w.string, ms: w.number })),
+    ),
+  }),
   "sub-error": s("sub-error", {
     id: w.optional(w.number),
     tabId: w.optional(w.string),

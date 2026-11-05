@@ -236,19 +236,32 @@ const SUB_KEEPALIVE_MS = 30_000;
 
 type SocketKind = keyof typeof WS_URLS;
 
+/** One resource whose own push is stuck while the others flow: its key and how long its oldest owed change has waited. */
+export type StalledResource = { readonly key: string; readonly ms: number };
+
 export type ChannelStatuses = {
   worktree: WsStatus;
   central: WsStatus;
   /**
-   * Per channel: how long the oldest change the server owes had gone
-   * undelivered at its latest heartbeat ping (0 when nothing is owed, and 0
-   * until the first ping of the current connection). A server whose pushes
-   * stopped — a flush that never settles, or no flush ever starting — leaves
-   * the socket open and quiet, so this is the only sign of it the tab gets;
-   * the health report's Connection row reads it.
+   * Per channel: how long EVERY push had been stopped at the server's latest
+   * heartbeat ping (0 when nothing is owed that way, and 0 until the first
+   * ping of the current connection). A server whose pushes stopped — a flush
+   * that never settles, or no flush ever starting — leaves the socket open and
+   * quiet, so this is the only sign of it the tab gets; the health report's
+   * Connection row reads it.
    * research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md
    */
   serverPushStallMs: Record<LiveStateSocketKind, number>;
+  /**
+   * Per channel: the resources whose own drain was stuck at the latest ping
+   * while every other push flowed (a leaf's lane whose loader hangs), oldest
+   * first, a few at most; empty until the first ping of the current
+   * connection, and from a server that predates it.
+   */
+  serverStalledResources: Record<
+    LiveStateSocketKind,
+    readonly StalledResource[]
+  >;
 };
 
 /** Live-state pipeline socket kind, as classified from a ws-status-bus url. */
@@ -636,6 +649,11 @@ export class NotificationsClient {
     worktree: 0,
     central: 0,
   };
+  /** Latest heartbeat `stalledResources` per channel — reset like `serverPushStallMs`. */
+  private serverStalledResources: Record<
+    SocketKind,
+    readonly StalledResource[]
+  > = { worktree: [], central: [] };
   private statusListeners = new Set<(s: WsStatus) => void>();
   private channelStatusListeners = new Set<(s: ChannelStatuses) => void>();
   /** Fired on any sub/version/socket/transport change for the Layer-2 inspector. */
@@ -767,8 +785,10 @@ export class NotificationsClient {
     this.unsubscribeFromBus = subscribeWsStatus(({ url, status }) => {
       const kind = this.socketKindOf(url);
       if (kind === null) return;
-      if (this.channelStatuses.get(url) !== status)
+      if (this.channelStatuses.get(url) !== status) {
         this.serverPushStallMs[kind] = 0;
+        this.serverStalledResources[kind] = [];
+      }
       this.channelStatuses.set(url, status);
       // Stamp the first instant THIS channel reached "open" (per-origin cold-
       // start latch; see `firstReadyByKind`). Written once per kind, never
@@ -881,24 +901,50 @@ export class NotificationsClient {
       central:
         this.channelStatuses.get(this.socketUrls.central) ?? "connecting",
       serverPushStallMs: { ...this.serverPushStallMs },
+      serverStalledResources: { ...this.serverStalledResources },
     };
   }
 
   /**
-   * Record a heartbeat's `pushStallMs` for `kind`. Notifies channel-status
-   * listeners only when the value moved, so an idle server's pings (0 → 0)
+   * Record a heartbeat's stall report for `kind`: `pushStallMs` (every push
+   * stopped) and `stalledResources` (one resource's drain stuck). Notifies
+   * channel-status listeners only when either moved, so an idle server's pings
    * re-render nothing. Every tab records it: the shared socket broadcasts every
    * frame, pings included, to all tabs.
    */
-  private noteServerPushStallMs(kind: SocketKind, raw: unknown): void {
-    const ms = raw ?? 0;
+  private noteServerPushStall(
+    kind: SocketKind,
+    rawMs: unknown,
+    rawResources: readonly StalledResource[] | undefined,
+  ): void {
+    const ms = rawMs ?? 0;
     if (typeof ms !== "number" || !Number.isFinite(ms) || ms < 0) {
       throw new Error(
-        `[notifications] ping carried a malformed pushStallMs: ${JSON.stringify(raw)}`,
+        `[notifications] ping carried a malformed pushStallMs: ${JSON.stringify(rawMs)}`,
       );
     }
-    if (this.serverPushStallMs[kind] === ms) return;
+    const resources = rawResources ?? [];
+    for (const r of resources) {
+      if (
+        typeof r.key !== "string" ||
+        typeof r.ms !== "number" ||
+        !Number.isFinite(r.ms) ||
+        r.ms < 0
+      ) {
+        throw new Error(
+          `[notifications] ping carried a malformed stalledResources entry: ${JSON.stringify(r)}`,
+        );
+      }
+    }
+    const prev = this.serverStalledResources[kind];
+    const sameResources =
+      prev.length === resources.length &&
+      prev.every(
+        (r, i) => r.key === resources[i]!.key && r.ms === resources[i]!.ms,
+      );
+    if (this.serverPushStallMs[kind] === ms && sameResources) return;
     this.serverPushStallMs[kind] = ms;
+    this.serverStalledResources[kind] = resources;
     const channels = this.getChannelStatuses();
     for (const fn of this.channelStatusListeners) fn(channels);
     this.emitDebug();
@@ -2276,11 +2322,12 @@ export class NotificationsClient {
     if (msg.kind === "ping") {
       // Server keepalive: never answered (per-tab duplicate `pong`s would be N×
       // writes through the shared socket for nothing). It does carry how long
-      // the server's oldest owed change has waited, which the health report
-      // reads as "live updates stuck".
-      this.noteServerPushStallMs(
+      // the server's owed changes have waited — every push, and per stuck
+      // resource — which the health report reads as "live updates stuck".
+      this.noteServerPushStall(
         channel === this.channels.central ? "central" : "worktree",
         msg.pushStallMs,
+        msg.stalledResources,
       );
       return;
     }

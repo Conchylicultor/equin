@@ -31399,7 +31399,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `network/live/live-state.getNotificationsClient`
           - `network/live/live-state.liveStateSocketKind`
-          - `network/live/live-state.LiveStateSocketKind`
           - `network/live/live-state.unansweredSubReportSink`
           - `network/live/live-state.useNotificationsChannelStatuses`
           - `primitives/networking.NetDiagEvent`
@@ -35561,6 +35560,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ResourceUnavailable`
               - `ResourceViewProps`
               - `SlowResourceInfo`
+              - `StalledResource`
               - `TransportInfo`
               - `UnansweredSubReport`
               - `WindowParams`

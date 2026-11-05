@@ -86,12 +86,17 @@ it once and re-presents its types as its own public surface.
   reconnect and replay, re-reading every value. Every send goes through
   `deliver`; never call `ws.send` directly. Pinned by
   `runtime-backpressure.test.ts`.
-- **Heartbeat `pushStallMs`**: age of the oldest undelivered change.
-  - It is the oldest of the running pass's start (re-taken per re-drain pass),
-    an in-flight lane's start, and the oldest queued pending's `enqueuedAt`.
-  - Covers a hung loader and a change no flush ever picks up (e.g. a
-    `withNotifyBatch` that never settles).
-  - Health's Connection row flags ≥ 30 s.
+- **Heartbeat stall report** (`pushStall()`), split by who holds the change:
+  - `pushStallMs` — EVERY push stopped: the oldest of the running pass's start
+    (re-taken per re-drain pass) and the oldest queued pending's `enqueuedAt`
+    of an entry with no lane in flight. Covers a hung barrier loader and a
+    change no flush ever picks up (a `withNotifyBatch` that never settles).
+  - `stalledResources` — ONE resource stopped while the rest flow: per entry
+    with a lane in flight, the older of the lane's start and its own pendings
+    (they wait for the lane), `{ key, ms }`, oldest first, at most
+    `STALLED_RESOURCES_MAX`. A leaf's lane never ages `pushStallMs`: a hung
+    `host-fs.peek` read as the whole app frozen (2026-11-05).
+  - Health's Connection row flags either ≥ 30 s (critical / attention).
 
 ## `ScopePolicy` — the two questions a keyed resource must answer
 

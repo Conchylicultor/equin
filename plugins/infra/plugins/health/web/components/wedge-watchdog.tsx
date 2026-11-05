@@ -9,7 +9,6 @@ import {
   liveStateSocketKind,
   unansweredSubReportSink,
   useNotificationsChannelStatuses,
-  type LiveStateSocketKind,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { getHealth } from "../internal/client";
@@ -37,7 +36,8 @@ type WedgeKind =
   | "connect-stalled"
   | "port-evicted"
   | "unanswered-sub"
-  | "push-stall";
+  | "push-stall"
+  | "push-stall-resource";
 
 // A net-diag event's url is the absolute socket url the worker dialed; the
 // live-state classifier keys on the path.
@@ -100,32 +100,56 @@ function wedge(
  */
 export function WedgeWatchdog() {
   // --- Signal 5: a server whose pushes stopped on an open socket ---
-  // The heartbeat's `pushStallMs` — the age of the oldest change the server
-  // owes — is the only frame that still arrives, so the tab is the one place
-  // that can report it. The same threshold turns the Connection row critical.
-  // One report per channel per episode: an episode ends when the stall drops
-  // back under the threshold (delivered, or the socket changed status).
+  // The heartbeat's stall report is the only frame that still arrives, so the
+  // tab is the one place that can report it. The same threshold drives the
+  // Connection row. Two shapes, reported apart:
+  // - `pushStallMs`: EVERY push stopped (a flush that never settles) — one
+  //   report per channel per episode;
+  // - `stalledResources`: one resource's drain stuck while the rest flow (a
+  //   leaf loader hung on the filesystem) — one report per resource key per
+  //   channel per episode, the key in the discriminator: each is its own bug.
+  // An episode ends when the age drops back under the threshold (delivered,
+  // or the socket changed status).
   const statuses = useNotificationsChannelStatuses();
-  const stalled = useRef(new Set<LiveStateSocketKind>());
+  const stalled = useRef(new Set<string>());
   useEffect(() => {
+    const now = new Set<string>();
     for (const kind of ["worktree", "central"] as const) {
+      if (statuses[kind] !== "open") continue;
       const ms = statuses.serverPushStallMs[kind];
-      if (statuses[kind] !== "open" || ms < PUSH_STALL_MS) {
-        stalled.current.delete(kind);
-        continue;
+      if (ms >= PUSH_STALL_MS) {
+        const id = `push-stall:${kind}`;
+        now.add(id);
+        if (!stalled.current.has(id))
+          wedge(
+            "push-stall",
+            id,
+            `the ${kind} server's oldest change has gone undelivered for ${Math.round(ms / 1000)}s on an open socket`,
+            {
+              description:
+                "Changes are saved but won't appear until the server restarts",
+            },
+          );
       }
-      if (stalled.current.has(kind)) continue;
-      stalled.current.add(kind);
-      wedge(
-        "push-stall",
-        `push-stall:${kind}`,
-        `the ${kind} server's oldest change has gone undelivered for ${Math.round(ms / 1000)}s on an open socket`,
-        {
-          description:
-            "Changes are saved but won't appear until the server restarts",
-        },
-      );
+      // Every push stopped covers its lanes too: "while every other push
+      // flows" would be false (a barrier entry awaiting a leaf's lane).
+      if (ms >= PUSH_STALL_MS) continue;
+      for (const r of statuses.serverStalledResources[kind]) {
+        if (r.ms < PUSH_STALL_MS) continue;
+        const id = `push-stall-resource:${kind}:${r.key}`;
+        now.add(id);
+        if (!stalled.current.has(id))
+          wedge(
+            "push-stall-resource",
+            id,
+            `the ${kind} server's push of ${r.key} has been stuck for ${Math.round(r.ms / 1000)}s while every other push flows`,
+            {
+              description: `${r.key} isn't updating — everything else is`,
+            },
+          );
+      }
     }
+    stalled.current = now;
   }, [statuses]);
 
   useEffect(() => {
