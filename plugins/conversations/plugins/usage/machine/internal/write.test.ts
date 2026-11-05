@@ -19,10 +19,8 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
-import {
-  installDerivedUpdatedAt,
-  registeredDerivedUpdatedAt,
-} from "@plugins/database/plugins/derived-updated-at/server";
+import { registeredDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
 import {
   _attempts,
   _conversations,
@@ -48,7 +46,10 @@ beforeAll(async () => {
     (s) => s.table === "conversations_ext_usage",
   );
   expect(spec).toHaveLength(1);
-  await installDerivedUpdatedAt(t.db, spec);
+  await installDbTriggers(
+    t.db,
+    spec.map((s) => s.triggerSet),
+  );
   await t.db.insert(_tasks).values({
     id: "task-w",
     clusterId: "task-w",

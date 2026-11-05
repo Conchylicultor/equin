@@ -20916,31 +20916,43 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Server: `@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server/testing`
               - `worktreeDbScenario` — Run one scenario against the REAL worktree database inside a transaction that is always rolled back, returning whatever the body read just before the rollback.
               - Types: `DbExecutor`
-    - **`db-triggers`** — Declared database triggers: defineDbTriggers names a set of plpgsql functions and the triggers that call them (asserted at module eval to create what they are named), contributed as DbTrigger and installed by the boot schema layer after the migrations — signature-in-COMMENT, advisory-locked, a no-op when current, asserted after — so an invariant a plugin needs the database itself to keep (a write that must always come with another) holds for every writer.
-      - Cross-plugin:
-        - Imported by:
-          - `database`
-          - `database/migrations`
-          - `tasks/tasks-core`
+    - **`db-triggers`** — The one trigger installer: defineDbTriggers names a set of plpgsql functions and the triggers that call them (asserted at module eval to create what they are named, schema included), contributed as DbTrigger; installDbTriggers installs every declared set — a plugin's invariants, the derived updatedAt triggers, the rollups' maintain triggers, graphile's superseded trigger — by one protocol: a per-object stamp in each COMMENT (DDL hash + catalog-definition hash, so an out-of-band replacement is seen), only stale objects re-run, every table in one fixed order one savepoint each, owned-but-undeclared objects dropped (a whole removed set under sweep), advisory-locked, asserted after.
       - Server:
+        - Uses: `primitives/log-channels.defineLogSink`
         - Exports (types):
           - `DbFunctionDdl`
           - `DbTriggerDdl`
           - `DbTriggerInstall`
           - `DbTriggerSet`
+          - `InstallDbTriggersOptions`
         - Exports (values):
           - `DbTrigger`
           - `defineDbTriggers`
           - `installDbTriggers`
-    - **`derived-tables`** — Trigger-maintained materialized rollup tables as data: defineRollup generates a rollup's table, a maintain function and triggers per source (diffing the columns it reads, advisory-locked per key) and a diff-first reconcile; the boot schema layer installs only what changed, one source table per savepoint, and reports what each reconcile healed (reconciledRollups). rollupSources() maps each rollup to the tables whose writes move it.
+      - Cross-plugin:
+        - Imported by:
+          - `database`
+          - `database/derived-tables`
+          - `database/derived-updated-at`
+          - `database/migrations`
+          - `infra/jobs`
+          - `tasks/tasks-core`
+    - **`derived-tables`** — Trigger-maintained materialized rollup tables as data: defineRollup generates a rollup's table, a maintain function and triggers per source (diffing the columns it reads, advisory-locked per key) and a diff-first reconcile; each rollup's functions and triggers a db-triggers set (rollup.<table>) the one trigger installer installs; the boot schema layer prepares the tables, installs every trigger set at once, reconciles, and reports what each reconcile healed (reconciledRollups). rollupSources() maps each rollup to the tables whose writes move it.
       - Server:
-        - Uses: `primitives/log-channels.defineLogSink`
+        - Uses:
+          - `database/db-triggers.DbTriggerInstall`
+          - `database/db-triggers.DbTriggerSet`
+          - `database/db-triggers.defineDbTriggers`
+          - `database/db-triggers.installDbTriggers`
+          - `primitives/log-channels.defineLogSink`
+        - Exports (types): `PreparedRollups`
         - Exports (values):
           - `DerivedTable`
           - `feedExemptTables`
+          - `prepareRollupTables`
           - `publishReconciledRollups`
-          - `rebuildDerivedTables`
           - `reconciledRollups`
+          - `reconcileRollups`
           - `rollupSources`
       - Core:
         - Uses: `database/derived-views.assertImperativePublicTable`
@@ -20967,20 +20979,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core`
       - Test helpers:
         - Server: `@plugins/database/plugins/derived-tables/server/testing`
-          - `installRollups` — Install `rollups` onto a throwaway test database (`createTestDb`) whose source tables exist, and reconcile them — the SAME code path the boot schema layer runs (`rebuildDerivedTables`), so the DDL and the reconcile under test are byte-identical to what a backend installs.
+          - `installRollups` — Install `rollups` onto a throwaway test database (`createTestDb`) whose source tables exist, and reconcile them — the SAME code path the boot schema layer runs (prepare the tables, install the trigger sets, reconcile), so the DDL and the reconcile under test are byte-identical to what a backend installs.
           - `rollupSourcesOf` — `rollupSources` over an explicit rollup list (a headless suite has no contributions).
-    - **`derived-updated-at`** — Derived updatedAt: compiles a table's per-column touchedBy rules (declared in defineEntity's meta.updatedAt, or deriveUpdatedAt on a raw pgTable) into a BEFORE UPDATE trigger that sets updated_at = now() only when a counted column really changed and RAISEs on any app write to it; a registry filled at module eval, the boot installer (signature-in-COMMENT, advisory-locked, asserted) the database plugin runs right after migrations, and a check that every schema table with an updated_at column declares one.
-      - Cross-plugin:
-        - Imported by:
-          - `apps/chord/curriculum`
-          - `apps/chord/song-index`
-          - `conversations/conversations-view/grouped`
-          - `database`
-          - `database/migrations`
-          - `debug/profiling/op-log/op-store`
-          - `infra/entities`
-          - `ui/theme-engine/saved-themes`
+    - **`derived-updated-at`** — Derived updatedAt: compiles a table's per-column touchedBy rules (declared in defineEntity's meta.updatedAt, or deriveUpdatedAt on a raw pgTable) into a BEFORE UPDATE trigger that sets updated_at = now() only when a counted column really changed and RAISEs on any app write to it; each compiled to a db-triggers set (updated-at.<table>) the boot schema layer installs with every other declared trigger set; a registry filled at module eval, and a check that every schema table with an updated_at column declares one.
       - Server:
+        - Uses: `database/db-triggers.defineDbTriggers`
         - DB schema: `plugins/database/plugins/derived-updated-at/server/internal/from-table.ts`
         - Exports (types):
           - `DerivedUpdatedAtSpec`
@@ -20990,9 +20993,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `compileFromTable`
           - `deriveUpdatedAt`
-          - `installDerivedUpdatedAt`
           - `registerDerivedUpdatedAt`
           - `registeredDerivedUpdatedAt`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/chord/curriculum`
+          - `apps/chord/song-index`
+          - `conversations/conversations-view/grouped`
+          - `database`
+          - `debug/profiling/op-log/op-store`
+          - `infra/entities`
+          - `ui/theme-engine/saved-themes`
     - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
       - Server:
         - Uses: `primitives/log-channels.defineLogSink`
@@ -21176,9 +21187,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `database/db-triggers.DbTriggerSet`
           - `database/db-triggers.installDbTriggers`
-          - `database/derived-tables.rebuildDerivedTables`
-          - `database/derived-updated-at.DerivedUpdatedAtSpec`
-          - `database/derived-updated-at.installDerivedUpdatedAt`
+          - `database/derived-tables.prepareRollupTables`
+          - `database/derived-tables.reconcileRollups`
           - `database/derived-views.DeclaredView`
           - `database/derived-views.dropDerivedViews`
           - `database/derived-views.rebuildDerivedViews`
@@ -32134,6 +32144,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
           - `database/connection.createDbPool`
           - `database/connection.withQueryDeadline`
+          - `database/db-triggers.defineDbTriggers`
+          - `database/db-triggers.installDbTriggers`
           - `database/sql-column.parsedJson`
           - `database/sql-column.parsedText`
           - `database/sql-projection.parsed`
@@ -46177,11 +46189,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×11
           - `debug` ×9
           - `infra` ×7
-          - `database` ×5
+          - `database` ×6
           - `framework` ×5
           - `network` ×4
           - `conversations` ×3

@@ -1,6 +1,6 @@
 /**
  * Real-DB suite for the `attempt_conv_agg` rollup — the generated DDL and
- * reconcile `rebuildDerivedTables` runs on EVERY backend boot (through
+ * reconcile `reconcileRollups` runs on EVERY backend boot (through
  * `installRollups`, the same path). A syntax error or a shape change that
  * silently fails to apply wedges every worktree's boot, so this exercises the
  * actual SQL against a throwaway database (db-test-fixture) rather than

@@ -71,8 +71,8 @@ export const attemptConvAgg = defineRollup({
   against; a carry (or via hop) has the key's type; one source per table; `select`
   calls `scope`; a closure's columns have the key's type and its edge table is a
   source carrying `child`.
-- **Asserted at install** (whenever a rollup's maintain functions are
-  (re)installed): the `select`, compiled as a temp view, returns exactly the
+- **Asserted at install** (whenever a rollup's trigger set has anything to
+  (re)install, before its DDL): the `select`, compiled as a temp view, returns exactly the
   table's columns (the projection reads them by name, so an extra one would be
   dropped silently), and every column it reads is declared — on a source table
   its pk, `carry` or a `reads` entry, on a via table `match` or `key`; any other
@@ -112,54 +112,54 @@ requires each `via` table to be a source of the same rollup carrying the hop's
 `key`, reading its `match`, firing on `update` and `delete` — without it the
 reader's route would miss the old key exactly as the maintain function does.
 
-## The boot install (`rebuildDerivedTables`)
+## The boot install
 
-Runs inside the migrations plugin's **one boot schema-layer transaction**
-(`applySchemaLayer`, from the `database` plugin's `onReadyBlocking`), after the
-migrations and `installDerivedUpdatedAt` and before `rebuildDerivedViews` (a view
-may read a rollup). It takes `db` and `rollups` as arguments — never the database
-barrel (a cycle) nor `DerivedTable.getContributions()` (empty in the
+Three steps inside the migrations plugin's **one boot schema-layer
+transaction** (`applySchemaLayer`, from the `database` plugin's
+`onReadyBlocking`), after the migrations and before `rebuildDerivedViews` (a
+view may read a rollup). Each takes `db` and `rollups` as arguments — never the
+database barrel (a cycle) nor `DerivedTable.getContributions()` (empty in the
 `migration-applies-clean` check, a process that never boots).
+`installRollups(db, rollups)` (`server/testing`) is the same three steps over
+the rollups alone, for a test database.
 
 ### Definition: only what changed
 
-- **Table** — compared to its live shape (columns, types, nullability, key)
-  every boot; created when missing, **dropped (CASCADE) and recreated** when it
-  differs. A rollup is derived, so a shape change is a refill by the reconcile,
-  never a migration; `rebuildDerivedViews` restores a view the CASCADE dropped.
-- **Maintain functions** — `CREATE OR REPLACE`, no table lock, signature-gated
-  per rollup (`functions:<rollup>` in `derived_table_object_state`), after the
-  install-time `select` assert above.
-- **Triggers — one source table per savepoint, in a fixed order (by name), only
-  when that table's triggers changed** (C12 / D25; signature `triggers:<table>`
-  plus the catalog: each trigger's name, function and shape — AFTER, FOR EACH
-  STATEMENT, its one op, no column list — so a trigger altered by hand is
-  reinstalled rather than left for A21 to refuse). A trigger change takes ShareRowExclusive on the source
-  (`CREATE OR REPLACE TRIGGER`; only dropping a stale or legacy trigger takes
-  AccessExclusive), held until the schema layer commits — savepoints release
-  nothing. During a hot swap the old backend still writes those tables; the
-  fixed order (attempts < conversations < pushes, the app's parent-before-child
-  write order) means a writer in that order and the layer only ever wait for
-  each other one way. A writer in the opposite order can close a cycle; Postgres
-  aborts the layer, which fails loudly naming the table (`migrations/check/internal/rollup-boot-order.test.ts`).
-  A steady-state boot takes no source lock at all.
-- **Stale objects** — a trigger calling a managed maintain function that is not
-  declared (a legacy hand-written `<rollup>_{i,u,d}`, a dropped source's) is
-  dropped, then any unused managed function (`<rollup>_maintain`,
-  `<rollup>__*_maintain`). Never a change-feed `live_state_*` or a
-  `*_derive_updated_at` object.
-- **A21** — every boot then asserts the catalog holds exactly the generated
-  triggers: each on its source, calling its function, `AFTER … FOR EACH
-  STATEMENT` on its one op, no column list.
-- **State** — `derived_table_object_state`, one signature per object. The
-  older builds' one-row `derived_table_state` (`id boolean, signature`) is kept
-  in that shape and only **emptied** every boot: an older build booting on this
-  database (main reverted past this layer, a branch on a fork of main) then
-  finds no signature and reinstalls its legacy triggers beside these — harmless
-  duplicates the next boot of this code drops as stale. Reshaping it would fail
-  that build's `INSERT … ON CONFLICT (id)` and with it its whole schema layer;
-  leaving its row would make it skip and run with no trigger at all. Drop the
-  table once no supported build reads it.
+- **Table** (`prepareRollupTables`, which also hands back each rollup's trigger
+  set) — compared to its live shape (columns,
+  types, nullability, key) every boot; created when missing, **dropped
+  (CASCADE) and recreated** when it differs. A rollup is derived, so a shape
+  change is a refill by the reconcile, never a migration; `rebuildDerivedViews`
+  restores a view the CASCADE dropped.
+- **Maintain functions and source triggers** — one db-triggers set per rollup
+  (`rollup.<table>`), installed by the ONE trigger
+  installer (`database/db-triggers`) in the schema layer's single call that
+  holds every declared trigger set. What that gives a rollup (see that
+  plugin's `CLAUDE.md`): per-object stamps checked against the catalog
+  definition, so a function or trigger dropped, altered or replaced out of band
+  (an older build's maintain function on a fork) is reinstalled, and a changed
+  function body re-runs only the function (no table lock); every source table
+  locked in the installer's one fixed order, one savepoint each, only when its
+  triggers changed (C12 / D25 — a steady-state boot takes no source lock); a
+  stray trigger calling a maintain function, or a removed source's trigger and
+  function, dropped; a removed rollup's whole set swept at boot (its TABLE is
+  left — the previous backend still reads it during a hot swap — for the
+  `orphaned-db-tables` check). The installer asserts every set current after.
+- **Asserted before the DDL** (`beforeInstall`): the `select` against its
+  declaration (above), whenever the rollup's set has anything to (re)install.
+- **Older builds' state tables** — `derived_table_state` (one row) and
+  `derived_table_object_state` (per object) are no longer read; both are kept
+  in their shape and only **emptied** every boot. An older build booting on
+  this database (main reverted past this layer, a branch on a fork of main)
+  then finds no signature and reinstalls its own functions and triggers — the
+  next boot of this code sees their catalog definitions differ from its stamps
+  and reinstalls its own. Left holding rows, it would trust them and skip.
+  The per-object one is READ before it is emptied: a `triggers:<table>` row
+  equal to the signature the previous installer computed for this build's
+  triggers on that table marks them adoptable (`legacyStamp: null`), so the
+  first boot of the one installer restamps them instead of locking every
+  source table. Drop both tables, and that read, once no supported build reads
+  them.
 
 ### Repair: the reconcile, every boot, diff-first (D21)
 
@@ -188,7 +188,7 @@ rollup (by table name); a writer holding another order can close a cycle, which
 Postgres aborts loudly (40P01) — and only on keys that had drifted.
 
 **It returns its counts, it does not publish them (C13):**
-`rebuildDerivedTables` → `{ table, upserted, deleted, definitionChanged }[]` →
+`reconcileRollups` → `{ table, upserted, deleted, definitionChanged }[]` →
 `applySchemaLayer`'s `{ pending, rollups }` → the database plugin publishes them
 with `publishReconciledRollups` **after the layer commits** (the dry run and the
 replay suite compute heals that roll back). `reconciledRollups()` reads them and
@@ -213,11 +213,12 @@ is recomputed in `onReady`.
 
 - `core/` — `defineRollup` and the `Rollup` / `RollupSpec` / `RollupReconcile`
   types. Pure: drizzle handles in, SQL text out, no DB.
-- `server/` — the `DerivedTable` contribution, `rebuildDerivedTables(db,
-  rollups)`, `feedExemptTables()`, `rollupSources()`,
+- `server/` — the `DerivedTable` contribution, the boot install's steps
+  (`prepareRollupTables`, `reconcileRollups`), `feedExemptTables()`,
+  `rollupSources()`,
   `publishReconciledRollups` / `reconciledRollups()`.
-- `server/testing` — `installRollups(db, rollups)`: the boot install, for a
-  throwaway test database.
+- `server/testing` — `installRollups(db, rollups)`: the boot install's three
+  steps over the rollups alone, for a throwaway test database.
 - The DB-backed oracles (`rollup-oracle.test.ts`, `rollup-boot-order.test.ts`)
   live in `migrations/check/internal/`, beside the schema-layer suites: this
   plugin is upstream of `database` (through migrations), so a suite here
@@ -227,15 +228,22 @@ is recomputed in `onReady`.
 
 ## Plugin reference
 
-- Description: Trigger-maintained materialized rollup tables as data: defineRollup generates a rollup's table, a maintain function and triggers per source (diffing the columns it reads, advisory-locked per key) and a diff-first reconcile; the boot schema layer installs only what changed, one source table per savepoint, and reports what each reconcile healed (reconciledRollups). rollupSources() maps each rollup to the tables whose writes move it.
+- Description: Trigger-maintained materialized rollup tables as data: defineRollup generates a rollup's table, a maintain function and triggers per source (diffing the columns it reads, advisory-locked per key) and a diff-first reconcile; each rollup's functions and triggers a db-triggers set (rollup.<table>) the one trigger installer installs; the boot schema layer prepares the tables, installs every trigger set at once, reconciles, and reports what each reconcile healed (reconciledRollups). rollupSources() maps each rollup to the tables whose writes move it.
 - Server:
-  - Uses: `primitives/log-channels.defineLogSink`
+  - Uses:
+    - `database/db-triggers.DbTriggerInstall`
+    - `database/db-triggers.DbTriggerSet`
+    - `database/db-triggers.defineDbTriggers`
+    - `database/db-triggers.installDbTriggers`
+    - `primitives/log-channels.defineLogSink`
+  - Exports (types): `PreparedRollups`
   - Exports (values):
     - `DerivedTable`
     - `feedExemptTables`
+    - `prepareRollupTables`
     - `publishReconciledRollups`
-    - `rebuildDerivedTables`
     - `reconciledRollups`
+    - `reconcileRollups`
     - `rollupSources`
 - Core:
   - Uses: `database/derived-views.assertImperativePublicTable`
@@ -262,7 +270,7 @@ is recomputed in `onReady`.
     - `tasks/tasks-core`
 - Test helpers:
   - Server: `@plugins/database/plugins/derived-tables/server/testing`
-    - `installRollups` — Install `rollups` onto a throwaway test database (`createTestDb`) whose source tables exist, and reconcile them — the SAME code path the boot schema layer runs (`rebuildDerivedTables`), so the DDL and the reconcile under test are byte-identical to what a backend installs.
+    - `installRollups` — Install `rollups` onto a throwaway test database (`createTestDb`) whose source tables exist, and reconcile them — the SAME code path the boot schema layer runs (prepare the tables, install the trigger sets, reconcile), so the DDL and the reconcile under test are byte-identical to what a backend installs.
     - `rollupSourcesOf` — `rollupSources` over an explicit rollup list (a headless suite has no contributions).
 
 <!-- AUTOGENERATED:END -->

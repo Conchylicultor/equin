@@ -9,7 +9,7 @@ import { ConversationStatusSchema } from "@plugins/tasks/plugins/tasks-core/core
 //
 // This lives in a NON-glob file (NOT `tables.ts`/`schema.ts`) so the drizzle
 // codegen glob (`**/internal/{schema,tables}{,-*}.ts`) never sees it: the table
-// is DERIVED state, created imperatively on boot by `rebuildDerivedTables` (via
+// is DERIVED state, created imperatively on boot by `prepareRollupTables` (via
 // the `DerivedTable` contribution / `rollup-spec.ts`), NOT tracked in the
 // migration chain — same reason plain views live in `views.ts`. If a migration
 // is ever generated for this table, it was put in a glob file by mistake.

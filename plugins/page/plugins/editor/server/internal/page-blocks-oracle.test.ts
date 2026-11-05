@@ -44,10 +44,8 @@ import {
 } from "bun:test";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
-import {
-  installDerivedUpdatedAt,
-  registeredDerivedUpdatedAt,
-} from "@plugins/database/plugins/derived-updated-at/server";
+import { registeredDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
 import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import {
   compileCollection,
@@ -157,9 +155,11 @@ beforeAll(async () => {
   });
   // The derived `updated_at` trigger, as a backend installs it at boot: a
   // content write moves the row's `updatedAt` in the same statement.
-  await installDerivedUpdatedAt(
+  await installDbTriggers(
     oracle.db,
-    registeredDerivedUpdatedAt().filter((spec) => spec.table === "page_blocks"),
+    registeredDerivedUpdatedAt()
+      .filter((spec) => spec.table === "page_blocks")
+      .map((spec) => spec.triggerSet),
   );
   oracle.registerAll(
     pageBlocks,

@@ -1,4 +1,5 @@
 import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
+import { defineDbTriggers } from "@plugins/database/plugins/db-triggers/server";
 import type { DerivedUpdatedAtSpec, TouchRule } from "./types";
 
 // ── Derived `updatedAt`: the compiler and the registry ─────────────────────
@@ -16,8 +17,9 @@ import type { DerivedUpdatedAtSpec, TouchRule } from "./types";
 //
 // The declaration is `defineEntity`'s `meta.updatedAt` (infra/entities) or, for
 // a raw drizzle table, `deriveUpdatedAt` (`from-table.ts`); both compile through
-// `compileFromTable` and register here. Installation (boot, after migrations)
-// is `install.ts`, called by the database plugin.
+// `compileFromTable` and register here. Each compiles to a db-triggers set
+// (`triggerSet`), installed with every other declared set by the boot schema
+// layer's one trigger installer.
 // Plan: research/2026-09-25-global-derived-updated-at.md.
 
 /** One column of the table, as the compiler sees it. */
@@ -236,5 +238,15 @@ export function compileDerivedUpdatedAt(
     `CREATE OR REPLACE TRIGGER ${fn} BEFORE UPDATE ON ${quoteIdent(table)} ` +
     `FOR EACH ROW EXECUTE FUNCTION ${fn}()`;
   const signature = sha256Hex(`${functionDdl}\n--\n${triggerDdl}`);
-  return { table, triggerName, functionDdl, triggerDdl, signature };
+  // Installed by the one trigger installer (db-triggers), as the set
+  // `updated-at.<table>`, with every other declared set.
+  const triggerSet = defineDbTriggers({
+    id: `updated-at.${table}`,
+    functions: [{ name: triggerName, args: "", ddl: functionDdl }],
+    // The previous installer stamped the trigger with `signature` alone.
+    triggers: [
+      { name: triggerName, table, ddl: triggerDdl, legacyStamp: signature },
+    ],
+  });
+  return { table, triggerName, functionDdl, triggerDdl, signature, triggerSet };
 }

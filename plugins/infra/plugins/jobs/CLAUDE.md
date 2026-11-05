@@ -242,8 +242,10 @@ overrun) the old row has exactly a dead job's columns.
   calls again (bounded, `ADD_JOB_LOCK_RACE_RETRIES`): the row is now visibly
   locked, so the detach retires it and a fresh row lands
   (`add-job-lock-race.test.ts`).
-- `installQueueSchema` installs it after graphile's migrations. A signature in
-  the trigger's COMMENT makes every later boot a catalog read with no table lock.
+- `installQueueSchema` installs it after graphile's migrations, as the
+  `jobs.superseded` set of the one trigger installer (`database/db-triggers`):
+  its stamp in the COMMENT makes every later boot a catalog read with no table
+  lock, and a trigger dropped, disabled or altered out of band is reinstalled.
 
 ## Retry policy & non-retryable failures
 
@@ -682,6 +684,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
     - `database/connection.createDbPool`
     - `database/connection.withQueryDeadline`
+    - `database/db-triggers.defineDbTriggers`
+    - `database/db-triggers.installDbTriggers`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`
     - `database/sql-projection.parsed`

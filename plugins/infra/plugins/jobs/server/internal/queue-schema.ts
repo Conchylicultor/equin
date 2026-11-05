@@ -1,10 +1,12 @@
 import { runMigrations as runGraphileMigrations } from "graphile-worker";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
 import {
   BOOT_DDL_QUERY_DEADLINE_MS,
   createDbPool,
   withQueryDeadline,
 } from "@plugins/database/plugins/connection/server";
-import { installSupersededTrigger } from "./superseded-trigger";
+import { supersededTriggers } from "./superseded-trigger";
 
 // ── Who installs the queue schema, and who merely asserts it ─────────────────
 //
@@ -97,12 +99,7 @@ export async function installQueueSchema(
         // bump, and every `createTestDb` throwaway. It has to follow the
         // migrations, which create the table it hangs off. A no-op (catalog read
         // only, no table lock) once installed; see `superseded-trigger.ts`.
-        const client = await pool.connect();
-        try {
-          await installSupersededTrigger(client);
-        } finally {
-          client.release();
-        }
+        await installDbTriggers(drizzle(pool), [supersededTriggers]);
       },
     );
   } finally {

@@ -37,10 +37,8 @@ import {
 import { asc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { compileCreateView } from "@plugins/database/plugins/derived-views/core";
-import {
-  installDerivedUpdatedAt,
-  registeredDerivedUpdatedAt,
-} from "@plugins/database/plugins/derived-updated-at/server";
+import { registeredDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
 import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import {
   compileCollection,
@@ -210,9 +208,11 @@ beforeAll(async () => {
   });
   // The agents' derived `updated_at` trigger, as a backend installs it at
   // boot: a rename moves `updatedAt` in the same row, as in production.
-  await installDerivedUpdatedAt(
+  await installDbTriggers(
     oracle.db,
-    registeredDerivedUpdatedAt().filter((spec) => spec.table === "agents"),
+    registeredDerivedUpdatedAt()
+      .filter((spec) => spec.table === "agents")
+      .map((spec) => spec.triggerSet),
   );
   // `agents_v`, rebuilt from source as boot does (the migration chain still
   // holds a historical CREATE VIEW).

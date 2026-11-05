@@ -316,9 +316,9 @@ export interface Entity<
     Exclude<keyof F, S>
   >;
   // The compiled derived-`updatedAt` trigger, present iff the record has an
-  // `updatedAt` field. Also recorded in the module registry that
-  // `installDerivedUpdatedAt` installs from; exposed here so a DB test can
-  // install exactly its own entity's trigger.
+  // `updatedAt` field. Also recorded in the module registry the boot schema
+  // layer installs from; exposed here so a DB test can install exactly its
+  // own entity's trigger (`installDbTriggers(db, [spec.triggerSet])`).
   readonly derivedUpdatedAt?: DerivedUpdatedAtSpec;
 }
 

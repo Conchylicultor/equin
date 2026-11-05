@@ -14,7 +14,7 @@ import {
 
 // Install this plugin's derived layer — the two attempt rollups, the four
 // views and the cluster triggers — onto a database that has only the migration chain: a `createTestDb`
-// throwaway. At boot the same DDL comes from `rebuildDerivedTables` /
+// throwaway. At boot the same DDL comes from the schema layer's rollup install /
 // `rebuildDerivedViews` over this plugin's contributions; a headless suite has
 // no plugin registry, so it installs the SAME exported declarations here
 // (`installRollups` is the boot rollup path itself), and the SQL under test is

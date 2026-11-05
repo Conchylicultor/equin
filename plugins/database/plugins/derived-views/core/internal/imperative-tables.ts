@@ -130,7 +130,7 @@ export const DERIVED_TABLE_STATE_TABLE = "derived_table_state";
  * A trigger-maintained materialized rollup ("hand-rolled IVM"): the latest
  * non-system conversation per task, maintained incrementally by STATEMENT
  * triggers on `conversations` and rebuilt from source on boot. Created
- * imperatively by the boot schema layer (`rebuildDerivedTables`, from the
+ * imperatively by the boot schema layer (`prepareRollupTables`, from the
  * `defineRollup` declaration in
  * `plugins/conversations/plugins/agents/server/internal/rollup-spec.ts`). Not
  * present in the drizzle snapshot; the orphaned-db-tables check treats it as
@@ -144,7 +144,7 @@ export const TASK_LATEST_CONVERSATION_TABLE = "task_latest_conversation";
  * conversation aggregate (has-conversation / has-live-conversation / max ended_at)
  * backing `attempts_v`, maintained incrementally by STATEMENT triggers on
  * `conversations` and reconciled from source on boot. Created imperatively by
- * `rebuildDerivedTables` (from the `defineRollup` declaration in
+ * `prepareRollupTables` (from the `defineRollup` declaration in
  * `plugins/tasks/plugins/tasks-core/server/internal/rollup-spec.ts`). Not present
  * in the drizzle snapshot; the orphaned-db-tables check treats it as declared.
  * `defineRollup` generates its `CREATE TABLE` from the read handle, so the line
@@ -156,7 +156,7 @@ export const ATTEMPT_CONV_AGG_TABLE = "attempt_conv_agg";
  * A trigger-maintained materialized rollup ("hand-rolled IVM"): the per-attempt
  * push aggregate (has-push / min created_at) backing `attempts_v`, maintained
  * incrementally by STATEMENT triggers on `pushes` and rebuilt from source on
- * boot. Created imperatively by `rebuildDerivedTables` (from the `defineRollup`
+ * boot. Created imperatively by `prepareRollupTables` (from the `defineRollup`
  * declaration in `plugins/tasks/plugins/tasks-core/server/internal/rollup-spec.ts`).
  * Not present in the drizzle snapshot; the orphaned-db-tables check treats it as
  * declared. `defineRollup` generates its `CREATE TABLE` from the read handle, so
@@ -170,7 +170,7 @@ export const ATTEMPT_PUSH_AGG_TABLE = "attempt_push_agg";
  * rows included), which the `pages.tree` set joins to give every page row its
  * `editedAt`. Maintained incrementally by STATEMENT triggers on `page_blocks`
  * and reconciled from source on boot. Created imperatively by
- * `rebuildDerivedTables` (from the `defineRollup` declaration in
+ * `prepareRollupTables` (from the `defineRollup` declaration in
  * `plugins/page/plugins/editor/server/internal/rollup-spec.ts`). Not present in
  * the drizzle snapshot; the orphaned-db-tables check treats it as declared.
  * `defineRollup` generates its `CREATE TABLE` from the read handle, so the line
@@ -186,7 +186,7 @@ export const PAGE_CONTENT_EDITED_AT_TABLE = "page_content_edited_at";
  * (`task_dependency_list`) and whether a transitive prerequisite still blocks
  * it (`task_prerequisite_blocking` — not `task_blocking`, which would take the
  * `agent_read` alias name of the `task_blocking_v` view). Rollups on the change feed, created and reconciled by
- * `rebuildDerivedTables`; `defineRollup` generates each `CREATE TABLE` from
+ * `prepareRollupTables`; `defineRollup` generates each `CREATE TABLE` from
  * the read handle, so the line carries `assertImperativePublicTable(…)`.
  */
 export const TASK_ATTEMPT_FACTS_TABLE = "task_attempt_facts";

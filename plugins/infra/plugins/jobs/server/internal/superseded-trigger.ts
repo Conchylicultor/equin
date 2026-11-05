@@ -1,7 +1,6 @@
+import { escapeLiteral } from "pg";
 import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
-import { escapeLiteral, type PoolClient } from "pg";
-import { z } from "zod";
-import { queryRows } from "@plugins/database/plugins/sql-rows/core";
+import { defineDbTriggers } from "@plugins/database/plugins/db-triggers/server";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // The one spelling of the flag our trigger writes into graphile's own `flags`
@@ -71,93 +70,36 @@ const TRIGGER_DDL = `CREATE OR REPLACE TRIGGER ${TRIGGER_NAME}
   WHEN (OLD.locked_at IS NOT NULL AND OLD.key IS NOT NULL AND NEW.key IS NULL)
   EXECUTE FUNCTION graphile_worker.${FUNCTION_NAME}()`;
 
-// Content signature of the DDL above, stored as the trigger's own COMMENT. It is
-// what "its definition differs" means here, and it is compared rather than
-// `pg_get_triggerdef`'s output on purpose: that text is Postgres's normalization
-// of what we wrote (extra parens, `old.`/`new.` casing, and a spelling that has
-// changed across major versions), so matching it against our source would either
-// need a hand-maintained copy of the normalized form or would silently mismatch
-// on every boot — re-running the DDL, and taking the table lock this file exists
-// to avoid, forever. The comment lives ON the trigger, so a trigger dropped out of
-// band takes its signature with it and is reinstalled. Same idea as the
-// change-feed's trigger-layer signature.
-const SIGNATURE = sha256Hex(`${FUNCTION_DDL}\n--\n${TRIGGER_DDL}`);
-
-const InstalledRowSchema = z.object({
-  signature: z.string().nullable(),
-  // A trigger disabled by hand (`ALTER TABLE … DISABLE TRIGGER`) keeps its
-  // comment but stops capturing the evidence; `CREATE OR REPLACE TRIGGER`
-  // re-enables it, so a disabled one counts as out of date.
-  enabled: z.boolean(),
-  function_present: z.boolean(),
+// Installed by the one trigger installer (`database/db-triggers`), from
+// `installQueueSchema` rather than the boot schema layer: it hangs off
+// graphile's table, which graphile's own migrations create, and every database
+// that gets a queue schema — main's boot, a graphile bump, every `createTestDb`
+// throwaway — gets it there. The installer's stamp (the DDL's hash plus the
+// catalog definition's, in the trigger's COMMENT — never `pg_get_triggerdef`
+// compared against our source, which is Postgres's normalisation of it) makes
+// every later install a catalog read with no lock on `_private_jobs`; a trigger
+// dropped or disabled out of band is reinstalled. A first install (or a changed
+// definition) takes SHARE ROW EXCLUSIVE for one statement, under the set's
+// advisory lock — whose two-int key space (`objsubid = 2`) cannot be mistaken
+// for a live worker's per-job lock (`objsubid = 1`, `jobLockHeldExpr`).
+export const supersededTriggers = defineDbTriggers({
+  id: "jobs.superseded",
+  functions: [
+    {
+      schema: "graphile_worker",
+      name: FUNCTION_NAME,
+      args: "",
+      ddl: FUNCTION_DDL,
+    },
+  ],
+  triggers: [
+    {
+      name: TRIGGER_NAME,
+      schema: "graphile_worker",
+      table: "_private_jobs",
+      ddl: TRIGGER_DDL,
+      // What this file stamped before the one installer: adopted, not re-run.
+      legacyStamp: sha256Hex(`${FUNCTION_DDL}\n--\n${TRIGGER_DDL}`),
+    },
+  ],
 });
-
-/**
- * Is the trigger (and its function) already exactly the one this file would
- * install? Reads catalogs only — no lock on `_private_jobs`.
- */
-async function isUpToDate(client: PoolClient): Promise<boolean> {
-  const rows = await queryRows(client, {
-    row: InstalledRowSchema,
-    sql: `SELECT obj_description(t.oid, 'pg_trigger')                                  AS signature,
-                 t.tgenabled = 'O'                                                     AS enabled,
-                 to_regprocedure('graphile_worker.${FUNCTION_NAME}()') IS NOT NULL     AS function_present
-            FROM pg_trigger t
-           WHERE t.tgrelid = 'graphile_worker._private_jobs'::regclass
-             AND t.tgname = $1`,
-    params: [TRIGGER_NAME],
-  });
-  const row = rows[0];
-  if (!row) return false;
-  return row.signature === SIGNATURE && row.enabled && row.function_present;
-}
-
-/**
- * Install the superseded-row trigger on `graphile_worker._private_jobs`, or do
- * nothing when it is already installed as written. Must run after graphile's
- * own migrations, which create the table.
- *
- * Returns what happened, so a regression test can assert that a second call is
- * a genuine no-op rather than a silent reinstall.
- *
- * Why the no-op path matters: every backend calls this at boot, including the
- * one coming up while the outgoing backend's workers are still fetching. The
- * catalog read above takes no table lock, so a boot that finds the trigger
- * already in place touches nothing. Only a first install (or a changed
- * definition) runs the DDL, which briefly takes SHARE ROW EXCLUSIVE on the
- * table — blocking writers for the length of one statement.
- *
- * The slow path is serialized with a transaction-scoped advisory lock and
- * re-checks under it, so two installers racing on one database (a backend
- * booting while a `worktree-db` test process installs against the same
- * database) do not both run the DDL. The two-int lock form lives in a different
- * `pg_locks` key space (`objsubid = 2`) from the per-job locks (`objsubid = 1`,
- * `jobLockHeldExpr`), so it can never be mistaken for a live worker.
- */
-export async function installSupersededTrigger(
-  client: PoolClient,
-): Promise<"installed" | "unchanged"> {
-  if (await isUpToDate(client)) return "unchanged";
-
-  await client.query("BEGIN");
-  try {
-    await client.query(
-      "SELECT pg_advisory_xact_lock(hashtext('graphile_worker'), hashtext($1))",
-      [TRIGGER_NAME],
-    );
-    if (await isUpToDate(client)) {
-      await client.query("COMMIT");
-      return "unchanged";
-    }
-    await client.query(FUNCTION_DDL);
-    await client.query(TRIGGER_DDL);
-    await client.query(
-      `COMMENT ON TRIGGER ${TRIGGER_NAME} ON graphile_worker._private_jobs IS ${escapeLiteral(SIGNATURE)}`,
-    );
-    await client.query("COMMIT");
-    return "installed";
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-  }
-}

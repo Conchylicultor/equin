@@ -6,15 +6,15 @@ import {
   rebuildDerivedViews,
   type DeclaredView,
 } from "@plugins/database/plugins/derived-views/server";
-import { rebuildDerivedTables } from "@plugins/database/plugins/derived-tables/server";
+import {
+  prepareRollupTables,
+  reconcileRollups,
+} from "@plugins/database/plugins/derived-tables/server";
 import type {
   Rollup,
   RollupReconcile,
 } from "@plugins/database/plugins/derived-tables/core";
-import {
-  installDerivedUpdatedAt,
-  type DerivedUpdatedAtSpec,
-} from "@plugins/database/plugins/derived-updated-at/server";
+import type { DerivedUpdatedAtSpec } from "@plugins/database/plugins/derived-updated-at/server";
 import {
   installDbTriggers,
   type DbTriggerSet,
@@ -789,9 +789,26 @@ export async function applySchemaLayerFrom(
       // The derived layer, in dependency order: the updatedAt triggers and the
       // rollup tables need the migrated columns; a view may read a rollup
       // table. Each skips its DDL when unchanged.
-      await installDerivedUpdatedAt(tx, inputs.updatedAtSpecs);
-      await installDbTriggers(tx, inputs.triggers);
-      rollups = await rebuildDerivedTables(tx, inputs.derivedTables);
+      // Every trigger the app declares goes through ONE installer call — the
+      // derived `updatedAt` triggers, the plugins' trigger sets, the rollups'
+      // maintain triggers — so their tables are locked in one fixed order and
+      // a set nobody declares any more is swept from `public`. The rollup
+      // tables come first (a maintain function writes one), the reconcile
+      // after (it needs the triggers in place).
+      const prepared = await prepareRollupTables(tx, inputs.derivedTables);
+      const installs = await installDbTriggers(
+        tx,
+        [
+          ...inputs.updatedAtSpecs.map((spec) => spec.triggerSet),
+          ...inputs.triggers,
+          ...prepared.triggerSets,
+        ],
+        { sweep: { schema: "public" } },
+      );
+      rollups = await reconcileRollups(tx, inputs.derivedTables, {
+        recreated: prepared.recreated,
+        installs,
+      });
       await rebuildDerivedViews(tx, inputs.views);
 
       if (!commit) throw ROLLBACK;
@@ -810,7 +827,8 @@ export async function applySchemaLayerFrom(
 //      contract, which boot defers (`deferContract`): it is what breaks the
 //      previous backend's code, still serving. `completeDeferredContract` runs
 //      it once that code is gone;
-//   3. `installDerivedUpdatedAt`, `installDbTriggers`, `rebuildDerivedTables`,
+//   3. the derived layer: the rollup tables, every declared trigger set in one
+//      `installDbTriggers` call (sweeping `public`), the rollup reconcile,
 //      `rebuildDerivedViews`.
 //
 // One transaction because the previous backend keeps serving during a hot-swap:

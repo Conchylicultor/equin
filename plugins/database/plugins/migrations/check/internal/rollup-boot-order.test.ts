@@ -44,11 +44,10 @@ import {
 import {
   ATTEMPT_CONV_AGG_TABLE,
   ATTEMPT_PUSH_AGG_TABLE,
-  DERIVED_TABLE_OBJECT_STATE_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { defineRollup } from "@plugins/database/plugins/derived-tables/core";
-import { rebuildDerivedTables } from "@plugins/database/plugins/derived-tables/server";
+import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";
 
 const conversations = pgTable("conversations", {
   id: text("id").primaryKey(),
@@ -118,16 +117,22 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await rebuildDerivedTables(t.db, rollups);
+  await installRollups(t.db, rollups);
 });
 
 // Make the next layer reinstall every source table's triggers, as a boot with
-// a changed rollup definition would.
+// a changed rollup definition would: their stamps (db-triggers) are cleared.
 async function forgetTriggerSignatures(): Promise<void> {
   await t.db.execute(
-    sql.raw(
-      `DELETE FROM "${DERIVED_TABLE_OBJECT_STATE_TABLE}" WHERE name LIKE 'triggers:%'`,
-    ),
+    sql.raw(`DO $$
+      DECLARE r record;
+      BEGIN
+        FOR r IN SELECT t.tgname, c.relname FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
+                  WHERE obj_description(t.oid, 'pg_trigger') LIKE 'db-triggers:rollup.%'
+        LOOP
+          EXECUTE format('COMMENT ON TRIGGER %I ON %I IS NULL', r.tgname, r.relname);
+        END LOOP;
+      END $$`),
   );
 }
 
@@ -143,7 +148,7 @@ async function connect(): Promise<{ client: Client; pid: number }> {
 // The schema layer: the rollup install inside ONE transaction on its own
 // connection, as `applySchemaLayer` runs it.
 function runLayer(client: Client): Promise<unknown> {
-  return drizzle(client).transaction((tx) => rebuildDerivedTables(tx, rollups));
+  return drizzle(client).transaction((tx) => installRollups(tx, rollups));
 }
 
 async function waitUntilBlocked(pid: number): Promise<void> {
@@ -207,6 +212,13 @@ describe("boot layer vs a hot-swap writer", () => {
     const writer = await connect();
     const layer = await connect();
     try {
+      // Which side of a cycle Postgres aborts is whichever runs its deadlock
+      // check first — each once, `deadlock_timeout` after it starts waiting —
+      // and the writer, though it waits second, sometimes got there first
+      // (1 run in 3). Pin the victim to the side under test: the layer checks
+      // 2 s in (the writer is waiting by then), the writer not within the test.
+      await layer.client.query(`SET deadlock_timeout = '2s'`);
+      await writer.client.query(`SET deadlock_timeout = '60s'`);
       await writer.client.query("BEGIN");
       await writer.client.query(
         `INSERT INTO pushes VALUES ('p3', 'a1', now())`,
@@ -224,7 +236,7 @@ describe("boot layer vs a hot-swap writer", () => {
       const err = await done;
       expect(err).toBeInstanceOf(Error);
       expect((err as Error).message).toMatch(
-        /installing the rollup triggers on "pushes" failed/,
+        /installing the triggers on "public.pushes" failed/,
       );
       expect((err as Error).message).toMatch(/deadlock/);
       await writerDone;

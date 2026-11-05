@@ -7,8 +7,8 @@
  * Lives in entities (not database/derived-updated-at) because it drives the
  * whole path: `defineEntity`'s declaration → physical column names → compiled
  * trigger → install, plus the raw-`pgTable` path (`deriveUpdatedAt`). It
- * installs exactly its own tables' specs (`installDerivedUpdatedAt(db,
- * [spec])`): the registry is process-wide and also holds every other suite's
+ * installs exactly its own tables' sets (`installDbTriggers(db,
+ * [spec.triggerSet])`): the registry is process-wide and also holds every other suite's
  * entities, whose tables this database does not have.
  *
  * Requires the running embedded cluster (`./equin build` first).
@@ -31,8 +31,9 @@ import { defineEntity } from "./define-entity";
 import {
   compileFromTable,
   deriveUpdatedAt,
-  installDerivedUpdatedAt,
 } from "@plugins/database/plugins/derived-updated-at/server";
+import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
+import { executeOne } from "@plugins/database/plugins/sql-rows/core";
 import { defaultNow } from "./types";
 
 const textType = defineFieldType<string>("__dua_db_text__");
@@ -162,20 +163,20 @@ beforeAll(async () => {
       updated_at     timestamptz NOT NULL DEFAULT now()
     )
   `);
-  await installDerivedUpdatedAt(t.db, [rawSpec]);
+  await installDbTriggers(t.db, [rawSpec.triggerSet]);
 });
 
 afterAll(async () => {
   await t.drop();
 });
 
-describe("installDerivedUpdatedAt", () => {
+describe("installing the derived-updatedAt set", () => {
   test("installs once, then is a catalog-only no-op", async () => {
-    expect(await installDerivedUpdatedAt(t.db, [spec])).toEqual([
-      { table: "dua_items", outcome: "installed" },
+    expect(await installDbTriggers(t.db, [spec.triggerSet])).toEqual([
+      { id: "updated-at.dua_items", outcome: "installed" },
     ]);
-    expect(await installDerivedUpdatedAt(t.db, [spec])).toEqual([
-      { table: "dua_items", outcome: "unchanged" },
+    expect(await installDbTriggers(t.db, [spec.triggerSet])).toEqual([
+      { id: "updated-at.dua_items", outcome: "unchanged" },
     ]);
   });
 
@@ -183,16 +184,46 @@ describe("installDerivedUpdatedAt", () => {
     await t.db.execute(
       sql`DROP TRIGGER "dua_items_derive_updated_at" ON dua_items`,
     );
-    expect(await installDerivedUpdatedAt(t.db, [spec])).toEqual([
-      { table: "dua_items", outcome: "installed" },
+    expect(await installDbTriggers(t.db, [spec.triggerSet])).toEqual([
+      { id: "updated-at.dua_items", outcome: "installed" },
+    ]);
+  });
+
+  test("adopts the previous installer's trigger (its bare signature) without re-creating it", async () => {
+    await t.db.execute(
+      sql.raw(
+        `COMMENT ON TRIGGER "dua_items_derive_updated_at" ON dua_items IS '${spec.signature}'`,
+      ),
+    );
+    const xmin = async () =>
+      (
+        await executeOne(t.db, {
+          query: sql`SELECT xmin::text AS x FROM pg_trigger WHERE tgname = 'dua_items_derive_updated_at'`,
+          row: z.object({ x: z.string() }),
+        })
+      ).x;
+    const before = await xmin();
+    expect(await installDbTriggers(t.db, [spec.triggerSet])).toEqual([
+      { id: "updated-at.dua_items", outcome: "installed" },
+    ]);
+    expect(await xmin()).toBe(before);
+    expect(await installDbTriggers(t.db, [spec.triggerSet])).toEqual([
+      { id: "updated-at.dua_items", outcome: "unchanged" },
     ]);
   });
 
   test("throws when the table does not exist", async () => {
-    const rejected = installDerivedUpdatedAt(t.db, [
-      { ...spec, table: "dua_missing" },
-    ]);
-    expect(rejected).rejects.toThrow(/does not exist/);
+    const missing = compileFromTable(
+      pgTable("dua_missing", {
+        id: text("id").primaryKey(),
+        title: text("title").notNull(),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+      }),
+      { id: false, title: true },
+    );
+    expect(installDbTriggers(t.db, [missing.triggerSet])).rejects.toThrow(
+      /does not exist/,
+    );
   });
 });
 

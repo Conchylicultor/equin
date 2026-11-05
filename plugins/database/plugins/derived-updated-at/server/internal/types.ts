@@ -1,3 +1,5 @@
+import type { DbTriggerSet } from "@plugins/database/plugins/db-triggers/server";
+
 // A column's rule for whether a write to it counts as a change of the record,
 // moving its `updatedAt`:
 //   - `true`  → any change of value (`NEW.c IS DISTINCT FROM OLD.c`);
@@ -27,9 +29,9 @@ export type ObjectKeyOf<T> = unknown extends T
     ? Extract<keyof T, string>
     : never;
 
-// The compiled trigger for one table: plain DDL strings plus the sha256 of
-// both, stored as the trigger's COMMENT so an up-to-date install is recognised
-// from the catalog alone. Built by `compileDerivedUpdatedAt`.
+// The compiled trigger for one table: plain DDL strings, the sha256 of both
+// (what tells two declarations of one table apart), and the db-triggers set
+// the boot installer installs them as. Built by `compileDerivedUpdatedAt`.
 export interface DerivedUpdatedAtSpec {
   /** Physical table name. */
   readonly table: string;
@@ -38,4 +40,6 @@ export interface DerivedUpdatedAtSpec {
   readonly functionDdl: string;
   readonly triggerDdl: string;
   readonly signature: string;
+  /** `updated-at.<table>`: the function and trigger, as `installDbTriggers` takes them. */
+  readonly triggerSet: DbTriggerSet;
 }

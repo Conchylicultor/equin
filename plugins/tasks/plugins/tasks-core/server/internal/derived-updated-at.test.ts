@@ -18,7 +18,6 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
-import { installDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 import { _conversations, _tasks, tasksCoreDerivedUpdatedAt } from "./tables";
 import { taskClusterTriggers } from "./cluster-triggers";
 import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
@@ -82,15 +81,15 @@ async function setConv(
 beforeAll(async () => {
   t = await createTestDb({ prefix: "tasks_derived_updated_at" });
   await runMigrations(t.db);
-  const results = await installDerivedUpdatedAt(t.db, [
-    spec(tasksCoreDerivedUpdatedAt.tasks, "tasks"),
-    spec(tasksCoreDerivedUpdatedAt.attempts, "attempts"),
-    spec(tasksCoreDerivedUpdatedAt.conversations, "conversations"),
+  const results = await installDbTriggers(t.db, [
+    spec(tasksCoreDerivedUpdatedAt.tasks, "tasks").triggerSet,
+    spec(tasksCoreDerivedUpdatedAt.attempts, "attempts").triggerSet,
+    spec(tasksCoreDerivedUpdatedAt.conversations, "conversations").triggerSet,
   ]);
-  expect(results.map((r) => r.table).sort()).toEqual([
-    "attempts",
-    "conversations",
-    "tasks",
+  expect(results.map((r) => r.id).sort()).toEqual([
+    "updated-at.attempts",
+    "updated-at.conversations",
+    "updated-at.tasks",
   ]);
   await installDbTriggers(t.db, [taskClusterTriggers]);
 });

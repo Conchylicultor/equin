@@ -7,7 +7,7 @@ import { PAGE_CONTENT_EDITED_AT_TABLE } from "@plugins/database/plugins/derived-
 //
 // This lives in a NON-glob file (NOT `tables.ts`/`schema.ts`) so the drizzle
 // codegen glob (`**/internal/{schema,tables}{,-*}.ts`) never sees it: the table
-// is DERIVED state, created imperatively on boot by `rebuildDerivedTables` (via
+// is DERIVED state, created imperatively on boot by `prepareRollupTables` (via
 // the `DerivedTable` contribution / `rollup-spec.ts`), NOT tracked in the
 // migration chain. If a migration is ever generated for this table, it was put
 // in a glob file by mistake.

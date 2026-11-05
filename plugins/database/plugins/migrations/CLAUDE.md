@@ -591,9 +591,8 @@ only agreement that matters.
   - Uses:
     - `database/db-triggers.DbTriggerSet`
     - `database/db-triggers.installDbTriggers`
-    - `database/derived-tables.rebuildDerivedTables`
-    - `database/derived-updated-at.DerivedUpdatedAtSpec`
-    - `database/derived-updated-at.installDerivedUpdatedAt`
+    - `database/derived-tables.prepareRollupTables`
+    - `database/derived-tables.reconcileRollups`
     - `database/derived-views.DeclaredView`
     - `database/derived-views.dropDerivedViews`
     - `database/derived-views.rebuildDerivedViews`

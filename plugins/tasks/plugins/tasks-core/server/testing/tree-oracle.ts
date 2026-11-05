@@ -35,7 +35,7 @@ import type {
   LookupCollectionSpecs,
 } from "@plugins/network/plugins/live/server";
 import { compileWindowQuery } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
-import { installDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
 import type { Rollup } from "@plugins/database/plugins/derived-tables/core";
 import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";
 import { attemptConvAgg, attemptPushAgg } from "../internal/rollup-spec";
@@ -245,11 +245,11 @@ export async function createTreeOracle(
   // The derived `updated_at` triggers too, as a backend installs them at
   // boot: a write a row field does not read can still move `updatedAt` (a
   // task's description), and the oracle must cost it as production does.
-  await installDerivedUpdatedAt(
+  await installDbTriggers(
     testDb.db,
-    Object.values(tasksCoreDerivedUpdatedAt).filter(
-      (spec) => spec !== undefined,
-    ),
+    Object.values(tasksCoreDerivedUpdatedAt)
+      .filter((spec) => spec !== undefined)
+      .map((spec) => spec.triggerSet),
   );
 
   const persisted = new Set(options.persisted);

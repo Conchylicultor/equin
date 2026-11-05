@@ -15,7 +15,7 @@ import {
 //
 // These live in a NON-glob file (NOT `tables.ts`/`schema.ts`) so the drizzle
 // codegen glob (`**/internal/{schema,tables}{,-*}.ts`) never sees them: the
-// tables are DERIVED state, created imperatively on boot by `rebuildDerivedTables`
+// tables are DERIVED state, created imperatively on boot by `prepareRollupTables`
 // (via the `DerivedTable` contributions / `rollup-spec.ts`), NOT tracked in the
 // migration chain — same reason plain views live in `views.ts`. If a migration is
 // ever generated for these tables, they were put in a glob file by mistake.

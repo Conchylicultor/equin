@@ -12,8 +12,10 @@
  * a clean reconcile writes nothing; a drifted rollup is healed with exact
  * counts, and a heal racing a writer of the same key waits for it rather than
  * overwrite it from an older snapshot; two concurrent writers of one key never
- * lose an update (A34); the install reinstates a trigger dropped or altered out
- * of band and drops a foreign one (A21); a select that reads an undeclared
+ * lose an update (A34); the install (the one trigger installer, db-triggers)
+ * reinstates a trigger dropped or altered out of band and a maintain function
+ * replaced out of band, drops a stray trigger calling a maintain function, and
+ * a sweep drops a rollup nobody declares any more; a select that reads an undeclared
  * column or table, or returns a column the table lacks, is refused; and the
  * older builds' one-row state table is emptied, never reshaped.
  *
@@ -43,12 +45,15 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import {
+  DERIVED_TABLE_OBJECT_STATE_TABLE,
   DERIVED_TABLE_STATE_TABLE,
   TASK_LATEST_CONVERSATION_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
 import { defineRollup } from "@plugins/database/plugins/derived-tables/core";
-import { rebuildDerivedTables } from "@plugins/database/plugins/derived-tables/server";
+import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";
+import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
 
 const attempts = pgTable("attempts", {
   id: text("id").primaryKey(),
@@ -150,7 +155,7 @@ beforeEach(async () => {
       created_at timestamptz NOT NULL,
       waiting_for text)`),
   );
-  await rebuildDerivedTables(t.db, [rollup]);
+  await installRollups(t.db, [rollup]);
 });
 
 const Row = z.object({
@@ -317,7 +322,7 @@ describe("define-rollup oracle — reconcile", () => {
   test("a clean reconcile writes nothing", async () => {
     await seed();
     const before = await xminOf("T1");
-    expect(await rebuildDerivedTables(t.db, [rollup])).toEqual([
+    expect(await installRollups(t.db, [rollup])).toEqual([
       {
         table: TASK_LATEST_CONVERSATION_TABLE,
         upserted: 0,
@@ -338,10 +343,10 @@ describe("define-rollup oracle — reconcile", () => {
     await run(
       `INSERT INTO task_latest_conversation VALUES ('T9', 'cx', null, 'done', now())`,
     );
-    const [result] = await rebuildDerivedTables(t.db, [rollup]);
+    const [result] = await installRollups(t.db, [rollup]);
     expect(result).toMatchObject({ upserted: 2, deleted: 1 });
     await expectConsistent();
-    const [again] = await rebuildDerivedTables(t.db, [rollup]);
+    const [again] = await installRollups(t.db, [rollup]);
     expect(again).toMatchObject({ upserted: 0, deleted: 0 });
   });
 
@@ -365,7 +370,7 @@ describe("define-rollup oracle — reconcile", () => {
     try {
       await a.query("BEGIN");
       await a.query(`UPDATE conversations SET status = 'done' WHERE id = 'c3'`);
-      const healed = rebuildDerivedTables(drizzle(boot), [rollup]);
+      const healed = installRollups(drizzle(boot), [rollup]);
       await waitUntilAdvisoryWaiter();
       await a.query("COMMIT");
       const [result] = await healed;
@@ -418,10 +423,10 @@ describe("define-rollup oracle — concurrency (A34)", () => {
   });
 });
 
-describe("define-rollup oracle — the installed trigger set (A21)", () => {
+describe("define-rollup oracle — the installed trigger set", () => {
   test("a trigger dropped out of band is reinstated", async () => {
     await run(`DROP TRIGGER task_latest_conversation__attempts_d ON attempts`);
-    const [result] = await rebuildDerivedTables(t.db, [rollup]);
+    const [result] = await installRollups(t.db, [rollup]);
     expect(result!.definitionChanged).toBe(true);
     await seed();
     await run(`DELETE FROM attempts WHERE id = 'A2'`);
@@ -432,7 +437,7 @@ describe("define-rollup oracle — the installed trigger set (A21)", () => {
     await run(`CREATE OR REPLACE TRIGGER task_latest_conversation__conversations_u
                AFTER UPDATE OF status ON conversations
                FOR EACH STATEMENT EXECUTE FUNCTION task_latest_conversation__conversations_maintain()`);
-    const [result] = await rebuildDerivedTables(t.db, [rollup]);
+    const [result] = await installRollups(t.db, [rollup]);
     expect(result!.definitionChanged).toBe(true);
     const cols = await executeRows(t.db, {
       query: sql.raw(
@@ -450,7 +455,7 @@ describe("define-rollup oracle — the installed trigger set (A21)", () => {
   test("a stray trigger calling a rollup's maintain function is dropped", async () => {
     await run(`CREATE TRIGGER task_latest_conversation__conversations_x AFTER TRUNCATE ON conversations
                FOR EACH STATEMENT EXECUTE FUNCTION task_latest_conversation__conversations_maintain()`);
-    await rebuildDerivedTables(t.db, [rollup]);
+    await installRollups(t.db, [rollup]);
     const names = await executeRows(t.db, {
       query: sql.raw(
         `SELECT tgname::text AS n FROM pg_trigger WHERE tgrelid = 'conversations'::regclass AND NOT tgisinternal ORDER BY 1`,
@@ -464,32 +469,121 @@ describe("define-rollup oracle — the installed trigger set (A21)", () => {
     ]);
   });
 
-  test("a legacy hand-written trigger and its function are replaced", async () => {
-    await run(
-      `CREATE FUNCTION task_latest_conversation_maintain() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NULL; END $$`,
-    );
-    await run(`CREATE TRIGGER task_latest_conversation_u AFTER UPDATE ON conversations
-               FOR EACH STATEMENT EXECUTE FUNCTION task_latest_conversation_maintain()`);
-    await rebuildDerivedTables(t.db, [rollup]);
-    const fns = await executeRows(t.db, {
-      query: sql.raw(
-        `SELECT proname::text AS n FROM pg_proc WHERE proname LIKE 'task_latest_conversation%' ORDER BY 1`,
-      ),
-      row: z.object({ n: z.string() }),
-    });
-    expect(fns.map((r) => r.n)).toEqual([
-      "task_latest_conversation__attempts_maintain",
-      "task_latest_conversation__conversations_maintain",
+  // An older build booting on a fork re-runs its own CREATE OR REPLACE
+  // FUNCTION, which keeps the OID and with it this build's stamp: only the
+  // catalog definition in the stamp tells the two apart.
+  test("a maintain function replaced out of band is reinstalled", async () => {
+    await run(`CREATE OR REPLACE FUNCTION task_latest_conversation__conversations_maintain()
+               RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NULL; END $$`);
+    const [result] = await installRollups(t.db, [rollup]);
+    expect(result!.definitionChanged).toBe(true);
+    await seed();
+    await run(`UPDATE conversations SET title = 'retitled' WHERE id = 'c3'`);
+    expect((await rollupRows())[0]!.title).toBe("retitled");
+    await expectConsistent();
+  });
+
+  test("a sweep drops a rollup nobody declares, triggers then functions", async () => {
+    expect(
+      await installDbTriggers(t.db, [], { sweep: { schema: "public" } }),
+    ).toEqual([
+      { id: `rollup.${TASK_LATEST_CONVERSATION_TABLE}`, outcome: "dropped" },
     ]);
+    const left = await executeRows(t.db, {
+      query: sql.raw(
+        `SELECT (SELECT count(*)::int FROM pg_trigger WHERE tgname LIKE 'task_latest_conversation%') AS triggers,
+                (SELECT count(*)::int FROM pg_proc WHERE proname LIKE 'task_latest_conversation%') AS functions`,
+      ),
+      row: z.object({ triggers: z.number(), functions: z.number() }),
+    });
+    expect(left).toEqual([{ triggers: 0, functions: 0 }]);
+    const [result] = await installRollups(t.db, [rollup]);
+    expect(result!.definitionChanged).toBe(true);
+    await seed();
+    await expectConsistent();
   });
 });
+
+describe("define-rollup oracle — adopting the previous installer's triggers", () => {
+  // The previous installer kept no comment on a rollup trigger, only a
+  // `triggers:<table>` signature row. Its triggers, installed as written, are
+  // restamped (COMMENT only) — never re-created, which would lock every source
+  // table at once on the first boot of the one installer.
+  test("a recorded table's triggers are restamped, not re-created", async () => {
+    await run(`DO $$
+      DECLARE r record;
+      BEGIN
+        FOR r IN SELECT t.tgname, c.relname FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
+                  WHERE obj_description(t.oid, 'pg_trigger') LIKE 'db-triggers:rollup.%'
+        LOOP
+          EXECUTE format('COMMENT ON TRIGGER %I ON %I IS NULL', r.tgname, r.relname);
+        END LOOP;
+      END $$`);
+    await run(
+      `CREATE TABLE "${DERIVED_TABLE_OBJECT_STATE_TABLE}" (name text PRIMARY KEY, signature text NOT NULL)`,
+    );
+    for (const source of rollup.sources) {
+      const sig = sha256Hex(
+        [...source.triggers]
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((t) => t.ddl)
+          .join("\n--\n"),
+      );
+      await run(
+        `INSERT INTO "${DERIVED_TABLE_OBJECT_STATE_TABLE}" VALUES ('triggers:${source.table}', '${sig}')`,
+      );
+    }
+    const before = await triggerRows();
+    await installRollups(t.db, [rollup]);
+    const after = await triggerRows();
+    expect(after.map((r) => r.xmin)).toEqual(before.map((r) => r.xmin));
+    expect(after.every((r) => r.stamp?.startsWith("db-triggers:rollup."))).toBe(
+      true,
+    );
+    await run(`DROP TABLE "${DERIVED_TABLE_OBJECT_STATE_TABLE}"`);
+    await seed();
+    await expectConsistent();
+  });
+
+  test("an unrecorded table's triggers are re-created", async () => {
+    await run(
+      `COMMENT ON TRIGGER task_latest_conversation__attempts_d ON attempts IS NULL`,
+    );
+    const before = await triggerRows();
+    await installRollups(t.db, [rollup]);
+    const after = await triggerRows();
+    const xmin = (rows: typeof before, name: string) =>
+      rows.find((r) => r.name === name)!.xmin;
+    expect(xmin(after, "task_latest_conversation__attempts_d")).not.toBe(
+      xmin(before, "task_latest_conversation__attempts_d"),
+    );
+  });
+});
+
+// Every rollup trigger: its catalog row's xmin (moved by a re-create, not by a
+// COMMENT) and its stamp.
+async function triggerRows(): Promise<
+  { name: string; xmin: string; stamp: string | null }[]
+> {
+  return executeRows(t.db, {
+    query: sql.raw(
+      `SELECT tgname::text AS name, xmin::text AS xmin, obj_description(oid, 'pg_trigger') AS stamp
+         FROM pg_trigger WHERE tgname LIKE 'task_latest_conversation%' ORDER BY 1`,
+    ),
+    row: z.object({
+      name: z.string(),
+      xmin: z.string(),
+      stamp: z.string().nullable(),
+    }),
+  });
+}
 
 describe("define-rollup oracle — the select against its declaration", () => {
   test("a read column no source declares is refused", async () => {
     const bad = latestRollup({
       reads: [conversations.kind, conversations.title, conversations.createdAt],
     });
-    expect(rebuildDerivedTables(t.db, [bad])).rejects.toThrow(
+    expect(installRollups(t.db, [bad])).rejects.toThrow(
       /reads conversations\.status, which no declaration names/,
     );
   });
@@ -504,7 +598,7 @@ describe("define-rollup oracle — the select against its declaration", () => {
          WHERE c.kind <> 'system' AND ${scope("a.task_id")}
          ORDER BY a.task_id, c.created_at DESC, c.id DESC`,
     });
-    expect(rebuildDerivedTables(t.db, [bad])).rejects.toThrow(
+    expect(installRollups(t.db, [bad])).rejects.toThrow(
       /reads public\.tasks, which is neither a source nor a via table/,
     );
   });
@@ -519,7 +613,7 @@ describe("define-rollup oracle — the select against its declaration", () => {
          WHERE c.kind <> 'system' AND ${scope("a.task_id")}
          ORDER BY a.task_id, c.created_at DESC, c.id DESC`,
     });
-    expect(rebuildDerivedTables(t.db, [bad])).rejects.toThrow(
+    expect(installRollups(t.db, [bad])).rejects.toThrow(
       /returns "kind", not a column of the table/,
     );
   });
@@ -536,7 +630,7 @@ describe("define-rollup oracle — the older builds' state table", () => {
     await run(
       `INSERT INTO "${DERIVED_TABLE_STATE_TABLE}" (signature) VALUES ('old')`,
     );
-    await rebuildDerivedTables(t.db, [rollup]);
+    await installRollups(t.db, [rollup]);
     const cols = await executeRows(t.db, {
       query: sql.raw(
         `SELECT column_name::text AS c FROM information_schema.columns WHERE table_name = '${DERIVED_TABLE_STATE_TABLE}' ORDER BY ordinal_position`,

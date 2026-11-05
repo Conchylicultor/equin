@@ -83,7 +83,7 @@ beforeAll(async () => {
   t = await createTestDb({ prefix: "page_doc_order_test" });
   await runMigrations(t.db);
   // `loadPages` reads each page's `editedAt` off the content rollup, which a
-  // backend installs at boot (`rebuildDerivedTables`) — the same path.
+  // backend installs at boot (`installRollups` is the boot rollup install) — the same path.
   await installRollups(t.db, [pageContentEditedAt]);
   collectContributions([
     {
