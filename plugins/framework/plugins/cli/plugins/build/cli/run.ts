@@ -1224,7 +1224,11 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           name: "central",
           server: centralDir,
           // Main's Bun (central runs main's code), never this checkout's.
-          command: namedBackendCommand("central", checkoutBun(mainRoot)),
+          command: namedBackendCommand(
+            "central",
+            checkoutBun(mainRoot),
+            "bin/index.ts",
+          ),
         });
       }
       endSpan();
@@ -1644,7 +1648,11 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           name: "central",
           server: centralDir,
           // Main's Bun (central runs main's code), never this checkout's.
-          command: namedBackendCommand("central", checkoutBun(mainRoot)),
+          command: namedBackendCommand(
+            "central",
+            checkoutBun(mainRoot),
+            "bin/index.ts",
+          ),
         });
 
         // 6d. Restart central so it picks up freshly-merged main code. Only

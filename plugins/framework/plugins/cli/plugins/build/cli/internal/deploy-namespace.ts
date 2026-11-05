@@ -29,6 +29,7 @@ import {
   SERVER_CORE_RELATIVE,
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/server";
+import { backendEntryFor } from "@plugins/infra/plugins/paths/core";
 import {
   buildAndPublishWebDist,
   type ArtifactHooks,
@@ -584,12 +585,19 @@ export async function deployNamespace(
       // checkout published, so writer and reader share one spelling.
       server: resolve(root, SERVER_CORE_RELATIVE),
       web: artifact.livePath,
-      // This build's own Bun, under the namespace's name.
-      command: namedBackendCommand(ns, asAppPath(process.execPath)),
-      // The `server` tree is this checkout's, shared with every namespace it
-      // serves, so this is the only thing that tells the spawned backend WHICH
-      // registry to load — the committed one for the main composition, the
-      // filtered `<dir>.composition.<id>.generated.ts` for any other.
+      // This build's own Bun, under the namespace's name, running the
+      // composition's own serving entry: the committed `bin/index.ts` for the
+      // main composition, the generated `bin/index.composition.<id>.generated.ts`
+      // (written with its filtered registries) for any other. The `server` tree
+      // is this checkout's, shared with every namespace it serves, so the entry
+      // is what decides WHICH app the spawned backend boots.
+      command: namedBackendCommand(
+        ns,
+        asAppPath(process.execPath),
+        backendEntryFor(target.composition),
+      ),
+      // Which app the namespace IS — the backend refuses to boot when the
+      // entry it was spawned with imports any other composition's registries.
       composition: target.composition,
     });
     endRegister();

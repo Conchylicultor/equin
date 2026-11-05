@@ -7,7 +7,15 @@ import {
   isTestCodePath,
   PLUGIN_FOLDERS,
 } from "@plugins/framework/plugins/plugin-id/core";
-import { buildRegistryGenContext } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  buildRegistryGenContext,
+  renderBackendEntry,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
+import {
+  backendEntryFor,
+  SERVER_CORE_RELATIVE,
+} from "@plugins/infra/plugins/paths/core";
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { serverPortabilityOf } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import {
@@ -177,4 +185,31 @@ const check: Check = {
   },
 };
 
-export default check;
+/**
+ * The main composition's serving entry (`bin/index.ts`) is exactly what codegen
+ * renders for it (`renderBackendEntry`) — the same template every other
+ * composition's gitignored entry is written from. Two reasons: a hand edit to
+ * the committed entry would silently not reach any other composition's, and
+ * the generated ones are outside the tsc program, so the committed one is how
+ * the template's contract with `bin/serve.ts` gets type-checked at all.
+ */
+const backendEntryInSync: Check = {
+  id: "server-core:backend-entry-in-sync",
+  description:
+    "the main composition's serving entry (server-core bin/index.ts) is byte-identical to codegen's renderBackendEntry, the template every composition's entry is written from",
+  async run(ctx): Promise<CheckResult> {
+    const repo = await ctx.repo();
+    const rel = `${SERVER_CORE_RELATIVE}/${backendEntryFor(MAIN_COMPOSITION_ID)}`;
+    const want = renderBackendEntry(MAIN_COMPOSITION_ID);
+    if ((await repo.read(rel)) === want) return { ok: true };
+    return {
+      ok: false,
+      message: `${rel} differs from renderBackendEntry's output for the main composition.`,
+      hint:
+        "Edit the template (renderBackendEntry, plugins/framework/plugins/tooling/plugins/codegen/core/plugin-registry-gen.ts), not the file, then copy its render into bin/index.ts; " +
+        "anything the backend does beyond importing its registries belongs in bin/serve.ts.",
+    };
+  },
+};
+
+export default [check, backendEntryInSync];

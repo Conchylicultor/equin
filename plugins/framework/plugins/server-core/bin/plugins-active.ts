@@ -22,8 +22,8 @@ import { readSpecComposition } from "./spec-composition";
 // `./declare-namespace` from the `--namespace` argv the gateway spawned this
 // process with.
 //
-// `worktreesDir` is free here — `bin/index.ts` already imports this same barrel,
-// so nothing is added to the boot import closure.
+// Exec only (`./active-runtime`): the serving backend's entry imports its
+// composition's registries by literal path instead (`./serve.ts`).
 //
 // All composition registries are gitignored, so the specifier is held in a
 // variable (never a string literal pointing at a maybe-absent file) — tsc must
@@ -32,9 +32,6 @@ import { readSpecComposition } from "./spec-composition";
 //
 // Both halves of the backend — every plugin's `server/` and every plugin's
 // `machine/` — come from the same composition, so they always describe one app.
-// This module answers both aliases (`@composition-server-registry` and
-// `@composition-machine-registry`) in dev; a release repoints each to its own
-// filtered file.
 const namespace = runtimeNamespace();
 const coreDir = join(import.meta.dir, "../core");
 const composition = readSpecComposition(worktreesDir(), namespace);

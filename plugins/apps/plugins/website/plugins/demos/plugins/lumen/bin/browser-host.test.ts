@@ -187,6 +187,7 @@ const diskMigrations: Entry = {
     } satisfies ServerPluginDefinition,
   }),
   dependsOn: ["database/plugins/migrations"],
+  core: null,
 };
 
 /** The repo's `config/`, read off disk: what the bundled layer inlines. */
@@ -215,6 +216,7 @@ const diskGitLayer: Entry = {
     } satisfies ServerPluginDefinition,
   }),
   dependsOn: ["config_v2"],
+  core: null,
 };
 
 /**

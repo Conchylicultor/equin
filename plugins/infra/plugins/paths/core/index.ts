@@ -2,6 +2,7 @@ export {
   repoConfigDir,
   PLUGINS_DIR,
   SERVER_CORE_RELATIVE,
+  backendEntryFor,
   HOME_DIR,
   backupsDir,
   backupsDirs,

@@ -39,6 +39,7 @@ import {
   discoverCollectedDirsIn,
   listNamedCompositionRegistries,
   parseNamedCompositionRegistryFileName,
+  renderBackendEntry,
   renderCollectedDirRegistry,
   standardPluginDirsFromSnapshot,
   standardPluginDirsIn,
@@ -326,6 +327,26 @@ test("parse rejects the singleton, committed, and non-registry file names", () =
   ).toBeNull();
 });
 
+test("a composition's backend entry imports its own registries by literal path", () => {
+  const main = renderBackendEntry(MAIN_COMPOSITION_ID);
+  expect(main).toContain('import * as server from "../core/server.generated";');
+  expect(main).toContain(
+    'import * as machine from "../core/machine.generated";',
+  );
+  const sonata = renderBackendEntry("sonata");
+  expect(sonata).toContain(
+    'import * as server from "../core/server.composition.sonata.generated";',
+  );
+  expect(sonata).toContain(
+    'import * as machine from "../core/machine.composition.sonata.generated";',
+  );
+  // The namespace is declared before anything else is imported.
+  expect(sonata.split("\n").find((l) => l.startsWith("import"))).toBe(
+    'import "./declare-namespace";',
+  );
+  expect(() => renderBackendEntry("../evil")).toThrow();
+});
+
 test("listNamedCompositionRegistries finds per-name files, skipping singletons", () => {
   // The collected dirs come from git; the per-name registries are found by
   // reading the owning core dirs (in the real repo they are gitignored).
@@ -346,12 +367,17 @@ test("listNamedCompositionRegistries finds per-name files, skipping singletons",
     ...Object.fromEntries(
       names.map((f) => [`plugins/sdk/core/${f}`, "export const x = [];\n"]),
     ),
+    // A composition's backend entry, written with its registries.
+    "plugins/framework/plugins/server-core/bin/index.composition.sonata.generated.ts":
+      "export {};\n",
+    "plugins/framework/plugins/server-core/bin/index.ts": "export {};\n",
   });
 
   const listed = listNamedCompositionRegistries(namedRoot)
     .map((e) => `${e.dir}:${e.name}`)
     .sort();
   expect(listed).toEqual([
+    "bin:sonata",
     "prewarm:sonata",
     "server:pages",
     "server:sonata",

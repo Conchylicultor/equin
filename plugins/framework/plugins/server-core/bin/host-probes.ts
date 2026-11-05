@@ -14,9 +14,9 @@ import { macPeerProcMemory, macProcMemory } from "./phys-footprint";
 // phys_footprint and the sleep clock over bun:ffi, hash with `Bun.hash` — is
 // installed into it from here, the desktop's own entry folder, before the
 // plugin graph boots. Imported
-// for its side effect by `./active-runtime`, which both boot modes load before
-// booting (`serve` statically, `exec` dynamically), so neither mode can boot
-// without them.
+// for its side effect by both boot modes before booting — `serve` (`./serve.ts`)
+// statically, `exec` through `./active-runtime` dynamically — so neither mode
+// can boot without them.
 
 installMemoryProbe(macProcMemory);
 installPeerMemoryProbe(macPeerProcMemory);

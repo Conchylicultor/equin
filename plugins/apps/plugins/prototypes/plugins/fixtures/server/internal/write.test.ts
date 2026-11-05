@@ -21,7 +21,7 @@
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { declareMemoryHostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import type {
@@ -134,6 +134,7 @@ const diskGitLayer: Entry = {
     } satisfies ServerPluginDefinition,
   }),
   dependsOn: ["config_v2"],
+  core: null,
 };
 
 // The committed migration history, read off disk by THIS harness.
@@ -159,6 +160,7 @@ const migrationSource: Entry = {
     } satisfies ServerPluginDefinition,
   }),
   dependsOn: ["database/plugins/migrations"],
+  core: null,
 };
 
 /** The `dependsOn` closure of `roots` in the app's server registry. */
@@ -272,10 +274,6 @@ describe.if(IN_CHILD)("writePrototypeFixture, after the host is up", () => {
         migrationSource,
         diskGitLayer,
       ],
-      coreBarrel: (pluginPath) =>
-        existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts"))
-          ? () => import(`@plugins/${pluginPath}/core`)
-          : null,
     });
     // Past ready, as a demo's seed runs: the watcher, the job queue, LISTEN.
     await runPostReadyPhases(ordered);

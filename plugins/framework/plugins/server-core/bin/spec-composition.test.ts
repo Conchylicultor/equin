@@ -12,7 +12,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { WORKTREE_SPEC_FILE } from "@plugins/infra/plugins/paths/core";
-import { readSpecComposition } from "./spec-composition";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
+import {
+  assertServesComposition,
+  readSpecComposition,
+} from "./spec-composition";
 
 const worktreesDir = mkdtempSync(join(tmpdir(), "spec-composition-test-"));
 afterAll(() => rmSync(worktreesDir, { recursive: true, force: true }));
@@ -62,4 +66,28 @@ test("a spec that exists but is corrupt throws instead of meaning the main app",
   expect(() => readSpecComposition(worktreesDir, "wrong-type")).toThrow(
     '"composition" must be a string',
   );
+});
+
+test("a backend serves only the composition its spec declares", () => {
+  // No composition declared is the main app: only the main entry may serve it.
+  assertServesComposition(undefined, [
+    MAIN_COMPOSITION_ID,
+    MAIN_COMPOSITION_ID,
+  ]);
+  assertServesComposition("", [MAIN_COMPOSITION_ID]);
+  assertServesComposition("sonata", ["sonata", "sonata"]);
+  // The main entry under a composition's namespace — a spec written before the
+  // composition's entry existed — must not boot the full app there.
+  expect(() =>
+    assertServesComposition("sonata", [MAIN_COMPOSITION_ID]),
+  ).toThrow(
+    /declares "sonata", whose entry is bin\/index\.composition\.sonata\.generated\.ts/,
+  );
+  expect(() => assertServesComposition(undefined, ["sonata"])).toThrow(
+    /boots the "sonata" composition/,
+  );
+  // Both halves must be the same app.
+  expect(() =>
+    assertServesComposition("sonata", ["sonata", MAIN_COMPOSITION_ID]),
+  ).toThrow();
 });

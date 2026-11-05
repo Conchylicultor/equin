@@ -27499,9 +27499,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/jobs/supervised-job`
       - Exemptions:
         - Exempts itself from:
-          - `detached-work-safety/no-raw-set-interval` — `bin/index.ts` (sanctioned)
+          - `detached-work-safety/no-raw-set-interval` — `bin/serve.ts` (sanctioned)
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
-          - `boot:closure-digestable` — `bin/index.ts` (debt)
       - Cli:
         - Exports (values): `runExec`
       - Test helpers:
@@ -27518,7 +27517,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runPostReadyPhases` — The post-ready phases of a SERVING host (`serve`, `browser`): `onReady` (graph-driven: each plugin fires as soon as its `dependsOn` parents have resolved), then the `onAllReady` barrier. `exec` never runs them — a short-lived child has no subscribers, so no watcher, job runner or LISTEN belongs in it.
           - `runSettledPhase` — The settled phase of a SERVING host (`serve`, `browser`): every plugin's `onSettled`, once the host is already serving and every post-ready phase has resolved — post-serving catch-up work (infra/warmup drains every declared warm-up here). `exec` has no path to it: a short-lived child must never run heavy post-serving work, and this function is the only caller of the hook.
           - `serverEntries`
-          - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states.
+          - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states and no core barrel to warm.
           - `setServerErrorHandler` — Route every `reportServerError` to `fn` — or to nobody (`null`) — discarding whatever was held before, so a suite never receives another suite's reports.
           - `withHostServices` — Run `fn` with `providers` (each a `Svc.provide(impl)`) answering their services — over the unbooted host's providers and over a collected graph's — and put the previous answers back once it settles, so a suite swapping a service cannot leak it into the suites after it in the same bun process.
     - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots` record declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
@@ -28066,7 +28065,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Exempts itself from: `boot:closure-digestable` — `server/index.ts` (debt)
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 134 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 136 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×20
               - `config_v2` ×16
               - `framework/plugin-id` ×15
@@ -28083,6 +28082,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/ledger` ×2
               - `framework/tooling/boundaries` ×2
               - `framework/tooling/format` ×2
+              - `infra/paths` ×2
               - `network/live/resource-protocol` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
@@ -28218,6 +28218,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `regenerateManifestCodegen`
               - `regenerateRegistryCodegen`
               - `renderAppDeclarationsManifest`
+              - `renderBackendEntry`
               - `renderBarrelStubs`
               - `renderBrowserHost`
               - `renderBrowserHostScope`
@@ -32849,9 +32850,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `ndjsonResponse`
     - **`paths`** — Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
       - Core:
-        - Uses: 29 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Uses: 30 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `infra/namespace` ×8
           - `packages/timed-fs` ×8
-          - `infra/namespace` ×7
           - `infra/launcher/env-names` ×4
           - `infra/host-fs/user-path` ×3
           - `framework/product-name` ×2
@@ -32881,6 +32882,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ReleaseIdentity`
         - Exports (values):
           - `actAsCheckoutNamespace`
+          - `backendEntryFor`
           - `backupsDir`
           - `backupsDirs`
           - `CHECK_ARTIFACTS_RETENTION`
@@ -32932,10 +32934,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `debug` ×7
+          - `framework` ×6
           - `infra` ×6
-          - `framework` ×5
           - `backup` ×4
           - `conversations` ×3
           - `release` ×3
@@ -40781,7 +40783,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `boundaries/no-platform-api` — `core/internal/fs-snapshot.ts`, `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
-          - `boot:closure-digestable` — `server/index.ts` (debt)
+          - `boot:closure-digestable` — `core/index.ts` (debt)
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections.
       - Web:
         - Slots:

@@ -8,6 +8,8 @@ import {
 import { basename, join, resolve } from "node:path";
 import {
   asNamespace,
+  MAIN_COMPOSITION_ID,
+  NAMESPACE_LABEL_RE,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
 // The RUNTIME's own namespace — a different question from every path below,
@@ -71,6 +73,28 @@ export const WEB_CORE_RELATIVE = "plugins/framework/plugins/web-core";
  * never built" and sends the reader after the wrong fix.
  */
 export const SERVER_CORE_RELATIVE = "plugins/framework/plugins/server-core";
+
+/**
+ * The serving entry of a composition's backend, relative to the server-core dir
+ * (the spec's `server`, the backend's cwd): the file the spec's `command` runs.
+ *
+ * The main composition's is the committed `bin/index.ts` — also the gateway's
+ * fallback when a spec has no `command`. Any other composition's is the
+ * gitignored `bin/index.composition.<id>.generated.ts` its build writes beside
+ * its filtered registries (codegen's `generateCompositionRegistry`). Each entry
+ * imports its registries by a LITERAL path, so the code a backend runs is a
+ * closure `sourceDigest` can follow; which app a backend is gets decided by
+ * which entry its spec runs, and checked against the spec's `composition` at
+ * boot (server-core `bin/serve.ts`).
+ */
+export function backendEntryFor(composition: string): string {
+  if (composition === MAIN_COMPOSITION_ID) return "bin/index.ts";
+  // One namespace label: it becomes a filename segment.
+  if (!NAMESPACE_LABEL_RE.test(composition)) {
+    throw new Error(`Invalid composition id "${composition}".`);
+  }
+  return `bin/index.composition.${composition}.generated.ts`;
+}
 
 /**
  * True when this backend is running inside a compiled release artifact (the

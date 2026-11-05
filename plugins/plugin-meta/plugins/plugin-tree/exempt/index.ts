@@ -14,7 +14,7 @@ export default [
   },
   {
     rule: "boot:closure-digestable",
-    paths: ["server/index.ts"],
+    paths: ["core/index.ts"],
     kind: "debt",
     task: "task-1793843068-6u6ujy",
     reason:

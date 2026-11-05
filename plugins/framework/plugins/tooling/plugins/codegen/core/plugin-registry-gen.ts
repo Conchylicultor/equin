@@ -38,6 +38,10 @@ import {
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import {
+  backendEntryFor,
+  SERVER_CORE_RELATIVE,
+} from "@plugins/infra/plugins/paths/core";
+import {
   classifyEdges,
   type EdgeGraph,
 } from "@plugins/plugin-meta/plugins/closure/core";
@@ -337,6 +341,9 @@ export interface CollectedRawEntry {
   pluginPath: string;
   importPath: string;
   id: string;
+  /** `@plugins/<path>/core` when the plugin has a core barrel, else null —
+   *  rendered only into a `CORE_WARMED_DIRS` registry. */
+  coreImportPath: string | null;
 }
 
 function hasDefaultExport(text: string): boolean {
@@ -577,6 +584,13 @@ const COMPANION_DIRS: Readonly<Partial<Record<string, string>>> = {
   machine: "server",
 };
 
+// The registries whose entries also carry their plugin's core-barrel loader
+// (`core`): the backend's load waves warm a wave's core barrels before its
+// server barrels (server-core's `boot-stages.ts` says why). A literal
+// `import()` per entry, so the boot reaches each barrel by a path the source
+// digest follows — never by a path computed from `pluginPath`.
+const CORE_WARMED_DIRS: ReadonlySet<string> = new Set(["server", "machine"]);
+
 /** The graph node a `<dir>` entry of `pluginPath` boots as. */
 function nodeKeyFor(dir: string, pluginPath: string): string {
   return COMPANION_DIRS[dir] === undefined
@@ -647,6 +661,9 @@ async function collectEntries(
       pluginPath: node.path,
       importPath: `@plugins/${node.path}/${dir}`,
       id: node.id,
+      coreImportPath: repo.has(`plugins/${node.path}/core/index.ts`)
+        ? `@plugins/${node.path}/core`
+        : null,
     });
   }
   entries.sort((a, b) => a.importPath.localeCompare(b.importPath));
@@ -953,6 +970,8 @@ function renderRegistry(
   lines.push("  id: string;");
   lines.push("  loader: () => Promise<{ default: unknown }>;");
   lines.push("  dependsOn: string[];");
+  const warmsCore = CORE_WARMED_DIRS.has(dir);
+  if (warmsCore) lines.push("  core: (() => Promise<unknown>) | null;");
   lines.push("}");
   lines.push("");
   lines.push(`export const ${exportName}: CollectedEntry[] = [`);
@@ -963,8 +982,13 @@ function renderRegistry(
         ? `[${entryDeps.map((d) => JSON.stringify(d)).join(", ")}]`
         : "[]";
     const id = COMPANION_DIRS[dir] === undefined ? e.id : machineNode(e.id);
+    const core = !warmsCore
+      ? ""
+      : e.coreImportPath === null
+        ? ", core: null"
+        : `, core: () => import(${JSON.stringify(e.coreImportPath)})`;
     lines.push(
-      `  { pluginPath: ${JSON.stringify(e.pluginPath)}, id: ${JSON.stringify(id)}, loader: () => import(${JSON.stringify(e.importPath)}), dependsOn: ${depsLiteral} },`,
+      `  { pluginPath: ${JSON.stringify(e.pluginPath)}, id: ${JSON.stringify(id)}, loader: () => import(${JSON.stringify(e.importPath)}), dependsOn: ${depsLiteral}${core} },`,
     );
   }
   lines.push("];");
@@ -1199,6 +1223,61 @@ export async function generateCompositionRegistry(opts: {
       }),
     });
   }
+  // The backend that boots those registries: its serving entry, written last
+  // so it never names a registry not yet on disk.
+  await writeGenerated({
+    file: backendEntryPath(opts.root, opts.name),
+    content: renderBackendEntry(opts.name),
+  });
+}
+
+/** The serving entry of `composition`'s backend in the checkout at `root`. */
+function backendEntryPath(root: AppPath, composition: string): AppPath {
+  return joinAppPath(root, SERVER_CORE_RELATIVE, backendEntryFor(composition));
+}
+
+/**
+ * The serving entry of `composition`'s backend (`backendEntryFor`, in
+ * `infra/paths`): imports the composition's server and machine registries by
+ * LITERAL path and hands them to server-core's `bin/serve.ts`. The main
+ * composition's render IS the committed `bin/index.ts` — held byte-identical by
+ * `server-core:backend-entry-in-sync`, which is also what puts this template in
+ * front of tsc; any other composition's is gitignored, written by
+ * `generateCompositionRegistry` beside its filtered registries.
+ *
+ * Why a file per composition rather than one entry that picks its registry: a
+ * pick is an import by a computed path, and the code a backend runs must be a
+ * closure `sourceDigest` can follow (research/2026-11-05-global-backend-code-identity.md).
+ */
+export function renderBackendEntry(composition: string): string {
+  const registry = (dir: string) =>
+    `../core/${compositionRegistryFileName(dir, composition).replace(/\.ts$/, "")}`;
+  return [
+    "// DO NOT EDIT — a composition backend's serving entry, rendered by codegen's",
+    "// `renderBackendEntry` (plugins/framework/plugins/tooling/plugins/codegen/core/plugin-registry-gen.ts).",
+    "// The main composition's is the committed `bin/index.ts`, held equal to the",
+    "// render by `server-core:backend-entry-in-sync`; any other composition's is the",
+    "// gitignored `bin/index.composition.<id>.generated.ts` its build writes.",
+    "//",
+    "// Its registries are imported by LITERAL path, so the code this backend runs is",
+    "// a closure `sourceDigest` can follow. WHICH app it is was decided by the entry",
+    "// the spec's `command` runs (`backendEntryFor`, infra/paths); `serve` checks",
+    "// that against the spec's `composition` before it binds anything.",
+    "",
+    "// FIRST, and it must stay first: this declares the namespace this backend",
+    "// serves, from the `--namespace` the gateway spawned it with. Everything below",
+    "// reads that answer, and modules in the closure resolve it at module eval",
+    "// (`config_v2`'s config dir), so an import above this line boots the process",
+    "// without an identity. See `./declare-namespace`.",
+    'import "./declare-namespace";',
+    'import "./pin-toolchain";',
+    `import * as server from "${registry("server")}";`,
+    `import * as machine from "${registry("machine")}";`,
+    'import { serve } from "./serve";',
+    "",
+    "await serve({ server, machine });",
+    "",
+  ].join("\n");
 }
 
 /** Parse `<dir>.composition.<name>.generated.ts` into its parts, else null. */
@@ -1214,7 +1293,8 @@ export function parseNamedCompositionRegistryFileName(
 }
 
 /**
- * Every per-name composition registry currently on disk — the auto-serve
+ * Every per-name composition registry currently on disk, and every
+ * composition's backend entry (`bin/index.composition.<name>.generated.ts`) — the auto-serve
  * stage's sweep input (delete the entries whose name is no longer activated).
  *
  * Synchronous (callers include a synchronous program-key read), so it takes the
@@ -1243,6 +1323,23 @@ export function listNamedCompositionRegistries(
       if (parsed === null || parsed.dir !== def.dir) continue;
       out.push({ ...parsed, file: join(coreDir, entry.name) });
     }
+  }
+  // Each composition's backend entry, written with its registries
+  // (`generateCompositionRegistry`) and reclaimed with them. Listed as dir
+  // `bin`, the folder it sits in.
+  const binDir = joinAppPath(root, SERVER_CORE_RELATIVE, "bin");
+  let binEntries;
+  try {
+    binEntries = readdirSync(binDir, { withFileTypes: true });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return out;
+  }
+  for (const entry of binEntries) {
+    if (!entry.isFile()) continue;
+    const parsed = parseNamedCompositionRegistryFileName(entry.name);
+    if (parsed === null || parsed.dir !== "index") continue;
+    out.push({ dir: "bin", name: parsed.name, file: join(binDir, entry.name) });
   }
   return out;
 }

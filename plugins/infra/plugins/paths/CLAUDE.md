@@ -314,9 +314,9 @@ reaped namespaces' gateway logs were each found by accident, months in.
 
 - Description: Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
 - Core:
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/namespace` ×8
     - `packages/timed-fs` ×8
-    - `infra/namespace` ×7
     - `infra/launcher/env-names` ×4
     - `infra/host-fs/user-path` ×3
     - `framework/product-name` ×2
@@ -346,6 +346,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `ReleaseIdentity`
   - Exports (values):
     - `actAsCheckoutNamespace`
+    - `backendEntryFor`
     - `backupsDir`
     - `backupsDirs`
     - `CHECK_ARTIFACTS_RETENTION`
@@ -397,10 +398,10 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×7
+    - `framework` ×6
     - `infra` ×6
-    - `framework` ×5
     - `backup` ×4
     - `conversations` ×3
     - `release` ×3

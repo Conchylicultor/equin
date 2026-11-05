@@ -5,9 +5,9 @@ import {
 
 // ── The FIRST thing a backend does: say which namespace it is ────────────────
 //
-// Imported as the literal first statement of `bin/index.ts`, before the
-// `server-core/core` barrel — so it runs before `./active-runtime` reaches
-// `plugins-active.ts` (whose top level selects the registry) and before
+// Imported as the literal first statement of every serving entry (`bin/index.ts`
+// and each composition's generated one — codegen's `renderBackendEntry`), before
+// the `server-core/core` barrel — so it runs before
 // `config_v2/machine/internal/config-dir.ts`, which resolves its directory at
 // module eval and throws without an identity.
 //

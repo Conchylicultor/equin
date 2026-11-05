@@ -103,12 +103,23 @@ A process has no ambient identity: which namespace it serves is stated by
 whoever spawned it, and read back through `runtimeNamespace()`
 ([`infra/runtime-identity`](../../../infra/plugins/runtime-identity/CLAUDE.md)).
 
-- **`serve`** — the gateway spawns `… bin/index.ts --namespace <ns>`
-  (`gateway/worktree.go`), and `bin/declare-namespace.ts` is the **literal first
-  import** of `bin/index.ts`. It has to be first: `plugins-active.ts` selects the
-  plugin registry at module eval, and `config_v2#machine` resolves its config
-  dir at module eval, so an import placed above that line boots the process with
-  no identity and fails deep in the graph with a TDZ error that names nothing.
+- **`serve`** — the gateway spawns `<spec command> --namespace <ns>`
+  (`gateway/worktree.go`), the command running the composition's serving entry,
+  and `bin/declare-namespace.ts` is the **literal first import** of every entry.
+  It has to be first: `config_v2#machine` resolves its config dir at module
+  eval, so an import placed above that line boots the process with no identity
+  and fails deep in the graph with a TDZ error that names nothing.
+- **Which app a serving backend is** is decided by the entry its spec's
+  `command` runs (`backendEntryFor`, `infra/paths`): the committed `bin/index.ts`
+  for the main composition, a gitignored `bin/index.composition.<id>.generated.ts`
+  (codegen's `renderBackendEntry`, written with the composition's filtered
+  registries) for any other. Each imports its registries by LITERAL path and calls
+  `bin/serve.ts`, so the code a backend runs is a closure `sourceDigest` can follow
+  (`boot:closure-digestable`); `serve` first refuses an entry whose registries are
+  not the composition its `spec.json` declares (`assertServesComposition`). Each
+  registry entry carries its plugin's core-barrel loader (`core`), the barrels the
+  load waves warm. `bin/index.ts` is held equal to the render by
+  `server-core:backend-entry-in-sync` — edit the template, not the file.
 - **`exec`** — `runExec(namespace, body)` takes it as a parameter and declares it
   before the dynamic `import("../bin/active-runtime")`. Its caller reads it off
   its own required `--namespace <ns>` option (`supervised-exec`), which the
@@ -194,13 +205,15 @@ safe only while registry selection and DB selection agree.**
 that are not usable — keys the runtime no longer persists, another definition, an
 older writer. That is a no-op in an `exec` child today
 because `bin/active-runtime.ts` selects the registry from the namespace's own
-`spec.json` and the database is derived from that same namespace — so a child's
+`spec.json` (and a serving backend refuses an entry whose registries are not the
+composition that spec declares) and the database is derived from that same
+namespace — so a child's
 declared key set always matches the serving backend's. If those two selections
 were ever allowed to disagree (a filtered-composition registry pointed at another
 namespace's DB), such a hook would delete the serving backend's state. Keep the
 pairing, or the scoping stops being a scope.
 
-The QoS boost stays in `bin/index.ts` and must not move into the shared sequence:
+The QoS boost stays in `bin/serve.ts` and must not move into the shared sequence:
 an `exec` child is background work spawned under a deliberately lowered priority,
 and raising it to user-interactive would defeat exactly the isolation it was
 spawned under.
@@ -310,8 +323,8 @@ two and no row lists them. Today's services: `database.driver`,
 - **Host probes.** `core` runs on every host, so the macOS memory probe (bun:ffi,
   `bin/phys-footprint.ts`) and the native snapshot hash (`Bun.hash`) are installed
   by `bin/host-probes.ts` (`installMemoryProbe`, `installHeapReader` —
-  `process.memoryUsage` —, `installSnapHash`), loaded by
-  `bin/active-runtime.ts` in both desktop boot modes; uninstalled (the browser
+  `process.memoryUsage` —, `installSnapHash`), loaded by `bin/serve.ts` and
+  `bin/active-runtime.ts` (the two desktop boot modes); uninstalled (the browser
   host), `procMemory()` / `heapMemory()` answer `null` (the profiler then records
   no memory, never a made-up zero) and the snapshot hash is the portable `hash64`.
 
@@ -620,9 +633,8 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `infra/jobs/supervised-job`
 - Exemptions:
   - Exempts itself from:
-    - `detached-work-safety/no-raw-set-interval` — `bin/index.ts` (sanctioned)
+    - `detached-work-safety/no-raw-set-interval` — `bin/serve.ts` (sanctioned)
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
-    - `boot:closure-digestable` — `bin/index.ts` (debt)
 - Cli:
   - Exports (values): `runExec`
 - Test helpers:
@@ -639,7 +651,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `runPostReadyPhases` — The post-ready phases of a SERVING host (`serve`, `browser`): `onReady` (graph-driven: each plugin fires as soon as its `dependsOn` parents have resolved), then the `onAllReady` barrier. `exec` never runs them — a short-lived child has no subscribers, so no watcher, job runner or LISTEN belongs in it.
     - `runSettledPhase` — The settled phase of a SERVING host (`serve`, `browser`): every plugin's `onSettled`, once the host is already serving and every post-ready phase has resolved — post-serving catch-up work (infra/warmup drains every declared warm-up here). `exec` has no path to it: a short-lived child must never run heavy post-serving work, and this function is the only caller of the hook.
     - `serverEntries`
-    - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states.
+    - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states and no core barrel to warm.
     - `setServerErrorHandler` — Route every `reportServerError` to `fn` — or to nobody (`null`) — discarding whatever was held before, so a suite never receives another suite's reports.
     - `withHostServices` — Run `fn` with `providers` (each a `Svc.provide(impl)`) answering their services — over the unbooted host's providers and over a collected graph's — and put the previous answers back once it settles, so a suite swapping a service cannot leak it into the suites after it in the same bun process.
 

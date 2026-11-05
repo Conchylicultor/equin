@@ -123,6 +123,7 @@ const migrationSource: Entry = {
     } satisfies ServerPluginDefinition,
   }),
   dependsOn: ["database/plugins/migrations"],
+  core: null,
 };
 
 /**

@@ -67,8 +67,10 @@ type Spec struct {
 
 	// Composition names WHICH APP this namespace serves. The gateway neither
 	// interprets it nor hands it on: the BACKEND reads it back off this same
-	// spec.json at boot (server-core/bin/spec-composition.ts) and picks its
-	// plugin registry from it. Absent means "no composition was declared",
+	// spec.json at boot (server-core/bin/spec-composition.ts) and refuses to
+	// serve when the entry Command runs imports another composition's plugin
+	// registries (the build points Command at the composition's own entry;
+	// with no Command, the fallback bin/index.ts is the main one). Absent means "no composition was declared",
 	// which the backend reads as the main app — never as "look on disk and see
 	// what turns up", which is the presence-keyed selection this field replaced.
 	//

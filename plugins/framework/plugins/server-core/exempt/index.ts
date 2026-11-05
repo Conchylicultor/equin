@@ -3,7 +3,7 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "detached-work-safety/no-raw-set-interval",
-    paths: ["bin/index.ts"],
+    paths: ["bin/serve.ts"],
     kind: "sanctioned",
     reason:
       "Process entry points' orphan guards: they run before (and outside) the plugin graph that registers timers, and exit the process when its parent dies.",
@@ -14,13 +14,5 @@ export default [
     kind: "sanctioned",
     reason:
       "The substrate: defines the old live-resource spellings, or is compiled onto them (the live API, the optimistic overlay, the runtime and its server / central facades).",
-  },
-  {
-    rule: "boot:closure-digestable",
-    paths: ["bin/index.ts"],
-    kind: "debt",
-    task: "task-1793843058-8yr0wg",
-    reason:
-      "The bin picks its registry (bin/plugins-active.ts) and warms core barrels (bin/active-runtime.ts coreBarrel) by computed import paths, so the closure measured from the bin stops at the registry.",
   },
 ] satisfies Exemptions;

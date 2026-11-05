@@ -506,10 +506,12 @@ export async function renderBrowserHost(
     "",
     "export const hostEntries: ServerRegistryEntry[] = [",
   ];
+  // `core: null` throughout: the host is one bundle, every module it can reach
+  // is already in it, so there is no cold core barrel to warm.
   for (const pluginPath of members) {
     const dependsOn = (deps.get(pluginPath) ?? []).filter((d) => graph.has(d));
     lines.push(
-      `  { pluginPath: ${JSON.stringify(pluginPath)}, id: ${JSON.stringify(pluginPath.split("/plugins/").join("."))}, loader: () => import(${JSON.stringify(`@plugins/${pluginPath}/server`)}), dependsOn: ${JSON.stringify(dependsOn)} },`,
+      `  { pluginPath: ${JSON.stringify(pluginPath)}, id: ${JSON.stringify(pluginPath.split("/plugins/").join("."))}, loader: () => import(${JSON.stringify(`@plugins/${pluginPath}/server`)}), dependsOn: ${JSON.stringify(dependsOn)}, core: null },`,
     );
   }
   lines.push(

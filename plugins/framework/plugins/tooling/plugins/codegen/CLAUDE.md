@@ -165,7 +165,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 134 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 136 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/parse-utils` ×20
     - `config_v2` ×16
     - `framework/plugin-id` ×15
@@ -182,6 +182,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `config_v2/ledger` ×2
     - `framework/tooling/boundaries` ×2
     - `framework/tooling/format` ×2
+    - `infra/paths` ×2
     - `network/live/resource-protocol` ×2
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
     - `framework/tooling/guards/agent-policy.agentPolicySettings`
@@ -317,6 +318,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `regenerateManifestCodegen`
     - `regenerateRegistryCodegen`
     - `renderAppDeclarationsManifest`
+    - `renderBackendEntry`
     - `renderBarrelStubs`
     - `renderBrowserHost`
     - `renderBrowserHostScope`

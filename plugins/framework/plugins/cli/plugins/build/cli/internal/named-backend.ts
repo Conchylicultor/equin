@@ -6,12 +6,17 @@ import {
   processName,
 } from "@plugins/packages/plugins/process-name/machine";
 
+/** The gateway's own spawn convention when a spec has no `command`. */
+const GATEWAY_DEFAULT_ENTRY = "bin/index.ts";
+
 /**
- * The spec `command` that starts namespace `ns`'s backend as `bun bin/index.ts`
- * — the gateway's own convention — through a clone of `bun` named for it
+ * The spec `command` that starts namespace `ns`'s backend as `bun <entry>`
+ * (relative to the spec's `server` dir) through a clone of `bun` named for it
  * (`equin · server · <ns>`, `equin · central`), so Activity Monitor tells the
- * backends apart. Undefined leaves the convention to the gateway: no `bun` to
- * name, or a filesystem refusing the clone (said so on the build's output).
+ * backends apart. When the clone cannot be made — no `bun` to name, or a
+ * filesystem refusing it (said so on the build's output) — the default entry is
+ * left to the gateway's own convention (`bun bin/index.ts`), and any other runs
+ * under the bare `bun`.
  *
  * The clone pins the Bun this build resolved: a backend the gateway restarts
  * later runs the same one, until the next build re-clones it.
@@ -19,8 +24,10 @@ import {
 export function namedBackendCommand(
   ns: string,
   bun: AppPath | null,
+  entry: string,
 ): string[] | undefined {
-  if (bun === null) return undefined;
+  const unnamed = entry === GATEWAY_DEFAULT_ENTRY ? undefined : ["bun", entry];
+  if (bun === null) return unnamed;
   const named = cloneNamedBinary({
     bin: bun,
     dir: worktreeArtifacts.processNames(asNamespace(ns)),
@@ -30,7 +37,7 @@ export function namedBackendCommand(
     console.log(
       `  could not clone bun for ${ns} (${named.code}): its backend runs as a bare \`bun\``,
     );
-    return undefined;
+    return unnamed;
   }
-  return [named.path, "bin/index.ts"];
+  return [named.path, entry];
 }

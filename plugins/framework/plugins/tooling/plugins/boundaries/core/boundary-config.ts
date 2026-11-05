@@ -225,7 +225,7 @@ export default defineBoundaries({
     "plugins/framework/plugins/web-core/web/App.tsx",
     "plugins/framework/plugins/server-core/core/server.generated.ts",
     "plugins/framework/plugins/server-core/core/machine.generated.ts",
-    "plugins/framework/plugins/server-core/bin/index.ts",
+    "plugins/framework/plugins/server-core/bin/serve.ts",
     "plugins/framework/plugins/central-core/core/central.generated.ts",
     "plugins/framework/plugins/central-core/bin/index.ts",
     "plugins/framework/plugins/tooling/plugins/checks/core/check.generated.ts",

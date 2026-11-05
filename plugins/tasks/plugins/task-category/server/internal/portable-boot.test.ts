@@ -200,6 +200,7 @@ const committedFromDisk: Entry = {
     } satisfies ServerPluginDefinition,
   }),
   dependsOn: ["database/plugins/migrations", "config_v2"],
+  core: null,
 };
 
 /** `SUBJECT`'s `dependsOn` closure in the app's server registry. */
@@ -252,10 +253,6 @@ describe.if(IN_CHILD)("task-category's server closure boots portably", () => {
     await bootPluginGraph({
       mode: "exec",
       entries: await withProviders([...closureOf(SUBJECT), committedFromDisk]),
-      coreBarrel: (pluginPath) =>
-        existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts"))
-          ? () => import(`@plugins/${pluginPath}/core`)
-          : null,
     });
   });
 

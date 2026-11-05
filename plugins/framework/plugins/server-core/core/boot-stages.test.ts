@@ -37,36 +37,36 @@ describe("bootPluginGraph — the preload-declare assert", () => {
     const key = "server-core-test.boot-stages-undeclared";
     let barrierRan = false;
     const boot = bootPluginGraph({
-        mode: "exec",
-        coreBarrel: () => null,
-        entries: [
-          {
-            pluginPath: "test/undeclared",
-            id: "test.undeclared",
-            dependsOn: [],
-            // Registers while loading, as a server barrel does at module eval,
-            // and contributes no Resource.Declare.
-            loader: async () => {
-              defineResource(
-                {
-                  key,
-                  schema: z.number(),
-                  preload: "boot",
-                  validateParams: () => {},
+      mode: "exec",
+      entries: [
+        {
+          pluginPath: "test/undeclared",
+          id: "test.undeclared",
+          dependsOn: [],
+          core: null,
+          // Registers while loading, as a server barrel does at module eval,
+          // and contributes no Resource.Declare.
+          loader: async () => {
+            defineResource(
+              {
+                key,
+                schema: z.number(),
+                preload: "boot",
+                validateParams: () => {},
+              },
+              { mode: "push", loader: () => 1 },
+            );
+            return {
+              default: {
+                contributions: [],
+                onReadyBlocking: () => {
+                  barrierRan = true;
                 },
-                { mode: "push", loader: () => 1 },
-              );
-              return {
-                default: {
-                  contributions: [],
-                  onReadyBlocking: () => {
-                    barrierRan = true;
-                  },
-                },
-              };
-            },
+              },
+            };
           },
-        ],
+        },
+      ],
     });
     expect(boot).rejects.toThrow(`"${key}"`);
     expect(barrierRan).toBe(false);

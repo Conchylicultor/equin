@@ -10,13 +10,17 @@ const REGISTRIES = [
   "plugins/framework/plugins/server-core/core/server.generated.ts",
   "plugins/framework/plugins/server-core/core/machine.generated.ts",
 ];
-/** A registry entry: `import("@plugins/<path>/<runtime>")`. */
+/** A registry entry's barrel — its `loader`'s `import("@plugins/<path>/<runtime>")`,
+ *  or its `core` loader's `import("@plugins/<path>/core")`. */
 const ENTRY_RE = /import\("@plugins\/([^"]+)"\)/g;
 
 /**
- * What a backend boots: its bin plus every server and machine barrel the
- * registries list (the bin reaches the registries by a computed path, so a
- * closure measured from the bin alone stops there). A failed result when a
+ * What a backend boots: its bin plus every barrel the registries list — each
+ * server and machine barrel, and the core barrel the load waves warm before
+ * it — so each finding is charged to the plugin whose barrel reaches it
+ * (rather than all of them to the bin, which reaches every registry). The main
+ * composition's bin stands for every composition's entry: they differ only in
+ * which registries they import (codegen's `renderBackendEntry`). A failed result when a
  * registry or a barrel it names is missing — a build is due.
  */
 export async function backendEntries(

@@ -22,7 +22,7 @@
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { declareMemoryHostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
@@ -88,6 +88,7 @@ const migrationSource: Entry = {
     } satisfies ServerPluginDefinition,
   }),
   dependsOn: ["database/plugins/migrations"],
+  core: null,
 };
 
 /** The `dependsOn` closure of `roots` in the app's server registry. */
@@ -192,10 +193,6 @@ describe.if(IN_CHILD)("pageTools on a portable host", () => {
         ...PROVIDERS,
         migrationSource,
       ],
-      coreBarrel: (pluginPath) =>
-        existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts"))
-          ? () => import(`@plugins/${pluginPath}/core`)
-          : null,
     });
     for (const r of ROWS) {
       await db.execute(

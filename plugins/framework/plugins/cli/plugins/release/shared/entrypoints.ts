@@ -4,7 +4,8 @@ import { dirname } from "node:path";
 // the `release:fixed-entrypoints-bundle` check so the check measures exactly
 // what a release compiles.
 
-/** The backend. Its whole closure is the composition (`@composition-server-registry`). */
+/** The backend: the main composition's serving entry, whose server and machine
+ *  registries a release bundles as the composition's (`RegistryRedirects`). */
 export const SERVER_ENTRY =
   "plugins/framework/plugins/server-core/bin/index.ts";
 

@@ -101,8 +101,6 @@ export async function bootBrowserHost(
   const ordered = await bootPluginGraph({
     mode: "browser",
     entries: opts.entries,
-    // One bundle: every module it can reach is already in it, nothing to warm.
-    coreBarrel: () => null,
   });
 
   // No per-plugin check here: the graph is portable by construction — codegen

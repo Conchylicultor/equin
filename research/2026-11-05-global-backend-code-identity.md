@@ -36,7 +36,7 @@ few edges:
 | `infra/deps` kinds, through ~15 barrels | `playwright-browser`'s `bun -e` script string holding `require(b)` | **fixed:** `scripts/record-executables.ts`, run by path |
 | `plugin-tree/server` → `plugin-records/core` | `runRecordJobRequest`'s `import(moduleUrl)` | **fixed:** the worker entry (`bin/record-worker.ts`) passes its own `import` as the loader |
 | `asset-mirror/bundle/server` | `runAssetMirrorPrewarm`'s `import(registry)` (release only) | **fixed:** moved to the bundle's `cli/` barrel (no backend registers it) |
-| `server-core/bin` | registry selection (`plugins-active.ts`) and `coreBarrel` | task-1793843058-8yr0wg |
+| `server-core/bin` | registry selection (`plugins-active.ts`) and `coreBarrel` | **fixed:** each composition has its own serving entry (`bin/index.ts` for main, a generated `bin/index.composition.<id>.generated.ts` otherwise) importing its registries by literal path; the spec's `command` runs it and `serve` checks it against the spec's `composition`. Core barrels warm through a literal `core` loader per registry entry |
 | `plugin-tree/server`, `composition/server`, `deploy-secrets/approvals/server` | the facet framework (`load-facets.ts`, which hides `facet.generated` behind a computed specifier on purpose), and through it codegen, web-artifacts, exempt and lint | task-1793843068-6u6ujy |
 | `type-check/server`, `type-check/backstop/server` (a `run` body) | `checks/core` runner | task-1793843085-tgrdel |
 | `worktree/reclaim/server`, `serve-composition/server` | codegen's barrel, used for a registry listing and a reset | task-1793843090-eqagj3 |
@@ -64,7 +64,7 @@ that tooling, not by any app logic.
    digest cannot disagree. It charges each finding to the entry (the bin or one
    barrel) whose own subgraph reaches it, stopping at other entries. The
    owning plugin either fixes the edge or holds it as tracked debt in its
-   `exempt/`. Eight entries are debt today, each tied to one of the tasks
+   `exempt/`. Seven entries are debt today, each tied to one of the tasks
    above. A new computed load anywhere else fails the check.
 4. **The identity** (after the chain above, part of the restart-skip work)
    is: `sourceDigest` over the serving entry, plus the non-code inputs below.

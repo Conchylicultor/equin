@@ -17,6 +17,7 @@ import {
   setReleaseIdentity,
   type ReleaseIdentity,
 } from "@plugins/infra/plugins/paths/server";
+import { backendEntryFor } from "@plugins/infra/plugins/paths/core";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
 import {
   ensureDatabase,
@@ -828,13 +829,12 @@ export async function bootSelfContainedApp(opts: {
    * Which composition this app IS, threaded into the spec so the backend selects
    * its plugin registry by identity.
    *
-   * Inert for a real release, whose `command` is a compiled binary: `release`
-   * repoints the `@composition-server-registry` alias at compile time, so the
-   * bundled closure IS the composition closure and there is no runtime selection
-   * left to steer. It matters for the uncompiled path (`serve-app` with no
-   * `--command`, which runs the checkout's `bun bin/index.ts`), and it is worth
-   * recording either way: the spec is the one durable statement of which app a
-   * namespace serves.
+   * For a real release, whose `command` is a compiled binary, `release`
+   * bundled the composition's registries into it; its backend checks the two
+   * agree at boot. For the uncompiled path (`serve-app` with no `command`) it
+   * also picks the entry the backend runs: the composition's own serving entry
+   * in the checkout (`backendEntryFor`). The spec is the one durable statement
+   * of which app a namespace serves.
    */
   composition?: string;
   logLevel?: string;
@@ -878,7 +878,14 @@ export async function bootSelfContainedApp(opts: {
     name,
     server,
     web,
-    command,
+    // Uncompiled: the checkout's Bun runs the composition's own entry — the
+    // gateway's fallback (`bun bin/index.ts`) is the main composition's, which
+    // the backend refuses to boot under another composition's namespace.
+    command:
+      command ??
+      (composition === undefined
+        ? undefined
+        : ["bun", backendEntryFor(composition)]),
     composition,
   });
   log(`Registered app "${name}"; waiting for backend to become ready...`);

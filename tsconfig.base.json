@@ -14,9 +14,7 @@
     "jsx": "react-jsx",
     "paths": {
       "@plugins/*": ["./plugins/*"],
-      "@composition-web-registry": ["./plugins/framework/plugins/web-sdk/core/web.generated"],
-      "@composition-server-registry": ["./plugins/framework/plugins/server-core/bin/plugins-active"],
-      "@composition-machine-registry": ["./plugins/framework/plugins/server-core/bin/plugins-active"]
+      "@composition-web-registry": ["./plugins/framework/plugins/web-sdk/core/web.generated"]
     }
   }
 }

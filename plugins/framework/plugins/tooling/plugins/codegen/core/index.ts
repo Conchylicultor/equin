@@ -45,6 +45,7 @@ export {
   generateCompositionRegistry,
   generatePluginRegistry,
   listNamedCompositionRegistries,
+  renderBackendEntry,
   parseNamedCompositionRegistryFileName,
   renderCollectedDirRegistry,
   renderEmptyCollectedDirRegistry,

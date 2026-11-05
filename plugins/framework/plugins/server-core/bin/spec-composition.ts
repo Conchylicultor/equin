@@ -1,6 +1,10 @@
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
-import { WORKTREE_SPEC_FILE } from "@plugins/infra/plugins/paths/core";
+import {
+  backendEntryFor,
+  WORKTREE_SPEC_FILE,
+} from "@plugins/infra/plugins/paths/core";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
 /**
  * Read WHICH APP this backend is, off the same `spec.json` the gateway read to
@@ -97,4 +101,34 @@ export function readSpecComposition(
     );
   }
   return composition;
+}
+
+/**
+ * Refuse to serve a composition other than the one the namespace declares.
+ *
+ * A serving backend's entry imports one composition's registries by literal
+ * path (`./serve.ts`), so which app it boots is decided by the entry the spec's
+ * `command` ran — and `declared` (`readSpecComposition`) is which app the
+ * namespace IS. The two can disagree: a spec written before its composition's
+ * entry existed, or a gateway falling back to `bin/index.ts` for a spec with no
+ * `command`. Booting then would put one app under another's namespace and
+ * database, which looks like it worked — so it throws, before anything binds.
+ *
+ * @param declared the spec's `composition` (absent/empty ⇒ the main one)
+ * @param booting the `composition.id` of every registry the entry imported
+ */
+export function assertServesComposition(
+  declared: string | undefined,
+  booting: readonly string[],
+): void {
+  const want =
+    declared === undefined || declared === "" ? MAIN_COMPOSITION_ID : declared;
+  const wrong = booting.find((id) => id !== want);
+  if (wrong === undefined) return;
+  throw new Error(
+    `This backend's entry boots the "${wrong}" composition, but its namespace's spec.json ` +
+      `declares "${want}", whose entry is ${backendEntryFor(want)}. ` +
+      `Rebuild the composition (Studio -> Compositions -> Serve) so its spec runs its own entry. ` +
+      `Refusing to boot one app under another's namespace and database.`,
+  );
 }

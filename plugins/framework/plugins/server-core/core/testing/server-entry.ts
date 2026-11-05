@@ -3,7 +3,7 @@ import type { ServerRegistryEntry } from "../boot-stages";
 /**
  * The registry entry of `pluginPath`'s server barrel, as codegen writes one
  * (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier),
- * with the `dependsOn` the caller states.
+ * with the `dependsOn` the caller states and no core barrel to warm.
  */
 export function serverEntryFor(
   pluginPath: string,
@@ -14,5 +14,6 @@ export function serverEntryFor(
     id: pluginPath.split("/plugins/").join("."),
     loader: () => import(`@plugins/${pluginPath}/server`),
     dependsOn,
+    core: null,
   };
 }

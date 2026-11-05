@@ -80,23 +80,19 @@ export interface ServerRegistryEntry {
   id: string;
   loader: () => Promise<{ default: unknown }>;
   dependsOn: string[];
+  /**
+   * The loader of the plugin's `core/index.ts`, or null when it has none (or
+   * when the host is one bundle, nothing left cold to warm — a browser host).
+   * A literal `import()` codegen writes per entry, so the boot reaches each core
+   * barrel by a path a source digest follows (`packages/source-digest`) — never
+   * one computed from `pluginPath`. What the load waves warm (see the
+   * core-warming note below).
+   */
+  core: (() => Promise<unknown>) | null;
 }
 
 export type BootSpec = {
   entries: ServerRegistryEntry[];
-  /**
-   * The loader of `plugins/<pluginPath>/core/index.ts`, or null when the plugin
-   * has none. Supplied by the composition root because answering it needs
-   * `PLUGINS_DIR` from `paths/core` — and a `shared/` file naming it would close
-   * a cycle in the server import graph (`paths/server` imports this plugin's
-   * `core`). The root also owns the import by computed path, so this module —
-   * which every compiled live read statically reaches through the core barrel —
-   * loads no module whose path is not a literal (a source digest of those
-   * reads could not follow one: `packages/source-digest`). In a `bun --compile`
-   * release the whole graph is one bundle and `PLUGINS_DIR` may not exist on
-   * disk; null there is correct (see the core-warming note below).
-   */
-  coreBarrel: (pluginPath: string) => (() => Promise<unknown>) | null;
 } & (
   | {
       mode: "serve";
@@ -134,7 +130,7 @@ export async function bootPluginGraph(
 ): Promise<LoadedServerPlugin[]> {
   // Before any plugin loads, so every phase hook can ask which mode it runs in.
   setBootMode(spec.mode);
-  const ordered = await loadServerPlugins(spec.entries, spec.coreBarrel);
+  const ordered = await loadServerPlugins(spec.entries);
 
   // ── Contributions ──────────────────────────────────────────────
   // Collect declarative contributions from all plugins — static data on the
@@ -200,7 +196,6 @@ export async function bootPluginGraph(
 // `computeLoadWaves` for the invariant and cycle handling.
 async function loadServerPlugins(
   entries: ServerRegistryEntry[],
-  coreBarrel: BootSpec["coreBarrel"],
 ): Promise<LoadedServerPlugin[]> {
   // The graph is keyed by NODE: a plugin's server half is its `pluginPath`, its
   // machine half `<pluginPath>#machine`, so the two never collide.
@@ -244,12 +239,11 @@ async function loadServerPlugins(
     // two roots at once. Rejections here are not the reporting site: a genuinely
     // broken core barrel re-rejects when its own (or a dependent's) server barrel
     // imports it below, and is recorded there — so nothing is swallowed.
-    // (In a `bun --compile` release the whole graph is one bundle, so the race
-    // cannot occur and `PLUGINS_DIR` may not exist on disk; core-warming simply
-    // no-ops via `coreBarrel`.)
+    // (In a bundle — a `bun --compile` release, a browser host — the race cannot
+    // occur; warming there only evaluates a bundled barrel a little earlier.)
     const took: { plugin: string; ms: number }[] = [];
     const coreLoads = wave.flatMap((n) => {
-      const load = coreBarrel(n.entry.pluginPath);
+      const load = n.entry.core;
       return load === null ? [] : [{ pluginPath: n.pluginPath, load }];
     });
     await Promise.allSettled(

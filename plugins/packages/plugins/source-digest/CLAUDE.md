@@ -32,9 +32,10 @@ const digest = await sourceDigest([myCode]);
   into reuse. There is no escape for a computed-path load: code reached
   through one is not hashed, so it could not invalidate what it shapes. A
   module that must load by computed path does it outside every guarded
-  closure — server-core's boot sequence, which every compiled live read
-  reaches through the core barrel, takes its core-barrel loaders from the
-  composition root (`BootSpec.coreBarrel`, `bin/active-runtime.ts`).
+  closure. Code a guarded closure does run loads by a literal path — server-core's
+  boot sequence warms each plugin's core barrel through the literal `core` loader
+  codegen writes into every server/machine registry entry, and a serving
+  backend's entry imports its composition's registries by literal path.
   `computedLoads(path, text)` is that reading on its own, for a guard that
   keeps a closure digestable (`boot:closure-digestable` holds the serving
   backend's).

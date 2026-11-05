@@ -127,8 +127,9 @@ import {
 const SENTINEL_WORKER_ENTRY =
   "plugins/debug/plugins/sentinel/server/internal/worker/entry.ts";
 
-// The registries the compiled backend's `@composition-server-registry` and
-// `@composition-machine-registry` aliases are repointed at, so the bundler's
+// The composition's filtered registries, checked present before compiling: the
+// compiled backend's imports of the committed server and machine registries
+// are redirected to them (`compositionRegistryRedirects`), so the bundler's
 // closure IS the composition closure (a release is a desktop host: it boots
 // both halves). Keyed by
 // composition NAME: filtered registries have no checkout-global flavour, so a
@@ -354,12 +355,9 @@ async function resolveCompositionIconKey(opts: {
  * release ships no bun runtime and no TS source.
  *
  * `@plugins/*` resolves via the on-disk `tsconfig.json` nearest the entrypoint
- * (Bun.build auto-discovers it), exactly as in dev. `aliasOverrides` repoints
- * bare specifiers for THIS compile only via an `onResolve` resolver plugin —
- * used to pin the backend's `@composition-server-registry` and
- * `@composition-machine-registry` imports to the filtered composition
- * registries, so the bundled closure IS the composition closure. (We use a resolver rather than `--tsconfig-override`, which
- * `bun build` does not accept.)
+ * (Bun.build auto-discovers it), exactly as in dev. Every committed registry
+ * the entrypoint reaches is bundled as the composition's filtered sibling
+ * (`registries`), so the bundled closure IS the composition closure.
  *
  * `platform` selects the standalone runtime baked into the binary. Bun
  * cross-compilation is first-class — it downloads the target runtime itself
@@ -378,24 +376,11 @@ async function compile(opts: {
   // something a call site can be trusted to list. The launcher reaching the
   // unfiltered `deps` registry is how Playwright got into the website release.
   registries: RegistryRedirects;
-  aliasOverrides?: { alias: string; target: string }[];
 }): Promise<void> {
-  const { entry, outfile, root, platform, registries, aliasOverrides } = opts;
+  const { entry, outfile, root, platform, registries } = opts;
   mkdirSync(dirname(outfile), { recursive: true });
 
   const plugins: Bun.BunPlugin[] = [registryRedirectPlugin(registries)];
-  for (const { alias, target } of aliasOverrides ?? []) {
-    // Anchor the regex to the exact specifier so no other import is intercepted.
-    const filter = new RegExp(
-      `^${alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
-    );
-    plugins.push({
-      name: "composition-registry-alias",
-      setup(build) {
-        build.onResolve({ filter }, () => ({ path: target }));
-      },
-    });
-  }
 
   const result = await Bun.build({
     entrypoints: [join(root, entry)],
@@ -1132,10 +1117,6 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
     root,
     platform,
     registries,
-    aliasOverrides: [
-      { alias: "@composition-server-registry", target: filteredServerReg },
-      { alias: "@composition-machine-registry", target: filteredMachineReg },
-    ],
   });
 
   console.log("  • launcher");
