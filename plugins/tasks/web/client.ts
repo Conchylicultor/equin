@@ -6,10 +6,10 @@ import {
 import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
+  taskActiveDependentCounts,
   taskRows,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { useTaskCluster } from "@plugins/tasks/plugins/tasks-core/web";
 import { updateTask } from "../core";
 
 // No `rank`: repositioning goes through the `moveTask` endpoint, which carries
@@ -78,7 +78,11 @@ export function useTasksById(
  * conversation Tasks button, the per-row conversation chip, the drop-dependents
  * action), so two of them can never disagree about how many tasks are waiting.
  *
- * A resource result over the count: loading until the task's cluster is known, error
+ * Read by id from the stored count (`taskActiveDependentCounts`), never by
+ * walking the task's dependency cluster: a list of rows each showing it (the
+ * queue's chips) holds one number per row, not one cluster per row.
+ *
+ * A resource result over the count: loading until the count is known, error
  * when it failed to load. A count of `0` is a real answer ("nothing is waiting
  * on it"); the loading arm is what "we don't know yet" looks like, so a surface
  * can render a loading affordance instead of quietly claiming zero.
@@ -86,10 +90,7 @@ export function useTasksById(
 export function useActiveDependentCount(
   id: string | null | undefined,
 ): ResourceResult<number> {
-  // Its dependents are all in its cluster. No such task ⇒ zero once that is
-  // known: nothing can wait on it.
-  const cluster = useTaskCluster(id);
-  return mapResource(cluster, (c) =>
-    c === null ? 0 : c.graph.activeDependents(c.task.id).length,
-  );
+  const row = useLive(taskActiveDependentCounts, { id: id ?? null });
+  // No such task ⇒ zero once that is known: nothing can wait on it.
+  return useMemo(() => mapRow(row, (r) => r?.activeDependents ?? 0), [row]);
 }

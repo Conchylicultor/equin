@@ -58,7 +58,6 @@
     - `network/live.useLive`
     - `network/live/live-state.mapResource`
     - `network/live/live-state.ResourceResult`
-    - `tasks/tasks-core.useTaskCluster`
   - Exports (types): `TaskPatch`
   - Exports (values):
     - `useActiveDependentCount`

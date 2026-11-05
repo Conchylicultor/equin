@@ -54,13 +54,19 @@ import { compileCollection } from "@plugins/network/plugins/live/server/testing"
 import {
   attemptRows,
   conversationsActive,
+  taskActiveDependentCounts,
   taskClusterRows,
+  TaskGraph,
   taskRows,
 } from "../../core";
+import type { TaskNode } from "../../core/task-graph";
 import { installTaskDerivedSchema } from "../testing/install-derived-schema";
 import { conversationsActiveServeOptions } from "./conversation-rows";
 import { attemptRowsServeOptions } from "./attempt-rows";
-import { taskRowsServeOptions } from "./task-rows";
+import {
+  taskActiveDependentCountsServeOptions,
+  taskRowsServeOptions,
+} from "./task-rows";
 import { _conversations } from "./tables";
 import { attempts, conversations, tasks } from "./views";
 
@@ -79,6 +85,25 @@ function taskPointLoader(db: QueryDb) {
   const { loader } = compileWindowQuery(taskRows.rows, specs.rows).serverOpts;
   return (ids: readonly string[]) =>
     loader(taskRows.rows.point.encode([...ids])) as Promise<Rec[]>;
+}
+
+/**
+ * The shipped active-dependent counts (`taskActiveDependentCounts`, lookup-only
+ * by id), compiled with their real serve options: their loader over an id set.
+ */
+function activeDependentsLoader(db: QueryDb) {
+  const specs = compileCollection(taskActiveDependentCounts, {
+    ...taskActiveDependentCountsServeOptions,
+    db,
+  });
+  const { loader } = compileWindowQuery(
+    taskActiveDependentCounts.rows,
+    specs.rows,
+  ).serverOpts;
+  return (ids: readonly string[]) =>
+    loader(taskActiveDependentCounts.rows.point.encode([...ids])) as Promise<
+      Rec[]
+    >;
 }
 
 /** The shipped cluster set (`taskClusterRows`, scoped by `clusterId`), same binding. */
@@ -277,6 +302,21 @@ async function checkTasks(): Promise<number> {
       union.push(...rows);
     }
     expect(sortedById(union)).toEqual(sortedById(full));
+    // Every task's stored active-dependent count (the "N blocked" chip's
+    // read) ≡ the in-memory walk over the whole graph it replaced
+    // (`TaskGraph.activeDependents`: through settled dependents, cycles
+    // included).
+    const graph = TaskGraph.from(full as unknown as TaskNode[]);
+    const counts = await activeDependentsLoader(db)(taskIds);
+    expect(sortedById(json(counts))).toEqual(
+      taskIds
+        .map((id) => ({
+          id,
+          activeDependents: graph.activeDependents(id).length,
+        }))
+        .sort(byId),
+    );
+    expect(counts.some((r) => (r.activeDependents as number) > 0)).toBe(true);
     return full.length;
   });
 }

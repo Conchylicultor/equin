@@ -952,6 +952,7 @@ export const hostReads: readonly {
   { key: "subagent-activity", needsMachine: true },
   { key: "subagent-transcript", needsMachine: true },
   { key: "subagents.parent-facts", needsMachine: false },
+  { key: "task-active-dependents", needsMachine: false },
   { key: "task-categories.by-id", needsMachine: false },
   { key: "task-category.registry", needsMachine: false },
   { key: "task-cluster", needsMachine: false },

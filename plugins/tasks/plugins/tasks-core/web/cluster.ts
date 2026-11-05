@@ -37,8 +37,8 @@ interface ClusterIndex {
 // One index per cluster snapshot, shared by every reader of it in a render
 // pass: a plain scoped read hands every observer the SAME cached array, a
 // fresh one whenever the cluster changes, so its identity is the cache key —
-// and the entry dies with the snapshot. A list of rows each showing a
-// dependent count builds the graph once, not once per row.
+// and the entry dies with the snapshot. The surfaces of one task (its graph
+// card, deps tree, dependency card) build the graph once between them.
 const INDEX_BY_SNAPSHOT = new WeakMap<readonly TaskRow[], ClusterIndex>();
 
 function indexOf(rows: readonly TaskRow[]): ClusterIndex {

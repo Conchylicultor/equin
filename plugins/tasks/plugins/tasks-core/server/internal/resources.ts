@@ -1,7 +1,11 @@
 import { serveCollection } from "@plugins/network/plugins/live/server";
 import { _attempts, _tasks, pushes } from "./tables";
 import { attemptRowsServeOptions } from "./attempt-rows";
-import { taskRowsServeOptions, taskWindowServeOptions } from "./task-rows";
+import {
+  taskActiveDependentCountsServeOptions,
+  taskRowsServeOptions,
+  taskWindowServeOptions,
+} from "./task-rows";
 import {
   conversationsActiveServeOptions,
   conversationsByIdServeOptions,
@@ -16,6 +20,7 @@ import {
   taskClusterRows,
   taskWindow,
   taskDescriptions,
+  taskActiveDependentCounts,
   attemptRows,
   attemptWorkspaces,
   pushRows,
@@ -120,3 +125,12 @@ export const attemptWorkspacesServed = serveCollection(attemptWorkspaces, {
 export const taskDescriptionsServed = serveCollection(taskDescriptions, {
   from: _tasks,
 });
+
+// One task's active dependent count by id (`taskActiveDependentCounts`,
+// lookup-only: `:rows` alone), over the `tasks` table and the stored
+// `task_active_dependents` count — a dependent's status move is a write to
+// the side row of each task it depends on, one refill each.
+export const taskActiveDependentCountsServed = serveCollection(
+  taskActiveDependentCounts,
+  taskActiveDependentCountsServeOptions,
+);

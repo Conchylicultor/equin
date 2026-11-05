@@ -227,8 +227,9 @@ serves them.
   union locks the two LABELS (advisory, in order), not the endpoint rows, so
   two unions reaching one cluster through different endpoints serialize.
   `clusterEdgeViolations` is the test oracle. Readers walking a task's edges
-  (graph, deps tree, dependency card and button, dependent counts, the draft
-  popover's relate) read `useTaskCluster(taskId)` (`web/cluster.ts`): the
+  (graph, deps tree, dependency card and button, the draft popover's
+  relate — surfaces about ONE task; a list's per-row reader reads a stored
+  value by id instead) read `useTaskCluster(taskId)` (`web/cluster.ts`): the
   task's row by id, then its cluster (`{ where: { clusterId } }`, skipped with
   `where: null` until the row is known), with the `TaskGraph` built once per
   snapshot. Why clusters (and not per-task closures):
@@ -257,6 +258,20 @@ serves them.
   count; an old bundle parses the default tuple). The one task window: what
   lists tasks reads it, what names a task reads `taskRows` by id
   (`research/2026-11-05-tasks-bounded-task-rows.md`).
+- **`taskActiveDependentCounts`** (`task-active-dependents`, lookup-only:
+  `:rows`) — one task's count of ACTIVE tasks transitively depending on it
+  (`{ id, activeDependents }`), the "N blocked" number the queue rows' chip,
+  the conversation Tasks button and drop-dependents show
+  (`tasks/web`'s `useActiveDependentCount`). Stored, not walked:
+  `task_active_dependents` is a `materializeJoin` of the `blocking` closure
+  walked the other way (child `depends_on_task_id` → parent `task_id`),
+  counting each reached dependent `depIsBlocking` calls unsettled — so a list
+  holds one number per row on screen. It replaced a `useTaskCluster` per row
+  (the queue's 38 chips subscribed 38 clusters, 0.39 M chars of a Tasks-pane
+  restart replay, 2026-11-05). A dependent's change re-aggregates every task
+  it transitively depends on (the closure's key expansion); one moved count is
+  one refill. `all-parity.test.ts` holds every count equal to
+  `TaskGraph.activeDependents`.
 - **`taskDescriptions`** (`task-descriptions`, lookup-only: `:rows`) — one
   task's `description`, the heavy text the set omits, by id
   (`useLive(taskDescriptions, { id })`). A description autosave is that row's
@@ -403,9 +418,9 @@ serves them.
     - `useTaskCluster`
     - `useTaskConversations`
 - Server:
-  - Contributes: 58 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `resource.declare` ×40
-    - `derived-table` ×6
+  - Contributes: 60 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `resource.declare` ×41
+    - `derived-table` ×7
     - `derived-view` ×4
     - `ids.kind` ×3
     - `attachments.link` ×2
@@ -612,6 +627,7 @@ serves them.
     - `pushes` (keyed, window)
     - `pushes:groups` (push)
     - `pushes:rows` (keyed, point)
+    - `task-active-dependents:rows` (keyed, point)
     - `task-cluster` (keyed)
     - `task-cluster:rows` (keyed, point)
     - `task-descriptions:rows` (keyed, point)
@@ -627,7 +643,7 @@ serves them.
     - `tasks.v2:groups` (push)
     - `tasks.v2:rows` (keyed, point)
 - Core:
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/model-provider` ×3
     - `conversations/workspace` ×3
     - `fields/text/config` ×3
@@ -638,6 +654,7 @@ serves them.
     - `network/live` ×2
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
+    - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `fields/string-list/config.stringListField`
     - `framework/product-name.LEGACY_IDS`
@@ -716,6 +733,7 @@ serves them.
     - `TASK_CLUSTER_MAX`
     - `TASK_FILING_STARTS`
     - `TASK_STATUS_OPTIONS`
+    - `taskActiveDependentCounts`
     - `taskAttachmentLinks`
     - `taskAttachmentLinksEntityRef`
     - `taskClusterRows`

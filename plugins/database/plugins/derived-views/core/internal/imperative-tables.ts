@@ -205,6 +205,16 @@ export const TASK_BLOCKING_TABLE = "task_prerequisite_blocking";
 export const TASK_CHILD_COUNT_TABLE = "task_child_count";
 
 /**
+ * Per task, how many ACTIVE tasks transitively depend on it (query-resource's
+ * `materializeJoin` of a closure over `task_dependencies` walked dependent-ward,
+ * in `plugins/tasks/plugins/tasks-core/server/internal/task-rows.ts`): the
+ * "N blocked" count a conversation row and the conversation toolbar show,
+ * read per task by id. A rollup on the change feed, created and reconciled by
+ * `rebuildDerivedTables` like the ones above.
+ */
+export const TASK_ACTIVE_DEPENDENTS_TABLE = "task_active_dependents";
+
+/**
  * The `pages.tree.v2` tree's child count (query-resource's `materializeJoin` of
  * `page_blocks` counting its own live page rows by `page_id`, in
  * `plugins/page/plugins/editor/server/internal/rollup-spec.ts`): per page, how
@@ -255,6 +265,7 @@ export const IMPERATIVE_PUBLIC_TABLES = {
   TASK_DEPENDENCY_LIST_TABLE,
   TASK_BLOCKING_TABLE,
   TASK_CHILD_COUNT_TABLE,
+  TASK_ACTIVE_DEPENDENTS_TABLE,
   PAGE_TREE_CHILDREN_TABLE,
 } as const satisfies Record<string, string>;
 

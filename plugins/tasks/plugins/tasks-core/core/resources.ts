@@ -25,6 +25,7 @@ import {
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { rankValueField } from "@plugins/fields/plugins/rank/plugins/config/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
@@ -164,8 +165,9 @@ export const TASK_CLUSTER_MAX = 500;
 // database unions on every dependency, folder and group edge write and refuses
 // a label write leaving an edge across clusters (`../server/internal/cluster-triggers.ts`),
 // so a reader walking those edges from one task — the dependency graph, the
-// deps tree, the dependency card, a dependent count, the draft popover's
-// relate — needs exactly its task's cluster. Bounded by TASK_CLUSTER_MAX, which
+// deps tree, the dependency card, the draft popover's relate — needs exactly
+// its task's cluster. A surface about ONE task: a per-row reader of a list
+// reads a stored per-task value by id instead (`taskActiveDependentCounts`). Bounded by TASK_CLUSTER_MAX, which
 // the union enforces. A union moves the loser's rows out of its tuple into the
 // winner's.
 export const taskClusterRows = liveCollection("task-cluster", {
@@ -180,6 +182,28 @@ export const taskClusterRows = liveCollection("task-cluster", {
     max: TASK_CLUSTER_MAX,
   },
 });
+
+// How many ACTIVE tasks transitively depend on each task, by id
+// (`useLive(taskActiveDependentCounts, { id })`): the "N blocked" count a
+// conversation row's chip, the conversation toolbar's Tasks button and the
+// drop-dependents action show. Lookup-only, over a stored count
+// (`task_active_dependents`, a materialized closure over the dependency edges
+// walked dependent-ward: `../server/internal/task-rows.ts`), so a list of rows
+// showing it holds one number per row on screen — never each row's whole
+// dependency cluster (38 `task-cluster` tuples, 0.39 M chars of a Tasks-pane
+// restart replay, 2026-11-05). A task the read does not find is `found: false`.
+export const taskActiveDependentCounts = liveCollection(
+  "task-active-dependents",
+  {
+    from: tasksEntityRef,
+    carry: {
+      pick: ["id"],
+      fields: { activeDependents: intField({ min: 0 }) },
+    },
+    baseExposures: false,
+    id: "id",
+  },
+);
 
 /** A task as `taskRows` delivers it: a `TaskListItem` and its exposed fields under `$columns`. */
 export type TaskRow =

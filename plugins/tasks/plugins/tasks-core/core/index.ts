@@ -54,6 +54,7 @@ export {
   taskWindow,
   type TaskRow,
   type TaskTreeRow,
+  taskActiveDependentCounts,
   taskDescriptions,
   attemptRows,
   attemptWorkspaces,

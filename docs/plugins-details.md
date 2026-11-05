@@ -21075,6 +21075,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PAGE_TREE_CHILDREN_TABLE`
           - `READ_ALIAS_SCHEMA`
           - `readAliasStem`
+          - `TASK_ACTIVE_DEPENDENTS_TABLE`
           - `TASK_ATTEMPT_FACTS_TABLE`
           - `TASK_BLOCKING_TABLE`
           - `TASK_CHILD_COUNT_TABLE`
@@ -25768,11 +25769,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 37 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 38 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `debug` ×11
               - `apps` ×9
               - `infra` ×5
               - `conversations` ×2
+              - `tasks` ×2
               - `active-data`
               - `backup/runs-arm`
               - `build/run-ledger`
@@ -25782,7 +25784,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `release`
               - `reports`
               - `shell/notifications`
-              - `tasks/automations`
         - **`storage`** — Integer field type: DB storage capability — maps to a Postgres integer column.
           - Server:
             - Contributes: `fields.storage` "int"
@@ -52306,7 +52307,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `network/live.useLive`
       - `network/live/live-state.mapResource`
       - `network/live/live-state.ResourceResult`
-      - `tasks/tasks-core.useTaskCluster`
     - Exports (types): `TaskPatch`
     - Exports (values):
       - `useActiveDependentCount`
@@ -54490,9 +54490,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTaskCluster`
           - `useTaskConversations`
       - Server:
-        - Contributes: 58 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `resource.declare` ×40
-          - `derived-table` ×6
+        - Contributes: 60 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `resource.declare` ×41
+          - `derived-table` ×7
           - `derived-view` ×4
           - `ids.kind` ×3
           - `attachments.link` ×2
@@ -54699,6 +54699,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pushes` (keyed, window)
           - `pushes:groups` (push)
           - `pushes:rows` (keyed, point)
+          - `task-active-dependents:rows` (keyed, point)
           - `task-cluster` (keyed)
           - `task-cluster:rows` (keyed, point)
           - `task-descriptions:rows` (keyed, point)
@@ -54714,7 +54715,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks.v2:groups` (push)
           - `tasks.v2:rows` (keyed, point)
       - Core:
-        - Uses: 34 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Uses: 35 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations/model-provider` ×3
           - `conversations/workspace` ×3
           - `fields/text/config` ×3
@@ -54725,6 +54726,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live` ×2
           - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
+          - `fields/int/config.intField`
           - `fields/json/config.jsonField`
           - `fields/string-list/config.stringListField`
           - `framework/product-name.LEGACY_IDS`
@@ -54803,6 +54805,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TASK_CLUSTER_MAX`
           - `TASK_FILING_STARTS`
           - `TASK_STATUS_OPTIONS`
+          - `taskActiveDependentCounts`
           - `taskAttachmentLinks`
           - `taskAttachmentLinksEntityRef`
           - `taskClusterRows`

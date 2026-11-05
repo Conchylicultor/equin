@@ -170,6 +170,7 @@ and re-export it from `core/index.ts`. See
     - `PAGE_TREE_CHILDREN_TABLE`
     - `READ_ALIAS_SCHEMA`
     - `readAliasStem`
+    - `TASK_ACTIVE_DEPENDENTS_TABLE`
     - `TASK_ATTEMPT_FACTS_TABLE`
     - `TASK_BLOCKING_TABLE`
     - `TASK_CHILD_COUNT_TABLE`

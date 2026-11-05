@@ -8,6 +8,7 @@ import {
 import {
   ATTEMPT_CONV_AGG_TABLE,
   ATTEMPT_PUSH_AGG_TABLE,
+  TASK_ACTIVE_DEPENDENTS_TABLE,
   TASK_ATTEMPT_FACTS_TABLE,
   TASK_BLOCKING_TABLE,
   TASK_CHILD_COUNT_TABLE,
@@ -88,6 +89,13 @@ export const _taskBlocking = pgTable(TASK_BLOCKING_TABLE, {
 // The `tasks.tree` tree's child count (`task-rows.ts`' `taskChildCount`):
 // per task, how many tasks name it as their folder.
 export const _taskChildCount = pgTable(TASK_CHILD_COUNT_TABLE, {
+  hostId: text("host_id").primaryKey(),
+  count: integer("count").notNull(),
+});
+
+// Per task, how many active tasks transitively depend on it (`task-rows.ts`'
+// `taskActiveDependents`): the "N blocked" count, read by id.
+export const _taskActiveDependents = pgTable(TASK_ACTIVE_DEPENDENTS_TABLE, {
   hostId: text("host_id").primaryKey(),
   count: integer("count").notNull(),
 });

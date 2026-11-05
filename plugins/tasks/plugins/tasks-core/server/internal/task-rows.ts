@@ -26,6 +26,7 @@ import {
 import { attemptConvAgg, attemptPushAgg } from "./rollup-spec";
 import {
   _attemptPushAgg,
+  _taskActiveDependents,
   _taskAttemptFacts,
   _taskBlocking,
   _taskChildCount,
@@ -185,6 +186,47 @@ export const taskBlocking = materializeJoin(
   { host: _tasks, table: _taskBlocking },
 );
 
+/**
+ * How many ACTIVE tasks transitively depend on the task, stored per task
+ * (`task_active_dependents`): the same closure as `taskBlocking` walked the
+ * other way (child `depends_on_task_id` → parent `task_id`, so a task's
+ * "ancestors" are its dependents), counting each dependent that is not
+ * settled — `depIsBlocking` is exactly "not done / dropped", the rule
+ * `TaskGraph.activeDependents` walks in memory. The closure is a `UNION`, so a
+ * dependent reached by two paths counts once, and a settled one is walked
+ * through. A dependent's change re-aggregates every task it transitively
+ * depends on (the closure's key expansion). Read per task by id
+ * (`taskActiveDependentCounts`), so a row showing the count holds one number,
+ * not its task's whole dependency cluster.
+ */
+export const taskActiveDependents = materializeJoin(
+  closureJoin({
+    alias: "dependents",
+    edges: _taskDependencies,
+    child: _taskDependencies.dependsOnTaskId,
+    parent: _taskDependencies.taskId,
+    nodes: _tasks,
+    ancestorJoins: [ancestorFacts],
+    aggregates: (c) => ({
+      count: aggregate(
+        sql`(count(*) FILTER (WHERE ${depIsBlocking({
+          droppedAt: c.anc.droppedAt,
+          heldAt: c.anc.heldAt,
+          hasCompleted: sql`COALESCE(${c.att.hasCompleted}, false)`,
+          hasActive: sql`COALESCE(${c.att.hasActive}, false)`,
+        })}))::int`,
+        {
+          decoder: Number,
+          sqlType: "integer",
+          notNull: true,
+          ifNone: sql`0`,
+        },
+      ),
+    }),
+  }),
+  { host: _tasks, table: _taskActiveDependents },
+);
+
 // The tree's child count (`taskWindow` declares `tree: { parent: "folderId" }`):
 // the tasks counting their own rows by `folder_id`, stored per parent — every
 // window row's `$childCount` (network/live's `childCount`, joined by the
@@ -214,6 +256,7 @@ export const TASK_MATERIALIZED_ROLLUPS = [
   taskDependencyList.rollup,
   taskBlocking.rollup,
   taskChildCount.rollup,
+  taskActiveDependents.rollup,
 ] as const;
 
 const joins = [
@@ -296,3 +339,20 @@ export const taskWindowServeOptions = {
 > & {
   childCount: TreeChildCountBinding<typeof _taskChildCount>;
 };
+
+/**
+ * One task's active dependent count by id (`taskActiveDependentCounts`,
+ * lookup-only): the stored `task_active_dependents` row joined onto the task.
+ * A write that moves the count is a write to that side row — the one refill.
+ */
+const activeDependentJoins = [taskActiveDependents.join()] as const;
+export const taskActiveDependentCountsServeOptions = {
+  from: _tasks,
+  joins: activeDependentJoins,
+  columns: { activeDependents: (j) => j.dependents.count },
+} satisfies ServeCollectionOptions<
+  typeof _tasks,
+  { id: string; activeDependents: number },
+  typeof activeDependentJoins,
+  never
+>;
