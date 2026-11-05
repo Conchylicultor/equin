@@ -673,6 +673,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
     - `apps/deploy/site-messages/inbox`
+    - `framework/cli/deploy`
 - Exemptions:
   - Exempts itself from:
     - `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)

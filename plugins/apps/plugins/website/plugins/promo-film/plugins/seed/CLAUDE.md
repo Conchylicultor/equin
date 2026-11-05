@@ -80,6 +80,8 @@ seed` → record, and get the same state. Design:
     - `seedPromoFilm`
     - `SONATA_KEY_SECTION`
     - `SONATA_SECTION_LAYOUT`
+- Cross-plugin:
+  - Imported by: `apps/website/promo-film`
 - Structure:
   - Non-standard folders: `data/`
 

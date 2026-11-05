@@ -65,6 +65,8 @@
     - `build/deployment`
     - `code-explorer`
     - `code-explorer/code-api`
+    - `conversations/commit-conversation`
+    - `conversations/conversation-progress`
     - `conversations/conversation-view/code`
     - `conversations/conversation-view/commits-graph`
     - `infra/git/checkout-watch`
@@ -72,6 +74,7 @@
     - `review/plugin-changes`
     - `tasks/attempt-work`
     - `tasks/task-triage`
+    - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-git.ts` (debt)
 

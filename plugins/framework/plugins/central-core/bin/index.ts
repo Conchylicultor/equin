@@ -22,7 +22,7 @@ import {
   topoSortPlugins,
 } from "@plugins/framework/plugins/plugin-loader/core";
 import { toolchainPin } from "@plugins/infra/plugins/paths/core";
-import { runtimePath } from "@plugins/infra/plugins/launcher/core";
+import { runtimePath } from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
 import { readServingSocket } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   centralRoutePrefixes,

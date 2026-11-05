@@ -957,18 +957,18 @@ query.
     - `liveReadCode`
     - `SQL_TYPE_RE`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×6
+    - `page` ×4
+    - `infra` ×3
+    - `conversations` ×2
+    - `debug` ×2
+    - `network` ×2
+    - `primitives` ×2
     - `active-data`
-    - `apps/events/events-core`
-    - `apps/mail/mail-core`
-    - `apps/sonata/library`
-    - `conversations/agents`
-    - `network/live`
-    - `page/attachment-block`
-    - `page/editor`
-    - `page/links`
-    - `primitives/data-view/custom-columns/values`
-    - `primitives/data-view/view-order`
+    - `backup/runs-arm`
+    - `build/runs-arm`
+    - `release/runs-arm`
     - `runs`
     - `tasks/tasks-core`
 - Exemptions:

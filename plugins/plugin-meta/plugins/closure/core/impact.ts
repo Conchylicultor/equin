@@ -1,4 +1,7 @@
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import type {
+  HostId,
+  PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { resolveComposition } from "./resolve-composition";
 import type { CompositionManifest, EdgeGraph } from "./types";
 
@@ -16,12 +19,19 @@ export function impactOfPruning(
   graph: EdgeGraph,
   manifest: CompositionManifest,
   selection: PluginId,
+  host?: HostId,
 ): PluginId[] {
-  const withSelection = resolveComposition(graph, manifest);
-  const withoutSelection = resolveComposition(graph, {
-    ...manifest,
-    selectedContributors: manifest.selectedContributors.filter((x) => x !== selection),
-  });
+  const withSelection = resolveComposition(graph, manifest, host);
+  const withoutSelection = resolveComposition(
+    graph,
+    {
+      ...manifest,
+      selectedContributors: manifest.selectedContributors.filter(
+        (x) => x !== selection,
+      ),
+    },
+    host,
+  );
 
   const dropped: PluginId[] = [];
   for (const id of withSelection.bundle) {
@@ -43,12 +53,17 @@ export function impactOfSelecting(
   graph: EdgeGraph,
   manifest: CompositionManifest,
   candidate: PluginId,
+  host?: HostId,
 ): PluginId[] {
-  const withoutCandidate = resolveComposition(graph, manifest);
-  const withCandidate = resolveComposition(graph, {
-    ...manifest,
-    selectedContributors: [...manifest.selectedContributors, candidate],
-  });
+  const withoutCandidate = resolveComposition(graph, manifest, host);
+  const withCandidate = resolveComposition(
+    graph,
+    {
+      ...manifest,
+      selectedContributors: [...manifest.selectedContributors, candidate],
+    },
+    host,
+  );
 
   const added: PluginId[] = [];
   for (const id of withCandidate.bundle) {

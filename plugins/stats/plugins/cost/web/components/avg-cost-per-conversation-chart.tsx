@@ -29,7 +29,10 @@ import {
   costDaysNote,
 } from "../../shared/derive";
 import { formatUsd } from "@plugins/fields/plugins/money/core";
-import { formatUsdCompact, formatTokensCompact } from "../../core";
+import {
+  formatUsdCompact,
+  formatTokensCompact,
+} from "@plugins/stats/plugins/cost/plugins/format/core";
 import { useScope } from "./use-scope";
 
 const FAMILY_PALETTE: Record<string, string> = {

@@ -1,4 +1,4 @@
-import { runtimePath } from "@plugins/infra/plugins/launcher/core";
+import { runtimePath } from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
 import { toolchainPin } from "@plugins/infra/plugins/paths/core";
 
 // ── Pin this backend's toolchain before anything can spawn ───────────────────

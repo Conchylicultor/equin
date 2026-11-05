@@ -49,6 +49,12 @@ database binding is `store.ts`. The `task_tree` tool, the digest appended to
     - `taskTree`
     - `treeDigest`
     - `TreeDigest`
+- Cross-plugin:
+  - Imported by:
+    - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
+    - `tasks`
+    - `tasks/orchestration/watch`
+    - `tasks/outcome-report`
 - Core:
   - Exports (types):
     - `ReadTree`

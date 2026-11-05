@@ -20,6 +20,7 @@
   - Imported by:
     - `apps-core/app-launcher`
     - `fields/json/config`
+    - `fields/json/storage`
 - Sub-plugins:
   - **`config`** — JSON field type: config-render capability (read-only formatted JSON for config-v2.fields.renderer) plus the jsonField factory.
   - **`storage`** — JSON field type: DB storage capability — a Postgres jsonb column, decoded by the field's own schema so a jsonField<T>'s shape is derived rather than asserted.

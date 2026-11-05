@@ -2,7 +2,7 @@
   "name": "@equin/plugin-fields-reorder-tree-config",
   "version": "0.0.1",
   "private": true,
-  "description": "Reorder-tree field type: config-render capability (read-only tree list) plus the reorderTreeField factory and normalizeNode helper.",
+  "description": "Reorder-tree field type: the reorderTreeField factory, normalizeNode and the gallery sample's value. The Config pane's renderer is the renderer sub-plugin.",
   "equin": {
     "collapsed": true
   }

@@ -79,6 +79,7 @@
     - `conversationModelOptions`
 - Cross-plugin:
   - Imported by:
+    - `active-data/conv`
     - `conversations/conversations-view/data-view`
     - `conversations/conversations-view/data-view/history`
 

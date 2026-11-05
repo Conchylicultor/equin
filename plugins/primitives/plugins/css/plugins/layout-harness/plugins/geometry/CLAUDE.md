@@ -21,6 +21,8 @@ that depends on nothing.
 ## Plugin reference
 
 - Description: Geometry vocabulary of the layout harness, as a types-only leaf: FixtureDims, GeometryInvariant, FixtureMutation, HOST_MARKER_ATTR and GeometrySpec (what an exhibit declares to be geometry-gated). Split out so the exhibit catalog can carry geometry without depending on the harness.
+- Cross-plugin:
+  - Imported by: `primitives/css/layout-harness`
 - Core:
   - Exports (types):
     - `FixtureDims`

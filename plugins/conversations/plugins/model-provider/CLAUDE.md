@@ -118,24 +118,15 @@ Single source of truth for the models an agent can run, and for what the user as
     - `ui/tokens/categorical --categorical-5`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/shape --spacing`
-  - Imported by:
-    - `apps/website/demos/lumen`
-    - `conversations`
-    - `conversations/agents`
-    - `conversations/all-conversations`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
-    - `conversations/conversation-view/launch-prompts`
-    - `debug/claude-cli-calls`
+  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×15
+    - `tasks` ×7
+    - `apps` ×3
+    - `debug` ×2
     - `hints/ask`
     - `infra/claude-cli`
     - `primitives/launch`
-    - `tasks`
-    - `tasks/auto-start`
-    - `tasks/auto-start/launch-option`
-    - `tasks/automations`
-    - `tasks/task-triage`
-    - `tasks/tasks-core`
+    - `stats/cost`
 - Sub-plugins:
   - **`catalog`** — The model catalog every launch reads: getModelCatalog() over the ModelCatalogSource host service (the desktop's discovered catalog.json, or the code baseline on a host without the computer), and the…
 

@@ -44,10 +44,18 @@ runtime-neutral `core`.
 - Description: Macrotask yield: yieldMacrotask() resolves on a later event-loop turn (scheduler.yield, else setImmediate, else setTimeout 0), so due timers and I/O callbacks run first — which a microtask yield never allows; createTurnQueue() gives concurrent callers one turn each, in call order.
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/analytics/ip-country`
+    - `apps/prototypes/files`
+    - `conversations/transcript-source`
     - `framework/tooling/boundaries`
     - `framework/tooling/checks`
     - `framework/tooling/codegen`
     - `framework/tooling/format`
+    - `infra/corpus-index`
+    - `infra/jobs/in-process`
+    - `infra/warmup`
+    - `network/live/change-feed`
+    - `packages/source-digest`
     - `plugin-meta/barrel-import`
     - `plugin-meta/plugin-refs`
     - `plugin-meta/plugin-tree/faceted`

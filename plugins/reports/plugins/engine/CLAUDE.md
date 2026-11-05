@@ -194,13 +194,13 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
 - Cross-plugin:
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `debug` ×8
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×11
+    - `conversations` ×4
     - `database` ×3
-    - `conversations` ×2
+    - `infra` ×2
     - `reports` ×2
     - `backup`
-    - `infra/jobs/deadline-audit`
     - `page/place/google`
     - `stats/cost`
     - `tasks/reports-investigation`

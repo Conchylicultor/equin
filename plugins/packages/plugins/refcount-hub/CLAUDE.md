@@ -31,7 +31,13 @@ edited-files rooms.
 
 - Description: Keyed refcounted subscription hub: createRefcountHub(open) shares ONE underlying subscription per key among every holder — the first acquire opens it (sync or async), each event fans out to every holder, the last release stops it — so N readers of one source cost one watch.
 - Cross-plugin:
-  - Imported by: `packages/watched-memo`
+  - Imported by:
+    - `conversations/conversation-view/jsonl-viewer`
+    - `infra/file-watcher`
+    - `infra/git/checkout-watch`
+    - `infra/paths/data-files`
+    - `packages/watched-memo`
+    - `primitives/metrics`
 - Core:
   - Exports (types):
     - `HubHold`

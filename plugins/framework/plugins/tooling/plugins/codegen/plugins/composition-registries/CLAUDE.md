@@ -26,7 +26,11 @@
     - `listNamedCompositionRegistries`
     - `parseNamedCompositionRegistryFileName`
 - Cross-plugin:
-  - Imported by: `framework/tooling/codegen`
+  - Imported by:
+    - `framework/cli/build`
+    - `framework/cli/release`
+    - `framework/tooling/codegen`
+    - `infra/worktree/reclaim`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/registry-files.ts` (debt)
 

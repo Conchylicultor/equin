@@ -68,9 +68,15 @@ tag.get(schema);                       // T | undefined
 - Description: The one owner of zod internals: inspect(schema) reads one level of a zod 4 schema (a zod 3 one is refused and named as such) as a repo-owned SchemaNode union in zod 4's model (refine a check, transform / preprocess a pipe, brand transparent, native enum an enum, passthrough an opaque object), with childrenOf, peel (strip optional / nullable / default / prefault / catch / readonly / nonoptional), valueSide (a pipe's value schema), isUncheckedBase (a bare base with no check), describeSchema (a version-independent description, function-bodied parts marked opaque) and defineSchemaTag (a namespaced tag stamped by clone, never mutation); plus the no-zod-internals and no-zod-subpath lint rules.
 - Cross-plugin:
   - Imported by:
+    - `fields/json/storage`
+    - `fields/text/storage`
     - `ids`
+    - `infra/entities`
+    - `infra/events`
+    - `infra/jobs/background-arm`
     - `network/live`
     - `network/live/live-state`
+    - `network/live/query-resource`
     - `packages/list-bound`
     - `ui/icons/saved-names`
 - Exemptions:

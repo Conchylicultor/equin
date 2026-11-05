@@ -340,6 +340,7 @@ reported) — the kind worth surfacing as crash tasks, not just toasts.
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
+  - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
 - Sub-plugins:

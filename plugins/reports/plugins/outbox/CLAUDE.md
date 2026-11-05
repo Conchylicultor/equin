@@ -159,7 +159,16 @@ pass the same `code` field.
     - `OutboxEntrySchema`
     - `repositoryOf`
 - Cross-plugin:
-  - Imported by: `framework/tooling/checks`
+  - Imported by:
+    - `backup`
+    - `database/fork`
+    - `debug/backend-liveness`
+    - `debug/boot-events`
+    - `debug/worktree-cleanup`
+    - `framework/cli/check`
+    - `framework/tooling/checks`
+    - `framework/tooling/checks/type-check`
+    - `framework/tooling/checks/type-check/backstop`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/file-report.ts`, `server/internal/drain.ts` (debt)
 

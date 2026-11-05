@@ -185,6 +185,21 @@ other doors.
 ## Plugin reference
 
 - Description: Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
+- Cross-plugin:
+  - Imported by: 51 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `database` ×13
+    - `apps` ×9
+    - `debug` ×6
+    - `tasks` ×5
+    - `infra` ×4
+    - `network` ×3
+    - `page` ×3
+    - `conversations` ×2
+    - `stats` ×2
+    - `build/run-ledger`
+    - `primitives/metrics`
+    - `search/engine`
+    - `shell/notifications`
 - Exemptions:
   - Exempts itself from: `sql-rows/no-unparsed-sql-rows` — `.` (sanctioned)
   - Exempted by: `database/sql-rows` (0 debt)

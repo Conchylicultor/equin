@@ -335,7 +335,15 @@ withdrawn).
 - Cross-plugin:
   - Imported by:
     - `conversations`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+    - `conversations/conversation-view/pending-turn`
+    - `conversations/conversation-view/push-and-exit`
+    - `conversations/runtime-sdk`
+    - `conversations/self-compact`
     - `conversations/transcript-source`
+    - `tasks/orchestration/mandate/change-notice`
+    - `tasks/orchestration/watch`
+    - `tasks/task-title`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
 

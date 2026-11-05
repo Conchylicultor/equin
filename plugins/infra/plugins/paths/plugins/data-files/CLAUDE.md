@@ -220,8 +220,11 @@ against both providers; a new provider runs it too.
 - Cross-plugin:
   - Imported by:
     - `apps/desktop/wallpaper`
+    - `apps/file-explorer/app-data`
     - `apps/prototypes`
     - `apps/prototypes/files`
+    - `apps/prototypes/files/snapshot-history`
+    - `apps/prototypes/fixtures`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/covers`
     - `infra/asset-mirror`

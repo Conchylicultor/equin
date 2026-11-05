@@ -11,7 +11,9 @@ stored-bytes → wire encoder.
 
 - Description: Domain-agnostic headless bridge between a Lexical editor state and the Y.Doc representation @lexical/yjs binds to (yDocFromLexical / readYDoc / yDocContent). A leaf so content-model owners (e.g. the page editor's runs↔XmlText seam) compose it without this primitive knowing any content model.
 - Cross-plugin:
-  - Imported by: `page/editor`
+  - Imported by:
+    - `page/block-text-write`
+    - `page/editor`
 - Core:
   - Exports (types): `HeadlessCollabOptions`
   - Exports (values):

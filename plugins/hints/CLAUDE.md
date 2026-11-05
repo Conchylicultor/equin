@@ -432,6 +432,7 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `apps/home/app-cards`
     - `apps/home/tour`
     - `apps/prototypes/canvas`
+    - `apps/website/promo-film`
     - `conversations/conversation-view/open-app`
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversations-view/data-view`

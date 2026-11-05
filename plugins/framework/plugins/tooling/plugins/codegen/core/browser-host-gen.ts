@@ -438,12 +438,18 @@ async function inferUncached(
       `${label}: no composition "${composition}" in the manifests (plugins/plugin-meta/plugins/composition/core/config.ts).`,
     );
   }
+  const manifest = manifestItemToManifest(row);
+  // The composition says where it runs; a browser host only checks it says
+  // so. Resolved under its own declaration — never a host passed from here —
+  // so its closure follows no `machine/` or `central/` import.
+  if (!manifest.hosts.includes("browser")) {
+    throw new Error(
+      `${label}: the composition is declared for ${manifest.hosts.join(", ")}, not for the browser — a browser host serves only a composition whose \`hosts\` include "browser" (plugins/plugin-meta/plugins/composition/core/config.ts).`,
+    );
+  }
   const resolved = resolveComposition(
     ctx.graph,
-    flattenManifest(
-      manifestItemToManifest(row),
-      manifests.map(manifestItemToManifest),
-    ),
+    flattenManifest(manifest, manifests.map(manifestItemToManifest)),
   );
   if (resolved.unsatisfiedExclusions.length > 0) {
     throw new Error(

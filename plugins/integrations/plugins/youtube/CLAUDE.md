@@ -208,10 +208,15 @@ calls the controller makes; `@types/youtube` is not a dependency.
     - `ui/tokens/density --space-sm`
     - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
+    - `apps/chord/song-index`
     - `apps/chord/trainer`
     - `apps/chord/video-availability`
     - `apps/sonata/recording`
+    - `apps/sonata/sources/ultimate-guitar`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
+    - `infra/audio-analysis`
     - `integrations/hooktheory`
+    - `integrations/youtube/audio-fetch`
     - `integrations/youtube/song-videos`
     - `integrations/youtube/song-videos/youtube-search`
 - Server:

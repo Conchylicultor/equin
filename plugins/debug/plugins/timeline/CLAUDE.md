@@ -233,6 +233,7 @@ slowness/freeze/memory-pressure incident across the cluster.
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-medium`
+  - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/timeline`
 - Exemptions:
   - Exempts itself from:
     - `no-db-backed-notify` — `server/internal/scan-served.ts` (sanctioned)

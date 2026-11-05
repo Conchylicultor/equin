@@ -21,6 +21,8 @@ This facet is the single source of truth for route metadata.
   - Exports (values):
     - `routesFacetDef`
     - `routesToComparable`
+- Cross-plugin:
+  - Imported by: `plugin-meta/facets/routes/render-diff`
 - Exemptions:
   - Exempts itself from: `marker-scan-safety/no-adhoc-marker-scan` — `facet/index.ts` (sanctioned)
 - Sub-plugins:

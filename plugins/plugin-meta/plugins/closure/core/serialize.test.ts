@@ -36,7 +36,7 @@ function tinyGraph(): EdgeGraph {
       [c, []],
     ]),
     edges: [
-      { from: a, to: b, kind: "hard" },
+      { from: a, to: b, kind: "hard", via: "import", runtimes: ["machine"] },
       { from: c, to: b, kind: "soft" },
     ],
     rules: [

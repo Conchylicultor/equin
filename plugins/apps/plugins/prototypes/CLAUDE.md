@@ -103,10 +103,17 @@ whose app surface still stands).
   - Uses: `infra/paths/data-files.FileRootLocation`
 - Cross-plugin:
   - Imported by:
+    - `apps/prototypes/canvas`
+    - `apps/prototypes/compare`
     - `apps/prototypes/files`
     - `apps/prototypes/files/snapshot-history`
     - `apps/prototypes/fixtures`
+    - `apps/prototypes/gallery`
+    - `apps/prototypes/state`
     - `apps/prototypes/thumbnails`
+    - `apps/website/promo-film/seed`
+    - `backup/sources/prototypes`
+    - `primitives/embed/frame`
 - Core:
   - Exports (values): `PROTOTYPES_CATEGORY_ID`
 - Sub-plugins:

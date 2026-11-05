@@ -2608,14 +2608,15 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 82 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page` ×59
-    - `apps` ×11
+  - Imported by: 90 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page` ×60
+    - `apps` ×17
     - `reports` ×4
     - `active-data` ×3
     - `primitives` ×2
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
     - `debug/slow-ops`
+    - `network/live`
     - `reorder/node-types`
   - Extended by:
     - `apps/pages/auto-icon` (table `page_blocks_ext_auto_icon`)

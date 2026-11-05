@@ -57,6 +57,7 @@ in, which has no SDK form, is the sign-in plugin's sanctioned exemption).
     - `runClaudeTurn`
 - Cross-plugin:
   - Imported by:
+    - `conversations/model-provider/catalog`
     - `conversations/runtime-sdk`
     - `infra/claude-cli`
     - `infra/claude-cli/availability`

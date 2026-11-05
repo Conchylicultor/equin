@@ -25,7 +25,9 @@ index. Interactive view: `./equin exempt list`.
     - `exemptionsFacetDef`
     - `exemptionsToComparable`
 - Cross-plugin:
-  - Imported by: `framework/tooling/codegen`
+  - Imported by:
+    - `framework/tooling/codegen`
+    - `plugin-meta/facets/exemptions/render-diff`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated exemptions table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin exemptions section in the plugin detail pane.

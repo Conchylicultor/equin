@@ -2,10 +2,47 @@
 
 The **plugin closure engine** — a pure, browser-safe core-only library that
 computes which plugins a *composition* bundles, and *why*. A composition is a
-named, **conservative** selection over the plugin space:
-`{ name, entryPoints, selectedContributors, extends? }` (`CompositionManifest`).
+named, **conservative** selection over the plugin space, for the hosts it runs
+on: `{ name, hosts, entryPoints, selectedContributors, extends? }`
+(`CompositionManifest`).
 Sibling of `plugin-tree` / `facets` / `plugin-view` under the `plugin-meta`
 umbrella; core-only like `plugin-tree` (no web/server runtime, no `definePlugin`).
+
+## Hosts — the closure follows only the imports its host runs
+
+A plugin is one node, but its code runs in several folders, and not every host
+executes every folder: the desktop boots `machine/` and `central/` beside
+`server/`, a browser host's worker boots portable `server/` only. So an import
+is a dependency only on a host that runs the folder WRITING it — Sonata's MIDI
+folders `machine/` → `infra/warmup/server` is real on the desktop and
+meaningless in the in-page demo.
+
+- **Host profiles are data** (`HOSTS`, `hostRuntimeFolders` in
+  `framework/plugin-id/core`): `desktop` = web, server, machine, central, core,
+  shared, data-dirs, deps; `browser` = the same minus machine and central.
+  `e2e`, `provision`, `cli` run on no host.
+- **Edges carry their folders.** The `cross-refs` facet files every import under
+  the folder that writes it, whatever barrel it reaches (`web/` → `x/core`
+  included — before 2026-11-05 a cross-runtime import was dropped, so every
+  closure missed them). A hard `Edge` carries `runtimes`: the importing folders
+  for an import, `web` for a token, the slot's runtime for a companion.
+- **The host is declared on the composition** (`CompositionManifest.hosts`,
+  never folded from `extends`). `graphForHosts(graph, hosts)` is the graph as
+  those hosts see it (hard edges whose `runtimes` meet the hosts' folders —
+  the union for several hosts); `resolveComposition`, `expandEntrySeeds` and
+  the causality queries walk the view of `manifest.hosts`, or of one `host`
+  passed explicitly (the Studio's Desktop / Browser toggle, the check's
+  per-host pass). A caller walking `hardClosure` / `removalClosure` itself
+  takes a view first.
+- **Inclusion steps name the folder**: a hard hop carries `edge: { via,
+  runtimes }`, and `stepLabel(step)` spells it (`machine/ import`, `token`,
+  `companion`, `uses field-type "date"`) for every surface.
+
+The closure stays per PLUGIN: reaching a plugin through one barrel bundles all
+of its barrels. A plugin whose light half (a factory, a path helper) is imported
+widely and whose heavy half pulls a lot is split in two, so importers stop
+paying for the heavy half — `fields/reorder-tree/config` (factory) vs its
+`renderer` (the layout editor), `infra/launcher` vs `launcher/runtime-env`.
 
 ## `extends` — first-class composition references (`flattenManifest`)
 
@@ -86,8 +123,9 @@ name that row, so it lives where every runtime can reach it.
 Two edge kinds, both indexed forward + reverse:
 
 - **hard** (mandatory, unprunable) — `A → B` when A *imports* B, read from the
-  `cross-refs` facet's per-runtime `apiUses` (unioned across runtimes, self-edges
-  dropped; precise & nested-aware). Importing an umbrella's barrel does **not**
+  `cross-refs` facet's per-runtime `apiUses` (every folder some host runs, each
+  edge tagged with the importing folders — see Hosts; self-edges dropped;
+  precise & nested-aware). Importing an umbrella's barrel does **not**
   pull its children — the barrel re-exports the umbrella's own symbols.
   Also `A → B` when A *paints with a token* B's token group supplies
   (`cross-refs` `tokenUses`: a `var(--x)` or a Tailwind class compiling to one,
@@ -313,7 +351,7 @@ take effect is a value in the result rather than silence.
   (`defineCollectedDir("composition")`). The engine defines the
   `CompositionManifest` *type* (its input); the registry that discovers manifests
   is the next increment. Until then the check would iterate an empty set.
-- Studio visualization; per-runtime split (the unioned graph is v1).
+- Studio visualization.
 
 ## Tests
 
@@ -338,6 +376,13 @@ non-empty `unsatisfiedExclusions` carrying the import path); and the migration
 itself — the real-tree main composition (`["**"]` + the inherited base row) bundling
 exactly every plugin minus the twelve the old `disabled` flag used to remove.
 
+`core/host-view.test.ts` pins the host model on a synthetic graph: desktop
+follows `machine/` and `central/` imports, browser drops a `machine/`-only edge
+and everything only it reached, a row declared for both hosts bundles the
+union, an explicit host overrides the declaration, a negative cascades only
+along the host's edges, inclusion steps name the importing folder, and a view
+of a view is cut from the whole graph.
+
 Run with `./equin test plugins/plugin-meta/plugins/closure`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
@@ -347,7 +392,10 @@ Run with `./equin test plugins/plugin-meta/plugins/closure`.
 - Core:
   - Uses:
     - `framework/plugin-id.asPluginId`
+    - `framework/plugin-id.HostId`
+    - `framework/plugin-id.hostRuntimeFolders`
     - `framework/plugin-id.PluginId`
+    - `framework/plugin-id.RuntimeFolder`
     - `framework/plugin-id.SHIPPED_RUNTIME_FOLDERS`
     - `infra/namespace.BASE_EXCLUSIONS_ID`
     - `plugin-meta/facets.getFacet`
@@ -363,6 +411,7 @@ Run with `./equin test plugins/plugin-meta/plugins/closure`.
     - `EdgeGraph`
     - `EdgeKind`
     - `EntryPattern`
+    - `HardEdge`
     - `HardEdgeVia`
     - `InclusionPath`
     - `InclusionStep`
@@ -378,6 +427,7 @@ Run with `./equin test plugins/plugin-meta/plugins/closure`.
     - `expandEntrySeeds`
     - `explainInclusion`
     - `flattenManifest`
+    - `graphForHosts`
     - `hardClosure`
     - `impactOfPruning`
     - `impactOfSelecting`
@@ -387,9 +437,19 @@ Run with `./equin test plugins/plugin-meta/plugins/closure`.
     - `resolveComposition`
     - `serializeEdgeGraph`
     - `slotGroupOwners`
+    - `stepLabel`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deploy-secrets/approvals`
+    - `apps/studio/compositions/contributors`
+    - `apps/studio/compositions/entry-points`
+    - `apps/studio/graph`
+    - `framework/cli/build`
+    - `framework/cli/deploy`
+    - `framework/cli/release`
     - `framework/tooling/codegen`
+    - `plugin-meta/composition`
     - `plugin-meta/plugin-refs`
+    - `plugin-meta/plugin-view/inclusion`
 
 <!-- AUTOGENERATED:END -->

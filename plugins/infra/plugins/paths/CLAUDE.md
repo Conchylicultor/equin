@@ -398,20 +398,29 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `debug` ×7
-    - `framework` ×7
-    - `infra` ×6
+  - Imported by: 124 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×31
+    - `apps` ×19
+    - `framework` ×17
+    - `debug` ×13
+    - `conversations` ×7
+    - `build` ×6
     - `backup` ×4
-    - `conversations` ×3
+    - `plugin-meta` ×3
+    - `primitives` ×3
     - `release` ×3
-    - `build` ×2
-    - `plugin-meta` ×2
-    - `primitives` ×2
-    - `apps/deploy/deployments`
-    - `code-explorer`
+    - `code-explorer` ×2
+    - `database` ×2
+    - `integrations` ×2
+    - `reports` ×2
+    - `stats` ×2
+    - `config_v2`
+    - `media/film`
+    - `menu-bar`
+    - `packages/signal-origin/sink`
     - `review/plugin-changes`
-    - `stats/cost`
+    - `shell/document-head`
+    - `tasks`
     - `toolchain`
 - Exemptions:
   - Exempts itself from:

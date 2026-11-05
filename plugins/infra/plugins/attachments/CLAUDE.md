@@ -159,27 +159,16 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `attachmentsEntityRef`
     - `getAttachmentFile`
 - Cross-plugin:
-  - Imported by:
-    - `apps/mail/attachments`
-    - `apps/mail/mail-core`
-    - `apps/pages/page-tree`
-    - `apps/sonata/library`
-    - `apps/sonata/sources/midi`
-    - `apps/sonata/sources/musicxml`
-    - `apps/sonata/transcription`
-    - `conversations`
-    - `conversations/agents`
+  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×8
+    - `page` ×6
+    - `tasks` ×3
+    - `conversations` ×2
+    - `backup/sources/attachments`
     - `debug/read-set`
     - `infra/attachments/memory-blobs`
-    - `page/attachment-block`
-    - `page/audio`
-    - `page/file`
-    - `page/image`
-    - `page/video`
     - `primitives/text-editor/paste-images`
     - `screenshot/draw-on-app`
-    - `tasks`
-    - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from:
     - `no-db-backed-notify` — `server/internal/bytes.ts` (sanctioned)

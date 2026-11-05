@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: Desktop — the floating-window desktop mode as an app: windows over a wallpaper, one bottom shelf (launcher, pinned apps, running windows, tray), virtual desktops, overview and a window switcher.
+- Cross-plugin:
+  - Imported by: `apps/desktop/wallpaper`
 - Sub-plugins:
   - **`launcher`** — The desktop's ⌘K launcher: a centred dialog over the windows listing every app as a grid (an empty query) or the matching apps and window commands (a query), with arrow-key selection, Shift+Enter…
   - **`shelf`** — The desktop's bottom shelf: a centred dock with the launcher button, the pinned apps and the running ones (grouped per app, with window pips, hover thumbnails and a right-click app menu), and the…

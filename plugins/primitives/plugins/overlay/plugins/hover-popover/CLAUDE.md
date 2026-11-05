@@ -39,7 +39,9 @@ close, re-entry always cancels the pending close). `floating-action`'s
     - `HoverPopoverProps`
   - Exports (values): `HoverPopover`
 - Cross-plugin:
-  - Imported by: `apps-core/app-launcher`
+  - Imported by:
+    - `apps-core/app-launcher`
+    - `primitives/collapsible`
 - Core:
   - Exports (types):
     - `HoverIntent`

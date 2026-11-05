@@ -1,10 +1,13 @@
-// @hash 88b89d48bf9b
+// @hash 189f2886aa53
 {
   "manifests": [
     {
       "id": "singularity",
       "name": "singularity",
       "category": "app",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "**"
       ],
@@ -18,6 +21,9 @@
       "id": "promo-film",
       "name": "promo-film",
       "category": "app",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "**"
       ],
@@ -31,6 +37,9 @@
       "id": "base-exclusions",
       "name": "base-exclusions",
       "category": "pack",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "!review.plugin-changes.**"
       ],
@@ -44,6 +53,9 @@
       "id": "agent-manager",
       "name": "agent-manager",
       "category": "profile",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "apps.agent-manager.**",
         "conversations.**",
@@ -89,6 +101,9 @@
       "id": "agent-manager-lean",
       "name": "agent-manager-lean",
       "category": "profile",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "apps.agent-manager.**",
         "conversations.**",
@@ -133,13 +148,20 @@
       "id": "agent-manager-demo",
       "name": "agent-manager-demo",
       "category": "profile",
+      "hosts": [
+        "browser"
+      ],
       "entryPoints": [
         "!conversations.conversation-view.push-and-exit.**",
         "!tasks.automations.**",
         "!tasks.reports-investigation.**",
         "!tasks.sidequest-autopilot.**",
         "!tasks.outcome-report.**",
+        "conversations.conversation-view.push-and-exit.capabilities",
+        "tasks.outcome-report.capability",
         "!apps.file-explorer.**",
+        "!conversations.workspace.worktree.**",
+        "!conversations.conversation-view.jsonl-viewer.tool-call.timeline.**",
         "apps.home.**",
         "!apps.home.tour.**",
         "apps.prototypes.**",
@@ -166,6 +188,9 @@
       "id": "home",
       "name": "home",
       "category": "app",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "apps.home.**"
       ],
@@ -181,6 +206,9 @@
       "id": "pages",
       "name": "pages",
       "category": "app",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "apps.pages.**"
       ],
@@ -196,6 +224,9 @@
       "id": "settings",
       "name": "settings",
       "category": "app",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "apps.settings.**"
       ],
@@ -211,6 +242,9 @@
       "id": "studio",
       "name": "studio",
       "category": "app",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "apps.studio.**"
       ],
@@ -226,6 +260,9 @@
       "id": "sonata",
       "name": "sonata",
       "category": "app",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "apps.sonata.**",
         "!apps.sonata.sources.midi.file-preview.**",
@@ -246,6 +283,9 @@
       "id": "debug",
       "name": "debug",
       "category": "app",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "apps.debug.**"
       ],
@@ -261,6 +301,9 @@
       "id": "deploy",
       "name": "deploy",
       "category": "app",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "apps.deploy.**"
       ],
@@ -276,6 +319,9 @@
       "id": "file-explorer",
       "name": "file-explorer",
       "category": "app",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "apps.file-explorer.**"
       ],
@@ -291,6 +337,9 @@
       "id": "website",
       "name": "website",
       "category": "app",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "apps.website.**",
         "!apps.website.demos.**",
@@ -311,6 +360,9 @@
       "id": "data",
       "name": "data",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "database.**"
       ],
@@ -324,6 +376,9 @@
       "id": "jobs-events",
       "name": "jobs-events",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "infra.jobs.**",
         "infra.events.**",
@@ -339,6 +394,9 @@
       "id": "live-state",
       "name": "live-state",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "network.live.live-state.**",
         "primitives.networking.**"
@@ -353,6 +411,9 @@
       "id": "auth",
       "name": "auth",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "auth.**"
       ],
@@ -366,6 +427,9 @@
       "id": "search",
       "name": "search",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "search.engine.**"
       ],
@@ -379,6 +443,9 @@
       "id": "history",
       "name": "history",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "history.engine.**"
       ],
@@ -392,6 +459,9 @@
       "id": "conversations",
       "name": "conversations",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "conversations.**"
       ],
@@ -405,6 +475,9 @@
       "id": "tasks-domain",
       "name": "tasks-domain",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "tasks.**"
       ],
@@ -418,6 +491,9 @@
       "id": "agent-runtime",
       "name": "agent-runtime",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "infra.worktree.**",
         "infra.git.git-watcher.**",
@@ -437,6 +513,9 @@
       "id": "page-editor",
       "name": "page-editor",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "page.**"
       ],
@@ -450,6 +529,9 @@
       "id": "fields",
       "name": "fields",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "fields.**"
       ],
@@ -463,6 +545,9 @@
       "id": "design-system",
       "name": "design-system",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "primitives.css.**"
       ],
@@ -476,6 +561,9 @@
       "id": "mcp",
       "name": "mcp",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "infra.mcp.**"
       ],
@@ -489,6 +577,9 @@
       "id": "served-baseline",
       "name": "served-baseline",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "apps-core.layout.**",
         "infra.health.**",
@@ -506,6 +597,9 @@
       "id": "reporters",
       "name": "reporters",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "reports.adaptive-bar.**",
         "reports.caret-flight.**",
@@ -535,6 +629,9 @@
       "id": "diagnostics",
       "name": "diagnostics",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "debug.latency-ledger.**",
         "debug.live-state-churn.emit.**",
@@ -550,6 +647,9 @@
       "id": "root-features",
       "name": "root-features",
       "category": "subsystem",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [
         "primitives.command-palette.**",
         "hints.**"
@@ -564,6 +664,9 @@
       "id": "self-improvement",
       "name": "self-improvement",
       "category": "pack",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [],
       "selectedContributors": [
         "wish.element-picker",
@@ -583,6 +686,9 @@
       "id": "theming",
       "name": "theming",
       "category": "pack",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [],
       "selectedContributors": [
         "ui.theme-toggle",
@@ -598,6 +704,9 @@
       "id": "app-chrome",
       "name": "app-chrome",
       "category": "pack",
+      "hosts": [
+        "desktop"
+      ],
       "entryPoints": [],
       "selectedContributors": [
         "apps-core.tab-bar",

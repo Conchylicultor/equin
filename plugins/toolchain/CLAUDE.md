@@ -43,7 +43,7 @@ every move proven before it lands.
   that entry into the worktree's `mise.lock` — let the upgrade record it.
 - **Never `mise upgrade`.** It uninstalls the previous release, which is still
   the one main and every other worktree run.
-- The runtime only obeys the lock because `launcher/core`'s `runtimePath`
+- The runtime only obeys the lock because `launcher/runtime-env`'s `runtimePath`
   puts mise's shims first on PATH — located from the environment, so it holds
   even when the starting shell never activated mise. Otherwise rustup's default rust
   wins, or mise's tools are missing outright.
@@ -87,7 +87,9 @@ every move proven before it lands.
 - Cli:
   - Uses: `infra/deps/updates.upgradeThisWorktree`
 - Cross-plugin:
-  - Imported by: `infra/deps/mise`
+  - Imported by:
+    - `infra/deps/mise`
+    - `release/source-checkout`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/internal/mise-bin.ts` (debt)

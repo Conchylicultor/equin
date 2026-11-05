@@ -19,7 +19,10 @@
     - `ordinalFieldType`
     - `ordinalIdentity`
 - Cross-plugin:
-  - Imported by: `fields/ordinal/config`
+  - Imported by:
+    - `fields/ordinal/config`
+    - `fields/ordinal/storage`
+    - `fields/ordinal/table`
 - Sub-plugins:
   - **`config`** — Ordinal field type: the ordinalField factory for building field records.
   - **`storage`** — Ordinal field type: DB storage capability — maps to a Postgres integer column.

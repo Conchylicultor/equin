@@ -77,8 +77,10 @@ The Claude accounts agents can run on, and which one new agents launch on.
     - `SYSTEM_ACCOUNT_ID`
 - Cross-plugin:
   - Imported by:
+    - `conversations/model-provider/catalog`
     - `conversations/runtime-sdk`
     - `infra/claude-cli`
+    - `infra/claude-cli/availability`
     - `infra/claude-cli/sdk`
     - `infra/claude-cli/sign-in`
 

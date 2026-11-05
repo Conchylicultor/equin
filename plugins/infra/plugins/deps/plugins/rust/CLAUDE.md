@@ -69,7 +69,9 @@ CLI in `framework/cli/release`), and the toolchain updater's `cargo check
     - `cargoEnv`
     - `crateTargetDir`
 - Cross-plugin:
-  - Imported by: `menu-bar`
+  - Imported by:
+    - `infra/deps/rust/cargo-updater`
+    - `menu-bar`
 - Sub-plugins:
   - **`cargo-updater`** — The `cargo` updater: moves every rust/ crate's Cargo.lock to the newest crates.io releases past a 3-day cooldown (within each Cargo.toml's requirements), contributed to the infra/deps updater…
 

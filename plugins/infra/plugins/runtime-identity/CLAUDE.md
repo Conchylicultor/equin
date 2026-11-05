@@ -118,11 +118,22 @@ worktrees in a single process (`log-channels`' `handle-emit.test.ts`).
     - `runtimeNamespace`
     - `servingSocketPath`
 - Cross-plugin:
-  - Imported by:
-    - `infra/endpoints`
-    - `infra/jobs/supervised-job`
-    - `infra/paths`
+  - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×15
+    - `debug` ×12
+    - `conversations` ×8
+    - `build` ×7
+    - `database` ×4
+    - `tasks` ×4
+    - `apps` ×3
+    - `backup` ×2
+    - `release` ×2
+    - `reports` ×2
+    - `config_v2`
+    - `framework/server-core`
     - `plugin-meta/barrel-import`
+    - `primitives/log-channels/log-files`
+    - `shell/document-head`
 - Test helpers:
   - Core: `@plugins/infra/plugins/runtime-identity/core/testing`
     - `resetRuntimeNamespaceForTest` — Drop the declaration.

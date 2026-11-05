@@ -4,7 +4,7 @@ import {
   spawnCaptured,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
-import { runtimePath } from "@plugins/infra/plugins/launcher/core";
+import { runtimePath } from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { readCheckProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { readLatestTestStatus } from "@plugins/framework/plugins/cli/plugins/test/core";

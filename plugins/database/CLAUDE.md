@@ -514,21 +514,23 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `libpqEnv`
     - `readDatabaseConfig`
 - Cross-plugin:
-  - Imported by: 137 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×39
-    - `conversations` ×15
+  - Imported by: 153 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×42
+    - `conversations` ×17
     - `page` ×15
-    - `tasks` ×13
-    - `infra` ×12
+    - `tasks` ×15
+    - `infra` ×14
     - `active-data` ×8
     - `debug` ×7
-    - `database` ×4
+    - `database` ×5
     - `primitives` ×4
     - `network` ×3
+    - `stats` ×3
+    - `backup` ×2
+    - `build` ×2
+    - `framework` ×2
     - `reports` ×2
-    - `stats` ×2
     - `apps-core/app-usage`
-    - `backup`
     - `code-explorer`
     - `hints`
     - `history/engine`

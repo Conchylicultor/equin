@@ -33,8 +33,23 @@
     - `repoSnapshotOver`
 - Cross-plugin:
   - Imported by:
+    - `framework/cli/build`
+    - `framework/cli/check`
+    - `framework/cli/deploy`
+    - `framework/cli/git-artifacts`
+    - `framework/cli/migrations`
+    - `framework/cli/regen-generated`
+    - `framework/cli/release`
     - `framework/tooling/checks`
+    - `framework/tooling/codegen`
+    - `framework/tooling/exempt`
     - `framework/tooling/web-artifacts`
+    - `infra/deps/npm`
+    - `infra/worktree/reclaim`
+    - `plugin-meta/plugin-tree`
+    - `plugin-meta/plugin-tree/faceted`
+    - `plugin-meta/relocate`
+    - `review/plugin-changes`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/repo-files.ts` (debt)

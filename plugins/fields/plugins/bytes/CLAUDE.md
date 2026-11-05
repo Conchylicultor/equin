@@ -29,7 +29,9 @@ Registers only its `FieldIdentity`: no cell or filter — no list shows a blob.
     - `bytesFieldType`
     - `bytesIdentity`
 - Cross-plugin:
-  - Imported by: `fields/bytes/config`
+  - Imported by:
+    - `fields/bytes/config`
+    - `fields/bytes/storage`
 - Sub-plugins:
   - **`config`** — Bytes field factory (bytesField) for building field records: a base64 wire value stored as bytes.
   - **`storage`** — Bytes field type: DB storage capability — a Postgres bytea column whose wire form is unfolded base64 (bytesToBase64, declared once through sql-column's withWire).

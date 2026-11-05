@@ -73,10 +73,14 @@ An emoji as a stored value, and the picker that picks one — the sibling of
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
   - Imported by:
+    - `apps/pages/auto-icon`
+    - `apps/pages/content-search`
+    - `apps/pages/history`
     - `apps/pages/page-tree`
     - `apps/website/demos/lumen`
     - `page/editor`
     - `page/links`
+    - `page/read-only-view`
 - Core:
   - Exports (types): `Emoji`
   - Exports (values):

@@ -116,7 +116,23 @@ own server half.)
     - `systemOrigin`
     - `UNREVERTED_WRITE_HEADER`
 - Cross-plugin:
-  - Imported by: `infra/endpoints`
+  - Imported by:
+    - `apps/pages/agent-origin`
+    - `apps/prototypes/files`
+    - `apps/prototypes/files/snapshot-history`
+    - `apps/prototypes/fixtures`
+    - `apps/prototypes/thumbnails`
+    - `apps/website/promo-film/seed`
+    - `auth/apple-signing`
+    - `config_v2`
+    - `config_v2/settings`
+    - `framework/tooling/e2e-harness`
+    - `infra/endpoints`
+    - `infra/mcp/browser`
+    - `infra/request-origin/agent-write-ledger`
+    - `tasks/automations`
+    - `tasks/sidequest-autopilot`
+    - `ui/theme-engine/saved-themes`
 - Sub-plugins:
   - **`agent-write-ledger`** — Shared agent-write ledger: defineAgentWriteLedger lets a domain snapshot the files an agent-origin request is about to overwrite (first write wins) and put them back on revert, skipping anything a…
 

@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  RUNTIME_FOLDERS,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import type {
   Edge,
   SerializedEdgeGraph,
@@ -23,11 +26,22 @@ const GRAPH_REASON =
 const idList = wholeList(pluginIdSchema, { reason: GRAPH_REASON });
 const adjacency = wholeRecord(idList, { reason: GRAPH_REASON });
 
-const edgeSchema: z.ZodType<Edge> = z.object({
-  from: pluginIdSchema,
-  to: pluginIdSchema,
-  kind: z.union([z.literal("hard"), z.literal("soft")]),
-});
+const edgeSchema: z.ZodType<Edge> = z.discriminatedUnion("kind", [
+  z.object({
+    from: pluginIdSchema,
+    to: pluginIdSchema,
+    kind: z.literal("hard"),
+    via: z.enum(["import", "token", "companion"]),
+    runtimes: wholeList(z.enum(RUNTIME_FOLDERS), {
+      reason: "the folders one edge holds through — a closed set of a dozen",
+    }),
+  }),
+  z.object({
+    from: pluginIdSchema,
+    to: pluginIdSchema,
+    kind: z.literal("soft"),
+  }),
+]);
 
 const usageRuleSchema: z.ZodType<UsageRule> = z.object({
   then: pluginIdSchema,

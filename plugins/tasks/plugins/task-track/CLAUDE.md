@@ -132,6 +132,8 @@ sidequest's ops at low host-admission priority, behind the main track.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
+    - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
     - `conversations/conversation-view/track`
     - `framework/cli/op-runtime`
     - `tasks`

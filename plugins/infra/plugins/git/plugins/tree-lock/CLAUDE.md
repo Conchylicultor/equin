@@ -61,6 +61,10 @@ delete this plugin.
     - `holdTreeRead`
     - `treeLockPath`
     - `withTreeWrite`
+- Cross-plugin:
+  - Imported by:
+    - `framework/cli/push`
+    - `framework/server-core`
 - Exemptions:
   - Exempts itself from:
     - `user-path/no-unproven-claim` — `core/internal/tree-lock.ts` (sanctioned)

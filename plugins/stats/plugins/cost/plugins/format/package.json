@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-stats-cost-format",
+  "private": true,
+  "version": "0.0.1",
+  "description": "How token counts and dollar amounts read: formatTokens (1,284,512), formatTokensCompact (1.3M) and formatUsdCompact ($12K). A core-only leaf, so a surface showing a token count (the conversation lists' Tokens column) does not bundle the cost dashboard."
+}

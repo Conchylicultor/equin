@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ClientBootSectionSchema } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
-import { CallerRefSchema, MAX_CLIENT_SLOW_OP_ITEMS } from "../core";
+import { MAX_CLIENT_SLOW_OP_ITEMS } from "../core";
+import { CallerRefSchema } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
 
 // The wait layer an `element` settle charges its transport bring-up to: the
 // notifications socket was not ready when the resource mounted.

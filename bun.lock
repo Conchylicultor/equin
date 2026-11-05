@@ -2774,6 +2774,10 @@
       "name": "@equin/plugin-debug-slow-ops-pane",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/slow-ops/plugins/sink": {
+      "name": "@equin/plugin-debug-slow-ops-sink",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/stall-monitor": {
       "name": "@equin/plugin-debug-stall-monitor",
       "version": "0.0.1",
@@ -3227,6 +3231,10 @@
     },
     "plugins/fields/plugins/reorder-tree/plugins/config": {
       "name": "@equin/plugin-fields-reorder-tree-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/reorder-tree/plugins/config/plugins/renderer": {
+      "name": "@equin/plugin-fields-reorder-tree-config-renderer",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/secret": {
@@ -4350,6 +4358,10 @@
     },
     "plugins/infra/plugins/launcher/plugins/login-services": {
       "name": "@equin/plugin-infra-launcher-login-services",
+    },
+    "plugins/infra/plugins/launcher/plugins/runtime-env": {
+      "name": "@equin/plugin-infra-launcher-runtime-env",
+      "version": "0.0.1",
     },
     "plugins/infra/plugins/mcp": {
       "name": "@equin/plugin-infra-mcp",
@@ -6635,6 +6647,10 @@
         "ccusage": "^20.0.45",
       },
     },
+    "plugins/stats/plugins/cost/plugins/format": {
+      "name": "@equin/plugin-stats-cost-format",
+      "version": "0.0.1",
+    },
     "plugins/stats/plugins/pushes": {
       "name": "@equin/plugin-stats-pushes",
       "version": "0.0.1",
@@ -8619,6 +8635,8 @@
 
     "@equin/plugin-debug-slow-ops-pane": ["@equin/plugin-debug-slow-ops-pane@workspace:plugins/debug/plugins/slow-ops/plugins/pane"],
 
+    "@equin/plugin-debug-slow-ops-sink": ["@equin/plugin-debug-slow-ops-sink@workspace:plugins/debug/plugins/slow-ops/plugins/sink"],
+
     "@equin/plugin-debug-stall-monitor": ["@equin/plugin-debug-stall-monitor@workspace:plugins/debug/plugins/stall-monitor"],
 
     "@equin/plugin-debug-stuck-spans": ["@equin/plugin-debug-stuck-spans@workspace:plugins/debug/plugins/stuck-spans"],
@@ -8846,6 +8864,8 @@
     "@equin/plugin-fields-reorder-tree": ["@equin/plugin-fields-reorder-tree@workspace:plugins/fields/plugins/reorder-tree"],
 
     "@equin/plugin-fields-reorder-tree-config": ["@equin/plugin-fields-reorder-tree-config@workspace:plugins/fields/plugins/reorder-tree/plugins/config"],
+
+    "@equin/plugin-fields-reorder-tree-config-renderer": ["@equin/plugin-fields-reorder-tree-config-renderer@workspace:plugins/fields/plugins/reorder-tree/plugins/config/plugins/renderer"],
 
     "@equin/plugin-fields-secret": ["@equin/plugin-fields-secret@workspace:plugins/fields/plugins/secret"],
 
@@ -9366,6 +9386,8 @@
     "@equin/plugin-infra-launcher-gateway-logs": ["@equin/plugin-infra-launcher-gateway-logs@workspace:plugins/infra/plugins/launcher/plugins/gateway-logs"],
 
     "@equin/plugin-infra-launcher-login-services": ["@equin/plugin-infra-launcher-login-services@workspace:plugins/infra/plugins/launcher/plugins/login-services"],
+
+    "@equin/plugin-infra-launcher-runtime-env": ["@equin/plugin-infra-launcher-runtime-env@workspace:plugins/infra/plugins/launcher/plugins/runtime-env"],
 
     "@equin/plugin-infra-mcp": ["@equin/plugin-infra-mcp@workspace:plugins/infra/plugins/mcp"],
 
@@ -10422,6 +10444,8 @@
     "@equin/plugin-stats-commits": ["@equin/plugin-stats-commits@workspace:plugins/stats/plugins/commits"],
 
     "@equin/plugin-stats-cost": ["@equin/plugin-stats-cost@workspace:plugins/stats/plugins/cost"],
+
+    "@equin/plugin-stats-cost-format": ["@equin/plugin-stats-cost-format@workspace:plugins/stats/plugins/cost/plugins/format"],
 
     "@equin/plugin-stats-pushes": ["@equin/plugin-stats-pushes@workspace:plugins/stats/plugins/pushes"],
 

@@ -380,6 +380,7 @@ A round nothing was typed into reads exactly like the next one, so after
     - `ui/tokens/density --space-sm`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
+    - `apps/chord/piano`
     - `apps/chord/progress`
     - `apps/chord/trainer`
 - Exemptions:

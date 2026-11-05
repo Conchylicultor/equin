@@ -147,6 +147,7 @@ it over the real tables with a fake agent.
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/push-and-exit`
+    - `conversations/conversations-view/data-view/queue`
     - `tasks`
     - `tasks/automations`
     - `tasks/outcome-report`

@@ -332,6 +332,9 @@ The job's transcript goes to the `sonata-ug-alignment` log channel.
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
+  - Imported by:
+    - `apps/sonata/recording`
+    - `apps/sonata/sources/ultimate-guitar`
 - Test helpers:
   - Core: `@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/core/testing`
     - `parsedSheet` — A `ParsedTab` from a terse spelling: one entry per section, each line a space-separated chord row ("C G Am F") placed over an empty lyric, or a `{ lyric }` for a lyric-only line.

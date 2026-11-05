@@ -142,11 +142,14 @@ dynamic value.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deploy-secrets/approvals`
+    - `framework/cli/release`
     - `framework/tooling/boundaries`
     - `framework/tooling/checks`
     - `framework/tooling/codegen`
     - `plugin-meta/composition`
     - `plugin-meta/plugin-tree/faceted`
+    - `plugin-meta/plugin-view`
+    - `plugin-meta/relocate`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)

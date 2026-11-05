@@ -30,7 +30,9 @@ import {
   setRegistry,
   useActiveComposition,
   useGraph,
+  usePickedHost,
   useRegistry,
+  viewedHost,
 } from "./store";
 import { useManifestItems } from "./manifests";
 
@@ -256,10 +258,16 @@ export function useInclusion(node: PluginNode): InclusionPath | null {
   const active = useActiveComposition();
   const graph = useGraph();
   const registry = useRegistry();
+  const picked = usePickedHost();
   return useMemo(() => {
     if (!active || !graph) return null;
-    return explainInclusion(graph, flattenManifest(active, registry), node.id);
-  }, [active, graph, registry, node.id]);
+    return explainInclusion(
+      graph,
+      flattenManifest(active, registry),
+      node.id,
+      viewedHost(active, picked),
+    );
+  }, [active, graph, registry, picked, node.id]);
 }
 
 export interface ImpactResult {
@@ -275,14 +283,16 @@ export function useImpact(node: PluginNode): ImpactResult | null {
   const active = useActiveComposition();
   const graph = useGraph();
   const registry = useRegistry();
+  const picked = usePickedHost();
   return useMemo(() => {
     if (!active || !graph) return null;
     const flat = flattenManifest(active, registry);
+    const host = viewedHost(active, picked);
     return {
-      select: impactOfSelecting(graph, flat, node.id),
-      prune: impactOfPruning(graph, flat, node.id),
+      select: impactOfSelecting(graph, flat, node.id, host),
+      prune: impactOfPruning(graph, flat, node.id, host),
     };
-  }, [active, graph, registry, node.id]);
+  }, [active, graph, registry, picked, node.id]);
 }
 
 /**

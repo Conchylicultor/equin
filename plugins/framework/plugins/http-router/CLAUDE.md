@@ -20,7 +20,9 @@ requests are timed (`Transport.requestTiming`).
 
 - Description: The one HTTP request router every host mounts: createRequestHandler turns "METHOD /path/:param" route pairs into a (req) => Promise<Response> — literal fast path, then :param matching in registration order, a default cache-control: no-store, a Server-Timing stamp of the handler's own time with a per-response id on every response (readServerTiming parses it back), and a logged generic 500 on a throw. A duplicate route key throws at construction.
 - Cross-plugin:
-  - Imported by: `framework/server-core`
+  - Imported by:
+    - `framework/server-core`
+    - `primitives/networking`
 - Core:
   - Exports (types):
     - `RequestHandlerOptions`

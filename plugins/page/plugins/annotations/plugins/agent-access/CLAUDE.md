@@ -578,6 +578,8 @@ Spec: `e2e/agent-access-verify.ts`.
     - `ReadPageInput`
     - `WriteAgentNoteInput`
   - Exports (values): `pageTools`
+- Cross-plugin:
+  - Imported by: `apps/website/promo-film/seed`
 - Machine:
   - Register:
     - `mcpTool('read_page')`

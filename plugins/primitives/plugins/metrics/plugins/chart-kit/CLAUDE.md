@@ -117,7 +117,9 @@ theme CSS, so they render on a bare page as well as in the app.
     - `ui/tokens/type-scale --font-size-caption`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
-  - Imported by: `primitives/metrics`
+  - Imported by:
+    - `apps/home/usage-fields`
+    - `primitives/metrics`
 - Core:
   - Exports (types):
     - `ChartBucket`

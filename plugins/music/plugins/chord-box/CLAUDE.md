@@ -38,6 +38,7 @@
     - `apps/sonata/chord-chart`
     - `apps/sonata/lyric-line`
     - `apps/sonata/lyrics-hud`
+    - `apps/sonata/rich/chord-label`
     - `apps/sonata/rich/chord-overlay`
     - `apps/sonata/rich/readout-keyboard`
     - `apps/sonata/sources/chord-grid`

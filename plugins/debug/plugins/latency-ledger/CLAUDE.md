@@ -212,6 +212,8 @@ state rather than the previous window's numbers.
     - `SLOWEST_INTERACTIONS`
     - `submitClientLatency`
     - `THREAD_STALL_MS`
+- Cross-plugin:
+  - Imported by: `stats/responsiveness`
 - Exemptions:
   - Exempts itself from:
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)

@@ -8,7 +8,7 @@ import { ScopeToggle } from "./scope-toggle";
 import { useScope } from "./use-scope";
 import { useUtcDay } from "./use-utc-day";
 import { formatUsd } from "@plugins/fields/plugins/money/core";
-import { formatTokensCompact } from "../../core";
+import { formatTokensCompact } from "@plugins/stats/plugins/cost/plugins/format/core";
 
 export function CostKpis() {
   const { scope } = useScope();

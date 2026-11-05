@@ -85,6 +85,8 @@ Plan: [`research/2026-10-07-primitives-image-viewer-fast-large-folders.md`](../.
     - `RESIZED_EDGES`
     - `resizedVersion`
     - `snapEdge`
+- Cross-plugin:
+  - Imported by: `primitives/file-viewer/image`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
 

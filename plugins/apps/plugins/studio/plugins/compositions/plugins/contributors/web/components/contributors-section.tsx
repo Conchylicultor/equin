@@ -4,6 +4,7 @@ import {
   useActiveComposition,
   useCompositionData,
   useGraph,
+  useViewHost,
 } from "@plugins/plugin-meta/plugins/composition/web";
 import {
   flattenManifest,
@@ -19,14 +20,16 @@ export function ContributorsSection(): ReactElement {
   const draft = useActiveComposition();
   const { manifests } = useCompositionData();
   const graph = useGraph();
+  const host = useViewHost();
   const [query, setQuery] = useState("");
 
   const resolved = useMemo(() => {
-    if (!draft || !graph) return null;
+    if (!draft || !graph || !host) return null;
     // Flatten the draft's `extends` (e.g. a profile's self-improvement pack)
-    // against the full registry before resolving, mirroring the store.
-    return resolveComposition(graph, flattenManifest(draft, manifests));
-  }, [draft, graph, manifests]);
+    // against the full registry before resolving, mirroring the store — on
+    // the host the Studio views it on.
+    return resolveComposition(graph, flattenManifest(draft, manifests), host);
+  }, [draft, graph, manifests, host]);
 
   if (!draft || !resolved) {
     return (

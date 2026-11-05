@@ -6,6 +6,7 @@ import type {
   MembershipState,
   UsageRule,
 } from "./types";
+import { hardEdgeOf } from "./host-view";
 
 /**
  * Everything an inclusion explanation needs from an ALREADY-RESOLVED
@@ -88,16 +89,23 @@ export function inclusionPathWithin(
     while (cur !== target) {
       const next = predecessor.get(cur)!;
       const rule = viaRule.get(cur);
-      steps.push(
-        rule
-          ? {
-              from: cur,
-              to: next,
-              kind: "hard",
-              usage: { owner: rule.owner, space: rule.space, key: rule.key },
-            }
-          : { from: cur, to: next, kind: "hard" },
-      );
+      if (rule) {
+        steps.push({
+          from: cur,
+          to: next,
+          kind: "hard",
+          usage: { owner: rule.owner, space: rule.space, key: rule.key },
+        });
+      } else {
+        // The hop came off `hardReverse`, so its edge is in `graph`.
+        const e = hardEdgeOf(graph, cur, next)!;
+        steps.push({
+          from: cur,
+          to: next,
+          kind: "hard",
+          edge: { via: e.via, runtimes: e.runtimes },
+        });
+      }
       cur = next;
     }
     const originIsEntry = entrySet.has(seed);
@@ -144,4 +152,18 @@ export function inclusionPathWithin(
   // No entry path; fall back to the shortest contributor-origin path found.
   if (contributorSeed !== null) return buildPath(contributorSeed);
   return null;
+}
+
+/**
+ * What one inclusion hop is, in words: `machine/ import`, `web/ + server/
+ * import`, `token`, `companion`, `uses field-type "date"`, `contributes`.
+ * The one spelling every surface prints (the check's chains, Studio's edge
+ * chips), so a path read anywhere names the folder that wrote the import.
+ */
+export function stepLabel(step: InclusionStep): string {
+  if (step.kind === "soft") return "contributes";
+  if (step.usage) return `uses ${step.usage.space} "${step.usage.key}"`;
+  if (!step.edge) return "hard";
+  const folders = step.edge.runtimes.map((rt) => `${rt}/`).join(" + ");
+  return step.edge.via === "import" ? `${folders} import` : step.edge.via;
 }

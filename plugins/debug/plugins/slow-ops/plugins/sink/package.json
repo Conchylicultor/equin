@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-debug-slow-ops-sink",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The public channel into the client slow-op queue: clientSlowOpSink (an observation sink a producer outside slow-ops emits a fully-formed slow op into; the slow-ops collector forwards it) and CallerRef, who issued an operation. A core-only leaf, so a producer (the main-thread-stall reporter) does not bundle slow-ops itself."
+}

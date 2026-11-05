@@ -128,17 +128,14 @@ Orthogonal to the runtime (tmux | sdk): a runtime sees only the cwd and the
     - `WorkspaceKindSchema`
     - `WorkspaceSpecSchema`
 - Cross-plugin:
-  - Imported by:
-    - `apps/places/ask`
-    - `apps/sonata/transcription`
-    - `conversations`
-    - `conversations/workspace/launch-option`
-    - `conversations/workspace/scratch`
-    - `conversations/workspace/worktree`
-    - `debug/scratch-hello`
-    - `debug/worktree-cleanup`
-    - `tasks/task-triage`
-    - `tasks/tasks-core`
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×10
+    - `debug` ×3
+    - `tasks` ×3
+    - `apps` ×2
+    - `code-explorer`
+    - `hints/ask`
+    - `primitives/prompt-editor`
 - Test helpers:
   - Server: `@plugins/conversations/plugins/workspace/server/testing`
     - `installWorkspaceImpl` — Sets `impl` as its kind's workspace, replacing any registered one — for a test, which runs without the plugin register phase and may share the module with other suites.

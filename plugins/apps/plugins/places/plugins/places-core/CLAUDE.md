@@ -204,9 +204,12 @@ its own.
 - Cross-plugin:
   - Imported by:
     - `apps/places/ask`
+    - `apps/places/mapstr-import`
     - `apps/places/page-overlay`
     - `apps/places/place-details`
     - `apps/places/places-map`
+    - `apps/places/tag-manager`
+    - `apps/website/promo-film/seed`
 - Test helpers:
   - Core: `@plugins/apps/plugins/places/plugins/places-core/core/testing`
     - `testPlace` — A saved place for a test: a Google place named after its Google id, at (0, 0), untagged — `over` sets whatever the test is about.

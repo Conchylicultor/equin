@@ -82,7 +82,10 @@
     - `rerankQueue`
     - `stepDownQueue`
 - Cross-plugin:
-  - Imported by: `conversations/conversations-view/data-view/queue`
+  - Imported by:
+    - `apps/website/promo-film/seed`
+    - `conversations/conversation-view/pin`
+    - `conversations/conversations-view/data-view/queue`
 - Web:
   - Exports (types):
     - `ClassifiedQueue`

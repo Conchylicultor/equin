@@ -34,6 +34,14 @@ paths, and nobody else.
 ## Plugin reference
 
 - Description: The human-facing spelling of the data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
+- Cross-plugin:
+  - Imported by:
+    - `apps/prototypes/compare`
+    - `apps/prototypes/files`
+    - `apps/prototypes/gallery`
+    - `auth`
+    - `config_v2/settings/conflict-agent`
+    - `upstream`
 - Exemptions:
   - Exempts itself from: `paths:no-hardcoded-paths` — `core/internal/display.ts` (sanctioned)
 - Core:

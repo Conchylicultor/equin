@@ -52,23 +52,16 @@ like `defineJob`.
     - `WarmupHost`
     - `warmupRunOf`
 - Cross-plugin:
-  - Imported by:
-    - `apps/pages/content-search`
-    - `apps/places/places-core`
-    - `apps/prototypes/thumbnails`
-    - `conversations/turn-ledger`
-    - `infra/corpus-index`
-    - `infra/warmup/background-arm`
-    - `infra/warmup/sole-host`
-    - `infra/worktree/spare-pool`
+  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks` ×7
+    - `apps` ×6
+    - `infra` ×4
+    - `conversations` ×2
+    - `debug/config-orphans`
     - `page/links`
     - `plugin-meta/plugin-tree`
     - `reports/engine`
     - `stats/cost`
-    - `tasks/auto-start`
-    - `tasks/automations`
-    - `tasks/sidequest-autopilot`
-    - `tasks/task-triage`
 - Sub-plugins:
   - **`background-arm`** — Warm-ups in the Background activity catalog: registers the `warmup` background kind — every declared warm-up under After boot, its scope from the warm-up's (host → main only, worktree → every…
   - **`sole-host`** (excluded) — Warm-up admission of a sole host — one backend with no neighbours (the browser composition, the portable boot test): provides the WarmupHost host service running every scope, host-scoped warm-ups…

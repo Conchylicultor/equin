@@ -38,6 +38,7 @@ these capabilities via the `extends`-chain fallback.
     - `fields/duration`
     - `fields/float`
     - `fields/int`
+    - `fields/number/text-cast`
 - Sub-plugins:
   - **`data-view-codec`** — Number field type: data-view custom-column value codec (native number ↔ canonical text).
   - **`filter`** — Number field type: data-view filter operator set (= ≠ > < ≥ ≤ between is-empty …).

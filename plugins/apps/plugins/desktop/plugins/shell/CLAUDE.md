@@ -44,6 +44,7 @@
     - `ui/tokens/shadow --shadow-popover`
     - `ui/tokens/shadow --shadow-xl`
   - Imported by:
+    - `apps/desktop`
     - `apps/desktop/launcher`
     - `apps/desktop/shelf`
     - `apps/desktop/switcher`

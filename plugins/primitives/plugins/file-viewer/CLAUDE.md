@@ -188,7 +188,10 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
     - `apps/file-explorer/app-data`
     - `apps/file-explorer/browser`
     - `apps/sonata/sources/midi/file-preview`
+    - `conversations/conversation-view/artifacts/screenshot`
     - `conversations/conversation-view/code/file-pane`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/read`
+    - `conversations/conversation-view/markdown-extensions`
     - `primitives/file-viewer/code`
     - `primitives/file-viewer/diff`
     - `primitives/file-viewer/fallback`

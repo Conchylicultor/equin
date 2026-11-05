@@ -226,8 +226,15 @@ as the only escape. Being importable from every runtime *is* the feature.
     - `statHistory`
 - Cross-plugin:
   - Imported by:
+    - `debug/boot-events`
+    - `debug/logs`
+    - `debug/profiling/fs-wait`
+    - `debug/profiling/op-log`
+    - `framework/cli/op-runtime`
     - `framework/tooling/checks`
     - `packages/signal-origin/sink`
+    - `primitives/log-channels`
+    - `primitives/log-channels/log-files`
 - Exemptions:
   - Exempts itself from:
     - `sink-safety/no-adhoc-file-sink` — `.` (sanctioned)

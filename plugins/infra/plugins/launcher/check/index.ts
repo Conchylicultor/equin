@@ -11,7 +11,8 @@ import {
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { stripComments } from "./internal/strip-comments";
 
-const DECLARATION = "plugins/infra/plugins/launcher/core";
+const LAUNCHER = "plugins/infra/plugins/launcher";
+const DECLARATION = `${LAUNCHER}/plugins/runtime-env/core`;
 
 /** Test sources are exempt from every check here: a test builds its own environment. */
 function isTestFile(path: string): boolean {
@@ -57,7 +58,7 @@ const ENV_NAMES_RULE = "launcher:env-names";
 // The env-name registry (the `env-names` sub-plugin). Its declaration names
 // keys, never full names, but it is the one file whose key spellings are
 // definitions rather than uses.
-const ENV_NAMES_CORE = `${DECLARATION.replace(/\/core$/, "")}/plugins/env-names/core`;
+const ENV_NAMES_CORE = `${LAUNCHER}/plugins/env-names/core`;
 const DECLARATION_FILE = `${ENV_NAMES_CORE}/internal/env-keys.ts`;
 
 // A full variable name, not the tail of a longer identifier: the lookbehind is
@@ -88,7 +89,7 @@ function namesKey(code: string, key: string): boolean {
 const envNamesCheck: Check = {
   id: ENV_NAMES_RULE,
   description:
-    "The app's environment variables are spelled by key: no full EQUIN_* name in TypeScript code, every full name a mirror or doc spells is declared in launcher/core, and every declared key is still used",
+    "The app's environment variables are spelled by key: no full EQUIN_* name in TypeScript code, every full name a mirror or doc spells is declared in launcher/env-names, and every declared key is still used",
   exemptable: {
     [ENV_NAMES_RULE]:
       "spells a full variable name on purpose (a fixture of the rule itself)",

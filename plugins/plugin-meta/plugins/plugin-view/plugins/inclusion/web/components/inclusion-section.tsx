@@ -13,11 +13,13 @@ import {
   useEnsureCompositionData,
   useInclusion,
   useImpact,
+  useViewHost,
   pinAsRoot,
 } from "@plugins/plugin-meta/plugins/composition/web";
-import type {
-  InclusionStep,
-  MembershipState,
+import {
+  stepLabel,
+  type InclusionStep,
+  type MembershipState,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -77,6 +79,7 @@ export function InclusionSection({ node }: { node: PluginNode }) {
   const active = useActiveComposition();
   const inclusion = useInclusion(node);
   const impact = useImpact(node);
+  const host = useViewHost();
 
   if (!active) {
     return (
@@ -101,6 +104,7 @@ export function InclusionSection({ node }: { node: PluginNode }) {
         <Badge variant={badge.variant}>{badge.label}</Badge>
         <Text variant="caption" tone="muted">
           in <span className="font-medium">{active.name}</span>
+          {host && <> on the {host}</>}
         </Text>
       </Stack>
 
@@ -155,7 +159,7 @@ function EdgeChip({ step }: { step: InclusionStep }) {
       </LinkChip>
       <Icon icon={arrowForwardIcon} className="size-3 text-muted-foreground" />
       <Badge variant={step.kind === "hard" ? "primary" : "info"}>
-        {step.kind}
+        {stepLabel(step)}
       </Badge>
       <Icon icon={arrowForwardIcon} className="size-3 text-muted-foreground" />
       <LinkChip

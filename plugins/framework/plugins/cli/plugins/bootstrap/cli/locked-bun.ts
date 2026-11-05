@@ -45,7 +45,7 @@ import { dirname, join } from "node:path";
 import {
   runtimePath,
   runtimeShimsDir,
-} from "@plugins/infra/plugins/launcher/core";
+} from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
 import {
   envEntries,
   readEnv,

@@ -5,7 +5,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { runtimePath } from "@plugins/infra/plugins/launcher/core";
+import { runtimePath } from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
 import type { Ready } from "@plugins/infra/plugins/deps/deps";
 import {
   build,

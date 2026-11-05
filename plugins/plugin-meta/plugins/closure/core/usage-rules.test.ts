@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import type { EdgeGraph, UsageRule } from "./types";
+import type { Edge, EdgeGraph, UsageRule } from "./types";
 import { hardClosure, resolveComposition } from "./resolve-composition";
 
 const id = (s: string) => s as PluginId;
@@ -19,8 +19,13 @@ function graphWith(rules: UsageRule[]): EdgeGraph {
   };
   const hardForward = new Map(ids.map((n) => [n, (forward[n] ?? []).map(id)]));
   const hardReverse = new Map(ids.map((n) => [n, [] as PluginId[]]));
+  // The edge list is what a host view is cut from, so it lists every hard edge.
+  const edges: Edge[] = [];
   for (const [from, tos] of hardForward)
-    for (const to of tos) hardReverse.get(to)!.push(from);
+    for (const to of tos) {
+      hardReverse.get(to)!.push(from);
+      edges.push({ from, to, kind: "hard", via: "import", runtimes: ["web"] });
+    }
   const empty = () => new Map(ids.map((n) => [n, [] as PluginId[]]));
   return {
     hardForward,
@@ -28,7 +33,7 @@ function graphWith(rules: UsageRule[]): EdgeGraph {
     softForward: empty(),
     softReverse: empty(),
     subtree: empty(),
-    edges: [],
+    edges,
     rules,
     hostProviders: new Map(),
   };
@@ -72,6 +77,7 @@ describe("usage rules", () => {
     const g = graphWith([cellRule]);
     const comp = resolveComposition(g, {
       name: "probe",
+      hosts: ["desktop"],
       entryPoints: ["app", "!cell"],
       selectedContributors: [],
     });

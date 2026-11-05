@@ -69,7 +69,11 @@ const headed = await launchChromium(ready, { headless: false });  // headed bina
     - `BrowserExecutablesSchema`
     - `readBrowserExecutables`
 - Cross-plugin:
-  - Imported by: `infra/safe-fetch/browser-fetch`
+  - Imported by:
+    - `apps/prototypes/thumbnails`
+    - `framework/tooling/e2e-harness`
+    - `infra/safe-fetch/browser-fetch`
+    - `primitives/css/layout-harness`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/internal/executables.ts` (debt)

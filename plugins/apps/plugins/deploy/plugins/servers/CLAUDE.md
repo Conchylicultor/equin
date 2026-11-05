@@ -181,6 +181,7 @@ plus `sshKey`.
     - `apps/deploy/health`
     - `apps/deploy/ssh-setup`
     - `debug/read-set`
+    - `framework/cli/deploy`
   - Extended by: `apps/deploy/health` (table `deploy_servers_ext_health`)
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ssh-keygen.ts`, `server/internal/ssh-public-key.ts` (debt)

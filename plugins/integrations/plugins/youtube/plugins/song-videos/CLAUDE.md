@@ -73,6 +73,7 @@ Tests: `core/internal/*.test.ts` (the ranking on a real results page included),
 - Cross-plugin:
   - Imported by:
     - `apps/chord/song-index`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
     - `integrations/youtube/song-videos/youtube-search`
 - Sub-plugins:
   - **`youtube-search`** — The youtube-search song-video source: YouTube's first ten results for "<artist> <title>" (yt-dlp's flat search: title, channel, duration, views, verified, art track), contributed to SongVideos.Source.

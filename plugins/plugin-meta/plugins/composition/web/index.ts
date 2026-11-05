@@ -35,6 +35,10 @@ export {
   useIsCompareMode,
   useDiffMap,
   setCompareComposition,
+  setViewHost,
+  usePickedHost,
+  useViewHost,
+  viewedHost,
 } from "./internal/store";
 export type { DiffState } from "./internal/store";
 

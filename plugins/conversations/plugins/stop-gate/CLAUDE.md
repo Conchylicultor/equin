@@ -69,6 +69,7 @@ This plugin names no contributor.
     - `conversations/runtime-sdk`
     - `conversations/self-compact`
     - `tasks/orchestration/watch`
+    - `tasks/outcome-report`
 - Exemptions:
   - Exempts itself from: `endpoints/no-raw-web-fetch` — `shared/client.ts` (sanctioned)
 - Machine:

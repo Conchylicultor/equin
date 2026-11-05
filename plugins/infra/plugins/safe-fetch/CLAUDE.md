@@ -7,12 +7,16 @@
 - Description: SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
 - Cross-plugin:
   - Imported by:
+    - `apps/desktop/wallpaper`
     - `apps/desktop/wallpaper/openverse`
     - `apps/events/sources/coworkmeet`
     - `apps/events/sources/dmda`
     - `apps/events/sources/salsanueva`
     - `apps/events/sources/url-extract`
+    - `apps/mail/remote-images`
+    - `apps/sonata/sources/ultimate-guitar`
     - `infra/safe-fetch/browser-fetch`
+    - `page/bookmark`
     - `stats/cost`
 - Exemptions:
   - Exempts itself from:

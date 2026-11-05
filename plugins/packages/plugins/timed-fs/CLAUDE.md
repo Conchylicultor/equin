@@ -69,16 +69,25 @@ its boot journal attribute that.
 
 - Description: The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call past FS_WAIT_FLOOR_MS handed to onSlowFsCall subscribers as a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
 - Cross-plugin:
-  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `framework` ×14
-    - `infra` ×7
-    - `plugin-meta` ×4
-    - `packages` ×3
-    - `config_v2` ×2
-    - `database` ×2
-    - `conversations/workspace/scratch`
-    - `debug/browser-recordings/writer`
-    - `reports/outbox`
+  - Imported by: 159 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×45
+    - `framework` ×23
+    - `apps` ×15
+    - `debug` ×14
+    - `backup` ×12
+    - `conversations` ×12
+    - `packages` ×6
+    - `database` ×5
+    - `plugin-meta` ×5
+    - `build` ×4
+    - `config_v2` ×3
+    - `primitives` ×3
+    - `release` ×3
+    - `integrations` ×2
+    - `reports` ×2
+    - `code-explorer`
+    - `hints/ask`
+    - `stats/cost`
     - `toolchain`
     - `ui/icons/icon-sets`
 - Exemptions:

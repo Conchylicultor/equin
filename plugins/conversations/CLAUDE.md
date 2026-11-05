@@ -256,16 +256,17 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `SYSTEM_CATEGORY_ID`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 59 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×40
-    - `apps` ×5
-    - `tasks` ×5
+  - Imported by: 81 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×55
+    - `tasks` ×8
+    - `apps` ×6
+    - `infra` ×3
     - `review` ×3
     - `active-data` ×2
     - `debug/profiling/ops`
     - `hints/ask`
-    - `infra/mcp/browser`
     - `page/annotations/agent-notes/agent-page`
+    - `primitives/launch`
   - Endpoint callers:
     - `close`
     - `compaction-context`

@@ -219,7 +219,9 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `ownClass`
     - `typeAwareLintGroups`
 - Cross-plugin:
-  - Imported by: `framework/tooling/codegen`
+  - Imported by:
+    - `framework/tooling/checks/type-check`
+    - `framework/tooling/codegen`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/declared-utilities.ts`, `core/plugin-dirs.ts` (debt)

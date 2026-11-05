@@ -199,11 +199,15 @@ primitive and Stage 2.1).
 - Cross-plugin:
   - Imported by:
     - `apps/file-explorer/git`
+    - `build/deployment`
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
+    - `conversations/conversation-view/jsonl-viewer/subagents`
     - `plugin-meta/plugin-tree`
     - `release`
     - `review/plugin-changes`
     - `tasks/attempt-work`
+    - `tasks/tasks-core`
 - Server:
   - Exports (types):
     - `GitStateMemo`

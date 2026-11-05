@@ -161,6 +161,8 @@ cannot be a `recomputeOn` upstream (a keyed window cascades nothing, D32).
     - `code-explorer/code-api`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/push-and-exit`
+    - `debug/profiling/boot-bench`
+    - `network/live`
     - `review/code-review`
     - `review/plugin-changes`
     - `review/plugin-changes/file-changes`

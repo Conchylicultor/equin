@@ -111,6 +111,8 @@ straight onto the page canvas; agents attaching to the user's tabs.
 ## Plugin reference
 
 - Description: The Browser app's engine, backend half: relays each viewed tab's socket (ENGINE_WS_PATH) byte for byte to the machine's engine host over its Unix socket — launching the host (a detached `bin/host.ts`, Chromium on a persistent profile in apps/browser/profile) when there is none, after checking Chromium is installed (requesting the install when not), and replacing it when it runs other code and this backend is main or the namespace that launched it.
+- Cross-plugin:
+  - Imported by: `apps/browser/webview`
 - Exemptions:
   - Exempts itself from:
     - `no-raw-websocket` — `machine/internal/relay.ts` (sanctioned)

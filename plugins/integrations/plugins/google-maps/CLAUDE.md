@@ -239,9 +239,11 @@ over:
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/places/mapstr-import`
     - `apps/places/place-details`
     - `apps/places/places-core`
     - `apps/places/places-map`
+    - `apps/website/promo-film/seed`
     - `map/google`
     - `page/place/google`
 - Exemptions:

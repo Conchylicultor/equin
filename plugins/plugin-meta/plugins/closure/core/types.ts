@@ -1,4 +1,8 @@
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import type {
+  HostId,
+  PluginId,
+  RuntimeFolder,
+} from "@plugins/framework/plugins/plugin-id/core";
 import type { KeySpace } from "@plugins/framework/plugins/slot-declaration/core";
 import type { EntryPattern } from "./entry-pattern";
 
@@ -17,13 +21,26 @@ export type EdgeKind = "hard" | "soft";
 export type HardEdgeVia = "import" | "token" | "companion";
 
 /** One directed cross-plugin edge `from → to` of a given kind. */
-export interface Edge {
-  from: PluginId;
-  to: PluginId;
-  kind: EdgeKind;
-  /** Set on hard edges. */
-  via?: HardEdgeVia;
-}
+export type Edge =
+  | {
+      from: PluginId;
+      to: PluginId;
+      kind: "hard";
+      via: HardEdgeVia;
+      /**
+       * The folders of `from` the edge holds through, sorted: for an import,
+       * the folders that write it (`machine` for a `machine/` file importing
+       * `@plugins/x/server`); for a token, `web` (the page paints it); for a
+       * companion, the runtime of the slot (`web` / `server`). A host follows
+       * the edge iff it executes one of them (`hostRuntimeFolders`) — the
+       * per-host view is {@link graphForHosts}.
+       */
+      runtimes: RuntimeFolder[];
+    }
+  | { from: PluginId; to: PluginId; kind: "soft" };
+
+/** A hard {@link Edge}. */
+export type HardEdge = Extract<Edge, { kind: "hard" }>;
 
 /**
  * A KEYED companion: `then` contributes `companion: true` to a slot `owner`
@@ -67,7 +84,8 @@ export interface EdgeGraph {
    * its children).
    */
   subtree: Map<PluginId, PluginId[]>;
-  /** Flat derived list of every edge (hard then soft). */
+  /** Flat derived list of every edge (hard then soft). In a host view
+   *  ({@link graphForHosts}) only the hard edges that host follows. */
   edges: Edge[];
   /** Required-if-used companions — conditions, not edges; {@link hardClosure}
    *  fires each once its owner and one of its users are in. */
@@ -106,6 +124,14 @@ export interface EdgeGraph {
  */
 export interface CompositionManifest {
   name: string;
+  /**
+   * The hosts this composition runs on — the one statement of where its
+   * bundle boots. The closure follows only the imports written in a folder one
+   * of them executes (`desktop` follows `machine/` and `central/` imports,
+   * `browser` does not), so a composition declared for both bundles the union.
+   * Never folded from `extends`: a pack says what to include, not where.
+   */
+  hosts: HostId[];
   entryPoints: EntryPattern[];
   selectedContributors: PluginId[];
   /** Names of other compositions merged into this one, transitively. Optional;
@@ -200,6 +226,9 @@ export interface InclusionStep {
   /** Set when the hop is a {@link UsageRule}: `from` uses the key `to` serves
    *  (and the rule's owner is bundled too). */
   usage?: { owner: PluginId; space: KeySpace; key: string };
+  /** Set when the hop is a hard edge: why it holds and through which of
+   *  `from`'s folders — "via machine/ import". */
+  edge?: { via: HardEdgeVia; runtimes: RuntimeFolder[] };
 }
 
 /** Why a given target plugin is in the bundle: the seed it originates from and

@@ -111,6 +111,8 @@ flag that swallowed error surfaces would be worse than one that shows a toast.
     - `apps/prototypes/canvas`
     - `apps/prototypes/compare/route`
     - `apps/prototypes/present`
+    - `conversations/conversation-view/open-app`
+    - `framework/cli/build`
     - `primitives/scope/app-instance`
     - `shell/global-action-bar`
 - Web:

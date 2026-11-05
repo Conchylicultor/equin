@@ -25,8 +25,21 @@ is bounded by construction.
 - Description: Trigger coalescer: createCoalescer / createKeyedCoalescer run a reaction at most once at a time per key and fold every trigger that lands mid-run into ONE trailing run (its items merged), so however many triggers arrive the work is bounded to one running plus one pending per key — and a trigger never joins a run that started before it.
 - Cross-plugin:
   - Imported by:
+    - `apps/prototypes/files`
+    - `apps/sonata/sources/midi/folders`
+    - `conversations/conversation-progress`
+    - `conversations/runtime-sdk`
+    - `conversations/transcript-watcher`
+    - `debug/profiling/op-log/op-store`
     - `framework/tooling/web-artifacts`
+    - `infra/file-watcher`
+    - `infra/git/checkout-watch`
+    - `infra/git/git-watcher`
+    - `infra/host/io-health`
+    - `infra/paths/data-files/memory`
     - `packages/watched-memo`
+    - `reports/outbox`
+    - `shell/document-head`
 - Core:
   - Exports (types):
     - `Coalescer`

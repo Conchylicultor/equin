@@ -326,6 +326,7 @@ Verified in Chromium only (the e2e harness drives Chromium).
     - `debug/boot-profile`
     - `debug/heap-snapshot`
     - `debug/profiling/boot`
+    - `primitives/data-view/list`
     - `primitives/data-view/table`
     - `primitives/metrics/chart-kit`
 - Core:

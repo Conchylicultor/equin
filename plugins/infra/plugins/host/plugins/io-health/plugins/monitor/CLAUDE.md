@@ -156,6 +156,8 @@ a second `ps`, one `proc_pid_rusage` per process and an `lsof` of fseventsd.
     - `infra/deps.defineDep`
     - `infra/deps/build.build`
   - Exports (values): `fsLatencyMonitorBinary`
+- Cross-plugin:
+  - Imported by: `infra/host/io-health`
 - Exemptions:
   - Exempts itself from:
     - `timed-fs/no-untimed-fs-read` — `bin/fs-latency-monitor.ts`, `bin/rotate.ts`, `bin/root-daemon.ts` (sanctioned)

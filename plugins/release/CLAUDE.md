@@ -544,7 +544,15 @@ remote is built here.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deployments`
+    - `apps/deploy/health`
+    - `apps/deploy/remote-deploy`
+    - `apps/studio/compositions/release`
+    - `apps/studio/compositions/release/release-artifact`
+    - `apps/studio/compositions/release/release-info`
+    - `apps/studio/compositions/release/release-logs`
     - `auth/apple-signing`
+    - `framework/cli/deploy`
+    - `framework/cli/release`
     - `release/runs-arm`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/preview-manager.ts`, `server/internal/run-logs-resource.ts`, `server/internal/run-state.ts`, `server/internal/transcript.ts` (debt)

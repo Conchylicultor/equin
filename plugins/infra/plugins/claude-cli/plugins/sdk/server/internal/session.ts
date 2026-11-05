@@ -6,7 +6,7 @@ import {
 } from "@anthropic-ai/claude-agent-sdk";
 import { claudeAccountCredential } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
 import { claudeCredentialEnv } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
-import { pickHostEnv } from "@plugins/infra/plugins/launcher/core";
+import { pickHostEnv } from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
 
 // Every Claude Code session a backend opens — an agent, a one-shot generation,
 // a probe — is opened here, through the Agent SDK, on an account chosen by its

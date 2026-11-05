@@ -161,6 +161,12 @@ from the reconciler terminal main appends to the log.
     - `TERMINAL_OUTCOMES`
     - `WAIT_KIND_IDS`
     - `WAIT_RESULTS`
+- Cross-plugin:
+  - Imported by:
+    - `conversations/conversation-view/op-status`
+    - `conversations/conversation-view/open-app`
+    - `debug/profiling/ops`
+    - `stats/pushes`
 - Exemptions:
   - Exempts itself from:
     - `timer/no-unlisted-timer` — `server/internal/service.ts` (sanctioned)

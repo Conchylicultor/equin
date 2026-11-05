@@ -25,6 +25,8 @@
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (values): `setAppleCertificateEndpoint`
+- Cross-plugin:
+  - Imported by: `auth/apple-signing/setup-wizard`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/certificate-endpoint.ts` (debt)
 - Shared:

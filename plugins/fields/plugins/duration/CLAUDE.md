@@ -20,7 +20,19 @@
     - `formatDuration`
     - `parseDuration`
 - Cross-plugin:
-  - Imported by: `fields/duration/config`
+  - Imported by:
+    - `debug/claude-cli-calls`
+    - `debug/profiling/runtime`
+    - `debug/queue`
+    - `debug/slow-ops/cluster`
+    - `debug/slow-ops/pane`
+    - `debug/trace/gates`
+    - `fields/duration/config`
+    - `fields/duration/filter`
+    - `fields/duration/storage`
+    - `fields/duration/table`
+    - `infra/claude-cli`
+    - `runs`
 - Sub-plugins:
   - **`config`** — Duration field type: the durationField factory for building field records.
   - **`filter`** — Duration field type: data-view filter — number's operators, with operands typed in units.

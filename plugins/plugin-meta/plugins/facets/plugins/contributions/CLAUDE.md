@@ -105,6 +105,9 @@ shared `contributionId` helper live in `core/`.
   - Imported by:
     - `framework/tooling/codegen`
     - `plugin-meta/closure`
+    - `plugin-meta/facets/contributions/render-contributions`
+    - `plugin-meta/facets/contributions/render-detail`
+    - `plugin-meta/facets/contributions/render-diff`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin contributions table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin contributions section in the plugin detail pane.

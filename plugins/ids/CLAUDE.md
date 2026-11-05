@@ -186,15 +186,15 @@ is reported by the schema file that exports it, which is where its plugin's
     - `parseKindLabel`
     - `storedIdSchema`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×13
     - `conversations` ×6
     - `primitives` ×3
     - `tasks` ×3
+    - `active-data` ×2
     - `build` ×2
     - `page` ×2
     - `release` ×2
-    - `active-data/id-chip`
     - `history/engine`
     - `infra/trash`
     - `plugin-meta/plugin-health`

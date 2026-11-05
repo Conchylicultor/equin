@@ -28,7 +28,9 @@ the type declares its own builder).
     - `personFieldType`
     - `personIdentity`
 - Cross-plugin:
-  - Imported by: `fields/person/config`
+  - Imported by:
+    - `fields/person/config`
+    - `fields/person/storage`
 - Sub-plugins:
   - **`config`** — Person field factory (personField) for building field records.
   - **`storage`** — Person field type: DB storage capability — a Postgres text column.

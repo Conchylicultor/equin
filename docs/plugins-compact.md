@@ -110,9 +110,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`sql-projection`** [exempt] — Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no…
     - **`sql-rows`** [exempt] — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>()…
 
-- **`debug`** [exempt] [64 sub-plugins] — Debug tools umbrella plugin.
+- **`debug`** [exempt] [65 sub-plugins] — Debug tools umbrella plugin.
 
-- **`fields`** [test helpers] [126 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
+- **`fields`** [test helpers] [127 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
@@ -176,7 +176,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useTarget); useIdKinds() / useIdPresenters() read them at…
 
-- **`infra`** [test helpers] [exempt] [100 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
+- **`infra`** [test helpers] [exempt] [101 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
@@ -341,7 +341,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`native`** — Native OS notifications from the menu-bar panel: the Notifications switch (MenuBar.Section 'notifications', a config_v2 bool, off by default), shown only when the helper can notify, and a…
     - **`toast`** — Global toast notifications: a plain showToast() (text toasts: data only) backed by sonner's global API, and useShowCustomToast() — a toast whose content the caller draws, rendered in the caller's…
 
-- **`stats`** [exempt] [5 sub-plugins] — Root plugin hosting stacked chart contributions from child plugins.
+- **`stats`** [exempt] [6 sub-plugins] — Root plugin hosting stacked chart contributions from child plugins.
 
 - **`tag-tree`** — Umbrella for nested tag trees: one per-plugin table of tags (name, parent, colour, icon, fractional rank) declared in three lines, served through one endpoint set, and picked, created, renamed…
   - Plugins:

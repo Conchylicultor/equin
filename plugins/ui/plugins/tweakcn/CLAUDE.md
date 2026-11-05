@@ -37,6 +37,7 @@
     - `ui/tokens/shadow --shadow-sm`
     - `ui/tokens/shadow --shadow-xl`
     - `ui/tokens/shadow --shadow-xs`
+  - Imported by: `ui/tweakcn/community-browser`
 - Sub-plugins:
   - **`community-browser`** — The tweakcn community catalog as a browsable theme source (picking a theme saves it as a saved theme), plus a customizer section that imports any tweakcn theme by URL. Serves the tweakcn community…
 

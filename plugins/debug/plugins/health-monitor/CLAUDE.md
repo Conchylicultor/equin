@@ -211,6 +211,7 @@ measured overhead on a real worktree workload is still an open task.
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `debug/latency-ledger`
+    - `debug/sentinel`
     - `debug/timeline`
 - Exemptions:
   - Exempts itself from:

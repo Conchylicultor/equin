@@ -1,4 +1,4 @@
-import { runtimePath } from "@plugins/infra/plugins/launcher/core";
+import { runtimePath } from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { uvCacheDir, uvPythonDir } from "../../data-dirs";
 

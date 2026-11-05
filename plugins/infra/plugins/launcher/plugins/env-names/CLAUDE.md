@@ -27,17 +27,17 @@
     - `setEnvDefault`
     - `unsetEnv`
 - Cross-plugin:
-  - Imported by:
-    - `framework/tooling/checks`
-    - `framework/tooling/guards`
-    - `framework/tooling/guards/agent-policy`
-    - `infra/launcher`
-    - `infra/launcher/login-services`
-    - `infra/paths`
-    - `infra/runtime-profiler`
-    - `packages/flock`
-    - `packages/spawn-disclaim`
-    - `packages/spawn-priority`
+  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×15
+    - `infra` ×11
+    - `database` ×4
+    - `packages` ×4
+    - `debug` ×2
+    - `auth`
+    - `build`
+    - `conversations/agent-launch`
+    - `release`
+    - `upstream`
 - Exemptions:
   - Exempts itself from: `user-path/no-unproven-claim` — `core/internal/env.ts` (sanctioned)
 - Test helpers:

@@ -519,7 +519,15 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `sliceCheckThread`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: `framework/cli/check`
+  - Imported by:
+    - `framework/cli/build`
+    - `framework/cli/check`
+    - `framework/cli/op-runtime`
+    - `framework/cli/test`
+    - `framework/tooling/checks/cache-prune`
+    - `framework/tooling/checks/type-check`
+    - `framework/tooling/checks/type-check/backstop`
+    - `infra/deps/updates`
 - Exemptions:
   - Exempts itself from:
     - `imperative-create-table-allowlisted` — `cli/internal/grep-index-store.ts` (sanctioned)

@@ -102,6 +102,8 @@ Design: [`research/2026-09-20-global-subagent-op-wakeup.md`](../../../../../../r
 - Description: `./equin await` — block until this checkout's running op writes its verdict, and print it. Starts nothing; the wake-up becomes a tool result instead of a notification that may never arrive.
 - Cli:
   - Uses: `infra/file-watcher.watchForCommand`
+- Cross-plugin:
+  - Imported by: `framework/cli/foreground-handoff`
 - Core:
   - Exports (types):
     - `AwaitedOp`

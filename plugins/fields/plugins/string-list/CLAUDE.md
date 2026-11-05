@@ -34,7 +34,9 @@ sub-plugin.
     - `stringListFieldType`
     - `stringListIdentity`
 - Cross-plugin:
-  - Imported by: `fields/string-list/config`
+  - Imported by:
+    - `fields/string-list/config`
+    - `fields/string-list/storage`
 - Sub-plugins:
   - **`config`** — String-list field type: config-render capability (drag-and-drop string list for config-v2.fields.renderer) plus the stringListField factory.
   - **`storage`** — String-list field type: DB storage capability — maps to a Postgres text[] column.

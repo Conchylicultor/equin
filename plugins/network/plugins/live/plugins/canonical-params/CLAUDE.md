@@ -28,7 +28,12 @@ spelling, and a value with none is refused rather than encoded as another.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/analytics/dashboard`
+    - `conversations/conversation-view/code`
+    - `conversations/conversation-view/jsonl-viewer`
+    - `debug/slow-ops`
     - `network/live`
+    - `network/live/live-state`
+    - `network/live/optimistic-mutation`
     - `network/live/resource-runtime`
 - Core:
   - Exports (values):

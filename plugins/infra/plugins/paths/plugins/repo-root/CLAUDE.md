@@ -55,12 +55,18 @@ A leaf (its one import is `user-path/core`'s types), so `tooling/lint/core`'s
     - `infra/host-fs/user-path.asAppPath`
   - Exports (values): `REPO_ROOT`
 - Cross-plugin:
-  - Imported by:
-    - `framework/tooling/checks`
-    - `framework/tooling/guards`
-    - `framework/tooling/lint`
-    - `infra/paths`
-    - `plugin-meta/barrel-import`
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×12
+    - `infra` ×8
+    - `apps` ×5
+    - `build` ×5
+    - `plugin-meta` ×3
+    - `code-explorer`
+    - `config_v2`
+    - `conversations/workspace/scratch`
+    - `debug/boot-events`
+    - `primitives/css/layout-harness`
+    - `release`
     - `reports/outbox`
 - Exemptions:
   - Exempts itself from: `user-path/no-unproven-claim` — `core/internal/repo-root.ts` (sanctioned)

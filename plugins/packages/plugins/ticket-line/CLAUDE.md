@@ -72,6 +72,10 @@ Cost: one `flock-wait` child (~37 MB, `bun --smol`) per queued waiter.
   - Exports (values):
     - `arrive`
     - `createTicketLine`
+- Cross-plugin:
+  - Imported by:
+    - `framework/cli/op-runtime`
+    - `packages/host-semaphore`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
 

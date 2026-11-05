@@ -47,6 +47,8 @@ What exists today:
 ## Plugin reference
 
 - Description: Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
+- Cross-plugin:
+  - Imported by: `apps/chord/song-index`
 - Sub-plugins:
   - **`curriculum`** [exempt] — The curriculum's browser half: useCurriculum (the live chord.curriculum selection — each chord practised, heard or off, the blanks, how many other chords a loop may hold), useCatalog (the live…
   - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the…

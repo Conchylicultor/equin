@@ -84,6 +84,8 @@ for app-level grants), and non-interactive `claude -p` probes are not wrapped.
     - `infra/deps.defineDep`
     - `infra/deps/build.build`
   - Exports (values): `disclaimExec`
+- Cross-plugin:
+  - Imported by: `conversations/runtime-sdk`
 - Structure:
   - Non-standard folders: `native/`
 

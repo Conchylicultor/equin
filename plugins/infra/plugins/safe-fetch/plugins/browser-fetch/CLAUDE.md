@@ -215,7 +215,12 @@ proven by hand:
     - `infra/deps/playwright-browser.playwrightBrowser`
   - Exports (values): `chromium`
 - Cross-plugin:
-  - Imported by: `apps/events/sources/url-extract`
+  - Imported by:
+    - `apps/browser/engine`
+    - `apps/events/sources/url-extract`
+    - `apps/prototypes/thumbnails`
+    - `framework/tooling/e2e-harness`
+    - `infra/mcp/browser`
 - Core:
   - Exports (types):
     - `BotMitigation`

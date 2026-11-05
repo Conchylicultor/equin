@@ -36,7 +36,7 @@ import { parseEntryPattern, matchEntryPattern } from "./entry-pattern";
 import { flattenManifest } from "./flatten-manifest";
 import { explainInclusion } from "./explain";
 import { impactOfPruning, impactOfSelecting } from "./impact";
-import type { EdgeGraph, CompositionManifest } from "./types";
+import type { EdgeGraph, CompositionManifest, HardEdge } from "./types";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
 const AGENT_MANAGER = asPluginId("apps.agent-manager");
@@ -50,6 +50,7 @@ const REVIEW = asPluginId("review");
 
 const manifest: CompositionManifest = {
   name: "agent-manager",
+  hosts: ["desktop"],
   entryPoints: [asPluginId("apps.agent-manager.**")],
   selectedContributors: [],
 };
@@ -67,6 +68,7 @@ function expand(
   return expandEntrySeeds(
     {
       name: "probe",
+      hosts: ["desktop"],
       entryPoints,
       selectedContributors: selectedContributors.map(asPluginId),
     },
@@ -226,6 +228,7 @@ test("root seeds every id but the host providers, and NAMES NONE", () => {
 test("resolveComposition under `**`: everything but the host providers bundled + required, nothing available", () => {
   const comp = resolveComposition(graph, {
     name: "everything",
+    hosts: ["desktop"],
     entryPoints: [asPluginId("**")],
     selectedContributors: [],
   });
@@ -284,6 +287,7 @@ test("a lone `!**` seeds nothing", () => {
 test("bare entry seeds node + hard deps only (subtree NOT bundled)", () => {
   const bare: CompositionManifest = {
     name: "agent-manager-bare",
+    hosts: ["desktop"],
     entryPoints: [AGENT_MANAGER],
     selectedContributors: [],
   };
@@ -345,6 +349,7 @@ test("negation trims a .**-implicit id, but an explicit positive survives", () =
 test("a negative takes an unprotected importer with it", () => {
   const comp = resolveComposition(importerGraph(), {
     name: "cascades",
+    hosts: ["desktop"],
     entryPoints: ["root.**", "!root.drop.**"],
     selectedContributors: [],
   });
@@ -365,6 +370,7 @@ test("a negative takes an unprotected importer with it", () => {
 test("a PROTECTED importer re-adds the negated id, and that is reported", () => {
   const comp = resolveComposition(importerGraph(), {
     name: "fail-loud",
+    hosts: ["desktop"],
     entryPoints: ["root.**", "root.keep", "!root.drop.**"],
     selectedContributors: [],
   });
@@ -385,6 +391,7 @@ test("a PROTECTED importer re-adds the negated id, and that is reported", () => 
       from: asPluginId("root.keep"),
       to: asPluginId("root.drop.inner"),
       kind: "hard",
+      edge: { via: "import", runtimes: ["web"] },
     },
   ]);
 });
@@ -406,6 +413,7 @@ function importerGraph(): EdgeGraph {
 test("website-shaped manifest: .** minus negatives drops a branch and its importers", () => {
   const websiteManifest: CompositionManifest = {
     name: "website",
+    hosts: ["desktop"],
     entryPoints: [
       asPluginId("apps.website.**"),
       asPluginId("!apps.website.pages.story.**"),
@@ -520,6 +528,7 @@ test("impactOfPruning a hard-required node drops nothing", () => {
 test("flattenManifest unions an extended pack's contributors into the host", () => {
   const pack: CompositionManifest = {
     name: "self-improvement",
+    hosts: ["desktop"],
     entryPoints: [],
     selectedContributors: [
       asPluginId("review"),
@@ -529,6 +538,7 @@ test("flattenManifest unions an extended pack's contributors into the host", () 
   };
   const profile: CompositionManifest = {
     name: "full",
+    hosts: ["desktop"],
     entryPoints: [AGENT_MANAGER],
     selectedContributors: [asPluginId("ui.theme-toggle")],
     extends: ["self-improvement"],
@@ -547,18 +557,21 @@ test("flattenManifest is diamond/cycle-safe and dedupes", () => {
   // a → b, a → c, b → c (diamond); plus c → a (cycle). All terminate, c folds once.
   const a: CompositionManifest = {
     name: "a",
+    hosts: ["desktop"],
     entryPoints: [asPluginId("apps.home")],
     selectedContributors: [asPluginId("ui.theme-toggle")],
     extends: ["b", "c"],
   };
   const b: CompositionManifest = {
     name: "b",
+    hosts: ["desktop"],
     entryPoints: [],
     selectedContributors: [asPluginId("review")],
     extends: ["c"],
   };
   const c: CompositionManifest = {
     name: "c",
+    hosts: ["desktop"],
     entryPoints: [],
     selectedContributors: [asPluginId("review"), asPluginId("reports.crash")],
     extends: ["a"],
@@ -574,6 +587,7 @@ test("flattenManifest is diamond/cycle-safe and dedupes", () => {
 test("flattenManifest ignores unknown extends references inertly", () => {
   const m: CompositionManifest = {
     name: "x",
+    hosts: ["desktop"],
     entryPoints: [asPluginId("apps.home")],
     selectedContributors: [asPluginId("ui.theme-toggle")],
     extends: ["does-not-exist"],
@@ -619,6 +633,8 @@ function syntheticGraph(
       from: asPluginId(from),
       to: asPluginId(to),
       kind: "hard" as const,
+      via: "import" as const,
+      runtimes: ["web" as const],
     })),
     rules: [],
     hostProviders: new Map(),
@@ -747,6 +763,7 @@ test("stopping at a kept id stays loud: a kept importer that drags a negated tar
   );
   const comp = resolveComposition(graph, {
     name: "probe",
+    hosts: ["desktop"],
     entryPoints: ["kept", "!target"],
     selectedContributors: [],
   });
@@ -765,6 +782,7 @@ test("stopping at a kept id stays loud: a kept importer that drags a negated tar
 const PLUGIN_CHANGES = asPluginId("review.plugin-changes");
 const BASE_ROW: CompositionManifest = {
   name: BASE_EXCLUSIONS_ID,
+  hosts: ["desktop"],
   entryPoints: ["!review.plugin-changes.**"],
   selectedContributors: [],
   extends: [],
@@ -844,6 +862,7 @@ test("a negative cascades to transitive importers; a dependency of the negated b
   );
   const comp = resolveComposition(g, {
     name: "cascade",
+    hosts: ["desktop"],
     entryPoints: ["root.**", "!root.seed.**"],
     selectedContributors: [],
   });
@@ -870,6 +889,7 @@ test("a negative cascades to transitive importers; a dependency of the negated b
 test("the base-exclusions row is inherited with no `extends`", () => {
   const facetsOnly: CompositionManifest = {
     name: "facets-only",
+    hosts: ["desktop"],
     entryPoints: ["plugin-meta.facets.**"],
     selectedContributors: [],
     extends: [],
@@ -899,6 +919,7 @@ test("the base-exclusions row is inherited with no `extends`", () => {
 test("naming the excluded plugin as an entry positive opts back in", () => {
   const optIn: CompositionManifest = {
     name: "facets-plus-changes",
+    hosts: ["desktop"],
     entryPoints: ["plugin-meta.facets.**", "review.plugin-changes"],
     selectedContributors: [],
     extends: [],
@@ -922,6 +943,7 @@ test("naming the excluded plugin as an entry positive opts back in", () => {
 test("naming the excluded plugin as a selected contributor opts back in", () => {
   const optIn: CompositionManifest = {
     name: "facets-plus-changes-soft",
+    hosts: ["desktop"],
     entryPoints: ["plugin-meta.facets.**"],
     selectedContributors: [PLUGIN_CHANGES],
     extends: [],
@@ -944,6 +966,7 @@ test("naming an importer is NOT an opt-out: the contradiction is reported with i
   const adapter = asPluginId("plugin-meta.facets.contributions.render-diff");
   const viaImporter: CompositionManifest = {
     name: "facets-selecting-an-adapter",
+    hosts: ["desktop"],
     entryPoints: ["plugin-meta.facets.**"],
     selectedContributors: [adapter],
     extends: [],
@@ -983,6 +1006,7 @@ test("naming an importer is NOT an opt-out: the contradiction is reported with i
 test("real-tree main: everything except plugin-changes, its render-diff importers and the host providers", () => {
   const main: CompositionManifest = {
     name: MAIN_COMPOSITION_ID,
+    hosts: ["desktop"],
     entryPoints: ["**"],
     selectedContributors: [],
     extends: [],
@@ -1019,6 +1043,7 @@ test("flattenManifest does not fold the base row into itself", () => {
 test("negatedTargets carries the asserted targets, not the cascade", () => {
   const main: CompositionManifest = {
     name: MAIN_COMPOSITION_ID,
+    hosts: ["desktop"],
     entryPoints: ["**"],
     selectedContributors: [],
     extends: [],
@@ -1064,6 +1089,7 @@ test("a host provider leaves `**` with no negative naming it", () => {
   );
   const all: CompositionManifest = {
     name: "all",
+    hosts: ["desktop"],
     entryPoints: ["**"],
     selectedContributors: [],
     extends: [],
@@ -1089,6 +1115,7 @@ test("naming a host provider is no opt-out: it is reported, not bundled silently
   ]) {
     const comp = resolveComposition(g, {
       name: "names-the-guest",
+      hosts: ["desktop"],
       extends: [],
       ...named,
     });
@@ -1146,10 +1173,25 @@ test("e2e / provision / cli imports are not hard closure edges", () => {
   // The harness's `provision/` import of browser-fetch, likewise.
   expect(graph.hardForward.get(E2E_HARNESS)).not.toContain(BROWSER_FETCH);
 
-  // The consequence: Playwright is reachable ONLY from the one plugin that
-  // genuinely imports it from a runtime the app runs, so it lands only in the
-  // compositions that ship that plugin.
-  expect(graph.hardReverse.get(BROWSER_FETCH)).toEqual([URL_EXTRACT]);
+  // The consequence: Playwright is reachable ONLY from the plugins that
+  // genuinely import it from a runtime some host runs (url-extract, and the
+  // `machine/` halves driving a real browser), so it lands only in the
+  // compositions that ship one of them — and in no browser-host bundle.
+  const shippedImporters = [...tree.byDir.values()]
+    .filter((n) =>
+      SHIPPED_RUNTIME_FOLDERS.some((rt) =>
+        getFacet(n, crossRefsFacetDef)?.apiUses[rt].some(
+          (u) => u.plugin === BROWSER_FETCH,
+        ),
+      ),
+    )
+    .map((n) => n.id)
+    .sort();
+  expect(shippedImporters).toContain(URL_EXTRACT);
+  expect(shippedImporters).not.toContain(E2E_HARNESS);
+  expect([...graph.hardReverse.get(BROWSER_FETCH)!].sort()).toEqual(
+    shippedImporters,
+  );
 });
 
 test("token use is a hard edge: a plugin painting with a group's var bundles the group", () => {
@@ -1167,7 +1209,10 @@ test("token use is a hard edge: a plugin painting with a group's var bundles the
   expect(graph.hardForward.get(AVATAR)).toContain(CATEGORICAL);
   expect(graph.hardReverse.get(CATEGORICAL)).toContain(AVATAR);
   expect(
-    graph.edges.find((e) => e.from === AVATAR && e.to === CATEGORICAL)?.via,
+    graph.edges.find(
+      (e): e is HardEdge =>
+        e.kind === "hard" && e.from === AVATAR && e.to === CATEGORICAL,
+    )?.via,
   ).toBe("token");
 });
 
@@ -1176,6 +1221,7 @@ test("the website bundles the token groups it paints with, none listed by name",
   // arrive through the token edges of the plugins the site renders.
   const comp = resolveComposition(graph, {
     name: "website-probe",
+    hosts: ["desktop"],
     entryPoints: [asPluginId("apps.website.**")],
     selectedContributors: [],
   });
@@ -1209,7 +1255,7 @@ test("a companion contribution is a hard edge from the slot's owner", () => {
     expect(graph.hardForward.get(from)).toContain(to);
     expect(graph.hardReverse.get(to)).toContain(from);
     const via = graph.edges.find(
-      (e) => e.from === from && e.to === to && e.kind === "hard",
+      (e): e is HardEdge => e.from === from && e.to === to && e.kind === "hard",
     )?.via;
     expect(via).toBe("companion");
   }
@@ -1227,6 +1273,7 @@ test("an ordinary contribution to a companion slot stays an opt-in option", () =
 test("the website bundles its runtime companions, none listed by name", () => {
   const comp = resolveComposition(graph, {
     name: "website-probe",
+    hosts: ["desktop"],
     entryPoints: [asPluginId("apps.website.**")],
     selectedContributors: [],
   });
@@ -1254,7 +1301,8 @@ test("a server companion contribution is a hard edge from the kind's owner", () 
   expect(graph.hardForward.get(CHANGE_FEED)).toContain(L2);
   expect(
     graph.edges.find(
-      (e) => e.from === CHANGE_FEED && e.to === L2 && e.kind === "hard",
+      (e): e is HardEdge =>
+        e.from === CHANGE_FEED && e.to === L2 && e.kind === "hard",
     )?.via,
   ).toBe("companion");
   const kind = collectCompanionSlots(tree).find(
@@ -1271,6 +1319,7 @@ test("a server companion contribution is a hard edge from the kind's owner", () 
 test("a bundle holding change-feed holds L2, none listing it", () => {
   const comp = resolveComposition(graph, {
     name: "change-feed-probe",
+    hosts: ["desktop"],
     entryPoints: [asPluginId("network.live.change-feed")],
     selectedContributors: [],
   });
@@ -1329,6 +1378,7 @@ test("every field-type dimension and view renderer is a keyed companion", () => 
 test("sonata bundles the renderers its DataViews use, with no pack", () => {
   const comp = resolveComposition(graph, {
     name: "sonata-probe",
+    hosts: ["desktop"],
     entryPoints: [asPluginId("apps.sonata.**")],
     selectedContributors: [],
   });

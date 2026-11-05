@@ -390,6 +390,11 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `writingCodegenPass`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
+  - Imported by:
+    - `framework/cli/build`
+    - `framework/cli/regen-generated`
+    - `framework/cli/release`
+    - `plugin-meta/relocate`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)

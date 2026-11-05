@@ -83,6 +83,10 @@ const audio = await fetchYouTubeAudio(videoId, exec, { log });
     - `isYouTubeAudioError`
     - `YouTubeAccessError`
   - Register: `defineJob('youtube-audio.sweep')`
+- Cross-plugin:
+  - Imported by:
+    - `apps/sonata/sources/ultimate-guitar/alignment`
+    - `infra/audio-analysis`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/cache.ts`, `server/internal/fetch.ts`, `server/internal/sweep.ts` (debt)
 - Test helpers:

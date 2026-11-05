@@ -369,11 +369,21 @@ export default createFacet<CrossRefsData>({
           // its dedicated gates.
           if (!r) continue;
           if (r.node === node) continue; // self-skip
-          if (r.suffix[0] !== rt) continue; // same-runtime filter
-          const key = `${r.node.id}:${use.symbol ?? ""}`;
+          // Every barrel the folder reaches, not only its own runtime's: a
+          // `machine/` import of `@plugins/x/server` is how a desktop bundle
+          // needs `x`, and a `web/` import of `x/core` how any bundle does.
+          // Which host executes the import is the closure engine's question
+          // (`ApiUse` is filed under the importing folder for it).
+          const barrel = RUNTIME_FOLDERS.find((f) => f === r.suffix[0]);
+          if (!barrel) continue; // not a barrel specifier (boundaries reject it)
+          const key = `${r.node.id}:${barrel}:${use.symbol ?? ""}`;
           if (seen.has(key)) continue;
           seen.add(key);
-          data.apiUses[rt].push({ plugin: r.node.id, symbol: use.symbol });
+          data.apiUses[rt].push(
+            use.symbol === undefined
+              ? { plugin: r.node.id, barrel }
+              : { plugin: r.node.id, barrel, symbol: use.symbol },
+          );
         }
       }
       // Clear the transient raw data so it doesn't leak into stored facet data.
@@ -466,8 +476,8 @@ export default createFacet<CrossRefsData>({
       data.tokenUsedBy.sort();
       for (const rt of RUNTIME_FOLDERS)
         data.apiUses[rt].sort((a, b) =>
-          `${a.plugin}:${a.symbol ?? ""}`.localeCompare(
-            `${b.plugin}:${b.symbol ?? ""}`,
+          `${a.plugin}:${a.barrel}:${a.symbol ?? ""}`.localeCompare(
+            `${b.plugin}:${b.barrel}:${b.symbol ?? ""}`,
           ),
         );
     }
@@ -476,22 +486,27 @@ export default createFacet<CrossRefsData>({
   renderDoc(data) {
     const facts: DocFact[] = [];
     for (const rt of RUNTIME_FOLDERS) {
-      if (data.apiUses[rt].length > 0) {
+      // A folder's own-runtime uses: what this runtime's barrel builds on. A
+      // cross-runtime use (`web/` → `x/core`) is a dependency the closure
+      // follows and `Imported by` lists, but listing it again under each
+      // importing folder would double every plugin's reference block.
+      const uses = data.apiUses[rt].filter((u) => u.barrel === rt);
+      if (uses.length > 0) {
         // Grouped by the plugin used: summarized, a heavy consumer reads as
         // "which plugins, how many symbols each".
         facts.push({
           folder: rt,
           key: "Uses",
           noun: "symbols",
-          groups: groupInOrder(
-            data.apiUses[rt],
-            (u) => `\`${asPath(u.plugin)}\``,
-          ).map(({ label, items }) => ({
-            label,
-            values: items.map(
-              (u) => `\`${asPath(u.plugin)}${u.symbol ? "." + u.symbol : ""}\``,
-            ),
-          })),
+          groups: groupInOrder(uses, (u) => `\`${asPath(u.plugin)}\``).map(
+            ({ label, items }) => ({
+              label,
+              values: items.map(
+                (u) =>
+                  `\`${asPath(u.plugin)}${u.symbol ? "." + u.symbol : ""}\``,
+              ),
+            }),
+          ),
         });
       }
     }

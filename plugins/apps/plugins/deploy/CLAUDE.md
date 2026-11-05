@@ -8,6 +8,10 @@
 - Server:
   - Contributes: `taskCategory` "deploy"
   - Uses: `tasks/task-category.TaskCategory`
+- Cross-plugin:
+  - Imported by:
+    - `apps/deploy/deploy-history/investigate-failure`
+    - `apps/deploy/deployments/runs-arm`
 - Core:
   - Exports (values): `DEPLOY_CATEGORY_ID`
 - Sub-plugins:

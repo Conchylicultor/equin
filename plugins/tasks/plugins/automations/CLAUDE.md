@@ -522,6 +522,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
+    - `hints/ask`
     - `infra/deps/updates`
     - `tasks/outcome-report`
     - `tasks/reports-investigation`

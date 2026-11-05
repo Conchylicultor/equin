@@ -21,6 +21,8 @@ Part of the unified facet-based docgen pipeline. See `research/2026-05-20-global
   - Exports (values):
     - `dbSchemaFacetDef`
     - `dbSchemaToComparable`
+- Cross-plugin:
+  - Imported by: `plugin-meta/facets/db-schema/render-diff`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin tables table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin db-schema section in the plugin detail pane.

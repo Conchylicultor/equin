@@ -30,7 +30,9 @@ own builder).
     - `identifierFieldType`
     - `identifierIdentity`
 - Cross-plugin:
-  - Imported by: `fields/identifier/config`
+  - Imported by:
+    - `fields/identifier/config`
+    - `fields/identifier/storage`
 - Sub-plugins:
   - **`config`** — Identifier field factory (identifierField) for building field records.
   - **`storage`** — Identifier field type: DB storage capability — a Postgres text column.

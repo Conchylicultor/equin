@@ -216,6 +216,7 @@ takes a `debt` exemption on the check's id.
     - `zone`
 - Cross-plugin:
   - Imported by:
+    - `framework/cli/build`
     - `framework/tooling/codegen`
     - `plugin-meta/plugin-refs`
 - Exemptions:

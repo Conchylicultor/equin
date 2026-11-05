@@ -30,6 +30,8 @@ import — keep it that way.
     - `plugin-meta/barrel-import`
     - `plugin-meta/composition`
     - `plugin-meta/plugin-records`
+    - `primitives/pane`
+    - `reorder`
 - Core:
   - Exports (types):
     - `KeyedCompanions`

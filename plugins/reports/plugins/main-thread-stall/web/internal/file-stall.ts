@@ -1,5 +1,5 @@
 import { report } from "@plugins/reports/web";
-import { clientSlowOpSink } from "@plugins/debug/plugins/slow-ops/core";
+import { clientSlowOpSink } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
 import {
   mainThreadStallSummary,
   type MainThreadStallPayload,

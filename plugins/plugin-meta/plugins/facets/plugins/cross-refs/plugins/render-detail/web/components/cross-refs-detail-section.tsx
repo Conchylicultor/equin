@@ -20,9 +20,10 @@ import {
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import type {
-  CrossRefsData,
-  ApiUse,
+import {
+  apiUseLabel,
+  type CrossRefsData,
+  type ApiUse,
 } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 
 // Renders the cross-refs facet's own data. Read `node.facets[id]` directly (as
@@ -112,11 +113,10 @@ function UsesGroup({
             <Text
               as="code"
               variant="caption"
-              key={`${u.plugin}:${u.symbol ?? ""}`}
+              key={apiUseLabel(u, runtime)}
               className="truncate px-xs py-px font-mono text-foreground"
             >
-              {asPath(u.plugin)}
-              {u.symbol ? "." + u.symbol : ""}
+              {apiUseLabel(u, runtime)}
             </Text>
           ))}
         </Stack>

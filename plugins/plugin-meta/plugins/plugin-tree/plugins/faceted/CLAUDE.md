@@ -23,7 +23,10 @@
 - Cli:
   - Uses: `plugin-meta/plugin-records.openRecordStore`
 - Cross-plugin:
-  - Imported by: `framework/tooling/codegen`
+  - Imported by:
+    - `framework/cli/deploy`
+    - `framework/tooling/codegen`
+    - `review/plugin-changes`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/fs-snapshot.ts`, `core/internal/faceted-tree.ts` (debt)
 

@@ -12,7 +12,9 @@ retired (`research/2026-10-20-conversations-sdk-default-and-tmux-removal.md`).
 ## Plugin reference
 
 - Cross-plugin:
-  - Imported by: `conversations`
+  - Imported by:
+    - `conversations`
+    - `debug/read-set`
 - Core:
   - Exports (types): `ConversationRuntimeId`
   - Exports (values):

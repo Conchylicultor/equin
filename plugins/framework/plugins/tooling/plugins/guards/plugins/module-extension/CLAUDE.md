@@ -7,6 +7,7 @@
 - Description: MODULE_EXTENSION: the extensions bun loads as a module (.ts/.tsx/.js/.jsx and their m/c forms) — the one set the bun-script guard denies and `./equin run` accepts. A leaf with no imports, so the e2e path convention (and the lint rule reading it) reaches the constant without the guard runtime.
 - Cross-plugin:
   - Imported by:
+    - `framework/cli/run`
     - `framework/tooling/e2e-harness`
     - `framework/tooling/guards`
 - Core:

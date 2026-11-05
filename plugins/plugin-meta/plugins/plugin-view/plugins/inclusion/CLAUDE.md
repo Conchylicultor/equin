@@ -29,6 +29,7 @@ presentation built from the `link-chip` / `badge` / `spacing` / `text` primitive
     - `plugin-meta/composition.useEnsureCompositionData`
     - `plugin-meta/composition.useImpact`
     - `plugin-meta/composition.useInclusion`
+    - `plugin-meta/composition.useViewHost`
     - `plugin-meta/plugin-view.PluginViewSlots`
     - `primitives/css/badge.Badge`
     - `primitives/css/badge.BadgeVariant`

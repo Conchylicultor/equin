@@ -184,7 +184,9 @@ that are real.
     - `TARGET_ACCURACY`
     - `TARGET_MEDIAN_MS`
 - Cross-plugin:
-  - Imported by: `apps/chord/trainer`
+  - Imported by:
+    - `apps/chord/curriculum`
+    - `apps/chord/trainer`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
 

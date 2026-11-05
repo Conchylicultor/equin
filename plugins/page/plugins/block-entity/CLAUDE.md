@@ -24,6 +24,8 @@
     - `StoredBlockDataSchema`
 - Cross-plugin:
   - Imported by:
+    - `apps/pages/agent-origin`
+    - `apps/pages/starred`
     - `page/editor`
     - `page/editor-collab`
     - `page/links`

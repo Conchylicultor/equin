@@ -102,13 +102,13 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
     - `linkProps`
     - `openInBrowserTab`
 - Cross-plugin:
-  - Imported by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×13
-    - `primitives` ×13
+  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×16
+    - `conversations` ×14
     - `apps` ×10
-    - `page` ×4
+    - `page` ×5
+    - `tasks` ×4
     - `apps-core` ×3
-    - `tasks` ×3
     - `debug` ×2
     - `hints` ×2
     - `shell` ×2
@@ -118,6 +118,7 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
     - `infra/claude-cli/sign-in`
     - `integrations/google-maps/usage`
     - `plugin-meta/plugin-view`
+    - `ui/theme-engine/quick-theme`
 - Core:
   - Exports (types):
     - `Activation`

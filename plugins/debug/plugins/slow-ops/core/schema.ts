@@ -23,16 +23,6 @@ import { durationField } from "@plugins/fields/plugins/duration/plugins/config/c
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 
-// Who issued an operation (the immediate enclosing request/loader span), before
-// any per-occurrence counts are merged in — the identity the recorder folds
-// into a `slow_op_callers` row. A SpanRef (server span parent) is structurally
-// assignable to it; client signals supply { kind: "route", ... }.
-export const CallerRefSchema = z.object({
-  kind: z.string(),
-  label: z.string(),
-});
-export type CallerRef = z.infer<typeof CallerRefSchema>;
-
 // Per-layer wait charged to this operation (gate/lock name → summed ms): the
 // durable wait-vs-work split. Mirrors the profiler's in-memory `waits`; merged
 // per layer on each occurrence. `{}` when the op never waited on a gate.

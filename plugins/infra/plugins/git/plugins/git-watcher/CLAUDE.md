@@ -64,10 +64,16 @@ the durable emit that follows.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/remote-deploy`
+    - `build`
+    - `build/deployment`
+    - `conversations/conversation-view/commits-graph`
+    - `infra/launcher/gateway-drift`
     - `plugin-meta/plugin-health`
     - `release`
     - `review/plugin-changes`
+    - `stats/commits`
     - `tasks/attempt-work`
+    - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-ref-advanced.ts` (debt)
 

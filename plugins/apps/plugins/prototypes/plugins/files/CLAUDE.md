@@ -730,12 +730,16 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `apps/prototypes/canvas`
     - `apps/prototypes/checkpoints`
     - `apps/prototypes/commands`
+    - `apps/prototypes/compare`
     - `apps/prototypes/files/snapshot-history`
     - `apps/prototypes/fixtures`
+    - `apps/prototypes/gallery`
+    - `apps/prototypes/present`
     - `apps/prototypes/state`
     - `apps/prototypes/thumbnails`
     - `conversations/conversation-view/artifacts/prototype`
     - `page/prototype`
+    - `primitives/embed/frame`
 - Cli:
   - Exports (types): `DeletedPrototypeIds`
   - Exports (values):

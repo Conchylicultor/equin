@@ -20,7 +20,15 @@
     - `formatByteSize`
     - `parseByteSize`
 - Cross-plugin:
-  - Imported by: `fields/byte-size/config`
+  - Imported by:
+    - `backup/runs-arm`
+    - `debug/config-orphans`
+    - `fields/byte-size/config`
+    - `fields/byte-size/filter`
+    - `fields/byte-size/storage`
+    - `fields/byte-size/table`
+    - `infra/deps`
+    - `primitives/dom/web-storage/health`
 - Sub-plugins:
   - **`config`** — Byte size field type: the byteSizeField factory for building field records.
   - **`filter`** — Byte size field type: data-view filter — number's operators, with operands typed in units.

@@ -5,6 +5,10 @@
 ## Plugin reference
 
 - Description: An image's pixel size read from its header bytes, in plain JS on every host: readImageSize(bytes) for PNG, GIF, JPEG, WebP and BMP — a known-format answer from the first bytes (JPEG: up to its frame header), so a caller can reserve an image's box before the image loads.
+- Cross-plugin:
+  - Imported by:
+    - `conversations/transcript-source`
+    - `conversations/transcript-watcher`
 - Core:
   - Exports (types):
     - `ImageSize`

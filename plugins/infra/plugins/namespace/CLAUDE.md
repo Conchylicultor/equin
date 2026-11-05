@@ -130,19 +130,22 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `namespaceUrl`
     - `resolveNamespaceAlias`
 - Cross-plugin:
-  - Imported by:
-    - `apps/website/shell`
-    - `build`
-    - `framework/tooling/codegen`
-    - `framework/tooling/codegen/composition-registries`
-    - `framework/tooling/guards`
-    - `framework/tooling/web-artifacts`
-    - `infra/paths`
-    - `infra/runtime-identity`
-    - `plugin-meta/barrel-import`
-    - `plugin-meta/closure`
-    - `plugin-meta/composition`
-    - `primitives/embed/frame`
+  - Imported by: 68 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×12
+    - `debug` ×11
+    - `apps` ×8
+    - `conversations` ×7
+    - `infra` ×7
+    - `build` ×5
+    - `plugin-meta` ×3
+    - `primitives` ×3
+    - `tasks` ×3
+    - `backup` ×2
+    - `database` ×2
+    - `release` ×2
+    - `auth`
+    - `menu-bar`
+    - `reports/live-state-stale-drop`
 - Exemptions:
   - Exempts itself from:
     - `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)

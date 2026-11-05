@@ -139,6 +139,7 @@ export function useManifestActions(): ManifestActions {
 
       const fields = {
         name: draft.name,
+        hosts: [...draft.hosts] as string[],
         // Stored as plain `string[]` (config_v2 string-list). `PluginId` is a
         // branded string, so it widens to `string[]` at the config boundary.
         entryPoints: [...draft.entryPoints] as string[],

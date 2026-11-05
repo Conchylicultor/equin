@@ -240,12 +240,15 @@ the shared Playwright harness.
     - `writeBuildReceipt`
 - Cross-plugin:
   - Imported by:
+    - `build/build-logs`
+    - `framework/cli/await`
     - `framework/cli/build`
     - `framework/cli/check`
     - `framework/cli/push`
     - `framework/cli/release`
     - `framework/cli/run`
     - `framework/cli/test`
+    - `framework/tooling/e2e-harness`
 - Exemptions:
   - Exempts itself from:
     - `watcher-safety/no-raw-fs-watch` — `cli/admission-valve.ts` (sanctioned)

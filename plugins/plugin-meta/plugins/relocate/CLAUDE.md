@@ -154,6 +154,8 @@ moving anything.
     - `readPluginMoves`
     - `restampMovedOverrides`
     - `snapshotConfigOrigins`
+- Cross-plugin:
+  - Imported by: `framework/cli/build`
 - Exemptions:
   - Exempts itself from:
     - `product-name:legacy-id` — `core/plugin-moves.json` (sanctioned)

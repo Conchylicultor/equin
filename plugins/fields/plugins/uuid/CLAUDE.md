@@ -27,7 +27,9 @@ lives in the `plugins/storage` sub-plugin.
     - `uuidFieldType`
     - `uuidIdentity`
 - Cross-plugin:
-  - Imported by: `fields/uuid/config`
+  - Imported by:
+    - `fields/uuid/config`
+    - `fields/uuid/storage`
 - Sub-plugins:
   - **`config`** — UUID field factory (uuidField) for building field records.
   - **`storage`** — UUID field type: DB storage capability — maps to a Postgres uuid column.

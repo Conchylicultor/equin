@@ -4,6 +4,16 @@
 
 ## Plugin reference
 
+- Cross-plugin:
+  - Imported by:
+    - `apps/mail/gmail-api`
+    - `apps/mail/sync`
+    - `database`
+    - `framework/cli/build`
+    - `infra/events-test`
+    - `infra/launcher`
+    - `infra/launcher/login-services`
+    - `primitives/networking`
 - Core:
   - Exports (types): `DelayStrategy`
   - Exports (values):

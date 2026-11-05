@@ -24,7 +24,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { costDaily, type CostDay } from "../../shared/values";
 import { costDaysNote } from "../../shared/derive";
 import { useShowEmptyDays } from "@plugins/stats/web";
-import { formatTokens } from "../../core";
+import { formatTokens } from "@plugins/stats/plugins/cost/plugins/format/core";
 import { useScope } from "./use-scope";
 
 const SERIES = [

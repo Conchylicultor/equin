@@ -163,7 +163,10 @@ failure notice.
     - `DeploySecretVisibilitySchema`
     - `MAX_VISIBILITY_KEYS`
 - Cross-plugin:
-  - Imported by: `apps/deploy/site-messages/intake`
+  - Imported by:
+    - `apps/deploy/deploy-secrets/approvals`
+    - `apps/deploy/site-messages/intake`
+    - `framework/cli/deploy`
 - Exemptions:
   - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/read-credential.ts` (sanctioned)
 - Sub-plugins:

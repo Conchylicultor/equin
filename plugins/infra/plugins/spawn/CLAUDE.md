@@ -260,16 +260,25 @@ presence only — **no re-exports**; import from `core/`.
     - `spawnPassthrough`
     - `spawnToFile`
 - Cross-plugin:
-  - Imported by:
-    - `database/migrations`
-    - `framework/tooling`
-    - `framework/tooling/boundaries`
-    - `framework/tooling/checks`
-    - `framework/tooling/format`
-    - `infra/deps/mise`
-    - `infra/git/remotes`
-    - `infra/paths`
+  - Imported by: 89 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×28
+    - `infra` ×24
+    - `apps` ×9
+    - `debug` ×5
+    - `plugin-meta` ×4
+    - `database` ×3
+    - `code-explorer` ×2
+    - `primitives` ×2
+    - `release` ×2
+    - `auth/apple-signing`
+    - `backup`
+    - `build/serve-composition`
+    - `conversations/conversation-view/op-status`
+    - `hints/ask`
     - `reports/outbox`
+    - `review/plugin-changes`
+    - `stats/commits`
+    - `tasks`
     - `upstream`
 - Exemptions:
   - Exempts itself from:

@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { FieldPresentation } from "@plugins/network/plugins/live/web";
-import { formatTokensCompact } from "@plugins/stats/plugins/cost/core";
+import { formatTokensCompact } from "@plugins/stats/plugins/cost/plugins/format/core";
 import { conversationUsageShape } from "../shared/shape";
 
 export default {

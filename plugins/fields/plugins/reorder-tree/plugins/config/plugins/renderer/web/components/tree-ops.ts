@@ -2,7 +2,10 @@ import type {
   ReorderNode,
   ReorderTree,
 } from "@plugins/fields/plugins/reorder-tree/core";
-import { normalizeNode, type NormalizedNode } from "../../core";
+import {
+  normalizeNode,
+  type NormalizedNode,
+} from "@plugins/fields/plugins/reorder-tree/plugins/config/core";
 
 // Pure `ReorderTree` ↔ view transforms for the settings-pane drag editor. The
 // settings pane has no live contribution catalog, so the view is built purely

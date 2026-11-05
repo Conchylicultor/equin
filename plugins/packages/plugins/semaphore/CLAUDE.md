@@ -104,13 +104,14 @@ query never wait.) See
 ## Plugin reference
 
 - Cross-plugin:
-  - Imported by:
-    - `database/migrations`
-    - `framework/tooling`
-    - `framework/tooling/checks`
-    - `framework/tooling/codegen`
-    - `framework/tooling/web-artifacts`
-    - `infra/endpoints`
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×9
+    - `apps` ×6
+    - `framework` ×4
+    - `debug` ×3
+    - `conversations` ×2
+    - `database` ×2
+    - `integrations/youtube/song-videos`
     - `network/live/resource-runtime`
     - `packages/inflight`
     - `plugin-meta/barrel-import`

@@ -21,6 +21,7 @@ clip long tasks to the boot window.
 - Cross-plugin:
   - Imported by:
     - `debug/boot-profile`
+    - `debug/profiling/cold-start`
     - `debug/slow-ops`
     - `framework/web-core`
     - `network/live/boot-snapshot`

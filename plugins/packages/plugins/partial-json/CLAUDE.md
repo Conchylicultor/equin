@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: parsePartialJson: the value a prefix of a JSON document already holds — every container closed, an in-progress string value finished, an in-progress key, number or literal cut — for drawing a document while it is still being written (a streamed tool call's input).
+- Cross-plugin:
+  - Imported by: `conversations/conversation-view/jsonl-viewer`
 - Core:
   - Exports (values): `parsePartialJson`
 

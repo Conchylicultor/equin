@@ -129,8 +129,12 @@ is correct here — do not "fix" it later.
 - Cross-plugin:
   - Imported by:
     - `apps/places/ask`
+    - `apps/places/mapstr-import`
     - `apps/places/place-details`
     - `apps/places/places-core`
+    - `apps/places/places-map`
+    - `apps/website/promo-film/seed`
+    - `integrations/google-maps/usage`
     - `page/place/google`
 - Server:
   - Exports (types):

@@ -313,17 +313,19 @@ pid liveness.
     - `worktreePathFor`
     - `writeWorktreeSpec`
 - Cross-plugin:
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×6
-    - `debug` ×5
-    - `tasks` ×3
+  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×9
+    - `infra` ×7
+    - `framework` ×4
+    - `tasks` ×4
+    - `conversations` ×3
+    - `build` ×2
+    - `stats` ×2
     - `backup/sources/databases`
-    - `build/serve-composition`
     - `code-explorer`
-    - `conversations/workspace/worktree`
     - `plugin-meta/plugin-health`
     - `release/source-checkout`
-    - `stats/cost`
+    - `review/plugin-changes`
 - Exemptions:
   - Exempts itself from:
     - `worktree/no-raw-worktree-git` — `.` (sanctioned)

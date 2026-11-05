@@ -138,8 +138,11 @@ memo degrades to a full chain re-read on every push.
     - `apps/prototypes/checkpoints`
     - `backup/sources/transcripts`
     - `conversations`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
+    - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/transcript-api`
     - `conversations/transcript-retention`
+    - `conversations/usage`
     - `debug/read-set`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/chain-signature.ts`, `server/internal/find-transcript-path.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)

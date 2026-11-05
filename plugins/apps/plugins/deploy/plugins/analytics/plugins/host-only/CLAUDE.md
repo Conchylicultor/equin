@@ -46,7 +46,9 @@ plugin ships on the box, and SSH must not.
   - Imported by:
     - `apps/deploy/analytics/collect`
     - `apps/deploy/deploy-secrets`
+    - `apps/deploy/host-query`
     - `apps/deploy/site-messages/intake`
+    - `framework/cli/deploy`
 - Server:
   - Exports (values):
     - `capBodySize`

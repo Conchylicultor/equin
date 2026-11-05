@@ -7,6 +7,17 @@ Uses `extract()` to scan each plugin's runtime directories for ES import
 statements referencing other plugins' barrels. Uses `relate()` to invert the
 apiUses graph into per-target `importedBy` lists.
 
+`apiUses[rt]` is every import WRITTEN in the plugin's `rt/` folder, whatever
+barrel it reaches — each `ApiUse` carries that `barrel` (`machine/` importing
+`@plugins/x/server` is a `machine` use with `barrel: "server"`). The closure
+engine needs the importing folder to know which host runs the import; it used
+to keep same-runtime imports only, which hid every `web/` → `core` import from
+`importedBy` and from every composition's closure. The generated "Uses" fact
+still lists a folder's own-runtime uses only (`barrel === rt`), so the
+reference blocks did not double; the Studio views (detail section, contributions
+table) list every use, a cross-runtime one spelled with its barrel
+(`apiUseLabel`: `x/y/core.sym`).
+
 The exported `crossRefsFacetDef` token lets other facets (e.g. `exports`)
 read this facet's data via `getFacet(node, crossRefsFacetDef)` during their
 own `relate()` pass.
@@ -23,7 +34,9 @@ existing web slot. The diff projection (`crossRefsToComparable`, the deduped
 - Core:
   - Uses:
     - `framework/plugin-id.asPath`
+    - `framework/plugin-id.PluginId`
     - `framework/plugin-id.RUNTIME_FOLDERS`
+    - `framework/plugin-id.RuntimeFolder`
     - `plugin-meta/facets.defineFacet`
   - Exports (types):
     - `ApiUse`
@@ -33,10 +46,15 @@ existing web slot. The diff projection (`crossRefsToComparable`, the deduped
     - `RawUse`
     - `TokenUse`
   - Exports (values):
+    - `apiUseLabel`
     - `crossRefsFacetDef`
     - `crossRefsToComparable`
 - Cross-plugin:
-  - Imported by: `plugin-meta/closure`
+  - Imported by:
+    - `plugin-meta/closure`
+    - `plugin-meta/facets/cross-refs/render-contributions`
+    - `plugin-meta/facets/cross-refs/render-detail`
+    - `plugin-meta/facets/cross-refs/render-diff`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin cross-refs table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin cross-refs section in the plugin detail pane.

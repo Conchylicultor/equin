@@ -101,8 +101,8 @@ the config-only templates to mirror.
     - `useFieldSamples`
     - `useLocalValue`
 - Cross-plugin:
-  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×20
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×21
     - `apps` ×5
     - `config_v2/settings`
     - `primitives/data-view/view-core`

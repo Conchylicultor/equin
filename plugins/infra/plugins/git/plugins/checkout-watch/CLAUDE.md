@@ -67,6 +67,8 @@ creation is heard; edits inside it are not until the watch reopens).
 - Cross-plugin:
   - Imported by:
     - `apps/file-explorer/git`
+    - `code-explorer`
+    - `conversations/conversation-progress`
     - `conversations/conversation-view/code`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/checkout-watch.ts` (debt)

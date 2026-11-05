@@ -34,6 +34,8 @@
     - `tasks/tasks-core.markConversationClosed`
   - Exports (types): `CloseTeardownSpec`
   - Exports (values): `CloseTeardown`
+- Cross-plugin:
+  - Imported by: `conversations/conversation-progress`
 - Machine:
   - Register: `defineJob('conversations.teardown-closed')`
 

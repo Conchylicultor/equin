@@ -33,7 +33,9 @@ wire-schema concern a consumer layers on with `@plugins/primitives/rank`'s
     - `rankFieldType`
     - `rankIdentity`
 - Cross-plugin:
-  - Imported by: `fields/rank/config`
+  - Imported by:
+    - `fields/rank/config`
+    - `fields/rank/storage`
 - Sub-plugins:
   - **`config`** — Rank field factory (rankField) for building field records.
   - **`storage`** — Rank field type: DB storage capability — maps to the rank_text (C-collation) Postgres domain column.

@@ -153,6 +153,8 @@ The rule only fires in files importing `bun:test`.
     - `isTestFilePath`
     - `partitionTestPaths`
     - `TEST_FILE_GLOB`
+- Cross-plugin:
+  - Imported by: `framework/cli/test`
 - Exemptions:
   - Exempts itself from:
     - `marker-scan-safety/no-adhoc-marker-scan` — `check/index.ts` (sanctioned)

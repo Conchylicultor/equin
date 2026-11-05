@@ -221,6 +221,7 @@ canvas redesign `research/2026-09-23-apps-prototypes-frame-canvas.md`.
     - `useCounterpartKinds`
 - Cross-plugin:
   - Imported by:
+    - `apps/demo`
     - `apps/prototypes/compare/exhibit`
     - `apps/prototypes/compare/route`
 - Core:

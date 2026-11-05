@@ -1,4 +1,7 @@
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  parseHosts,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
 import { compositionsConfig } from "./config";
 
@@ -27,6 +30,10 @@ export function manifestItemToManifest(
 ): CompositionManifest {
   return {
     name: item.name,
+    // Stored as plain strings (a tags field): parsed here, at the config
+    // boundary, so an unknown or missing host throws naming the row rather
+    // than resolving a closure for nowhere.
+    hosts: parseHosts(item.hosts, `composition "${item.name}"`),
     entryPoints: item.entryPoints as PluginId[],
     selectedContributors: item.selectedContributors as PluginId[],
     extends: [...item.extends],

@@ -243,27 +243,17 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `openShortLivedClient`
     - `reclaimForkTemp`
 - Cross-plugin:
-  - Imported by:
-    - `apps/chord/song-index`
-    - `apps/mail/mail-core`
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×7
+    - `infra` ×6
+    - `database` ×4
+    - `apps` ×3
+    - `framework` ×3
+    - `build` ×2
+    - `network` ×2
     - `backup/sources/databases`
-    - `build/serve-composition`
-    - `database/db-test-fixture/sweep`
-    - `database/fork`
-    - `database/lock-watch`
-    - `database/query`
-    - `debug/boot-profile`
-    - `debug/latency-ledger`
-    - `debug/slow-ops`
-    - `debug/slow-ops/cluster`
-    - `debug/timeline`
-    - `debug/trace/engine`
-    - `debug/worktree-cleanup`
-    - `infra/claude-cli`
-    - `infra/jobs/supervised-job`
-    - `infra/launcher`
-    - `infra/worktree/reclaim`
     - `reports/engine`
+    - `shell/notifications`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/backup.ts`, `server/internal/fork.ts`, `server/internal/pool.ts`, `server/internal/temp-name.ts` (debt)
 - Test helpers:

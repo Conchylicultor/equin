@@ -68,7 +68,7 @@ maps its data into `entries` + callbacks.
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-3xs`
     - `ui/tokens/type-scale --line-height-caption`
-  - Imported by: `fields/reorder-tree/config`
+  - Imported by: `fields/reorder-tree/config/renderer`
 - Exemptions:
   - Exempts itself from: `data-view/no-adhoc-row-list` — `.` (sanctioned)
 

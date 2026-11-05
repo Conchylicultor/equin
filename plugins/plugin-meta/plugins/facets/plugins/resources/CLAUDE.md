@@ -64,6 +64,11 @@ names no bound (`research/2026-10-22-global-live-bounds-independent-of-freshness
     - `resourceModeLabel`
     - `resourcesFacetDef`
     - `resourcesToComparable`
+- Cross-plugin:
+  - Imported by:
+    - `plugin-meta/facets/resources/render-contributions`
+    - `plugin-meta/facets/resources/render-detail`
+    - `plugin-meta/facets/resources/render-diff`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin resources table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin resources section in the plugin detail pane.

@@ -30,7 +30,13 @@ function makeGraph(spec: {
   for (const [from, to] of spec.hard ?? []) {
     hardForward.get(id(from))!.push(id(to));
     hardReverse.get(id(to))!.push(id(from));
-    edges.push({ from: id(from), to: id(to), kind: "hard" });
+    edges.push({
+      from: id(from),
+      to: id(to),
+      kind: "hard",
+      via: "import",
+      runtimes: ["web"],
+    });
   }
   for (const [from, to] of spec.soft ?? []) {
     softForward.get(id(from))!.push(id(to));

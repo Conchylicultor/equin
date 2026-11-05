@@ -9,6 +9,7 @@ import {
 import {
   explainInclusion,
   resolveComposition,
+  stepLabel,
   type CompositionManifest,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
@@ -37,6 +38,8 @@ const check: Check = {
     );
     const manifest: CompositionManifest = {
       name: "reorder-apply",
+      // Every served bundle runs on the desktop; its view is the widest.
+      hosts: ["desktop"],
       entryPoints: [APPLY_ROOT],
       selectedContributors: [],
     };
@@ -46,7 +49,9 @@ const check: Check = {
     const paths = leaked.map((id) => {
       const path = explainInclusion(graph, manifest, id);
       const trail = path
-        ? path.steps.map((s) => `${s.from} →(${s.kind}) ${s.to}`).join("\n    ")
+        ? path.steps
+            .map((s) => `${s.from} →(${stepLabel(s)}) ${s.to}`)
+            .join("\n    ")
         : "(no path found)";
       return `${id}:\n    ${trail}`;
     });

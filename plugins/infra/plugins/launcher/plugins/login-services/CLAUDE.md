@@ -191,7 +191,12 @@ folder needs only its boundary row, not a barrel's doc and shipping policy.
     - `executableEnv`
     - `unbundledExecutable`
 - Cross-plugin:
-  - Imported by: `infra/launcher/gateway-drift`
+  - Imported by:
+    - `framework/cli/start`
+    - `framework/cli/stop`
+    - `infra/launcher`
+    - `infra/launcher/gateway-drift`
+    - `infra/paths/root-migration`
 - Exemptions:
   - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/launchd.ts`, `machine/internal/systemd.ts` (sanctioned)
 - Machine:

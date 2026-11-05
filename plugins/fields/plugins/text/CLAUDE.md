@@ -37,6 +37,7 @@ reuse these capabilities via the `extends`-chain fallback.
     - `fields/person`
     - `fields/rank`
     - `fields/text/config`
+    - `fields/text/storage`
     - `fields/uuid`
     - `ids`
 - Sub-plugins:

@@ -65,7 +65,9 @@ file, and `buildSnapshot(csv, yyyymm)` makes one from a small CSV fixture.
     - `reloadIpCountry`
   - Register: `defineJob('ip-country.refresh')`
 - Cross-plugin:
-  - Imported by: `apps/deploy/analytics/collect`
+  - Imported by:
+    - `apps/deploy/analytics/collect`
+    - `apps/deploy/analytics/dashboard`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/lookup.ts`, `server/internal/refresh.ts` (debt)
 - Core:

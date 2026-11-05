@@ -1,14 +1,22 @@
 import { defineFacet } from "@plugins/plugin-meta/plugins/facets/core";
-import type {
-  PluginId,
-  RuntimeFolder,
+import {
+  asPath,
+  type PluginId,
+  type RuntimeFolder,
 } from "@plugins/framework/plugins/plugin-id/core";
 import type { KeySpace } from "@plugins/framework/plugins/slot-declaration/core";
 
-/** One cross-plugin import: the target plugin id, plus the imported symbol for
- *  named imports (absent for namespace/default/side-effect imports). */
+/** One cross-plugin import: the target plugin id, the target's barrel folder
+ *  it reaches (`@plugins/<target>/<barrel>`), plus the imported symbol for
+ *  named imports (absent for namespace/default/side-effect imports).
+ *
+ *  Filed under the IMPORTING folder (`apiUses[rt]`), whatever barrel it
+ *  reaches: a `machine/` file importing `@plugins/x/server` is a `machine` use
+ *  with `barrel: "server"`. That is what lets the closure engine ask which
+ *  host executes the import (`HOST_RUNTIMES`). */
 export interface ApiUse {
   plugin: PluginId;
+  barrel: RuntimeFolder;
   symbol?: string;
 }
 
@@ -50,6 +58,8 @@ export interface KeyRef {
 }
 
 export interface CrossRefsData {
+  /** Every cross-plugin import, keyed by the folder that WRITES it (see
+   *  {@link ApiUse}) — cross-runtime ones included (`web/` → `x/core`). */
   apiUses: Record<RuntimeFolder, ApiUse[]>;
   importedBy: PluginId[];
   raw?: Record<RuntimeFolder, RawUse[]>;
@@ -76,3 +86,14 @@ export interface CrossRefsData {
 }
 
 export const crossRefsFacetDef = defineFacet<CrossRefsData>("cross-refs");
+
+/**
+ * One use as the surfaces print it, under the folder `rt` that writes it:
+ * `x/y.sym` when it reaches `rt`'s own barrel, `x/y/core.sym` when it crosses
+ * into another (`web/` → `x/y/core`). Unique within a folder's uses — the
+ * facet dedupes on (plugin, barrel, symbol) — so it is also a row key.
+ */
+export function apiUseLabel(u: ApiUse, rt: RuntimeFolder): string {
+  const barrel = u.barrel === rt ? "" : `/${u.barrel}`;
+  return `${asPath(u.plugin)}${barrel}${u.symbol ? "." + u.symbol : ""}`;
+}

@@ -5,6 +5,13 @@
 ## Plugin reference
 
 - Description: clipboardEventOf: the ClipboardEvent a Lexical PASTE / COPY / CUT command carries, or null — their payloads are unions (an InputEvent paste, a keyboard-dispatched copy) and only a ClipboardEvent holds clipboardData. A leaf, so every editor plugin can read a clipboard command the same way, the text-editor tree included.
+- Cross-plugin:
+  - Imported by:
+    - `page/editor`
+    - `page/inline-page-link`
+    - `page/url-paste`
+    - `primitives/text-editor/paste-images`
+    - `primitives/text-editor/token-extension/node`
 - Core:
   - Exports (values): `clipboardEventOf`
 

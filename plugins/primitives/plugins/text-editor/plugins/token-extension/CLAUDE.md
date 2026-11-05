@@ -182,6 +182,9 @@ share is the entry model.
 - Cross-plugin:
   - Imported by:
     - `page/editor`
+    - `page/read-only-view`
+    - `primitives/text-editor`
+    - `primitives/text-editor/inline-chip`
     - `primitives/text-editor/token-extension/node`
 - Core:
   - Exports (types):

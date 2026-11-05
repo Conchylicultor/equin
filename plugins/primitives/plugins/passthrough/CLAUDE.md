@@ -170,6 +170,8 @@ A genuine one-off escapes per site, with its reason next to the code:
 ## Plugin reference
 
 - Description: The open-passthrough contract: a primitive that accepts props it does not name promises they land on ONE node, and `ref` is that node's name. Owns the Passthrough props marker, the splitPassthrough router for the rare second destination, and the two lint rules that keep the promise true.
+- Cross-plugin:
+  - Imported by: `primitives/css/row`
 - Core:
   - Exports (types): `Passthrough`
   - Exports (values): `splitPassthrough`

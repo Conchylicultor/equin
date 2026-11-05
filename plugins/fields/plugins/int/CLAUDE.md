@@ -28,6 +28,7 @@ the foundation's proof that the `extends` chain works end to end.
 - Cross-plugin:
   - Imported by:
     - `fields/int/config`
+    - `fields/int/storage`
     - `fields/ordinal`
 - Sub-plugins:
   - **`config`** — Integer field type: config-render capability (number stepper for config-v2.fields.renderer) plus the intField factory.

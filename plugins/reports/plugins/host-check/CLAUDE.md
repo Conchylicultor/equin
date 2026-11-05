@@ -35,6 +35,8 @@ when the check passes again — read `lastSeenAt`, or run the check.
   - Uses:
     - `reports.ReportKind`
     - `reports.ReportRow`
+- Cross-plugin:
+  - Imported by: `framework/cli/check`
 - Core:
   - Exports (types): `HostCheckPayload`
   - Exports (values):

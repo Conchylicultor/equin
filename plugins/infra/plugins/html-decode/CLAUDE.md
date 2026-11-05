@@ -107,7 +107,11 @@ attribute values and text, as the `HTMLRewriter` callers always did.
 
 - Description: Read and edit HTML on every host, every value decoded exactly once: scanHtml (start tags and element text, on htmlparser2), rewriteStartTag / replaceElementText (in-place splices that leave every other byte as written), and decodeHtmlText / readHtmlAttr for a Bun HTMLRewriter read, which decodes nothing.
 - Cross-plugin:
-  - Imported by: `apps/prototypes/files`
+  - Imported by:
+    - `apps/events/sources/salsanueva`
+    - `apps/events/sources/url-extract`
+    - `apps/prototypes/files`
+    - `page/bookmark`
 - Core:
   - Exports (types):
     - `AttributeSource`

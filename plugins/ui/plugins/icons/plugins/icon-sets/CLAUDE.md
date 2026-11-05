@@ -22,7 +22,9 @@
     - `SYMBOL_NAMES_REL_PATH`
     - `symbolNamesInputsHash`
 - Cross-plugin:
-  - Imported by: `framework/tooling/codegen`
+  - Imported by:
+    - `framework/tooling/codegen`
+    - `ui/icons`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/symbol-names.ts` (debt)
 

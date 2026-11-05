@@ -135,6 +135,7 @@ disagree.
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/places/page-overlay`
     - `apps/places/places-map`
     - `page/place/google`
     - `page/place/map-layer`

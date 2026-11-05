@@ -472,11 +472,19 @@ remaining allocations are one flat band array per completed entry span, and what
     - `SPAN_MEASURES`
     - `waitSplit`
 - Cross-plugin:
-  - Imported by:
-    - `debug/profiling/runtime`
-    - `debug/slow-ops`
-    - `infra/endpoints`
-    - `packages/watched-memo`
+  - Imported by: 66 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×21
+    - `debug` ×20
+    - `conversations` ×6
+    - `apps` ×5
+    - `database` ×3
+    - `tasks` ×3
+    - `packages` ×2
+    - `reports` ×2
+    - `auth`
+    - `build`
+    - `integrations/google-maps`
+    - `network/live/change-feed`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
 

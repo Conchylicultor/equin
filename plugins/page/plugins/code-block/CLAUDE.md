@@ -54,6 +54,7 @@
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
     - `ui/tokens/type-scale --line-height-code`
+  - Imported by: `page/code-block/mermaid-insert`
 - Sub-plugins:
   - **`mermaid-insert`** — `/mermaid` in the page editor: turns the caret's line into a code block set to mermaid, shown split — its source above the drawn diagram (the code-preview registry draws it).
 

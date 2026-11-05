@@ -220,7 +220,10 @@ idempotent and per-file.
     - `isFormattable`
     - `listChangedFormattableFiles`
 - Cross-plugin:
-  - Imported by: `framework/tooling/codegen`
+  - Imported by:
+    - `framework/cli/build`
+    - `framework/cli/format`
+    - `framework/tooling/codegen`
 - Exemptions:
   - Exempts itself from:
     - `format-safety/no-adhoc-prettier` — `.` (sanctioned)

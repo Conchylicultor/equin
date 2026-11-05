@@ -445,37 +445,41 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `useWantedStyleKeys`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 362 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×96
-    - `conversations` ×58
-    - `primitives` ×42
+  - Imported by: 541 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×154
+    - `conversations` ×82
+    - `page` ×52
+    - `primitives` ×52
     - `fields` ×41
-    - `page` ×41
-    - `debug` ×11
-    - `tasks` ×9
-    - `ui` ×8
-    - `active-data` ×6
+    - `debug` ×28
+    - `tasks` ×23
+    - `plugin-meta` ×16
+    - `active-data` ×11
+    - `ui` ×9
+    - `infra` ×8
+    - `apps-core` ×7
+    - `auth` ×6
+    - `config_v2` ×5
+    - `shell` ×5
     - `audience` ×4
-    - `infra` ×4
-    - `plugin-meta` ×4
+    - `build` ×4
     - `review` ×4
-    - `shell` ×4
-    - `apps-core` ×3
-    - `build` ×3
-    - `config_v2` ×3
+    - `framework` ×3
     - `hints` ×3
     - `reorder` ×3
+    - `reports` ×3
     - `backup` ×2
-    - `framework` ×2
-    - `reports` ×2
-    - `auth`
+    - `integrations` ×2
+    - `map` ×2
+    - `menu-bar` ×2
+    - `screenshot` ×2
     - `fullscreen`
     - `layouts/miller`
-    - `map`
-    - `menu-bar`
+    - `network/live/live-state`
     - `runs/run-outcome`
-    - `screenshot`
+    - `stats`
     - `tag-tree/picker`
+    - `upstream`
     - `wish`
 - Exemptions:
   - Exempts itself from:

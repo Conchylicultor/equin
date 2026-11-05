@@ -12,7 +12,7 @@ import {
 import {
   runtimePath,
   runtimeShimsDir,
-} from "@plugins/infra/plugins/launcher/core";
+} from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
 import { toolchainPin } from "@plugins/infra/plugins/paths/core";
 import type {
   Check,

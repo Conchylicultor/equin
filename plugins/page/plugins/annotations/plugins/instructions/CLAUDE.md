@@ -172,7 +172,9 @@ at a time; exclusivity with `author`, and `global` requiring `instructions`, is
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/shape --radius`
-  - Imported by: `page/annotations/agent-access`
+  - Imported by:
+    - `page/annotations/agent-access`
+    - `page/annotations/instructions/instructions-page`
 - Sub-plugins:
   - **`instructions-page`** — Instructions pages in the page editor: a sub-page whose data marks it `instructions: true` is tinted with the instructions card's wash wherever it is referenced (its row in the parent page, the…
 

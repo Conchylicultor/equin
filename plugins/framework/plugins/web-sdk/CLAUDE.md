@@ -421,6 +421,33 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `webCollectedDir`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
+  - Imported by: 110 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×20
+    - `reports` ×18
+    - `apps` ×17
+    - `ui` ×6
+    - `apps-core` ×5
+    - `debug` ×5
+    - `page` ×4
+    - `shell` ×4
+    - `config_v2` ×3
+    - `conversations` ×3
+    - `fields` ×3
+    - `framework` ×3
+    - `infra` ×3
+    - `hints` ×2
+    - `network` ×2
+    - `tasks` ×2
+    - `active-data`
+    - `auth`
+    - `build`
+    - `ids`
+    - `layouts/route-fallback`
+    - `map`
+    - `plugin-meta/contributions-table`
+    - `reorder/node-types`
+    - `review/plugin-changes`
+    - `wish`
 - Test helpers:
   - Core: `@plugins/framework/plugins/web-sdk/core/testing`
     - `resetDeferredLoadStateForTests` — TEST-ONLY: reset the module-global deferred-load state to its initial values (empty loaded/failed sets, not-yet-settled) and notify subscribers.

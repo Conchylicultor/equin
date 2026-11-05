@@ -28,6 +28,8 @@ be one the instance knows, as the create handler requires.
     - `config_v2.getConfig`
     - `database.db`
   - Exports (values): `writeDeployFixture`
+- Cross-plugin:
+  - Imported by: `apps/website/promo-film/seed`
 - Core:
   - Exports (types):
     - `DeployFixture`

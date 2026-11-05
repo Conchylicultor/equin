@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: Sonata — extensible piano and music app.
+- Cross-plugin:
+  - Imported by: `apps/sonata/sources/midi/folders`
 - Sub-plugins:
   - **`audio`** [7 sub-plugins] — Audio playback umbrella for Sonata: engine + instruments.
   - **`chord-chart`** — Sonata Display: the chord grid. Lays the song's chords out as bars in rows of four under their section headers, each bar split by beats into chord boxes painted in the root's degree colour (held…

@@ -68,8 +68,10 @@ adds itself.
     - `CompactionContextResponseSchema`
 - Cross-plugin:
   - Imported by:
+    - `conversations/agent-launch`
     - `conversations/runtime-sdk`
     - `page/annotations/agent-access`
+    - `tasks`
 - Exemptions:
   - Exempts itself from: `endpoints/no-raw-web-fetch` — `shared/client.ts` (sanctioned)
 - Machine:

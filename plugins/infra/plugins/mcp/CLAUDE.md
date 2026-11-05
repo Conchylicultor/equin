@@ -146,24 +146,16 @@ and without it no tool set can be computed.
     - `McpHealthSchema`
     - `mcpRequest`
 - Cross-plugin:
-  - Imported by:
-    - `apps/places/ask`
-    - `apps/sonata/transcription`
-    - `conversations/conversation-view/push-and-exit`
-    - `conversations/self-compact`
-    - `conversations/workspace/scratch`
+  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×6
+    - `tasks` ×6
+    - `conversations` ×4
+    - `apps` ×3
+    - `infra` ×2
     - `database/query`
-    - `debug/profiling/boot-bench`
-    - `debug/profiling/runtime`
-    - `debug/scratch-hello`
-    - `debug/timeline`
     - `hints/ask`
-    - `infra/mcp/browser`
+    - `page/annotations/agent-access`
     - `plugin-meta/plugin-health`
-    - `tasks`
-    - `tasks/orchestration/mandate`
-    - `tasks/orchestration/message`
-    - `tasks/task-triage`
   - Endpoint callers: `health`
 - Sub-plugins:
   - **`browser`** — The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (what each is for — its task's title — its tab count, and how long until it closes if left idle), a…

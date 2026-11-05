@@ -19,7 +19,11 @@
     - `moneyFieldType`
     - `moneyIdentity`
 - Cross-plugin:
-  - Imported by: `fields/money/config`
+  - Imported by:
+    - `fields/money/config`
+    - `fields/money/storage`
+    - `fields/money/table`
+    - `stats/cost`
 - Sub-plugins:
   - **`config`** — Money field type: the moneyField factory for building field records.
   - **`storage`** — Money field type: DB storage capability — maps to a Postgres double precision column.

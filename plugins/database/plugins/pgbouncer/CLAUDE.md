@@ -79,6 +79,7 @@ The pre-relay `postgres/pgbouncer.log` is moved into that rotation (as the newes
     - `database`
     - `database/query-deadline`
     - `infra/launcher`
+    - `infra/paths/root-migration`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `shared/internal/paths.ts` (debt)
 - Machine:

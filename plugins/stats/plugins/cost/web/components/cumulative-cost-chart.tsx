@@ -23,7 +23,7 @@ import { costDaily, type CostDay } from "../../shared/values";
 import { cumulativeCost, costDaysNote } from "../../shared/derive";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { formatUsd } from "@plugins/fields/plugins/money/core";
-import { formatUsdCompact } from "../../core";
+import { formatUsdCompact } from "@plugins/stats/plugins/cost/plugins/format/core";
 import { useScope } from "./use-scope";
 
 export function CumulativeCostChart() {

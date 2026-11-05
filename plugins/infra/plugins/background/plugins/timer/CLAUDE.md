@@ -80,7 +80,9 @@ implementation site.
     - `debug/backend-liveness`
     - `debug/health-monitor`
     - `debug/profiling/op-log/op-store`
+    - `debug/queue-health`
     - `debug/stuck-spans`
+    - `infra/jobs`
     - `infra/jobs/supervised-job`
 - Exemptions:
   - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `shared/timer.ts` (sanctioned)

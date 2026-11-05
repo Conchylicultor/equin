@@ -62,7 +62,10 @@ Watches this page's connection to its backends and says so.
     - `getHealthReady`
     - `HealthResponseSchema`
 - Cross-plugin:
-  - Imported by: `reports/crash`
+  - Imported by:
+    - `framework/cli/build`
+    - `infra/launcher`
+    - `reports/crash`
   - Endpoint callers: `backend-liveness`
 - Exemptions:
   - Exempts itself from:

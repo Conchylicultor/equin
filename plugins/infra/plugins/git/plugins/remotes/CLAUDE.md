@@ -209,7 +209,11 @@ that fails re-probes and records what comes back.
     - `resolveUpstreamRemote`
     - `sameRepoUrl`
 - Cross-plugin:
-  - Imported by: `upstream`
+  - Imported by:
+    - `framework/cli/git-artifacts`
+    - `framework/cli/push`
+    - `framework/cli/upstream`
+    - `upstream`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/commit-identity.ts`, `core/internal/publish-target.ts` (debt)
 

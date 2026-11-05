@@ -80,17 +80,9 @@ export function focusSubgraph(
   const kept = new Set<PluginId>(keptIds);
   const hiddenCount = reached - kept.size;
 
-  // Forward-only edge emission over the kept set yields each directed edge once
-  // with its true kind.
-  const edges: Edge[] = [];
-  for (const from of keptIds) {
-    for (const to of get(graph.hardForward, from)) {
-      if (kept.has(to)) edges.push({ from, to, kind: "hard" });
-    }
-    for (const to of get(graph.softForward, from)) {
-      if (kept.has(to)) edges.push({ from, to, kind: "soft" });
-    }
-  }
+  // The graph's own edges between kept nodes: each directed edge once, with its
+  // true kind (and, for a hard one, why it holds and through which folders).
+  const edges = graph.edges.filter((e) => kept.has(e.from) && kept.has(e.to));
 
   return { nodeIds: keptIds, edges, hiddenCount };
 }

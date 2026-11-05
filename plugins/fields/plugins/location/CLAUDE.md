@@ -29,7 +29,11 @@
     - `locationLabel`
     - `LocationSchema`
 - Cross-plugin:
-  - Imported by: `apps/places/places-core`
+  - Imported by:
+    - `apps/places/places-core`
+    - `fields/location/storage`
+    - `fields/location/table`
+    - `primitives/data-view/map`
 - Sub-plugins:
   - **`filter`** — Location field type: data-view filter operator set (is set / is not set).
   - **`storage`** — Location field type: DB storage capability — a Postgres jsonb column, decoded by the field's own schema so a location's shape is derived rather than asserted.

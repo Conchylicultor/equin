@@ -66,6 +66,7 @@ export function CompositionsList(): ReactElement {
   function newComposition(): void {
     const newId = save({
       name: "Untitled composition",
+      hosts: ["desktop"],
       entryPoints: [],
       selectedContributors: [],
     });

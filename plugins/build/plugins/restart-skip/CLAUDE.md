@@ -22,6 +22,8 @@
     - `adoptDeploy`
     - `AdoptRequestSchema`
     - `AdoptVerdictSchema`
+- Cross-plugin:
+  - Imported by: `framework/cli/build`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `shared/judge.ts`, `shared/process-view.ts` (sanctioned)
 - Sub-plugins:

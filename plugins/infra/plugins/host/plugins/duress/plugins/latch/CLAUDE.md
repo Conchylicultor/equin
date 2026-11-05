@@ -35,7 +35,10 @@ shed engine's test.
   - Imported by:
     - `debug/latency-ledger`
     - `debug/sentinel`
+    - `framework/cli/build`
+    - `framework/cli/op-runtime`
     - `infra/host/duress/shed`
+    - `primitives/log-channels`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/latch.ts` (debt)
 - Server:

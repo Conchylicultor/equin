@@ -64,6 +64,8 @@ plugins/framework/plugins/central-core/
     - `defineResource`
     - `handleResourceHttp`
     - `notificationsWsHandler`
+- Cross-plugin:
+  - Imported by: `network/live`
 - Exemptions:
   - Exempts itself from:
     - `detached-work-safety/no-raw-set-interval` — `bin/index.ts` (sanctioned)

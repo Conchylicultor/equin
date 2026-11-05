@@ -21,6 +21,10 @@ user to approve.
   - Exports (values):
     - `deploySecretsFacetDef`
     - `deploySecretsToComparable`
+- Cross-plugin:
+  - Imported by:
+    - `apps/deploy/deploy-secrets/approvals`
+    - `plugin-meta/facets/deploy-secrets/render-diff`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated deploy-secrets table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin deploy-secrets section in the plugin detail pane.

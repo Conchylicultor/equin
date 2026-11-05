@@ -307,7 +307,11 @@ can blind or deafen all of them at once.
     - `WINDOW_MS`
     - `WINDOW_SIZE`
 - Cross-plugin:
-  - Imported by: `debug/browser-recordings/writer`
+  - Imported by:
+    - `conversations/conversation-view/allow-monitor`
+    - `debug/browser-recordings`
+    - `debug/browser-recordings/writer`
+    - `framework/tooling/e2e-harness`
 - Exemptions:
   - Exempts itself from:
     - `timed-fs/no-untimed-fs-read` — `bin/bootstrap.ts` (sanctioned)

@@ -157,6 +157,12 @@ Design: [`research/2026-09-16-global-shared-prototype-option-picks.md`](../../..
     - `agentWritesStatusSchema`
     - `inAgentWritesScope`
     - `revertAgentWrites`
+- Cross-plugin:
+  - Imported by:
+    - `config_v2`
+    - `framework/tooling/e2e-harness`
+    - `infra/mcp/browser`
+    - `infra/paths/data-files`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ledger.ts` (debt)
 

@@ -1,5 +1,5 @@
 import { defineObservationSink } from "@plugins/primitives/plugins/report-sink/core";
-import type { CallerRef } from "./schema";
+import type { CallerRef } from "./caller-ref";
 
 /**
  * One client slow-op measured by a plugin outside slow-ops — a fully-formed

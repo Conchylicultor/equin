@@ -157,9 +157,9 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `useInstallRoutePrefixes`
     - `usePathname`
 - Cross-plugin:
-  - Imported by: 57 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×27
-    - `apps-core` ×13
+    - `apps-core` ×14
     - `ui` ×6
     - `config_v2` ×2
     - `hints` ×2

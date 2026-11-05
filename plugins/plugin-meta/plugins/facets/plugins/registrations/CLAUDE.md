@@ -19,6 +19,8 @@ No `relate()` — registrations have no cross-plugin relationships.
   - Exports (values):
     - `registrationsFacetDef`
     - `registrationsToComparable`
+- Cross-plugin:
+  - Imported by: `plugin-meta/facets/registrations/render-diff`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin registrations table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin registrations section in the plugin detail pane.

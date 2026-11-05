@@ -405,6 +405,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `build/build-logs`
     - `build/build-profiling`
     - `build/runs-arm`
+    - `build/serve-composition`
     - `debug/reports`
     - `menu-bar`
   - Endpoint callers: `restart-skip`

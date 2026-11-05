@@ -4,7 +4,7 @@ import type {
   WaitBreakdown,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { ReportSource } from "@plugins/reports/core";
-import type { CallerRef } from "../../core";
+import type { CallerRef } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
 
 // The only report sources a slow-op originates from — narrowed from the
 // canonical ReportSource union (now in reports/core), so this stays a checked

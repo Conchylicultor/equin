@@ -259,6 +259,9 @@ nor closed under it. Bounded, because the host cannot see the script end.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --warning`
+  - Imported by:
+    - `debug/sentinel/machine-usage`
+    - `framework/tooling/e2e-harness`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `server/internal/host-client.ts`, `shared/code-id.ts` (debt)

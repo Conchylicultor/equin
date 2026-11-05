@@ -1,7 +1,9 @@
 # render-detail
 
 Renders the cross-refs facet as a section in the plugin detail pane: a per-runtime
-"Uses" group (the symbols/plugins this plugin imports, from `apiUses`) plus an
+"Uses" group (the symbols/plugins each folder imports, from `apiUses` —
+cross-runtime ones included and spelled with their barrel, `x/y/core.sym`, by
+`apiUseLabel`) plus an
 "Imported by" banner (other plugins that import this one, from the `importedBy`
 reverse index). Reads `node.facets["cross-refs"]` directly.
 

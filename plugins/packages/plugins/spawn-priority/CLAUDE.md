@@ -135,6 +135,7 @@ re-exports what server consumers use (same-plugin re-export), and
     - `withForegroundPriority`
 - Cross-plugin:
   - Imported by:
+    - `debug/profiling/cold-start`
     - `infra/host/host-admission`
     - `infra/spawn`
 - Exemptions:

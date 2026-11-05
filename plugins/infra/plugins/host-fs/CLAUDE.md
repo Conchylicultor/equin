@@ -319,11 +319,18 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `writeHostPaths`
 - Cross-plugin:
   - Imported by:
+    - `active-data/folder-link`
+    - `apps/file-explorer/browser`
+    - `apps/file-explorer/places`
+    - `apps/sonata/sources/midi/folders`
     - `code-explorer`
     - `code-explorer/file-resolve`
+    - `debug/browser-recordings`
     - `infra/host-fs/image`
     - `infra/host-fs/zip`
     - `primitives/file-viewer`
+    - `primitives/file-viewer/image`
+    - `primitives/folder-picker`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/archive/locate.ts`, `server/internal/archive/tree.ts`, `server/internal/complete.ts`, `server/internal/entry.ts`, `server/internal/extract.ts`, `server/internal/free-path.ts`, `server/internal/list.ts`, `server/internal/move.ts`, `server/internal/open-file.ts`, `server/internal/open.ts`, `server/internal/path.ts`, `server/internal/peek.ts`, `server/internal/raw.ts`, `server/internal/stat.ts`, `server/internal/text.ts`, `server/internal/volume.ts` (debt)
 - Sub-plugins:

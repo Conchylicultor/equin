@@ -32,10 +32,17 @@ supervised job's child. The `report-sink/no-direct-sink-register` lint
 
 - Description: Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths.
 - Cross-plugin:
-  - Imported by:
-    - `debug/slow-ops`
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×8
+    - `infra` ×3
+    - `network` ×2
+    - `reports` ×2
+    - `ui` ×2
+    - `database/connection`
+    - `debug/slow-ops/sink`
     - `framework/server-core`
-    - `primitives/perfs/latency-signal`
+    - `page/editor`
+    - `tasks/tasks-core`
 - Core:
   - Exports (types):
     - `ObservationSink`

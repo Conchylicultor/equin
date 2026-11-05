@@ -188,6 +188,9 @@ from `build`, so both sides of an otherwise-cyclic edge can reach them.
   - Imported by:
     - `active-data/build-run`
     - `build`
+    - `build/build-commits`
+    - `build/build-fix`
+    - `build/build-logs`
     - `build/runs-arm`
     - `framework/cli/build`
 - Machine:

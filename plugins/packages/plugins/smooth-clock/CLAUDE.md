@@ -21,6 +21,10 @@ per audio buffer and made the piano roll stutter).
 ## Plugin reference
 
 - Description: Smooth clock over a stepping time source: createSmoothClockModel turns readings that advance in steps (an embedded player's posted playhead, an AudioContext's buffer-quantized currentTime) into a continuous line slewed toward each new reading (at most 5 % off the rate) and snapped only on a jump — so whatever renders or plays against it advances every frame instead of stuttering.
+- Cross-plugin:
+  - Imported by:
+    - `apps/sonata/audio/engine`
+    - `integrations/youtube`
 - Core:
   - Exports (types): `SmoothClockModel`
   - Exports (values):

@@ -12,6 +12,8 @@
     - `infra/mcp.Mcp`
     - `tasks/tasks-core.getConversation`
   - Register: `mcpTool('query_db')`
+- Cross-plugin:
+  - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/query-db`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/mcp-tools.ts` (debt)
 - Core:

@@ -90,6 +90,21 @@ follow.
     - `screenshot`
     - `search/quick-find`
     - `tag-tree/picker`
+  - Imported by:
+    - `apps-core/chrome-theme`
+    - `apps/agent-manager/shell`
+    - `apps/browser/shell`
+    - `apps/deploy/shell`
+    - `apps/file-explorer/browser`
+    - `apps/file-explorer/shell`
+    - `apps/home/shell`
+    - `apps/pages/shell`
+    - `apps/prototypes/shell`
+    - `apps/sonata/shell`
+    - `apps/website/pages/apps`
+    - `apps/website/shell`
+    - `hints`
+    - `menu-bar`
 - Exemptions:
   - Exempts itself from:
     - `type-scale:closed-role-ladder:raw-vars` — `.` (sanctioned)

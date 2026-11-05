@@ -11,7 +11,7 @@ import {
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { formatUsd } from "@plugins/fields/plugins/money/core";
-import { formatTokensCompact } from "../../core";
+import { formatTokensCompact } from "@plugins/stats/plugins/cost/plugins/format/core";
 import {
   costTopSessions,
   sessionConversations,

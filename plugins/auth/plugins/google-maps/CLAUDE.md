@@ -7,6 +7,10 @@
 - Description: Google Maps Platform API-key provider. The key is stored in the central auth token store (encrypted, shared across worktrees) and verified against the Places API before it is accepted.
 - Central:
   - Uses: `auth.registerAuthProvider`
+- Cross-plugin:
+  - Imported by:
+    - `auth/google-maps/setup-wizard`
+    - `integrations/google-maps`
 - Core:
   - Exports (values): `GOOGLE_MAPS_PROVIDER_ID`
 - Sub-plugins:

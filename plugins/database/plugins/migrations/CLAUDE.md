@@ -708,6 +708,8 @@ only agreement that matters.
   - Imported by:
     - `database`
     - `database/migrations/bundled-source`
+    - `framework/cli/migrations`
+    - `framework/cli/regen-migrations`
 - Exemptions:
   - Exempts itself from:
     - `product-name:legacy-id` — `data` (sanctioned)

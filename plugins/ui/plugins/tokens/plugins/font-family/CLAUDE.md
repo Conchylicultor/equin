@@ -50,7 +50,21 @@
     - `hints`
     - `music/chord-box`
     - `stats/cost`
-  - Imported by: `ui/tokens/font-family/google-fonts`
+  - Imported by:
+    - `apps-core/chrome-theme`
+    - `apps/agent-manager/shell`
+    - `apps/browser/shell`
+    - `apps/chord/shell`
+    - `apps/deploy/shell`
+    - `apps/desktop/shell`
+    - `apps/file-explorer/shell`
+    - `apps/pages/shell`
+    - `apps/prototypes/shell`
+    - `apps/sonata/shell`
+    - `apps/website/shell`
+    - `hints`
+    - `menu-bar`
+    - `ui/tokens/font-family/google-fonts`
 - Sub-plugins:
   - **`google-fonts`** — Loads the Google Fonts that the theme each scope selects asks for (the desktop's and every app's own), so a per-app font loads whether or not that app is focused.
 

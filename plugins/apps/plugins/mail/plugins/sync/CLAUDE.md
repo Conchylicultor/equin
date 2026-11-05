@@ -316,6 +316,8 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
   - Imported by:
     - `apps/mail/reading-pane`
     - `apps/mail/search`
+    - `apps/mail/sync-status`
+    - `apps/mail/sync/auto-resume`
 - Exemptions:
   - Exempts itself from: `no-db-backed-notify` — `server/internal/search-value.ts` (sanctioned)
 - Sub-plugins:

@@ -21,7 +21,10 @@ core, so an alignment → UG edge would be an R6 cycle. Co-located
 
 - Description: The Ultimate Guitar tab model: the normalized raw tab schema and the chord/lyric markup parser.
 - Cross-plugin:
-  - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
+  - Imported by:
+    - `apps/sonata/recording`
+    - `apps/sonata/sources/ultimate-guitar`
+    - `apps/sonata/sources/ultimate-guitar/alignment`
 - Core:
   - Exports (types):
     - `InferredSection`

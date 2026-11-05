@@ -429,27 +429,9 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `ui/tokens/color-palette` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/shadow --shadow-cover`
-  - Imported by:
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×20
     - `active-data/song`
-    - `apps/sonata/audio/engine`
-    - `apps/sonata/audio/metronome`
-    - `apps/sonata/piano-roll`
-    - `apps/sonata/playback-history`
-    - `apps/sonata/rich/chord-mode`
-    - `apps/sonata/rich/key-mode`
-    - `apps/sonata/rich/rhythm-controls`
-    - `apps/sonata/rich/swing`
-    - `apps/sonata/sources/chord-grid`
-    - `apps/sonata/sources/midi`
-    - `apps/sonata/sources/midi/file-preview`
-    - `apps/sonata/sources/midi/folders`
-    - `apps/sonata/sources/musicxml`
-    - `apps/sonata/sources/ultimate-guitar`
-    - `apps/sonata/sources/ultimate-guitar/alignment`
-    - `apps/sonata/track-mixer`
-    - `apps/sonata/transcription`
-    - `apps/sonata/transport-bar`
-    - `apps/sonata/transpose`
   - Extended by:
     - `apps/sonata/sources/chord-grid` (table `sonata_songs_ext_chord_grid`)
     - `apps/sonata/rich/chord-mode` (table `sonata_songs_ext_chord_mode`)

@@ -112,14 +112,17 @@ froze). Pinned by `server/internal/pool.test.ts`. See
     - `apps/file-explorer/git`
     - `code-explorer`
     - `conversations/conversation-view/code`
+    - `conversations/conversation-view/commits-graph`
     - `debug/health-monitor`
     - `debug/profiling/boot-bench`
     - `debug/worktree-cleanup`
     - `infra/corpus-index`
     - `infra/host-fs`
+    - `infra/warmup`
     - `plugin-meta/plugin-tree`
     - `review/plugin-changes`
     - `tasks/attempt-work`
+    - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/pool.ts` (debt)
 

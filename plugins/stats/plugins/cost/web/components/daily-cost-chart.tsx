@@ -24,7 +24,7 @@ import { costDaily, type CostDay } from "../../shared/values";
 import { costDaysNote } from "../../shared/derive";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { formatUsd } from "@plugins/fields/plugins/money/core";
-import { formatUsdCompact } from "../../core";
+import { formatUsdCompact } from "@plugins/stats/plugins/cost/plugins/format/core";
 import { useScope } from "./use-scope";
 
 // Family-based palette; specific revisions (opus-4-7, sonnet-4-6, …)

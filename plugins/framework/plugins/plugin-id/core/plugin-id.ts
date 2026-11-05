@@ -189,50 +189,115 @@ export const UNDOCUMENTED_RUNTIME_FOLDERS: ReadonlySet<string> = new Set(
   RUNTIME_FOLDERS.filter((rt) => !RUNTIME_FOLDER_DOCUMENTED[rt]),
 );
 
-/** Whether a runtime folder's imports SHIP — whether an import written there is
- *  a reason to put its target inside a composition's bundled closure.
+/** The hosts a composition can run on — where its bundle boots.
  *
- *  This is the question "does the deployed app execute this folder?", and it is a
- *  property of the runtime, so it is declared here beside the runtime set — the
- *  edge classifier consumes the derived allowlist below and never names a folder
- *  itself. `Record<RuntimeFolder, boolean>` is exhaustive by construction: adding
- *  a runtime folder is a type error until it declares whether it ships.
+ *  - `desktop` — the computer: a Bun backend with the machine behind it (its
+ *    `machine/` halves boot beside `server/`), `central`, the page.
+ *  - `browser` — no computer: the portable `server/` barrels in a worker (a
+ *    browser host, e.g. the in-page demo) and the page. Never `machine/` nor
+ *    `central/`.
+ *
+ *  A composition declares the hosts it runs on (`CompositionManifest.hosts`),
+ *  and its closure follows only the imports written in a folder one of those
+ *  hosts executes (`HOST_RUNTIMES`). */
+export const HOSTS = ["desktop", "browser"] as const;
+export type HostId = (typeof HOSTS)[number];
+
+/** Whether a host executes a runtime folder — whether an import written there
+ *  is a reason to put its target in a composition bundled for that host.
+ *
+ *  It is a property of the host × runtime pair, so it is declared here beside
+ *  the runtime set — the edge classifier and the resolver consume the derived
+ *  sets below and never name a folder themselves. `Record<RuntimeFolder,
+ *  boolean>` per host is exhaustive by construction: adding a runtime folder or
+ *  a host is a type error until each pair answers.
  *
  *  It is spelled as the full map rather than a bare allowlist array ON PURPOSE.
- *  An array would let a NEW shipping runtime default silently to "does not ship",
- *  which does not fail — it quietly drops plugins out of every composition's
- *  registry and surfaces as a missing feature at runtime. The map makes the new
- *  runtime's author answer.
+ *  An array would let a NEW shipping runtime default silently to "does not
+ *  ship", which does not fail — it quietly drops plugins out of every
+ *  composition's registry and surfaces as a missing feature at runtime.
  *
- *  `e2e`, `provision` and `cli` are developer surfaces that run on a developer's
- *  machine and are never compiled into a release. Counting their imports as
- *  closure edges is not merely wasteful, it is how a plugin's throwaway Playwright
- *  script drags Chromium into every shipped backend: `reorder/e2e` imports the
- *  shared harness, whose `provision/` imports `browser-fetch`, which imports
- *  `playwright` — and the website release's `bun build --compile` then died on a
- *  `chromium-bidi` require inside playwright-core that nothing ever executes. */
-const RUNTIME_FOLDER_SHIPPED: Record<RuntimeFolder, boolean> = {
-  web: true,
-  server: true,
-  // The desktop backend boots it (`machineEntries`), so it ships in the
-  // desktop release.
-  machine: true,
-  central: true,
-  core: true,
-  shared: true,
-  "data-dirs": true,
-  e2e: false,
-  provision: false,
-  cli: false,
-  // A backend imports its declarations and the engine (`requestDep`,
-  // `readyNow`, the install job), so a `deps` import is a reason to bundle.
-  deps: true,
+ *  `e2e`, `provision` and `cli` run on no host: they are developer surfaces,
+ *  never compiled into a release. Counting their imports as closure edges is
+ *  not merely wasteful, it is how a plugin's throwaway Playwright script drags
+ *  Chromium into every shipped backend: `reorder/e2e` imports the shared
+ *  harness, whose `provision/` imports `browser-fetch`, which imports
+ *  `playwright` — and the website release's `bun build --compile` then died on
+ *  a `chromium-bidi` require inside playwright-core that nothing ever executes.
+ *
+ *  `machine` and `central` run on the desktop only: a `machine/` import is a
+ *  real dependency of a desktop bundle (Sonata's MIDI folders need
+ *  `infra/warmup`) and none of a browser host's, whose worker never boots that
+ *  half — counting it there would pull the computer into the demo. */
+const HOST_RUNTIMES: Record<HostId, Record<RuntimeFolder, boolean>> = {
+  desktop: {
+    web: true,
+    server: true,
+    // The desktop backend boots it (`machineEntries`).
+    machine: true,
+    central: true,
+    core: true,
+    shared: true,
+    "data-dirs": true,
+    e2e: false,
+    provision: false,
+    cli: false,
+    // A backend imports its declarations and the engine (`requestDep`,
+    // `readyNow`, the install job), so a `deps` import is a reason to bundle.
+    deps: true,
+  },
+  browser: {
+    web: true,
+    server: true,
+    machine: false,
+    central: false,
+    core: true,
+    shared: true,
+    "data-dirs": true,
+    e2e: false,
+    provision: false,
+    cli: false,
+    deps: true,
+  },
 };
 
-/** The runtimes whose imports define the shipped closure — the ALLOWLIST the
- *  edge classifier walks instead of every runtime's `apiUses`. */
-export const SHIPPED_RUNTIME_FOLDERS: readonly RuntimeFolder[] =
-  RUNTIME_FOLDERS.filter((rt) => RUNTIME_FOLDER_SHIPPED[rt]);
+/** The runtime folders a set of hosts executes — the union of each host's.
+ *  A composition declared for several hosts bundles for all of them. */
+export function hostRuntimeFolders(
+  hosts: readonly HostId[],
+): ReadonlySet<RuntimeFolder> {
+  return new Set(
+    RUNTIME_FOLDERS.filter((rt) => hosts.some((h) => HOST_RUNTIMES[h][rt])),
+  );
+}
+
+/** Parse a stored host list (config is plain strings): every entry a known
+ *  host, at least one, no duplicates. Throws naming what is wrong — a
+ *  composition that runs nowhere, or on a host nobody declared, has no closure. */
+export function parseHosts(raw: readonly string[], owner: string): HostId[] {
+  if (raw.length === 0)
+    throw new Error(
+      `${owner}: declares no host — name at least one of ${HOSTS.join(", ")}.`,
+    );
+  const out: HostId[] = [];
+  for (const h of raw) {
+    if (!(HOSTS as readonly string[]).includes(h))
+      throw new Error(
+        `${owner}: unknown host "${h}" — the hosts are ${HOSTS.join(", ")}.`,
+      );
+    if (out.includes(h as HostId))
+      throw new Error(`${owner}: host "${h}" is declared twice.`);
+    out.push(h as HostId);
+  }
+  return out;
+}
+
+/** The runtimes whose imports ship on SOME host — the union of every host's
+ *  folders. For a reading that is not about one composition (the token and key
+ *  scans of the cross-refs facet); a closure reads its own hosts' set. */
+export const SHIPPED_RUNTIME_FOLDERS: readonly RuntimeFolder[] = [
+  ...hostRuntimeFolders(HOSTS),
+];
 
 /** A plugin's `machine/` half is its own node in a desktop backend's plugin
  *  graph, beside the plugin's `server/` node: keyed `<pluginPath>#machine`, with

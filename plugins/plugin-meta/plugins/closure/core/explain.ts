@@ -1,4 +1,8 @@
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import type {
+  HostId,
+  PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
+import { graphForHosts } from "./host-view";
 import { inclusionPathWithin } from "./inclusion-path";
 import { resolveComposition, expandEntrySeeds } from "./resolve-composition";
 import type { CompositionManifest, EdgeGraph, InclusionPath } from "./types";
@@ -14,16 +18,20 @@ import type { CompositionManifest, EdgeGraph, InclusionPath } from "./types";
  * `unsatisfiedExclusions` postcondition names the import chain that re-added an
  * excluded plugin — and a resolver calling this wrapper would be a cycle (and an
  * infinite one). Both callers reach the same BFS instead of a second copy of it.
+ *
+ * Walked over the same host view the resolution used (`manifest.hosts`, or
+ * `host` alone), so each hop names a folder that host executes.
  */
 export function explainInclusion(
   graph: EdgeGraph,
   manifest: CompositionManifest,
   target: PluginId,
+  host?: HostId,
 ): InclusionPath | null {
-  const comp = resolveComposition(graph, manifest);
-  const { seeds } = expandEntrySeeds(manifest, graph);
+  const comp = resolveComposition(graph, manifest, host);
+  const { seeds } = expandEntrySeeds(manifest, graph, host);
   return inclusionPathWithin(
-    graph,
+    graphForHosts(graph, host ? [host] : manifest.hosts),
     {
       bundle: comp.bundle,
       membership: comp.membership,

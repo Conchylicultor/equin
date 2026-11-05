@@ -35,7 +35,11 @@ function makeGraph(hard: [string, string][], soft: [string, string][]): EdgeGrap
       ensure(to);
       fwd.get(from)!.push(to);
       rev.get(to)!.push(from);
-      edges.push({ from, to, kind });
+      edges.push(
+        kind === "hard"
+          ? { from, to, kind, via: "import", runtimes: ["web"] }
+          : { from, to, kind },
+      );
     }
   };
 

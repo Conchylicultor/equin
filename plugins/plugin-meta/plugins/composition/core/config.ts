@@ -3,6 +3,8 @@ import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
+import { tagsField } from "@plugins/fields/plugins/tags/plugins/config/core";
+import { HOSTS } from "@plugins/framework/plugins/plugin-id/core";
 import {
   BASE_EXCLUSIONS_ID,
   MAIN_COMPOSITION_ID,
@@ -106,6 +108,20 @@ export const compositionsConfig = defineConfig({
           options: ["app", "profile", "subsystem", "pack"],
           default: "app",
         }),
+        // WHERE this composition runs — `desktop` (the computer: `machine/`
+        // and `central/` boot beside `server/`) and/or `browser` (a browser
+        // host's worker: portable `server/` only). The one statement of it:
+        // the closure follows only the imports written in a folder a declared
+        // host executes, codegen builds the bundle for these hosts, the
+        // `composition-closure` check resolves the row under each, and a
+        // browser host refuses a composition not declared for `browser`. A
+        // CompositionManifest field (the engine reads it); `extends` never
+        // folds it in — a pack says what to include, not where.
+        hosts: tagsField({
+          label: "Hosts",
+          options: [...HOSTS],
+          default: ["desktop"],
+        }),
         entryPoints: stringListField({ label: "Entry points" }),
         selectedContributors: stringListField({ label: "Contributors" }),
         extends: stringListField({ label: "Extends" }),
@@ -184,6 +200,7 @@ export const compositionsConfig = defineConfig({
           id: MAIN_COMPOSITION_ID,
           name: MAIN_COMPOSITION_ID,
           category: "app" as const,
+          hosts: ["desktop"],
           entryPoints: ["**"],
           selectedContributors: [] as string[],
           extends: [] as string[],
@@ -207,6 +224,7 @@ export const compositionsConfig = defineConfig({
           id: "promo-film",
           name: "promo-film",
           category: "app" as const,
+          hosts: ["desktop"],
           entryPoints: ["**"],
           selectedContributors: [] as string[],
           extends: [] as string[],
@@ -258,6 +276,7 @@ export const compositionsConfig = defineConfig({
           id: BASE_EXCLUSIONS_ID,
           name: BASE_EXCLUSIONS_ID,
           category: "pack" as const,
+          hosts: ["desktop"],
           entryPoints: ["!review.plugin-changes.**"],
           selectedContributors: [] as string[],
           extends: [] as string[],
@@ -276,6 +295,7 @@ export const compositionsConfig = defineConfig({
           id: "agent-manager",
           name: "agent-manager",
           category: "profile",
+          hosts: ["desktop"],
           entryPoints: [...AGENT_MANAGER.entryPoints],
           selectedContributors: ["ui.theme-toggle"],
           extends: ["self-improvement", "served-baseline"],
@@ -287,6 +307,7 @@ export const compositionsConfig = defineConfig({
           id: "agent-manager-lean",
           name: "agent-manager-lean",
           category: "profile",
+          hosts: ["desktop"],
           entryPoints: [...AGENT_MANAGER.entryPoints],
           selectedContributors: ["ui.theme-toggle"],
           extends: ["served-baseline"],
@@ -346,9 +367,10 @@ export const compositionsConfig = defineConfig({
         // agent-manager profile this extends negates them, a negative a
         // positive here may not contradict (composition-closure), and no
         // seeded transcript names a prototype.
-        // Events, Places and Stats are not in the bundle at all (Stats left
-        // with `conversations.usage`'s cost scan, now in its `machine/`), so a
-        // negative for them would trim nothing — a dead negative. Debug cannot leave yet: the
+        // Events and Places are not in the bundle at all, so a negative for
+        // them would trim nothing — a dead negative. (`stats` and `stats.cost`
+        // are: `conversations.usage`'s page imports the cost model's core.)
+        // Debug cannot leave yet: the
         // bell (`shell.notifications`), build, recover and two debug tools
         // register their panes into the Debug app by importing its shell, so
         // `!apps.debug.**` would cascade ~280 plugins out and leave
@@ -362,13 +384,28 @@ export const compositionsConfig = defineConfig({
           id: "agent-manager-demo",
           name: "agent-manager-demo",
           category: "profile",
+          // A browser host's scope: its closure never follows a `machine/` or
+          // `central/` import (the worker never boots those halves), and the
+          // browser-host codegen refuses a row not declared for `browser`.
+          hosts: ["browser"],
           entryPoints: [
             "!conversations.conversation-view.push-and-exit.**",
             "!tasks.automations.**",
             "!tasks.reports-investigation.**",
             "!tasks.sidequest-autopilot.**",
             "!tasks.outcome-report.**",
+            // Kept under those negatives: the mandate capabilities as plain
+            // data. `tasks.mandate-presets` (which every task runs with)
+            // grants them from its `shared/`, so the features leave and the
+            // capability ids they define stay.
+            "conversations.conversation-view.push-and-exit.capabilities",
+            "tasks.outcome-report.capability",
             "!apps.file-explorer.**",
+            // The agent's git worktree (DB fork, checkout): the computer's.
+            "!conversations.workspace.worktree.**",
+            // The get_timeline tool call's renderer: it draws this host's
+            // incident timeline, which a demo has none of.
+            "!conversations.conversation-view.jsonl-viewer.tool-call.timeline.**",
             "apps.home.**",
             "!apps.home.tour.**",
             "apps.prototypes.**",
@@ -509,6 +546,7 @@ export const compositionsConfig = defineConfig({
           id: "agent-runtime",
           name: "agent-runtime",
           category: "subsystem" as const,
+          hosts: ["desktop"],
           entryPoints: [
             "infra.worktree.**",
             "infra.git.git-watcher.**",
@@ -693,6 +731,7 @@ function app(
     id: name,
     name,
     category: "app" as const,
+    hosts: ["desktop"],
     entryPoints: opts.entryPoints,
     selectedContributors: [] as string[],
     extends: ["served-baseline", ...(opts.extraExtends ?? [])],
@@ -709,6 +748,7 @@ function subsystem(name: string, opts: { entryPoints: string[] }) {
     id: name,
     name,
     category: "subsystem" as const,
+    hosts: ["desktop"],
     entryPoints: opts.entryPoints,
     selectedContributors: [] as string[],
     extends: [] as string[],
@@ -724,6 +764,7 @@ function pack(name: string, opts: { selectedContributors: string[] }) {
     id: name,
     name,
     category: "pack" as const,
+    hosts: ["desktop"],
     entryPoints: [] as string[],
     selectedContributors: opts.selectedContributors,
     extends: [] as string[],

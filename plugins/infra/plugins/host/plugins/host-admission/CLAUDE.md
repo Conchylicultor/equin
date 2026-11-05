@@ -336,7 +336,13 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
   - Imported by:
     - `database/admin`
     - `debug/profiling/boot-bench`
+    - `framework/cli/build`
+    - `framework/cli/check`
+    - `framework/cli/op-runtime`
+    - `framework/cli/push`
+    - `framework/cli/test`
     - `framework/tooling/checks/type-check`
+    - `framework/tooling/checks/type-check/backstop`
     - `infra/host/host-read-pool`
     - `infra/jobs/supervised-job`
     - `infra/safe-fetch/browser-fetch`

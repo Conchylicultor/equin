@@ -133,12 +133,17 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `wrapPreprompt`
 - Cross-plugin:
   - Imported by:
+    - `apps/prototypes/checkpoints`
     - `backup/sources/transcripts`
+    - `conversations`
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/api-request`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/outline`
     - `conversations/conversation-view/jsonl-viewer/subagents`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats`
+    - `conversations/question-relay`
     - `conversations/transcript-source/memory`
     - `conversations/transcript-watcher`
 - Sub-plugins:

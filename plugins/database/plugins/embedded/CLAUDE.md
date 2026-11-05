@@ -58,7 +58,9 @@ Worktree backends read connection params from `~/.equin/state/db-config/database
     - `database/pgbouncer`
     - `database/query-deadline`
     - `debug/sentinel`
+    - `framework/cli/build`
     - `infra/launcher`
+    - `infra/paths/root-migration`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `shared/internal/paths.ts` (debt)
 - Server:

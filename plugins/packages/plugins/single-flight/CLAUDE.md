@@ -111,7 +111,9 @@ verdict re-run, a stale verdict never adopted, different keys in parallel.
     - `singleFlight`
     - `tryLead`
 - Cross-plugin:
-  - Imported by: `framework/tooling/checks`
+  - Imported by:
+    - `framework/cli/op-runtime`
+    - `framework/tooling/checks`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/single-flight.ts` (debt)
 

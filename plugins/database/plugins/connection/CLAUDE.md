@@ -337,10 +337,14 @@ deadline sees it go silent. That needs a heartbeat.
     - `tagSqlWithOrigin`
 - Cross-plugin:
   - Imported by:
+    - `database`
     - `database/admin`
     - `database/lock-watch`
     - `database/query-deadline`
+    - `infra/events-test`
     - `infra/jobs`
+    - `infra/jobs/supervised-job`
+    - `infra/paths/root-migration`
 - Server:
   - DB schema: `plugins/database/plugins/connection/server/internal/schema-generation.ts`
   - Exports (types):

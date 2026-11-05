@@ -131,14 +131,22 @@
     - `UpdateTaskBodySchema`
 - Cross-plugin:
   - Imported by:
+    - `active-data/task`
+    - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/dependent-count`
     - `conversations/conversation-view/drop-dependents`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
     - `conversations/conversation-view/tasks-panel`
     - `hints/ask`
+    - `primitives/launch`
     - `tasks/auto-start/launch-option`
     - `tasks/automations`
     - `tasks/sidequest-autopilot`
+    - `tasks/task-dependencies`
+    - `tasks/task-deps-tree`
     - `tasks/task-description`
+    - `tasks/task-draft-form`
+    - `tasks/task-events`
     - `tasks/task-graph`
     - `tasks/task-header`
     - `tasks/task-list`

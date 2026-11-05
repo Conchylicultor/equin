@@ -91,7 +91,10 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.eq
     - `apps/deploy/servers`
     - `auth`
     - `auth/apple-signing`
+    - `backup/sources/platform`
+    - `backup/sources/secrets`
     - `fields/secret/config`
+    - `framework/cli/deploy`
     - `infra/claude-cli/accounts`
 - Exemptions:
   - Exempts itself from: `paths:no-hardcoded-paths` — `central/index.ts` (sanctioned)

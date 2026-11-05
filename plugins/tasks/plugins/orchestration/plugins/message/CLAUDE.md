@@ -51,6 +51,8 @@ Names no workflow. Plan: `research/2026-10-30-tasks-message-agents.md`.
   - Register:
     - `mcpTool('list_agents')`
     - `mcpTool('message_agent')`
+- Cross-plugin:
+  - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
 - Core:
   - Exports (types):
     - `AgentLine`

@@ -95,6 +95,8 @@ automations define theirs through `defineAutomation({ mandate })`.
     - `tasks/orchestration/mandate/change-notice`
     - `tasks/orchestration/message`
     - `tasks/orchestration/tree-digest`
+    - `tasks/orchestration/watch`
+    - `tasks/outcome-report`
 - Sub-plugins:
   - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at…
   - **`definitions`** — The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id and label) so boot-snapshot hydrates it before first paint.…

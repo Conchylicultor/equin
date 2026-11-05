@@ -481,6 +481,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `apps/chord/progress`
     - `apps/chord/trainer`
     - `apps/chord/vocabulary`
+    - `apps/website/promo-film`
 - Exemptions:
   - Exempts itself from:
     - `no-db-backed-notify` — `server/internal/loops-resource.ts` (sanctioned)

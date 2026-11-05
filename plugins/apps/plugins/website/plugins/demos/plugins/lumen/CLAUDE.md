@@ -223,6 +223,7 @@ data and seed; no app folder changes:
     - `lumenDemo`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
+  - Imported by: `apps/demo/shell`
 - Structure:
   - Non-standard folders: `data/`
 

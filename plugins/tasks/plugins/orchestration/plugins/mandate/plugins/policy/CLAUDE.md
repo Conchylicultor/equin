@@ -30,11 +30,17 @@ by `MandatePolicySchema`), and the mandate's server half resolves it through
   - Imported by:
     - `conversations/conversation-view/push-and-exit/capabilities`
     - `conversations/self-compact/capability`
+    - `infra/deps/updates`
+    - `tasks/automations`
     - `tasks/mandate-presets`
+    - `tasks/orchestration/mandate`
     - `tasks/orchestration/message/capability`
     - `tasks/orchestration/watch/capabilities`
     - `tasks/outcome-report/capability`
+    - `tasks/reports-investigation`
+    - `tasks/sidequest-autopilot`
     - `tasks/tasks-core`
+    - `upstream`
 - Core:
   - Exports (types):
     - `Capability`

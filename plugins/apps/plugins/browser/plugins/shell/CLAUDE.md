@@ -82,6 +82,7 @@
     - `ui/tokens/sidebar-palette --sidebar`
     - `ui/tokens/sidebar-palette --sidebar-foreground`
   - Imported by:
+    - `apps/browser`
     - `apps/browser/bookmarks`
     - `apps/browser/history`
     - `apps/browser/navigation`
@@ -89,6 +90,7 @@
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`
+    - `apps/website`
 - Exemptions:
   - Exempts itself from: `spacer/no-split-slot-row` — `web/components/browser-layout.tsx` (sanctioned)
 

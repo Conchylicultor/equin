@@ -9,6 +9,7 @@
   - Imported by:
     - `apps/deploy/health`
     - `apps/deploy/host-query`
+    - `framework/cli/deploy`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/session.ts`, `server/internal/upload.ts` (debt)
 - Server:

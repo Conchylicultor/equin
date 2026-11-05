@@ -9,10 +9,12 @@ import {
   expandEntrySeeds,
   explainInclusion,
   flattenManifest,
+  graphForHosts,
   matchEntryPattern,
   parseEntryPattern,
   removalClosure,
   resolveComposition,
+  stepLabel,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
 import {
@@ -334,66 +336,87 @@ const check: Check = {
         const targets = [...matchEntryPattern(p, graph)].filter(
           (id) => !protectedIds.has(id),
         );
-        const trims = [...removalClosure(targets, graph, protectedIds)].filter(
-          (id) => positiveSeeds.has(id),
+        //
+        //     The cascade follows the edges of each host the row declares: a
+        //     negative that trims only through a `machine/` import is live on
+        //     the desktop and inert in the browser.
+        const trims = flat.hosts.some((host) =>
+          [
+            ...removalClosure(
+              targets,
+              graphForHosts(graph, [host]),
+              protectedIds,
+            ),
+          ].some((id) => positiveSeeds.has(id)),
         );
         negativeTrimmedSomewhere.set(
           p.raw,
-          (negativeTrimmedSomewhere.get(p.raw) ?? false) || trims.length > 0,
+          (negativeTrimmedSomewhere.get(p.raw) ?? false) || trims,
         );
       }
 
-      const comp = resolveComposition(graph, flat);
+      // 3c–5 hold on EVERY host the row declares, each resolved as that host
+      // sees it: a composition for the desktop and the browser must mean what
+      // its manifest says in both, and its selections must be genuine options
+      // in both bundles.
+      for (const host of flat.hosts) {
+        const on = flat.hosts.length > 1 ? ` (on the ${host} host)` : "";
+        const comp = resolveComposition(graph, flat, host);
 
-      // 3c. Every declared exclusion took effect. A negative removes its targets
-      //     and their removal closure from the SEED set, but an id this
-      //     composition names explicitly is protected from that removal — so a
-      //     protected plugin that IMPORTS an excluded one survives and drags the
-      //     excluded plugin back in through the hard closure. When that happens
-      //     the composition does not mean what its manifest says, and the engine
-      //     reports it as a value rather than resolving the ambiguity by guessing
-      //     which of the two the author wanted.
-      //
-      //     The import chain IS the repair instruction: either the importer named
-      //     in it should be excluded too, or the exclusion should be dropped.
-      if (comp.unsatisfiedExclusions.length > 0) {
-        const lines = comp.unsatisfiedExclusions.map(({ target, path }) => {
-          const trail = path.steps
-            .map((s) => `${s.from} →(${s.kind}) ${s.to}`)
-            .join("\n        ");
-          return `${target} — pulled back in from ${path.origin} (${path.originKind}):\n        ${trail}`;
-        });
-        return fail(
-          `composition "${m.name}" declares ${comp.unsatisfiedExclusions.length} exclusion(s) that did NOT take effect:\n    ${lines.join("\n    ")}`,
-          `Each plugin above is excluded (by this composition's own negative, or by the inherited "${BASE_EXCLUSIONS_ID}" row) yet is still in the bundle, because something this composition NAMES imports it — and naming an importer is not a request for what it imports. Either exclude the importer at the head of the chain too, or drop the exclusion. To keep the plugin deliberately, name it here (as an entry positive or a selected contributor): that suppresses the inherited negative outright, and nothing cascades.`,
-        );
-      }
-
-      // 4. No selection already locked in by the entries' hard edges.
-      if (comp.redundantSelections.length > 0) {
-        return fail(
-          `composition "${m.name}" selects already-required contributor(s): ${comp.redundantSelections.join(", ")}`,
-          "A contributor pulled in by the entry points' hard closure is included unconditionally — remove it from selectedContributors (or from the extended pack).",
-        );
-      }
-
-      // 5. Every selected contributor must be a genuine, load-bearing soft option:
-      //    deselecting it must remove it from the bundle (i.e. it is in the
-      //    `available` frontier of the composition resolved without it). This rejects
-      //    selections that are already pulled in via another contributor's hard
-      //    closure, and selections that aren't soft contributors at all.
-      for (const id of flat.selectedContributors) {
-        const without = resolveComposition(graph, {
-          ...flat,
-          selectedContributors: flat.selectedContributors.filter(
-            (x) => x !== id,
-          ),
-        });
-        if (!without.available.includes(id)) {
+        // 3c. Every declared exclusion took effect. A negative removes its targets
+        //     and their removal closure from the SEED set, but an id this
+        //     composition names explicitly is protected from that removal — so a
+        //     protected plugin that IMPORTS an excluded one survives and drags the
+        //     excluded plugin back in through the hard closure. When that happens
+        //     the composition does not mean what its manifest says, and the engine
+        //     reports it as a value rather than resolving the ambiguity by guessing
+        //     which of the two the author wanted.
+        //
+        //     The import chain IS the repair instruction: either the importer named
+        //     in it should be excluded too, or the exclusion should be dropped.
+        if (comp.unsatisfiedExclusions.length > 0) {
+          const lines = comp.unsatisfiedExclusions.map(({ target, path }) => {
+            const trail = path.steps
+              .map((s) => `${s.from} →(${stepLabel(s)}) ${s.to}`)
+              .join("\n        ");
+            return `${target} — pulled back in from ${path.origin} (${path.originKind}):\n        ${trail}`;
+          });
           return fail(
-            `composition "${m.name}" selects "${id}", which is not a genuine soft option`,
-            "It is either not a soft contributor to this bundle, or it is already pulled in by another selection's hard closure. Remove it from selectedContributors (or from the extended pack).",
+            `composition "${m.name}"${on} declares ${comp.unsatisfiedExclusions.length} exclusion(s) that did NOT take effect:\n    ${lines.join("\n    ")}`,
+            `Each plugin above is excluded (by this composition's own negative, or by the inherited "${BASE_EXCLUSIONS_ID}" row) yet is still in the bundle, because something this composition NAMES imports it — and naming an importer is not a request for what it imports. Either exclude the importer at the head of the chain too, or drop the exclusion. To keep the plugin deliberately, name it here (as an entry positive or a selected contributor): that suppresses the inherited negative outright, and nothing cascades.`,
           );
+        }
+
+        // 4. No selection already locked in by the entries' hard edges.
+        if (comp.redundantSelections.length > 0) {
+          return fail(
+            `composition "${m.name}"${on} selects already-required contributor(s): ${comp.redundantSelections.join(", ")}`,
+            "A contributor pulled in by the entry points' hard closure is included unconditionally — remove it from selectedContributors (or from the extended pack).",
+          );
+        }
+
+        // 5. Every selected contributor must be a genuine, load-bearing soft option:
+        //    deselecting it must remove it from the bundle (i.e. it is in the
+        //    `available` frontier of the composition resolved without it). This rejects
+        //    selections that are already pulled in via another contributor's hard
+        //    closure, and selections that aren't soft contributors at all.
+        for (const id of flat.selectedContributors) {
+          const without = resolveComposition(
+            graph,
+            {
+              ...flat,
+              selectedContributors: flat.selectedContributors.filter(
+                (x) => x !== id,
+              ),
+            },
+            host,
+          );
+          if (!without.available.includes(id)) {
+            return fail(
+              `composition "${m.name}"${on} selects "${id}", which is not a genuine soft option`,
+              "It is either not a soft contributor to this bundle, or it is already pulled in by another selection's hard closure. Remove it from selectedContributors (or from the extended pack).",
+            );
+          }
         }
       }
     }
@@ -486,7 +509,7 @@ const check: Check = {
           const path = explainInclusion(graph, appFlat, offender);
           const trail = path
             ? path.steps
-                .map((s) => `${s.from} →(${s.kind}) ${s.to}`)
+                .map((s) => `${s.from} →(${stepLabel(s)}) ${s.to}`)
                 .join("\n    ")
             : "(no path found)";
           return fail(

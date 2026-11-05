@@ -27,7 +27,10 @@ data-view capabilities live in dedicated sub-plugins under `plugins/`:
     - `boolFieldType`
     - `boolIdentity`
 - Cross-plugin:
-  - Imported by: `fields/bool/config`
+  - Imported by:
+    - `fields/bool/config`
+    - `fields/bool/storage`
+    - `fields/bool/text-cast`
 - Sub-plugins:
   - **`config`** — Boolean field type: config-render capability (checkbox for config-v2.fields.renderer) plus the boolField factory.
   - **`data-view-codec`** — Boolean field type: data-view custom-column value codec (native boolean ↔ canonical text).

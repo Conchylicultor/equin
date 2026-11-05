@@ -77,6 +77,10 @@ export const rootMountsReached: Check = {
         .map((c) => c.slot)
         .filter((slot) => slot.split(".")[0] === AMBIENT_GROUP);
       if (ambient.length === 0) continue;
+      // Reached on SOME host: an edge any host follows decides what the
+      // plugin is (a dependency, not an opt-in root feature). A browser
+      // composition that does not reach it ships without it, which is what
+      // its own closure says — not this check's question.
       if (graph.hardReverse.get(node.id)!.length > 0) continue;
       if (reachedByRule.has(node.id) || named.has(node.id)) continue;
       problems.push(

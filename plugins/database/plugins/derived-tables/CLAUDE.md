@@ -266,6 +266,7 @@ is recomputed in `onReady`.
     - `database/migrations`
     - `network/live/change-feed`
     - `network/live/live-state-snapshot`
+    - `network/live/query-resource`
     - `page/editor`
     - `page/links`
     - `tasks/tasks-core`

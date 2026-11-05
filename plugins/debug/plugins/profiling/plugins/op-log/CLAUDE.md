@@ -226,7 +226,15 @@ through `foldOpLines`. The before/after ruler of
     - `waitersAhead`
     - `waitLineOf`
 - Cross-plugin:
-  - Imported by: `debug/profiling/op-log/op-store`
+  - Imported by:
+    - `conversations/conversation-view/op-status`
+    - `debug/profiling/op-log/op-store`
+    - `debug/profiling/ops`
+    - `debug/profiling/ops/op-gantt`
+    - `framework/cli/await`
+    - `framework/cli/build`
+    - `framework/cli/op-runtime`
+    - `framework/cli/push`
 - Server:
   - Exports (types):
     - `OpProfiler`

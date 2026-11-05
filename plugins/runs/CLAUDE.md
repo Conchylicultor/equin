@@ -219,10 +219,13 @@ row, or on a failed re-read the row as last seen).
   - Uses tokens: `ui/tokens/color-palette --muted-foreground`
   - Imported by:
     - `apps/deploy/deploy-history`
+    - `apps/deploy/deploy-history/investigate-failure`
     - `apps/deploy/deployments/runs-arm`
+    - `apps/studio/compositions/release`
     - `backup`
     - `backup/runs-arm`
     - `build`
+    - `build/build-fix`
     - `build/runs-arm`
     - `release/runs-arm`
 - Sub-plugins:

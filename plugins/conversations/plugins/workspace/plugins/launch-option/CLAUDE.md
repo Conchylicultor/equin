@@ -71,6 +71,7 @@ default, stored as no row) or one registered scratch profile. Design:
   - Imported by:
     - `apps/sonata/transcription`
     - `conversations`
+    - `conversations/agent-thread`
 - Shared:
   - Exports (types): `TaskWorkspace`
   - Exports (values):

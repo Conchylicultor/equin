@@ -250,9 +250,13 @@ block keep taking a plain `ClaudeCliCall`.
   - Imported by:
     - `apps/events/sources/source-detail/runs/model-call`
     - `apps/events/sources/url-extract`
+    - `apps/pages/auto-icon`
     - `apps/places/places-core`
+    - `conversations/conversation-category`
+    - `conversations/conversation-view/turn-summary`
     - `debug/claude-cli-calls`
     - `debug/read-set`
+    - `tasks/task-title`
 - Exemptions:
   - Exempts itself from:
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)

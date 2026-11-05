@@ -305,6 +305,7 @@ code, that is the bug this section exists to prevent.
     - `apps/studio/compositions`
     - `apps/studio/compositions/draft-actions`
     - `apps/studio/compositions/release`
+    - `apps/website/promo-film`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
 

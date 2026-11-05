@@ -46,7 +46,9 @@
     - `ui/tokens/categorical` ×3
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
-  - Imported by: `conversations/conversation-view/jsonl-viewer/subagents`
+  - Imported by:
+    - `conversations/conversation-view/jsonl-viewer/subagents`
+    - `conversations/conversation-view/running-agents`
 - Core:
   - Exports (types):
     - `WorkflowMeta`

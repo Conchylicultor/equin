@@ -181,9 +181,11 @@ renderer, which only the running app has.
     - `ui/tokens/type-scale --line-height-3xs`
   - Imported by:
     - `apps/settings/config`
+    - `apps/website/promo-film`
     - `config_v2/config-link`
     - `config_v2/settings/conflict-agent`
     - `debug/config-orphans`
+    - `tasks/automations`
 - Sub-plugins:
   - **`conflict-agent`** — Ask-an-agent button inside the config detail's conflict banners: opens the standard task-draft popover pre-filled with a factual description of the conflict (which fields disagree, and how).
 

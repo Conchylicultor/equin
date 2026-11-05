@@ -28,6 +28,8 @@ the Forge catalog "Structure" tab, and the PR diff renderer all read
   - Exports (values):
     - `structureFacetDef`
     - `structureToComparable`
+- Cross-plugin:
+  - Imported by: `plugin-meta/facets/structure/render-diff`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin structure-anomaly table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin structure section in the plugin detail pane.

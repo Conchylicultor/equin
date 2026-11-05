@@ -226,6 +226,7 @@ clock is pinned with `vi.setSystemTime` so "today" is deterministic.
     - `fields/date/filter`
     - `fields/date/inline`
     - `page/inline-date`
+    - `primitives/data-view`
 - Core:
   - Exports (types):
     - `DayNavIntent`

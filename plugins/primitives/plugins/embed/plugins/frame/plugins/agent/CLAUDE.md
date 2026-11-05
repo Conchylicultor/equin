@@ -19,7 +19,9 @@ The model and the rules live in the parent's CLAUDE.md (`primitives/embed/frame`
 
 - Description: The content-frame channel's protocol and its frame agent: the script injected into every content document, answering the parent's closed set of requests over a MessagePort.
 - Cross-plugin:
-  - Imported by: `infra/endpoints`
+  - Imported by:
+    - `infra/endpoints`
+    - `primitives/embed/frame`
 - Exemptions:
   - Exempts itself from: `scroll-safety/no-adhoc-scroll-write` — `core/frame-agent.ts` (sanctioned)
 - Core:

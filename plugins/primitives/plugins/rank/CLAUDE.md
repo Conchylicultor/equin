@@ -130,20 +130,15 @@ import { withRank } from "@plugins/primitives/plugins/rank/server";
     - `rankText`
     - `withRank`
 - Cross-plugin:
-  - Imported by:
-    - `apps/studio/explorer`
-    - `config_v2`
-    - `conversations/agents`
-    - `conversations/conversations-view/grouped`
-    - `conversations/conversations-view/queue`
-    - `fields/rank/config`
-    - `page/editor`
-    - `page/markdown-apply`
-    - `primitives/data-view/view-order`
-    - `primitives/tree`
-    - `tag-tree/engine`
-    - `tasks`
-    - `tasks/tasks-core`
+  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×7
+    - `conversations` ×5
+    - `primitives` ×4
+    - `config_v2` ×2
+    - `fields` ×2
+    - `page` ×2
+    - `tag-tree` ×2
+    - `tasks` ×2
 - Web:
   - Exports (values):
     - `Rank`

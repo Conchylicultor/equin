@@ -95,6 +95,7 @@ See `plugins/commands/` for the reference implementation.
 - Description: Facet-based plugin metadata extraction and docgen pipeline
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deploy-secrets/approvals`
     - `framework/tooling/codegen`
     - `plugin-meta/closure`
     - `plugin-meta/facets/contributions`

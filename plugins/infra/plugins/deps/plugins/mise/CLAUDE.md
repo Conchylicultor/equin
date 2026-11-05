@@ -18,6 +18,11 @@
   - Exports (values):
     - `installLockedToolchain`
     - `miseUpdater`
+- Cross-plugin:
+  - Imported by:
+    - `framework/cli/build`
+    - `framework/cli/start`
+    - `toolchain`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/mise-updater.ts`, `core/internal/mise.ts` (debt)
 

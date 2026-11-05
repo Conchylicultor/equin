@@ -133,6 +133,7 @@
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
+    - `apps/file-explorer/app-data`
     - `apps/file-explorer/attachment-preview`
     - `apps/file-explorer/folder-peek`
     - `apps/file-explorer/git`

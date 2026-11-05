@@ -182,10 +182,12 @@ that missed an input surfaces as a failed job, never as a quiet stale read.
   - Imported by:
     - `framework/cli/build`
     - `framework/cli/check`
+    - `framework/cli/migrations`
     - `framework/cli/regen-generated`
     - `framework/tooling/boundaries`
     - `framework/tooling/codegen`
     - `plugin-meta/plugin-tree/faceted`
+    - `plugin-meta/relocate`
 - Exemptions:
   - Exempts itself from: `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
 - Sub-plugins:

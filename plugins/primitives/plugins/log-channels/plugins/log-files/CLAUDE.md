@@ -40,6 +40,7 @@ another worktree's logs. See `plugins/primitives/plugins/log-channels/CLAUDE.md`
     - `debug/sentinel`
     - `debug/slow-ops`
     - `debug/timeline`
+    - `primitives/log-channels`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/persist.ts` (debt)
 

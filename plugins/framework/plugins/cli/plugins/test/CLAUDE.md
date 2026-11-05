@@ -106,6 +106,10 @@ queueing for a grant, writes its own record (the leader's runners,
   - Uses:
     - `framework/cli/op-runtime.DirectOpFlight`
     - `framework/cli/op-runtime.withDirectOp`
+- Cross-plugin:
+  - Imported by:
+    - `framework/cli/await`
+    - `infra/deps/updates`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/test-status.ts` (debt)
 

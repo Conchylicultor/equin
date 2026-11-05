@@ -47,6 +47,7 @@
     - `ui/tokens/shape --spacing`
     - `ui/tokens/sidebar-palette --sidebar-border`
   - Imported by:
+    - `apps/home/tour`
     - `conversations/conversations-view`
     - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`

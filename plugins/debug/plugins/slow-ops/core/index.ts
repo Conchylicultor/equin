@@ -5,7 +5,6 @@ export {
   slowOpCallerFields,
   slowOpCallersEntityRef,
   SlowOpCallerSchema,
-  CallerRefSchema,
   SlowOpSampleSchema,
   SAMPLE_HOLDERS_MAX,
   VariantBreakdownSchema,
@@ -18,7 +17,6 @@ export {
 export type {
   SlowOp,
   SlowOpCaller,
-  CallerRef,
   SlowOpSample,
   SlowOpMarker,
   VariantBreakdown,
@@ -30,8 +28,6 @@ export type { SlowOpListRow, SlowOpCallerListRow } from "./resources";
 export { slowOpDetailRoute } from "./routes";
 export { slowOpConfig, CLIENT_SIGNAL_THRESHOLD } from "./config";
 export { MAX_CLIENT_SLOW_OP_ITEMS, MAX_SLOW_OP_MARKERS } from "./limits";
-export { clientSlowOpSink } from "./client-slow-op-sink";
-export type { ClientSlowOpSignal } from "./client-slow-op-sink";
 export {
   isLegacyBurstReport,
   SlowOpReportPayloadSchema,

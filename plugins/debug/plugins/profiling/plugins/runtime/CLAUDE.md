@@ -64,6 +64,9 @@
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-3xs`
     - `ui/tokens/type-scale --line-height-3xs`
+  - Imported by:
+    - `debug/sentinel`
+    - `network/live`
 - Exemptions:
   - Exempts itself from:
     - `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)

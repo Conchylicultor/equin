@@ -226,21 +226,22 @@ count accumulates across drops.
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Imported by: 59 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×11
+  - Imported by: 68 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×12
+    - `infra` ×10
     - `debug` ×9
-    - `infra` ×7
+    - `conversations` ×6
     - `database` ×6
     - `framework` ×5
     - `network` ×4
-    - `conversations` ×3
+    - `build` ×2
     - `reports` ×2
     - `tasks` ×2
     - `active-data/show-me`
     - `backup`
-    - `build`
     - `integrations/youtube/audio-fetch`
     - `menu-bar`
+    - `page/annotations/agent-access`
     - `plugin-meta/plugin-records/verify`
     - `primitives/log-channels/memory-persistence`
     - `release`

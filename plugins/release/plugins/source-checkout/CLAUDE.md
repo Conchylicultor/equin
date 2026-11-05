@@ -108,6 +108,8 @@ anything is removed — the counterpart of `infra/worktree`'s
     - `isReleaseCheckout`
     - `releaseCargoTargetDir`
     - `sweepLeakedReleaseCheckouts`
+- Cross-plugin:
+  - Imported by: `framework/cli/release`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/source-checkout.ts` (debt)
 

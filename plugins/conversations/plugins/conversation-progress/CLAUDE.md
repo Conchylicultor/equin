@@ -86,6 +86,8 @@ has moved on. So it is NOT read per turn:
     - `PHASE_ORDER`
     - `PHASE_STEPS`
     - `PROGRESS_SUMMARY`
+- Cross-plugin:
+  - Imported by: `apps/website/promo-film/seed`
 - Exemptions:
   - Exempts itself from: `repo-walk-safety/no-adhoc-repo-listing` — `machine/internal/phase-git.ts` (sanctioned)
 - Machine:

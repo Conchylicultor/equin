@@ -759,18 +759,21 @@ serves them.
     - `TRAILER_LOG_FORMAT`
     - `UNATTRIBUTED_TRAILER_KEY`
 - Cross-plugin:
-  - Imported by: 84 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×30
-    - `tasks` ×29
+  - Imported by: 118 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×47
+    - `tasks` ×36
+    - `debug` ×6
     - `active-data` ×5
-    - `debug` ×5
+    - `apps` ×3
     - `page` ×3
-    - `apps` ×2
+    - `primitives` ×3
+    - `review` ×3
+    - `code-explorer` ×2
     - `infra` ×2
     - `stats` ×2
     - `backup/sources/transcripts`
-    - `code-explorer`
     - `database/query`
+    - `framework/cli/push`
     - `hints/ask`
     - `plugin-meta/plugin-health`
     - `wish`

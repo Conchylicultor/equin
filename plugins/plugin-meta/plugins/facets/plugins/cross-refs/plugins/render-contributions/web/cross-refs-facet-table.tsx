@@ -5,11 +5,11 @@ import {
 } from "@plugins/plugin-meta/plugins/contributions-table/web";
 import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
-import type { CrossRefsData } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 import {
-  RUNTIME_FOLDERS,
-  asPath,
-} from "@plugins/framework/plugins/plugin-id/core";
+  apiUseLabel,
+  type CrossRefsData,
+} from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
+import { RUNTIME_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
 
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -55,7 +55,7 @@ function rows(entries: FacetTableEntry[]): CrossRefRow[] {
       for (const u of data.apiUses[runtime]) {
         result.push({
           plugin: entry.node,
-          used: `${asPath(u.plugin)}${u.symbol ? "." + u.symbol : ""}`,
+          used: apiUseLabel(u, runtime),
           runtime,
         });
       }

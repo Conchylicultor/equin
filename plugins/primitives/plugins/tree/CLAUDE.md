@@ -397,6 +397,7 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `primitives/data-view`
     - `primitives/data-view/list`
     - `primitives/data-view/table`
+    - `primitives/multi-select`
     - `tag-tree/picker`
     - `ui/tree-disclosure`
     - `ui/tree-disclosure/column`

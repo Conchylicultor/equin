@@ -26,6 +26,7 @@ Resolving the unflattened draft would silently under-report the frontier.
     - `plugin-meta/composition.useActiveComposition`
     - `plugin-meta/composition.useCompositionData`
     - `plugin-meta/composition.useGraph`
+    - `plugin-meta/composition.useViewHost`
     - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`

@@ -9,7 +9,9 @@
   - Uses: `database.db`
   - Exports (values): `databaseForkedAt`
 - Cross-plugin:
-  - Imported by: `conversations`
+  - Imported by:
+    - `conversations`
+    - `database/admin`
 - Core:
   - Exports (values): `FORKED_AT_SETTING`
 

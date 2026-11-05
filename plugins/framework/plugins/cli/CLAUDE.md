@@ -464,7 +464,12 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
     - `readMergeMarkers`
     - `resolveGitDir`
 - Cross-plugin:
-  - Imported by: `framework/tooling/import-closure`
+  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×26
+    - `infra` ×5
+    - `apps` ×3
+    - `plugin-meta` ×2
+    - `toolchain`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/internal/claudemd-conflicts.ts`, `core/internal/git-dir.ts`, `core/internal/merge-markers.ts`, `core/internal/registry-entry.ts` (debt)

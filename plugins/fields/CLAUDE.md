@@ -106,17 +106,17 @@ tokens, so anything that imports the barrels back would cycle.
     - `Fields.Identity` ×35
   - Exports (values): `Fields`
 - Cross-plugin:
-  - Imported by: 119 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×63
-    - `apps` ×13
-    - `conversations` ×8
+  - Imported by: 133 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×65
+    - `apps` ×21
+    - `conversations` ×9
     - `infra` ×5
     - `tasks` ×5
     - `debug` ×4
-    - `page` ×3
+    - `page` ×4
+    - `primitives` ×4
     - `backup` ×2
     - `build` ×2
-    - `primitives` ×2
     - `apps-core/app-launcher`
     - `config_v2`
     - `hints`
@@ -196,7 +196,7 @@ tokens, so anything that imports the barrels back would cycle.
   - **`ordinal`** [3 sub-plugins] — Ordinal field type: identity only, extends int — a position, rank or version number, drawn faint and tabular with no thousands grouping; sort, filter and grouping inherited from int → number.
   - **`person`** [3 sub-plugins] — Person field type (a person's display name, free text): extends text — text's sort, filter and editor via the extends chain, its own initial-avatar + name cell.
   - **`rank`** [2 sub-plugins] — Rank field type: identity only, extends text — a fractional-indexing string stored in the rank_text (C-collation) domain, reusing text's cell and filter via the extends chain.
-  - **`reorder-tree`** [1 sub-plugin] — Reorder-tree field type: identity only. The config-render capability and the reorderTreeField factory live in the plugins/config sub-plugin.
+  - **`reorder-tree`** [2 sub-plugins] — Reorder-tree field type: identity only. The config-render capability and the reorderTreeField factory live in the plugins/config sub-plugin.
   - **`secret`** [1 sub-plugin] — Secret field type: identity only. The config-render/storage/central capabilities and the secretField factory live in the plugins/config sub-plugin. Registers NO coerce and contributes NO data-view…
   - **`server-capabilities`** — Server-owned field-capability library: the Fields.Storage / Fields.ValueTextCast tokens, their resolvers (resolveFieldStorage / resolveFieldValueTextCast — the latter answering a TEXT-stored value's…
   - **`server-capabilities-loader`** — Eagerly evaluates every fields storage capability barrel via a generated side-effect manifest, so each self-registers into the server-capabilities eager index. Eval-time consumers import this for…

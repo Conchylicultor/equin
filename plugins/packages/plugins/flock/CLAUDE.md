@@ -87,16 +87,15 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
     - `holdParentLifeline`
     - `waitForFlock`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×8
+    - `framework` ×5
+    - `packages` ×3
+    - `apps/chord/song-index`
     - `debug/browser-recordings/writer`
-    - `framework/tooling/checks`
-    - `framework/tooling/web-artifacts`
-    - `infra/git/tree-lock`
-    - `infra/spawn`
-    - `infra/worktree`
-    - `packages/host-semaphore`
-    - `packages/single-flight`
-    - `packages/ticket-line`
+    - `integrations/youtube/audio-fetch`
+    - `release/source-checkout`
+    - `reports/outbox`
 - Exemptions:
   - Exempts itself from:
     - `spawn-safety/no-raw-bun-spawn` — `core/internal/wait.ts` (sanctioned)

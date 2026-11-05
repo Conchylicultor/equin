@@ -9,7 +9,9 @@
   - Imported by:
     - `apps/sonata/transcription`
     - `infra/audio-analysis`
+    - `infra/deps/python/uv-updater`
     - `integrations/youtube`
+    - `integrations/youtube/audio-fetch`
 - Exemptions:
   - Exempts itself from: `python/no-system-python` — `lint/no-system-python.test.ts` (sanctioned)
   - Exempted by:

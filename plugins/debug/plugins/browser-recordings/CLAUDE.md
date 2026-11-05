@@ -136,7 +136,10 @@ inside one `browser_batch` (one frame per call).
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
-  - Imported by: `debug/browser-recordings/writer`
+  - Imported by:
+    - `debug/browser-recordings/writer`
+    - `framework/tooling/e2e-harness`
+    - `infra/mcp/browser`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/list-runs.ts` (debt)
 - Sub-plugins:

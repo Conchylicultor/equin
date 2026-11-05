@@ -65,8 +65,11 @@ import.meta`, carried by `Resource.Declare`) — the L2 stamps judged by
   - Imported by:
     - `build/restart-skip`
     - `infra/corpus-index`
+    - `network/live`
+    - `network/live/live-state-snapshot`
     - `network/live/query-resource`
     - `reports/engine`
+    - `ui/icons/saved-sources`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `shared/digest.ts` (sanctioned)
 - Server:

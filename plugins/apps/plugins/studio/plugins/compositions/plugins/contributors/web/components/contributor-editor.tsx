@@ -7,6 +7,7 @@ import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import {
   updateActiveDraft,
   useGraph,
+  useViewHost,
 } from "@plugins/plugin-meta/plugins/composition/web";
 import {
   impactOfPruning,
@@ -43,6 +44,7 @@ export function ContributorEditor({
   onQueryChange: (q: string) => void;
 }) {
   const graph = useGraph();
+  const host = useViewHost() ?? undefined;
   const selected = useMemo(
     () => new Set(draft.selectedContributors),
     [draft.selectedContributors],
@@ -90,8 +92,8 @@ export function ContributorEditor({
           {filtered.map((id) => {
             const isOn = selected.has(id);
             const cost = isOn
-              ? impactOfPruning(graph, draft, id)
-              : impactOfSelecting(graph, draft, id);
+              ? impactOfPruning(graph, draft, id, host)
+              : impactOfSelecting(graph, draft, id, host);
             return (
               // Flexible chip cell + rigid impact meta. <Fill> owns the
               // grow/shrink role: it absorbs the slack (pushing the meta

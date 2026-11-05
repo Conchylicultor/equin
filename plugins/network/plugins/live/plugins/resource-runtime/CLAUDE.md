@@ -951,6 +951,7 @@ Out of reach at this seam (DB-backed harness instead):
   - Imported by:
     - `framework/central-core`
     - `framework/server-core`
+    - `network/live/query-resource`
 - Exemptions:
   - Exempts itself from:
     - `resource-runtime:compiled-routes` — `core/routing.ts`, `core/index.ts` (sanctioned)

@@ -132,7 +132,23 @@ only when another file happens to spell the same class. Pass the step to
     - `ui/tokens/density --space-xl`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/density --space-xsm`
-  - Imported by: `primitives/css/rail`
+  - Imported by:
+    - `apps/places/places-map`
+    - `conversations/runtime-sdk`
+    - `page/editor`
+    - `primitives/adaptive-bar`
+    - `primitives/css/cluster`
+    - `primitives/css/column`
+    - `primitives/css/grid`
+    - `primitives/css/inline`
+    - `primitives/css/pin`
+    - `primitives/css/rail`
+    - `primitives/css/spacing`
+    - `primitives/css/sticky`
+    - `primitives/data-view`
+    - `primitives/data-view/floating-toolbar`
+    - `primitives/detail-sections`
+    - `primitives/overlay/floating-action`
 - Core:
   - Exports (types):
     - `RampFamily`

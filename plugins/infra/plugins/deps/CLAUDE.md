@@ -373,23 +373,15 @@ torch.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
-  - Imported by:
-    - `apps/chord/song-index`
-    - `apps/sonata/transcription`
-    - `apps/website/promo-film`
-    - `infra/audio-analysis`
-    - `infra/codesign`
-    - `infra/deps/build`
-    - `infra/host/io-health/monitor`
-    - `infra/launcher`
-    - `infra/mcp/browser`
-    - `infra/safe-fetch/browser-fetch`
-    - `integrations/youtube`
-    - `media/ffmpeg`
-    - `media/film`
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×10
+    - `apps` ×5
+    - `framework` ×5
+    - `integrations` ×2
+    - `media` ×2
+    - `packages` ×2
+    - `conversations/runtime-sdk`
     - `menu-bar`
-    - `packages/signal-origin`
-    - `packages/spawn-disclaim`
 - Deps:
   - Exports (types):
     - `BundleSpec`

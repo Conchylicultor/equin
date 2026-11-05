@@ -101,8 +101,8 @@ Consumers read only the generic aggregate:
     - `task-categories.by-id:rows` (keyed, point)
     - `task-category.registry` (push, fixed, whole: one entry per registered task category — declared in code, a few dozen)
 - Cross-plugin:
-  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×6
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×7
     - `tasks` ×5
     - `conversations` ×3
     - `hints` ×2

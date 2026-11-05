@@ -25,6 +25,8 @@ and sends it as `Authorization: Bearer <activkey>`.
   - Uses: `auth.Auth`
 - Central:
   - Uses: `auth.registerAuthProvider`
+- Cross-plugin:
+  - Imported by: `integrations/hooktheory`
 - Core:
   - Exports (values):
     - `HOOKTHEORY_API_BASE`

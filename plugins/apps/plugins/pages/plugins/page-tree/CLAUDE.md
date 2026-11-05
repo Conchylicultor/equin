@@ -282,8 +282,10 @@ it, so an id means the same thing wherever it is clicked.
     - `apps/pages/starred`
     - `apps/pages/welcome/quick-create`
     - `apps/pages/welcome/recent-pages`
+    - `apps/places/places-map`
     - `conversations/conversation-view/artifacts/page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
+    - `page/inline-date`
 - Exemptions:
   - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/pages-sidebar.tsx` (sanctioned)
 

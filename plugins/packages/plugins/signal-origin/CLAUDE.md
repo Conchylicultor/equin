@@ -95,7 +95,10 @@ name their sender.
     - `infra/deps/build.build`
   - Exports (values): `signalOriginShim`
 - Cross-plugin:
-  - Imported by: `build/build-termination`
+  - Imported by:
+    - `build/build-termination`
+    - `framework/cli/build`
+    - `framework/cli/op-runtime`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `server/internal/signal-origin.fixture.ts`, `server/internal/signal-origin.ts` (debt)

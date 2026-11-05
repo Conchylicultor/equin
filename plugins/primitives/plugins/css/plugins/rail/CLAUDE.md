@@ -221,6 +221,8 @@ now zero: approximately right in a screenshot, wrong in the DOM. Enforced by
     - `backup`
     - `primitives/css/control-panel`
     - `primitives/css/ui-kit`
+    - `primitives/data-view`
+    - `primitives/detail-sections`
 - Web:
   - Exports (values): `useRailGuard`
 

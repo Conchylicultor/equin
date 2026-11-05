@@ -313,7 +313,10 @@ marker is *additive* alongside it; nothing here reads or writes it.
     - `primitives/error-boundary`
     - `primitives/ui-context/element-picker`
     - `reports/crash`
+    - `reports/launch-fix`
     - `reports/render-loop`
+    - `tasks/task-source-url`
+    - `wish/element-picker`
 - Core:
   - Exports (types):
     - `ContributionNode`

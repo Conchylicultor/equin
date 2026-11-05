@@ -28,6 +28,14 @@ output: the log relay". The Go constants are pinned here by
 ## Plugin reference
 
 - Description: The gateway's log directory (logs/gateway: its slog sink, each namespace's channel, each supervised service's channel under services/) with the bound every channel rotates at, and the service log relay's contract: the --log-fd flag a service's start command receives its relay fd by (serviceLogTarget), and the one-shot move of a daemon's pre-relay log file into its channel's rotation (adoptLegacyLog). A leaf importing only infra/paths and host-fs/user-path, so the database plugins the launcher boots can import it without a cycle.
+- Cross-plugin:
+  - Imported by:
+    - `database/embedded`
+    - `database/pgbouncer`
+    - `debug/logs`
+    - `framework/cli/serve-app`
+    - `framework/cli/start`
+    - `infra/launcher`
 - Core:
   - Exports (types): `ServiceLogTarget`
   - Exports (values):

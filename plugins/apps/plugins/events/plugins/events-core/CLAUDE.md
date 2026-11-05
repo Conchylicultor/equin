@@ -373,6 +373,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `apps/events/sources/source-detail/runs/model-call`
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`
+    - `apps/events/sources/source-field`
     - `apps/events/sources/url-extract`
 - Exemptions:
   - Exempts itself from: `events/no-raw-events-write` — `server/internal/events-repo.ts` (sanctioned)

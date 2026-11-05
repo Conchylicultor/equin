@@ -119,6 +119,11 @@ records it once, at bind; `principalStamp()` reads it back
 ## Plugin reference
 
 - Description: Who a request is: the principal (owner | anonymous) the gateway stamps on every proxied request (X-Equin-Principal), read fail-closed by principalOf; EndpointAccess (owner by default, { public: reason } opt-in); gateByPrincipal — the socket hosts' per-route gate, on only when the gateway declares it stamps (--principal-stamped on the backend's argv; ungated and loudly so behind an older gateway), answering an anonymous caller of an owner route 403 cross-site-refused before the handler runs — the anonymous WebSocket refusal, and each host's route table. Plus the Go↔TS header sync check and the lint rule that keeps origin / Sec-Fetch-* reads out of handlers.
+- Cross-plugin:
+  - Imported by:
+    - `apps/deploy/deploy-secrets/approvals`
+    - `debug/backend-liveness`
+    - `infra/launcher/gateway-drift`
 - Core:
   - Exports (types):
     - `EndpointAccess`

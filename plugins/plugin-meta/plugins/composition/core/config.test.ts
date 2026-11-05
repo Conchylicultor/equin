@@ -281,7 +281,9 @@ test("the demo profile is the agent manager and Pages minus machine-only surface
   // either app gains reaches the demo with no edit here. Its own entries
   // SUBTRACT machine-only surfaces, and the only thing they may add is a whole
   // app (`apps.<app>.**`, e.g. Prototypes over its in-worker data-files root) —
-  // never a hand-picked plugin, which would drift from the app it belongs to.
+  // never a hand-picked plugin, which would drift from the app it belongs to —
+  // or keep a leaf under one of its own negatives (a capability id other code
+  // grants, kept while its feature leaves: the engine's opt-out).
   // It selects nothing. Never served. Its home is the app gallery, as main's
   // is: the launcher's grid lists every app but the home, so an agent-manager
   // home would hide the agent manager from the demo's launcher.
@@ -291,9 +293,15 @@ test("the demo profile is the agent manager and Pages minus machine-only surface
   expect(demo.entryPoints).not.toContain("!apps.pages.**");
   expect(demo.selectedContributors).toEqual([]);
   expect(demo.entryPoints.some((e) => e.startsWith("!"))).toBe(true);
+  const negatedBranches = demo.entryPoints
+    .filter((e) => e.startsWith("!") && e.endsWith(".**"))
+    .map((e) => e.slice(1, -".**".length));
   for (const e of demo.entryPoints.filter((e) => !e.startsWith("!"))) {
-    expect(e).toMatch(/^apps\.[^.]+\.\*\*$/);
+    if (/^apps\.[^.]+\.\*\*$/.test(e)) continue;
+    expect(negatedBranches.some((b) => e.startsWith(`${b}.`))).toBe(true);
   }
+  // A browser host's scope: its closure follows no `machine/` import.
+  expect(demo.hosts).toEqual(["browser"]);
   expect(demo.entryPoints).toContain(
     "!conversations.conversation-view.push-and-exit.**",
   );

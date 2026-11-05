@@ -82,6 +82,13 @@ serveBrowserHost({
     - `openHostStorage`
     - `serveBrowserHost`
     - `StorageNewerThanCodeError`
+- Cross-plugin:
+  - Imported by:
+    - `config_v2/browser-store`
+    - `conversations/transcript-source/memory`
+    - `database/pglite`
+    - `infra/attachments/memory-blobs`
+    - `infra/paths/data-files/memory`
 - Test helpers:
   - Core: `@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing`
     - `declareMemoryHostStorage` — Declare that this process's browser host keeps its state in memory — what a test that boots a browser graph (PGlite and the in-memory host stores) declares before `bootBrowserHost`, as a host's entry point declares its storage.

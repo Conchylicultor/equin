@@ -39,14 +39,14 @@ its table/filter capabilities from `number` via the identity `extends` chain.
     - `intField`
     - `intSample`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×16
     - `debug` ×11
-    - `apps` ×9
+    - `conversations` ×7
     - `infra` ×5
-    - `conversations` ×2
-    - `tasks` ×2
+    - `tasks` ×5
+    - `backup` ×4
     - `active-data`
-    - `backup/runs-arm`
     - `build/run-ledger`
     - `fields/object/config`
     - `integrations/google-maps/usage`

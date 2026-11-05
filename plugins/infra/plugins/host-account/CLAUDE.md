@@ -91,8 +91,12 @@ be a claim about the user that then reverses itself.
     - `hostHome`
 - Cross-plugin:
   - Imported by:
+    - `apps/file-explorer/attachment-preview`
     - `apps/file-explorer/browser`
+    - `apps/file-explorer/git`
+    - `apps/file-explorer/places`
     - `apps/pages/shell`
+    - `apps/sonata/sources/midi/folders`
     - `infra/host-account/guest`
 - Sub-plugins:
   - **`guest`** (excluded) — The account of a host without the computer: provides the HostAccountSource host service as a fixed guest account (login `demo`, full name Alex Morgan), so a surface that greets the user — the Pages…

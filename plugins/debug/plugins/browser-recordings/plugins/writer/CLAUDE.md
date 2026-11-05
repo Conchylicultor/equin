@@ -24,6 +24,10 @@
     - `FrameFormat`
     - `Recording`
   - Exports (values): `openRecording`
+- Cross-plugin:
+  - Imported by:
+    - `framework/tooling/e2e-harness`
+    - `infra/mcp/browser`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/writer.ts` (debt)
 

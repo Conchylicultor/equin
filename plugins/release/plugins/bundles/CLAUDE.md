@@ -155,6 +155,8 @@ process can import it.
   - Imported by:
     - `apps/deploy/deployments`
     - `apps/deploy/remote-deploy`
+    - `framework/cli/deploy`
+    - `framework/cli/release`
     - `release`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/claim-pointer.ts`, `server/internal/prune.ts`, `server/internal/resolve-bundle.ts` (debt)

@@ -146,6 +146,7 @@ without booting the server.
   - Imported by:
     - `apps/sonata/audio/piano`
     - `apps/sonata/audio/soundfont`
+    - `infra/asset-mirror/bundle`
     - `ui/icons/emoji`
 - Sub-plugins:
   - **`bundle`** — The asset mirror's release bundle, host-only: runAssetMirrorPrewarm (cli/, for ./equin release) downloads every prewarm-declared file of a composition's closure into a release bundle, and…

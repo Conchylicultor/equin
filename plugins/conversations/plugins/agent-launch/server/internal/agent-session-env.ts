@@ -1,4 +1,4 @@
-import { runtimeShimsDir } from "@plugins/infra/plugins/launcher/core";
+import { runtimeShimsDir } from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
 import {
   envEntries,
   envName,

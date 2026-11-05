@@ -18,6 +18,8 @@ each exported symbol by reading cross-plugin import data from the cross-refs fac
   - Exports (values):
     - `exportsFacetDef`
     - `exportsToComparable`
+- Cross-plugin:
+  - Imported by: `plugin-meta/facets/exports/render-diff`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin exports table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin exports section in the plugin detail pane.

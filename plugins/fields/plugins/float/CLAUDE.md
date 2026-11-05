@@ -29,6 +29,7 @@ Like `int`, it demonstrates the `extends` chain — differing only in that its
 - Cross-plugin:
   - Imported by:
     - `fields/float/config`
+    - `fields/float/storage`
     - `fields/money`
 - Sub-plugins:
   - **`config`** — Float field type: config-render capability (number stepper for config-v2.fields.renderer) plus the floatField factory.

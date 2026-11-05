@@ -57,6 +57,7 @@ server.
   - Imported by:
     - `fields/string-list`
     - `fields/tags/config`
+    - `fields/tags/storage`
 - Sub-plugins:
   - **`config`** — Tags field type: config-render capability. Contributes the multi-select chip renderer to the config-v2.fields.renderer slot.
   - **`filter`** [test helpers] — Tags (multi-value) field type: data-view filter operator set (contains / contains-any-of …).

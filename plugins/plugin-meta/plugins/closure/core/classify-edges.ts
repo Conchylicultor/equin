@@ -3,6 +3,7 @@ import type { PluginTreeData } from "@plugins/plugin-meta/plugins/plugin-tree/co
 import {
   SHIPPED_RUNTIME_FOLDERS,
   type PluginId,
+  type RuntimeFolder,
 } from "@plugins/framework/plugins/plugin-id/core";
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
@@ -52,12 +53,24 @@ export function classifyEdges(tree: PluginTreeData): EdgeGraph {
   // precedence order (import, token, companion), so an edge two of them derive
   // carries the stronger reason. Every hard edge goes through `addHard`, so the
   // flat list below can never meet one without a reason.
+  //
+  // Each edge also gathers the folders of `from` it holds through (every
+  // reason's, whatever won `via`), which is what a host view filters on.
   const via = new Map<string, HardEdgeVia>();
-  const addHard = (from: PluginId, to: PluginId, why: HardEdgeVia) => {
+  const runtimes = new Map<string, Set<RuntimeFolder>>();
+  const addHard = (
+    from: PluginId,
+    to: PluginId,
+    why: HardEdgeVia,
+    rt: RuntimeFolder,
+  ) => {
     pushUnique(hardForward, from, to);
     pushUnique(hardReverse, to, from);
     const k = `${from}\0${to}`;
     if (!via.has(k)) via.set(k, why);
+    let set = runtimes.get(k);
+    if (!set) runtimes.set(k, (set = new Set()));
+    set.add(rt);
   };
 
   // Seed every node as a key so callers never branch on undefined.
@@ -82,7 +95,9 @@ export function classifyEdges(tree: PluginTreeData): EdgeGraph {
 
   // ── Hard edges: union apiUses across the SHIPPED runtimes, drop self ───
   //
-  // Only the runtimes the deployed app executes (`SHIPPED_RUNTIME_FOLDERS`).
+  // Only the runtimes some host executes (`SHIPPED_RUNTIME_FOLDERS`), each
+  // edge tagged with the importing folders so a host view keeps only those it
+  // runs (a `machine/` import is a desktop edge, never a browser one).
   // This loop used to walk `Object.values(apiUses)` — every runtime — which made
   // an import written in a developer-only folder a reason to bundle its target:
   // `reorder/e2e` imports the shared Playwright harness, whose `provision/`
@@ -96,7 +111,7 @@ export function classifyEdges(tree: PluginTreeData): EdgeGraph {
       for (const use of crossRefs.apiUses[rt]) {
         if (use.plugin === node.id) continue; // self-edge
         if (!hardForward.has(use.plugin)) continue; // unknown target — inert
-        addHard(node.id, use.plugin, "import");
+        addHard(node.id, use.plugin, "import", rt);
       }
     }
   }
@@ -115,7 +130,8 @@ export function classifyEdges(tree: PluginTreeData): EdgeGraph {
     for (const use of crossRefs.tokenUses) {
       if (use.plugin === node.id) continue; // self-edge
       if (!hardForward.has(use.plugin)) continue; // unknown target — inert
-      addHard(node.id, use.plugin, "token");
+      // The var is painted on the page, whatever folder names it.
+      addHard(node.id, use.plugin, "token", "web");
     }
   }
 
@@ -171,7 +187,7 @@ export function classifyEdges(tree: PluginTreeData): EdgeGraph {
   for (const slot of collectCompanionSlots(tree, groupOwner)) {
     for (const companion of slot.companions) {
       if (!slot.keyed) {
-        addHard(slot.owner, companion.plugin, "companion");
+        addHard(slot.owner, companion.plugin, "companion", slot.runtime);
         continue;
       }
       const key = companion.key!;
@@ -199,6 +215,7 @@ export function classifyEdges(tree: PluginTreeData): EdgeGraph {
         to,
         kind: "hard",
         via: via.get(`${from}\0${to}`)!,
+        runtimes: [...runtimes.get(`${from}\0${to}`)!].sort(),
       });
   for (const [from, tos] of softForward)
     for (const to of tos) edges.push({ from, to, kind: "soft" });

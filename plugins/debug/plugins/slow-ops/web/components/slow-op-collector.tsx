@@ -6,7 +6,8 @@ import { getBootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-tra
 import { clientLatencySink } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
 import { toClientBootSection } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
-import { clientSlowOpSink, slowOpConfig } from "../../core";
+import { slowOpConfig } from "../../core";
+import { clientSlowOpSink } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
 import { elementSlowOp, transportSlowOp } from "../internal/element-slow-op";
 import { latencySlowOp } from "../internal/latency-slow-op";
 import { endingNow } from "../internal/page-pause-judge";

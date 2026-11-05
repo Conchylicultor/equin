@@ -163,7 +163,10 @@ certificate expires within 30 days.
     - `signBundle`
     - `signedByRequirement`
 - Cross-plugin:
-  - Imported by: `infra/launcher`
+  - Imported by:
+    - `infra/launcher`
+    - `infra/launcher/gateway-drift`
+    - `infra/launcher/login-services`
 - Exemptions:
   - Exempts itself from: `paths:no-hardcoded-paths` — `deps/internal/identity.ts`, `deps/internal/sign.ts`, `deps/internal/codesign.test.ts` (sanctioned)
 

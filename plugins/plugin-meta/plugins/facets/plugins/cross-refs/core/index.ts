@@ -1,4 +1,4 @@
-export { crossRefsFacetDef } from "./types";
+export { crossRefsFacetDef, apiUseLabel } from "./types";
 export type {
   CrossRefsData,
   ApiUse,

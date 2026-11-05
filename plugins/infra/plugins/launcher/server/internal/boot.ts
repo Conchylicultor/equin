@@ -62,9 +62,10 @@ import {
 } from "../../data-dirs";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
 import { listenFlag } from "./listen";
-// Own-plugin, so relative — the `@plugins/infra/plugins/launcher/core` alias
-// would name this plugin from inside itself.
-import { pickRuntimeEnv, runtimeEnvNames } from "../../core";
+import {
+  pickRuntimeEnv,
+  runtimeEnvNames,
+} from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
 import { gatewayBinary, gatewayBuild } from "../../deps";
 import { readyNow, type Ready } from "@plugins/infra/plugins/deps/deps";
 import type { BuildSource } from "@plugins/infra/plugins/deps/plugins/build/deps";
@@ -469,7 +470,7 @@ export interface GatewayLaunchOptions {
  * ways the gateway gets started cannot drift apart.
  *
  * The gateway starts from the DECLARED runtime environment, not from ours:
- * `pickRuntimeEnv(process.env)` keeps only the names `launcher/core` declares.
+ * `pickRuntimeEnv(process.env)` keeps only the names `launcher/runtime-env` declares.
  * Whatever else the starting shell carries — an agent's
  * `EQUIN_CONVERSATION_ID`, its `CLAUDE_*` — stays here instead
  * of reaching every backend on the host. `-child-env` hands the gateway the same

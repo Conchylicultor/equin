@@ -20,7 +20,11 @@
     - `fileConfigProxy`
     - `readEffectiveConfigFromDisk`
 - Cross-plugin:
-  - Imported by: `framework/tooling/codegen`
+  - Imported by:
+    - `build/serve-composition`
+    - `framework/cli/build`
+    - `framework/cli/deploy`
+    - `framework/tooling/codegen`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/effective-on-disk.ts` (debt)
 

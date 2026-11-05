@@ -940,7 +940,7 @@ with an empty route.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 192 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 193 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×72
     - `conversations` ×31
     - `debug` ×27
@@ -960,6 +960,7 @@ with an empty route.
     - `build`
     - `code-explorer/commit-detail`
     - `config_v2/settings`
+    - `framework/web-core`
     - `hints/ask`
     - `integrations/google-maps`
     - `menu-bar`

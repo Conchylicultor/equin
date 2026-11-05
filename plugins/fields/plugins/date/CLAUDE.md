@@ -31,7 +31,10 @@ sub-plugins under `plugins/`:
     - `dateFieldType`
     - `dateIdentity`
 - Cross-plugin:
-  - Imported by: `fields/date/config`
+  - Imported by:
+    - `fields/date/config`
+    - `fields/date/storage`
+    - `fields/date/text-cast`
 - Sub-plugins:
   - **`config`** — Date field factory (dateField) for building field records.
   - **`data-view-codec`** — Date field type: data-view custom-column value codec (native Date ↔ canonical ISO text).

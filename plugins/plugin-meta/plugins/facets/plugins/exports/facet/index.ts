@@ -59,11 +59,10 @@ export default createFacet<ExportsData>({
           if (!target || target === importer) continue;
           const targetData = getFacet(target, exportsFacetDef);
           if (!targetData) continue;
-          for (const rt2 of RUNTIME_FOLDERS) {
-            const sym = targetData[rt2].find((s) => s.name === use.symbol);
-            if (sym && !sym.consumers.includes(importer.id)) {
-              sym.consumers.push(importer.id);
-            }
+          // The symbol of the barrel the import reaches.
+          const sym = targetData[use.barrel].find((s) => s.name === use.symbol);
+          if (sym && !sym.consumers.includes(importer.id)) {
+            sym.consumers.push(importer.id);
           }
         }
       }

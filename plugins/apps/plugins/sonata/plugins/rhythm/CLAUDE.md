@@ -32,7 +32,10 @@ a bug, not an absorbable empty value.
 
 - Description: Rhythm-necklace data model for Sonata: preset onset patterns (Tresillo, Son, Bossa Nova, …) plus pure rotate/resample/toggle operations. A framework-free leaf shared by the rhythm circle and the per-hand chord-grid grooves.
 - Cross-plugin:
-  - Imported by: `apps/sonata/voicing`
+  - Imported by:
+    - `apps/sonata/document`
+    - `apps/sonata/rich/rhythm-controls`
+    - `apps/sonata/voicing`
 - Core:
   - Exports (types):
     - `NamedRhythm`

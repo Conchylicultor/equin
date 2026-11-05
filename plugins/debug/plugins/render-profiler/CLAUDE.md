@@ -138,6 +138,9 @@ React-internals coupling (fiber `flags` / `memoizedState` / `dependencies` /
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/shape --spacing`
+  - Imported by:
+    - `debug/live-state-churn/emit`
+    - `debug/profiling/cold-start`
 - Core:
   - Exports (types):
     - `CommitSample`

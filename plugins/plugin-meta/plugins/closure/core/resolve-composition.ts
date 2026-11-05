@@ -1,6 +1,10 @@
 import type { PluginTreeData } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import type {
+  HostId,
+  PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { classifyEdges } from "./classify-edges";
+import { graphForHosts } from "./host-view";
 import { inclusionPathWithin } from "./inclusion-path";
 import {
   allNodeIds,
@@ -119,6 +123,27 @@ export function removalClosure(
 export function expandEntrySeeds(
   manifest: CompositionManifest,
   graph: EdgeGraph,
+  host?: HostId,
+): { seeds: Set<PluginId>; named: Set<PluginId>; negated: Set<PluginId> } {
+  return expandOver(manifest, viewFor(graph, manifest, host));
+}
+
+/**
+ * The graph a composition is resolved over: the view of the hosts its manifest
+ * declares, or of one `host` when the caller asks how the composition looks
+ * there (the Studio's host toggle, the check's per-host pass).
+ */
+function viewFor(
+  graph: EdgeGraph,
+  manifest: CompositionManifest,
+  host: HostId | undefined,
+): EdgeGraph {
+  return graphForHosts(graph, host ? [host] : manifest.hosts);
+}
+
+function expandOver(
+  manifest: CompositionManifest,
+  graph: EdgeGraph,
 ): { seeds: Set<PluginId>; named: Set<PluginId>; negated: Set<PluginId> } {
   const seeds = new Set<PluginId>();
   const named = new Set<PluginId>();
@@ -185,19 +210,34 @@ export function expandEntrySeeds(
   return { seeds, named, negated };
 }
 
+/**
+ * Resolve a flattened manifest over the graph as its hosts see it: the view of
+ * `manifest.hosts` (their union — a composition declared for the desktop and
+ * the browser bundles what either needs), or of `host` alone when given (how
+ * the composition looks on that one host). An import written in a folder no
+ * resolved host executes is no edge: a `machine/` import pulls its target into
+ * a desktop bundle and never into a browser one.
+ */
 export function resolveComposition(
   graph: EdgeGraph,
   manifest: CompositionManifest,
+  host?: HostId,
 ): Composition;
 export function resolveComposition(
   tree: PluginTreeData,
   manifest: CompositionManifest,
+  host?: HostId,
 ): Composition;
 export function resolveComposition(
   graphOrTree: EdgeGraph | PluginTreeData,
   manifest: CompositionManifest,
+  host?: HostId,
 ): Composition {
-  const graph = isTree(graphOrTree) ? classifyEdges(graphOrTree) : graphOrTree;
+  const graph = viewFor(
+    isTree(graphOrTree) ? classifyEdges(graphOrTree) : graphOrTree,
+    manifest,
+    host,
+  );
 
   // Entry seeds under the glob grammar: each positive pattern seeds its exact base
   // (hard deps flow in via hardClosure below), plus its whole subtree when written
@@ -209,11 +249,7 @@ export function resolveComposition(
   // node classifies `entry` and every bundled node is `required` — correct:
   // "everything" demands no particular plugin. `negated` is what the author
   // asserted must leave, kept for the postcondition at the end of this function.
-  const {
-    seeds: entrySeeds,
-    named,
-    negated,
-  } = expandEntrySeeds(manifest, graph);
+  const { seeds: entrySeeds, named, negated } = expandOver(manifest, graph);
 
   // `required` = hard closure of the entry seeds ALONE — the locked set, unchanged.
   const required = hardClosure(entrySeeds, graph);
