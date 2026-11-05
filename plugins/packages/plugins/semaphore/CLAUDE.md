@@ -55,6 +55,20 @@ gate's own queue: a read queued for a DB connection that gave its read slot back
 would take it back while holding the connection. User: the live read-admission
 gate (`resource-runtime`).
 
+**A plain slot pins every yieldable one.** A `run` body without `yieldable`
+sits in the lease scope while it runs (`runHoldingSlot`), and a `whileWaiting`
+anywhere inside it — a timed-fs call — gives nothing back, whichever yieldable
+slots are around or inside it. Giving a slot back while holding a plain one is a
+lock-order inversion: others take the freed slots and queue for the plain one,
+holding theirs, and the take-back waits forever. (The trade: a read inside a
+plain gate — a heavy git read — holds its read slot through its own file
+waits, as every read did before yieldable slots.) Measured 2026-11-05: the file explorer on `/tmp` — each
+folder peek ran host-fs's plain peek gate around a `readdir` inside the live read
+gate, and every read of the backend (the sidebar's included) wedged behind six
+slots no one would free. Pinned by `lease-scope.test.ts`. An `acquire` lease
+cannot pin (its lifetime is not a call): never `whileWaiting` while holding one
+inside a yieldable body.
+
 Used at the per-worktree DB connection gate
 (`plugins/database/server/internal/client.ts`) to cap concurrent loader-kind
 queries below the Postgres pool `max`, reserving capacity for interactive

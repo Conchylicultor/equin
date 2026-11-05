@@ -1,4 +1,8 @@
-import { runInLeaseScope, type YieldableLease } from "./lease-scope";
+import {
+  runHoldingSlot,
+  runInLeaseScope,
+  type YieldableLease,
+} from "./lease-scope";
 
 /**
  * How much of the gate one caller takes, and how it observes the wait. ONE
@@ -225,7 +229,7 @@ export function createSemaphore(max: number): Semaphore {
       return (async () => {
         const release = await pending;
         try {
-          return await fn();
+          return await runHoldingSlot(fn);
         } finally {
           release();
         }

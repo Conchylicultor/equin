@@ -49,6 +49,25 @@ export function installLeaseContextRuntime(runtime: LeaseContextRuntime): void {
   contextRuntime = runtime;
 }
 
+/**
+ * A plain (non-yieldable) slot in the scope: while its body runs, a wait
+ * anywhere inside it gives nothing back — whichever yieldable slots sit
+ * around or inside it. Giving one back while holding a plain slot is a
+ * lock-order inversion: the body keeps the plain slot, others take the
+ * yielded one and queue for the plain one (holding theirs), and the take-back
+ * waits for a slot none of them will free — the 2026-11-05 file-explorer
+ * wedge (a folder peek's plain gate around a readdir, inside the live read
+ * gate).
+ */
+interface HeldSlot extends YieldableLease {
+  readonly held: true;
+  ended: boolean;
+}
+
+function isHeldSlot(lease: YieldableLease): lease is HeldSlot {
+  return (lease as Partial<HeldSlot>).held === true;
+}
+
 /** Run `fn` with `lease` added to the ambient scope (nested gates stack). */
 export function runInLeaseScope<T>(lease: YieldableLease, fn: () => T): T {
   const parent = contextRuntime.current();
@@ -56,6 +75,27 @@ export function runInLeaseScope<T>(lease: YieldableLease, fn: () => T): T {
     { leases: parent ? [...parent.leases, lease] : [lease] },
     fn,
   );
+}
+
+/**
+ * Run `fn`, the body of a plain slot, with that slot in the ambient scope
+ * (see `HeldSlot`) until it settles. Outside any yieldable scope there
+ * is nothing to pin.
+ */
+export async function runHoldingSlot<T>(fn: () => Promise<T>): Promise<T> {
+  const parent = contextRuntime.current();
+  if (!parent) return fn();
+  const slot: HeldSlot = {
+    held: true,
+    ended: false,
+    beginWait() {},
+    endWait: () => Promise.resolve(),
+  };
+  try {
+    return await contextRuntime.run({ leases: [...parent.leases, slot] }, fn);
+  } finally {
+    slot.ended = true;
+  }
 }
 
 /**
@@ -73,9 +113,10 @@ export function whileWaiting<T>(promise: Promise<T>): Promise<T> {
   // body (a gated read inside a gated read) taking several back at once could
   // split the free slots one per body — each holding one, waiting for another,
   // none releasing. Outer leases stay held, as they always were.
-  const lease = contextRuntime
-    .current()
-    ?.leases.findLast((held) => !held.ended);
+  const leases = contextRuntime.current()?.leases ?? [];
+  // A plain slot held anywhere in the scope pins every yieldable one (`HeldSlot`).
+  if (leases.some((held) => isHeldSlot(held) && !held.ended)) return promise;
+  const lease = leases.findLast((held) => !held.ended);
   // Nothing held: the very promise, so a caller sharing it keeps its identity.
   if (!lease) return promise;
   lease.beginWait();

@@ -163,3 +163,99 @@ describe("nested yieldable slots", () => {
     expect(gate.stats()).toEqual({ active: 0, queued: 0, max: 2 });
   });
 });
+
+describe("a held slot nested in a yieldable one", () => {
+  // The 2026-11-05 file-explorer wedge: each folder-peek read ran inside the
+  // live read gate (yieldable) and took host-fs's peek gate (plain) around a
+  // readdir awaited through whileWaiting. Yielding the read slot while holding
+  // the peek slot let other reads take every read slot and queue for the peek
+  // slot; the readdir's return then waited for a read slot none would free.
+  test("a body holding a plain slot does not give its yieldable slot back", async () => {
+    const reads = createSemaphore(1);
+    const peeks = createSemaphore(1);
+    const io = deferred();
+    let activeDuringWait = -1;
+    const peek = (wait: () => Promise<void>) =>
+      reads.run(() => peeks.run(wait), { yieldable: true });
+    const first = peek(async () => {
+      const pending = whileWaiting(io.promise);
+      activeDuringWait = reads.stats().active;
+      await pending;
+    });
+    await flush();
+    const second = peek(async () => {});
+    await flush();
+    expect(activeDuringWait).toBe(1); // the read slot stayed held
+    io.resolve();
+    await Promise.all([first, second]); // no deadlock: both settle
+    expect(reads.stats()).toEqual({ active: 0, queued: 0, max: 1 });
+    expect(peeks.stats()).toEqual({ active: 0, queued: 0, max: 1 });
+  });
+
+  test("a plain slot pins yieldable slots inside it and around it", async () => {
+    const outer = createSemaphore(2);
+    const plain = createSemaphore(1);
+    const inner = createSemaphore(2);
+    const other = deferred();
+    let during = { outer: -1, inner: -1 };
+    await outer.run(
+      () =>
+        plain.run(() =>
+          inner.run(
+            async () => {
+              const pending = whileWaiting(other.promise);
+              during = {
+                outer: outer.stats().active,
+                inner: inner.stats().active,
+              };
+              other.resolve();
+              await pending;
+            },
+            { yieldable: true },
+          ),
+        ),
+      { yieldable: true },
+    );
+    expect(during).toEqual({ outer: 1, inner: 1 });
+  });
+
+  test("a plain body that rejects stops pinning", async () => {
+    const reads = createSemaphore(1);
+    const peeks = createSemaphore(1);
+    const other = deferred();
+    let activeDuringWait = -1;
+    await reads.run(
+      async () => {
+        const failed = peeks.run(() => Promise.reject(new Error("boom")));
+        expect(failed).rejects.toThrow("boom");
+        await failed.catch((err: unknown) => {
+          if (!(err instanceof Error && err.message === "boom")) throw err;
+        });
+        const pending = whileWaiting(other.promise);
+        activeDuringWait = reads.stats().active;
+        other.resolve();
+        await pending;
+      },
+      { yieldable: true },
+    );
+    expect(activeDuringWait).toBe(0);
+  });
+
+  test("once the plain slot is released, a wait gives the yieldable slot back again", async () => {
+    const reads = createSemaphore(1);
+    const peeks = createSemaphore(1);
+    const other = deferred();
+    let activeDuringWait = -1;
+    await reads.run(
+      async () => {
+        await peeks.run(async () => {});
+        const pending = whileWaiting(other.promise);
+        activeDuringWait = reads.stats().active;
+        other.resolve();
+        await pending;
+      },
+      { yieldable: true },
+    );
+    expect(activeDuringWait).toBe(0);
+  });
+});
