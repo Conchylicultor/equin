@@ -132,6 +132,7 @@ import { dragKindFromTypes, type ClaimedKind } from "../internal/drag-kind";
 import { writeForestToClipboard } from "../internal/clipboard-write";
 import { blockTextProtectedSpans } from "../internal/block-text-extensions";
 import "./block-selection-scope.css";
+import { isInsideSelectableText } from "./selectable-text";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -1698,7 +1699,9 @@ function SelectionLayer({
       if (!grid) return;
 
       const row = el.closest("[data-block-id]");
-      const inText = isInsideEditingHost(el);
+      // Read-only text a void block opened to selection (`selectableText`) is
+      // the browser's press too, under the same promotion rule as a host.
+      const inText = isInsideEditingHost(el) || isInsideSelectableText(el);
       // A row's gutter rail is its own padding, so a hit on the row element ITSELF
       // is the rail (background); only a hit on a descendant is block content.
       //

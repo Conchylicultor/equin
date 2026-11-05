@@ -35,6 +35,17 @@
 }
 
 /*
+ * The one exemption that is not an editing surface: read-only text a void block
+ * marks with `selectableText` (a table's cells). Its press is handled like a
+ * press in an editing host — the browser's until the drag leaves the block, a
+ * block range after — so the selection it starts stays inside it.
+ */
+.block-list-editing-selectable [data-selectable-text] {
+  user-select: text;
+  cursor: text;
+}
+
+/*
  * Selected text, native or painted, is ONE colour: the theme's `--text-selection`
  * (color-palette). The browser's own selection inside an editing host and the
  * editor-owned TEXT span (`text-span-highlight.tsx`, the CSS Custom Highlight

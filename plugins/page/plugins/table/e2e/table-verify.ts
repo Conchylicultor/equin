@@ -8,7 +8,13 @@
 //   2. "Edit source" opens the table's GFM in a textarea;
 //   3. an invalid source stays open with an error, the table unchanged;
 //   4. a valid edit commits on mod+Enter and the table shows it;
-//   5. ⌘Z restores the previous cells, ⌘⇧Z re-applies the edit.
+//   5. ⌘Z restores the previous cells, ⌘⇧Z re-applies the edit;
+//   6. the cells' text selects natively: a drag across cells selects their words
+//      (the surface is otherwise user-select: none), and a drag that leaves the
+//      table for the line above becomes a block range, never a native selection
+//      running across the page;
+//   7. the caret cue is painted on the table's widened box, not on the
+//      column-wide host around it.
 //
 // Usage: ./equin run plugins/page/plugins/table/e2e/table-verify.ts [--url <deploy>]
 import type { Page } from "playwright";
@@ -50,6 +56,9 @@ await withBrowser(async (h) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
   await openBlankPage(page, { settleMs: 3000 });
+  // A line above the table, for phase 6's drag out of it.
+  await page.keyboard.type("above");
+  await page.keyboard.press("Enter");
 
   // ---- 1: paste a GFM table -------------------------------------------------
   await page.evaluate((text) => navigator.clipboard.writeText(text), GFM);
@@ -124,6 +133,70 @@ await withBrowser(async (h) => {
     ["apple", "3"],
     ["plum", "7"],
   ]);
+
+  // ---- 6: the cells' text is selectable ---------------------------------------
+  const cellBox = async (text: string) => {
+    const box = await table.getByText(text, { exact: true }).boundingBox();
+    if (!box) throw new Error(`cell "${text}" has no box`);
+    return box;
+  };
+  const from = await cellBox("apple");
+  const to = await cellBox("7");
+  await page.mouse.move(from.x + 1, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width - 1, to.y + to.height / 2, {
+    steps: 8,
+  });
+  await page.mouse.up();
+  const selected = await page.evaluate(() => getSelection()?.toString() ?? "");
+  r.ok(
+    `6a: a drag across cells selects their text (got ${JSON.stringify(selected)})`,
+    selected.includes("apple") && selected.includes("7"),
+  );
+  await snap(page, out, "selected");
+
+  const above = await page
+    .getByText("above", { exact: true })
+    .first()
+    .boundingBox();
+  if (!above) throw new Error('the "above" line has no box');
+  await page.mouse.move(from.x + 1, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(above.x + 2, above.y + above.height / 2, {
+    steps: 8,
+  });
+  const nativeOut = await page.evaluate(
+    () => getSelection()?.toString() ?? "",
+  );
+  await page.mouse.up();
+  r.eq("6b: dragging out of the table leaves no native selection", nativeOut, "");
+  r.ok(
+    "6c: … it selects the blocks instead",
+    (await page.locator("[data-selection-band]").count()) > 0,
+  );
+  await page.keyboard.press("Escape");
+
+  // ---- 7: the caret cue surrounds the widened table ---------------------------
+  await table.getByText("apple", { exact: true }).click();
+  await page.waitForTimeout(200);
+  const cue = await table.evaluate((t) => {
+    const host = t.closest("[data-caret-host]");
+    const wide = t.closest(".w-max");
+    const bg = (el: Element | null) =>
+      el ? getComputedStyle(el).backgroundColor : "missing";
+    return {
+      current: host?.getAttribute("aria-current") ?? null,
+      host: bg(host),
+      wide: bg(wide),
+    };
+  });
+  r.eq("7a: the caret is on the table", cue.current, "true");
+  r.eq("7b: the column-wide host paints no tint", cue.host, "rgba(0, 0, 0, 0)");
+  r.ok(
+    `7c: the widened box carries the tint (got ${cue.wide})`,
+    cue.wide !== "rgba(0, 0, 0, 0)" && cue.wide !== "missing",
+  );
+  await snap(page, out, "cue");
 });
 
 await r.finish();

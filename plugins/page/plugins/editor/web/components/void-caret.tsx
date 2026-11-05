@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
@@ -217,6 +218,39 @@ export function useBlockActivate(
   }, [register, enabled, run, onArrival]);
 }
 
+/**
+ * Claim the caret cue for a box inside the host. Returns the release; the host
+ * paints the cue on itself again once every claim is released.
+ */
+type ClaimCaretCue = () => () => void;
+
+const CaretCueContext = createContext<ClaimCaretCue | null>(null);
+
+/**
+ * The caret cue, painted on a claiming box instead of the host: the same two
+ * layered conditions as the host's own (see {@link BlockCaretHost}, *The cue*),
+ * read off the host through its named group — DOM focus from its
+ * `:focus-visible`, the editor's caret from its `aria-current` — so the box
+ * can never disagree with the host it stands in for.
+ */
+const CLAIMED_CUE =
+  "rounded-md group-focus-visible/caret-host:ring-3 group-focus-visible/caret-host:ring-ring/50 group-aria-[current=true]/caret-host:bg-accent";
+
+/**
+ * Paint the caret cue on THIS box rather than on the host around the block.
+ *
+ * For a box whose visual extent is not the host's: a `WideBlock` grows past the
+ * reading column (centered on it), so a cue on the column-wide host shows as a
+ * ring cutting through the middle of the table, and a tint covering only part
+ * of it. Returns the class to put on the box; `undefined` outside a caret host
+ * (a read-only surface, a `caret: "renderer"` block), where there is no cue.
+ */
+export function useCaretCueTarget(): string | undefined {
+  const claim = useContext(CaretCueContext);
+  useEffect(() => claim?.(), [claim]);
+  return claim ? CLAIMED_CUE : undefined;
+}
+
 export interface BlockCaretHostProps {
   /** The block's row id — the key the editor's focus handle registry is keyed by. */
   blockId: string;
@@ -326,6 +360,12 @@ export function BlockCaretHost({
   const selection = useSelectionControl();
   const { rowsRef, scope, makeBlockAPI } = useBlockEditor();
   const anchorTypes = useAnchorTypes();
+  // How many boxes inside paint the cue in the host's place (`useCaretCueTarget`).
+  const [cueClaims, setCueClaims] = useState(0);
+  const claimCue = useCallback<ClaimCaretCue>(() => {
+    setCueClaims((n) => n + 1);
+    return () => setCueClaims((n) => n - 1);
+  }, []);
 
   // Stable for the lifetime of the host — `no-unstable-context-value`, and more
   // to the point a fresh identity would re-run every consumer's effect.
@@ -443,6 +483,7 @@ export function BlockCaretHost({
 
   return (
     <BlockActivateContext.Provider value={register}>
+      <CaretCueContext.Provider value={claimCue}>
       <div
         ref={ref}
         tabIndex={0}
@@ -455,13 +496,18 @@ export function BlockCaretHost({
         aria-current={isFocused ? true : undefined}
         onKeyDown={handleKeyDown}
         onFocus={onFocus}
+          // The cue is the host's own unless a box inside claimed it (see
+          // `useCaretCueTarget`); `group/caret-host` is what the claimer reads.
         className={cn(
-          "focus-ring cursor-default rounded-md",
-          isFocused && "bg-accent",
+            "group/caret-host cursor-default",
+            cueClaims > 0
+              ? "outline-none"
+              : cn("focus-ring rounded-md", isFocused && "bg-accent"),
         )}
       >
         {children}
       </div>
+      </CaretCueContext.Provider>
     </BlockActivateContext.Provider>
   );
 }

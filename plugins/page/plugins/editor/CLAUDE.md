@@ -574,6 +574,12 @@ tint as `Row.selected`, distinct from the selection band `bg-primary/15`).
 `page-editor/no-model-focus-ring` forbids a focus/ring/outline class gated on
 `isFocused`.
 
+**A box whose extent is not the host's takes the cue** (`useCaretCueTarget`):
+`WideBlock` grows past the column-wide host, so the host's ring would cut through
+the widened table and its tint cover only part of it. A claiming box paints the
+same two conditions read off the host's named group (`group/caret-host`:
+`:focus-visible`, `aria-current`); the host paints nothing while claimed.
+
 ### The host adds no padding, and it counts as row background
 
 It sits at `C` (a decoration); blocks keep their own `<Inset x={BLOCK_INSET}>`. It
@@ -988,6 +994,11 @@ blocks); offsets clamped and snapped OUTWARD off inline tokens
 
 - A property of the SURFACE, not decided per gesture in `onPointerDown` (the branch
   starting no gesture is the one that leaked).
+- **One exemption that is not an editing surface: `selectableText`**
+  (`components/selectable-text.ts`), spread by a void block onto read-only text
+  the user must still be able to select and copy (a table's cells). Its press is
+  treated as a text press (`onPointerDown`'s `inText`): the browser's while it
+  stays in the block, promoted to a block range when it crosses a row.
 - The exemption (`.block-list-editing-selectable`) drops for the promoted text drag.
 - Cross-block text is the editor's span, painted (below); the DOM selection stays
   empty.
@@ -2250,6 +2261,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `registerBlockPasteHandler`
     - `registerBlockTextExtension`
     - `registerBlockTextExtensionSource`
+    - `selectableText`
     - `TextBlockLayout`
     - `undoConflictReportSink`
     - `useBlockActivate`

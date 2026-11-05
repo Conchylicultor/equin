@@ -37872,6 +37872,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `registerBlockPasteHandler`
           - `registerBlockTextExtension`
           - `registerBlockTextExtensionSource`
+          - `selectableText`
           - `TextBlockLayout`
           - `undoConflictReportSink`
           - `useBlockActivate`
@@ -39489,6 +39490,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.BLOCK_INSET`
           - `page/editor.BlockRendererProps`
           - `page/editor.Editor`
+          - `page/editor.selectableText`
           - `page/editor.useBlockActivate`
           - `page/editor.usePageMarkdownContext`
           - `page/editor.WideBlock`

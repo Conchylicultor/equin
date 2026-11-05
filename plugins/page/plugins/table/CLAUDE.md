@@ -53,6 +53,7 @@ editor's line-claim escape, not this file's.
     - `page/editor.BLOCK_INSET`
     - `page/editor.BlockRendererProps`
     - `page/editor.Editor`
+    - `page/editor.selectableText`
     - `page/editor.useBlockActivate`
     - `page/editor.usePageMarkdownContext`
     - `page/editor.WideBlock`

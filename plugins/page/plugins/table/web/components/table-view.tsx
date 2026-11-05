@@ -3,7 +3,11 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { BLOCK_INSET, WideBlock } from "@plugins/page/plugins/editor/web";
+import {
+  BLOCK_INSET,
+  WideBlock,
+  selectableText,
+} from "@plugins/page/plugins/editor/web";
 import type { RichText } from "@plugins/page/plugins/editor/core";
 import { RunsRenderer } from "@plugins/page/plugins/read-only-view/web";
 import type { TableAlign, TableData } from "../../core";
@@ -31,6 +35,10 @@ function alignStyle(align: TableAlign | undefined): CSSProperties | undefined {
  * cells keep a readable width instead of squeezing into narrow strips; past the
  * pane it scrolls sideways on its own. `overlay` is pinned to that widened box
  * (the editable block's hover button).
+ *
+ * Its cells are `selectableText`: on the editable surface (where everything
+ * outside an editing host is unselectable) the words can still be selected and
+ * copied natively.
  */
 export function TableView({
   data,
@@ -55,6 +63,7 @@ export function TableView({
           its cells or pushing the page wide. */}
         <Scroll axis="x">
           <table
+            {...selectableText}
             className={cn("w-full border-collapse", textVariantClass("body"))}
           >
             <thead>
