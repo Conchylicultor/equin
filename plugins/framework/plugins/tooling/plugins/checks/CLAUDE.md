@@ -547,6 +547,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`fields-eager-in-sync`**
   - **`format-clean`**
   - **`generated-artifacts-normalized`**
+  - **`host-audit`** — The hourly checks.host-audit job: runs the host-scoped checks on main and files a host-check report per failure — the one place a verdict about the shared machine is delivered, since no worktree's…
   - **`host-budget`**
   - **`host-pools-declared`**
   - **`inherited-theme-defaults-scoped`** [exempt]

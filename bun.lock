@@ -3596,6 +3596,10 @@
       "name": "@equin/plugin-framework-tooling-checks-generated-artifacts-normalized",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/host-audit": {
+      "name": "@equin/plugin-framework-tooling-checks-host-audit",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/host-budget": {
       "name": "@equin/plugin-framework-tooling-checks-host-budget",
       "version": "0.0.1",
@@ -6382,6 +6386,10 @@
       "name": "@equin/plugin-reports-engine",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/host-check": {
+      "name": "@equin/plugin-reports-host-check",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/icon-family-gap": {
       "name": "@equin/plugin-reports-icon-family-gap",
       "version": "0.0.1",
@@ -8954,6 +8962,8 @@
 
     "@equin/plugin-framework-tooling-checks-generated-artifacts-normalized": ["@equin/plugin-framework-tooling-checks-generated-artifacts-normalized@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/generated-artifacts-normalized"],
 
+    "@equin/plugin-framework-tooling-checks-host-audit": ["@equin/plugin-framework-tooling-checks-host-audit@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/host-audit"],
+
     "@equin/plugin-framework-tooling-checks-host-budget": ["@equin/plugin-framework-tooling-checks-host-budget@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/host-budget"],
 
     "@equin/plugin-framework-tooling-checks-host-pools-declared": ["@equin/plugin-framework-tooling-checks-host-pools-declared@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/host-pools-declared"],
@@ -10241,6 +10251,8 @@
     "@equin/plugin-reports-endpoint-errors": ["@equin/plugin-reports-endpoint-errors@workspace:plugins/reports/plugins/endpoint-errors"],
 
     "@equin/plugin-reports-engine": ["@equin/plugin-reports-engine@workspace:plugins/reports/plugins/engine"],
+
+    "@equin/plugin-reports-host-check": ["@equin/plugin-reports-host-check@workspace:plugins/reports/plugins/host-check"],
 
     "@equin/plugin-reports-icon-family-gap": ["@equin/plugin-reports-icon-family-gap@workspace:plugins/reports/plugins/icon-family-gap"],
 

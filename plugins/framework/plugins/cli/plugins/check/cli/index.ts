@@ -1,6 +1,9 @@
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
-import { CHECK_SCOPES } from "@plugins/framework/plugins/tooling/core";
+import {
+  CHECK_SCOPES,
+  CHECKOUT_SCOPES,
+} from "@plugins/framework/plugins/tooling/core";
 
 /**
  * The repo's verdict, as a command. `build` and `push` do not re-implement it —
@@ -38,12 +41,16 @@ export default defineCliCommand<
     alwaysRun?: boolean;
     runId?: string;
     jobs?: string;
+    fileReports?: boolean;
   }
 >({
   name: "check",
   description: "Run repo validation checks",
   arguments: [
-    { name: "[checks...]", description: "Check IDs to run (default: all)" },
+    {
+      name: "[checks...]",
+      description: `Check IDs to run (default: every ${CHECKOUT_SCOPES.join(" and ")} check)`,
+    },
   ],
   options: [
     { flags: "--list", description: "List available checks and exit" },
@@ -62,13 +69,22 @@ export default defineCliCommand<
       flags: "--scope <scopes>",
       description:
         `Run only checks of these scopes — one, or a comma-separated list, of ` +
-        `${CHECK_SCOPES.join(" | ")}; default: every scope. ` +
+        `${CHECK_SCOPES.join(" | ")}; default: ${CHECKOUT_SCOPES.join(",")} (with no ids). ` +
         "`tree` = the verdict is a function of the tree content, i.e. of what a push carries; " +
         "`deploy` = it verifies the local gitignored dist/artifact store `build` produces; " +
         "`host` = it is about this MACHINE — the shared data root and other host-global state " +
         "no single worktree owns, which another live checkout may have created. " +
         "`--scope tree` reproduces the pass `./equin push` runs, and " +
-        "`--scope tree,deploy` the pass `./equin build` runs.",
+        "`--scope tree,deploy` the pass `./equin build` runs. Host checks are not in the " +
+        "default: they judge state every checkout shares, and main's hourly " +
+        "checks.host-audit runs them.",
+    },
+    {
+      flags: "--file-reports",
+      description:
+        "Deliver each failing check as a host-check report through the report outbox instead " +
+        "of failing the exit code (exit 1 only if a report could not be written). Only with " +
+        "--scope host: what main's hourly checks.host-audit job runs.",
     },
     {
       flags: "--always-run",

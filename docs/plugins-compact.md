@@ -134,7 +134,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tooling`** [exempt] — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Plugins:
         - **`boundaries`** [exempt] — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
-        - **`checks`** [test helpers] [exempt] [56 sub-plugins] — Check runner and built-in checks for ./equin check
+        - **`checks`** [test helpers] [exempt] [57 sub-plugins] — Check runner and built-in checks for ./equin check
         - **`codegen`** [exempt] — Plugin doc generation and registry codegen
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
         - **`e2e-harness`** [exempt] — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on…
@@ -294,7 +294,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`node-types`** [4 sub-plugins] — Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
     - **`slot-middleware`** [load-bearing] — Applies every render slot's committed layout: reorder's list middleware, contributed to slot-render as a companion so it ships wherever slots render.
 
-- **`reports`** [exempt] [26 sub-plugins] — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The…
+- **`reports`** [exempt] [27 sub-plugins] — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The…
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Plugins:

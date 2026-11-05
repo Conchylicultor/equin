@@ -27581,6 +27581,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `assertRepoPath`
           - `CHECK_SCOPES`
+          - `CHECKOUT_SCOPES`
           - `globPaths`
           - `InconclusiveCheckError`
           - `loadRepoFiles`
@@ -27918,6 +27919,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`fields-eager-in-sync`**
             - **`format-clean`**
             - **`generated-artifacts-normalized`**
+            - **`host-audit`** — The hourly checks.host-audit job: runs the host-scoped checks on main and files a host-check report per failure — the one place a verdict about the shared machine is delivered, since no worktree's check pass asserts it.
+              - Server:
+                - Uses:
+                  - `infra/jobs/supervised-job.defineSupervisedJob`
+                  - `primitives/log-channels.defineLogSink`
+                - Register: `defineSupervisedJob('checks.host-audit')`
             - **`host-budget`**
             - **`host-pools-declared`**
               - Exemptions:
@@ -32359,26 +32366,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `cliExecContext`
               - `runAttached`
           - Cross-plugin:
-            - Imported by:
-              - `apps/chord/song-index`
-              - `apps/deploy/deployments`
-              - `apps/prototypes/thumbnails`
+            - Imported by: 21 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+              - `framework` ×9
+              - `infra` ×4
+              - `apps` ×3
               - `backup`
               - `conversations/workspace/worktree`
               - `database/fork`
               - `debug/worktree-cleanup`
-              - `framework/cli/build`
-              - `framework/cli/op-runtime`
-              - `framework/cli/release`
-              - `framework/cli/serve-app`
-              - `framework/cli/start`
-              - `framework/tooling/checks/cache-prune`
-              - `framework/tooling/checks/type-check/backstop`
-              - `framework/tooling/web-artifacts/prune`
-              - `infra/audio-analysis`
-              - `infra/deps`
-              - `infra/events-test`
-              - `infra/worktree/spare-pool`
               - `release`
           - Exemptions:
             - Exempts itself from:
@@ -45974,12 +45969,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×11
           - `debug` ×9
           - `infra` ×7
           - `database` ×5
-          - `framework` ×4
+          - `framework` ×5
           - `network` ×4
           - `conversations` ×3
           - `reports` ×2
@@ -49665,8 +49660,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 32 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×32
+    - Slot contributors: 33 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×33
     - Contributes:
       - `IdKinds.Kind` "report"
       - `ConfigV2.WebRegister` "reports"
@@ -49762,8 +49757,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 57 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×25
+    - Imported by: 58 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `reports` ×26
       - `debug` ×14
       - `database` ×4
       - `conversations` ×3
@@ -49974,6 +49969,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `sink-safety/no-adhoc-file-sink` — `server/internal/buffer.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/buffer.ts` (debt)
+    - **`host-check`** — Host-check report kind's Debug → Reports summary view: one line naming the failing host-scoped check and the first line of its message. Filed by main's hourly host audit through the report outbox — no collector here. Host-check report kind: one row per failing host-scoped check (fingerprint = check id), filed through the report outbox by main's hourly checks.host-audit job (`./equin check --scope host --file-reports`) — the only place a host check's verdict is delivered, since no worktree's check pass asserts the shared machine. Renders a task carrying the check's message and hint verbatim. Warning, re-arms every 6 h.
+      - Web:
+        - Contributes: `Reports.KindView` → `HostCheckSummary`
+        - Uses: `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "host-check"
+        - Uses:
+          - `reports.ReportKind`
+          - `reports.ReportRow`
+      - Core:
+        - Exports (types): `HostCheckPayload`
+        - Exports (values):
+          - `HOST_CHECK_KIND`
+          - `hostCheckFingerprint`
+          - `hostCheckMessage`
+          - `HostCheckPayloadSchema`
     - **`icon-family-gap`** — Icon-family-gap collector: drains the icons plugin's iconFamilyGapReportSink into a deduped report whenever a scope whose icon family is strict draws a symbol the family does not map (it shows the family's gap glyph), plus the Debug → Reports summary view. Icon-family-gap report kind: validates the payload <Icon> files when a scope whose icon family is strict draws a symbol the family does not map (the scope shows the family's gap glyph), fingerprints by (family, name), and renders a task asking for the missing glyph.
       - Web:
         - Contributes:

@@ -8,7 +8,7 @@ export type {
   RepoFiles,
   RepoSnapshot,
 } from "./types";
-export { CHECK_SCOPES } from "./types";
+export { CHECK_SCOPES, CHECKOUT_SCOPES } from "./types";
 export { InconclusiveCheckError } from "./inconclusive";
 export {
   assertRepoPath,

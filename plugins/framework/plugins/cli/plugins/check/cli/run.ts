@@ -25,8 +25,51 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   CHECK_SCOPES,
+  CHECKOUT_SCOPES,
+  type CheckResult,
   type CheckScope,
 } from "@plugins/framework/plugins/tooling/core";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
+import {
+  HOST_CHECK_KIND,
+  hostCheckMessage,
+  type HostCheckPayload,
+} from "@plugins/reports/plugins/host-check/core";
+
+/**
+ * Deliver each failing check's verdict as a `host-check` report through the
+ * report outbox — `--file-reports`, what main's hourly host audit runs. True
+ * when every failure reached the outbox: the reports, not the exit code, are
+ * the verdict then, so a run that delivered them all has done its job.
+ */
+async function fileHostCheckReports(
+  failures: readonly { id: string; result: CheckResult }[],
+): Promise<boolean> {
+  let allFiled = true;
+  for (const { id, result } of failures) {
+    if (result.ok) continue;
+    const data: HostCheckPayload = {
+      checkId: id,
+      message: result.message,
+      hint: result.hint ?? null,
+    };
+    // No `code`: the report is about the machine's state, not a source file,
+    // so the outbox's staleness rule has nothing to compare.
+    const filed = await fileReportFromProcess({
+      kind: HOST_CHECK_KIND,
+      message: hostCheckMessage(data),
+      data,
+    });
+    if (filed.outcome === "written") {
+      console.log(`Filed a ${HOST_CHECK_KIND} report for ${id}.`);
+    } else {
+      // `fileReportFromProcess` already printed why.
+      console.error(`Could not file the ${HOST_CHECK_KIND} report for ${id}.`);
+      allFiled = false;
+    }
+  }
+  return allFiled;
+}
 
 /**
  * The open run's thread stalls so far, as one line — or null when it has had
@@ -229,6 +272,7 @@ const run: CliAction<
     alwaysRun?: boolean;
     runId?: string;
     jobs?: string;
+    fileReports?: boolean;
   }
 > = async (checks, opts) => {
   // Validate before anything else: an unrecognized scope must NOT fall
@@ -250,6 +294,31 @@ const run: CliAction<
       process.exit(1);
     }
     scope = parts as CheckScope[];
+  } else if (checks.length === 0) {
+    // A bare `./equin check` asserts what THIS checkout owns: its tree and its
+    // deploy. Host checks judge state every checkout shares (the data root),
+    // so selecting them here let one agent's leftover file fail every other
+    // agent's check. They run on main's hourly host audit, which files a
+    // report, and when asked for by id or `--scope host`.
+    scope = [...CHECKOUT_SCOPES];
+    console.log(
+      `Running the ${CHECKOUT_SCOPES.join(" + ")} checks. Host checks (shared machine ` +
+        "state) are not this checkout's to assert: main's hourly checks.host-audit runs " +
+        "them and files a host-check report; `./equin check --scope host` runs them now.",
+    );
+  }
+
+  // `--file-reports` delivers verdicts to the alert funnel, which is only right
+  // for a verdict nobody's checkout owns. A tree or deploy failure belongs to
+  // the checkout that ran it — filed as a report it would page whoever triages
+  // Reports about one agent's work in progress.
+  const fileReports = opts.fileReports === true;
+  if (fileReports && (scope === undefined || scope.some((s) => s !== "host"))) {
+    console.error(
+      "--file-reports is only valid with --scope host: a tree or deploy verdict belongs to the " +
+        "checkout that ran it, not to the alert funnel.",
+    );
+    process.exit(1);
   }
 
   // NESTING is resolved by `withDirectOp` below (a parent op hands this child
@@ -327,9 +396,12 @@ const run: CliAction<
     {
       max: cpuBudget().B,
       opId: opts.runId,
-      flight: treeHash
-        ? checkFlight(checks, scope, alwaysRun, treeHash.value)
-        : undefined,
+      // A joiner adopts the leader's verdict without its per-check results,
+      // so a reporting run never joins one.
+      flight:
+        treeHash && !fileReports
+          ? checkFlight(checks, scope, alwaysRun, treeHash.value)
+          : undefined,
     },
     async (grant, ctx) => {
       // This run's transcript: `check-<opId>.log` sits in the worktree's data
@@ -339,6 +411,8 @@ const run: CliAction<
       // writes are the same expression.
       const checkLogPath = worktreeArtifacts.checkLog(ctx.slug, ctx.opId);
       const { profiler } = ctx;
+      const failures: { id: string; result: CheckResult }[] = [];
+      const inconclusive: string[] = [];
       const runOpts: RunChecksOptions = {
         grant,
         // One step per individual check, so a `check` bar drills in to
@@ -360,14 +434,17 @@ const run: CliAction<
         // Not `performance.timeOrigin + wallStartMs`, which would bake in
         // `timeOrigin`'s process-start capture error (~6ms under load) and
         // every nap since the process started.
-        onCheckDone: profiler
-          ? (id, durationMs, wallStartMs) =>
-              profiler.recordStep(
-                id,
-                durationMs,
-                Date.now() - (performance.now() - wallStartMs),
-              )
-          : undefined,
+        onCheckDone: (id, durationMs, wallStartMs, result) => {
+          if (!result.ok) {
+            if (result.inconclusive) inconclusive.push(id);
+            else failures.push({ id, result });
+          }
+          profiler?.recordStep(
+            id,
+            durationMs,
+            Date.now() - (performance.now() - wallStartMs),
+          );
+        },
         noCache: opts.cache === false,
         treeHash,
         // `--no-cache` means "really run": every grep runs whole as well.
@@ -394,6 +471,13 @@ const run: CliAction<
       );
       // Last line, so it survives `./equin check | tail`.
       if (!ok) console.error(`\nFull check output: ${checkLogPath}`);
+      // Only a run whose every non-passing check became a report has
+      // delivered its verdict. An inconclusive check files nothing, so it
+      // keeps the run failed — the job's own failure report then names it.
+      if (fileReports && !ok && failures.length > 0) {
+        const filed = await fileHostCheckReports(failures);
+        return filed && inconclusive.length === 0 ? "success" : "failed";
+      }
       return ok ? "success" : "failed";
     },
   );

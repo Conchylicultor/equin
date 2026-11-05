@@ -206,6 +206,21 @@ export const CHECK_SCOPES = ["tree", "deploy", "host"] as const;
  */
 export type CheckScope = (typeof CHECK_SCOPES)[number];
 
+/**
+ * The scopes a CHECKOUT can assert — what a bare `./equin check` selects. Every
+ * scope but `"host"`: a host verdict is about state shared with every other
+ * checkout on the machine, so one agent's leftover directory under the data
+ * root would turn every other agent's check red over something it neither
+ * caused nor may touch. A host check runs when it is asked for by name or by
+ * `--scope host`, and on main's hourly `checks.host-audit`, which files a
+ * report per failing check. Written as a list so a new scope must be placed on
+ * one side of this line deliberately.
+ */
+export const CHECKOUT_SCOPES = [
+  "tree",
+  "deploy",
+] as const satisfies readonly CheckScope[];
+
 export interface Check {
   id: string;
   description: string;
@@ -250,8 +265,11 @@ export interface Check {
    *     created, which it did not cause and cannot repair. Asserting it from a
    *     build is what made `paths:no-undeclared-data-dirs` fail a deploy on a
    *     directory another agent's unmerged branch had just declared (see
-   *     research/2026-09-01-global-host-scoped-data-root-audit.md). Its home is a
-   *     standalone `./equin check` and any host-singleton runner.
+   *     research/2026-09-01-global-host-scoped-data-root-audit.md). A bare
+   *     `./equin check` does not select it either (`CHECKOUT_SCOPES`) — run in
+   *     a worktree it is the same per-worktree caller. Its home is main's hourly
+   *     `checks.host-audit`, which delivers the verdict as a report (kind
+   *     `host-check`), and an explicit `./equin check <id>` / `--scope host`.
    *
    * TREE PURITY — the second half of what `"tree"` promises. The verdict must be
    * a function of the tree hash AND of NOTHING ELSE, including what else already

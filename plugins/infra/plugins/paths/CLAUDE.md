@@ -250,8 +250,11 @@ entry nobody on this machine declares is an offender. Two things not to undo:
   `data-dirs/index.ts` — `infra/host/host-admission` mints one `locks/<id>`
   declaration per pool, so a declared name is not always a literal.
 - The check is `scope: "host"` and so **does not run during a build**: no
-  per-worktree op can assert a root that runs ahead of its own branch. Run it
-  with a standalone `./equin check`. A namespace that has never booted
+  per-worktree op can assert a root that runs ahead of its own branch. Nor
+  does a bare `./equin check` select it: main's hourly `checks.host-audit`
+  runs it and files a `host-check` report per failure
+  (`plugins/framework/plugins/tooling/plugins/checks/plugins/host-audit`). Run
+  it on demand with `./equin check paths:no-undeclared-data-dirs`. A namespace that has never booted
   publishes nothing, so its dirs read as undeclared until it does.
 
 `paths:no-undeclared-data-dirs` reads the REAL root and fails on any top-level

@@ -123,12 +123,12 @@ Always deploy after changes: `./equin build`, from the worktree directory (not t
 ### Check
 
 ```bash
-./equin check                       # all checks
+./equin check                       # every check this checkout owns (tree + deploy scope)
 ./equin check --list                # list checks
 ./equin check migrations-in-sync    # one check (id as positional arg)
 ```
 
-Checks run first in `push`, and in `build` after migration/doc generation (unless `--skip-checks`). Built-ins live in, and are registered in, `plugins/framework/plugins/tooling/plugins/checks/core/index.ts`. Plugins contribute their own (discovered at runtime, no registry edits):
+Checks run first in `push`, and in `build` after migration/doc generation (unless `--skip-checks`). Host-scoped checks (shared machine state, e.g. the `~/.equin` data root) are not in any checkout's pass: main's hourly `checks.host-audit` runs them and files a `host-check` report; `./equin check --scope host` runs them on demand. Built-ins live in, and are registered in, `plugins/framework/plugins/tooling/plugins/checks/core/index.ts`. Plugins contribute their own (discovered at runtime, no registry edits):
 
 - `plugins/<name>/lint/index.ts` — default-export `{ name: "<plugin-id>", rules: { ... } }` of ESLint v9 rules. Each rule is enabled as `error` **repo-wide** (`**/*.{ts,tsx}`), not just in the contributing subtree; the `eslint` check runs them.
 - `plugins/<name>/check/index.ts` — default-export `Check | Check[]` (same interface as built-ins), id `<plugin-name>:<check-id>`.

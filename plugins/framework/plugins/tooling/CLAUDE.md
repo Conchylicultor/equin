@@ -22,6 +22,7 @@
   - Exports (values):
     - `assertRepoPath`
     - `CHECK_SCOPES`
+    - `CHECKOUT_SCOPES`
     - `globPaths`
     - `InconclusiveCheckError`
     - `loadRepoFiles`

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-checks-host-audit",
+  "description": "The hourly checks.host-audit job: runs the host-scoped checks on main and files a host-check report per failure — the one place a verdict about the shared machine is delivered, since no worktree's check pass asserts it.",
+  "version": "0.0.1",
+  "private": true
+}

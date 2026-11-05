@@ -157,7 +157,18 @@ export interface RunChecksOptions {
    * per heavy child; every other check ignores it.
    */
   grant: Grant;
-  onCheckDone?: (id: string, durationMs: number, wallStartMs: number) => void;
+  /**
+   * Called once per selected check as the run settles, in selection order, with
+   * its verdict — a cached or joined one included. The fourth argument is what a
+   * caller needs to deliver the verdict somewhere other than the console (the
+   * host audit files a report per failing check: `check --file-reports`).
+   */
+  onCheckDone?: (
+    id: string,
+    durationMs: number,
+    wallStartMs: number,
+    result: CheckResult,
+  ) => void;
   /**
    * How many checks may run at once. Omitted, the run is UNBOUNDED — every
    * selected check starts at once, exactly as it did before this gate existed,
@@ -998,7 +1009,7 @@ export async function runChecks(
     sharedFrom,
     observations,
   } of results) {
-    options?.onCheckDone?.(check.id, durationMs, wallStart);
+    options?.onCheckDone?.(check.id, durationMs, wallStart, result);
     if (result.ok) {
       log(`• ${check.id} ... ok${provenance(cached, sharedFrom)}`, "stdout");
       emitObservations(observations);
