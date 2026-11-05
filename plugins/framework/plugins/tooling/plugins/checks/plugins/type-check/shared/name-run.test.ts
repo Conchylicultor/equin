@@ -51,7 +51,7 @@ import {
   type LintHook,
   type NameRunOutput,
 } from "./name-run";
-import { inProcessBatches } from "./batch-run";
+import { inProcessBatches, OverBudget, refuseBatches } from "./batch-run";
 import {
   bufferedNameStore,
   memoryNameStore,
@@ -139,6 +139,8 @@ async function run(
     onMiss?: "throw" | "whole";
     /** Batches of at most this many files, in this process. */
     batchK?: number;
+    /** A small run's batching: no program over this many sources. */
+    refuse?: number;
   } = {},
 ): Promise<NameRunOutput> {
   const options = optionsFor(root, opts.extra);
@@ -151,7 +153,9 @@ async function run(
   // kept apart: batching changes which program a file is checked in, never
   // what it is checked against or keyed on (no lint: a hook records).
   const shadow =
-    opts.lint === undefined && opts.batchK === undefined
+    opts.lint === undefined &&
+    opts.batchK === undefined &&
+    opts.refuse === undefined
       ? await runNameCheck({
           view,
           options,
@@ -174,6 +178,9 @@ async function run(
     onMiss: opts.onMiss ?? "throw",
     ...(opts.batchK !== undefined
       ? { batching: inProcessBatches(opts.batchK) }
+      : {}),
+    ...(opts.refuse !== undefined
+      ? { batching: refuseBatches(opts.refuse) }
       : {}),
   });
   const full = fullCheck(view, options, list);
@@ -264,6 +271,49 @@ test("an API change follows the names that use it, through contracts, and stops 
   // value, inferred through d) follow. h uses only k's `k(): number`, which
   // names nothing of g.
   expect(api).toEqual(["d.ts", "e.ts", "f.ts", "g.ts", "k.ts"]);
+});
+
+test("a small run refuses a program over its bound, and answers one within it", async () => {
+  const root = freshRoot();
+  const store = memoryNameStore();
+  writeTree(root, CHAIN);
+  // Cold: program 1 is every file, over the bound — refused before it is built.
+  expect(run(root, CHAIN, store, { refuse: 3 })).rejects.toThrow(OverBudget);
+  await run(root, CHAIN, store);
+  const edited = {
+    ...CHAIN,
+    "k.ts":
+      'import type { G } from "./g";\nexport function k(): number { const v: G = { x: 2 }; return v.x + 1; }\n',
+  };
+  writeTree(root, edited, CHAIN);
+  // A body edit: one program of one file, within a bound of one.
+  const out = await run(root, edited, store, { refuse: 1 });
+  expect(out.checked).toEqual(["k.ts"]);
+});
+
+test("a run refused at program 2 records nothing: the heavy run answers as if it never ran", async () => {
+  const root = freshRoot();
+  const store = memoryNameStore();
+  writeTree(root, CHAIN);
+  await run(root, CHAIN, store);
+  const api = {
+    ...CHAIN,
+    "g.ts": "export interface G { x: number; y?: string }\n",
+  };
+  writeTree(root, api, CHAIN);
+  // Program 1 (g.ts) fits a bound of one; program 2 (its four users) does
+  // not, and is refused — after program 1 ran, before anything was recorded.
+  try {
+    await run(root, api, store, { refuse: 1 });
+    throw new Error("the small run was not refused");
+  } catch (err) {
+    if (!(err instanceof OverBudget)) throw err;
+    expect(err.sources).toBe(4);
+  }
+  // The escalated run, over the same store: the refused attempt recorded
+  // nothing, so it is the unbounded run's answer, compared with a full check.
+  const out = await run(root, api, store);
+  expect(out.checked).toEqual(["d.ts", "e.ts", "f.ts", "g.ts", "k.ts"]);
 });
 
 test("a type error introduced through two contracts is found in the importer", async () => {

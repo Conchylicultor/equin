@@ -35,6 +35,7 @@ pool says can move any other pool's capacity:
 | `push` | 1 | foreground | the global push mutex |
 | `e2e` | 2 | inherit | concurrent e2e script runs (`./equin run …/e2e/x.ts`) — their own cap, so a 20 s screenshot never queues in `cpu`'s background window behind 40-min builds |
 | `type-check-worker` | 2 | foreground | live repo-program type-check workers (7–14 GB each); laned by its owner (`type-check/server`): background may hold 1 |
+| `type-check-light` | 3 | foreground | live SMALL type-check workers (every program ≤ 100 sources, ≤ 3.9 GB measured; the worker refuses a larger one and is re-admitted above); laned: background may hold 2 |
 | `worktree-prepare` | 4 | inherit | booted `worktree.prepare` children (an agent checkout being made) — the job's `admission` pool, taken by the child BEFORE it boots and held until it exits, so a launch storm's queued checkouts hold no database connection (2026-10-28: twenty children at once ran pgbouncer out of `max_client_conn`) |
 
 The `holder` column is declared at each `defineHostPool` call (see *A scarce
@@ -188,7 +189,7 @@ slot file. None does today.
 A `laned` pool MUST also pass an explicit `backgroundLimit` (the `background`
 lane's slot window); `defineHostPool` throws otherwise, since silently falling
 back to `backgroundLimit === size` would void the reserved floor the flag
-promises. Two pools are laned: `cpu` and `type-check-worker`.
+promises. Three pools are laned: `cpu`, `type-check-worker` and `type-check-light`.
 
 ## The grant (`server`)
 

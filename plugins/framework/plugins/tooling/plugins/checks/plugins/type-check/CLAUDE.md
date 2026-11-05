@@ -267,10 +267,11 @@ A base naming a missing shard is refused (full path, reason logged). Correctness
 
 `spawnTypeCheckWorker` (`server/`) is the ONE place a worker starts (this check and build's `--skip-checks` path). It takes the caller's `Grant`, so admission and priority cannot be skipped:
 
-1. **A slot in the laned `type-check-worker` host pool** (size 2, host-admission's `HOST_POOLS`; `server/internal/worker-pool.ts`).
-   - Background (agent builds/checks) may hold one slot; interactive (push, main build/check) either.
-   - Taken FIRST, so a queued worker holds no grant units.
-   - **This is the memory bound** — the grant alone never was.
+1. **A slot, small run or heavy** (host-admission's `HOST_POOLS`; `server/internal/worker-pool.ts`). Taken FIRST, so a queued worker holds no grant units. **This is the memory bound** — the grant alone never was.
+   - **Small first:** a keyed run sending ≤ `TYPE_CHECK_LIGHT_SOURCES` (100) lint files takes a slot of the laned `type-check-light` pool (size 3, background may hold 2) and runs with `batch: refuse`: its worker builds no program over 100 sources (`refuseBatches`, `shared/batch-run.ts`) and answers `over-budget` instead (`TypeCheckWorkerOutput`), having recorded nothing (the name store is written after both programs).
+   - **Heavy:** a refused run — or one plainly not small (`heavyFromTheStart`: more lint files, a non-keyed mode, a caller-chosen batching) — takes a slot of the laned `type-check-worker` pool (size 2; background may hold one, interactive either) and batches past K. The two slots are taken one after the other, never nested.
+   - Why split: a whole-tree run (typed re-lint of every file, 600+ CPU-s) held the heavy pool's one background slot 8–12 min while 4-s runs queued behind it (977 s measured). ≤ 100 sources covered 63 % of 150 measured runs at ≤ 3.9 GB, ≤ 34 CPU-s.
+   - The transcript's `type-check worker repo: admitted …` line says which pool, and for an escalation what the refused attempt cost.
 2. **`TYPE_CHECK_WORKER_UNITS` of the grant** (`core/worker-weight.ts`: `ceil(7.2 GB mean peak / PER_UNIT_BYTES)` = 2) — CPU accounting.
    - The grant clamps it to its own size.
    - Batch processes run serially inside this share.
@@ -309,10 +310,12 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
 
 ## Plugin reference
 
-- Description: spawnTypeCheckWorker: the one way to start a repo-program type-check worker — admitted through the laned host-wide type-check-worker pool (background may hold one slot, the interactive lane the other) and the holder's grant, demoted only for a background-lane holder.
+- Description: spawnTypeCheckWorker: the one way to start a repo-program type-check worker — admitted first as a small run through the laned type-check-light pool (its worker refuses any program over TYPE_CHECK_LIGHT_SOURCES), else — or once refused — through the laned type-check-worker pool (background may hold one slot, the interactive lane the other), then the holder's grant; the worker runs in the foreground as the slot's holder.
 - Server:
   - Uses: `infra/host/host-admission.defineHostPool`
-  - Exports (types): `TypeCheckWorkerRun`
+  - Exports (types):
+    - `TypeCheckWorkerRun`
+    - `WorkerAdmission`
   - Exports (values): `spawnTypeCheckWorker`
 - Core:
   - Uses: `infra/host/host-admission.PER_UNIT_BYTES`
@@ -324,10 +327,12 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
     - `TscDivergence`
     - `TscMode`
     - `TscPredictionMiss`
+    - `TypeCheckBatching`
     - `TypeCheckDivergencePayload`
     - `TypeCheckStats`
     - `TypeCheckTree`
     - `TypeCheckWorkerJob`
+    - `TypeCheckWorkerOutput`
     - `TypeCheckWorkerResult`
     - `TypedDecision`
     - `TypedPartFp`
@@ -338,6 +343,7 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
     - `LINT_GROUP_BASE`
     - `TYPE_CHECK_BATCH_FILES`
     - `TYPE_CHECK_DIVERGENCE_KIND`
+    - `TYPE_CHECK_LIGHT_SOURCES`
     - `TYPE_CHECK_WORKER_PEAK_BYTES`
     - `TYPE_CHECK_WORKER_UNITS`
     - `TypeCheckDivergencePayloadSchema`

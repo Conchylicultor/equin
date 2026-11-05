@@ -16,7 +16,9 @@
  *      constructing a second one.
  *
  * Protocol: argv[2] is a JSON job file (so a cold run's thousands of lint paths
- * never hit the argv limit). stdout is one JSON result object. A nonzero exit
+ * never hit the argv limit). stdout is one JSON `TypeCheckWorkerOutput`: the
+ * result, or — a small run's worker (`batch: refuse`) asked to build a larger
+ * program — over-budget, and nothing recorded. A nonzero exit
  * means the worker itself crashed (the orchestrator records no PASSes for it).
  */
 import { unlinkSync, writeSync } from "fs";
@@ -38,12 +40,18 @@ import {
   type TscDivergence,
   type TypedPartOutcome,
   type TypeCheckWorkerJob as Job,
+  type TypeCheckWorkerOutput as Output,
   type TypeCheckWorkerResult as Result,
 } from "../core";
 import type { NameResult, NameRunOutput } from "./name-run";
 import { signatureEmitOptions } from "./emit-options";
 import { compareResults, fullCheck } from "./full-check";
-import type { Batching, BatchStats } from "./batch-run";
+import {
+  OverBudget,
+  refuseBatches,
+  type Batching,
+  type BatchStats,
+} from "./batch-run";
 import { processBatches, type BatchSpend } from "./batch-processes";
 import { createLintDecisions } from "./lint-decisions";
 import { createLintEngine, type LintOut } from "./lint-engine";
@@ -441,14 +449,18 @@ async function run(job: Job): Promise<Result> {
   };
   const spend: BatchSpend = { count: 0, cpuSeconds: 0, maxRssBytes: 0 };
   // Each batch in its own process: a process's memory is what K bounds (in
-  // this one, programs built one after another kept 11–15 GB resident).
-  const batching: Batching = processBatches({
-    k: job.batch.k,
-    width: 1,
-    root: job.root,
-    tree: job.tree,
-    spend,
-  });
+  // this one, programs built one after another kept 11–15 GB resident). A
+  // small run's worker batches nothing: past its bound it refuses.
+  const batching: Batching =
+    job.batch.kind === "refuse"
+      ? refuseBatches(job.batch.sources)
+      : processBatches({
+          k: job.batch.k,
+          width: 1,
+          root: job.root,
+          tree: job.tree,
+          spend,
+        });
   const store: NameStore = openNameStore();
   const walkStore = openWalkBaseStore();
   const checkout = realpathSync(job.root);
@@ -659,7 +671,16 @@ if (!jobArg) {
 // The job file the spawning type-check wrote in its own temp dir.
 const jobPath = asAppPath(jobArg);
 const job = JSON.parse(readFileSync(jobPath, "utf8")) as Job;
-const result = await run(job);
+let output: Output;
+try {
+  output = { kind: "done", result: await run(job) };
+} catch (err) {
+  // Refused before anything this run records: the name store is written
+  // after both programs, the walk base after that, and the lint state by the
+  // spawner from a result only. The heavy run starts from the same state.
+  if (!(err instanceof OverBudget)) throw err;
+  output = { kind: "over-budget", sources: err.sources, bound: err.bound };
+}
 try {
   unlinkSync(jobPath);
 } catch (err) {
@@ -667,7 +688,7 @@ try {
 }
 // Synchronous, because the exit below follows at once: an async stream write
 // could still be buffered when the process ends.
-writeSync(1, JSON.stringify(result));
+writeSync(1, JSON.stringify(output));
 // Explicit: `exitWithParent`'s lifeline thread parks in a blocking FFI flock,
 // which an emptied event loop must not wait on.
 process.exit(0);

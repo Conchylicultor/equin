@@ -52,3 +52,18 @@ export const TYPE_CHECK_WORKER_UNITS = Math.ceil(
  * (research/2026-10-23-global-type-check-bounded-batches.md).
  */
 export const TYPE_CHECK_BATCH_FILES = 2000;
+
+/**
+ * L: the most source files (checked, or held to be linted) one program of a
+ * SMALL run holds. A run is first admitted as small (host-admission's
+ * `type-check-light` pool) unless it plainly is not (more lint files than L,
+ * or a mode beside the keyed check); its worker builds every program of at
+ * most L sources in its own process and refuses a larger one, answering
+ * over-budget, and the run is re-admitted through the `type-check-worker` pool.
+ *
+ * Measured over 150 check transcripts (2026-11-02..05), by the largest program
+ * of each run: ≤ 100 sources covered 94 runs, peak RSS ≤ 3.9 GB (p90 1.9),
+ * ≤ 34 CPU-s; the next step (≤ 400) adds 10 runs but reaches 79 CPU-s and
+ * 4.9 GB. Those 94 runs had waited 9,476 s of the heavy pool's 13,073 s.
+ */
+export const TYPE_CHECK_LIGHT_SOURCES = 100;

@@ -760,8 +760,9 @@ export async function fastValidationJobs(opts: {
     // name-records store as the check, so this path and the check never
     // re-check what the other already checked.
     //
-    // Admitted exactly like the check's worker — the host-wide
-    // `type-check-worker` slot in the grant's lane, then the measured grant
+    // Admitted exactly like the check's worker — a host-wide slot in the
+    // grant's lane (`type-check-light` while its programs stay small, else
+    // `type-check-worker`), then the measured grant
     // weight, the worker in the foreground as the slot's holder — because
     // `spawnTypeCheckWorker` is the one place a worker is admitted and takes
     // the grant itself.

@@ -28034,10 +28034,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`theme-declarations-in-sync`**
             - **`token-group-vars-in-sync`**
             - **`tsconfig-alias-single-owner`**
-            - **`type-check`** — spawnTypeCheckWorker: the one way to start a repo-program type-check worker — admitted through the laned host-wide type-check-worker pool (background may hold one slot, the interactive lane the other) and the holder's grant, demoted only for a background-lane holder.
+            - **`type-check`** — spawnTypeCheckWorker: the one way to start a repo-program type-check worker — admitted first as a small run through the laned type-check-light pool (its worker refuses any program over TYPE_CHECK_LIGHT_SOURCES), else — or once refused — through the laned type-check-worker pool (background may hold one slot, the interactive lane the other), then the holder's grant; the worker runs in the foreground as the slot's holder.
               - Server:
                 - Uses: `infra/host/host-admission.defineHostPool`
-                - Exports (types): `TypeCheckWorkerRun`
+                - Exports (types):
+                  - `TypeCheckWorkerRun`
+                  - `WorkerAdmission`
                 - Exports (values): `spawnTypeCheckWorker`
               - Core:
                 - Uses: `infra/host/host-admission.PER_UNIT_BYTES`
@@ -28049,10 +28051,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `TscDivergence`
                   - `TscMode`
                   - `TscPredictionMiss`
+                  - `TypeCheckBatching`
                   - `TypeCheckDivergencePayload`
                   - `TypeCheckStats`
                   - `TypeCheckTree`
                   - `TypeCheckWorkerJob`
+                  - `TypeCheckWorkerOutput`
                   - `TypeCheckWorkerResult`
                   - `TypedDecision`
                   - `TypedPartFp`
@@ -28063,6 +28067,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `LINT_GROUP_BASE`
                   - `TYPE_CHECK_BATCH_FILES`
                   - `TYPE_CHECK_DIVERGENCE_KIND`
+                  - `TYPE_CHECK_LIGHT_SOURCES`
                   - `TYPE_CHECK_WORKER_PEAK_BYTES`
                   - `TYPE_CHECK_WORKER_UNITS`
                   - `TypeCheckDivergencePayloadSchema`

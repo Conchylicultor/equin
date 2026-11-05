@@ -18,7 +18,7 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
  * agent sessions, editors, one Postgres — so pretending to schedule cores here
  * would be false precision dressed as rigour. What the bar is FOR is catching a
  * pool declared at an implausible size: at 2× the core count today's declarations
- * sit at 22 of 36, and a `size: 50` pool trips it loudly.
+ * sit at 32 of 32 on the reference host, and a `size: 50` pool trips it loudly.
  */
 const MAX_OVERSUBSCRIPTION = 2;
 

@@ -35,7 +35,7 @@ import type {
   TypeCheckWorkerJob,
   TypeCheckWorkerResult,
 } from "../core";
-import { spawnTypeCheckWorker } from "../server";
+import { spawnTypeCheckWorker, type WorkerAdmission } from "../server";
 import type {
   Check,
   CheckContext,
@@ -60,6 +60,7 @@ interface WorkerResult extends TypeCheckWorkerResult {
   cpuSystemMicros: number | undefined;
   wallMs: number;
   slotWaitMs: number;
+  admission: WorkerAdmission;
 }
 
 async function runWorker(
@@ -101,7 +102,25 @@ async function runWorker(
     cpuSystemMicros: run.cpuSystemMicros,
     wallMs: run.wallMs,
     slotWaitMs: run.slotWaitMs,
+    admission: run.admission,
   };
+}
+
+// Which pool the worker was admitted through (one line per run), e.g.
+// "type-check worker repo: admitted light (type-check-light)", or
+// "… admitted heavy (type-check-worker), escalated: a program of 409 sources
+// > 100; the light attempt cpu 3.1s, wall 4.0s". What says whether the small
+// pool is sized right: escalations, and what each one wasted.
+function admissionLine(label: string, a: WorkerAdmission): string {
+  if (a.kind === "light") return `${label}: admitted light (type-check-light)`;
+  if (a.kind === "heavy") {
+    return `${label}: admitted heavy (type-check-worker): ${a.why}`;
+  }
+  const cpu =
+    a.lightCpuMicros === undefined
+      ? ""
+      : `cpu ${(a.lightCpuMicros / 1e6).toFixed(1)}s, `;
+  return `${label}: admitted heavy (type-check-worker), escalated: a program of ${a.sources} sources > ${a.bound}; the light attempt ${cpu}wall ${seconds(a.lightWallMs)}s`;
 }
 
 // Which scheduling tier the worker runs in, and why — one greppable line beside
@@ -180,7 +199,7 @@ function workerCostLine(
     );
   }
   if (parts.length === 0) return null;
-  // How long the worker queued for its `type-check-worker` slot — the cap's
+  // How long the run queued for its host-wide slot(s) — the cap's
   // cost, on the same line as what the worker then cost, so a wait that
   // replaced a thrash can be weighed against it.
   if (slotWaitMs != null) parts.push(`slot wait ${seconds(slotWaitMs)}s`);
@@ -292,9 +311,10 @@ const check: Check = {
           ),
           "stderr",
         );
-        // Admission is the spawn's own (`../server`): a host-wide
-        // `type-check-worker` slot in the grant's lane — the memory bound the
-        // grant's clamped weight could not express — then
+        // Admission is the spawn's own (`../server`): a host-wide slot in the
+        // grant's lane — `type-check-light` for a run whose programs stay
+        // small, else `type-check-worker`; the memory bound the grant's
+        // clamped weight could not express — then
         // `TYPE_CHECK_WORKER_UNITS` of the CPU grant the invoking
         // build/check/push already holds (`ctx.grant`). The worker runs in the
         // foreground as the slot's holder, whatever the lane.
@@ -322,6 +342,12 @@ const check: Check = {
         result?.slotWaitMs,
       );
       if (costLine !== null) ctx.log?.(costLine, "stderr");
+      if (result) {
+        ctx.log?.(
+          admissionLine(`type-check worker ${program.name}`, result.admission),
+          "stderr",
+        );
+      }
       // Where that CPU went, phase by phase (in the worker's own clock, so it
       // excludes process start-up): the type check (the walk, both programs'
       // build and check) and lint — then what each program held and checked.

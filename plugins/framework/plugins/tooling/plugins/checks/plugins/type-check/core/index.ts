@@ -1,5 +1,6 @@
 export {
   TYPE_CHECK_BATCH_FILES,
+  TYPE_CHECK_LIGHT_SOURCES,
   TYPE_CHECK_WORKER_PEAK_BYTES,
   TYPE_CHECK_WORKER_UNITS,
 } from "./worker-weight";
@@ -16,6 +17,8 @@ export type {
   TypeCheckTree,
   TypeCheckWorkerJob,
   TypeCheckWorkerResult,
+  TypeCheckWorkerOutput,
+  TypeCheckBatching,
   TscDivergence,
   TscPredictionMiss,
   TscMode,

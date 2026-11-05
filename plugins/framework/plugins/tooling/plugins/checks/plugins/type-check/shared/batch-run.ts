@@ -47,6 +47,36 @@ export class ContractMissing extends Error {
   }
 }
 
+/**
+ * A small run's worker was asked to build a program larger than it was
+ * admitted for (`refuseBatches`): it answers over-budget, and its spawner
+ * re-admits the run as a heavy one.
+ */
+export class OverBudget extends Error {
+  constructor(
+    readonly sources: number,
+    readonly bound: number,
+  ) {
+    super(
+      `type-check: a program of ${sources} sources, over this worker's bound of ${bound}`,
+    );
+    this.name = "OverBudget";
+  }
+}
+
+/**
+ * The batching of a SMALL run: a set of at most `bound` files is one program
+ * in this process; a larger one is refused (`OverBudget`) — never batched.
+ */
+export function refuseBatches(bound: number): Batching {
+  return {
+    k: bound,
+    open(_ctx, sources) {
+      throw new OverBudget(sources, bound);
+    },
+  };
+}
+
 /** What to lint of one file in a batch — `./lint-engine.ts`'s `LintSpec`. */
 export interface BatchLintSpec {
   unit: "split" | "whole";
@@ -126,7 +156,8 @@ export interface BatchRunner {
 export interface Batching {
   /** The most files one program holds (an import cycle larger is one batch). */
   k: number;
-  open(ctx: BatchContext): BatchRunner;
+  /** Open a runner for a set of `sources` files (more than `k`). */
+  open(ctx: BatchContext, sources: number): BatchRunner;
 }
 
 /** How a set was batched, for the transcript. */
@@ -257,7 +288,7 @@ async function checkInBatches(
 ): Promise<SetRun> {
   const { ctx, sources, check } = input;
   const t0 = performance.now();
-  const runner = batching.open(ctx);
+  const runner = batching.open(ctx, sources.size);
   try {
     const plan = planBatches({
       files: [...sources],

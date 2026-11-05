@@ -33,3 +33,21 @@ export const typeCheckWorkerPool = defineHostPool({
   backgroundLimit: size - 1,
   holder: "foreground",
 });
+
+// The SMALL-run pool: a worker whose every program holds at most
+// `TYPE_CHECK_LIGHT_SOURCES` source files (≤ 3.9 GB, ≤ 34 CPU-s measured) is
+// admitted here, not behind a whole-tree run in the pool above — before it,
+// 63 % of runs (a few seconds of work each) queued on that pool's one
+// background slot for minutes. The bound is the worker's own: it refuses to
+// build a larger program and `spawnTypeCheckWorker` re-admits it above, so a
+// run admitted here cannot grow into a heavy one. Laned and foreground for the
+// same reasons as the heavy pool.
+const light = HOST_POOLS["type-check-light"];
+
+export const typeCheckLightPool = defineHostPool({
+  id: "type-check-light",
+  size: light.size,
+  laned: true,
+  backgroundLimit: light.size - 1,
+  holder: "foreground",
+});

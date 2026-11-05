@@ -6,8 +6,10 @@ Bounds how many holders host admission can hand out at once:
 Σ (every pool's size in HOST_POOLS) + B  ≤  hostCpuCeiling() × MAX_OVERSUBSCRIPTION
 ```
 
-with `MAX_OVERSUBSCRIPTION = 2`. Today that reads `13 + 9 = 22 ≤ 36` — passing
-with room, and a pool declared at `size: 50` trips it. Sizes are read from
+with `MAX_OVERSUBSCRIPTION = 2`, judged on a fixed 16-core / 64 GiB reference
+host. Today that reads `23 + 9 = 32 ≤ 32` — passing at the bar (the
+`type-check-light` pool, 3, took the last of the room), and a pool declared at
+`size: 50` trips it. Sizes are read from
 `host-admission/core`'s `HOST_POOLS` table, never by importing server pool code.
 
 **This is a stampede bar, not a model of the box.** Do not read the `× 2` as

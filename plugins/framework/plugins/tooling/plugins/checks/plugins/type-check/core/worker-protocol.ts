@@ -208,14 +208,32 @@ export interface TypeCheckWorkerJob {
    * sides cannot see different trees.
    */
   tree: TypeCheckTree;
-  /**
-   * How a set of files too large for one program is checked: dependency-ordered
-   * batches of at most `k` files (an import cycle larger is one batch), each in
-   * its own process, one at a time
-   * (research/2026-10-23-global-type-check-bounded-batches.md).
-   */
-  batch: { k: number };
+  /** How a set of files too large for one program is checked. */
+  batch: TypeCheckBatching;
 }
+
+/**
+ * How the worker checks a set larger than one program may hold:
+ *
+ * - `batches`: in dependency-ordered batches of at most `k` files (an import
+ *   cycle larger is one batch), each in its own process, one at a time
+ *   (research/2026-10-23-global-type-check-bounded-batches.md);
+ * - `refuse`: not at all — a SMALL run's worker (`TYPE_CHECK_LIGHT_SOURCES`)
+ *   builds no program of more than `sources` files and answers `over-budget`,
+ *   so the run it was admitted for as small cannot grow into a heavy one.
+ */
+export type TypeCheckBatching =
+  { kind: "batches"; k: number } | { kind: "refuse"; sources: number };
+
+/**
+ * The worker's JSON stdout: its result, or — under `batch: refuse` — the
+ * program it would not build. An over-budget worker has recorded nothing (the
+ * name store is written after both programs, the walk base and lint state
+ * after that), so the heavy run that follows starts from the same state.
+ */
+export type TypeCheckWorkerOutput =
+  | { kind: "done"; result: TypeCheckWorkerResult }
+  | { kind: "over-budget"; sources: number; bound: number };
 
 /**
  * The type check's input, as data: a git tree and its overlay
@@ -283,7 +301,7 @@ export interface TypeCheckWorkerResult {
     lint: number;
   };
   /**
-   * The batch processes this run spawned (a set larger than `job.batch.k`):
+   * The batch processes this run spawned (a set larger than `job.batch`'s `k`):
    * their CPU (type check and lint — already inside the
    * worker's rusage, which counts its reaped children), how many, the largest
    * one's peak, and an upper bound on the peaks alive at once. Null when none

@@ -117,6 +117,9 @@ Motivation: without it every run read all 12.6k name-record entries and walked e
 - **Why the slot is taken before grant units.** A queued worker then holds none of its holder's grant units.
 - **Rejected: background-tier workers** (`taskpolicy -b`, on the E-cores). The whole fleet waited out the stretched hold: slot wait median 13.5 min, p90 38 min. The lane picks only the slot window (background's stays 1, so at most 2 foreground workers exist).
 - **Rejected: picking the lane by branch.** A push checks the rebased agent branch and is interactive.
+- **Why a small-run pool.** One pool sized for the cold cost made every run wait out every whole-tree run: on 2026-11-05 a 4.4-CPU-s run waited 977 s for the one background slot. Most runs are small (≤ 100 sources: 63 % of runs, ≤ 3.9 GB), so they get their own laned pool (`type-check-light`, 3).
+- **Why the worker refuses, not the spawner predicts.** A program's size is known only inside the worker (program 2 follows program 1's records). A refusal is a bound by construction: a run admitted small never builds a large program. It costs an escalated run its small attempt (the walk and a program 1 of ≤ 100 sources, redone by the heavy run: the name store is written only after both programs, so a refused attempt records nothing and cannot leave a half-written state).
+- **Rejected: one pool with more slots.** It would admit more whole-tree workers (7–12 GB) at once, the thrash the pool exists to prevent.
 
 Design and the simulation behind the sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`; the foreground holder: `research/2026-10-16-global-scarce-slot-holders-run-foreground.md`; the fleet-thrash bound: `research/2026-07-09-global-type-check-worker-host-budget.md`.
 

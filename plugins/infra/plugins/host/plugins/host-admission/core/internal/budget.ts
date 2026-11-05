@@ -167,6 +167,16 @@ export function hostPoolsFor(host: HostFacts) {
     // holder, main — keeps the other). See
     // research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md.
     "type-check-worker": { size: 2 },
+    // One SMALL type-check worker: a run whose every program holds at most
+    // `TYPE_CHECK_LIGHT_SOURCES` source files (type-check/core), refused by the
+    // worker itself past that bound and re-admitted through the slot above.
+    // Measured over 150 runs (2026-11-02..05): 63 % of runs fit, peak RSS ≤ 3.9
+    // GB, ≤ 34 CPU-s — and they took 72 % of the heavy pool's slot wait,
+    // queued behind whole-tree runs holding its one background slot 8–12 min
+    // (a 4 s run waited 977 s). Three of them (≤ ~12 GB) beside the two heavy
+    // ones; laned by its owner like the heavy pool (background may hold 2).
+    // A CONSTANT: the size names the slot files.
+    "type-check-light": { size: 3 },
     // One e2e script run (`./equin run plugins/…/e2e/x.ts`): one bun
     // process driving one Chromium against a deployed app, held p50 21 s / p90
     // 82 s. It used to take a 1-unit `cpu` grant, which put a 20 s screenshot in

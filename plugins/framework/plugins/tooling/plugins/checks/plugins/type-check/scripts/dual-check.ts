@@ -36,7 +36,7 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   TYPE_CHECK_BATCH_FILES,
   type TypeCheckWorkerJob,
-  type TypeCheckWorkerResult,
+  type TypeCheckWorkerOutput,
 } from "../core";
 import { readCheckTree } from "../shared/repo-view";
 
@@ -78,7 +78,7 @@ const job: TypeCheckWorkerJob = {
   walkBase: { kind: walkBase },
   // The checkout's working tree as it is now, and its gitignored roots.
   tree: (await readCheckTree(root, tsconfigPath)).tree,
-  batch: { k: batchK },
+  batch: { kind: "batches", k: batchK },
 };
 const jobPath = join(os.tmpdir(), `dual-check-${process.pid}.json`);
 writeFileSync(jobPath, JSON.stringify(job));
@@ -92,7 +92,11 @@ if (run.exitCode !== 0) {
   console.error(`dual-check: the worker exited ${run.exitCode}`);
   process.exit(2);
 }
-const result = JSON.parse(run.stdout) as TypeCheckWorkerResult;
+const output = JSON.parse(run.stdout) as TypeCheckWorkerOutput;
+// Batches never refuse: an over-budget answer is a broken worker.
+if (output.kind !== "done")
+  throw new Error(`the worker answered ${output.kind}`);
+const result = output.result;
 for (const line of result.tscLines) console.log(line);
 const { check, full } = result.phaseCpuSeconds;
 const usage = run.resourceUsage;

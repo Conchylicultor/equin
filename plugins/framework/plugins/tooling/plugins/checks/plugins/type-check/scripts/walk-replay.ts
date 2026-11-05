@@ -44,7 +44,7 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   TYPE_CHECK_BATCH_FILES,
   type TypeCheckWorkerJob,
-  type TypeCheckWorkerResult,
+  type TypeCheckWorkerOutput,
 } from "../core";
 import { readCheckTree } from "../shared/repo-view";
 import { splitKey } from "../shared/name-records";
@@ -67,7 +67,10 @@ const flag = (name: string): string | undefined => {
 const [scratchArg, from, to] = args;
 const data = flag("--data");
 const outPath = flag("--out");
-const BATCH = { k: Number(flag("--batch-k") ?? TYPE_CHECK_BATCH_FILES) };
+const BATCH = {
+  kind: "batches",
+  k: Number(flag("--batch-k") ?? TYPE_CHECK_BATCH_FILES),
+} as const;
 if (!scratchArg || !from || !to || !data || !(BATCH.k >= 1)) {
   console.error(
     "usage: walk-replay.ts <scratch checkout> <from> <to> --data <dir> [--batch-k <files>] [--out <steps.json>]",
@@ -143,7 +146,11 @@ async function runChain(
       `${chain}: the worker exited ${run.exitCode} (a missed prediction throws):\n${run.stderr.slice(-4000)}`,
     );
   }
-  const result = JSON.parse(run.stdout) as TypeCheckWorkerResult;
+  const output = JSON.parse(run.stdout) as TypeCheckWorkerOutput;
+  // Batches never refuse: an over-budget answer is a broken worker.
+  if (output.kind !== "done")
+    throw new Error(`the worker answered ${output.kind}`);
+  const result = output.result;
   const line = (p: string): string =>
     result.tscLines.find((l) => l.startsWith(p)) ?? "";
   return {
