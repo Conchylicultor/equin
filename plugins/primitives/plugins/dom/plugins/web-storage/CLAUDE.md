@@ -51,9 +51,14 @@ server state is. So a store is **per composition scope by default**:
   page's keys wherever it is used from. `useStore` hands one back unchanged,
   so a primitive over stores (`useDraft`) takes either kind.
 - An owner's cap covers its entries in every scope (so the budget holds), but
-  no scope pays for another's growth: a scope evicts only its own entries, and
-  the page's own scope evicts the scopes' entries first (even in a `refuse`
-  store — state a Reset throws away anyway) before its own oldest.
+  no scope pays for another's growth: the page's own scope may fill only ¾ of
+  a scoped owner's cap (`NESTED_SHARE` — the rest is the scopes' reserve), so
+  a cache filled to its cap by the page (its steady state) can never refuse
+  every write inside a scope. A scope evicts its own oldest, then other
+  scopes' (a cache only), never the page's; the page's own scope evicts the
+  scopes' entries first (even in a `refuse` store — state a Reset throws away
+  anyway) before its own oldest. Page cache entries found inside the reserve
+  (written before it existed) are evicted on first touch.
 - `clearStorageScope(id)` removes every entry of one `PluginScope` — the
   demo's Reset (`DemoScope`), after its subtree unmounted. The page's own
   entries have no scope id, so it cannot reach them. A module that keeps what

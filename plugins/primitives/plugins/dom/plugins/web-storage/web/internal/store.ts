@@ -183,9 +183,23 @@ export interface ScopedStore<T> {
 
 type Entry = { bytes: number; ts: number };
 
+/**
+ * The share of a scoped owner's cap the page's own scope may never use: it is
+ * the `PluginScope`s' (the demo's). Without it a cache's page entries fill the
+ * whole cap — a cache's steady state — and, since a scope evicts only its own
+ * entries, every write inside a scope is refused from then on (2026-11-05:
+ * scroll positions refused ×13 in a Demo tab).
+ */
+const NESTED_SHARE = 1 / 4;
+
 interface OwnerState<T> {
   spec: StoreSpec<T>;
   cap: number;
+  /**
+   * The most the page's own scope may hold: the cap less the scopes' reserve
+   * (`NESTED_SHARE`), or the whole cap for a `pageWide` store (no scopes).
+   */
+  pageCap: number;
   /** The page's own scope's prefix — where legacy keys are adopted. */
   prefix: string;
   /**
@@ -194,6 +208,8 @@ interface OwnerState<T> {
    */
   entries: Map<string, Entry> | "unavailable" | null;
   used: number;
+  /** Of `used`, the page's own scope's bytes (kept against `pageCap`). */
+  pageUsed: number;
   evicted: number;
   refusedOverCap: number;
   refusedByBrowser: number;
@@ -285,7 +301,8 @@ function load<T>(state: OwnerState<T>): Map<string, Entry> | null {
   const entries = new Map<string, Entry>();
   const drop: string[] = [];
   const legacy: string[] = [];
-  let used = 0;
+  state.used = 0;
+  state.pageUsed = 0;
   try {
     for (let i = 0; i < store.length; i++) {
       const key = store.key(i);
@@ -301,9 +318,10 @@ function load<T>(state: OwnerState<T>): Map<string, Entry> | null {
         drop.push(key);
         continue;
       }
-      const bytes = entryBytes(key, raw);
-      entries.set(key, { bytes, ts: env.ts });
-      used += bytes;
+      remember(state, entries, key, {
+        bytes: entryBytes(key, raw),
+        ts: env.ts,
+      });
     }
     for (const key of drop) store.removeItem(key);
     for (const key of legacy) {
@@ -318,7 +336,11 @@ function load<T>(state: OwnerState<T>): Map<string, Entry> | null {
         ts: adopted.ts,
       } satisfies Envelope);
       const bytes = entryBytes(newKey, raw);
-      if (used + bytes > state.cap) continue;
+      if (
+        state.pageUsed + bytes > state.pageCap ||
+        state.used + bytes > state.cap
+      )
+        continue;
       try {
         store.setItem(newKey, raw);
       } catch (err) {
@@ -327,8 +349,26 @@ function load<T>(state: OwnerState<T>): Map<string, Entry> | null {
         if (err instanceof DOMException) continue;
         throw err;
       }
-      entries.set(newKey, { bytes, ts: adopted.ts });
-      used += bytes;
+      remember(state, entries, newKey, { bytes, ts: adopted.ts });
+    }
+    // Page entries written before the scopes' reserve existed (or by a tab on
+    // an older build) may sit in it: a cache gives them back now, so a scope's
+    // first write is not refused. A `refuse` store keeps them — what the user
+    // typed is never dropped silently; a page write that would grow it is
+    // refused until it shrinks.
+    if (
+      state.spec.whenFull === "evict-oldest" &&
+      state.pageUsed > state.pageCap
+    ) {
+      const page = [...entries]
+        .filter(([k]) => isPageKey(k))
+        .sort((a, b) => a[1].ts - b[1].ts);
+      for (const [key] of page) {
+        if (state.pageUsed <= state.pageCap) break;
+        store.removeItem(key);
+        forget(state, entries, key);
+        state.evicted++;
+      }
     }
   } catch (err) {
     if (!(err instanceof DOMException)) throw err;
@@ -336,7 +376,6 @@ function load<T>(state: OwnerState<T>): Map<string, Entry> | null {
     return null;
   }
   state.entries = entries;
-  state.used = used;
   notifyChanged();
   return entries;
 }
@@ -344,6 +383,24 @@ function load<T>(state: OwnerState<T>): Map<string, Entry> | null {
 function listenersOf(state: OwnerState<unknown>, key: string): void {
   const set = state.listeners.get(key);
   if (set) for (const l of set) l();
+}
+
+/** Whether `key` is in the page's own scope (outside every `PluginScope`). */
+function isPageKey(key: string): boolean {
+  return parseStoreKey(key)?.scope === null;
+}
+
+/** Record an entry (replacing the key's previous one) in the owner's accounting. */
+function remember(
+  state: OwnerState<unknown>,
+  entries: Map<string, Entry>,
+  key: string,
+  entry: Entry,
+): void {
+  forget(state, entries, key);
+  entries.set(key, entry);
+  state.used += entry.bytes;
+  if (isPageKey(key)) state.pageUsed += entry.bytes;
 }
 
 function forget(
@@ -354,6 +411,7 @@ function forget(
   const prev = entries.get(key);
   if (!prev) return;
   state.used -= prev.bytes;
+  if (isPageKey(key)) state.pageUsed -= prev.bytes;
   entries.delete(key);
 }
 
@@ -400,9 +458,10 @@ function installCrossTabListener(): void {
     forget(state, state.entries, e.key);
     if (e.newValue !== null) {
       const env = parseEnvelope(e.newValue);
-      const bytes = entryBytes(e.key, e.newValue);
-      state.entries.set(e.key, { bytes, ts: env?.ts ?? Date.now() });
-      state.used += bytes;
+      remember(state, state.entries, e.key, {
+        bytes: entryBytes(e.key, e.newValue),
+        ts: env?.ts ?? Date.now(),
+      });
     }
     listenersOf(state, e.key);
     notifyChanged();
@@ -437,9 +496,11 @@ export function defineStore<T>(spec: StoreSpec<T>): Store<T> | ScopedStore<T> {
   const state: OwnerState<T> = {
     spec,
     cap,
+    pageCap: spec.pageWide ? cap : cap - Math.floor(cap * NESTED_SHARE),
     prefix: ownerPrefix(spec.owner),
     entries: null,
     used: 0,
+    pageUsed: 0,
     evicted: 0,
     refusedOverCap: 0,
     refusedByBrowser: 0,
@@ -469,35 +530,72 @@ export function defineStore<T>(spec: StoreSpec<T>): Store<T> | ScopedStore<T> {
 }
 
 /**
- * Which of an owner's entries a write of `k` in `scope` may evict to fit its
- * cap, in eviction order — the cap is the owner's across every scope, but no
- * scope pays for another's growth: a `PluginScope` (the demo) evicts only its
- * own entries, so it can never cost the page's own a draft or a layout; the
- * page's own scope evicts the scopes' entries first (oldest first — state a
- * Reset throws away anyway), then, for an `evict-oldest` cache, its own.
- * A `refuse` store never evicts in its own scope: what the user typed there is
- * refused loudly instead.
+ * Which of an owner's entries a write of `bytes` to `k` in `scope` evicts so it
+ * fits, oldest first — or `null` when it cannot fit (refused, nothing evicted).
+ * Two bounds: the owner's cap, across every scope; and, for the page's own
+ * scope, `pageCap`, so the scopes' reserve is always theirs to fill.
+ *
+ * No scope pays for another's growth: the page's own scope evicts the scopes'
+ * entries first (even in a `refuse` store — state a Reset throws away anyway),
+ * then its own oldest for an `evict-oldest` cache; a `PluginScope` evicts its
+ * own oldest, then the other scopes' (a cache only), never the page's. Since
+ * the page's entries stay within `pageCap`, a cache's write inside a scope
+ * always fits once it evicts enough — unless one value outgrows the reserve.
+ * A write that does not grow its entry always fits.
  */
-function victimsFor(
+function planEviction(
+  state: OwnerState<unknown>,
+  entries: Map<string, Entry>,
   k: string,
   scope: string | null,
-  entries: Map<string, Entry>,
-  whenFull: WhenFull,
-): [string, Entry][] {
+  bytes: number,
+): string[] | null {
+  const cache = state.spec.whenFull === "evict-oldest";
+  const prev = entries.get(k)?.bytes ?? 0;
+  // Rewriting an entry no bigger than it was grows nothing — even an owner
+  // over a bound (a tab on an older build wrote past it) takes it.
+  if (bytes <= prev) return [];
   const own: [string, Entry][] = [];
   const nested: [string, Entry][] = [];
   for (const e of entries) {
     if (e[0] === k) continue;
     const entryScope = parseStoreKey(e[0])?.scope ?? null;
     if (entryScope === scope) own.push(e);
-    else if (scope === null) nested.push(e);
+    else if (entryScope !== null) nested.push(e);
   }
   // Oldest first: Map order is insertion order, not ts order, so sort.
   const oldest = (a: [string, Entry], b: [string, Entry]) => a[1].ts - b[1].ts;
-  return [
-    ...nested.sort(oldest),
-    ...(whenFull === "evict-oldest" ? own.sort(oldest) : []),
-  ];
+  own.sort(oldest);
+  nested.sort(oldest);
+
+  const plan = new Set<string>();
+  let freed = 0;
+  /** Take from `list` until `freed` covers `room`; whether it does. */
+  const take = (list: [string, Entry][], room: number): boolean => {
+    for (const [key, entry] of list) {
+      if (freed >= room) break;
+      if (plan.has(key)) continue;
+      plan.add(key);
+      freed += entry.bytes;
+    }
+    return freed >= room;
+  };
+
+  if (scope === null) {
+    const pageRoom = state.pageUsed - prev + bytes - state.pageCap;
+    if (pageRoom > 0 && !(cache && take(own, pageRoom))) return null;
+  }
+  const capRoom = state.used - prev + bytes - state.cap;
+  if (capRoom > 0) {
+    const order =
+      scope === null
+        ? [nested, ...(cache ? [own] : [])]
+        : cache
+          ? [own, nested]
+          : [];
+    if (!order.some((list) => take(list, capRoom))) return null;
+  }
+  return [...plan];
 }
 
 /** The handle over one owner's entries in one scope (`null`: the page's own). */
@@ -554,30 +652,24 @@ function bind<T>(state: OwnerState<T>, scope: string | null): Store<T> {
       const now = Date.now();
       const raw = JSON.stringify({ v: value, ts: now } satisfies Envelope);
       const bytes = entryBytes(k, raw);
-      if (state.used - (entries.get(k)?.bytes ?? 0) + bytes > cap) {
+      const prev = entries.get(k)?.bytes ?? 0;
+      if (
+        state.used - prev + bytes > cap ||
+        (scope === null && state.pageUsed - prev + bytes > state.pageCap)
+      ) {
         // Entries that expired since the first-touch sweep make room first.
         for (const [key, entry] of [...entries])
           if (key !== k && expired(state, entry.ts)) removeKey(state, key);
       }
-      const others = state.used - (entries.get(k)?.bytes ?? 0);
-      if (others + bytes > cap) {
-        const room = others + bytes - cap;
-        const victims = victimsFor(k, scope, entries, spec.whenFull);
-        if (
-          bytes > cap ||
-          victims.reduce((sum, [, entry]) => sum + entry.bytes, 0) < room
-        ) {
-          fail(state, { reason: "over-cap" });
-          return { ok: false, reason: "over-cap" };
-        }
-        let left = room;
-        for (const [victim, entry] of victims) {
-          if (left <= 0) break;
-          removeKey(state, victim);
-          state.evicted++;
-          left -= entry.bytes;
-          listenersOf(state, victim);
-        }
+      const victims = planEviction(state, entries, k, scope, bytes);
+      if (victims === null) {
+        fail(state, { reason: "over-cap" });
+        return { ok: false, reason: "over-cap" };
+      }
+      for (const victim of victims) {
+        removeKey(state, victim);
+        state.evicted++;
+        listenersOf(state, victim);
       }
       try {
         store.setItem(k, raw);
@@ -587,9 +679,7 @@ function bind<T>(state: OwnerState<T>, scope: string | null): Store<T> {
         fail(state, { reason, error: err.name });
         return { ok: false, reason };
       }
-      forget(state, entries, k);
-      entries.set(k, { bytes, ts: now });
-      state.used += bytes;
+      remember(state, entries, k, { bytes, ts: now });
       listenersOf(state, k);
       notifyChanged();
       return { ok: true };

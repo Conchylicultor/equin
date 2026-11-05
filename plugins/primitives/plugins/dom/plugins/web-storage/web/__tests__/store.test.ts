@@ -113,7 +113,8 @@ describe("defineStore", () => {
       owner: o,
       label: "Offsets",
       area: "local",
-      cap: "2 KB",
+      // The page's own scope holds ¾ of it (1.875 KB): two entries, not three.
+      cap: "2.5 KB",
       ttl: Infinity,
       whenFull: "evict-oldest",
       schema: z.string(),
@@ -423,6 +424,55 @@ describe("eviction across scopes", () => {
     s.in(demo).write("a", big);
     expect(s.in(ROOT).write("b", big)).toEqual({ ok: true });
     expect(s.in(demo).read("a")).toEqual({ kind: "none", why: "absent" });
+  });
+
+  /** Entries small enough that several fit the 256 B reserve of a 1 KB cap. */
+  const small = (i: number) => `${i}`.padEnd(40, "x");
+
+  it("a cache's page entries leave the scopes' reserve free — a scope's write always fits", () => {
+    const o = owner("ev-reserve");
+    const s = defineStore(spec(o, "evict-oldest"));
+    // A cache's steady state: the page wrote far more than its cap holds.
+    for (let i = 0; i < 40; i++)
+      expect(s.in(ROOT).write(`p${i}`, small(i))).toEqual({ ok: true });
+    for (let i = 0; i < 40; i++)
+      expect(s.in(demo).write(`d${i}`, small(i))).toEqual({ ok: true });
+    const usage = storageUsage().find((u) => u.owner === o);
+    expect(usage?.refusedOverCap).toBe(0);
+    expect(usage?.bytes).toBeLessThanOrEqual(1024);
+    // The page kept its newest entries; the demo evicted only its own.
+    expect(s.in(ROOT).read("p39")).toMatchObject({ value: small(39) });
+    expect(s.in(demo).read("d39")).toMatchObject({ value: small(39) });
+    expect(s.in(demo).read("d0")).toEqual({ kind: "none", why: "absent" });
+    // Writing in the page again evicts the page's own, not into the reserve.
+    expect(s.in(ROOT).write("p40", small(40))).toEqual({ ok: true });
+    expect(s.in(demo).read("d39")).toMatchObject({ value: small(39) });
+  });
+
+  it("a cache's page entries already in the reserve are given back on first touch", () => {
+    const o = owner("ev-legacy");
+    const now = Date.now();
+    // Written before the reserve existed: the page holds the whole cap.
+    for (let i = 0; i < 12; i++)
+      local.setItem(
+        `s:${o}:p${i}`,
+        JSON.stringify({ v: small(i), ts: now - 1000 + i }),
+      );
+    const s = defineStore(spec(o, "evict-oldest"));
+    expect(s.in(demo).write("d", small(0))).toEqual({ ok: true });
+    expect(s.in(ROOT).read("p0")).toEqual({ kind: "none", why: "absent" });
+    expect(s.in(ROOT).read("p11")).toMatchObject({ value: small(11) });
+  });
+
+  it("a refuse store keeps the reserve for its scopes too", () => {
+    const s = defineStore(spec(owner("ev-refuse-reserve"), "refuse"));
+    let refused = false;
+    for (let i = 0; i < 40 && !refused; i++)
+      refused = !s.in(ROOT).write(`p${i}`, small(i)).ok;
+    expect(refused).toBe(true);
+    expect(s.in(demo).write("d", small(0))).toEqual({ ok: true });
+    // Rewriting a draft no bigger than it was still fits.
+    expect(s.in(ROOT).write("p0", small(0))).toEqual({ ok: true });
   });
 
   it("a refuse store still refuses rather than evict the page's own", () => {
