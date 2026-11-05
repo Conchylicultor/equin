@@ -2,8 +2,16 @@ import { mkdirSync } from "node:fs";
 import { relative, sep } from "node:path";
 import type { RuntimeSignal } from "@plugins/conversations/server";
 import { recordContextUsage } from "@plugins/conversations/plugins/context-usage/server";
-import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
-import { createKeyedCoalescer } from "@plugins/packages/plugins/coalesce/core";
+import {
+  acquireDirWatch,
+  defineFileWatcher,
+  WatchedDirGoneError,
+  type FileWatcher,
+} from "@plugins/infra/plugins/file-watcher/server";
+import {
+  createCoalescer,
+  createKeyedCoalescer,
+} from "@plugins/packages/plugins/coalesce/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { withDeadline } from "@plugins/packages/plugins/deadline/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -41,9 +49,20 @@ import {
 import { requestAutoResume } from "./auto-resume";
 import { readEventsAfter } from "./event-reader";
 import type { ReadPosition } from "../../server/internal/read-position";
-import { runningAgentIds } from "./agent-processes";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import {
+  liveAgentIds,
+  onAgentProcessesRecount,
+  runningAgentIds,
+} from "./agent-processes";
 import { agentReady } from "./partial-stream";
-import { agentEventsExist, agentEventsPath, ownAgentsRoot } from "./paths";
+import {
+  agentDir,
+  agentEventsExist,
+  agentEventsPath,
+  ownAgentPidsDir,
+  ownAgentsRoot,
+} from "./paths";
 import {
   AgentNotRunningError,
   commandAgent,
@@ -54,23 +73,29 @@ import { z } from "zod";
 // Events → state: tails every SDK agent's events.jsonl from the cursor its
 // conversation row holds, applies the new lines (reducer.ts), runs their side
 // effects (the turn ledger, the question relay) and signals the status
-// reconciler. Push-based end to end: one kqueue watch over the agents'
+// reconciler. Push-based end to end: a kqueue watch of each RUNNING agent's own
 // directory (fs.watch never reports appends under bun), one catch-up per
 // conversation at a time (a keyed coalescer folds a burst into one trailing
 // run), and in-process waiters for the runtime's own "wait until the agent
 // did X" (stop, ready).
 
 /**
- * The one watch over this namespace's `state/sdk-agents/<ns>/`: an append to any agent's events file
- * wakes that conversation's catch-up. kqueue (`writesWhileOpen`) because
- * FSEvents coalesces appends to an open file; the directory holds a handful of
- * files per agent and is reclaimed after 14 days, far under the entry ceiling.
+ * The watch of one running agent's directory, `state/sdk-agents/<ns>/<id>/`:
+ * an append to its events file wakes that conversation's catch-up. kqueue
+ * (`writesWhileOpen`) because FSEvents reports an append to a file still held
+ * open only when it closes. kqueue holds one descriptor per entry, so it is
+ * opened per running agent (a handful of files; `bin/`'s clones ignored), never
+ * over the whole namespace: that tree keeps every agent the namespace ever ran
+ * (2026-11-05: 1,059 dirs, 5,016 entries on main — ~4,400 descriptors held, and
+ * past the 5,000-entry ceiling every boot threw in onReady:conversations, a
+ * crash loop). See {@link followAgent}.
  */
 export const sdkEventsWatcher = defineFileWatcher({
   name: "runtime-sdk.events",
   description:
-    "Notices an SDK agent appending to its events.jsonl, so this backend applies the new lines to the conversation's status, turns and questions.",
+    "Notices a running SDK agent appending to its events.jsonl, so this backend applies the new lines to the conversation's status, turns and questions.",
   writesWhileOpen: true,
+  ignore: ["bin"],
   debounceMs: 10,
 });
 
@@ -465,44 +490,219 @@ async function onResolved(q: ResolvedQuestion): Promise<void> {
   await deliver(q.conversationId, row.openRequestId, q.resolution);
 }
 
-/** The id of the agent directory a watch event names, if it is an events file. */
-function agentOfPath(root: string, path: string): string | null {
-  const parts = relative(root, path).split(sep);
-  if (parts.length !== 2) return null;
-  const [id, file] = parts as [string, string];
-  return file.startsWith(AGENT_EVENTS_FILE) ? id : null;
+/** Whether a watch event of an agent's directory names its events file (a rotated generation included). */
+function isEventsPath(dir: string, path: string): boolean {
+  const name = relative(dir, path);
+  return !name.includes(sep) && name.startsWith(AGENT_EVENTS_FILE);
 }
+
+/** One followed agent: its directory's watch, and the launches pinning it. */
+interface Follow {
+  /** Resolves once the watch is open; rejects when it could not be. */
+  watch: Promise<FileWatcher>;
+  /** Launches under way: an agent not running yet is not unfollowed meanwhile. */
+  launches: number;
+}
+
+/**
+ * The agents this backend follows — each one's directory watched while its
+ * process runs (its pid file names a live pid), or while a launch is starting
+ * it. What the watch costs is bounded by the agents running, not by how many
+ * the namespace has ever run.
+ */
+const followed = new Map<string, Follow>();
+
+/**
+ * An unfollowed agent's watch still closing. A follow of the same agent (a
+ * relaunch right after its stop) opens its watch only once that one is closed,
+ * so two native watches of one directory never overlap.
+ */
+const closing = new Map<string, Promise<void>>();
+
+/**
+ * Watch `id`'s directory (idempotent; registered at once, so a caller can pin
+ * it before anything awaits), then catch up: lines the agent wrote before the
+ * watch was open produced no event. Its `watch` rejects when the watch cannot
+ * be opened, and the agent is then not followed.
+ *
+ * Only this namespace's agents are followed (their pid files, or this
+ * backend's own launch), so every one is this DB's conversation.
+ */
+function followAgent(id: string): Follow {
+  const known = followed.get(id);
+  if (known) return known;
+  const dir = agentDir(id);
+  mkdirSync(dir, { recursive: true });
+  const follow: Follow = {
+    launches: 0,
+    watch: (closing.get(id) ?? Promise.resolve())
+      .then(() =>
+        sdkEventsWatcher.start({
+          dirs: [dir],
+          label: id,
+          onChange: async (events) => {
+            if (!events.some((e) => isEventsPath(dir, e.path))) return;
+            // Heard before (and whatever) the catch-up does: a launch probing
+            // for a stalled consumer must hear the agent write even when
+            // catch-up is wedged.
+            for (const hear of appendListeners.get(id) ?? []) hear();
+            catchUps.trigger(id);
+          },
+          onLost: async (_dir, error) => {
+            // Its directory went: this watch hears nothing more. The scan
+            // follows it again if its agent still runs.
+            if (error instanceof WatchedDirGoneError) {
+              await unfollowAgent(id, follow);
+              followScan.trigger();
+            }
+            // Events may have been dropped: read what is on disk.
+            catchUps.trigger(id);
+          },
+        }),
+      )
+      .then(
+        (watch) => {
+          catchUps.trigger(id);
+          return watch;
+        },
+        (err: unknown) => {
+          if (followed.get(id) === follow) followed.delete(id);
+          throw err;
+        },
+      ),
+  };
+  followed.set(id, follow);
+  return follow;
+}
+
+/**
+ * Stop watching `id`'s directory — `only` that follow when given (a watch
+ * reporting its own loss must not close a newer one) — then read what its
+ * agent wrote last.
+ */
+async function unfollowAgent(id: string, only?: Follow): Promise<void> {
+  const follow = followed.get(id);
+  if (!follow || (only && follow !== only)) return;
+  followed.delete(id);
+  const closed = follow.watch.then(
+    (watch) => watch.stop(),
+    // It never opened: whoever opened it answers for that (a launch fails, the
+    // scan files a report).
+    () => undefined,
+  );
+  closing.set(id, closed);
+  try {
+    await closed;
+  } finally {
+    if (closing.get(id) === closed) closing.delete(id);
+  }
+  catchUps.trigger(id);
+}
+
+/**
+ * Follow `id` for the length of `launch`, which starts its process: the
+ * agent writes its first events before its pid file says it runs. Once the
+ * launch settles, the pid files decide (a failed launch is unfollowed unless
+ * its agent runs after all). The pid file lands just after the `started`
+ * event the launch waits for, so a scan in between may unfollow it for a
+ * moment; the pid file's own event follows it again and catches up, so no
+ * line goes unread.
+ */
+export async function followLaunch<T>(
+  id: string,
+  launch: () => Promise<T>,
+): Promise<T> {
+  const follow = followAgent(id);
+  follow.launches += 1;
+  try {
+    await follow.watch;
+    return await launch();
+  } finally {
+    follow.launches -= 1;
+    followScan.trigger();
+  }
+}
+
+/**
+ * Bring the followed set in line with the agents running now: follow each one
+ * whose pid file names a live pid, unfollow each one whose process is gone (and
+ * no launch holds). An agent whose watch cannot be opened is reported, not
+ * thrown: one agent's directory must never fail the rest, nor a boot.
+ */
+async function syncFollowed(): Promise<void> {
+  let running: Set<string>;
+  try {
+    running = new Set(liveAgentIds(runtimeNamespace()));
+  } catch (err) {
+    // The pid files could not be read: the followed set stays as it is until
+    // the next pid-file change or recount.
+    await recordReport({
+      kind: "crash",
+      source: "server-caught",
+      message: `SDK agents: the running agents' pid files could not be read, so which agents' events are watched was not updated — ${err instanceof Error ? err.message : String(err)}`,
+      data: { errorType: "SdkEventsWatchFailed", label: "runtime-sdk.events" },
+    });
+    return;
+  }
+  for (const id of running) {
+    if (followed.has(id)) continue;
+    try {
+      await followAgent(id).watch;
+    } catch (err) {
+      await reportFollowFailure(id, "could not be watched", err);
+    }
+  }
+  for (const [id, follow] of [...followed]) {
+    if (running.has(id) || follow.launches > 0) continue;
+    try {
+      await unfollowAgent(id, follow);
+    } catch (err) {
+      await reportFollowFailure(id, "could not stop being watched", err);
+    }
+  }
+}
+
+async function reportFollowFailure(
+  id: string,
+  what: string,
+  err: unknown,
+): Promise<void> {
+  await recordReport({
+    kind: "crash",
+    source: "server-caught",
+    message: `SDK agent ${id}: its directory ${agentDir(id)} ${what}, so its new events are applied only when something else reads them — ${err instanceof Error ? err.message : String(err)}`,
+    data: { errorType: "SdkEventsWatchFailed", label: "runtime-sdk.events" },
+  });
+}
+
+const followScan = createCoalescer({ run: () => syncFollowed() });
 
 /** How many agents the boot catch-up brings up at once. */
 const BOOT_CATCH_UP_CONCURRENCY = 8;
 
 /**
- * Start consuming: the watch, the question-answer listener, then one catch-up
- * of every live sdk conversation (what happened while no backend was up) and
- * a re-sync of every question an agent still holds open. Resolves the stop.
+ * Start consuming: the running agents' watches (kept in line with their pid
+ * files), the question-answer listener, then one catch-up of every live sdk
+ * conversation (what happened while no backend was up) and a re-sync of every
+ * question an agent still holds open. Resolves the stop.
  */
 export async function startConsumer(
   onSignal: (s: RuntimeSignal) => void,
 ): Promise<() => Promise<void>> {
   if (signal) throw new Error("runtime-sdk consumer: already started");
   signal = onSignal;
-  const root = ownAgentsRoot();
-  mkdirSync(root, { recursive: true });
-  const watcher = await sdkEventsWatcher.start({
-    dirs: [root],
-    onChange: async (events) => {
-      const ids = new Set<string>();
-      for (const e of events) {
-        const id = agentOfPath(root, e.path);
-        if (id) ids.add(id);
-      }
-      // Heard before (and whatever) the catch-up does: a launch probing for a
-      // stalled consumer must hear the agent write even when catch-up is wedged.
-      for (const id of ids)
-        for (const hear of appendListeners.get(id) ?? []) hear();
-      for (const id of ids) if (await isOurs(id)) catchUps.trigger(id);
-    },
+  mkdirSync(ownAgentsRoot(), { recursive: true });
+  const pidsDir = ownAgentPidsDir();
+  mkdirSync(pidsDir, { recursive: true });
+  // An agent starting or exiting adds or removes its pid file; one killed
+  // outright leaves it behind, which the reconciler's recount notices.
+  const releasePids = await acquireDirWatch({
+    dir: pidsDir,
+    scope: "children",
+    onChange: () => followScan.trigger(),
   });
+  const unrecount = onAgentProcessesRecount(() => followScan.trigger());
+  await followScan.run();
   const unlisten = onQuestionResolved(onResolved);
   // The rows expected live (an agent that exited while this backend was down
   // still has its last lines to read) and every agent actually running, whatever
@@ -527,7 +727,10 @@ export async function startConsumer(
   );
   return async () => {
     unlisten();
-    await watcher.stop();
+    unrecount();
+    releasePids();
+    await followScan.idle();
+    await Promise.all([...followed.keys()].map((id) => unfollowAgent(id)));
     signal = null;
   };
 }

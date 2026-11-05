@@ -31198,6 +31198,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `journalCursor`
           - `listFileWatchers`
           - `onWatcherActivity`
+          - `WatchedDirGoneError`
           - `WRITES_WHILE_OPEN_MAX_ENTRIES`
         - Register:
           - `defineFileWatcher('file-watcher.dirs')`

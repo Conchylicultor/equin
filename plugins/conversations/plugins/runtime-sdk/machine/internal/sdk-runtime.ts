@@ -34,6 +34,7 @@ import {
 import { runningAgentIds } from "./agent-processes";
 import {
   adoptAgent,
+  followLaunch,
   catchUpNow,
   catchUpWithin,
   forgetPosition,
@@ -425,16 +426,20 @@ async function launchAgent(
   options: AgentLaunchIntent,
 ): Promise<void> {
   const launchedAt = new Date();
-  const started = await startAgentProcess(id, options);
-  const stopWaiting = new AbortController();
-  const outcome = await Promise.race([
-    waitForStart(id, stopWaiting.signal, launchedAt),
-    started.exited.then((reason) => ({ kind: "exited" as const, reason })),
-  ]);
-  stopWaiting.abort();
-  if (outcome.kind === "exited") {
-    throw new AgentStartError(id, outcome.reason, started.output());
-  }
+  // Its directory is watched before the process starts: the agent writes its
+  // first events before its pid file says it runs.
+  await followLaunch(id, async () => {
+    const started = await startAgentProcess(id, options);
+    const stopWaiting = new AbortController();
+    const outcome = await Promise.race([
+      waitForStart(id, stopWaiting.signal, launchedAt),
+      started.exited.then((reason) => ({ kind: "exited" as const, reason })),
+    ]);
+    stopWaiting.abort();
+    if (outcome.kind === "exited") {
+      throw new AgentStartError(id, outcome.reason, started.output());
+    }
+  });
 }
 
 /**

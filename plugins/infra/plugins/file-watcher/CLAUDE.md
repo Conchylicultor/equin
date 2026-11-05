@@ -278,6 +278,7 @@ re-created is watched again (a `rescan` on each appearing or going).
     - `journalCursor`
     - `listFileWatchers`
     - `onWatcherActivity`
+    - `WatchedDirGoneError`
     - `WRITES_WHILE_OPEN_MAX_ENTRIES`
   - Register:
     - `defineFileWatcher('file-watcher.dirs')`

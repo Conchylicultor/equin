@@ -142,6 +142,7 @@ function countAgents(): AgentProcesses {
 }
 
 const notifiers = new Set<() => void>();
+const recountListeners = new Set<() => void>();
 
 /**
  * Re-count now: an agent this backend found gone outright (killed, so it left
@@ -149,6 +150,18 @@ const notifiers = new Set<() => void>();
  */
 export function recountAgentProcesses(): void {
   for (const notify of notifiers) notify();
+  for (const hear of recountListeners) hear();
+}
+
+/**
+ * Hear every {@link recountAgentProcesses} — the one signal for an agent that
+ * died without removing its pid file. Returns the unsubscribe.
+ */
+export function onAgentProcessesRecount(hear: () => void): () => void {
+  recountListeners.add(hear);
+  return () => {
+    recountListeners.delete(hear);
+  };
 }
 
 /**
