@@ -165,11 +165,13 @@ await withBrowser(async (h) => {
   await page.mouse.move(above.x + 2, above.y + above.height / 2, {
     steps: 8,
   });
-  const nativeOut = await page.evaluate(
-    () => getSelection()?.toString() ?? "",
-  );
+  const nativeOut = await page.evaluate(() => getSelection()?.toString() ?? "");
   await page.mouse.up();
-  r.eq("6b: dragging out of the table leaves no native selection", nativeOut, "");
+  r.eq(
+    "6b: dragging out of the table leaves no native selection",
+    nativeOut,
+    "",
+  );
   r.ok(
     "6c: … it selects the blocks instead",
     (await page.locator("[data-selection-band]").count()) > 0,
