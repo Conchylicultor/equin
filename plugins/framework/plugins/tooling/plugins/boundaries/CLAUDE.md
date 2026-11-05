@@ -295,7 +295,7 @@ takes a `debt` exemption on the check's id.
     - `framework/tooling/checks/type-check` (17 debt)
     - `framework/tooling/codegen` (22 debt)
     - `framework/tooling/format` (5 debt)
-    - `framework/tooling/guards` (10 debt)
+    - `framework/tooling/guards` (11 debt)
     - `framework/tooling/import-closure` (1 debt)
     - `framework/tooling/lint` (2 debt)
     - `framework/tooling/web-artifacts` (19 debt)

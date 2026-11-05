@@ -1,4 +1,6 @@
 import { resolve } from "node:path";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { expandHome } from "./home-path";
 import {
   CLI_NAME,
   isCliName,
@@ -758,11 +760,14 @@ function stripGroupParens(tokens: string[]): string[] {
 /** Fold a single `cd` over the running cwd. */
 function applyCd(cwd: string, args: string[]): string {
   const target = args.find((a) => !a.startsWith("-"));
-  // `cd` / `cd -` / `cd ~…` resolve to dirs we can't know here; leave the cwd
-  // unchanged rather than guess. Absolute targets replace it; relative ones
-  // fold onto it.
-  if (!target || target === "-" || target.startsWith("~")) return cwd;
-  return resolve(cwd, target);
+  // `cd`, `cd ~/x` and `cd $HOME/x` go home — a dir we know, and the one a
+  // search must not start from unseen (`cd ~ && rg foo`). `cd -` and `cd ~user`
+  // resolve to dirs we can't know here; leave the cwd unchanged rather than
+  // guess. Absolute targets replace it; relative ones fold onto it.
+  if (!target) return HOME_DIR;
+  const expanded = expandHome(target);
+  if (expanded === "-" || expanded.startsWith("~")) return cwd;
+  return resolve(cwd, expanded);
 }
 
 function basename(p: string): string {

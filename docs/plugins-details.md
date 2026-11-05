@@ -27713,7 +27713,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/checks/type-check` (17 debt)
               - `framework/tooling/codegen` (22 debt)
               - `framework/tooling/format` (5 debt)
-              - `framework/tooling/guards` (10 debt)
+              - `framework/tooling/guards` (11 debt)
               - `framework/tooling/import-closure` (1 debt)
               - `framework/tooling/lint` (2 debt)
               - `framework/tooling/web-artifacts` (19 debt)
@@ -28402,16 +28402,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries/no-platform-api` — `core/internal/changed-files.ts`, `core/internal/format-sources.ts`, `core/internal/format-thread.ts`, `core/internal/format-worker.ts`, `core/internal/prettier.ts` (debt)
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
-            - Uses: 25 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+            - Uses: 27 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+              - `packages/timed-fs` ×4
               - `framework/cli/cli-name` ×3
               - `infra/host-fs/user-path` ×3
-              - `packages/timed-fs` ×3
+              - `infra/paths` ×3
               - `framework/cli/foreground-handoff` ×2
               - `framework/tooling/collected-dir` ×2
               - `framework/tooling/guards/refusal-format` ×2
               - `infra/launcher/env-names` ×2
               - `infra/namespace` ×2
-              - `infra/paths` ×2
               - `packages/owned-fd` ×2
               - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
               - `infra/paths/repo-root.REPO_ROOT`
@@ -28464,9 +28464,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `timed-fs/no-untimed-fs-read` — `bin/bootstrap.ts` (sanctioned)
               - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/main-edits.ts` (sanctioned)
-              - `user-path/no-sync-fs` — `core/context.ts`, `core/git-target.ts`, `core/guards/poll-loop.ts` (sanctioned)
+              - `user-path/no-sync-fs` — `core/context.ts`, `core/git-target.ts`, `core/guards/poll-loop.ts`, `core/walk-scope.ts` (sanctioned)
               - `python/no-system-python` — `core` (sanctioned)
-              - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts` (debt)
+              - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts`, `core/walk-scope.ts` (debt)
           - Plugins:
             - **`agent-policy`** — The protections every agent runs with — the guard and stop-guard hooks and the deny rules — declared once as data: `.claude/settings.json`'s protection keys are generated from it (guards:claude-settings-in-sync) and every app launch carries it, whatever its workspace, so an agent outside the repo (a scratch workspace) is guarded too.
               - Core:

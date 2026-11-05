@@ -47,7 +47,15 @@ export type TranscriptRead =
 
 /** A built-in Claude Code tool a guard can judge. */
 export type BuiltinTool =
-  "Bash" | "Write" | "Edit" | "Read" | "NotebookEdit" | "Agent" | "ToolSearch";
+  | "Bash"
+  | "Write"
+  | "Edit"
+  | "Read"
+  | "NotebookEdit"
+  | "Agent"
+  | "ToolSearch"
+  | "Grep"
+  | "Glob";
 /**
  * Every tool of one MCP server — `mcp__<server>__*` (Claude Code names an MCP
  * tool `mcp__<server>__<tool>`). A whole server, not one tool: a guard about an

@@ -92,7 +92,31 @@ is the failure that matters. `no-adhoc-path-resolve` (in the `guard-path-safety`
 lint plugin) keeps it fixed: inside `core/guards/`, importing a value from
 `node:path` is an error.
 
+## A search stays where it is bounded
+
+`search-scope` (Bash) and `search-scope-grep` / `search-scope-glob` refuse a
+recursive walk whose ROOT lies outside what the system bounds — one walk of `~`
+(transcripts, Downloads, every worktree's node_modules) churns the kernel file
+cache the whole host shares.
+
+- `core/walk-roots.ts` is `argv.ts` for reads: the directories a call walks
+  (`rg`, `grep -r`, `fd`, `find`, `ag`, `tree`, `du`, `ls -R`, Grep/Glob),
+  resolved — implicit cwd, `~`/`$HOME`, `cd`, a glob folded to the directory it
+  expands in — plus its depth bound and whether it skips ignored/hidden entries.
+- `core/walk-scope.ts` is the policy, an ALLOWLIST (a list of known-huge places
+  is always one short): the workspace, a writable data dir, the main checkout
+  (minus the dirs holding `.claude/worktrees`, for a walk that does not skip
+  ignored dirs), ONE entry below a shared parent (a worktree's data dir, a
+  `/tmp` dir). A non-directory is read, not walked; a one-segment glob is judged
+  by what it expands to.
+- Opt-in elsewhere: an explicit depth, ≤ 2 for a names-only walk, ≤ 1 for a
+  content search. `du -d` bounds what it prints, not what it walks.
+
 ## Known gaps, on purpose
+
+- **`search-scope` stops accidents, not intent.** A root built from a variable
+  other than `$HOME` (`rg foo "$PWD/.."`, `$(dirname …)`) or run through
+  `bash -c` is not resolved.
 
 - **BSD `sed -i .bak`.** BSD spells the backup suffix as its own token. `-i` is
   modelled as taking no separate value — the only way both BSD's `sed -i ''` and
@@ -228,16 +252,16 @@ can blind or deafen all of them at once.
 
 - Description: Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
 - Core:
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `packages/timed-fs` ×4
     - `framework/cli/cli-name` ×3
     - `infra/host-fs/user-path` ×3
-    - `packages/timed-fs` ×3
+    - `infra/paths` ×3
     - `framework/cli/foreground-handoff` ×2
     - `framework/tooling/collected-dir` ×2
     - `framework/tooling/guards/refusal-format` ×2
     - `infra/launcher/env-names` ×2
     - `infra/namespace` ×2
-    - `infra/paths` ×2
     - `packages/owned-fd` ×2
     - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
     - `infra/paths/repo-root.REPO_ROOT`
@@ -290,9 +314,9 @@ can blind or deafen all of them at once.
   - Exempts itself from:
     - `timed-fs/no-untimed-fs-read` — `bin/bootstrap.ts` (sanctioned)
     - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/main-edits.ts` (sanctioned)
-    - `user-path/no-sync-fs` — `core/context.ts`, `core/git-target.ts`, `core/guards/poll-loop.ts` (sanctioned)
+    - `user-path/no-sync-fs` — `core/context.ts`, `core/git-target.ts`, `core/guards/poll-loop.ts`, `core/walk-scope.ts` (sanctioned)
     - `python/no-system-python` — `core` (sanctioned)
-    - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts` (debt)
+    - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts`, `core/walk-scope.ts` (debt)
 - Sub-plugins:
   - **`agent-policy`** — The protections every agent runs with — the guard and stop-guard hooks and the deny rules — declared once as data: `.claude/settings.json`'s protection keys are generated from it…
   - **`refusal-format`** — The text format of a guard's denial — the did-not-run banner, then 'Why it was blocked:' and the guard's own reason — written (joinRefusal) and read back (refusalReason) in one place, so a…

@@ -1,4 +1,5 @@
 import { basename, resolve } from "node:path";
+import { expandHome } from "./home-path";
 import type { ShellCall } from "./parse-shell";
 
 /**
@@ -73,6 +74,11 @@ export interface ParsedArgv {
    * absent, which is what makes `sed -ei 'x' f` correctly NOT in-place.
    */
   flags: ReadonlySet<string>;
+  /**
+   * The value each `consumed` / `dir` flag took, keyed like `flags` (the last
+   * one wins when a flag repeats) — `rg --max-depth 2` → `"max-depth" → "2"`.
+   */
+  values: ReadonlyMap<string, string>;
 }
 
 /**
@@ -326,6 +332,232 @@ const COMMAND_GRAMMAR = {
     },
     leading: {},
   },
+  // The search / walk commands below are read by `walk-roots.ts`: their
+  // operands are the directories they walk, so every value flag must be modelled
+  // or its value (a glob, a type, a count) would pose as a root.
+  //
+  // ripgrep: the leading positional is the pattern unless `-e`/`-f` (or a mode
+  // that takes none) supplies it. Source: `rg --help`.
+  rg: {
+    short: {
+      A: "consumed",
+      B: "consumed",
+      C: "consumed",
+      d: "consumed",
+      E: "consumed",
+      e: "consumed",
+      f: "consumed",
+      g: "consumed",
+      j: "consumed",
+      M: "consumed",
+      m: "consumed",
+      r: "consumed",
+      T: "consumed",
+      t: "consumed",
+    },
+    long: {
+      "after-context": "consumed",
+      "before-context": "consumed",
+      context: "consumed",
+      "context-separator": "consumed",
+      "max-depth": "consumed",
+      maxdepth: "consumed",
+      encoding: "consumed",
+      regexp: "consumed",
+      file: "consumed",
+      glob: "consumed",
+      iglob: "consumed",
+      threads: "consumed",
+      "max-columns": "consumed",
+      "max-count": "consumed",
+      "max-filesize": "consumed",
+      replace: "consumed",
+      "type-not": "consumed",
+      type: "consumed",
+      "type-add": "consumed",
+      "type-clear": "consumed",
+      "ignore-file": "consumed",
+      "path-separator": "consumed",
+      sort: "consumed",
+      sortr: "consumed",
+      colors: "consumed",
+      color: "consumed",
+      engine: "consumed",
+      pre: "consumed",
+      "pre-glob": "consumed",
+      "dfa-size-limit": "consumed",
+      "regex-size-limit": "consumed",
+      "field-match-separator": "consumed",
+      "field-context-separator": "consumed",
+      "hostname-bin": "consumed",
+      "hyperlink-format": "consumed",
+      generate: "consumed",
+    },
+    leading: {
+      suppressedBy: [
+        "e",
+        "f",
+        "regexp",
+        "file",
+        "files",
+        "type-list",
+        "version",
+        "help",
+        "V",
+      ],
+    },
+  },
+  // grep: same leading-pattern shape. Only a recursive grep walks (the walk
+  // reader checks the flag); `-d`/`-D` take an action word.
+  grep: {
+    short: {
+      A: "consumed",
+      B: "consumed",
+      C: "consumed",
+      D: "consumed",
+      d: "consumed",
+      e: "consumed",
+      f: "consumed",
+      m: "consumed",
+    },
+    long: {
+      "after-context": "consumed",
+      "before-context": "consumed",
+      context: "consumed",
+      devices: "consumed",
+      directories: "consumed",
+      regexp: "consumed",
+      file: "consumed",
+      "max-count": "consumed",
+      include: "consumed",
+      exclude: "consumed",
+      "exclude-dir": "consumed",
+      "exclude-from": "consumed",
+      label: "consumed",
+      "binary-files": "consumed",
+      color: "attached",
+      colour: "attached",
+    },
+    leading: { suppressedBy: ["e", "f", "regexp", "file", "V", "version"] },
+  },
+  // fd: an optional leading pattern, then the roots. `--search-path` names a
+  // root as a flag (read from `values`), `--base-directory` moves the cwd.
+  fd: {
+    short: {
+      d: "consumed",
+      E: "consumed",
+      e: "consumed",
+      t: "consumed",
+      j: "consumed",
+      c: "consumed",
+      S: "consumed",
+      o: "consumed",
+    },
+    long: {
+      "max-depth": "consumed",
+      "min-depth": "consumed",
+      "exact-depth": "consumed",
+      extension: "consumed",
+      type: "consumed",
+      exclude: "consumed",
+      threads: "consumed",
+      color: "consumed",
+      size: "consumed",
+      "changed-within": "consumed",
+      "changed-before": "consumed",
+      newer: "consumed",
+      older: "consumed",
+      owner: "consumed",
+      "ignore-file": "consumed",
+      "max-results": "consumed",
+      "search-path": "dir",
+      "base-directory": "consumed",
+      "path-separator": "consumed",
+      "batch-size": "consumed",
+      "max-buffer-time": "consumed",
+      format: "consumed",
+      and: "consumed",
+      hyperlink: "attached",
+    },
+    leading: { suppressedBy: ["search-path", "version", "V", "help"] },
+  },
+  // The silver searcher: the leading positional is the pattern.
+  ag: {
+    short: {
+      A: "consumed",
+      B: "consumed",
+      C: "consumed",
+      G: "consumed",
+      g: "consumed",
+      m: "consumed",
+      p: "consumed",
+    },
+    long: {
+      "after-context": "attached",
+      "before-context": "attached",
+      context: "attached",
+      depth: "consumed",
+      "file-search-regex": "consumed",
+      ignore: "consumed",
+      "ignore-dir": "consumed",
+      "max-count": "consumed",
+      "path-to-ignore": "consumed",
+      pager: "consumed",
+      workers: "consumed",
+    },
+    leading: {},
+  },
+  // tree: every operand is a root; `-L` bounds the depth.
+  tree: {
+    short: {
+      L: "consumed",
+      P: "consumed",
+      I: "consumed",
+      o: "consumed",
+      H: "consumed",
+      T: "consumed",
+    },
+    long: {
+      charset: "consumed",
+      filelimit: "consumed",
+      timefmt: "consumed",
+      sort: "consumed",
+      gitfile: "consumed",
+      infile: "attached",
+    },
+  },
+  // du: every operand is a root; `-d` bounds the depth it REPORTS, not the
+  // one it walks (`du -d 0 ~` still stats everything) — so it bounds nothing.
+  du: {
+    short: { d: "consumed", B: "consumed", t: "consumed", I: "consumed" },
+    long: {
+      "max-depth": "consumed",
+      "block-size": "consumed",
+      threshold: "consumed",
+      exclude: "consumed",
+      "exclude-from": "consumed",
+      "files0-from": "consumed",
+      time: "attached",
+      "time-style": "consumed",
+    },
+  },
+  ls: {
+    short: { I: "consumed", T: "consumed", w: "consumed" },
+    long: {
+      ignore: "consumed",
+      hide: "consumed",
+      tabsize: "consumed",
+      width: "consumed",
+      "block-size": "consumed",
+      color: "attached",
+      format: "consumed",
+      "indicator-style": "consumed",
+      "quoting-style": "consumed",
+      sort: "consumed",
+      time: "consumed",
+      "time-style": "consumed",
+    },
+  },
 } satisfies Record<string, CommandGrammar>;
 
 export type KnownCommand = keyof typeof COMMAND_GRAMMAR;
@@ -375,13 +607,18 @@ function grammarFor(name: string): CommandGrammar {
  */
 const REMOTE_SPEC = /^[^:/]+:/;
 
+/** One operand's path on this machine: `~`/`$HOME` expanded, resolved against `cwd`. */
+export function operandPath(raw: string, cwd: string): string {
+  return resolve(cwd, expandHome(raw));
+}
+
 function toOperand(
   raw: string,
   cwd: string,
   remoteSpecs: boolean,
 ): FileOperand {
   if (remoteSpecs && REMOTE_SPEC.test(raw)) return { kind: "remote", raw };
-  return { kind: "local", raw, path: resolve(cwd, raw) };
+  return { kind: "local", raw, path: operandPath(raw, cwd) };
 }
 
 export function parseArgv(call: ShellCall): ParsedArgv {
@@ -389,6 +626,7 @@ export function parseArgv(call: ShellCall): ParsedArgv {
   const remoteSpecs = grammar.remoteSpecs === true;
   const files: FileOperand[] = [];
   const flags = new Set<string>();
+  const values = new Map<string, string>();
   let targetDir: FileOperand | undefined;
   let leading: string | undefined;
   let leadingFilled = false;
@@ -420,7 +658,12 @@ export function parseArgv(call: ShellCall): ParsedArgv {
   };
 
   /** A flag's value: recorded as taken, and (for `dir`) as the destination. */
-  const takeValue = (arity: FlagArity, value: string | undefined): void => {
+  const takeValue = (
+    name: string,
+    arity: FlagArity,
+    value: string | undefined,
+  ): void => {
+    if (value !== undefined && arity !== "attached") values.set(name, value);
     if (arity === "dir" && value !== undefined && value !== "") {
       targetDir = toOperand(value, call.cwd, remoteSpecs);
     }
@@ -450,7 +693,8 @@ export function parseArgv(call: ShellCall): ParsedArgv {
       flags.add(name);
       if (eq !== -1) {
         // `--name=value` is self-contained whatever the arity.
-        takeValue(arity ?? "attached", tok.slice(eq + 1));
+        values.set(name, tok.slice(eq + 1));
+        takeValue(name, arity ?? "attached", tok.slice(eq + 1));
         continue;
       }
       // GNU long options accept both spellings, so `chmod --reference r f` must
@@ -458,7 +702,7 @@ export function parseArgv(call: ShellCall): ParsedArgv {
       // next token — its value is optional and must be glued.
       if (arity === "consumed" || arity === "dir") {
         const value = args[++i];
-        takeValue(arity, value);
+        takeValue(name, arity, value);
       }
       continue;
     }
@@ -479,7 +723,7 @@ export function parseArgv(call: ShellCall): ParsedArgv {
         flags.add(letter);
         if (arity === "consumed" || arity === "dir") {
           const tail = cluster.slice(j + 1);
-          takeValue(arity, tail !== "" ? tail : args[++i]);
+          takeValue(letter, arity, tail !== "" ? tail : args[++i]);
           break;
         }
         if (arity === "attached") {
@@ -499,6 +743,7 @@ export function parseArgv(call: ShellCall): ParsedArgv {
     targetDir,
     leading,
     flags,
+    values,
   };
 }
 

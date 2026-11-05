@@ -21,6 +21,7 @@ export default [
       "core/context.ts",
       "core/git-target.ts",
       "core/guards/poll-loop.ts",
+      "core/walk-scope.ts",
     ],
     kind: "sanctioned",
     reason:
@@ -46,6 +47,7 @@ export default [
       "core/guards/poll-loop.ts",
       "core/parse-shell.ts",
       "core/stop-guard.ts",
+      "core/walk-scope.ts",
     ],
     kind: "debt",
     task: "task-1792338443-riwqev",

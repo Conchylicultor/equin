@@ -37,6 +37,8 @@ const NOT_DONE: Record<
   Agent: () =>
     "No agent was launched. Nothing it would have done has happened.",
   ToolSearch: () => "No tools were loaded.",
+  Grep: () => "Nothing was searched. You have not seen any match.",
+  Glob: () => "Nothing was listed. You have not seen any path.",
 };
 
 function stringField(

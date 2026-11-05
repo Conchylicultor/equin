@@ -19,6 +19,11 @@ import { pipefailGuard } from "./guards/pipefail";
 import { pollLoopGuard } from "./guards/poll-loop";
 import { postgresGuard } from "./guards/postgres";
 import { rgReplaceGuard } from "./guards/rg-replace";
+import {
+  globScopeGuard,
+  grepScopeGuard,
+  searchScopeGuard,
+} from "./guards/search-scope";
 import type { Guard } from "./types";
 
 export const GUARDS: Guard<any>[] = [
@@ -30,6 +35,7 @@ export const GUARDS: Guard<any>[] = [
   bunScriptGuard,
   gitDiffMainGuard,
   rgReplaceGuard,
+  searchScopeGuard,
   gitPushGuard,
   gitResetMainGuard,
   migrationsGuard,
@@ -51,6 +57,9 @@ export const GUARDS: Guard<any>[] = [
   claudeMdHint,
   // Bash + file writes
   noMemoryGuard,
+  // Search tools
+  grepScopeGuard,
+  globScopeGuard,
   // Agent
   agentModelGuard,
 ];
