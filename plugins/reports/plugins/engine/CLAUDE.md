@@ -97,6 +97,16 @@ Rules that follow:
   fingerprint is rate-limited the bell stays quiet, but its row's count keeps
   moving in an open pane (every 2 s).
 
+## Fatal reports: `serverFatalSink`
+
+`reportServerFatalSync` (server-core) files a report synchronously just before
+a deliberate exit (the jobs runner floor, a dead runner). The engine handles it
+through `sinkHandlers` (`server/internal/fatal.ts`), so it is attached in every
+boot mode. Where it lands follows `recordReport`: the serving backend appends a
+line naming its kind to its crash buffer (replayed by its next boot's
+`flushBufferedReports`); any other process (an exec child) hands it to
+`reportOutboxFatalSink`, which `reports/outbox` writes synchronously.
+
 ## Filing from a process with no server
 
 `recordReport` runs inside a backend. A process with no server — a
@@ -149,6 +159,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `recordReportDebounced`
     - `recordReportIncident`
     - `renderReportTask`
+    - `reportOutboxFatalSink`
     - `reportOutboxSink`
     - `uninvestigatedReportCounts`
     - `uninvestigatedReports`

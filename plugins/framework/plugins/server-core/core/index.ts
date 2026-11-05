@@ -13,7 +13,7 @@ export {
   reportServerError,
   reportServerFatalSync,
   serverErrorSink,
-  setFatalReporter,
+  serverFatalSink,
 } from "./error-reporter";
 export type { ServerErrorReport, ServerFatalReport } from "./error-reporter";
 export { setProfilerHooks } from "./profiler-hooks";

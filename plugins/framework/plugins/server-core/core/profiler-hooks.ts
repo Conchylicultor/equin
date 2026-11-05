@@ -6,8 +6,7 @@
 // `ServerPluginDefinition` from here, so a direct `server-core → runtime-profiler`
 // import made the cross-plugin graph cyclic. Instead, server-core declares the
 // hooks it needs here with safe no-op defaults, and runtime-profiler INJECTS the
-// real implementation at boot via `setProfilerHooks` — mirroring the
-// `setFatalReporter` pattern in ./error-reporter.
+// real implementation at boot via `setProfilerHooks`.
 
 /** Minimal view of a loader aggregate that server-core reads for the _debug endpoint. */
 export interface LoaderAggregateView {

@@ -1,7 +1,15 @@
 import { sinkHandler } from "@plugins/framework/plugins/server-core/core";
-import { reportOutboxSink } from "@plugins/reports/plugins/engine/server";
+import {
+  reportOutboxFatalSink,
+  reportOutboxSink,
+} from "@plugins/reports/plugins/engine/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { fileReportFromProcess } from "../../core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import {
+  fileReportFromProcess,
+  fileReportFromProcessSync,
+  repositoryOf,
+} from "../../core";
 
 // The writes still in flight: a process must not exit before they land.
 const inFlight = new Set<Promise<unknown>>();
@@ -31,3 +39,35 @@ export const outboxWriter = sinkHandler(reportOutboxSink, () => (input) => {
 export async function settleOutboxWrites(): Promise<void> {
   await Promise.all(inFlight);
 }
+
+// This checkout's repository, for the synchronous writer's `writer.repo`:
+// resolving it spawns git, which a process on its way out cannot await. Read
+// once in `onReadyBlocking` (`resolveWriterRepo`), before any registered work
+// runs.
+let writerRepo: string | undefined;
+
+/**
+ * Resolve the repository the synchronous writer stamps. Throws like the
+ * drain's own read of it (`repositoryOf`): the app runs from a git checkout,
+ * and one git cannot read is a broken assumption to fail on, not to stamp
+ * around.
+ */
+export async function resolveWriterRepo(): Promise<void> {
+  writerRepo = await repositoryOf(REPO_ROOT);
+}
+
+/**
+ * The engine's `reportOutboxFatalSink` → the outbox, synchronously: a fatal
+ * report (`reportServerFatalSync`) from a process that cannot write `reports`
+ * — an exec child exiting on purpose — is one entry, renamed into place before
+ * the handler returns, so the caller may exit on its next statement. Answers
+ * whether it landed (a refusal or failure has printed why).
+ */
+export const outboxFatalWriter = sinkHandler(
+  reportOutboxFatalSink,
+  () => (report) =>
+    fileReportFromProcessSync(
+      { kind: report.kind, message: report.message, data: report.data ?? {} },
+      { repo: writerRepo },
+    ).outcome === "written",
+);

@@ -1,5 +1,6 @@
 export {
   fileReportFromProcess,
+  fileReportFromProcessSync,
   OUTBOX_MAX_PENDING,
   repositoryOf,
 } from "./internal/file-report";

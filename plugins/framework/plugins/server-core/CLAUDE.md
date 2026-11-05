@@ -148,6 +148,14 @@ hooks. A `sink.register(fn)` from a hook runs only where that hook runs: in
 sink held and then dropped what the child emitted. Outside `web/`, the
 `report-sink/no-direct-sink-register` lint rejects the hand-rolled form.
 
+The reporters server-core itself offers are sinks for the same reason:
+`reportServerError` emits on `serverErrorSink` (held until the engine attaches),
+and `reportServerFatalSync` — the synchronous report a process files just
+before a deliberate `process.exit()` — on `serverFatalSink`, a REQUEST sink
+(never held: a report held past the exit is lost) whose handler answers
+whether the durable write landed; with none attached it says so on stderr.
+There is no `set*Reporter` setter to call from a hook an exec child skips.
+
 ### Two standing constraints — read before adding a boot hook
 
 **1. `isMain()` does NOT mean "the serving backend", and an `exec` child satisfies
@@ -488,6 +496,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `network/live/resource-runtime.ResourceGuardError`
     - `packages/string-hash.hash64`
     - `primitives/report-sink.defineReportSink`
+    - `primitives/report-sink.defineRequestSink`
   - Exports (types):
     - `BootJournalEntry`
     - `BootMode`
@@ -611,9 +620,9 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `seedRouteDrift`
     - `serverCollectedDir`
     - `serverErrorSink`
+    - `serverFatalSink`
     - `setClientBuildIdentity`
     - `setEpochHandoffHooks`
-    - `setFatalReporter`
     - `setLiveStateSnapshotHooks`
     - `setProfilerHooks`
     - `setRelationBases`

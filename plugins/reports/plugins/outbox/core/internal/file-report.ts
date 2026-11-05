@@ -1,7 +1,16 @@
+import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { mkdir, rename, writeFile } from "node:fs/promises";
-import { readdir, realpath } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  readdir,
+  readdirSync,
+  realpath,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { reportOutboxDir } from "../../data-dirs";
 import {
@@ -60,32 +69,10 @@ export async function fileReportFromProcess(
   const dir = opts.dir ?? reportOutboxDir.path;
   try {
     await mkdir(dir, { recursive: true });
-    const pending = (await readdir(dir)).filter(isOutboxEntryName).length;
-    if (pending >= OUTBOX_MAX_PENDING) {
-      console.error(
-        `[report-outbox] refused a "${report.kind}" report: ${dir} already holds ` +
-          `${pending} undrained entries (cap ${OUTBOX_MAX_PENDING}). Main's backend ` +
-          "drains this directory — is it running?",
-      );
-      return { outcome: "refused", pending };
-    }
+    const refused = refusal(report, dir, await readdir(dir));
+    if (refused) return refused;
     const now = opts.now ?? Date.now();
-    // Parsed on the way OUT too: a malformed entry (a bad merge-base, an
-    // absolute path) fails here, in the writer's own terminal, rather than as
-    // a crash report on main that names nobody.
-    const entry: OutboxEntry = OutboxEntrySchema.parse({
-      version: 1,
-      kind: report.kind,
-      message: report.message,
-      data: report.data,
-      code: report.code,
-      occurredAt: now,
-      writer: {
-        pid: process.pid,
-        checkout: basename(REPO_ROOT),
-        repo: await repositoryOf(REPO_ROOT),
-      },
-    });
+    const entry = outboxEntry(report, now, await repositoryOf(REPO_ROOT));
     const name = newOutboxEntryName(now, process.pid);
     const temp = join(dir, outboxTempName(name));
     const path = join(dir, name);
@@ -93,11 +80,87 @@ export async function fileReportFromProcess(
     await rename(temp, path);
     return { outcome: "written", path };
   } catch (error) {
-    console.error(
-      `[report-outbox] could not file a "${report.kind}" report into ${dir}: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    );
-    return { outcome: "failed", error };
+    return failure(report, dir, error);
   }
+}
+
+/**
+ * {@link fileReportFromProcess}, synchronously: for a report filed on the way
+ * out of a process (`reportServerFatalSync` in an exec child), whose next
+ * statement is `process.exit()` — the entry is renamed into place before this
+ * returns. Never throws, same result arms.
+ *
+ * `repo` is the caller's: resolving it spawns git, which a dying process
+ * cannot await. `undefined` only when it was not known yet — the entry then
+ * reads as one from a writer older than `writer.repo`.
+ */
+export function fileReportFromProcessSync(
+  report: ProcessReport,
+  opts: { repo: string | undefined; dir?: AppPath; now?: number },
+): FileReportOutcome {
+  const dir = opts.dir ?? reportOutboxDir.path;
+  try {
+    mkdirSync(dir, { recursive: true });
+    const refused = refusal(report, dir, readdirSync(dir));
+    if (refused) return refused;
+    const now = opts.now ?? Date.now();
+    const entry = outboxEntry(report, now, opts.repo);
+    const name = newOutboxEntryName(now, process.pid);
+    const temp = joinAppPath(dir, outboxTempName(name));
+    const path = joinAppPath(dir, name);
+    writeFileSync(temp, JSON.stringify(entry));
+    renameSync(temp, path);
+    return { outcome: "written", path };
+  } catch (error) {
+    return failure(report, dir, error);
+  }
+}
+
+// The cap: `OUTBOX_MAX_PENDING` undrained entries, read from the directory's
+// names — or nothing, when there is room.
+function refusal(
+  report: ProcessReport,
+  dir: string,
+  names: readonly string[],
+): FileReportOutcome | undefined {
+  const pending = names.filter(isOutboxEntryName).length;
+  if (pending < OUTBOX_MAX_PENDING) return undefined;
+  console.error(
+    `[report-outbox] refused a "${report.kind}" report: ${dir} already holds ` +
+      `${pending} undrained entries (cap ${OUTBOX_MAX_PENDING}). Main's backend ` +
+      "drains this directory — is it running?",
+  );
+  return { outcome: "refused", pending };
+}
+
+// The entry, parsed on the way OUT too: a malformed one (a bad merge-base, an
+// absolute path) fails here, in the writer's own terminal, rather than as a
+// crash report on main that names nobody.
+function outboxEntry(
+  report: ProcessReport,
+  now: number,
+  repo: string | undefined,
+): OutboxEntry {
+  return OutboxEntrySchema.parse({
+    version: 1,
+    kind: report.kind,
+    message: report.message,
+    data: report.data,
+    code: report.code,
+    occurredAt: now,
+    writer: { pid: process.pid, checkout: basename(REPO_ROOT), repo },
+  });
+}
+
+function failure(
+  report: ProcessReport,
+  dir: string,
+  error: unknown,
+): FileReportOutcome {
+  console.error(
+    `[report-outbox] could not file a "${report.kind}" report into ${dir}: ${
+      error instanceof Error ? error.message : String(error)
+    }`,
+  );
+  return { outcome: "failed", error };
 }

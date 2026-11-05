@@ -27354,6 +27354,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/resource-runtime.ResourceGuardError`
           - `packages/string-hash.hash64`
           - `primitives/report-sink.defineReportSink`
+          - `primitives/report-sink.defineRequestSink`
         - Exports (types):
           - `BootJournalEntry`
           - `BootMode`
@@ -27477,9 +27478,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seedRouteDrift`
           - `serverCollectedDir`
           - `serverErrorSink`
+          - `serverFatalSink`
           - `setClientBuildIdentity`
           - `setEpochHandoffHooks`
-          - `setFatalReporter`
           - `setLiveStateSnapshotHooks`
           - `setProfilerHooks`
           - `setRelationBases`
@@ -31907,7 +31908,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 28 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+            - Imported by: 29 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
               - `framework` ×8
               - `infra` ×8
               - `packages` ×3
@@ -31915,6 +31916,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×2
               - `config_v2/ledger`
               - `database/migrations`
+              - `reports/outbox`
               - `toolchain`
               - `ui/icons/icon-sets`
           - Exemptions:
@@ -49952,6 +49954,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `recordReportDebounced`
           - `recordReportIncident`
           - `renderReportTask`
+          - `reportOutboxFatalSink`
           - `reportOutboxSink`
           - `uninvestigatedReportCounts`
           - `uninvestigatedReports`
@@ -50152,21 +50155,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `optimisticRejectionFingerprint`
           - `OptimisticRejectionPayloadSchema`
-    - **`outbox`** — Report outbox writer and drain: writes every report recordReport hands to the engine's reportOutboxSink (a process that cannot write reports — an exec child, a CLI) into the outbox, in every boot mode, awaiting the writes on shutdown; and on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged; one from another repository (the writer stamps its own) is filed without that check, its message saying where it came from; an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
+    - **`outbox`** — Report outbox writer and drain: writes every report recordReport hands to the engine's reportOutboxSink (a process that cannot write reports — an exec child, a CLI) into the outbox, in every boot mode, awaiting the writes on shutdown, and every fatal report (reportOutboxFatalSink) synchronously, before the process exits; and on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged; one from another repository (the writer stamps its own) is filed without that check, its message saying where it came from; an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
       - Server:
         - Uses:
           - `infra/file-watcher.defineFileWatcher`
           - `infra/file-watcher.FileWatcher`
           - `reports.isReportKindRegistered`
           - `reports/engine.recordReport`
+          - `reports/engine.reportOutboxFatalSink`
           - `reports/engine.reportOutboxSink`
         - Register: `defineFileWatcher('reports-outbox.outbox-dir')`
       - Core:
         - Uses:
+          - `infra/host-fs/user-path.AppPath`
+          - `infra/host-fs/user-path.joinAppPath`
           - `infra/paths/repo-root.REPO_ROOT`
           - `infra/spawn.getMainRepoRoot`
           - `infra/spawn.spawnCaptured`
           - `packages/timed-fs.readdir`
+          - `packages/timed-fs.readdirSync`
           - `packages/timed-fs.realpath`
         - Exports (types):
           - `FileReportOutcome`
@@ -50176,6 +50183,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ProcessReport`
         - Exports (values):
           - `fileReportFromProcess`
+          - `fileReportFromProcessSync`
           - `isOutboxEntryName`
           - `isOutboxTempName`
           - `mergeBaseWithMain`

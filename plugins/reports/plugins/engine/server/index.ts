@@ -1,7 +1,6 @@
 import {
   serverErrorSink,
   sinkHandler,
-  setFatalReporter,
 } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
@@ -16,7 +15,7 @@ import {
   flushBufferedReports,
   installProcessHooks,
 } from "./internal/process-hooks";
-import { appendFatalReportSync } from "./internal/buffer";
+import { fatalReportHandler } from "./internal/fatal";
 
 export {
   linkReportsToTask,
@@ -25,7 +24,10 @@ export {
   uninvestigatedReports,
 } from "./internal/uninvestigated";
 export { recordReport, recordReportIncident } from "./internal/record-report";
-export { reportOutboxSink } from "./internal/outbox-sink";
+export {
+  reportOutboxFatalSink,
+  reportOutboxSink,
+} from "./internal/outbox-sink";
 export { investigateReport } from "./internal/investigate";
 export type { RecordReportResult } from "./internal/record-report";
 export { recordReportDebounced } from "./internal/record-report-debounced";
@@ -79,35 +81,25 @@ export default {
         },
       });
     }),
+    // A report filed synchronously before a deliberate exit — in an exec child
+    // too, which never runs `onReady` (./internal/fatal.ts).
+    fatalReportHandler,
   ],
   onReady: async () => {
     // Cheap, serving-critical error-capture wiring stays EAGER: it installs the
-    // process crash hooks + the fatal reporter and drains the on-disk
-    // crash buffer from the previous boot. These are near-instant (register a
-    // listener; flush a small JSONL buffer) and must run before first request so
-    // crashes are captured from t=0. Only the heavy `_reports` scan moved to the
-    // deferred/throttled backfill warm-up (see backfillNoiseWarmup).
-    installProcessHooks();
-    // The synchronous twin, for a backend on its way out of a deliberate exit.
-    // It cannot go through `recordReport` for the same reason the crash hooks
-    // cannot: that is a Postgres write, and the caller's next statement is
-    // `process.exit()`. So it takes the SAME durable path as a crash — one
-    // appended JSONL line, replayed by the `flushBufferedReports()` below on
-    // the next boot — and the only thing it adds is that the line names its own
-    // kind, so it comes back as itself instead of as an anonymous crash.
+    // process crash hooks and drains the on-disk crash buffer from the
+    // previous boot (crashes, and fatal reports a deliberate exit filed). These
+    // are near-instant (register a listener; flush a small JSONL buffer) and
+    // must run before first request so crashes are captured from t=0. Only the
+    // heavy `_reports` scan moved to the deferred/throttled backfill warm-up
+    // (see backfillNoiseWarmup).
     //
-    // The kind must be registered by some plugin in the composition for that
-    // replay to resolve. It is: `collectContributions()` runs over every plugin
-    // BEFORE any `onReady` (server-core `bin/index.ts`), so every ReportKind
-    // contribution is in the registry by the time this flush reads the file.
-    setFatalReporter((report) => {
-      appendFatalReportSync({
-        source: "server-fatal",
-        kind: report.kind,
-        message: report.message,
-        data: report.data ?? {},
-      });
-    });
+    // A buffered line's kind must be registered by some plugin in the
+    // composition for the replay to resolve. It is: `collectContributions()`
+    // runs over every plugin BEFORE any `onReady` (server-core
+    // `bin/index.ts`), so every ReportKind contribution is in the registry by
+    // the time this flush reads the file.
+    installProcessHooks();
     await flushBufferedReports();
   },
 } satisfies ServerPluginDefinition;

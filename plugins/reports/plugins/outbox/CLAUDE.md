@@ -38,6 +38,11 @@ await fileReportFromProcess({ kind, message, data, code? });
   the engine's `reportOutboxSink`) lands here through this plugin's
   `sinkHandlers` entry (`server/internal/writer.ts`), attached in every boot
   mode; its `onShutdown` awaits the writes still in flight.
+- **A fatal report from such a process** (`reportServerFatalSync` in an exec
+  child exiting on purpose: the engine's `reportOutboxFatalSink`) is written
+  SYNCHRONOUSLY (`fileReportFromProcessSync`, also a `sinkHandlers` entry), so
+  the entry is in place before the caller's `process.exit()`. Its `writer.repo`
+  is resolved in `onReadyBlocking` (git cannot be awaited on the way out).
 
 ## Reading: the drain (server, main only)
 
@@ -117,21 +122,25 @@ pass the same `code` field.
 
 ## Plugin reference
 
-- Description: Report outbox writer and drain: writes every report recordReport hands to the engine's reportOutboxSink (a process that cannot write reports — an exec child, a CLI) into the outbox, in every boot mode, awaiting the writes on shutdown; and on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged; one from another repository (the writer stamps its own) is filed without that check, its message saying where it came from; an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
+- Description: Report outbox writer and drain: writes every report recordReport hands to the engine's reportOutboxSink (a process that cannot write reports — an exec child, a CLI) into the outbox, in every boot mode, awaiting the writes on shutdown, and every fatal report (reportOutboxFatalSink) synchronously, before the process exits; and on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged; one from another repository (the writer stamps its own) is filed without that check, its message saying where it came from; an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
 - Server:
   - Uses:
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `reports.isReportKindRegistered`
     - `reports/engine.recordReport`
+    - `reports/engine.reportOutboxFatalSink`
     - `reports/engine.reportOutboxSink`
   - Register: `defineFileWatcher('reports-outbox.outbox-dir')`
 - Core:
   - Uses:
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.joinAppPath`
     - `infra/paths/repo-root.REPO_ROOT`
     - `infra/spawn.getMainRepoRoot`
     - `infra/spawn.spawnCaptured`
     - `packages/timed-fs.readdir`
+    - `packages/timed-fs.readdirSync`
     - `packages/timed-fs.realpath`
   - Exports (types):
     - `FileReportOutcome`
@@ -141,6 +150,7 @@ pass the same `code` field.
     - `ProcessReport`
   - Exports (values):
     - `fileReportFromProcess`
+    - `fileReportFromProcessSync`
     - `isOutboxEntryName`
     - `isOutboxTempName`
     - `mergeBaseWithMain`

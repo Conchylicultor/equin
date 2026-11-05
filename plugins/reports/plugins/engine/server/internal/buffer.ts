@@ -25,21 +25,25 @@ function bufferFile(): AppPath {
 }
 
 // The one write. Both public writers below go through it so the file format is
-// described in exactly one place — and so the best-effort swallow (we are on a
+// described in exactly one place — and so the best-effort catch (we are on a
 // dying event loop; throwing here would replace the report with a worse
 // failure) is stated once rather than copied.
-function appendLine(line: Omit<BufferedReport, "at">): void {
+function appendLine(line: Omit<BufferedReport, "at">): BufferAppend {
   try {
     reportsBufferDir.ensure();
     appendFileSync(
       bufferFile(),
       JSON.stringify({ ...line, at: new Date().toISOString() }) + "\n",
     );
-    // eslint-disable-next-line promise-safety/no-bare-catch
-  } catch {
+    return { ok: true };
+  } catch (error) {
     // Best-effort: we're in a crash path; swallowing is better than throwing.
+    return { ok: false, error };
   }
 }
+
+/** Whether a buffered line landed. */
+export type BufferAppend = { ok: true } | { ok: false; error: unknown };
 
 export function appendReportSync(source: ReportSource, err: Error): void {
   appendLine({
@@ -54,18 +58,19 @@ export function appendReportSync(source: ReportSource, err: Error): void {
  * Buffer a TYPED report synchronously — the durable half of
  * `reportServerFatalSync`.
  *
- * Returns once the bytes are handed to `appendFileSync`, so a caller may exit
- * on the next statement. `data` is NOT validated here: this side owns the
- * buffer, and the kind owns its payload. A payload the kind's schema rejects
- * fails loudly on the next boot's flush, where a stack trace can still be read.
+ * Returns once the bytes are handed to `appendFileSync` (or the write failed —
+ * the result says which), so a caller may exit on the next statement. `data`
+ * is NOT validated here: this side owns the buffer, and the kind owns its
+ * payload. A payload the kind's schema rejects fails loudly on the next boot's
+ * flush, where a stack trace can still be read.
  */
 export function appendFatalReportSync(line: {
   source: ReportSource;
   kind: string;
   message: string;
   data: Record<string, unknown>;
-}): void {
-  appendLine({
+}): BufferAppend {
+  return appendLine({
     source: line.source,
     kind: line.kind,
     data: line.data,
