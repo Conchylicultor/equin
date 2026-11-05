@@ -95,6 +95,8 @@ export interface RecordedFrame {
   /** `sub-error` on contract-mismatch / unknown-key: skew / same-build / unknown. */
   verdict?: string;
   params?: ResourceParams;
+  /** An answer frame's asking tab (sub-ack / up-to-date / sub-error / up-to-date-batch). */
+  tabId?: string;
   /** Boot epoch stamped on sub-ack / up-to-date / up-to-date-batch frames. */
   epoch?: string;
   /** A DERIVED sub-ack's echo of the id of the derivation it answers (no `value` rides it). */

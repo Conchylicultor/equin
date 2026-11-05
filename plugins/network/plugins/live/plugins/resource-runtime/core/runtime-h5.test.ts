@@ -31,7 +31,10 @@
  * invariant the wire depends on — with two independent flights, real completion
  * order is unrelated — and every convergence assertion below holds in either
  * order, because the client's version guard, not the send order, is what makes the
- * stale sub-ack harmless.
+ * stale sub-ack harmless. In THIS order the stale sub-ack is not even sent: the
+ * push reached the socket after the sub arrived, so the sub is answered
+ * `up-to-date` at the push's version (`alreadyShipped`,
+ * `runtime-shared-socket.test.ts`).
  */
 
 import { test, expect, describe } from "bun:test";
@@ -48,7 +51,7 @@ const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
 
 describe("H5 — notify races a fresh sub", () => {
-  test("H5a: a push landing while a fresh sub's loader is parked wins; the stale sub-ack is version-dropped", async () => {
+  test("H5a: a push landing while a fresh sub's loader is parked wins; the sub is answered up-to-date at its version", async () => {
     const supersedes: string[] = [];
     const h = createHarness({
       onStaleFlightSupersede: (key) => supersedes.push(key),
@@ -91,29 +94,29 @@ describe("H5 — notify races a fresh sub", () => {
     ctl.release();
     await tick();
 
-    // Two frames: the push (update at base + 1) sent BEFORE the stale sub-ack
-    // (at base, the version it read before parking) — the race. The sub-ack's
-    // version is not strictly greater than the push's, so the client
-    // version-drops it.
+    // Two frames: the push (the update) sent BEFORE the sub's answer. The push
+    // reached this socket after the sub arrived, so the tab already holds its
+    // value: the sub is answered `up-to-date` at the push's version instead of
+    // its own older copy (`alreadyShipped`, runtime-shared-socket.test.ts) —
+    // which the client would have version-dropped anyway.
     const update = h.frames.find((f) => f.kind === "update")!;
-    const subAck = h.frames.find((f) => f.kind === "sub-ack")!;
-    const base = subAck.version!;
-    expect(update.version).toBe(base + 1);
+    const answer = h.frames.find((f) => f.kind === "up-to-date")!;
+    expect(h.frames.some((f) => f.kind === "sub-ack")).toBe(false);
     expect(update.value).toBe("B");
+    expect(answer.version).toBe(update.version);
     // Send order, not a wire invariant: `sendUpdate` broadcasts with no await
     // while `handleSub` yields a microtask after its flight, so the push wins in
     // this harness. It guards that no-await property (the reason `sendUpdate`
     // sends rather than returns a frame — `runtime-revalidate.test.ts` owns the
-    // dedicated case), NOT the correctness below: the version guard makes the
-    // stale sub-ack harmless whichever order it arrives in.
-    expect(update.seq).toBeLessThan(subAck.seq);
+    // dedicated case), NOT the correctness below.
+    expect(update.seq).toBeLessThan(answer.seq);
 
     // The real client, fed the frames in send order, converges to the LATEST
-    // loader output at the push's version — the stale sub-ack changes nothing.
+    // loader output at the push's version.
     const cv = makeClientView();
     cv.applyAll(h.frames);
     expect(cv.value).toBe("B");
-    expect(cv.version).toBe(base + 1); // monotonic — never regressed to the sub-ack's
+    expect(cv.version).toBe(update.version!);
     expect(cv.driftResubs).toBe(0);
   });
 
@@ -159,7 +162,7 @@ describe("H5 — notify races a fresh sub", () => {
     // (`runtime-reseed-ahead.test.ts`).
     //
     // What holds now: the sub-ack seeds only a tuple with NO snapshot. Here the
-    // push's FULL update seeded it first, so the stale sub-ack's value is never
+    // push's FULL update seeded it first, so the stale read's value is never
     // a base at all, and the next delta diffs against the push's.
     const supersedes: string[] = [];
     let fullLoads = 0;
@@ -205,15 +208,18 @@ describe("H5 — notify races a fresh sub", () => {
     expect(supersedes).toEqual(["rows"]);
     expect(fullLoads).toBe(2);
 
-    // First race: a FULL update (base + 1) before the stale sub-ack (base, the
-    // version it read before parking).
-    const staleAck = h.frames.find((f) => f.kind === "sub-ack")!;
-    const base = staleAck.version!;
+    // First race: a FULL update before the sub's answer — `up-to-date` at the
+    // update's version, since the socket already carried that value after the
+    // sub arrived (`alreadyShipped`): the older read is never shipped.
     const firstUpdate = h.frames.find((f) => f.kind === "update")!;
-    expect(firstUpdate.version).toBe(base + 1);
+    const base = firstUpdate.version! - 1;
+    expect(h.frames.some((f) => f.kind === "sub-ack")).toBe(false);
+    expect(h.frames.find((f) => f.kind === "up-to-date")!.version).toBe(
+      firstUpdate.version,
+    );
 
     // A SUBSEQUENT scoped change ships a delta the client must merge onto the
-    // push's base, which the stale sub-ack left in place. No drift.
+    // push's base. No drift.
     ctl.setValue([
       { id: "a", n: 3 },
       { id: "b", n: 1 },

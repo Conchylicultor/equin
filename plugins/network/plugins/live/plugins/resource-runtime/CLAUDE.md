@@ -672,6 +672,24 @@ All but the version are co-produced by the starter. A push drain mints
     the tab did not restate, so an identical replay never goes 1→0→1.
   - Current entries collapse into one `up-to-date-batch`.
   - `op: "unsub-tab"` on `pagehide`.
+- **One copy per socket (`alreadyShipped`).** Every tab on a socket gets every
+  frame, so a sub the socket's own frames already answered is sent
+  `up-to-date` at the version the socket holds, not its own copy of the value.
+  Answered when the socket was sent a frame carrying the tuple's WHOLE value
+  (a value `sub-ack`, an `update`) AFTER the sub arrived, and the latest frame
+  for the tuple since (`delta` / `patch` move it) is at least the version the
+  answer would carry. Per tuple on the socket's record
+  (`SocketSubRecord.shipped`, cleared by `invalidate` / `sub-error`, gone with
+  the record); arrival is the socket's frame position (`framesSent`).
+  - Sound because a tab registers its sub (a replay resets its version to -1)
+    BEFORE sending it: a frame the server sent after receiving the sub reached
+    the tab while it held the sub and was applied — the copy would be dropped
+    as not newer. A frame sent BEFORE the sub arrived may have reached the tab
+    before it registered, so it never answers one.
+  - A restart's replay is the herd: every tab restates the same tuples, the
+    reads join one flight, and each tab used to get its own full copy.
+  - `_debug` per key: `subAcksShared`, `subAckChars` (value sub-acks sent),
+    `subAckCharsSaved`. Pinned by `runtime-shared-socket.test.ts`.
 - The HTTP body is `{ value, version, epoch }`, the version read before the load.
 - **`sub-error` frames carry `params`** (the shared socket broadcasts to every
   tab).

@@ -459,7 +459,16 @@ describe("the epoch handoff — every doubt loads", () => {
       },
     });
     expect(out.loadedHere).toBeGreaterThanOrEqual(1);
-    expect(upToDate(out.next.h)).toEqual([]);
+    // Never claimed at the old version: an `up-to-date` here can only name the
+    // version of the update the live change pushed to this socket after the
+    // sub arrived (`alreadyShipped`) — a value this process loaded.
+    const pushed = new Set(
+      out.next.h.frames
+        .filter((f) => f.kind === "update" || f.kind === "delta")
+        .map((f) => f.version),
+    );
+    for (const u of upToDate(out.next.h))
+      expect(pushed.has(u.version)).toBe(true);
   });
 
   test("a definition mismatch (a deploy moved the SQL): loads", async () => {

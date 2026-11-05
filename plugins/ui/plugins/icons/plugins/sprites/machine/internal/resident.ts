@@ -14,7 +14,9 @@ const RESIDENT: readonly SpriteKey[] = [...DEFAULT_STYLE_KEYS, BRANDS_SPRITE];
 /**
  * The resident sprites. External and `fixed` (no `notify`): a pure function of
  * the manifest compiled into this process and the installed icon sets, so the
- * first load is the only one.
+ * first load is the only one. Its ETag is `manifestHash` — the hash of exactly
+ * what the value is a function of — so a tab replaying it after a restart that
+ * changed none of that is answered `up-to-date` instead of re-sent ~1 MB.
  */
 export const residentSpritesServed = serveValue(residentSprites, {
   source: "external",
@@ -24,6 +26,7 @@ export const residentSpritesServed = serveValue(residentSprites, {
         "a pure function of the manifest compiled into this process and the installed icon sets",
     },
   },
+  revalidate: () => Promise.resolve(manifestHash),
   loader: async () => ({
     manifestHash,
     sprites: Object.fromEntries(

@@ -460,6 +460,21 @@ used to run the full loader behind the 6-slot read gate
   value SELECTed at T0 with a version pushes bumped since; the strict `<` guard
   applies it and the stale value pins. Read before, an older value reports an
   older version, is dropped and refetched.
+- **One copy per socket**: measured on main's 2026-11-04 20:17 restart, one
+  tab's replay drew ~7.6 MB of full sub-acks; six tabs share one SharedWorker
+  socket, which fans every frame out to every tab, so ~45 MB went through one
+  connection and every tab but one dropped each copy as `stale-version`.
+  - Why "sent after the sub arrived": the client registers a sub before
+    sending it (a replay resets its version in the same task), so a later
+    frame is causally after the registration. An earlier frame is not — a
+    tab mounting a pane another tab already holds must get the value.
+  - Why answer with the socket's version, not the read's: the tab holds
+    exactly the last frame it got, and `up-to-date` there is dropped as
+    not newer after it marks the request answered.
+  - Rejected: a client-side merge of the tabs' subs in the SharedWorker (it
+    would re-own per-tab bookkeeping the server already keeps); a per-tab
+    "frames seen" counter on the wire (a protocol change for what the
+    server's own send order already proves).
 - **`params` on `sub-error`**: the shared socket broadcasts to every tab, which
   must gate it on its own sub like `update` / `delta`; a params-less frame
   matches no sub and is dropped.

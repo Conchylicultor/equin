@@ -17,7 +17,12 @@ is in the parent's [`CLAUDE.md`](../../CLAUDE.md) (section "Sprites").
   with transforms throws), the per-weight memoized build, the resident value
   and the on-demand sprite value — external `fixed` and `immutable` (a pure
   function of the compiled manifest and the installed sets; the on-demand one
-  answers only this process's `manifestHash`). The `seti` sprite is built
+  answers only this process's `manifestHash`). Each declares a `revalidate`
+  ETag — the resident value's is `manifestHash`, an on-demand tuple's the
+  tuple itself while its hash is this process's — so a tab replaying them after
+  a restart that kept the manifest and sets is answered `up-to-date` instead
+  of re-sent ~2 MB of sprites (`icons.runtime-symbols` likewise, by
+  `symbolsHash`). The `seti` sprite is built
   from the icons plugin's vendored set (`SETI_SET`, its identity folded into
   `manifestHash`) and served only by `icons.sprite`, never in the resident
   value. So is the `lucide` sprite: every mapped

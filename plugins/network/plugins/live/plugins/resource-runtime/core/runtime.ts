@@ -1665,6 +1665,16 @@ interface SocketSubRecord {
    * The socket gets `{ kind: "ack" }` frames for this tuple iff non-empty.
    */
   ackTabs: Set<string>;
+  /**
+   * What the socket was last sent of this tuple's value, while it holds it
+   * (`noteSent`): `fullAt` — the socket frame number (`SocketState.framesSent`)
+   * of the last frame carrying the WHOLE value (a value sub-ack, an `update`) —
+   * and `version`, the version of the last frame building on it (the whole
+   * value, then every `delta` / `patch`). Absent until one is sent, and
+   * cleared by an `invalidate` or a `sub-error` (holders then read over HTTP,
+   * outside this socket's frames). Read by `alreadyShipped`.
+   */
+  shipped?: { fullAt: number; version: number; chars: number };
 }
 
 interface SocketState {
@@ -1679,6 +1689,12 @@ interface SocketState {
   backlog?: { frames: string[]; chars: number; since: number };
   /** The runtime closed it (`closeBacklogged`): nothing more is sent. */
   closing?: true;
+  /**
+   * How many frames were handed to `deliver` for this socket — the position of
+   * the next one in its (ordered) stream. A sub's arrival is stamped with it
+   * (`alreadyShipped`).
+   */
+  framesSent: number;
 }
 
 /**
@@ -1737,9 +1753,7 @@ export interface ResourceDelivery {
  * same first-notify → send quantity `onDelivered` reports; `holdMs` is the part
  * of it the entry's declared throttle held the change (`PendingNotify.holdMs`).
  */
-function frameTiming(
-  pending: PendingNotify,
-):
+function frameTiming(pending: PendingNotify):
   | {
       timing: {
         changedAt: number;
@@ -2822,6 +2836,16 @@ export function createResourceRuntime(
   // load, by reason. Monotonic; surfaced in the `_debug` payload — a high
   // fallback count under one reason is where a paged read pays full loads.
   const derivedSubs = new Map<string, number>();
+  // Per-key subs a socket's own frames already answered (`answerShipped`):
+  // another tab on the same socket was sent the value after this sub arrived,
+  // so this one got `up-to-date` instead of its own copy. And the chars of the
+  // value-carrying sub-acks sent per key — what a replay costs on the wire.
+  // Monotonic; surfaced in the `_debug` payload.
+  const subAcksShared = new Map<string, number>();
+  const subAckChars = new Map<string, number>();
+  // …and the chars of the whole-value frame each shared answer pointed to:
+  // about what that sub would have cost had it been sent its own copy.
+  const subAckCharsSaved = new Map<string, number>();
   // Per-key drained tuple-cycles whose ack was suppressed because their
   // sourceTx union crossed `SOURCE_TX_CAP` (a pending's `sourceTxOverflow`, or
   // a standalone owed ack's `overflow`). Monotonic; surfaced in the `_debug`
@@ -5462,13 +5486,85 @@ export function createResourceRuntime(
     }
   }
 
+  // Returns the frame's length in UTF-16 chars (0 when nothing was sent).
   function sendJson<F extends ServerFrame>(
     ws: RuntimeSocket,
     obj: ExactServerFrame<F>,
-  ): void {
+  ): number {
     const state = sockets.get(ws);
-    if (state === undefined) return; // closed: nothing holds it
-    deliver(state, JSON.stringify(obj));
+    if (state === undefined) return 0; // closed: nothing holds it
+    const str = JSON.stringify(obj);
+    deliver(state, str);
+    noteSent(state, obj, null, str.length);
+    return str.length;
+  }
+
+  // Keep a socket's record of what it was sent of a tuple's value
+  // (`SocketSubRecord.shipped`). Called after each frame is delivered (or
+  // queued in its backlog, in order). `pk` is the frame's params key when the
+  // caller already has it (one broadcast, many sockets), else null.
+  function noteSent(
+    state: SocketState,
+    obj: ServerFrame,
+    pk: string | null,
+    chars: number,
+  ): void {
+    const position = state.framesSent++;
+    if (!("key" in obj) || !("params" in obj)) return;
+    const rec = state.subs
+      .get(obj.key)
+      ?.get(pk ?? paramsKey(obj.params as ResourceParams));
+    if (rec === undefined) return;
+    switch (obj.kind) {
+      case "sub-ack":
+        if ("value" in obj) {
+          rec.shipped = { fullAt: position, version: obj.version, chars };
+        }
+        return;
+      case "update":
+        rec.shipped = { fullAt: position, version: obj.version, chars };
+        return;
+      case "delta":
+      case "patch":
+        if (rec.shipped !== undefined) rec.shipped.version = obj.version;
+        return;
+      case "invalidate":
+      case "sub-error":
+        rec.shipped = undefined;
+        return;
+      case "up-to-date":
+      case "ack":
+        return; // no value: the holders keep what they hold
+    }
+  }
+
+  // Whether a sub that reached this socket at frame position `arrivedAt` is
+  // already answered by what the socket was sent since: a frame carrying the
+  // tuple's whole value, sent AFTER the sub arrived, and a version at least
+  // `version` (the one this answer would carry). Every tab on a socket gets
+  // every frame (the client's SharedWorker fans each one out), and a tab
+  // registers its sub — or, replaying, resets its version to -1 — BEFORE
+  // sending it, so a frame the server sent after receiving the sub reached
+  // that tab while it held the sub, and was applied (nothing it held could be
+  // newer): the tab already holds this tuple at the recorded version, and the
+  // whole value it would be sent now would be dropped as not newer. A
+  // restart's replay is the herd this exists for: every tab on one socket
+  // restates the same tuples at once, the reads join one flight, and each tab
+  // used to get its own full copy of every value (one 2026-11-04 restart:
+  // ~7.6 MB per tab, six tabs, ~45 MB through one connection, past Bun's
+  // backpressure limit). A frame sent BEFORE the sub arrived may have reached
+  // the tab before it registered, so it never answers one.
+  function alreadyShipped(
+    state: SocketState,
+    key: string,
+    pk: string,
+    arrivedAt: number,
+    version: number,
+  ): { version: number; chars: number } | null {
+    const shipped = state.subs.get(key)?.get(pk)?.shipped;
+    if (shipped === undefined) return null;
+    if (shipped.fullAt < arrivedAt || shipped.version < version) return null;
+    return shipped;
   }
 
   // Broadcast one frame to N subscribers: serialize ONCE, send the string to
@@ -5487,7 +5583,11 @@ export function createResourceRuntime(
   ): number {
     if (subs.length === 0) return 0;
     const str = JSON.stringify(obj);
-    for (const s of subs) deliver(s, str);
+    const pk = "params" in obj ? paramsKey(obj.params as ResourceParams) : null;
+    for (const s of subs) {
+      deliver(s, str);
+      noteSent(s, obj, pk, str.length);
+    }
     return str.length;
   }
 
@@ -7565,7 +7665,7 @@ export function createResourceRuntime(
 
   const notificationsWsHandler: WsHandler = {
     open(ws) {
-      sockets.set(ws, { ws, subs: new Map() });
+      sockets.set(ws, { ws, subs: new Map(), framesSent: 0 });
       // `pushStallMs`: how long the oldest owed change has gone undelivered (0
       // when nothing is owed) — see `pushStallMs()`. The client reads a ping
       // without it as 0.
@@ -8300,6 +8400,8 @@ export function createResourceRuntime(
   ): Promise<void> {
     const { key, params = {}, etag: clientEtag } = m;
     if (!key) return;
+    // Where in this socket's frame stream the sub arrived (`alreadyShipped`).
+    const arrivedAt = state.framesSent;
     const req = subRequestOf(m);
     const build = typeof m.build === "string" ? m.build : undefined;
     const entry = registry.get(key);
@@ -8465,7 +8567,44 @@ export function createResourceRuntime(
       recordResumeRefusal(claim.reason);
     }
 
-    await serveSub(state, entry, req, key, params, pk, clientEtag, firstGlobal);
+    await serveSub(
+      state,
+      entry,
+      req,
+      key,
+      params,
+      pk,
+      clientEtag,
+      firstGlobal,
+      arrivedAt,
+    );
+  }
+
+  // Answer a sub the socket's own frames already answered (`alreadyShipped`)
+  // with `up-to-date` at the version the socket holds instead of the whole
+  // value again. Returns whether it did.
+  function answerShipped(
+    state: SocketState,
+    req: SubRequest,
+    key: string,
+    params: ResourceParams,
+    pk: string,
+    arrivedAt: number,
+    version: number,
+  ): boolean {
+    const shipped = alreadyShipped(state, key, pk, arrivedAt, version);
+    if (shipped === null) return false;
+    sendJson(state.ws, {
+      kind: "up-to-date",
+      ...req,
+      key,
+      params,
+      version: shipped.version,
+      epoch: bootEpoch,
+    });
+    subAcksShared.set(key, (subAcksShared.get(key) ?? 0) + 1);
+    subAckCharsSaved.set(key, (subAckCharsSaved.get(key) ?? 0) + shipped.chars);
+    return true;
   }
 
   // The read/serve tail of a subscription: probe the conditional-revalidation
@@ -8481,6 +8620,7 @@ export function createResourceRuntime(
     pk: string,
     clientEtag: string | undefined,
     opensSpan: boolean,
+    arrivedAt: number,
   ): Promise<void> {
     // Report the CURRENT version without bumping: a sub-ack (or an `up-to-date`)
     // delivers existing state, it is not a state change. Bumping here made the
@@ -8575,15 +8715,22 @@ export function createResourceRuntime(
     // change since is a notify already pending: its drain patches it forward.
     const patchBase = entry.patches ? entry.held.get(pk) : undefined;
     if (patchBase !== undefined) {
-      sendJson(state.ws, {
-        kind: "sub-ack",
-        ...req,
+      if (
+        answerShipped(state, req, key, params, pk, arrivedAt, patchBase.version)
+      )
+        return;
+      noteSubAckChars(
         key,
-        params,
-        value: patchBase.value,
-        version: patchBase.version,
-        epoch: bootEpoch,
-      });
+        sendJson(state.ws, {
+          kind: "sub-ack",
+          ...req,
+          key,
+          params,
+          value: patchBase.value,
+          version: patchBase.version,
+          epoch: bootEpoch,
+        }),
+      );
       return;
     }
 
@@ -8684,17 +8831,25 @@ export function createResourceRuntime(
       { value, raw },
       opensSpan ? { state, version } : undefined,
     );
-    sendJson(state.ws, {
-      kind: "sub-ack",
-      ...req,
+    if (answerShipped(state, req, key, params, pk, arrivedAt, version)) return;
+    noteSubAckChars(
       key,
-      params,
-      value,
-      version,
-      ...(etag !== undefined ? { etag } : {}),
-      ...(watermark !== undefined ? { watermark } : {}),
-      epoch: bootEpoch,
-    });
+      sendJson(state.ws, {
+        kind: "sub-ack",
+        ...req,
+        key,
+        params,
+        value,
+        version,
+        ...(etag !== undefined ? { etag } : {}),
+        ...(watermark !== undefined ? { watermark } : {}),
+        epoch: bootEpoch,
+      }),
+    );
+  }
+
+  function noteSubAckChars(key: string, chars: number): void {
+    subAckChars.set(key, (subAckChars.get(key) ?? 0) + chars);
   }
 
   // Whole-set replay for ONE tab (`op: "sub-batch"`). Registration is fully
@@ -8713,6 +8868,8 @@ export function createResourceRuntime(
     const tabId = typeof m.tabId === "string" ? m.tabId : "";
     const build = typeof m.build === "string" ? m.build : undefined;
     const entries = Array.isArray(m.entries) ? m.entries : [];
+    // Where in this socket's frame stream the batch arrived (`alreadyShipped`).
+    const arrivedAt = state.framesSent;
 
     // Pass 1 — synchronous registration of every entry.
     const prepared: Array<{
@@ -8853,6 +9010,7 @@ export function createResourceRuntime(
           p.pk,
           p.etag,
           p.firstGlobal,
+          arrivedAt,
         );
       })();
     }
@@ -8900,6 +9058,7 @@ export function createResourceRuntime(
             c.pk,
             c.etag,
             c.firstGlobal,
+            arrivedAt,
           );
         }
         if (answered.length > 0) {
@@ -9377,6 +9536,9 @@ export function createResourceRuntime(
       replaySkips: number;
       ackOverflows: number;
       derivedSubs: number;
+      subAcksShared: number;
+      subAckChars: number;
+      subAckCharsSaved: number;
       deriveFallbacks: Partial<Record<DeriveRefusal, number>>;
       subTabs: Record<string, number>;
       externalSource: boolean;
@@ -9519,6 +9681,11 @@ export function createResourceRuntime(
         // from rows the client held, and the ones that fell back to a load —
         // by reason.
         derivedSubs: derivedSubs.get(entry.key) ?? 0,
+        // Replayed subs answered by another tab's frame on the same socket
+        // (`answerShipped`), and the chars of value sub-acks sent.
+        subAcksShared: subAcksShared.get(entry.key) ?? 0,
+        subAckChars: subAckChars.get(entry.key) ?? 0,
+        subAckCharsSaved: subAckCharsSaved.get(entry.key) ?? 0,
         deriveFallbacks: Object.fromEntries(
           deriveFallbacks.get(entry.key) ?? [],
         ),

@@ -60,7 +60,10 @@ export async function loadRuntimeSymbols({
 /**
  * External and `immutable`: this process answers only its own sets hash, and
  * a tuple's symbols are a pure function of those sets (`runtimeSymbols` keeps
- * each style's map once built).
+ * each style's map once built). Its ETag is the tuple itself while `hash` is
+ * this process's — so a tab replaying it after a restart that kept the sets
+ * is answered `up-to-date` instead of re-sent — and a value no stored ETag
+ * can equal otherwise (that tuple is refused `stale-symbols`).
  */
 export const runtimeSymbolsServed = serveValue(runtimeSymbolsValue, {
   source: "external",
@@ -70,5 +73,11 @@ export const runtimeSymbolsServed = serveValue(runtimeSymbolsValue, {
         "content-addressed by symbolsHash (the sets, the saved-name list, the symbol build version) and the sorted names",
     },
   },
+  revalidate: ({ hash, key, names }) =>
+    Promise.resolve(
+      hash === symbolsHash
+        ? `${hash}/${key}/${names}`
+        : `stale-symbols/${symbolsHash}`,
+    ),
   loader: loadRuntimeSymbols,
 });

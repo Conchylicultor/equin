@@ -623,8 +623,11 @@ describe("conditional revalidation — a push etag rides only the update frame",
     await tick();
 
     const update = h.frames.find((f) => f.kind === "update")!;
-    const subAck = h.frames.find((f) => f.kind === "sub-ack")!;
-    expect(update.seq).toBeLessThan(subAck.seq); // the push hits the wire first
+    // The sub's answer: `up-to-date` at the push's version, since the push
+    // carried the value to this socket after the sub arrived (`alreadyShipped`).
+    const answer = h.frames.find((f) => f.kind === "up-to-date")!;
+    expect(update.seq).toBeLessThan(answer.seq); // the push hits the wire first
+    expect(answer.version).toBe(update.version);
     expect("etag" in update).toBe(false); // no revalidate ⇒ no etag on the frame
   });
 });
