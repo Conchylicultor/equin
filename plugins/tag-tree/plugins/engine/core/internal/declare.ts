@@ -60,7 +60,7 @@ export type ExtraKeyOf<R extends AnyTagTreeEntityRef> = Exclude<
  * (`defineTagTreeTable`); a `liveCollection` reads it, its spec written out as
  * an inline literal (the resource scanners read no call): pick `name` plus
  * the extras a list shows, carry every other field, id `id`, and `all` in
- * `rank` order (`unbounded` — a tree is read whole).
+ * `rank` order capped at {@link TAG_TREE_MAX} (a tree is read whole).
  */
 export function tagTreeEntityRef<
   const N extends string,
@@ -84,6 +84,19 @@ export interface TagTree<Row extends TagRow = TagRow> {
 
 const TREE_ID_RE = /^[a-z][a-z0-9-]*$/;
 
+/**
+ * The most tags one tree holds. A tag tree is read WHOLE — a tag's colour
+ * ramps from its ancestors and its siblings, a filter on a tag takes its
+ * subtree, the picker searches every path and rolls counts up the tree, and
+ * sibling names are unique — so it is a hand-made taxonomy, not a growing
+ * set (the largest, Places, holds 27). Every tree's collection declares
+ * `all: { max: TAG_TREE_MAX }` (asserted by `defineTagTree`): the schema
+ * refuses one more row, the server's load past it fails loudly, and the
+ * engine refuses a create that would cross it — so the bound is a guarantee
+ * of the writes, not an observation of the data.
+ */
+export const TAG_TREE_MAX = 500;
+
 /** Declare a tag tree (core, browser-safe): the handle the server serves and the picker reads. */
 export function defineTagTree<Row extends TagRow>(spec: {
   id: string;
@@ -101,6 +114,13 @@ export function defineTagTree<Row extends TagRow>(spec: {
         `defineTagTree("${spec.id}"): entity ${spec.entity.name} has no "${key}" field — build its ref with tagTreeEntityRef.`,
       );
     }
+  }
+  // A tree is read whole: its collection must be the capped whole set.
+  const bound: { max?: unknown } = spec.collection.all.all;
+  if (bound.max !== TAG_TREE_MAX) {
+    throw new Error(
+      `defineTagTree("${spec.id}"): collection ${spec.collection.all.key} must declare \`all: { …, max: TAG_TREE_MAX }\` — a tag tree is read whole, so its bound is the engine's cap (it declares ${bound.max === undefined ? "`unbounded`" : `max ${String(bound.max)}`}).`,
+    );
   }
   return Object.freeze({ ...spec });
 }

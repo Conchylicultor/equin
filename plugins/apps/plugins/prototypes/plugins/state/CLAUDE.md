@@ -141,6 +141,7 @@ move-to-trash delete may still run against the shared tree.
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `tag-tree/engine.defineTagTree`
+    - `tag-tree/engine.TAG_TREE_MAX`
     - `tag-tree/engine.tagTreeEntityRef`
   - Exports (types):
     - `PrototypeState`

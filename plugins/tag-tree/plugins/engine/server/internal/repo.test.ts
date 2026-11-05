@@ -27,8 +27,13 @@ import { runMigrations } from "@plugins/database/plugins/migrations/server/testi
 import { defineIdKind } from "@plugins/ids/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { defineTagTree, tagTreeEntityRef } from "../../core/internal/declare";
+import {
+  defineTagTree,
+  TAG_TREE_MAX,
+  tagTreeEntityRef,
+} from "../../core/internal/declare";
 import { defineTagTreeTable } from "./table";
 import {
   resolveServedTree,
@@ -72,7 +77,7 @@ const testTags = liveCollection("tag-tree.test-tags.all", {
   id: "id",
   all: {
     orderBy: [["rank", "asc"]],
-    unbounded: { reason: "a test tree, read whole" },
+    max: TAG_TREE_MAX,
   },
 });
 const testTree = defineTagTree({
@@ -242,6 +247,66 @@ describe("createPath", () => {
 });
 
 // ── Update ──────────────────────────────────────────────────────────────
+
+// ── The cap ─────────────────────────────────────────────────────────────
+
+/** Fill the tree with `n` root tags, written straight to the table. */
+async function fill(n: number): Promise<void> {
+  const ranks = Rank.nBetween(null, null, n);
+  await t.db.insert(testTagsTable).values(
+    ranks.map((rank, i) => ({
+      id: `tttag-fill-${i}`,
+      name: `fill ${i}`,
+      parentId: null,
+      rank: rank.toJSON(),
+    })) as never,
+  );
+}
+
+describe("TAG_TREE_MAX", () => {
+  test("a create past the cap is a 400; at the cap it lands", async () => {
+    await fill(TAG_TREE_MAX - 1);
+    await create("last");
+    expect((await all()).length).toBe(TAG_TREE_MAX);
+    await expectHttp(create("one too many"), 400);
+    expect((await all()).length).toBe(TAG_TREE_MAX);
+  });
+
+  test("a path counts every segment it would create", async () => {
+    await fill(TAG_TREE_MAX - 2);
+    await expectHttp(
+      createTagPathIn(served, database, { segments: ["a", "b", "c"] }),
+      400,
+    );
+    expect((await all()).length).toBe(TAG_TREE_MAX - 2);
+    // An existing segment costs nothing.
+    await create("a");
+    await createTagPathIn(served, database, { segments: ["a", "b"] });
+    expect((await all()).length).toBe(TAG_TREE_MAX);
+  });
+});
+
+describe("defineTagTree", () => {
+  test("refuses a collection that is not capped at TAG_TREE_MAX", () => {
+    const uncapped = liveCollection("tag-tree.test-tags.uncapped", {
+      from: testTagsRef,
+      pick: ["name"],
+      carry: { pick: ["id", "parentId", "rank"] },
+      id: "id",
+      all: {
+        orderBy: [["rank", "asc"]],
+        unbounded: { reason: "a test of the refusal" },
+      },
+    });
+    expect(() =>
+      defineTagTree({
+        id: "uncapped",
+        entity: testTagsRef,
+        collection: uncapped as never,
+      }),
+    ).toThrow(/TAG_TREE_MAX/);
+  });
+});
 
 describe("update", () => {
   test("renames, recolours; a sibling's name is a 400", async () => {

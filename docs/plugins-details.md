@@ -6311,8 +6311,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DELETE /api/places/places/:id`
               - `POST /api/places/places/:id/icon`
           - Core:
-            - Uses: 34 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
-              - `tag-tree/engine` ×6
+            - Uses: 35 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
+              - `tag-tree/engine` ×7
               - `fields` ×4
               - `integrations/google-maps/places-api` ×4
               - `fields/text/config` ×3
@@ -7268,6 +7268,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/entities.entityRef`
               - `network/live.liveCollection`
               - `tag-tree/engine.defineTagTree`
+              - `tag-tree/engine.TAG_TREE_MAX`
               - `tag-tree/engine.tagTreeEntityRef`
             - Exports (types):
               - `PrototypeState`
@@ -52118,6 +52119,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `rolledUpTagCounts`
           - `TAG_PALETTE`
           - `TAG_TREE_BASE_KEYS`
+          - `TAG_TREE_MAX`
           - `tagColor`
           - `tagDescendants`
           - `tagFieldOptions`

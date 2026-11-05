@@ -2,6 +2,7 @@ import { defineIdKind } from "@plugins/ids/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import {
   defineTagTree,
+  TAG_TREE_MAX,
   tagTreeEntityRef,
 } from "@plugins/tag-tree/plugins/engine/core";
 
@@ -20,7 +21,8 @@ export const prototypeTagsEntityRef = tagTreeEntityRef("prototype_tags", {
 });
 
 /**
- * Every prototype tag, live, in rank order — the whole tree. The spec is the
+ * Every prototype tag, live, in rank order — the whole tree, capped at the
+ * engine's `TAG_TREE_MAX`. The spec is the
  * tag-tree spelling (pick the name, carry the rest) written out: the resource
  * scanners read a spec only as an inline object literal.
  */
@@ -42,9 +44,9 @@ export const prototypeTags = liveCollection("prototypes.tags.all", {
   id: "id",
   all: {
     orderBy: [["rank", "asc"]],
-    unbounded: {
-      reason: "a person adds every tag by hand, and the tag tree is read whole",
-    },
+    // A tag tree is read whole, so it is capped at the engine's bound
+    // (the engine refuses a create past it).
+    max: TAG_TREE_MAX,
   },
 });
 

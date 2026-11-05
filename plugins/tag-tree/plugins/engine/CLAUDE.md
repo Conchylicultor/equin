@@ -103,6 +103,7 @@
     - `rolledUpTagCounts`
     - `TAG_PALETTE`
     - `TAG_TREE_BASE_KEYS`
+    - `TAG_TREE_MAX`
     - `tagColor`
     - `tagDescendants`
     - `tagFieldOptions`

@@ -126,8 +126,8 @@ its own.
     - `DELETE /api/places/places/:id`
     - `POST /api/places/places/:id/icon`
 - Core:
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tag-tree/engine` ×6
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tag-tree/engine` ×7
     - `fields` ×4
     - `integrations/google-maps/places-api` ×4
     - `fields/text/config` ×3

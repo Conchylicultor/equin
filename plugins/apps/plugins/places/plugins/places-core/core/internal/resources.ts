@@ -1,5 +1,8 @@
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import { defineTagTree } from "@plugins/tag-tree/plugins/engine/core";
+import {
+  defineTagTree,
+  TAG_TREE_MAX,
+} from "@plugins/tag-tree/plugins/engine/core";
 import { placesEntityRef, placeTagsEntityRef } from "./entity-refs";
 import { PlaceSearchQuerySchema, PlaceSearchResultSchema } from "./maps";
 
@@ -52,7 +55,7 @@ export const places = liveCollection("places.places.all", {
  * The tag tree, live, as flat rows in rank order (`parentId` links them; the
  * tag-tree helpers walk it) — the WHOLE ordered set (`all`): every surface
  * reads the tree entire, and a tree cut at a window's edge orphans the
- * children of a tag past it. The spec is the tag-tree spelling (pick the name
+ * children of a tag past it — capped at the engine's `TAG_TREE_MAX`. The spec is the tag-tree spelling (pick the name
  * plus the listed extras, carry the rest) written out: the resource scanners
  * read a spec only as an inline object literal.
  *
@@ -80,9 +83,9 @@ export const placeTags = liveCollection("places.tags.all", {
   id: "id",
   all: {
     orderBy: [["rank", "asc"]],
-    unbounded: {
-      reason: "a person adds every tag by hand, and the tag tree is read whole",
-    },
+    // A tag tree is read whole, so it is capped at the engine's bound
+    // (the engine refuses a create past it).
+    max: TAG_TREE_MAX,
   },
 });
 

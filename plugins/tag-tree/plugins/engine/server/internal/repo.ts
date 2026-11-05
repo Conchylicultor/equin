@@ -4,6 +4,7 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { rankAdjacentTo } from "@plugins/primitives/plugins/rank/server";
 import {
   resolveTagPath,
+  TAG_TREE_MAX,
   wouldCycle,
   type CreateTagBody,
   type CreateTagPathBody,
@@ -19,7 +20,8 @@ import type { ServedTagTree, TagTreeDb, TagTreeTx } from "./serve";
 // must see the complete sibling set, and two racing writers must not both
 // mint the "last" rank or both create one path (precedent: places'
 // `seedPlaceTagsWarmup`). Every refusal is an `HttpError` (404 unknown, 400
-// refused); the rows reach clients through the tree's live collection.
+// refused — a create past `TAG_TREE_MAX` too); the rows reach clients
+// through the tree's live collection.
 
 type Row = TagRow & Record<string, unknown>;
 
@@ -71,6 +73,25 @@ function assertFreeName(
   }
 }
 
+/**
+ * Refuse a write adding `adding` tags to a tree of `rows` past
+ * {@link TAG_TREE_MAX}: the tree's collection is read whole under that cap,
+ * so a tag past it would make the tree unreadable — refused here, where the
+ * user is told, rather than at the next load.
+ */
+function assertRoomFor(
+  served: ServedTagTree,
+  rows: readonly Row[],
+  adding: number,
+): void {
+  if (rows.length + adding > TAG_TREE_MAX) {
+    throw new HttpError(
+      400,
+      `The ${served.tree.id} tag tree holds at most ${TAG_TREE_MAX} tags (it has ${rows.length}) — delete some before adding more`,
+    );
+  }
+}
+
 /** The rank appending a new row under `parentId`. */
 function appendRank(rows: readonly Row[], parentId: string | null): Rank {
   return rankAdjacentTo(rows, parentId, null, "after", new Set());
@@ -102,6 +123,7 @@ export async function createTagIn(
     const parentId = body.parentId ?? null;
     requireParent(rows, parentId);
     assertFreeName(rows, parentId, body.name, null);
+    assertRoomFor(served, rows, 1);
     const id = served.tree.entity.idKind.mint();
     await tx.insert(served.store.table).values({
       ...extra,
@@ -124,6 +146,11 @@ export async function createTagPathIn(
 ): Promise<CreateTagPathResult> {
   return withTree(served, database, async (tx, rows) => {
     const resolved = resolveTagPath(body.segments, rows);
+    assertRoomFor(
+      served,
+      rows,
+      resolved.filter((s) => s.tagId === null).length,
+    );
     const created: string[] = [];
     let parentId: string | null = null;
     for (const segment of resolved) {

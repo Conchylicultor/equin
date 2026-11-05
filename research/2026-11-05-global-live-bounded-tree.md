@@ -348,3 +348,36 @@ Measured, Tasks pane open, one tab, restart replay
 Boot snapshot (main, warm): 10.33 MB raw / 1.36 MB gzip, `tasks` 5.59 MB /
 606 KB — unchanged by this task: `taskRows` is still `preload: "boot"` for its
 remaining whole-set readers; dropping it is task-1793840408-hau52q (−5.6 MB).
+
+## Follow-up: tag trees and the file explorer (task att-1793865433)
+
+The two trees step 5 left out, judged once the primitive had landed:
+
+- **Tag trees stay whole, under a checked cap — not a live tree.** Every
+  reader needs the entire tree: a tag's colour ramps from its ancestors and
+  its siblings (`tagColor`), a filter on a tag takes its subtree
+  (`isTagUnder`, the places map), the picker searches every path and rolls
+  counts up (`rolledUpTagCounts`), chips draw full paths, and sibling names
+  are unique. Paged, each of those becomes a server read of its own
+  (descendant closures, colour on the server, path search with ancestors) for
+  a hand-made taxonomy: on main, Places has 27 tags (17 roots), Prototypes 7.
+  So the engine declares `TAG_TREE_MAX` (500) and every tree's collection is
+  `all: { max: TAG_TREE_MAX }` instead of `unbounded` — asserted by
+  `defineTagTree`, refused by the schema and the loader past it, and refused
+  (400) by the engine's create / create-path before it is reached, so the
+  bound holds by the writes. Pinned by the engine's `repo.test.ts`.
+- **The file explorer keeps its own source.** It is already bounded the
+  same way the live tree is: one paged `host-fs.list` read per open folder
+  (`useListings`' `ListingReader`s, released on collapse) over DataView's
+  `lazyChildren` — the same tree mechanism the live tree's expand mode drives.
+  What differs is only the source, and the live tree's contract is SQL-bound
+  where the filesystem cannot follow cheaply: `$childCount` would be a
+  `readdir` of every visible folder (the explorer peeks only the folders on
+  screen, `hostFsDirPeek`), `:ancestors` and hits mode (search with
+  ancestors) would need a recursive filesystem walk (the explorer filters what
+  it has listed), and a folder's read answers typed refusals (missing,
+  denied, not a folder) and per-listing meta (`within` an archive, `total`),
+  which a collection window has no arm for. Unifying them means giving the
+  tree contract an external-source form first (a `hasChildren` in place of a
+  count, ancestors by path, refusals per level) — a primitive change of its
+  own, not this step.

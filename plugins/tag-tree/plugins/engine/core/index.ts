@@ -9,7 +9,11 @@ export type {
   TagTreeBaseKey,
   TagTreeFields,
 } from "./internal/fields";
-export { defineTagTree, tagTreeEntityRef } from "./internal/declare";
+export {
+  defineTagTree,
+  TAG_TREE_MAX,
+  tagTreeEntityRef,
+} from "./internal/declare";
 export type {
   AnyTagTreeEntityRef,
   AnyTagTreeFields,

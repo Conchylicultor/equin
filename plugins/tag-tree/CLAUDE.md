@@ -25,7 +25,7 @@ by a tree of tags (Prototypes, Places). Design:
 export const prototypeTagsEntityRef = tagTreeEntityRef("prototype_tags", { idKind: prototypeTagIdKind });
 // The spec must be an INLINE object literal (the resource scanners refuse a
 // call, so the engine ships no spec builder): pick ["name", …extras a list
-// shows], carry every other field, id "id", all: { orderBy rank asc, unbounded }.
+// shows], carry every other field, id "id", all: { orderBy rank asc, max: TAG_TREE_MAX }.
 export const prototypeTags = liveCollection("prototypes.tags.all", { from: prototypeTagsEntityRef, pick: ["name"], carry: { pick: [/* … */] }, id: "id", all: { /* … */ } });
 export const prototypeTagTree = defineTagTree({ id: "prototypes", entity: prototypeTagsEntityRef, collection: prototypeTags });
 
@@ -53,6 +53,17 @@ contributions: [
   the ones listed in `serveTagTree`'s `editableExtras`.
 - `TagTree<Row>` is invariant in `Row` (its live collection is), so code that
   takes any tree is generic: `<Row extends TagRow>(tree: TagTree<Row>)`.
+- **A tree is read whole, capped at `TAG_TREE_MAX` (500).** Every reader
+  needs the entire tree — a tag's colour ramps from its ancestors and
+  siblings, a filter on a tag takes its subtree, the picker searches every
+  path and rolls counts up — so a tag tree is a hand-made taxonomy (Places:
+  27 tags, Prototypes: 7), not a growing set, and is NOT a bounded live tree
+  (network/live's `tree`, which Tasks and Pages use). The bound is a checked
+  `max`, not `unbounded`: `defineTagTree` throws unless the collection
+  declares `all: { max: TAG_TREE_MAX }`; the schema refuses one more row, a
+  load past it fails loudly, and the engine refuses (400) a create or a path
+  that would cross it. A tree that genuinely needs to grow past it is a
+  window with `tree`, not a bigger cap.
 - Sibling names are unique (case-insensitive): a "New tag" button names its
   tag with `freeSiblingName("New tag", parentId, tags)`.
 

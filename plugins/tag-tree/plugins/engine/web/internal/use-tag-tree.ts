@@ -17,7 +17,7 @@ import {
   type UpdateTagBody,
 } from "../../core";
 
-/** A tree's rows, live, in rank order — the whole tree. */
+/** A tree's rows, live, in rank order — the whole tree (at most `TAG_TREE_MAX` tags). */
 export function useTagTree<Row extends TagRow>(
   tree: TagTree<Row>,
 ): ResourceResult<CollectionRow<Row>[]> {
