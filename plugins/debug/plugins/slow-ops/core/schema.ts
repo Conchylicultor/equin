@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  cappedList,
   wholeList,
   wholeRecord,
 } from "@plugins/packages/plugins/list-bound/core";
@@ -74,6 +75,10 @@ export type SlowOpMeasures = z.infer<typeof SlowOpMeasuresSchema>;
 // without unbounded growth. `traceId` links
 // the freshest sample to the durable trace the same trip captured (when the
 // engine admitted one), so the aggregate view can deep-link the evidence.
+// How many of a gate's holders one sample keeps (longest-held first): every
+// read-admission slot, and the head of any wider gate.
+export const SAMPLE_HOLDERS_MAX = 8;
+
 export const SlowOpSampleSchema = z.object({
   atTime: z.coerce.date(),
   durationMs: z.number(),
@@ -88,6 +93,12 @@ export const SlowOpSampleSchema = z.object({
       ) as Record<SpanMeasure, z.ZodOptional<z.ZodNumber>>,
     )
     .optional(),
+  // A `wait <gate>` sample: who held the gate when the wait was filed
+  // (runtime-profiler's `SlowWait.holders`), so the row says who it queued
+  // behind, not only that the gate was full.
+  holders: cappedList(z.object({ label: z.string(), heldMs: z.number() }), {
+    max: SAMPLE_HOLDERS_MAX,
+  }).optional(),
 });
 export type SlowOpSample = z.infer<typeof SlowOpSampleSchema>;
 

@@ -430,6 +430,36 @@ describe("onSlowWait — a queue wait is the gate's slowness", () => {
     }
     expect(seen).toEqual([{ layer: "read-admit", ms: 30, caller: "loader:l" }]);
   });
+
+  test("a filed wait names who holds its gate, read from the gate's gauge", async () => {
+    registerGateGauge("held-gate", () => ({
+      active: 1,
+      queued: 3,
+      max: 1,
+      holders: [{ label: "plugin-view.tree", heldMs: 15_000 }],
+    }));
+    const seen: SlowWait[] = [];
+    const sub = onSlowWait(
+      (w) => {
+        seen.push(w);
+        return true;
+      },
+      { thresholdMs: 20 },
+    );
+    try {
+      await recordEntrySpan("sub", "s", async () => {
+        fakeNow = 30;
+        chargeWait("held-gate", 30, "queue");
+        chargeWait("bare-gate", 30, "queue"); // no gauge: no holders
+      });
+    } finally {
+      sub.dispose();
+    }
+    expect(seen.map((w) => [w.layer, w.holders])).toEqual([
+      ["held-gate", [{ label: "plugin-view.tree", heldMs: 15_000 }]],
+      ["bare-gate", undefined],
+    ]);
+  });
 });
 
 describe("queue residue — many small waits are reported against the gate", () => {

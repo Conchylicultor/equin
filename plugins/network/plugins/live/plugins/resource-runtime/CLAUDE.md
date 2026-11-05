@@ -671,6 +671,34 @@ All but the version are co-produced by the starter. A push drain mints
   the slot throughout. `runtime-read-admit-yield.test.ts`,
   `scripts/read-admit-bench.ts`,
   `research/2026-11-03-framework-read-admission-waiters-yield.md`.
+- **A key's share.** No resource key holds more than `READ_KEY_SHARE` (3)
+  of the `READ_LOAD_CONCURRENCY` (6) slots — the gate's `perClass`, each
+  read's class its key: a key at its share has its next read passed over
+  while every other read keeps its FIFO place. So one slow class cannot take
+  the whole gate (main, 2026-11-05: 15 hung `host-fs.peek` loads from one tab
+  held all 6 slots and 121 `reports.list` subs waited 93 s). A hard cap, not
+  fair share: a slot is held for a whole load. ONE gate on purpose: a read
+  yielding its slot to wait gives back its key's share with it, so no
+  per-key gate held across a yield can deadlock two keys.
+- **A read nobody is owed is dropped at its slot (`ReadAbandoned`).** When its
+  slot comes, a subscription's read — and its
+  `revalidate` probe — runs only while its tuple is tracked (any socket, a
+  lingering one included) or a caller its tracking cannot see awaits the
+  flight (an HTTP read, a push drain that joined it: `untrackedFlightReaders`).
+  Otherwise it rejects with `ReadAbandoned` before the loader, and `serveSub`
+  sends nothing — a tab scrolling a per-row list no longer leaves cold reads
+  for rows it unsubscribed. The flight detaches from its single-flight key in
+  the same step (`inflight`'s `detach()`), so a caller arriving later starts a
+  fresh read instead of inheriting the rejection. Counted per key in
+  `_debug.abandonedReads`.
+- **The gate names its holders.** Every gated read is labelled (`<key>
+  <params>`, a probe `revalidate <key> <params>`), so `readGateStats().holders`
+  says who holds the slots; the profiler stamps them on a filed `wait
+  read-admit` (runtime-profiler's `SlowWait.holders` → the slow-op sample) and
+  the gates trace lane shows them.
+- **A watcher start is timed.** `onFirstSubscribe` (a `whileSubscribed`
+  start), awaited before the first read, runs as its own `sub start:<key>`
+  span (`startFirstSubscribe`). Pinned by `runtime-read-abandon.test.ts`.
 - **Per-tab subs + batch replay.**
   - Per-socket records tag the holding tabs (`SocketSubRecord`; untagged ⇒ `""`).
   - `op: "sub-batch"` registers entries first, then `complete: true` releases what

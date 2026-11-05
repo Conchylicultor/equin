@@ -1,12 +1,14 @@
 import type {
+  GateHolder,
   SpanDetail,
   WaitBreakdown,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { ContentionSnapshot } from "@plugins/infra/plugins/host/plugins/contention/server";
-import type {
-  SlowOpMeasures,
-  SlowOpSample,
-  VariantBreakdown,
+import {
+  SAMPLE_HOLDERS_MAX,
+  type SlowOpMeasures,
+  type SlowOpSample,
+  type VariantBreakdown,
 } from "../../core";
 import type { RecordSlowOpInput } from "./input";
 import { mergeMeasures, mergeVariant } from "./merge-detail";
@@ -92,6 +94,7 @@ export function mergeSample(
   traceId: string | undefined,
   occurredAt: Date,
   detail?: SpanDetail,
+  holders?: readonly GateHolder[],
 ): SlowOpSample[] {
   const sample: SlowOpSample = {
     atTime: occurredAt,
@@ -101,6 +104,8 @@ export function mergeSample(
   };
   if (detail?.variant !== undefined) sample.variant = detail.variant;
   if (detail?.measures) sample.measures = detail.measures;
+  if (holders && holders.length > 0)
+    sample.holders = holders.slice(0, SAMPLE_HOLDERS_MAX);
   return [sample, ...samples]
     .sort(
       // atTime is a Date in fresh entries but an ISO string once round-tripped
@@ -178,6 +183,7 @@ export function foldSlowOpBatch(
       input.traceId,
       occurredAt,
       input.detail,
+      input.holders,
     );
     if (input.detail?.variant !== undefined) {
       op.variants = mergeVariant(op.variants, input.detail.variant, durationMs);

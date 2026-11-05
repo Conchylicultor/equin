@@ -1,4 +1,5 @@
 import type {
+  GateHolder,
   SpanDetail,
   WaitBreakdown,
 } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -43,6 +44,9 @@ export interface RecordSlowOpInput {
   // measures (fan-out, frame size, …). Merged into the row's `variants`
   // breakdown and `measures` stats, and stamped on the newest sample.
   detail?: SpanDetail;
+  // A `wait <gate>` op only: who held the gate when the wait was filed
+  // (`SlowWait.holders`). Stamped on the newest sample, never aggregated.
+  holders?: readonly GateHolder[];
   // Additive cold-start attribution (client `element` signal only). When the
   // notifications transport was not ready at resource mount, this duration is
   // transport time-to-first-data, not resource compute — its size is the

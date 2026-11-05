@@ -76,7 +76,7 @@ describe("createSemaphore", () => {
 
   test("stats() reports active/queued/max through fill, saturation, and drain", async () => {
     const sem = createSemaphore(2);
-    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2 });
+    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2, holders: [] });
 
     let open!: () => void;
     const gate = new Promise<void>((r) => {
@@ -91,11 +91,11 @@ describe("createSemaphore", () => {
 
     await tick();
     // 2 hold slots, the other 3 queue behind them.
-    expect(sem.stats()).toEqual({ active: 2, queued: 3, max: 2 });
+    expect(sem.stats()).toEqual({ active: 2, queued: 3, max: 2, holders: [] });
 
     open();
     await Promise.all(tasks);
-    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2 });
+    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2, holders: [] });
   });
 
   test("releases the slot when the body rejects", async () => {
@@ -126,7 +126,7 @@ describe("createSemaphore", () => {
 
     await tick();
     expect(admitted).toEqual([0, 1]); // exactly max admitted, rest queued
-    expect(sem.stats()).toEqual({ active: 2, queued: 2, max: 2 });
+    expect(sem.stats()).toEqual({ active: 2, queued: 2, max: 2, holders: [] });
 
     // Freeing one slot admits exactly the head waiter, not the tail.
     (await leases[0]!)();
@@ -139,7 +139,7 @@ describe("createSemaphore", () => {
 
     (await leases[2]!)();
     (await leases[3]!)();
-    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2 });
+    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2, holders: [] });
   });
 
   test("the release fn is idempotent — a double release frees only one slot", async () => {
@@ -162,13 +162,13 @@ describe("createSemaphore", () => {
 
     // Only the head waiter got in; the third is still queued behind the one live slot.
     expect(admitted).toEqual([1]);
-    expect(sem.stats()).toEqual({ active: 1, queued: 1, max: 1 });
+    expect(sem.stats()).toEqual({ active: 1, queued: 1, max: 1, holders: [] });
 
     (await second)();
     await tick();
     expect(admitted).toEqual([1, 2]);
     (await third)();
-    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 1 });
+    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 1, holders: [] });
   });
 
   test("acquire reports wait time via onWait — ~0 when free, positive when queued", async () => {
@@ -204,16 +204,16 @@ describe("createSemaphore", () => {
     const queued = sem.run(async () => {});
 
     await tick();
-    expect(sem.stats()).toEqual({ active: 2, queued: 1, max: 2 });
+    expect(sem.stats()).toEqual({ active: 2, queued: 1, max: 2, holders: [] });
 
     // The lease hands its slot to the queued `run` body, which completes at once.
     lease();
     await queued;
-    expect(sem.stats()).toEqual({ active: 1, queued: 0, max: 2 });
+    expect(sem.stats()).toEqual({ active: 1, queued: 0, max: 2, holders: [] });
 
     open();
     await running;
-    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2 });
+    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2, holders: [] });
   });
 
   test("a weighted caller takes its whole weight, atomically", async () => {
@@ -245,21 +245,21 @@ describe("createSemaphore", () => {
     await tick();
     // The first heavy body holds BOTH units, so nothing else fits — not the other
     // heavy one, and not the light one either.
-    expect(sem.stats()).toEqual({ active: 2, queued: 2, max: 2 });
+    expect(sem.stats()).toEqual({ active: 2, queued: 2, max: 2, holders: [] });
 
     open["heavy-a"]!();
     await tick();
-    expect(sem.stats()).toEqual({ active: 2, queued: 1, max: 2 });
+    expect(sem.stats()).toEqual({ active: 2, queued: 1, max: 2, holders: [] });
     open["heavy-b"]!();
     await tick();
-    expect(sem.stats()).toEqual({ active: 1, queued: 0, max: 2 });
+    expect(sem.stats()).toEqual({ active: 1, queued: 0, max: 2, holders: [] });
     open["light"]!();
     await Promise.all([a, b, light]);
 
     // Every admission saw itself alone: a weight is all-or-nothing, so a heavy
     // body never ran half-acquired beside anyone.
     expect(overlaps).toEqual([["heavy-a"], ["heavy-b"], ["light"]]);
-    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2 });
+    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2, holders: [] });
   });
 
   test("a queued heavy waiter is never overtaken by a lighter one that would fit", async () => {
@@ -279,7 +279,7 @@ describe("createSemaphore", () => {
       await lightGate;
     });
     await tick();
-    expect(sem.stats()).toEqual({ active: 1, queued: 0, max: 2 });
+    expect(sem.stats()).toEqual({ active: 1, queued: 0, max: 2, holders: [] });
 
     // Needs both units, so it queues with one unit free.
     const heavy = sem.run(
@@ -297,17 +297,17 @@ describe("createSemaphore", () => {
 
     await tick();
     expect(admitted).toEqual(["light0"]);
-    expect(sem.stats()).toEqual({ active: 1, queued: 2, max: 2 });
+    expect(sem.stats()).toEqual({ active: 1, queued: 2, max: 2, holders: [] });
 
     openLight();
     await tick();
     expect(admitted).toEqual(["light0", "heavy"]);
-    expect(sem.stats()).toEqual({ active: 2, queued: 1, max: 2 });
+    expect(sem.stats()).toEqual({ active: 2, queued: 1, max: 2, holders: [] });
 
     openHeavy();
     await Promise.all([light0, heavy, light1]);
     expect(admitted).toEqual(["light0", "heavy", "light1"]);
-    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2 });
+    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2, holders: [] });
   });
 
   test("rejects a weight that could never be admitted, at the call site", () => {
@@ -320,13 +320,13 @@ describe("createSemaphore", () => {
     );
     expect(() => sem.acquire({ weight: 1.5 })).toThrow(/positive integer/);
     // A refused request never touched the gate.
-    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2 });
+    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 2, holders: [] });
   });
 
   test("releasing a weighted lease frees all of its weight, exactly once", async () => {
     const sem = createSemaphore(3);
     const release = await sem.acquire({ weight: 3 });
-    expect(sem.stats()).toEqual({ active: 3, queued: 0, max: 3 });
+    expect(sem.stats()).toEqual({ active: 3, queued: 0, max: 3, holders: [] });
 
     const admitted: number[] = [];
     const queued = [1, 2, 3].map((i) =>
@@ -343,10 +343,10 @@ describe("createSemaphore", () => {
     await tick();
     // The freed weight is handed down the queue while each waiter still fits.
     expect(admitted).toEqual([1, 2, 3]);
-    expect(sem.stats()).toEqual({ active: 3, queued: 0, max: 3 });
+    expect(sem.stats()).toEqual({ active: 3, queued: 0, max: 3, holders: [] });
 
     for (const q of queued) (await q)();
-    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 3 });
+    expect(sem.stats()).toEqual({ active: 0, queued: 0, max: 3, holders: [] });
   });
 
   test("onWait fires once for a weighted caller, at its acquisition", async () => {
@@ -376,5 +376,127 @@ describe("createSemaphore", () => {
     await Promise.all([holder, queued]);
     expect(waits).toHaveLength(2);
     expect(waits[1]!).toBeGreaterThan(0); // genuinely waited for the full weight
+  });
+
+  test("stats().holders names the labelled callers holding a slot, longest first", async () => {
+    const sem = createSemaphore(2);
+    let openA!: () => void;
+    let openB!: () => void;
+    const a = sem.run(
+      () =>
+        new Promise<void>((r) => {
+          openA = r;
+        }),
+      { label: "a" },
+    );
+    await tick();
+    const b = sem.run(
+      () =>
+        new Promise<void>((r) => {
+          openB = r;
+        }),
+      { label: "b" },
+    );
+    // Queued: holds nothing, so it is not a holder.
+    const c = sem.run(async () => {}, { label: "c" });
+    await tick();
+    expect(sem.stats().holders.map((h) => h.label)).toEqual(["a", "b"]);
+    openA();
+    await a;
+    await c;
+    expect(sem.stats().holders.map((h) => h.label)).toEqual(["b"]);
+    openB();
+    await b;
+    expect(sem.stats().holders).toEqual([]);
+  });
+
+  test("an unlabelled caller holds capacity but is not listed", async () => {
+    const sem = createSemaphore(1);
+    const release = await sem.acquire();
+    expect(sem.stats()).toEqual({
+      active: 1,
+      queued: 0,
+      max: 1,
+      holders: [],
+    });
+    release();
+  });
+
+  test("perClass: a class at its share is passed over; other callers keep FIFO order", async () => {
+    const sem = createSemaphore(4, { perClass: 2 });
+    const order: string[] = [];
+    let open!: () => void;
+    const gate = new Promise<void>((r) => {
+      open = r;
+    });
+    const hold = (name: string, cls: string) =>
+      sem.run(
+        async () => {
+          order.push(name);
+          await gate;
+        },
+        { class: cls },
+      );
+    const runs = [
+      hold("a1", "a"),
+      hold("a2", "a"),
+      hold("a3", "a"), // a at its share: passed over
+      hold("b1", "b"),
+      hold("c1", "c"),
+      hold("d1", "d"), // gate full
+    ];
+    await tick();
+    expect(order).toEqual(["a1", "a2", "b1", "c1"]);
+    expect(sem.stats()).toMatchObject({ active: 4, queued: 2 });
+    open();
+    await Promise.all(runs);
+    expect(order.slice(4).sort()).toEqual(["a3", "d1"]);
+    expect(sem.stats()).toMatchObject({ active: 0, queued: 0 });
+  });
+
+  test("perClass: a freed slot of the capped class admits its waiter first in queue order", async () => {
+    const sem = createSemaphore(2, { perClass: 1 });
+    const order: string[] = [];
+    let releaseA!: () => void;
+    const a1 = sem.run(
+      () =>
+        new Promise<void>((r) => {
+          order.push("a1");
+          releaseA = r;
+        }),
+      { class: "a" },
+    );
+    const a2 = sem.run(async () => void order.push("a2"), { class: "a" });
+    let releaseB!: () => void;
+    const b1 = sem.run(
+      () =>
+        new Promise<void>((r) => {
+          order.push("b1");
+          releaseB = r;
+        }),
+      { class: "b" },
+    );
+    await tick();
+    expect(order).toEqual(["a1", "b1"]);
+    releaseA();
+    await a1;
+    await a2;
+    expect(order).toEqual(["a1", "b1", "a2"]);
+    releaseB();
+    await b1;
+  });
+
+  test("perClass must fit max; a class is ignored on a gate without it", async () => {
+    expect(() => createSemaphore(2, { perClass: 3 })).toThrow("perClass");
+    const sem = createSemaphore(2);
+    let open!: () => void;
+    const gate = new Promise<void>((r) => {
+      open = r;
+    });
+    const runs = [1, 2].map(() => sem.run(() => gate, { class: "a" }));
+    await tick();
+    expect(sem.stats().active).toBe(2);
+    open();
+    await Promise.all(runs);
   });
 });

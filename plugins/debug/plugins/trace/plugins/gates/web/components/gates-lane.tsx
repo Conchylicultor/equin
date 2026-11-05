@@ -9,18 +9,28 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import type { TraceLaneProps } from "@plugins/debug/plugins/trace/plugins/engine/web";
+import { formatDuration } from "@plugins/fields/plugins/duration/core";
 
 // Web mirror of the gates section (layer → occupancy gauge). Parsed loudly since
 // the snapshot endpoint keeps `events` sections opaque.
 const GatesSchema = z.record(
   z.string(),
-  z.object({ active: z.number(), queued: z.number(), max: z.number() }),
+  z.object({
+    active: z.number(),
+    queued: z.number(),
+    max: z.number(),
+    holders: z
+      .array(z.object({ label: z.string(), heldMs: z.number() }))
+      .optional(),
+  }),
 );
 
 // Gate occupancy at the trip instant — a point-in-time strip (NOT time bars):
 // one chip per layer `active/max (+queued)`, saturated gates escalated to
 // warning/destructive so a bottleneck jumps out. Layer names share the vocabulary
-// of the spans' per-layer waits, so this joins the same instant.
+// of the spans' per-layer waits, so this joins the same instant. Below the
+// strip, each gate whose owner names its holders says who held it (longest
+// first) — who the queued ops were waiting behind.
 export function GatesLane({ payload }: TraceLaneProps): ReactElement {
   const parsed = GatesSchema.safeParse(payload);
   const gates = parsed.success ? Object.entries(parsed.data) : [];
@@ -53,6 +63,16 @@ export function GatesLane({ payload }: TraceLaneProps): ReactElement {
           })}
         </Cluster>
       )}
+      {gates
+        .filter(([, g]) => g.holders !== undefined && g.holders.length > 0)
+        .map(([layer, g]) => (
+          <Text key={layer} variant="caption" tone="muted">
+            {layer} held by{" "}
+            {g
+              .holders!.map((h) => `${h.label} (${formatDuration(h.heldMs)})`)
+              .join(", ")}
+          </Text>
+        ))}
     </Stack>
   );
 }

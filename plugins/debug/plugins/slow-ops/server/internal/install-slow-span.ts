@@ -153,6 +153,7 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
         source: "server-slow-op",
         caller: wait.caller,
         detail,
+        holders: wait.holders,
         traceId: trace?.id,
       });
       return true;

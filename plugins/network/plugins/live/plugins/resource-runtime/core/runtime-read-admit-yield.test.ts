@@ -68,7 +68,11 @@ describe("read admission — waiters give their slot back", () => {
     await tick();
 
     // Every derived read only waits: none holds a slot, none blocks the rest.
-    expect(h.runtime.readGateStats()).toEqual({ active: 0, queued: 0, max: 6 });
+    expect(h.runtime.readGateStats()).toMatchObject({
+      active: 0,
+      queued: 0,
+      max: 6,
+    });
     expect(acked("places")).toBe(true);
     expect(acked("reports")).toBe(true);
     expect(acked("config")).toBe(true);
@@ -104,21 +108,32 @@ describe("read admission — waiters give their slot back", () => {
         (f) => f.kind === "sub-ack" && f.key?.startsWith("derived-"),
       ),
     ).toHaveLength(6);
-    expect(h.runtime.readGateStats()).toEqual({ active: 0, queued: 0, max: 6 });
+    expect(h.runtime.readGateStats()).toMatchObject({
+      active: 0,
+      queued: 0,
+      max: 6,
+    });
   });
 
   test("a read that keeps running holds its slot: distinct running loads still cap at six", async () => {
     const h = createHarness();
     const ctl = controllable("v");
-    h.runtime.defineExternalResource<string, { i: string }>({
-      key: "r",
-      mode: "push",
-      schema: z.string(),
-      loader: () => ctl.loader(),
-    });
+    // Eight keys, so no key's share (READ_KEY_SHARE) is what caps them.
+    for (let k = 0; k < 8; k++) {
+      h.runtime.defineExternalResource({
+        key: `r${k}`,
+        mode: "push",
+        schema: z.string(),
+        loader: () => ctl.loader(),
+      });
+    }
     ctl.block();
-    for (let i = 0; i < 8; i++) await h.subscribe("r", { i: String(i) });
-    expect(h.runtime.readGateStats()).toEqual({ active: 6, queued: 2, max: 6 });
+    for (let k = 0; k < 8; k++) await h.subscribe(`r${k}`);
+    expect(h.runtime.readGateStats()).toMatchObject({
+      active: 6,
+      queued: 2,
+      max: 6,
+    });
     ctl.release();
     await tick();
     expect(h.runtime.readGateStats().active).toBe(0);

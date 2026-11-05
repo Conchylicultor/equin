@@ -57,7 +57,7 @@ describe("yieldable slots", () => {
     block.resolve();
     await Promise.all([a, b, c]);
     expect(order).toEqual(["a:start", "b:run", "a:resumed:x", "c:run"]);
-    expect(gate.stats()).toEqual({ active: 0, queued: 0, max: 1 });
+    expect(gate.stats()).toEqual({ active: 0, queued: 0, max: 1, holders: [] });
   });
 
   test("a rejected wait still takes the slot back before rethrowing", async () => {
@@ -99,7 +99,7 @@ describe("yieldable slots", () => {
     expect(gate.stats().active).toBe(0); // y still pending
     y.resolve();
     await a;
-    expect(gate.stats()).toEqual({ active: 0, queued: 0, max: 2 });
+    expect(gate.stats()).toEqual({ active: 0, queued: 0, max: 2, holders: [] });
   });
 
   test("a non-yieldable slot is held while its body waits", async () => {
@@ -136,7 +136,7 @@ describe("yieldable slots", () => {
     expect(gate.stats().active).toBe(0);
     late.resolve();
     await stray;
-    expect(gate.stats()).toEqual({ active: 0, queued: 0, max: 1 });
+    expect(gate.stats()).toEqual({ active: 0, queued: 0, max: 1, holders: [] });
   });
 });
 
@@ -160,7 +160,55 @@ describe("nested yieldable slots", () => {
     );
     await outer;
     expect(activeDuringWait).toBe(1); // the outer slot, never both released
-    expect(gate.stats()).toEqual({ active: 0, queued: 0, max: 2 });
+    expect(gate.stats()).toEqual({ active: 0, queued: 0, max: 2, holders: [] });
+  });
+
+  test("a yielded slot is not held: its holder leaves `holders` for the wait and returns with the slot", async () => {
+    const gate = createSemaphore(1);
+    const other = deferred<void>();
+    const resumed = deferred<void>();
+    const finish = deferred<void>();
+    const a = gate.run(
+      async () => {
+        await whileWaiting(other.promise);
+        resumed.resolve();
+        await finish.promise;
+      },
+      { yieldable: true, label: "a" },
+    );
+    await flush();
+    expect(gate.stats().holders).toEqual([]);
+    other.resolve();
+    await resumed.promise;
+    expect(gate.stats().holders.map((h) => h.label)).toEqual(["a"]);
+    finish.resolve();
+    await a;
+    expect(gate.stats().holders).toEqual([]);
+  });
+
+  test("a yielded slot frees its class's share too", async () => {
+    const gate = createSemaphore(2, { perClass: 1 });
+    const other = deferred<void>();
+    const order: string[] = [];
+    const a1 = gate.run(
+      async () => {
+        order.push("a1");
+        await whileWaiting(other.promise);
+        order.push("a1:resumed");
+      },
+      { yieldable: true, class: "a" },
+    );
+    await flush();
+    // a1 waits on other work: its class's share is free for a2.
+    const a2 = gate.run(
+      async () => {
+        order.push("a2");
+        other.resolve();
+      },
+      { yieldable: true, class: "a" },
+    );
+    await Promise.all([a1, a2]);
+    expect(order).toEqual(["a1", "a2", "a1:resumed"]);
   });
 });
 

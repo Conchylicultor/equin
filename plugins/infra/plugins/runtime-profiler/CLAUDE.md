@@ -205,7 +205,9 @@ imports `server/`, so on the client every entry point is a transparent passthrou
   count it once per level), with the layer, the ms and the innermost open
   entry that waited — and from a latency leaf's `queue` (see Lanes), flagged
   `latency: true`. Context-less waits already become a `db [layer]` span and
-  are not handed here. slow-ops files each as `wait <layer>`.
+  are not handed here. slow-ops files each as `wait <layer>`. A wait handed
+  to a subscriber carries `holders` when its gate's gauge names them
+  (`GateGauge.holders`, read as it is filed): who it waited behind.
 - `currentCallerKind()` — the `kind` of the **innermost** enclosing entry point (or
   `undefined` when none is active). A thin read of the same ambient context; the DB pool
   wrapper uses it to decide whether to capture a query's read-set. Read it synchronously,
@@ -418,6 +420,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `FlightSpan`
     - `FlightWindow`
     - `GateGauge`
+    - `GateHolder`
     - `OriginClass`
     - `ParentBreakdown`
     - `SlowSpan`

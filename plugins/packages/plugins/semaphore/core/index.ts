@@ -1,5 +1,5 @@
 export { createSemaphore } from "./internal/semaphore";
-export type { Semaphore, SlotOptions } from "./internal/semaphore";
+export type { Semaphore, SlotHolder, SlotOptions } from "./internal/semaphore";
 export {
   installLeaseContextRuntime,
   whileWaiting,

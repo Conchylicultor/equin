@@ -54,4 +54,5 @@ export type {
   FlightSpan,
   FlightWindow,
   GateGauge,
+  GateHolder,
 } from "./recorder";

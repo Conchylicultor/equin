@@ -7,6 +7,7 @@ export {
   SlowOpCallerSchema,
   CallerRefSchema,
   SlowOpSampleSchema,
+  SAMPLE_HOLDERS_MAX,
   VariantBreakdownSchema,
   SlowOpMeasuresSchema,
   VARIANT_CAP,

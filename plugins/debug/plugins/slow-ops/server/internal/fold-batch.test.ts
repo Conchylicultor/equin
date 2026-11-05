@@ -41,6 +41,25 @@ describe("mergeSample", () => {
     expect(newest?.atTime).toBe(T1);
   });
 
+  test("a wait's gate holders ride its sample, capped longest-first", () => {
+    const holders = Array.from({ length: 12 }, (_, i) => ({
+      label: `peek ${i}`,
+      heldMs: 94_000 - i,
+    }));
+    const [sample] = mergeSample(
+      [],
+      snapshot(T1),
+      93_000,
+      undefined,
+      T1,
+      undefined,
+      holders,
+    );
+    expect(sample?.holders).toEqual(holders.slice(0, 8));
+    const [bare] = mergeSample([], snapshot(T1), 100, undefined, T1);
+    expect(bare && "holders" in bare).toBe(false);
+  });
+
   test("an older replayed sample sorts behind an already-present newer one", () => {
     const ring = mergeSample([], snapshot(T2), 100, undefined, T2);
     const merged = mergeSample(ring, snapshot(T1), 200, undefined, T1);

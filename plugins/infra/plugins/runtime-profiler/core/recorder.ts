@@ -919,6 +919,13 @@ export interface SlowWait {
    * sees, so a monitor may hold it to a latency bar rather than a work bar.
    */
   latency?: true;
+  /**
+   * Who held the gate when the wait was filed — the gate's own gauge
+   * (`GateGauge.holders`), read at that instant. Absent when the gate names no
+   * holders. Read when filed, not over the whole wait: a holder that finished
+   * just before (the one whose release admitted a single wait) is not listed.
+   */
+  holders?: GateHolder[];
 }
 
 /**
@@ -937,9 +944,20 @@ const slowWaitSubs: { thresholdMs: number; handler: SlowWaitHandler }[] = [];
  */
 function notifySlowWait(wait: SlowWait): boolean {
   let filed = false;
-  for (const sub of slowWaitSubs)
-    if (wait.ms >= sub.thresholdMs && sub.handler(wait)) filed = true;
+  let named: SlowWait | undefined;
+  for (const sub of slowWaitSubs) {
+    if (wait.ms < sub.thresholdMs) continue;
+    // The gate's holders are read only for a wait some subscriber may file.
+    named ??= withHolders(wait);
+    if (sub.handler(named)) filed = true;
+  }
   return filed;
+}
+
+/** `wait` naming who holds its gate now, when the gate's gauge says. */
+function withHolders(wait: SlowWait): SlowWait {
+  const holders = gateGauges.get(wait.layer)?.().holders;
+  return holders && holders.length > 0 ? { ...wait, holders } : wait;
 }
 
 /**
@@ -1225,11 +1243,24 @@ function loopStallOverlap(start: number, end: number): number {
   return ms;
 }
 
+/** A caller holding a gate's capacity, as its owner names it. */
+export interface GateHolder {
+  label: string;
+  /** How long it has held its slot (ms). */
+  heldMs: number;
+}
+
 /** Point-in-time occupancy of one concurrency gate. */
 export interface GateGauge {
   active: number;
   queued: number;
   max: number;
+  /**
+   * Who holds it, longest first — for a gate whose callers say what they are
+   * (`packages/semaphore`'s `SlotOptions.label`). A slow wait on the gate
+   * carries it (`SlowWait.holders`), so a wait names who it waited behind.
+   */
+  holders?: GateHolder[];
 }
 
 const gateGauges = new Map<string, () => GateGauge>();

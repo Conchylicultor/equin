@@ -35,6 +35,18 @@ export interface InflightOptions {
   onSupersede?: () => void;
 }
 
+/** The running flight, as its own body sees it (`Inflight.run`'s `fn`). */
+export interface InflightFlight {
+  /**
+   * Stop anyone else joining this flight: from now on a caller with its key
+   * starts a fresh one. For a body that has decided its answer is no use to a
+   * caller arriving later (it is giving up), so none inherits it. Callers that
+   * already joined still share this flight's outcome. A no-op once the key
+   * names another flight (a supersession).
+   */
+  detach(): void;
+}
+
 export interface Inflight {
   /**
    * Run `fn` under `key`, sharing one in-flight promise across concurrent
@@ -66,7 +78,11 @@ export interface Inflight {
    * See `plugins/packages/plugins/inflight/CLAUDE.md` and
    * `research/2026-08-08-global-live-state-flight-freshness.md`.
    */
-  run<T>(key: string, fn: () => Promise<T>, opts?: InflightOptions): Promise<T>;
+  run<T>(
+    key: string,
+    fn: (flight: InflightFlight) => Promise<T>,
+    opts?: InflightOptions,
+  ): Promise<T>;
   /**
    * Number of distinct keys currently in flight (introspection / tests). A key,
    * not a flight: a superseded flight is still running but no longer holds the
@@ -94,7 +110,7 @@ export function createInflight(): Inflight {
   return {
     run<T>(
       key: string,
-      fn: () => Promise<T>,
+      fn: (flight: InflightFlight) => Promise<T>,
       opts?: InflightOptions,
     ): Promise<T> {
       const existing = pending.get(key);
@@ -140,14 +156,23 @@ export function createInflight(): Inflight {
       // under one key, and the older one settling must not evict the newer
       // entry (which would send the next arrival off on a third redundant run,
       // and, worse, let a caller join a flight that had already been refused).
+      // `detached` covers a body that detaches before its first await, while
+      // the key does not name this flight yet.
+      let detached = false;
+      const flight: InflightFlight = {
+        detach: () => {
+          detached = true;
+          if (pending.get(key)?.token === token) pending.delete(key);
+        },
+      };
       const p = (async () => {
         try {
-          return await fn();
+          return await fn(flight);
         } finally {
           if (pending.get(key)?.token === token) pending.delete(key);
         }
       })();
-      pending.set(key, { promise: p, startedAt, token });
+      if (!detached) pending.set(key, { promise: p, startedAt, token });
       return p;
     },
     get size() {

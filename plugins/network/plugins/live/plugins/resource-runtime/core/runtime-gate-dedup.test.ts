@@ -53,19 +53,22 @@ describe("gate-after-dedup — read-admission inside the single-flight", () => {
     expect(h.runtime.readGateStats().active).toBe(0); // slot released
   });
 
-  test("N distinct-pk parked loads: gate active capped at the gate size", async () => {
+  test("N distinct parked loads: gate active capped at the gate size", async () => {
     const h = createHarness();
     const ctl = controllable("v");
-    h.runtime.defineExternalResource<string, { i: string }>({
-      key: "r",
-      mode: "push",
-      schema: z.string(),
-      loader: () => ctl.loader(),
-    });
+    // Eight keys, so no key's share (READ_KEY_SHARE) is what caps them.
+    for (let k = 0; k < 8; k++) {
+      h.runtime.defineExternalResource({
+        key: `r${k}`,
+        mode: "push",
+        schema: z.string(),
+        loader: () => ctl.loader(),
+      });
+    }
 
     ctl.block();
-    for (let i = 0; i < 8; i++) {
-      await h.subscribe("r", { i: String(i) }); // 8 distinct pks → 8 flights
+    for (let k = 0; k < 8; k++) {
+      await h.subscribe(`r${k}`); // 8 distinct tuples → 8 flights
     }
     const stats = h.runtime.readGateStats();
     expect(stats.max).toBe(6); // READ_LOAD_CONCURRENCY

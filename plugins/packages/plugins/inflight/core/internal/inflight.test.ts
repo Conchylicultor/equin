@@ -268,4 +268,45 @@ describe("createInflight — freshness floor (notBefore)", () => {
     expect(waits).toHaveLength(1);
     expect(waits[0]).toBeGreaterThanOrEqual(0);
   });
+
+  test("a detached flight takes no new joiner; its own joiners still share it", async () => {
+    const inflight = createInflight();
+    let detach!: () => void;
+    let calls = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const body = async (flight: { detach(): void }) => {
+      calls++;
+      detach = () => flight.detach();
+      await gate;
+      return calls;
+    };
+    const a = inflight.run("k", body);
+    const joined = inflight.run("k", body); // joins before the detach
+    await tick();
+    detach();
+    expect(inflight.size).toBe(0);
+    const fresh = inflight.run("k", body); // starts its own flight
+    expect(calls).toBe(2);
+    release();
+    expect(await a).toBe(await joined);
+    await fresh;
+  });
+
+  test("a detach before the body's first await still keeps the flight out of the key", async () => {
+    const inflight = createInflight();
+    let calls = 0;
+    const a = inflight.run("k", async (flight) => {
+      calls++;
+      flight.detach();
+      await tick();
+    });
+    const b = inflight.run("k", async () => {
+      calls++;
+    });
+    expect(calls).toBe(2);
+    await Promise.all([a, b]);
+  });
 });

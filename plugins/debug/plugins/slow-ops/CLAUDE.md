@@ -379,12 +379,12 @@ bar).
     - `slow-ops.ops:rows` (keyed, point)
   - Routes: `POST /api/slow-ops/client`
 - Core:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×3
     - `infra/runtime-profiler` ×3
+    - `packages/list-bound` ×3
     - `config_v2` ×2
     - `network/live` ×2
-    - `packages/list-bound` ×2
     - `debug/trace/engine.traceListRoute`
     - `fields/date/config.dateField`
     - `fields/duration/config.durationField`
@@ -418,6 +418,7 @@ bar).
     - `MAX_CLIENT_SLOW_OP_ITEMS`
     - `MAX_SLOW_OP_MARKERS`
     - `OTHER_VARIANT`
+    - `SAMPLE_HOLDERS_MAX`
     - `slowOpById`
     - `slowOpCallerFields`
     - `slowOpCallers`

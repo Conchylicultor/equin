@@ -12,6 +12,15 @@ This is a *concurrency* deduplicator, not a cache — pair it with a TTL cache i
 you also want to reuse a settled result. Never use it where each caller needs a
 distinct side effect (mutations): the shared body runs once.
 
+## Detaching a flight (`fn`'s `flight.detach()`)
+
+`fn` is handed its flight. `flight.detach()` takes the flight off its key
+(token-checked, so a superseding flight is never evicted; sticky when called
+before `fn`'s first await): every later arrival starts a fresh one, while
+callers that already joined still share this flight's outcome. For a body that
+gives up — the live read gate's abandoned read rejects, and a caller arriving
+after that moment must not inherit the rejection.
+
 ## The freshness floor (`opts.notBefore`)
 
 Overlapping in time is the right sharing rule for a caller that only wants the work

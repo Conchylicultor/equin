@@ -36,6 +36,23 @@ took it, so its owner may release twice (`pg`'s `client.release` is call-once, a
 the DB wrapper patches it) — a second free would return a slot the lease never
 held, letting occupancy exceed `max` and silently voiding the gate's invariant.
 
+**Holders** (`opts.label`). A caller that says what it is is listed in
+`stats().holders` (`{ label, heldMs }`, longest-held first) while it holds
+weight — a yielded slot is not held, and comes back with a fresh `heldMs`. So
+a gate owner's gauge can say WHO a queued caller waits behind (runtime-profiler
+stamps a gauge's holders on a filed slow wait). Unlabelled callers are counted
+in `active` but never listed. User: the live read-admission gate.
+
+**Classes** (`createSemaphore(max, { perClass })` + `opts.class`). At most
+`perClass` weight of one class holds the gate at once. A queued caller whose
+class is at its share is passed over — not ahead of anyone — while every other
+caller keeps its FIFO place (and the heavy-waiter rule holds among them). A
+yielded slot gives back its class's share too, which is why a per-class cap
+belongs IN the gate rather than in a second gate around it: an outer gate held
+across an inner yield can deadlock. A gate without `perClass` ignores
+`opts.class` and is byte-identical to before. User: the live read-admission
+gate (class = resource key), so one slow resource cannot take every slot.
+
 **Yieldable slots** (`opts.yieldable`, `run` only). A gate bounds the bodies
 that RUN; a body that holds a slot while it only waits on work another caller
 is doing stalls everyone queued behind it for nothing. `whileWaiting(promise)`
@@ -103,6 +120,7 @@ query never wait.) See
     - `LeaseContextRuntime`
     - `LeaseScope`
     - `Semaphore`
+    - `SlotHolder`
     - `SlotOptions`
   - Exports (values):
     - `createSemaphore`

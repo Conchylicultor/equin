@@ -2,7 +2,10 @@ import type { z } from "zod";
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { canonicalParams } from "@plugins/network/plugins/live/plugins/canonical-params/core";
-import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import {
+  createSemaphore,
+  type SlotHolder,
+} from "@plugins/packages/plugins/semaphore/core";
 import {
   diffValue,
   type ValuePatchOp,
@@ -1869,7 +1872,10 @@ export interface ResourceRuntimeOptions {
    * charge) attribute to the originating request class — `sub` (a tab subscribed),
    * `push` (a drain's load), `cascade` (a routed entry's reverse-route resolve,
    * `resolveReverseRoutes`) or `bg` (a follow hook's re-read,
-   * `onFollowReached` — background work no reader waits on). Without it the
+   * `onFollowReached` — background work no reader waits on). A tuple's
+   * `onFirstSubscribe` runs under `sub` labelled `start:<key>`: the sub-ack
+   * waits on it, so a slow watcher start is a span of its own rather than
+   * untimed time before the read. Without it the
    * loader runs with no entry context and gets `parent: null`. server:
    * recordEntrySpan(kind, key, fn);
    * central: omit (identity). See
@@ -2453,9 +2459,17 @@ export interface ResourceRuntime {
    * Occupancy of the read-admission gate (see `READ_LOAD_CONCURRENCY`):
    * currently-held slots, queued waiters, and the cap. The runtime stays
    * profiler-free, so the facade (server-core) registers this as the
-   * `read-admit` gate gauge; central omits the registration.
+   * `read-admit` gate gauge; central omits the registration. `holders` names
+   * the reads holding a slot now (`<key> <params>`, a signature probe
+   * `revalidate <key> <params>`), longest-held first — who a queued read is
+   * waiting behind.
    */
-  readGateStats: () => { active: number; queued: number; max: number };
+  readGateStats: () => {
+    active: number;
+    queued: number;
+    max: number;
+    holders: SlotHolder[];
+  };
   /**
    * Every table a registered resource's routed delivery depends on: one row per
    * route of a ROUTED entry (`routes` / `reach` — every table it may read, since
@@ -2699,6 +2713,61 @@ const WATERMARK_SHARE_MS = 100;
 // research/2026-11-03-framework-read-admission-waiters-yield.md
 const READ_LOAD_CONCURRENCY = 6;
 
+// The most read-admission slots ONE resource key may hold at once (the gate's
+// `perClass`, each read's class its key): a key at its share has its next read
+// passed over while every other key's reads keep their FIFO place, so one slow
+// resource class cannot take the whole gate: main, 2026-11-05
+// 00:59–01:05Z, 15 `host-fs.peek` loads from one File Explorer tab hung ~94 s
+// in readdir and held all 6 slots — 73 reads queued, 121 `reports.list` subs
+// waited 93 s, and the app loaded without data. With a share of half, a hung
+// key leaves the other half to every other key. A hard cap, not a fair-share
+// scheduler: a slot is held for the whole load, so a key that took every free
+// slot while the gate was idle would still starve whoever came next. One gate,
+// so a read waiting on another's work (`whileWaiting`) gives back its key's
+// share with its slot — a second, non-yieldable per-key gate around it could
+// deadlock two keys' reads waiting on each other's queued flights.
+const READ_KEY_SHARE = 3;
+
+/**
+ * Who a gated read is for: a tuple's subscription (`sub` — owed only while
+ * the tuple is tracked) or an HTTP read (owed until it answers).
+ */
+type GatedReader = "sub" | "http";
+
+/**
+ * A subscription's read that reached its read-admission slot after every
+ * subscriber of the tuple left. Thrown instead of running the loader, so a
+ * read nobody will receive costs the gate nothing but its queue place (a tab
+ * scrolling a per-row list queues one cold read per row, and unsubscribes
+ * most of them before they are admitted). Caught by `serveSub`, which sends
+ * nothing: no socket holds the tuple to receive it.
+ */
+class ReadAbandoned extends Error {
+  constructor(key: string) {
+    super(`read of ${key} abandoned: no subscriber left`);
+    this.name = "ReadAbandoned";
+  }
+}
+
+/** The single-flight key of one tuple's read. */
+function flightKeyOf(key: string, pk: string): string {
+  return `${key} ${pk}`;
+}
+
+// Longest params text a read-admission holder label keeps: enough to tell
+// one row's read from another, short enough for a trace and a slow-op sample.
+const GATE_LABEL_PARAMS_MAX = 120;
+
+/** How a read holding a read-admission slot is named (`SlotOptions.label`). */
+function gateLabel(key: string, pk: string): string {
+  if (pk === EMPTY_PK) return key;
+  const params =
+    pk.length > GATE_LABEL_PARAMS_MAX
+      ? `${pk.slice(0, GATE_LABEL_PARAMS_MAX - 1)}…`
+      : pk;
+  return `${key} ${params}`;
+}
+
 /** A reach plan's follows by table: every follow (by name) reading each one. */
 function followsByTable(
   routes: readonly Route[],
@@ -2795,7 +2864,9 @@ export function createResourceRuntime(
   // Per-runtime read-admission gate (see READ_LOAD_CONCURRENCY). Its `onWait`
   // charges queue-wait to the enclosing entry via the injected hook (server:
   // chargeWait), so a saturated gate is observable rather than hidden.
-  const readLoadGate = createSemaphore(READ_LOAD_CONCURRENCY);
+  const readLoadGate = createSemaphore(READ_LOAD_CONCURRENCY, {
+    perClass: READ_KEY_SHARE,
+  });
   const chargeReadGateWait = (waitMs: number): void =>
     opts.onReadGateWait?.(waitMs);
   // Identity of THIS server boot, stamped on every sub-ack / up-to-date frame.
@@ -2829,6 +2900,14 @@ export function createResourceRuntime(
   // is how we learn whether the pre-commit join the 2026-08-08 incident rode on
   // still happens in production — and is now refused rather than shipped.
   const staleFlightSupersedes = new Map<string, number>();
+  // Per-key count of reads that reached a read-admission slot with nobody
+  // left to answer (`ReadAbandoned`). Monotonic; surfaced in `_debug`.
+  const abandonedReads = new Map<string, number>();
+  // Per flight (`flightKeyOf`): how many callers awaiting it are NOT a
+  // tuple's subscription — an HTTP read, a push drain that joined it. Their
+  // want is invisible to `entry.tracked`, so a queued read counts them before
+  // it concludes nobody is left (`readWanted`).
+  const untrackedFlightReaders = new Map<string, number>();
   // How many times a socket's buffer filled and the runtime held frames for
   // its drain (`deliver`), this boot.
   let backlogEpisodes = 0;
@@ -3853,7 +3932,7 @@ export function createResourceRuntime(
     params: ResourceParams,
     ctx?: { affectedIds: readonly string[] },
     seedEtag?: string,
-    gated = false,
+    gated?: GatedReader,
     seedAckTx?: readonly string[],
     notBefore?: number,
   ): Promise<FlightValue> {
@@ -3880,7 +3959,7 @@ export function createResourceRuntime(
     // charged as coalesce-wait in the joiner's own context — never gate-wait
     // (only the starter runs `chargeReadGateWait`, in its own context, because
     // inflight runs the starter's factory synchronously in its call frame).
-    // Push-path callers (`gated` false) start UNGATED flights exactly as before;
+    // Push-path callers (`gated` undefined) start UNGATED flights exactly as before;
     // a gated read joining one rides the coalesce wait with no slot either way.
     // The flight factory: watermark capture FIRST (Rule B — the floor is valid
     // only if captured before the loader's first read), then the loader. Runs
@@ -3908,14 +3987,35 @@ export function createResourceRuntime(
         ackTx: seedAckTx,
       };
     };
-    return inflight.run(
-      `${entry.key} ${paramsKey(params)}`,
+    const pk = paramsKey(params);
+    const flightKey = flightKeyOf(entry.key, pk);
+    // A tuple's subscription is wanted while the tuple is tracked; every other
+    // caller (an HTTP read, a push drain) is counted on the flight until it
+    // settles. Counted on the side, so the promise handed back is the flight's
+    // own (no extra hop before a continuation: H5's ordering).
+    const untracked = gated !== "sub";
+    if (untracked) {
+      untrackedFlightReaders.set(
+        flightKey,
+        (untrackedFlightReaders.get(flightKey) ?? 0) + 1,
+      );
+    }
+    const flight = inflight.run(
+      flightKey,
       gated
-        ? () =>
-            readLoadGate.run(load, {
-              onWait: chargeReadGateWait,
-              yieldable: true,
-            })
+        ? (inFlight) =>
+            admitRead(
+              entry.key,
+              gateLabel(entry.key, pk),
+              () => {
+                if (readWanted(entry, pk)) return true;
+                // Giving up: no caller arriving from now on may join and
+                // inherit the `ReadAbandoned` — it starts a fresh read.
+                inFlight.detach();
+                return false;
+              },
+              load,
+            )
         : load,
       {
         onWait: opts.onCoalesceWait,
@@ -3926,6 +4026,51 @@ export function createResourceRuntime(
         onSupersede: () => recordStaleFlightSupersede(entry.key),
       },
     );
+    if (untracked) {
+      const settle = () => {
+        const n = (untrackedFlightReaders.get(flightKey) ?? 1) - 1;
+        if (n > 0) untrackedFlightReaders.set(flightKey, n);
+        else untrackedFlightReaders.delete(flightKey);
+      };
+      // The caller handles the flight's own rejection; this branch only counts.
+      void flight.then(settle, settle);
+    }
+    return flight;
+  }
+
+  // Admit one read-path body: a slot of the read-admission gate, within its
+  // key's share (`READ_KEY_SHARE`), yieldable, labelled for `holders` and
+  // charged as `read-admit`. `wanted` is asked when the slot comes; a read
+  // nobody is owed any more rejects with `ReadAbandoned` instead of running
+  // (see `readWanted`).
+  function admitRead<T>(
+    key: string,
+    label: string,
+    wanted: () => boolean,
+    body: () => Promise<T>,
+  ): Promise<T> {
+    return readLoadGate.run(
+      () => {
+        if (!wanted()) throw new ReadAbandoned(key);
+        return body();
+      },
+      { onWait: chargeReadGateWait, yieldable: true, label, class: key },
+    );
+  }
+
+  // Is a read of (entry, pk) still owed to anyone? A subscription is owed
+  // while its tuple is tracked (any socket, a lingering one included); every
+  // other caller is counted on the flight. Asked when a queued read reaches
+  // its slot — the moment a read nobody waits for would start costing.
+  function readWanted(entry: RegistryEntry, pk: string): boolean {
+    return (
+      entry.tracked.has(pk) ||
+      (untrackedFlightReaders.get(flightKeyOf(entry.key, pk)) ?? 0) > 0
+    );
+  }
+
+  function recordAbandonedRead(key: string): void {
+    abandonedReads.set(key, (abandonedReads.get(key) ?? 0) + 1);
   }
 
   // Run a full loader on the READ path (WS sub-ack + HTTP GET fallback) inside a
@@ -3945,16 +4090,21 @@ export function createResourceRuntime(
   // call may START. The returned `etag` is the one the flight was actually seeded
   // with — the caller's own iff it started the flight. Callers must stamp the
   // RETURNED etag, never their own (see `getResourceValue`).
+  //
+  // `reader` says who asks: a tuple's subscription (`sub`) is dropped at the
+  // gate once nobody holds the tuple — it rejects with `ReadAbandoned`, which
+  // its caller answers by sending nothing.
   function gatedRead(
     entry: RegistryEntry,
     params: ResourceParams,
+    reader: GatedReader,
     seedEtag?: string,
   ): Promise<FlightValue> {
     // No ackTx seed and the resolved ackTx is discarded: read-path frames
     // (sub-ack / HTTP body) never carry one — their snapshot watermark subsumes
     // it (Rule B).
     const run = () =>
-      getResourceValue(entry, params, undefined, seedEtag, true);
+      getResourceValue(entry, params, undefined, seedEtag, reader);
     return opts.wrapOrigin ? opts.wrapOrigin("sub", entry.key, run) : run();
   }
 
@@ -3963,24 +4113,32 @@ export function createResourceRuntime(
   // when the resource never opted in OR the signature threw — a fail-safe: the
   // caller then falls through to the full loader / omits the ETag, so a broken
   // signature degrades to today's behavior and never serves stale.
+  //
+  // A subscription's probe (`reader: "sub"`) is dropped at the gate like its
+  // read once nobody holds the tuple: `ReadAbandoned` is rethrown, never
+  // reported. An HTTP probe always runs — its caller awaits the answer.
   async function computeEtag(
     entry: RegistryEntry,
     params: ResourceParams,
+    reader: GatedReader,
   ): Promise<string | undefined> {
     if (!entry.revalidate) return undefined;
     const revalidate = entry.revalidate;
+    const pk = paramsKey(params);
     try {
       const run = () =>
-        readLoadGate.run(() => revalidate(params), {
-          onWait: chargeReadGateWait,
-          yieldable: true,
-        });
+        admitRead(
+          entry.key,
+          `revalidate ${gateLabel(entry.key, pk)}`,
+          () => reader !== "sub" || entry.tracked.has(pk),
+          () => revalidate(params),
+        );
       const raw = await (opts.wrapOrigin
         ? opts.wrapOrigin("sub", entry.key, run)
         : run());
       return normalizeEtag(raw);
-      // eslint-disable-next-line promise-safety/no-absorbed-failure -- the loader error IS reported (reportLoaderError); returning undefined skips this push so the live-state sub retains its last-good value (documented stale-safe behavior), never publishing a false empty
     } catch (err) {
+      if (err instanceof ReadAbandoned) throw err;
       reportLoaderError(`revalidate failed for ${entry.key}`, err);
       return undefined;
     }
@@ -6679,7 +6837,7 @@ export function createResourceRuntime(
                 params,
                 undefined,
                 undefined,
-                false,
+                undefined,
                 seedAckTx,
                 pendingEntry.lastNotifyAt,
               ),
@@ -6689,7 +6847,7 @@ export function createResourceRuntime(
               params,
               undefined,
               undefined,
-              false,
+              undefined,
               seedAckTx,
               pendingEntry.lastNotifyAt,
             )));
@@ -7532,7 +7690,7 @@ export function createResourceRuntime(
                   params,
                   undefined,
                   undefined,
-                  false,
+                  undefined,
                   seedAckTx,
                   pendingEntry.lastNotifyAt,
                 ),
@@ -7542,7 +7700,7 @@ export function createResourceRuntime(
                 params,
                 undefined,
                 undefined,
-                false,
+                undefined,
                 seedAckTx,
                 pendingEntry.lastNotifyAt,
               )));
@@ -8418,6 +8576,29 @@ export function createResourceRuntime(
     return { id: derivation.id };
   }
 
+  // A tuple's 0→1 hook (`onFirstSubscribe`, a `whileSubscribed` watcher
+  // start), settled before its first read — so the sub-ack waits on it. Run
+  // as its own `sub` span, `start:<key>`: a slow watcher start is then a
+  // timed op of its own, not untimed time before the gated read. A failure is
+  // reported and the read goes on.
+  async function startFirstSubscribe(
+    entry: RegistryEntry,
+    params: ResourceParams,
+  ): Promise<void> {
+    const hook = entry.onFirstSubscribe;
+    if (!hook) return;
+    const run = async (): Promise<void> => {
+      await hook(params);
+    };
+    try {
+      await (opts.wrapOrigin
+        ? opts.wrapOrigin("sub", `start:${entry.key}`, run)
+        : run());
+    } catch (err) {
+      reportLoaderError(`onFirstSubscribe failed for ${entry.key}`, err);
+    }
+  }
+
   // `m.derive` is a seeded derivation (see `deriveSub`), on a fresh `sub`
   // only, read only under this server's `PROTOCOL` (`m.protocol`).
   async function handleSub(
@@ -8506,13 +8687,8 @@ export function createResourceRuntime(
         });
       }
     }
-    if (firstGlobal && entry.onFirstSubscribe) {
-      try {
-        await entry.onFirstSubscribe(params);
-      } catch (err) {
-        reportLoaderError(`onFirstSubscribe failed for ${key}`, err);
-      }
-    }
+    if (firstGlobal && entry.onFirstSubscribe)
+      await startFirstSubscribe(entry, params);
     if (derived) return;
 
     // Version short-circuit: the client echoed the (epoch, version) its cached
@@ -8698,9 +8874,16 @@ export function createResourceRuntime(
     // in. `computeEtag` is fail-safe — undefined when the resource never opted in
     // OR the signature threw — so a broken signature degrades to the plain
     // full-loader path and never serves stale.
-    const freshEtag = entry.revalidate
-      ? await computeEtag(entry, params)
-      : undefined;
+    let freshEtag: string | undefined;
+    try {
+      freshEtag = entry.revalidate
+        ? await computeEtag(entry, params, "sub")
+        : undefined;
+    } catch (err) {
+      if (!(err instanceof ReadAbandoned)) throw err;
+      recordAbandonedRead(key);
+      return;
+    }
     if (
       freshEtag !== undefined &&
       clientEtag != null &&
@@ -8771,9 +8954,16 @@ export function createResourceRuntime(
       ({ value, raw, etag, watermark } = await gatedRead(
         entry,
         params,
+        "sub",
         freshEtag,
       ));
     } catch (err) {
+      // Every holder of the tuple left while this read queued: nobody to
+      // answer, and nothing was loaded.
+      if (err instanceof ReadAbandoned) {
+        recordAbandonedRead(key);
+        return;
+      }
       // A gate gap: the tuple is registered, so evict it everywhere (which
       // tells this socket too) rather than leave every push re-failing.
       if (evictOnContractError(entry, params, err, { state, req })) return;
@@ -9020,13 +9210,8 @@ export function createResourceRuntime(
       }
       void (async () => {
         // Mirror handleSub's ordering: settle the 0→1 hook before the read.
-        if (p.firstGlobal && p.entry.onFirstSubscribe) {
-          try {
-            await p.entry.onFirstSubscribe(p.params);
-          } catch (err) {
-            reportLoaderError(`onFirstSubscribe failed for ${p.key}`, err);
-          }
-        }
+        if (p.firstGlobal && p.entry.onFirstSubscribe)
+          await startFirstSubscribe(p.entry, p.params);
         await serveSub(
           state,
           p.entry,
@@ -9382,7 +9567,7 @@ export function createResourceRuntime(
     // a broken signature falls through to the full value below and stamps no ETag.
     const ifNoneMatch = req.headers.get("If-None-Match");
     const freshEtag = entry.revalidate
-      ? await computeEtag(entry, resourceParams)
+      ? await computeEtag(entry, resourceParams, "http")
       : undefined;
     if (
       freshEtag !== undefined &&
@@ -9427,6 +9612,7 @@ export function createResourceRuntime(
       ({ value, raw, etag, watermark } = await gatedRead(
         entry,
         resourceParams,
+        "http",
         freshEtag,
       ));
     } catch (err) {
@@ -9556,6 +9742,7 @@ export function createResourceRuntime(
       loaderStats?: { count: number; ratePerMin: number; maxMs: number };
       notifyStats: NotifyCounts;
       subShortCircuits: number;
+      abandonedReads: number;
       handoff: string;
       resumedSubs: number;
       staleFlightSupersedes: number;
@@ -9689,6 +9876,9 @@ export function createResourceRuntime(
         // zero read-admission slots). Live re-validation gauge for the
         // 2026-07-11 replay-storm fix.
         subShortCircuits: subShortCircuits.get(entry.key) ?? 0,
+        // Reads skipped at the read-admission gate because every subscriber
+        // of the tuple left while they queued (see `ReadAbandoned`).
+        abandonedReads: abandonedReads.get(entry.key) ?? 0,
         handoff: notInheritable(entry) ?? "inheritable",
         resumedSubs: resumedSubs.get(entry.key) ?? 0,
         // Stale-flight supersessions for this key (a push drain refused an
