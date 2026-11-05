@@ -125,16 +125,16 @@ it is handed and knows no tour.
   - Slots: `TaskDraftFormSlots.Action`
   - Slot contributors: `TaskDraftFormSlots.Action` ← `wish.element-picker`
   - Contributes: `ConfigV2.WebRegister` "config"
-  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/launch-options` ×5
     - `infra/endpoints` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/persistent-draft` ×3
+    - `primitives/shortcuts` ×3
     - `primitives/sortable-list` ×3
     - `primitives/text-editor/composer` ×3
     - `config_v2` ×2
     - `primitives/overlay/tooltip` ×2
-    - `primitives/shortcuts` ×2
     - `shell/notifications` ×2
     - `tasks/tasks-core` ×2
     - `apps-core.useCurrentAppId`
@@ -167,11 +167,11 @@ it is handed and knows no tour.
   - Exports (values):
     - `draftInsert`
     - `draftSeed`
-    - `setActiveRelateContext`
     - `submitChain`
     - `TaskDraftFormSlots`
     - `TaskDraftPopover`
     - `useActiveRelateContext`
+    - `useActiveRelateTask`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`

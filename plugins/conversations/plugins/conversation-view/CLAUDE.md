@@ -31,7 +31,7 @@
     - `conversationPane.Actions` ← `conversations.conversation-view.track`
     - `conversationPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "conversation"
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×5
     - `network/live` ×2
     - `conversations/conversation-view/action-bar.ActionBarView`
@@ -46,10 +46,9 @@
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/file-links.FileLinksWorkspaceProvider`
     - `primitives/loading.Loading`
-    - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
-    - `tasks/task-draft-form.setActiveRelateContext`
+    - `tasks/task-draft-form.useActiveRelateTask`
   - Exports (types):
     - `ConversationOpener`
     - `PromptComposer`

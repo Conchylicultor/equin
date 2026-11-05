@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 import type {
   GestureAdvance,
   Hint,
@@ -96,13 +97,20 @@ export function useEngineState(): EngineState {
  * Several components may hold one hint's moment (every chip of a kind): the
  * request stays while ANY holds it, and is withdrawn when the last lets go.
  * `hint` may be absent — a generic component handed an optional tip asks nothing.
+ *
+ * A moment inside a `<PluginScope>` (the demo's embedded app) asks nothing:
+ * the one host is the page's, at `Core.Root`, and records a shown tip as seen
+ * through the PAGE's server — a demo visitor's moment would mark the page
+ * user's hints seen. The scope is read from where the moment renders, so no
+ * caller can forget it.
  */
 export function useHintMoment(
   hint: Hint | null | undefined,
   when: boolean,
 ): void {
+  const foreignScope = usePluginScopeId() !== null;
   useEffect(() => {
-    if (!hint || !when) return;
+    if (!hint || !when || foreignScope) return;
     const holders = momentHolders.get(hint.id) ?? 0;
     momentHolders.set(hint.id, holders + 1);
     if (holders === 0) setTips(requestTip(state.tips, hint, Date.now()));
@@ -115,7 +123,7 @@ export function useHintMoment(
       momentHolders.delete(hint.id);
       setTips(removeTip(state.tips, hint.id, Date.now()));
     };
-  }, [hint, when]);
+  }, [hint, when, foreignScope]);
 }
 
 /** The host advances the queue at `now` against what is eligible. */

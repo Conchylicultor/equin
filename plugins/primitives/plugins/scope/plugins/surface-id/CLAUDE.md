@@ -25,7 +25,6 @@ once per surface by `TabSurface`.
     - `apps-core/tabs`
     - `apps/file-explorer/browser`
     - `apps/sonata/controls`
-    - `conversations/conversation-view`
     - `conversations/conversation-view/jsonl-viewer`
     - `layouts/miller`
     - `primitives/app-shell`

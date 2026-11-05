@@ -15448,7 +15448,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversationPane.Actions` ← `conversations.conversation-view.track`
           - `conversationPane.Actions` ← `primitives.pane`
         - Contributes: `Pane.Register` "conversation"
-        - Uses: 23 symbols — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+        - Uses: 22 symbols — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
           - `primitives/pane` ×5
           - `network/live` ×2
           - `conversations/conversation-view/action-bar.ActionBarView`
@@ -15463,10 +15463,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/file-links.FileLinksWorkspaceProvider`
           - `primitives/loading.Loading`
-          - `primitives/scope/surface-id.useSurfaceTabId`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
-          - `tasks/task-draft-form.setActiveRelateContext`
+          - `tasks/task-draft-form.useActiveRelateTask`
         - Exports (types):
           - `ConversationOpener`
           - `PromptComposer`
@@ -47898,7 +47897,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/tabs`
               - `apps/file-explorer/browser`
               - `apps/sonata/controls`
-              - `conversations/conversation-view`
               - `conversations/conversation-view/jsonl-viewer`
               - `layouts/miller`
               - `primitives/app-shell`
@@ -48071,7 +48069,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/runtime-sdk`
           - `infra/claude-cli/availability`
           - `integrations/google-maps`
-    - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
+    - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler. Owns the page's focused surface, and surface signals keyed by it (defineSurfaceSignal: a surface publishes a value, global chrome reads the focused surface's — only when both render in the same plugin scope).
       - Web:
         - Slots: `Shortcuts.Shortcut`
         - Slot contributors:
@@ -48084,19 +48082,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/latest-ref.useLatestRef`
           - `primitives/scope/surface-id.useSurfaceTabId`
-        - Exports (types): `ShortcutDescriptor`
+        - Exports (types):
+          - `ShortcutDescriptor`
+          - `SurfaceSignal`
         - Exports (values):
           - `defineShortcut`
+          - `defineSurfaceSignal`
           - `formatShortcutLabel`
           - `getFocusedSurfaceId`
           - `isModHeld`
           - `setFocusedSurfaceId`
           - `Shortcuts`
-          - `subscribeFocusedSurface`
           - `targetClaimsKey`
-          - `useFocusedSurfaceId`
+          - `useFocusedSurfaceSignal`
           - `usePlayPauseShortcut`
           - `useSurfaceShortcuts`
+          - `useSurfaceSignal`
       - Cross-plugin:
         - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
           - `apps` ×15
@@ -53427,16 +53428,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `TaskDraftFormSlots.Action`
         - Slot contributors: `TaskDraftFormSlots.Action` ← `wish.element-picker`
         - Contributes: `ConfigV2.WebRegister` "config"
-        - Uses: 47 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
+        - Uses: 48 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
           - `tasks/launch-options` ×5
           - `infra/endpoints` ×3
           - `primitives/css/ui-kit` ×3
           - `primitives/persistent-draft` ×3
+          - `primitives/shortcuts` ×3
           - `primitives/sortable-list` ×3
           - `primitives/text-editor/composer` ×3
           - `config_v2` ×2
           - `primitives/overlay/tooltip` ×2
-          - `primitives/shortcuts` ×2
           - `shell/notifications` ×2
           - `tasks/tasks-core` ×2
           - `apps-core.useCurrentAppId`
@@ -53469,11 +53470,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `draftInsert`
           - `draftSeed`
-          - `setActiveRelateContext`
           - `submitChain`
           - `TaskDraftFormSlots`
           - `TaskDraftPopover`
           - `useActiveRelateContext`
+          - `useActiveRelateTask`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
         - Uses: `config_v2.ConfigV2`

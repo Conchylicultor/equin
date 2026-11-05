@@ -14,7 +14,7 @@ export type {
 } from "./components/task-draft-form";
 
 export {
-  setActiveRelateContext,
+  useActiveRelateTask,
   useActiveRelateContext,
 } from "./active-relate-context";
 export type { ActiveRelateContext } from "./active-relate-context";
