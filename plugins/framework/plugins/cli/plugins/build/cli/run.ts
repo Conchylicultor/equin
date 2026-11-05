@@ -20,6 +20,11 @@ import {
 } from "./internal/app-artifacts";
 import { resolveBuildTargets } from "./internal/build-targets";
 import { deployNamespace } from "./internal/deploy-namespace";
+import { askAdoption } from "./internal/adopt";
+import {
+  adoptCentralDeploy,
+  type AdoptVerdict,
+} from "@plugins/build/plugins/restart-skip/core";
 import { namedBackendCommand } from "./internal/named-backend";
 import { checkoutBun } from "@plugins/packages/plugins/process-name/machine";
 import {
@@ -1646,22 +1651,49 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       // — which the networking primitive does on its own.
       if (existsSync(join(centralDir, "bin", "index.ts"))) {
         // No `composition` — see the early central write above.
+        // Main's Bun (central runs main's code), never this checkout's.
+        const centralCommand = namedBackendCommand(
+          "central",
+          checkoutBun(mainRoot),
+          "bin/index.ts",
+        );
         writeWorktreeSpec({
           name: "central",
           server: centralDir,
-          // Main's Bun (central runs main's code), never this checkout's.
-          command: namedBackendCommand(
-            "central",
-            checkoutBun(mainRoot),
-            "bin/index.ts",
-          ),
+          command: centralCommand,
         });
 
         // 6d. Restart central so it picks up freshly-merged main code. Only
         // done when building from main — agent worktrees never change central's
         // running code (central always runs main's central-core/), so restarting on
         // every worktree build would needlessly drop every open WS connection.
+        //
+        // Central is asked first whether it already runs this tree's code
+        // (build/restart-skip); most main deploys change nothing central
+        // loads, and a restart drops every worktree's central socket.
+        let centralAdoption: AdoptVerdict | null = null;
         if (root === mainRoot) {
+          endSpan = buildProfilerStart(
+            "adoptCentral",
+            "build:deploy",
+            "ask central to adopt",
+          );
+          centralAdoption = await askAdoption({
+            endpoint: adoptCentralDeploy,
+            // The gateway serves central's routes on every host name.
+            origin: "http://localhost:9000",
+            server: centralDir,
+            command: centralCommand,
+            commit: headAtStart,
+          });
+          endSpan();
+        }
+        if (centralAdoption?.kind === "adopted") {
+          console.log(
+            "Central kept: it already runs this tree's code (no restart).",
+          );
+        } else if (centralAdoption !== null) {
+          console.log(`Central restart needed: ${centralAdoption.reason}`);
           endSpan = buildProfilerStart(
             "restartCentral",
             "build:deploy",

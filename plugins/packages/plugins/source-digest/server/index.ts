@@ -2,10 +2,14 @@ import {
   getBootMode,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
-import { prewarmSourceDigests } from "./internal/digest";
+import { prewarmSourceDigests } from "../shared/digest";
 
-export { computedLoads, sourceDigest } from "./internal/digest";
-export type { ComputedLoads } from "./internal/digest";
+export {
+  closureChangedSince,
+  computedLoads,
+  sourceDigest,
+} from "../shared/digest";
+export type { ComputedLoads } from "../shared/digest";
 
 export default {
   description:

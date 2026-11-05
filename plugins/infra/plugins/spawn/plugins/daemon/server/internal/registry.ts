@@ -288,9 +288,35 @@ export function backoffPolicy(restart: DaemonRestart): {
 // ---------------------------------------------------------------------------
 // Registry
 
+/**
+ * The code a supervised incarnation was spawned to run: the executable
+ * (`null` for a worker — a thread of this process's own Bun) and the module
+ * files its runtime loads from (`null` when the launch names none this
+ * process can point at).
+ */
+export interface SpawnedCode {
+  binary: string | null;
+  entries: readonly string[] | null;
+}
+
+/**
+ * A live supervised incarnation (process or worker arm): it dies with this
+ * backend, so a backend that is not restarted keeps it — on the code it was
+ * spawned with.
+ */
+export interface SupervisedIncarnation {
+  /** `<daemon>` or `<daemon> (<instance>)`. */
+  label: string;
+  /** When the current incarnation was spawned, ms since the epoch. */
+  spawnedAtMs: number;
+  code: SpawnedCode | null;
+}
+
 interface InstanceRec {
   key: string;
   info: DaemonInstanceInfo;
+  /** The current incarnation's code (supervised arms), `null` between incarnations. */
+  code: SpawnedCode | null;
   /** The open run of the current incarnation. */
   run: BackgroundRun | null;
   /** Re-reads liveness that no event reports (pid-file arms). */
@@ -349,6 +375,28 @@ export function newDeclState(
   };
 }
 
+/**
+ * Every supervised incarnation alive in this process now — what a restart
+ * of it would kill and its successor respawn (detached and attached
+ * instances outlive a restart, so they are not listed).
+ */
+export function liveSupervisedIncarnations(): SupervisedIncarnation[] {
+  const out: SupervisedIncarnation[] = [];
+  for (const state of declarations.values()) {
+    for (const rec of state.instances.values()) {
+      const { arm, spawnedAt, instance } = rec.info;
+      if (arm !== "process" && arm !== "worker") continue;
+      if (spawnedAt === null) continue;
+      out.push({
+        label: `${state.spec.name}${instance === null ? "" : ` (${instance})`}`,
+        spawnedAtMs: spawnedAt.getTime(),
+        code: rec.code,
+      });
+    }
+  }
+  return out;
+}
+
 export function registerDecl(state: DeclState): void {
   const existing = declarations.get(state.spec.name);
   if (existing === state) return;
@@ -402,6 +450,7 @@ export function claimInstance(
     },
     run: null,
     observe: null,
+    code: null,
   };
   state.instances.set(key, rec);
   return rec;

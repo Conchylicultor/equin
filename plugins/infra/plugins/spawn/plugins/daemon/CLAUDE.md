@@ -118,6 +118,8 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `DetachedLaunch`
     - `PidFileRead`
     - `ProcessLaunch`
+    - `SpawnedCode`
+    - `SupervisedIncarnation`
     - `UnsupervisedDeclExtras`
     - `WorkerDaemonInstance`
     - `WorkerLaunch`
@@ -128,6 +130,7 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `DEFAULT_BACKOFF`
     - `defineDaemon`
     - `listDaemons`
+    - `liveSupervisedIncarnations`
     - `onDaemonActivity`
     - `pidAlive`
     - `readPidFile`

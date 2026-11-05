@@ -10,20 +10,23 @@ export interface CollectedEntry {
   id: string;
   loader: () => Promise<{ default: unknown }>;
   dependsOn: string[];
+  core: (() => Promise<unknown>) | null;
 }
 
 export const centralEntries: CollectedEntry[] = [
-  { pluginPath: "auth", id: "auth", loader: () => import("@plugins/auth/central"), dependsOn: ["infra/plugins/background/plugins/timer", "infra/plugins/secrets", "network/plugins/live"] },
-  { pluginPath: "auth/plugins/google-maps", id: "auth.google-maps", loader: () => import("@plugins/auth/plugins/google-maps/central"), dependsOn: ["auth"] },
-  { pluginPath: "auth/plugins/google", id: "auth.google", loader: () => import("@plugins/auth/plugins/google/central"), dependsOn: ["auth", "fields/plugins/secret/plugins/config"] },
-  { pluginPath: "auth/plugins/hooktheory", id: "auth.hooktheory", loader: () => import("@plugins/auth/plugins/hooktheory/central"), dependsOn: ["auth"] },
-  { pluginPath: "auth/plugins/notion", id: "auth.notion", loader: () => import("@plugins/auth/plugins/notion/central"), dependsOn: ["auth", "fields/plugins/secret/plugins/config"] },
-  { pluginPath: "debug/plugins/backend-liveness", id: "debug.backend-liveness", loader: () => import("@plugins/debug/plugins/backend-liveness/central"), dependsOn: ["infra/plugins/background/plugins/timer"] },
-  { pluginPath: "fields/plugins/secret/plugins/config", id: "fields.secret.config", loader: () => import("@plugins/fields/plugins/secret/plugins/config/central"), dependsOn: ["infra/plugins/secrets"] },
-  { pluginPath: "infra/plugins/background/plugins/catalog", id: "infra.background.catalog", loader: () => import("@plugins/infra/plugins/background/plugins/catalog/central"), dependsOn: ["network/plugins/live"] },
-  { pluginPath: "infra/plugins/background/plugins/timer", id: "infra.background.timer", loader: () => import("@plugins/infra/plugins/background/plugins/timer/central"), dependsOn: ["infra/plugins/background/plugins/catalog"] },
-  { pluginPath: "infra/plugins/secrets", id: "infra.secrets", loader: () => import("@plugins/infra/plugins/secrets/central"), dependsOn: [] },
-  { pluginPath: "network/plugins/live", id: "network.live", loader: () => import("@plugins/network/plugins/live/central"), dependsOn: [] },
+  { pluginPath: "auth", id: "auth", loader: () => import("@plugins/auth/central"), dependsOn: ["infra/plugins/background/plugins/timer", "infra/plugins/secrets", "network/plugins/live"], core: () => import("@plugins/auth/core") },
+  { pluginPath: "auth/plugins/google-maps", id: "auth.google-maps", loader: () => import("@plugins/auth/plugins/google-maps/central"), dependsOn: ["auth"], core: () => import("@plugins/auth/plugins/google-maps/core") },
+  { pluginPath: "auth/plugins/google", id: "auth.google", loader: () => import("@plugins/auth/plugins/google/central"), dependsOn: ["auth", "fields/plugins/secret/plugins/config"], core: null },
+  { pluginPath: "auth/plugins/hooktheory", id: "auth.hooktheory", loader: () => import("@plugins/auth/plugins/hooktheory/central"), dependsOn: ["auth"], core: () => import("@plugins/auth/plugins/hooktheory/core") },
+  { pluginPath: "auth/plugins/notion", id: "auth.notion", loader: () => import("@plugins/auth/plugins/notion/central"), dependsOn: ["auth", "fields/plugins/secret/plugins/config"], core: null },
+  { pluginPath: "build/plugins/restart-skip", id: "build.restart-skip", loader: () => import("@plugins/build/plugins/restart-skip/central"), dependsOn: ["packages/plugins/source-digest"], core: () => import("@plugins/build/plugins/restart-skip/core") },
+  { pluginPath: "debug/plugins/backend-liveness", id: "debug.backend-liveness", loader: () => import("@plugins/debug/plugins/backend-liveness/central"), dependsOn: ["infra/plugins/background/plugins/timer"], core: () => import("@plugins/debug/plugins/backend-liveness/core") },
+  { pluginPath: "fields/plugins/secret/plugins/config", id: "fields.secret.config", loader: () => import("@plugins/fields/plugins/secret/plugins/config/central"), dependsOn: ["infra/plugins/secrets"], core: () => import("@plugins/fields/plugins/secret/plugins/config/core") },
+  { pluginPath: "infra/plugins/background/plugins/catalog", id: "infra.background.catalog", loader: () => import("@plugins/infra/plugins/background/plugins/catalog/central"), dependsOn: ["network/plugins/live"], core: () => import("@plugins/infra/plugins/background/plugins/catalog/core") },
+  { pluginPath: "infra/plugins/background/plugins/timer", id: "infra.background.timer", loader: () => import("@plugins/infra/plugins/background/plugins/timer/central"), dependsOn: ["infra/plugins/background/plugins/catalog"], core: null },
+  { pluginPath: "infra/plugins/secrets", id: "infra.secrets", loader: () => import("@plugins/infra/plugins/secrets/central"), dependsOn: [], core: () => import("@plugins/infra/plugins/secrets/core") },
+  { pluginPath: "network/plugins/live", id: "network.live", loader: () => import("@plugins/network/plugins/live/central"), dependsOn: [], core: () => import("@plugins/network/plugins/live/core") },
+  { pluginPath: "packages/plugins/source-digest", id: "packages.source-digest", loader: () => import("@plugins/packages/plugins/source-digest/central"), dependsOn: [], core: () => import("@plugins/packages/plugins/source-digest/core") },
 ];
 
 export interface CompositionIdentity {

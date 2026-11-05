@@ -9,6 +9,7 @@ import { fixed, retryUntil } from "@plugins/packages/plugins/retry/core";
 import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/core";
 import { getHealth } from "@plugins/infra/plugins/health/core";
+import { adoptDeploy } from "@plugins/build/plugins/restart-skip/core";
 import {
   propagateConfigToUser,
   type CodegenPass,
@@ -41,6 +42,7 @@ import {
   type WebDistTarget,
 } from "./app-artifacts";
 import type { BuildTarget } from "./build-targets";
+import { askAdoption } from "./adopt";
 import { namedBackendCommand } from "./named-backend";
 
 /**
@@ -48,8 +50,8 @@ import { namedBackendCommand } from "./named-backend";
  * `./equin build`, run once per `--composition` (and once, unnamed, for a
  * plain build).
  *
- *   marker → dist → database → config → (marker again) + spec → restart → health
- *   probe → keep the dist, or put the previous one back
+ *   marker → dist → database → config → (marker again) + spec → adopt, or
+ *   restart → health probe → keep the dist, or put the previous one back
  *
  * The dist is published before the restart (the new backend reads its graph at
  * boot), so a deploy that fails after it rolls the frontend back: a namespace
@@ -583,24 +585,26 @@ export async function deployNamespace(
     // throws if the marker cannot be read back, so a marker-less namespace can
     // never reach the spec write at all.
     stampMarker();
+    // The back-pointer a reader follows the other way: `deploysForCheckout`
+    // matches specs against this same constant to answer which deploys a
+    // checkout published, so writer and reader share one spelling.
+    const server = resolve(root, SERVER_CORE_RELATIVE);
+    // This build's own Bun, under the namespace's name, running the
+    // composition's own serving entry: the committed `bin/index.ts` for the
+    // main composition, the generated `bin/index.composition.<id>.generated.ts`
+    // (written with its filtered registries) for any other. The `server` tree
+    // is this checkout's, shared with every namespace it serves, so the entry
+    // is what decides WHICH app the spawned backend boots.
+    const command = namedBackendCommand(
+      ns,
+      asAppPath(process.execPath),
+      backendEntryFor(target.composition),
+    );
     writeWorktreeSpec({
       name: ns,
-      // The back-pointer a reader follows the other way: `deploysForCheckout`
-      // matches specs against this same constant to answer which deploys a
-      // checkout published, so writer and reader share one spelling.
-      server: resolve(root, SERVER_CORE_RELATIVE),
+      server,
       web: artifact.livePath,
-      // This build's own Bun, under the namespace's name, running the
-      // composition's own serving entry: the committed `bin/index.ts` for the
-      // main composition, the generated `bin/index.composition.<id>.generated.ts`
-      // (written with its filtered registries) for any other. The `server` tree
-      // is this checkout's, shared with every namespace it serves, so the entry
-      // is what decides WHICH app the spawned backend boots.
-      command: namedBackendCommand(
-        ns,
-        asAppPath(process.execPath),
-        backendEntryFor(target.composition),
-      ),
+      command,
       // Which app the namespace IS — the backend refuses to boot when the
       // entry it was spawned with imports any other composition's registries.
       composition: target.composition,
@@ -612,10 +616,38 @@ export async function deployNamespace(
       return { ok: true, notes };
     }
 
+    backendAsked = true;
+
+    // ADOPT BEFORE RESTART. The running backend is asked whether a process
+    // spawned from this spec would run exactly its code; only it can say,
+    // because only it knows what it loaded (build/restart-skip). `adopted`
+    // means no restart is needed — it already re-pinned itself to this
+    // deploy — so the dist stays published and there is no new backend to
+    // probe. Anything else, including no answer, restarts as before.
+    const adoption = await span(
+      "adoptDeploy",
+      "build:deploy",
+      "ask the backend to adopt",
+      () =>
+        askAdoption({
+          endpoint: adoptDeploy,
+          origin: site,
+          server,
+          command,
+          commit: opts.commit,
+        }),
+    );
+    if (adoption.kind === "adopted") {
+      console.log(
+        `Backend kept: ${site} already runs this tree's code (no restart).`,
+      );
+      return { ok: true, notes };
+    }
+    console.log(`Restart needed: ${adoption.reason}`);
+
     // Snapshot the currently-served backend's per-process identity BEFORE the
     // restart. probeHealth compares against it to prove the NEW backend took over,
     // rather than the old one still answering ok with stale code.
-    backendAsked = true;
     const previousStartedAt = await readHealthStartedAt(ns);
     const restart = await span(
       "restartBackend",

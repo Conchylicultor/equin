@@ -587,7 +587,9 @@ only agreement that matters.
 
 - Description: DDL lifecycle: migration runner and SQL files.
 - Server:
-  - Contributes: `host-service:database.migration-source` "database.migration-source"
+  - Contributes:
+    - `host-service:database.migration-source` "database.migration-source"
+    - `restart-skip.boot-input` "the migration SQL"
   - Uses:
     - `database/db-triggers.DbTriggerSet`
     - `database/db-triggers.installDbTriggers`

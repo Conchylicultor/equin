@@ -313,10 +313,15 @@ const COMPANION_DIRS: Readonly<Partial<Record<string, string>>> = {
 
 // The registries whose entries also carry their plugin's core-barrel loader
 // (`core`): the backend's load waves warm a wave's core barrels before its
-// server barrels (server-core's `boot-stages.ts` says why). A literal
+// server barrels (server-core's `boot-stages.ts` says why), and central's
+// before its central barrels (central-core's `bin/index.ts`). A literal
 // `import()` per entry, so the boot reaches each barrel by a path the source
 // digest follows — never by a path computed from `pluginPath`.
-const CORE_WARMED_DIRS: ReadonlySet<string> = new Set(["server", "machine"]);
+const CORE_WARMED_DIRS: ReadonlySet<string> = new Set([
+  "server",
+  "machine",
+  "central",
+]);
 
 /** The graph node a `<dir>` entry of `pluginPath` boots as. */
 function nodeKeyFor(dir: string, pluginPath: string): string {

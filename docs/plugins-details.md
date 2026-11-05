@@ -13205,6 +13205,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `build/runs-arm`
       - `debug/reports`
       - `menu-bar`
+    - Endpoint callers: `restart-skip`
   - Shared:
     - Exports (types): `BuildRun`
     - Exports (values):
@@ -13419,6 +13420,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `resource.declare` "build.chain-from"
           - `resource.declare` "build.deployment"
+          - `restart-skip.adopted` "the server pin (the commit this backend runs)"
         - Resources:
           - `build.chain-from` (push, notified)
           - `build.deployment` (push, notified)
@@ -13495,6 +13497,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --spacing`
         - Imported by: `build`
+    - **`restart-skip`** — Restart-skip, central's half: POST /api/restart-skip/central/adopt — main's deploy asks central before restarting it, and central answers adopted only when a process spawned now would run exactly its code (the same judgement as a backend's: same Bun and entry, nothing it loaded or could still load changed since it started).
+      - Machine:
+        - Uses: `infra/endpoints.implementMachine`
+        - Routes: `POST /api/build/restart-skip/adopt`
+      - Central:
+        - Uses: `packages/source-digest.closureChangedSince`
+        - Routes: `POST /api/restart-skip/central/adopt`
+      - Core:
+        - Uses: `infra/endpoints.defineEndpoint`
+        - Exports (types):
+          - `AdoptRequest`
+          - `AdoptVerdict`
+          - `ChildIncarnation`
+        - Exports (values):
+          - `adoptCentralDeploy`
+          - `adoptDeploy`
+          - `AdoptRequestSchema`
+          - `AdoptVerdictSchema`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `shared/judge.ts`, `shared/process-view.ts` (sanctioned)
+      - Plugins:
+        - **`hooks`** — Restart-skip's contribution kinds, a leaf every contributor imports (so contributing never pulls in the judgement and its imports): RestartSkip.BootInput (files a backend reads once and holds — a restart may be skipped only while they are untouched since it started) and RestartSkip.Adopted (what a backend re-reads when it adopts a deploy instead of being restarted: its commit pin, the web graph it judges tabs against). The judgement and the endpoint are restart-skip's machine half.
+          - Cross-plugin:
+            - Imported by: `build/server-build-id`
+          - Server:
+            - Exports (types): `AdoptHook`
+            - Exports (values): `RestartSkip`
+          - Core:
+            - Exports (types): `BootInput`
     - **`run-ledger`** — Build-runs ledger leaf: the build_runs entity, and (cli/) the hand-SQL build-run recorder the `./equin build` CLI imports without the table or the heavy build barrel.
       - Server:
         - Uses:
@@ -13632,9 +13663,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/studio/compositions/release`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
-    - **`server-build-id`** — Served-bundle pin leaf: reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
+    - **`server-build-id`** — Served-bundle pin leaf: reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts), re-read when the backend adopts a deploy instead of restarting (restart-skip). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
       - Server:
-        - Uses: `infra/paths.webDistDir`
+        - Contributes: `restart-skip.adopted` "the web graph live-resource contract verdicts are judged against"
+        - Uses:
+          - `build/restart-skip/hooks.RestartSkip`
+          - `infra/paths.webDistDir`
         - Exports (values):
           - `getServerCommit`
           - `getServerGraphHash`
@@ -21190,7 +21224,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LockWatchStateSchema`
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Server:
-        - Contributes: `host-service:database.migration-source` "database.migration-source"
+        - Contributes:
+          - `host-service:database.migration-source` "database.migration-source"
+          - `restart-skip.boot-input` "the migration SQL"
         - Uses:
           - `database/db-triggers.DbTriggerSet`
           - `database/db-triggers.installDbTriggers`
@@ -27744,6 +27780,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup/sources/transcripts` (1 debt)
               - `backup/targets/google-drive` (2 debt)
               - `backup/targets/local` (1 debt)
+              - `build/restart-skip` (0 debt)
               - `build/serve-composition` (1 debt)
               - `build/server-build-id` (2 debt)
               - `code-explorer` (5 debt)
@@ -30874,7 +30911,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 240 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 241 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×68
           - `conversations` ×35
           - `infra` ×21
@@ -30885,10 +30922,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×6
           - `ui` ×6
           - `auth` ×5
+          - `build` ×3
           - `network` ×3
           - `active-data` ×2
           - `apps-core` ×2
-          - `build` ×2
           - `code-explorer` ×2
           - `config_v2` ×2
           - `history` ×2
@@ -33717,6 +33754,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DetachedLaunch`
               - `PidFileRead`
               - `ProcessLaunch`
+              - `SpawnedCode`
+              - `SupervisedIncarnation`
               - `UnsupervisedDeclExtras`
               - `WorkerDaemonInstance`
               - `WorkerLaunch`
@@ -33727,6 +33766,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DEFAULT_BACKOFF`
               - `defineDaemon`
               - `listDaemons`
+              - `liveSupervisedIncarnations`
               - `onDaemonActivity`
               - `pidAlive`
               - `readPidFile`
@@ -36604,21 +36644,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createSmoothClockModel`
           - `SMOOTH_CLOCK_MAX_SLEW`
           - `SMOOTH_CLOCK_SNAP_SEC`
-    - **`source-digest`** — Digest of the code a source set loads: sourceDigest(sets) — sha256 over the static runtime import closure of the modules each set includes (repo files by relative path and bytes, packages by name@version, builtins by name; type-only imports erased), computed once per process, every defined set started at a serving backend's boot. What persisted or inherited state stamps itself with, so a cache built by other code is refused without a version anyone bumps.
+    - **`source-digest`** — Digest of the code a source set loads: sourceDigest(sets) — sha256 over the static runtime import closure of the modules each set includes (repo files by relative path and bytes, packages by name@version, builtins by name; type-only imports erased), computed once per process, every defined set started at a serving backend's boot. What persisted or inherited state stamps itself with, so a cache built by other code is refused without a version anyone bumps. Central's reach to the source-digest closure walk: closureChangedSince(entries, sinceMs) — whether nothing a closure loads (repo files, package resolution entries) changed since an instant, by inode change time. The same walk the server barrel serves (shared/), so central's restart-skip judgement reads its code exactly as a backend's does.
       - Cross-plugin:
         - Imported by:
+          - `build/restart-skip`
           - `infra/corpus-index`
           - `network/live/query-resource`
           - `reports/engine`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/digest.ts` (sanctioned)
+        - Exempts itself from: `boundaries/no-platform-api` — `shared/digest.ts` (sanctioned)
       - Server:
         - Exports (types): `ComputedLoads`
         - Exports (values):
+          - `closureChangedSince`
           - `computedLoads`
           - `sourceDigest`
+      - Central:
+        - Exports (values): `closureChangedSince`
       - Core:
-        - Exports (types): `SourceSet`
+        - Exports (types):
+          - `ClosureSince`
+          - `SourceSet`
         - Exports (values):
           - `allSourceSets`
           - `defineSourceSet`

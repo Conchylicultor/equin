@@ -60,21 +60,27 @@ import.meta`, carried by `Resource.Declare`) — the L2 stamps judged by
 
 ## Plugin reference
 
-- Description: Digest of the code a source set loads: sourceDigest(sets) — sha256 over the static runtime import closure of the modules each set includes (repo files by relative path and bytes, packages by name@version, builtins by name; type-only imports erased), computed once per process, every defined set started at a serving backend's boot. What persisted or inherited state stamps itself with, so a cache built by other code is refused without a version anyone bumps.
+- Description: Digest of the code a source set loads: sourceDigest(sets) — sha256 over the static runtime import closure of the modules each set includes (repo files by relative path and bytes, packages by name@version, builtins by name; type-only imports erased), computed once per process, every defined set started at a serving backend's boot. What persisted or inherited state stamps itself with, so a cache built by other code is refused without a version anyone bumps. Central's reach to the source-digest closure walk: closureChangedSince(entries, sinceMs) — whether nothing a closure loads (repo files, package resolution entries) changed since an instant, by inode change time. The same walk the server barrel serves (shared/), so central's restart-skip judgement reads its code exactly as a backend's does.
 - Cross-plugin:
   - Imported by:
+    - `build/restart-skip`
     - `infra/corpus-index`
     - `network/live/query-resource`
     - `reports/engine`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/digest.ts` (sanctioned)
+  - Exempts itself from: `boundaries/no-platform-api` — `shared/digest.ts` (sanctioned)
 - Server:
   - Exports (types): `ComputedLoads`
   - Exports (values):
+    - `closureChangedSince`
     - `computedLoads`
     - `sourceDigest`
+- Central:
+  - Exports (values): `closureChangedSince`
 - Core:
-  - Exports (types): `SourceSet`
+  - Exports (types):
+    - `ClosureSince`
+    - `SourceSet`
   - Exports (values):
     - `allSourceSets`
     - `defineSourceSet`

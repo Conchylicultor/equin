@@ -216,6 +216,7 @@ convergence mechanisms all missing it) and the design.
   - Contributes:
     - `resource.declare` "build.chain-from"
     - `resource.declare` "build.deployment"
+    - `restart-skip.adopted` "the server pin (the commit this backend runs)"
   - Resources:
     - `build.chain-from` (push, notified)
     - `build.deployment` (push, notified)

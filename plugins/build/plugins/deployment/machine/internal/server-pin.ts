@@ -67,6 +67,18 @@ export function sealServerPin(): void {
   }
 }
 
+/**
+ * This process adopted the deploy of `commit` instead of being restarted for
+ * it (`build/restart-skip`): it was judged to run exactly the code a process
+ * spawned from that tree would, so it is pinned as one — what a restart's
+ * import-time sample would have read. Overrides a mixed-boot pin too: the
+ * judgement proved nothing it loaded changed since it started, so it is not
+ * a mix.
+ */
+export function adoptServerPin(commit: string): void {
+  pin = resolved(commit);
+}
+
 /** The commit this backend process was materialized from, or why it cannot say. */
 export function serverPin(): Resolvable<string> {
   return pin;

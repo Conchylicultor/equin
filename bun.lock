@@ -1630,6 +1630,14 @@
       "name": "@equin/plugin-build-deployment",
       "version": "0.0.1",
     },
+    "plugins/build/plugins/restart-skip": {
+      "name": "@equin/plugin-build-restart-skip",
+      "version": "0.0.1",
+    },
+    "plugins/build/plugins/restart-skip/plugins/hooks": {
+      "name": "@equin/plugin-build-restart-skip-hooks",
+      "version": "0.0.1",
+    },
     "plugins/build/plugins/run-ledger": {
       "name": "@equin/plugin-build-run-ledger",
       "version": "0.0.1",
@@ -8038,6 +8046,10 @@
     "@equin/plugin-build-build-termination": ["@equin/plugin-build-build-termination@workspace:plugins/build/plugins/build-termination"],
 
     "@equin/plugin-build-deployment": ["@equin/plugin-build-deployment@workspace:plugins/build/plugins/deployment"],
+
+    "@equin/plugin-build-restart-skip": ["@equin/plugin-build-restart-skip@workspace:plugins/build/plugins/restart-skip"],
+
+    "@equin/plugin-build-restart-skip-hooks": ["@equin/plugin-build-restart-skip-hooks@workspace:plugins/build/plugins/restart-skip/plugins/hooks"],
 
     "@equin/plugin-build-run-ledger": ["@equin/plugin-build-run-ledger@workspace:plugins/build/plugins/run-ledger"],
 

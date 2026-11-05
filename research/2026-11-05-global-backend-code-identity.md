@@ -66,10 +66,11 @@ that tooling, not by any app logic.
    owning plugin either fixes the edge or holds it as tracked debt in its
    `exempt/`. The entries it held as debt when it landed are all fixed (the
    table above), so a new computed load anywhere fails the check.
-4. **The identity** (after the chain above, part of the restart-skip work)
-   is: `sourceDigest` over the serving entry, plus the non-code inputs below.
-   The build compares the new tree's identity with the one the running backend
-   computed at its own boot. Equal means a restart is not needed.
+4. **The identity** (after the chain above, part of the restart-skip work).
+   First sketched as `sourceDigest` over the serving entry plus the non-code
+   inputs below, compared by the build with a digest the backend took at
+   boot. What landed is stronger — see "Restart-skip, as built" below: equal
+   digests do not prove what a process loaded.
 
 ## Non-code inputs a boot reads once
 
@@ -100,3 +101,88 @@ Every edge cut from the closure is also one less thing a boot evaluates or can
 reach. `closure-no-dev-tooling` measures the eager half, and this guard
 measures the lazy half too. The facet fix in particular moves seconds of facet
 CPU off main's post-boot warm-up.
+
+## Restart-skip, as built (2026-11-05)
+
+`build/restart-skip`. Before restarting a namespace backend
+(`deploy-namespace.ts`) or central (`run.ts`, main builds), the deploy asks
+the running process — `POST /api/build/restart-skip/adopt` on the backend,
+`POST /api/restart-skip/central/adopt` on central — with what the new spec
+spawns (the Bun binary, the entry) and the commit. The PROCESS judges,
+because only it knows what it loaded.
+
+### Why not compare digests
+
+A digest equality between the running backend and the new tree misses:
+
+- **A revert.** A lazily imported module changed, was loaded while changed,
+  and was changed back: the tree's digest equals the boot digest, the process
+  runs the in-between code.
+- **The window between load and read.** A digest read after the imports can
+  describe newer files than those loaded (the constraint the task named); one
+  read before them can describe older ones, which a revert then matches.
+- **A re-pointed package.** `node_modules` is Bun's isolated layout:
+  `node_modules/zod` is a symlink into `.bun/zod@<v>`. Re-pointing it at an
+  older store dir that is still on disk changes the code without touching a
+  single file whose bytes the digest reads.
+
+### The rule: nothing it loaded or could load changed since it started
+
+Read by inode change time (`ctime`), against the process start
+(`performance.timeOrigin`). The kernel sets `ctime` on every write, rename
+into place, link or metadata change, and user space cannot set it back. So a
+file whose `ctime` precedes the start held its present bytes from before the
+start until now: whatever the process loaded from it, at any time, is what is
+on disk. A rewrite of equal bytes counts as a change, and so does a revert.
+`adopted` requires all of:
+
+1. **Spawn**: the same Bun binary (real path) and entry, and the binary not
+   replaced since the start.
+2. **Runtime inputs**: `tsconfig.json`, `tsconfig.base.json`, `bunfig.toml`,
+   root `package.json` untouched (read once, resolve every later import).
+3. **Boot inputs** (`RestartSkip.BootInput`): the migration SQL dir (its own
+   inode for an added or removed file, and each entry) untouched.
+4. **Every loaded module** (`require.cache`: eager and lazy, repo files and
+   package files, by real path) untouched.
+5. **The closure on disk now** (`source-digest`'s `closureChangedSince`: the
+   entry's closure, literal dynamic imports followed — what a fresh process
+   would load and this one may still load lazily) measurable, every repo file
+   untouched, every package resolution entry (`<dir>/node_modules/<name>`, the
+   first walking up from the importer, by `lstat`) untouched — a re-pointed
+   symlink or a new shadowing entry is a new inode — and each resolved
+   package's `package.json` untouched.
+6. **No stray module**: every repo module loaded is still in that closure.
+7. **Every live child that dies with it**: a supervised worker or process
+   (`infra/spawn/daemon` — the only way server code starts one; raw
+   `new Worker` is linted out) is killed by a restart and respawned from the
+   new tree, so a skip keeps it on the code it was spawned with. The
+   supervisor records each incarnation's code (a worker's module; a
+   process's executable and absolute code-file arguments) and spawn time;
+   its executable and the closure of its entries must be untouched since IT
+   spawned. A child whose code cannot be pointed at (no code-file argument —
+   a `python -m`, a native binary's own data) refuses. Detached and attached
+   daemons outlive a restart, so a skip changes nothing for them. (Found by
+   the independent review: the sentinel worker's code is outside the
+   backend's closure — it is started by URL, not imported.)
+
+Anything else, including no answer (a backend predating the endpoint, still
+booting, gone), is `restart`, with the reason in the build log.
+
+On `adopted`, every `RestartSkip.Adopted` hook moves its per-process memo to
+the deploy as a fresh boot would have read it: the deployment's server pin is
+re-pinned to the build's commit (`wantsBuild` would otherwise read main as
+unconverged forever), and server-build-id re-reads the served web graph the
+live-resource runtime judges contract mismatches against (the deploy
+published the dist first, so it is the graph built beside this code).
+
+Not compared, on purpose: the spec's other fields. `web` is read per call
+through the dist symlink; `composition` is decided by the entry. A field a
+backend reads once that the spec grows later must join the comparison.
+
+Residual assumption: the wall clock does not step backwards across a deploy
+(`ctime` and `timeOrigin` share it).
+
+Central needed its own closure made measurable first: its load waves warmed
+core barrels by `import(\`@plugins/${pluginPath}/core\`)`. Its registry now
+carries a literal `core` loader per entry, as the server's does, and
+`boot:closure-digestable` covers central's bin and registry too.

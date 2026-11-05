@@ -1,7 +1,8 @@
 import type { MachinePluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { deploymentServed } from "./internal/deployment-resource";
 import { chainFromServed } from "./internal/chain-from-resource";
-import { sealServerPin } from "./internal/server-pin";
+import { adoptServerPin, sealServerPin } from "./internal/server-pin";
+import { RestartSkip } from "@plugins/build/plugins/restart-skip/plugins/hooks/server";
 
 export {
   readDeployment,
@@ -13,7 +14,17 @@ export { serverPin } from "./internal/server-pin";
 export default {
   description:
     "The deployment description: this checkout's HEAD (the target) plus a pin per deployable carrier — the backend process and the frontend bundle it serves — and the one derived verdict (converged / behind / diverged / unknown) both the Build button and the auto-build decision read. Desktop-only (its truth is git and the served dist; both values are needsMachine). A leaf: it never imports build/server, so the reconciler that owns triggerBuild can import DOWN into it.",
-  contributions: [...deploymentServed.declare, ...chainFromServed.declare],
+  contributions: [
+    ...deploymentServed.declare,
+    ...chainFromServed.declare,
+    RestartSkip.Adopted({
+      what: "the server pin (the commit this backend runs)",
+      adopt: ({ commit }) => {
+        adoptServerPin(commit);
+        deploymentServed.notify();
+      },
+    }),
+  ],
   onAllReady: async () => {
     // Seal the server pin here, not in `onReady`: this is the first point at
     // which every plugin's import is behind us, so re-sampling HEAD now answers

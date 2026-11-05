@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
-import { readFile } from "@plugins/packages/plugins/timed-fs/core";
+import { lstat, readFile, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { builtinModules } from "node:module";
-import { dirname, relative, sep } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { allSourceSets, type SourceSet } from "../../core";
+import { allSourceSets, type ClosureSince, type SourceSet } from "../core";
 
 // The digest of a source set: sha256 over the static runtime import closure of
 // its modules, as the Bun runtime would load it.
@@ -54,6 +54,19 @@ function isBuiltin(specifier: string): boolean {
 
 const NODE_MODULES = `${sep}node_modules${sep}`;
 
+/** A closure the walk cannot vouch for: a computed load, an import that does not resolve. */
+class UnmeasurableClosureError extends Error {}
+
+/** The directory of the package a resolved `node_modules` file belongs to. */
+function packageDirOf(resolved: string): { name: string; dir: string } {
+  const at = resolved.lastIndexOf(NODE_MODULES) + NODE_MODULES.length;
+  const segments = resolved.slice(at).split(sep);
+  const name = segments[0]!.startsWith("@")
+    ? `${segments[0]}/${segments[1]}`
+    : segments[0]!;
+  return { name, dir: resolved.slice(0, at) + name.split("/").join(sep) };
+}
+
 // `name@version` of the package a resolved `node_modules` file belongs to,
 // memoized per package dir within one closure walk (a closure reaches one
 // package from many files).
@@ -61,18 +74,13 @@ function packageIdOf(
   resolved: string,
   packageIds: Map<string, Promise<string>>,
 ): Promise<string> {
-  const at = resolved.lastIndexOf(NODE_MODULES) + NODE_MODULES.length;
-  const segments = resolved.slice(at).split(sep);
-  const name = segments[0]!.startsWith("@")
-    ? `${segments[0]}/${segments[1]}`
-    : segments[0]!;
-  const dir = resolved.slice(0, at) + name.split("/").join(sep);
+  const { name, dir } = packageDirOf(resolved);
   let id = packageIds.get(dir);
   if (id === undefined) {
     id = readFile(`${dir}${sep}package.json`, "utf8").then((text) => {
       const pkg = JSON.parse(text) as { name?: unknown; version?: unknown };
       if (typeof pkg.version !== "string") {
-        throw new Error(
+        throw new UnmeasurableClosureError(
           `[source-digest] ${dir}${sep}package.json has no version`,
         );
       }
@@ -91,19 +99,32 @@ interface Closure {
   builtins: Set<string>;
 }
 
-async function closureOf(entries: readonly string[]): Promise<Closure> {
-  const closure: Closure = {
-    files: new Map(),
-    packages: new Set(),
-    builtins: new Set(),
-  };
-  const packageIds = new Map<string, Promise<string>>();
+/**
+ * What a closure walk reports, as it reads: every repo file (with the bytes it
+ * read), every import that leaves the repo for a package, every builtin. The
+ * walk itself — what an edge is, what resolves where, what refuses — is ONE
+ * function, so the digest and {@link closureChangedSince} cannot disagree on
+ * what a closure holds.
+ */
+interface ClosureVisitor {
+  file(path: string, bytes: Buffer): Promise<void> | void;
+  /** `specifier`, imported by `importer`, resolved to `resolved` under `node_modules`. */
+  package(importer: string, specifier: string, resolved: string): Promise<void>;
+  builtin(specifier: string): void;
+}
+
+async function walkClosure(
+  entries: readonly string[],
+  visit: ClosureVisitor,
+): Promise<void> {
+  const seen = new Set<string>();
   const queue = [...entries];
   while (queue.length > 0) {
     const file = queue.pop()!;
-    if (closure.files.has(file)) continue;
+    if (seen.has(file)) continue;
+    seen.add(file);
     const bytes = await readFile(file);
-    closure.files.set(file, sha256(bytes));
+    await visit.file(file, bytes);
     if (!CODE_FILE.test(file)) continue;
     const transpiler = transpilerFor(file);
     const text = bytes.toString("utf8");
@@ -111,20 +132,20 @@ async function closureOf(entries: readonly string[]): Promise<Closure> {
     assertEveryImportSeen(file, transpiler, text, imports);
     for (const imp of imports) {
       if (isBuiltin(imp.path)) {
-        closure.builtins.add(imp.path);
+        visit.builtin(imp.path);
         continue;
       }
       let resolved: string;
       try {
         resolved = Bun.resolveSync(imp.path, dirname(file));
       } catch (err) {
-        throw new Error(
+        throw new UnmeasurableClosureError(
           `[source-digest] cannot resolve "${imp.path}" imported by ${file}`,
           { cause: err },
         );
       }
       if (resolved.includes(NODE_MODULES)) {
-        closure.packages.add(await packageIdOf(resolved, packageIds));
+        await visit.package(file, imp.path, resolved);
       } else {
         queue.push(resolved);
       }
@@ -132,7 +153,147 @@ async function closureOf(entries: readonly string[]): Promise<Closure> {
     // One file at a time on the serving thread: let timers and I/O run.
     await yieldMacrotask();
   }
+}
+
+async function closureOf(entries: readonly string[]): Promise<Closure> {
+  const closure: Closure = {
+    files: new Map(),
+    packages: new Set(),
+    builtins: new Set(),
+  };
+  const packageIds = new Map<string, Promise<string>>();
+  await walkClosure(entries, {
+    file(path, bytes) {
+      closure.files.set(path, sha256(bytes));
+    },
+    async package(_importer, _specifier, resolved) {
+      closure.packages.add(await packageIdOf(resolved, packageIds));
+    },
+    builtin(specifier) {
+      closure.builtins.add(specifier);
+    },
+  });
   return closure;
+}
+
+class ChangedSince extends Error {
+  constructor(
+    readonly path: string,
+    readonly changedAtMs: number,
+  ) {
+    super(`[source-digest] ${path} changed at ${changedAtMs}`);
+  }
+}
+
+/**
+ * Whether nothing the closure of `entries` loads — or would load, followed
+ * from the files on disk NOW — changed since `sinceMs`: the question a running
+ * process asks to know that what it loaded (at any time after `sinceMs`, its
+ * own start) is byte for byte what a process started now would load.
+ *
+ * "Changed" is the inode CHANGE time (`ctime`): the kernel sets it on every
+ * write, rename-into-place, link or metadata change, and nothing in user space
+ * sets it back, so a file whose `ctime` precedes `sinceMs` held its present
+ * bytes all the way from then to the stat — whatever the content was when a
+ * module was loaded, it is what is read here. A content-equal rewrite counts
+ * as a change, and so does a revert: a file changed and changed back may have
+ * been lazily loaded in between, so equal bytes alone vouch for nothing.
+ *
+ * Read per file: the repo file itself (stat AFTER its bytes are read, so a
+ * write during the read is seen). Per package import: the
+ * `node_modules/<name>` entry resolution goes through — the first that exists
+ * walking up from the importer, as a `node_modules` lookup does — by `lstat`,
+ * so a re-pointed symlink (a new inode) or a newly created shadowing entry
+ * counts, plus the resolved package's `package.json`. A package's own files
+ * are not walked here (as in the digest): a caller holding what it actually
+ * loaded checks those itself.
+ *
+ * Never throws for what it measures: a closure the digest would refuse is
+ * `unmeasurable`, which a caller must read as "cannot vouch".
+ */
+export async function closureChangedSince(
+  entries: readonly string[],
+  sinceMs: number,
+): Promise<ClosureSince> {
+  const files = new Set<string>();
+  const checked = new Set<string>();
+  const assertBefore = async (
+    path: string,
+    read: (p: string) => Promise<{ ctimeMs: number }>,
+  ): Promise<void> => {
+    if (checked.has(path)) return;
+    checked.add(path);
+    const { ctimeMs } = await read(path);
+    if (ctimeMs >= sinceMs) throw new ChangedSince(path, ctimeMs);
+  };
+  try {
+    await walkClosure(entries, {
+      async file(path) {
+        files.add(path);
+        await assertBefore(path, stat);
+      },
+      async package(importer, specifier, resolved) {
+        await assertBefore(await nodeModulesEntry(importer, specifier), lstat);
+        await assertBefore(packageJsonOf(resolved), stat);
+      },
+      builtin() {},
+    });
+  } catch (err) {
+    if (err instanceof ChangedSince) {
+      return { kind: "changed", path: err.path, changedAtMs: err.changedAtMs };
+    }
+    if (err instanceof UnmeasurableClosureError) {
+      return { kind: "unmeasurable", reason: err.message };
+    }
+    // A file gone between resolving it and reading it: the tree moved.
+    const gone = err as NodeJS.ErrnoException;
+    if (gone.code === "ENOENT" && typeof gone.path === "string") {
+      return { kind: "changed", path: gone.path, changedAtMs: Date.now() };
+    }
+    throw err;
+  }
+  return { kind: "unchanged", files };
+}
+
+/** The package name a bare specifier imports (`@scope/name/sub` → `@scope/name`). */
+function packageNameOf(specifier: string): string {
+  const parts = specifier.split("/");
+  return specifier.startsWith("@") ? `${parts[0]}/${parts[1]}` : parts[0]!;
+}
+
+/**
+ * The `node_modules/<name>` entry an import of `specifier` from `importer`
+ * resolves through: the first one that exists walking up from the importer's
+ * directory. Throws when none does — `Bun.resolveSync` just found one, so the
+ * tree moved under the walk.
+ */
+async function nodeModulesEntry(
+  importer: string,
+  specifier: string,
+): Promise<string> {
+  const name = packageNameOf(specifier);
+  let dir = dirname(importer);
+  for (;;) {
+    const candidate = join(dir, "node_modules", ...name.split("/"));
+    try {
+      await lstat(candidate);
+      return candidate;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) {
+      throw new UnmeasurableClosureError(
+        `[source-digest] no node_modules entry for "${specifier}" above ${importer}`,
+      );
+    }
+    dir = parent;
+  }
+}
+
+/** The `package.json` of the package a resolved `node_modules` file belongs to. */
+function packageJsonOf(resolved: string): string {
+  return join(packageDirOf(resolved).dir, "package.json");
 }
 
 // A call that loads a module at runtime: `import(…)` / `require(…)`.
@@ -160,7 +321,7 @@ function assertEveryImportSeen(
   const unseen = unseenLoads(transpiler, text, imports);
   for (const kind of ["import", "require"] as const) {
     if (unseen[kind] > 0) {
-      throw new Error(
+      throw new UnmeasurableClosureError(
         `[source-digest] ${file} has ${unseen[kind]} \`${kind}(…)\` whose path is not a literal — the digest cannot follow it, so it cannot vouch for the code it loads`,
       );
     }

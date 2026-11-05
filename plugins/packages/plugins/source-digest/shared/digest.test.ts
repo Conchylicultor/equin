@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { defineSourceSet } from "../../core";
+import { defineSourceSet } from "../core";
 import { computeDigest, sourceDigest } from "./digest";
 
 let dir: string;

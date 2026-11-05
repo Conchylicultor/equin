@@ -23,13 +23,39 @@ const ENTRY_RE = /import\("@plugins\/([^"]+)"\)/g;
  * which registries they import (codegen's `renderBackendEntry`). A failed result when a
  * registry or a barrel it names is missing — a build is due.
  */
-export async function backendEntries(
+export function backendEntries(
   repo: RepoFiles,
 ): Promise<
   { ok: true; entries: string[] } | { ok: false; result: CheckResult }
 > {
-  const entries = [BIN_ENTRY];
-  for (const registry of REGISTRIES) {
+  return entriesOf(repo, BIN_ENTRY, REGISTRIES);
+}
+
+/** Central's composition root. */
+const CENTRAL_BIN_ENTRY = "plugins/framework/plugins/central-core/bin/index.ts";
+// eslint-disable-next-line exempt/no-path-allowlist -- the registry whose members central boots, not an allowlist of violators
+const CENTRAL_REGISTRIES = [
+  "plugins/framework/plugins/central-core/core/central.generated.ts",
+];
+
+/** What central boots, the same way: its bin plus every barrel its registry lists. */
+export function centralEntries(
+  repo: RepoFiles,
+): Promise<
+  { ok: true; entries: string[] } | { ok: false; result: CheckResult }
+> {
+  return entriesOf(repo, CENTRAL_BIN_ENTRY, CENTRAL_REGISTRIES);
+}
+
+async function entriesOf(
+  repo: RepoFiles,
+  bin: string,
+  registries: readonly string[],
+): Promise<
+  { ok: true; entries: string[] } | { ok: false; result: CheckResult }
+> {
+  const entries = [bin];
+  for (const registry of registries) {
     const src = await repo.read(registry);
     if (src === null) {
       return {

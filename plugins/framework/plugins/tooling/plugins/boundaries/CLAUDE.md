@@ -249,6 +249,7 @@ takes a `debt` exemption on the check's id.
     - `backup/sources/transcripts` (1 debt)
     - `backup/targets/google-drive` (2 debt)
     - `backup/targets/local` (1 debt)
+    - `build/restart-skip` (0 debt)
     - `build/serve-composition` (1 debt)
     - `build/server-build-id` (2 debt)
     - `code-explorer` (5 debt)

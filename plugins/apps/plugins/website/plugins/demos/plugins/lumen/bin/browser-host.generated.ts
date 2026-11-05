@@ -72,6 +72,7 @@ export const hostEntries: ServerRegistryEntry[] = [
   { pluginPath: "apps/plugins/sonata/plugins/transpose", id: "apps.sonata.transpose", loader: () => import("@plugins/apps/plugins/sonata/plugins/transpose/server"), dependsOn: ["apps/plugins/sonata/plugins/library","infra/plugins/endpoints","infra/plugins/entity-extensions","network/plugins/live"], core: null },
   { pluginPath: "audience", id: "audience", loader: () => import("@plugins/audience/server"), dependsOn: ["config_v2"], core: null },
   { pluginPath: "build", id: "build", loader: () => import("@plugins/build/server"), dependsOn: ["build/plugins/run-ledger","config_v2","ids","network/plugins/live","tasks/plugins/task-category"], core: null },
+  { pluginPath: "build/plugins/restart-skip/plugins/hooks", id: "build.restart-skip.hooks", loader: () => import("@plugins/build/plugins/restart-skip/plugins/hooks/server"), dependsOn: [], core: null },
   { pluginPath: "build/plugins/run-ledger", id: "build.run-ledger", loader: () => import("@plugins/build/plugins/run-ledger/server"), dependsOn: ["infra/plugins/entities"], core: null },
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/server"), dependsOn: ["infra/plugins/endpoints","network/plugins/live"], core: null },
   { pluginPath: "config_v2/plugins/browser-store", id: "config_v2.browser-store", loader: () => import("@plugins/config_v2/plugins/browser-store/server"), dependsOn: ["config_v2"], core: null },

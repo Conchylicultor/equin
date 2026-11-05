@@ -21,11 +21,9 @@ import {
   computeLoadWaves,
   topoSortPlugins,
 } from "@plugins/framework/plugins/plugin-loader/core";
-import { PLUGINS_DIR, toolchainPin } from "@plugins/infra/plugins/paths/core";
+import { toolchainPin } from "@plugins/infra/plugins/paths/core";
 import { runtimePath } from "@plugins/infra/plugins/launcher/core";
 import { readServingSocket } from "@plugins/infra/plugins/runtime-identity/core";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
-import { join } from "node:path";
 import {
   centralRoutePrefixes,
   writeCentralRoutesManifest,
@@ -60,10 +58,6 @@ const seenIds = new Set<string>();
 // Collect ALL load failures across every wave and throw once at the end — the
 // operator needs the full list, not just the first plugin to blow up.
 const loadFailures: Array<{ pluginPath: string; error: string }> = [];
-// A plugin exposes a public `core` barrel iff `plugins/<path>/core/index.ts`
-// exists (`PLUGINS_DIR` is derived from this file's own location, not cwd).
-const hasCoreBarrel = (pluginPath: string): boolean =>
-  existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts"));
 for (const wave of waves) {
   // ── Warm this wave's core barrels BEFORE loading its central barrels ──
   // Parity with the server loader, kept as forward-safe insurance. Central's
@@ -80,9 +74,12 @@ for (const wave of waves) {
   // earlier wave — makes that impossible. Rejections here are not the reporting
   // site: a genuinely broken core re-rejects when its own (or a dependent's)
   // central barrel imports it below, and is recorded there — nothing is swallowed.
-  const coreWave = wave.filter((e) => hasCoreBarrel(e.pluginPath));
+  //
+  // Each entry's `core` is a literal loader the registry carries (null when
+  // the plugin has no core barrel), so central's code is a closure the source
+  // digest can follow — never a path computed from `pluginPath`.
   await Promise.allSettled(
-    coreWave.map((e) => import(`@plugins/${e.pluginPath}/core`)),
+    wave.flatMap((e) => (e.core === null ? [] : [e.core()])),
   );
 
   const results = await Promise.allSettled(

@@ -4,7 +4,7 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import { importClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import { computedLoads } from "@plugins/packages/plugins/source-digest/server";
-import { backendEntries } from "./backend-entries";
+import { backendEntries, centralEntries } from "./backend-entries";
 
 const ID = "boot:closure-digestable";
 
@@ -35,16 +35,20 @@ const ID = "boot:closure-digestable";
 const check: Check = {
   id: ID,
   description:
-    "the serving backend's closure (its bin plus every server/machine registry barrel, literal dynamic imports followed) holds no dynamic import or require with a computed path — so sourceDigest can measure the code a backend runs",
+    "the serving backend's and central's closures (each bin plus every server/machine/central registry barrel, literal dynamic imports followed) hold no dynamic import or require with a computed path — so the code a backend or central runs is measurable (sourceDigest, restart-skip)",
   exemptable: {
     [ID]: "this backend entry reaches a module that loads code by a computed path, so the code a backend runs cannot be digested",
   },
   outOfScope: ["test"],
   async run(ctx): Promise<CheckResult> {
     const repo = await ctx.repo();
-    const found = await backendEntries(repo);
-    if (!found.ok) return found.result;
-    const { entries } = found;
+    // Both processes a deploy restarts — and may skip restarting
+    // (build/restart-skip) only while their code is measurable.
+    const backend = await backendEntries(repo);
+    if (!backend.ok) return backend.result;
+    const central = await centralEntries(repo);
+    if (!central.ok) return central.result;
+    const entries = [...backend.entries, ...central.entries];
     const closure = await importClosures(repo.root, entries, {
       dynamicImports: "follow-except-command-runs",
     });

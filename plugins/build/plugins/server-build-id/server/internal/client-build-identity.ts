@@ -17,7 +17,18 @@ import { getServerGraphHash } from "./get-server-graph-hash";
 // the dist is already the one built alongside this code.
 export const clientBuildIdentityRegistration: Registration = {
   register() {
-    const bootGraph = getServerGraphHash();
-    setClientBuildIdentity(() => bootGraph);
+    pinClientBuildIdentity();
   },
 };
+
+/**
+ * Read the served graph now and hold it as this process's build identity: at
+ * boot, and again when the process adopts a deploy instead of being restarted
+ * for it (`build/restart-skip` — the deploy publishes its dist first, so the
+ * graph read then is the one built alongside the code this process was just
+ * judged to run).
+ */
+export function pinClientBuildIdentity(): void {
+  const graph = getServerGraphHash();
+  setClientBuildIdentity(() => graph);
+}

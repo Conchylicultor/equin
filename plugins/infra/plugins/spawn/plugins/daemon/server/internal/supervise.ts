@@ -13,6 +13,7 @@ import {
   type DaemonStartCommon,
   type DaemonTransition,
   type PidFileRead,
+  type SpawnedCode,
   type DetachedLaunch,
   type ProcessLaunch,
   type WorkerDaemonInstance,
@@ -29,6 +30,8 @@ type InstanceRec = ReturnType<typeof claimInstance>;
 /** What one incarnation looks like to the supervisor, whatever it runs on. */
 interface Incarnation {
   pid: number | null;
+  /** The code it was spawned to run (`SpawnedCode`), as launched. */
+  code: SpawnedCode | null;
   /** Deliberate end: graceful step (if any), then kill / terminate. */
   stop(): Promise<void>;
 }
@@ -41,6 +44,33 @@ type Spawner = (hooks: {
   onExit: (reason: string) => void;
   ready: () => void;
 }) => Incarnation;
+
+const CODE_FILE = /\.(?:[cm]?[jt]sx?)$/;
+
+/**
+ * A process's code, read off its argv: the executable, and the module files
+ * a Bun-style runtime loads from it (every absolute code-file argument). An
+ * argv naming no such file runs code this process cannot point at (a
+ * `python -m`, a native binary's own data) — `entries: null`.
+ */
+function processCode(argv: readonly string[]): SpawnedCode {
+  const entries = argv
+    .slice(1)
+    .filter((a) => a.startsWith("/") && CODE_FILE.test(a));
+  return {
+    binary: argv[0] ?? null,
+    entries: entries.length > 0 ? entries : null,
+  };
+}
+
+/** A worker's code: its module, run on this process's own Bun. */
+function workerCode(url: URL): SpawnedCode {
+  return {
+    binary: null,
+    entries:
+      url.protocol === "file:" ? [decodeURIComponent(url.pathname)] : null,
+  };
+}
 
 function label(state: DeclState, rec: InstanceRec): string {
   const i = rec.info.instance;
@@ -109,6 +139,7 @@ function supervise(
     current = incarnation;
     rec.info.pid = incarnation.pid;
     rec.info.spawnedAt = new Date(spawnedAt);
+    rec.code = incarnation.code;
     openRun(state, rec);
     // A survival-healthy (or never-restarting) daemon is running once spawned;
     // a ready-healthy one waits for its signal.
@@ -124,6 +155,7 @@ function supervise(
   const onExit = (reason: string): void => {
     rec.info.pid = null;
     rec.info.spawnedAt = null;
+    rec.code = null;
     rec.info.lastExit = { at: new Date(), reason };
     if (stopping) return; // stop() closes the run itself
     lastError = reason;
@@ -245,6 +277,7 @@ export function spawnProcessIn(
     }
     return {
       pid: proc.pid,
+      code: processCode(argv),
       async stop() {
         proc.kill();
         // SIGKILL a child that ignores SIGTERM, so a stop always ends.
@@ -293,6 +326,7 @@ export function spawnWorkerIn(
       opts.onSpawn?.(w);
       return {
         pid: null,
+        code: workerCode(opts.url),
         async stop() {
           if (opts.stop) await opts.stop(w);
           w.terminate();
