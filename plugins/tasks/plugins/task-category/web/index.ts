@@ -1,8 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { categoryPresentation } from "./internal/presentation";
 
-export { useTaskCategories, useTaskCategoryMap } from "./hooks";
-export type { TaskCategoryMap } from "./hooks";
+export { useTaskCategories, useTaskCategory } from "./hooks";
 
 export default {
   description:

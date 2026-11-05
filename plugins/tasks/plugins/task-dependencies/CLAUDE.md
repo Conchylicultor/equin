@@ -20,8 +20,7 @@
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
-    - `tasks/task-category.TaskCategoryMap`
-    - `tasks/task-category.useTaskCategoryMap`
+    - `tasks/task-category.useTaskCategory`
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-detail.TaskDetailSlots`
     - `tasks/task-draft-form.TaskDraftPopover`

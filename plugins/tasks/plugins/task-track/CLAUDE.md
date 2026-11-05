@@ -30,15 +30,17 @@ change. `setTaskTrack(id, "main")` deletes the row.
 
 ## Reads
 
-One `liveCollection` (`task-tracks.all`):
+One lookup-only `liveCollection` (`task-tracks.by-id`: `:rows` alone, never
+preloaded), bounded by construction:
 
 - `useTaskTrack(taskId)` — point read, exact, a `ResourceResult<TaskTrack>`: `loading` until known (never a
   stand-in "main").
-- The collection is still declared `all` and preloaded (`boot-and-keep`), but
-  no surface reads it whole any more: the sidequest launch list filters
-  `tasks.window` by the exposed track on the server instead.
+- Nothing reads every track: the sidequest launch list filters `tasks.window`
+  by the exposed track on the server. The whole set (`task-tracks.all`,
+  preloaded at boot) was dropped on 2026-11-05 with a key rename, so an older
+  tab subscribing `{}` gets `unknown-key`.
 
-No list reads either: the shape EXPOSES the track (`exposes`, served by
+No list reads it: the shape EXPOSES the track (`exposes`, served by
 `LiveColumns.Expose(tasksTrack)`), so every list whose rows reach a task — the
 task list (`taskRows` is `from: tasksEntityRef`), the conversation lists —
 gets a `track` field (id `track`), filtered, sorted and grouped by it, with no
@@ -62,7 +64,7 @@ sidequest's ops at low host-admission priority, behind the main track.
 
 ## Plugin reference
 
-- Description: Per-task track (main | sidequest): the track badge, the clickable Track control the task detail header renders to switch it, and the exposed `track` field of every list whose rows reach a task (the task list, the conversation lists). Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (the whole set for the task list, point reads for one task), the endpoint that switches a task's track, the tasks.trackChanged trigger event every track write emits, and the track exposed to every list whose rows reach a task (LiveColumns.Expose).
+- Description: Per-task track (main | sidequest): the track badge, the clickable Track control the task detail header renders to switch it, and the exposed `track` field of every list whose rows reach a task (the task list, the conversation lists). Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (lookup-only: one task's track by id), the endpoint that switches a task's track, the tasks.trackChanged trigger event every track write emits, and the track exposed to every list whose rows reach a task (LiveColumns.Expose).
 - Web:
   - Contributes: `FieldPresentation.Register` "exposure:tasks_ext_track"
   - Uses:
@@ -79,8 +81,7 @@ sidequest's ops at low host-admission priority, behind the main track.
     - `useTaskTrack`
 - Server:
   - Contributes:
-    - `resource.declare` "task-tracks.all"
-    - `resource.declare` "task-tracks.all:rows"
+    - `resource.declare` "task-tracks.by-id:rows"
     - `live.columns.expose` "tasks ← tasks_ext_track"
   - Uses:
     - `database.db`
@@ -108,9 +109,7 @@ sidequest's ops at low host-admission priority, behind the main track.
     - `setTaskTrack`
     - `taskTrackChanged`
   - Register: `defineTriggerEvent('tasks.trackChanged')`
-  - Resources:
-    - `task-tracks.all` (keyed)
-    - `task-tracks.all:rows` (keyed, point)
+  - Resources: `task-tracks.by-id:rows` (keyed, point)
   - Routes: `PUT /api/tasks/:taskId/track`
 - Core:
   - Uses:

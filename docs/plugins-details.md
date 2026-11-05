@@ -53238,23 +53238,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/overlay/image-viewer.AssetThumbnail`
           - `primitives/overlay/image-viewer.ImageGallery`
           - `tasks/task-detail.TaskDetailSlots`
-    - **`task-category`** — Per-task category (registry-driven, system-set only): presents the exposed `category` field of every list whose rows reach a task (the task list groups by it), its options read from the live category registry. Owns the tasks_ext_category side-table: the per-task category (registry-driven via the TaskCategory contribution, system-set only), its live collection (the whole ordered set, routed and L2-persisted), the live category registry (fixed per process), and the category exposed to every list whose rows reach a task (LiveColumns.Expose).
+    - **`task-category`** — Per-task category (registry-driven, system-set only): presents the exposed `category` field of every list whose rows reach a task (the task list groups by it), its options read from the live category registry. Owns the tasks_ext_category side-table: the per-task category (registry-driven via the TaskCategory contribution, system-set only), its live collection (lookup-only: one task's category by id), the live category registry (fixed per process), and the category exposed to every list whose rows reach a task (LiveColumns.Expose).
       - Web:
         - Contributes: `FieldPresentation.Register` "exposure:tasks_ext_category"
         - Uses:
           - `network/live.FieldPresentation`
           - `network/live.LiveFieldOption`
           - `network/live.LiveFieldOptionsRead`
+          - `network/live.mapRow`
           - `network/live.useLive`
           - `network/live/live-state.mapResource`
-        - Exports (types): `TaskCategoryMap`
         - Exports (values):
           - `useTaskCategories`
-          - `useTaskCategoryMap`
+          - `useTaskCategory`
       - Server:
         - Contributes:
-          - `resource.declare` "task-categories"
-          - `resource.declare` "task-categories:rows"
+          - `resource.declare` "task-categories.by-id:rows"
           - `resource.declare` "task-category.registry"
           - `live.columns.expose` "tasks ← tasks_ext_category"
         - Uses:
@@ -53273,8 +53272,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskCategory`
           - `tasksCategory`
         - Resources:
-          - `task-categories` (keyed)
-          - `task-categories:rows` (keyed, point)
+          - `task-categories.by-id:rows` (keyed, point)
           - `task-category.registry` (push, fixed, whole: one entry per registered task category — declared in code, a few dozen)
       - Cross-plugin:
         - Imported by: 27 plugins — full list in [`plugins/tasks/plugins/task-category/REFERENCE.md`](../plugins/tasks/plugins/task-category/REFERENCE.md)
@@ -53311,8 +53309,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
           - `primitives/pane.useOpenPane`
-          - `tasks/task-category.TaskCategoryMap`
-          - `tasks/task-category.useTaskCategoryMap`
+          - `tasks/task-category.useTaskCategory`
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-draft-form.TaskDraftPopover`
@@ -54016,7 +54013,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `host-service:task-title.generator` "task-title.generator"
             - Uses: `tasks/task-title.TaskTitleGenerator`
-    - **`task-track`** — Per-task track (main | sidequest): the track badge, the clickable Track control the task detail header renders to switch it, and the exposed `track` field of every list whose rows reach a task (the task list, the conversation lists). Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (the whole set for the task list, point reads for one task), the endpoint that switches a task's track, the tasks.trackChanged trigger event every track write emits, and the track exposed to every list whose rows reach a task (LiveColumns.Expose).
+    - **`task-track`** — Per-task track (main | sidequest): the track badge, the clickable Track control the task detail header renders to switch it, and the exposed `track` field of every list whose rows reach a task (the task list, the conversation lists). Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (lookup-only: one task's track by id), the endpoint that switches a task's track, the tasks.trackChanged trigger event every track write emits, and the track exposed to every list whose rows reach a task (LiveColumns.Expose).
       - Web:
         - Contributes: `FieldPresentation.Register` "exposure:tasks_ext_track"
         - Uses:
@@ -54033,8 +54030,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTaskTrack`
       - Server:
         - Contributes:
-          - `resource.declare` "task-tracks.all"
-          - `resource.declare` "task-tracks.all:rows"
+          - `resource.declare` "task-tracks.by-id:rows"
           - `live.columns.expose` "tasks ← tasks_ext_track"
         - Uses:
           - `database.db`
@@ -54062,9 +54058,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `setTaskTrack`
           - `taskTrackChanged`
         - Register: `defineTriggerEvent('tasks.trackChanged')`
-        - Resources:
-          - `task-tracks.all` (keyed)
-          - `task-tracks.all:rows` (keyed, point)
+        - Resources: `task-tracks.by-id:rows` (keyed, point)
         - Routes: `PUT /api/tasks/:taskId/track`
       - Core:
         - Uses:

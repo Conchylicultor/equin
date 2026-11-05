@@ -7,10 +7,11 @@
  *
  * Each conversion step adds its phase here. Landed:
  *
- *  - **18 `task-categories`** — a category set on a seeded task arrives as one
- *    upsert, a change as one upsert, a clear as one delete (checked on the
- *    socket's frames, not in the DOM). A reload's boot snapshot carries the
- *    current set.
+ *  - **18 `task-categories.by-id`** — the task's own category row (the
+ *    detail pane's dependency card reads it; lookup-only, so never in the
+ *    boot snapshot): a category set on a seeded task arrives as one upsert, a
+ *    change as one upsert, a clear as one delete (checked on the socket's
+ *    frames, not in the DOM).
  *
  *  - **19 `tasks`** — a second seeded task arrives as an entrant (one upsert),
  *    a hold and a release of the first each as one upsert of its row with the
@@ -89,7 +90,11 @@ const OUT = arg("out") ?? "/tmp/tree-live";
 /** Every seeded id starts with this, so a crashed run's leftovers are swept by prefix. */
 const SEED_PREFIX = "e2e-tree-";
 /** The live keys this script watches, and what an HTTP read of one looks like. */
-const TREE_KEYS = ["task-categories", "tasks", "attempts.v2"] as const;
+const TREE_KEYS = [
+  "task-categories.by-id:rows",
+  "tasks",
+  "attempts.v2",
+] as const;
 
 const db = openDeployDb();
 
@@ -162,9 +167,10 @@ const deleted = (frames: Frame[], key: string, id: string, from: number) =>
   framesOf(frames, key, from).some((f) => f.deletes?.includes(id));
 
 /**
- * Step 18: `task-categories` — set, change, clear, each one scoped delta; and
- * over the whole phase (from `measureFrom`, the first frame after the page's
- * own subscribe, to the phase's last frame) no frame re-sent the whole set.
+ * Step 18: `task-categories.by-id` — set, change, clear of the task's own row,
+ * each one scoped delta; and over the whole phase (from `measureFrom`, the
+ * first frame after the page's own subscribe, to the phase's last frame) no
+ * frame re-sent the whole value.
  */
 async function categoriesPhase(
   r: Report,
@@ -173,7 +179,7 @@ async function categoriesPhase(
   taskId: string,
   measureFrom: number,
 ): Promise<void> {
-  const KEY = "task-categories";
+  const KEY = "task-categories.by-id:rows";
   let at = frames.length;
   await db.query(
     "INSERT INTO tasks_ext_category (parent_id, category) VALUES ($1, 'wishes')",
@@ -216,9 +222,6 @@ async function categoriesPhase(
   );
   r.ok("a category clear arrives as a delete", cleared.ok);
 
-  // Leave it categorized for the reload check — and wait for that upsert on
-  // the socket, so the kept snapshot the reload's boot snapshot reads has it
-  // (a reload racing the write would fail the check intermittently).
   at = frames.length;
   await db.query(
     "INSERT INTO tasks_ext_category (parent_id, category) VALUES ($1, 'agents')",
@@ -1009,11 +1012,6 @@ try {
     r.ok(
       "the reload's boot snapshot carries the seeded task's row",
       body.includes(`"id":"${taskId}"`),
-    );
-    r.ok(
-      "the reload's boot snapshot carries the task's current category",
-      body.includes(`"taskId":"${taskId}","category":"agents"`) ||
-        body.includes(`"category":"agents","taskId":"${taskId}"`),
     );
     await snap(page, OUT, "1-reloaded");
     await launchesPhase(r, h, taskId);

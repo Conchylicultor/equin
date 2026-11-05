@@ -684,7 +684,9 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
       new Map(DEMO_STORIES.map((s) => [demoTaskId(s), [s.shortTitle, s.task]])),
     );
 
-    const tracks = (await loadResourceByKey("task-tracks.all", {})) as {
+    const tracks = (await loadResourceByKey("task-tracks.by-id:rows", {
+      ids,
+    })) as {
       taskId: string;
       track: string;
     }[];

@@ -10,7 +10,7 @@ export { getTaskCategory, setTaskCategory } from "./internal/mutations";
 
 export default {
   description:
-    "Owns the tasks_ext_category side-table: the per-task category (registry-driven via the TaskCategory contribution, system-set only), its live collection (the whole ordered set, routed and L2-persisted), the live category registry (fixed per process), and the category exposed to every list whose rows reach a task (LiveColumns.Expose).",
+    "Owns the tasks_ext_category side-table: the per-task category (registry-driven via the TaskCategory contribution, system-set only), its live collection (lookup-only: one task's category by id), the live category registry (fixed per process), and the category exposed to every list whose rows reach a task (LiveColumns.Expose).",
   contributions: [
     ...taskCategoriesServed.declare,
     ...taskCategoryRegistryServed.declare,

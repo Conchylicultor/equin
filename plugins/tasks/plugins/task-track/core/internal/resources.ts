@@ -30,37 +30,18 @@ export const taskTrackShape = defineExtensionShape({
 export const TaskTrackRowSchema = taskTrackShape.schema;
 export type TaskTrackRow = z.infer<typeof TaskTrackRowSchema>;
 
-// The stored tracks, read two ways from one declaration:
+// The stored tracks, read by task: `useLive(taskTracks, { id: taskId })` —
+// the exact answer for ONE task (the task detail's Track control, the
+// conversation header chip); `found: false` is main. Lookup-only (`:rows`
+// alone, never preloaded): no surface needs every task's track — a LIST of
+// tasks reads the track exposed into its rows (`exposes` above), and the
+// sidequest launch list filters `tasks.window` by it on the server — so the
+// set is bounded by construction, its cost one row per mounted reader.
 //
-// - `useLive(taskTracks, { id: taskId })` — the exact answer for ONE task (the task
-//   detail's Track row, the conversation header chip). `found: false` is main.
-// - `useLive(taskTracks)` — the WHOLE ordered set (`all`). No surface reads
-//   it whole any more (the sidequest launch list filters `tasks.window` by the
-//   exposed track on the server); a LIST of tasks reads neither form: the
-//   track is exposed into its rows — `exposes` above.
-//
-// Served from the extension table (`server/internal/resource.ts`): marking a
-// task a sidequest is one entrant, moving it back to main (or the task's
-// delete, by FK cascade) an exit — never a whole-set reload.
-//
-// The key is `task-tracks.all`, not the old window's `task-tracks`: no bundle
-// ever declared this key with another contract, so a tab on an older one gets
-// `unknown-key` (a `skew` verdict) and never parses these rows — no C39
-// old-bundle proof to keep.
-//
-// Preloaded (`boot-and-keep`) so a surface reading every track never paints
-// every task as main and then flips: the boot snapshot hydrates the `{}` tuple
-// before first paint, and the cache stays resident for surfaces that mount
-// late.
-export const taskTracks = liveCollection("task-tracks.all", {
+// The key is `task-tracks.by-id`, not the old whole set's `task-tracks.all`: a
+// tab on an older bundle subscribing `{}` gets `unknown-key` (a `skew`
+// verdict), never this collection's rows — no C39 old-bundle proof to keep.
+export const taskTracks = liveCollection("task-tracks.by-id", {
   from: taskTrackShape,
   id: "taskId",
-  all: {
-    orderBy: [["taskId", "asc"]],
-    unbounded: {
-      reason:
-        "at most one row per task, and the sidequest launch list reads every sidequest it may show by id",
-    },
-  },
-  preload: "boot-and-keep",
 });

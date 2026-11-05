@@ -8,10 +8,7 @@ import {
   useTaskCluster,
   type TaskCluster,
 } from "@plugins/tasks/plugins/tasks-core/web";
-import {
-  useTaskCategoryMap,
-  type TaskCategoryMap,
-} from "@plugins/tasks/plugins/task-category/web";
+import { useTaskCategory } from "@plugins/tasks/plugins/task-category/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import {
@@ -27,12 +24,11 @@ import {
 
 function targetForSibling(
   task: TaskListItem,
-  categoryMap: TaskCategoryMap,
+  categoryId: string | null,
 ): TaskChainTarget {
   if (task.folderId) {
     return { kind: "folder", folderTaskId: task.folderId };
   }
-  const categoryId = categoryMap.get(task.id);
   if (categoryId) {
     return { kind: "category", categoryId };
   }
@@ -51,27 +47,27 @@ function targetForSibling(
  */
 export function TaskDependenciesActions({ taskId }: { taskId: string }) {
   const tasksResult = useTaskCluster(taskId);
-  const categoryResult = useTaskCategoryMap();
+  const categoryResult = useTaskCategory(taskId);
   const fetchEndpoint = useFetchEndpoint();
 
-  // No header actions until the task's cluster and the categories are known (the
+  // No header actions until the task's cluster and its category are known (the
   // draft's target is the task's category — an unknown one is not "root"). A
   // failed tasks read shows none: the card's body reads the same tasks and
-  // renders that failure with Retry. The body never reads categories, so a
-  // failed categories read with nothing held renders HERE, in place of the
+  // renders that failure with Retry. The body never reads the category, so a
+  // failed category read with nothing held renders HERE, in place of the
   // actions, with its own Retry.
   if (tasksResult.status === "loading" || tasksResult.status === "error")
     return null;
   if (categoryResult.status === "loading") return null;
-  let categoryMap: TaskCategoryMap;
-  if (categoryResult.status === "ready") categoryMap = categoryResult.data;
+  let categoryId: string | null;
+  if (categoryResult.status === "ready") categoryId = categoryResult.data;
   else if (categoryResult.stale !== undefined)
-    categoryMap = categoryResult.stale;
+    categoryId = categoryResult.stale;
   else {
     return (
       <ResourceErrorInline
         variant="inline"
-        subject="task categories"
+        subject="the task's category"
         error={categoryResult.error}
         refetch={categoryResult.refetch}
       />
@@ -97,7 +93,7 @@ export function TaskDependenciesActions({ taskId }: { taskId: string }) {
     );
   };
 
-  const target = targetForSibling(task, categoryMap);
+  const target = targetForSibling(task, categoryId);
 
   return (
     <>

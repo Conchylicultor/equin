@@ -19,7 +19,7 @@
  * barrier — so the real migrations and the real schema layer run on PGlite,
  * which also proves the history applies on PGlite's Postgres). Then tasks and
  * their `tasks_ext_category` rows are written through the real mutations and
- * read back from `task-categories` through the real `serveCollection` path.
+ * read back from `task-categories.by-id` through the real `serveCollection` path.
  *
  * It boots in a FRESH bun process (this same file, re-run as a child with
  * `PORTABLE_BOOT_CHILD` set): a boot collects its own host-service providers
@@ -256,7 +256,7 @@ describe.if(IN_CHILD)("task-category's server closure boots portably", () => {
     });
   });
 
-  test("seeded categories come back through the real task-categories collection", async () => {
+  test("seeded categories come back through the real task-categories.by-id collection", async () => {
     const a = await createTask({
       title: "portable boot: categorized",
       mandate: TEST_MANDATE,
@@ -265,14 +265,16 @@ describe.if(IN_CHILD)("task-category's server closure boots portably", () => {
       title: "portable boot: also categorized",
       mandate: TEST_MANDATE,
     });
-    await createTask({
+    const c = await createTask({
       title: "portable boot: uncategorized",
       mandate: TEST_MANDATE,
     });
     await setTaskCategory(a.id, "improvements");
     await setTaskCategory(b.id, "deploy");
 
-    const value = await loadResourceByKey("task-categories", {});
+    const value = await loadResourceByKey("task-categories.by-id:rows", {
+      ids: [a.id, b.id, c.id].join(","),
+    });
     const rows = (value as { taskId: string; category: string }[])
       .map((r) => ({ taskId: r.taskId, category: r.category }))
       .sort((x, y) => x.taskId.localeCompare(y.taskId));

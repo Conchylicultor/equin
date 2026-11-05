@@ -1,11 +1,8 @@
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useMemo } from "react";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { TaskCategoryDef } from "@plugins/tasks/plugins/task-category/core";
-import {
-  taskCategories,
-  taskCategoryRegistry,
-  type TaskCategoryRow,
-} from "../shared/resources";
+import { taskCategories, taskCategoryRegistry } from "../shared/resources";
 
 /**
  * The registered categories: a read — loading, failed, or the list. Fixed for
@@ -18,21 +15,16 @@ export function useTaskCategories(): ResourceResult<TaskCategoryDef[]> {
   return useLive(taskCategoryRegistry);
 }
 
-/** taskId → categoryId, one entry per categorized task. */
-export type TaskCategoryMap = ReadonlyMap<string, string>;
-
-// Stable (module-level), so the `select` re-runs only when the set changes.
-function toCategoryMap(rows: TaskCategoryRow[]): TaskCategoryMap {
-  return new Map(rows.map((r) => [r.taskId, r.category]));
-}
-
 /**
- * Every categorized task's category, from the live `task-categories` set: a
- * read — loading, failed, or the map. A task missing from a READY map has no
- * category (the "None" bucket); not loaded yet is the loading arm, never an
- * empty map (which would claim every task is uncategorized). The set is
- * preloaded, so a boot-hydrated read renders ready on its first render.
+ * One task's category id: a read — loading, failed, or the id (`null` when the
+ * task has none, the "None" bucket). Its row of the lookup-only
+ * `task-categories.by-id`; not loaded yet is the loading arm, never `null`
+ * (which would claim the task uncategorized).
  */
-export function useTaskCategoryMap(): ResourceResult<TaskCategoryMap> {
-  return useLive(taskCategories, { select: toCategoryMap });
+export function useTaskCategory(taskId: string): ResourceResult<string | null> {
+  const result = useLive(taskCategories, { id: taskId });
+  return useMemo(
+    () => mapRow(result, (row) => (row ? row.category : null)),
+    [result],
+  );
 }
