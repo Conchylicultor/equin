@@ -660,6 +660,99 @@ test("removalClosure: pulls in transitive importers + descendants, leaves depend
   );
 });
 
+test("removalClosure: a kept id is neither removed nor walked through", () => {
+  //   feature ⊃ feature.leaf   (the leaf is a child of the negated feature)
+  //   presets → feature.leaf   (presets imports the leaf)
+  //   umbrella ⊃ umbrella.kid, umbrella → presets
+  //   app → umbrella.kid
+  // Keeping the leaf must stop the cascade there: without it, removing
+  // `feature` reaches presets → umbrella → umbrella.kid → app.
+  const graph = syntheticGraph(
+    ["feature", "feature.leaf", "presets", "umbrella", "umbrella.kid", "app"],
+    [
+      ["presets", "feature.leaf"],
+      ["umbrella", "presets"],
+      ["app", "umbrella.kid"],
+    ],
+    { feature: ["feature.leaf"], umbrella: ["umbrella.kid"] },
+  );
+
+  const unkept = removalClosure([asPluginId("feature")], graph);
+  expect([...unkept].map(String).sort()).toEqual([
+    "app",
+    "feature",
+    "feature.leaf",
+    "presets",
+    "umbrella",
+    "umbrella.kid",
+  ]);
+
+  const kept = removalClosure(
+    [asPluginId("feature")],
+    graph,
+    new Set([asPluginId("feature.leaf")]),
+  );
+  expect([...kept].map(String)).toEqual(["feature"]);
+});
+
+test("a named plugin stops the negative's cascade: its importers and an umbrella's other children stay seeded", () => {
+  // The agent-manager-demo shape: `!feature.**` beside a named `feature.leaf`
+  // that a kept plugin imports, under a named umbrella (`umbrella.**` names
+  // only `umbrella`, so its children are unnamed seeds).
+  const graph = syntheticGraph(
+    [
+      "feature",
+      "feature.leaf",
+      "umbrella",
+      "umbrella.presets",
+      "umbrella.kid",
+      "app",
+    ],
+    [
+      ["umbrella.presets", "feature.leaf"],
+      ["umbrella", "umbrella.presets"],
+      ["app", "umbrella.kid"],
+    ],
+    {
+      feature: ["feature.leaf"],
+      umbrella: ["umbrella.presets", "umbrella.kid"],
+    },
+  );
+  const { seeds } = expand(
+    ["umbrella.**", "app", "!feature.**", "feature.leaf"],
+    graph,
+  );
+  expect([...seeds].map(String).sort()).toEqual([
+    "app",
+    "feature.leaf",
+    "umbrella",
+    "umbrella.kid",
+    "umbrella.presets",
+  ]);
+});
+
+test("stopping at a kept id stays loud: a kept importer that drags a negated target back is reported", () => {
+  // kept → mid → target: the cascade from `target` stops at `kept`, `mid`
+  // stays out of the seeds' removal, and `kept` pulls `target` back.
+  const graph = syntheticGraph(
+    ["kept", "mid", "target"],
+    [
+      ["kept", "mid"],
+      ["mid", "target"],
+    ],
+    {},
+  );
+  const comp = resolveComposition(graph, {
+    name: "probe",
+    entryPoints: ["kept", "!target"],
+    selectedContributors: [],
+  });
+  expect(comp.bundle.has(asPluginId("target"))).toBe(true);
+  expect(comp.unsatisfiedExclusions.map((u) => String(u.target))).toEqual([
+    "target",
+  ]);
+});
+
 // ── Global exclusions: the base-exclusions row every composition inherits ──────
 
 /** The one negative the repo ships. It resolves to the plugin, its sub-plugins,

@@ -326,8 +326,8 @@ const check: Check = {
         const targets = [...matchEntryPattern(p, graph)].filter(
           (id) => !protectedIds.has(id),
         );
-        const trims = [...removalClosure(targets, graph)].filter(
-          (id) => !protectedIds.has(id) && positiveSeeds.has(id),
+        const trims = [...removalClosure(targets, graph, protectedIds)].filter(
+          (id) => positiveSeeds.has(id),
         );
         negativeTrimmedSomewhere.set(
           p.raw,

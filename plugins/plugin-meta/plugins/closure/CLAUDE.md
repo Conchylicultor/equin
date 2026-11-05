@@ -187,11 +187,16 @@ negative pass, in three steps:
    asking for X; that request suppresses the negative on X **entirely**, so
    nothing cascades from it either. This is how a composition takes back a plugin
    the inherited base row negates.
-3. **The cascade** — `removalClosure(targets, graph)`, then `seeds.delete(id)` for
-   every member that is not itself protected. Removing X necessarily removes X's
-   descendants and everything that transitively imports X; without this a
-   surviving importer would drag X straight back through `hardClosure` and the
-   negative would be silently inert.
+3. **The cascade** — `removalClosure(targets, graph, kept)` with `kept =
+   named ∪ selectedContributors`, then `seeds.delete(id)` for every member.
+   Removing X necessarily removes X's descendants and everything that
+   transitively imports X; without this a surviving importer would drag X
+   straight back through `hardClosure` and the negative would be silently
+   inert. A kept id stays, so the cascade stops AT it — it is neither removed
+   nor walked through: `!feature.**` beside a named `feature.leaf` keeps the
+   leaf's importers (and, through them, a named umbrella's other children)
+   seeded. Walking through it would strip them while the kept id itself
+   survived, a hole nothing reported.
 
 **The two rules differ, and the difference is the point.** Naming X suppresses the
 negative on X — the opt-out. Naming an *importer* of X does not: that is not a
@@ -212,8 +217,8 @@ Consequences under `**`, all correct: no node classifies `entry`, every bundled
 node is `required`, `available` is empty, and any `selectedContributors` entry is
 redundant. Unknown bases pass inertly, as before.
 
-`removalClosure(seeds, graph)` — the reverse+subtree fixpoint (`subtree` ∪
-`hardReverse`) — is the general statement *given that these ids leave, what else
+`removalClosure(seeds, graph, kept?)` — the reverse+subtree fixpoint (`subtree` ∪
+`hardReverse`), stopping at `kept` ids — is the general statement *given that these ids leave, what else
 must leave*, not any one mechanism's function. It is the mirror of `hardClosure`,
 which walks `hardForward` (what a plugin needs).
 

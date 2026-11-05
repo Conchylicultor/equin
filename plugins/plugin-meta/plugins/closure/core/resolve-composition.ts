@@ -68,16 +68,23 @@ export function hardClosure(
  * negative would be silently undone — the seed set would lose X while X's
  * importers stayed seeded and dragged it straight back through
  * {@link hardClosure}.
+ *
+ * `kept` are the ids the composition names (its protected set): they stay
+ * whatever the cascade says, so they are neither removed nor walked THROUGH —
+ * an importer of a kept plugin loses nothing, and a kept capability leaf under
+ * a negated feature (`!tasks.outcome-report.**` beside a named
+ * `tasks.outcome-report.capability`) does not take its importers with it.
  */
 export function removalClosure(
   seeds: Iterable<PluginId>,
   graph: EdgeGraph,
+  kept: ReadonlySet<PluginId> = new Set(),
 ): Set<PluginId> {
   const out = new Set<PluginId>();
   const stack = [...seeds];
   while (stack.length) {
     const x = stack.pop()!;
-    if (out.has(x)) continue;
+    if (out.has(x) || kept.has(x)) continue;
     out.add(x);
     for (const d of graph.subtree.get(x) ?? []) if (!out.has(d)) stack.push(d); // descendants
     for (const r of graph.hardReverse.get(x) ?? [])
@@ -170,10 +177,10 @@ export function expandEntrySeeds(
   //    `hardForward`, and `resolveComposition`'s `unsatisfiedExclusions`
   //    postcondition fires naming the exact import chain. The ambiguity is made
   //    LOUD rather than guessed at in either direction.
-  for (const id of removalClosure(negated, graph)) {
-    if (named.has(id) || selected.has(id)) continue; // protected — may leave a hole
-    seeds.delete(id);
-  }
+  //  - a named plugin stays, so the cascade stops at it: its importers and
+  //    descendants lose nothing through it.
+  const kept = new Set<PluginId>([...named, ...selected]);
+  for (const id of removalClosure(negated, graph, kept)) seeds.delete(id);
 
   return { seeds, named, negated };
 }
