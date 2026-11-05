@@ -49,26 +49,33 @@ export function lintableFiles(paths: readonly string[]): string[] {
 }
 
 /**
- * Extract every module specifier this file depends on at compile time:
- *   - static `import ... from "<mod>"` (incl. `import type`)
- *   - `export ... from "<mod>"` re-exports (incl. `export type ... from`)
+ * Extract every module specifier this file depends on at RUN time — what a lint
+ * rule group's members are, since a rule's output is a function of the code it
+ * runs:
+ *   - static `import ... from "<mod>"` and `export ... from "<mod>"`, but not
+ *     the whole-statement type-only forms (`import type …` / `export type …
+ *     from`): those are erased before the code runs, so no edit behind them can
+ *     change a message. (An inline `import { type X }` stays: under
+ *     `verbatimModuleSyntax` the statement itself survives.)
  *   - bare side-effect `import "<mod>"`
- *   - inline `import("<literal>")` type/dynamic expressions
+ *   - inline `import("<literal>")` — kept even in a type position, which this
+ *     scan cannot tell from a dynamic import (the builder loads the lint
+ *     registry that way)
  * Returns the raw specifier strings.
  *
  * The static forms route through `findImports` (the shared static-import
  * scanner), which masks comments/regex/strings fully and reads each specifier
  * back by offset — so an import written inside a string or template literal (a
  * test fixture, a docs snippet, a codegen template) is never mistaken for a real
- * edge. This is a compile-time import GRAPH, so we keep ALL of them: type-only
- * imports (`import type …` / `export type … from`) are real compile edges, and
- * bare side-effect imports too.
+ * edge.
  */
-export function extractImportSpecifiers(rawSrc: string): string[] {
+export function runtimeImportSpecifiers(rawSrc: string): string[] {
   const results: string[] = [];
 
   // Static `import … from "…"` / `export … from "…"` / bare `import "…"`.
-  for (const imp of findImports(rawSrc)) results.push(imp.specifier);
+  for (const imp of findImports(rawSrc)) {
+    if (!imp.typeOnly) results.push(imp.specifier);
+  }
 
   // Inline `import("literal")` — type-position or dynamic. `findImports` treats
   // it as a call, not a static import, so it is out of scope there; scan for it

@@ -81,6 +81,18 @@ test("export type … from is flagged typeOnly", () => {
   expect(found[0]!.typeOnly).toBe(true);
 });
 
+test("export type * and a default type import are flagged typeOnly", () => {
+  expect(findImports(`export type * from "./a";`)[0]!.typeOnly).toBe(true);
+  expect(findImports(`import type T from "./a";`)[0]!.typeOnly).toBe(true);
+});
+
+test("a default import NAMED type is a value import", () => {
+  expect(findImports(`import type from "./a";`)[0]!.typeOnly).toBe(false);
+  expect(findImports(`import type, { a } from "./a";`)[0]!.typeOnly).toBe(
+    false,
+  );
+});
+
 test("inline type binding is NOT a whole-statement type import", () => {
   const found = findImports(`import { type T, a } from "@plugins/a/core";`);
   expect(found[0]!.typeOnly).toBe(false);

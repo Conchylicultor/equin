@@ -170,7 +170,7 @@ Results are stored per **(file, blob version)** (`shared/lint-results.ts`, `type
 | a directive file, whole (`LINT_GROUP_ALL`) | `typedResultKey(all fp, result key)` | any of the above |
 
 - **Rules half** (`check/lint-groups.ts`): one fp per group, each folding in the **engine**:
-  - the config builder's import closure (`LINT_CONFIG_SOURCE`), `shared/worker.ts`, root tsconfigs, `package.json`, `patches/**`;
+  - the config builder's RUNTIME import closure (`LINT_CONFIG_SOURCE`; `import type` edges are erased, so not followed), `shared/worker.ts`, root tsconfigs, `package.json`, `patches/**`. Keep the builder's imports to what can change a message — it takes the manifests' file set as data (`lint/core/ide-lint-config.ts` lists it), so the repo-file enumeration and the process plumbing under it stay out (a test holds it there);
   - the lockfile minus workspace entries (`lockfileLintDigest`);
   - the `@utility` set (`lintDataKey`).
 

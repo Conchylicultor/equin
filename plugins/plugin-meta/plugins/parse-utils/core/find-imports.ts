@@ -98,7 +98,9 @@ export function findImports(
       index: spec.index,
       keyword: m[1] as "import" | "export",
       clause,
-      typeOnly: /^\s*type\b/.test(clause),
+      // `type` then a binding (`{`, `*`, a name) — not a default import that is
+      // itself NAMED `type` (`import type from`, `import type, { a } from`).
+      typeOnly: /^\s*type\b\s*[^\s,]/.test(clause),
       sideEffect: false,
     });
   }

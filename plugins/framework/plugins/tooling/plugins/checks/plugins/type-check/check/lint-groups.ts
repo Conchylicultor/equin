@@ -43,6 +43,12 @@
 // disable directive is "unused" depends on every rule, so its result is keyed
 // on every group at once (and its result key) and it is re-linted whole.
 //
+// A closure follows RUNTIME imports only (`runtimeImportSpecifiers`): an
+// `import type` is erased before a rule runs, so what sits behind it cannot
+// change a message. Followed, the engine took in the process plumbing a type
+// named (host admission, spawn): 53 files on 2026-11-05, most of them unable
+// to change a message, and every edit to one re-linted the whole tree.
+//
 // Every file in a group is hashed by its VERSION — its git blob sha in the
 // run's tree (`../shared/repo-view.ts`) — so hashing a group reads nothing. Its
 // MEMBERS are found by walking the import closures of the config builder and
@@ -68,7 +74,7 @@ import type { TypeAwareGroups } from "../shared/lint-results";
 import type { RepoView } from "../shared/repo-view";
 import { producerSources } from "../shared/tsc-engine";
 import {
-  extractImportSpecifiers,
+  runtimeImportSpecifiers,
   isLintable,
   resolveSpecifier,
 } from "./import-graph";
@@ -217,14 +223,16 @@ export function typedGroupFps(
  * through it — matching the graph this replaced, which held edges out of
  * lintable files alone.
  */
-export function lintClosures(view: RepoView) {
+export function lintClosures(
+  view: Pick<RepoView, "isFile" | "readText" | "treeHash">,
+) {
   const deps = new Map<string, readonly string[]>();
   const depsOf = (rel: string): readonly string[] => {
     let d = deps.get(rel);
     if (d === undefined) {
       const out = new Set<string>();
       if (isLintable(rel)) {
-        for (const spec of extractImportSpecifiers(view.readText(rel))) {
+        for (const spec of runtimeImportSpecifiers(view.readText(rel))) {
           const to = resolveSpecifier(rel, spec, view.isFile);
           if (to !== null && to !== rel) out.add(to);
         }
