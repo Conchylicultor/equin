@@ -35,9 +35,9 @@ export type TaskTrackRow = z.infer<typeof TaskTrackRowSchema>;
 // - `useLive(taskTracks, { id: taskId })` — the exact answer for ONE task (the task
 //   detail's Track row, the conversation header chip). `found: false` is main.
 // - `useLive(taskTracks)` — the WHOLE ordered set (`all`), for a surface that
-//   needs a track for EVERY task it shows (the sidequest autopilot's launch
-//   list), so its reader holds the set entire. A row a task has (or not) is
-//   its track: one row per sidequest at most, never a stand-in for one past a
+//   needs every sidequest (the sidequest autopilot's launch list reads the
+//   rows of exactly these tasks by id), so its reader holds the set entire.
+//   A row a task has (or not) is its track: one row per sidequest at most, never a stand-in for one past a
 //   window's edge. (A LIST of tasks reads neither: the track is exposed into
 //   its rows — `exposes` above.)
 //
@@ -61,7 +61,7 @@ export const taskTracks = liveCollection("task-tracks.all", {
     orderBy: [["taskId", "asc"]],
     unbounded: {
       reason:
-        "at most one row per task, and the sidequest launch list projects a track for every task it shows",
+        "at most one row per task, and the sidequest launch list reads every sidequest it may show by id",
     },
   },
   preload: "boot-and-keep",

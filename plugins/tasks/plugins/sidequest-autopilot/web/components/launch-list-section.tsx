@@ -86,6 +86,7 @@ function triageByTask(
 }
 
 const NO_ROWS: LaunchListRow[] = [];
+const NO_IDS: string[] = [];
 
 // The title is the row's face; where it stands and the launch order are
 // dimensions to group, filter and sort by, left out of the body.
@@ -137,20 +138,33 @@ export function LaunchListSection(): ReactElement {
   const openPane = useOpenPane();
   const catalog = useLive(automationsCatalog);
   const tracks = useStoredTracks();
-  const tasks = useLive(taskRows);
+  // The sidequests' own rows, read by id — never the whole task set. Every
+  // stored track is a sidequest (main is the absent row), so the track set
+  // names them; `taskRows`' `maxIds` bounds the read loudly.
+  // Still in memory: `status = new` ∩ sidequest becomes one server window
+  // once a window can filter on the derived status (task-1793848785-7tzicj).
+  const sidequestIds = useMemo(
+    () =>
+      foldResource(tracks, {
+        loading: () => NO_IDS,
+        error: () => NO_IDS,
+        ready: (map) =>
+          [...map].filter(([, t]) => t === "sidequest").map(([id]) => id),
+      }),
+    [tracks],
+  );
+  const tasks = useLive(taskRows, { ids: sidequestIds });
   // Read whole (`all`): the list joins it to every ready sidequest.
   const decisions = useLive(launchDecisions, { select: decisionsByTask });
   const readyIds = useMemo(
     () =>
-      foldResource(combineResources({ tracks, tasks }), {
-        loading: () => [],
-        error: () => [],
-        ready: (d) =>
-          d.tasks
-            .filter((t) => t.status === "new" && d.tracks.has(t.id))
-            .map((t) => t.id),
+      foldResource(tasks, {
+        loading: () => NO_IDS,
+        error: () => NO_IDS,
+        ready: (rows) =>
+          rows.filter((t) => t.status === "new").map((t) => t.id),
       }),
-    [tracks, tasks],
+    [tasks],
   );
   // The triage of exactly the sidequests shown — a point read by id.
   const triageRows = useLive(taskTriageReads, { ids: readyIds });
@@ -175,7 +189,7 @@ export function LaunchListSection(): ReactElement {
         unavailable: () => NO_ROWS,
         ready: (d) => {
           const ready = d.tasks
-            .filter((t) => t.status === "new" && d.tracks.has(t.id))
+            .filter((t) => t.status === "new")
             .map((t) => ({
               id: t.id,
               title: t.title,
