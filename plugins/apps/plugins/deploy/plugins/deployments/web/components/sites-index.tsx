@@ -12,7 +12,7 @@ import {
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   Inset,
@@ -142,6 +142,7 @@ function SitesBody({
   servers: readonly ServerListRow[];
   readiness: ResourceReadiness;
 }): ReactElement {
+  const openDialog = useOpenDialog();
   const openPane = useOpenPane();
 
   const extraFields = useMemo<FieldDef<Deployment>[]>(() => {

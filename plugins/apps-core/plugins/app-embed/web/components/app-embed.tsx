@@ -6,6 +6,7 @@ import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { showToast } from "@plugins/shell/plugins/toast/web";
+import { RenderOrigin } from "@plugins/primitives/plugins/scope/plugins/render-origin/web";
 import { Apps } from "@plugins/apps-core/web";
 import {
   TabsProvider,
@@ -44,6 +45,10 @@ const refuseLeave: AppEmbedLeave = () => {
  *   base path (the Desktop's `/desktop`) switches the embed's surface mode,
  *   whose windows are then the embed's own tabs; anything else is
  *   `onLeave(url)` — by default a toast, and the embed stays.
+ * - **Its own render origin** (`scope/render-origin`): a toast's body or an
+ *   imperative dialog raised inside renders in the embed's tree — its tab set,
+ *   theme and whatever transport and plugin scope surround it — not in the
+ *   page chrome that shows it.
  * - **Its own theme scope**, `app:<id>` of the focused tab's app, with
  *   `transform-gpu` so `position: fixed` app chrome (a sidebar) resolves
  *   against the embed, not the viewport. A placement that would escape to the
@@ -95,13 +100,17 @@ function EmbedFrame({ className }: { className: string | undefined }) {
         className,
       )}
     >
-      <PluginErrorBoundary label="App embed">
-        {surface ? (
-          renderIsolated(Apps.Surface, surface as unknown as Contribution, {})
-        ) : (
-          <AppTabsBody />
-        )}
-      </PluginErrorBoundary>
+      {/* The embed's render origin: a toast or dialog raised inside renders
+          under its tab set (a link in it moves the embed) and app theme. */}
+      <RenderOrigin>
+        <PluginErrorBoundary label="App embed">
+          {surface ? (
+            renderIsolated(Apps.Surface, surface as unknown as Contribution, {})
+          ) : (
+            <AppTabsBody />
+          )}
+        </PluginErrorBoundary>
+      </RenderOrigin>
     </Theme>
   );
 }

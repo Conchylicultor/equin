@@ -14,6 +14,10 @@
  *     control (as on the real desktop): the windows give way to that one tab,
  *     filling the embed box — the embed is its tab set's viewport — and the
  *     page stays as it was; Esc brings the desktop back, both windows intact;
+ *  3b. right-clicks the empty desktop and changes the wallpaper through
+ *     "Change wallpaper…" — an imperative dialog, rendered in the embed's own
+ *     render origin, so the picker reads and writes the scope's config (the
+ *     pick reads back as selected when the picker reopens);
  *  4. checks the page's own state is untouched: its sessionStorage tab set
  *     and window layout are byte-identical to before (the embed's desktop
  *     keeps its layout in memory, never in the page's storage).
@@ -102,6 +106,60 @@ async function pageShellStorage(page: Page): Promise<unknown> {
     }
     return { tabSets, windowKeys };
   });
+}
+
+/**
+ * Right-click the empty desktop inside the embed (a point no window covers,
+ * where the backdrop's capture layer is on top) and pick "Change wallpaper…";
+ * returns the wallpaper dialog.
+ */
+async function openWallpaperPicker(page: Page): Promise<Locator> {
+  const point = await embedRoot(page).evaluate((embed) => {
+    const box = embed.getBoundingClientRect();
+    for (let y = box.top + 40; y < box.bottom - 80; y += 24)
+      for (let x = box.left + 24; x < box.right - 24; x += 24) {
+        const el = document.elementFromPoint(x, y);
+        if (
+          el instanceof HTMLElement &&
+          embed.contains(el) &&
+          el.getAttribute("aria-hidden") === "true" &&
+          el.classList.contains("inset-0")
+        )
+          return { x, y };
+      }
+    return null;
+  });
+  if (point === null) throw new Error("no empty desktop to right-click");
+  await page.mouse.click(point.x, point.y, { button: "right" });
+  await page
+    .getByRole("menuitem", { name: /Change wallpaper/ })
+    .first()
+    .click();
+  const dialog = page
+    .getByRole("dialog")
+    .filter({ hasText: "Change wallpaper" })
+    .first();
+  await dialog.waitFor({ timeout: RENDER_TIMEOUT_MS });
+  return dialog;
+}
+
+/**
+ * Change the wallpaper to a built-in one not in use; returns its title (the
+ * tile's image alt), or null when the dialog did not close on the pick.
+ */
+async function changeWallpaper(page: Page): Promise<string | null> {
+  const dialog = await openWallpaperPicker(page);
+  const tile = dialog.locator('button[aria-pressed="false"]:has(img)').first();
+  const title = await tile.locator("img").getAttribute("alt");
+  await tile.click();
+  const closed = await dialog
+    .waitFor({ state: "detached", timeout: RENDER_TIMEOUT_MS })
+    .then(() => true)
+    .catch((err: unknown) => {
+      if (err instanceof Error && err.name === "TimeoutError") return false;
+      throw err;
+    });
+  return closed ? title : null;
 }
 
 await withBrowser(async (h) => {
@@ -237,6 +295,30 @@ await withBrowser(async (h) => {
     (ids) => ids.length === 2 && both.value.every((id) => ids.includes(id)),
   );
   await snap(page, OUT, "3-back-to-desktop");
+
+  // ── 3b. an imperative dialog raised inside the embed ────────────────────
+  // The desktop's "Change wallpaper…" opens through the imperative dialog,
+  // which renders in the caller's render origin: the picker reads the
+  // scope's registry and config, and its pick writes the scope's config —
+  // a dialog rendered by the page's chrome would write the page's.
+  const pickedTitle = await changeWallpaper(page);
+  r.ok(
+    "Change wallpaper… opens the picker in the embed's scope, and a pick closes it",
+    pickedTitle !== null,
+    String(pickedTitle),
+  );
+  if (pickedTitle !== null) {
+    const pressed = await openWallpaperPicker(page);
+    const tile = pressed.getByRole("button", { name: pickedTitle });
+    r.eq(
+      "reopened, the picker shows the pick — written to the scope's config and read back",
+      await tile.getAttribute("aria-pressed"),
+      "true",
+    );
+    await page.keyboard.press("Escape");
+    await pressed.waitFor({ state: "detached", timeout: RENDER_TIMEOUT_MS });
+  }
+  await snap(page, OUT, "3b-wallpaper");
 
   // ── 4. the page's own state ─────────────────────────────────────────────
   await page.waitForTimeout(1_000);

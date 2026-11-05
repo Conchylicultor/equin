@@ -639,6 +639,7 @@ export const browserHost = {
     "primitives.scope.app-instance",
     "primitives.scope.dom-scope",
     "primitives.scope.install-sink",
+    "primitives.scope.render-origin",
     "primitives.scope.scoped-store",
     "primitives.scope.surface-id",
     "primitives.scope.tab-id",

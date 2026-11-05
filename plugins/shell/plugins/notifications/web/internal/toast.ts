@@ -13,7 +13,7 @@ import {
 } from "../../core";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import type { SymbolRef } from "@plugins/ui/plugins/icons/core";
-import { toastNotification } from "../components/notification-view";
+import { useToastNotification } from "../components/notification-view";
 
 export interface ToastArgs {
   type: string;
@@ -52,10 +52,11 @@ export const recentClientIds = new Set<string>();
 export type Toast = (args: ToastArgs) => void;
 
 /**
- * The toaster of this subtree: shows the toast at once (Shell.Toast), then
+ * The toaster of this subtree: shows the toast at once — rendered in the
+ * subtree's render origin, so its action and subject act there — then
  * persists it as a notification through the subtree's transport — so a toast
- * raised inside a scope with its own server (the demo) is written there, never
- * to the computer's. Stable per transport.
+ * raised inside a scope with its own server (the demo) is shown, acted on and
+ * written there, never on the computer's. Stable per transport and origin.
  *
  * Persisting is a fire-and-forget side-write of a toast already on screen.
  * It is declared `needsMachine` (D4): under a transport without the computer
@@ -64,6 +65,7 @@ export type Toast = (args: ToastArgs) => void;
 export function useToast(): Toast {
   const fetchEndpoint = useFetchEndpoint();
   const persist = useMachineAvailability(createNotification).available;
+  const toastNotification = useToastNotification();
   return useCallback(
     (args: ToastArgs) => {
       const variant = args.variant ?? "info";
@@ -122,6 +124,6 @@ export function useToast(): Toast {
         },
       );
     },
-    [fetchEndpoint, persist],
+    [fetchEndpoint, persist, toastNotification],
   );
 }

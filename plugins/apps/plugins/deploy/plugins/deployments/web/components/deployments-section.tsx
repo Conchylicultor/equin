@@ -12,7 +12,7 @@ import {
   useCombinedResources,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type { Server } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import {
@@ -138,6 +138,7 @@ function DeploymentsBody({
   statusOf: SiteStatusOf;
   readiness: ResourceReadiness;
 }): ReactNode {
+  const openDialog = useOpenDialog();
   const openPane = useOpenPane();
   // The selection is the ROUTE, never local state: the highlighted row and the
   // open column are then the same fact, and a deep link paints correctly.

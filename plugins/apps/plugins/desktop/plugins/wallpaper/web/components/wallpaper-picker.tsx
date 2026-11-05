@@ -1,7 +1,7 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { showToast } from "@plugins/shell/plugins/toast/web";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useSetConfig } from "@plugins/config_v2/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { DialogTitle } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -14,16 +14,20 @@ import { Wallpaper } from "../slots";
 import { saveCandidate } from "../internal/save";
 
 /**
- * Open the wallpaper picker as a modal dialog. One tab per registered
+ * This surface's wallpaper-picker opener: opens it as a modal dialog in the
+ * surface's render origin (inside the demo, against the demo's config). One tab per registered
  * {@link Wallpaper.Provider} (collection-consumer — never names a provider). On
  * pick, the dialog centralizes saving: it funnels the candidate through the
  * server save path, then writes `wallpaperConfig` (the single config-write site),
  * then closes.
  */
-export function openWallpaperPicker(): void {
-  void openDialog((close) => <WallpaperPickerDialog onClose={close} />, {
-    size: "md",
-  });
+export function useOpenWallpaperPicker(): () => void {
+  const openDialog = useOpenDialog();
+  return useCallback(() => {
+    void openDialog((close) => <WallpaperPickerDialog onClose={close} />, {
+      size: "md",
+    });
+  }, [openDialog]);
 }
 
 function WallpaperPickerDialog({ onClose }: { onClose: () => void }) {

@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { OpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
@@ -64,13 +65,18 @@ export type SourceHydration =
     };
 
 /**
- * What the library hands a source's imperative `createOption.onSelect`: the
- * fetcher bound to the transport of the surface the library renders in, so a
- * source never reaches past it. For writes only — `fetchEndpoint` refuses a
- * read (a GET) at compile time; reads are live (`useHydration`).
+ * What the library hands a source's imperative `createOption.onSelect`, bound
+ * to the surface the library renders in, so a source never reaches past it:
+ *
+ * - `fetchEndpoint` — the fetcher of the surface's transport. For writes only —
+ *   it refuses a read (a GET) at compile time; reads are live (`useHydration`).
+ * - `openDialog` — the dialog opener of the surface's render origin: a dialog
+ *   a source opens renders where the library is (inside the demo, against the
+ *   demo's server), never in the page around it.
  */
 export interface SourceContext {
   fetchEndpoint: FetchEndpoint;
+  openDialog: OpenDialog;
 }
 
 /**

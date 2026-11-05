@@ -156,7 +156,7 @@ the panel until it is given something to say.
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
     - `primitives/networking.useTransport`
-    - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+    - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
     - `shell/toast.showToast`
     - `ui/icons.Icon`
   - Exports (values): `worktreeCleanupPane`

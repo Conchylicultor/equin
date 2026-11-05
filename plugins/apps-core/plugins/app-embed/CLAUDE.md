@@ -58,6 +58,7 @@ Tests: `web/__tests__/app-embed.test.tsx`.
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
     - `primitives/error-boundary.PluginErrorBoundary`
+    - `primitives/scope/render-origin.RenderOrigin`
     - `primitives/slot-render.renderIsolated`
     - `shell/toast.showToast`
   - Exports (types): `AppEmbedLeave`

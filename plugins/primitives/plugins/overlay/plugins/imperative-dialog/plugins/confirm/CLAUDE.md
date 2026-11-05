@@ -1,17 +1,19 @@
 # confirm
 
-`confirmDialog(opts)` — the destructive-confirm helper. A thin policy layer over
-`openDialog`: it opens the body at `{ size: "sm" }` so it inherits the unified
-panel + padding from the host's `DialogContent`, and the body is a bare
+`useConfirmDialog()` → `confirm(opts)` — the destructive-confirm helper. A thin
+policy layer over `useOpenDialog` (so it renders in the caller's render origin):
+it opens the body at `{ size: "sm" }` so it inherits the unified panel + padding
+from the dialog's `DialogContent`, and the body is a bare
 `<Stack gap="md">` (title + description + optional `children` + inline error +
 Cancel/Confirm row) with **no `Surface`/width of its own**. That the panel chrome
 lives in `DialogContent` is the whole reason this can be a ~30-line helper.
 
-## Fire-and-forget — `void confirmDialog(...)`, never `await` in an onClick
+## Fire-and-forget — `void confirm(...)`, never `await` in an onClick
 
-`confirmDialog` returns `Promise<boolean>` that resolves when the dialog closes
+The confirm returns `Promise<boolean>` that resolves when the dialog closes
 (`true` iff `onConfirm` completed, `false` on Cancel / Escape / backdrop). Call
-it fire-and-forget: `void confirmDialog({ ... })`. Do **not** `await` it inside a
+it fire-and-forget: `void confirmDialog({ ... })` (with
+`const confirmDialog = useConfirmDialog()` in the component or hook). Do **not** `await` it inside a
 `Button`'s `onClick` — `Button` auto-pends off any thenable its handler returns,
 so awaiting the confirm would leave the *launching* button spinning for the
 entire lifetime of the dialog. The boolean return exists for the rare caller that
@@ -54,7 +56,7 @@ appears (YAGNI).
 
 ## Plugin reference
 
-- Description: confirmDialog(opts) → Promise<boolean>: a destructive-confirm helper over openDialog. Renders a sm panel (title + description + optional children + inline error + Cancel/Confirm), keeps the dialog open and shows getEndpointErrorMessage on failure, and resolves true iff onConfirm completed.
+- Description: useConfirmDialog() → confirm(opts) → Promise<boolean>: a destructive-confirm helper over useOpenDialog (rendered in the caller's render origin). Renders a sm panel (title + description + optional children + inline error + Cancel/Confirm), keeps the dialog open and shows getEndpointErrorMessage on failure, and resolves true iff onConfirm completed.
 - Web:
   - Uses:
     - `infra/endpoints.EndpointError`
@@ -65,11 +67,13 @@ appears (YAGNI).
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.DialogDescription`
     - `primitives/css/ui-kit.DialogTitle`
-    - `primitives/overlay/imperative-dialog.openDialog`
+    - `primitives/overlay/imperative-dialog.useOpenDialog`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/shortcuts.formatShortcutLabel`
-  - Exports (types): `ConfirmDialogOptions`
-  - Exports (values): `confirmDialog`
+  - Exports (types):
+    - `ConfirmDialog`
+    - `ConfirmDialogOptions`
+  - Exports (values): `useConfirmDialog`
 - Cross-plugin:
   - Imported by:
     - `apps/demo/shell`

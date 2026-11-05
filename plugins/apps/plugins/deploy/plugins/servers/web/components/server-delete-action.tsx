@@ -1,6 +1,6 @@
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { Server } from "../../shared";
@@ -12,6 +12,7 @@ import { DeleteServerDialog } from "./delete-server-dialog";
  * the Connection fields it used to ride the header of.
  */
 export function ServerDeleteAction({ server }: { server: Server }) {
+  const openDialog = useOpenDialog();
   const remove = useEndpointMutation(deleteServer);
 
   function handleDelete() {

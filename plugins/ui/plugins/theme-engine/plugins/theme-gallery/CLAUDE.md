@@ -55,7 +55,7 @@ its lines are the schema's: name, source, tags), `list` draws `ThemeSwatch`.
     - `QuickTheme.Section` "Theme" → `QuickThemePicker`
     - `item-actions` "rename" → `RenameThemeAction`
     - `item-actions` "delete" → `DeleteThemeAction`
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×7
     - `ui/theme-engine` ×7
     - `primitives/css/ui-kit` ×4
@@ -63,6 +63,7 @@ its lines are the schema's: name, source, tags), `list` draws `ThemeSwatch`.
     - `network/live/live-state` ×3
     - `ui/theme-engine/saved-themes` ×3
     - `config_v2` ×2
+    - `primitives/overlay/imperative-dialog/confirm` ×2
     - `apps-core.Apps`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
@@ -71,8 +72,7 @@ its lines are the schema's: name, source, tags), `list` draws `ThemeSwatch`.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
-    - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
-    - `primitives/overlay/imperative-dialog.openDialog`
+    - `primitives/overlay/imperative-dialog.useOpenDialog`
     - `primitives/syntax-highlight.useDarkMode`
     - `ui/theme-engine/quick-theme.QuickTheme`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`

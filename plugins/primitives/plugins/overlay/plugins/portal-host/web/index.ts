@@ -1,6 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { PortalHost, usePortalContainer } from "./internal/portal-host";
+export {
+  PortalContainerProvider,
+  PortalHost,
+  usePortalContainer,
+} from "./internal/portal-host";
 
 export default {
   description:

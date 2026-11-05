@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactElement } from "react";
+import { useCallback, type ComponentProps, type ReactElement } from "react";
 import { useAudience } from "@plugins/audience/web";
 import { DeveloperMark } from "@plugins/audience/plugins/developer-mark/web";
 import {
@@ -25,7 +25,7 @@ import {
 } from "@plugins/primitives/plugins/link-gesture/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useShowCustomToast } from "@plugins/shell/plugins/toast/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import {
@@ -628,11 +628,24 @@ export function NotificationToastCard({
 /** Errors stay until dismissed or acted on; everything else leaves after 4s. */
 export const TOAST_DURATION_MS = 4000;
 
-/** Show `n` as a toast through the toast host's custom-content path. */
-export function toastNotification(n: NotificationContent): void {
-  showToast({
-    render: ({ dismiss }) => <NotificationToastCard n={n} dismiss={dismiss} />,
-    duration: n.variant === "error" ? Infinity : TOAST_DURATION_MS,
-    audience: n.audience,
-  });
+/**
+ * Shows a notification as a toast through the toast host's custom-content
+ * path, rendered in the caller's render origin — so its action kind, its
+ * `useLink` / `useRun` and its subject resolve where the caller is (inside the
+ * demo: the demo's registry, server and embed), never in the page chrome
+ * that shows the toast.
+ */
+export function useToastNotification(): (n: NotificationContent) => void {
+  const showCustomToast = useShowCustomToast();
+  return useCallback(
+    (n: NotificationContent) =>
+      showCustomToast({
+        render: ({ dismiss }) => (
+          <NotificationToastCard n={n} dismiss={dismiss} />
+        ),
+        duration: n.variant === "error" ? Infinity : TOAST_DURATION_MS,
+        audience: n.audience,
+      }),
+    [showCustomToast],
+  );
 }

@@ -455,7 +455,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses: 91 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 92 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `primitives/data-view` ×6
     - `infra/endpoints` ×5
@@ -470,6 +470,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/css/spacing` ×2
     - `primitives/icon-button` ×2
     - `primitives/latest-ref` ×2
+    - `primitives/overlay/imperative-dialog/confirm` ×2
     - `primitives/pane` ×2
     - `primitives/slot-render` ×2
     - `apps-core/tabs.useAppLinkProps`
@@ -501,7 +502,6 @@ navigation, so it starts from nothing remembered.
     - `primitives/launch.LaunchAgentPopover`
     - `primitives/loading.Loading`
     - `primitives/networking.useTransport`
-    - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/portal-host.PortalHost`
     - `primitives/relative-time.RelativeTime`

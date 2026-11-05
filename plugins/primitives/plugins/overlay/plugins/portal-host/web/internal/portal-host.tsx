@@ -49,6 +49,27 @@ export function PortalHost({
 }
 
 /**
+ * Re-provides a host's element to content rendered in ANOTHER part of the
+ * React tree than the host but shown inside it — content raised from its own
+ * render origin (`scope/render-origin`) into a hosted region (a toast's body,
+ * in the toast layer), whose popups must still be drawn in that region.
+ * `container` is the host element as `usePortalContainer()` read it there.
+ */
+export function PortalContainerProvider({
+  container,
+  children,
+}: {
+  container: HTMLElement | null | undefined;
+  children: ReactNode;
+}): ReactNode {
+  return (
+    <PortalContainerContext.Provider value={container}>
+      {children}
+    </PortalContainerContext.Provider>
+  );
+}
+
+/**
  * The container a popup portals into: the nearest {@link PortalHost}'s
  * element; `null` inside a host not mounted yet, which the library reads as
  * "wait" (never `body`, where the popup would be invisible); `undefined` (the

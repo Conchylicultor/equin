@@ -6,7 +6,7 @@ import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -109,6 +109,7 @@ export function DangerZone({ deploymentId }: SectionProps): ReactNode {
 }
 
 function DangerZoneBody({ deployment }: { deployment: Deployment }): ReactNode {
+  const openDialog = useOpenDialog();
   // Predicted: the site leaves every read at once, so the dialog closes and
   // the index opens with it; a refusal is the rejection toast.
   const remove = useEndpointMutation(deleteDeployment);

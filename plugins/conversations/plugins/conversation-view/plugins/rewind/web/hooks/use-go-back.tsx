@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useConversationById } from "@plugins/conversations/web";
 import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
-import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
+import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import {
   getEndpointErrorMessage,
   useFetchEndpoint,
@@ -45,6 +45,7 @@ export function useGoBackToMessage({
   busy: boolean;
   run: (mode: RewindMode) => Promise<void>;
 } {
+  const confirmDialog = useConfirmDialog();
   const conversation = rowOrStale(useConversationById(convId));
   const fetchEndpoint = useFetchEndpoint();
   const read = useLiveReader();

@@ -108,7 +108,10 @@ React, so it cannot call `useFetchEndpoint()`; the library passes
 `ctx.fetchEndpoint` — the fetcher bound to the transport the library renders
 under — so a source's writes stay on that transport (a demo scope's, else the
 page's) instead of reaching for one itself. Writes only: a read is live
-(`useHydration`).
+(`useHydration`). Likewise `ctx.openDialog`, the dialog opener of the library's
+render origin (`scope/render-origin`): a source's dialog (Ultimate Guitar's
+import, Transcribe) renders where the library is, so inside the demo it talks
+to the demo's server.
 
 Because a `createOption.onSelect` is plain data (no component, no hooks), the
 open-after-create step can't use the `useSongLink` hook. Sources call
@@ -289,7 +292,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
-  - Uses: 94 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 95 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×13
     - `primitives/data-view` ×7
     - `apps/sonata/shell` ×6
@@ -328,6 +331,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
+    - `primitives/overlay/imperative-dialog.useOpenDialog`
     - `primitives/relative-time.formatRelativeTime`
     - `primitives/slot-render.defineRenderSlot`
     - `ui/icons.Icon`

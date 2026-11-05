@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
+import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
@@ -85,6 +85,7 @@ function RollbackButton({
   release: string;
   deployment: Deployment;
 }): ReactElement {
+  const confirmDialog = useConfirmDialog();
   const blocked = useBlockedReason(deployment);
   const live = useLive(deployRunHistory, {
     where: {

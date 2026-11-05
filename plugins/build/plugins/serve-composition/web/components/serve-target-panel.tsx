@@ -10,7 +10,7 @@ import {
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
+import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
@@ -66,6 +66,7 @@ export function ServeTargetPanel({
   item: CompositionManifestItem;
   status: ServeStatus;
 }): ReactElement {
+  const confirmDialog = useConfirmDialog();
   const { setMode, rebuildNow } = useServeComposition();
   // Reset the served composition's own DB + config back to first-launch. Handles
   // its own toasts (success + failure) so `onError` suppresses the global one.

@@ -193,7 +193,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture/new-tab.NewTabButton`
-    - `primitives/overlay/imperative-dialog.openDialog`
+    - `primitives/overlay/imperative-dialog.useOpenDialog`
     - `ui/icons.Icon`
   - Exports (types):
     - `ConfigValues`

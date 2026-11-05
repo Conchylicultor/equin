@@ -26,7 +26,7 @@ import {
   type FieldDef,
   type FieldOption,
 } from "@plugins/primitives/plugins/data-view/web";
-import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
+import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
   bulkDeleteWorktrees,
@@ -376,6 +376,7 @@ const STEP_LABEL: Record<ReapStep, string> = {
  * re-read by the server once the reap ends, so the list never needs a reload.
  */
 function DeleteAction({ entry }: { entry: WorktreeEntry }): ReactElement {
+  const confirmDialog = useConfirmDialog();
   const transport = useTransport();
   const [step, setStep] = useState<ReapStep | null>(null);
   const branchName = entry.worktreePath.split("/").pop() ?? entry.attemptId;

@@ -15,7 +15,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
+import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   placeTags,
@@ -262,6 +262,7 @@ function TagRowActions({
   hasChildren: boolean;
   onAddChild: () => Promise<void>;
 }): ReactNode {
+  const confirmDialog = useConfirmDialog();
   const { update: updateTag, remove: deleteTag } =
     useTagTreeActions(placeTagTree);
   // A tag with a role (Been, Want to go) is how the app finds them: the tree

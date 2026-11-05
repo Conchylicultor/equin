@@ -524,7 +524,7 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/loading.Loading`
-    - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+    - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/pane.Pane`
     - `primitives/shortcuts.useSurfaceShortcuts`

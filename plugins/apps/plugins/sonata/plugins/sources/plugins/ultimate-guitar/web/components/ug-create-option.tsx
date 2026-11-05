@@ -1,5 +1,4 @@
-import type { CreateOption } from "@plugins/primitives/plugins/data-view/web";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import type { SourceCreateOption } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { UgImportDialog } from "./ug-import-dialog";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -15,11 +14,11 @@ const musicNoteIcon = symbol("music-note");
  * control busy while it's open. Fetch-first means the library never gains a
  * half-formed "Untitled" song when the user cancels. Fully imperative — no hooks.
  */
-export const ultimateGuitarCreateOption: CreateOption = {
+export const ultimateGuitarCreateOption: SourceCreateOption = {
   id: "ultimate-guitar",
   label: "Import from Ultimate Guitar",
   description: "Paste a tab URL to import chords, sections, and lyrics.",
   icon: <Icon icon={musicNoteIcon} className="size-4" />,
-  onSelect: () =>
+  onSelect: ({ openDialog }) =>
     openDialog((close) => <UgImportDialog onClose={close} />, { size: "md" }),
 };

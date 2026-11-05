@@ -89,7 +89,7 @@ plus `sshKey`.
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/loading.Loading`
-    - `primitives/overlay/imperative-dialog.openDialog`
+    - `primitives/overlay/imperative-dialog.useOpenDialog`
     - `primitives/slot-render.defineRenderSlot`
     - `ui/icons.Icon`
   - Exports (types):

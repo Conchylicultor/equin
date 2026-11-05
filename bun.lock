@@ -6146,6 +6146,10 @@
       "name": "@equin/plugin-primitives-scope-install-sink",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/scope/plugins/render-origin": {
+      "name": "@equin/plugin-primitives-scope-render-origin",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/scope/plugins/scoped-store": {
       "name": "@equin/plugin-primitives-scope-scoped-store",
       "version": "0.0.1",
@@ -10178,6 +10182,8 @@
     "@equin/plugin-primitives-scope-dom-scope": ["@equin/plugin-primitives-scope-dom-scope@workspace:plugins/primitives/plugins/scope/plugins/dom-scope"],
 
     "@equin/plugin-primitives-scope-install-sink": ["@equin/plugin-primitives-scope-install-sink@workspace:plugins/primitives/plugins/scope/plugins/install-sink"],
+
+    "@equin/plugin-primitives-scope-render-origin": ["@equin/plugin-primitives-scope-render-origin@workspace:plugins/primitives/plugins/scope/plugins/render-origin"],
 
     "@equin/plugin-primitives-scope-scoped-store": ["@equin/plugin-primitives-scope-scoped-store@workspace:plugins/primitives/plugins/scope/plugins/scoped-store"],
 

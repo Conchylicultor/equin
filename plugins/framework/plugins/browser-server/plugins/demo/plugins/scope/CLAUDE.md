@@ -90,6 +90,7 @@ in-realm `MessageChannel` standing in for the worker).
     - `primitives/log-channels.clientLog`
     - `primitives/networking.TransportProvider`
     - `primitives/networking.useTransport`
+    - `primitives/scope/render-origin.RenderOrigin`
   - Exports (types): `DemoHostControl`
   - Exports (values):
     - `DemoScope`

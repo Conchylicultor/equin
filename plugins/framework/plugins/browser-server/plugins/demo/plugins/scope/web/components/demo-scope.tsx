@@ -45,6 +45,7 @@ import {
   useTransport,
 } from "@plugins/primitives/plugins/networking/web";
 import { PluginScope } from "@plugins/framework/plugins/web-sdk/core";
+import { RenderOrigin } from "@plugins/primitives/plugins/scope/plugins/render-origin/web";
 
 // ── The host ───────────────────────────────────────────────────────────
 
@@ -282,7 +283,12 @@ export function DemoScope({
     <DemoHostControlContext.Provider value={control}>
       <TransportProvider transport={transport}>
         <NotificationsProvider>
-          <PluginScope composition={scenario.host}>{children}</PluginScope>
+          <PluginScope composition={scenario.host}>
+            {/* What the scope's code hands to page chrome (a toast's body, an
+                imperative dialog) renders here, against the host — never
+                in the page's tree, against the page's server. */}
+            <RenderOrigin>{children}</RenderOrigin>
+          </PluginScope>
         </NotificationsProvider>
       </TransportProvider>
     </DemoHostControlContext.Provider>

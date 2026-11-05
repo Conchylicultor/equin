@@ -15,7 +15,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
+import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { PlaceRichDetails } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
@@ -116,6 +116,7 @@ export function PlaceCard({
   /** Ask the map for the custom place's new position (pick mode). */
   onMovePin: () => void;
 }) {
+  const confirmDialog = useConfirmDialog();
   const updatePlace = useUpdatePlace();
   const deletePlace = useDeletePlace();
   const [photosOpen, setPhotosOpen] = useState(false);

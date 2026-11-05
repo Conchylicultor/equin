@@ -11,7 +11,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/core";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { baseName } from "../../core";
-import { askConflict } from "../components/conflict-dialog";
+import { useAskConflict } from "../components/conflict-dialog";
 
 /** The folder holding an absolute path (host-fs answers resolved paths). */
 function dirOf(path: string): string {
@@ -72,6 +72,7 @@ export function useMoveInto(): (
   destDir: string,
 ) => Promise<readonly string[]> {
   const move = useEndpointMutation(hostFsMove);
+  const askConflict = useAskConflict();
   return useCallback(
     async (sources, destDir) => {
       // Moving renames paths on the computer's disk: a host without the
@@ -167,6 +168,6 @@ export function useMoveInto(): (
       }
       return moved;
     },
-    [move],
+    [move, askConflict],
   );
 }

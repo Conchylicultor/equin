@@ -26,7 +26,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
-    - `primitives/overlay/imperative-dialog.openDialog`
+    - `primitives/overlay/imperative-dialog.useOpenDialog`
 - Server:
   - Contributes:
     - `deploy.gate` "deploy-secrets"

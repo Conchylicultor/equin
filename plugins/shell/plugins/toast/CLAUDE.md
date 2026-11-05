@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted. A toast declaring audience developer is shown only in Developer mode. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.
+- Description: Global toast notifications: a plain showToast() (text toasts: data only) backed by sonner's global API, and useShowCustomToast() — a toast whose content the caller draws, rendered in the caller's render origin (its transport, registry and navigator) while the stack only places it, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted. A toast declaring audience developer is shown only in Developer mode. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.
 - Web:
   - Contributes:
     - `Core.Root` → `ToasterHost`
@@ -20,7 +20,12 @@
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/z-layers/stack.defineZLayer`
     - `primitives/dom/element-size.useElementSize`
+    - `primitives/latest-ref.useEventCallback`
     - `primitives/link-gesture.linkProps`
+    - `primitives/overlay/portal-host.PortalContainerProvider`
+    - `primitives/overlay/portal-host.usePortalContainer`
+    - `primitives/scope/render-origin.RenderOriginHandle`
+    - `primitives/scope/render-origin.useRenderOrigin`
     - `primitives/select-scope.ContentScope`
     - `ui/icons.Icon`
   - Exports (types):
@@ -30,6 +35,7 @@
   - Exports (values):
     - `isInToast`
     - `showToast`
+    - `useShowCustomToast`
     - `useSuppressToasts`
 - Cross-plugin:
   - Uses tokens:

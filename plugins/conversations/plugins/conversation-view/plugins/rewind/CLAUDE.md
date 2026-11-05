@@ -114,7 +114,7 @@ rename throws before anything has changed.
     - `primitives/css/spacing.Stack`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.useLaunchConversation`
-    - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+    - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
     - `shell/notifications.Toast`
     - `shell/notifications.useToast`
   - Exports (types): `RewindMode`

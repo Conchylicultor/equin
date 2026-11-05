@@ -4,7 +4,7 @@ import { wallpaperConfig } from "../core";
 import { Wallpaper } from "./slots";
 
 export { Wallpaper } from "./slots";
-export { openWallpaperPicker } from "./components/wallpaper-picker";
+export { useOpenWallpaperPicker } from "./components/wallpaper-picker";
 export { WallpaperSearchPanel } from "./components/wallpaper-search-panel";
 export { DesktopContextMenu } from "./components/desktop-context-menu";
 export { WallpaperAttribution } from "./components/wallpaper-attribution";

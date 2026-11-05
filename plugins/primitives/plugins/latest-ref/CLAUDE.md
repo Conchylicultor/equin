@@ -22,13 +22,14 @@ stability-independent and is suppressed at the site with an inline disable.)
 
 - Description: Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
 - Cross-plugin:
-  - Imported by: 79 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 80 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×33
     - `apps` ×24
     - `page` ×4
     - `conversations` ×3
     - `map` ×2
     - `network` ×2
+    - `shell` ×2
     - `apps-core/tabs`
     - `build/serve-composition`
     - `debug/slow-ops`
@@ -39,7 +40,6 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `reorder`
     - `reports/main-thread-stall`
     - `screenshot`
-    - `shell/notifications`
 - Web:
   - Exports (values):
     - `useEventCallback`

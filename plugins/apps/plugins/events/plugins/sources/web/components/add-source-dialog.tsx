@@ -1,7 +1,7 @@
-import { useState, type ReactElement } from "react";
+import { useCallback, useState, type ReactElement } from "react";
 import { fieldsToZodObject } from "@plugins/fields/core";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import {
   Button,
   DialogDescription,
@@ -29,24 +29,31 @@ const CADENCE_SEGMENTS = REFRESH_CADENCES.map((id) => ({
 }));
 
 /**
- * Open the add-source dialog for one registered source type.
+ * The add-source dialog opener of this surface: opens it for one registered
+ * source type, in the surface's render origin.
  *
  * A dialog rather than a `.../new` sentinel route (the `deploy/servers` shape)
  * because the type is chosen BEFORE the form exists: a route would have to carry
  * the type id as a second param and reserve a sentinel id, and the detail pane's
  * `:sourceId` segment would then have to mean two things.
  */
-export function openAddSourceDialog(
+export function useOpenAddSourceDialog(): (
   type: EventSourceTypeContribution,
   onCreated: (sourceId: string) => void,
-): void {
-  void openDialog(
-    (close) => (
-      <AddSourceDialog type={type} onCreated={onCreated} onClose={close} />
-    ),
-    // Not dismissible by an outside press: the form holds a part-filled set of
-    // source fields (often a pasted URL or token) that a stray click would drop.
-    { dismissible: false },
+) => void {
+  const openDialog = useOpenDialog();
+  return useCallback(
+    (type, onCreated) => {
+      void openDialog(
+        (close) => (
+          <AddSourceDialog type={type} onCreated={onCreated} onClose={close} />
+        ),
+        // Not dismissible by an outside press: the form holds a part-filled set of
+        // source fields (often a pasted URL or token) that a stray click would drop.
+        { dismissible: false },
+      );
+    },
+    [openDialog],
   );
 }
 

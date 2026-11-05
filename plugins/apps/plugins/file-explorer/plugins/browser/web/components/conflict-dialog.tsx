@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import {
   Button,
   DialogDescription,
@@ -7,7 +7,7 @@ import {
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import type { HostFsMoveResolution } from "@plugins/infra/plugins/host-fs/core";
 
 /** What the person chose for one name collision of a move. */
@@ -16,30 +16,41 @@ export type ConflictAnswer =
   /** Cancel, Escape or a press outside: this one and every later one skipped. */
   | { kind: "cancel" };
 
-/**
- * Ask what to do with one entry whose name is already taken in the folder it
- * is being moved into: Replace / Keep both / Skip, and — while more
- * collisions wait behind this one — "Apply to all N remaining".
- */
-export function askConflict(conflict: {
+/** One collision to ask about. */
+interface Conflict {
   name: string;
   destName: string;
   /** How many collisions come after this one. */
   remaining: number;
-}): Promise<ConflictAnswer> {
-  let answer: ConflictAnswer = { kind: "cancel" };
-  return openDialog(
-    (close) => (
-      <ConflictDialogBody
-        {...conflict}
-        onAnswer={(a) => {
-          answer = a;
-          close();
-        }}
-      />
-    ),
-    { size: "sm" },
-  ).then(() => answer);
+}
+
+/**
+ * This surface's conflict question (in its render origin): ask what to do with one entry whose name is already taken in the folder it
+ * is being moved into: Replace / Keep both / Skip, and — while more
+ * collisions wait behind this one — "Apply to all N remaining".
+ */
+export function useAskConflict(): (
+  conflict: Conflict,
+) => Promise<ConflictAnswer> {
+  const openDialog = useOpenDialog();
+  return useCallback(
+    (conflict) => {
+      let answer: ConflictAnswer = { kind: "cancel" };
+      return openDialog(
+        (close) => (
+          <ConflictDialogBody
+            {...conflict}
+            onAnswer={(a) => {
+              answer = a;
+              close();
+            }}
+          />
+        ),
+        { size: "sm" },
+      ).then(() => answer);
+    },
+    [openDialog],
+  );
 }
 
 function ConflictDialogBody({

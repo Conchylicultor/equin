@@ -7,8 +7,8 @@ import type { TSESLint } from "@typescript-eslint/utils";
  *
  * Bans the native browser modals `confirm(x)` / `alert(x)` / `prompt(x)`: they
  * block the main thread with an unstyled OS chrome (no theme, no pending state,
- * invisible to Playwright). Use `confirmDialog` for a yes/no guard, or
- * `openDialog` for a richer body — both from the imperative-dialog primitive.
+ * invisible to Playwright). Use `useConfirmDialog` for a yes/no guard, or
+ * `useOpenDialog` for a richer body — both from the imperative-dialog primitive.
  *
  * Detection is SCOPE-precise, never name-based:
  *
@@ -57,12 +57,12 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Ban native confirm()/alert()/prompt(): they block the event loop and are unthemed. Use confirmDialog / openDialog.",
+        "Ban native confirm()/alert()/prompt(): they block the event loop and are unthemed. Use useConfirmDialog / useOpenDialog.",
     },
     schema: [],
     messages: {
       nativeDialog:
-        "Native `{{name}}()` blocks the main thread with an unstyled browser modal (no theme, no pending state, invisible to Playwright). Use `confirmDialog` from @plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web for a yes/no guard, or `openDialog` from @plugins/primitives/plugins/overlay/plugins/imperative-dialog/web for a richer body.",
+        "Native `{{name}}()` blocks the main thread with an unstyled browser modal (no theme, no pending state, invisible to Playwright). Use `useConfirmDialog` from @plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web for a yes/no guard, or `useOpenDialog` from @plugins/primitives/plugins/overlay/plugins/imperative-dialog/web for a richer body.",
     },
   },
   defaultOptions: [],

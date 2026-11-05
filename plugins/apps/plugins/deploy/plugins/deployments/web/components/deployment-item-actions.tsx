@@ -5,7 +5,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useServerHealth } from "@plugins/apps/plugins/deploy/plugins/health/web";
 import {
@@ -129,6 +129,7 @@ export function DeployAction({
 export function DeleteDeploymentAction({
   row,
 }: ItemActionProps<Deployment>): ReactElement {
+  const openDialog = useOpenDialog();
   // Predicted: the row leaves the list at once and the dialog closes with
   // it; a refusal is the rejection toast.
   const remove = useEndpointMutation(deleteDeployment);

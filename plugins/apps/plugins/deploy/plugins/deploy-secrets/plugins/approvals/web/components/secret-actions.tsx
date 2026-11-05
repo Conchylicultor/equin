@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { approveDeploySecret } from "../../core";
 import type { SecretItem } from "../internal/items";
@@ -15,6 +15,7 @@ const approveIcon = symbol("check");
 export function SetValueAction({
   row,
 }: ItemActionProps<SecretItem>): ReactElement {
+  const openDialog = useOpenDialog();
   return (
     <IconButton
       icon={keyIcon}

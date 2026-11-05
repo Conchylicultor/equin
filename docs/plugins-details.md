@@ -1774,7 +1774,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
-              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
           - Core:
             - Uses:
               - `primitives/pane.defineApp`
@@ -2165,7 +2165,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/endpoints.useEndpointMutation`
                   - `network/live.useLive`
                   - `primitives/icon-button.IconButton`
-                  - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+                  - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
         - **`deploy-secrets`** — readDeploySecret(decl) reads an approved deploy secret on the box, as a set/unset state, through the DeploySecretSource host service (the machine half reads the credential systemd decrypted into the service's credentials directory). The host-only GET /api/host-only/deploy-secrets answers set/unset per named key (never a value) — what ship's health gate asks of the running app.
           - Server:
             - Contributes: `host-service:deploy-secrets.source` "deploy-secrets.source"
@@ -2217,7 +2217,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/icon-button.IconButton`
-                  - `primitives/overlay/imperative-dialog.openDialog`
+                  - `primitives/overlay/imperative-dialog.useOpenDialog`
               - Server:
                 - Contributes:
                   - `deploy.gate` "deploy-secrets"
@@ -2347,7 +2347,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture/new-tab.NewTabLink`
               - `primitives/loading.Loading`
-              - `primitives/overlay/imperative-dialog.openDialog`
+              - `primitives/overlay/imperative-dialog.useOpenDialog`
               - `primitives/relative-time.RelativeTime`
               - `primitives/tabbed-view.defineTabbedView`
               - `ui/icons.Icon`
@@ -2862,7 +2862,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/loading.Loading`
-              - `primitives/overlay/imperative-dialog.openDialog`
+              - `primitives/overlay/imperative-dialog.useOpenDialog`
               - `primitives/slot-render.defineRenderSlot`
               - `ui/icons.Icon`
             - Exports (types):
@@ -3161,7 +3161,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/loading.Loading`
-              - `primitives/overlay/imperative-dialog.openDialog`
+              - `primitives/overlay/imperative-dialog.useOpenDialog`
               - `ui/icons.Icon`
             - Exports (types):
               - `SshConsoleProps`
@@ -3387,7 +3387,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/loading.Loading`
-              - `primitives/overlay/imperative-dialog.openDialog`
+              - `primitives/overlay/imperative-dialog.useOpenDialog`
               - `primitives/search.SearchInput`
               - `shell/toast.showToast`
               - `ui/icons.Icon`
@@ -3395,7 +3395,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `builtinWallpaperUrl`
               - `DesktopContextMenu`
-              - `openWallpaperPicker`
+              - `useOpenWallpaperPicker`
               - `Wallpaper`
               - `WallpaperAttribution`
               - `WallpaperSearchPanel`
@@ -4039,7 +4039,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture/new-tab.NewTabButton`
-              - `primitives/overlay/imperative-dialog.openDialog`
+              - `primitives/overlay/imperative-dialog.useOpenDialog`
               - `ui/icons.Icon`
             - Exports (types):
               - `ConfigValues`
@@ -4470,7 +4470,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.activationProps`
               - `primitives/loading.Loading`
-              - `primitives/overlay/imperative-dialog.openDialog`
+              - `primitives/overlay/imperative-dialog.useOpenDialog`
               - `primitives/scope/dom-scope.defineDomScope`
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/search.SearchInput`
@@ -6474,7 +6474,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/loading.Loading`
-              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
               - `primitives/overlay/tooltip.Kbd`
               - `primitives/pane.Pane`
               - `primitives/shortcuts.useSurfaceShortcuts`
@@ -6526,7 +6526,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/icon-picker.IconPicker`
-              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
               - `tag-tree/engine.useTagTreeActions`
               - `ui/icons.Icon`
             - Exports (types): `TagManagerPanelProps`
@@ -6590,7 +6590,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 91 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 92 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `primitives/data-view` ×6
               - `infra/endpoints` ×5
@@ -6605,6 +6605,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing` ×2
               - `primitives/icon-button` ×2
               - `primitives/latest-ref` ×2
+              - `primitives/overlay/imperative-dialog/confirm` ×2
               - `primitives/pane` ×2
               - `primitives/slot-render` ×2
               - `apps-core/tabs.useAppLinkProps`
@@ -6636,7 +6637,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/launch.LaunchAgentPopover`
               - `primitives/loading.Loading`
               - `primitives/networking.useTransport`
-              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/overlay/portal-host.PortalHost`
               - `primitives/relative-time.RelativeTime`
@@ -7761,7 +7761,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
-            - Uses: 94 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Uses: 95 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `primitives/pane` ×13
               - `primitives/data-view` ×7
               - `apps/sonata/shell` ×6
@@ -7800,6 +7800,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.linkProps`
               - `primitives/loading.Loading`
+              - `primitives/overlay/imperative-dialog.useOpenDialog`
               - `primitives/relative-time.formatRelativeTime`
               - `primitives/slot-render.defineRenderSlot`
               - `ui/icons.Icon`
@@ -9791,7 +9792,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Sonata.Effect` "ultimate-guitar-persist" → `UltimateGuitarPersistObserver`
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_ultimate_guitar"
                   - `Library.Cover` "ultimate-guitar"
-                - Uses: 45 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
+                - Uses: 44 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
                   - `primitives/css/ui-kit` ×6
                   - `network/live/live-state` ×5
                   - `network/live` ×4
@@ -9817,7 +9818,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/data-view.coverDetailClass`
                   - `primitives/dom/scroll-reveal.revealElement`
                   - `primitives/loading.Loading`
-                  - `primitives/overlay/imperative-dialog.openDialog`
                   - `primitives/search.SearchInput`
                   - `ui/icons.Icon`
               - Server:
@@ -10203,7 +10203,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.DialogTitle`
               - `primitives/launch.LaunchAgentForm`
               - `primitives/loading.Loading`
-              - `primitives/overlay/imperative-dialog.openDialog`
               - `ui/icons.Icon`
           - Server:
             - Contributes:
@@ -11723,6 +11722,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
           - `primitives/error-boundary.PluginErrorBoundary`
+          - `primitives/scope/render-origin.RenderOrigin`
           - `primitives/slot-render.renderIsolated`
           - `shell/toast.showToast`
         - Exports (types): `AppEmbedLeave`
@@ -13608,7 +13608,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.Button`
           - `primitives/latest-ref.useLatestRef`
-          - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+          - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
           - `primitives/relative-time.RelativeTime`
           - `shell/toast.showToast`
         - Exports (types):
@@ -18855,7 +18855,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/icon-button.IconButton`
               - `primitives/launch.useLaunchConversation`
-              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
               - `shell/notifications.Toast`
               - `shell/notifications.useToast`
             - Exports (types): `RewindMode`
@@ -24624,7 +24624,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/icon-button.IconButton`
           - `primitives/networking.useTransport`
-          - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+          - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
           - `shell/toast.showToast`
           - `ui/icons.Icon`
         - Exports (values): `worktreeCleanupPane`
@@ -26830,6 +26830,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/log-channels.clientLog`
                   - `primitives/networking.TransportProvider`
                   - `primitives/networking.useTransport`
+                  - `primitives/scope/render-origin.RenderOrigin`
                 - Exports (types): `DemoHostControl`
                 - Exports (values):
                   - `DemoScope`
@@ -45862,13 +45863,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 79 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 80 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×33
           - `apps` ×24
           - `page` ×4
           - `conversations` ×3
           - `map` ×2
           - `network` ×2
+          - `shell` ×2
           - `apps-core/tabs`
           - `build/serve-composition`
           - `debug/slow-ops`
@@ -45879,7 +45881,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reorder`
           - `reports/main-thread-stall`
           - `screenshot`
-          - `shell/notifications`
       - Web:
         - Exports (values):
           - `useEventCallback`
@@ -47092,14 +47093,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `wheelZoomFactor`
               - `ZOOM_LADDER`
               - `zoomAt`
-        - **`imperative-dialog`** — Imperative dialog primitive: openDialog(render) mounts a modal Dialog from any callback (create affordances, confirms) via a single Core.Root host — the toaster pattern for dialogs. Returns a promise that resolves when the dialog closes.
+        - **`imperative-dialog`** — Imperative dialog primitive: useOpenDialog() returns openDialog(render), which mounts a modal Dialog from any callback (create affordances, confirms) in the caller's render origin — so the dialog reads the caller's transport, registry and navigator, never the page's from inside a scope. Returns a promise that resolves when the dialog closes.
           - Web:
-            - Contributes: `Core.Root` → `ImperativeDialogHost`
             - Uses:
               - `primitives/css/ui-kit.Dialog`
               - `primitives/css/ui-kit.DialogContent`
-            - Exports (types): `DialogOptions`
-            - Exports (values): `openDialog`
+              - `primitives/scope/render-origin.Raised`
+              - `primitives/scope/render-origin.useRenderOrigin`
+            - Exports (types):
+              - `DialogOptions`
+              - `OpenDialog`
+            - Exports (values): `useOpenDialog`
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/deploy-secrets/approvals`
@@ -47109,12 +47113,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/wallpaper`
               - `apps/events/sources`
               - `apps/file-explorer/browser`
-              - `apps/sonata/sources/ultimate-guitar`
-              - `apps/sonata/transcription`
+              - `apps/sonata/library`
               - `primitives/overlay/imperative-dialog/confirm`
               - `ui/theme-engine/theme-gallery`
           - Plugins:
-            - **`confirm`** — confirmDialog(opts) → Promise<boolean>: a destructive-confirm helper over openDialog. Renders a sm panel (title + description + optional children + inline error + Cancel/Confirm), keeps the dialog open and shows getEndpointErrorMessage on failure, and resolves true iff onConfirm completed.
+            - **`confirm`** — useConfirmDialog() → confirm(opts) → Promise<boolean>: a destructive-confirm helper over useOpenDialog (rendered in the caller's render origin). Renders a sm panel (title + description + optional children + inline error + Cancel/Confirm), keeps the dialog open and shows getEndpointErrorMessage on failure, and resolves true iff onConfirm completed.
               - Web:
                 - Uses:
                   - `infra/endpoints.EndpointError`
@@ -47125,11 +47128,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/ui-kit.Button`
                   - `primitives/css/ui-kit.DialogDescription`
                   - `primitives/css/ui-kit.DialogTitle`
-                  - `primitives/overlay/imperative-dialog.openDialog`
+                  - `primitives/overlay/imperative-dialog.useOpenDialog`
                   - `primitives/overlay/tooltip.Kbd`
                   - `primitives/shortcuts.formatShortcutLabel`
-                - Exports (types): `ConfirmDialogOptions`
-                - Exports (values): `confirmDialog`
+                - Exports (types):
+                  - `ConfirmDialog`
+                  - `ConfirmDialogOptions`
+                - Exports (values): `useConfirmDialog`
               - Cross-plugin:
                 - Imported by:
                   - `apps/demo/shell`
@@ -47198,8 +47203,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/present`
               - `primitives/css/ui-kit`
               - `primitives/css/viewport-overlay`
+              - `shell/toast`
           - Web:
             - Exports (values):
+              - `PortalContainerProvider`
               - `PortalHost`
               - `usePortalContainer`
         - **`surface-overlay`** — Surface-filling overlay primitive: <SurfaceOverlay> portals into the nearest <SurfaceOverlayHost> so its absolute inset-0 box fills the app tab's surface — escaping the pane layout in between without escaping to the viewport, so the tab bar and app rail stay visible. A missing host throws.
@@ -48006,6 +48013,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `InstallSink`
               - `InstallSinkOptions`
             - Exports (values): `defineInstallSink`
+        - **`render-origin`** — Where content a caller hands to page chrome renders: <RenderOrigin> marks a subtree's own origin, and useRenderOrigin() captures the caller's (the nearest one, else outside every PluginScope the page's, mounted at Core.Root) — raise(node) renders it there, under the caller's transport, registry and navigator, while the chrome only places it. Inside a PluginScope with no origin of its own, useRenderOrigin throws rather than fall through to the page's.
+          - Web:
+            - Contributes: `Core.Root` → `PageRenderOrigin`
+            - Exports (types):
+              - `Raised`
+              - `RaiseOptions`
+              - `RenderOriginHandle`
+            - Exports (values):
+              - `RenderOrigin`
+              - `useRenderOrigin`
+          - Cross-plugin:
+            - Imported by:
+              - `apps-core/app-embed`
+              - `framework/browser-server/demo/scope`
+              - `primitives/overlay/imperative-dialog`
+              - `shell/toast`
         - **`scoped-store`** — Per-Provider-instance external store primitive: defineScopedStore. Module-level factory, per-mount isolated state, with imperative reads, reactive whole-state, and selector subscriptions with re-render bailout.
           - Web:
             - Uses: `primitives/latest-ref.useLatestRef`
@@ -51430,7 +51453,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/relative-time.RelativeTime`
           - `primitives/scope/tab-id.getTabId`
           - `shell/action-bar.ActionBar`
-          - `shell/toast.showToast`
+          - `shell/toast.useShowCustomToast`
           - `ui/icons.Icon`
         - Exports (types):
           - `Notification`
@@ -51569,7 +51592,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --space-md`
-    - **`toast`** — Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted. A toast declaring audience developer is shown only in Developer mode. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.
+    - **`toast`** — Global toast notifications: a plain showToast() (text toasts: data only) backed by sonner's global API, and useShowCustomToast() — a toast whose content the caller draws, rendered in the caller's render origin (its transport, registry and navigator) while the stack only places it, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted. A toast declaring audience developer is shown only in Developer mode. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.
       - Web:
         - Contributes:
           - `Core.Root` → `ToasterHost`
@@ -51585,7 +51608,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/css/z-layers/stack.defineZLayer`
           - `primitives/dom/element-size.useElementSize`
+          - `primitives/latest-ref.useEventCallback`
           - `primitives/link-gesture.linkProps`
+          - `primitives/overlay/portal-host.PortalContainerProvider`
+          - `primitives/overlay/portal-host.usePortalContainer`
+          - `primitives/scope/render-origin.RenderOriginHandle`
+          - `primitives/scope/render-origin.useRenderOrigin`
           - `primitives/select-scope.ContentScope`
           - `ui/icons.Icon`
         - Exports (types):
@@ -51595,6 +51623,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `isInToast`
           - `showToast`
+          - `useShowCustomToast`
           - `useSuppressToasts`
       - Cross-plugin:
         - Uses tokens:
@@ -55918,7 +55947,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `QuickTheme.Section` "Theme" → `QuickThemePicker`
               - `item-actions` "rename" → `RenameThemeAction`
               - `item-actions` "delete" → `DeleteThemeAction`
-            - Uses: 42 symbols — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md)
+            - Uses: 43 symbols — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md)
               - `primitives/data-view` ×7
               - `ui/theme-engine` ×7
               - `primitives/css/ui-kit` ×4
@@ -55926,6 +55955,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live/live-state` ×3
               - `ui/theme-engine/saved-themes` ×3
               - `config_v2` ×2
+              - `primitives/overlay/imperative-dialog/confirm` ×2
               - `apps-core.Apps`
               - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
@@ -55934,8 +55964,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/icon-button.IconButton`
-              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
-              - `primitives/overlay/imperative-dialog.openDialog`
+              - `primitives/overlay/imperative-dialog.useOpenDialog`
               - `primitives/syntax-highlight.useDarkMode`
               - `ui/theme-engine/quick-theme.QuickTheme`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`

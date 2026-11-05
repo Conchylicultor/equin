@@ -4,8 +4,11 @@ import {
   type ItemActionProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import {
+  useConfirmDialog,
+  type ConfirmDialog,
+} from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import {
   isBuiltInThemeId,
   type Theme,
@@ -47,9 +50,11 @@ function fallbackSentence(scopeNames: readonly string[]): string {
  * The server can still know of a scope this page does not (an app this
  * composition does not include). Then the delete comes back "in use" with the
  * server's own list, and the user is asked again, naming those scopes.
- * `removeSavedTheme` is the row's (bound to its subtree's transport).
+ * `removeSavedTheme` and `confirmDialog` are the row's (bound to its
+ * subtree's transport and render origin).
  */
 function confirmDelete(
+  confirmDialog: ConfirmDialog,
   removeSavedTheme: RemoveSavedTheme,
   theme: Theme,
   scopeNames: readonly string[],
@@ -65,6 +70,7 @@ function confirmDelete(
       });
       if (result.kind === "in-use") {
         confirmDelete(
+          confirmDialog,
           removeSavedTheme,
           theme,
           result.usedBy.map((u) => scopeLabel(u.scopeId)),
@@ -85,6 +91,7 @@ export function DeleteThemeAction({
 }: ItemActionProps<ThemeRow>): ReactElement | null {
   const scopeLabel = useScopeLabel();
   const removeSavedTheme = useRemoveSavedTheme();
+  const confirmDialog = useConfirmDialog();
   const { target } = row;
   if (target.kind !== "resident" || isBuiltInThemeId(target.theme.id)) {
     return null;
@@ -97,6 +104,7 @@ export function DeleteThemeAction({
       onClick={(e) => {
         e.stopPropagation();
         confirmDelete(
+          confirmDialog,
           removeSavedTheme,
           theme,
           row.usedBy.map((u) => u.label),
@@ -114,6 +122,7 @@ export function DeleteThemeAction({
 export function RenameThemeAction({
   row,
 }: ItemActionProps<ThemeRow>): ReactElement | null {
+  const openDialog = useOpenDialog();
   const { target } = row;
   if (target.kind !== "resident" || target.theme.source !== "custom") {
     return null;

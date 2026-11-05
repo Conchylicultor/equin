@@ -8,7 +8,7 @@ import {
   useDemoHostControl,
 } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
+import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { AppEmbed } from "@plugins/apps-core/plugins/app-embed/web";
 import { lumenDemo } from "@plugins/apps/plugins/website/plugins/demos/plugins/lumen/core";
 import { useIsPhone } from "../hooks/use-is-phone";
@@ -72,6 +72,7 @@ export function DemoLayout() {
  * starts again from it.
  */
 function ResetDemoButton() {
+  const confirmDialog = useConfirmDialog();
   const { reset } = useDemoHostControl();
   return (
     <Button

@@ -13,7 +13,7 @@ import {
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import {
   StepDone,
   StepNote,
@@ -42,6 +42,7 @@ const textareaClass =
  * Reprinting it here is the bug this whole change removes.
  */
 export function GenerateKeyStep({ server }: { server: Server }) {
+  const openDialog = useOpenDialog();
   const key = server.sshKey;
   const [privateKey, setPrivateKey] = useState("");
 

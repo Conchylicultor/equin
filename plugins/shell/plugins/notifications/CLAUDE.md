@@ -40,9 +40,12 @@ the line box.
 (`web/components/notification-view.tsx`). An arriving notification
 (`useNotificationArrivals`, in the bell) and a toast this page raises itself
 (`useToast`, which requires a `category`) are shown through
-`toastNotification` — `showToast({ render, duration })`, the toast plugin's
-custom-content path: the view on the overlay surface, 4s, `Infinity` for an
-error. The popover's row is the same view with its time and an unread dot.
+`useToastNotification()` — the toast plugin's custom-content path
+(`useShowCustomToast`): the view on the overlay surface, 4s, `Infinity` for an
+error. It renders in the CALLER's render origin (`scope/render-origin`), so a
+toast `useToast` raises inside the demo resolves its action kind, runs its
+`useRun` / `useLink` and reads its subject against the demo — never the page
+chrome's registry, server or tabs. The popover's row is the same view with its time and an unread dot.
 `NotificationBody` (the old type / tab / count body) is Debug → Notifications'
 row only.
 
@@ -233,7 +236,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `primitives/relative-time.RelativeTime`
     - `primitives/scope/tab-id.getTabId`
     - `shell/action-bar.ActionBar`
-    - `shell/toast.showToast`
+    - `shell/toast.useShowCustomToast`
     - `ui/icons.Icon`
   - Exports (types):
     - `Notification`

@@ -5,7 +5,7 @@ import {
   useCombinedResources,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { SidebarPaneSection } from "@plugins/primitives/plugins/app-shell/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -49,6 +49,7 @@ export function SitesSidebarSection(): ReactElement {
 }
 
 function AddSite(): ReactElement {
+  const openDialog = useOpenDialog();
   return (
     <IconButton
       icon={addIcon}

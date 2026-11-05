@@ -40,12 +40,14 @@ const spy = vi.hoisted(() => ({
 
 vi.mock("@plugins/shell/plugins/toast/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  showToast: (args: {
-    render: (toast: { dismiss: () => void }) => unknown;
-    duration: number;
-  }) => {
-    spy.toasts.push(args);
-  },
+  useShowCustomToast:
+    () =>
+    (args: {
+      render: (toast: { dismiss: () => void }) => unknown;
+      duration: number;
+    }) => {
+      spy.toasts.push(args);
+    },
 }));
 
 vi.mock("@plugins/audience/web", async (importOriginal) => ({

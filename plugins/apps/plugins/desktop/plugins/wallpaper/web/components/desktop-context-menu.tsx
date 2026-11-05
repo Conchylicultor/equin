@@ -11,7 +11,7 @@ import {
   DEFAULT_WALLPAPER_ID,
   isDefaultWallpaper,
 } from "../../core";
-import { openWallpaperPicker } from "./wallpaper-picker";
+import { useOpenWallpaperPicker } from "./wallpaper-picker";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -87,6 +87,7 @@ function DesktopContextMenuContent({
   canReset: boolean;
   onReset: () => void;
 }) {
+  const openWallpaperPicker = useOpenWallpaperPicker();
   return (
     <CursorAnchoredMenu anchor={anchor} onClose={onClose}>
       <DropdownMenuItem onClick={openWallpaperPicker}>

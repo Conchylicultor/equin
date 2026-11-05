@@ -4,16 +4,17 @@ A reusable "open a modal dialog from any imperative callback" primitive.
 
 ## What it is
 
-`openDialog(render)` mounts a modal `Dialog` from anywhere — a plain-data
-`onSelect`, an event handler, a non-React callback — without the caller owning a
-JSX `<Dialog>` host or an `open` state ref. `render` receives a `close` callback
+`useOpenDialog()` returns `openDialog(render)`, which mounts a modal `Dialog`
+from any callback — an event handler, a plain-data `onSelect` handed the opener
+— without the caller owning a JSX `<Dialog>` host or an `open` state ref. `render` receives a `close` callback
 to dismiss the dialog from inside its own content; `openDialog` returns a promise
 that resolves when the dialog closes (via `close()`, Escape, or a press outside
 the panel), so a caller can `await` the dialog's lifetime.
 
 ```ts
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 
+const openDialog = useOpenDialog(); // in the component or hook that raises it
 await openDialog((close) => <MyForm onClose={close} />, { size: "md" });
 // resolves once the dialog is dismissed
 ```
@@ -22,7 +23,7 @@ The second arg is `{ size, className, dismissible }`. `size`/`className` go
 straight to `DialogContent`, which owns the panel chrome (see ui-kit's "Dialog
 owns the panel"). Padding is **not** among them: the panel always opens its own inset
 region, and content that must reach the panel edge says so itself with
-`rail-bleed`. For a yes/no guard, reach for `confirmDialog` (`plugins/confirm`)
+`rail-bleed`. For a yes/no guard, reach for `useConfirmDialog` (`plugins/confirm`)
 instead of hand-rolling a confirm body.
 
 ## `dismissible` — the one dialog that should not close on an outside press
@@ -38,7 +39,7 @@ It is not a rank: "this dialog is important" is not a reason. A destructive
 confirm holds nothing the user would lose by closing it, so it stays
 dismissible.
 
-## `confirmDialog` and the keyboard
+## `useConfirmDialog` and the keyboard
 
 Focus opens on **Cancel**. Every action behind this dialog is destructive, and a
 destructive choice must not be the one a reflex reaches — so the safe button is
@@ -52,25 +53,34 @@ anywhere in the dialog; Enter on its own keeps its plain meaning, which is
 shown on (`formatShortcutLabel`), and it lives in a tooltip on the confirm
 button rather than printed inside it, so the destructive control stays one word.
 
-## How it works (the Core.Root global-host pattern)
+## How it works: rendered in the caller's origin
 
-This mirrors the toaster (`shell/toaster` contributes `Core.Root({ component:
-ToasterRoot })`). A single `ImperativeDialogHost` is contributed to `Core.Root`
-and mounted once for the whole app. `openDialog` pushes an entry into a tiny
-module-level store; the host reads it via `useSyncExternalStore` and renders each
-open dialog inside a controlled shadcn `Dialog`/`DialogContent`. `DialogContent`
-portals to `document.body` and carries the forwarded theme scope, so a dialog
-opened from any plugin paints correctly regardless of where the call originated.
+The opener is a hook because WHERE the dialog renders is the caller's: it is
+raised into the caller's render origin (`scope/render-origin`) — the nearest
+`<RenderOrigin>`, else the page's, mounted at `Core.Root` — and rendered there
+inside a controlled `Dialog`/`DialogContent`. So the dialog's content reads the
+caller's transport, plugin registry, navigator and theme scope: a dialog opened
+inside `/demo` (the desktop's wallpaper picker, Sonata's import dialogs) talks to
+the demo's server, never the page's. `DialogContent` portals to `document.body`
+(or the nearest `PortalHost`) and carries the forwarded theme scope. If the
+origin unmounts while the dialog is open, the dialog goes with it and the
+promise resolves.
+
+Code outside React that must open one is handed the opener by the component
+that owns it (Sonata's `SourceContext.openDialog`, bound by the library) — there
+is no module-level `openDialog`, so nothing can open a dialog in a world it was
+not raised from.
 
 ## When to use it
 
-Reach for `openDialog` when the thing that needs a modal is **not** a component
-that can hold dialog state — e.g. a create affordance passed as plain data (the
-data-view `CreateOption.onSelect`), or a confirm prompt fired from a callback.
+Reach for `useOpenDialog` when the thing that needs a modal is **not** a
+component that can hold dialog state — e.g. a create affordance passed as plain
+data (the data-view `CreateOption.onSelect`), or a confirm prompt fired from a
+callback.
 When a component already owns the trigger and can hold `open` state, prefer a
 plain inline `<Dialog open={…}>` (the version-history dialog pattern).
 
-The host's `DialogContent` provides the panel (chrome + size + padding); `render`
+The dialog's `DialogContent` provides the panel (chrome + size + padding); `render`
 owns only the content + a `DialogTitle` (for a11y). Never wrap your own
 `<Surface>` panel — it would double the chrome.
 
@@ -78,14 +88,17 @@ owns only the content + a `DialogTitle` (for a11y). Never wrap your own
 
 ## Plugin reference
 
-- Description: Imperative dialog primitive: openDialog(render) mounts a modal Dialog from any callback (create affordances, confirms) via a single Core.Root host — the toaster pattern for dialogs. Returns a promise that resolves when the dialog closes.
+- Description: Imperative dialog primitive: useOpenDialog() returns openDialog(render), which mounts a modal Dialog from any callback (create affordances, confirms) in the caller's render origin — so the dialog reads the caller's transport, registry and navigator, never the page's from inside a scope. Returns a promise that resolves when the dialog closes.
 - Web:
-  - Contributes: `Core.Root` → `ImperativeDialogHost`
   - Uses:
     - `primitives/css/ui-kit.Dialog`
     - `primitives/css/ui-kit.DialogContent`
-  - Exports (types): `DialogOptions`
-  - Exports (values): `openDialog`
+    - `primitives/scope/render-origin.Raised`
+    - `primitives/scope/render-origin.useRenderOrigin`
+  - Exports (types):
+    - `DialogOptions`
+    - `OpenDialog`
+  - Exports (values): `useOpenDialog`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deploy-secrets/approvals`
@@ -95,11 +108,10 @@ owns only the content + a `DialogTitle` (for a11y). Never wrap your own
     - `apps/desktop/wallpaper`
     - `apps/events/sources`
     - `apps/file-explorer/browser`
-    - `apps/sonata/sources/ultimate-guitar`
-    - `apps/sonata/transcription`
+    - `apps/sonata/library`
     - `primitives/overlay/imperative-dialog/confirm`
     - `ui/theme-engine/theme-gallery`
 - Sub-plugins:
-  - **`confirm`** — confirmDialog(opts) → Promise<boolean>: a destructive-confirm helper over openDialog. Renders a sm panel (title + description + optional children + inline error + Cancel/Confirm), keeps the dialog…
+  - **`confirm`** — useConfirmDialog() → confirm(opts) → Promise<boolean>: a destructive-confirm helper over useOpenDialog (rendered in the caller's render origin). Renders a sm panel (title + description + optional…
 
 <!-- AUTOGENERATED:END -->

@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   Button,
@@ -26,6 +26,7 @@ const deleteIcon = symbol("delete");
 export function SourceDeleteAction({
   row,
 }: ItemActionProps<EventSource>): ReactElement {
+  const openDialog = useOpenDialog();
   const remove = useDeleteEventSource();
 
   return (

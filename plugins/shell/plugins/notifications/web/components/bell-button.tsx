@@ -18,7 +18,7 @@ import { useReachingNotifications } from "../internal/use-reaching-notifications
 import { notificationsUnread } from "../../shared/resources";
 import { markAllNotificationsRead } from "../../shared/endpoints";
 import { NotificationsPanel } from "./notifications-panel";
-import { toastNotification } from "./notification-view";
+import { useToastNotification } from "./notification-view";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const notificationsIcon = symbol("notifications");
@@ -39,6 +39,7 @@ export function BellButton() {
 
   // A toast for each notification that arrives while the bell is mounted —
   // the same view its row in the popover draws (the bell mirrors the toasts).
+  const toastNotification = useToastNotification();
   useNotificationArrivals(toastNotification);
 
   const hadUnreadRef = useRef(false);

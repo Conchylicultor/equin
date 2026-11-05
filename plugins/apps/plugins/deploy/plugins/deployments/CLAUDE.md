@@ -484,7 +484,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture/new-tab.NewTabLink`
     - `primitives/loading.Loading`
-    - `primitives/overlay/imperative-dialog.openDialog`
+    - `primitives/overlay/imperative-dialog.useOpenDialog`
     - `primitives/relative-time.RelativeTime`
     - `primitives/tabbed-view.defineTabbedView`
     - `ui/icons.Icon`

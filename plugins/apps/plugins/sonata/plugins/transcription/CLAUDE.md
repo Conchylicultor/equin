@@ -103,7 +103,6 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
     - `primitives/css/ui-kit.DialogTitle`
     - `primitives/launch.LaunchAgentForm`
     - `primitives/loading.Loading`
-    - `primitives/overlay/imperative-dialog.openDialog`
     - `ui/icons.Icon`
 - Server:
   - Contributes:

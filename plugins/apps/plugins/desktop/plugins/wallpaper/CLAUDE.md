@@ -54,7 +54,7 @@ its own, so it declares no data dir; see `apps-core/CLAUDE.md`.
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/loading.Loading`
-    - `primitives/overlay/imperative-dialog.openDialog`
+    - `primitives/overlay/imperative-dialog.useOpenDialog`
     - `primitives/search.SearchInput`
     - `shell/toast.showToast`
     - `ui/icons.Icon`
@@ -62,7 +62,7 @@ its own, so it declares no data dir; see `apps-core/CLAUDE.md`.
   - Exports (values):
     - `builtinWallpaperUrl`
     - `DesktopContextMenu`
-    - `openWallpaperPicker`
+    - `useOpenWallpaperPicker`
     - `Wallpaper`
     - `WallpaperAttribution`
     - `WallpaperSearchPanel`

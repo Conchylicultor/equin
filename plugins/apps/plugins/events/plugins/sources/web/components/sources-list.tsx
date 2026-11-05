@@ -22,7 +22,7 @@ import {
   EXTRACTION_STATUS_OPTIONS,
   SOURCE_STATE_OPTIONS,
 } from "../internal/format";
-import { openAddSourceDialog } from "./add-source-dialog";
+import { useOpenAddSourceDialog } from "./add-source-dialog";
 
 /**
  * The configured sources, config-backed like every DataView: the view instances
@@ -74,6 +74,7 @@ export function SourcesList(): ReactNode {
   const types = useEventSourceTypes();
   const selectedId = eventSourceDetailPane.useRouteEntry()?.params.sourceId;
 
+  const openAddSourceDialog = useOpenAddSourceDialog();
   // The `+` menu IS the registry: one creator per installed source type, in
   // contributed order. Nothing here names a type, so adding one is zero edits.
   const creators = useMemo<CreateOption[]>(
@@ -90,7 +91,7 @@ export function SourcesList(): ReactNode {
             ),
         };
       }),
-    [types, openPane],
+    [types, openPane, openAddSourceDialog],
   );
 
   const renderList = (sources: EventSource[]): ReactElement => (

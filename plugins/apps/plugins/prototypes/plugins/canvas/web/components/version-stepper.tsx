@@ -12,7 +12,10 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
+import {
+  useConfirmDialog,
+  type ConfirmDialog,
+} from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import {
   useFetchEndpoint,
   type FetchEndpoint,
@@ -157,6 +160,7 @@ function ReadyStepper({
   narrow: boolean;
 }): ReactElement {
   const fetchEndpoint = useFetchEndpoint();
+  const confirmDialog = useConfirmDialog();
   const [open, setOpen] = useState(false);
   const { model, current, prev, next, go, stepBack, stepForward } =
     useVersionStepping(history, { shown, show });
@@ -228,7 +232,13 @@ function ReadyStepper({
                 className="text-warning"
                 onClick={() => {
                   setOpen(false);
-                  confirmRestore(fetchEndpoint, name, restorable, show);
+                  confirmRestore(
+                    confirmDialog,
+                    fetchEndpoint,
+                    name,
+                    restorable,
+                    show,
+                  );
                 }}
               >
                 <Icon icon={historyIcon} />
@@ -328,6 +338,7 @@ function StepTooltip({ step }: { step: VersionStep | null }) {
  * where the restored design now is.
  */
 function confirmRestore(
+  confirmDialog: ConfirmDialog,
   fetchEndpoint: FetchEndpoint,
   name: string,
   version: PrototypeVersion,

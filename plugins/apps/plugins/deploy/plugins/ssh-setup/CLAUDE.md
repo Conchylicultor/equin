@@ -91,7 +91,7 @@ and
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/loading.Loading`
-    - `primitives/overlay/imperative-dialog.openDialog`
+    - `primitives/overlay/imperative-dialog.useOpenDialog`
     - `ui/icons.Icon`
   - Exports (types):
     - `SshConsoleProps`

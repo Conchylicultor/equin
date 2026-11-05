@@ -24,6 +24,10 @@
  *     the class the Sonata covers fell into (research/2026-11-04-global-no-
  *     route-string-in-scoped-code.md).
  *
+ *  5. opens Pages, deletes a seeded page from the sidebar and clicks Undo on
+ *     the "Page moved to trash" toast: a toast raised inside the scope acts
+ *     on the scope — the worker restores the page.
+ *
  * And asserts that the demo's own writes RENDER — the worker's change feed
  * recomputes its live reads (research/2026-10-22-global-demo-writes-render-
  * portable-change-feed.md, G6):
@@ -74,6 +78,7 @@ import {
   closeLauncherGrid,
   launcherTiles,
   openLauncherGrid,
+  pickFromLauncher,
 } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import {
   arg,
@@ -219,6 +224,8 @@ async function clickButton(page: Page, name: string): Promise<void> {
 
 /** A seeded prototype (`website/demos/lumen`'s `data/prototypes/`) and where its frames are served from. */
 const PROTOTYPE_TITLE = "Lumen — notes board";
+/** The seeded page deleted and brought back through its toast's Undo. */
+const TRASHED_PAGE = "Ideas";
 const FRAMES_RE = /^\/artifacts\/[^/]+\/frames\/[^/]+\/api\/prototypes\//;
 
 /** The seeded task the steps edit (`website/demos/lumen`'s `stories.ts`). */
@@ -746,6 +753,57 @@ await withBrowser(async (h) => {
     await snap(page, OUT, `app-${tile.key.replace(/[^\w-]/g, "_")}`);
   }
   noteSubs("every app");
+
+  // ── 5. a toast raised inside the demo, and its action ───────────────────
+  // Deleting a page raises "Page moved to trash" with Undo: the toast shows
+  // in the page's stack, and its action must act on the demo — the worker
+  // restores the page; nothing reaches the page's server.
+  r.ok(
+    "the launcher offers Pages",
+    await pickFromLauncher(embed, /^\s*Pages\s*$/),
+  );
+  await renders(
+    "the embed shows Pages",
+    () => embed.getAttribute("data-app-embed"),
+    (id) => id === "pages",
+  );
+  const trashed = embed.locator("[data-row-key]").filter({
+    // The page's icon, an emoji glyph, is part of the row's text.
+    hasText: new RegExp(
+      `^\\s*\\p{Extended_Pictographic}?\\uFE0F?\\s*${TRASHED_PAGE}\\s*$`,
+      "u",
+    ),
+  });
+  const listed = await renders(
+    `the sidebar lists "${TRASHED_PAGE}"`,
+    () => trashed.count(),
+    (n) => n > 0,
+  );
+  // The Recent list's row offers Delete directly (the tree's keeps it in ⋯).
+  const deletable = trashed.filter({
+    has: page.getByRole("button", { name: "Delete page" }),
+  });
+  await deletable.first().hover();
+  await deletable.first().getByRole("button", { name: "Delete page" }).click();
+  await renders(
+    `"${TRASHED_PAGE}" leaves the sidebar`,
+    () => trashed.count(),
+    (n) => n === 0,
+  );
+  const toast = page
+    .locator("[data-sonner-toast]")
+    .filter({ hasText: "Page moved to trash" })
+    .first();
+  await toast.waitFor({ timeout: RENDER_TIMEOUT_MS });
+  await snap(page, OUT, "toast");
+  await toast.getByRole("button", { name: "Undo" }).click();
+  await renders(
+    `the toast's Undo brings "${TRASHED_PAGE}" back — through the demo's server`,
+    () => trashed.count(),
+    (n) => n === listed.value,
+  );
+  r.note(`after Undo: ${(await workerLog(page)).slice(-3).join(" · ")}`);
+  noteSubs("toast");
 
   page.off("request", onRequest);
   page.off("websocket", onSocket);

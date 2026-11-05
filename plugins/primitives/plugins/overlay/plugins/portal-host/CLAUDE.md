@@ -48,8 +48,10 @@ precedent as `popup-open` and `overlay-boundary`.
     - `apps/prototypes/present`
     - `primitives/css/ui-kit`
     - `primitives/css/viewport-overlay`
+    - `shell/toast`
 - Web:
   - Exports (values):
+    - `PortalContainerProvider`
     - `PortalHost`
     - `usePortalContainer`
 

@@ -284,7 +284,7 @@ code, that is the bug this section exists to prevent.
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+    - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
     - `primitives/relative-time.RelativeTime`
     - `shell/toast.showToast`
   - Exports (types):

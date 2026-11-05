@@ -1,5 +1,17 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { toast as sonnerToast } from "sonner";
+import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
+import {
+  PortalContainerProvider,
+  usePortalContainer,
+} from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
+import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  useRenderOrigin,
+  type RenderOriginHandle,
+} from "@plugins/primitives/plugins/scope/plugins/render-origin/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { DeveloperMark } from "@plugins/audience/plugins/developer-mark/web";
@@ -52,7 +64,16 @@ function isControlClick(event: MouseEvent, li: HTMLElement): boolean {
  * dismiss, the host unmounting) converges on this one unmount — so none of
  * them needs enumerating.
  */
-function ToastBody({ id, children }: { id: string; children: React.ReactNode }) {
+function ToastBody({
+  id,
+  onGone,
+  children,
+}: {
+  id: string;
+  /** Runs once the body has unmounted for good (not StrictMode's re-run). */
+  onGone?: () => void;
+  children: React.ReactNode;
+}) {
   const anchorRef = useRef<HTMLSpanElement>(null);
 
   // Deliberately its own effect, separate from the click wiring below: that
@@ -68,6 +89,21 @@ function ToastBody({ id, children }: { id: string; children: React.ReactNode }) 
     trackToast(id);
     return () => untrackToast(id);
   }, [id]);
+
+  // A custom toast's content lives in its caller's origin: it ends when the
+  // body does. StrictMode's destroy → create re-mounts within the same task,
+  // so the end is decided a microtask later.
+  const mountsRef = useRef({ count: 0 });
+  useEffect(() => {
+    if (onGone === undefined) return;
+    const mounts = mountsRef.current;
+    const mount = ++mounts.count;
+    return () => {
+      queueMicrotask(() => {
+        if (mounts.count === mount) onGone();
+      });
+    };
+  }, [onGone]);
 
   // Dismiss the whole toast on click, while still allowing the user to select /
   // drag the text: a click that ends an active text selection is ignored. A
@@ -111,45 +147,112 @@ export interface CustomToastArgs {
 }
 
 /**
- * Fire a global toast. Backed by sonner's global imperative API — callable from
+ * Fire a text toast. Backed by sonner's global imperative API — callable from
  * anywhere; if no `<ToasterHost/>` is mounted the enqueue simply has no renderer
- * (a silent no-op, never a throw). Deprecates the former `shell.toast` command.
- * A toast declaring `audience: "developer"` is dropped unless the reader is in
- * Developer mode.
+ * (a silent no-op, never a throw). A toast declaring `audience: "developer"` is
+ * dropped unless the reader is in Developer mode.
  *
- * Two shapes: the text toast (`ToastArgs` — sonner draws the card around a
- * title and description), and the custom toast (`{ render, duration }` — the
- * caller's node IS the toast, e.g. a notification's own view, so the toast
- * and the bell's row are one component).
+ * Data only — strings, and the caller's own closures (an `onClick`, a
+ * `LinkTarget` its hooks built) — so it renders the same wherever the stack
+ * is. A toast whose content is drawn by the caller (a component, with hooks)
+ * is `useShowCustomToast`, which renders it in the caller's origin.
  */
-export function showToast(args: ToastArgs | CustomToastArgs): void {
+export function showToast(args: ToastArgs): void {
   // A developer toast is shown only to a developer (Developer mode on).
   if (!toastReachesReader(args.audience)) return;
-  const id = `shell-toast-${SESSION}-${++seq}`;
-  if ("render" in args) {
-    showCustomToast(id, args);
-    return;
-  }
-  showTextToast(id, args);
+  showTextToast(nextToastId(), args);
 }
 
-function showCustomToast(id: string, { render, duration }: CustomToastArgs) {
-  // Built eagerly, like the text toast's body (see below). Sonner's `custom`
-  // renders the node unstyled inside its `[data-sonner-toast]` `<li>`, so the
-  // body's click-to-dismiss and ledger registration work as for a text toast.
+function nextToastId(): string {
+  return `shell-toast-${SESSION}-${++seq}`;
+}
+
+/**
+ * The custom toast, bound to the caller's render origin: the caller's node IS
+ * the toast (e.g. a notification's own view, so the toast and the bell's row
+ * are one component), and it renders in the CALLER's tree — under its
+ * transport, plugin registry and navigator (`scope/render-origin`) — while
+ * the page's stack only places it. A toast raised inside the demo thus reads
+ * and acts on the demo, never on the page's server.
+ */
+export function useShowCustomToast(): (args: CustomToastArgs) => void {
+  const origin = useRenderOrigin();
+  return useCallback(
+    (args: CustomToastArgs) => {
+      if (!toastReachesReader(args.audience)) return;
+      showCustomToast(origin, nextToastId(), args);
+    },
+    [origin],
+  );
+}
+
+function showCustomToast(
+  origin: RenderOriginHandle,
+  id: string,
+  { render, duration }: CustomToastArgs,
+) {
+  const dismiss = () => {
+    sonnerToast.dismiss(id);
+  };
+  // The content renders in the caller's origin, portalled into an element of
+  // its own; the toast's `<li>` adopts that element once the content has
+  // committed (`raised.mounted`). Adopting rather than portalling into the
+  // `<li>` from its own mount: sonner measures the toast's height in its
+  // first effect, so the content must already be there when sonner mounts it.
+  // React events still bubble through the origin's tree (a portal), and the
+  // CSS — the chrome's theme, sonner's styles — is the `<li>`'s, by the DOM.
+  const element = document.createElement("div");
+  element.style.display = "contents";
+  const content = render({ dismiss });
+  // What the toast layer provides its content besides the DOM: where a popup
+  // opened from the toast draws (the layer's PortalHost, so a notification's
+  // Fix popover paints above the toasts) and the chrome's theme scope.
+  const contentIn = (portal: HTMLElement | null | undefined) =>
+    createPortal(
+      <PortalContainerProvider container={portal}>
+        <Theme name={chromeThemeScope} surface="none" className="contents">
+          <ContentScope fill={false}>{content}</ContentScope>
+        </Theme>
+      </PortalContainerProvider>,
+      element,
+    );
+  const raised = origin.raise(contentIn(undefined), { onGone: dismiss });
   const body = (
-    <ToastBody id={id}>
-      <ContentScope fill={false}>
-        {render({
-          dismiss: () => {
-            sonnerToast.dismiss(id);
-          },
-        })}
-      </ContentScope>
+    <ToastBody id={id} onGone={raised.remove}>
+      <AdoptElement
+        element={element}
+        onPortalContainer={(portal) => raised.update(contentIn(portal))}
+      />
     </ToastBody>
   );
-  // Same one-microtask deferral as the text toast — see `showTextToast`.
-  queueMicrotask(() => sonnerToast.custom(() => body, { id, duration }));
+  // After the content committed, and through the same one-microtask
+  // deferral as the text toast — see `showTextToast`.
+  void raised.mounted.then(() =>
+    queueMicrotask(() => sonnerToast.custom(() => body, { id, duration })),
+  );
+}
+
+/**
+ * Puts an element rendered elsewhere into this spot, in the layout phase, and
+ * hands back the portal container this spot is drawn under.
+ */
+function AdoptElement({
+  element,
+  onPortalContainer,
+}: {
+  element: HTMLElement;
+  onPortalContainer: (portal: HTMLElement | null | undefined) => void;
+}) {
+  const adopt = useCallback(
+    (span: HTMLSpanElement | null) => {
+      if (span !== null && element.parentNode !== span) span.append(element);
+    },
+    [element],
+  );
+  const portal = usePortalContainer();
+  const report = useEventCallback(onPortalContainer);
+  useLayoutEffect(() => report(portal), [portal, report]);
+  return <span ref={adopt} style={{ display: "contents" }} />;
 }
 
 function showTextToast(

@@ -18,7 +18,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-    - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+    - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
 - Core:
   - Uses:
     - `primitives/pane.defineApp`

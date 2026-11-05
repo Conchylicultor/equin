@@ -16,14 +16,19 @@
  * version's `dist/index.mjs`.
  */
 
-import { useEffect } from "react";
+import { createContext, useContext, useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Toaster, toast as sonnerToast } from "sonner";
 
 import type { ToastVariant } from "../../core";
 import { useLiveToastCount } from "../internal/live-toasts";
-import { showToast } from "../internal/show-toast";
+import { RenderOrigin } from "@plugins/primitives/plugins/scope/plugins/render-origin/web";
+import {
+  showToast,
+  useShowCustomToast,
+  type CustomToastArgs,
+} from "../internal/show-toast";
 
 /** sonner's default toast lifetime (dist:417). */
 const TOAST_LIFETIME = 4000;
@@ -377,24 +382,41 @@ describe("the toast ledger is the set of mounted toasts", () => {
 });
 
 describe("click-to-dismiss", () => {
-  /** A custom toast with words and one control of its own. */
+  /**
+   * A custom toast with words and one control of its own, raised from inside
+   * a render origin — where its content renders, adopted into sonner's `<li>`.
+   */
   async function showCustom(onControl: () => void): Promise<void> {
+    let show: ((args: CustomToastArgs) => void) | null = null;
+    function Raiser({
+      into,
+    }: {
+      into: (r: (args: CustomToastArgs) => void) => void;
+    }) {
+      into(useShowCustomToast());
+      return null;
+    }
     render(
-      <>
+      <RenderOrigin>
         <LedgerProbe />
         <Toaster />
-      </>,
+        <Raiser into={(r) => (show = r)} />
+      </RenderOrigin>,
     );
-    showToast({
-      duration: Infinity,
-      render: () => (
-        <div>
-          <p>the body</p>
-          <button type="button" onClick={onControl}>
-            Act
-          </button>
-        </div>
-      ),
+    await act(async () => {
+      show!({
+        duration: Infinity,
+        render: () => (
+          <div>
+            <p>the body</p>
+            <button type="button" onClick={onControl}>
+              Act
+            </button>
+          </div>
+        ),
+      });
+      // The content commits in the origin before the toast is enqueued.
+      await Promise.resolve();
     });
     await flushToasts();
     expect(ledgerCount()).toBe(1);
@@ -426,5 +448,68 @@ describe("click-to-dismiss", () => {
     await flushToasts(TIME_BEFORE_UNMOUNT + 50);
     expect(onControl).toHaveBeenCalledTimes(1);
     expect(mountedToasts()).toHaveLength(1);
+  });
+});
+
+describe("a custom toast renders in its caller's origin", () => {
+  /** Stands for any context the toast's body reads (a transport, a navigator). */
+  const World = createContext("page");
+
+  function WorldName() {
+    return <p>{`body in ${useContext(World)}`}</p>;
+  }
+
+  let show: ((args: CustomToastArgs) => void) | null = null;
+  function Raiser({
+    into,
+  }: {
+    into: (r: (args: CustomToastArgs) => void) => void;
+  }) {
+    into(useShowCustomToast());
+    return null;
+  }
+
+  /** The toaster in the page's world; the raiser in its own origin, in another. */
+  function Tree({ withOrigin }: { withOrigin: boolean }) {
+    return (
+      <>
+        <LedgerProbe />
+        <Toaster />
+        {withOrigin && (
+          <World.Provider value="demo">
+            <RenderOrigin>
+              <Raiser into={(r) => (show = r)} />
+            </RenderOrigin>
+          </World.Provider>
+        )}
+      </>
+    );
+  }
+
+  async function raise(): Promise<void> {
+    await act(async () => {
+      show!({ duration: Infinity, render: () => <WorldName /> });
+      await Promise.resolve();
+    });
+    await flushToasts();
+  }
+
+  it("shows the body inside the toast, reading the caller's contexts", async () => {
+    render(<Tree withOrigin />);
+    await raise();
+    const [li] = mountedToasts();
+    expect(li?.textContent).toContain("body in demo");
+    expect(ledgerCount()).toBe(1);
+  });
+
+  it("is dismissed when its origin goes away", async () => {
+    const view = render(<Tree withOrigin />);
+    await raise();
+    expect(mountedToasts()).toHaveLength(1);
+    view.rerender(<Tree withOrigin={false} />);
+    await flushToasts(50);
+    await flushToasts(TIME_BEFORE_UNMOUNT + 50);
+    expect(mountedToasts()).toHaveLength(0);
+    expect(ledgerCount()).toBe(0);
   });
 });

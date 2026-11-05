@@ -57,7 +57,7 @@ the meaning, so the view config sets no sort.
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/icon-picker.IconPicker`
-    - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+    - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
     - `tag-tree/engine.useTagTreeActions`
     - `ui/icons.Icon`
   - Exports (types): `TagManagerPanelProps`
