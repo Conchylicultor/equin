@@ -300,8 +300,10 @@ export interface ScheduleSpec {
    * snapshot of data that expires), so it needs no boot-time fallback of its
    * own: graphile backfills from `known_crontabs.last_execution`, each tick
    * at most once across every restart, and the singleton key collapses
-   * several missed ticks onto one row. The in-process queue keeps no history
-   * across a reload, so there it has nothing to catch up.
+   * several missed ticks onto one row. The in-process queue (a browser host)
+   * reads it the same way, from its own last-tick watermark, when its
+   * schedules are installed: a tick missed while no tab was open runs once on
+   * the next open.
    */
   catchUpWithinMs?: number;
 }

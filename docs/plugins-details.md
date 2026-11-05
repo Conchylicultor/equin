@@ -21758,6 +21758,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes: `host-service:database.driver` "database.driver"
         - Uses: `database.DatabaseDriver`
+      - Test helpers:
+        - Server: `@plugins/database/plugins/pglite/server/testing`
+          - `createPgliteDriver` — A `DatabaseDriver` over PGlite — Postgres compiled to WASM, in this process.
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
       - Server:
         - Uses:
@@ -21838,11 +21841,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 22 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+        - Imported by: 23 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
           - `apps` ×6
           - `fields` ×5
+          - `infra` ×3
           - `conversations` ×2
-          - `infra` ×2
           - `network` ×2
           - `debug/latency-ledger`
           - `ids`
@@ -30303,17 +30306,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 39 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+    - Imported by: 40 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
       - `apps` ×13
       - `conversations` ×6
       - `primitives` ×3
       - `tasks` ×3
       - `active-data` ×2
       - `build` ×2
+      - `infra` ×2
       - `page` ×2
       - `release` ×2
       - `history/engine`
-      - `infra/trash`
       - `plugin-meta/plugin-health`
       - `reports`
       - `shell/notifications`
@@ -33244,28 +33247,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JobDeadlinePayloadSchema`
               - `JobRunnerDiedPayloadSchema`
               - `JobSlotFloorPayloadSchema`
-        - **`in-process`** (excluded) — The in-process job queue: provides the JobQueue host service in memory — a row runs in this process when it is due (a transaction's enqueue only once it commits), scheduled jobs fire on a one-shot timer to their next due minute, nothing survives a reload. For a host without the desktop's graphile queue; never booted by the desktop.
+        - **`in-process`** (excluded) — The in-process job queue: provides the JobQueue host service for a host without the desktop's graphile queue — a row runs in this process when it is due, kept in the host's own database (written in the enqueuing transaction, so it commits or rolls back with it, and outlives a reload); scheduled jobs fire on a one-shot timer to their next due minute, a tick missed while no process ran caught up per the job's catchUpWithinMs. Never booted by the desktop.
           - Server:
-            - Contributes: `host-service:jobs.queue` "jobs.queue"
-            - Uses:
-              - `database.afterCommit`
-              - `infra/jobs.announceRunDead`
-              - `infra/jobs.answerJobsInMemory`
-              - `infra/jobs.JobQueue`
-              - `infra/jobs.JobQueueImpl`
-              - `infra/jobs.JobRowOpts`
-              - `infra/jobs.JobRowOutcome`
-              - `infra/jobs.JobTaskPayload`
-              - `infra/jobs.listRegisteredJobs`
-              - `infra/jobs.pendingWaits`
-              - `infra/jobs.QueuedJob`
-              - `infra/jobs.resolveJobCron`
-              - `infra/jobs.singletonJobKey`
-              - `infra/jobs.UNSAFE_runJobRow`
+            - Contributes:
+              - `host-service:jobs.queue` "jobs.queue"
+              - `change-feed-exclusion` "jobs_in_process_rows"
+              - `change-feed-exclusion` "jobs_in_process_schedules"
+            - Uses: 21 symbols — full list in [`plugins/infra/plugins/jobs/plugins/in-process/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/in-process/REFERENCE.md)
+              - `infra/jobs` ×14
+              - `database` ×3
+              - `database/sql-column` ×2
+              - `ids.externalIdColumn`
+              - `network/live/change-feed.ExcludeFromChangeFeed`
+            - DB schema: `plugins/infra/plugins/jobs/plugins/in-process/server/internal/tables.ts`
             - Exports (values): `settleJobQueue`
           - Test helpers:
             - Server: `@plugins/infra/plugins/jobs/plugins/in-process/server/testing`
-              - `createMemoryQueue` — An in-memory job queue: rows run in this process when they are due, nothing survives a reload.
+              - `createInProcessQueue` — The in-process job queue: rows run in this process when they are due, for a host without the desktop's graphile queue (the browser composition, the portable boot test).
         - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
           - Server:
             - Contributes: `fork-data-exclusion` "supervised_job_runs"
@@ -36586,6 +36584,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/latency-ledger`
               - `debug/slow-ops`
               - `debug/trace/engine`
+              - `infra/jobs/in-process`
               - `infra/retention`
               - `network/live/live-state-snapshot`
               - `reports/engine`
@@ -37414,6 +37413,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/mail/sync`
           - `conversations`
           - `conversations/transcript-source`
+          - `infra/jobs/in-process`
           - `infra/launcher/login-services`
           - `infra/paths/data-files`
           - `infra/paths/data-files/memory`

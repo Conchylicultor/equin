@@ -32,8 +32,10 @@ serveBrowserHost({
   `config` (`config_v2/browser-store`), `transcripts`
   (`conversations/transcript-source/memory`), `attachment-blobs`
   (`infra/attachments/memory-blobs`), `data-files`
-  (`infra/paths/data-files/memory`). NOT persisted: the in-process job queue (a
-  row queued but not run is lost on reload) and the log sink (ring only).
+  (`infra/paths/data-files/memory`). The in-process job queue
+  persists in the database itself (`infra/jobs/in-process`: its rows are
+  written in the enqueuing transaction). NOT persisted: the log sink (ring
+  only).
 - **Lifecycle record** `{ state, migrations }`: `seeding` found at open = a
   first boot died mid-way → wiped and started again (never half a seed);
   `migrations` holding a hash this bundle lacks = newer code migrated the data

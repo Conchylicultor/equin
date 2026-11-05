@@ -38,7 +38,7 @@ import { runMigrations } from "@plugins/database/plugins/migrations/server/testi
 import { withHostServices } from "@plugins/framework/plugins/server-core/core/testing";
 import { JobQueue } from "@plugins/infra/plugins/jobs/server";
 import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server";
-import { createMemoryQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server/testing";
+import { createInProcessQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server/testing";
 import { installTaskDerivedSchema } from "@plugins/tasks/plugins/tasks-core/server/testing";
 import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import {
@@ -121,7 +121,7 @@ test("a spawn job that dead-letters takes its conversation out of starting, its 
     VALUES (${CONV}, ${ATTEMPT}, 'starting', 'sdk', ${FALLBACK_MODEL}, 'test')
   `);
 
-  const queue = createMemoryQueue();
+  const queue = createInProcessQueue();
   await withHostServices(
     [
       DatabaseDriver.provide(throwawayDriver(t.db as unknown as Db)),

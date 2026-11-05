@@ -37,6 +37,7 @@ keystrokes into one concatenated turn.
     - `apps/mail/sync`
     - `conversations`
     - `conversations/transcript-source`
+    - `infra/jobs/in-process`
     - `infra/launcher/login-services`
     - `infra/paths/data-files`
     - `infra/paths/data-files/memory`

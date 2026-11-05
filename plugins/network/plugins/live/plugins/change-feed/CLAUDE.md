@@ -489,6 +489,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `debug/latency-ledger`
     - `debug/slow-ops`
     - `debug/trace/engine`
+    - `infra/jobs/in-process`
     - `infra/retention`
     - `network/live/live-state-snapshot`
     - `reports/engine`
