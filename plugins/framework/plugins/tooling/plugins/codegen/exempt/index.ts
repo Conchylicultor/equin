@@ -46,10 +46,7 @@ export default [
   },
   {
     rule: "repo-walk-safety/no-adhoc-repo-listing",
-    paths: [
-      "core/barrel-free-tree.ts",
-      "core/evaluated-barrels.ts",
-    ],
+    paths: ["core/barrel-free-tree.ts", "core/evaluated-barrels.ts"],
     kind: "debt",
     task: "task-1793856387-73tcw0",
     reason:
