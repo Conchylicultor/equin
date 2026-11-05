@@ -40,7 +40,7 @@ export const _attemptConvAgg = pgTable(ATTEMPT_CONV_AGG_TABLE, {
   hasOpenConv: boolean("has_open_conv"),
   maxEndedAt: timestamp("max_ended_at", { withTimezone: true }),
   // `status = 'waiting'`: some conversation of the attempt waits on the user.
-  // Feeds the task's `need_action` status (tasks_v and the `tasks` set both
+  // Feeds the task's `need_action` status (tasks_v and the live task rows both
   // read it here, so neither reads `conversations` directly). NULL for an
   // attempt with no conversation, like the two flags above.
   hasWaitingConv: boolean("has_waiting_conv"),

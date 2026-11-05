@@ -54465,7 +54465,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --radius`
         - Imported by: `tasks/sidequest-autopilot`
-    - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced, each a read of the task's own scope; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
+    - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical conversations-* / tasks.v2 resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced, each a read of the task's own scope; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Web:
         - Contributes:
           - `FieldPresentation.Register` "exposure:tasks_ext_mandate"
@@ -54488,8 +54488,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTaskCluster`
           - `useTaskConversations`
       - Server:
-        - Contributes: 57 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `resource.declare` ×39
+        - Contributes: 58 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `resource.declare` ×40
           - `derived-table` ×6
           - `derived-view` ×4
           - `ids.kind` ×3
@@ -54702,14 +54702,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `task-descriptions:rows` (keyed, point)
           - `task-dropped-states:rows` (keyed, point)
           - `task-mandates:rows` (keyed, point)
-          - `tasks` (keyed)
-          - `tasks:rows` (keyed, point)
           - `tasks.attachment-links` (keyed)
           - `tasks.attachment-links:rows` (keyed, point)
           - `tasks.tree` (keyed, window)
           - `tasks.tree:ancestors` (keyed, window)
           - `tasks.tree:groups` (push)
           - `tasks.tree:rows` (keyed, point)
+          - `tasks.v2` (keyed, window)
+          - `tasks.v2:groups` (push)
+          - `tasks.v2:rows` (keyed, point)
       - Core:
         - Uses: 34 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations/model-provider` ×3

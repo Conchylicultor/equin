@@ -324,7 +324,10 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
   });
 
   test("tasks carry the stories' categories", async () => {
-    const rows = (await loadResourceByKey("tasks", {})) as Row[];
+    const rows = (await loadResourceByKey(
+      taskRows.rows.key,
+      taskRows.rows.point.encode(DEMO_STORIES.map(demoTaskId)),
+    )) as Row[];
     const byId = new Map(rows.map((r) => [r.id, r]));
     for (const story of DEMO_STORIES) {
       const row = byId.get(demoTaskId(story));
@@ -798,7 +801,9 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
       return { value, xid };
     };
     try {
-      const all: ResourceParams = {};
+      // The tasks window's default page: the demo's few tasks, and the one
+      // created below.
+      const all: ResourceParams = taskRows.window.defaultParams;
       await subscribe(taskRows.key, all);
 
       const created = await inTx((tx) =>

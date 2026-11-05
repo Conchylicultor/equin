@@ -42,7 +42,7 @@ preloaded), bounded by construction:
 
 No list reads it: the shape EXPOSES the track (`exposes`, served by
 `LiveColumns.Expose(tasksTrack)`), so every list whose rows reach a task — the
-task list (`taskRows` is `from: tasksEntityRef`), the conversation lists —
+task list (`taskWindow` is `from: tasksEntityRef`), the conversation lists —
 gets a `track` field (id `track`), filtered, sorted and grouped by it, with no
 list code. Its presentation (`FieldPresentation.Register({ owner:
 taskTrackShape.exposure })`) is the default enum chip in each value's

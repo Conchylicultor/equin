@@ -107,7 +107,7 @@ export { runtimeOfConversationLookup } from "./internal/runtime-lookups";
 // in one query has nowhere else to read it — and a `tasks_v` read costs the same
 // whether it asks for one id or fifty, so per-id reads turn a page read into one
 // full-graph round trip per linked task. Built on the same derivations as the
-// live `tasks` set (./internal/derived.ts), which reads the base tables instead.
+// live task rows (./internal/derived.ts), which reads the base tables instead.
 // Today's consumers are `page/annotations/todo/task-link`'s markdown provider
 // and `tasks/automations`' open-task lookup (read by the `automations.catalog`
 // live value). A legacy live reader of `tasks_v` is reached through the view's

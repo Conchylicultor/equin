@@ -75,7 +75,7 @@ const TASK_ROW_CARRY = {
   },
 } as const;
 
-// Ordered as the old list was: `rank`, then `createdAt` (the id breaks ties).
+// Tree order: `rank`, then `createdAt` (the id breaks ties).
 const TASK_ROW_ORDER = [
   ["rank", "asc"],
   ["createdAt", "asc"],
@@ -98,51 +98,47 @@ const TASK_TREE_CARRY = {
   fields: TASK_ROW_CARRY.fields,
 } as const;
 
-// Every task — the WHOLE ordered set (`all`): the task list, the dependency
-// graph and every per-task chip read a value for every task (a status, the
-// dependency edges), so its readers hold the set entire. Served over the base
-// table and its materialized aggregates (`../server/internal/task-rows.ts`): a
-// task write is its own row's refill, a write that moves a stored aggregate
+// The tasks as a bounded WINDOW (`rank`, then `createdAt`; 100 / 500), read
+// today by id (`useLive(taskRows, { id })` / `{ ids }`, its `:rows`): the
+// chips, referents, the task pane and the sidebar queue. No reader holds
+// every task — the edge walkers read one cluster (`taskClusterRows`), the task
+// list and the sidequest launch list the tree (`taskWindow`) — so the set is
+// never shipped whole: it was an `all` set preloaded at boot, 5.55 MB of every
+// boot snapshot and restart replay on main (6,778 rows, 2026-11-05;
+// research/2026-11-05-tasks-bounded-task-rows.md, step 5). Served over the
+// base table and its materialized aggregates (`../server/internal/task-rows.ts`):
+// a task write is its own row's refill, a write that moves a stored aggregate
 // (an attempt / conversation / push, an edge, a prerequisite's facts) the
-// refill of each task whose side row changed, an insert an entrant, a delete
-// an exit — never a whole-set reload.
-// Ordered as the old list was: `rank`, then `createdAt` (the id breaks ties).
+// refill of each task whose side row changed.
 //
 // Declared by FIELDS over the `tasks` entity (`from: tasksEntityRef`): the
 // task list's fields — the title and last update (`pick`), the derived
 // `status` (an own field, bound by `../server/internal/task-rows.ts`) — carry
-// their labels, types and options, so no list builds them; and every field a
-// task extension exposes (its track, category, automation origin) folds into
-// each row under `$columns` (the base exposures), filtered and grouped in
-// memory with no list code. Each is a rarely-written side table (a track
-// switch, a filing, a categorisation — unlike a conversation's usage), so
-// folding them into this boot-preloaded set stays cheap.
+// their labels, types and options, so no list builds them (the in-memory task
+// DataViews derive theirs from this collection); and every field a task
+// extension exposes (its track, category, automation origin) folds into each
+// row under `$columns` (the base exposures) — a window reaches them, a
+// lookup-only collection would not.
 //
 // The wire row is `TaskListItem` — every `tasks_v` column but the heavy
 // `description` (read per task from `taskDescriptions` below) — plus the
-// additive `$columns`, under the legacy key `tasks`: a tab still running a
-// bundle that declared `tasks` as an old param-less keyed descriptor over
-// `TaskListItemSchema` subscribes `{}`, passes the `all` gate and parses these
-// rows with its own schema, which strips the keys it does not know — the C39
-// old-bundle check, pinned by `../server/internal/tree-oracle.test.ts`. A
-// removed, renamed or retyped field must rename the key.
+// additive `$columns`. Key `tasks.v2`: the old `tasks` was a param-less whole
+// set (preloaded at boot), so a tab still running a bundle that declared it
+// subscribes a key no longer served and is refused (C39). A removed, renamed
+// or retyped field must rename the key.
 //
-// Boot-critical (`preload: "boot"`): the task list paints from the boot
-// snapshot. Named `taskRows` because `tasks` is the server's view handle.
-export const taskRows = liveCollection("tasks", {
+// Not preloaded; its `:rows` sibling is preloaded at the live conversations'
+// tasks (`../server/internal/resources.ts`). Named `taskRows` because `tasks`
+// is the server's view handle.
+export const taskRows = liveCollection("tasks.v2", {
   from: tasksEntityRef,
   pick: TASK_ROW_PICK,
   fields: TASK_ROW_FIELDS,
   carry: TASK_ROW_CARRY,
   id: "id",
-  all: {
-    orderBy: TASK_ROW_ORDER,
-    unbounded: {
-      reason:
-        "the task list, the dependency graph and the task chips need every task's status and dependency edges",
-    },
-  },
-  preload: "boot",
+  sortable: ["rank", "createdAt", "updatedAt", "title"],
+  default: { orderBy: TASK_ROW_ORDER, limit: 100 },
+  maxLimit: 500,
   // The `:rows` id-set cap. The sidebar queue reads the tasks of every LIVE
   // conversation by id (`conversationsActive`, a whole set — ~30 today), as
   // `queueRanks` reads their ranks: 2000 is far over any live set, still bounded.

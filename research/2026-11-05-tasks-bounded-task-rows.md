@@ -236,3 +236,25 @@ Yes, as the **scope** of the edge-walking reads — with the bound above.
    the task list on it, with `childCount` as a row field.
 5. `taskRows` from `all` to a window (key renamed, no `preload`); measure boot
    snapshot and `replay-bytes.ts` before / after.
+
+### Step 5 — as landed (2026-11-05)
+
+`taskRows` is a plain (non-tree) window under key `tasks.v2` (`rank`,
+`createdAt`; 100 / 500; `maxIds` 2000), no `preload`. Every reader reads it by
+id (`tasks.v2:rows`); its `:rows` stays preloaded at the live conversations'
+tasks (the queue). A window rather than lookup-only: a lookup-only collection
+reaches no exposures, and the in-memory task DataViews derive their fields
+(track, category, origin) from this collection's `$columns`. The old `tasks`
+key is gone, so an old-bundle tab is refused `unknown-key` (C39, pinned in
+`tree-oracle.test.ts`); the tree oracle's per-step costs are now a point
+reader of every scripted task (the same loads as the whole set's), and
+`all-parity.test.ts` holds the point read and every cluster's scope equal to
+`tasks_v`.
+
+Measured on this worktree's fork of main (6.8k tasks), same method as above:
+
+| | before (main) | after |
+|---|---|---|
+| boot snapshot | 6.68 MB, `tasks` 6.14 M chars (measured on main today, after attempts were bounded) | 0.78 MB, no task set (`tasks.v2:rows` 33 K chars: the live conversations' tasks) |
+| restart replay, 3 tabs, `/` (`replay-bytes.ts`) | ≈ 6.01 M chars, `tasks` 5.52 M | 0.40 M chars, no task frame |
+| restart replay, 3 tabs, Tasks pane open | — | 1.42 M chars: `task-cluster` 0.39 M (38 clusters), `tasks.tree:ancestors` 0.11 M, `tasks.tree` 0.10 M, `tasks.v2:rows` 0.09 M |

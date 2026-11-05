@@ -14,9 +14,10 @@
  * its host's refill, a delete or a drop an exit with no load, and a write to a
  * table the probe does not read loads nothing.
  *
- * Step 19 adds the REAL `tasks` set (`taskRows`, compiled with its shipped
- * serve options against the throwaway), subscribed `{}` and as a `:rows`
- * point reader of two ids, and pins ITS cost per step: a task write is its
+ * Step 19 adds the REAL task rows (`taskRows`, compiled with its shipped
+ * serve options against the throwaway) — since the bounded-tasks step 5
+ * (2026-11-05) a window, `tasks.v2`, read as a `:rows` point reader of
+ * every scripted task — and pins ITS cost per step: a task write is its
  * own row (plus every transitive dependent when the write moves what the
  * blocking rule reads — `held_at`, `dropped_at`), an attempt / conversation /
  * push write is its task's row plus that task's dependents, an edge write the
@@ -24,8 +25,8 @@
  * `waiting_for`) nothing. Beside it, `taskDescriptions` (lookup-only,
  * `task-descriptions:rows`) as a point reader of two ids: a description write
  * is its row's refill, a write to any other `tasks` column loads nothing, a
- * deleted id leaves the read. Then the C39 old-bundle check against the real
- * key, with a literal frozen copy of the legacy row.
+ * deleted id leaves the read. Then the C39 check: a tab on the old whole-set
+ * `tasks` key (or its `tasks:rows`) is refused `unknown-key`.
  *
  * Step 20 adds the REAL attempts set (`attemptRows`, its shipped serve
  * options — since 2026-11-05 scoped by task, key `attempts.v2`), subscribed
@@ -83,7 +84,6 @@ import {
   compileCollection,
   subscribeAsOldDescriptor,
 } from "@plugins/network/plugins/live/server/testing";
-import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import {
   attemptRows,
   conversationsActive,
@@ -131,7 +131,6 @@ const probe = liveCollection(PROBE, {
   },
 });
 
-const TASKS = taskRows.key;
 const TASK_ROWS = taskRows.rows.key;
 const DESCRIPTIONS = taskDescriptions.rows.key;
 const ATTEMPTS = attemptRows.key;
@@ -146,7 +145,7 @@ let oracle: TreeOracle;
 beforeAll(async () => {
   oracle = await createTreeOracle({
     prefix: "tree_oracle",
-    persisted: [PROBE, TASKS, ACTIVE, SYSTEM],
+    persisted: [PROBE, ACTIVE, SYSTEM],
   });
   const queryDb = oracle.queryDb as unknown as QueryDb;
   oracle.registerAll(
@@ -177,7 +176,7 @@ beforeAll(async () => {
       db: queryDb,
     }),
   );
-  oracle.registerAll(
+  oracle.registerWindow(
     taskRows,
     compileCollection(taskRows, {
       ...taskRowsServeOptions,
@@ -322,113 +321,74 @@ const TASK_STEPS: Record<string, TreeStep[]> = {
   ],
 };
 
-/**
- * What each step must cost the real `tasks` set: its loads and `orderOf`
- * calls, and the `:rows` point reader's loads (its point set is T1, T3).
- * The edges at each step are the script's: T2 → T1, T3 → T2, T4 → T1, then
- * T6 → T3 (`edge.insert`), and T3 → T2 gone (`edge.delete`).
- */
-interface TasksCost {
+/** A set's cost per step: its loads and `orderOf` calls, and its `:rows` point reader's loads. */
+interface SetCost {
   loads: TreeLoad[];
   orderOf: number;
   rowLoads: TreeLoad[];
 }
-const NOTHING: TasksCost = { loads: [], orderOf: 0, rowLoads: [] };
+const NOTHING: SetCost = { loads: [], orderOf: 0, rowLoads: [] };
+
+/**
+ * What each step must cost the `tasks.v2:rows` point reader of every
+ * scripted task (T1–T6; T6 is inserted mid-script, so the set holds its id
+ * before its row): its loads. The edges at each step are the script's: T2 →
+ * T1, T3 → T2, T4 → T1, then T6 → T3 (`edge.insert`), and T3 → T2 gone
+ * (`edge.delete`). Any step not listed loads nothing.
+ */
 const ids = (...xs: string[]) => ({ ids: [...xs].sort() });
 const sortLoads = (loads: readonly TreeLoad[]) =>
   [...loads].sort((a, b) =>
     JSON.stringify(a.ids).localeCompare(JSON.stringify(b.ids)),
   );
-const TASKS_COST: Record<string, TasksCost> = {
+const TASKS_COST: Record<string, TreeLoad[]> = {
   // An entrant.
-  "task.insert": { ...NOTHING, loads: [ids(T6)], orderOf: 1 },
+  "task.insert": [ids(T6)],
   // T6's own edge: its `dependencies` and its closure (nothing depends on T6).
-  "edge.insert": { ...NOTHING, loads: [ids(T6)] },
-  // `title` is no order field and no blocking input: T2 alone.
-  "task.rename": { ...NOTHING, loads: [ids(T2)] },
+  "edge.insert": [ids(T6)],
+  // `title` is a row field and no blocking input: T2 alone.
+  "task.rename": [ids(T2)],
   // `updated_at` moves with it.
-  "task.describe": {
-    loads: [ids(T1)],
-    orderOf: 0,
-    rowLoads: [ids(T1)],
-  },
+  "task.describe": [ids(T1)],
   // `held_at` is a blocking input, but T3 was already blocking T6 (it has no
   // completed attempt): T6's stored `blocking` row does not move, so T3 alone.
-  "task.hold": {
-    loads: [ids(T3)],
-    orderOf: 0,
-    rowLoads: [ids(T3)],
-  },
+  "task.hold": [ids(T3)],
   // An attempt, its conversation and its push: the task. Its dependent T6 is
   // refilled only when T3's facts move T6's stored `blocking` row — none of
   // these do (T3, held, keeps blocking).
-  "attempt.insert": {
-    loads: [ids(T3)],
-    orderOf: 0,
-    rowLoads: [ids(T3)],
-  },
-  "conversation.insert": {
-    loads: [ids(T3)],
-    orderOf: 0,
-    rowLoads: [ids(T3)],
-  },
+  "attempt.insert": [ids(T3)],
+  "conversation.insert": [ids(T3)],
   // T1 completes: the dependents whose blocking it ends (T2, T4). T3 and T6
   // stay blocked (by T2, by T3): their stored rows do not move.
-  "conversation.done": {
-    loads: [ids(T1, T2, T4)],
-    orderOf: 0,
-    rowLoads: [ids(T1)],
-  },
+  "conversation.done": [ids(T1, T2, T4)],
   // `waiting_for` / `last_viewed_at`: no rollup reads them.
-  "conversation.poller": NOTHING,
+  "conversation.poller": [],
   // `status` is a rollup input (`has_waiting_conv`): T3 (T6 stays blocked).
-  "conversation.resume": {
-    loads: [ids(T3)],
-    orderOf: 0,
-    rowLoads: [ids(T3)],
-  },
-  "push.insert": {
-    loads: [ids(T3)],
-    orderOf: 0,
-    rowLoads: [ids(T3)],
-  },
+  "conversation.resume": [ids(T3)],
+  "push.insert": [ids(T3)],
   // No rollup reads `title`.
-  "conversation.retitle": NOTHING,
+  "conversation.retitle": [],
   // `title` again: T3 alone.
-  "task.rename-live": { loads: [ids(T3)], orderOf: 0, rowLoads: [ids(T3)] },
+  "task.rename-live": [ids(T3)],
   // A system conversation moves no stored fact of T3 (it already has a live
   // conversation): nothing.
-  "conversation.system": NOTHING,
-  // `rank` is the order field.
-  "task.reorder": { ...NOTHING, loads: [ids(T5)], orderOf: 1 },
+  "conversation.system": [],
+  // `rank` is a row field.
+  "task.reorder": [ids(T5)],
   // A2 moves from T2 to T4: both hosts' stored facts move. Their dependents'
   // blocking does not (T3 stays blocked by T2, T6 by T3).
-  "attempt.move": {
-    loads: [ids(T2, T4)],
-    orderOf: 0,
-    rowLoads: [],
-  },
+  "attempt.move": [ids(T2, T4)],
   // T3's edge: T3 (T6 stays blocked by T3 itself).
-  "edge.delete": {
-    loads: [ids(T3)],
-    orderOf: 0,
-    rowLoads: [ids(T3)],
-  },
+  "edge.delete": [ids(T3)],
   // A1 (T1's) with its conversation and push: T1 and its dependents now (T2,
   // T4 — T3 no longer runs after T2).
-  "attempt.delete": {
-    loads: [ids(T1, T2, T4)],
-    orderOf: 0,
-    rowLoads: [ids(T1)],
-  },
+  "attempt.delete": [ids(T1, T2, T4)],
   // An exit. Its own edge (T2 → T1) is cascade-deleted in the same
-  // transaction, and the edge's route asks for T2's refill — one scoped load
-  // that reads nothing (a pending holds the delete and the refill as sets, so
-  // the order between them is gone and the runtime cannot skip it). Nothing
-  // depends on T2 any more, so no dependent loads.
-  "task.delete": { ...NOTHING, loads: [ids(T2)] },
+  // transaction, and the edge's route asks for T2's refill — one load that
+  // reads nothing. Nothing depends on T2 any more, so no dependent loads.
+  "task.delete": [ids(T2)],
   // `dropped_at` is a blocking input, but nothing depends on T4.
-  "task.drop": { ...NOTHING, loads: [ids(T4)] },
+  "task.drop": [ids(T4)],
 };
 
 /**
@@ -449,7 +409,7 @@ const DESCRIPTIONS_COST: Record<string, TreeLoad[]> = {
  * `attempt.insert`). Any step not listed loads nothing — every task and edge
  * write, the drag, the poller's `waiting_for` / `last_viewed_at` write.
  */
-const ATTEMPTS_COST: Record<string, TasksCost> = {
+const ATTEMPTS_COST: Record<string, SetCost> = {
   // An entrant.
   "attempt.insert": { loads: [ids(A3)], orderOf: 1, rowLoads: [ids(A3)] },
   // A conversation write: its attempt's row (the list and the rollup).
@@ -583,8 +543,8 @@ describe("tree oracle — the scripted workload over the real feed", () => {
       await oracle.run(step);
     }
     await oracle.subscribe(PROBE);
-    await oracle.subscribe(TASKS);
-    const pointParams = taskRows.rows.point.encode([T1, T3]);
+    // T6 is inserted mid-script: the point set holds an id before its row.
+    const pointParams = taskRows.rows.point.encode([T1, T2, T3, T4, T5, T6]);
     await oracle.subscribe(TASK_ROWS, pointParams);
     for (const taskId of ATTEMPT_SCOPES) {
       await oracle.subscribe(ATTEMPTS, { taskId });
@@ -605,7 +565,6 @@ describe("tree oracle — the scripted workload over the real feed", () => {
     const conversationsSeen: unknown[] = [];
     const conversationsWant: unknown[] = [];
     const baseline = oracle.loadsOf(PROBE).length;
-    const tasksBaseline = oracle.loadsOf(TASKS).length;
     const rowsBaseline = oracle.loadsOf(TASK_ROWS).length;
     const attemptsBaseline = oracle.loadsOf(ATTEMPTS).length;
     const attemptRowsBaseline = oracle.loadsOf(ATTEMPT_ROWS).length;
@@ -638,10 +597,8 @@ describe("tree oracle — the scripted workload over the real feed", () => {
       });
       expect({
         step: step.label,
-        loads: cost.loads[TASKS] ?? [],
-        orderOf: cost.orderOf[TASKS] ?? 0,
-        rowLoads: cost.loads[TASK_ROWS] ?? [],
-      }).toEqual({ step: step.label, ...TASKS_COST[step.label]! });
+        loads: cost.loads[TASK_ROWS] ?? [],
+      }).toEqual({ step: step.label, loads: TASKS_COST[step.label]! });
       expect({
         step: step.label,
         loads: cost.loads[DESCRIPTIONS] ?? [],
@@ -677,7 +634,7 @@ describe("tree oracle — the scripted workload over the real feed", () => {
     expect(conversationsSeen).toEqual(conversationsWant);
     for (const [key, from] of [
       [PROBE, baseline],
-      [TASKS, tasksBaseline],
+      [TASK_ROWS, rowsBaseline],
       [ATTEMPTS, attemptsBaseline],
       [ACTIVE, conversationBaselines.get(ACTIVE)!],
       [SYSTEM, conversationBaselines.get(SYSTEM)!],
@@ -700,7 +657,7 @@ describe("tree oracle — the scripted workload over the real feed", () => {
     }
     // Every point-reader load after the subscribe is one a step pinned.
     expect(oracle.loadsOf(TASK_ROWS).slice(rowsBaseline)).toEqual(
-      steps.flatMap((s) => TASKS_COST[s.label]!.rowLoads),
+      steps.flatMap((s) => TASKS_COST[s.label]!),
     );
     oracle.unsubscribe(TASK_ROWS, pointParams);
     // T2 left the read with its delete: the view holds T1 alone.
@@ -714,14 +671,12 @@ describe("tree oracle — the scripted workload over the real feed", () => {
 
   test("with nobody subscribed, the persisted `{}` snapshots stay current through the workload's writes", async () => {
     oracle.unsubscribe(PROBE);
-    oracle.unsubscribe(TASKS);
     oracle.unsubscribe(ACTIVE);
     oracle.unsubscribe(SYSTEM);
     const conversationBaselines = new Map(
       [ACTIVE, SYSTEM].map((k) => [k, oracle.loadsOf(k).length]),
     );
     const baseline = oracle.loadsOf(PROBE).length;
-    const tasksBaseline = oracle.loadsOf(TASKS).length;
     await oracle.run({
       label: "idle.rename",
       statements: [`UPDATE tasks SET title = 'zz' WHERE id = '${T1}'`],
@@ -764,7 +719,6 @@ describe("tree oracle — the scripted workload over the real feed", () => {
     });
     await oracle.converged("idle");
     expect(oracle.kept(PROBE)).toBeDefined();
-    expect(oracle.kept(TASKS)).toBeDefined();
     expect(oracle.kept(ACTIVE)).toBeDefined();
     expect(oracle.kept(SYSTEM)).toBeDefined();
     for (const key of [ACTIVE, SYSTEM]) {
@@ -779,12 +733,6 @@ describe("tree oracle — the scripted workload over the real feed", () => {
       oracle
         .loadsOf(PROBE)
         .slice(baseline)
-        .some((l) => l.ids === "FULL"),
-    ).toBe(false);
-    expect(
-      oracle
-        .loadsOf(TASKS)
-        .slice(tasksBaseline)
         .some((l) => l.ids === "FULL"),
     ).toBe(false);
   });
@@ -897,50 +845,17 @@ describe("tree oracle — the scripted workload over the real feed", () => {
 // ever shipped would fail on every additive change). A field removed, renamed
 // or retyped fails the parse as a missing or invalid key — the change C39 says
 // must rename the key.
-const LegacyRowsSchema = z.array(
-  z.object({
-    id: z.string(),
-    folderId: z.string().nullable(),
-    groupId: z.string().nullable(),
-    clusterId: z.string().nullable(),
-    title: z.string(),
-    titleAuto: z.boolean(),
-    author: z.string().nullable(),
-    droppedAt: z.coerce.date().nullable(),
-    heldAt: z.coerce.date().nullable(),
-    rank: RankSchema,
-    createdAt: z.coerce.date(),
-    updatedAt: z.coerce.date(),
-    status: z.enum([
-      "new",
-      "in_progress",
-      "need_action",
-      "attempted",
-      "done",
-      "held",
-      "dropped",
-      "blocked",
-      "in_progress_blocked",
-    ]),
-    active: z.boolean(),
-    finishedAt: z.coerce.date().nullable(),
-    dependencies: z.array(z.string()),
-  }),
-);
-
-describe("C39 — a tab on the legacy `tasks` descriptor", () => {
-  test("subscribes `{}`, passes the gate, and parses the compiled rows with its OLD schema to the same values", async () => {
-    // The truth as an old tab would hold it: the kept set, over the wire.
-    const wire: unknown = JSON.parse(JSON.stringify(oracle.kept(TASKS)));
-    for (const schema of [LegacyRowsSchema, z.array(TaskListItemSchema)]) {
+describe("C39 — a tab on the legacy whole-set `tasks` key", () => {
+  test("is refused `unknown-key`, a `skew` verdict (the Reload prompt), for the set and its point reads", async () => {
+    for (const key of ["tasks", "tasks:rows"]) {
       const old = await subscribeAsOldDescriptor(
-        { key: TASKS, schema },
+        { key, schema: z.array(TaskListItemSchema) },
         { handler: oracle.runtime.notificationsWsHandler },
       );
-      expect(old.kind).toBe("parsed");
-      expect(canonical(old.kind === "parsed" ? old.value : null)).toBe(
-        canonical(schema.parse(wire)),
-      );
+      expect({ key, old }).toEqual({
+        key,
+        old: { kind: "refused", reason: "unknown-key", verdict: "skew" },
+      });
     }
   });
 });
@@ -962,9 +877,13 @@ describe("C39 — a tab on the legacy whole-set `attempts` key", () => {
 // What the legacy `conversations-active` / `-system` descriptors parsed their
 // payload with (param-less, keyed on `id`: `z.array(ConversationSchema)`, the
 // `conversations_v` row), restated as a
-// LITERAL frozen at step 22 — never derived from the live schema (see
-// `LegacyRowsSchema` above). Not `strict` (see there): an additive key such as
-// `$columns` is stripped, as the old tab's schema did.
+// LITERAL frozen at step 22 — never derived from the live schema, which would
+// change with the row and so pass whatever the row becomes. Not `strict`: the
+// old bundle's schema was a plain `z.object`, which strips unknown keys, so an
+// additive key such as `$columns` is stripped, as the old tab's schema did
+// (and modelling a stricter client than ever shipped would fail on every
+// additive change). A field removed, renamed or retyped fails the parse — the
+// change C39 says must rename the key.
 // `model` is the stored version as text.
 const LegacyConversationsSchema = z.array(
   z.object({

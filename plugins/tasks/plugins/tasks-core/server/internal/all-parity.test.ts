@@ -11,8 +11,9 @@
  * system conversations, before and after a round of writes the rollup
  * triggers maintain.
  *
- * Since step 19 the tasks half is the SHIPPED declaration — `taskRows`
- * compiled with its real serve options (`./task-rows.ts`) — against `tasks_v`
+ * Since step 19 the tasks half is the SHIPPED declarations — `taskRows` (by
+ * id; a whole set until the bounded-tasks step 5) and `taskClusterRows` (every
+ * cluster's scope), compiled with their real serve options (`./task-rows.ts`) — against `tasks_v`
  * rebuilt on the same builders (`./derived.ts`): the two readers of one
  * definition, held equal row for row. Both read "waiting" off the conversation
  * rollup's `has_waiting_conv`. Since step 20 the attempts half is the shipped
@@ -48,8 +49,14 @@ import {
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
+import { compileWindowQuery } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import { compileCollection } from "@plugins/network/plugins/live/server/testing";
-import { attemptRows, conversationsActive, taskRows } from "../../core";
+import {
+  attemptRows,
+  conversationsActive,
+  taskClusterRows,
+  taskRows,
+} from "../../core";
 import { installTaskDerivedSchema } from "../testing/install-derived-schema";
 import { conversationsActiveServeOptions } from "./conversation-rows";
 import { attemptRowsServeOptions } from "./attempt-rows";
@@ -63,9 +70,20 @@ setDefaultTimeout(180_000);
 
 type Rec = Record<string, unknown>;
 
-/** The shipped `tasks` set (`taskRows`), compiled with its real serve options. */
-function compileTasks(db: QueryDb) {
-  return compileCollection(taskRows, { ...taskRowsServeOptions, db });
+/**
+ * The shipped tasks window's point read (`taskRows`' `:rows`, by id),
+ * compiled with its real serve options: its loader over an id set.
+ */
+function taskPointLoader(db: QueryDb) {
+  const specs = compileCollection(taskRows, { ...taskRowsServeOptions, db });
+  const { loader } = compileWindowQuery(taskRows.rows, specs.rows).serverOpts;
+  return (ids: readonly string[]) =>
+    loader(taskRows.rows.point.encode([...ids])) as Promise<Rec[]>;
+}
+
+/** The shipped cluster set (`taskClusterRows`, scoped by `clusterId`), same binding. */
+function compileClusters(db: QueryDb) {
+  return compileCollection(taskClusterRows, { ...taskRowsServeOptions, db });
 }
 
 /** The shipped attempts set (`attemptRows`, scoped by task), compiled with its real serve options. */
@@ -212,35 +230,21 @@ const ownRows = (rows: readonly unknown[]): Rec[] =>
 
 async function checkTasks(): Promise<number> {
   return inParis(async (db, raw) => {
-    const compiled = compileTasks(db);
-    // The set reaches the tasks extensions' exposures (`from`); none is
+    // Every task by id (`taskRows`' point read) and every cluster's scope
+    // (`taskClusterRows`): the two shipped reads of the one binding.
+    // The rows reach the tasks extensions' exposures (`from`); none is
     // served here, so every row's `$columns` is empty — the rest is the
     // view's row.
-    const loaded = (await compiled.all.loader({})) as Rec[];
+    const point = taskPointLoader(db);
+    const loaded = await point(taskIds);
     expect(loaded.map((r) => r.$columns)).toEqual(loaded.map(() => ({})));
     const full = ownRows(loaded);
-    // `tasks_v` minus `description`: the set's row is `TaskListItem`.
+    // `tasks_v` minus `description`: the row is `TaskListItem`.
     const view = (await raw.select().from(tasks)).map(
       ({ description: _d, ...rest }) => rest,
     );
     expect(sortedById(full)).toEqual(sortedById(view));
-    // The declared order: rank, then createdAt, the id the tiebreaker — as
-    // Postgres orders them (rank is text under the column's collation).
-    const order = (
-      await executeRows(raw, {
-        query: sql`SELECT id FROM tasks_v ORDER BY rank, created_at, id`,
-        row: z.object({ id: z.string() }),
-        label: "order",
-      })
-    ).map((r) => r.id);
-    expect(json(full).map((r) => r.id)).toEqual(order);
-    const policy = compiled.all as unknown as {
-      scopedMembership: { orderOf(p: object): Promise<string[]> };
-    };
-    expect(await policy.scopedMembership.orderOf({})).toEqual(
-      order as string[],
-    );
-    // scoped(S) ≡ full ∩ S, with an id that is no task's.
+    // A point read of some tasks ≡ full ∩ S, with an id that is no task's.
     for (let i = 0; i < 6; i++) {
       const s = [
         ...new Set([
@@ -250,12 +254,29 @@ async function checkTasks(): Promise<number> {
           "task-none",
         ]),
       ];
-      const scoped = await compiled.all.loader({}, { affectedIds: s });
       const want = json(full).filter((r) => s.includes(String(r.id)));
-      expect(sortedById(ownRows(scoped))).toEqual(want.sort(byId));
-      const point = await compiled.rows.loader({ ids: s.join(",") });
-      expect(sortedById(ownRows(point))).toEqual(want.sort(byId));
+      const rows = await point(s);
+      expect(sortedById(ownRows(rows))).toEqual(want.sort(byId));
     }
+    // Every cluster's scope, in the declared order (rank, then createdAt,
+    // the id the tiebreaker — as Postgres orders them: rank is text under
+    // the column's collation); together, the view.
+    const clusters = compileClusters(db);
+    const order = await executeRows(raw, {
+      query: sql`SELECT id, cluster_id FROM tasks_v ORDER BY rank, created_at, id`,
+      row: z.object({ id: z.string(), cluster_id: z.string() }),
+      label: "order",
+    });
+    const clusterIds = [...new Set(order.map((r) => r.cluster_id))];
+    const union: Rec[] = [];
+    for (const clusterId of clusterIds) {
+      const rows = ownRows((await clusters.all.loader({ clusterId })) as Rec[]);
+      expect(json(rows).map((r) => r.id)).toEqual(
+        order.filter((r) => r.cluster_id === clusterId).map((r) => r.id),
+      );
+      union.push(...rows);
+    }
+    expect(sortedById(union)).toEqual(sortedById(full));
     return full.length;
   });
 }
@@ -400,7 +421,7 @@ async function checkActiveConversations(): Promise<number> {
   });
 }
 
-describe("the `all` compiler ≡ the derived views (Europe/Paris)", () => {
+describe("the compiled collections ≡ the derived views (Europe/Paris)", () => {
   test("tasks ≡ tasks_v, attempts ≡ attempts_v, on the seeded graph", async () => {
     expect(await checkTasks()).toBe(taskIds.length);
     expect(await checkAttempts()).toBe(attemptIds.length);

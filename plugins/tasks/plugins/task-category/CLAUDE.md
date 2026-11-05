@@ -25,7 +25,7 @@ Consumers read only the generic aggregate:
   garbage-collected), read through `useTaskCategories()`.
 - **Lists:** the shape EXPOSES `category` (`taskCategoryShape.exposes`, served
   by `LiveColumns.Expose(tasksCategory)`), so every list whose rows reach a
-  task — the task list (`taskRows` is `from: tasksEntityRef`) — gets a
+  task — the task list (`taskWindow` is `from: tasksEntityRef`) — gets a
   `category` field, filtered, sorted and grouped by it with no list code
   naming any category. A task with no row reads NULL (the field declares no
   default): the None bucket. Its options are the LIVE registry

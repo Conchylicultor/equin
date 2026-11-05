@@ -13,12 +13,13 @@
  *    change as one upsert, a clear as one delete (checked on the socket's
  *    frames, not in the DOM).
  *
- *  - **19 `tasks`** — a second seeded task arrives as an entrant (one upsert),
- *    a hold and a release of the first each as one upsert of its row with the
- *    new status, an edge making the second run after the first as one upsert
- *    of the second (`dependencies`, `blocked`), the edge's removal likewise,
- *    and the second task's delete as one delete. A reload's boot snapshot
- *    carries the first task.
+ *  - **19 `tasks.v2`** — the seeded task's own row (the detail pane reads
+ *    it by id; no whole set since the bounded-tasks step 5, so a task is never
+ *    in the boot snapshot unless a live conversation's): a hold and a release
+ *    each as one upsert of its row with the new status, an edge making it run
+ *    after a second seeded task as one upsert (`dependencies`, `blocked`),
+ *    the edge's removal likewise. A reload's boot snapshot carries no task
+ *    set (the old whole `tasks` set was every task on every boot).
  *
  *  - **20 `attempts`** — an attempt on the seeded task arrives as an entrant
  *    (`pending`, no conversations) and moves the task to `in_progress` (an
@@ -92,7 +93,7 @@ const SEED_PREFIX = "e2e-tree-";
 /** The live keys this script watches, and what an HTTP read of one looks like. */
 const TREE_KEYS = [
   "task-categories.by-id:rows",
-  "tasks",
+  "tasks.v2:rows",
   "attempts.v2",
 ] as const;
 
@@ -256,9 +257,9 @@ interface TaskRow {
 }
 
 /**
- * Step 19: `tasks` — an entrant, a status flip each way, an edge added and
- * removed, a delete: each one scoped delta of the rows it moves, and over the
- * whole phase no frame re-sent the whole set.
+ * Step 19: `tasks.v2:rows` (the seeded task's own row) — a status flip each
+ * way, an edge added and removed: each one scoped delta of the row, and over
+ * the whole phase no frame re-sent the whole value.
  */
 async function tasksPhase(
   r: Report,
@@ -267,7 +268,7 @@ async function tasksPhase(
   taskId: string,
   measureFrom: number,
 ): Promise<void> {
-  const KEY = "tasks";
+  const KEY = "tasks.v2:rows";
   const otherId = `${taskId}-b`;
   const upsertWhere = async (
     id: string,
@@ -287,18 +288,6 @@ async function tasksPhase(
     );
 
   let at = frames.length;
-  await db.query(
-    "INSERT INTO tasks (id, cluster_id, title, title_auto, rank, mandate_ref) VALUES ($1, $1, $2, false, $3, 'interactive')",
-    [otherId, `${otherId} task`, `zz${otherId}`],
-  );
-  const entered = await upsertWhere(otherId, at, () => true);
-  r.eq(
-    "a new task arrives as an upsert of its row",
-    entered.value?.status,
-    "new",
-  );
-
-  at = frames.length;
   await db.query("UPDATE tasks SET held_at = now() WHERE id = $1", [taskId]);
   const held = await upsertWhere(taskId, at, (row) => row.status === "held");
   r.ok("a hold arrives as one upsert with status `held`", held.ok);
@@ -309,29 +298,35 @@ async function tasksPhase(
   const released = await upsertWhere(taskId, at, (row) => row.status === "new");
   r.ok("a release arrives as one upsert with status `new`", released.ok);
 
+  // A second task the seeded one comes to run after: the edge moves the
+  // seeded task's `dependencies` and status.
+  await db.query(
+    "INSERT INTO tasks (id, cluster_id, title, title_auto, rank, mandate_ref) VALUES ($1, $1, $2, false, $3, 'interactive')",
+    [otherId, `${otherId} task`, `zz${otherId}`],
+  );
   at = frames.length;
   await db.query(
     "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)",
-    [otherId, taskId],
+    [taskId, otherId],
   );
   const blocked = await upsertWhere(
-    otherId,
+    taskId,
     at,
     (row) => row.status === "blocked",
   );
   r.eq(
     "an edge arrives as one upsert of the task that now runs after it (`blocked`)",
     blocked.value?.dependencies,
-    [taskId],
+    [otherId],
   );
 
   at = frames.length;
   await db.query(
     "DELETE FROM task_dependencies WHERE task_id = $1 AND depends_on_task_id = $2",
-    [otherId, taskId],
+    [taskId, otherId],
   );
   const unblocked = await upsertWhere(
-    otherId,
+    taskId,
     at,
     (row) => row.status === "new",
   );
@@ -340,19 +335,11 @@ async function tasksPhase(
     unblocked.value?.dependencies,
     [],
   );
-
-  at = frames.length;
   await db.query("DELETE FROM tasks WHERE id = $1", [otherId]);
-  const gone = await waitFor(
-    async () => deleted(frames, KEY, otherId, at),
-    (d) => d,
-    { timeoutMs: 15_000 },
-  );
-  r.ok("a task delete arrives as a delete", gone.ok);
 
   const phase = framesOf(frames, KEY, measureFrom);
   r.ok(
-    "no `tasks` frame re-sent the whole set, over the whole phase",
+    "no `tasks.v2:rows` frame re-sent the whole value, over the whole phase",
     phase.every((f) => f.value === undefined),
     phase
       .map((f) => `${f.kind ?? "?"}${f.value !== undefined ? "(value)" : ""}`)
@@ -413,7 +400,7 @@ async function attemptsPhase(
   );
   // A pending attempt is `active` (its agent is expected to run).
   const started = await upsertWhere<TaskRow>(
-    "tasks",
+    "tasks.v2:rows",
     taskId,
     at,
     (row) => row.status === "in_progress",
@@ -489,7 +476,7 @@ async function attemptsPhase(
     completed.ok,
   );
   const done = await upsertWhere<TaskRow>(
-    "tasks",
+    "tasks.v2:rows",
     taskId,
     at,
     (row) => row.status === "done",
@@ -505,7 +492,7 @@ async function attemptsPhase(
   );
   r.ok("an attempt delete arrives as a delete", gone.ok);
   const fresh = await upsertWhere<TaskRow>(
-    "tasks",
+    "tasks.v2:rows",
     taskId,
     at,
     (row) => row.status === "new",
@@ -1003,15 +990,17 @@ try {
       ),
     );
 
-    // A reload's first paint is current: the boot snapshot carries the set.
+    // A reload's boot snapshot no longer carries every task: the seeded task
+    // has no live conversation, so no preloaded read names it (its pane
+    // reads it by id after boot).
     const snapshot = page.waitForResponse((res) =>
       new URL(res.url()).pathname.startsWith("/api/resources/boot-snapshot"),
     );
     await page.reload({ waitUntil: "domcontentloaded" });
     const body = await (await snapshot).text();
     r.ok(
-      "the reload's boot snapshot carries the seeded task's row",
-      body.includes(`"id":"${taskId}"`),
+      "the reload's boot snapshot carries no whole task set (not the seeded task's row)",
+      !body.includes(`"id":"${taskId}"`),
     );
     await snap(page, OUT, "1-reloaded");
     await launchesPhase(r, h, taskId);

@@ -5,9 +5,9 @@ clickable chips. Agents write the bare id in their text — no tag wrapping
 needed — and the active-data linkify primitive replaces matches at render time.
 
 Clicking opens the task in `taskDetailPane` (`/tasks/t/:taskId`). The chip
-resolves the task title and current status via the live `tasks` set
-(`useLive(taskRows)`); falls back to
-the raw id if the task isn't in the index yet.
+resolves the task title and current status by id
+(`useLive(taskRows, { id })`, tasks-core's `tasks.v2:rows`); falls back to
+the raw id while the row is unknown.
 
 The id shape is not declared here: the chip's pattern is derived from
 `taskIdKind` (`tasks-core/core/id-kinds.ts`) by `active-data/id-chip`, which

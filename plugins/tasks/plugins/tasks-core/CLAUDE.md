@@ -185,13 +185,19 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
 readers import the declaration from `tasks-core/core`); `server/internal/resources.ts`
 serves them.
 
-- **`taskRows`** (`tasks`) — every task, the WHOLE ordered set
-  (`liveCollection(key, { all })`, `rank` then `createdAt`, `preload: "boot"`),
-  read with `useLive(taskRows[, { select }])` / `useLive(taskRows, { id })`. The
-  row is exactly `TaskListItem` (every `tasks_v` column but `description`),
-  under the legacy key, so an old-bundle tab subscribing `{}` parses it with its
-  own schema (C39, pinned by `tree-oracle.test.ts`); a row change must rename
-  the key. Served by `serveCollection` from `server/internal/task-rows.ts` —
+- **`taskRows`** (`tasks.v2`) — the tasks as a bounded WINDOW (`rank` then
+  `createdAt`, 100 / 500), read today by id with `useLive(taskRows, { id })` /
+  `{ ids }` (chips, referents, the task pane, worktree identity, the queue);
+  a window rather than lookup-only so its rows keep the task extensions'
+  exposures (`$columns`), which the in-memory task DataViews' fields derive
+  from. No reader holds every task, so
+  none is shipped whole: no `preload` — only its `:rows` at the live
+  conversations' tasks (`preloadRows`, the queue's statuses). The row is
+  exactly `TaskListItem` (every `tasks_v` column but `description`) plus the
+  base exposures under `$columns`. The key was renamed from the old whole-set
+  `tasks` (boot-preloaded, 5.55 MB of every boot on main, 2026-11-05): an old
+  tab is refused `unknown-key` (C39, pinned by `tree-oracle.test.ts`); a row
+  change must rename the key. Served by `serveCollection` from `server/internal/task-rows.ts` —
   the ONE spelling the server and the tests compile — over the base table and
   three MATERIALIZED joins (query-resource's `materializeJoin`, each a `fed`
   rollup keyed by the task id, read handles in `rollup-table.ts`), never a
@@ -199,12 +205,14 @@ serves them.
   two rollup rows), `deps` → `task_dependency_list` (the task's own edges →
   `dependencies`) and `blocking` → `task_prerequisite_blocking` (a closure over
   `task_dependencies`, each ancestor with its STORED attempt facts). Costs,
-  pinned per step by the tree oracle: a task write is its own row's refill; a
-  write that moves a stored aggregate (an attempt / conversation / push, an
-  edge, a prerequisite's `held_at` / `dropped_at` / facts) the refill of each
-  task whose side row changed — a dependent only when its blocking really
-  moved; an insert an entrant, a delete an exit; a write no aggregate reads
-  (a conversation's `waiting_for`) nothing.
+  pinned per step by the tree oracle (a point reader of every scripted task):
+  a task write is its own row's refill; a write that moves a stored aggregate
+  (an attempt / conversation / push, an edge, a prerequisite's `held_at` /
+  `dropped_at` / facts) the refill of each task whose side row changed — a
+  dependent only when its blocking really moved; a write no aggregate reads
+  (a conversation's `waiting_for`) nothing. `all-parity.test.ts` holds both
+  shipped reads of the binding (every task by id, every cluster's scope)
+  equal to `tasks_v`.
 - **`taskClusterRows`** (`task-cluster`) — one dependency cluster's tasks, a
   scoped `all` by `clusterId` over the same row and binding as `taskRows`
   (`taskRowsServeOptions`), capped at `TASK_CLUSTER_MAX` (`all: { max }`).
@@ -239,17 +247,18 @@ serves them.
   recounts the folders it touches; it mints `tasks.tree:ancestors`. Read by
   the task list (task-list's `TasksListView`, a live DataView tree) and the
   sidequest launch list (`{ status: "new", tasks_ext_track.track:
-  "sidequest" }`, its own `createdAt desc` order). The key is the flat
-  window's: the change was additive (C39). Pinned by
+  "sidequest" }`, its own `createdAt desc` order). Key `tasks.tree` (it was
+  the flat `tasks.window`; the default read changed meaning, so a new key per
+  C39). Pinned by
   `server/internal/task-tree-oracle.test.ts` (every level converges on the
   tree script plus folder writes; every `$childCount` against a direct
-  count; an old bundle parses the default tuple). The step towards
-  `taskRows` itself as a window
+  count; an old bundle parses the default tuple). The one task window: what
+  lists tasks reads it, what names a task reads `taskRows` by id
   (`research/2026-11-05-tasks-bounded-task-rows.md`).
 - **`taskDescriptions`** (`task-descriptions`, lookup-only: `:rows`) — one
   task's `description`, the heavy text the set omits, by id
   (`useLive(taskDescriptions, { id })`). A description autosave is that row's
-  refill, and also the task's one-row refill in `tasks` (the derived
+  refill, and also the task's one-row refill in `tasks.v2` (the derived
   `updated_at` moves).
 - **The ended-conversation total** is `conversationsGone`'s own `:count`
   (declared `count: true`, preloaded with the window):
@@ -346,7 +355,7 @@ serves them.
     **`conversationsSystem`** (`conversations-system`) — the WHOLE ordered sets
     of live conversations (`all`, `createdAt` desc, `preload: "boot"`), the
     non-`system` and the `system` ones, read with `useLive(c[, { select }])`.
-    Same legacy-key C39 rule as `tasks`. Costs, pinned by the tree oracle: a
+    Same legacy-key C39 rule as the old whole `tasks` set had. Costs, pinned by the tree oracle: a
     conversation write is its own row's refill (`waiting_for` included — the
     one-row refill a poller tick costs), a close an exit, an insert an
     entrant; a task rename or an attempt move the conversations it owns; any
@@ -368,7 +377,7 @@ serves them.
 
 ## Plugin reference
 
-- Description: tasks-core web presence: eagerly registers the boot-critical tasks / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced, each a read of the task's own scope; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
+- Description: tasks-core web presence: eagerly registers the boot-critical conversations-* / tasks.v2 resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced, each a read of the task's own scope; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
 - Load-bearing: yes
 - Web:
   - Contributes:
@@ -392,8 +401,8 @@ serves them.
     - `useTaskCluster`
     - `useTaskConversations`
 - Server:
-  - Contributes: 57 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `resource.declare` ×39
+  - Contributes: 58 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `resource.declare` ×40
     - `derived-table` ×6
     - `derived-view` ×4
     - `ids.kind` ×3
@@ -606,14 +615,15 @@ serves them.
     - `task-descriptions:rows` (keyed, point)
     - `task-dropped-states:rows` (keyed, point)
     - `task-mandates:rows` (keyed, point)
-    - `tasks` (keyed)
-    - `tasks:rows` (keyed, point)
     - `tasks.attachment-links` (keyed)
     - `tasks.attachment-links:rows` (keyed, point)
     - `tasks.tree` (keyed, window)
     - `tasks.tree:ancestors` (keyed, window)
     - `tasks.tree:groups` (push)
     - `tasks.tree:rows` (keyed, point)
+    - `tasks.v2` (keyed, window)
+    - `tasks.v2:groups` (push)
+    - `tasks.v2:rows` (keyed, point)
 - Core:
   - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/model-provider` ×3

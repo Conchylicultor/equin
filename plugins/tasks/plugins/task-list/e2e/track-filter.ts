@@ -2,7 +2,7 @@
  * The task list filters by TRACK and groups by CATEGORY — two fields the
  * task extensions EXPOSE (fields declared once, phase 2:
  * research/2026-10-13-global-fields-declared-once-phase2.md), named by no
- * list code: `taskRows` is declared `from: tasksEntityRef`, so every exposed
+ * list code: `taskWindow` is declared `from: tasksEntityRef`, so every exposed
  * task field folds into its rows.
  *
  *  1. seeds two tasks: one on the sidequest track (a `tasks_ext_track` row)

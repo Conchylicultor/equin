@@ -33,11 +33,12 @@ import {
 } from "./rollup-table";
 import { _attempts, _taskDependencies, _tasks } from "./tables";
 
-// How `taskRows` (core: the whole ordered set of tasks, key `tasks`) binds to
-// the database — the ONE spelling both the served collection
-// (`./resources.ts`) and the tests (`./tree-oracle.test.ts`, which compiles it
-// against a throwaway database; `./all-parity.test.ts`, which holds it equal
-// to `tasks_v`) read, so neither can drift from what ships.
+// How the task row binds to the database — `taskRows` (core: the tasks window
+// `tasks.v2`, read by id), `taskClusterRows` (one cluster) and, with its child
+// count, `taskWindow` (the tree): the ONE spelling both the served
+// collections (`./resources.ts`) and the tests (`./tree-oracle.test.ts`, which
+// compiles it against a throwaway database; `./all-parity.test.ts`, which
+// holds it equal to `tasks_v`) read, so neither can drift from what ships.
 //
 // It reads the BASE table and three MATERIALIZED joins (query-resource's
 // `materializeJoin`: each a derived-tables rollup keyed by the task id, on the
@@ -267,7 +268,7 @@ const derivedColumns = {
     }),
 };
 
-/** The whole ordered set (`taskRows`). */
+/** Any task by id (`taskRows`) and one cluster's tasks (`taskClusterRows`). */
 export const taskRowsServeOptions = {
   from: _tasks,
   joins,
