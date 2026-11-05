@@ -6905,6 +6905,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeMeta`
               - `PrototypeOption`
               - `PrototypeProblem`
+              - `PrototypeScan`
               - `PrototypeVersion`
               - `PrototypeVersionKind`
               - `PrototypeViewport`
@@ -6929,6 +6930,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `listPrototypes`
               - `MocksDeclarationSchema`
               - `mocksProblemDetail`
+              - `nonTokenNamesOf`
               - `optionLabel`
               - `parseMocks`
               - `parseOptionColor`
@@ -6939,6 +6941,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PicksChangeSchema`
               - `picksFromQuery`
               - `presetSize`
+              - `problemsOf`
               - `protoIdKind`
               - `PROTOTYPE_ENTRY_FILE`
               - `PROTOTYPE_VERSION_KINDS`
@@ -6961,6 +6964,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readPrototypeOptions`
               - `resolvePicks`
               - `restorePrototypeVersion`
+              - `scanPrototypeFolder`
               - `setPrototypePicks`
               - `SIZE_PRESETS`
               - `stampPicks`
@@ -49596,6 +49600,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `CLIENT_REPORT_SOURCES`
       - `investigateReport`
+      - `isStaleOrigin`
       - `normalizeMessage`
       - `REPORT_RECENT_MAX`
       - `reportDetailRoute`

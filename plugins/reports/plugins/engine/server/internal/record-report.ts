@@ -34,6 +34,7 @@ const infoReportIcon = symbol("info");
 import {
   reportDetailRoute,
   REPORT_RECENT_MAX,
+  isStaleOrigin,
   reportIdKind,
   type ReportId,
   type ReportInput,
@@ -354,12 +355,17 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
 
   const limited = bumpWindowAndCheck(fp);
   // A report whose originating bundle's graph hash differs from the graph this
-  // server is serving came from an outdated frontend tab — benign version-skew.
-  // Both sides are the artifact's content identity, so a rebuild that composed
-  // the same graph does not make every open tab's reports look stale.
-  const serverGraph = getServerGraphHash();
-  const staleOrigin =
-    buildId != null && serverGraph != null && buildId !== serverGraph;
+  // server is serving came from an outdated frontend tab — benign version-skew,
+  // when the report is about the page's own code; one about what the tab saw
+  // the server do (a sub left unanswered) is not explained by the bundle's age
+  // (reports/core's isStaleOrigin). Both sides are the artifact's content
+  // identity, so a rebuild that composed the same graph does not make every
+  // open tab's reports look stale.
+  const staleOrigin = isStaleOrigin({
+    source,
+    buildId,
+    serverGraph: getServerGraphHash(),
+  });
   const { errorType, stack } = noiseFieldsFrom(data);
   const noise = isNoiseReport({
     source,

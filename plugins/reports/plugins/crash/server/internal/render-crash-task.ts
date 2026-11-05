@@ -1,5 +1,6 @@
 import { getServerGraphHash } from "@plugins/build/plugins/server-build-id/server";
 import { serializeUiContext } from "@plugins/primitives/plugins/ui-context/core";
+import { isStaleOrigin } from "@plugins/reports/core";
 import type { ReportRow } from "@plugins/reports/server";
 import { CrashPayloadSchema, formatResizeLoopTrace } from "../../core";
 import type { CrashPayload } from "../../core";
@@ -25,16 +26,15 @@ function crashOf(row: ReportRow): CrashPayload {
   return CrashPayloadSchema.parse(row.data);
 }
 
-// Same derivation as record-report's `staleOrigin`, against the same pin: the
-// bundle graph hash `reports.last_build_id` holds versus the graph this server
-// is serving.
-function isStaleOrigin(row: ReportRow): boolean {
-  const serverGraph = getServerGraphHash();
-  return (
-    row.lastBuildId != null &&
-    serverGraph != null &&
-    row.lastBuildId !== serverGraph
-  );
+// record-report's `staleOrigin`, against the same pin: the bundle graph hash
+// `reports.last_build_id` holds versus the graph this server is serving — for
+// a source about the page's own code only (reports/core's isStaleOrigin).
+function staleOriginOf(row: ReportRow): boolean {
+  return isStaleOrigin({
+    source: row.source,
+    buildId: row.lastBuildId,
+    serverGraph: getServerGraphHash(),
+  });
 }
 
 export function renderCrashTask(row: ReportRow): {
@@ -47,7 +47,7 @@ export function renderCrashTask(row: ReportRow): {
 function renderTitle(row: ReportRow): string {
   const data = crashOf(row);
   const prefix = data.errorType ? `${data.errorType}: ` : "";
-  const stalePrefix = isStaleOrigin(row) ? "[Stale tab] " : "";
+  const stalePrefix = staleOriginOf(row) ? "[Stale tab] " : "";
   // Tag known-benign noise so the title itself reads as "expected", matching the
   // muted notification — not just a dimmed row with no explanation.
   const noisePrefix = row.noise ? "[noise] " : "";
@@ -58,7 +58,7 @@ function renderTitle(row: ReportRow): string {
 function renderDescription(row: ReportRow): string {
   const data = crashOf(row);
   const serverGraph = getServerGraphHash();
-  const staleOrigin = isStaleOrigin(row);
+  const staleOrigin = staleOriginOf(row);
   const recurrence = row.taskId != null;
   const stack = data.stack != null ? clamp(data.stack, STACK_MAX) : null;
   const componentStack =

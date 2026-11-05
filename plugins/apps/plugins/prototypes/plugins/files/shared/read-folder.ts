@@ -21,12 +21,18 @@ export async function listPrototypeDirNames(mount: Mount): Promise<string[]> {
   const listed = await mount.list(relPath());
   if (listed.kind === "missing") return [];
   return listed.entries
-    .filter(
-      (e) =>
-        e.kind === "dir" && !e.name.startsWith("_") && !e.name.startsWith("."),
-    )
+    .filter((e) => e.kind === "dir" && isPrototypeDirName(e.name))
     .map((e) => e.name)
     .sort();
+}
+
+/**
+ * Whether a directory of this name directly under the root is a prototype —
+ * the name half of {@link listPrototypeDirNames}, for a caller handed one name
+ * (a watch event's first segment) rather than the listing.
+ */
+export function isPrototypeDirName(name: string): boolean {
+  return !name.startsWith("_") && !name.startsWith(".");
 }
 
 /**

@@ -92,8 +92,8 @@ async function decideAll(
 ): Promise<ThumbnailRenderRequest[]> {
   // Every folder at once, not one after another: with the memo each is a
   // listing and a stat, and in series each await queues behind whatever else
-  // holds a booting event loop (the same reason `readPrototypesSignature`
-  // reads concurrently).
+  // holds a booting event loop (the same reason the files watcher's records
+  // read their listings concurrently).
   const looked = await Promise.all(
     names.map(async (name) => {
       const fingerprint = await fingerprintPrototype(name);

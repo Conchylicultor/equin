@@ -30,9 +30,16 @@ export {
   PrototypeProblemSchema,
   PROTOTYPE_ENTRY_FILE,
   isScannableFile,
+  nonTokenNamesOf,
+  problemsOf,
+  scanPrototypeFolder,
   validatePrototypeFolder,
 } from "./validate";
-export type { PrototypeProblem, PrototypeFolder } from "./validate";
+export type {
+  PrototypeProblem,
+  PrototypeFolder,
+  PrototypeScan,
+} from "./validate";
 export { protoIdKind, prototypeIdsIn, UNTITLED_PROTOTYPE } from "./id";
 export { parseMocks, mocksProblemDetail } from "./mocks";
 export {

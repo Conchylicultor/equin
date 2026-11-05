@@ -1,12 +1,11 @@
 import { prototypesFiles } from "@plugins/apps/plugins/prototypes/server";
 import {
-  PrototypeMetaMemo,
-  listPrototypeMetas as listMetasOver,
   readPrototypeMeta as readMetaOver,
   readPrototypeTitle as readTitleOver,
 } from "../../shared/list-metas";
 import { listPrototypeDirNames } from "../../shared/read-folder";
 import type { PrototypeMeta } from "../../core";
+import { prototypeRecords } from "./tree-records";
 
 // The lister (`shared/list-metas.ts`, shared with `./equin prototype list`)
 // over the app's file root — the server's spelling of it. `handlers.ts`,
@@ -14,22 +13,18 @@ import type { PrototypeMeta } from "../../core";
 // read from) call these.
 
 /**
- * Every folder's last meta, for the life of the backend: the list is re-read
- * on every edit the watcher reports (an agent saving a prototype, several a
- * minute), and only the folders that moved are read again.
+ * Every prototype in the tree, as the gallery lists it — composed from the
+ * records the watcher keeps (`tree-records.ts`): no file system call but the
+ * first read of a folder that moved since the last list.
  */
-const memo = new PrototypeMetaMemo();
-
-/** Every prototype in the tree, as the gallery lists it. */
 export function listPrototypeMetas(): Promise<PrototypeMeta[]> {
-  return listMetasOver(prototypesFiles, memo);
+  return prototypeRecords.list();
 }
 
 /**
  * The name of every prototype in the tree — the folder listing alone, for a
- * caller that needs which prototypes exist and nothing about them. A
- * `listPrototypeMetas` reads, validates and parses every folder (seconds on a
- * busy host); a consumer keyed by name must not pay that to learn the names.
+ * caller that needs which prototypes exist and nothing about them, read off
+ * the disk now.
  */
 export function listPrototypeNames(): Promise<string[]> {
   return listPrototypeDirNames(prototypesFiles);

@@ -105,9 +105,21 @@ function pathTokens(text: string): Set<string> {
   ) {
     let start = slash;
     while (start > 0 && isNameChar(text.charCodeAt(start - 1))) start -= 1;
-    if (start < slash) tokens.add(text.slice(start, slash));
+    if (start === slash) continue;
+    const token = text.slice(start, slash);
+    if (!tokens.has(token)) tokens.add(ownCopy(token));
   }
   return tokens;
+}
+
+/**
+ * `s` as a string of its own. A slice may share its parent's buffer (JSC's
+ * substrings do), so a token kept in a `PrototypeScan` would pin the whole
+ * file's text: measured over the gallery's 11.7 MB, 7.9 MB of heap kept by
+ * ~4,300 tokens, against 0.4 MB copied.
+ */
+function ownCopy(s: string): string {
+  return s.split("").join("");
 }
 
 /** `[A-Za-z0-9_-]`, by char code — {@link pathTokens}' inner loop. */
@@ -184,11 +196,95 @@ function readEntryFacts(html: string): EntryFacts {
   };
 }
 
+/**
+ * What one folder's validation needs of the folder alone — everything but
+ * WHICH other prototypes exist. A long-lived lister (the server's) keeps one
+ * per folder and re-reads a folder only when ITS files move: a prototype minted
+ * or removed elsewhere changes no folder's bytes, only the sibling names its
+ * references are judged against ({@link problemsOf}).
+ *
+ * `files` holds every file in validation order, each with its own problems and
+ * its path tokens; a file's sibling references are joined in right after its
+ * own problems, so the order matches a whole-folder validation exactly.
+ */
+export interface PrototypeScan {
+  dirName: string;
+  /** The folder-level problems: its name, subdirs, a missing entry file. */
+  folderProblems: PrototypeProblem[];
+  files: ScannedFile[];
+  /**
+   * The non-token names (not every character a name character — never a
+   * minted id) the references were judged against, in order: such a name is
+   * matched with the text in hand (`referencesFolder`), so a scan answers
+   * only for the names it was given. A lister rescans when the set moves.
+   */
+  nonTokenNames: readonly string[];
+}
+
+interface ScannedFile {
+  name: string;
+  problems: PrototypeProblem[];
+  /** {@link pathTokens} of its text — every token-shaped name it references. */
+  tokens: ReadonlySet<string>;
+  /** The {@link PrototypeScan.nonTokenNames} it references. */
+  nonTokenRefs: ReadonlySet<string>;
+}
+
+/** The names among `names` a token lookup cannot answer (see {@link PrototypeScan.nonTokenNames}). */
+export function nonTokenNamesOf(names: readonly string[]): string[] {
+  return names.filter((name) => !NAME_TOKEN.test(name));
+}
+
 /** Every way `folder` fails the contract. Empty ⇒ it is a well-formed prototype. */
 export function validatePrototypeFolder(
   folder: PrototypeFolder,
 ): PrototypeProblem[] {
-  const problems: PrototypeProblem[] = [];
+  return problemsOf(
+    scanPrototypeFolder(folder, nonTokenNamesOf(folder.siblings)),
+    folder.siblings,
+  );
+}
+
+/**
+ * The scan's problems with the references into `siblings` joined in — what
+ * {@link validatePrototypeFolder} answers for the same folder and siblings.
+ * Linear in the folder's files times its siblings, reading no text.
+ */
+export function problemsOf(
+  scan: PrototypeScan,
+  siblings: readonly string[],
+): PrototypeProblem[] {
+  const problems = [...scan.folderProblems];
+  for (const file of scan.files) {
+    problems.push(...file.problems);
+    for (const sibling of siblings) {
+      if (sibling === scan.dirName) continue;
+      const referenced = NAME_TOKEN.test(sibling)
+        ? file.tokens.has(sibling)
+        : file.nonTokenRefs.has(sibling);
+      if (referenced) {
+        problems.push({
+          path: file.name,
+          detail: `references another prototype's folder (\`${sibling}/\`)`,
+        });
+      }
+    }
+  }
+  return problems;
+}
+
+/**
+ * The sibling-independent half of {@link validatePrototypeFolder}: every rule
+ * but "references another prototype's folder", plus what that rule needs of
+ * each file's text. `nonTokenNames` are the non-token sibling names to judge
+ * against ({@link nonTokenNamesOf}); token-shaped names are answered later
+ * from the tokens, whatever they are.
+ */
+export function scanPrototypeFolder(
+  folder: Omit<PrototypeFolder, "siblings">,
+  nonTokenNames: readonly string[],
+): PrototypeScan {
+  const folderProblems: PrototypeProblem[] = [];
 
   // A folder whose name is not a minted id. Skips `_`-prefixed directories:
   // `_template` is a seed rather than a prototype, and the repo check runs this
@@ -200,7 +296,7 @@ export function validatePrototypeFolder(
   // resolve. This is the loud-runtime rung, and it is what stops
   // `cp -R _template <name>` from being silently fine again.
   if (!folder.dirName.startsWith("_") && !protoIdKind.is(folder.dirName)) {
-    problems.push({
+    folderProblems.push({
       path: "",
       detail:
         "the folder name is not a minted prototype id (proto-<epoch>-<4 chars>), so this prototype cannot be referenced by id from a conversation — create prototypes with `./equin prototype new` instead of copying _template by hand",
@@ -208,7 +304,7 @@ export function validatePrototypeFolder(
   }
 
   for (const sub of [...folder.subdirs].sort()) {
-    problems.push({
+    folderProblems.push({
       path: `${sub}/`,
       detail:
         "a prototype folder is flat — the route matches one path segment and has no wildcard, so nothing under a subdirectory can be served",
@@ -216,22 +312,24 @@ export function validatePrototypeFolder(
   }
 
   if (!folder.files.includes(PROTOTYPE_ENTRY_FILE)) {
-    problems.push({
+    folderProblems.push({
       path: PROTOTYPE_ENTRY_FILE,
       detail: "missing — index.html is the one required file",
     });
   }
   if (folder.files.includes("meta.json")) {
-    problems.push({
+    folderProblems.push({
       path: "meta.json",
       detail:
         "leftover — metadata now comes from index.html (title, meta description, meta prototype-viewport)",
     });
   }
 
+  const files: ScannedFile[] = [];
   for (const fileName of [...folder.files].sort()) {
     const text = folder.texts.get(fileName);
     if (text === undefined) continue;
+    const problems: PrototypeProblem[] = [];
 
     if (fileName === PROTOTYPE_ENTRY_FILE) {
       const facts = readEntryFacts(text);
@@ -285,20 +383,20 @@ export function validatePrototypeFolder(
         detail: "references `../`, which reaches outside the folder",
       });
     }
-    const tokens = pathTokens(text);
-    for (const sibling of folder.siblings) {
-      if (sibling === folder.dirName) continue;
-      const referenced = NAME_TOKEN.test(sibling)
-        ? tokens.has(sibling)
-        : referencesFolder(text, sibling);
-      if (referenced) {
-        problems.push({
-          path: fileName,
-          detail: `references another prototype's folder (\`${sibling}/\`)`,
-        });
-      }
-    }
+    files.push({
+      name: fileName,
+      problems,
+      tokens: pathTokens(text),
+      nonTokenRefs: new Set(
+        nonTokenNames.filter((name) => referencesFolder(text, name)),
+      ),
+    });
   }
 
-  return problems;
+  return {
+    dirName: folder.dirName,
+    folderProblems,
+    files,
+    nonTokenNames: [...nonTokenNames],
+  };
 }

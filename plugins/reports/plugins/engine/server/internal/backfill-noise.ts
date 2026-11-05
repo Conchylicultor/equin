@@ -7,7 +7,7 @@ import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { _reports } from "@plugins/reports/server";
 import { isNoiseReport } from "./noise";
 import { reportsProducer } from "./producer";
-import { reportIdKind } from "@plugins/reports/core";
+import { isStaleOrigin, reportIdKind } from "@plugins/reports/core";
 
 // Re-evaluate every report row against the CURRENT noise-rule set and sync both
 // the stored `reports.noise` flag and the linked notification's `muted` flag.
@@ -36,12 +36,13 @@ export async function backfillNoiseClassification(): Promise<void> {
   const noiseIds: string[] = [];
   const signalIds: string[] = [];
   for (const row of rows) {
-    // Mirror record-report's staleOrigin derivation so a row reclassifies
-    // identically to how a fresh occurrence would be classified right now.
-    const staleOrigin =
-      row.lastBuildId != null &&
-      serverGraph != null &&
-      row.lastBuildId !== serverGraph;
+    // record-report's derivation, so a row reclassifies identically to how a
+    // fresh occurrence would be classified right now.
+    const staleOrigin = isStaleOrigin({
+      source: row.source,
+      buildId: row.lastBuildId,
+      serverGraph,
+    });
     // Crash-shaped noise fields live in the kind's generic `data` payload.
     const errorType =
       typeof row.data.errorType === "string" ? row.data.errorType : null;

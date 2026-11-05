@@ -5,8 +5,9 @@ export interface ReportNoiseInput {
   errorType: string | null;
   message: string;
   stack: string | null;
-  // True when the report's build id differs from the server's current build id
-  // (the crash came from an outdated frontend tab — benign version-skew).
+  // True when the report came from an outdated frontend tab and is about that
+  // tab's own code — benign version-skew (reports/core's isStaleOrigin; a
+  // report about what the tab saw the server do is never stale-origin).
   staleOrigin?: boolean;
 }
 export interface ReportNoiseRuleSpec {

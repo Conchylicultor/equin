@@ -21,12 +21,15 @@ import {
   parseMocks,
   parseViewport,
   DEFAULT_PROTOTYPE_VIEWPORT,
+  nonTokenNamesOf,
+  problemsOf,
   readPrototypeOptions,
-  validatePrototypeFolder,
+  scanPrototypeFolder,
   type MocksDeclaration,
   type PrototypeFolder,
   type PrototypeMeta,
   type PrototypeProblem,
+  type PrototypeScan,
   type PrototypeViewport,
 } from "../core";
 import { listPrototypeDirNames, readPrototypeFolder } from "./read-folder";
@@ -105,57 +108,26 @@ function parseHtmlMeta(html: string): HtmlMeta {
  * A malformed folder is listed, not hidden: its `problems` say what is wrong and
  * the gallery card shows them. Silently dropping it is how an author ends up
  * staring at a gallery that doesn't contain the thing they just wrote.
+ *
+ * Every folder read whole: the one-shot spelling, for a process that holds
+ * nothing between two lists (the CLI). The server keeps one record per folder
+ * fed by its watch (`server/internal/records.ts`) and composes the same metas
+ * from them.
  */
 export async function listPrototypeMetas(
   mount: Mount,
-  memo?: PrototypeMetaMemo,
 ): Promise<PrototypeMeta[]> {
   const dirNames = await listPrototypeDirNames(mount);
-  memo?.retain(dirNames);
-
+  const nonTokenNames = nonTokenNamesOf(dirNames);
   const metas: PrototypeMeta[] = [];
   for (const dirName of dirNames) {
-    const meta = await readMeta(mount, dirName, dirNames, memo);
+    const listing = await readFolderListing(mount, dirName);
     // Removed between the listing and its read: it no longer exists to list.
-    if (meta !== null) metas.push(meta);
+    if (listing === null) continue;
+    const scanned = await scanPrototype(mount, dirName, listing, nonTokenNames);
+    metas.push(metaOf(scanned, dirNames));
   }
   return metas;
-}
-
-/**
- * Each folder's last `PrototypeMeta`, keyed by everything it is derived from:
- * the folder's signature (every file's size and mtime — the same fact its
- * `rev` is), its birth time, and the sibling names its validation checks
- * references against. A listing re-reads and re-validates only the folders
- * whose key moved — an edit to one prototype costs one folder, not the tree
- * (130 prototypes, 11 MB of text, re-read on every save an agent makes).
- *
- * Held by a long-lived lister (the server's); a one-shot one (the CLI) passes
- * none. A folder that could not be read is never kept: its error is the
- * moment's, not the bytes'.
- */
-export class PrototypeMetaMemo {
-  private readonly entries = new Map<
-    string,
-    { key: string; meta: PrototypeMeta }
-  >();
-
-  /** Forget every folder no longer in the tree. */
-  retain(dirNames: readonly string[]): void {
-    const live = new Set(dirNames);
-    for (const name of this.entries.keys()) {
-      if (!live.has(name)) this.entries.delete(name);
-    }
-  }
-
-  get(dirName: string, key: string): PrototypeMeta | undefined {
-    const entry = this.entries.get(dirName);
-    return entry?.key === key ? entry.meta : undefined;
-  }
-
-  set(dirName: string, key: string, meta: PrototypeMeta): void {
-    this.entries.set(dirName, { key, meta });
-  }
 }
 
 /**
@@ -170,7 +142,15 @@ export async function readPrototypeMeta(
 ): Promise<PrototypeMeta | null> {
   const dirNames = await listPrototypeDirNames(mount);
   if (!dirNames.includes(name)) return null;
-  return await readMeta(mount, name, dirNames);
+  const listing = await readFolderListing(mount, name);
+  if (listing === null) return null;
+  const scanned = await scanPrototype(
+    mount,
+    name,
+    listing,
+    nonTokenNamesOf(dirNames),
+  );
+  return metaOf(scanned, dirNames);
 }
 
 /**
@@ -198,53 +178,80 @@ export async function readPrototypeTitle(
   return { found: true, title: title === "" ? UNTITLED_PROTOTYPE : title };
 }
 
-async function readMeta(
-  mount: Mount,
-  dirName: string,
-  siblings: string[],
-  memo?: PrototypeMetaMemo,
-): Promise<PrototypeMeta | null> {
-  const dirStat = await mount.stat(relPath(dirName));
-  if (dirStat.kind === "missing") return null;
-  const listed = await mount.list(relPath(dirName));
-  if (listed.kind === "missing") return null;
-  const files = folderFilesOf(listed.entries);
-  const createdAt = dirStat.entry.birthtimeMs;
-  const signature = signatureOfFiles(files);
-  // Subdirs too: the signature skips them, but validation flags each one.
-  const subdirs = listed.entries
-    .filter((e) => e.kind === "dir" && !e.name.startsWith("."))
-    .map((e) => e.name)
-    .sort();
-  const key = [
-    createdAt,
-    siblings.join("/"),
-    subdirs.join("/"),
-    signature,
-  ].join("\n");
-  const known = memo?.get(dirName, key);
-  if (known !== undefined) return known;
-  const meta = await readMetaFresh(
-    mount,
-    dirName,
-    siblings,
-    files,
-    signature,
-    createdAt,
-  );
-  if (meta.readable) memo?.set(dirName, key, meta.meta);
-  return meta.meta;
+/**
+ * One prototype folder as its listing shows it — a stat and a listing, no
+ * file read. Everything its meta derives from but the bytes: the files' sizes
+ * and mtimes (the signature its `rev` is), its birth time and its subdirs.
+ * `null` when there is no such folder (removed, or a file at that name).
+ */
+export interface FolderListing {
+  createdAt: number;
+  files: FolderFile[];
+  /** Subdirs too: the signature skips them, but validation flags each one. */
+  subdirs: string[];
+  signature: string;
 }
 
-/** {@link readMeta} past the memo: read, validate and parse the folder. */
-async function readMetaFresh(
+export async function readFolderListing(
   mount: Mount,
   dirName: string,
-  siblings: string[],
-  files: FolderFile[],
-  signature: string,
-  createdAt: number,
-): Promise<{ meta: PrototypeMeta; readable: boolean }> {
+): Promise<FolderListing | null> {
+  const dir = relPath(dirName);
+  const dirStat = await mount.stat(dir);
+  if (dirStat.kind === "missing" || dirStat.entry.kind !== "dir") return null;
+  const listed = await mount.list(dir);
+  if (listed.kind === "missing") return null;
+  const files = folderFilesOf(listed.entries);
+  return {
+    createdAt: dirStat.entry.birthtimeMs,
+    files,
+    subdirs: listed.entries
+      .filter((e) => e.kind === "dir" && !e.name.startsWith("."))
+      .map((e) => e.name)
+      .sort(),
+    signature: signatureOfFiles(files),
+  };
+}
+
+/** Two listings with one key read the same folder — its scan still holds. */
+export function listingKey(listing: FolderListing): string {
+  return [listing.createdAt, listing.subdirs.join("/"), listing.signature].join(
+    "\n",
+  );
+}
+
+/**
+ * One folder's meta, all but the problems that depend on which OTHER
+ * prototypes exist ({@link metaOf} joins those in). What a long-lived lister
+ * keeps per folder: a sibling minted or removed moves no folder's scan.
+ *
+ * `readable: false` is a folder that could not be read — its error is the
+ * moment's, not the bytes', so a lister must not keep it.
+ */
+export type ScannedPrototype =
+  | {
+      readable: true;
+      base: Omit<PrototypeMeta, "problems">;
+      scan: PrototypeScan;
+    }
+  | {
+      readable: false;
+      base: Omit<PrototypeMeta, "problems">;
+      problems: PrototypeProblem[];
+    };
+
+/**
+ * Read, validate and parse one folder — the one place its bytes are read.
+ * `nonTokenNames`: the sibling names a token lookup cannot answer
+ * (`nonTokenNamesOf` over the tree's names; see `PrototypeScan`).
+ */
+export async function scanPrototype(
+  mount: Mount,
+  dirName: string,
+  listing: FolderListing,
+  nonTokenNames: readonly string[],
+): Promise<ScannedPrototype> {
+  const { files, createdAt, signature } = listing;
   const base = {
     name: dirName,
     rev: revOfSignature(signature),
@@ -259,37 +266,54 @@ async function readMetaFresh(
     options: [],
   };
 
-  let folder: PrototypeFolder;
+  let folder: Omit<PrototypeFolder, "siblings">;
   try {
-    folder = await readPrototypeFolder(mount, dirName, siblings);
+    folder = await readPrototypeFolder(mount, dirName, []);
   } catch (err) {
     // One unreadable folder must not take the whole gallery down with it — but
     // it is reported on its own card rather than swallowed.
     return {
-      meta: {
-        ...base,
-        problems: [{ path: "", detail: `could not be read: ${String(err)}` }],
-      },
       readable: false,
+      base,
+      problems: [{ path: "", detail: `could not be read: ${String(err)}` }],
     };
   }
 
-  const problems: PrototypeProblem[] = validatePrototypeFolder(folder);
+  const scan = scanPrototypeFolder(folder, nonTokenNames);
   const html = folder.texts.get(PROTOTYPE_ENTRY_FILE);
-  if (html === undefined)
-    return { meta: { ...base, problems }, readable: true };
+  if (html === undefined) return { readable: true, base, scan };
 
   const parsed = parseHtmlMeta(html);
-  const meta: PrototypeMeta = {
-    ...base,
-    title: parsed.title === "" ? UNTITLED_PROTOTYPE : parsed.title,
-    blurb: parsed.blurb,
-    viewport: parsed.viewport,
-    mocks: parsed.mocks,
-    // Valid options only; each broken line is already in `problems`, from the
-    // same read (`validatePrototypeFolder` calls `readPrototypeOptions` too).
-    options: readPrototypeOptions(html).options,
-    problems,
+  return {
+    readable: true,
+    base: {
+      ...base,
+      title: parsed.title === "" ? UNTITLED_PROTOTYPE : parsed.title,
+      blurb: parsed.blurb,
+      viewport: parsed.viewport,
+      mocks: parsed.mocks,
+      // Valid options only; each broken line is already in the scan's
+      // problems, from the same read (`scanPrototypeFolder` calls
+      // `readPrototypeOptions` too).
+      options: readPrototypeOptions(html).options,
+    },
+    scan,
   };
-  return { meta, readable: true };
+}
+
+/**
+ * A scanned folder's `PrototypeMeta` in a tree of `siblings` (every prototype
+ * name, its own included) — no read: the references into siblings are joined
+ * from the scan's tokens.
+ */
+export function metaOf(
+  scanned: ScannedPrototype,
+  siblings: readonly string[],
+): PrototypeMeta {
+  return {
+    ...scanned.base,
+    problems: scanned.readable
+      ? problemsOf(scanned.scan, siblings)
+      : scanned.problems,
+  };
 }

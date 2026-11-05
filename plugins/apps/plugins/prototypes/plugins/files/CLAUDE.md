@@ -280,7 +280,9 @@ answer can never disagree with the gallery.
 That sharing is why the lister is in `shared/list-metas.ts`, over a `Mount`:
 `server/internal/list.ts` calls it with `prototypesFiles` (keeping the server
 barrel's `listPrototypeMetas()` / `readPrototypeTitle(name)`), the CLI with its
-disk mount. `read-folder.ts`, `folder-signature.ts` and `record-store.ts` take a
+disk mount (read whole each time; the server composes the same metas from its
+records — `listingKey` / `scanPrototype` / `metaOf`). `read-folder.ts`,
+`folder-signature.ts` and `record-store.ts` take a
 `Mount` the same way.
 
 The declaration (`commands/cli/index.ts`) is loaded on every single `./equin`
@@ -479,10 +481,28 @@ every extension a prototype can ship (`.html/.css/.js/.json` plus images and
 `RelPath`s and `tree-path.ts` classifies them — and `onShutdown` disposes it.
 No polling.
 
+**The list is composed from per-folder records the watch moves**
+(`server/internal/records.ts`, the server's instance in `tree-records.ts`).
+Each record is one folder's listing (its files' sizes and mtimes, its subdirs,
+its birth time) and, once a list asked for it, its scan: the meta read out of
+its bytes and its validation minus the sibling references
+(`scanPrototypeFolder` → `PrototypeScan`, joined against the current names by
+`problemsOf`, from each file's path tokens — so a prototype minted or removed
+elsewhere re-reads no other folder). A list read therefore makes no file
+system call but the first read of a folder that moved since the last list; an
+edit costs a stat and a listing of the folder it touched. The boot baseline is
+one listing per folder (no bytes); a list landing while it is read waits for
+it, and one before the watcher ever started throws. Do not go back to
+re-listing the tree per read: at 132 prototypes that was ~570 sequential file
+system calls per read, 5–24 s on a host whose stats stall, holding a
+read-admission slot that other tabs' subscriptions then queued behind
+(`research/2026-11-05-apps-prototypes-list-records.md`).
+
 **Nothing re-broadcasts unless the tree really moved.** Every wake-up — a
 watcher event, a dropped-events report (`onLost`) — runs the same gate: re-read
-`readPrototypesSignature()` (every file's size + mtime) and return early when it
-matches the last one. A moved `rev` is a RELOAD of that prototype's open iframes,
+the listings of the folders the event names (every folder for `onLost` or a
+change at the root) into the records and return early when none moved. A
+moved `rev` is a RELOAD of that prototype's open iframes,
 and a prototype is a live app somebody is clicking through, so a reload costs
 the author the state they built up on screen. A watcher event only says
 something *might* have changed (a touch, a chmod, an atomic save's temp file),
@@ -635,6 +655,7 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `PrototypeMeta`
     - `PrototypeOption`
     - `PrototypeProblem`
+    - `PrototypeScan`
     - `PrototypeVersion`
     - `PrototypeVersionKind`
     - `PrototypeViewport`
@@ -659,6 +680,7 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `listPrototypes`
     - `MocksDeclarationSchema`
     - `mocksProblemDetail`
+    - `nonTokenNamesOf`
     - `optionLabel`
     - `parseMocks`
     - `parseOptionColor`
@@ -669,6 +691,7 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `PicksChangeSchema`
     - `picksFromQuery`
     - `presetSize`
+    - `problemsOf`
     - `protoIdKind`
     - `PROTOTYPE_ENTRY_FILE`
     - `PROTOTYPE_VERSION_KINDS`
@@ -691,6 +714,7 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `readPrototypeOptions`
     - `resolvePicks`
     - `restorePrototypeVersion`
+    - `scanPrototypeFolder`
     - `setPrototypePicks`
     - `SIZE_PRESETS`
     - `stampPicks`
