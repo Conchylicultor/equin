@@ -1196,6 +1196,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         root,
         manifest,
         compositions: targets.map((t) => t.composition),
+        grant,
         hooks,
       });
 

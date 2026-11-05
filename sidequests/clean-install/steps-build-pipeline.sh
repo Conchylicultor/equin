@@ -363,7 +363,8 @@ step_16_cc() {
   # measure-build-steps.ts --order pipeline from an EMPTY data root and an
   # empty transpiler cache, OS file cache warm, under --cpu-prof-md, in two
   # trees: the tree under test (with the shared SQLite record store: --records,
-  # and without it: every record made in memory) and $BUILD_PIPELINE_CC_BASE
+  # its misses made in-process and, step 6, on the build's record worker
+  # threads: --workers ideal) and $BUILD_PIPELINE_CC_BASE
   # (a commit of the bundle's history, e.g. main before plugin records),
   # checked out as a second worktree and installed. x$BUILD_PIPELINE_CC_RUNS (2).
   guest_zsh '
@@ -385,10 +386,10 @@ if [ -n "'"${BUILD_PIPELINE_CC_BASE:-}"'" ]; then
   bp_cc CC-base $HOME/bp-base
 fi
 bp_cc CC-records ~/equin --records
-bp_cc CC-memory ~/equin
+bp_cc CC-pooled ~/equin --records --workers ideal
 '
 }
-step_16_cc_DOC="CC: cold codegen alone (measure-build-steps --order pipeline, empty data root and transpiler cache, cpu-prof) in the tree under test (--records and in-memory) and in \$BUILD_PIPELINE_CC_BASE."
+step_16_cc_DOC="CC: cold codegen alone (measure-build-steps --order pipeline, empty data root and transpiler cache, cpu-prof) in the tree under test (--records in-process, and on record workers) and in \$BUILD_PIPELINE_CC_BASE."
 step_16_cc_TAG="harness-only"
 
 step_17_w5() {

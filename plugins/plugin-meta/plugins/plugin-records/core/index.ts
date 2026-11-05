@@ -6,6 +6,18 @@ export {
 } from "./internal/store";
 export type { RecordStore, RecordTable } from "./internal/store";
 export { gitBlobId, recordKey } from "./internal/keys";
+export {
+  defineRecordJob,
+  installRecordWorkers,
+  recordWorkerCount,
+  runRecordJobRequest,
+  runRecordJobs,
+} from "./internal/workers";
+export type {
+  RecordJob,
+  RecordJobRequest,
+  RecordWorkers,
+} from "./internal/workers";
 export { reviveValue, serializeValue } from "./internal/serialize";
 export type {
   Json,

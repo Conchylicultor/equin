@@ -26879,16 +26879,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 46 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 48 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×31
               - `framework/cli/bootstrap` ×4
               - `framework/cli/migrations` ×3
               - `framework/tooling/web-artifacts` ×3
+              - `plugin-meta/plugin-records` ×3
               - `build/run-ledger.createBuildRunRecorder`
               - `framework/cli/doctor.assertPrerequisites`
               - `framework/cli/git-artifacts.registerMergeDrivers`
               - `infra/jobs/supervised-job.runAttached`
-              - `plugin-meta/plugin-records.openRecordStore`
           - Plugins:
             - **`experimental-marks`** — The Show experimental marks setting (view-options popover and Settings → Config, on an experimental build): useShowExperimentalMarks() is true when the build stamped this document experimental and the marks are on; the frame and the Wish banner both follow it. Registers the Show experimental marks config and, while it is off, serves a head script that hides the marks before the first frame.
               - Web:
@@ -36436,7 +36436,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `readThreadCpu`
     - **`thread-pool`**
       - Cross-plugin:
-        - Imported by: `framework/tooling/web-artifacts`
+        - Imported by:
+          - `framework/tooling/web-artifacts`
+          - `plugin-meta/plugin-records`
       - Cli:
         - Exports (types): `ThreadPool`
         - Exports (values):
@@ -40553,22 +40555,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ModuleGraph`
           - `ModuleGraphInput`
           - `ModuleNode`
+          - `RecordJob`
+          - `RecordJobRequest`
           - `RecordStore`
           - `RecordTable`
+          - `RecordWorkers`
           - `ReviveOptions`
           - `SerializeOptions`
         - Exports (values):
           - `buildModuleGraph`
           - `createMemoryRecordStore`
           - `currentRecordStore`
+          - `defineRecordJob`
           - `evaluateBarrels`
           - `gitBlobId`
           - `installRecordStore`
+          - `installRecordWorkers`
           - `RECORD_TABLES`
           - `recordKey`
+          - `recordWorkerCount`
           - `reviveValue`
+          - `runRecordJobRequest`
+          - `runRecordJobs`
           - `scanFilesCached`
           - `serializeValue`
+      - Cli:
+        - Uses: `packages/thread-pool.createThreadPool`
+        - Exports (values):
+          - `createPooledRecordWorkers`
+          - `idealRecordWorkerThreads`
+          - `openRecordStore`
       - Cross-plugin:
         - Imported by:
           - `framework/cli/build`
@@ -40578,8 +40594,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-tree`
       - Exemptions:
         - Exempts itself from: `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
-      - Cli:
-        - Exports (values): `openRecordStore`
     - **`plugin-refs`** — The one plugin-reference locator: every place the repo names a plugin (path literals, @plugins specifiers, structurally-read dot ids, relative markdown/CSS links), each with an exact character range a mover rewrites by.
       - Core:
         - Uses:
@@ -40656,11 +40670,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineWarmup('plugin-tree.trees')`
           - `defineFileWatcher('plugin-tree.plugins-dir')`
       - Core:
-        - Uses: 31 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/REFERENCE.md)
+        - Uses: 35 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/REFERENCE.md)
+          - `plugin-meta/plugin-records` ×7
           - `framework/plugin-id` ×6
           - `plugin-meta/facets` ×6
-          - `plugin-meta/parse-utils` ×4
-          - `plugin-meta/plugin-records` ×4
+          - `plugin-meta/parse-utils` ×5
           - `framework/tooling` ×3
           - `infra/host-fs/user-path` ×3
           - `packages/timed-fs` ×3

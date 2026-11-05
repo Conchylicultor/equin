@@ -30,7 +30,9 @@ top-level work.
 ## Plugin reference
 
 - Cross-plugin:
-  - Imported by: `framework/tooling/web-artifacts`
+  - Imported by:
+    - `framework/tooling/web-artifacts`
+    - `plugin-meta/plugin-records`
 - Cli:
   - Exports (types): `ThreadPool`
   - Exports (values):

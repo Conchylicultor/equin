@@ -288,6 +288,7 @@ export async function runHermeticBuild(opts: {
         root,
         manifest: compositionsConfig.fields.manifests.defaultValue,
         compositions: opts.compositions,
+        grant,
         hooks,
       });
 

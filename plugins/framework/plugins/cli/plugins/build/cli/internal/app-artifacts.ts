@@ -35,8 +35,15 @@ import {
   idealArtifactBuildThreads,
 } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/cli";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
-import { installRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
-import { openRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/cli";
+import {
+  installRecordStore,
+  installRecordWorkers,
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
+import {
+  createPooledRecordWorkers,
+  idealRecordWorkerThreads,
+  openRecordStore,
+} from "@plugins/plugin-meta/plugins/plugin-records/cli";
 import {
   restampMovedOverrides,
   snapshotConfigOrigins,
@@ -352,6 +359,9 @@ export function assertKnownCompositions(ids: readonly string[]): void {
   }
 }
 
+/** The record workers stage 1 installed, closed when stage 2 is done with them. */
+let recordWorkers: ReturnType<typeof createPooledRecordWorkers> | undefined;
+
 /**
  * Stage 1 — dependencies + registry-level repo-tree codegen + (when building
  * compositions) each composition's filtered registries.
@@ -372,6 +382,11 @@ export async function prepareCompositionSources(opts: {
    * Every id must name a row in `manifest`.
    */
   compositions: readonly string[];
+  /**
+   * The build's host grant: the record workers a cold record store's misses
+   * run on (stages 1 and 2) are clamped to its units.
+   */
+  grant: Grant;
   hooks: ArtifactHooks;
 }): Promise<void> {
   const { root, compositions, hooks } = opts;
@@ -410,6 +425,16 @@ export async function prepareCompositionSources(opts: {
   // worktree). Stage 2 reuses it through the memoized trees.
   let endSpan = hooks.span("repoFiles", "build:setup", "repo file set");
   installRecordStore(openRecordStore());
+  // The misses of a cold store (a new machine, an edit to a facet or the
+  // evaluator: every plugin) run on worker threads, about two per three
+  // cores, clamped to the grant — the same rule as the artifact pool, which
+  // only starts once codegen is done. Lazy: a build with few misses starts
+  // none. Closed at the end of stage 2 (`generateAppSources`).
+  installRecordWorkers(
+    (recordWorkers = createPooledRecordWorkers({
+      threads: Math.min(idealRecordWorkerThreads(), opts.grant.units),
+    })),
+  );
   const repo = await loadRepoSnapshot(root);
   endSpan();
 
@@ -599,7 +624,15 @@ export async function generateAppSources(opts: {
   // The origins as committed, before codegen regenerates them: the base a
   // plugin move's re-stamp compares the regenerated ones against (4b'').
   const priorOrigins = snapshotConfigOrigins(joinAppPath(root, "config"));
-  await regenerateManifestCodegen({ root, onStep: codegenStep });
+  try {
+    await regenerateManifestCodegen({ root, onStep: codegenStep });
+  } finally {
+    // The last record misses are the manifest codegen's: the workers (each
+    // holding the modules it evaluated) are not kept through the frontend.
+    installRecordWorkers(undefined);
+    await recordWorkers?.close();
+    recordWorkers = undefined;
+  }
 
   // 4b''. A plugin move re-roots reorder keys in committed overrides, but the
   // regenerated origins' hashes are only known now. Re-stamp each override

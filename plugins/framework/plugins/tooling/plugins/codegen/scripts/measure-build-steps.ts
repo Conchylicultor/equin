@@ -3,7 +3,12 @@
  * chosen order so the first payer of a process-wide memo is attributed:
  *
  *   ./equin run plugins/framework/plugins/tooling/plugins/codegen/scripts/measure-build-steps.ts \
- *     [--order pipeline|docs-first|guard-first|tree-only|migrations-only] [--json out.json] [--records]
+ *     [--order pipeline|docs-first|guard-first|tree-only|migrations-only] [--json out.json] [--records] \
+ *     [--workers <n>]
+ *
+ * `--workers <n>`: record misses run on n record worker threads, as
+ * `./equin build` runs them (`idealRecordWorkerThreads()`, clamped to its
+ * grant); `--workers ideal` takes that count. Without it: in-process.
  *
  * `--records`: read and write the shared plugin-record store, from a repo
  * snapshot, as `./equin build` does (without it: the process's memory store,
@@ -51,8 +56,15 @@ import {
   stageDrizzleOut,
 } from "@plugins/database/plugins/migrations/core";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
-import { installRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
-import { openRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/cli";
+import {
+  installRecordStore,
+  installRecordWorkers,
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
+import {
+  createPooledRecordWorkers,
+  idealRecordWorkerThreads,
+  openRecordStore,
+} from "@plugins/plugin-meta/plugins/plugin-records/cli";
 import {
   assertSlotsDeclared,
   buildBarrelFreeTree,
@@ -91,6 +103,15 @@ const order = orderArg as Order;
 const jsonOut = arg("json");
 const records = process.argv.includes("--records");
 const dumpOut = arg("dump");
+const workersArg = arg("workers");
+const workerThreads =
+  workersArg === undefined
+    ? 0
+    : workersArg === "ideal"
+      ? idealRecordWorkerThreads()
+      : Number(workersArg);
+if (!Number.isInteger(workerThreads) || workerThreads < 0)
+  throw new Error(`--workers must be a count or "ideal", got ${workersArg}`);
 
 interface Row {
   step: string;
@@ -153,6 +174,11 @@ async function trackedMtimes(): Promise<Map<string, number>> {
 }
 
 if (records) installRecordStore(openRecordStore());
+const recordWorkers =
+  workerThreads > 0
+    ? createPooledRecordWorkers({ threads: workerThreads })
+    : undefined;
+installRecordWorkers(recordWorkers);
 const snapshot = records
   ? await step("repo snapshot", () => loadRepoSnapshot(root))
   : undefined;
@@ -314,6 +340,9 @@ if (order === "pipeline") {
   };
 }
 
+installRecordWorkers(undefined);
+await recordWorkers?.close();
+
 if (dumpOut) {
   const dump: Record<string, unknown> = {};
   for (const [name, tree] of [
@@ -336,6 +365,7 @@ const touched: string[] = [];
 for (const [f, m] of after) if (before.get(f) !== m) touched.push(f);
 void resolve;
 
+console.log(`record workers: ${workerThreads || "none (in-process)"}`);
 console.log(
   `order: ${order}   (host load: ${(await import("os"))
     .loadavg()
