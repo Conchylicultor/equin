@@ -2,7 +2,8 @@
  * `serveCollection(c, { preloadRows: { idsOf } })`: the `:rows` sibling is an
  * enumerated preload at ONE tuple — the id set of `idsOf`'s boot value,
  * encoded by the point codec the reader subscribes through, so a reader
- * holding that set in any order asks for exactly the preloaded tuple.
+ * holding that set in any order asks for exactly the preloaded tuple. With
+ * `field`, the ids are one field of `idsOf`'s rows (deduped).
  *
  * Run: `./equin test plugins/network/plugins/live`.
  */
@@ -26,6 +27,11 @@ const scoresRef = entityRef("pr_scores", {
   score: intField({ label: "Score" }),
 });
 const scores = defineEntity(scoresRef, { primaryKey: "personId" });
+const teamsRef = entityRef("pr_teams", {
+  id: textField({ label: "Id" }),
+  captainId: textField({ label: "Captain" }),
+});
+const teams = defineEntity(teamsRef, { primaryKey: "id" });
 
 let seq = 0;
 const peopleCollection = (preload?: "boot") =>
@@ -46,6 +52,16 @@ const scoresCollection = () =>
     sortable: ["score"],
     default: { orderBy: [["score", "asc"]], limit: 10 },
     maxLimit: 20,
+  });
+
+const teamsCollection = () =>
+  liveCollection(`test.live.preload-rows-teams-${seq++}`, {
+    from: teamsRef,
+    baseExposures: false,
+    carry: { pick: ["id", "captainId"] },
+    id: "id",
+    all: { orderBy: [["id", "asc"]], unbounded: { reason: "a test set" } },
+    preload: "boot",
   });
 
 describe("preloadRows", () => {
@@ -96,6 +112,47 @@ describe("preloadRows", () => {
       },
     ]);
     expect(tuples[0]!.params).toEqual({ ids: "p1,p2" });
+  });
+
+  test("`field`: the tuple is the distinct values of one field of the source's rows", async () => {
+    const source = teamsCollection();
+    serveCollection(source, {
+      from: teams,
+      db: recordingQueryDb(() => [
+        { id: "t1", captainId: "p2" },
+        { id: "t2", captainId: "p1" },
+        { id: "t3", captainId: "p2" },
+      ]).db,
+    });
+    const target = scoresCollection();
+    const served = serveCollection(target, {
+      from: scores,
+      preloadRows: { idsOf: source, field: "captainId" },
+      db: recordingQueryDb(() => [
+        { personId: "p1", score: 3 },
+        { personId: "p2", score: 5 },
+      ]).db,
+    });
+    const rows = served.declare.find((d) => d.key === `${target.key}:rows`)!;
+    // A contribution's payload fields read back as `unknown`.
+    const load = rows.preloadTuples as (() => Promise<unknown[]>) | undefined;
+    expect(load).toBeDefined();
+    const tuples = (await load!()) as { params: unknown; ok: boolean }[];
+    expect(tuples.map((t) => t.params)).toEqual([{ ids: "p1,p2" }]);
+    expect(tuples[0]!.ok).toBe(true);
+  });
+
+  test("`field` naming no field of the source: a serve-time throw", () => {
+    const source = teamsCollection();
+    serveCollection(source, { from: teams, db: recordingQueryDb().db });
+    const target = scoresCollection();
+    expect(() =>
+      serveCollection(target, {
+        from: scores,
+        preloadRows: { idsOf: source, field: "coachId" },
+        db: recordingQueryDb().db,
+      }),
+    ).toThrow(/`preloadRows.field` "coachId" is not a field of/);
   });
 
   test("a source that is not preloaded names no boot tuple: a serve-time throw", () => {

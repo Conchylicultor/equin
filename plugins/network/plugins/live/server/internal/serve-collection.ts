@@ -18,10 +18,7 @@ import {
   Resource as ResourceContribution,
 } from "@plugins/framework/plugins/server-core/core";
 import type { Resource } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
-import type {
-  PointParams,
-  ResourcePreload,
-} from "@plugins/network/plugins/live/plugins/live-state/core";
+import type { PointParams } from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   columnWireCodec,
   type WireCodec,
@@ -110,6 +107,7 @@ import {
   type ServeAllCollectionOptions,
 } from "./serve-all";
 import { serveOffFeed, type OffFeedOptions } from "./serve-off-feed";
+import type { PreloadRows, PreloadRowsSource } from "./preload-rows";
 import {
   FOLLOW_SOURCE,
   type FollowIds,
@@ -240,10 +238,12 @@ export type ServeCollectionOptions<
   defaults?: readonly DefaultScope<T, Row, J, U>[];
   /**
    * Preload the `:rows` point sibling at ONE boot tuple: the id set of another
-   * preloaded collection's whole ordered set (`idsOf`). For a reader that reads
-   * this collection by exactly that id set — the queue reads the ranks of the
-   * live conversations — so the rows it asks for are in the boot snapshot and
-   * it settles on its first render, not one round trip after it.
+   * preloaded collection's whole ordered set (`idsOf`) — its rows' own ids, or
+   * the values of one of its fields (`field`, e.g. each live conversation's
+   * `taskId`). For a reader that reads this collection by exactly that id set —
+   * the queue reads the ranks of the live conversations, and the statuses of
+   * their tasks — so the rows it asks for are in the boot snapshot and it
+   * settles on its first render, not one round trip after it.
    *
    * The tuple is derived server-side from `idsOf`'s value as the boot snapshot
    * ships it (its kept in-memory snapshot, read in the same tick, else its
@@ -253,27 +253,11 @@ export type ServeCollectionOptions<
    * hydrated one and it falls back to its sub-ack, as without a preload. An
    * enumerated preload: never L2-persisted.
    */
-  preloadRows?: { idsOf: PreloadRowsSource };
+  preloadRows?: PreloadRows;
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
 } & ColumnOverrides<T, Row, BoundFields<Row>, J> &
   WireCheck<T, Row>;
-
-/**
- * A collection whose boot id set names a `:rows` boot tuple
- * (`ServeCollectionOptions.preloadRows`): one declared `all` — its whole
- * ordered set is one param-less tuple the client holds at first render when
- * preloaded (a serve-time throw when it is not).
- */
-export interface PreloadRowsSource {
-  key: string;
-  all: {
-    key: string;
-    preload?: ResourcePreload;
-    /** The set's row key — its id, as every reader keys its rows. */
-    keyed: { keyOf: (row: unknown) => string };
-  };
-}
 
 /** One default scope of a collection (see `ServeCollectionOptions.defaults`). */
 export interface DefaultScope<
@@ -1307,7 +1291,7 @@ export function serveAnyCollection<
           ...(all.preload !== undefined ? { preload: all.preload } : {}),
           code: [liveReadCode],
         }),
-        ResourceContribution.Declare(rows),
+        declareRows(collection, rows, allOpts.preloadRows),
       ],
       [FOLLOW_SOURCE]: source,
     } as ServedAllCollection<Row, string>;
@@ -1477,7 +1461,7 @@ function servedWindow<Row>(
   rows: Resource<Row[], PointParams>,
   groups: Resource<LiveGroup<FilterScalar>[], LiveGroupParams>,
   count: Resource<number, LiveCountParams> | null,
-  opts: { preloadRows?: { idsOf: PreloadRowsSource } },
+  opts: { preloadRows?: PreloadRows },
 ): ServedCollection<Row> {
   const all = [window, rows, groups, ...(count === null ? [] : [count])];
   return {
@@ -1503,14 +1487,20 @@ type PointCodec = { encode: (ids: readonly string[]) => PointParams };
 function declareRows<Row>(
   collection: { key: string; rows: { point: PointCodec } },
   rows: Pick<Resource<Row[], PointParams>, "key" | "mode" | "load">,
-  preloadRows: { idsOf: PreloadRowsSource } | undefined,
+  preloadRows: PreloadRows | undefined,
 ): ReturnType<typeof ResourceContribution.Declare> {
   if (preloadRows === undefined) return ResourceContribution.Declare(rows);
-  const source = preloadRows.idsOf;
+  const { idsOf: source, field } = preloadRows;
   if (source.all.preload === undefined) {
     throw new Error(
       `serveCollection("${collection.key}"): \`preloadRows.idsOf\` "${source.key}" is not preloaded — ` +
         `its id set is not on the client at first render, so it names no boot tuple a reader would hold.`,
+    );
+  }
+  if (field !== undefined && !source.rowKeys.includes(field)) {
+    throw new Error(
+      `serveCollection("${collection.key}"): \`preloadRows.field\` "${field}" is not a field of ` +
+        `"${source.key}" (its fields: ${source.rowKeys.join(", ")}).`,
     );
   }
   const point = collection.rows.point;
@@ -1521,7 +1511,7 @@ function declareRows<Row>(
     // Like `serveValue`'s enumeration: the resource's own `load` (no flight,
     // no commit watermark), the one tuple settling on its own.
     preloadTuples: async () => {
-      const params = point.encode(await bootIdsOf(source));
+      const params = point.encode(await bootIdsOf(source, field));
       try {
         return [{ params, ok: true, value: await rows.load(params) }];
       } catch (error) {
@@ -1534,9 +1524,13 @@ function declareRows<Row>(
 /**
  * The ids of `source`'s value as the boot snapshot ships it: its kept
  * in-memory snapshot (the snapshot's first source, read synchronously — the
- * snapshot reads it in the same tick), else its loader.
+ * snapshot reads it in the same tick), else its loader. Its rows' own ids, or
+ * each row's `field` (the point codec dedupes them).
  */
-async function bootIdsOf(source: PreloadRowsSource): Promise<string[]> {
+async function bootIdsOf(
+  source: PreloadRowsSource,
+  field: string | undefined,
+): Promise<string[]> {
   const value =
     keptSnapshotValue(source.all.key) ??
     (await loadResourceByKey(source.all.key));
@@ -1545,7 +1539,18 @@ async function bootIdsOf(source: PreloadRowsSource): Promise<string[]> {
       `preloadRows: "${source.all.key}" loaded a non-array value — not a whole ordered set`,
     );
   }
-  return value.map((row) => source.all.keyed.keyOf(row));
+  if (field === undefined)
+    return value.map((row) => source.all.keyed.keyOf(row));
+  return value.map((row: Record<string, unknown>) => {
+    const id = row[field];
+    if (typeof id !== "string") {
+      throw new Error(
+        `preloadRows: "${source.all.key}" row ${source.all.keyed.keyOf(row)} holds ` +
+          `${JSON.stringify(id)} in "${field}", not an id`,
+      );
+    }
+    return id;
+  });
 }
 
 // ── Scoped and exposing collections: compiled at boot ───────────────────

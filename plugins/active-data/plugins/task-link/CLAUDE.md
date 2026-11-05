@@ -28,6 +28,7 @@ which renders `<task>prompt</task>` *block* tags as editable creation cards.
     - `InlineChip.Tag` "task" → `TaskLinkChip`
   - Uses:
     - `active-data/id-chip.idChip`
+    - `network/live.mapRow`
     - `network/live.useLive`
     - `network/live/live-state.foldResource`
     - `network/live/live-state.matchResource`

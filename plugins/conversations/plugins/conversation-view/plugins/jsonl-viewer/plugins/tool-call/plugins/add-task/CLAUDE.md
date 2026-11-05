@@ -10,8 +10,8 @@
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+    - `network/live.rowOrStale`
     - `network/live.useLive`
-    - `network/live/live-state.foldResource`
     - `primitives/css/badge.Badge`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/rigid.rigidClass`

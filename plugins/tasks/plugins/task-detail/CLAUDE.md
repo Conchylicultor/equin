@@ -27,18 +27,17 @@
     - `Pane.Register` "tasks-root"
     - `Shell.Sidebar` "Tasks"
   - Uses:
+    - `network/live.rowOrStale`
     - `network/live.useLive`
-    - `network/live/live-state.foldResource`
     - `primitives/app-shell.opensPane`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/file-links.FileLinksWorkspaceProvider`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
-    - `primitives/pane.resolveFrom`
     - `primitives/pane.ResolveResult`
+    - `primitives/pane.resolveRow`
     - `primitives/pane.useOpenPane`
     - `shell.Shell`
-    - `tasks.useTask`
     - `tasks/task-list.TasksListView`
   - Exports (values):
     - `TaskDetail`

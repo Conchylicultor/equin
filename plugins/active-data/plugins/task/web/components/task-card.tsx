@@ -230,21 +230,21 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
 function TaskChip({ taskId }: { taskId: string }) {
   const { convId } = conversationPane.useParams();
   const conversation = rowOrStale(useConversationById(convId));
-  const tasksResult = useLive(taskRows);
+  const taskResult = useLive(taskRows, { id: taskId });
   const openPane = useOpenPane();
   if (!conversation) return null;
-  if (tasksResult.status === "loading") return null;
-  if (tasksResult.status === "error") {
+  if (taskResult.status === "loading") return null;
+  if (taskResult.status === "error") {
     return (
       <ResourceErrorInline
         variant="inline"
         subject="the task"
-        error={tasksResult.error}
-        refetch={tasksResult.refetch}
+        error={taskResult.error}
+        refetch={taskResult.refetch}
       />
     );
   }
-  const task = tasksResult.data.find((t) => t.id === taskId);
+  const task = taskResult.found ? taskResult.row : undefined;
   const title = task?.title.trim() || "Untitled task";
   return (
     <LinkChip

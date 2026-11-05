@@ -1,4 +1,4 @@
-import { useLive } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import {
   foldResource,
   matchResource,
@@ -19,7 +19,7 @@ export function TaskLinkChip({
   attrs: Record<string, string>;
 }) {
   const taskId = content.trim();
-  const result = useLive(taskRows);
+  const result = mapRow(useLive(taskRows, { id: taskId }), (task) => task);
   const openPane = useOpenPane();
 
   if (!taskId) return null;
@@ -37,8 +37,7 @@ export function TaskLinkChip({
         <span className="font-mono">{taskId}</span>
       </LinkChip>
     ),
-    ready: (data) => {
-      const task = data.find((t) => t.id === taskId) ?? null;
+    ready: (task) => {
       // The dot colour comes from the one status-display table (task-status), so
       // this chip can never drift from the badge the task list shows.
       const statusClass = task
@@ -57,14 +56,13 @@ export function TaskLinkChip({
   });
 }
 
-/** The task presenter's referent read: the task's title, from the live tasks list. */
+/** The task presenter's referent read: the task's title, from its live row. */
 export function useTaskReferent(taskId: string): IdReferentState {
-  const result = useLive(taskRows);
+  const result = mapRow(useLive(taskRows, { id: taskId }), (task) => task);
   return foldResource(result, {
     loading: (): IdReferentState => ({ status: "loading" }),
     error: (error): IdReferentState => ({ status: "failed", error }),
-    ready: (tasks): IdReferentState => {
-      const task = tasks.find((t) => t.id === taskId);
+    ready: (task): IdReferentState => {
       return task
         ? { status: "found", title: task.title }
         : { status: "missing" };

@@ -84,7 +84,7 @@ type HeldDisplay = { from: QueueDisplay; display: QueueDisplay };
 /**
  * Combines the queue's live resources — active + gone conversations (gone read
  * as live pages, so the Done section pages as the user scrolls, kept live
- * where it is on screen), tasks, and
+ * where it is on screen), the live set's tasks (by id), and
  * the bounded POINT ranks (subscribed to the LIVE conversation id set) — runs the shared {@link classifyQueue}, and
  * flattens the classification into one `QueueRow[]` in display order (Pinned,
  * Queue, Working, Lost, Unranked, Disconnected, Done).
@@ -144,7 +144,6 @@ export function useQueueRows(view: ViewState): {
           },
     [gonePaging],
   );
-  const tasksResult = useLive(taskRows);
 
   // The live conversation id set the queue already tracks — `null` (not a fake
   // empty) while active is still pending, so a pending live set is never confused
@@ -166,6 +165,16 @@ export function useQueueRows(view: ViewState): {
       .map((c) => c.id);
   }, [activeResult]);
   const failuresResult = useLive(spawnFailureRows, { ids: goneIds });
+  // The tasks of the live set — only their statuses are read (which live rows
+  // are blocked). Every live row's task, gone ones included: exactly the id set
+  // the server preloads (`taskRows`' `preloadRows`), so the boot snapshot holds
+  // this tuple and the queue settles on its first render.
+  const liveTaskIds = useMemo<string[]>(() => {
+    if (activeResult.status === "loading" || activeResult.status === "error")
+      return [];
+    return activeResult.data.map((c) => c.taskId);
+  }, [activeResult]);
+  const tasksResult = useLive(taskRows, { ids: liveTaskIds });
 
   // The ranks of the live set, as an id set of the collection. A pending live
   // set reads the empty set — a valid EMPTY point subscription (no query), never

@@ -115,6 +115,10 @@ export const taskRows = liveCollection("tasks", {
     },
   },
   preload: "boot",
+  // The `:rows` id-set cap. The sidebar queue reads the tasks of every LIVE
+  // conversation by id (`conversationsActive`, a whole set — ~30 today), as
+  // `queueRanks` reads their ranks: 2000 is far over any live set, still bounded.
+  maxIds: 2000,
 });
 
 /** A task as `taskRows` delivers it: a `TaskListItem` and its exposed fields under `$columns`. */

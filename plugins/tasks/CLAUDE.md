@@ -54,6 +54,7 @@
 - Web:
   - Uses:
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.mapRow`
     - `network/live.useLive`
     - `network/live/live-state.mapResource`
     - `network/live/live-state.ResourceResult`
@@ -138,7 +139,6 @@
     - `tasks/automations`
     - `tasks/sidequest-autopilot`
     - `tasks/task-description`
-    - `tasks/task-detail`
     - `tasks/task-graph`
     - `tasks/task-header`
     - `tasks/task-list`

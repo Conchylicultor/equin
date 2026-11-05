@@ -1,12 +1,11 @@
 import { useCallback, useMemo } from "react";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { namespaceFromHost } from "@plugins/infra/plugins/namespace/core";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import {
   attemptRows,
   taskRows,
   type AttemptWithConversations,
-  type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import type { HealthInfo } from "@plugins/shell/plugins/health-report/web";
 import {
@@ -30,11 +29,11 @@ export function useWorktreePlace(): WorktreePlace {
  * The task this page's checkout is working on: the attempt whose worktree path
  * ends in the checkout, then that attempt's task.
  *
- * Both reads are `select`s over sets that are already resident (boot
- * critical), so this re-renders when THIS checkout's link changes, not on every
- * push to the global lists. Each is a gated read (`useLive(all, { select })`),
- * which keeps the pending → settled flip reliable, since `pending` is an
- * answer of its own here.
+ * The attempt is a `select` over the resident attempt set, so this re-renders
+ * when THIS checkout's link changes, not on every push to the global list (a
+ * gated read, `useLive(all, { select })`, which keeps the pending → settled
+ * flip reliable, since `pending` is an answer of its own here). The title is a
+ * point read of the linked task's row.
  */
 export function useLinkedTask(place: WorktreePlace): LinkedTask {
   const checkout = place.kind === "worktree" ? place.checkout : null;
@@ -55,14 +54,10 @@ export function useLinkedTask(place: WorktreePlace): LinkedTask {
     error: () => null,
     ready: (id) => id,
   });
-  const selectTitle = useCallback(
-    (tasks: TaskListItem[]) =>
-      taskId === null
-        ? null
-        : (tasks.find((t) => t.id === taskId)?.title ?? null),
-    [taskId],
+  const task = mapRow(
+    useLive(taskRows, { id: taskId }),
+    (row) => row?.title ?? null,
   );
-  const task = useLive(taskRows, { select: selectTitle });
 
   if (checkout === null) return { kind: "none" };
   if (attempt.status === "loading") return { kind: "pending" };

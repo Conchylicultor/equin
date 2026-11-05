@@ -79,7 +79,14 @@ export const attemptRowsServed = serveCollection(
 // write refills its own row, an attempt / conversation / push write its
 // task's, an edge write its task's and every dependent's, an insert is an
 // entrant and a delete an exit.
-export const taskRowsServed = serveCollection(taskRows, taskRowsServeOptions);
+//
+// The `:rows` sibling is preloaded at the tasks of the live conversations
+// (`conversationsActive`'s `taskId`s, itself preloaded): the queue reads their
+// statuses by exactly that id set, so it settles on its first render.
+export const taskRowsServed = serveCollection(taskRows, {
+  ...taskRowsServeOptions,
+  preloadRows: { idsOf: conversationsActive, field: "taskId" },
+});
 
 // One attempt's workspace by id (`attemptWorkspaces`, lookup-only), over the
 // `attempts` table.

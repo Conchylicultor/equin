@@ -115,9 +115,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `active-data/id-chip.idChip`
           - `conversations/conversation-view.useConversationOpener`
+          - `network/live.mapRow`
           - `network/live.useLive`
           - `network/live/live-state.foldResource`
+          - `network/live/live-state.mapResource`
           - `network/live/live-state.matchResource`
+          - `network/live/live-state.ResourceResult`
           - `network/live/live-state.useCombinedResources`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/status-dot.StatusDot`
@@ -520,6 +523,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `InlineChip.Tag` "task" → `TaskLinkChip`
         - Uses:
           - `active-data/id-chip.idChip`
+          - `network/live.mapRow`
           - `network/live.useLive`
           - `network/live/live-state.foldResource`
           - `network/live/live-state.matchResource`
@@ -17471,8 +17475,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `network/live.rowOrStale`
                       - `network/live.useLive`
-                      - `network/live/live-state.foldResource`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/link-chip.LinkChip`
                       - `primitives/css/rigid.rigidClass`
@@ -35576,12 +35580,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 304 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 302 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×83
-              - `conversations` ×49
+              - `conversations` ×48
               - `debug` ×29
-              - `tasks` ×25
               - `ui` ×25
+              - `tasks` ×24
               - `page` ×16
               - `primitives` ×14
               - `infra` ×8
@@ -51895,6 +51899,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Web:
     - Uses:
       - `infra/endpoints.useEndpointMutation`
+      - `network/live.mapRow`
       - `network/live.useLive`
       - `network/live/live-state.mapResource`
       - `network/live/live-state.ResourceResult`
@@ -51979,7 +51984,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/automations`
       - `tasks/sidequest-autopilot`
       - `tasks/task-description`
-      - `tasks/task-detail`
       - `tasks/task-graph`
       - `tasks/task-header`
       - `tasks/task-list`
@@ -53219,18 +53223,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "tasks-root"
           - `Shell.Sidebar` "Tasks"
         - Uses:
+          - `network/live.rowOrStale`
           - `network/live.useLive`
-          - `network/live/live-state.foldResource`
           - `primitives/app-shell.opensPane`
           - `primitives/detail-sections.defineDetailSections`
           - `primitives/file-links.FileLinksWorkspaceProvider`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
-          - `primitives/pane.resolveFrom`
           - `primitives/pane.ResolveResult`
+          - `primitives/pane.resolveRow`
           - `primitives/pane.useOpenPane`
           - `shell.Shell`
-          - `tasks.useTask`
           - `tasks/task-list.TasksListView`
         - Exports (values):
           - `TaskDetail`
@@ -54496,6 +54499,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `HealthReport.Row` "worktree"
         - Uses:
           - `apps-core/tabs.useAppLinkProps`
+          - `network/live.mapRow`
           - `network/live.useLive`
           - `network/live/live-state.foldResource`
           - `primitives/copy-to-clipboard.CopyButton`

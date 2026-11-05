@@ -34,6 +34,7 @@ import {
 import { foldColumns } from "./encode-row";
 import { exposedBinding, exposureFolds } from "./exposure-folds";
 import type { ExposingExtension } from "./serve-columns";
+import type { PreloadRows } from "./preload-rows";
 import {
   isEntitySource,
   type CollectionSource,
@@ -209,6 +210,8 @@ export type ServeAllCollectionOptions<
    * `debounceMs`, as `serveValue`'s `throttleMs`; C18).
    */
   throttleMs?: number;
+  /** Preload the `:rows` point sibling at one boot tuple (as `ServeCollectionOptions.preloadRows`). */
+  preloadRows?: PreloadRows;
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
 } & AllColumnOverrides<

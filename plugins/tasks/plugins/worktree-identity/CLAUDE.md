@@ -21,8 +21,9 @@ attempt's task. The checkout comes from `namespaceParts`
 namespace would miss every composition served from an agent checkout
 (`sonata.att-…`).
 
-Both reads are `select`s — `useLive(attemptRows, { select })` and
-`useLive(taskRows, { select })` — which are boot-critical and already resident — no new resource. While either is still
+The attempt is a `select` over the resident attempt set
+(`useLive(attemptRows, { select })`); the title is a point read of that task's
+own row (`useLive(taskRows, { id })`). While either is still
 loading the lookup is `pending`, which renders exactly like "no task" (the
 namespace as title, no "Open task"), so nothing on screen claims an answer that
 later reverses.
@@ -44,6 +45,7 @@ outside `apps/…` it loads in the eager tier, so the row is there at first pain
   - Contributes: `HealthReport.Row` "worktree"
   - Uses:
     - `apps-core/tabs.useAppLinkProps`
+    - `network/live.mapRow`
     - `network/live.useLive`
     - `network/live/live-state.foldResource`
     - `primitives/copy-to-clipboard.CopyButton`

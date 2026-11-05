@@ -36,10 +36,10 @@ export interface TodoTaskState {
  * The linked task's LIVE title and status, joined client-side.
  *
  * The join is the whole point: the link row carries the task id and nothing
- * else, and the title and status come off the already boot-critical `tasks`
- * resource — the same one the task list renders. So a card's glyph follows the
- * task through every status change with nothing stored on the card and nothing
- * to keep in sync, which is the same read `page/prompt/block`'s chips make
+ * else, and the title and status come off the task's own live row (a point
+ * read of `tasks`, by the link's id). So a card's glyph follows the task
+ * through every status change with nothing stored on the card and nothing to
+ * keep in sync, which is the same read `page/prompt/block`'s chips make
  * against `attempts`.
  *
  * A resource result: loading while either side is hydrating, error when
@@ -55,15 +55,19 @@ export function useTodoTaskState(
   blockId: string,
 ): ResourceResult<TodoTaskState | null> {
   const taskId = mapRow(useTodoTask(blockId), (row) => row?.taskId ?? null);
-  const tasks = useLive(taskRows);
+  const task = mapRow(
+    useLive(taskRows, {
+      id: taskId.status === "ready" ? taskId.data : null,
+    }),
+    (row) => row,
+  );
   if (taskId.status === "ready" && taskId.data === null)
     return mapResource(taskId, () => null);
   return mapResource(
-    combineResources({ taskId, tasks }),
-    ({ taskId: id, tasks: list }): TodoTaskState | null => {
-      const task = id === null ? undefined : list.find((t) => t.id === id);
-      if (id === null || !task) return null;
-      return { taskId: id, title: task.title, status: task.status };
+    combineResources({ taskId, task }),
+    ({ taskId: id, task: row }): TodoTaskState | null => {
+      if (id === null || !row) return null;
+      return { taskId: id, title: row.title, status: row.status };
     },
   );
 }

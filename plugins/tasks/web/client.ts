@@ -3,7 +3,7 @@ import {
   mapResource,
   type ResourceResult,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   taskRows,
@@ -40,44 +40,36 @@ export function usePatchTask(): (
   );
 }
 /**
- * One task out of the live task set — a resource result whose ready arm is the
- * task, or `null` when the set is known and holds no such task (or `id` is
- * empty). Loading and a failed read stay their own states, so a caller never
- * mistakes "not known yet" or "could not be read" for "no such task".
+ * One task, by id — a resource result whose ready arm is the task, or `null`
+ * when the task list holds no such task (or `id` is empty). Loading and a
+ * failed read stay their own states, so a caller never mistakes "not known
+ * yet" or "could not be read" for "no such task".
  *
- * A `select` over the set: a caller re-renders when ITS task changes (an
- * untouched row keeps its identity across a push), not on every push.
+ * A point read of the task's own row: a caller re-renders when ITS task
+ * changes, and holds that row only, never the whole task set.
  */
 export function useTask(
   id: string | null | undefined,
 ): ResourceResult<TaskListItem | null> {
-  const select = useCallback(
-    (tasks: TaskListItem[]) =>
-      id ? (tasks.find((t) => t.id === id) ?? null) : null,
-    [id],
-  );
-  return useLive(taskRows, { select });
+  return mapRow(useLive(taskRows, { id: id ?? null }), (row) => row);
 }
 
 /**
- * Several tasks out of the live task list, by id — for a surface that lists
- * rows of its own keyed by task (an automation's history) and joins each to
- * its task. The ready arm maps every id the list holds; an id it does not hold
- * is absent from the map (a deleted task), which is a settled answer. Loading
- * and a failed read stay their own states, as in `useTask`.
+ * Several tasks, by id — for a surface that lists rows of its own keyed by
+ * task (an automation's history) and joins each to its task. A point-set read
+ * of just those rows (`{ ids }`, at most the collection's `maxIds`). The ready
+ * arm maps every id the list holds; an id it does not hold is absent from the
+ * map (a deleted task), which is a settled answer. Loading and a failed read
+ * stay their own states, as in `useTask`.
  */
 export function useTasksById(
   ids: readonly string[],
 ): ResourceResult<ReadonlyMap<string, TaskListItem>> {
-  const result = useLive(taskRows);
-  return useMemo(() => {
-    const wanted = new Set(ids);
-    return mapResource(
-      result,
-      (tasks) =>
-        new Map(tasks.filter((t) => wanted.has(t.id)).map((t) => [t.id, t])),
-    );
-  }, [result, ids]);
+  const result = useLive(taskRows, { ids });
+  return useMemo(
+    () => mapResource(result, (tasks) => new Map(tasks.map((t) => [t.id, t]))),
+    [result],
+  );
 }
 
 // One TaskGraph per task-set snapshot, shared by every caller in a render pass.

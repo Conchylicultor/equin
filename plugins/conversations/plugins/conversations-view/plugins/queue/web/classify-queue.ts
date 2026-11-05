@@ -76,6 +76,7 @@ export function classifyQueue<C extends Conversation>(data: {
   active: C[];
   gone: C[];
   queue: QueueData;
+  /** The tasks of the `active` rows (only their statuses are read); any other is ignored. */
   tasks: TaskListItem[];
   /** The ids, among the gone `active` rows, that carry a spawn failure. */
   spawnFailedIds: ReadonlySet<string>;

@@ -1,6 +1,4 @@
-import { useLive } from "@plugins/network/plugins/live/web";
-import { useMemo } from "react";
-import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { rowOrStale, useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { taskRows } from "@plugins/tasks/plugins/tasks-core/core";
@@ -66,19 +64,10 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
       : (input.model ?? input.autostart ?? null));
   const track = TRACK_META[input.track ?? DEFAULT_TASK_TRACK];
 
-  const tasksResult = useLive(taskRows);
   const openPane = useOpenPane();
   // Loading shows the bare task id (known from the call, never revised); a
   // failed read keeps the task as last seen, else the same bare id.
-  const task = useMemo(() => {
-    const tasks = foldResource(tasksResult, {
-      loading: () => null,
-      error: (_error, stale) => stale ?? null,
-      ready: (data) => data,
-    });
-    if (tasks === null || !taskId) return null;
-    return tasks.find((t) => t.id === taskId) ?? null;
-  }, [tasksResult, taskId]);
+  const task = rowOrStale(useLive(taskRows, { id: taskId ?? null }));
 
   const summary = (
     <Stack as="span" direction="row" align="center" gap="sm">

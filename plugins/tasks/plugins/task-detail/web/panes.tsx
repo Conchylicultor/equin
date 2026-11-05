@@ -1,11 +1,10 @@
-import { useCallback, type ReactElement } from "react";
-import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import type { ReactElement } from "react";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import {
   Pane,
   PaneChrome,
   useOpenPane,
-  resolveFrom,
+  resolveRow,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
@@ -14,9 +13,7 @@ import {
   taskRows,
   tasksRootRoute,
   taskDetailRoute,
-  type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { useTask } from "@plugins/tasks/web";
 import { FileLinksWorkspaceProvider } from "@plugins/primitives/plugins/file-links/web";
 import { TaskDetailFlushProvider } from "./context";
 import { TaskDetail } from "./components/task-detail";
@@ -34,24 +31,14 @@ export const tasksRootPane = Pane.define({
 });
 
 function useResolveTask({ taskId }: { taskId: string }): ResolveResult {
-  // A `select` of the one fact the route needs, so the pane re-resolves when
-  // the task appears or goes — not on every push to the task set.
-  const select = useCallback(
-    (tasks: TaskListItem[]) => tasks.some((t) => t.id === taskId),
-    [taskId],
-  );
-  return resolveFrom(useLive(taskRows, { select }), (exists) => exists);
+  return resolveRow(useLive(taskRows, { id: taskId }));
 }
 
-/** The task's title from the global live-state resource, or undefined. */
+/** The task's title from its live row, or undefined. */
 function useTaskTitle({ taskId }: { taskId: string }): string | undefined {
-  // No title until the task is known; a failed read leaves the tab untitled
-  // (the pane's sections render that failure).
-  return foldResource(useTask(taskId), {
-    loading: () => undefined,
-    error: () => undefined,
-    ready: (task) => task?.title,
-  });
+  // No title until the task is known; a failed read keeps the title as last
+  // seen (the pane's sections render that failure).
+  return rowOrStale(useLive(taskRows, { id: taskId }))?.title;
 }
 
 export const taskDetailPane = Pane.define({
