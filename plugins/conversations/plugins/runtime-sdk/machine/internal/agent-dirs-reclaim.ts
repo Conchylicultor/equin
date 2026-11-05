@@ -188,7 +188,8 @@ async function removeNamespace(
 ): Promise<void> {
   const ids = await dirsIn(joinAppPath(roots.agentsRoot, ns));
   const removedBefore = out.removed;
-  for (const id of ids) await removeAgentDir(roots, ns, id, out, dryRun, recheck);
+  for (const id of ids)
+    await removeAgentDir(roots, ns, id, out, dryRun, recheck);
   if (dryRun) {
     if (out.removed - removedBefore === ids.length) out.namespacesRemoved++;
     return;
