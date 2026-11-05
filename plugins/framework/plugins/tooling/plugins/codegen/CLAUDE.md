@@ -67,6 +67,15 @@ reached — an import chain is computed only when reporting a failure. Emitted a
 `bin/browser-host.generated.ts` (`hostEntries`, `hostProviders`), held by
 `plugins-registry-in-sync`; the rule is pinned by `core/browser-host-gen.test.ts`.
 
+**The derivation never reads its own previous output.** The entry imports
+`./browser-host.generated`, so the closure would otherwise measure the file
+on disk — and a stale one naming a server barrel since moved or deleted fails
+the very closure that regenerates it, wedging every build. `ownOutputs` hands
+the measurement both generated files as they render over an EMPTY graph
+instead (the module graph's `written` overlay, and the declaration scan's
+`read`). Nothing is lost: both load their graph only through dynamic imports,
+which a bundled closure cuts.
+
 **Portability is derived, never declared.** "Portable" is
 `serverPortabilityOf(repo)` (`boundaries/core/portability.ts`): a server
 barrel whose static closure loads no module that imports a platform API, uses

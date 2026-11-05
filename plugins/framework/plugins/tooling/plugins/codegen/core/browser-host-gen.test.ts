@@ -26,7 +26,10 @@ import {
 } from "./browser-host-gen";
 import { buildRegistryGenContext } from "./plugin-registry-gen";
 import { codegenPassOver } from "./codegen-pass";
-import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import {
+  loadRepoSnapshot,
+  type RepoSnapshot,
+} from "@plugins/framework/plugins/tooling/core";
 
 setDefaultTimeout(300_000);
 
@@ -106,6 +109,38 @@ describe("deriveBrowserHostGraph over the repo", () => {
     expect(scope).toContain('  home: "home",');
     expect(scope).toContain(`import("@browser-host/${DEMO}")`);
     expect(scope).toContain("} satisfies DemoHost;");
+  });
+});
+
+describe("deriveBrowserHostGraph over its own stale output", () => {
+  test("a graph file naming a removed server barrel is measured as its empty render", async () => {
+    // A server barrel moved or deleted leaves the committed graph file naming
+    // it; the derivation that regenerates the file must not trip on it.
+    const root = await getWorktreeRoot();
+    const snapshot = await loadRepoSnapshot(root);
+    const host = discoverBrowserHosts(snapshot).find(
+      (h) => h.pluginPath === DEMO,
+    )!;
+    const committed = (await snapshot.read(host.generated))!;
+    const stale = committed.replace(
+      "];\n",
+      `  { pluginPath: "gone", id: "gone", loader: () => import("@plugins/gone/server"), dependsOn: [], core: null },\n];\n`,
+    );
+    expect(stale).not.toBe(committed);
+    const staleSnapshot: RepoSnapshot = {
+      root: snapshot.root,
+      all: () => snapshot.all(),
+      has: (p) => snapshot.has(p),
+      under: (d) => snapshot.under(d),
+      glob: (g) => snapshot.glob(g),
+      read: async (p) => (p === host.generated ? stale : snapshot.read(p)),
+      blobOf: (p) =>
+        p === host.generated ? "stale-graph-blob" : snapshot.blobOf(p),
+    };
+    const ctx = await buildRegistryGenContext(codegenPassOver(staleSnapshot));
+    const graph = await inferBrowserHostGraph(ctx, host);
+    expect(graph.members).not.toContain("gone");
+    expect(graph.members.length).toBeGreaterThan(0);
   });
 });
 
