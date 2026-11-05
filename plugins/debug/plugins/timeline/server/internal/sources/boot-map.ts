@@ -11,14 +11,17 @@ export interface BootEventLike {
   readyAt: number | null;
   // Set when the process exited before ready (a boot crash): the bar ends there.
   exitedAt: number | null;
+  // Set when the boot watchdog saw the process gone (killed before ready, no
+  // line of its own): known dead by then, so the bar ends there, not at now.
+  deadBy: number | null;
   supersededAtMs: number | null;
 }
 
 // A boot is the wall-clock interval [processStartedAt, readyAt] — a
 // deploy-restart burst renders as a stack of these bars. A never-ready boot
 // renders to its exit (a boot crash), to its superseding attempt's start
-// (warning: a failed attempt) or
-// open-ended to toMs with the in-flight pulse (possibly booting right now,
+// (warning: a failed attempt), to when it was known dead (killed before ready)
+// or open-ended to toMs with the in-flight pulse (possibly booting right now,
 // possibly wedged — the previously-invisible case). `worktree` is the log-dir
 // name the events were read from (== the lane), not the line's own field, so
 // the chunk and its events can never disagree.
@@ -68,8 +71,8 @@ export function mapBootEvents(
       });
       continue;
     }
-    const open = e.supersededAtMs === null;
-    const endMs = e.supersededAtMs ?? toMs;
+    const open = e.supersededAtMs === null && e.deadBy === null;
+    const endMs = e.supersededAtMs ?? e.deadBy ?? toMs;
     if (!overlapsWindow(e.processStartedAt, endMs, fromMs, toMs)) continue;
     out.push({
       id: `boot:${worktree}:start:${e.processStartedAt}`,
@@ -77,7 +80,11 @@ export function mapBootEvents(
       worktree,
       startMs: e.processStartedAt,
       endMs,
-      label: open ? "backend boot (in progress or wedged)" : "backend boot (never ready)",
+      label: open
+        ? "backend boot (in progress or wedged)"
+        : e.supersededAtMs === null
+          ? "backend boot (killed before ready)"
+          : "backend boot (never ready)",
       // A bounded never-ready attempt is a known-failed boot; an open one may
       // simply be a boot in progress at refresh time, so it stays info and
       // pulses (the in-flight convention).
@@ -86,6 +93,7 @@ export function mapBootEvents(
         processStartedAt: e.processStartedAt,
         readyAt: null,
         supersededAtMs: e.supersededAtMs,
+        ...(e.deadBy !== null && { deadBy: e.deadBy }),
         inFlight: open,
       },
     });

@@ -21739,6 +21739,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/log-channels.defineLogSink`
           - `primitives/log-channels/log-files.channelFileSink`
           - `primitives/log-channels/log-files.logEnvelope`
+          - `primitives/log-channels/log-files.logsDirFor`
           - `primitives/log-channels/log-files.readChannelJson`
         - DB schema: `plugins/debug/plugins/boot-events/server/internal/schema.ts`
         - Exports (types):
@@ -21749,6 +21750,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BootLineSchema`
           - `readBootEvents`
           - `readBootJournals`
+          - `writeBootDeadEvent`
           - `writeBootStartEvent`
       - Cross-plugin:
         - Imported by:

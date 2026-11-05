@@ -3,7 +3,10 @@ import { writeBootReadyEvent } from "./internal/write-boot-event";
 
 export { readBootEvents } from "./internal/read-boot-events";
 export { readBootJournals } from "./internal/boot-journal";
-export { writeBootStartEvent } from "./internal/write-boot-event";
+export {
+  writeBootDeadEvent,
+  writeBootStartEvent,
+} from "./internal/write-boot-event";
 export type { BootJournalSummary } from "./internal/boot-journal";
 export { BootLineSchema } from "./internal/schema";
 export type { BootEvent, BootLine } from "./internal/schema";

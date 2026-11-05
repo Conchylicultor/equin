@@ -5,6 +5,7 @@ import { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
   readBootEvents,
   readBootJournals,
+  writeBootDeadEvent,
 } from "@plugins/debug/plugins/boot-events/server";
 import {
   clearBootUnsettled,
@@ -17,22 +18,10 @@ import {
   describeBootWedge,
   type BootWedgePayload,
 } from "../../core";
-import { classifyNeverReady } from "./classify-wedge";
+import { classifyNeverReady, isSettledVerdict } from "./classify-wedge";
 import { readFleet } from "./read-fleet";
 import { listWorktreeDirs } from "@plugins/infra/plugins/paths/server";
 import type { BootEvent } from "@plugins/debug/plugins/boot-events/server";
-
-// Per-process set of closed wedges (superseded, restart-failed, killed)
-// ALREADY filed. A closed wedge is a past fact: the boot channel keeps returning it every tick for as
-// long as it sits inside the lookback window, so without a guard the watchdog
-// would re-file the SAME dead outage each minute. Keying on `wt:processStartedAt`
-// (the boot's identity) makes each superseded attempt file at most once per main
-// process. Across a main restart the module reloads with a fresh Set, so a
-// superseded wedge still inside the window re-files once — but collapses onto its
-// stable fingerprint row (`boot-wedge:<worktree>`), bumping `count`. This is
-// boot-budget's exact dedup pattern; booting / failed wedges deliberately bypass
-// it (see below) so the bell re-arms while the worktree is still unusable.
-const reportedOnce = new Set<string>();
 
 // Main-only wedged-boot watchdog. Runs every minute in the MAIN backend only —
 // NO perWorktree — because this is structurally impossible to do per-worktree: a
@@ -83,9 +72,10 @@ export const bootWatchdogMonitorJob = defineJob({
     //  • every worktree MARKED unsettled (boot-events' marks): a backend marks
     //    its worktree right after its `start` line, and only this sweep clears
     //    the mark, once it has read that worktree's boot as settled (ready or
-    //    exited). So a never-ready worktree the gateway lists `idle` (after a
-    //    gateway restart, a stop, a kill) is still read every tick and still
-    //    filed as open while it stays unusable — whatever the timing.
+    //    exited, or dead — the `dead` line this tick writes once it reports a
+    //    killed boot). So a never-ready worktree the gateway lists `idle`
+    //    (after a gateway restart, a stop, a kill) is still read until its
+    //    boot is reported, then no more.
     //
     // Marks are complete once stamped `indexed`; until then (first run, or the
     // dir was deleted) one full sweep marks every worktree with an open boot.
@@ -134,21 +124,6 @@ export const bootWatchdogMonitorJob = defineJob({
           cfg.bootReadyBudgetMs,
         );
         if (verdict === null) continue;
-        // Superseded, restart-failed and killed are closed facts (a later
-        // boot replaced it; the old backend kept serving; the gateway no
-        // longer holds the failure and boots it on the next request): filed
-        // ONCE. Booting and failed are true NOW — the worktree has no ready
-        // backend — so they are re-filed each tick (NO dedup Set): `count` ≈
-        // minutes unusable, and the bell re-arms per the kind's cooldown.
-        if (
-          verdict.state === "superseded" ||
-          verdict.state === "restart-failed" ||
-          verdict.state === "killed"
-        ) {
-          const key = `${wt}:${ev.processStartedAt}`;
-          if (reportedOnce.has(key)) continue;
-          reportedOnce.add(key);
-        }
         journals ??= readBootJournals(wt);
         const journal = journals.get(ev.processStartedAt);
         const data: BootWedgePayload = {
@@ -166,12 +141,33 @@ export const bootWatchdogMonitorJob = defineJob({
             },
           }),
         };
-        void recordReport({
+        // Awaited: a report that failed to file must not be settled below —
+        // the job fails, and the boot is still open next tick.
+        await recordReport({
           kind: "boot-wedge",
           source: "server-boot-watchdog",
           data,
           message: describeBootWedge(data),
         });
+        // Every verdict but `booting` is a fact about a past boot — its
+        // process is gone (the gateway killed it, or a later boot replaced
+        // it). Reported once: the `dead` line settles the boot in its own
+        // channel, so no later tick — and no later main process — reads it as
+        // open again; its unsettled mark clears next tick. A NEW boot of the
+        // worktree is a new start line with its own report, so a worktree
+        // that keeps failing keeps alerting, once per attempt. `booting` (the
+        // gateway still waiting on it) is true now and re-files each tick
+        // until the gateway readies or abandons it.
+        //
+        // `deadBy` is read at write time, not the tick's `now`: this tick may
+        // have just marked the worktree (an open boot with no mark), and a
+        // mark is cleared only by a settling newer than it.
+        if (isSettledVerdict(verdict))
+          writeBootDeadEvent(
+            wt,
+            ev.processStartedAt,
+            verdict.supersededAtMs ?? Date.now(),
+          );
       }
     }
   },
@@ -181,12 +177,17 @@ export const bootWatchdogMonitorJob = defineJob({
 function hasUnsettledBoot(events: readonly BootEvent[]): boolean {
   return events.some(
     (e) =>
-      e.readyAt === null && e.exitedAt === null && e.supersededAtMs === null,
+      e.readyAt === null &&
+      e.exitedAt === null &&
+      e.deadBy === null &&
+      e.supersededAtMs === null,
   );
 }
 
 /**
- * When the worktree's latest boot settled (its ready or exit time). No boot in
+ * When the worktree's latest boot settled (its ready or exit time, or when the
+ * watchdog wrote it dead — `deadBy`, which for a latest attempt is when the
+ * line was written, after any mark that tick made). No boot in
  * the lookback window: nothing settled inside it, so a mark older than the
  * window's start is a leftover (a worktree whose boot.jsonl is gone, or
  * quiet) and a newer one may still have its `start` line coming.
@@ -198,7 +199,7 @@ function settledAtMs(
 ): number {
   let latest = now - lookbackMs;
   for (const e of events) {
-    const at = e.readyAt ?? e.exitedAt;
+    const at = e.readyAt ?? e.exitedAt ?? e.deadBy;
     if (at !== null && at > latest) latest = at;
   }
   return latest;

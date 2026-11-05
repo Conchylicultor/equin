@@ -15,7 +15,8 @@ export function readBootEvents(worktree: string, windowMs: number): BootEvent[] 
   const cutoff = Date.now() - windowMs;
   const lines = readChannelJson(worktree, "boot", MAX_LINES, BootLineSchema);
   // A boot's interval starts at processStartedAt and ends at readyAt, at its
-  // exit (a boot crash), at the superseding attempt's start, or (never-ready latest attempt) extends to
+  // exit (a boot crash), at the superseding attempt's start, when it was known
+  // dead (the watchdog's dead line), or (never-ready latest attempt) extends to
   // now — so it overlaps [cutoff, now] iff its end edge is >= cutoff, with an
   // unbounded end always overlapping.
   return pairBootLines(lines).filter(
@@ -23,6 +24,7 @@ export function readBootEvents(worktree: string, windowMs: number): BootEvent[] 
       (e.readyAt ??
         e.exitedAt ??
         e.supersededAtMs ??
+        e.deadBy ??
         Number.POSITIVE_INFINITY) >= cutoff,
   );
 }

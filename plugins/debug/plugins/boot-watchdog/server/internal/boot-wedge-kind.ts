@@ -9,11 +9,11 @@ import {
   type BootWedgePayload,
 } from "../../core";
 
-// Re-alert the bell at most once per ~15 min while a worktree stays unusable. A boot
-// that never comes up is an active outage, not a one-shot condition, so the
-// cooldown re-surfaces it periodically (each open tick bumps `count`; the
-// cooldown decides when the bell re-arms) without spamming a fresh row per
-// minute. Tighter than boot-budget's 6h re-arm because a wedged boot is a live
+// Re-alert the bell at most once per ~15 min while a worktree keeps failing to
+// boot. Each failed boot attempt is reported once (and a boot the gateway still
+// waits on, each minute past its budget), bumping `count`; the cooldown decides
+// when the bell re-arms, so a crash-loop someone keeps retrying re-surfaces
+// without a bell per attempt, and an abandoned worktree rings once. Tighter than boot-budget's 6h re-arm because a wedged boot is a live
 // outage a human should look at now, not a chronic cost regression.
 const BOOT_WEDGE_NOTIF_COOLDOWN_MS = 15 * 60 * 1000;
 
@@ -21,7 +21,7 @@ const BOOT_WEDGE_NOTIF_COOLDOWN_MS = 15 * 60 * 1000;
 // `boot-wedge:<worktree>`), NOT per boot attempt: the row's own `worktree`
 // column is always `main` (the monitor job runs there), so the subject must
 // live in the fingerprint, and a crash-loop that never comes up collapses to a
-// single row whose `count` is the number of times the watchdog saw it un-ready.
+// single row whose `count` is the number of failed attempts (plus booting minutes).
 // Variant `error`: a backend that never became ready is a hard failure — it
 // serves nothing — unlike a merely-slow boot (boot-budget's `warning`).
 export const bootWedgeKind = ReportKind({

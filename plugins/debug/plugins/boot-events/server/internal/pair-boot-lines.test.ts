@@ -26,6 +26,14 @@ const exited = (psa: number, exitedAt: number): BootLine => ({
   phase: "exited",
 });
 
+const dead = (psa: number, deadBy: number): BootLine => ({
+  sampledAt: deadBy,
+  worktree: "wt-a",
+  processStartedAt: psa,
+  deadBy,
+  phase: "dead",
+});
+
 describe("pairBootLines", () => {
   test("a start + ready pair collapses to one ready event", () => {
     const events = pairBootLines([start(T0), ready(T0, T0 + 9_000, "ready")]);
@@ -35,6 +43,7 @@ describe("pairBootLines", () => {
         processStartedAt: T0,
         readyAt: T0 + 9_000,
         exitedAt: null,
+        deadBy: null,
         supersededAtMs: null,
       },
     ]);
@@ -48,6 +57,7 @@ describe("pairBootLines", () => {
         processStartedAt: T0,
         readyAt: T0 + 9_000,
         exitedAt: null,
+        deadBy: null,
         supersededAtMs: null,
       },
     ]);
@@ -60,6 +70,7 @@ describe("pairBootLines", () => {
       processStartedAt: T0 + 60_000,
       readyAt: null,
       exitedAt: null,
+      deadBy: null,
       supersededAtMs: null,
     });
   });
@@ -77,6 +88,7 @@ describe("pairBootLines", () => {
         processStartedAt: T0,
         readyAt: null,
         exitedAt: null,
+        deadBy: null,
         supersededAtMs: T0 + 30_000,
       },
       {
@@ -84,6 +96,7 @@ describe("pairBootLines", () => {
         processStartedAt: T0 + 30_000,
         readyAt: null,
         exitedAt: null,
+        deadBy: null,
         supersededAtMs: T0 + 60_000,
       },
       {
@@ -91,6 +104,7 @@ describe("pairBootLines", () => {
         processStartedAt: T0 + 60_000,
         readyAt: T0 + 69_000,
         exitedAt: null,
+        deadBy: null,
         supersededAtMs: null,
       },
     ]);
@@ -114,6 +128,7 @@ describe("pairBootLines", () => {
         processStartedAt: T0,
         readyAt: null,
         exitedAt: T0 + 3_000,
+        deadBy: null,
         supersededAtMs: T0 + 170_000,
       },
       {
@@ -121,6 +136,7 @@ describe("pairBootLines", () => {
         processStartedAt: T0 + 170_000,
         readyAt: T0 + 174_000,
         exitedAt: null,
+        deadBy: null,
         supersededAtMs: null,
       },
     ]);
@@ -133,7 +149,43 @@ describe("pairBootLines", () => {
       processStartedAt: T0,
       readyAt: null,
       exitedAt: T0 + 2_000,
+      deadBy: null,
       supersededAtMs: null,
     });
+  });
+
+  test("a dead line settles the latest never-ready boot and is not an attempt", () => {
+    const events = pairBootLines([start(T0), dead(T0, T0 + 600_000)]);
+    expect(events).toEqual([
+      {
+        worktree: "wt-a",
+        processStartedAt: T0,
+        readyAt: null,
+        exitedAt: null,
+        deadBy: T0 + 600_000,
+        supersededAtMs: null,
+      },
+    ]);
+  });
+
+  test("a later ready line for the same boot wins over a dead line", () => {
+    const [ev] = pairBootLines([
+      start(T0),
+      dead(T0, T0 + 200_000),
+      ready(T0, T0 + 250_000, "ready"),
+    ]);
+    expect(ev?.readyAt).toBe(T0 + 250_000);
+  });
+
+  test("a dead line is never counted as a later attempt", () => {
+    const events = pairBootLines([
+      start(T0),
+      start(T0 + 300_000),
+      dead(T0, T0 + 300_000),
+    ]);
+    expect(events.map((e) => [e.deadBy, e.supersededAtMs])).toEqual([
+      [T0 + 300_000, T0 + 300_000],
+      [null, null],
+    ]);
   });
 });

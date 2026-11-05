@@ -39,24 +39,38 @@ like a live wedge; before 2026-11-05 this watchdog filed such dead boots as
   the crash is its own report (boot-events files it, error and stack, through
   the report outbox). Measured to the next start it would read as a wedge as
   long as the agent took to rebuild (a 3 s boot assert filed as "un-ready 172s").
-- **superseded** — a later attempt replaced it. A closed, past outage: filed
-  **once** (a module-level `Set<wt:processStartedAt>`, boot-budget's pattern).
+- **superseded** — a later attempt replaced it. A closed, past outage.
 - the latest attempt, on a worktree still in the fleet, by the fleet state:
   - **booting** — `starting` / `restarting`: the gateway is still waiting on
-    it, past its budget.
+    it, past its budget. True *now*: filed **each tick**, so the row's `count`
+    grows by the minutes it boots past budget. It stops when the gateway
+    readies or abandons it.
   - **restart-failed** — `running`: a backend serves, so this was a hot
     restart's new process, killed while the old one kept serving — a failed
-    deploy, not an outage. Filed once.
+    deploy, not an outage.
   - **failed** — `broken`: the gateway gave up on it (its `lastSpawnErr`
     quoted) and retries it only on a deploy or a browser start (gateway
-    "A failed boot is not retried by traffic"). The worktree is **unusable**,
-    so this keeps alerting.
+    "A failed boot is not retried by traffic"). The worktree is unusable until
+    then; a background request gets the failure as its own 502.
   - **killed** — `idle` / `stopping`: killed before ready, but the gateway runs
     nothing for it and no longer holds the failure (it restarted, or the idle
-    sweeper ran) — the next request boots it again. Filed once.
-  - **booting** and **failed** are true *now*: filed **each tick** (no dedup
-    Set), so the row's `count` ≈ minutes unusable and the bell re-arms per the
-    15-min cooldown. It stops when a boot becomes ready.
+    sweeper ran) — the next request boots it again.
+
+**One report per boot.** Every verdict but **booting** says the boot's
+process is gone (killed at its readiness deadline, or replaced): a fact about
+a past boot. It is filed once, then the watchdog **settles the boot** by
+appending boot-events' `dead` line to that worktree's own `boot.jsonl`
+(`writeBootDeadEvent`, `deadBy` = the superseding start, else the write time). The line
+is durable, so the boot is never read as open again — not by the next tick,
+not by the next main process (before 2026-11-05 the dedup was a module-level
+Set: every main restart re-filed every killed boot, ~15 notifications a
+deploy, and the boot's unsettled mark kept it in every sweep forever, since a
+SIGKILLed boot never settled). The report is awaited before the line is
+written: a report that failed to file leaves the boot open for the next tick.
+A **new** boot of the same worktree is a new start line, so it gets its own
+report: a worktree that keeps failing alerts once per attempt — a person
+retrying it in a browser, a deploy — and an abandoned one alerts once. A
+later `ready` line for the same boot still wins over a `dead` one.
 - A worktree gone from the fleet (torn down) is not alerted; an unreadable
   fleet skips the latest attempts this tick rather than guessing.
 
@@ -80,7 +94,8 @@ stalls under host load) to evaluate the ~10 that can hold a wedge. A tick reads:
   `start` line, at process start, and only this sweep clears a mark, after reading that
   worktree's boot as settled (ready or exited) or finding it torn down. So a
   never-ready worktree the gateway lists `idle` — after a gateway restart, a
-  stop, a kill — is still read (and filed once, as `killed`). The marks are complete
+  stop, a kill — is still read until it is filed as `killed` and settled
+  dead, which clears the mark the next tick. The marks are complete
   once stamped `.indexed`; until then (first tick after deploy, or the dir was
   deleted) one full sweep marks every worktree with an open boot.
 

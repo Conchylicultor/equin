@@ -3,9 +3,10 @@ import { z } from "zod";
 // The jsonb payload for a `boot-wedge` report. One report per distinct worktree
 // (fingerprint `boot-wedge:<worktree>` — the row's own `worktree` column is
 // always `main`, since the monitor job runs there, so the subject MUST live in
-// the payload + fingerprint). The row `count` discriminates a one-off wedged
-// boot from a worktree that stays unusable (count grows across the watchdog's
-// per-minute re-files while it does).
+// the payload + fingerprint). Each boot is reported once — except `booting`,
+// re-filed each tick while the gateway still waits on it — so the row `count`
+// is about the number of failed boot attempts, plus the minutes spent booting
+// past the budget.
 //
 //   • `state: "booting"` — the latest attempt, and the gateway is still
 //     waiting on it (fleet state `starting`): past its budget, not given up on
@@ -14,7 +15,9 @@ import { z } from "zod";
 //     (fleet state `broken`: killed at its readiness deadline — a SIGKILL, so
 //     the boot wrote no exit line). No backend runs, none has become ready
 //     since, and the gateway retries it only on a deploy or a browser start —
-//     the worktree is unusable, so this is re-filed each tick while it stays so.
+//     the worktree is unusable until then. Filed once per boot: background
+//     requests get the failure as their own 502, and each retry (a deploy, a
+//     browser start) is a new boot with its own report if it fails again.
 //   • `state: "killed"` — the latest attempt was killed before ready, and the
 //     gateway now lists the worktree `idle` / `stopping`: it runs nothing for
 //     it and no longer holds the failure (a gateway restart, the idle sweeper)

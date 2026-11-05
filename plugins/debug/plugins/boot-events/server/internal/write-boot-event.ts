@@ -1,8 +1,10 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { openDynamicSink } from "@plugins/infra/plugins/file-sink/core";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import {
   channelFileSink,
   logEnvelope,
+  logsDirFor,
 } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import type { BootLine } from "./schema";
 
@@ -96,4 +98,35 @@ export function writeBootReadyEvent(): void {
     readyAt: now,
     phase: "ready",
   });
+}
+
+/**
+ * Settle `worktree`'s never-ready boot `processStartedAt` as dead by `deadBy`:
+ * the one boot line written by another process — the boot watchdog, on main,
+ * once the gateway shows the process is gone (killed at its readiness
+ * deadline, or replaced). A SIGKILL leaves no line of its own, so without this
+ * the boot read as open forever (see `schema.ts`). Appended to that
+ * worktree's own `boot.jsonl` through the same bounded file sink a channel
+ * file is written with (`openDynamicSink`: a per-worktree path, not this
+ * process's), so the boot's whole history stays in one file.
+ */
+export function writeBootDeadEvent(
+  worktree: string,
+  processStartedAt: number,
+  deadBy: number,
+): void {
+  const line: BootLine = {
+    sampledAt: Date.now(),
+    worktree,
+    processStartedAt,
+    deadBy,
+    phase: "dead",
+  };
+  openDynamicSink(logsDirFor(worktree), BOOT_CHANNEL.id).append(
+    logEnvelope({
+      t: line.sampledAt,
+      stream: "stdout",
+      line: JSON.stringify(line),
+    }),
+  );
 }

@@ -29,6 +29,13 @@ Both lines go to the persisted `boot` log channel →
   watchdog filed one whose "un-ready" time ran until the next build's boot. A
   signal kill runs no listener, so a backend killed mid-boot writes none and
   stays "never ready".
+- **`phase: "dead"`** — the one line another process writes: the boot
+  watchdog (`writeBootDeadEvent`, main), once the gateway shows a never-ready
+  boot's process is gone and it has reported it. Carries `deadBy` (the
+  superseding start, else the watchdog's observation — an upper bound on the
+  kill). It **settles** a killed boot: without it a SIGKILLed boot stayed open
+  forever — an eternal timeline bar, an unsettled mark read every minute, and
+  a report re-filed on every main restart. A later `ready` line still wins.
 
 **A boot crash is a report.** Until `ready`, the plugin's `machine/` half
 (filing needs the computer) holds `uncaughtException` / `unhandledRejection`
@@ -48,6 +55,7 @@ process's crashes.
 { "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "phase": "start" }
 { "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "readyAt": <ms>, "phase": "ready" }
 { "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "exitedAt": <ms>, "phase": "exited" }
+{ "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "deadBy": <ms>, "phase": "dead" }
 ```
 
 A boot is the wall-clock interval `[processStartedAt, readyAt]`
@@ -77,7 +85,8 @@ worktree with a never-ready boot: the journal is ~100 lines a boot.
 `processStartedAt` (`pair-boot-lines.ts`, pure + tested) into `BootEvent`s
 whose interval overlaps the window. A start without a ready line is a boot
 that never became ready: `readyAt: null` — a crash when an exited line pairs
-with it (`exitedAt`, its bar ends there), otherwise bounded by the next attempt's start
+with it (`exitedAt`, its bar ends there), known dead when a dead line does
+(`deadBy`, its bar ends there), otherwise bounded by the next attempt's start
 (`supersededAtMs`) when one follows — a crash-loop must not render as a stack
 of eternal open bars — and open-ended (the timeline renders it to the window
 edge, pulsing) when it is the latest attempt. Mirrors health-monitor's
@@ -93,7 +102,8 @@ point beside the boot's `start` line, before any plugin import
 can hold an open boot. The boot watchdog also marks any open boot it reads (a
 backend predating the marks, or a mark that raced its read), and is the only one
 to clear a mark (`clearBootUnsettled`, after reading the channel as settled; a
-mark newer than that read is kept). So it reads the marked worktrees plus the
+mark newer than that read is kept). A killed boot settles when the watchdog
+writes it `dead`. So it reads the marked worktrees plus the
 gateway's live ones, not every worktree's `boot.jsonl`. `.indexed` stamps the
 marks complete; without it the watchdog sweeps every worktree once to mark the
 boots from before the marks.
@@ -108,6 +118,7 @@ boots from before the marks.
     - `primitives/log-channels.defineLogSink`
     - `primitives/log-channels/log-files.channelFileSink`
     - `primitives/log-channels/log-files.logEnvelope`
+    - `primitives/log-channels/log-files.logsDirFor`
     - `primitives/log-channels/log-files.readChannelJson`
   - DB schema: `plugins/debug/plugins/boot-events/server/internal/schema.ts`
   - Exports (types):
@@ -118,6 +129,7 @@ boots from before the marks.
     - `BootLineSchema`
     - `readBootEvents`
     - `readBootJournals`
+    - `writeBootDeadEvent`
     - `writeBootStartEvent`
 - Cross-plugin:
   - Imported by:

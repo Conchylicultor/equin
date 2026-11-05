@@ -15,6 +15,7 @@ describe("mapBootEvents", () => {
           processStartedAt: start,
           readyAt: ready,
           exitedAt: null,
+          deadBy: null,
           supersededAtMs: null,
         },
       ],
@@ -39,12 +40,14 @@ describe("mapBootEvents", () => {
       processStartedAt: fromMs - 5000,
       readyAt: fromMs + 5000,
       exitedAt: null,
+      deadBy: null,
       supersededAtMs: null,
     };
     const outside = {
       processStartedAt: fromMs - 60_000,
       readyAt: fromMs - 30_000,
       exitedAt: null,
+      deadBy: null,
       supersededAtMs: null,
     };
     const events = mapBootEvents([straddling, outside], "wt-a", fromMs, toMs);
@@ -60,6 +63,7 @@ describe("mapBootEvents", () => {
           processStartedAt: start,
           readyAt: null,
           exitedAt: null,
+          deadBy: null,
           supersededAtMs: null,
         },
       ],
@@ -88,6 +92,7 @@ describe("mapBootEvents", () => {
           processStartedAt: start,
           readyAt: null,
           exitedAt: null,
+          deadBy: null,
           supersededAtMs: next,
         },
       ],
@@ -113,6 +118,7 @@ describe("mapBootEvents", () => {
           processStartedAt: start,
           readyAt: null,
           exitedAt: exited,
+          deadBy: null,
           supersededAtMs: start + 170_000,
         },
       ],
@@ -137,6 +143,7 @@ describe("mapBootEvents", () => {
           processStartedAt: start,
           readyAt: null,
           exitedAt: null,
+          deadBy: null,
           supersededAtMs: null,
         },
       ],
@@ -146,5 +153,30 @@ describe("mapBootEvents", () => {
     );
     expect(events.length).toBe(1);
     expect(events[0]!.endMs).toBe(toMs);
+  });
+
+  test("a boot known dead ends at deadBy, a warning, not open-ended", () => {
+    const start = T0 + 5 * 60 * 1000;
+    const deadBy = start + 200_000;
+    const [ev] = mapBootEvents(
+      [
+        {
+          processStartedAt: start,
+          readyAt: null,
+          exitedAt: null,
+          deadBy,
+          supersededAtMs: null,
+        },
+      ],
+      "wt-a",
+      fromMs,
+      toMs,
+    );
+    expect(ev).toMatchObject({
+      endMs: deadBy,
+      label: "backend boot (killed before ready)",
+      severity: "warning",
+      detail: { deadBy, inFlight: false },
+    });
   });
 });

@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { BootEvent } from "@plugins/debug/plugins/boot-events/server";
-import { classifyNeverReady, type FleetEntry } from "./classify-wedge";
+import {
+  classifyNeverReady,
+  isSettledVerdict,
+  type FleetEntry,
+} from "./classify-wedge";
 
 const T0 = Date.parse("2026-11-04T22:00:05.000Z");
 const BUDGET = 120_000;
@@ -12,6 +16,7 @@ const boot = (over: Partial<BootEvent> = {}): BootEvent => ({
   processStartedAt: T0,
   readyAt: null,
   exitedAt: null,
+  deadBy: null,
   supersededAtMs: null,
   ...over,
 });
@@ -39,6 +44,25 @@ describe("classifyNeverReady", () => {
     ).toBeNull();
     expect(
       classifyNeverReady(boot(), fleet("starting"), at(60_000), BUDGET),
+    ).toBeNull();
+    // Settled dead — already reported: not re-filed, whatever the fleet says
+    // (a main restart reads the same line).
+    for (const state of ["idle", "broken", "running"])
+      expect(
+        classifyNeverReady(
+          boot({ deadBy: at(200_000) }),
+          fleet(state, KILLED),
+          at(90_000_000),
+          BUDGET,
+        ),
+      ).toBeNull();
+    expect(
+      classifyNeverReady(
+        boot({ deadBy: at(300_000), supersededAtMs: at(300_000) }),
+        fleet("running"),
+        at(600_000),
+        BUDGET,
+      ),
     ).toBeNull();
     expect(classifyNeverReady(boot(), null, at(600_000), BUDGET)).toBeNull();
     expect(
@@ -102,5 +126,27 @@ describe("classifyNeverReady", () => {
       wedgedMs: 140_000,
       supersededAtMs: at(140_000),
     });
+  });
+
+  test("every verdict but booting settles the boot (its process is gone)", () => {
+    const states = ["starting", "running", "broken", "idle", "stopping"].map(
+      (st) => classifyNeverReady(boot(), fleet(st), at(600_000), BUDGET),
+    );
+    const superseded = classifyNeverReady(
+      boot({ supersededAtMs: at(400_000) }),
+      fleet("running"),
+      at(600_000),
+      BUDGET,
+    );
+    expect(
+      [...states, superseded].map((v) => [v!.state, isSettledVerdict(v!)]),
+    ).toEqual([
+      ["booting", false],
+      ["restart-failed", true],
+      ["failed", true],
+      ["killed", true],
+      ["killed", true],
+      ["superseded", true],
+    ]);
   });
 });
