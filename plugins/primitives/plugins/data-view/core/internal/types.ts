@@ -341,6 +341,15 @@ export interface RowDragConfig<TRow> {
    * "N items".
    */
   write: (rows: readonly TRow[], dt: DataTransfer) => void;
+  /**
+   * Hand the drag to the host instead of the browser — an installed app
+   * window dragging files out as real files, which no browser drag can carry.
+   * Answer the drag's end (it settles once the drop or the cancel lands), or
+   * `null` to drag in the page as usual (`write`). A handed-off drag cancels
+   * the browser's: no `dragend` follows, so the rows count as dragging — no
+   * drop on themselves — until the answer settles.
+   */
+  handOff?: (rows: readonly TRow[]) => Promise<unknown> | null;
 }
 
 /** Where a drop on a view's empty space landed: the view instance (a

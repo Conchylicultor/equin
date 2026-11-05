@@ -4443,16 +4443,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 64 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 68 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×10
               - `primitives/css/ui-kit` ×8
               - `primitives/file-viewer` ×5
               - `network/live` ×4
               - `primitives/pane` ×4
+              - `infra/endpoints` ×3
               - `network/live/live-state` ×3
-              - `infra/endpoints` ×2
+              - `primitives/networking` ×2
               - `primitives/path-bar` ×2
               - `primitives/persistent-draft` ×2
+              - `menu-bar/app-window.useNativeFileDrag`
               - `primitives/bar.Bar`
               - `primitives/copy-to-clipboard.useCopyToClipboard`
               - `primitives/css/center.Center`
@@ -32023,6 +32025,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `compareHostFsNames`
           - `FileVersionSchema`
+          - `handOffHostPaths`
           - `hasHostPaths`
           - `HOST_FS_COMPLETE_LIMIT`
           - `HOST_FS_MACHINE`
@@ -35033,6 +35036,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --primary-foreground`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
+    - **`app-window`** — An installed app window's bridge to the native helper (window.equinWindow), read once per document: useNativeFileDrag() is the window's native file drag — drag host paths out as real files, the drag Finder starts, so any app or website takes them — or null in a browser tab, on a platform without it, or before the window has answered.
+      - Cross-plugin:
+        - Imported by: `apps/file-explorer/browser`
+      - Web:
+        - Exports (types): `NativeFileDrag`
+        - Exports (values): `useNativeFileDrag`
+      - Core:
+        - Exports (types):
+          - `AppWindowInfo`
+          - `EquinWindowBridge`
+          - `FileDragOutcome`
+        - Exports (values):
+          - `AppWindowInfoSchema`
+          - `FileDragOutcomeSchema`
+          - `WINDOW_BRIDGE_METHODS`
 
 - **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes and strings only: the chord box (a chord's degree colour, numeral and tile).
   - Plugins:
@@ -46764,8 +46782,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTransport`
           - `useTransportScoped`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
-          - `apps` ×10
+        - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
+          - `apps` ×11
           - `primitives` ×6
           - `conversations` ×5
           - `framework` ×3

@@ -332,16 +332,23 @@ function Listing({
   // The paths this listing is dragging right now: dropping them back into
   // the folder they sit in is no move, so the pane does not offer it.
   const dragging = useRef<readonly string[] | null>(null);
-  const onDragPaths = useCallback((paths: readonly string[]) => {
-    dragging.current = paths;
-    window.addEventListener(
-      "dragend",
-      () => {
-        dragging.current = null;
-      },
-      { once: true, capture: true },
-    );
-  }, []);
+  const onDragPaths = useCallback(
+    (paths: readonly string[], ended: Promise<unknown> | null) => {
+      dragging.current = paths;
+      const done = () => {
+        if (dragging.current === paths) dragging.current = null;
+      };
+      // A drag handed to the OS ends with its promise (its rejection
+      // reported by the row drag); a browser drag with `dragend`.
+      if (ended !== null) void ended.then(done, done);
+      else
+        window.addEventListener("dragend", done, {
+          once: true,
+          capture: true,
+        });
+    },
+    [],
+  );
   const publishControls = ExplorerControlsSlot.usePublishRef();
 
   // Show hidden files, then every lens hide rule that is not switched to show.

@@ -1,9 +1,20 @@
 //! Window mode: one installed app's own process — a regular app with its own
 //! Dock icon (macOS: the shim bundle's identity) or window class (Linux:
 //! `equin-<id>`, the shim's `StartupWMClass`), and ONE window on the app's URL
-//! as the app's own document (never `?embed=`, see `shim::window_url`). The
-//! window gets no IPC — no capability names its label — and no script is
-//! injected into any page it shows.
+//! as the app's own document (never `?embed=`, see `shim::window_url`).
+//!
+//! Its one bridge, `window.equinWindow` (src/window_bridge.js), carries the
+//! powers a page of the app needs from this machine — today a native file
+//! drag (src/file_drag.rs). It is held to the window's origin (`Scope`): the
+//! ACL grants its commands to window `app` on that origin only, the script
+//! defines it only there and in the main frame, and every command checks the
+//! page the window shows when it is called (src/commands.rs). The origin is
+//! the owner's instance, whose pages already read and serve any host file —
+//! the bridge hands them no new reach. The window takes no other script.
+//!
+//! Drops reach the page: Tauri's own drop handler is off, so the page's HTML
+//! drag and drop runs as in a browser (its own row drags, and files dropped
+//! from Finder) — with it on, every drag over the window was Tauri's.
 //!
 //! It keeps to its namespace (`window_scope`: the app URL's whole origin, not
 //! its base path), so the app's own ways to other apps — the launcher, a link
@@ -21,15 +32,18 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+use tauri::ipc::CapabilityBuilder;
 use tauri::webview::{NewWindowResponse, PageLoadEvent};
 use tauri::{AppHandle, Manager, RunEvent, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 use url::Url;
 
+use crate::command_table::APP_WINDOW_COMMANDS;
 use crate::main_frame::{self, FrameKind};
 use crate::scope_gate::{self, admits_main_frame, web};
 use crate::{instance, shim};
 
-const LABEL: &str = "app";
+pub const LABEL: &str = "app";
+const BRIDGE_JS: &str = include_str!("window_bridge.js");
 const DEFAULT_SIZE: (f64, f64) = (1200.0, 800.0);
 
 /// What a window-mode process opens.
@@ -105,6 +119,39 @@ fn window_scope(base: &Url) -> Url {
     scope
 }
 
+/// What the window's bridge answers: the pages of the app URL's origin.
+pub struct Scope(Url);
+
+impl Scope {
+    pub fn of(base: &Url) -> Self {
+        Scope(window_scope(base))
+    }
+
+    pub fn admits(&self, url: &Url) -> bool {
+        url.origin() == self.0.origin()
+    }
+
+    fn origin(&self) -> String {
+        self.0.origin().ascii_serialization()
+    }
+
+    /// The bridge's grant: window `app`, remote, this origin only.
+    fn capability(&self) -> CapabilityBuilder {
+        APP_WINDOW_COMMANDS.iter().fold(
+            CapabilityBuilder::new("app-window-bridge")
+                .window(LABEL)
+                .local(false)
+                .remote(format!("{}/*", self.origin())),
+            |cap, cmd| cap.permission(format!("allow-{}", cmd.replace('_', "-"))),
+        )
+    }
+
+    /// window_bridge.js with the origin filled in.
+    fn bridge_script(&self) -> String {
+        BRIDGE_JS.replace("__EQUIN_ORIGIN__", &serde_json::json!(self.origin()).to_string())
+    }
+}
+
 /// A later launch's hand-off: come forward, and go to its URL when it is ours.
 fn on_handoff(app: &AppHandle, scope: &Url, url: Option<Url>) {
     let Some(window) = app.get_webview_window(LABEL) else { return };
@@ -150,10 +197,16 @@ pub fn build_window(app: &AppHandle, launch: &Launch, hooks: Hooks) -> tauri::Re
     let sink = hooks.hand_off;
     let installed = Arc::new(AtomicBool::new(false));
     app.manage(GateInstalled(installed.clone()));
+    let bridge = Scope::of(&launch.base);
+    app.add_capability(bridge.capability())?;
+    let bridge_script = bridge.bridge_script();
+    app.manage(bridge);
     let mut builder = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External(shim::window_url(&launch.url)))
         .title(&launch.name)
         .min_inner_size(480.0, 360.0)
         .visible(hooks.visible)
+        .initialization_script(bridge_script)
+        .disable_drag_drop_handler()
         .on_new_window(move |url, _features| {
             if web(&url) {
                 scope_gate::hand_off(url, sink);
@@ -250,6 +303,7 @@ pub fn run(launch: Launch) {
     let owns_socket = listener.is_some();
     let app_id = launch.app_id.clone();
     let app = tauri::Builder::default()
+        .invoke_handler(crate::commands::handler())
         .setup(move |app| {
             // The window class (X11 WM_CLASS) and Wayland app id: the shim's
             // StartupWMClass, so the dock groups the window under its entry.
@@ -300,5 +354,21 @@ mod tests {
         assert!(shim::in_scope(&scope, &u("http://equin.localhost:9000/agents/c/1")));
         assert!(!shim::in_scope(&scope, &u("http://other.localhost:9000/home")));
         assert!(!shim::in_scope(&scope, &u("https://example.com/")));
+    }
+
+    #[test]
+    fn the_bridge_is_the_origin() {
+        use tauri::ipc::RuntimeCapability;
+        let bridge = Scope::of(&Url::parse("http://equin.localhost:9000/files").unwrap());
+        let tauri::utils::acl::capability::CapabilityFile::Capability(cap) = bridge.capability().build() else {
+            panic!("one capability");
+        };
+        assert_eq!(cap.windows, vec![LABEL.to_string()]);
+        assert!(!cap.local);
+        assert_eq!(cap.remote.expect("a remote grant").urls, vec!["http://equin.localhost:9000/*".to_string()]);
+        assert_eq!(cap.permissions.len(), APP_WINDOW_COMMANDS.len());
+        let js = bridge.bridge_script();
+        assert!(!js.contains("__EQUIN_ORIGIN__"));
+        assert!(js.contains(r#"var origin = "http://equin.localhost:9000";"#));
     }
 }

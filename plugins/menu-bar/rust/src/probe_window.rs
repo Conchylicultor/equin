@@ -226,6 +226,7 @@ pub fn run(namespace: String) {
     *SCOPE.lock().unwrap() = Some((base.clone(), namespace));
     let launch = Launch { app_id: "equin-probe".into(), name: "equin probe".into(), base: base.clone(), url: base };
     let app = tauri::Builder::default()
+        .invoke_handler(crate::commands::handler())
         .setup(move |app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);

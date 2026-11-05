@@ -31,6 +31,7 @@ export type {
 } from "./internal/endpoints";
 export {
   HOST_PATHS_MIME,
+  handOffHostPaths,
   hasHostPaths,
   readHostPaths,
   writeHostPaths,

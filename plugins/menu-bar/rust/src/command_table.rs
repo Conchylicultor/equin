@@ -17,6 +17,10 @@ pub const PANEL_COMMANDS: &[&str] = &[
     "pin_app",
 ];
 
+/// `window.equinWindow` (src/window_bridge.js): an installed app's window, on
+/// pages of its own origin (its namespace) only.
+pub const APP_WINDOW_COMMANDS: &[&str] = &["window_info", "start_file_drag"];
+
 /// The bundled "equin isn't running" page (local, in the panel window): its
 /// Start button.
 pub const OFFLINE_COMMANDS: &[&str] = &["start_gateway"];

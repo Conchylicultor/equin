@@ -291,6 +291,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
   - Exports (values):
     - `compareHostFsNames`
     - `FileVersionSchema`
+    - `handOffHostPaths`
     - `hasHostPaths`
     - `HOST_FS_COMPLETE_LIMIT`
     - `HOST_FS_MACHINE`

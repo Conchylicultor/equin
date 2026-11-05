@@ -25,6 +25,51 @@ const HostPathsPayloadSchema = z.object({
   entries: z.array(DraggedHostPathSchema).min(1),
 });
 
+/**
+ * The page's own drag handed to the OS as real files (`handOffHostPaths`), or
+ * `null`. Back over this page it arrives as a drag from outside — `Files`,
+ * no {@link HOST_PATHS_MIME}, and `File`s without a path — so the readers
+ * below take it from here instead: the page knows what it is dragging.
+ */
+let handedOff: readonly DraggedHostPath[] | null = null;
+
+/**
+ * Drag `entries` as real files through `start` (the host's native drag —
+ * `useNativeFileDrag`, in an installed app window), in place of the browser
+ * drag. Answers the drag's end; until then, a `Files` drag over this page is
+ * this one, read by {@link hasHostPaths} / {@link readHostPaths} as if it
+ * carried {@link HOST_PATHS_MIME}.
+ *
+ * Its end and its drop on this page come by two roads (the host's answer, the
+ * page's `drop` event) in no promised order, so the end does not forget the
+ * drag: the next drag to enter the page — another one — does.
+ */
+export function handOffHostPaths<T>(
+  entries: readonly DraggedHostPath[],
+  start: (paths: readonly string[]) => Promise<T>,
+): Promise<T> {
+  if (entries.length === 0) {
+    throw new Error("handOffHostPaths: no paths to drag");
+  }
+  handedOff = entries;
+  const forget = () => {
+    if (handedOff === entries) handedOff = null;
+  };
+  return start(entries.map((e) => e.path)).finally(() => {
+    globalThis.addEventListener("dragenter", forget, {
+      capture: true,
+      once: true,
+    });
+  });
+}
+
+/** The handed-off drag, when a drag of `types` is it. */
+function handedOffIn(
+  types: readonly string[],
+): readonly DraggedHostPath[] | null {
+  return handedOff !== null && types.includes("Files") ? handedOff : null;
+}
+
 /** Put `entries` on a drag (in `dragstart`). */
 export function writeHostPaths(
   dt: Pick<DataTransfer, "setData">,
@@ -50,7 +95,12 @@ export type ReadHostPathsResult =
 export function readHostPaths(
   dt: Pick<DataTransfer, "getData" | "types">,
 ): ReadHostPathsResult {
-  if (!hasHostPaths(dt.types)) return { kind: "absent" };
+  if (!dt.types.includes(HOST_PATHS_MIME)) {
+    const own = handedOffIn(dt.types);
+    return own === null
+      ? { kind: "absent" }
+      : { kind: "paths", entries: [...own] };
+  }
   const raw = dt.getData(HOST_PATHS_MIME);
   let json: unknown;
   try {
@@ -73,5 +123,5 @@ export function readHostPaths(
  * / `dragenter` can test, since the browser hides the data until `drop`.
  */
 export function hasHostPaths(types: readonly string[]): boolean {
-  return types.includes(HOST_PATHS_MIME);
+  return types.includes(HOST_PATHS_MIME) || handedOffIn(types) !== null;
 }

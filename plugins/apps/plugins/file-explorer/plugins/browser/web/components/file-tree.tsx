@@ -19,14 +19,23 @@ import type {
 import type { TreeChildrenState } from "@plugins/primitives/plugins/tree/core";
 import {
   compareHostFsNames,
+  handOffHostPaths,
   hasHostPaths,
+  hostFileUrl,
   hostFsDirPeek,
   isBrowsable,
   writeHostPaths,
+  type DraggedHostPath,
   type HostFsDirPeek,
   type HostFsEntry,
 } from "@plugins/infra/plugins/host-fs/core";
 import type { LiveValueTupleRead } from "@plugins/network/plugins/live/web";
+import { assetUrlOver } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useTransport,
+  type Transport,
+} from "@plugins/primitives/plugins/networking/web";
+import { useNativeFileDrag } from "@plugins/menu-bar/plugins/app-window/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
@@ -393,8 +402,14 @@ export interface FileTreeProps {
   home: string;
   /** The selected rows (a set and its anchor), by path. */
   rowSelection: RowSelectionConfig;
-  /** The dragged rows' absolute paths, as a drag starts. */
-  onDragPaths: (paths: readonly string[]) => void;
+  /**
+   * The dragged rows' absolute paths, as a drag starts — with its end when
+   * the drag was handed to the OS (no `dragend` will follow), else `null`.
+   */
+  onDragPaths: (
+    paths: readonly string[],
+    ended: Promise<unknown> | null,
+  ) => void;
   /** Host paths dropped on a folder row (`dir`, display form). */
   onDropInto: (dir: string, dt: DataTransfer) => void;
 }
@@ -450,19 +465,43 @@ export function FileTree({
   // Rows drag as host paths with their kinds (the selection when the grabbed
   // row is in it), so any surface taking `HOST_PATHS_MIME` — a folder row
   // here, the Favorites sidebar — can take them without reading the disk.
-  const rowDrag = useMemo<RowDragConfig<EntryRow>>(
-    () => ({
+  // In an installed app window, rows on disk drag as real files instead (the
+  // OS drag: Finder, Mail, a website's upload take them), which this page
+  // still reads as its own host paths; in a browser tab, one file also
+  // carries Chrome's `DownloadURL` (dropped on the desktop or Finder, it is
+  // saved there).
+  const fileDrag = useNativeFileDrag();
+  const transport = useTransport();
+  const rowDrag = useMemo<RowDragConfig<EntryRow>>(() => {
+    const entriesOf = (dragged: readonly EntryRow[]): DraggedHostPath[] =>
+      dragged.map((r) => ({ path: absolutePath(r.path, home), kind: r.kind }));
+    return {
       write: (dragged, dt) => {
-        const entries = dragged.map((r) => ({
-          path: absolutePath(r.path, home),
-          kind: r.kind,
-        }));
+        const entries = entriesOf(dragged);
         writeHostPaths(dt, entries);
-        onDragPaths(entries.map((e) => e.path));
+        writeDownloadUrl(dt, entries, transport);
+        onDragPaths(
+          entries.map((e) => e.path),
+          null,
+        );
       },
-    }),
-    [home, onDragPaths],
-  );
+      handOff: (dragged) => {
+        // A row inside an archive is no file the OS can drag.
+        if (
+          fileDrag === null ||
+          !dragged.every((r) => isOnDisk(listings, r.parentId ?? root))
+        )
+          return null;
+        const entries = entriesOf(dragged);
+        const ended = handOffHostPaths(entries, fileDrag);
+        onDragPaths(
+          entries.map((e) => e.path),
+          ended,
+        );
+        return ended;
+      },
+    };
+  }, [home, onDragPaths, fileDrag, transport, listings, root]);
   // A real folder takes them — not an archive file, nor a folder inside one
   // (its listing is an archive's: `within`), which cannot be written to.
   const rowDrop = useMemo<RowDropConfig<EntryRow>>(
@@ -583,4 +622,28 @@ export function FileTree({
       emptyState={emptyState}
     />
   );
+}
+
+/**
+ * Chrome's `DownloadURL` drag type for a drag of ONE file — `mime:name:url`,
+ * the one way a page drags a file out as a file: dropped on the desktop or a
+ * Finder window, Chrome saves it there (other browsers ignore it). Only where
+ * the file's bytes have a URL (the page's own server); never for a folder.
+ */
+function writeDownloadUrl(
+  dt: DataTransfer,
+  entries: readonly DraggedHostPath[],
+  transport: Transport,
+): void {
+  const [only] = entries;
+  if (entries.length !== 1 || only === undefined || only.kind !== "file") {
+    return;
+  }
+  const name = only.path.slice(only.path.lastIndexOf("/") + 1);
+  // The format's own separator: a name holding one cannot be spelled.
+  if (name === "" || name.includes(":")) return;
+  const asset = assetUrlOver(transport, hostFileUrl(only.path));
+  if (asset.kind !== "ready") return;
+  const url = new URL(asset.url, window.location.href).href;
+  dt.setData("DownloadURL", `application/octet-stream:${name}:${url}`);
 }

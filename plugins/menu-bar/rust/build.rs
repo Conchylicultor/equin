@@ -56,10 +56,11 @@ fn main() {
 
     // An app manifest makes every command ACL-gated: a command runs only for a
     // window and origin a capability grants it to (the panel's, granted at
-    // runtime from the pinned URL — src/panel.rs; the offline page's,
+    // runtime from the pinned URL — src/panel.rs; an app window's, from its
+    // origin — src/window.rs; the offline page's,
     // capabilities/panel-offline.json) — nothing is callable by default.
     println!("cargo:rerun-if-changed=src/command_table.rs");
-    let commands: Vec<&'static str> = PANEL_COMMANDS.iter().chain(OFFLINE_COMMANDS).copied().collect();
+    let commands: Vec<&'static str> = PANEL_COMMANDS.iter().chain(APP_WINDOW_COMMANDS).chain(OFFLINE_COMMANDS).copied().collect();
     tauri_build::try_build(
         tauri_build::Attributes::new()
             .app_manifest(tauri_build::AppManifest::new().commands(Vec::leak(commands))),

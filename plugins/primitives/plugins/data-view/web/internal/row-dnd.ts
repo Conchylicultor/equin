@@ -361,6 +361,13 @@ export function useRowDnd<TRow>(args: {
           if (!rowDrag) return;
           const carried = dragRows(key);
           dragging.current = new Set(carried.map((c) => c.key));
+          const ended = rowDrag.handOff?.(carried.map((c) => c.row)) ?? null;
+          if (ended !== null) {
+            e.preventDefault();
+            // A failed hand-off rejects on: an unhandled rejection, reported.
+            void ended.finally(finishDrag);
+            return;
+          }
           rowDrag.write(
             carried.map((c) => c.row),
             e.dataTransfer,

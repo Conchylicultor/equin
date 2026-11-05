@@ -17,6 +17,7 @@ mod apps;
 mod cli;
 mod command_table;
 mod commands;
+mod file_drag;
 mod gateway;
 mod instance;
 mod main_frame;

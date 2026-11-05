@@ -1,6 +1,8 @@
-//! The bridge's commands (`window.equinNative`, src/bridge.js) and the offline
+//! The bridge's commands (`window.equinNative`, src/bridge.js), an app
+//! window's (`window.equinWindow`, src/window_bridge.js) and the offline
 //! page's Start. Each is ACL-gated — the bridge to the panel window on the
-//! pinned origin (granted at runtime, `panel::Pin::capability`),
+//! pinned origin (granted at runtime, `panel::Pin::capability`), the app
+//! window's to that window on its origin (`window::Scope::capability`),
 //! `start_gateway` to the panel's bundled page (capabilities/panel-offline.json)
 //! — and then gated again here (`handler`) on the page the calling window
 //! shows right now, by its row in src/command_table.rs.
@@ -13,8 +15,8 @@ use tauri::{AppHandle, Manager, WebviewWindow};
 use tauri_plugin_notification::NotificationExt;
 use url::Url;
 
-use crate::command_table::{OFFLINE_COMMANDS, PANEL_COMMANDS};
-use crate::{apps, gateway, panel, shim, tray};
+use crate::command_table::{APP_WINDOW_COMMANDS, OFFLINE_COMMANDS, PANEL_COMMANDS};
+use crate::{apps, file_drag, gateway, panel, shim, tray, window};
 
 /// Bump on a breaking change of the bridge; the web side reads it.
 const BRIDGE_VERSION: u8 = 1;
@@ -153,6 +155,38 @@ fn set_panel_height(window: WebviewWindow, px: f64) -> Result<(), String> {
     panel::set_height(&window, px).map(|_| ()).map_err(|e| e.to_string())
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowCapabilities {
+    /// `start_file_drag`: dragging host paths out as real files.
+    file_drag: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowInfo {
+    version: u8,
+    platform: &'static str,
+    capabilities: WindowCapabilities,
+}
+
+/// `equinWindow.hostInfo()`: what this app window can do.
+#[tauri::command]
+fn window_info() -> WindowInfo {
+    WindowInfo {
+        version: BRIDGE_VERSION,
+        platform: if cfg!(target_os = "macos") { "macos" } else { "linux" },
+        capabilities: WindowCapabilities { file_drag: file_drag::AVAILABLE },
+    }
+}
+
+/// `equinWindow.startFileDrag(paths)`: drag host paths out of the window as
+/// real files; resolves `"dropped"` / `"cancelled"` once the drag ends.
+#[tauri::command]
+async fn start_file_drag(window: WebviewWindow, paths: Vec<String>) -> Result<file_drag::Outcome, String> {
+    file_drag::start(window, paths).await
+}
+
 /// The offline page's Start: start the gateway service, then load the panel.
 #[tauri::command]
 async fn start_gateway(app: AppHandle) -> Result<(), String> {
@@ -163,16 +197,27 @@ async fn start_gateway(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// May a window showing `shown` call `command`? The bridge's commands: only
-/// the pinned panel page (its current URL — after an in-document route change
-/// too); `start_gateway`: only the bundled offline page; anything else: no.
-pub fn admitted(pin: &panel::Pin, command: &str, shown: &Url) -> Result<(), String> {
-    let ok = if PANEL_COMMANDS.contains(&command) {
-        pin.admits(shown)
-    } else if OFFLINE_COMMANDS.contains(&command) {
-        panel::is_offline_page(shown)
-    } else {
-        false
+/// Which window is calling, with what it is held to.
+pub enum Caller<'a> {
+    /// The panel, held to its pin.
+    Panel(&'a panel::Pin),
+    /// An installed app's window, held to its scope (the app URL's origin).
+    AppWindow(&'a window::Scope),
+    /// A window no command answers.
+    Other,
+}
+
+/// May `caller`, showing `shown`, call `command`? The bridge's commands: only
+/// the panel on its pinned page (its current URL — after an in-document route
+/// change too); `start_gateway`: only the panel on its bundled offline page;
+/// an app window's: only an app window on a page of its origin; anything
+/// else: no.
+pub fn admitted(caller: &Caller, command: &str, shown: &Url) -> Result<(), String> {
+    let ok = match caller {
+        Caller::Panel(pin) if PANEL_COMMANDS.contains(&command) => pin.admits(shown),
+        Caller::Panel(_) if OFFLINE_COMMANDS.contains(&command) => panel::is_offline_page(shown),
+        Caller::AppWindow(scope) if APP_WINDOW_COMMANDS.contains(&command) => scope.admits(shown),
+        _ => false,
     };
     if ok {
         Ok(())
@@ -194,13 +239,23 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         set_panel_height,
         apps,
         pin_app,
+        window_info,
+        start_file_drag,
         start_gateway
     ];
     move |invoke: Invoke| {
         let webview = invoke.message.webview();
         let command = invoke.message.command().to_string();
+        let app = webview.app_handle();
+        let panel = app.try_state::<panel::Panel>();
+        let scope = app.try_state::<window::Scope>();
+        let caller = match webview.label() {
+            panel::LABEL => panel.as_ref().map_or(Caller::Other, |p| Caller::Panel(p.pin())),
+            window::LABEL => scope.as_ref().map_or(Caller::Other, |s| Caller::AppWindow(s)),
+            _ => Caller::Other,
+        };
         let verdict = match webview.url() {
-            Ok(shown) => admitted(webview.app_handle().state::<panel::Panel>().pin(), &command, &shown),
+            Ok(shown) => admitted(&caller, &command, &shown),
             Err(e) => Err(format!("{command}: the calling page's URL is unknown ({e})")),
         };
         match verdict {
@@ -225,23 +280,41 @@ mod tests {
     #[test]
     fn the_bridge_answers_the_pinned_page_only() {
         let pin = panel::Pin::for_namespace("equin");
-        assert!(admitted(&pin, "host_info", &u("http://equin.localhost:9000/home/menu-bar?embed=1")).is_ok());
-        assert!(admitted(&pin, "notify", &u("http://equin.localhost:9000/home/menu-bar/x")).is_ok());
-        assert!(admitted(&pin, "pin_app", &u("http://equin.localhost:9000/home/menu-bar?embed=1")).is_ok());
-        assert!(admitted(&pin, "pin_app", &u("http://other.localhost:9000/home/menu-bar")).is_err());
-        assert!(admitted(&pin, "apps", &u("http://equin.localhost:9000/agents")).is_err());
+        let pin = &Caller::Panel(&pin);
+        assert!(admitted(pin, "host_info", &u("http://equin.localhost:9000/home/menu-bar?embed=1")).is_ok());
+        assert!(admitted(pin, "notify", &u("http://equin.localhost:9000/home/menu-bar/x")).is_ok());
+        assert!(admitted(pin, "pin_app", &u("http://equin.localhost:9000/home/menu-bar?embed=1")).is_ok());
+        assert!(admitted(pin, "pin_app", &u("http://other.localhost:9000/home/menu-bar")).is_err());
+        assert!(admitted(pin, "apps", &u("http://equin.localhost:9000/agents")).is_err());
         // An in-document route change away from the panel.
-        assert!(admitted(&pin, "host_info", &u("http://equin.localhost:9000/agents")).is_err());
-        assert!(admitted(&pin, "host_info", &u("http://equin.localhost:9000/home/menu-barx")).is_err());
+        assert!(admitted(pin, "host_info", &u("http://equin.localhost:9000/agents")).is_err());
+        assert!(admitted(pin, "host_info", &u("http://equin.localhost:9000/home/menu-barx")).is_err());
         // Another namespace, scheme or port.
-        assert!(admitted(&pin, "host_info", &u("http://other.localhost:9000/home/menu-bar")).is_err());
-        assert!(admitted(&pin, "host_info", &u("https://equin.localhost:9000/home/menu-bar")).is_err());
-        assert!(admitted(&pin, "host_info", &u("http://equin.localhost:9001/home/menu-bar")).is_err());
+        assert!(admitted(pin, "host_info", &u("http://other.localhost:9000/home/menu-bar")).is_err());
+        assert!(admitted(pin, "host_info", &u("https://equin.localhost:9000/home/menu-bar")).is_err());
+        assert!(admitted(pin, "host_info", &u("http://equin.localhost:9001/home/menu-bar")).is_err());
         // The offline page gets Start only; the panel page never gets Start.
-        assert!(admitted(&pin, "host_info", &u("tauri://localhost/index.html")).is_err());
-        assert!(admitted(&pin, "start_gateway", &u("tauri://localhost/index.html")).is_ok());
-        assert!(admitted(&pin, "start_gateway", &u("http://equin.localhost:9000/home/menu-bar")).is_err());
+        assert!(admitted(pin, "host_info", &u("tauri://localhost/index.html")).is_err());
+        assert!(admitted(pin, "start_gateway", &u("tauri://localhost/index.html")).is_ok());
+        assert!(admitted(pin, "start_gateway", &u("http://equin.localhost:9000/home/menu-bar")).is_err());
         // A command outside the table.
-        assert!(admitted(&pin, "unknown", &u("http://equin.localhost:9000/home/menu-bar")).is_err());
+        assert!(admitted(pin, "unknown", &u("http://equin.localhost:9000/home/menu-bar")).is_err());
+        // The panel never gets an app window's commands.
+        assert!(admitted(pin, "start_file_drag", &u("http://equin.localhost:9000/home/menu-bar")).is_err());
+    }
+
+    #[test]
+    fn an_app_window_answers_its_origin_only() {
+        let scope = window::Scope::of(&u("http://equin.localhost:9000/files"));
+        let app = &Caller::AppWindow(&scope);
+        assert!(admitted(app, "start_file_drag", &u("http://equin.localhost:9000/files/at/x")).is_ok());
+        // Anywhere in its namespace: the window roams it.
+        assert!(admitted(app, "window_info", &u("http://equin.localhost:9000/agents")).is_ok());
+        assert!(admitted(app, "start_file_drag", &u("http://other.localhost:9000/files")).is_err());
+        assert!(admitted(app, "start_file_drag", &u("https://example.com/")).is_err());
+        // Never the panel's or the offline page's commands.
+        assert!(admitted(app, "pin_app", &u("http://equin.localhost:9000/home/menu-bar")).is_err());
+        assert!(admitted(app, "start_gateway", &u("tauri://localhost/index.html")).is_err());
+        assert!(admitted(&Caller::Other, "window_info", &u("http://equin.localhost:9000/files")).is_err());
     }
 }
