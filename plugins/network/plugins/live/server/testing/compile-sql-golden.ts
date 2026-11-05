@@ -72,12 +72,7 @@ import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
-import {
-  exposedColumns,
-  liveCollection,
-  scopedLiveColumns,
-  type LiveColumnsDeclaration,
-} from "../../core";
+import { exposedColumns, liveCollection, scopedLiveColumns } from "../../core";
 import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
@@ -1016,28 +1011,31 @@ async function collectionCases(): Promise<Record<string, Json>> {
       { id: "b", title: "B", n: 2 },
     ]);
     const specs = compileCollection(c, { from: scSongs, db }, [set]);
-    const handle: LiveColumnsDeclaration = scopedLiveColumns(SCOPE, "custom", {
+    const handle = scopedLiveColumns(SCOPE, "custom", {
       c1: { domain: "text", sortable: true },
       "cc-2": { domain: "number", sortable: true },
     });
-    const encode = (q: object, cuts?: object) =>
-      c.window.window.encode(
-        { ...q, columns: [handle] } as never,
-        cuts as never,
-      );
+    const window = c.window.window;
     out.scoped = await collectionRecord(h, c, specs, {
       window: {
-        default: encode({}),
-        byMember: encode({ orderBy: [["custom.c1", "desc"]] }),
-        castMember: encode({
+        default: window.encode({ columns: [handle] }),
+        byMember: window.encode({
+          orderBy: [["custom.c1", "desc"]],
+          columns: [handle],
+        }),
+        castMember: window.encode({
           orderBy: [["custom.cc-2", "asc"]],
           where: { "custom.c1": "x" },
+          columns: [handle],
         }),
-        castCut: encode(
-          { orderBy: [["custom.cc-2", "asc"]] },
+        castCut: window.encode(
+          { orderBy: [["custom.cc-2", "asc"]], columns: [handle] },
           { after: JSON.stringify(["2.5", "a"]) },
         ),
-        filterCast: encode({ where: { "custom.cc-2": { gt: 3 } } }),
+        filterCast: window.encode({
+          where: { "custom.cc-2": { gt: 3 } },
+          columns: [handle],
+        }),
       },
       point: { one: c.rows.point.encode(["a"]) },
       groups: { title: c.groups.groups.encode({ groupBy: "title" }) },
@@ -1073,20 +1071,20 @@ async function collectionCases(): Promise<Record<string, Json>> {
       [],
       [songPlayback],
     );
-    const encode = (q: object, cuts?: object) =>
-      c.window.window.encode(
-        { ...q, columns: [stats] } as never,
-        cuts as never,
-      );
+    const window = c.window.window;
     out.exposedSort = await collectionRecord(h, c, specs, {
       window: {
-        default: encode({}),
-        byPlays: encode({
-          orderBy: [[PLAYS, "desc"]],
-          where: { [PLAYS]: { gt: 3 } },
+        default: window.encode({ columns: [stats] }),
+        byPlays: window.encode({
+          orderBy: [["golden_plays_songs_ext_playback.playCount", "desc"]],
+          where: { "golden_plays_songs_ext_playback.playCount": { gt: 3 } },
+          columns: [stats],
         }),
-        byPlayedCut: encode(
-          { orderBy: [[LAST, "desc"]] },
+        byPlayedCut: window.encode(
+          {
+            orderBy: [["golden_plays_songs_ext_playback.lastPlayedAt", "desc"]],
+            columns: [stats],
+          },
           { after: JSON.stringify([null, "s2"]) },
         ),
       },

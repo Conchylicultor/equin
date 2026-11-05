@@ -138,9 +138,9 @@ describe("exposed columns — the codec", () => {
       default: { orderBy: [["title", "asc"]], limit: 10 },
       maxLimit: 30,
     });
-    expect(() =>
-      unreached.window.window.encode({ columns: [stats] } as never),
-    ).toThrow(/does not reach/);
+    expect(() => unreached.window.window.encode({ columns: [stats] })).toThrow(
+      /does not reach/,
+    );
   });
 });
 

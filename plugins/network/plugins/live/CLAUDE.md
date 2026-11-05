@@ -466,8 +466,9 @@ state or limit change.
   - **A query built before the call** is not excess-checked by tsc. An
     unknown top-level key is still refused (the inferred key set). A `where`
     built before the call is declared with its collection's where type —
-    `const w: LiveWhereOf<typeof tasks> = { … }` — so tsc checks it where it
-    is written; the lint `live/where-declared` requires it (an undeclared one
+    `const w: LiveWhereOf<typeof tasks> = { … }` (with the column sets it
+    names: `LiveWhereOf<typeof tasks, [typeof track]>`) — so tsc checks it
+    where it is written; the lint `live/where-declared` requires it (an undeclared one
     would compile, then throw on render: "… is not a filterable column").
   - Every value signature takes its trailing arguments as a rest that is an
     impossible arity for a collection (`ValueArgs` / `PagedArgs`), so a
@@ -767,6 +768,24 @@ declared default (`COALESCE`), else NULL. User-defined custom columns are
   field's list id is its `as` (else key).
 - **Columns.** `exposedColumns(exposure)` (core): every field with a domain
   filterable, and sortable unless a string array. `.column(f)`, `.read(row)`.
+- **Typed by what the query brings.** A column set carries its wire
+  vocabulary as types (`LiveColumnsDeclaration<WF, WS>`: an exposure's
+  `<slice>.<field>` and an arm's `<arm>.<field>` exactly; a scoped set's
+  members are data, so only its prefix — any `<name>.<member>`, a misspelt
+  member left to the codec), and
+  every typed query — `useLive`'s collection and viewport reads, the codecs'
+  `encode` — extends the collection's own columns by the sets its `columns`
+  brings (`LiveQueryFilterable` / `LiveQuerySortable` / `LiveQueryGroupable`
+  / `LiveQueryWhere`, core):
+  `useLive(tasks, { columns: [track], where: { "tasks_ext_track.track": "sidequest" } })`
+  type-checks like an own column; the same `where` without `columns` is a
+  tsc error. A set whose names are not known statically (an erased
+  `LiveColumnsDeclaration` — data-view lowering a saved filter) opens the
+  vocabulary: its `where` is the collection's own typed one or the untyped
+  filter language, checked by the codec. A `where` built outside the call
+  names its sets too: `LiveWhereOf<typeof tasks, [typeof track]>` (also for
+  an `or()` tree over a brought column — tsc types `or()` before it infers
+  `columns`).
 - **Groups/counts** by an exposed column: `encode({ groupBy:
   "<slice>.<field>", columns })`; the server's decode is the authority.
 - **Web.** `FieldPresentation.Register({ owner: shape.exposure })`; data-view

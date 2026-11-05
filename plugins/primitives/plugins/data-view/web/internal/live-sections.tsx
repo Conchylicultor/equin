@@ -12,7 +12,6 @@ import type {
   LiveColumnsDeclaration,
   LiveGroup,
   LiveOrderBy,
-  LiveWhere,
 } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
@@ -186,9 +185,7 @@ export function GroupsRead(props: {
   const collection = source.collection as unknown as GroupsCollection;
   const read = useLive(collection, {
     groupBy: column,
-    ...(where === undefined
-      ? {}
-      : { where: where as LiveWhere<Record<string, { domain: "text" }>> }),
+    ...(where === undefined ? {} : { where }),
     limit: collection.groups.groups.maxLimit,
     ...(columns.length > 0 ? { columns } : {}),
   });
@@ -230,7 +227,7 @@ export function SectionRead(props: {
   const { source, sectionKey, query, resetKey, onResult } = props;
   const pagesQuery = useMemo(
     () => ({
-      where: query.where as LiveWhere<unknown>,
+      where: query.where,
       ...(query.orderBy !== undefined ? { orderBy: query.orderBy } : {}),
       ...(query.columns.length > 0 ? { columns: query.columns } : {}),
     }),

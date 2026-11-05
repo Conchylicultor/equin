@@ -33,7 +33,6 @@ import {
 import {
   liveCollection,
   scopedLiveColumns,
-  type LiveColumnsDeclaration,
   type LiveWindowParams,
 } from "@plugins/network/plugins/live/core";
 import { compileCollection } from "./serve-collection";
@@ -117,16 +116,19 @@ function setup() {
   const specs = compileCollection(c, { from: songs, db: recording.db }, [set]);
   const window = compileWindowQuery(c.window, specs.window).serverOpts;
   // What the browser hands the codec: the members as it knows them.
-  const handle: LiveColumnsDeclaration = scopedLiveColumns(SCOPE, "custom", {
+  const handle = scopedLiveColumns(SCOPE, "custom", {
     c1: { domain: "text", sortable: true },
     "cc-2": { domain: "number", sortable: true },
   });
-  // A query naming members by wire name (`custom.<id>`), which the
-  // collection's own column types cannot spell.
-  const encode = (q: {
-    where?: object;
-    orderBy?: readonly (readonly [string, "asc" | "desc"])[];
-  }) => c.window.window.encode({ ...q, columns: [handle] } as never);
+  // A query bringing the set, naming its members by wire name (`custom.<id>`).
+  const encode = (
+    q: Omit<
+      NonNullable<
+        Parameters<typeof c.window.window.encode<readonly [typeof handle]>>[0]
+      >,
+      "columns"
+    >,
+  ) => c.window.window.encode({ ...q, columns: [handle] });
   /** A member's join alias in the test scope. */
   const alias = (member: string) =>
     familyMember(set.family, member, SCOPE).alias;
@@ -417,7 +419,7 @@ describe("serveCollection with a scoped column set", () => {
     const params = c.window.window.encode({
       where: { "custom.c1": { eq: "x" } },
       columns: [other],
-    } as never);
+    });
     expect(params.scope).toBe(OTHER);
     expect([
       ...w.routes!.usesOf(params).get("custom")!.match!.data_view_id!,

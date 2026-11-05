@@ -19,7 +19,6 @@ import type {
   LiveCountedCollection,
   LiveOrderBy,
   LiveSortDirection,
-  LiveWhere,
 } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
@@ -418,9 +417,7 @@ export function useLiveSource<TRow>(args: {
     () =>
       lowering.kind === "ok" && lowering.grouped.kind === "rows"
         ? {
-            ...(lowering.where !== undefined
-              ? { where: lowering.where as LiveWhere<unknown> }
-              : {}),
+            ...(lowering.where !== undefined ? { where: lowering.where } : {}),
             ...(lowering.orderBy !== undefined
               ? { orderBy: lowering.orderBy }
               : {}),
@@ -461,9 +458,11 @@ export function useLiveSource<TRow>(args: {
   // counts are the groups read's.
   const counted =
     source && source.collection.count !== null
-      ? (source.collection as unknown as LiveCountedCollection<
+      ? // Its query is the lowered one, in the filter language (an open
+        // vocabulary, checked by the codec).
+        (source.collection as unknown as LiveCountedCollection<
           TRow,
-          unknown,
+          Filterable,
           string
         >)
       : null;
@@ -480,7 +479,7 @@ export function useLiveSource<TRow>(args: {
       : {
           count: true,
           ...(totalWhere.where !== undefined
-            ? { where: totalWhere.where as LiveWhere<unknown> }
+            ? { where: totalWhere.where }
             : {}),
           ...(totalWhere.columns.length > 0
             ? { columns: totalWhere.columns }

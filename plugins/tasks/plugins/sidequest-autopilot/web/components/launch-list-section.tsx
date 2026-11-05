@@ -4,11 +4,7 @@ import {
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import {
-  exposedColumns,
-  type LiveQuery,
-  type LiveWhereOf,
-} from "@plugins/network/plugins/live/core";
+import { exposedColumns } from "@plugins/network/plugins/live/core";
 import {
   combineResources,
   foldResource,
@@ -95,25 +91,6 @@ const NO_IDS: string[] = [];
 
 const trackColumns = exposedColumns(taskTrackShape.exposure);
 
-// Every ready sidequest — a task whose derived status is `new` on the
-// sidequest track — as ONE bounded server window: `status` is a stored
-// aggregate (tasks-core's materialized joins), so the server filters on it
-// and a task leaving `new` (launched, held, blocked by a new prerequisite)
-// exits the window. The track is an exposed column (task-track's side table),
-// which a typed `where` cannot spell — no own field of the collection — so the
-// query names it by wire name and brings its column set, as data-view's
-// narrowing does. Newest first (the window's own default is the tree's rank
-// order), at the window's cap.
-const READY_SIDEQUESTS = {
-  columns: [trackColumns],
-  where: {
-    status: "new",
-    [trackColumns.column("track").name]: "sidequest",
-  } as LiveWhereOf<typeof taskWindow>,
-  orderBy: [["createdAt", "desc"] as const],
-  limit: 500,
-} satisfies LiveQuery<unknown, string>;
-
 // The title is the row's face; where it stands and the launch order are
 // dimensions to group, filter and sort by, left out of the body.
 const LAUNCH_LIST_OVERRIDES = fieldOverrides(launchListRowKind, {
@@ -163,7 +140,20 @@ const LAUNCH_LIST_TOOLBAR: HostedToolbar = {
 export function LaunchListSection(): ReactElement {
   const openPane = useOpenPane();
   const catalog = useLive(automationsCatalog);
-  const tasks = useLive(taskWindow, READY_SIDEQUESTS);
+  // Every ready sidequest — a task whose derived status is `new` on the
+  // sidequest track — as ONE bounded server window: `status` is a stored
+  // aggregate (tasks-core's materialized joins), so the server filters on it
+  // and a task leaving `new` (launched, held, blocked by a new prerequisite)
+  // exits the window. The track is an exposed column (task-track's side
+  // table): the query brings its column set and names it by wire name.
+  // Newest first (the window's own default is the tree's rank order), at the
+  // window's cap.
+  const tasks = useLive(taskWindow, {
+    columns: [trackColumns],
+    where: { status: "new", "tasks_ext_track.track": "sidequest" },
+    orderBy: [["createdAt", "desc"]],
+    limit: 500,
+  });
   // Read whole (`all`): the list joins it to every ready sidequest.
   const decisions = useLive(launchDecisions, { select: decisionsByTask });
   const readyIds = useMemo(

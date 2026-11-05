@@ -394,7 +394,7 @@ export async function recordUnionGolden(): Promise<Json> {
       where: { "a.code": { gt: 0 } },
       columns: [aColumns],
       limit: 8,
-    } as never),
+    }),
     "arm-order": w.encode({
       orderBy: [
         ["n.size", "desc"],
@@ -402,7 +402,7 @@ export async function recordUnionGolden(): Promise<Json> {
       ],
       columns: [nColumns],
       limit: 3,
-    } as never),
+    }),
     // An OR prunes nothing: either alternative may hold.
     "or-filter": w.encode({
       where: or(clause("kind", "eq", "a"), clause("label", "contains", "on")),
@@ -415,7 +415,7 @@ export async function recordUnionGolden(): Promise<Json> {
       where: { "u.owner": { eq: "owner one" } },
       columns: [uColumns],
       limit: 4,
-    } as never),
+    }),
     "none-survive": w.encode({ where: { kind: "zzz" } } as never),
   };
   const window = await windowRecord(

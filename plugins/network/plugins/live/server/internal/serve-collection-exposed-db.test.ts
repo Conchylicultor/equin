@@ -202,7 +202,7 @@ describe("exposed columns on a real database", () => {
     const specs = compiled();
     expect(
       await specs.groups.loader(
-        list.groups.groups.encode({ groupBy: COST as never, columns }),
+        list.groups.groups.encode({ groupBy: COST, columns }),
       ),
     ).toEqual([
       { value: 7, count: 2 },

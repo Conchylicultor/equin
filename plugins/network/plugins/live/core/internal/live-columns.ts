@@ -84,8 +84,18 @@ export type LiveColumnsOwner =
  * it may validate), the server compile (which fields to bind and fold), a
  * column ref — with its row type erased. A typed {@link LiveArmColumnsHandle}
  * is one.
+ *
+ * `WF` / `WS` are its wire vocabulary AS TYPES — what a query bringing the
+ * set may name in `where` / `orderBy` (`useLive`'s collection signature
+ * extends the collection's own columns by them). A typed set states them
+ * (an exposure's `tasks_ext_track.track`); the erased default (any wire
+ * name) is a set whose names are not known statically — a query bringing
+ * one is checked by the codec alone.
  */
-export interface LiveColumnsDeclaration {
+export interface LiveColumnsDeclaration<
+  WF = Filterable,
+  WS extends string = string,
+> {
   readonly kind: "live-columns";
   /** Who the set belongs to (see {@link LiveColumnsOwner}). */
   readonly owner: LiveColumnsOwner;
@@ -101,17 +111,36 @@ export interface LiveColumnsDeclaration {
   /** A field's wire name: `<name>.<field>`. */
   wireName(field: string): string;
   /** The filter declaration by WIRE name — what a codec extends its own with. */
-  readonly wireFilterable: Filterable;
+  readonly wireFilterable: WF;
   /** The sortable wire names. */
-  readonly wireSortable: readonly string[];
+  readonly wireSortable: readonly WS[];
 }
+
+/**
+ * A typed set's filter vocabulary by wire name: each filterable field `K` of
+ * `F` (field → its filter column) as `<N>.<K>`.
+ */
+export type WireFilterable<N extends string, F> = {
+  readonly [K in keyof F as K extends string ? `${N}.${K}` : never]-?: Exclude<
+    F[K],
+    undefined
+  >;
+};
+
+/** A typed set's sortable wire names: each sortable field `S` as `<N>.<S>`. */
+export type WireSortable<N extends string, S extends string> = `${N}.${S}`;
 
 /**
  * What a typed column set (an arm's) has: its declaration, its row schema and
  * filter / sort vocabulary, and the refs a list binds to.
  */
-export type TypedColumnsParts<CRow, F, S extends string> = Omit<
-  LiveColumnsDeclaration,
+export type TypedColumnsParts<
+  CRow,
+  F,
+  S extends string,
+  N extends string = string,
+> = Omit<
+  LiveColumnsDeclaration<WireFilterable<N, F>, WireSortable<N, S>>,
   "owner"
 > & {
   readonly row: LiveRowSchema<CRow>;
@@ -126,13 +155,13 @@ export type TypedColumnsParts<CRow, F, S extends string> = Omit<
  * caller's object, completed with its owner and `read`) — what a minted ref
  * carries, read when a ref is minted, never during construction.
  */
-export function typedColumns<CRow, F, S extends string>(
+export function typedColumns<CRow, F, S extends string, N extends string>(
   owner: LiveColumnsOwner,
-  name: string,
+  name: N,
   spec: { row: LiveRowSchema<CRow>; filterable: F; sortable: readonly S[] },
   fail: (message: string) => never,
   self: () => LiveColumnsDeclaration,
-): TypedColumnsParts<CRow, F, S> {
+): TypedColumnsParts<CRow, F, S, N> {
   const fields = Object.keys(spec.row.shape) as (keyof CRow & string)[];
   const filterable = spec.filterable as unknown as Record<string, FilterColumn>;
   for (const f of [...Object.keys(filterable), ...spec.sortable]) {
@@ -141,11 +170,15 @@ export function typedColumns<CRow, F, S extends string>(
     }
   }
   const wireName = (field: string): string => `${name}.${field}`;
-  const wireFilterable: Filterable = Object.fromEntries(
+  // The runtime record IS the declared vocabulary (each field under
+  // `<name>.<field>`); tsc cannot follow a key rename through `fromEntries`.
+  const wireFilterable = Object.fromEntries(
     Object.entries(filterable).map(([f, col]) => [wireName(f), col]),
+  ) as WireFilterable<N, F>;
+  const wireSortable = spec.sortable.map(
+    (f) => wireName(f) as WireSortable<N, S>,
   );
-  const wireSortable = spec.sortable.map((f) => wireName(f));
-  const parts: TypedColumnsParts<CRow, F, S> = {
+  const parts: TypedColumnsParts<CRow, F, S, N> = {
     kind: "live-columns",
     name,
     row: spec.row,
@@ -194,7 +227,8 @@ export interface LiveArmColumnsHandle<
   CRow,
   F,
   S extends string,
-> extends LiveColumnsDeclaration {
+  A extends string = string,
+> extends LiveColumnsDeclaration<WireFilterable<A, F>, WireSortable<A, S>> {
   readonly owner: {
     readonly kind: "arm";
     readonly collection: string;
@@ -231,15 +265,16 @@ function armColumns<
   CRow,
   const F extends LiveFilterable<CRow>,
   const S extends keyof CRow & string = never,
+  const A extends string = string,
 >(
   collection: LiveArmsCollection<Row, F0, S0, D>,
-  arm: string,
+  arm: A,
   spec: {
     row: LiveRowSchema<CRow>;
     filterable: F;
     sortable: readonly S[];
   },
-): LiveArmColumnsHandle<WithContributedColumns<Row>, CRow, F, S> {
+): LiveArmColumnsHandle<WithContributedColumns<Row>, CRow, F, S, A> {
   const fail = (message: string): never => {
     throw new Error(`liveArm("${collection.key}", "${arm}"): ${message}`);
   };
@@ -258,7 +293,8 @@ function armColumns<
     WithContributedColumns<Row>,
     CRow,
     F,
-    S
+    S,
+    A
   > = {
     ...parts,
     owner,
@@ -297,8 +333,17 @@ export interface ScopedColumnMember {
   sortable: boolean;
 }
 
-/** A scoped column set: its declaration, and the refs a list binds its fields to. */
-export interface LiveScopedColumns extends LiveColumnsDeclaration {
+/**
+ * A scoped column set: its declaration, and the refs a list binds its fields
+ * to. Its members are data (a surface's config), so its wire vocabulary is
+ * known only by prefix: any `<N>.<member>`.
+ */
+export interface LiveScopedColumns<
+  N extends string = string,
+> extends LiveColumnsDeclaration<
+  Readonly<Record<`${N}.${string}`, FilterColumn>>,
+  `${N}.${string}`
+> {
   readonly owner: { readonly kind: "scoped"; readonly scope: string };
   /** A member as a list binds a field to it (`FieldDef.column`); a ref naming its scope. */
   column(member: string): LiveColumnRef;
@@ -310,11 +355,11 @@ export interface LiveScopedColumns extends LiveColumnsDeclaration {
  * `<name>.<member>`). Browser-safe, registers nothing; rebuilt whenever the
  * members change (a query built from it names exactly the members it knew).
  */
-export function scopedLiveColumns(
+export function scopedLiveColumns<const N extends string>(
   scope: string,
-  name: string,
+  name: N,
   members: Readonly<Record<string, ScopedColumnMember>>,
-): LiveScopedColumns {
+): LiveScopedColumns<N> {
   const fail = (message: string): never => {
     throw new Error(`scopedLiveColumns("${scope}", "${name}"): ${message}`);
   };
@@ -326,20 +371,22 @@ export function scopedLiveColumns(
       fail(`member "${member}" must be non-empty and carry no "."`);
     }
   }
-  const wireName = (member: string): string => `${name}.${member}`;
-  const wireFilterable: Filterable = Object.fromEntries(
+  const wireName = (member: string): `${N}.${string}` => `${name}.${member}`;
+  // Every key is a `wireName` (`<name>.<member>`); tsc cannot follow a key
+  // through `fromEntries`.
+  const wireFilterable = Object.fromEntries(
     Object.entries(members)
       .filter(([, m]) => m.domain !== null)
       .map(([member, m]) => [
         wireName(member),
         { domain: m.domain } as FilterColumn,
       ]),
-  );
+  ) as Record<`${N}.${string}`, FilterColumn>;
   const wireSortable = Object.entries(members)
     .filter(([, m]) => m.sortable)
     .map(([member]) => wireName(member));
   const owner = { kind: "scoped", scope } as const;
-  const handle: LiveScopedColumns = {
+  const handle: LiveScopedColumns<N> = {
     kind: "live-columns",
     owner,
     name,
@@ -382,11 +429,14 @@ export interface LiveArm<
   // Erased (`LiveArm<Row, FieldsRecord, string>` — a presentation owner, a
   // link's arm): ANY arm, whatever it picks. `liveArm` returns its own `P`.
   Pk extends string = string,
+  // The arm's kind (its wire names' prefix); erased: any arm.
+  A extends string = string,
 > extends LiveArmColumnsHandle<
   Row,
   { [K in keyof (F & C)]: InferFieldValue<(F & C)[K]> },
   FieldsFilterable<F>,
-  S
+  S,
+  A
 > {
   /** The arm's name in every list — the band its fields are listed under (`"Build"`). */
   readonly label: string;
@@ -446,9 +496,10 @@ export function liveArm<
   const F extends FieldsRecord = Record<never, never>,
   const S extends (keyof F & string) | P = never,
   const C extends FieldsRecord = Record<never, never>,
+  const A extends string = string,
 >(
   collection: LiveArmsCollection<Row, F0, S0, D>,
-  arm: string,
+  arm: A,
   spec: {
     label: string;
     /** Its band's place among the union's arms, ascending ({@link LiveArm.order}). */
@@ -466,7 +517,8 @@ export function liveArm<
   Pick<FromFields<E>, P & keyof FromFields<E>> & F,
   S,
   C,
-  P
+  P,
+  A
 > {
   const fail = (message: string): never => {
     throw new Error(`liveArm("${collection.key}", "${arm}"): ${message}`);
@@ -582,6 +634,7 @@ export function liveArm<
     Pick<FromFields<E>, P & keyof FromFields<E>> & F,
     S,
     C,
-    P
+    P,
+    A
   >;
 }

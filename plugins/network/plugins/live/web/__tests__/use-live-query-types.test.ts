@@ -16,8 +16,14 @@ import { z } from "zod";
 import { fieldsToZodObject, nullable } from "@plugins/fields/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
+import {
+  exposedColumns,
   liveCollection,
   liveValue,
   type CollectionRow,
@@ -176,6 +182,77 @@ const typed = liveValue("fx.typed", {
   schema: z.object({ n: z.number() }),
   params: { window: z.enum(["1h", "24h"]) },
 });
+
+// An exposure's column set: its wire names (`<slice>.<field>`) are typed, so
+// a query bringing it (`columns`) names them like own columns.
+const track = exposedColumns(
+  defineExtensionShape({
+    key: "parentId",
+    fields: {
+      track: enumTextField(["main", "side"], {
+        label: "Track",
+        default: "main",
+      }),
+    },
+    exposes: {
+      parent: entityRef("fx_parents", {}),
+      name: "track",
+      fields: { track: {} },
+    },
+  }).exposure,
+);
+
+function useBroughtColumns() {
+  useLive(windowed, {
+    columns: [track],
+    where: { flag: true, "fx_parents_ext_track.track": "side" },
+  });
+  // A `Filter` tree over a brought column is declared with the sets it names
+  // (`or()` infers its columns from its contextual type, which tsc reads
+  // before the call has inferred the query's `columns`).
+  const either: LiveWhereOf<typeof windowed, [typeof track]> = or(
+    { column: "fx_parents_ext_track.track", op: "eq", operand: "side" },
+    { column: "n", op: "gt", operand: 1 },
+  );
+  useLive(windowed, { columns: [track], where: either });
+  useLive(windowed, {
+    columns: [track],
+    orderBy: [["fx_parents_ext_track.track", "asc"]],
+  });
+  useLive(windowed, {
+    columns: [track],
+    groupBy: "fx_parents_ext_track.track",
+  });
+  useLive(counted, {
+    count: true,
+    columns: [track],
+    where: { "fx_parents_ext_track.track": "main" },
+  });
+  const declared: LiveWhereOf<typeof windowed, [typeof track]> = {
+    "fx_parents_ext_track.track": "main",
+  };
+  useLive(windowed, { columns: [track], where: declared });
+  useLive(windowed, {
+    where: {
+      // @ts-expect-error TS2353 — exposed column the query does not bring
+      "fx_parents_ext_track.track": "side",
+    },
+  });
+  useLive(windowed, {
+    columns: [track],
+    where: {
+      // @ts-expect-error TS2322 — exposed column, operand outside its values
+      "fx_parents_ext_track.track": "other",
+    },
+  });
+  useLive(windowed, {
+    columns: [track],
+    where: {
+      // @ts-expect-error TS2353 — a field the exposure does not expose
+      "fx_parents_ext_track.nope": "side",
+    },
+  });
+}
 
 function useNegatives(
   id: string,
@@ -1146,6 +1223,7 @@ describe("useLive's collection read types", () => {
       useUnionWherePositives,
       useTreeReads,
       useResetKeyReads,
+      useBroughtColumns,
     ]) {
       expect(typeof hook).toBe("function");
     }

@@ -29,8 +29,11 @@ import {
   type LiveGroupQuery,
   type LiveOrderBy,
   type LiveQuery,
+  type LiveQueryFilterable,
+  type LiveQueryGroupable,
+  type LiveQuerySortable,
+  type LiveQueryWhere,
   type LiveSortDirection,
-  type LiveWhere,
   type LiveWindowBounds,
   type LiveWindowParams,
 } from "./query";
@@ -84,10 +87,16 @@ export interface LiveWindowCodec<F, S extends string> {
   /**
    * Canonical encode. Throws on an undeclared column, an op its domain does
    * not take, a bad operand, a limit above `maxLimit`, or a cut (`bounds`)
-   * that is not a row key of the query's order.
+   * that is not a row key of the query's order. Typed like `useLive`'s window
+   * query: the collection's own columns, extended by the sets it brings
+   * (`columns` — {@link LiveQueryFilterable}).
    */
-  encode: (
-    query?: LiveQuery<F, S>,
+  encode: <Cols = never>(
+    query?: LiveQuery<
+      LiveQueryFilterable<F, Cols>,
+      LiveQuerySortable<S, Cols>,
+      LiveQueryWhere<F, Cols>
+    > & { readonly columns?: Cols },
     bounds?: LiveWindowBounds,
   ) => LiveWindowParams;
   /**
@@ -137,8 +146,18 @@ export interface LiveGroupCodec<F> {
   defaultLimit: number;
   /** No grouping query returns more groups than this (the filter language's `LIST_MAX`). */
   maxLimit: number;
-  /** Canonical encode. Throws on a non-groupable `groupBy`, a bad `where`, a limit above max, or an `orderBy`. */
-  encode: (query: LiveGroupQuery<F>) => LiveGroupParams;
+  /**
+   * Canonical encode. Throws on a non-groupable `groupBy`, a bad `where`, a
+   * limit above max, or an `orderBy`. `groupBy` / `where` may name a column
+   * of a set the query brings (`columns`).
+   */
+  encode: <Cols = never>(
+    query: LiveGroupQuery<
+      LiveQueryFilterable<F, Cols>,
+      LiveQueryGroupable<F, Cols>,
+      LiveQueryWhere<F, Cols>
+    > & { readonly columns?: Cols },
+  ) => LiveGroupParams;
   /**
    * STRICT decode. Throws unless `params` is exactly a canonical encoding. The
    * server passes the column sets a grouping may name (its exposed ones).
@@ -560,9 +579,17 @@ export interface LiveAllCollection<
  * `const w: LiveWhereOf<typeof tasks> = { status: "open" }` — so tsc checks
  * its columns where it is written: a value built elsewhere is never
  * excess-checked at the call (the lint `live/where-declared`).
+ *
+ * `Cols` — the column sets the query brings (its `columns`, as a tuple type
+ * `[typeof trackColumns]`) — extends a window's vocabulary by theirs (see
+ * {@link LiveQueryFilterable}): `LiveWhereOf<typeof tasks, [typeof track]>`
+ * takes `{ "tasks_ext_track.track": "sidequest" }`.
  */
-export type LiveWhereOf<C> = C extends { window: object; filterable: infer F }
-  ? LiveWhere<F>
+export type LiveWhereOf<C, Cols = never> = C extends {
+  window: object;
+  filterable: infer F;
+}
+  ? LiveQueryWhere<F, Cols>
   : C extends { all: LiveAllCollection<infer _Row, infer B>["all"] }
     ? [B] extends [never]
       ? never

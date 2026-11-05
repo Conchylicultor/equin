@@ -6,6 +6,7 @@ import type {
   LivePagedParams,
   LiveQuery,
   LiveValueOrigin,
+  LiveWhere,
   LiveWindowParams,
 } from "@plugins/network/plugins/live/core";
 import type { Page } from "../../shared/page-plan";
@@ -19,8 +20,8 @@ import type { Page } from "../../shared/page-plan";
 // on the server, so either may be sent seeded (`derive`).
 
 /** A paged read's query: the window query without `limit` — the pages own the limits. */
-export type LivePagesQuery<F, S extends string> = Omit<
-  LiveQuery<F, S>,
+export type LivePagesQuery<F, S extends string, W = LiveWhere<F>> = Omit<
+  LiveQuery<F, S, W>,
   "limit"
 >;
 

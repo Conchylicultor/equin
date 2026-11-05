@@ -3,6 +3,7 @@ import type {
   FilterColumn,
   FilterDomainId,
   FilterOperand,
+  Filterable,
   OperandKindOf,
   OpsFor,
 } from "@plugins/network/plugins/live/plugins/filter/core";
@@ -86,6 +87,77 @@ export type LiveFilterableOf<F> = {
  */
 export type LiveWhere<F> = LiveWhereObject<F> | Filter<LiveFilterableOf<F>>;
 
+type UnionToIntersection<U> = (
+  U extends unknown ? (u: U) => void : never
+) extends (i: infer I) => void
+  ? I
+  : never;
+
+/** The column-set declarations a query's `columns` (`C`) holds; `never` for none. */
+type BroughtSets<C> = C extends readonly (infer E)[] ? E : never;
+
+/** The wire filter vocabulary of each brought set, as a union. */
+type BroughtFilterable<C> =
+  BroughtSets<C> extends infer E
+    ? E extends { readonly wireFilterable: infer WF }
+      ? WF
+      : never
+    : never;
+
+/** The sortable wire names of the brought sets. */
+type BroughtSortable<C> =
+  BroughtSets<C> extends infer E
+    ? E extends { readonly wireSortable: readonly (infer WS)[] }
+      ? WS
+      : never
+    : never;
+
+/**
+ * The filter vocabulary of a query on a collection with filterable columns
+ * `F` that brings the column sets `C` (its `columns`): the collection's own,
+ * plus every set's wire vocabulary (an exposure's `tasks_ext_track.track`) —
+ * so a `where` naming a brought column type-checks like an own one, and one
+ * naming a column the query does not bring is a tsc error. A brought set
+ * whose names are not known statically (an erased `LiveColumnsDeclaration` —
+ * a list lowering a saved filter over whatever sets it holds) makes the whole
+ * vocabulary open: such a `where` is the untyped filter language, checked by
+ * the codec at runtime as before.
+ */
+export type LiveQueryFilterable<F, C> = [BroughtSets<C>] extends [never]
+  ? F
+  : BringsOpenSet<C> extends true
+    ? Filterable
+    : F & UnionToIntersection<BroughtFilterable<C>>;
+
+/** Whether a brought set's names are not known statically (an erased declaration). */
+type BringsOpenSet<C> = string extends keyof UnionToIntersection<
+  BroughtFilterable<C>
+>
+  ? true
+  : false;
+
+/**
+ * The `where` of a query on a collection with filterable columns `F` that
+ * brings the column sets `C`: over the vocabulary {@link LiveQueryFilterable}
+ * — or, bringing a set whose names are not known statically, either the
+ * collection's own typed `where` or the untyped filter language (a query
+ * typed by its declaration keeps its own `where`'s check).
+ */
+export type LiveQueryWhere<F, C> = [BroughtSets<C>] extends [never]
+  ? LiveWhere<F>
+  : BringsOpenSet<C> extends true
+    ? LiveWhere<F> | LiveWhere<Filterable>
+    : LiveWhere<F & UnionToIntersection<BroughtFilterable<C>>>;
+
+/** The sortable columns of a query bringing the column sets `C` (see {@link LiveQueryFilterable}). */
+export type LiveQuerySortable<S extends string, C> = [BroughtSets<C>] extends [
+  never,
+]
+  ? S
+  : string extends BroughtSortable<C>
+    ? string
+    : S | (BroughtSortable<C> & string);
+
 export type LiveSortDirection = "asc" | "desc";
 
 /** Sort keys, most significant first. The server appends the id as tiebreaker. */
@@ -94,9 +166,13 @@ export type LiveOrderBy<S extends string> = readonly (readonly [
   LiveSortDirection,
 ])[];
 
-/** A window query. Every part defaults to the declaration's `default`. */
-export interface LiveQuery<F, S extends string> {
-  where?: LiveWhere<F>;
+/**
+ * A window query. Every part defaults to the declaration's `default`. `W` is
+ * its `where` — over `F` unless the query brings column sets
+ * ({@link LiveQueryWhere}).
+ */
+export interface LiveQuery<F, S extends string, W = LiveWhere<F>> {
+  where?: W;
   orderBy?: LiveOrderBy<S>;
   limit?: number;
   /**
@@ -134,6 +210,16 @@ export type LiveGroupableColumn<F> = {
 }[keyof F & string];
 
 /**
+ * The columns a grouping bringing the column sets `C` may group by (see
+ * {@link LiveQueryFilterable}) — any name when a brought set's names are not
+ * known statically (the codec checks it).
+ */
+export type LiveQueryGroupable<F, C> =
+  BringsOpenSet<C> extends true
+    ? string
+    : LiveGroupableColumn<LiveQueryFilterable<F, C>>;
+
+/**
  * A grouping query: the values the filterable column `G` takes across the
  * collection's rows matching `where`, one `{ value, count }` per value. The
  * order is fixed — count descending, then value (code-point order) — so there
@@ -146,10 +232,11 @@ export type LiveGroupableColumn<F> = {
  */
 export interface LiveGroupQuery<
   F,
-  G extends LiveGroupableColumn<F> = LiveGroupableColumn<F>,
+  G extends string = LiveGroupableColumn<F>,
+  W = LiveWhere<F>,
 > {
   groupBy: G;
-  where?: LiveWhere<F>;
+  where?: W;
   limit?: number;
   /**
    * The column sets (an exposure's `exposedColumns`) its `groupBy` / `where`
@@ -176,9 +263,9 @@ export interface LiveGroupQuery<
  * collection declared `count: true` (its author's statement that the COUNT is
  * cheap enough to keep live).
  */
-export interface LiveCountQuery<F> {
+export interface LiveCountQuery<F, W = LiveWhere<F>> {
   count: true;
-  where?: LiveWhere<F>;
+  where?: W;
   /** The column sets its `where` names by wire name (see {@link LiveQuery.columns}). */
   columns?: readonly LiveColumnsDeclaration[];
   /**

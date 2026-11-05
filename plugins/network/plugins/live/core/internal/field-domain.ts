@@ -37,7 +37,7 @@ export type DomainOfValue<V> = [V] extends [never]
             : never;
 
 /** The operand type a value of type `V` filters by in its domain. */
-type OperandOfValue<V> = [V] extends [string]
+export type OperandOfValue<V> = [V] extends [string]
   ? V
   : [V] extends [number]
     ? number

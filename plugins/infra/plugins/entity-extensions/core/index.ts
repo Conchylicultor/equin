@@ -19,6 +19,7 @@ export type {
   ExposesDecl,
   ExposureRow,
   ExposureRowSchema,
+  ExposureSlice,
 } from "./internal/exposure";
 export { EXTENSION_TIMESTAMPS } from "./internal/reserved";
 export type { ExtensionTimestamp } from "./internal/reserved";

@@ -106,6 +106,14 @@ type PresenceRow<X> = X extends { presence: infer P }
 
 type Flatten<T> = { [K in keyof T]: T[K] };
 
+/** An exposure's slice — `<parent>_ext_<name>` — from its declaration's literals. */
+export type ExposureSlice<X extends ExposesDecl> = X extends {
+  readonly parent: EntityRef<infer P>;
+  readonly name: infer N extends string;
+}
+  ? `${P}_ext_${N}`
+  : string;
+
 /** The exposed slice as a row: each exposed field (by column key) → its wire value, and the presence. */
 export type ExposureRow<
   F extends FieldsRecord,
@@ -189,12 +197,16 @@ export type ExposureRowSchema<R> = z.ZodType<R> & {
  */
 export interface EntityExposure<
   R extends Record<string, unknown> = Record<string, unknown>,
+  Sl extends string = string,
 > {
   readonly kind: "exposure";
   readonly parent: EntityRef;
   readonly name: string;
-  /** `<parent>_ext_<name>`: the extension's table name. */
-  readonly slice: string;
+  /**
+   * `<parent>_ext_<name>`: the extension's table name — a literal type when
+   * declared with literals, so its wire names (`<slice>.<field>`) are too.
+   */
+  readonly slice: Sl;
   readonly fields: { readonly [K in keyof R & string]: ExposedField<R[K]> };
   /** The slice as a row: every exposed field's wire schema. */
   readonly row: ExposureRowSchema<R>;

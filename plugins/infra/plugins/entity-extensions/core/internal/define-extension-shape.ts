@@ -15,6 +15,7 @@ import {
   type ExposesCheck,
   type ExposesDecl,
   type ExposureRow,
+  type ExposureSlice,
 } from "./exposure";
 import {
   assertNoReservedKeys,
@@ -141,7 +142,13 @@ export function defineExtensionShape<
   def: ExtensionShapeDef<K, F, S, W> & {
     exposes: X & ExposesCheck<NoInfer<F>, NoInfer<S>, X>;
   },
-): ExtensionShape<K, F, S, W, EntityExposure<ExposureRow<F, X>>>;
+): ExtensionShape<
+  K,
+  F,
+  S,
+  W,
+  EntityExposure<ExposureRow<F, X>, ExposureSlice<X>>
+>;
 export function defineExtensionShape<
   K extends string,
   F extends FieldsRecord,

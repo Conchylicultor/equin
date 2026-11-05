@@ -266,6 +266,7 @@ Never hand-edit the generated SQL to interleave the DML: the push-time hand-edit
     - `ExposesDecl`
     - `ExposureRow`
     - `ExposureRowSchema`
+    - `ExposureSlice`
     - `ExtensionFields`
     - `ExtensionServerOnly`
     - `ExtensionShape`

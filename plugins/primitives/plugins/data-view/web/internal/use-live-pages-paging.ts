@@ -9,17 +9,33 @@ import {
 import type { MachineFeature } from "@plugins/infra/plugins/endpoints/core";
 import type {
   LiveCollection,
+  LiveColumnsDeclaration,
   LiveCountedCollection,
   LivePagedValue,
+  LiveQueryFilterable,
+  LiveQuerySortable,
+  LiveQueryWhere,
   LiveValueOrigin,
   LiveWhere,
 } from "@plugins/network/plugins/live/core";
-import type { Filter } from "@plugins/network/plugins/live/plugins/filter/core";
+import type {
+  Filter,
+  Filterable,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { DataViewPaging, ViewState } from "../../core";
 import { narrowWhere, usePagesNarrowing } from "./narrow-pages";
 import { pagesPaging } from "./pages-paging";
 import { usePagesViewport } from "./pages-viewport";
+
+/**
+ * The query the read is asked: the caller's, in the filter language — the
+ * narrowing ANDs in a view filter lowered at runtime and brings the column
+ * sets it names, so its vocabulary is open (the codec checks it).
+ */
+type ReadQuery = LivePagesQuery<Filterable, string, LiveWhere<Filterable>> & {
+  readonly columns?: readonly LiveColumnsDeclaration[];
+};
 
 /** A paged read's paging, before a consumer says which of its rows are the read's. */
 export type LivePagesPaging = Omit<DataViewPaging<unknown>, "isPaged">;
@@ -47,22 +63,34 @@ export type LivePagesPaging = Omit<DataViewPaging<unknown>, "isPaged">;
  *   read when the narrowing names a contributed column, which a count cannot
  *   read — the counts stay lower bounds.
  */
-export function useLivePagesPaging<Row, F, S extends string>(
+export function useLivePagesPaging<Row, F, S extends string, Cols = never>(
   collection: LiveCollection<Row, F, S> | null,
-  query: LivePagesQuery<F, S> | null,
+  // Typed like `useLive`'s: the collection's own columns, extended by the
+  // sets the query brings (`columns`).
+  query:
+    | (LivePagesQuery<
+        LiveQueryFilterable<NoInfer<F>, Cols>,
+        LiveQuerySortable<NoInfer<S>, Cols>,
+        LiveQueryWhere<NoInfer<F>, Cols>
+      > & { readonly columns?: Cols })
+    | null,
   options?: { resetKey?: string; narrowBy?: ViewState; total?: true },
 ): { pages: LivePagesResult<Row>; paging: LivePagesPaging | null } {
   const { viewport, sink } = usePagesViewport();
   const narrowing = usePagesNarrowing(collection, options?.narrowBy);
-  const narrowed = useMemo((): LivePagesQuery<F, S> | null => {
-    if (query === null || narrowing.kind === "none") return query;
-    const columns = [...(query.columns ?? []), ...narrowing.columns];
+  const narrowed = useMemo((): ReadQuery | null => {
+    if (query === null) return null;
+    // The caller's `where`, checked where it was written, read as the filter
+    // language it canonicalizes to.
+    const own = query.where as Filter | undefined;
+    const brought = (query.columns ?? []) as readonly LiveColumnsDeclaration[];
+    const columns =
+      narrowing.kind === "none" ? brought : [...brought, ...narrowing.columns];
+    const where = narrowing.kind === "none" ? own : narrowWhere(own, narrowing);
     return {
-      ...query,
-      where: narrowWhere(
-        query.where as Filter | undefined,
-        narrowing,
-      ) as LiveWhere<F>,
+      ...(where !== undefined ? { where } : {}),
+      ...(query.orderBy !== undefined ? { orderBy: query.orderBy } : {}),
+      ...(query.now !== undefined ? { now: query.now } : {}),
       ...(columns.length > 0 ? { columns } : {}),
     };
   }, [query, narrowing]);
@@ -82,7 +110,12 @@ export function useLivePagesPaging<Row, F, S extends string>(
     (narrowing.kind === "none" || narrowing.countable);
   const total = useLive(
     counting
-      ? (collection as unknown as LiveCountedCollection<Row, F, S> | null)
+      ? // Read over the same open query as the pages.
+        (collection as unknown as LiveCountedCollection<
+          Row,
+          Filterable,
+          string
+        > | null)
       : null,
     !counting || narrowed === null
       ? null

@@ -310,16 +310,16 @@ afterAll(async () => {
 
 const w = runs.window.window;
 type Row = Record<string, unknown>;
+/** A window query bringing a scope's custom columns, without them. */
+type ScopedQuery = Omit<
+  NonNullable<Parameters<typeof w.encode<readonly [LiveScopedColumns]>>[0]>,
+  "columns"
+>;
 const encode = (
   scope: string,
-  q: {
-    where?: object;
-    orderBy?: readonly (readonly [string, "asc" | "desc"])[];
-    limit?: number;
-  },
+  q: ScopedQuery,
   cuts?: { after?: string; until?: string },
-): LiveWindowParams =>
-  w.encode({ ...q, columns: [handles[scope]!] } as never, cuts);
+): LiveWindowParams => w.encode({ ...q, columns: [handles[scope]!] }, cuts);
 const load = async (params: LiveWindowParams): Promise<Row[]> =>
   (await compiled.window.loader(params)) as unknown as Row[];
 const keys = (rows: readonly Row[]) => rows.map((r) => r.runKey);
@@ -327,7 +327,7 @@ const keys = (rows: readonly Row[]) => rows.map((r) => r.runKey);
 /** Every page of `q` at `limit`, cut at each page's last `$key`. */
 async function pages(
   scope: string,
-  q: { orderBy: readonly (readonly [string, "asc" | "desc"])[] },
+  q: Pick<ScopedQuery, "orderBy">,
   limit: number,
 ): Promise<{ pages: string[][]; cuts: unknown[] }> {
   const out: string[][] = [];
@@ -501,7 +501,7 @@ describe("scoped columns on a union", () => {
         w.encode({
           orderBy: [["custom.other", "asc"]],
           columns: [other],
-        } as never),
+        }),
       ),
     ).toThrow(/custom\.other/);
   });

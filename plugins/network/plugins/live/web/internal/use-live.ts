@@ -21,7 +21,12 @@ import type {
   LiveIdsQuery,
   LiveOrderBy,
   LiveQuery,
+  LiveQueryFilterable,
+  LiveQuerySortable,
+  LiveQueryGroupable,
+  LiveQueryWhere,
   LiveRowQuery,
+  LiveWhere,
   LiveScopedAllQuery,
   LivePagedPages,
   LivePagedValue,
@@ -353,6 +358,17 @@ interface KindKeyValues<Row, I, Ids, C, G, R, In = undefined> {
 }
 
 /**
+ * Where the column sets a query brings (`columns`) are inferred — the one
+ * value captured beside the kind keys: the sets extend the vocabulary its
+ * `where` / `orderBy` / `groupBy` may name (`LiveQueryFilterable`), so a
+ * filter on an exposed column type-checks like one on an own column, and
+ * one on a column the query does not bring is a tsc error.
+ */
+interface BroughtColumns<Cols> {
+  readonly columns?: Cols;
+}
+
+/**
  * Whether a kind key's inferred value names its read: `undefined` (not given,
  * or given as nothing — the runtime reads kind keys by value) does not. Not
  * distributive, so for a generic value the conditional is deferred and tsc
@@ -475,14 +491,23 @@ type KnownKeysOnly<K extends PropertyKey, Known, W> = {
  * key in {@link COLLECTION_KIND_KEYS} and {@link KindKeyValues}, a signature
  * parameter and a {@link CollectionReads} row — never a signature or a hook.
  */
-type CollectionForms<D, Row, F, S extends string, B extends string, G> =
+type CollectionForms<
+  D,
+  Row,
+  F,
+  S extends string,
+  B extends string,
+  G,
+  W = LiveWhere<F>,
+  GC extends string = LiveGroupableColumn<F>,
+> =
   | (LiveRowQuery & OnlyKind<"id"> & IncludeFor<D>)
   | (LiveIdsQuery & OnlyKind<"ids"> & NoInclude)
   | (D extends { window: object }
-      ? | (LiveQuery<F, NoInfer<S>> & OnlyKind<"none"> & IncludeFor<D>)
-        | (LiveGroupQuery<F, G & LiveGroupableColumn<F>> & OnlyKind<"groupBy">)
+      ? | (LiveQuery<F, NoInfer<S>, W> & OnlyKind<"none"> & IncludeFor<D>)
+        | (LiveGroupQuery<F, G & GC, W> & OnlyKind<"groupBy">)
         | (D extends { count: object }
-            ? LiveCountQuery<F> & OnlyKind<"count">
+            ? LiveCountQuery<F, W> & OnlyKind<"count">
             : never)
       : D extends { all: object }
         ? // `select` is open on the scope form: a selector is inferred in
@@ -660,17 +685,28 @@ export function useLive<
   K extends PropertyKey = never,
   NM extends MachineFeature | undefined = undefined,
   In extends "ancestors" | undefined = undefined,
+  Cols = never,
 >(
   collection: D &
     LiveRowsCollection<Row> &
     CollectionFacets<Row, F, S, B> &
     MachineDecl<NM>,
   query:
-    | (CollectionForms<D, Row, F, S, B, G> &
+    | (CollectionForms<
+        D,
+        Row,
+        LiveQueryFilterable<F, Cols>,
+        LiveQuerySortable<S, Cols>,
+        B,
+        G,
+        LiveQueryWhere<F, Cols>,
+        LiveQueryGroupable<F, Cols>
+      > &
         KindKeyValues<Row, I, Ids, C, G, R, In> &
+        BroughtColumns<Cols> &
         KindGuard<QueryKindValues<D, I, Ids, C, G, R, N>> &
         SkipGuard<N> &
-        KnownKeysOnly<K, QueryKeyName, LiveWhereOf<D> | ScopeSkip<D>>)
+        KnownKeysOnly<K, QueryKeyName, LiveWhereOf<D, Cols> | ScopeSkip<D>>)
     | QueryHoles<D, N>,
 ): WithMachine<
   NM,
@@ -742,12 +778,22 @@ export function useLive<
   D extends object = object,
   In extends "ancestors" | undefined = undefined,
   O extends LivePagesOptions | LiveListReadOptions = LivePagesOptions,
+  Cols = never,
 >(
   collection: (LiveCollection<Row, F, S> & MachineDecl<NM> & D) | null,
   query:
     | ((O extends LiveListReadOptions
-        ? LiveQuery<F, S>
-        : LivePagesQuery<F, S>) &
+        ? LiveQuery<
+            LiveQueryFilterable<NoInfer<F>, Cols>,
+            LiveQuerySortable<NoInfer<S>, Cols>,
+            LiveQueryWhere<NoInfer<F>, Cols>
+          >
+        : LivePagesQuery<
+            LiveQueryFilterable<NoInfer<F>, Cols>,
+            LiveQuerySortable<NoInfer<S>, Cols>,
+            LiveQueryWhere<NoInfer<F>, Cols>
+          >) &
+        BroughtColumns<Cols> &
         IncludeFor<D> & { readonly include?: In })
     | null,
   options: O,

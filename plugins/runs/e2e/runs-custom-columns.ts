@@ -193,7 +193,7 @@ try {
       where,
       orderBy: [[wire, "asc"]],
       columns: [handle(RUNS.surface, "number")],
-    } as never);
+    });
     r.ok(
       "a query naming the column carries its surface",
       runsAsc.scope === RUNS.surface,
@@ -209,7 +209,7 @@ try {
         where,
         orderBy: [[wire, "desc"]],
         columns: [handle(ACTIVITY.surface, "text")],
-      } as never),
+      }),
     );
     r.eq("Activity, sorted desc by its text column", act.names, [
       "running",
@@ -220,7 +220,7 @@ try {
       codec.encode({
         where: { ...where, [wire]: { gt: 2 } },
         columns: [handle(RUNS.surface, "number")],
-      } as never),
+      }),
     );
     r.eq(
       "runs, filtered by its column (> 2) server-side",
