@@ -113,7 +113,8 @@ describe("keyWidths", () => {
     const [w] = await widthsOf(
       {
         ...heavyBarrel(3),
-        [`${P}/ns/core/index.ts`]: 'export * as heavyNs from "@plugins/heavy/core";',
+        [`${P}/ns/core/index.ts`]:
+          'export * as heavyNs from "@plugins/heavy/core";',
         [PRODUCER]:
           'import { heavyNs } from "@plugins/ns/core";\nexport const s = heavyNs;',
       },
