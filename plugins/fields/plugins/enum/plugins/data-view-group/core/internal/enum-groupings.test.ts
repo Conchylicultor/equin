@@ -183,3 +183,22 @@ describe("enum grouping: the option's identity rides the bucket", () => {
     expect("icon" in stale! || "tint" in stale!).toBe(false);
   });
 });
+
+describe("enumGroupings — an ordinal field (valueOrder)", () => {
+  test("sections follow the declared value order, never the options' order or the text", () => {
+    const keys = sectionKeys(["done", "todo", "doing", "todo"], {
+      // Options listed alphabetically; the declared order is the field's.
+      options: [...OPTIONS].sort((a, b) => a.value.localeCompare(b.value)),
+      valueOrder: ["todo", "doing", "done"],
+    }).map((b) => b.key);
+    expect(keys).toEqual(["todo", "doing", "done"]);
+  });
+
+  test("a value the order does not list goes after every listed one", () => {
+    const keys = sectionKeys(["stale", "done", "todo"], {
+      options: OPTIONS,
+      valueOrder: ["todo", "doing", "done"],
+    }).map((b) => b.key);
+    expect(keys).toEqual(["todo", "done", "stale"]);
+  });
+});

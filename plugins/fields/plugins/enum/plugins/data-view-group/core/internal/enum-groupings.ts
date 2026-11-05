@@ -1,5 +1,6 @@
 import {
   compareValues,
+  valuePosition,
   type FieldGrouping,
   type FieldValue,
   type GroupBucket,
@@ -15,7 +16,10 @@ import {
  * identity chip) and never its stored value — an opaque
  * minted option id, for a user-authored column.
  *
- * Section order is `options` order, with values that match no option placed
+ * Section order is the field's declared value order when it has one (an
+ * ordinal enum, `field.valueOrder` — the order its sort and a live window
+ * use, so the sections and the rows agree), else `options` order; values the
+ * order does not list are placed
  * **after** every known one and, among themselves, in natural value order. That
  * is deliberate: the option list is the author's own reading order, and a value
  * outside it is either stale data or a column edited since the row was written —
@@ -25,7 +29,7 @@ import {
  * ranks the unknown values, so this cannot drift from the identity grouping's
  * answer to the same question.
  *
- * The `plan`/bucket split is what makes this cheap: the `options` index and the
+ * The `plan`/bucket split is what makes this cheap: the ranked index and the
  * unknown-value ranking are built ONCE per render, not re-derived per row.
  */
 function planEnumBuckets(
@@ -33,29 +37,30 @@ function planEnumBuckets(
 ): (value: FieldValue) => GroupBucket {
   const options = ctx.field.options ?? [];
 
-  // value → its index in `options` (first wins, so a duplicated option value
+  // The values in their section order: the declared value order, else the
+  // options'.
+  const ranked = ctx.field.valueOrder ?? options.map((o) => o.value);
+
+  // value → its index in `ranked` (first wins, so a duplicated option value
   // keeps the position its first declaration gave it).
-  const knownOrder = new Map<string, number>();
-  options.forEach((option, index) => {
-    if (!knownOrder.has(option.value)) knownOrder.set(option.value, index);
-  });
+  const position = valuePosition(ranked);
 
   // Every value with no matching option, deduped by bucket key and keeping one
   // representative value to compare on.
   const unknown = new Map<string, FieldValue>();
   for (const value of ctx.values) {
     const key = String(value);
-    if (knownOrder.has(key) || unknown.has(key)) continue;
+    if (position(key) !== null || unknown.has(key)) continue;
     unknown.set(key, value);
   }
   const unknownOrder = new Map<string, number>();
   [...unknown]
     .sort(([, a], [, b]) => compareValues(a, b))
-    .forEach(([key], index) => unknownOrder.set(key, options.length + index));
+    .forEach(([key], index) => unknownOrder.set(key, ranked.length + index));
 
   // A value the plan never saw sorts after every ranked one; nothing but a
   // caller bucketing a value outside `ctx.values` can produce it.
-  const lastOrder = options.length + unknown.size;
+  const lastOrder = ranked.length + unknown.size;
 
   return (value) => {
     const key = String(value);
@@ -63,7 +68,7 @@ function planEnumBuckets(
     return {
       key,
       label: option?.label ?? String(value),
-      order: knownOrder.get(key) ?? unknownOrder.get(key) ?? lastOrder,
+      order: position(key) ?? unknownOrder.get(key) ?? lastOrder,
       // The option's identity — its glyph and colour — rides the bucket to
       // the section (`DataViewSection.identity`), where the group header draws
       // its chip. Spread only when declared, so an option without one leaves

@@ -408,6 +408,35 @@ describe("deriveFields — a collection's own presentation and non-string option
     expect(status.value!(at(null))).toBeNull();
   });
 
+  test("an ordinal enum lists its options in its declared order, which it carries as valueOrder", () => {
+    const ranked = liveCollection("test.derived-fields.ranked", {
+      fields: {
+        stage: enumTextField(["new", "doing", "done"], {
+          label: "Stage",
+          // The options' own key order differs from the declared one.
+          options: {
+            done: { label: "Done" },
+            new: { label: "New" },
+            doing: { label: "Doing" },
+          },
+          ordered: true,
+        }),
+      },
+      carry: { fields: { id: textField() } },
+      id: "id",
+      all: { orderBy: [["stage", "asc"]], unbounded: { reason: "a test" } },
+    });
+    const stage = deriveFields(ranked, false, []).fields.find(
+      (f) => f.id === "stage",
+    )!;
+    expect(stage.valueOrder).toEqual(["new", "doing", "done"]);
+    expect(stage.options!.map((o) => o.value)).toEqual([
+      "new",
+      "doing",
+      "done",
+    ]);
+  });
+
   test("a collection presents its own fields, and throws on a field it does not list", () => {
     const { fields } = deriveFields(tasksList, false, [
       registration({ owner: tasksList, fields: { name: { width: "9rem" } } }),

@@ -636,6 +636,16 @@ interface GroupByRule {
 value, ordered by `compareValues`) — also what a legacy `groupBy: "<fieldId>"`
 reads as (`readGroupBy`).
 
+### A declared value order is read everywhere
+
+An ordinal field (`FieldDef.valueOrder`, from `enumTextField(values, { ordered:
+true })` via `LiveField.order`) is ordered by each value's position, an
+unlisted value or NULL last — read through ONE core helper, `valuePosition`:
+the in-memory sort (`sort-rows.ts`), the section order of the identity and
+`enum` groupings (so server sections follow it too), a derived enum's options
+order, and the Sort direction's label, which names the order's ends
+("New → Dropped", `useResolveDirectionLabels`, which takes the field).
+
 ### The picker
 
 `GroupByControl`: the field radio band, then — when the field's type offers >1
@@ -2625,6 +2635,7 @@ list, table and `primitives/tree` share it.
     - `splitFieldSections`
     - `sumSectionCounts`
     - `UNGROUPED_FOLD_KEY`
+    - `valuePosition`
     - `visibleSections`
 - Cross-plugin:
   - Uses tokens: 91 vars — full list in [REFERENCE.md](./REFERENCE.md)

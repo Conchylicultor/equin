@@ -25520,6 +25520,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view.FieldValue`
               - `primitives/data-view.GroupBucket`
               - `primitives/data-view.GroupingPlanContext`
+              - `primitives/data-view.valuePosition`
             - Exports (values): `enumGroupings`
         - **`filter`** — Enum (select) field type: data-view filter operator set (is / is-any-of / is-empty …).
           - Web:
@@ -44184,6 +44185,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `splitFieldSections`
           - `sumSectionCounts`
           - `UNGROUPED_FOLD_KEY`
+          - `valuePosition`
           - `visibleSections`
       - Cross-plugin:
         - Uses tokens: 91 vars — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)

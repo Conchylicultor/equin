@@ -45,7 +45,7 @@ export function SortRuleRow<TRow>(props: {
   const { rule } = props;
   const resolveDirectionLabels = useResolveDirectionLabels();
   const activeField = props.fields.find((f) => f.id === rule.fieldId);
-  const directionLabels = resolveDirectionLabels(activeField?.type);
+  const directionLabels = resolveDirectionLabels(activeField);
   const pinned = rule.pinned === true;
 
   return (

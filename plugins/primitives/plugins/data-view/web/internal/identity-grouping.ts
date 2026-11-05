@@ -1,4 +1,4 @@
-import { compareValues } from "../../core";
+import { compareValues, valuePosition } from "../../core";
 import type { FieldGrouping, FieldGroupingSet } from "../../core";
 
 /**
@@ -15,17 +15,26 @@ import type { FieldGrouping, FieldGroupingSet } from "../../core";
  * (one entry per row), so the map keeps the FIRST index a key is seen at: the
  * ordinals then have gaps but stay monotonic, which is all `GroupBucket.order`
  * promises.
+ *
+ * An ordinal field (`valueOrder`) orders its sections by each value's declared
+ * position instead (`valuePosition` — the sort's own reading), the values it
+ * does not list after every listed one, in `compareValues` order.
  */
 export const IDENTITY_GROUPING: FieldGrouping = {
   id: "value",
   label: "Value",
   // One section per distinct value.
   oneBucketPerValue: true,
-  plan: ({ values }) => {
+  plan: ({ values, field }) => {
+    const declared =
+      field.valueOrder === undefined ? null : valuePosition(field.valueOrder);
+    const listed = field.valueOrder?.length ?? 0;
     const orderByKey = new Map<string, number>();
     [...values].sort(compareValues).forEach((value, index) => {
       const key = String(value);
-      if (!orderByKey.has(key)) orderByKey.set(key, index);
+      if (!orderByKey.has(key)) {
+        orderByKey.set(key, declared?.(value) ?? listed + index);
+      }
     });
     return (value) => {
       const key = String(value);

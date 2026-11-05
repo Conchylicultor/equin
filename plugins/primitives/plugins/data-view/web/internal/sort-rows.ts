@@ -1,3 +1,4 @@
+import { valuePosition } from "../../core";
 import type { FieldDef, FieldValue, SortRule } from "../../core";
 
 /** Coerce a FieldValue to a comparable number|string (Date→ms, bool→0/1, …). */
@@ -26,11 +27,8 @@ function sortKeyOf<TRow>(
   valueOrder: readonly string[] | undefined,
 ): (row: TRow) => number | string | null {
   if (valueOrder === undefined) return (row) => comparable(value(row));
-  const position = new Map(valueOrder.map((v, i) => [v, i]));
-  return (row) => {
-    const v = value(row);
-    return (typeof v === "string" ? position.get(v) : undefined) ?? null;
-  };
+  const position = valuePosition(valueOrder);
+  return (row) => position(value(row));
 }
 
 /**

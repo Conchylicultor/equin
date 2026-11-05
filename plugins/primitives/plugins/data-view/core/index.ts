@@ -46,6 +46,7 @@ export type {
 } from "./internal/placement";
 
 export { compareValues } from "./internal/grouping";
+export { valuePosition } from "./internal/value-order";
 export { optionDescendants } from "./internal/option-tree";
 
 export { scopeFilterRows } from "./internal/filter-scope";

@@ -28,6 +28,7 @@ import {
 import type { FieldsRecord } from "@plugins/fields/core";
 import { foldFieldRead, splitRowReader } from "./field-read";
 import { ClockCell } from "./clock-cell";
+import { valuePosition } from "../../core";
 import type {
   DataViewRowsCollection,
   FieldDef,
@@ -141,6 +142,21 @@ function optionsOf(
   }));
 }
 
+/**
+ * An ordinal field's options in its declared value order (`valuePosition`, the
+ * order its sort and groups use), so its filter choices list the same way;
+ * an option the order does not list keeps its place after them.
+ */
+function inValueOrder(
+  options: FieldOption[] | undefined,
+  order: readonly string[] | null,
+): FieldOption[] | undefined {
+  if (options === undefined || order === null) return options;
+  const position = valuePosition(order);
+  const rank = (o: FieldOption) => position(o.value) ?? order.length;
+  return [...options].sort((a, b) => rank(a) - rank(b));
+}
+
 /** The presentation props a field takes from its spec (the cell is the caller's — it knows the read). */
 function presented(
   spec: FieldPresentationSpec<unknown, unknown> | undefined,
@@ -220,7 +236,7 @@ function derivedField(
   spec: FieldPresentationSpec<unknown, unknown> | undefined,
   extra: Pick<FieldDef<unknown>, "column" | "section">,
 ): FieldDef<unknown> {
-  const options = optionsOf(field.options);
+  const options = inValueOrder(optionsOf(field.options), field.order);
   // An enum over booleans / numbers (options keyed by their spelling) filters
   // in its values' domain.
   const valueDomain =
