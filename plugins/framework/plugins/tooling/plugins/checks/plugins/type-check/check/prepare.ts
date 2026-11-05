@@ -29,7 +29,8 @@
 // THE RUN BASE (`../shared/run-base.ts`) is what keeps a run O(changes): the
 // complete per-file lint state a completed run ended in, content-addressed by
 // tree and sharded per leaf plugin. A run picks one (its own tree's, the
-// worktree's last, HEAD's, the merge-base's — the first stored), compares each
+// worktree's last, HEAD's, the merge-base's — the first stored under this
+// run's rules, else the first stored), compares each
 // shard's listing (paths and versions, hashed from the current tree with no
 // read) with the base's, and sends the worker only the files whose state does
 // not carry: changed, added, or — when the rules moved — every file, with the
@@ -235,6 +236,8 @@ interface ChosenBase {
   treeHash: string;
   hash: string;
   root: RunBaseRoot;
+  /** Usable candidates ahead of it that were not taken, and why (transcript). */
+  passed: string[];
 }
 
 type BaseChoice =
@@ -274,18 +277,30 @@ const treeOf = (root: AppPath, rev: string): Promise<string | undefined> =>
   gitLine(root, ["rev-parse", "--verify", "-q", `${rev}^{tree}`]);
 
 /**
- * The base a run carries from: the first candidate tree with a stored root —
+ * The base a run carries from, among the candidate trees with a stored root —
  * this very tree (a re-run, or a sibling's), the worktree's last completed
- * run's, `HEAD`'s, the merge-base with `main`'s. Which one wins decides only
- * how much is left to do (`../shared/run-base.ts`): a hint is never trusted
- * for the verdict. A base that names a shard the store no longer holds is
- * refused — the run takes the full path and says why.
+ * run's, `HEAD`'s, the merge-base with `main`'s: the first whose rules are
+ * this run's, else the first. Which one wins decides only how much is left to
+ * do (`../shared/run-base.ts`): a hint is never trusted for the verdict.
+ *
+ * Rules first, because a base under other rules carries nothing on its own:
+ * every file is sent, and only the per-file store can spare its re-lint —
+ * which a busy host has long evicted (on 2026-11-05, 172 of 15,002 files still
+ * held main's current base-group key). After a rebase onto a main whose rules
+ * moved, the worktree's own last run is such a base, while the merge-base's —
+ * written by the pusher's check of that very tree — has this run's rules and
+ * carries every file the worktree did not change. Taking the first stored one
+ * re-linted the whole tree (~500 CPU-s) on every such rebase.
+ *
+ * A base that names a shard the store no longer holds is passed over; when no
+ * candidate is usable the run takes the full path and says why.
  */
 async function chooseBase(
   root: AppPath,
   worktree: string,
   treeHash: string,
   bases: RunBaseStore,
+  lint: RunBaseLint,
 ): Promise<BaseChoice> {
   const candidates: [string, () => Promise<string | undefined>][] = [
     ["this tree", () => Promise.resolve(treeHash)],
@@ -301,6 +316,9 @@ async function chooseBase(
   ];
   const misses: string[] = [];
   const seen = new Set<string>();
+  let first: ChosenBase | undefined;
+  /** Stored bases passed over: unusable, or (before the winner) other rules. */
+  const passed: string[] = [];
   for (const [label, get] of candidates) {
     const t = await get();
     if (t === undefined) {
@@ -317,18 +335,24 @@ async function chooseBase(
     const base = bases.root(hash);
     if (base === undefined) {
       misses.push(`${label} ${t.slice(0, 12)}: root pruned`);
+      passed.push(`${label} ${t.slice(0, 12)}: root pruned`);
       continue;
     }
     const refs = Object.values(base.shards);
     const missing = refs.filter(([h]) => !bases.hasShard(h)).length;
     if (missing > 0) {
-      return {
-        kind: "none",
-        reason: `${label} ${t.slice(0, 12)}'s base is missing ${missing} of ${refs.length} shards — full path`,
-      };
+      const why = `${label} ${t.slice(0, 12)}: missing ${missing} of ${refs.length} shards`;
+      misses.push(why);
+      passed.push(why);
+      continue;
     }
-    return { kind: "base", label, treeHash: t, hash, root: base };
+    if (sameLintInputs(base.lint, lint)) {
+      return { kind: "base", label, treeHash: t, hash, root: base, passed };
+    }
+    first ??= { label, treeHash: t, hash, root: base, passed: [...passed] };
+    passed.push(`${label} ${t.slice(0, 12)}: other rules`);
   }
+  if (first !== undefined) return { kind: "base", ...first };
   return { kind: "none", reason: misses.join("; ") };
 }
 
@@ -499,7 +523,7 @@ export async function openPreparation({
   }
   const worktree = realpathSync(root);
   const bases = openRunBaseStore();
-  const choice = await chooseBase(root, worktree, treeHash, bases);
+  const choice = await chooseBase(root, worktree, treeHash, bases, lint);
   const base: ChosenBase | undefined =
     choice.kind === "base" ? choice : undefined;
   const same = base !== undefined && sameLintInputs(base.root.lint, lint);
@@ -633,7 +657,7 @@ export async function openPreparation({
   const baseLine =
     base === undefined
       ? `base none (${choice.kind === "none" ? choice.reason : ""})`
-      : `base ${base.label} ${base.treeHash.slice(0, 12)}${movedRules()}: ${changed} changed, ${removed} removed${goneShards > 0 ? ` (+${goneShards} shards gone)` : ""}; shards read ${baseShards.size}/${Object.keys(base.root.shards).length}; ${jobPaths.length}/${files.length} files sent`;
+      : `base ${base.label} ${base.treeHash.slice(0, 12)}${base.passed.length > 0 ? ` (passed over ${base.passed.join(", ")})` : ""}${movedRules()}: ${changed} changed, ${removed} removed${goneShards > 0 ? ` (+${goneShards} shards gone)` : ""}; shards read ${baseShards.size}/${Object.keys(base.root.shards).length}; ${jobPaths.length}/${files.length} files sent`;
 
   const plan: Extract<Plan, { kind: "run" }> = {
     kind: "run",

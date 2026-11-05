@@ -12,6 +12,8 @@
  *      report of a file-level exemption that suppressed nothing;
  *   6. a crashed worker records no base;
  *   7. a base missing a shard is refused: the full path, saying why;
+ *   7b. a candidate under this run's rules wins over an earlier one under
+ *      other rules (a rebase onto a main whose rules moved);
  *   8. EQUIVALENCE — over a series of edits (a body edit, an API edit that
  *      moves an importer's result key, its revert, an add/remove, a directive
  *      file edit), the verdict and the recorded state of every file with a
@@ -474,6 +476,59 @@ test(
 );
 
 test(
+  "a candidate under this run's rules wins over the last run under other rules",
+  async () => {
+    // HEAD's tree gets a base under the current rules (as main's does, from
+    // the pusher's check of that very tree).
+    await git("add", "-A");
+    await git(
+      "-c",
+      "user.name=t",
+      "-c",
+      "user.email=t@t",
+      "commit",
+      "-q",
+      "-m",
+      "head",
+    );
+    await run();
+    // The worktree's last run is of another tree, under other rules: what a
+    // run before a rebase onto a main whose rules moved leaves behind.
+    write(A, "export const a = 4;\n");
+    await run();
+    const store = openRunBaseStore();
+    const lastTree = (await computeTreeHash(root))!;
+    const base = store.root(store.pointer(lastTree)!)!;
+    const forged = {
+      ...base,
+      lint: {
+        ...base.lint,
+        fps: Object.fromEntries(
+          Object.keys(base.lint.fps).map((g) => [g, "0".repeat(16)]),
+        ),
+        allFp: "1".repeat(16),
+      },
+    };
+    store.setPointer(lastTree, store.putRoot(forged).hash);
+
+    write(B, 'import { a } from "./a";\nexport const b = a + 2;\n');
+    const r = await prepare();
+    // HEAD's base carries every file but the two that differ from it; the
+    // last run's would have sent every file.
+    expect(r.plan.baseLine).toContain("base HEAD");
+    expect(r.plan.baseLine).toMatch(/passed over last run \w+: other rules/);
+    expect(r.plan.baseLine).not.toContain("rules moved");
+    expect(r.plan.lintBase).not.toBeNull();
+    expect(sent(r.plan)).toEqual([A, B].sort());
+    await r.finalize((await work(r.plan)).outcome);
+    // Put the fixture back for the cases below.
+    write(A, "export const a = 3;\n");
+    write(B, 'import { a } from "./a";\nexport const b = a + 1;\n');
+  },
+  TIMEOUT_MS,
+);
+
+test(
   "a base missing a shard is refused: the full path",
   async () => {
     await run();
@@ -490,7 +545,7 @@ test(
     if (stored.length === 0) throw new Error("no shard stored");
     for (const f of stored) rmSync(f);
     const r = await prepare();
-    expect(r.plan.baseLine).toMatch(/missing 3 of 3 shards — full path/);
+    expect(r.plan.baseLine).toMatch(/base none \(.*missing 3 of 3 shards/);
     expect(r.plan.lintBase).toBeNull();
     expect(sent(r.plan)).toEqual([A, B, CLEAN, V, D].sort());
     // The full path's run records a whole base again: the lost shards are

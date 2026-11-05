@@ -219,14 +219,17 @@ What a change costs:
   - the walk base it names (`walk`).
 - **Shard** (`type-check-run-base-shards`): per file version, directive flag, R, non-empty raw messages per part.
 
-**Choosing** (first stored wins):
+**Choosing** — candidates in this order; the first stored one **under this run's rules** wins, else the first stored one:
 
 1. this tree;
 2. the worktree's last completed run (hint);
 3. `HEAD`'s tree;
 4. the merge-base with `main`.
 
-A base naming a missing shard is refused (full path, reason logged). Correctness never rests on the choice: a shard carries only when its listing hash equals the root's, a file only when its version does, and rules are compared.
+- Rules first: a base under other rules sends every file, and on a busy host the per-file store has long evicted most results (2026-11-05: main's current base-group key held by 172 of 15,002 files).
+  - After a rebase onto a main whose rules moved, the hint is such a base. The merge-base's base, written by the pusher's check of that tree, carries every unchanged file.
+  - First-stored-wins re-linted the whole tree (~500 CPU-s) on every such rebase.
+- A candidate naming a missing shard is passed over; with no usable candidate the run takes the full path, every reason logged. Correctness never rests on the choice: a shard carries only when its listing hash equals the root's, a file only when its version does, and rules are compared.
 
 **Planning**:
 
