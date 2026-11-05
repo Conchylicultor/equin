@@ -1156,6 +1156,75 @@ function pushCompleted(
   flightRingHead = (flightRingHead + 1) % FLIGHT_RING_CAPACITY;
 }
 
+// --- Event-loop stalls ---
+//
+// A leaf's duration is measured from issuing the call to the callback that
+// sees its answer. While the thread is blocked (another op's synchronous work,
+// a GC pause, the process descheduled on a saturated host), an answer that
+// already arrived sits unread, and the blocked time lands in whichever calls
+// were in flight: on main on 2026-11-05, 79% of slow `db` samples overlapped
+// a loop stall of at least half their length (10.6% of random windows did) —
+// a trivial SELECT on two empty tables "took" 605 ms because the loop did.
+//
+// A probe that should run every `periodMs` (health-monitor's
+// `health.loop-probe` timer) calls `noteLoopTurn` on each tick; a tick late by
+// more than `toleranceMs` registers `[due, now]` as a stall. A plain leaf
+// recorded later is charged its overlap with the registered stalls as the
+// `event-loop` wait, so it is judged on its own time. Only REGISTERED stalls
+// count, and that is what keeps the culprit charged: a timer due during a
+// block runs before the socket callbacks that queued behind it (measured on
+// Bun: 5/5 blocks, the late tick first), so a victim's answer is read after
+// the probe registered the stall — while a call whose own synchronous work
+// (decoding a huge result) blocked the loop records in that same macrotask,
+// before the probe could register anything. The whole overlap is charged, not
+// just the part after the answer arrived (nothing here knows when it did): a
+// query genuinely busy in Postgres during a stall is under-charged by at most
+// the stall's length — the under-reporting direction. Entries are not charged: an entry
+// may itself be the synchronous work that blocked the loop, and nothing here
+// can tell that apart. Whether the stall itself is worth an alert is the
+// stall monitor's call (debug/stall-monitor), with the stacks to name it.
+
+/** The wait layer a leaf's time on a blocked event loop is charged to. */
+const EVENT_LOOP_LAYER = "event-loop";
+
+// Registered stalls, oldest first. Disjoint and ordered by construction (each
+// starts where the previous probe tick was due, at or after the last one
+// ended), which `loopStallOverlap` relies on to stop early. Bounded: a leaf
+// spanning more stalls than this is undercharged, never overcharged.
+const LOOP_STALL_CAP = 64;
+const loopStalls: { t0: number; t1: number }[] = [];
+let lastLoopTurn: number | undefined;
+
+/**
+ * One turn of the event-loop probe, called from a timer due every `periodMs`:
+ * a tick later than due by more than `toleranceMs` registers the late part as
+ * a stall (see the section comment). The first call only sets the baseline.
+ */
+export function noteLoopTurn(periodMs: number, toleranceMs: number): void {
+  const t = now();
+  if (lastLoopTurn !== undefined) {
+    const due = lastLoopTurn + periodMs;
+    if (t - due > toleranceMs) {
+      loopStalls.push({ t0: due, t1: t });
+      if (loopStalls.length > LOOP_STALL_CAP) loopStalls.shift();
+    }
+  }
+  lastLoopTurn = t;
+}
+
+// How much of `[start, end]` the registered stalls cover.
+function loopStallOverlap(start: number, end: number): number {
+  let ms = 0;
+  for (let i = loopStalls.length - 1; i >= 0; i--) {
+    const s = loopStalls[i]!;
+    if (s.t1 <= start) break;
+    const lo = s.t0 > start ? s.t0 : start;
+    const hi = s.t1 < end ? s.t1 : end;
+    if (hi > lo) ms += hi - lo;
+  }
+  return ms;
+}
+
 /** Point-in-time occupancy of one concurrency gate. */
 export interface GateGauge {
   active: number;
@@ -1705,16 +1774,31 @@ export function recordSpan(
   opts?: LeafSpanOptions,
 ): void {
   const cur = contextRuntime.current();
+  const end = now();
   let waits = opts?.waits;
   let waitMs = 0;
   if (waits) for (const layer in waits) waitMs += waits[layer]!;
   waitMs = Math.min(durationMs, waitMs);
+  // A plain leaf (a query) that spanned a registered event-loop stall was
+  // waiting on the loop: its answer sat unread until the blocked thread came
+  // back (see `noteLoopTurn`). Capped at what the caller's own waits left, so
+  // the layers never sum past the duration. A latency leaf keeps its own
+  // `waits | queue | own` layout untouched.
+  if (!opts?.latency) {
+    const stalled = Math.min(
+      durationMs - waitMs,
+      loopStallOverlap(end - durationMs, end),
+    );
+    if (stalled > 0) {
+      waits = { ...waits, [EVENT_LOOP_LAYER]: stalled };
+      waitMs += stalled;
+    }
+  }
   // A latency leaf's window is `[now − duration, now]`, laid out as its
   // leading `waits` | its `queue` | its own part. Only the own part is judged,
   // net of what the enclosing entry claimed inside it (another op's slowness,
   // already filed) — never the waits or the queue, so nothing is taken off
   // twice.
-  const end = now();
   const queue = opts?.latency ? opts.queue : undefined;
   const queueMs = queue
     ? Math.min(durationMs - waitMs, Math.max(0, queue.ms))
@@ -2347,6 +2431,8 @@ export function resetRuntimeProfile(): void {
     slot.waitBands = undefined;
   }
   flightRingHead = 0;
+  loopStalls.length = 0;
+  lastLoopTurn = undefined;
   laneClaims.clear();
   gateWindows.clear();
   sinceMs = now();

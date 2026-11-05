@@ -1,6 +1,7 @@
 export {
   recordSpan,
   recordEntrySpan,
+  noteLoopTurn,
   chargeWait,
   recordReadTables,
   installLoaderReadSetSink,

@@ -20,6 +20,8 @@ const WAIT_LAYER_HINTS: Readonly<Record<string, string>> = {
   [SLEEP_LAYER]: "The machine was asleep — not counted against this op.",
   [HIDDEN_LAYER]:
     "The tab was hidden or frozen, where the browser throttles it — not counted against this op.",
+  "event-loop":
+    "This backend's event loop was blocked while the call was in flight, so its answer sat unread — not counted against this op (runtime-profiler's event-loop probe); a stall of 3 s or more is filed on its own (event-loop-stall).",
   "throttle-hold":
     "The resource's own declared throttle held the change — by design, not counted against this op.",
   "flush-queue":

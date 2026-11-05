@@ -51,6 +51,35 @@ idempotent under re-covering, which is what makes each level's `waits` self-cont
 Closed ancestors are never mutated (a detached child finishing late cannot corrupt a
 recorded span).
 
+### Event-loop stalls (`event-loop`, `noteLoopTurn`)
+
+A leaf is timed from issuing the call to the callback that reads its answer, so
+time the thread spent blocked — another op's synchronous work, a GC pause, the
+process descheduled — lands in every call in flight. Measured on main
+(2026-11-05): 79% of slow `db` samples overlapped a loop stall of at least half
+their length, against 10.6% of random windows; unrelated statements "took" the
+same 600 ms and finished within a few ms of each other.
+
+- `noteLoopTurn(periodMs, toleranceMs)` is called by a probe due every
+  `periodMs` (debug/health-monitor's `health.loop-probe`, 100 ms, on every
+  backend); a tick more than `toleranceMs` late registers `[due, now]` as a
+  stall (a bounded ring, disjoint and ordered).
+- A plain leaf (`recordSpan` without `latency`) is charged its overlap with the
+  registered stalls as the `event-loop` wait, so it is judged on its own time
+  (capped at what the caller's own waits left). A latency leaf keeps its `waits | queue | own` layout.
+- **Only registered stalls count — that keeps the culprit charged.** After a
+  block, Bun runs the overdue timer before the socket callbacks queued behind
+  it (measured 5/5), so a victim's answer is read after the probe registered
+  the stall; a call whose own synchronous work (a huge result decode) blocked
+  the loop records in that same macrotask, before anything is registered.
+- **The whole overlap is charged**, not just the part after the answer arrived
+  (unknowable here): a query genuinely busy in Postgres during a stall is
+  under-charged by at most the stall's length — the safe, under-reporting
+  direction.
+- **Entries are not charged**: an entry may be the synchronous work that
+  blocked the loop, and nothing here tells it apart. Whether a stall deserves
+  an alert is debug/stall-monitor's call, with the stacks to name it.
+
 ### Positioned wait bands (`WaitBand`)
 
 `Track` is the *measure* of the covered set; a **`WaitBand[]` per `(entry, layer)`** is the
@@ -90,7 +119,7 @@ recompute) and the 0 ms markers `git-memo-hit:<name>` / `git-memo-miss:<name>`
 (`infra/git/git-read-cache`); `fs-stat` / `fs-readdir` / `fs-read` / `fs-glob`
 (kind `io`: a file call past `packages/timed-fs`'s floor, charged by
 `server/internal/install.ts`'s `onSlowFsCall` subscriber — a disk stall is the
-disk's time, filed like a `queue` wait as `wait fs-<op>`). A `chargeWait` with no active entry (context-less jobs/pollers)
+disk's time, filed like a `queue` wait as `wait fs-<op>`); `event-loop` (below). A `chargeWait` with no active entry (context-less jobs/pollers)
 falls back to a standalone `db [layer]` span so the wait is never lost. See
 `research/2026-07-02-global-profiler-wait-propagation.md`.
 
@@ -420,6 +449,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `installProfilingSuppressionRuntime`
     - `installRootContextRuntime`
     - `installSpanContextRuntime`
+    - `noteLoopTurn`
     - `onSlowSpan`
     - `onSlowWait`
     - `profilerNowMs`

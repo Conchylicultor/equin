@@ -6,10 +6,11 @@ export default [
     paths: [
       "server/internal/process-sampler.ts",
       "server/internal/host-sampler.ts",
+      "server/internal/loop-probe.ts",
     ],
     kind: "sanctioned",
     reason:
-      "Samplers of this process / the host every 10 s: the instrument for a wedged backend, below cron's 1-minute floor.",
+      "Samplers of this process / the host (every 10 s; the event-loop probe every 100 ms): the instrument for a wedged backend, below cron's 1-minute floor.",
   },
   {
     rule: "boundaries/no-platform-api",

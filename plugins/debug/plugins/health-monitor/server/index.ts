@@ -11,6 +11,7 @@ import {
   startHostSampler,
   stopHostSampler,
 } from "./internal/host-sampler";
+import { loopProbeTimer } from "./internal/loop-probe";
 
 // Every sample as it is taken, for plugins that build on the health series
 // without tailing its JSONL (debug/latency-ledger).
@@ -30,12 +31,14 @@ export default {
   description:
     "Continuous per-backend health sampler: event-loop lag, GC/heap pressure, and phys_footprint appended to per-worktree JSONL (read from disk even when a backend is wedged), plus main-only host metrics. Surfaced as the Debug → Health pane.",
   contributions: [...healthSeriesServed.declare],
-  register: [processSamplerTimer, hostSamplerTimer],
+  register: [processSamplerTimer, hostSamplerTimer, loopProbeTimer],
   onReady: () => {
+    loopProbeTimer.start();
     startProcessSampler();
     if (isMain()) startHostSampler();
   },
   onShutdown: () => {
+    loopProbeTimer.stop();
     stopProcessSampler();
     if (isMain()) stopHostSampler();
   },

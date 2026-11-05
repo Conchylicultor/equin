@@ -46,6 +46,14 @@ gap as a labeled dark "sleep" segment. A merely-late tick from a wedged loop
 stays below the jump factor and keeps its stall evidence. (See
 `research/2026-07-11-global-observability-freeze-blind-spots.md`, Stage 6.)
 
+## The event-loop probe (`health.loop-probe`)
+
+A 100 ms timer on every backend calling runtime-profiler's `noteLoopTurn`: a
+tick more than 100 ms late is a registered stall, and the profiler charges it to
+every database call it overlapped as an `event-loop` wait (runtime-profiler's
+"Event-loop stalls"), so a query blocked behind the loop is not filed as a slow
+query. The 10 s sampler says how bad the lag was; the probe says when.
+
 ## Stall stacks → the trace store
 
 On **main**, the sampler also claims the background-thread JSC sampling profiler
@@ -156,6 +164,7 @@ measured overhead on a real worktree workload is still an open task.
   - Register:
     - `defineTimer('health.process-sampler')`
     - `defineTimer('health.host-sampler')`
+    - `defineTimer('health.loop-probe')`
   - Resources: `health-monitor.series` (push, notified, whole: one per worktree backend that sampled in the read window — the backends running in the last 2 h, never every worktree on disk, capped: MAX_HEALTH_SAMPLES, capped: MAX_SLOW_OP_MARKERS)
 - Core:
   - Uses:
@@ -187,7 +196,7 @@ measured overhead on a real worktree workload is still an open task.
     - `debug/timeline`
 - Exemptions:
   - Exempts itself from:
-    - `timer/no-unlisted-timer` — `server/internal/process-sampler.ts`, `server/internal/host-sampler.ts` (sanctioned)
+    - `timer/no-unlisted-timer` — `server/internal/process-sampler.ts`, `server/internal/host-sampler.ts`, `server/internal/loop-probe.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/health-series.ts`, `server/internal/host-sampler.ts`, `server/internal/process-sampler.ts` (debt)
 - Shared:
   - Exports (values): `healthMonitorSeries`

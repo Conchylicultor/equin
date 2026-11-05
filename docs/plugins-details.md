@@ -22127,6 +22127,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register:
           - `defineTimer('health.process-sampler')`
           - `defineTimer('health.host-sampler')`
+          - `defineTimer('health.loop-probe')`
         - Resources: `health-monitor.series` (push, notified, whole: one per worktree backend that sampled in the read window — the backends running in the last 2 h, never every worktree on disk, capped: MAX_HEALTH_SAMPLES, capped: MAX_SLOW_OP_MARKERS)
       - Core:
         - Uses:
@@ -22158,7 +22159,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/timeline`
       - Exemptions:
         - Exempts itself from:
-          - `timer/no-unlisted-timer` — `server/internal/process-sampler.ts`, `server/internal/host-sampler.ts` (sanctioned)
+          - `timer/no-unlisted-timer` — `server/internal/process-sampler.ts`, `server/internal/host-sampler.ts`, `server/internal/loop-probe.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/health-series.ts`, `server/internal/host-sampler.ts`, `server/internal/process-sampler.ts` (debt)
       - Shared:
         - Exports (values): `healthMonitorSeries`
@@ -33323,6 +33324,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installProfilingSuppressionRuntime`
           - `installRootContextRuntime`
           - `installSpanContextRuntime`
+          - `noteLoopTurn`
           - `onSlowSpan`
           - `onSlowWait`
           - `profilerNowMs`

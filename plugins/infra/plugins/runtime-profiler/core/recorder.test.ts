@@ -22,6 +22,7 @@ import {
   installLoaderReadSetSink,
   installProfilingSuppressionRuntime,
   installSpanContextRuntime,
+  noteLoopTurn,
   onSlowSpan,
   onSlowWait,
   readGateGauges,
@@ -1729,5 +1730,91 @@ describe("span detail", () => {
     expect(details).toContainEqual(undefined);
     expect(details.find((d) => d)!.variant!.length).toBe(200);
     expect(agg("route", "tasks").measuresMax).toBeUndefined();
+  });
+});
+
+describe("event-loop stalls — a query is not charged the time the loop was blocked", () => {
+  // The probe ticks every 100 ms; a tick > 100 ms late registers a stall.
+  function turn(at: number): void {
+    fakeNow = at;
+    noteLoopTurn(100, 100);
+  }
+
+  test("a query spanning a registered stall is charged it as an event-loop wait", () => {
+    const filed: SlowSpan[] = [];
+    const sub = onSlowSpan(
+      (span) => {
+        if (span.durationMs - span.excludedMs >= 500) filed.push(span);
+      },
+      { thresholdMs: 0 },
+    );
+    try {
+      turn(0);
+      turn(100);
+      // Blocked from 150 to 750: the tick due at 200 fires at 750.
+      turn(750);
+      // A query issued at 150 whose answer is read at 760 (after the probe).
+      fakeNow = 760;
+      recordSpan("db", "select 1", 610);
+    } finally {
+      sub.dispose();
+    }
+    const span = getRuntimeProfile().slowest.db.find(
+      (s) => s.label === "select 1",
+    )!;
+    expect(span.waits).toEqual({ "event-loop": 550 });
+    expect(span.waitMs).toBe(550);
+    expect(span.selfMs).toBe(60);
+    expect(span.excludedMs).toBe(550);
+    expect(filed).toEqual([]);
+  });
+
+  test("a query recorded before the probe registered the stall keeps its time (it may be the work that blocked)", () => {
+    turn(0);
+    turn(100);
+    // Its own result decode blocked the loop until 750; it records first.
+    fakeNow = 750;
+    recordSpan("db", "select huge", 640);
+    turn(760);
+    const span = getRuntimeProfile().slowest.db.find(
+      (s) => s.label === "select huge",
+    )!;
+    expect(span.waits).toBeUndefined();
+    expect(span.selfMs).toBe(640);
+  });
+
+  test("on-time ticks and jitter under the tolerance register nothing", () => {
+    turn(0);
+    turn(100);
+    turn(290); // 90 ms late: jitter
+    turn(390);
+    fakeNow = 400;
+    recordSpan("db", "q", 400);
+    const span = getRuntimeProfile().slowest.db.find((s) => s.label === "q")!;
+    expect(span.waits).toBeUndefined();
+  });
+
+  test("only the overlap counts, across several stalls", () => {
+    turn(0);
+    turn(500); // stall 100..500
+    turn(600);
+    turn(1300); // stall 700..1300
+    fakeNow = 1400;
+    // Window 300..1400: 200 ms of the first stall + 600 ms of the second.
+    recordSpan("db", "q2", 1100);
+    const span = getRuntimeProfile().slowest.db.find((s) => s.label === "q2")!;
+    expect(span.waits).toEqual({ "event-loop": 800 });
+    expect(span.selfMs).toBe(300);
+  });
+
+  test("a latency leaf keeps its own layout (never charged)", () => {
+    turn(0);
+    turn(800);
+    fakeNow = 900;
+    recordSpan("push", "deliver:x", 900, undefined, { latency: true });
+    const span = getRuntimeProfile().slowest.push.find(
+      (s) => s.label === "deliver:x",
+    )!;
+    expect(span.waits).toBeUndefined();
   });
 });
