@@ -42999,6 +42999,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/overlay/overlay-boundary.OverlayBoundary`
+              - `primitives/overlay/popup-open.usePopupAnchorAtRest`
               - `primitives/overlay/popup-open.useReportPopupOpen`
               - `primitives/overlay/portal-host.usePortalContainer`
               - `primitives/select-scope.ContentScope`
@@ -46634,6 +46635,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.PopoverPadding`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/overlay/popup-open.PopupAnchorRest`
               - `primitives/overlay/popup-open.PopupOpenScope`
             - Exports (types):
               - `FloatingActionFadeInProps`
@@ -46957,7 +46959,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reorder/editor`
               - `tag-tree/picker`
               - `tasks/task-draft-form`
-        - **`popup-open`** — Typed 'is a popup open inside me' signal: PopupOpenScope aggregates every popup opened under it and hands the boolean to its render-prop child; ui-kit's Root wrappers publish it via useReportPopupOpen. Replaces CSS selectors that named a popup library's own attribute contract. Sits below ui-kit (imports only react) so ui-kit can consume it without a cycle.
+        - **`popup-open`** — Typed 'is a popup open inside me' signal: PopupOpenScope aggregates every popup opened under it and hands the boolean to its render-prop child; ui-kit's Root wrappers publish it via useReportPopupOpen. And the reverse signal, PopupAnchorRest / usePopupAnchorAtRest: whether the region a popup is opened from is at rest (a FloatingAction mid-morph is not), so a popover requested meanwhile waits and is laid out against where its trigger ends up. Replaces CSS selectors that named a popup library's own attribute contract. Sits below ui-kit (imports only react) so ui-kit can consume it without a cycle.
           - Cross-plugin:
             - Imported by:
               - `apps/prototypes/present`
@@ -46969,7 +46971,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/row-actions`
           - Web:
             - Exports (values):
+              - `PopupAnchorRest`
               - `PopupOpenScope`
+              - `usePopupAnchorAtRest`
               - `useReportPopupOpen`
         - **`portal-host`** — Where a popup opened inside a region is drawn: PortalHost makes every ui-kit popup (popover, menu, select, tooltip, dialog, sheet) opened inside it render into the region instead of document.body — required under the Fullscreen API, which paints only the fullscreen element's subtree, and over overlays stacked above the popup layer. ui-kit's portal wrappers read usePortalContainer. Imports only react, so ui-kit can consume it without a cycle.
           - Cross-plugin:

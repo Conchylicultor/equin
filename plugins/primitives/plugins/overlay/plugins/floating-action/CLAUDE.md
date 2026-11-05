@@ -92,6 +92,12 @@ promises; nothing animating reveals at once; a close cancels them and never
 reveals). The wrapper carries `data-revealed` then — what an e2e script waits
 for before clicking an item, never `data-open`.
 
+A popover requested from the panel before it is revealed (programmatically —
+nothing in it is clickable yet) waits for the reveal too: the panel declares
+`PopupAnchorRest atRest={revealed}` (`popup-open`), which ui-kit's `Popover`
+reads, so the popover opens against where its trigger ends up instead of
+against a trigger still sliding into place.
+
 ## Hover has reach: drifting off the bar is not leaving it
 
 A long bar's far items are reached by sweeping along it, and a hand drifts a
@@ -133,6 +139,7 @@ global action bar's `e2e/focus-restore.ts` checks this in Chromium.
     - `primitives/css/ui-kit.PopoverPadding`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/overlay/popup-open.PopupAnchorRest`
     - `primitives/overlay/popup-open.PopupOpenScope`
   - Exports (types):
     - `FloatingActionFadeInProps`

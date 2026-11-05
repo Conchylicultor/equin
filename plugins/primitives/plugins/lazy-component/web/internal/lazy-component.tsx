@@ -17,6 +17,15 @@ export interface LazyComponentOptions {
    * only an omitted fallback gets the spinner.
    */
   fallback?: ReactNode;
+  /**
+   * `"idle"`: load the chunk once the page is idle after boot, so the first
+   * mount renders synchronously instead of suspending. For a component that
+   * appears in a surface whose size must not change once shown — an editor
+   * inside a popover that opens on a click would otherwise open without it and
+   * grow when the chunk lands. Still off the boot path; omitted: load on first
+   * mount.
+   */
+  preload?: "idle";
 }
 
 /**
@@ -60,6 +69,7 @@ export function lazyComponent<P extends object>(
       return m;
     }));
   loaders.add(load);
+  if (opts?.preload === "idle") preloadWhenIdle(load);
   const Lazy = lazy(load);
   // Not `??`: that reads an explicit `fallback: null` as "none given" and draws
   // the spinner an inline widget asked not to flash.
@@ -82,4 +92,18 @@ export function lazyComponent<P extends object>(
       </Suspense>
     );
   };
+}
+
+/**
+ * One-shot: run `load` when the main thread is next idle (Safari has no
+ * `requestIdleCallback`: a macrotask then). Only in a page — a module evaluated
+ * outside one (barrel introspection's fake `window` has no `document`) loads
+ * nothing. A failed preload is left unhandled, so it is reported; the first
+ * mount shares the same rejected import and throws into its boundary.
+ */
+function preloadWhenIdle(load: () => Promise<unknown>): void {
+  if (typeof document === "undefined") return;
+  const run = () => void load();
+  if (typeof requestIdleCallback === "function") requestIdleCallback(run);
+  else setTimeout(run, 0);
 }

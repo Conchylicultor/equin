@@ -21,7 +21,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
+import {
+  PopupAnchorRest,
+  PopupOpenScope,
+} from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import { useDisclosureIntent } from "./use-disclosure-intent";
 
 export type FloatingAnchor =
@@ -334,10 +337,15 @@ function FloatingActionPanel({
                 keeps the always-visible trigger from flex-shrinking to 0 next to
                 a tall/wide `children` sibling under a clamped panel. It is also
                 the box whose resizes re-size the hover hitbox above. */}
-            <div ref={triggerRef} className="shrink-0">
-              {typeof trigger === "function" ? trigger(open) : trigger}
-            </div>
-            {children}
+            {/* Everything in the panel moves while it morphs open, so a
+                popover requested from it meanwhile waits until it is revealed
+                and is laid out against where its trigger ends up. */}
+            <PopupAnchorRest atRest={revealed}>
+              <div ref={triggerRef} className="shrink-0">
+                {typeof trigger === "function" ? trigger(open) : trigger}
+              </div>
+              {children}
+            </PopupAnchorRest>
           </div>
         </OverlayPanel>
       </div>

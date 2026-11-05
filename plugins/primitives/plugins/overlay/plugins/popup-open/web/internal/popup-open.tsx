@@ -79,3 +79,43 @@ export function useReportPopupOpen(open: boolean): void {
     return () => sink.unregister();
   }, [sink, open]);
 }
+
+/**
+ * Whether the region a popup is opened from is at rest — its trigger where it
+ * will stay. Default `true`: a popup outside any moving region opens at once.
+ */
+const AnchorAtRestContext = createContext(true);
+
+/**
+ * Declares whether the region below is at rest. A region whose content moves
+ * while it opens (a `FloatingAction` morphing from its collapsed footprint)
+ * says `false` until it settles, so a popup opened from inside it meanwhile —
+ * typically programmatically, since the content is not clickable yet — waits
+ * and is laid out against where its trigger ends up, rather than against a
+ * trigger still sliding under it (Floating UI does not follow a reference that
+ * moves while clipped: it re-checks at most once a second).
+ *
+ * Nested regions compose: a popup waits for every moving region above it.
+ */
+export function PopupAnchorRest({
+  atRest,
+  children,
+}: {
+  atRest: boolean;
+  children: ReactNode;
+}): ReactNode {
+  const outer = useContext(AnchorAtRestContext);
+  return (
+    <AnchorAtRestContext.Provider value={outer && atRest}>
+      {children}
+    </AnchorAtRestContext.Provider>
+  );
+}
+
+/**
+ * Whether the region a popup is opened from is at rest — read by ui-kit's
+ * `Popover`, which holds a requested open until it is.
+ */
+export function usePopupAnchorAtRest(): boolean {
+  return useContext(AnchorAtRestContext);
+}

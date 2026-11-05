@@ -12,6 +12,7 @@ import type {
   PopoverMaxHeight,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width";
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
+import { usePopupAnchorAtRest } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 
 /**
  * Whether this popover has ever been open. Once it has, its content stays
@@ -54,14 +55,24 @@ function Popover({
     defaultOpen,
     onOpenChange,
   });
+  // Requested is not yet drawn: opened from a region still moving into place
+  // (a floating bar morphing open), the popup waits until it is at rest, so it
+  // is laid out against where its trigger ends up — never against a trigger
+  // sliding under it, which Floating UI would only catch up with a second
+  // later. Once drawn it stays drawn for this open. The request is still
+  // reported to the enclosing scope at once (the mirror above): that is what
+  // opens the bar. See `popup-open`'s `PopupAnchorRest`.
+  const anchorAtRest = usePopupAnchorAtRest();
+  const [drawn, setDrawn] = React.useState(isOpen && anchorAtRest);
+  if (!isOpen && drawn) setDrawn(false);
+  if (isOpen && anchorAtRest && !drawn) setDrawn(true);
   // A click inside an iframe never reaches base-ui's outside-press listener.
-  const actionsRef =
-    useFrameFocusDismiss<PopoverPrimitive.Root.Actions>(isOpen);
+  const actionsRef = useFrameFocusDismiss<PopoverPrimitive.Root.Actions>(drawn);
   // Latched on first open (the render-phase "adjust state on prop change"
   // pattern): a popover never opened mounts nothing, one opened once keeps its
   // content — so whatever the user typed in it survives closing it.
-  const [everOpened, setEverOpened] = React.useState(isOpen);
-  if (isOpen && !everOpened) setEverOpened(true);
+  const [everOpened, setEverOpened] = React.useState(drawn);
+  if (drawn && !everOpened) setEverOpened(true);
   // See `useHoldPopoverOpen`: a refused close is cancelled before the mirror or
   // the caller hears of it, so neither ever sees the popover as closed.
   const holds = React.useRef(0);
@@ -84,9 +95,10 @@ function Popover({
   return (
     <PopoverEverOpenedContext.Provider value={everOpened}>
       <PopoverHoldContext.Provider value={hold}>
+        {/* Always controlled by `drawn`: the mirror holds the requested
+            state (`defaultOpen` included), so base-ui never keeps its own. */}
         <PopoverPrimitive.Root
-          open={open}
-          defaultOpen={defaultOpen}
+          open={drawn}
           onOpenChange={guardedOpenChange}
           actionsRef={actionsRef}
           {...props}
