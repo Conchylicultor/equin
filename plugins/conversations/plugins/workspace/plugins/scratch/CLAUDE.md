@@ -27,6 +27,7 @@ The `scratch` workspace: `state/workspaces/<attemptId>/`, holding the profile's
 - Description: The scratch workspace: a conversation runs in a plain directory (`state/workspaces/<attemptId>`) holding only its scratch profile's CLAUDE.md and inputs — no git, DB fork or build. Launched with the user's own settings, the app's MCP server scoped to the profile's tool allowlist, and the profile's permissions; reaped a week after its task is done or dropped.
 - Server:
   - Uses:
+    - `conversations/workspace.announceWorkspacesReclaimed`
     - `conversations/workspace.findWorkspaceOfConversation`
     - `conversations/workspace.ScratchProfile`
     - `conversations/workspace.Workspace`

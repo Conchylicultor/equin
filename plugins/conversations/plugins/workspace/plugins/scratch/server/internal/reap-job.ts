@@ -4,6 +4,7 @@ import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { getAttempt, getTask } from "@plugins/tasks/plugins/tasks-core/server";
+import { announceWorkspacesReclaimed } from "@plugins/conversations/plugins/workspace/server";
 import { scratchWorkspacesDir } from "../../data-dirs";
 import { decideScratchReap, type ScratchDirFacts } from "./reap-policy";
 
@@ -36,13 +37,24 @@ export const scratchReapJob = defineJob({
     const root = scratchWorkspacesDir.ensure();
     const entries = await readdir(root, { withFileTypes: true });
     const now = Date.now();
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      const dir = scratchWorkspacesDir.file(entry.name);
-      const decision = decideScratchReap(await factsOf(entry.name, dir), now);
-      if (!decision.reap) continue;
-      reapLog.publish(`removing ${dir}: ${decision.reason}`);
-      await rm(dir, { recursive: true, force: true });
+    const reclaimed: string[] = [];
+    try {
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const dir = scratchWorkspacesDir.file(entry.name);
+        const decision = decideScratchReap(await factsOf(entry.name, dir), now);
+        if (!decision.reap) continue;
+        reapLog.publish(`removing ${dir}: ${decision.reason}`);
+        await rm(dir, { recursive: true, force: true });
+        reclaimed.push(entry.name);
+      }
+    } finally {
+      // Every directory removed so far, whatever stopped the loop: what other
+      // plugins keep for these attempts is freed by them (the directory name
+      // is the attempt id). The deletions are done either way, so a retry
+      // would not announce them again — a handler that throws fails the run
+      // loudly, and its leftovers are its own backstop's.
+      await announceWorkspacesReclaimed(reclaimed);
     }
   },
 });

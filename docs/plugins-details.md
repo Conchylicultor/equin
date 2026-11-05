@@ -19817,6 +19817,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "runtime-sdk.error-stopped:rows"
           - `ConfigV2.Register` "runtime-sdk-auto-resume"
           - `trigger` "runtime-sdk.attempt-ended"
+          - `Workspace.Reclaimed` "runtime-sdk.agent-dirs"
           - `report-kind` "sdk-agent-unresponsive"
           - `report-kind` "sdk-catch-up-overdue"
           - `report-kind` "sdk-consumer-stalled"
@@ -19859,6 +19860,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineDaemon('runtime-sdk.agent')`
           - `defineJob('runtime-sdk.attempt-ended')`
           - `defineJob('runtime-sdk.auto-resume')`
+          - `defineJob('runtime-sdk.agent-dirs-reclaim')`
         - Routes:
           - `POST /api/claude-usage/refresh`
           - `POST /api/runtime-sdk/resume-stopped`
@@ -20502,7 +20504,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('conversations.usage.backfill')`
           - `defineJob('conversations.usage.reprice')`
           - `defineWarmup('conversations.usage.backfill')`
-    - **`workspace`** — Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to and parseWorkspaceSpec over it (a new attempt's spec, validated before any write), the workspace.catalog live value (every workspace a task can name), and the conversation → workspace lookup.
+    - **`workspace`** — Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to and parseWorkspaceSpec over it (a new attempt's spec, validated before any write), the workspace.catalog live value (every workspace a task can name), the conversation → workspace lookup, and the Workspace.Reclaimed announcement (every reaper calls announceWorkspacesReclaimed once it deleted attempts' workspaces; every plugin keeping per-attempt state contributes a handler that frees it).
       - Server:
         - Contributes: `resource.declare` "workspace.catalog"
         - Uses:
@@ -20519,13 +20521,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WorkspaceAt`
           - `WorkspaceImpl`
           - `WorkspacePrepareCtx`
+          - `WorkspaceReclaimedHandler`
         - Exports (values):
+          - `announceWorkspacesReclaimed`
           - `defineScratchProfile`
           - `findWorkspaceOfConversation`
           - `parseWorkspaceSpec`
           - `ScratchProfile`
           - `Workspace`
           - `workspaceOfConversation`
+          - `WorkspaceReclaimed`
         - Resources: `workspace.catalog` (push, fixed, whole: the worktree plus one entry per registered scratch profile — a handful, fixed at boot, capped: WorkspaceCapabilitySchema.options.length)
       - Core:
         - Uses:
@@ -20560,6 +20565,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/workspace/scratch`
           - `conversations/workspace/worktree`
           - `debug/scratch-hello`
+          - `debug/worktree-cleanup`
           - `tasks/task-triage`
           - `tasks/tasks-core`
       - Test helpers:
@@ -20632,6 +20638,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`scratch`** — The scratch workspace: a conversation runs in a plain directory (`state/workspaces/<attemptId>`) holding only its scratch profile's CLAUDE.md and inputs — no git, DB fork or build. Launched with the user's own settings, the app's MCP server scoped to the profile's tool allowlist, and the profile's permissions; reaped a week after its task is done or dropped.
           - Server:
             - Uses:
+              - `conversations/workspace.announceWorkspacesReclaimed`
               - `conversations/workspace.findWorkspaceOfConversation`
               - `conversations/workspace.ScratchProfile`
               - `conversations/workspace.Workspace`
@@ -24685,7 +24692,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "worktree-reap-failed"
           - `resource.declare` "debug.worktree-cleanup.worktrees"
           - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-        - Uses: 38 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
+        - Uses: 39 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
           - `infra/worktree` ×13
           - `infra/worktree/reclaim` ×4
           - `tasks/tasks-core` ×4
@@ -24695,6 +24702,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/jobs/supervised-job` ×2
           - `infra/paths` ×2
           - `network/live` ×2
+          - `conversations/workspace.announceWorkspacesReclaimed`
           - `infra/ndjson-stream.ndjsonResponse`
           - `primitives/log-channels.defineLogSink`
           - `reports.ReportKind`

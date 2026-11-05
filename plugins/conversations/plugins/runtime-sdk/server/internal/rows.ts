@@ -219,3 +219,41 @@ export async function attemptHasOpenConversation(
     .limit(1);
   return row !== undefined;
 }
+
+/** Each of `ids`' attempt; a conversation this DB has no row of is absent. */
+export async function attemptsOfConversations(
+  ids: readonly string[],
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (ids.length === 0) return out;
+  const rows = await db
+    .select({ id: _conversations.id, attemptId: _conversations.attemptId })
+    .from(_conversations)
+    .where(inArray(_conversations.id, [...ids]));
+  for (const row of rows) out.set(row.id, row.attemptId);
+  return out;
+}
+
+/** Every conversation of `attemptIds`, whatever its status. */
+export async function conversationIdsOfAttempts(
+  attemptIds: readonly string[],
+): Promise<string[]> {
+  if (attemptIds.length === 0) return [];
+  const rows = await db
+    .select({ id: _conversations.id })
+    .from(_conversations)
+    .where(inArray(_conversations.attemptId, [...attemptIds]));
+  return rows.map((r) => r.id);
+}
+
+/** Each of `attemptIds`' workspace spec; an attempt this DB has no row of is absent. */
+export async function workspacesOfAttempts(attemptIds: readonly string[]) {
+  const rows =
+    attemptIds.length === 0
+      ? []
+      : await db
+          .select({ id: _attempts.id, workspace: _attempts.workspace })
+          .from(_attempts)
+          .where(inArray(_attempts.id, [...attemptIds]));
+  return new Map(rows.map((r) => [r.id, r.workspace]));
+}

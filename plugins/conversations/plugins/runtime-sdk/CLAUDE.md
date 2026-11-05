@@ -84,6 +84,19 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   whose events file is gone cannot restart at seq 1 under the cursor, where
   the reducer would skip every line. The agent removes its `bin/` clones'
   folder on exit.
+- **An agent directory lives as long as its attempt's workspace**
+  (`machine/internal/agent-dirs-reclaim.ts`, wired in `agent-dirs-job.ts`). A
+  reaper that deletes workspaces announces it (`Workspace.Reclaimed`,
+  conversations/workspace); this plugin's handler removes those attempts'
+  agent directories — their conversations' in this namespace, and the whole
+  `<attemptId>/` namespace a worktree's own build launched agents under —
+  skipping any whose agent runs (its pid file). The daily main-only
+  `runtime-sdk.agent-dirs-reclaim` is the backstop with the same rule
+  (workspace not on disk via `Workspace.pathFor`, agent not running), for
+  reaps before the announcement or a handler that failed; input `{ dryRun:
+  true }` only counts. What the DB cannot place (no conversation or attempt
+  row, a namespace that is no attempt) is kept. Never by age: a held task's
+  idle agent keeps its directory while its workspace does.
 - `server/` — the `conversations_ext_sdk_agent` side table, the pure event
   reducer, the launch → options-file mapping.
 - Conversations left on the retired tmux runtime were moved by the data
@@ -285,6 +298,7 @@ Gotchas the spike hit:
     - `resource.declare` "runtime-sdk.error-stopped:rows"
     - `ConfigV2.Register` "runtime-sdk-auto-resume"
     - `trigger` "runtime-sdk.attempt-ended"
+    - `Workspace.Reclaimed` "runtime-sdk.agent-dirs"
     - `report-kind` "sdk-agent-unresponsive"
     - `report-kind` "sdk-catch-up-overdue"
     - `report-kind` "sdk-consumer-stalled"
@@ -327,6 +341,7 @@ Gotchas the spike hit:
     - `defineDaemon('runtime-sdk.agent')`
     - `defineJob('runtime-sdk.attempt-ended')`
     - `defineJob('runtime-sdk.auto-resume')`
+    - `defineJob('runtime-sdk.agent-dirs-reclaim')`
   - Routes:
     - `POST /api/claude-usage/refresh`
     - `POST /api/runtime-sdk/resume-stopped`

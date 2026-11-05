@@ -7,14 +7,25 @@ import { defineDataDir } from "@plugins/infra/plugins/paths/core";
  * the sockets dir). The events file is how a restarted backend catches up, so
  * it outlives the process; a conversation's transcript (the CLI's own JSONL)
  * remains the durable record.
+ *
+ * Kept while its conversation can run again — that is, while its attempt's
+ * workspace exists. When a reaper deletes a workspace it announces it
+ * (`Workspace.Reclaimed`), and the agent directories of that attempt go with
+ * it: its conversations' here, and the whole namespace a worktree's own build
+ * launched agents under. The daily `runtime-sdk.agent-dirs-reclaim` applies
+ * the same rule to whatever an announcement missed. A running agent's
+ * directory is never removed. Deleting one costs nothing else: a later launch
+ * numbers its events past the backend's cursor (launch.json's `seqFloor`).
  */
 export const sdkAgentsDir = defineDataDir({
   kind: "state",
   name: "sdk-agents",
   owner: "conversations/runtime-sdk",
   description:
-    "Per-conversation SDK agent process state, per launching namespace: the numbered events.jsonl a backend replays from its cursor, the launch options and the agent's log",
-  reclaim: { kind: "ttl", ttlDays: 14 },
+    "Per-conversation SDK agent process state, per launching namespace: the numbered events.jsonl a backend replays from its cursor, the launch options and the agent's log — removed with its attempt's workspace, never while its agent runs",
+  // Safe once its agent has stopped: the event numbering continues from the
+  // DB, not from this file. Reclaimed with the attempt's workspace (above).
+  reclaim: { kind: "restart" },
 });
 
 /**

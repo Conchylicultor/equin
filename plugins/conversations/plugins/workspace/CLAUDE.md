@@ -37,6 +37,15 @@ scratch profile provides. Design:
   can name: the worktree, then one choice per scratch profile (label, owner
   plugin via `registeringPlugin()`, MCP tool count, `unavailable` when its
   input has no defaults). Readers never name a profile.
+- **`Workspace.Reclaimed`** — what a plugin keeps per attempt (an SDK
+  agent's state) goes with the attempt's workspace. Every reaper calls
+  `announceWorkspacesReclaimed(attemptIds)` once it deleted workspaces (the
+  worktree sweep in `debug/worktree-cleanup`'s `reapAttempt`, the scratch
+  reaper); every plugin with per-attempt state contributes
+  `WorkspaceReclaimed({ id, onReclaimed })`. Neither side names the other. A
+  server contribution, not a trigger event: the worktree sweep runs in a
+  supervised child, which collects contributions but must not enqueue. Every
+  handler runs even after one throws; then one error names the failures.
 - `plugins/<kind>/` — one impl per kind, registered with `Workspace.define`.
 - `plugins/launch-option/` — the Workspace task launch option (which workspace
   a task's next attempt runs in).
@@ -66,7 +75,7 @@ Orthogonal to the runtime (tmux | sdk): a runtime sees only the cwd and the
 
 ## Plugin reference
 
-- Description: Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to and parseWorkspaceSpec over it (a new attempt's spec, validated before any write), the workspace.catalog live value (every workspace a task can name), and the conversation → workspace lookup.
+- Description: Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to and parseWorkspaceSpec over it (a new attempt's spec, validated before any write), the workspace.catalog live value (every workspace a task can name), the conversation → workspace lookup, and the Workspace.Reclaimed announcement (every reaper calls announceWorkspacesReclaimed once it deleted attempts' workspaces; every plugin keeping per-attempt state contributes a handler that frees it).
 - Server:
   - Contributes: `resource.declare` "workspace.catalog"
   - Uses:
@@ -83,13 +92,16 @@ Orthogonal to the runtime (tmux | sdk): a runtime sees only the cwd and the
     - `WorkspaceAt`
     - `WorkspaceImpl`
     - `WorkspacePrepareCtx`
+    - `WorkspaceReclaimedHandler`
   - Exports (values):
+    - `announceWorkspacesReclaimed`
     - `defineScratchProfile`
     - `findWorkspaceOfConversation`
     - `parseWorkspaceSpec`
     - `ScratchProfile`
     - `Workspace`
     - `workspaceOfConversation`
+    - `WorkspaceReclaimed`
   - Resources: `workspace.catalog` (push, fixed, whole: the worktree plus one entry per registered scratch profile — a handful, fixed at boot, capped: WorkspaceCapabilitySchema.options.length)
 - Core:
   - Uses:
@@ -124,6 +136,7 @@ Orthogonal to the runtime (tmux | sdk): a runtime sees only the cwd and the
     - `conversations/workspace/scratch`
     - `conversations/workspace/worktree`
     - `debug/scratch-hello`
+    - `debug/worktree-cleanup`
     - `tasks/task-triage`
     - `tasks/tasks-core`
 - Test helpers:

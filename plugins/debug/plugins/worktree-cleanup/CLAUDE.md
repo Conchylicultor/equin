@@ -183,7 +183,7 @@ the panel until it is given something to say.
     - `report-kind` "worktree-reap-failed"
     - `resource.declare` "debug.worktree-cleanup.worktrees"
     - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/worktree` ×13
     - `infra/worktree/reclaim` ×4
     - `tasks/tasks-core` ×4
@@ -193,6 +193,7 @@ the panel until it is given something to say.
     - `infra/jobs/supervised-job` ×2
     - `infra/paths` ×2
     - `network/live` ×2
+    - `conversations/workspace.announceWorkspacesReclaimed`
     - `infra/ndjson-stream.ndjsonResponse`
     - `primitives/log-channels.defineLogSink`
     - `reports.ReportKind`

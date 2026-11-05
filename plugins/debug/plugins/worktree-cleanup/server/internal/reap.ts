@@ -16,6 +16,7 @@ import {
   namespacesOwnedByCheckout,
   reclaimNamespace,
 } from "@plugins/infra/plugins/worktree/plugins/reclaim/server";
+import { announceWorkspacesReclaimed } from "@plugins/conversations/plugins/workspace/server";
 import type { ReapStep } from "../../shared/endpoints";
 
 export async function dirExists(path: string): Promise<boolean> {
@@ -46,6 +47,11 @@ export async function reapAttempt(
   },
 ): Promise<WorktreeRemoval> {
   let removal: WorktreeRemoval = { kind: "absent" };
+  // Whether the checkout is gone once this runs: no path known (an orphan
+  // whose directory already went), or its canonical path removed below. A
+  // path outside the worktree root is never removed here, so its checkout may
+  // still be there — and nothing is announced for it.
+  let checkoutGone = !opts.worktreePath;
   if (opts.worktreePath) {
     const root = await ensureMainWorktreeRoot();
     // Deliberately NOT gated on the directory still existing, which is what this
@@ -59,6 +65,7 @@ export async function reapAttempt(
     if (isCanonicalWorktreePath(opts.worktreePath, root)) {
       opts.onStep?.("worktree");
       removal = await removeWorktree(opts.worktreePath);
+      checkoutGone = true;
     }
   }
 
@@ -103,6 +110,18 @@ export async function reapAttempt(
   opts.onStep?.("registry");
   await removeWorktreeSpec(id);
 
+  // The checkout is gone, so whatever other plugins keep for this attempt is
+  // worth nothing now (an SDK agent's state, say): every one that does hears it
+  // here, named by none. A handler that fails is collected like a namespace —
+  // its leftovers are its own backstop's to collect.
+  if (checkoutGone) {
+    try {
+      await announceWorkspacesReclaimed([id]);
+    } catch (err) {
+      derivedFailures.push(String(err));
+    }
+  }
+
   // Contained, then loud. A namespace whose database will not drop must not cost
   // the checkout its own reclaim — that is why the failures were collected rather
   // than thrown where they happened — but containment must not mean silence, so
@@ -113,8 +132,8 @@ export async function reapAttempt(
   // checkout is gone, so the namespace is exactly what that branch enumerates.
   if (derivedFailures.length > 0) {
     throw new Error(
-      `reaped checkout "${id}", but ${derivedFailures.length} namespace(s) it ` +
-        `owned could not be reclaimed: ${derivedFailures.join("; ")}`,
+      `reaped checkout "${id}", but ${derivedFailures.length} namespace(s) or ` +
+        `reclaim handler(s) failed: ${derivedFailures.join("; ")}`,
     );
   }
   return removal;
