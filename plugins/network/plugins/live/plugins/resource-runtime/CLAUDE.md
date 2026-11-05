@@ -867,13 +867,13 @@ Out of reach at this seam (DB-backed harness instead):
 ## Plugin reference
 
 - Core:
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/resource-protocol` ×15
+    - `packages/semaphore` ×2
     - `packages/string-hash` ×2
     - `packages/value-patch` ×2
     - `network/live/canonical-params.canonicalParams`
     - `packages/inflight.createInflight`
-    - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `AliasMembership`
     - `ChangeSource`
