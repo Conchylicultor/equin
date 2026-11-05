@@ -28334,7 +28334,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
               - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
-              - `repo-walk-safety/no-adhoc-repo-listing` — `core/barrel-free-tree.ts`, `core/evaluated-barrels.ts`, `core/plugin-registry-gen.ts` (debt)
+              - `repo-walk-safety/no-adhoc-repo-listing` — `core/barrel-free-tree.ts`, `core/evaluated-barrels.ts` (debt)
           - Plugins:
             - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, and every per-name registry and backend entry on disk — without the build pipeline, so a serving backend (worktree reclaim) can list them.
               - Core:
@@ -28412,7 +28412,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/tooling/codegen`
                   - `framework/tooling/codegen/composition-registries`
               - Exemptions:
-                - Exempts itself from: `boundaries/no-platform-api` — `core/discover.ts` (debt)
+                - Exempts itself from:
+                  - `boundaries/no-platform-api` — `core/discover.ts` (debt)
+                  - `repo-walk-safety/no-adhoc-repo-listing` — `core/discover.ts` (debt)
         - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./equin deps install chromium`). Also owns the two generic tools (screenshot, perf).
           - Core:
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
@@ -28801,7 +28803,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/tooling/checks` (0 debt)
                   - `framework/tooling/checks/no-gitlinks` (0 debt)
                   - `framework/tooling/checks/type-check` (0 debt)
-                  - `framework/tooling/codegen` (3 debt)
+                  - `framework/tooling/codegen` (2 debt)
+                  - `framework/tooling/collected-dir/discovery` (1 debt)
                   - `framework/tooling/lint` (0 debt)
                   - `framework/tooling/web-artifacts` (0 debt)
                   - `infra/deps/build` (0 debt)

@@ -49,7 +49,6 @@ export default [
     paths: [
       "core/barrel-free-tree.ts",
       "core/evaluated-barrels.ts",
-      "core/plugin-registry-gen.ts",
     ],
     kind: "debt",
     task: "task-1793856387-73tcw0",

@@ -360,7 +360,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
     - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
-    - `repo-walk-safety/no-adhoc-repo-listing` — `core/barrel-free-tree.ts`, `core/evaluated-barrels.ts`, `core/plugin-registry-gen.ts` (debt)
+    - `repo-walk-safety/no-adhoc-repo-listing` — `core/barrel-free-tree.ts`, `core/evaluated-barrels.ts` (debt)
 - Sub-plugins:
   - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored…
 
