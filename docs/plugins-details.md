@@ -22200,6 +22200,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `debug/slow-ops.readSlowOpMarkers`
           - `debug/stall-monitor.recordEventLoopStall`
+          - `debug/stall-monitor.recordLoopStallEvidence`
           - `infra/background/timer.defineTimer`
           - `infra/file-watcher.acquireDirWatch`
           - `infra/host/host-read-pool.heavyReadQueueDepth`
@@ -24125,7 +24126,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/trace/engine.captureTrace`
           - `reports.ReportKind`
           - `reports/engine.recordReport`
-        - Exports (values): `recordEventLoopStall`
+        - Exports (values):
+          - `recordEventLoopStall`
+          - `recordLoopStallEvidence`
       - Core:
         - Uses:
           - `config_v2.defineConfig`
@@ -33484,6 +33487,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FlightWindow`
           - `GateGauge`
           - `GateHolder`
+          - `LoopStall`
           - `OriginClass`
           - `ParentBreakdown`
           - `SlowSpan`

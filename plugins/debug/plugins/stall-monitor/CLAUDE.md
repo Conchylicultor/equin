@@ -32,6 +32,13 @@ for error-path reporters where a low-level primitive must not hard-depend on
 "what counts as a stall" — the threshold constant stays there; only an `enabled`
 mute lives in this plugin's config.
 
+A **short** stall (0.5 s up to the freeze threshold) comes in through
+`recordLoopStallEvidence(section, durationMs, thresholdMs)`: the same `stall`
+trace, labelled `short stall: <dominant stack>` (`deriveCulprit`; prefixed so its
+cooldown key never shadows a freeze trace of the same culprit), non-critical, with **no
+report** — main has one in ~5–10% of its 10 s windows, evidence to group by
+label in Debug → Slow Events, not an alert each.
+
 ## Fingerprint on the STACK, not the leaf
 
 `deriveCulprit` (pure, unit-tested) keys the report dedup fingerprint on
@@ -104,7 +111,9 @@ rename.
     - `debug/trace/engine.captureTrace`
     - `reports.ReportKind`
     - `reports/engine.recordReport`
-  - Exports (values): `recordEventLoopStall`
+  - Exports (values):
+    - `recordEventLoopStall`
+    - `recordLoopStallEvidence`
 - Core:
   - Uses:
     - `config_v2.defineConfig`

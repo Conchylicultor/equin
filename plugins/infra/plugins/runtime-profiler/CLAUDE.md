@@ -421,6 +421,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `FlightWindow`
     - `GateGauge`
     - `GateHolder`
+    - `LoopStall`
     - `OriginClass`
     - `ParentBreakdown`
     - `SlowSpan`

@@ -1210,24 +1210,40 @@ const EVENT_LOOP_LAYER = "event-loop";
 // ended), which `loopStallOverlap` relies on to stop early. Bounded: a leaf
 // spanning more stalls than this is undercharged, never overcharged.
 const LOOP_STALL_CAP = 64;
-const loopStalls: { t0: number; t1: number }[] = [];
+const loopStalls: LoopStall[] = [];
 let lastLoopTurn: number | undefined;
+
+/** A registered event-loop stall, on the profiler clock (`performance.now()`). */
+export interface LoopStall {
+  /** When the late probe tick was due — the block began at most one period before. */
+  t0: number;
+  /** When it finally ran: the block's end. */
+  t1: number;
+}
 
 /**
  * One turn of the event-loop probe, called from a timer due every `periodMs`:
  * a tick later than due by more than `toleranceMs` registers the late part as
- * a stall (see the section comment). The first call only sets the baseline.
+ * a stall (see the section comment) and returns it, so the probe's owner can
+ * also attribute it (health-monitor's stall stacks). The first call only sets
+ * the baseline.
  */
-export function noteLoopTurn(periodMs: number, toleranceMs: number): void {
+export function noteLoopTurn(
+  periodMs: number,
+  toleranceMs: number,
+): LoopStall | null {
   const t = now();
+  let stall: LoopStall | null = null;
   if (lastLoopTurn !== undefined) {
     const due = lastLoopTurn + periodMs;
     if (t - due > toleranceMs) {
-      loopStalls.push({ t0: due, t1: t });
+      stall = { t0: due, t1: t };
+      loopStalls.push(stall);
       if (loopStalls.length > LOOP_STALL_CAP) loopStalls.shift();
     }
   }
   lastLoopTurn = t;
+  return stall;
 }
 
 // How much of `[start, end]` the registered stalls cover.

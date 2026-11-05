@@ -36,6 +36,7 @@ const IN_CHECK_X: StackSample = {
       category: "JIT",
     },
   ],
+  atMs: null,
   activity: null,
 };
 

@@ -67,8 +67,15 @@ export interface JscSample {
   frames: StackFrame[];
 }
 
-/** A drained sample: JSC's own, plus the activity running when it was taken. */
+/** A drained sample: JSC's own, plus when and under which activity it was taken. */
 export interface StackSample extends JscSample {
+  /**
+   * When the sample was taken on `performance.now()` (clamped to the window
+   * between the previous drain and this one), or null when the clock could not
+   * place it (see `createSampleClock`). The handle a consumer selects the samples
+   * of a known interval by — an event-loop stall the probe registered.
+   */
+  atMs: number | null;
   /**
    * The `withThreadActivity` interval this sample fell in (innermost when they
    * nest), or null — none was running, or the sample's time could not be placed
@@ -179,14 +186,14 @@ export function createStackSamplerClaim(
         clock.observe(previousDrainMs, drainMs, raw);
         const samples = raw.map((sample): StackSample => {
           const ms = clock.toMs(sample.timestamp);
+          const atMs =
+            ms === null
+              ? null
+              : Math.min(drainMs, Math.max(previousDrainMs, ms));
           return {
             ...sample,
-            activity:
-              ms === null
-                ? null
-                : activities.at(
-                    Math.min(drainMs, Math.max(previousDrainMs, ms)),
-                  ),
+            atMs,
+            activity: atMs === null ? null : activities.at(atMs),
           };
         });
         // Every later sample is taken after this drain, so an activity that

@@ -17,6 +17,7 @@ const frame = (sourceURL: string | null) => ({
 const sample = (urls: (string | null)[], timestamp = 0): StackSample => ({
   timestamp,
   frames: urls.map(frame),
+  atMs: null,
   activity: null,
 });
 

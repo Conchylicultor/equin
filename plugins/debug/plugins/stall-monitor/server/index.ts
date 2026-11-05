@@ -3,7 +3,10 @@ import { ConfigV2 } from "@plugins/config_v2/server";
 import { stallMonitorConfig } from "../core";
 import { stallMonitorKind } from "./internal/stall-kind";
 
-export { recordEventLoopStall } from "./internal/record-stall";
+export {
+  recordEventLoopStall,
+  recordLoopStallEvidence,
+} from "./internal/record-stall";
 
 export default {
   description:

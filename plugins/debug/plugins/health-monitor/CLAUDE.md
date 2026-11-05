@@ -71,6 +71,23 @@ dead-end `stall-profiles.jsonl` that nothing read.) The Health pane still shows
 *that* a stall happened via the `eventLoopMaxMs` spike line; the trace + report
 answer *why*. See `server/internal/stall-profiler.ts`.
 
+### Short stalls (0.5–3 s) → their own stacks
+
+A block below the freeze threshold is attributed too, from **its own samples**
+only. The loop probe's `noteLoopTurn` returns each stall it registers; one of
+`STALL_EVIDENCE_MS` (500) up to 3 s calls `noteRegisteredStall`, which drains the
+sampler right after the block, keeps the samples placed (`StackSample.atMs`)
+inside `[t0 − probe period, t1]`, and hands the aggregate to stall-monitor's
+`recordLoopStallEvidence` — a non-critical `stall` trace labelled with the
+dominant stack, **no report** (main had one in ~5–10% of its 10 s windows on
+2026-11-05: too many to alert on, and each is still a delay for every op behind
+it). Scoping to the block matters: the 10 s window's samples would drown a 600 ms
+block in the window's ordinary work. A trace with `nSamples: 0` means the thread
+ran no JS during the block (descheduled, or native work). Early drains go to a
+buffer the 10 s tick consumes, so the window aggregation and the latency
+ledger's observers still see every sample once; the tick keeps its previous
+batch, since after a block the tick may drain before the probe registers it.
+
 **`topStacks` carries its own `frames`.** Each stack bucket ships, alongside its
 name-only `stack` signature, the resolved `frameKey` identities of the same
 frames (the primitive's `frameKey`, with paths made cwd-relative — the
@@ -139,6 +156,7 @@ measured overhead on a real worktree workload is still an open task.
   - Uses:
     - `debug/slow-ops.readSlowOpMarkers`
     - `debug/stall-monitor.recordEventLoopStall`
+    - `debug/stall-monitor.recordLoopStallEvidence`
     - `infra/background/timer.defineTimer`
     - `infra/file-watcher.acquireDirWatch`
     - `infra/host/host-read-pool.heavyReadQueueDepth`

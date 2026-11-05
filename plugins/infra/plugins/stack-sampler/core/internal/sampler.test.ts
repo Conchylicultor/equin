@@ -172,7 +172,7 @@ test("claim: a second owner throws, naming both owners", () => {
 
 test("claim: drain normalizes each read", () => {
   const { state, backend } = fakeBackend();
-  const sampler = createStackSamplerClaim(backend)("owner");
+  const sampler = createStackSamplerClaim(backend, { now: () => 10 })("owner");
   state.raw = {
     interval: 0.001,
     traces: [
@@ -196,6 +196,8 @@ test("claim: drain normalizes each read", () => {
           category: "FTL",
         },
       ],
+      // A one-sample batch between two drains at 10 places it there.
+      atMs: 10,
       activity: null,
     },
   ]);
@@ -289,5 +291,31 @@ describe("activities", () => {
       null,
       null,
     ]);
+  });
+
+  test("drain places each sample on performance.now() once the clock has closed", () => {
+    const OFFSET_MS = 7_000;
+    let nowMs = 0;
+    const raw = { interval: 0.001, traces: [] as unknown[] };
+    const sampler = createStackSamplerClaim(
+      { start: () => {}, read: () => raw },
+      { now: () => nowMs },
+    )("owner");
+    const trace = (ms: number) => ({
+      timestamp: (ms + OFFSET_MS) / 1000,
+      frames: [{ name: "spin", line: NO_LINE, category: "FTL" }],
+    });
+
+    // A thread busy across the drain at 100: the first sample of the next batch
+    // is taken right after it, the last right before it — the offset closes.
+    raw.traces = [trace(0.5), trace(99.5)];
+    nowMs = 100;
+    sampler.drain();
+    raw.traces = [trace(100.5), trace(150), trace(199.5)];
+    nowMs = 200;
+    const placed = sampler.drain().map((s) => s.atMs!);
+    expect(placed[0]).toBeCloseTo(100.5, 0);
+    expect(placed[1]).toBeCloseTo(150, 0);
+    expect(placed[2]).toBeCloseTo(199.5, 0);
   });
 });

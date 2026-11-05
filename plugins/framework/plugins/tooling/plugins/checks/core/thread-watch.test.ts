@@ -37,6 +37,7 @@ function samples(n: number, frames: StackFrame[]): StackSample[] {
   return Array.from({ length: n }, (_, i) => ({
     timestamp: i,
     frames,
+    atMs: null,
     activity: null,
   }));
 }
@@ -70,6 +71,7 @@ describe("stepWatch", () => {
     const during: StackSample = {
       timestamp: 0,
       frames: [native("(anonymous)")],
+      atMs: null,
       activity: {
         name: "barrel import",
         detail: "plugins/apps/plugins/mail/web/index.ts",

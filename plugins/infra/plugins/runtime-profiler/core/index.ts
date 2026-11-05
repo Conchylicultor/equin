@@ -55,4 +55,5 @@ export type {
   FlightWindow,
   GateGauge,
   GateHolder,
+  LoopStall,
 } from "./recorder";

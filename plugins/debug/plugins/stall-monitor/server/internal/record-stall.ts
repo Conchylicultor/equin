@@ -71,3 +71,30 @@ export function recordEventLoopStall(
     message: `Event-loop stall ${Math.round(durationMs)}ms — ${hotFrame}`,
   });
 }
+
+// The evidence side of a SHORT stall (0.5 s up to the report threshold): the
+// stacks the sampler took during ONE registered block, as a `stall` trace in
+// Debug → Slow Events — no report. Main stalled like this in 5–10% of its 10 s
+// windows (2026-11-05), too often for each to be an alert, and until this seam
+// none of them carried a stack: a block that is not a freeze still delays every
+// query and push in flight behind it. Non-critical, so the trace engine's
+// cooldown, per-minute ceiling and duress shedding all apply; labelled with the
+// dominant caller stack like the freeze trace, so one recurring culprit is one
+// trigger and its traces group by label. The label is prefixed: the engine's
+// cooldown key is kind:label, so sharing the freeze trace's label would let a
+// short stall's trace cool down the critical trace of a freeze of the same
+// culprit right after it — and its report would lose the evidence link.
+export function recordLoopStallEvidence(
+  section: StallSection,
+  durationMs: number,
+  thresholdMs: number,
+): void {
+  const { culpritStack } = deriveCulprit(section);
+  captureTrace({
+    kind: "stall",
+    label: `short stall: ${culpritStack}`,
+    durationMs,
+    thresholdMs,
+    detail: section,
+  });
+}

@@ -103,6 +103,9 @@ a process whose sampler was never claimed.
   this one — and the brackets are intersected across batches
   (`createSampleClock`). While the thread is busy across drains they close to about
   one sample period. A batch that contradicts them restarts the estimate.
+- **`atMs`.** Each drained sample carries its placed `performance.now()` time
+  (null when the clock cannot place it yet), so a consumer can select the samples
+  of a known interval — health-monitor picks a registered event-loop stall's.
 - **When, not who.** The interval also covers whatever else ran while the marked
   work awaited. A consumer names only frameless samples with it (the check-thread
   watch's `native during <name>` owner), never overrides a frame that names its

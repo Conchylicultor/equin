@@ -1,4 +1,8 @@
-import { recordEventLoopStall } from "@plugins/debug/plugins/stall-monitor/server";
+import {
+  recordEventLoopStall,
+  recordLoopStallEvidence,
+} from "@plugins/debug/plugins/stall-monitor/server";
+import type { LoopStall } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   claimStackSampler,
   frameKey,
@@ -43,6 +47,12 @@ import type {
 // Matches the "stalls > 3 s" cohort the investigation tracks in health.jsonl.
 const STALL_THRESHOLD_MS = 3_000;
 
+// A shorter block the loop probe registered gets its OWN stacks (a `stall` trace,
+// no report) from this long: the slow-op bar, so a block that could make any op
+// look slow names what ran. Measured on main (2026-11-05): ~9% of 10 s windows
+// hold a 0.5–3 s block, and 79% of slow `db` samples overlapped one.
+const STALL_EVIDENCE_MS = 500;
+
 // Cap the per-trace stack signature so a deep recursion can't bloat a line.
 const MAX_SIGNATURE_FRAMES = 40;
 
@@ -50,6 +60,20 @@ const TOP_LEAVES = 15;
 const TOP_STACKS = 10;
 
 let sampler: StackSampler | null = null;
+
+// The samples drained since the sampler tick last consumed them, and the batch it
+// consumed before that. A registered stall drains early (so its trace is captured
+// right after the block, with the spans that were in flight), and a sampler tick
+// may run first after a block — before the probe registers it — so a stall's
+// samples are in one of the two.
+let pending: StackSample[] = [];
+let previousWindow: StackSample[] = [];
+
+function collect(): void {
+  if (!sampler) return;
+  const drained = sampler.drain();
+  if (drained.length > 0) pending = pending.concat(drained);
+}
 
 // Stack-sample observers — the `onSlowSpan` shape. Called once per drain (every
 // 10 s tick while armed) with that window's samples. Armed always on main, and on
@@ -191,6 +215,68 @@ export function startStallProfiler(): void {
 // re-claims the same handle (same owner).
 export function stopStallProfiler(): void {
   sampler = null;
+  pending = [];
+  previousWindow = [];
+}
+
+/**
+ * The samples taken during one registered stall: the block began at most one
+ * probe period before the late tick was due (`t0`), and ended when it ran (`t1`).
+ * A sample the clock could not place is left out — never guessed into a block.
+ */
+export function samplesInStall(
+  samples: readonly StackSample[],
+  stall: LoopStall,
+  probePeriodMs: number,
+): StackSample[] {
+  const from = stall.t0 - probePeriodMs;
+  return samples.filter(
+    (s) => s.atMs !== null && s.atMs >= from && s.atMs <= stall.t1,
+  );
+}
+
+/**
+ * A stall the loop probe just registered (called from its tick, right after the
+ * block). One of STALL_EVIDENCE_MS up to the freeze threshold is attributed from
+ * its own samples — only the block's, not the 10 s window's — and captured as a
+ * `stall` trace; a freeze stays the sampler tick's (window stacks + report).
+ */
+export function noteRegisteredStall(
+  stall: LoopStall,
+  probePeriodMs: number,
+): void {
+  if (!sampler) return;
+  const durationMs = stall.t1 - stall.t0;
+  // The 10 s window's eventLoopMaxMs reads the same block up to one probe
+  // period longer than this lateness, so a block near the threshold belongs to
+  // the freeze path — never filed by both.
+  if (
+    durationMs < STALL_EVIDENCE_MS ||
+    durationMs > STALL_THRESHOLD_MS - probePeriodMs
+  )
+    return;
+  collect();
+  const inStall = samplesInStall(
+    previousWindow.concat(pending),
+    stall,
+    probePeriodMs,
+  );
+  const { topLeaves, topStacks } = aggregateTraces(inStall);
+  // No sample in the block: the thread was not running JS (descheduled on a
+  // loaded host, or native work the sampler cannot see). Still evidence — a
+  // trace with nSamples 0 says the block was not this process's JS.
+  recordLoopStallEvidence(
+    {
+      nSamples: inStall.length,
+      sampleRateHz: Math.round(
+        inStall.length / ((durationMs + probePeriodMs) / 1000),
+      ),
+      topLeaves,
+      topStacks,
+    },
+    durationMs,
+    STALL_EVIDENCE_MS,
+  );
 }
 
 // Always drain (bounds memory + aligns the window). If the window stalled past
@@ -203,7 +289,10 @@ export function drainAndMaybeDump(
   windowMs: number,
 ): void {
   if (!sampler) return;
-  const traces = sampler.drain();
+  collect();
+  const traces = pending;
+  previousWindow = pending;
+  pending = [];
   // Every drained batch, stall or not: what ran on the thread this window. Until
   // this seam the samples of a healthy window were thrown away, so "what does this
   // thread spend its time on" could only be answered during a freeze.

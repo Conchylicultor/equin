@@ -3,7 +3,7 @@ import {
   claimStackSampler,
   type StackFrame,
 } from "@plugins/infra/plugins/stack-sampler/core";
-import { aggregateTraces } from "./stall-profiler";
+import { aggregateTraces, samplesInStall } from "./stall-profiler";
 
 // Synthetic traces: deterministic histogram + percentage math.
 test("aggregateTraces builds leaf + stack histograms with percentages", () => {
@@ -184,4 +184,20 @@ test("real JSC capture names the blocking function", () => {
   const { topLeaves, topStacks } = aggregateTraces(traces);
   const named = JSON.stringify({ topLeaves, topStacks });
   expect(named).toContain("uniquelyNamedBusyBlock");
+});
+
+// A short stall is attributed from ITS samples only: the block began at most one
+// probe period before the late tick was due, ended when it ran, and a sample the
+// clock could not place is never guessed into it.
+test("samplesInStall keeps the samples taken during the block, nothing around it", () => {
+  const at = (atMs: number | null) => ({
+    timestamp: 0,
+    frames: [jsFrame(`f${atMs}`, "/x/a.ts", 1)],
+    atMs,
+    activity: null,
+  });
+  const samples = [at(50), at(120), at(400), at(900), at(905), at(null)];
+  // The tick due at 200 ran at 900: the block began after the turn at 100.
+  const kept = samplesInStall(samples, { t0: 200, t1: 900 }, 100);
+  expect(kept.map((s) => s.atMs)).toEqual([120, 400, 900]);
 });
