@@ -75,9 +75,17 @@ function textOf<T extends string, M extends Partial<DeclaredDefault>>(
  * `enumTextField`'s options: the field meta, with `options` keyed by exactly
  * the field's values (each value's label, chip tint and tooltip).
  */
-type EnumTextOptions<V extends string> = Omit<FieldMeta, "optionMeta"> & {
+type EnumTextOptions<V extends string> = Omit<
+  FieldMeta,
+  "optionMeta" | "valueOrder"
+> & {
   default?: V;
   options?: { readonly [K in V]: FieldOptionMeta };
+  /**
+   * The values are listed in their order (`FieldMeta.valueOrder`): a list
+   * sorts the field by position in `values`, not alphabetically.
+   */
+  ordered?: true;
 };
 
 // The closed-set sugar over `parsedTextField`. Pass the allowed values — a
@@ -87,7 +95,8 @@ type EnumTextOptions<V extends string> = Omit<FieldMeta, "optionMeta"> & {
 // the same record agree by construction. `default` defaults to the first value
 // — a declared `default` marks the field (`DeclaredDefault`: see
 // `FieldDef.defaultDeclared`); the implicit first value does not. `options`
-// presents each value (`{ main: { label: "Main", variant: "primary" } }`).
+// presents each value (`{ main: { label: "Main", variant: "primary" } }`);
+// `ordered: true` makes the tuple's order the field's sort order.
 // The options mark the field (`FieldMarks`).
 export function enumTextField<
   const T extends readonly string[],
@@ -110,9 +119,20 @@ export function enumTextField<
       );
     }
   }
+  if (opts?.ordered === true && new Set(values).size !== values.length) {
+    throw new Error(
+      "enumTextField: an ordered field lists each value once — its position is its order.",
+    );
+  }
   return textOf(
     z.enum(values),
-    opts === undefined ? undefined : { ...opts, optionMeta: opts.options },
+    opts === undefined
+      ? undefined
+      : {
+          ...opts,
+          optionMeta: opts.options,
+          ...(opts.ordered === true ? { valueOrder: values } : {}),
+        },
     opts?.default ?? first,
     declaredDefault(opts),
   ) as FieldDef<T[number]> & FieldMarks<O>;

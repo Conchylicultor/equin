@@ -381,3 +381,25 @@ The two trees step 5 left out, judged once the primitive had landed:
   tree contract an external-source form first (a `hasChildren` in place of a
   count, ancestors by path, refusals per level) — a primitive change of its
   own, not this step.
+
+## Follow-up: every shown field sorts and filters on the server (task att-1793865869)
+
+Moving the Tasks list onto `tasks.tree` lost two things the in-memory set had
+(and, for `status`, never had right: in memory it sorted alphabetically too):
+
+- **Custom columns** — the tree was `unscoped`. Both trees (`tasks.tree`,
+  `pages.tree.v2`) now declare `scopedColumns: true`: a surface's custom
+  columns are scoped columns of the window (the family join, per query), and
+  data-view's live tree already threads each level's `columns`. The only
+  `unscoped` source left is the job queue (served outside Postgres).
+- **Enum order** — a declared, generic property of the field, not a
+  per-collection hack: `enumTextField(values, { ordered: true })`. The
+  position is the window's order key (`array_position(values, col::text)`,
+  registered as an `integer` expression so cuts cast back to it), on a
+  single-table window and a union alike; the in-memory comparator reads the
+  same `valueOrder`. `status` is ordered by `TASK_STATUS_ORDER` (open →
+  running → waiting on the user → settled) and is `sortable` on `tasks.tree`.
+  Rejected: a stored ordinal column (a second spelling of the value, a
+  migration per enum, and drift when the order changes); sorting by the
+  options record's key order (options are presentation, and not every enum
+  declares them).

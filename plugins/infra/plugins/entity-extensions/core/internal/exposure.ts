@@ -180,6 +180,11 @@ export interface ExposedField<W = unknown> {
    */
   readonly absent: ExposedAbsent;
   readonly options: Readonly<Record<string, ExposedOption>> | null;
+  /**
+   * The field's declared value order (`FieldMeta.valueOrder`, an ordinal
+   * enum): every list sorts it by position here. `null` = sorted as its type.
+   */
+  readonly order: readonly string[] | null;
   /** Set on the presence field — a read of the side row's existence, no column. */
   readonly presence: ExposedPresence | null;
 }
@@ -291,6 +296,7 @@ export function resolveExposure(
       wire: wire as z.ZodType<unknown>,
       absent: absent as ExposedAbsent,
       options: options === undefined ? null : Object.freeze({ ...options }),
+      order: field.meta.valueOrder ?? null,
       presence: null,
     });
     shape[f] = wire;
@@ -331,6 +337,7 @@ export function resolveExposure(
         presence.options === undefined
           ? null
           : Object.freeze({ ...presence.options }),
+      order: null,
       presence: Object.freeze({
         values: values === null ? null : Object.freeze({ ...values }),
       }),

@@ -84,6 +84,29 @@ export const TASK_STATUS_OPTIONS = {
   },
 } as const satisfies Record<TaskStatus, FieldOptionMeta>;
 
+/**
+ * The task statuses in the order a list sorts them by (the `status` field is
+ * ordinal: `enumTextField(TASK_STATUS_ORDER, { ordered: true })`) — from not
+ * started, through running and waiting on the user, to settled — never their
+ * text. Every status exactly once (tsc, below).
+ */
+export const TASK_STATUS_ORDER = [
+  "new",
+  "blocked",
+  "in_progress",
+  "in_progress_blocked",
+  "need_action",
+  "attempted",
+  "held",
+  "done",
+  "dropped",
+] as const satisfies readonly TaskStatus[];
+// A status missing from the order is a type error here.
+({}) satisfies Record<
+  Exclude<TaskStatus, (typeof TASK_STATUS_ORDER)[number]>,
+  never
+>;
+
 // Every value names a fact the attempt's row PROVES (invariant I6, see the
 // status CASE in server/internal/views.ts). `pushed` / `completed` are the only
 // two that claim anything about work landing, and both require a `pushes` row;

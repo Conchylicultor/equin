@@ -70,6 +70,37 @@ const window = liveCollection("test.live-fields.window", {
   maxLimit: 40,
 });
 
+describe("an ordinal field (`enumTextField(values, { ordered: true })`)", () => {
+  const ranked = liveCollection("test.live-fields.ordinal", {
+    fields: {
+      phase: enumTextField(["todo", "doing", "done"] as const, {
+        label: "Phase",
+        ordered: true,
+      }),
+      kind: enumTextField(["b", "a"] as const, { label: "Kind" }),
+    },
+    carry: { fields: { id: textField() } },
+    id: "id",
+    sortable: ["phase", "kind"],
+    default: { orderBy: [["phase", "asc"]], limit: 10 },
+    maxLimit: 40,
+  });
+
+  test("carries its values, in their declared order, as the field's order", () => {
+    expect(ranked.fields.phase.order).toEqual(["todo", "doing", "done"]);
+  });
+
+  test("an enum not declared ordered sorts as its type: no order", () => {
+    expect(ranked.fields.kind.order).toBeNull();
+  });
+
+  test("an ordered field listing a value twice throws", () => {
+    expect(() =>
+      enumTextField(["a", "b", "a"] as const, { label: "X", ordered: true }),
+    ).toThrow(/each value once/);
+  });
+});
+
 describe("liveCollection — the fields spelling", () => {
   test("derives the row: picked, own and carried fields, plus `$columns` when it reaches an entity", () => {
     expect(window.rowKeys).toEqual([
@@ -121,6 +152,7 @@ describe("liveCollection — the fields spelling", () => {
       primary: true,
       domain: "text",
       sortable: true,
+      order: null,
       clock: null,
     });
     expect(window.fields.status.options).toEqual({

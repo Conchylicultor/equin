@@ -55,6 +55,7 @@ import {
   type LiveGroup,
   type LiveGroupParams,
   type LiveField,
+  type LiveFields,
   type LiveWindowParams,
   type WithContributedColumns,
 } from "@plugins/network/plugins/live/core";
@@ -684,11 +685,23 @@ export function compileUnion<
    * member, read the same in every arm (one alias per member: any arm's plan
    * renders it).
    */
+  // Each ordinal field's declared value order (`LiveField.order`): the
+  // union's base fields' and every column set's (arms, exposures), by wire
+  // name — sorted by position, never by text (`UnionOrderKey.ordinal`).
+  const ordinals = new Map<string, readonly string[]>([
+    ...Object.values(
+      (collection as { fields?: LiveFields }).fields ?? {},
+    ).flatMap((f): [string, readonly string[]][] =>
+      f.order === null ? [] : [[f.id, f.order]],
+    ),
+    ...handles.flatMap((h) => Object.entries(h.wireOrder)),
+  ]);
   const orderOf = (params: LiveWindowParams): UnionOrderKey[] => {
     const q = decode(params);
     return q.orderBy.map(([name, dir]): UnionOrderKey => {
       if (typeOf.has(name) || name === discriminator || name === idField) {
-        return { name, dir };
+        const ordinal = ordinals.get(name);
+        return ordinal === undefined ? { name, dir } : { name, dir, ordinal };
       }
       const member =
         plans.length === 0

@@ -21,15 +21,13 @@ const TASKS_LIST_VIEW = defineDataView("tasks-list");
  * The tasks tree, read live and bounded: the root level a paged window, each
  * open task's children a window of their own, a filter or a search its hits
  * with their folder chains (data-view's live trees over `taskWindow`, a
- * `tree` collection) — never the whole set of tasks.
+ * `tree` collection) — never the whole set of tasks. Every field it shows
+ * sorts and filters there: the surface's custom columns are scoped columns
+ * of `taskWindow`, and `status` sorts in its declared order.
  */
 const TASKS_SOURCE = liveDataSource(taskWindow, {
   surface: TASKS_LIST_VIEW,
   searchable: ["title"],
-  unscoped: {
-    reason:
-      "the task list sorts and filters on the server, which holds no custom columns for tasks yet",
-  },
 });
 
 const TREE_OPTIONS = buildTreeOptions({});

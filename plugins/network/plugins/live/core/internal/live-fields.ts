@@ -60,6 +60,13 @@ export interface LiveField {
   /** Its column sorts (declared `sortable`). */
   readonly sortable: boolean;
   /**
+   * The field's declared value order (`FieldMeta.valueOrder` — an ordinal
+   * enum, `enumTextField(values, { ordered: true })`): it sorts by each
+   * value's position here, on the server (the window's order key is the
+   * position) and in memory alike. `null` = sorted as its type sorts.
+   */
+  readonly order: readonly string[] | null;
+  /**
    * Declared against the clock (`clockField`): its value is not on the row —
    * the reader computes it from the row's inputs (`clockFieldValue`), and a
    * query naming it in `where` / `orderBy` pins `now`. `null` for an ordinary
@@ -491,6 +498,7 @@ export function resolveFieldsSpec(
               primary: field.meta.primary === true,
               domain: filterable[name]?.domain ?? null,
               sortable: sortable.includes(name),
+              order: field.meta.valueOrder ?? null,
               clock: clocks.get(name) ?? null,
             } satisfies LiveField),
           ]),

@@ -673,6 +673,14 @@ interface FieldDefBase<TRow> {
    */
   valueDomain?: "boolean" | "number";
   /**
+   * The values in their declared order (an ordinal enum — `LiveField.order`,
+   * from `enumTextField(values, { ordered: true })`): a sort on the field
+   * orders rows by each value's position here, as the server orders a live
+   * window by it — never by the text. A value it does not list sorts last.
+   * Absent = sorted by `value` as it compares.
+   */
+  valueOrder?: readonly string[];
+  /**
    * Multi-value projection for tags-style fields. Folded into search and read by
    * the filter as a `stringArray` row value. Mutually exclusive with `value`.
    */

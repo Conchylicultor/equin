@@ -114,6 +114,12 @@ export interface LiveColumnsDeclaration<
   readonly wireFilterable: WF;
   /** The sortable wire names. */
   readonly wireSortable: readonly WS[];
+  /**
+   * The ordinal fields' declared value orders, by WIRE name (`LiveField.order`
+   * — an `enumTextField(values, { ordered: true })`): a window sorting by one
+   * orders by the value's position. A field it omits sorts as its type.
+   */
+  readonly wireOrder: Readonly<Record<string, readonly string[]>>;
 }
 
 /**
@@ -158,7 +164,13 @@ export type TypedColumnsParts<
 export function typedColumns<CRow, F, S extends string, N extends string>(
   owner: LiveColumnsOwner,
   name: N,
-  spec: { row: LiveRowSchema<CRow>; filterable: F; sortable: readonly S[] },
+  spec: {
+    row: LiveRowSchema<CRow>;
+    filterable: F;
+    sortable: readonly S[];
+    /** Each ordinal field's declared value order, by field. */
+    order: Readonly<Record<string, readonly string[]>>;
+  },
   fail: (message: string) => never,
   self: () => LiveColumnsDeclaration,
 ): TypedColumnsParts<CRow, F, S, N> {
@@ -178,6 +190,14 @@ export function typedColumns<CRow, F, S extends string, N extends string>(
   const wireSortable = spec.sortable.map(
     (f) => wireName(f) as WireSortable<N, S>,
   );
+  for (const f of Object.keys(spec.order)) {
+    if (!(spec.sortable as readonly string[]).includes(f)) {
+      fail(`"${f}" declares a value order but is not a sortable field`);
+    }
+  }
+  const wireOrder = Object.fromEntries(
+    Object.entries(spec.order).map(([f, order]) => [wireName(f), order]),
+  );
   const parts: TypedColumnsParts<CRow, F, S, N> = {
     kind: "live-columns",
     name,
@@ -189,6 +209,7 @@ export function typedColumns<CRow, F, S extends string, N extends string>(
     wireName,
     wireFilterable,
     wireSortable,
+    wireOrder,
     column: (field) => {
       const declared = Object.hasOwn(filterable, field)
         ? filterable[field]
@@ -273,6 +294,7 @@ function armColumns<
     row: LiveRowSchema<CRow>;
     filterable: F;
     sortable: readonly S[];
+    order: Readonly<Record<string, readonly string[]>>;
   },
 ): LiveArmColumnsHandle<WithContributedColumns<Row>, CRow, F, S, A> {
   const fail = (message: string): never => {
@@ -395,6 +417,8 @@ export function scopedLiveColumns<const N extends string>(
     wireName,
     wireFilterable,
     wireSortable,
+    // A member's values are data (a custom column's): none declares an order.
+    wireOrder: {},
     column: (member) => {
       const m = Object.hasOwn(members, member) ? members[member] : undefined;
       if (m === undefined) fail(`column("${member}"): not a member`);
@@ -597,6 +621,14 @@ export function liveArm<
     filterable: filterable as unknown as FieldsFilterable<Listed> &
       LiveFilterable<Slice>,
     sortable,
+    order: Object.fromEntries(
+      Object.entries(listedFields).flatMap(([name, field]) =>
+        field.meta.valueOrder !== undefined &&
+        (sortable as readonly string[]).includes(name)
+          ? [[name, field.meta.valueOrder]]
+          : [],
+      ),
+    ),
   });
   const listed = Object.freeze(
     Object.fromEntries(
@@ -614,6 +646,7 @@ export function liveArm<
           primary: false,
           domain: filterable[name]?.domain ?? null,
           sortable: (sortable as readonly string[]).includes(name),
+          order: field.meta.valueOrder ?? null,
           // An arm's own fields are its table's columns; only a union's base
           // fields may be declared against the clock.
           clock: null,

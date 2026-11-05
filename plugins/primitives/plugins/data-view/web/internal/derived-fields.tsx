@@ -234,6 +234,7 @@ function derivedField(
     type: options !== undefined ? "enum" : field.typeId,
     ...(options !== undefined ? { options } : {}),
     ...(valueDomain !== undefined ? { valueDomain } : {}),
+    ...(field.order !== null ? { valueOrder: field.order } : {}),
     ...(field.domain === "stringArray"
       ? { values: (row) => (read(row) as string[] | undefined) ?? [] }
       : { value: (row) => (read(row) ?? null) as FieldValue }),
@@ -420,6 +421,7 @@ export function deriveFields(
             primary: false,
             domain: columns.wireFilterable[wire]?.domain ?? null,
             sortable: columns.wireSortable.includes(wire),
+            order: exposed.order,
             clock: null,
           },
           (row) => columns.read(row as Parameters<typeof columns.read>[0])[key],
@@ -472,6 +474,7 @@ export function deriveFields(
             primary: false,
             domain: columns.wireFilterable[wire]?.domain ?? null,
             sortable: columns.wireSortable.includes(wire),
+            order: exposed.order,
             clock: null,
           },
           // Another arm's row carries no slice of this exposure.

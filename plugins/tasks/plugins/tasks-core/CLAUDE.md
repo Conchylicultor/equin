@@ -237,8 +237,10 @@ serves them.
   WINDOW (`rank` then `createdAt`, 100 / 500, not preloaded), served with the
   same joins (`taskWindowServeOptions`), declared `tree: { parent:
   "folderId", rank: "rank" }` (network/live *Trees*). `status` and the other
-  derived fields filter and sort on the server, and a task whose status moves
-  enters or leaves a filtered window. `folderId` is LISTED here (a tree's
+  derived fields filter and sort on the server (`status` in its declared
+  order, `TASK_STATUS_ORDER` — an ordinal field, never alphabetical), and a
+  task whose status moves enters or leaves a filtered window. It takes
+  `scopedColumns`: the task list's custom columns sort and filter it too. `folderId` is LISTED here (a tree's
   parent is a filterable field; labelled "Folder" on the entity), carried on
   `taskRows` — the wire row is the same. Every row carries `$childCount`: the
   `task_child_count` rollup (`taskChildCount`, a `materializeJoin` of the

@@ -695,6 +695,17 @@ conversationHistory.fields.status;
   carried by every `liveCollection({ from: ref })`), an exposure, an arm, a
   row kind, client fields, or a field-declared collection. Two plugins
   setting the same property of one field throws.
+- **An enum declares its sort order — `enumTextField(values, { ordered: true })`**:
+  the tuple's order is the field's (`FieldMeta.valueOrder` → `LiveField.order`,
+  an exposed field's `ExposedField.order`, a column set's `wireOrder`). A
+  window sorted by it orders by POSITION, never text: `serveCollection` /
+  `serveUnionCollection` pass `WindowOrderKey.ordinal` / `UnionOrderKey.ordinal`
+  and query-resource orders, cuts and keys by `array_position(values, col::text)`
+  (`JoinPlan.renderOrdinal`; the `$key` part is the position, the order
+  signature still the value); data-view's in-memory sort reads the same order
+  (`FieldDef.valueOrder`). A NULL or unlisted value orders last. Tests:
+  `server/internal/serve-collection-ordinal.test.ts`,
+  `serve-union-ordinal.test.ts`. (Tasks' `status`: `TASK_STATUS_ORDER`.)
 - **Options label every value by canonical spelling** (`optionKey`): a string
   is itself, boolean/number its `String`, `"null"` is no-value (→ `isEmpty`
   filter, "None" section label).
@@ -835,6 +846,9 @@ page; `trash-entries`: every trash surface), each with its own columns.
   route keeps only its own arm's keys. An ordered-by member is a per-tuple
   transient outer column (NULL-able, NULLS LAST in both directions, cut like
   any key). Oracle: `server/internal/serve-union-scoped-oracle.test.ts`.
+- **Trees take them too** (`tasks.tree`, `pages.tree.v2`): every level's
+  read and a hits read name the scope when they sort or filter by a member
+  (data-view's live tree builds each level's `columns`).
 - **Browser**: `scopedLiveColumns(scope, name, members)`. The flag stays
   LITERAL on the collection's type (`LiveScopedColumnsOf`), so a live
   DataView source over a collection without it must say why its surface's

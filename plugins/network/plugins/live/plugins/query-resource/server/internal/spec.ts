@@ -113,6 +113,15 @@ export interface WindowOrderKey {
   dir?: "asc" | "desc";
   /** Nullable column → symmetric NULLS LAST handling (see `primitives/keyset`). Default `false`. */
   nullable?: boolean;
+  /**
+   * The column's values in their declared order (an ordinal enum field): the
+   * window orders by each value's POSITION here (`JoinPlan.renderOrdinal`),
+   * not by the value — its ORDER BY, cuts and row keys all read the
+   * position, while the order signature still reads `col` (a change of the
+   * value is what moves the position). A value not listed orders last, as
+   * NULL does. Absent = ordered by `col` itself.
+   */
+  ordinal?: readonly string[];
 }
 
 /**

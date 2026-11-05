@@ -115,11 +115,15 @@ export function exposedColumns<
   };
   const filterable: Record<string, FilterColumn> = {};
   const sortable: string[] = [];
+  const order: Record<string, readonly string[]> = {};
   for (const [field, f] of Object.entries(exposure.fields)) {
     const domain = schemaDomain(f.wire);
     if (domain === null) continue;
     filterable[field] = { domain } as FilterColumn;
-    if (domain !== "stringArray") sortable.push(field);
+    if (domain !== "stringArray") {
+      sortable.push(field);
+      if (f.order !== null) order[field] = f.order;
+    }
   }
   const owner = { kind: "exposed", entity: exposure.parent.name } as const;
   // The runtime derivation (`schemaDomain` over each wire schema) is the
@@ -131,6 +135,7 @@ export function exposedColumns<
       row: exposure.row,
       filterable: filterable as unknown as ExposedFilterable<R>,
       sortable: sortable as ExposedSortable<R>[],
+      order,
     },
     fail,
     () => handle,

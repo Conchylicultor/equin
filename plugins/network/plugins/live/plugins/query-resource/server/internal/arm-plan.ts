@@ -604,13 +604,27 @@ export function planArm<Row, P extends ResourceParams>(
   //
   // A column a LEFT join reads is NULL for a host with no joined row, whatever
   // its own NOT NULL says — so it orders as nullable.
+  // An ordinal key orders by its value's declared position: the position IS
+  // the key (ORDER BY, cut operand cast, row-key text), its column only what
+  // the signature watches.
   const orderKeys = (declared: readonly WindowOrderKey[]): SortKey[] => {
-    const keys: SortKey[] = declared.map((k) => ({
-      fieldId: nameOf(k.col),
-      col: k.col,
-      dir: k.dir ?? "asc",
-      nullable: (k.nullable ?? false) || joins.canBeNull(k.col),
-    }));
+    const keys: SortKey[] = declared.map((k) => {
+      if (k.ordinal === undefined) {
+        return {
+          fieldId: nameOf(k.col),
+          col: k.col,
+          dir: k.dir ?? "asc",
+          nullable: (k.nullable ?? false) || joins.canBeNull(k.col),
+        };
+      }
+      guard(
+        memberAliasOf(k.col) === undefined,
+        key,
+        `the order key "${nameOf(k.col)}" is a family member — a member's values are data, so it declares no value order.`,
+      );
+      const col = joins.renderOrdinal(k.col, k.ordinal);
+      return { fieldId: nameOf(col), col, dir: k.dir ?? "asc", nullable: true };
+    });
     if (!keys.some((k) => sameColumn(k.col as ReadColumn, pkColumn))) {
       keys.push({
         fieldId: pkColumn.name,
@@ -684,6 +698,7 @@ export function planArm<Row, P extends ResourceParams>(
         renderingOf(k.col),
         k.dir ?? "asc",
         k.nullable ?? false,
+        k.ordinal ?? null,
       ]),
     );
     let plan = orderMemo.get(canonical);

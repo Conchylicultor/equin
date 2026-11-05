@@ -8,6 +8,7 @@ interface Row {
   name?: string;
   when?: Date;
   flag?: boolean;
+  phase?: string;
 }
 
 const fields: FieldDef<Row>[] = [
@@ -15,6 +16,13 @@ const fields: FieldDef<Row>[] = [
   { id: "name", label: "Name", value: (r) => r.name ?? null },
   { id: "when", label: "When", value: (r) => r.when ?? null },
   { id: "flag", label: "Flag", value: (r) => r.flag ?? null },
+  // An ordinal field: sorted by position in its declared order, not by text.
+  {
+    id: "phase",
+    label: "Phase",
+    value: (r) => r.phase ?? null,
+    valueOrder: ["todo", "doing", "done"],
+  },
   // A field with no `value` projection — rules referencing it are dangling.
   { id: "novalue", label: "No value" },
 ];
@@ -30,6 +38,22 @@ function sortRows(rules: SortRule[], rows: Row[]): Row[] {
 const ids = (rows: Row[]) => rows.map((r) => r.id);
 
 describe("makeSortComparator", () => {
+  it("sorts an ordinal field by its declared order, an unlisted or missing value last in both directions", () => {
+    const rows: Row[] = [
+      { id: "a", phase: "done" },
+      { id: "b", phase: "todo" },
+      { id: "c", phase: "zzz" },
+      { id: "d", phase: "doing" },
+      { id: "e" },
+    ];
+    expect(
+      ids(sortRows([{ fieldId: "phase", direction: "asc" }], rows)),
+    ).toEqual(["b", "d", "a", "c", "e"]);
+    expect(
+      ids(sortRows([{ fieldId: "phase", direction: "desc" }], rows)),
+    ).toEqual(["a", "d", "b", "c", "e"]);
+  });
+
   it("sorts a single number rule asc and desc", () => {
     const rows: Row[] = [
       { id: "a", num: 3 },

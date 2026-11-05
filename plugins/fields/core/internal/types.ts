@@ -39,6 +39,14 @@ export interface FieldMeta {
    * `options` (`enumField`'s pickable list) is spelled beside the meta.
    */
   optionMeta?: Readonly<Record<string, FieldOptionMeta>>;
+  /**
+   * A closed set's values in their DECLARED order — the field is ordinal: a
+   * list sorts it by each value's position here (a status from open to
+   * settled), never by its text, in memory and on the server alike. Set by
+   * `enumTextField(values, { ordered: true })` from `values` itself, so the
+   * order names exactly the field's values. Absent = sorted as its type sorts.
+   */
+  valueOrder?: readonly string[];
 }
 
 /**

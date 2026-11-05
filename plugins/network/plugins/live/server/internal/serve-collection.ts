@@ -108,6 +108,7 @@ import {
   type AnyCollection,
   type AnyExternalCollectionOptions,
   type AnyServedExternal,
+  type LiveFields,
 } from "../../core";
 import {
   compileAllSpecs,
@@ -1014,6 +1015,17 @@ export function compileCollection<
       tupleFilterWhere(q.where, q.scope),
     ]);
   };
+  // Each ordinal field's declared value order (`LiveField.order`): its own
+  // fields' and every column set's, by wire name. A window sorting by one
+  // orders by the value's position (`WindowOrderKey.ordinal`), never its text.
+  const ordinals = new Map<string, readonly string[]>([
+    ...Object.values(
+      (collection as { fields?: LiveFields }).fields ?? {},
+    ).flatMap((f): [string, readonly string[]][] =>
+      f.order === null ? [] : [[f.id, f.order]],
+    ),
+    ...handles.flatMap((h) => Object.entries(h.wireOrder)),
+  ]);
   const orderBy = (params: LiveWindowParams): WindowOrderKey[] => {
     const q = decode(params);
     return q.orderBy.map(([name, dir]) => {
@@ -1021,7 +1033,10 @@ export function compileCollection<
         bound.get(name) ??
         scopedRead(name, q.scope) ??
         fail(`"${name}" is not a sortable column`);
-      return { col, dir, nullable: joins.canBeNull(col) };
+      const ordinal = ordinals.get(name);
+      return ordinal === undefined
+        ? { col, dir, nullable: joins.canBeNull(col) }
+        : { col, dir, ordinal };
     });
   };
 

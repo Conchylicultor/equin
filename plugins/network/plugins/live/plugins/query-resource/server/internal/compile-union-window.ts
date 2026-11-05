@@ -148,7 +148,18 @@ export interface UnionColumn {
  * `familyValuesKey` so the order signature sees it move.
  */
 export type UnionOrderKey =
-  | { name: string; dir: "asc" | "desc"; member?: never }
+  | {
+      name: string;
+      dir: "asc" | "desc";
+      member?: never;
+      /**
+       * The column's values in their declared order (an ordinal field): the
+       * tuple orders by each value's position here — outer and per arm, its
+       * cuts and row-key parts too — never by the value (see
+       * `WindowOrderKey.ordinal`). An unlisted value orders last, as NULL.
+       */
+      ordinal?: readonly string[];
+    }
   | {
       name: string;
       dir: "asc" | "desc";
@@ -285,6 +296,35 @@ interface Arm {
     tuple: (params: ResourceParams) => TupleReads;
   };
   groups: GroupArmPlan<{ value: unknown; count: number }, ResourceParams>;
+}
+
+/** One key of a tuple's order: its outer column, direction, and declared value order. */
+interface TupleKey {
+  col: OuterColumn;
+  dir: "asc" | "desc";
+  /** Ordered by position in these values (`UnionOrderKey.ordinal`). */
+  ordinal?: readonly string[];
+}
+
+/**
+ * What a key orders by, over `read` (an arm's value, or the outer column):
+ * the read itself, or — an ordinal key — its value's position in the declared
+ * order (NULL for a NULL or unlisted value).
+ */
+function keyRead(k: TupleKey, read: SQL | ReadColumn): SQL | ReadColumn {
+  if (k.ordinal === undefined) return read;
+  return sql`array_position(ARRAY[${sql.join(
+    k.ordinal.map((v) => sql`${v}`),
+    sql`, `,
+  )}]::text[], (${read})::text)`;
+}
+/** A key's SQL type, as its cut operand casts back to it (a position is an integer). */
+function keySqlType(k: TupleKey): string {
+  return k.ordinal === undefined ? k.col.sqlType : "integer";
+}
+/** Whether a key may read NULL (a position is NULL for an unlisted value). */
+function keyNullable(k: TupleKey): boolean {
+  return k.ordinal !== undefined || k.col.nullable;
 }
 
 /** Memoize a per-params answer (the runtime hands one params object per tuple). */
@@ -592,37 +632,42 @@ export function compileUnionCollection<
 
   // ── The window ────────────────────────────────────────────────────────────
   /** The tuple's keys: its order, then the row key (unless the order names it). */
-  const keysOf = perParams(
-    (params: WP): { col: OuterColumn; dir: "asc" | "desc" }[] => {
-      let members = 0;
-      const keys = spec.window.orderOf(params).map((k) => {
-        if (k.member === undefined) return { col: colOf(k.name), dir: k.dir };
-        if (spec.familyValuesKey === undefined) {
-          fail(
-            `the tuple orders by family member "${k.name}", but the union names no \`familyValuesKey\`.`,
-          );
+  const keysOf = perParams((params: WP): TupleKey[] => {
+    let members = 0;
+    const keys = spec.window.orderOf(params).map((k): TupleKey => {
+      if (k.member === undefined) {
+        if (k.ordinal !== undefined && k.ordinal.length === 0) {
+          fail(`the ordinal of "${k.name}" lists no value.`);
         }
-        if (!SQL_TYPE_RE.test(k.member.sqlType)) {
-          fail(
-            `member "${k.name}" reads as "${k.member.sqlType}", which is not a Postgres type name — it is interpolated raw into a cut's cast.`,
-          );
-        }
-        // A per-tuple column: never on the row, NULL for a host with no
-        // member row (so it orders as nullable, statically for the tuple).
-        const col: OuterColumn = {
-          name: k.name,
-          alias: `__m${members++}`,
-          sqlType: k.member.sqlType,
-          nullable: true,
-          transient: true,
-          member: k.member.read,
-        };
-        return { col, dir: k.dir };
-      });
-      if (!keys.some((k) => k.col === KEY)) keys.push({ col: KEY, dir: "asc" });
-      return keys;
-    },
-  );
+        return k.ordinal === undefined
+          ? { col: colOf(k.name), dir: k.dir }
+          : { col: colOf(k.name), dir: k.dir, ordinal: k.ordinal };
+      }
+      if (spec.familyValuesKey === undefined) {
+        fail(
+          `the tuple orders by family member "${k.name}", but the union names no \`familyValuesKey\`.`,
+        );
+      }
+      if (!SQL_TYPE_RE.test(k.member.sqlType)) {
+        fail(
+          `member "${k.name}" reads as "${k.member.sqlType}", which is not a Postgres type name — it is interpolated raw into a cut's cast.`,
+        );
+      }
+      // A per-tuple column: never on the row, NULL for a host with no
+      // member row (so it orders as nullable, statically for the tuple).
+      const col: OuterColumn = {
+        name: k.name,
+        alias: `__m${members++}`,
+        sqlType: k.member.sqlType,
+        nullable: true,
+        transient: true,
+        member: k.member.read,
+      };
+      return { col, dir: k.dir };
+    });
+    if (!keys.some((k) => k.col === KEY)) keys.push({ col: KEY, dir: "asc" });
+    return keys;
+  });
   const survivingOf = perParams((params: WP): Arm[] => {
     const kept = spec.window.armsOf(params);
     return arms.filter((arm) => kept.has(arm.kind));
@@ -634,9 +679,9 @@ export function compileUnionCollection<
     const keys = keysOf(params);
     const sortKeys: SortKey[] = keys.map((k) => ({
       fieldId: k.col.alias,
-      col: arm.valueOf(k.col),
+      col: keyRead(k, arm.valueOf(k.col)),
       dir: k.dir,
-      nullable: k.col.nullable,
+      nullable: keyNullable(k),
     }));
     const operands = (
       cut: readonly (string | null)[],
@@ -648,7 +693,7 @@ export function compileUnionCollection<
         );
       }
       return cut.map((v, i) =>
-        v === null ? null : sql`${v}::${sql.raw(keys[i]!.col.sqlType)}`,
+        v === null ? null : sql`${v}::${sql.raw(keySqlType(keys[i]!))}`,
       );
     };
     return allOf([
@@ -692,9 +737,9 @@ export function compileUnionCollection<
         .filter((k) => !arm.constant(k.col))
         .map((k) => ({
           fieldId: k.col.alias,
-          col: arm.valueOf(k.col),
+          col: keyRead(k, arm.valueOf(k.col)),
           dir: k.dir,
-          nullable: k.col.nullable,
+          nullable: keyNullable(k),
         }));
       parts.push(sql`ORDER BY ${sql.join(orderByClauses(keys), sql`, `)}`);
       parts.push(sql`LIMIT ${opts.limit}`);
@@ -714,14 +759,14 @@ export function compileUnionCollection<
   const outerKeys = (params: WP): SortKey[] =>
     keysOf(params).map((k) => ({
       fieldId: k.col.alias,
-      col: sql`u.${sql.identifier(k.col.alias)}`,
+      col: keyRead(k, sql`u.${sql.identifier(k.col.alias)}`),
       dir: k.dir,
-      nullable: k.col.nullable,
+      nullable: keyNullable(k),
     }));
   const partsSql = (params: WP): SQL[] =>
     keysOf(params).map(
       (k, i) =>
-        sql`(u.${sql.identifier(k.col.alias)})::text AS ${sql.identifier(`__p${i}`)}`,
+        sql`(${keyRead(k, sql`u.${sql.identifier(k.col.alias)}`)})::text AS ${sql.identifier(`__p${i}`)}`,
     );
 
   /** The family members a tuple orders by (carried under `familyValuesKey`). */

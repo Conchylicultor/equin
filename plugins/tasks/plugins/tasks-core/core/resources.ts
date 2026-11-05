@@ -6,7 +6,7 @@ import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   AttemptStatusSchema,
   TASK_STATUS_OPTIONS,
-  TaskStatusSchema,
+  TASK_STATUS_ORDER,
 } from "./internal/schema";
 import { ConversationSummarySchema } from "./schemas";
 import {
@@ -48,10 +48,13 @@ export const RECENT_GONE_LIMIT = 30;
 // one spelling each declaration names (the scanners read a spec's own keys,
 // so the pieces are shared rather than the spec spread).
 const TASK_ROW_PICK = ["title", "updatedAt"] as const;
+// `status` is ordinal: a list sorts it by `TASK_STATUS_ORDER` (open to
+// settled), on the tree's server window and in memory alike.
 const TASK_ROW_FIELDS = {
-  status: enumTextField(TaskStatusSchema.options, {
+  status: enumTextField(TASK_STATUS_ORDER, {
     label: "Status",
     options: TASK_STATUS_OPTIONS,
+    ordered: true,
   }),
 };
 const TASK_ROW_CARRY = {
@@ -213,10 +216,13 @@ export const taskWindow = liveCollection("tasks.tree", {
   fields: TASK_ROW_FIELDS,
   carry: TASK_TREE_CARRY,
   id: "id",
-  sortable: ["rank", "createdAt", "updatedAt", "title"],
+  sortable: ["rank", "createdAt", "updatedAt", "title", "status"],
   default: { orderBy: TASK_ROW_ORDER, limit: 100 },
   maxLimit: 500,
   tree: { parent: "folderId", rank: "rank" },
+  // The task list's custom columns sort and filter it on the server, in the
+  // scope (the surface) each query names.
+  scopedColumns: true,
 });
 
 /** A task as the tasks tree (`taskWindow`) delivers it: a {@link TaskRow} and its `$childCount`. */

@@ -80,10 +80,6 @@ const NO_LINK_CHILDREN: readonly string[] = [];
 const pagesSource = liveDataSource(pagesTree, {
   surface: PAGES_SIDEBAR_VIEW,
   searchable: ["title"],
-  unscoped: {
-    reason:
-      "the pages sidebar has no custom columns: every field is the page row's own or an extension's exposure",
-  },
 });
 
 /** The page's icon: the row's lead (the tree's icon box, the list's glyph). */

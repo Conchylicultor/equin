@@ -1,7 +1,7 @@
 import type { FieldMeta } from "./types";
 
 // The presentation meta a field factory keeps from its options. A key the
-// caller did not pass stays absent (`primary`, `filterable`, `optionMeta`), so a
+// caller did not pass stays absent (`primary`, `filterable`, `optionMeta`, `valueOrder`), so a
 // field declared without them carries exactly the meta it always did.
 export function pickMeta(opts?: FieldMeta): FieldMeta {
   return {
@@ -12,6 +12,9 @@ export function pickMeta(opts?: FieldMeta): FieldMeta {
     ...(opts?.filterable !== undefined ? { filterable: opts.filterable } : {}),
     ...(opts?.optionMeta !== undefined
       ? { optionMeta: Object.freeze({ ...opts.optionMeta }) }
+      : {}),
+    ...(opts?.valueOrder !== undefined
+      ? { valueOrder: Object.freeze([...opts.valueOrder]) }
       : {}),
   };
 }

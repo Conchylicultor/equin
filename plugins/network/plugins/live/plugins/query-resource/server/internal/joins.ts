@@ -121,6 +121,13 @@ type ReadExpression =
 const readExpressions = new WeakMap<SQL, ReadExpression>();
 
 /**
+ * Each column's ordinal renderings (`JoinPlan.renderOrdinal`), by its value
+ * list — module-level like `readExpressions`, so every plan rendering one
+ * column's ordinal over one list hands back the same object.
+ */
+const ordinalRenderings = new WeakMap<object, Map<string, SQL>>();
+
+/**
  * Each family's members by alias, as any plan rendered them — module-level for
  * the same reason as `readExpressions`: the plan that applies a tuple's joins
  * finds a member another plan rendered by its alias.
@@ -258,6 +265,19 @@ export interface JoinPlan {
    * could reach, so a change to what it aggregates would leave it silently
    * stale (C7 of research/2026-10-06-global-scoped-change-routing-p8-v3.md).
    */
+  /**
+   * An ORDINAL read of `col` (a rendered column or expression): the position
+   * of its value in `values` (1-based, `array_position` over the value's
+   * text), NULL for a NULL value or one `values` does not list — what a
+   * window orders a field declaring its value order by (`WindowOrderKey.
+   * ordinal`), so it sorts by declared position, never by text. Registered as
+   * an `integer` expression (a cut casts its row-key part back to it) named
+   * `<col>#ordinal`, nullable whenever `col` may be or a value may be
+   * unlisted (always — `values` cannot vouch for the column); its provenance
+   * is `col`'s (read off its SQL). One rendering per (`col`, `values`): a
+   * repeat call returns the same object, as a memo keyed on renderings needs.
+   */
+  renderOrdinal(col: ReadColumn, values: readonly string[]): SQL;
   renderAggregate(
     sql: SQL,
     opts: {
@@ -1454,6 +1474,31 @@ function compilePlan(
     memberOf,
     relationKey,
     renderExpr,
+    renderOrdinal(col, values) {
+      if (values.length === 0) {
+        fail(`the ordinal of "${nameOf(col)}" lists no value.`);
+      }
+      let byValues = ordinalRenderings.get(col);
+      if (byValues === undefined) {
+        byValues = new Map();
+        ordinalRenderings.set(col, byValues);
+      }
+      const cacheKey = JSON.stringify(values);
+      const cached = byValues.get(cacheKey);
+      if (cached !== undefined) return cached;
+      const rendered = sql`array_position(ARRAY[${sql.join(
+        values.map((v) => sql`${v}`),
+        sql`, `,
+      )}]::text[], (${col})::text)`.mapWith(Number);
+      readExpressions.set(rendered, {
+        kind: "expr",
+        name: `${nameOf(col)}#ordinal`,
+        nullable: true,
+        sqlType: "integer",
+      });
+      byValues.set(cacheKey, rendered);
+      return rendered;
+    },
     renderAggregate,
     canBeNull: (col) => {
       if (!is(col, SQL)) {

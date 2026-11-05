@@ -94,6 +94,9 @@ export const pagesTree = liveCollection("pages.tree.v2", {
   default: { orderBy: [["docRank", "asc"]], limit: 100 },
   maxLimit: 500,
   tree: { parent: "pageId", rank: "docRank" },
+  // The sidebar's custom columns sort and filter it on the server, in the
+  // scope (the surface) each query names.
+  scopedColumns: true,
 });
 
 /**
