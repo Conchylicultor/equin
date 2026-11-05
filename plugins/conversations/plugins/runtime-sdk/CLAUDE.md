@@ -77,6 +77,13 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   alone a worktree backend found main's agents answering and commanded them.
   Layout: `state/sdk-agents/<ns>/<id>/` (launch.json, events.jsonl, agent.log),
   `locks/sdk-agents/<ns>/<id>.pid`, `sockets/agents/<ns>/<id>.sock`.
+- **The seq continues from the DB, not from the events file.** Every start
+  writes the row's `cursorSeq` into launch.json as `seqFloor`
+  (`startAgentProcess`, a per-start field like `claudeBin`), and the agent
+  numbers its events past `max(seqFloor, the file's last seq)` — so a launch
+  whose events file is gone cannot restart at seq 1 under the cursor, where
+  the reducer would skip every line. The agent removes its `bin/` clones'
+  folder on exit.
 - `server/` — the `conversations_ext_sdk_agent` side table, the pure event
   reducer, the launch → options-file mapping.
 - Conversations left on the retired tmux runtime were moved by the data

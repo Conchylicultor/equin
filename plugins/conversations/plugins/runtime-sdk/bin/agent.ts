@@ -28,7 +28,13 @@ import type {
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 import { spawn, spawnSync, type ChildProcessByStdio } from "node:child_process";
-import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  renameSync,
+  rmSync,
+  rmdirSync,
+  writeFileSync,
+} from "node:fs";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { createServer, type Socket } from "node:net";
 import type { Readable, Writable } from "node:stream";
@@ -128,7 +134,9 @@ const sessionEnv = await claudeSessionEnv(args.account, process.env);
 // ── events.jsonl ──────────────────────────────────────────────────────────
 // Resumes numbering from the file (or, right after a rotation, its newest
 // generation), so a restarted agent keeps the sequence gap-free for readers
-// holding a cursor.
+// holding a cursor — and never below the backend's own cursor (`seqFloor`),
+// which outlives the file: an events file that is gone must not restart the
+// numbering under lines the reader already took.
 function lastSeqIn(path: AppPath): number | null {
   let text: string;
   try {
@@ -148,7 +156,10 @@ function lastSeqIn(path: AppPath): number | null {
   }
   return null;
 }
-let seq = lastSeqIn(eventsPath) ?? lastSeqIn(asAppPath(`${eventsPath}.1`)) ?? 0;
+let seq = Math.max(
+  options.seqFloor,
+  lastSeqIn(eventsPath) ?? lastSeqIn(asAppPath(`${eventsPath}.1`)) ?? 0,
+);
 // A bounded sink (rotates at 128 MB, keeps 3). The backend's reader reads the
 // rotated generations before the live file, so rotation and replay agree.
 const events = defineFileSink({
@@ -731,7 +742,28 @@ process.on("exit", removeExitFiles);
 function removeExitFiles(): void {
   if (options.namedClaudeBin) rmSync(options.namedClaudeBin, { force: true });
   if (options.namedBun) rmSync(options.namedBun, { force: true });
+  // Their folder too, once empty (it holds only those two): one per agent
+  // ever run otherwise stays behind.
+  for (const clone of [options.namedClaudeBin, options.namedBun]) {
+    if (clone) rmEmptyDir(dirname(clone));
+  }
   rmSync(pidPath, { force: true });
+}
+
+/**
+ * Remove `path` if it is an empty directory; one still holding files, or gone,
+ * stays as is. Any other failure is written to the log, never thrown: it runs
+ * on the way out, before the pid file goes, and a leftover empty folder must
+ * not leave a pid file claiming this agent still runs.
+ */
+function rmEmptyDir(path: string): void {
+  try {
+    rmdirSync(path);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOTEMPTY" || code === "ENOENT") return;
+    log(`could not remove ${path} on exit: ${String(err)}`);
+  }
 }
 
 /**

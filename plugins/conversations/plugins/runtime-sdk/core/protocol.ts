@@ -320,6 +320,15 @@ export const AgentLaunchOptionsSchema = z.preprocess(
      * was refused. Made at every start, removed by the agent when it exits.
      */
     namedBun: z.string().nullable().default(null),
+    /**
+     * The highest event seq the backend has applied for this conversation
+     * (its row's `cursorSeq`), read at every start: the agent numbers its
+     * events past both this and its events file's last line. So a relaunch
+     * whose events file is gone (its agent dir deleted) cannot restart at
+     * seq 1 below the cursor, where the reducer would skip every line.
+     * Defaulted for an options file written before it existed.
+     */
+    seqFloor: z.number().int().nonnegative().default(0),
     /** The CLI's `--model` value. */
     model: z.string().nullable(),
     /** The CLI's `--effort` value. */
@@ -363,7 +372,7 @@ export type AgentLaunchOptions = z.infer<typeof AgentLaunchOptionsSchema>;
 
 /** The fields the backend resolves at each process start, never carried over. */
 export type AgentStartFields =
-  "claudeBin" | "disclaimExec" | "namedClaudeBin" | "namedBun";
+  "claudeBin" | "disclaimExec" | "namedClaudeBin" | "namedBun" | "seqFloor";
 
 /** What a launch asks for — everything but the per-start fields. */
 export type AgentLaunchIntent = Omit<AgentLaunchOptions, AgentStartFields>;

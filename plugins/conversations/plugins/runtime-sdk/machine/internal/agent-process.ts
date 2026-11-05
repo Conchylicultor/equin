@@ -34,6 +34,7 @@ import {
   type AgentLaunchIntent,
   type AgentLaunchOptions,
 } from "../../core";
+import { readAgentRow } from "../../server/internal/rows";
 import { liveAgentIds } from "./agent-processes";
 import { readClaudeUsage } from "./claude-usage";
 import { resolveDisclaimExec } from "./disclaim";
@@ -145,6 +146,21 @@ export function readAgentOptions(id: string): AgentLaunchOptions {
 }
 
 /**
+ * The last event seq this backend applied for `id` — the floor the agent
+ * numbers its events past. Every launch prepares the row first (`create`), so
+ * a launch without one is a broken caller, not a fresh agent.
+ */
+async function appliedSeq(id: string): Promise<number> {
+  const row = await readAgentRow(id);
+  if (!row) {
+    throw new Error(
+      `SDK agent ${id}: launched without a conversations_ext_sdk_agent row, so its events would have no cursor to continue from`,
+    );
+  }
+  return row.cursorSeq;
+}
+
+/**
  * Start the agent process for `id` with `options`, written here as its
  * options file — with this start's own `claudeBin` (the Agent SDK's bundled
  * build), `disclaimExec` and named clone (whatever `options` carried from a
@@ -198,6 +214,7 @@ export async function startAgentProcess(
     disclaimExec,
     namedClaudeBin: namedClaude,
     namedBun,
+    seqFloor: await appliedSeq(id),
   };
   writeFileSync(agentOptionsPath(id), JSON.stringify(options, null, 2));
   const account = chooseLaunchAccount();
