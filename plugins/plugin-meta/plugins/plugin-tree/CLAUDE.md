@@ -25,6 +25,15 @@ consumers — `classifyEdges`, plugin-view's payload, the deploy-secrets gate �
 take `PluginTreeData`, so a faceted tree built in-process and one read back
 are the same input to them.
 
+## The structure build reads narrow in a backend
+
+`getStructureTreeCached` reads through a file set of width 8
+(`loadRepoFiles(…, { readConcurrency })`), not the default 64: the build hands
+every plugin's barrels to the fs pool at once (~8k reads), and that pool also
+serves the backend's requests — at 64 every other fs call of main queued behind
+the warm-up (fs-wait, 2026-11-04: ~100 ms per read, all queue time). Width 8
+builds as fast warm (~135 ms).
+
 ## Boot warm-up (`server/internal/warmup.ts`)
 
 Both tree caches are in-memory and die with the process, so on main (which

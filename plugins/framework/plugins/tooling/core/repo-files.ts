@@ -30,12 +30,19 @@ import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/c
 // and same reasoning as the check runner's read-set GIT_TIMEOUT_MS.
 const GIT_TIMEOUT_MS = 60_000;
 
-// How many `read()`s one set holds open at once. A check run has ONE set,
-// shared by every check, so this is the run's bound, not a check's: a caller
-// that hands `read` seven thousand paths at once opens this many and queues the
-// rest. Wide enough that one such caller does not park another's single read
-// behind it for long.
+// How many `read()`s one set holds open at once, by default. A check run has
+// ONE set, shared by every check, so this is the run's bound, not a check's: a
+// caller that hands `read` seven thousand paths at once opens this many and
+// queues the rest. Wide enough that one such caller does not park another's
+// single read behind it for long. A process whose fs pool also serves requests
+// (a backend) asks for a narrower set (`readConcurrency`), so its bulk reads
+// leave the pool room for them.
 const READ_CONCURRENCY = 64;
+
+export interface RepoFilesOptions {
+  /** How many `read()`s the set holds open at once (default 64). */
+  readConcurrency?: number;
+}
 
 async function git(
   root: string,
@@ -110,10 +117,11 @@ async function readWorkingTree(
 export function repoFilesOver(
   root: AppPath,
   sorted: readonly string[],
+  opts?: RepoFilesOptions,
 ): RepoFiles {
   const paths = Object.freeze(sorted);
   const members = new Set(paths);
-  const gate = createSemaphore(READ_CONCURRENCY);
+  const gate = createSemaphore(opts?.readConcurrency ?? READ_CONCURRENCY);
   return {
     root,
     all: () => paths,
@@ -154,12 +162,15 @@ export function repoFilesOver(
  *
  * Throws on any git failure — never an empty set.
  */
-export async function loadRepoFiles(root: AppPath): Promise<RepoFiles> {
+export async function loadRepoFiles(
+  root: AppPath,
+  opts?: RepoFilesOptions,
+): Promise<RepoFiles> {
   const [present, deleted] = await Promise.all([
     lsFiles(root, ["--cached", "--others", "--exclude-standard"]),
     lsFiles(root, ["--deleted"]),
   ]);
-  return repoFilesOver(root, membership(present, deleted));
+  return repoFilesOver(root, membership(present, deleted), opts);
 }
 
 /**
@@ -195,7 +206,7 @@ function membership(present: string[], deleted: string[]): string[] {
  */
 export async function loadRepoSnapshot(
   root: AppPath,
-  opts?: { extra?: readonly string[] },
+  opts?: RepoFilesOptions & { extra?: readonly string[] },
 ): Promise<RepoSnapshot> {
   const extra = opts?.extra ?? [];
   for (const p of extra) assertRepoPath("extra", p, false);
@@ -244,7 +255,7 @@ export async function loadRepoSnapshot(
     toHash.forEach((p, i) => blobs.set(p, ids[i]!));
   }
 
-  const files = repoFilesOver(root, paths);
+  const files = repoFilesOver(root, paths, opts);
   return {
     ...files,
     blobOf: (path) => {

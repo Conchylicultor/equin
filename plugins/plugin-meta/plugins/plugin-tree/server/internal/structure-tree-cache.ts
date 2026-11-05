@@ -3,6 +3,8 @@ import {
   type PluginTree,
   type PluginTreeData,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { appPathParent } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createGitStateMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import {
@@ -102,12 +104,28 @@ const facetsMemo = createGitStateMemo<PluginTreeData>({
   name: "plugin-tree.facets",
 });
 
+// How many file reads the structure build holds open at once. A backend's fs
+// pool also serves its requests, and the build hands it every plugin's barrels
+// at once (thousands of reads): at the file set's default width (64, over a
+// pool of ~18 threads) every other fs call of the process queued behind it
+// (fs-wait on main, 2026-11-04: ~100 ms per read, all queue time). Narrow, so
+// the pool keeps threads for the request path; a background build takes a
+// little longer instead.
+const TREE_READ_CONCURRENCY = 8;
+
 export async function getStructureTreeCached(): Promise<PluginTree> {
   await ensureWatcher();
   return structureMemo.get(
     PLUGINS_DIR,
     () => Promise.resolve(treeChange.token()),
-    () => withHeavyReadSlot(() => buildPluginTree(PLUGINS_DIR)),
+    () =>
+      withHeavyReadSlot(async () =>
+        buildPluginTree(PLUGINS_DIR, {
+          repo: await loadRepoFiles(appPathParent(PLUGINS_DIR), {
+            readConcurrency: TREE_READ_CONCURRENCY,
+          }),
+        }),
+      ),
   );
 }
 
