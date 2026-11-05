@@ -107,7 +107,7 @@ const check: Check = {
     const allFiles = repoFiles.all();
     const repo = repoTree(allFiles);
 
-    const tree = await buildStructureTreeOnce(pluginsRoot);
+    const tree = await buildStructureTreeOnce(pluginsRoot, repoFiles);
     const plugins: PluginDir[] = Array.from(tree.byDir.values()).map(
       (node) => ({
         relPath: node.path,

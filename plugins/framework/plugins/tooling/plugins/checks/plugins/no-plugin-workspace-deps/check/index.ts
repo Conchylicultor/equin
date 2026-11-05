@@ -1,16 +1,7 @@
-import {
-  getWorktreeRoot,
-  spawnCaptured,
-} from "@plugins/infra/plugins/spawn/core";
-
-// Wedge-breaker for a metadata-only git read: far above any real duration,
-// because starvation under a saturated check run is what these suffer, not
-// slowness. Same reasoning as `infra/worktree`'s bounds, which carry the
-// measurements.
-const GIT_TIMEOUT_MS = 60_000;
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+import type {
+  Check,
+  CheckContext,
+} from "@plugins/framework/plugins/tooling/core";
 
 interface Offender {
   file: string;
@@ -22,29 +13,24 @@ const check: Check = {
   id: "no-plugin-workspace-deps",
   description:
     "Plugin package.jsons must not declare `workspace:*` deps — cross-plugin imports go through `@plugins/*` path aliases, not npm workspaces",
-  async run() {
-    const root = await getWorktreeRoot();
-    const lsFiles = await spawnCaptured(
-      ["git", "ls-files", "plugins/**/package.json"],
-      { cwd: root, timeoutMs: GIT_TIMEOUT_MS },
-    );
-    const fileList = lsFiles.stdout.split("\n").filter(Boolean);
+  async run(ctx: CheckContext) {
+    const repo = await ctx.repo();
+    const fileList = repo
+      .glob("plugins/**/package.json")
+      .filter((p) => p.endsWith("/package.json"));
 
     const offenders: Offender[] = [];
     for (const file of fileList) {
+      const text = await repo.read(file);
+      if (text === null) continue; // removed since the set was taken
       let json: {
         dependencies?: Record<string, string>;
         devDependencies?: Record<string, string>;
       };
       try {
-        const text = await Bun.file(`${root}/${file}`).text();
         json = JSON.parse(text);
       } catch (err) {
-        if (
-          !(err instanceof SyntaxError) &&
-          (err as NodeJS.ErrnoException).code !== "ENOENT"
-        )
-          throw err;
+        if (!(err instanceof SyntaxError)) throw err;
         continue;
       }
       for (const section of ["dependencies", "devDependencies"] as const) {

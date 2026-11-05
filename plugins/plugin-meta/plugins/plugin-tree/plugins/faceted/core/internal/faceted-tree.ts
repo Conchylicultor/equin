@@ -47,11 +47,12 @@ export interface TreeEnrichment {
 
 export interface BuildFacetedTreeOptions {
   /**
-   * The repo's file set. A SNAPSHOT (with blob ids — a build's) makes the
-   * facets plugin records: read from the process's record store, extracted
-   * only where they missed. Absent, the tree asks git for a file set.
+   * The pass's file set — required, so the tree never lists the repo itself.
+   * A SNAPSHOT (with blob ids — a build's, or a check run's `ctx.repo()`)
+   * makes the facets plugin records: read from the process's record store,
+   * extracted only where they missed.
    */
-  repo?: RepoFiles;
+  repo: RepoFiles;
   /** Enrich the facets with the evaluated barrels (see {@link TreeEnrichment}). */
   enrich?: TreeEnrichment;
 }
@@ -80,12 +81,9 @@ function readOutside(root: AppPath, rel: string): string | null {
  */
 export async function buildFacetedPluginTree(
   pluginsRoot: AppPath,
-  opts?: BuildFacetedTreeOptions,
+  opts: BuildFacetedTreeOptions,
 ): Promise<PluginTree> {
-  const tree = await buildPluginTree(
-    pluginsRoot,
-    opts?.repo ? { repo: opts.repo } : undefined,
-  );
+  const tree = await buildPluginTree(pluginsRoot, { repo: opts.repo });
   const { repo } = tree;
   const facets = await loadFacets();
   tree.facets = facets;
@@ -112,7 +110,7 @@ export async function buildFacetedPluginTree(
 
   // Step 2: enrich with the evaluated barrels (the enriched tree only). Never
   // a record: the naming is the whole tree's.
-  const enrich = opts?.enrich;
+  const enrich = opts.enrich;
   if (enrich) {
     for (const node of nodes) {
       const modules = enrich.modulesOf(node);

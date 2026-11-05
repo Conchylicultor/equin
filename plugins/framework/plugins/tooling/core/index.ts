@@ -15,5 +15,6 @@ export {
   loadRepoFiles,
   loadRepoSnapshot,
   repoFilesOver,
+  repoSnapshotOver,
 } from "./repo-files";
 export { globPaths, pathspecToRegex, pathsUnder } from "./pathspec";

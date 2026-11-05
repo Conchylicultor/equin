@@ -4,7 +4,10 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { buildFacetedPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
-import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import {
+  loadRepoFiles,
+  type RepoFiles,
+} from "@plugins/framework/plugins/tooling/core";
 
 const barrelFreeTreeCache = new Map<string, Promise<PluginTree>>();
 
@@ -32,10 +35,12 @@ export function buildBarrelFreeTree(
 ): Promise<PluginTree> {
   let cached = barrelFreeTreeCache.get(root);
   if (!cached) {
-    cached = buildFacetedPluginTree(
-      joinAppPath(root, "plugins"),
-      repo ? { repo } : undefined,
-    );
+    cached = (async () =>
+      buildFacetedPluginTree(joinAppPath(root, "plugins"), {
+        // Debt (task-1793856387-73tcw0): a caller without the pass's set
+        // makes the tree list the repo itself.
+        repo: repo ?? (await loadRepoFiles(root)),
+      }))();
     barrelFreeTreeCache.set(root, cached);
   }
   return cached;

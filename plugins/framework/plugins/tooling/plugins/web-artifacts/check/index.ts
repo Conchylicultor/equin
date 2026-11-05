@@ -53,6 +53,7 @@ import { join } from "node:path";
 import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import type {
   Check,
+  CheckContext,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
 import { isBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
@@ -211,7 +212,7 @@ const mapInSync: Check = {
     // holds (the expected map is recomputed through store metas) — fold both in.
     return sha256(`${marker}\n${html}\n${storeMtime()}`);
   },
-  async run(): Promise<CheckResult> {
+  async run(ctx: CheckContext): Promise<CheckResult> {
     // See run-context.ts: during `./equin build` the checks race the
     // frontend build, so the deployed dist is by definition the one this build
     // replaces — comparing it against the current tree would fail every build
@@ -270,7 +271,7 @@ const mapInSync: Check = {
     }
 
     const expected = await computeExpectedComposition({
-      root,
+      repo: await ctx.repo(),
       minify: markerMinify(markerRaw),
     });
     if (expected.kind === "missing-artifacts") {
@@ -407,10 +408,11 @@ const noVendoredStateInlined: Check = {
     // runner's tree hash — plus which artifacts the store holds.
     return storeMtime();
   },
-  async run(): Promise<CheckResult> {
+  async run(ctx: CheckContext): Promise<CheckResult> {
     if (!existsSync(WEB_ARTIFACTS_STORE_DIR)) return { ok: true }; // nothing composed yet
 
-    const root = await worktreeRoot();
+    const repo = await ctx.repo();
+    const { root } = repo;
     // The marker is read for ONE field — how the deployed dist was minified — so
     // that the fleet planned here matches the artifacts the store actually
     // holds. No deploy means no marker to read, which lands on the same default
@@ -427,7 +429,7 @@ const noVendoredStateInlined: Check = {
     // are skipped — staleness is map-in-sync's job, this check verifies the
     // content of what exists. The registry artifact is excluded by construction
     // (type-stripped transform, never bundles).
-    const fleet = await planExpectedFleet({ root, minify });
+    const fleet = await planExpectedFleet({ repo, minify });
     const present = fleet.targets.filter((t) => hasArtifact(t.dirName));
     if (present.length === 0) return { ok: true }; // nothing composed yet
 

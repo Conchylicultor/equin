@@ -4,7 +4,6 @@ import { join, relative } from "path";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { declareSlotsFromBarrels } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { loadFacets } from "@plugins/plugin-meta/plugins/facets/plugins/loader/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   registerBarrelStubs,
   importBarrel,
@@ -14,8 +13,10 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+import type {
+  Check,
+  CheckContext,
+} from "@plugins/framework/plugins/tooling/core";
 
 // The three browser render surfaces every facet must cover. Each entry is a
 // stable web-slot id (the registry key) owned by a consumer plugin. A
@@ -48,13 +49,14 @@ const check: Check = {
   id: "facets:render-complete",
   description:
     "Every facet from loadFacets() has a render contributor in each web render slot (diff, detail, contributions) with a matching facet id",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx: CheckContext) {
+    const repo = await ctx.repo();
+    const { root } = repo;
     const pluginsRoot = joinAppPath(root, "plugins");
     const facetIds = (await loadFacets()).map((f) => f.def.id).sort();
     const facetIdSet = new Set(facetIds);
 
-    const tree = await buildStructureTreeOnce(pluginsRoot);
+    const tree = await buildStructureTreeOnce(pluginsRoot, repo);
     registerBarrelStubs(appPathParent(pluginsRoot));
 
     // This check imports web barrels ITSELF (the tree above is structure-only),

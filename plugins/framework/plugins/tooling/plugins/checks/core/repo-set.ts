@@ -14,9 +14,9 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   assertRepoPath,
-  loadRepoFiles,
-  repoFilesOver,
-  type RepoFiles,
+  loadRepoSnapshot,
+  repoSnapshotOver,
+  type RepoSnapshot,
 } from "@plugins/framework/plugins/tooling/core";
 import type { FileSystemView, TreeSnapshot } from "./read-set";
 
@@ -43,13 +43,15 @@ import type { FileSystemView, TreeSnapshot } from "./read-set";
  *                    disk. The working tree holds the snapshot's content unless
  *                    the file changed after the run took its tree hash, the
  *                    window every disk-reading check already has.
+ *   - `blobOf(p)`  → `view.recordFile(p)`, then `base.blobOf(p)`: a content id
+ *                    is a content fact.
  * The view keeps one fact per path / pattern, so a file recorded here AND by a
  * check's own eager read-set is one fact.
  */
 export function recordingRepoFiles(
-  base: RepoFiles,
+  base: RepoSnapshot,
   view: FileSystemView,
-): RepoFiles {
+): RepoSnapshot {
   return {
     root: base.root,
     all: () => view.glob("**"),
@@ -67,6 +69,11 @@ export function recordingRepoFiles(
       view.recordFile(path);
       return base.read(path);
     },
+    blobOf: (path) => {
+      assertRepoPath("blobOf", path, false);
+      view.recordFile(path);
+      return base.blobOf(path);
+    },
   };
 }
 
@@ -76,10 +83,10 @@ export function recordingRepoFiles(
  * it asks.
  */
 export function recordingRepo(
-  repo: () => Promise<RepoFiles>,
+  repo: () => Promise<RepoSnapshot>,
   view: FileSystemView,
-): () => Promise<RepoFiles> {
-  let recorded: Promise<RepoFiles> | null = null;
+): () => Promise<RepoSnapshot> {
+  let recorded: Promise<RepoSnapshot> | null = null;
   return () =>
     (recorded ??= repo().then((files) => recordingRepoFiles(files, view)));
 }
@@ -91,10 +98,11 @@ export function recordingRepo(
  * Where the set comes from, in order:
  *   1. the run's tree snapshot. `loadSnapshot` is the runner's own memoized
  *      load: already done when an input-keyed check is selected, done here
- *      otherwise. The set is then the tree the cache key hashed.
- *   2. `loadRepoFiles(root)` when there is no snapshot: `--no-cache` computes
- *      no tree hash, and the snapshot load is fail-open (null on any git
- *      failure). The same universe, asked of git directly — and the same
+ *      otherwise. The set is then the tree the cache key hashed, each blob id
+ *      the one it hashed.
+ *   2. `loadRepoSnapshot(root)` when there is no snapshot: `--no-cache`
+ *      computes no tree hash, and the snapshot load is fail-open (null on any
+ *      git failure). The same universe, asked of git directly — and the same
  *      implementation build-time codegen uses.
  * A failure of (2) rejects, and every check that asked fails itself, naming
  * it. Never an empty set: that would pass every rule that iterates it.
@@ -102,14 +110,16 @@ export function recordingRepo(
 export function runRepoFiles(source: {
   loadSnapshot: () => Promise<TreeSnapshot | null>;
   root: () => Promise<AppPath>;
-}): () => Promise<RepoFiles> {
-  const load = async (): Promise<RepoFiles> => {
+}): () => Promise<RepoSnapshot> {
+  const load = async (): Promise<RepoSnapshot> => {
     const snapshot = await source.loadSnapshot();
     if (snapshot !== null) {
-      return repoFilesOver(snapshot.root, snapshot.paths());
+      return repoSnapshotOver(snapshot.root, snapshot.paths(), (p) =>
+        snapshot.blobSha(p),
+      );
     }
-    return loadRepoFiles(await source.root());
+    return loadRepoSnapshot(await source.root());
   };
-  let loaded: Promise<RepoFiles> | null = null;
+  let loaded: Promise<RepoSnapshot> | null = null;
   return () => (loaded ??= load());
 }

@@ -19,7 +19,7 @@ export {
 export type {
   BuildLintConfigOptions,
   LintContribution,
-  LintExemptionMode,
+  LintExemptions,
   LintRuleDocs,
   LintRuleKind,
   LintRuleSelection,

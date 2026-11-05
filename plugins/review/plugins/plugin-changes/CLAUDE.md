@@ -132,7 +132,9 @@ trees; no ledger read). Refused `missing` (a sha names no commit) and `no-base`
     - `review/plugin-changes/api-changes`
     - `review/plugin-changes/file-changes`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/push-plugin-changes.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `server/internal/push-plugin-changes.ts` (debt)
+    - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/plugin-tree-cache.ts` (sanctioned)
 - Sub-plugins:
   - **`api-changes`** (excluded) — API surface diff section for per-plugin review cards.
   - **`file-changes`** (excluded) — File-level diff section for per-plugin review cards.

@@ -1,18 +1,9 @@
 import type TS from "typescript";
-import {
-  getWorktreeRoot,
-  spawnCaptured,
-} from "@plugins/infra/plugins/spawn/core";
-
-// Wedge-breaker for a metadata-only git read, not latency policing. Generous
-// because what these actually suffer under a saturated `./equin check` is
-// starvation rather than slowness, and starvation is not bounded by the p99 of
-// an idle box (the calibration note in `infra/worktree`'s `worktree.ts` has the
-// measurements). Only a genuinely wedged child trips it.
-const GIT_TIMEOUT_MS = 60_000;
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+import type {
+  Check,
+  CheckContext,
+  RepoFiles,
+} from "@plugins/framework/plugins/tooling/core";
 
 // The root base config is the single owner of repo-wide path aliases. Every
 // other tsconfig must inherit them via `extends`, never redeclare a local copy
@@ -25,18 +16,13 @@ function loadTypescript(): Promise<typeof TS> {
   return (tsPromise ??= import("typescript").then((m) => m.default));
 }
 
-async function listTsconfigs(root: string): Promise<string[]> {
-  const result = await spawnCaptured(["git", "ls-files", "*tsconfig*.json"], {
-    cwd: root,
-    timeoutMs: GIT_TIMEOUT_MS,
-  });
-  const out = result.stdout.trim();
-  if (!out) return [];
+/** Every tsconfig of the run's file set (the git pathspec `*tsconfig*.json`: `*` spans `/`). */
+function listTsconfigs(repo: RepoFiles): string[] {
   return (
-    out
-      .split("\n")
+    repo
+      .glob("*tsconfig*.json")
       // Sidequests are independent projects with their own tsconfigs.
-      .filter((p) => p && !p.startsWith("sidequests/"))
+      .filter((p) => !p.startsWith("sidequests/"))
   );
 }
 
@@ -57,9 +43,10 @@ const check: Check = {
   id: "tsconfig-alias-single-owner",
   description:
     "Path aliases (e.g. @plugins/*) must be declared once in tsconfig.base.json and inherited via `extends` — no tsconfig may redeclare a base-owned alias",
-  async run() {
+  async run(ctx: CheckContext) {
     const ts = await loadTypescript();
-    const root = await getWorktreeRoot();
+    const repo = await ctx.repo();
+    const { root } = repo;
     const owned = new Set(declaredPathAliases(ts, root, BASE));
     if (owned.size === 0) {
       return {
@@ -70,7 +57,7 @@ const check: Check = {
     }
 
     const offenders: string[] = [];
-    for (const rel of await listTsconfigs(root)) {
+    for (const rel of listTsconfigs(repo)) {
       if (rel === BASE) continue;
       const dupes = declaredPathAliases(ts, root, rel).filter((a) =>
         owned.has(a),

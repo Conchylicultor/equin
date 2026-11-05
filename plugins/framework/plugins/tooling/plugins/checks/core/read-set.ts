@@ -187,6 +187,7 @@ export async function loadTreeSnapshot(
     if (code !== 0) return null;
     const text = new TextDecoder().decode(bytes);
     const blobSha = new Map<string, string>();
+    const gitlinks: string[] = [];
     for (const record of text.split("\0")) {
       if (record.length === 0) continue;
       const tab = record.indexOf("\t");
@@ -196,11 +197,14 @@ export async function loadTreeSnapshot(
       const parts = meta.split(" ");
       const type = parts[1];
       const sha = parts[2];
-      if (type !== "blob" || !sha) continue; // skip submodule commits etc.
+      if (!sha) continue;
+      // A gitlink (mode 160000): a nested repository, kept apart — never a file.
+      if (type === "commit") gitlinks.push(path);
+      if (type !== "blob") continue;
       blobSha.set(path, sha);
     }
     if (blobSha.size === 0) return null; // an empty tree is never a real scan surface
-    return buildSnapshot(root, treeHash, blobSha);
+    return buildSnapshot(root, treeHash, blobSha, gitlinks.sort());
     // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- explicit fail-open contract, mirroring computeTreeHash: any error (no git, spawn failure, malformed output) returns null so checks run uncached; propagating would break the whole run in a degraded environment
   } catch {
     return null;
@@ -319,6 +323,7 @@ function buildSnapshot(
   root: AppPath,
   treeHash: string,
   blobSha: Map<string, string>,
+  gitlinks: readonly string[],
 ): TreeSnapshot {
   // Build the `dir → immediate child names` index ONCE. For a/b/c.ts we add
   // c.ts under a/b, b under a, a under "" (root). Files and subdirs both count
@@ -360,6 +365,7 @@ function buildSnapshot(
     treeHash,
     root,
     blobSha: (path) => blobSha.get(path) ?? null,
+    gitlinks: () => gitlinks,
     exists: (path) => blobSha.has(path),
     paths: () => sortedPaths,
     members: (dir) => {

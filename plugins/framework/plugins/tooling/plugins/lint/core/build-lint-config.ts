@@ -6,11 +6,12 @@
  *
  *   - the root `eslint.config.ts` (editor/IDE + ad-hoc `bunx eslint`) passes
  *     `{ projectService: true }` — typescript-eslint discovers each file's
- *     tsconfig and builds its own program — and `exemptions: "config-off"`;
+ *     tsconfig and builds its own program — and `exemptions: { mode:
+ *     "config-off", manifests }`;
  *   - the `type-check` check's per-target worker passes `{ programs: [program] }`
  *     — typescript-eslint REUSES a program the worker already built for `tsc`
  *     diagnostics, so the type-program is constructed once, not twice — and
- *     `exemptions: "report"`.
+ *     `exemptions: { mode: "report" }`.
  *
  * Keeping both paths on this one builder means a rule/plugin/exemption change
  * applies identically to the IDE and the check. The contribution loader is
@@ -26,7 +27,6 @@ import type TsEslintParser from "@typescript-eslint/parser";
 import type { ESLint, Linter } from "eslint";
 import type ReactHooksPlugin from "eslint-plugin-react-hooks";
 import type { Program } from "typescript";
-import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   NON_APP_FILE_CATEGORIES,
   categoryGlobs,
@@ -34,6 +34,7 @@ import {
   loadExemptions,
   ruleIdProblems,
   type FileCategory,
+  type ManifestSource,
   type ResolvedExemption,
 } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import type { CollectedEntry } from "./lint.generated";
@@ -319,9 +320,9 @@ export function lintRuleIds(contributions: readonly LoadedLintContribution[]): {
 /**
  * The exemptions that name a lint rule, validated against the live rule set.
  * Throws on an unknown or closed id: in "config-off" mode it would otherwise
- * switch off a rule that does not exist, and in "report" mode suppress nothing
- * with no way to tell. Throws too on a debt entry for a noDebt rule, so the IDE
- * config and the type-check worker refuse it as loudly as the check does.
+ * switch off a rule that does not exist. Throws too on a debt entry for a
+ * noDebt rule, so the IDE config refuses it as loudly as the check
+ * (`exempt:manifests-valid`) does.
  */
 export function lintExemptions(
   exemptions: readonly ResolvedExemption[],
@@ -383,13 +384,21 @@ export type ParserTypeSource =
  * How `exempt/` manifests apply:
  *   - "config-off" — each exempted (rule, path) becomes an `"off"` config block,
  *     so the editor shows no squiggle on an exempt file. An exemption that
- *     suppresses nothing is invisible in this mode.
+ *     suppresses nothing is invisible in this mode. The caller hands the
+ *     manifests' file set (`manifests`: its pass's `RepoFiles`) — the builder
+ *     never lists the repo itself.
  *   - "report" — the rule stays on everywhere and the CALLER drops the messages
- *     an exemption covers (the type-check worker, through `createExemptionIndex`
+ *     an exemption covers (the type-check check, through `createExemptionIndex`
  *     over `loadExemptions()`), so it can also report an exemption that
- *     suppressed nothing.
+ *     suppressed nothing. The config reads no manifest: the type-check lint
+ *     engine builds one config per (program, kind, group set) in every batch
+ *     process, and each used to list the whole working tree to load manifests
+ *     it then only validated — 27 of a pass's whole-tree `git ls-files` spawns
+ *     (2026-11-05). Their validity is `exempt:manifests-valid`'s, in the same
+ *     pass (unknown, closed and debt-on-noDebt rule ids alike).
  */
-export type LintExemptionMode = "config-off" | "report";
+export type LintExemptions =
+  { mode: "config-off"; manifests: ManifestSource } | { mode: "report" };
 
 /**
  * A subset of the rules to enable: the builder's own rules (`base` —
@@ -412,7 +421,7 @@ export interface BuildLintConfigOptions {
   root: AppPath;
   /** projectService (IDE/CLI) or a pre-built program set (type-check worker). */
   typeSource: ParserTypeSource;
-  exemptions: LintExemptionMode;
+  exemptions: LintExemptions;
   /**
    * Enable only these rules (default: all). The type-check worker re-runs only
    * the rule groups whose cached result is stale for a file; a contribution
@@ -571,13 +580,15 @@ export async function buildLintConfig(
   const [allContributions, exemptions, tsPlugin, tsParser, reactHooks] =
     await Promise.all([
       loadLintContributions(root),
-      loadRepoFiles(root).then(loadExemptions),
+      opts.exemptions.mode === "config-off"
+        ? loadExemptions(opts.exemptions.manifests)
+        : Promise.resolve([]),
       loadTsPlugin(),
       loadTsParser(),
       loadReactHooks(),
     ]);
-  // Validated in BOTH modes, so a manifest naming a dead or closed rule fails
-  // the IDE config and the check alike.
+  // Validated before any is switched off, so a manifest naming a dead or
+  // closed rule fails the IDE config rather than silencing nothing.
   const lintExempt = lintExemptions(exemptions, allContributions);
   const allBaseRules = baseRuleEntries(reactHooks);
   let contributions = allContributions;
@@ -722,7 +733,7 @@ export async function buildLintConfig(
   // "config-off": one block per exempted (rule, target). A target is a file or
   // a directory; naming both spellings covers either without a stat.
   const exemptConfigs: Linter.Config[] =
-    opts.exemptions === "config-off"
+    opts.exemptions.mode === "config-off"
       ? lintExempt.map(
           (e) =>
             ({

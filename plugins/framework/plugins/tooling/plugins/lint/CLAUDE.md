@@ -154,6 +154,7 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `framework/tooling/exempt.FileCategory`
     - `framework/tooling/exempt.isLintRuleId`
     - `framework/tooling/exempt.loadExemptions`
+    - `framework/tooling/exempt.ManifestSource`
     - `framework/tooling/exempt.NON_APP_FILE_CATEGORIES`
     - `framework/tooling/exempt.ResolvedExemption`
     - `framework/tooling/exempt.ruleIdProblems`
@@ -167,7 +168,7 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `BuildLintConfigOptions`
     - `ClassRuleFactory`
     - `LintContribution`
-    - `LintExemptionMode`
+    - `LintExemptions`
     - `LintRuleDocs`
     - `LintRuleKind`
     - `LintRuleSelection`
@@ -204,6 +205,7 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `boundaries/no-platform-api` — `core/declared-utilities.ts`, `core/plugin-dirs.ts` (debt)
     - `rule-kind-safety/no-raw-rule-creator` — `core/rule-creator.ts` (sanctioned)
     - `rule-kind-safety/no-raw-rule-tester` — `core/testing/rule-tester.ts` (sanctioned)
+    - `repo-walk-safety/no-adhoc-repo-listing` — `core/ide-lint-config.ts` (sanctioned)
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
     - `createRuleTester` — A syntactic rule's tester: no program, no project.
@@ -236,7 +238,7 @@ its disable does not cover. Parameters and imports have no in-file value.
   - **`polling-safety`** — polling-safety lint rule: no-refetch-interval
   - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
   - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
-  - **`repo-walk-safety`** — repo-walk-safety lint rule: no-adhoc-repo-walk
+  - **`repo-walk-safety`** — repo-walk-safety lint rules: no-adhoc-repo-walk (no hand-written build-output deny-list), no-adhoc-repo-listing (no working-tree listing — git ls-files, loadRepoFiles — outside a pass root: take the…
   - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
   - **`route-teardown-safety`** — route-teardown-safety lint rule: no-unroute
   - **`rule-kind-safety`** — rule-kind-safety lint rules: type-aware-rule-declared (a lint rule that reads parser services declares meta.docs.requiresTypeChecking: true), no-raw-rule-creator (every rule is made with lint/core…

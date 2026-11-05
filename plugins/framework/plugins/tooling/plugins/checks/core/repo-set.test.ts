@@ -15,7 +15,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   loadRepoFiles,
-  repoFilesOver,
+  repoSnapshotOver,
 } from "@plugins/framework/plugins/tooling/core";
 import { computeTreeHash } from "./tree-hash";
 import { loadTreeSnapshot, validate, type TreeSnapshot } from "./read-set";
@@ -155,7 +155,7 @@ describe("recording (input-keyed checks)", () => {
     const snap = await snapshot();
     const view = snap.createRecordingView();
     const repo = recordingRepoFiles(
-      repoFilesOver(snap.root, snap.paths()),
+      repoSnapshotOver(snap.root, snap.paths(), (p) => snap.blobSha(p)),
       view,
     );
     expect(repo.under("a")).toEqual(["a/b/x.ts", "a/b/y.ts", "a/c.ts"]);
@@ -170,11 +170,25 @@ describe("recording (input-keyed checks)", () => {
     expect(rs.absent).toEqual(["missing.ts"]);
   });
 
+  test("blobOf answers the snapshot's id and records a content fact", async () => {
+    const snap = await snapshot();
+    const view = snap.createRecordingView();
+    const repo = recordingRepoFiles(
+      repoSnapshotOver(snap.root, snap.paths(), (p) => snap.blobSha(p)),
+      view,
+    );
+    expect(repo.blobOf("a/c.ts")).toBe(snap.blobSha("a/c.ts")!);
+    expect(() => repo.blobOf("missing.ts")).toThrow(
+      /not a file of the snapshot/,
+    );
+    expect(view.readSet().files.map((f) => f.path)).toContain("a/c.ts");
+  });
+
   test("all() records the whole tree's membership", async () => {
     const snap = await snapshot();
     const view = snap.createRecordingView();
     const repo = recordingRepoFiles(
-      repoFilesOver(snap.root, snap.paths()),
+      repoSnapshotOver(snap.root, snap.paths(), (p) => snap.blobSha(p)),
       view,
     );
     expect(repo.all()).toEqual(EXPECTED);
@@ -185,7 +199,7 @@ describe("recording (input-keyed checks)", () => {
     const snap = await snapshot();
     const view = snap.createRecordingView();
     const repo = recordingRepoFiles(
-      repoFilesOver(snap.root, snap.paths()),
+      repoSnapshotOver(snap.root, snap.paths(), (p) => snap.blobSha(p)),
       view,
     );
     repo.under("a");

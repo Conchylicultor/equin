@@ -34,6 +34,7 @@ const check: Check = {
     const repo = await ctx.repo();
     const tree = await buildStructureTreeOnce(
       joinAppPath(repo.root, "plugins"),
+      repo,
     );
     const pathSet = new Set([...tree.byPath.keys()].map((p) => `plugins/${p}`));
     const idSet = new Set([...tree.byDir.values()].map((n) => n.id as string));

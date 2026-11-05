@@ -41,4 +41,25 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "repo-walk-safety/no-adhoc-repo-listing",
+    paths: ["core/repo-set.ts"],
+    kind: "sanctioned",
+    reason:
+      "The check runner's own `ctx.repo()`: read off the run's tree snapshot, and listed only when there is none (`--no-cache`, or a snapshot that failed to load) \u2014 once per run, shared by every check.",
+  },
+  {
+    rule: "repo-walk-safety/no-adhoc-repo-listing",
+    paths: ["core/repo-files.ts"],
+    kind: "sanctioned",
+    reason:
+      "`listRepoFiles`, the array form of `loadRepoFiles` for a pass root and test fixtures; a check reads `ctx.repo()`.",
+  },
+  {
+    rule: "repo-walk-safety/no-adhoc-repo-listing",
+    paths: ["core/tree-hash.ts"],
+    kind: "sanctioned",
+    reason:
+      "Lists a SCRATCH index (`read-tree` of the run's tree, then `ls-files -s` over it): git's own answer to which files a pathspec names in the run's tree \u2014 no working-tree read.",
+  },
 ] satisfies Exemptions;

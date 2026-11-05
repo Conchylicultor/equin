@@ -2,5 +2,5 @@
   "name": "@equin/plugin-framework-tooling-lint-repo-walk-safety",
   "version": "0.0.1",
   "private": true,
-  "description": "repo-walk-safety lint rule: no-adhoc-repo-walk"
+  "description": "repo-walk-safety lint rules: no-adhoc-repo-walk (no hand-written build-output deny-list), no-adhoc-repo-listing (no working-tree listing — git ls-files, loadRepoFiles — outside a pass root: take the caller's file set)"
 }

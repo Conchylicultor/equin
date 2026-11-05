@@ -161,8 +161,8 @@ Three checks document why they stay off it; read them before adopting:
 [`format-clean`](plugins/format-clean/check/index.ts) and
 [`lint-directives-stable`](plugins/lint-directives-stable/check/index.ts) start
 from a `git merge-base` read the recording view cannot observe, and
-[`test-layout:runner-split`](../test-layout/check/index.ts) discovers files via
-`git ls-files` and reads `bunfig.toml` / `vitest.config.ts` directly.
+[`test-layout:runner-split`](../test-layout/check/index.ts) reads
+`bunfig.toml` / `vitest.config.ts` directly.
 
 ## The check fan-out is gated, and the gate is an instrument
 
@@ -384,8 +384,13 @@ So check code:
 - **Gets the file set from `ctx.repo()`.** Loaded once per run, shared by every
   check: the universe the cache key covers (tracked + untracked-not-ignored),
   read off the key's own tree snapshot when the run has one. `all()`,
-  `has(path)` and `under(dir)` answer in memory. Never list, walk or glob the
-  repo yourself, and never run `git ls-files` per check.
+  `has(path)` and `under(dir)` answer in memory, and `blobOf(path)` gives the
+  content id the snapshot hashed (it is a `RepoSnapshot`). Never list, walk or
+  glob the repo yourself, never run `git ls-files` per check, and hand the set
+  to any shared helper that needs one (`buildStructureTreeOnce`, the
+  web-artifacts plan, `readWorkspace`) — `repo-walk-safety/no-adhoc-repo-listing`
+  rejects a listing outside a pass root. Whether `add -A` would record a
+  gitlink is on `ctx.snapshot()` too (`gitlinks()`).
 - **Reads contents asynchronously**: `repo.read(path)`, or `node:fs/promises`.
   `read` is bounded by one run-wide gate, so `Promise.all` over thousands of
   paths is fine through it — never through raw `readFile`.
@@ -436,8 +441,8 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `framework/tooling` ×10
+  - Uses: 67 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework/tooling` ×11
     - `framework/tooling/exempt` ×7
     - `reports/check-thread-stall` ×7
     - `infra/stack-sampler` ×5
@@ -521,6 +526,9 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/tree-hash.ts` (sanctioned)
     - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts` (debt)
+    - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-set.ts` (sanctioned)
+    - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-files.ts` (sanctioned)
+    - `repo-walk-safety/no-adhoc-repo-listing` — `core/tree-hash.ts` (sanctioned)
 - Cli:
   - Exports (values): `openGrepIndexStore`
 - Test helpers:
@@ -557,7 +565,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`migrations-in-sync`**
   - **`no-db-backed-notify`** [exempt]
   - **`no-disabled-flag`**
-  - **`no-gitlinks`**
+  - **`no-gitlinks`** [exempt]
   - **`no-hand-built-link-to`**
   - **`no-hardcoded-colors`**
   - **`no-plugin-imports-in-core`**
@@ -578,7 +586,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`snapshot-chain-intact`**
   - **`space-ramp-in-sync`**
   - **`table-defs-in-schema-glob`** [exempt]
-  - **`tailwind-scan-covers-classes`** [exempt]
+  - **`tailwind-scan-covers-classes`**
   - **`theme-bridge-reads`**
   - **`theme-declarations-in-sync`**
   - **`token-group-vars-in-sync`**

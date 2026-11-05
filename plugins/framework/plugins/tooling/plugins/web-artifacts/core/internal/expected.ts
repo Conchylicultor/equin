@@ -6,15 +6,12 @@
 // been composed from the current tree — reported as `missing-artifacts` rather
 // than a URL diff, since the closure can't even be completed without the metas.
 
-import {
-  joinAppPath,
-  type AppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { BUILDER_VERSION } from "../constants";
 import { buildImportMap } from "../import-map";
 import { hostWorkerSpecifier, type BrowserHostPlan } from "./browser-hosts";
 import type { OwnSources } from "./own-files";
-import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import {
   artifactUrl,
   collectVendorRequests,
@@ -98,7 +95,8 @@ export type ExpectedComposition =
 
 /** The expected fleet's targets and metas, stopping at store misses. */
 export async function planExpectedFleet(opts: {
-  root: AppPath;
+  /** The pass's file set (a check run's `ctx.repo()`): the own-file sources are read off it. */
+  repo: RepoSnapshot;
   minify: boolean;
   /** Which registry + entry set to plan; defaults to the committed full registry. */
   source?: FleetSource;
@@ -111,13 +109,14 @@ export async function planExpectedFleet(opts: {
   missing: string[];
   builderSource: string;
 }> {
-  const pluginsRoot = joinAppPath(opts.root, "plugins");
+  const { root } = opts.repo;
+  const pluginsRoot = joinAppPath(root, "plugins");
   const sources: OwnSources = {
-    snapshot: await loadRepoSnapshot(opts.root),
+    snapshot: opts.repo,
     globs: loadGlobPatternMemo(),
   };
   const plan = await planFleet({
-    root: opts.root,
+    root,
     minify: opts.minify,
     sources,
     source: opts.source,
@@ -186,7 +185,8 @@ export async function planExpectedFleet(opts: {
 
 /** The exact import map + entry URL the current tree composes. */
 export async function computeExpectedComposition(opts: {
-  root: AppPath;
+  /** The pass's file set (a check run's `ctx.repo()`, a pass root's snapshot). */
+  repo: RepoSnapshot;
   minify: boolean;
 }): Promise<ExpectedComposition> {
   const fleet = await planExpectedFleet(opts);
@@ -195,8 +195,8 @@ export async function computeExpectedComposition(opts: {
   }
 
   const requests = await collectVendorRequests({
-    root: opts.root,
-    pluginsRoot: joinAppPath(opts.root, "plugins"),
+    root: opts.repo.root,
+    pluginsRoot: joinAppPath(opts.repo.root, "plugins"),
     targets: fleet.targets,
     metaOf: (dirName) => fleet.metas.get(dirName)!,
   });
@@ -205,7 +205,7 @@ export async function computeExpectedComposition(opts: {
     minify: opts.minify,
     builderVersion: BUILDER_VERSION,
     builderSource: fleet.builderSource,
-    root: opts.root,
+    root: opts.repo.root,
   });
   const vendorMeta = readVendorSetMeta(setHash);
   if (vendorMeta === null) {
@@ -237,7 +237,8 @@ export async function computeExpectedComposition(opts: {
  * which means the full fleet has not been built from this tree yet.
  */
 export async function readFleetVendorMeta(opts: {
-  root: AppPath;
+  /** The pass's file set (a check run's `ctx.repo()`, a pass root's snapshot). */
+  repo: RepoSnapshot;
   minify: boolean;
 }): Promise<VendorSetMeta> {
   const fleet = await planExpectedFleet(opts);
@@ -249,8 +250,8 @@ export async function readFleetVendorMeta(opts: {
     );
   }
   const requests = await collectVendorRequests({
-    root: opts.root,
-    pluginsRoot: joinAppPath(opts.root, "plugins"),
+    root: opts.repo.root,
+    pluginsRoot: joinAppPath(opts.repo.root, "plugins"),
     targets: fleet.targets,
     metaOf: (dirName) => fleet.metas.get(dirName)!,
   });
@@ -259,7 +260,7 @@ export async function readFleetVendorMeta(opts: {
     minify: opts.minify,
     builderVersion: BUILDER_VERSION,
     builderSource: fleet.builderSource,
-    root: opts.root,
+    root: opts.repo.root,
   });
   const meta = readVendorSetMeta(setHash);
   if (meta === null) {

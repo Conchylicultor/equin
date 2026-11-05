@@ -66,8 +66,13 @@ export interface CheckContext {
    *
    * For an `inputKeyed` check, whatever it lists and reads through this is
    * recorded in its read-set, with no extra code.
+   *
+   * A `RepoSnapshot`: each member's blob id comes with it (the tree snapshot
+   * hashed every file for the cache key), so a shared helper that needs one —
+   * codegen's barrel evaluation, the web-artifacts plan — takes this set
+   * rather than listing and hashing the tree again.
    */
-  repo(): Promise<RepoFiles>;
+  repo(): Promise<RepoSnapshot>;
   /**
    * The run's tree as git hashed it: its tree hash and every blob's sha (see
    * `GitTreeSnapshot`). Lazy + memoized per run, and the SAME snapshot the
@@ -128,6 +133,12 @@ export interface GitTreeSnapshot {
   paths(): readonly string[];
   /** Blob sha of `path`, or null if the path is not a blob in the tree. */
   blobSha(path: string): string | null;
+  /**
+   * Every path the tree records as a gitlink (mode 160000, "a commit of another
+   * repository"), sorted: a nested checkout `git add -A` swept in, or one the
+   * index already tracks whose directory is still there. Never in `paths()`.
+   */
+  gitlinks(): readonly string[];
 }
 
 /**

@@ -55,8 +55,9 @@ async function ruleAt(
   return severity(resolved.rules?.[rule]);
 }
 
+const repo = await loadRepoFiles(ROOT);
 const [exemptions, contributions] = await Promise.all([
-  loadRepoFiles(ROOT).then(loadExemptions),
+  loadExemptions(repo),
   loadLintContributions(ROOT),
 ]);
 const lint = lintExemptions(exemptions, contributions);
@@ -70,7 +71,7 @@ describe("lint exemptions are honored", () => {
     const config = await buildLintConfig({
       root: ROOT,
       typeSource: { none: true },
-      exemptions: "config-off",
+      exemptions: { mode: "config-off", manifests: repo },
     });
     const notOff: string[] = [];
     for (const e of lint) {

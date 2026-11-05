@@ -27,7 +27,7 @@ const check: Check = {
     const repo = await ctx.repo();
     if (repo.under("plugins").length === 0) return { ok: true };
 
-    const tree = await buildStructureTreeOnce(pluginsRoot);
+    const tree = await buildStructureTreeOnce(pluginsRoot, repo);
     const missing: string[] = [];
     const reexported: string[] = [];
 

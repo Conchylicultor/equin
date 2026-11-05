@@ -44,7 +44,6 @@ per-file synchronous work (`checks/CLAUDE.md`, "The check thread is shared" and
     - `framework/tooling/checks/plugin-boundaries` (2 debt)
     - `framework/tooling/checks/plugins-have-claudemd` (1 debt)
     - `framework/tooling/checks/table-defs-in-schema-glob` (1 debt)
-    - `framework/tooling/checks/tailwind-scan-covers-classes` (1 debt)
     - `framework/tooling/checks/type-check` (1 debt)
     - `framework/tooling/test-layout` (1 debt)
     - `infra/launcher` (1 debt)

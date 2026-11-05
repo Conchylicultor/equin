@@ -1,8 +1,5 @@
 import { basename, join, relative } from "path";
-import {
-  loadRepoFiles,
-  type RepoFiles,
-} from "@plugins/framework/plugins/tooling/core";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import type { Facet } from "@plugins/plugin-meta/plugins/facets/core";
 import {
   asPluginId,
@@ -275,24 +272,25 @@ function computeIds(nodes: PluginNode[], parentId: string): void {
 
 export interface BuildPluginTreeOptions {
   /**
-   * The repo's file set. Absent, the tree asks git for one. The faceted build
-   * (`plugin-tree/faceted`) passes a SNAPSHOT, whose blob ids key its facet
-   * records.
+   * The pass's file set (a build's snapshot, a check run's `ctx.repo()`) — the
+   * tree is read off it and nothing else lists the repo. Required: a tree that
+   * listed the repo itself was one more whole-tree `git ls-files` per caller.
+   * The faceted build (`plugin-tree/faceted`) passes a SNAPSHOT, whose blob ids
+   * key its facet records.
    */
-  repo?: RepoFiles;
+  repo: RepoFiles;
 }
 
 /**
- * The plugin tree under `pluginsRoot`, read off `opts.repo` — the repo's file
- * set, whose root `pluginsRoot` sits directly under. A caller that holds the
- * pass's set (a build's snapshot, a check run's `ctx.repo()`) passes it; with
- * none, the tree asks git for one. Nothing here walks the disk.
+ * The plugin tree under `pluginsRoot`, read off `opts.repo` — the pass's file
+ * set, whose root `pluginsRoot` sits directly under. Nothing here walks the
+ * disk or lists the repo.
  */
 export async function buildPluginTree(
   pluginsRoot: AppPath,
-  opts?: BuildPluginTreeOptions,
+  opts: BuildPluginTreeOptions,
 ): Promise<PluginTree> {
-  const repo = opts?.repo ?? (await loadRepoFiles(appPathParent(pluginsRoot)));
+  const { repo } = opts;
   if (repo.root !== appPathParent(pluginsRoot)) {
     throw new Error(
       `buildPluginTree(${pluginsRoot}): the repo set is of ${repo.root}, not of the plugins root's parent.`,

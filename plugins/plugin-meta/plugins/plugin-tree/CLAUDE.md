@@ -117,8 +117,6 @@ dynamic value.
     - `framework/plugin-id.asPluginId`
     - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
     - `framework/plugin-id.PluginId`
-    - `framework/tooling.loadRepoFiles`
-    - `framework/tooling.RepoFiles`
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.appPathParent`
     - `infra/host-fs/user-path.joinAppPath`
@@ -150,7 +148,9 @@ dynamic value.
     - `plugin-meta/composition`
     - `plugin-meta/plugin-tree/faceted`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
+    - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/structure-tree-cache.ts` (sanctioned)
 - Sub-plugins:
   - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and `./equin…
 

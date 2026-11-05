@@ -1,6 +1,6 @@
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type {
   Check,
+  CheckContext,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
 import {
@@ -28,8 +28,8 @@ const ranges: Check = {
   id: "deps-npm:ranges",
   description:
     "every package.json dependency is a ^/~ range or a workspace link — bun.lock fixes the version, the npm updater moves it",
-  async run() {
-    const ws = await readWorkspace(await getWorktreeRoot());
+  async run(ctx: CheckContext) {
+    const ws = await readWorkspace(await ctx.repo());
     return verdict(
       unrangedSpecs(ws.declared),
       "Write a range (`^<locked version>` keeps today's lock). Packages that must move together are a lockstep group, a release that must wait is a hold — both in the package.json's `dependencyPolicy` (plugins/infra/plugins/deps/plugins/npm/CLAUDE.md).",
@@ -45,8 +45,8 @@ const policy: Check = {
   id: "deps-npm:policy",
   description:
     "every package.json dependencyPolicy is well-formed, names declared packages, and holds no release longer than 90 days from today",
-  async run() {
-    const ws = await readWorkspace(await getWorktreeRoot());
+  async run(ctx: CheckContext) {
+    const ws = await readWorkspace(await ctx.repo());
     return verdict(
       policyProblems({ ...ws, today: utcDay(new Date()) }),
       "See plugins/infra/plugins/deps/plugins/npm/CLAUDE.md for the dependencyPolicy shape.",
@@ -59,8 +59,8 @@ const groupsCoherent: Check = {
   id: "deps-npm:groups-coherent",
   description:
     "every lockstep group in a dependencyPolicy resolves in bun.lock to one copy per member, the members agreeing on the group's version part",
-  async run() {
-    const ws = await readWorkspace(await getWorktreeRoot());
+  async run(ctx: CheckContext) {
+    const ws = await readWorkspace(await ctx.repo());
     return verdict(
       groupProblems(ws.policies, ws.lock),
       "Move a group's members together: `./equin deps upgrade npm --only <member>` moves the whole group.",
@@ -78,8 +78,8 @@ const wrappersDeclared: Check = {
   id: "deps-npm:wrappers-declared",
   description:
     "every dependency in a scope we publish belongs to a dependencyPolicy group declaring the upstream it wraps",
-  async run() {
-    const ws = await readWorkspace(await getWorktreeRoot());
+  async run(ctx: CheckContext) {
+    const ws = await readWorkspace(await ctx.repo());
     return verdict(
       wrappersUndeclared(ws.policies, ws.declared),
       "Add `wraps` (the upstream's release tags and the publish prerequisite) to the package's lockstep group — plugins/infra/plugins/deps/plugins/npm/CLAUDE.md.",

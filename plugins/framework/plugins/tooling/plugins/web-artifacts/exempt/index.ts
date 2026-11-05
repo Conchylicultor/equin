@@ -57,4 +57,11 @@ export default [
     reason:
       "a relative import / url() specifier read from the checkout's own sources or its node_modules packages, resolved against the file that names it — or a path of the metafile esbuild wrote for the app's own vendor build, relative to its cwd",
   },
+  {
+    rule: "repo-walk-safety/no-adhoc-repo-listing",
+    paths: ["core/internal/pipeline.ts"],
+    kind: "sanctioned",
+    reason:
+      "The build's artifact pipeline takes its snapshot after codegen and the formatter wrote, so every address is read off the tree the artifacts are built from \u2014 the build's own pass, once per run.",
+  },
 ] satisfies Exemptions;

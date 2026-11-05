@@ -28,6 +28,7 @@ import {
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   asNamespace,
   namespaceUrl,
@@ -321,7 +322,9 @@ async function resolveCompositionIconKey(opts: {
     );
   }
 
-  const tree = await buildPluginTree(joinAppPath(root, "plugins"));
+  const tree = await buildPluginTree(joinAppPath(root, "plugins"), {
+    repo: await loadRepoFiles(root),
+  });
 
   // Each entry point is an EntryPattern (`id`, `id.**`, `!id.**`, or the root
   // `**`); its base id is a dotted plugin id whose tree node is keyed by the

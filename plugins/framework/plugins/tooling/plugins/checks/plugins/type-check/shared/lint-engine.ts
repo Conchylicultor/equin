@@ -95,7 +95,7 @@ export function createLintEngine(root: AppPath): LintEngine {
           ? buildLintConfig({
               root,
               typeSource: { programs: [program!] },
-              exemptions: "report",
+              exemptions: { mode: "report" },
             })
           : buildLintConfig({
               root,
@@ -103,7 +103,7 @@ export function createLintEngine(root: AppPath): LintEngine {
                 kind === "syntactic"
                   ? { none: true }
                   : { programs: [program!] },
-              exemptions: "report",
+              exemptions: { mode: "report" },
               rules: {
                 base: groups.includes(LINT_GROUP_BASE),
                 contributions: new Set(groups),

@@ -2,10 +2,11 @@ import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type {
   Check,
+  CheckContext,
   CheckResult,
+  RepoFiles,
 } from "@plugins/framework/plugins/tooling/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import {
   findImports,
@@ -24,12 +25,6 @@ import {
   isBunTestPath,
   isDomTestPath,
 } from "../core/test-layout";
-
-// Wedge-breaker for a metadata-only git read: far above any real duration,
-// because starvation under a saturated check run is what these suffer, not
-// slowness. Same reasoning as `infra/worktree`'s bounds, which carry the
-// measurements.
-const GIT_TIMEOUT_MS = 60_000;
 
 const BUNFIG = "bunfig.toml";
 const VITEST_CONFIG = "vitest.config.ts";
@@ -65,8 +60,7 @@ const VITEST_CONFIG = "vitest.config.ts";
  *       passes on a laptop and fails under `LANG=C.UTF-8` with no code change.
  *
  * NOT `inputKeyed`: unlike the `grepCode`-only pattern checks, this one
- * discovers files via `git ls-files` and reads `bunfig.toml` /
- * `vitest.config.ts` directly, so its reads do NOT route through the recording
+ * reads `bunfig.toml` / `vitest.config.ts` directly, so its reads do NOT route through the recording
  * `FileSystemView`. Declaring it input-keyed would record an incomplete
  * read-set and could produce a stale PASS. It takes the legacy whole-tree key.
  */
@@ -74,12 +68,13 @@ const check: Check = {
   id: "test-layout:runner-split",
   description:
     "bun:test and vitest scopes stay exact complements: no test file imports the other runner, no stray `__tests__/` suite, both scope literals survive in bunfig.toml / vitest.config.ts, the shared vitest setup still pins the clock, and vitest.config.ts still pins the workers' locale and timezone",
-  async run(): Promise<CheckResult> {
+  async run(ctx: CheckContext): Promise<CheckResult> {
     const root = REPO_ROOT;
+    const repo = await ctx.repo();
     const sections: string[] = [];
 
     // ---- rules (a)–(c): the test-file sweep --------------------------------
-    const files = await listTestFiles(root);
+    const listed = listTestFiles(repo);
 
     const crossVitest: string[] = [];
     const crossBunTest: string[] = [];
@@ -89,9 +84,10 @@ const check: Check = {
     // run inside the reads' callbacks, the scans of reads that settle together
     // chained into one block on the check runner's shared thread. The slicer
     // yields between files instead.
-    const sources = await Promise.all(
-      files.map((rel) => Bun.file(join(root, rel)).text()),
-    );
+    const read = await Promise.all(listed.map((rel) => repo.read(rel)));
+    // A null read: removed since the set was taken — no file, no offense.
+    const files = listed.filter((_, i) => read[i] != null);
+    const sources = read.filter((src): src is string => src != null);
     const slice = createTimeSlicer();
     for (let f = 0; f < files.length; f++) {
       await slice();
@@ -182,45 +178,16 @@ const check: Check = {
 };
 
 /**
- * Every test file in the checkout, repo-relative. `--cached --others
- * --exclude-standard` is tracked + not-yet-committed but never gitignored, so a
- * brand-new offender is visible while `node_modules` and nested worktrees are
- * not. (`git grep` would miss the untracked file; `Bun.Glob` would walk the
- * ignored trees.)
- *
- * Files DELETED in the working tree are then subtracted, because `--cached`
- * lists the index and a deletion is not staged until it is committed: a test
- * file moved or removed in a worktree is still an index entry with no bytes on
- * disk, and reading it threw an ENOENT that took the whole build down with it.
- * Asking git for that set is exact — a `catch` on the read, or an `existsSync`
- * filter, would also swallow a genuinely unreadable file.
+ * Every test file in the checkout, repo-relative: the run's file set (tracked +
+ * not-yet-committed, never gitignored, minus files deleted in the working
+ * tree), so a brand-new offender is visible while `node_modules` and nested
+ * worktrees are not. The git pathspecs `*.test.ts` / `*.test.tsx` (`*` spans
+ * `/`), matched exactly.
  */
-async function listTestFiles(root: string): Promise<string[]> {
-  const [present, deleted] = await Promise.all([
-    lsFiles(root, ["--cached", "--others", "--exclude-standard"]),
-    lsFiles(root, ["--deleted"]),
-  ]);
-  const gone = new Set(deleted);
-  return present.filter((rel) => !gone.has(rel));
-}
-
-/** One `git ls-files` pass over the test-file globs, repo-relative. */
-async function lsFiles(root: string, flags: string[]): Promise<string[]> {
-  const result = await spawnCaptured(
-    ["git", "ls-files", ...flags, "--", "*.test.ts", "*.test.tsx"],
-    { cwd: root, timeoutMs: GIT_TIMEOUT_MS },
-  );
-  // An empty list from a FAILED git call would silently pass every file rule —
-  // the enumeration failing must be loud, not an absorbed "no offenders".
-  if (result.exitCode !== 0) {
-    throw new Error(
-      `git ls-files failed in ${root} (exit ${result.exitCode}): ${result.stderr.trim()}`,
-    );
-  }
-  return result.stdout
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+function listTestFiles(repo: RepoFiles): string[] {
+  return [...repo.glob("*.test.ts"), ...repo.glob("*.test.tsx")]
+    .filter((rel) => rel.endsWith(".test.ts") || rel.endsWith(".test.tsx"))
+    .sort();
 }
 
 interface RunnerImport {

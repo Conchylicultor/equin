@@ -60,7 +60,10 @@ async function buildAllowSet(repo: RepoFiles): Promise<Set<string>> {
 async function enumerateBarrels(
   repo: RepoFiles,
 ): Promise<{ web: string[]; rest: string[] }> {
-  const tree = await buildStructureTreeOnce(joinAppPath(repo.root, "plugins"));
+  const tree = await buildStructureTreeOnce(
+    joinAppPath(repo.root, "plugins"),
+    repo,
+  );
   const web: string[] = [];
   const rest: string[] = [];
 

@@ -1,4 +1,8 @@
-import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
+  appPathParent,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { buildFacetedPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
 import { createGitStateMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
@@ -37,7 +41,12 @@ export function getMainPluginTree(
       // aborts the memo recompute, retaining the previous cached tree (stale-safe).
       lastKnownMainSha() ??
       (await runGit(["rev-parse", "main"], mainPluginsDir)).trim(),
-    () => withHeavyReadSlot(() => buildFacetedPluginTree(mainPluginsDir)),
+    () =>
+      withHeavyReadSlot(async () =>
+        buildFacetedPluginTree(mainPluginsDir, {
+          repo: await loadRepoFiles(appPathParent(mainPluginsDir)),
+        }),
+      ),
   );
 }
 
@@ -69,6 +78,11 @@ export function getWorktreePluginTree(
   return worktreeTreeMemo.get(
     worktreePath,
     () => editedFilesSignature(worktreePath),
-    () => withHeavyReadSlot(() => buildFacetedPluginTree(worktreePluginsDir)),
+    () =>
+      withHeavyReadSlot(async () =>
+        buildFacetedPluginTree(worktreePluginsDir, {
+          repo: await loadRepoFiles(appPathParent(worktreePluginsDir)),
+        }),
+      ),
   );
 }

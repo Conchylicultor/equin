@@ -10,16 +10,12 @@ import {
   mapConfigLists,
 } from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
-import {
-  getWorktreeRoot,
-  spawnCaptured,
-} from "@plugins/infra/plugins/spawn/core";
-
-// Wedge-breaker for a metadata-only git read: far above any real duration,
-// because starvation under a saturated check run is what these suffer, not
-// slowness. Same reasoning as `infra/worktree`'s bounds, which carry the
-// measurements.
-const GIT_TIMEOUT_MS = 60_000;
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import type {
+  Check,
+  CheckContext,
+  CheckResult,
+} from "@plugins/framework/plugins/tooling/core";
 
 // A scoped override (config/<hier>/@app/<id>/<name>.jsonc) is a base-anchored
 // delta: its schema anchors to the BASE origin (config/<hier>/<name>.origin.jsonc).
@@ -31,9 +27,6 @@ function stripScopeSegment(p: string): string {
   return p.replace(SCOPE_SEG_RE, "/$1");
 }
 
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
 const HINT =
   "Identity-bearing list rows need a stable, content-independent id so external " +
   'state (e.g. saved row order) survives edits. Add a bare slug id, e.g. "id": "online".';
@@ -42,7 +35,7 @@ const check: Check = {
   id: "config-stable-list-ids",
   description:
     "Every identity-bearing config listField (stableIdentity) row carries an explicit, unique id",
-  async run() {
+  async run(ctx: CheckContext) {
     const root = await getWorktreeRoot();
     const configDir = join(root, "config");
     if (!existsSync(configDir)) return { ok: true };
@@ -56,11 +49,9 @@ const check: Check = {
       live: true,
     });
 
-    const result = await spawnCaptured(
-      ["git", "ls-files", "--others", "--cached", "--", "config/"],
-      { cwd: root, timeoutMs: GIT_TIMEOUT_MS },
-    );
-    const allConfigFiles = result.stdout.trim().split("\n").filter(Boolean);
+    // The run's file set (tracked + untracked-not-ignored) — what a commit of
+    // this tree holds under config/.
+    const allConfigFiles = (await ctx.repo()).under("config");
 
     for (const relFromRoot of allConfigFiles) {
       if (!relFromRoot.endsWith(".jsonc")) continue;

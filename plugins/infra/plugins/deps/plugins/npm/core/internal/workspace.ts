@@ -2,12 +2,9 @@
 // (its declared dependencies and its `dependencyPolicy`) and what `bun.lock`
 // resolved each to. Read-only.
 
-import { readFile } from "@plugins/packages/plugins/timed-fs/core";
-import { join } from "node:path";
 import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";
 import { z } from "zod";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { POLICY_KEY, PolicySchema, type Policy } from "./policy";
 import { parseSpec, type Spec } from "./spec";
 
@@ -85,32 +82,18 @@ const LockSchema = z.object({
 
 /**
  * Every workspace package.json: the root and each plugin's, tracked or new —
- * as the working tree has them, so one deleted but not yet committed (a plugin
- * just removed) is not listed: `--cached` alone still names it.
+ * as the working tree has them (the file set subtracts one deleted but not yet
+ * committed: a plugin just removed). Read off the caller's file set — a check
+ * run's `ctx.repo()`, so the four `deps-npm:*` checks no longer each walk
+ * `plugins/` for untracked manifests.
  */
-export async function workspaceManifests(root: string): Promise<string[]> {
-  const pathspec = ["--", "package.json", ":(glob)plugins/**/package.json"];
-  const listed = await gitLsFiles(root, [
-    "--cached",
-    "--others",
-    "--exclude-standard",
-    ...pathspec,
-  ]);
-  const deleted = new Set(await gitLsFiles(root, ["--deleted", ...pathspec]));
-  return listed.filter((path) => !deleted.has(path));
-}
-
-async function gitLsFiles(root: string, args: string[]): Promise<string[]> {
-  const result = await spawnCaptured(["git", "ls-files", ...args], {
-    cwd: root,
-    timeoutMs: 60_000,
-  });
-  if (result.exitCode !== 0) {
-    throw new Error(
-      `git ls-files failed (exit ${result.exitCode}): ${result.stderr.trim()}`,
-    );
-  }
-  return result.stdout.split("\n").filter((l) => l.trim() !== "");
+export function workspaceManifests(files: RepoFiles): string[] {
+  return [
+    ...(files.has("package.json") ? ["package.json"] : []),
+    ...files
+      .glob("plugins/**/package.json")
+      .filter((path) => path.endsWith("/package.json")),
+  ];
 }
 
 /** The version in a lock entry's `<name>@<version>` ident (scoped names keep their `@`). */
@@ -163,22 +146,17 @@ export function parseLock(text: string): Lock {
   };
 }
 
-/** How many `package.json` reads `readWorkspace` holds open at once. */
-const MANIFEST_READ_CONCURRENCY = 32;
-
-export async function readWorkspace(root: string): Promise<Workspace> {
+/** The workspace as `files` holds it: every manifest of {@link workspaceManifests}, and `bun.lock`. */
+export async function readWorkspace(files: RepoFiles): Promise<Workspace> {
   const declared: Declared[] = [];
   const policies: DeclaredPolicy[] = [];
   const policyErrors: PolicyError[] = [];
-  // Read asynchronously through a bounded gate: a blocking read per manifest
-  // (a few hundred of them) held the check thread every check shares for
-  // seconds.
-  const manifests = await workspaceManifests(root);
-  const reads = createSemaphore(MANIFEST_READ_CONCURRENCY);
+  // Read asynchronously through the set's bounded gate: a blocking read per
+  // manifest (a few hundred of them) held the check thread every check shares
+  // for seconds.
+  const manifests = workspaceManifests(files);
   const texts = await Promise.all(
-    manifests.map((manifest) =>
-      reads.run(() => readFile(join(root, manifest), "utf8")),
-    ),
+    manifests.map((manifest) => readMember(files, manifest)),
   );
   for (const [i, manifest] of manifests.entries()) {
     const pkg = ManifestSchema.parse(JSON.parse(texts[i]!));
@@ -211,8 +189,19 @@ export async function readWorkspace(root: string): Promise<Workspace> {
     declared,
     policies,
     policyErrors,
-    lock: parseLock(await readFile(join(root, "bun.lock"), "utf8")),
+    lock: parseLock(await readMember(files, "bun.lock")),
   };
+}
+
+/** A member's text; one gone since the set was taken is a failure, never "no manifest". */
+async function readMember(files: RepoFiles, path: string): Promise<string> {
+  const text = await files.read(path);
+  if (text === null) {
+    throw new Error(
+      `${path} is not a file of the working tree at ${files.root} (removed since the file set was taken, or never there).`,
+    );
+  }
+  return text;
 }
 
 /**

@@ -22,4 +22,11 @@ export default [
     reason:
       "createRuleTester itself: the one subclass of eslint's RuleTester, wiring bun's describe/it and a fresh project service per typed suite",
   },
+  {
+    rule: "repo-walk-safety/no-adhoc-repo-listing",
+    paths: ["core/ide-lint-config.ts"],
+    kind: "sanctioned",
+    reason:
+      "The editor's ESLint config is its own pass: ESLint loads it once per session, and its exemption manifests are read off that one listing.",
+  },
 ] satisfies Exemptions;

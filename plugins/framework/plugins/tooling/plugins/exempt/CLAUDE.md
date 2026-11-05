@@ -87,10 +87,12 @@ once as globs — ESLint reads the globs, checks the compiled predicate.
 
 One loader (`loadExemptions`), three consumers:
 
-- **IDE** (`eslint.config.ts`, `exemptions: "config-off"`): each exempted
-  (rule, path) is a config-level `"off"` block — no squiggle on an exempt file.
-- **type-check worker** (`exemptions: "report"`): the rule runs everywhere; the
-  worker drops messages an exemption covers, and reports
+- **IDE** (`eslint.config.ts`, `exemptions: { mode: "config-off", manifests }`):
+  each exempted (rule, path) is a config-level `"off"` block — no squiggle on an
+  exempt file.
+- **type-check** (`exemptions: { mode: "report" }`): the rule runs everywhere
+  in the worker, whose config reads no manifest; the check drops the messages an
+  exemption covers (`loadExemptions` over the run's file set), and reports
   `(unused-exemption)` for a FILE-level exemption on a linted file that
   suppressed nothing. Directory exemptions are only stale-checked (an
   incremental run lints part of a subtree). Every `plugins/**/exempt/**` file is

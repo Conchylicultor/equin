@@ -17,6 +17,7 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join, relative, sep } from "path";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 const SOURCE_ROOTS = ["plugins", "plugins/framework/plugins/web-core/web"];
@@ -59,7 +60,10 @@ function pluginForPath(relFile: string, pluginSet: Set<string>): string | null {
 const dryRun = process.argv.includes("--dry-run");
 const root = await getWorktreeRoot();
 const pluginsRoot = joinAppPath(root, "plugins");
-const tree = await buildStructureTreeOnce(pluginsRoot);
+const tree = await buildStructureTreeOnce(
+  pluginsRoot,
+  await loadRepoFiles(root),
+);
 const pluginSet = new Set(Array.from(tree.byDir.values()).map((n) => n.path));
 
 const files: string[] = [];

@@ -225,7 +225,13 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
   if (from.id === to.id)
     refuse(`<from> and <to> are the same plugin (${from.id})`);
 
-  const tree = await buildStructureTreeOnce(asAppPath(join(root, "plugins")));
+  // The one listing of this command: the tree and the reference scan below
+  // both read it, and nothing has moved yet.
+  const repo = await loadRepoFiles(root);
+  const tree = await buildStructureTreeOnce(
+    asAppPath(join(root, "plugins")),
+    repo,
+  );
   const fromNode = [...tree.byDir.values()].find((n) => n.id === from.id);
   if (fromNode === undefined) refuse(`${from.dir} is not a plugin`);
 
@@ -258,7 +264,6 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
   );
 
   // Locate BEFORE anything moves: the refs carry old paths and old offsets.
-  const repo = await loadRepoFiles(root);
   const refs = await findPluginRefs(repo);
   const mentions = await findPluginMentions(repo, [from.id]);
   const texts = new Map<string, string>();

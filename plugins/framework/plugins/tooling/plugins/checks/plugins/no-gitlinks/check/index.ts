@@ -2,7 +2,11 @@ import {
   getWorktreeRoot,
   spawnExpectOk,
 } from "@plugins/infra/plugins/spawn/core";
-import type { Check } from "@plugins/framework/plugins/tooling/core";
+import type {
+  Check,
+  CheckContext,
+  GitTreeSnapshot,
+} from "@plugins/framework/plugins/tooling/core";
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -21,7 +25,11 @@ async function gitRecords(root: string, args: string[]): Promise<string[]> {
   return result.stdout.split("\0").filter((record) => record.length > 0);
 }
 
-/** Paths the index records as gitlinks. Each record is `<mode> <sha> <stage>\t<path>`. */
+/**
+ * Paths the index records as gitlinks. Each record is `<mode> <sha> <stage>\t<path>`.
+ * An index-only read (no working-tree stat): the run's tree drops a tracked
+ * gitlink whose directory is gone, so only the index still names it.
+ */
 async function trackedGitlinks(root: string): Promise<string[]> {
   const records = await gitRecords(root, ["ls-files", "--stage"]);
   return records
@@ -31,21 +39,38 @@ async function trackedGitlinks(root: string): Promise<string[]> {
 
 /**
  * Untracked, un-ignored directories that hold their own repository — a clone,
- * a `git init`, or a `git worktree add` target. Without `--directory`,
- * `ls-files --others` descends into ordinary untracked directories and lists
- * their files; the only entry it prints as `dir/` is one it refuses to descend
- * into because it is a repository. That is exactly the set `git add -A` (the
+ * a `git init`, or a `git worktree add` target — which `git add -A` (the
  * staging step of `./equin push -m`) would record as gitlinks.
+ *
+ * Read off the run's tree: it IS `git add -A` over this checkout, so its
+ * gitlinks are exactly these, with no walk of our own. Except when there is no
+ * tree: `add -A` refuses a nested repository with no commit checked out
+ * (`'sub/' does not have a commit checked out`), so the run could not hash the
+ * working tree and `ctx.snapshot()` rejects. Only then is the working tree
+ * walked (`ls-files --others`, which prints a directory it refuses to descend
+ * into — a repository — as `dir/`), to name the checkout that broke the hash;
+ * a failure it cannot explain is rethrown as it came.
  */
-async function nestedCheckouts(root: string): Promise<string[]> {
-  const records = await gitRecords(root, [
-    "ls-files",
-    "--others",
-    "--exclude-standard",
-  ]);
-  return records
-    .filter((path) => path.endsWith("/"))
-    .map((path) => path.slice(0, -1));
+async function nestedCheckouts(
+  ctx: CheckContext,
+  root: string,
+): Promise<string[]> {
+  let tree: GitTreeSnapshot;
+  try {
+    tree = await ctx.snapshot();
+  } catch (err) {
+    const records = await gitRecords(root, [
+      "ls-files",
+      "--others",
+      "--exclude-standard",
+    ]);
+    const repos = records
+      .filter((path) => path.endsWith("/"))
+      .map((path) => path.slice(0, -1));
+    if (repos.length > 0) return repos;
+    throw err;
+  }
+  return [...tree.gitlinks()];
 }
 
 function bulleted(paths: string[]): string {
@@ -71,9 +96,9 @@ const check: Check = {
     "no gitlink (a nested repository or worktree checkout) is tracked, or would be swept in by `git add -A`",
   // Reads the real index, which the runner's tree hash (a scratch `add -A`)
   // does not reproduce exactly: an index gitlink whose directory is gone drops
-  // out of the scratch tree. Two metadata reads — nothing worth caching.
+  // out of the scratch tree. One index read — nothing worth caching.
   cacheSignature: () => null,
-  async run() {
+  async run(ctx: CheckContext) {
     const root = await getWorktreeRoot();
 
     const tracked = await trackedGitlinks(root);
@@ -90,7 +115,8 @@ const check: Check = {
       };
     }
 
-    const nested = await nestedCheckouts(root);
+    // None is tracked here (that returned above).
+    const nested = await nestedCheckouts(ctx, root);
     if (nested.length > 0) {
       return {
         ok: false,

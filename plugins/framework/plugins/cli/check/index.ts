@@ -2,7 +2,7 @@ import { builtinModules } from "node:module";
 import { relative } from "node:path";
 import {
   collectedDirRegistryPath,
-  discoverCollectedDirs,
+  discoverCollectedDirsIn,
   postWebManifests,
   preBarrelManifests,
   writePreBarrelManifest,
@@ -246,12 +246,12 @@ const manifestFreezeCheck: Check = {
     // Every collected dir's committed registry, discovered (not listed), so a
     // new registry is held to the rule the moment it exists.
     const registries = new Map<string, string>();
-    for (const def of discoverCollectedDirs(root)) {
+    for (const def of await discoverCollectedDirsIn(await ctx.repo())) {
       registries.set(relative(root, collectedDirRegistryPath(def)), def.dir);
     }
     if (registries.size === 0) {
       throw new Error(
-        "discoverCollectedDirs found NO collected dir, so there is no registry to measure. The " +
+        "discoverCollectedDirsIn found NO collected dir, so there is no registry to measure. The " +
           "plugin runtimes themselves are collected dirs, so that is a broken discovery, not a repo " +
           "without registries — refusing to report a pass derived from it.",
       );

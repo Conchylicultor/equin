@@ -100,7 +100,7 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
       const pluginsRoot = joinAppPath(root, "plugins");
 
       const pluginTree = existsSync(pluginsRoot)
-        ? await buildStructureTreeOnce(pluginsRoot)
+        ? await buildStructureTreeOnce(pluginsRoot, await ctx.repo())
         : null;
       const zoneMap = buildZoneMap(root, config.zones, pluginTree);
 

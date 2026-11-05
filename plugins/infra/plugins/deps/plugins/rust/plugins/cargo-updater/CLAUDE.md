@@ -44,7 +44,9 @@ which files tasks (the python/uv-updater split).
   - Contributes: `updater` "cargo"
   - Uses: `infra/deps/updates.UpdaterDeclare`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/cargo-updater.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `server/internal/cargo-updater.ts` (debt)
+    - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/cargo-updater.ts` (sanctioned)
 - Core:
   - Exports (values):
     - `CARGO_HOLDS`

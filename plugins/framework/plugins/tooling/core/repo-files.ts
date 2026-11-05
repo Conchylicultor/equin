@@ -111,8 +111,8 @@ async function readWorkingTree(
  * A `RepoFiles` over `sorted` — every file path, repo-relative, in
  * `Array.prototype.sort()` order. Takes ownership of the array and freezes it,
  * so `all()` can hand it out uncopied. Content is read from the working tree
- * under `root`. For a caller that already holds the listing (the check
- * runner's tree snapshot); everyone else calls `loadRepoFiles`.
+ * under `root`. For a caller that already holds the listing; everyone else
+ * calls `loadRepoFiles`.
  */
 export function repoFilesOver(
   root: AppPath,
@@ -255,13 +255,33 @@ export async function loadRepoSnapshot(
     toHash.forEach((p, i) => blobs.set(p, ids[i]!));
   }
 
-  const files = repoFilesOver(root, paths, opts);
+  return repoSnapshotOver(
+    root,
+    paths,
+    (path) => blobs.get(path) ?? null,
+    opts,
+  );
+}
+
+/**
+ * A `RepoSnapshot` over `sorted` (as `repoFilesOver`), each member's blob id
+ * answered by `blobOf` — for a caller that already holds the ids (the check
+ * runner's tree snapshot, which hashed every file for its cache key). A member
+ * `blobOf` has no id for throws, like a path outside the set.
+ */
+export function repoSnapshotOver(
+  root: AppPath,
+  sorted: readonly string[],
+  blobOf: (path: string) => string | null,
+  opts?: RepoFilesOptions,
+): RepoSnapshot {
+  const files = repoFilesOver(root, sorted, opts);
   return {
     ...files,
     blobOf: (path) => {
       assertRepoPath("blobOf", path, false);
-      const blob = files.has(path) ? blobs.get(path) : undefined;
-      if (blob === undefined) {
+      const blob = files.has(path) ? blobOf(path) : null;
+      if (blob === null) {
         throw new Error(
           `RepoSnapshot.blobOf(${JSON.stringify(path)}): not a file of the snapshot of ${root}.`,
         );

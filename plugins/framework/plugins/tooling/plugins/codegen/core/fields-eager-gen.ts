@@ -4,7 +4,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeGenerated } from "./write-generated";
-import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 /**
@@ -71,12 +71,13 @@ function hasDefaultExport(file: AppPath): boolean {
 /**
  * Walk the plugin tree (barrel-free static scan) and collect the `@plugins/…`
  * specifier of every fields storage `server` barrel with a default
- * export. Sorted for deterministic output.
+ * export. Sorted for deterministic output. The codegen tree its sibling
+ * pre-barrel manifests read, so the pass lists the repo for it once.
  */
 export async function collectFieldEagerBarrels(
   root: AppPath,
 ): Promise<string[]> {
-  const tree = await buildStructureTreeOnce(joinAppPath(root, "plugins"));
+  const tree = await buildBarrelFreeTree(root);
   const specifiers: string[] = [];
   for (const node of tree.byDir.values()) {
     if (!CAPABILITY_RE.test(node.path)) continue;

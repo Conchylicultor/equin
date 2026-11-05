@@ -1,26 +1,9 @@
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import {
-  getWorktreeRoot,
-  spawnCaptured,
-} from "@plugins/infra/plugins/spawn/core";
-
-// Wedge-breaker for a metadata-only git read: far above any real duration,
-// because starvation under a saturated check run is what these suffer, not
-// slowness. Same reasoning as `infra/worktree`'s bounds, which carry the
-// measurements.
-const GIT_TIMEOUT_MS = 60_000;
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function git(args: string[], cwd?: string): Promise<string> {
-  const result = await spawnCaptured(["git", ...args], {
-    cwd,
-    timeoutMs: GIT_TIMEOUT_MS,
-  });
-  return result.stdout;
-}
+import type {
+  Check,
+  CheckContext,
+} from "@plugins/framework/plugins/tooling/core";
 
 const APP_CSS =
   "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
@@ -85,8 +68,9 @@ const check: Check = {
   id: "tailwind-scan-covers-classes",
   description:
     "Every file that authors a utility class must lie within Tailwind's resolved @source scan scope in app.css (else the class is silently never generated)",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx: CheckContext) {
+    const repo = await ctx.repo();
+    const { root } = repo;
     const cssPath = join(root, APP_CSS);
     const cssDir = dirname(cssPath);
     const css = readFileSync(cssPath, "utf8");
@@ -127,26 +111,18 @@ const check: Check = {
     const scopes = sources.map((g) => sourceBaseDir(cssDir, g));
 
     // Only files OUTSIDE every scope can be offenders, so read just those.
-    const tracked = (await git(["ls-files", "-z"], root))
-      .split("\0")
-      .filter(Boolean);
-    const offenders: string[] = [];
-    for (const relPath of tracked) {
-      if (!SCANNABLE.test(relPath)) continue;
-      if (SELF_STYLED.test(relPath)) continue; // styles itself → app.css is irrelevant
-      const abs = join(root, relPath);
-      if (scopes.some((s) => within(s, abs))) continue; // in scope → emitted, skip
-      let text: string;
-      try {
-        text = readFileSync(abs, "utf8");
-      } catch (err) {
-        // A tracked file can vanish between `git ls-files` and the read; that is
-        // not an offense. Anything else is unexpected — fail loudly.
-        if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
-        throw err;
-      }
-      if (AUTHORS.test(text)) offenders.push(relPath);
-    }
+    const outside = repo.all().filter(
+      (relPath) =>
+        SCANNABLE.test(relPath) &&
+        !SELF_STYLED.test(relPath) && // styles itself → app.css is irrelevant
+        !scopes.some((s) => within(s, join(root, relPath))), // in scope → emitted
+    );
+    const texts = await Promise.all(outside.map((p) => repo.read(p)));
+    // A null read: the file vanished since the set was taken — not an offense.
+    const offenders = outside.filter((_, i) => {
+      const text = texts[i];
+      return text != null && AUTHORS.test(text);
+    });
 
     if (offenders.length > 0) {
       const shown = offenders.slice(0, 10);

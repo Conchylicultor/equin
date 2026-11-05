@@ -15,16 +15,12 @@ import {
 } from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import type { ConfigDescriptor, JsonValue } from "@plugins/config_v2/core";
-import {
-  getWorktreeRoot,
-  spawnCaptured,
-} from "@plugins/infra/plugins/spawn/core";
-
-// Wedge-breaker for a metadata-only git read: far above any real duration,
-// because starvation under a saturated check run is what these suffer, not
-// slowness. Same reasoning as `infra/worktree`'s bounds, which carry the
-// measurements.
-const GIT_TIMEOUT_MS = 60_000;
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import type {
+  Check,
+  CheckContext,
+  CheckResult,
+} from "@plugins/framework/plugins/tooling/core";
 
 // A scoped override (config/<hier>/@app/<id>/<name>.jsonc) is a base-anchored
 // delta: its // @hash and schema anchor to the BASE origin
@@ -35,9 +31,6 @@ const SCOPE_SEG_RE = new RegExp(`/${APP_SCOPE_DIR}/[^/]+/([^/]+)$`);
 function stripScopeSegment(p: string): string {
   return p.replace(SCOPE_SEG_RE, "/$1");
 }
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 // Validate a config file's content against its descriptor's Zod schema. Returns
 // a failure when the parsed document fails — the same `safeParse` the runtime
@@ -69,7 +62,7 @@ const check: Check = {
   id: "config-origins-in-sync",
   description:
     "config/ origin files match defineConfig defaults, overwrite hashes are consistent, and all content validates against its schema",
-  async run() {
+  async run(ctx: CheckContext) {
     const root = await getWorktreeRoot();
     const configDir = join(root, "config");
     // `renderConfigOriginContent` resolves origin annotations through codegen's
@@ -111,11 +104,9 @@ const check: Check = {
 
     if (!existsSync(configDir)) return { ok: true };
 
-    const result = await spawnCaptured(
-      ["git", "ls-files", "--others", "--cached", "--", "config/"],
-      { cwd: root, timeoutMs: GIT_TIMEOUT_MS },
-    );
-    const allConfigFiles = result.stdout.trim().split("\n").filter(Boolean);
+    // The run's file set (tracked + untracked-not-ignored) — what a commit of
+    // this tree holds under config/.
+    const allConfigFiles = (await ctx.repo()).under("config");
 
     // Orphan pass: any `*.origin.jsonc` present in the WORKING TREE that
     // `renderConfigOriginContent` did not produce is no longer backed by a

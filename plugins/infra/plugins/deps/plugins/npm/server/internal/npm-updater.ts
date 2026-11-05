@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   utcDay,
   type Move,
@@ -137,13 +138,21 @@ async function fetchTagDate(repo: string, tag: string): Promise<string> {
   }
 }
 
+/**
+ * The workspace as `root`'s working tree holds it now. Listed afresh on each
+ * read: `apply` rewrites manifests and reinstalls between its reads.
+ */
+async function workspaceAt(root: AppPath): Promise<Workspace> {
+  return readWorkspace(await loadRepoFiles(root));
+}
+
 async function planNow(root: AppPath): Promise<{
   plan: Plan;
   ws: Workspace;
   packuments: Map<string, Packument>;
   now: Date;
 }> {
-  const ws = await readWorkspace(root);
+  const ws = await workspaceAt(root);
   if (ws.policyErrors.length > 0) {
     throw new Error(
       `dependencyPolicy does not parse (\`./equin check deps-npm:policy\`):\n  ${ws.policyErrors.map((e) => `${e.manifest}: ${e.message}`).join("\n  ")}`,
@@ -234,7 +243,10 @@ export const npmUpdater: Updater = {
   id: "npm",
   description:
     "Every npm package a workspace package.json declares: its range and bun.lock, moved to the newest release past a 3-day cooldown, lockstep groups together",
-  files: async (root) => [...(await workspaceManifests(root)), "bun.lock"],
+  files: async (root) => [
+    ...workspaceManifests(await loadRepoFiles(root)),
+    "bun.lock",
+  ],
 
   // Plus the upstream releases of the wrappers we publish: the registry cannot
   // show one nobody has wrapped yet. Only detection asks — an upstream row has
@@ -294,10 +306,10 @@ export const npmUpdater: Updater = {
   // satisfies). One install of `^to` would take whatever is newest at that
   // moment, cooldown or not.
   async apply(root, moves, log) {
-    const ws = await readWorkspace(root);
+    const ws = await workspaceAt(root);
     for (const { name, to } of moves) rewriteSpecs(root, ws, name, () => to);
     await bunInstall(root, log);
-    const pinned = await readWorkspace(root);
+    const pinned = await workspaceAt(root);
     for (const { name, to } of moves) {
       const original = new Map(
         ws.declared.filter((d) => d.name === name).map((d) => [d.manifest, d]),
@@ -308,7 +320,7 @@ export const npmUpdater: Updater = {
       });
     }
     await bunInstall(root, log);
-    const after = await readWorkspace(root);
+    const after = await workspaceAt(root);
     for (const { name, to } of moves) {
       for (const d of after.declared.filter((x) => x.name === name)) {
         const got = after.lock.resolved(d.workspace, name);
@@ -335,6 +347,6 @@ export const npmUpdater: Updater = {
   holds: {
     file: "package.json (the `dependencyPolicy.holds` of the package.json that declares the dependency)",
     read: async (root) =>
-      (await readWorkspace(root)).policies.flatMap((p) => p.policy.holds ?? []),
+      (await workspaceAt(root)).policies.flatMap((p) => p.policy.holds ?? []),
   },
 };

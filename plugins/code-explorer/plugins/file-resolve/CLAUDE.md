@@ -62,6 +62,8 @@ takes the `total` and says when the list is capped.
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/type-scale --font-weight-medium`
   - Imported by: `conversations/conversation-view/code/file-pane`
+- Exemptions:
+  - Exempts itself from: `repo-walk-safety/no-adhoc-repo-listing` — `machine/internal/resolve-path.ts` (sanctioned)
 - Shared:
   - Exports (types): `ResolvedFile`
   - Exports (values):

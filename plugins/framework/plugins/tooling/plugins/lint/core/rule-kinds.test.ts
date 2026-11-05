@@ -27,7 +27,7 @@ async function config(rules: LintRuleSelection): Promise<Linter.Config[]> {
   return buildLintConfig({
     root: ROOT,
     typeSource: { none: true },
-    exemptions: "report",
+    exemptions: { mode: "report" },
     rules,
   });
 }
