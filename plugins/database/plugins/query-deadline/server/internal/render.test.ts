@@ -25,6 +25,7 @@ function row(data: Record<string, unknown>): ReportRow {
     count: 3,
     rateLimited: false,
     noise: false,
+    staleOrigin: false,
     lastClientId: null,
     lastBuildId: null,
     taskId: null,

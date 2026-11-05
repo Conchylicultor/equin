@@ -74,6 +74,15 @@ export const reportFields = {
   rateLimited: boolField({ label: "Rate-limited" }),
   noise: boolField({ label: "Noise" }),
   /**
+   * The newest occurrence came from an outdated tab and is about that tab's
+   * own code (`isStaleOrigin`, judged against the graph the server
+   * served AT THAT MOMENT). A fact of the occurrence, stored because nothing
+   * can re-derive it later: the server's graph has moved on by then, and
+   * judging an old row against the current one calls every report filed
+   * before the last deploy stale.
+   */
+  staleOrigin: boolField({ label: "Stale tab" }),
+  /**
    * Attribution (last-writer-wins): the tab + bundle identity of the most
    * recent report for this fingerprint. NOT part of the dedup key.
    * `lastBuildId` holds the bundle's GRAPH HASH — the artifact's content

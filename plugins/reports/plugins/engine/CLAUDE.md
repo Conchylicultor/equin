@@ -73,7 +73,7 @@ the statement, reads the PKs it returned and routes them to the tuples reading
 them — coalesced to one flush per 2 s, so a storm costs each reader one scoped
 refill per window. The four writers: `recordReport` (`writeReport`, background —
 the rate-limited path routes too), `investigateReport` (interactive: flushes at
-once), the boot noise backfill (one statement per flip) and the nightly
+once), the noise reconcile (one statement per flip) and the nightly
 retention sweep (retention deletes through the producer when the table has one).
 
 Rules that follow:
@@ -107,6 +107,24 @@ line naming its kind to its crash buffer (replayed by its next boot's
 `flushBufferedReports`); any other process (an exec child) hands it to
 `reportOutboxFatalSink`, which `reports/outbox` writes synchronously.
 
+## Noise is judged when recorded, re-judged only when the rules change
+
+`noise` (and the bell's `muted`) is computed by `recordReport` from the
+`ReportNoiseRule` contributions and the row's own fields — `staleOrigin`
+included, which is a fact of the occurrence: the reporting tab's bundle
+against the graph the server served AT THAT MOMENT, stored on the row and
+never re-derived (judging an old row against today's graph calls every report
+filed before the last deploy stale; it did, 2026-06 → 2026-11, muting real
+crashes on the first boot after each push).
+
+So the stored flags only go stale when the rules' code changes. The
+`reports.backfill-noise` warm-up stamps them with the source digest of that
+code (every rule's `code` module plus `noise-input.ts`, the row → rule input
+mapping) in `reports_reconciled`; a boot whose digest matches reads one row
+and stops. Only a changed digest re-runs the O(reports) pass (every row
+re-judged, every linked notification's `muted` synced). Keep a rule's module
+and `noise-input.ts` importing nothing but types — whatever they load counts.
+
 ## Filing from a process with no server
 
 `recordReport` runs inside a backend. A process with no server — a
@@ -126,27 +144,20 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - Contributes:
     - `change-producer` "reports"
     - `fork-data-exclusion` "reports"
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reports` ×8
+    - `infra/host/duress/shed` ×2
+    - `shell/notifications` ×2
     - `build/server-build-id.getServerGraphHash`
     - `config_v2.getConfig`
-    - `database.db`
     - `database/admin.ExcludeFromFork`
+    - `database.db`
     - `infra/endpoints.implement`
-    - `infra/host/duress/shed.createShedBuffer`
-    - `infra/host/duress/shed.ShedSummary`
     - `infra/retention.defineRetention`
     - `infra/warmup.defineWarmup`
     - `network/live/change-feed.defineChangeProducer`
-    - `reports._reports`
-    - `reports.reportInvestigationSink`
-    - `reports.ReportKind`
-    - `reports.ReportKindSpec`
-    - `reports.ReportNoiseInput`
-    - `reports.ReportNoiseRule`
-    - `reports.reportRecordedSignal`
-    - `reports.ReportRow`
-    - `shell/notifications.recordNotification`
-    - `shell/notifications.setMutedByMetadata`
+    - `packages/source-digest.sourceDigest`
+  - DB schema: `plugins/reports/plugins/engine/server/internal/tables.ts`
   - Exports (types):
     - `RecordReportResult`
     - `StormRosterEntry`

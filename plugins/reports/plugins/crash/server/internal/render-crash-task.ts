@@ -1,6 +1,4 @@
-import { getServerGraphHash } from "@plugins/build/plugins/server-build-id/server";
 import { serializeUiContext } from "@plugins/primitives/plugins/ui-context/core";
-import { isStaleOrigin } from "@plugins/reports/core";
 import type { ReportRow } from "@plugins/reports/server";
 import { CrashPayloadSchema, formatResizeLoopTrace } from "../../core";
 import type { CrashPayload } from "../../core";
@@ -26,17 +24,6 @@ function crashOf(row: ReportRow): CrashPayload {
   return CrashPayloadSchema.parse(row.data);
 }
 
-// record-report's `staleOrigin`, against the same pin: the bundle graph hash
-// `reports.last_build_id` holds versus the graph this server is serving — for
-// a source about the page's own code only (reports/core's isStaleOrigin).
-function staleOriginOf(row: ReportRow): boolean {
-  return isStaleOrigin({
-    source: row.source,
-    buildId: row.lastBuildId,
-    serverGraph: getServerGraphHash(),
-  });
-}
-
 export function renderCrashTask(row: ReportRow): {
   title: string;
   description: string;
@@ -47,7 +34,7 @@ export function renderCrashTask(row: ReportRow): {
 function renderTitle(row: ReportRow): string {
   const data = crashOf(row);
   const prefix = data.errorType ? `${data.errorType}: ` : "";
-  const stalePrefix = staleOriginOf(row) ? "[Stale tab] " : "";
+  const stalePrefix = row.staleOrigin ? "[Stale tab] " : "";
   // Tag known-benign noise so the title itself reads as "expected", matching the
   // muted notification — not just a dimmed row with no explanation.
   const noisePrefix = row.noise ? "[noise] " : "";
@@ -57,8 +44,6 @@ function renderTitle(row: ReportRow): string {
 
 function renderDescription(row: ReportRow): string {
   const data = crashOf(row);
-  const serverGraph = getServerGraphHash();
-  const staleOrigin = staleOriginOf(row);
   const recurrence = row.taskId != null;
   const stack = data.stack != null ? clamp(data.stack, STACK_MAX) : null;
   const componentStack =
@@ -67,9 +52,11 @@ function renderDescription(row: ReportRow): string {
       : null;
 
   const lines: string[] = [];
-  if (staleOrigin) {
+  // Stored at record time (`staleOrigin`): judged against the graph the server
+  // served then, never against today's, which has moved on since.
+  if (row.staleOrigin) {
     lines.push(
-      `**Origin:** stale frontend tab (bundle ${row.lastBuildId} vs current ${serverGraph}) — likely benign version-skew, not a live bug.`,
+      `**Origin:** stale frontend tab (bundle ${row.lastBuildId}, older than the one the server was serving) — likely benign version-skew, not a live bug.`,
     );
     lines.push("");
   }

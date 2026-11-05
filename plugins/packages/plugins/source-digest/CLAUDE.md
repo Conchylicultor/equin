@@ -65,6 +65,7 @@ import.meta`, carried by `Resource.Declare`) — the L2 stamps judged by
   - Imported by:
     - `infra/corpus-index`
     - `network/live/query-resource`
+    - `reports/engine`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/digest.ts` (sanctioned)
 - Server:

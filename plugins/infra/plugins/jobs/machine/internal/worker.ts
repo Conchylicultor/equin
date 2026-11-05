@@ -277,8 +277,9 @@ export function buildCronItems(): { item: ParsedCronItem; crontab: Crontab }[] {
         identifier: cronIdentifier(job.name),
         payload: { jobName: job.name, input } satisfies JobTaskPayload,
         options: {
-          // backfillPeriod 0 ⇒ no catch-up flood on boot.
-          backfillPeriod: 0,
+          // 0 ⇒ no catch-up flood on boot; a job that must not miss a
+          // period opts in with its own bound.
+          backfillPeriod: schedule.catchUpWithinMs ?? 0,
           maxAttempts: job.maxAttempts,
           // The class's fetch priority, alongside its task above. graphile's
           // cron path passes this straight into the tick's job spec, and the

@@ -343,6 +343,7 @@ describe("reports.list fed by the reports producer — differential oracle", () 
         data: { n: clock },
         limited: rand() < 0.3,
         noise: rand() < 0.3,
+        staleOrigin: false,
         clientId: null,
         buildId: null,
         // Occasionally an out-of-order (replayed) occurrence.

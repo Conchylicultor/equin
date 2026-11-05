@@ -60,6 +60,7 @@ const values = (
   data: {},
   limited: false,
   noise: false,
+  staleOrigin: false,
   clientId: null,
   buildId: null,
   occurredAt: T1,
@@ -119,6 +120,26 @@ describe("writeReport (real DB)", () => {
     expect(row?.message).toBe("newest");
     expect(row?.data).toEqual({});
     expect(row?.lastClientId).toBeNull();
+  });
+
+  test("staleOrigin is the newest occurrence's, stored as recorded", async () => {
+    const [stale] = await writeReport(
+      values({ occurredAt: T1, staleOrigin: true, noise: true }),
+      t.db,
+    );
+    expect(stale?.staleOrigin).toBe(true);
+    // A replayed older occurrence from a current tab does not overwrite it…
+    const [replayed] = await writeReport(
+      values({ occurredAt: T0, staleOrigin: false }),
+      t.db,
+    );
+    expect(replayed?.staleOrigin).toBe(true);
+    // …a newer one does.
+    const [fresh] = await writeReport(
+      values({ occurredAt: T2, staleOrigin: false }),
+      t.db,
+    );
+    expect(fresh?.staleOrigin).toBe(false);
   });
 
   test("a genuinely newer repeat advances last_seen_at and takes over attribution", async () => {

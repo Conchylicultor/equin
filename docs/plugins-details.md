@@ -13641,9 +13641,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getServerCommit`
           - `getServerGraphHash`
       - Cross-plugin:
-        - Imported by:
-          - `reports/crash`
-          - `reports/engine`
+        - Imported by: `reports/engine`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/get-server-commit.ts`, `server/internal/get-server-graph-hash.ts` (debt)
 
@@ -36436,6 +36434,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `infra/corpus-index`
           - `network/live/query-resource`
+          - `reports/engine`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/digest.ts` (sanctioned)
       - Server:
@@ -49901,9 +49900,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports.Reports`
       - Server:
         - Contributes: `report-kind` "crash"
-        - Uses:
-          - `build/server-build-id.getServerGraphHash`
-          - `reports.ReportKind`
+        - Uses: `reports.ReportKind`
       - Core:
         - Uses:
           - `packages/list-bound.cappedList`
@@ -49932,27 +49929,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `change-producer` "reports"
           - `fork-data-exclusion` "reports"
-        - Uses:
+        - Uses: 21 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+          - `reports` ×8
+          - `infra/host/duress/shed` ×2
+          - `shell/notifications` ×2
           - `build/server-build-id.getServerGraphHash`
           - `config_v2.getConfig`
-          - `database.db`
           - `database/admin.ExcludeFromFork`
+          - `database.db`
           - `infra/endpoints.implement`
-          - `infra/host/duress/shed.createShedBuffer`
-          - `infra/host/duress/shed.ShedSummary`
           - `infra/retention.defineRetention`
           - `infra/warmup.defineWarmup`
           - `network/live/change-feed.defineChangeProducer`
-          - `reports._reports`
-          - `reports.reportInvestigationSink`
-          - `reports.ReportKind`
-          - `reports.ReportKindSpec`
-          - `reports.ReportNoiseInput`
-          - `reports.ReportNoiseRule`
-          - `reports.reportRecordedSignal`
-          - `reports.ReportRow`
-          - `shell/notifications.recordNotification`
-          - `shell/notifications.setMutedByMetadata`
+          - `packages/source-digest.sourceDigest`
+        - DB schema: `plugins/reports/plugins/engine/server/internal/tables.ts`
         - Exports (types):
           - `RecordReportResult`
           - `StormRosterEntry`

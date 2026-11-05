@@ -47,9 +47,7 @@ So it is read once at boot. See `resource-protocol` / `resource-runtime`.
     - `getServerCommit`
     - `getServerGraphHash`
 - Cross-plugin:
-  - Imported by:
-    - `reports/crash`
-    - `reports/engine`
+  - Imported by: `reports/engine`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/get-server-commit.ts`, `server/internal/get-server-graph-hash.ts` (debt)
 

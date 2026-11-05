@@ -1,6 +1,6 @@
 {
-  "id": "fec7dc19-91b4-405f-8c3e-4d7cd4ffa73b",
-  "prevId": "aa274962-ff32-4eab-8eef-cffd545a145c",
+  "id": "8c6c8422-f80b-4402-b20d-1afdc9a32f44",
+  "prevId": "fec7dc19-91b4-405f-8c3e-4d7cd4ffa73b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -11505,6 +11505,38 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.reports_reconciled": {
+      "name": "reports_reconciled",
+      "schema": "",
+      "columns": {
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "code_digest": {
+          "name": "code_digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reconciled_at": {
+          "name": "reconciled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.reports": {
       "name": "reports",
       "schema": "",
@@ -11581,6 +11613,13 @@
         },
         "noise": {
           "name": "noise",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "stale_origin": {
+          "name": "stale_origin",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,

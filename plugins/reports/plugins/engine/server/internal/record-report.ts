@@ -20,6 +20,7 @@ import { reportsProducer } from "./producer";
 import { reportOutboxSink } from "./outbox-sink";
 import { bumpWindowAndCheck } from "./velocity";
 import { isNoiseReport } from "./noise";
+import { noiseInputOf } from "./noise-input";
 import {
   _reports,
   ReportKind,
@@ -81,19 +82,6 @@ function clamp(value: string, max: number): string {
   const tail = max - head;
   const omitted = value.length - max;
   return `${value.slice(0, head)}\n… [truncated ${omitted} chars] …\n${value.slice(value.length - tail)}`;
-}
-
-// The noise pipeline classifies on a small, generic shape. Crash-shaped fields
-// (errorType / stack) that noise rules inspect live in the kind's `data` payload;
-// we surface them here as plain strings if present. A kind that has no such
-// fields simply yields nulls and matches no crash-specific noise rule.
-function noiseFieldsFrom(data: Record<string, unknown>): {
-  errorType: string | null;
-  stack: string | null;
-} {
-  const errorType = typeof data.errorType === "string" ? data.errorType : null;
-  const stack = typeof data.stack === "string" ? data.stack : null;
-  return { errorType, stack };
 }
 
 function shedSummaryMessage(s: ShedSummary): string {
@@ -387,14 +375,9 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
     buildId,
     serverGraph: getServerGraphHash(),
   });
-  const { errorType, stack } = noiseFieldsFrom(data);
-  const noise = isNoiseReport({
-    source,
-    errorType,
-    message: rawMessage ?? "",
-    stack,
-    staleOrigin,
-  });
+  const noise = isNoiseReport(
+    noiseInputOf({ source, message: rawMessage ?? "", data, staleOrigin }),
+  );
 
   const id = reportIdKind.mint();
   // Wrapped in runWithoutProfiling: the reports insert/upsert is itself a `db`
@@ -429,6 +412,7 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
         data,
         limited,
         noise,
+        staleOrigin,
         clientId: clientId ?? null,
         buildId: buildId ?? null,
         occurredAt,
@@ -587,6 +571,8 @@ export interface ReportUpsertValues {
   data: Record<string, unknown>;
   limited: boolean;
   noise: boolean;
+  /** This occurrence's {@link isStaleOrigin}, judged now — stored, never re-derived. */
+  staleOrigin: boolean;
   clientId: string | null;
   buildId: string | null;
   // The event's true instant — under duress-shed replay this is EARLIER than
@@ -623,7 +609,8 @@ function buildUpsert(
   const { occurredAt } = v;
   // Timestamps take greatest/least so an out-of-order replay can never move
   // last_seen_at backwards (or first_seen_at forwards); the last-writer-wins
-  // attribution columns (message / data / noise / lastClientId / lastBuildId)
+  // attribution columns (message / data / noise / staleOrigin / lastClientId /
+  // lastBuildId)
   // only apply when this occurrence is at least as new as the row's
   // last_seen_at, so a replayed older report never clobbers fresher
   // attribution. ON CONFLICT SET expressions all read the PRE-update row, so
@@ -668,6 +655,7 @@ function buildUpsert(
       recent: [occurrence],
       rateLimited: v.limited,
       noise: v.noise,
+      staleOrigin: v.staleOrigin,
       lastClientId: v.clientId,
       lastBuildId: v.buildId,
       firstSeenAt: occurredAt,
@@ -689,6 +677,7 @@ function buildUpsert(
         lastSeenAt: sql`greatest(${t.lastSeenAt}, ${occurredAt})`,
         rateLimited: sql`${t.rateLimited} OR ${v.limited}`,
         noise: sql`case when ${isNewest} then ${v.noise} else ${t.noise} end`,
+        staleOrigin: sql`case when ${isNewest} then ${v.staleOrigin} else ${t.staleOrigin} end`,
         lastClientId: sql`case when ${isNewest} then ${v.clientId} else ${t.lastClientId} end`,
         lastBuildId: sql`case when ${isNewest} then ${v.buildId} else ${t.lastBuildId} end`,
       },

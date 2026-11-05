@@ -81,7 +81,7 @@ export interface AggregateBundle {
 
 /**
  * `buildBundle`'s full result: the read-path bundle PLUS the two things only the
- * capture path (warm-up, daily job) consumes — the merged archive to flush and
+ * capture path (the daily job) consumes — the merged archive to flush and
  * the anomalies to report. Kept off `AggregateBundle` so a value loader
  * (`./answers.ts`) cannot accidentally reach for a durable-write payload.
  */
@@ -207,7 +207,7 @@ async function ensureArchive(): Promise<Map<string, ArchiveEntry>> {
 
 /**
  * Load, merge and price. Pure with respect to disk: it writes NOTHING — the
- * archive flush lives in `captureCostHistory` (warm-up + daily job).
+ * archive flush lives in `captureCostHistory` (the daily job).
  *
  * `conv` is the live conversation metadata the archive snapshots: the capture
  * path reads it from `_conversations`; the read path passes `NO_CONV_META` and
@@ -432,20 +432,23 @@ async function buildReadBundle(
  * Bank the current merged state to disk and surface the anomalies the merge and
  * the pricing pass found.
  *
- * Called from exactly two places — the boot warm-up and the daily refresh job —
- * because it WRITES. Transcripts only vanish after 30 untouched days, so a daily
- * flush plus one at boot leaves a ~30× margin; flushing per request would put a
- * whole-shard `JSON.stringify` on the serving path.
+ * Called from exactly one place — the daily refresh job — because it WRITES and
+ * because it is O(archive): it re-reads every conversation's title, re-prices
+ * every session ever archived and serializes the year's whole shard.
+ * Transcripts only vanish after 30 untouched days, so a daily flush leaves a
+ * ~30× margin, and the job catches up a tick it missed (`catchUpWithinMs`), so
+ * nothing needs to flush at boot; flushing per request would put a whole-shard
+ * `JSON.stringify` on the serving path.
  *
  * `isHostSingleton()`, never `isMain()`: in a compiled release the single backend
  * runs under the composition name, so an `isMain()` gate here would silently mean
  * the archive is never written there — invisible, because there is no second
  * backend to notice.
  *
- * That gate is correct but not yet sufficient: BOTH callers are still reached
- * through upstream `isMain()` gates (the warmup executor skips `scope: "host"`,
- * graphile's cron builder skips non-`perWorktree` schedules), so today the
- * archive is written in dev only. See the deferred note on `costRefreshJob`.
+ * That gate is correct but not yet sufficient: the job is still reached through
+ * an upstream `isMain()` gate (graphile's cron builder skips non-`perWorktree`
+ * schedules), so today the archive is written in dev only. See the deferred note
+ * on `costRefreshJob`.
  */
 export async function captureCostHistory(): Promise<void> {
   const { merged, unpriced, shrunk } = await buildBundle(await loadConvMeta());
@@ -460,29 +463,32 @@ export async function captureCostHistory(): Promise<void> {
 // `startWatcher()` below — mounted next to it.
 export const costUsageWatcher = costIndex.watcher;
 
-// Declared heavy boot warm-up (replacing the former raw `onReady` prewarm): warm
-// the host-global usage index and start the corpus watcher on MAIN
-// ONLY (`scope: "host"`), DEFERRED past serving-ready and THROTTLED by the
-// warmup executor instead of competing with first requests on `onReady`. The
-// index is shared across worktrees, so a single writer keeps it fresh and no
-// worktree backend pays the parse. A request arriving before the drain still
-// serves correctly via the on-demand `ensureFresh()` fallback in `loadBundle`.
+// Declared boot warm-up: start the corpus watcher on MAIN ONLY (`scope:
+// "host"`), deferred past serving-ready and throttled by the warmup executor,
+// and catch the index up on what moved while no process watched (a journal
+// replay — O(changes since the last pass), not a walk). The index is shared
+// across worktrees, so a single writer keeps it fresh and no worktree backend
+// pays the parse. A request arriving before the drain still serves correctly
+// via the on-demand `ensureFresh()` fallback in `loadBundle`.
+//
+// It does NOT build the bundle or capture the archive. It used to, on every
+// boot (main boots ~74 times a day), to cover a missed daily tick: that was a
+// whole-archive parse, merge, re-price and shard write — O(history), 0.8 s on
+// a quiet host and up to 22 s under load — redone though nothing it reads had
+// changed. The daily job now catches its own missed tick up, and the bundle is
+// built by the first read that needs it.
 export const costUsageWarmup = defineWarmup({
   name: "stats.cost.usage",
   description:
-    "Loads the transcript usage index after startup and keeps it fresh so cost stats open instantly.",
+    "Watches agent transcripts after startup and catches the usage index up on what changed while it was down, so cost stats stay fresh.",
   scope: "host",
-  run: warmAndWatch,
+  run: watchAndCatchUp,
 });
 
-async function warmAndWatch(): Promise<void> {
-  // Watcher first so no corpus change is missed between warm and watch-start.
+async function watchAndCatchUp(): Promise<void> {
+  // Watcher first so no corpus change is missed between catch-up and watch-start.
   await costIndex.startWatcher();
-  // Warms the same path a request takes AND banks it — one of the archive's two
-  // write points (the other is the daily job), so a dev machine whose backend
-  // restarts often still captures history even if the cron tick is missed.
-  // Both paths are `isMain()`-gated upstream — see the note on `costRefreshJob`.
-  await captureCostHistory();
+  await costIndex.ensureFresh();
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────

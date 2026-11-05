@@ -4,7 +4,7 @@ import type { UnpricedModel } from "./usage-index";
 
 /**
  * File the two anomaly kinds the capture path found. Called ONLY from
- * `captureCostHistory` (boot warm-up + daily job), never per request — the
+ * `captureCostHistory` (the daily job), never per request — the
  * conditions are steady-state, so reporting them on every read would be a DB
  * upsert per model per chart request for a fact that has not changed.
  *

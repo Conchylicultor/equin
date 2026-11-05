@@ -1,27 +1,80 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { ProducerExecutor } from "@plugins/network/plugins/live/plugins/change-feed/server";
-import { getServerGraphHash } from "@plugins/build/plugins/server-build-id/server";
 import { setMutedByMetadata } from "@plugins/shell/plugins/notifications/server";
+import { defineSourceSet } from "@plugins/packages/plugins/source-digest/core";
+import { sourceDigest } from "@plugins/packages/plugins/source-digest/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
-import { _reports } from "@plugins/reports/server";
+import { _reports, ReportNoiseRule } from "@plugins/reports/server";
+import { reportIdKind } from "@plugins/reports/core";
 import { isNoiseReport } from "./noise";
+import { noiseInputCode, noiseInputOf } from "./noise-input";
 import { reportsProducer } from "./producer";
-import { isStaleOrigin, reportIdKind } from "@plugins/reports/core";
+import { _reportsReconciled } from "./tables";
 
 // Re-evaluate every report row against the CURRENT noise-rule set and sync both
-// the stored `reports.noise` flag and the linked notification's `muted` flag.
+// the stored `reports.noise` flag and the linked notification's `muted` flag —
+// ONCE per change of the rules' code, never on a boot whose rules are the ones
+// the rows were last reconciled against.
 //
 // `noise` is snapshotted at record time, so a report recorded before a rule
 // existed keeps a stale `noise: false` forever — surfacing an un-muted, badge-
 // counting notification for what is now known to be benign noise. (This is
 // exactly how the resize-observer rule, added 2026-06-07, left May-era
-// ResizeObserver crashes un-muted.) Reconciling on boot is the self-healing
-// fix: idempotent, runs whenever the rule set may have changed (a deploy), and
-// touches only rows whose classification actually flips. After the first
-// reconcile a steady-state boot does a single SELECT and zero writes.
+// ResizeObserver crashes un-muted.) So the stored classification is stamped
+// with the source digest of the code that computed it (`reports_reconciled`):
+// every row `recordReport` writes is classified by the running code, so while
+// the digest is unchanged there is nothing to redo. It used to re-read and
+// re-judge every report on every boot — O(history), main's ~2k rows at ~74
+// boots a day, up to 14 s under host load — for a rule set that changes a few
+// times a year.
+//
+// Every input is the row's own: `staleOrigin` is the fact recorded with the
+// occurrence. Re-deriving it here against the graph the server serves NOW
+// marked every client report filed before the last deploy as stale — muting
+// real crashes on the first boot after any push.
+
+/**
+ * The classifier's code: every contributed rule's module
+ * (`ReportNoiseRuleSpec.code`) and `noise-input.ts` (the row → rule-input
+ * mapping and how the rules' answers combine). Not this
+ * module's: it loads the database and both reports barrels, so its digest
+ * would move with nearly every push and re-run the pass for nothing.
+ */
+const noiseRulesCode = defineSourceSet(
+  "the report noise classifier's code (the stored `reports.noise` flags)",
+);
+noiseRulesCode.include(noiseInputCode);
+
+const RECONCILE_NAME = "noise";
+
 export async function backfillNoiseClassification(): Promise<void> {
-  const serverGraph = getServerGraphHash();
+  const rules = ReportNoiseRule.getContributions();
+  for (const rule of rules) noiseRulesCode.include(rule.code);
+  // The rule ids too: two rules sharing one module are still two rules.
+  const digest = `${await sourceDigest([noiseRulesCode])}:${rules
+    .map((r) => r.id)
+    .sort()
+    .join(",")}`;
+  const [stamp] = await db
+    .select({ codeDigest: _reportsReconciled.codeDigest })
+    .from(_reportsReconciled)
+    .where(eq(_reportsReconciled.name, RECONCILE_NAME));
+  if (stamp?.codeDigest === digest) return;
+
+  await reconcileNoise();
+
+  await db
+    .insert(_reportsReconciled)
+    .values({ name: RECONCILE_NAME, codeDigest: digest })
+    .onConflictDoUpdate({
+      target: _reportsReconciled.name,
+      set: { codeDigest: digest, reconciledAt: new Date() },
+    });
+}
+
+/** The O(reports) pass: every row re-judged, every linked notification synced. */
+async function reconcileNoise(): Promise<void> {
   const rows = await db
     .select({
       id: _reports.id,
@@ -29,45 +82,26 @@ export async function backfillNoiseClassification(): Promise<void> {
       message: _reports.message,
       data: _reports.data,
       noise: _reports.noise,
-      lastBuildId: _reports.lastBuildId,
+      staleOrigin: _reports.staleOrigin,
     })
     .from(_reports);
 
   const noiseIds: string[] = [];
   const signalIds: string[] = [];
   for (const row of rows) {
-    // record-report's derivation, so a row reclassifies identically to how a
-    // fresh occurrence would be classified right now.
-    const staleOrigin = isStaleOrigin({
-      source: row.source,
-      buildId: row.lastBuildId,
-      serverGraph,
-    });
-    // Crash-shaped noise fields live in the kind's generic `data` payload.
-    const errorType =
-      typeof row.data.errorType === "string" ? row.data.errorType : null;
-    const stack = typeof row.data.stack === "string" ? row.data.stack : null;
-    const noise = isNoiseReport({
-      source: row.source,
-      errorType,
-      message: row.message,
-      stack,
-      staleOrigin,
-    });
+    const noise = isNoiseReport(noiseInputOf(row));
     if (noise !== row.noise) {
       await setReportNoise(db, row.id, noise);
     }
     (noise ? noiseIds : signalIds).push(row.id);
   }
   // Reconcile EVERY linked notification's `muted` to its report row's current
-  // noise — not just rows whose flag flipped this boot. A notification can
-  // diverge from an unchanged row: pre-dedup, `muted` was snapshotted per
-  // occurrence at record time, so a row that was already `noise: true` can still
-  // carry earlier occurrences' un-muted notifications (e.g. occurrences recorded
-  // while the firing tab's build matched the server's). Notifications link back
-  // via metadata.reportId; setMutedByMetadata writes only the rows that actually
-  // disagree and pushes only when something changed, so a converged steady state
-  // does two indexed scans and zero writes.
+  // noise — not just rows whose flag flipped. A notification can diverge from
+  // an unchanged row: pre-dedup, `muted` was snapshotted per occurrence at
+  // record time, so a row that was already `noise: true` can still carry
+  // earlier occurrences' un-muted notifications. Notifications link back via
+  // metadata.reportId; setMutedByMetadata writes only the rows that actually
+  // disagree.
   await setMutedByMetadata("reportId", noiseIds, true);
   await setMutedByMetadata("reportId", signalIds, false);
 }
@@ -96,18 +130,13 @@ export async function setReportNoise(
   );
 }
 
-// Worktree-scoped boot warm-up: the full `_reports` scan + reconcile is a heavy,
-// unbounded read that ran eagerly from `onReady` on EVERY boot in EVERY worktree,
-// competing with first requests on the serving-critical path. `_reports` is a
-// per-worktree table, so the reconcile must still run on every backend — but
-// deferred past serving-ready and throttled by the warmup executor instead. It
-// is a pure self-healing OPTIMISATION (reclassifying stale rows against the
-// current noise rules); a throw is logged and the drain continues, and steady
-// state is a single SELECT + zero writes.
+// Worktree-scoped boot warm-up, deferred past serving-ready and throttled by
+// the warmup executor. `_reports` is a per-worktree table, so each backend
+// checks its own stamp; a steady-state boot (same rules) is one indexed read.
 export const backfillNoiseWarmup = defineWarmup({
   name: "reports.backfill-noise",
   description:
-    "Reclassifies stored reports against the current noise rules so stale rows stop cluttering the report list.",
+    "Reclassifies stored reports when the noise rules change, so rows recorded before a rule existed stop cluttering the report list.",
   scope: "worktree",
   run: () => backfillNoiseClassification(),
 });

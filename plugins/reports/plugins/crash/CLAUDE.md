@@ -40,9 +40,7 @@ Add a case there before changing any of this.
     - `reports.Reports`
 - Server:
   - Contributes: `report-kind` "crash"
-  - Uses:
-    - `build/server-build-id.getServerGraphHash`
-    - `reports.ReportKind`
+  - Uses: `reports.ReportKind`
 - Core:
   - Uses:
     - `packages/list-bound.cappedList`

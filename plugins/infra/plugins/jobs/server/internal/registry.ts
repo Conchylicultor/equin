@@ -290,6 +290,20 @@ export interface ScheduleSpec {
    * that work is genuinely wanted for every ephemeral worktree — a rare case.
    */
   perWorktree?: boolean;
+  /**
+   * Run a tick the schedule missed while no worker ran (the machine asleep,
+   * the backend down) once, when the worker next starts — if that tick is at
+   * most this old. Without it a missed tick is skipped: the next one is the
+   * next run.
+   *
+   * For a job whose work must happen at least once per period (a daily
+   * snapshot of data that expires), so it needs no boot-time fallback of its
+   * own: graphile backfills from `known_crontabs.last_execution`, each tick
+   * at most once across every restart, and the singleton key collapses
+   * several missed ticks onto one row. The in-process queue keeps no history
+   * across a reload, so there it has nothing to catch up.
+   */
+  catchUpWithinMs?: number;
 }
 
 /**

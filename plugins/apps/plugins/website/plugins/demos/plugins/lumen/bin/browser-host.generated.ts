@@ -251,6 +251,7 @@ export const hostEntries: ServerRegistryEntry[] = [
   { pluginPath: "reports/plugins/adaptive-bar", id: "reports.adaptive-bar", loader: () => import("@plugins/reports/plugins/adaptive-bar/server"), dependsOn: ["reports"], core: null },
   { pluginPath: "reports/plugins/caret-flight", id: "reports.caret-flight", loader: () => import("@plugins/reports/plugins/caret-flight/server"), dependsOn: ["reports"], core: null },
   { pluginPath: "reports/plugins/collab-hydration", id: "reports.collab-hydration", loader: () => import("@plugins/reports/plugins/collab-hydration/server"), dependsOn: ["reports"], core: null },
+  { pluginPath: "reports/plugins/crash", id: "reports.crash", loader: () => import("@plugins/reports/plugins/crash/server"), dependsOn: ["reports"], core: null },
   { pluginPath: "reports/plugins/icon-family-gap", id: "reports.icon-family-gap", loader: () => import("@plugins/reports/plugins/icon-family-gap/server"), dependsOn: ["reports"], core: null },
   { pluginPath: "reports/plugins/live-state-stale-drop", id: "reports.live-state-stale-drop", loader: () => import("@plugins/reports/plugins/live-state-stale-drop/server"), dependsOn: ["reports"], core: null },
   { pluginPath: "reports/plugins/main-thread-stall", id: "reports.main-thread-stall", loader: () => import("@plugins/reports/plugins/main-thread-stall/server"), dependsOn: ["reports"], core: null },
