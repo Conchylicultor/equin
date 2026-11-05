@@ -9,7 +9,6 @@ import { DEFAULT_MAX_ATTEMPTS } from "./constants";
 import { JobQueue, type JobRowOpts, type QueuedJob } from "./queue";
 import { singletonJobKey } from "./run-identity";
 import type { WaitForOptions } from "./step-ctx";
-import { suspendedRunIds } from "./workflow-log";
 
 export { DEFAULT_MAX_ATTEMPTS } from "./constants";
 
@@ -519,12 +518,13 @@ export interface JobTaskPayload {
  * The row's routing — its queue name, task and priority — is derived from the
  * registered job by the host's queue (`JobQueue`), never passed in, so the two
  * internal callers (`jobs.resume`'s target re-enqueue, a suspend's scheduled
- * resume) cannot omit it.
+ * resume) cannot omit it. A `tx` lands the row on the caller's transaction
+ * (`jobs.resume` inserts the target's row in the one that resolves its wait).
  */
 export function UNSAFE_insertJobRow(
   job: QueuedJob,
   payload: JobTaskPayload,
-  opts: Omit<JobRowOpts, "tx">,
+  opts: JobRowOpts,
 ): Promise<{ jobId: string }> {
   return JobQueue.get().enqueue(job, payload, opts);
 }
@@ -601,17 +601,13 @@ export function defineJob<
       );
     }
     // The queue key `enqueue` stamps (`${name}:${key}`), mapped back. A keyed
-    // run's id IS that key, so a run suspended on a wait — no queue row
-    // between its suspend and its resume — counts too: it is still coming.
+    // run's id IS that key, so the queue's one read counts a run suspended on
+    // a wait too — no queue row between its suspend and its resume.
     const prefix = `${spec.name}:`;
-    const queueKeys = keys.map((key) => prefix + key);
-    const [held, suspended] = await Promise.all([
-      JobQueue.get().keysInFlight(queueKeys),
-      suspendedRunIds(queueKeys),
-    ]);
-    return new Set(
-      [...held, ...suspended].map((queueKey) => queueKey.slice(prefix.length)),
+    const held = await JobQueue.get().keysInFlight(
+      keys.map((key) => prefix + key),
     );
+    return new Set([...held].map((queueKey) => queueKey.slice(prefix.length)));
   }
 
   const factory: JobFactory<N, S, E> = {

@@ -7,7 +7,6 @@ import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { attemptBranchName } from "@plugins/infra/plugins/worktree/core";
 import { latestSupervisedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import {
-  adoptCompleteCheckout,
   checkoutState,
   ensureMainWorktreeRoot,
   gitWorktreesDir,
@@ -41,14 +40,14 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
     );
   },
 
-  // The checkout is made by the supervised `worktree.prepare` child, which a
-  // backend restart does not kill; this only requests it and waits, durably
-  // (see `prepareWorktree`). A checkout that is already complete — a resume —
-  // is adopted here in process, as fast as before.
+  // The checkout is made, locked and installed by the supervised
+  // `worktree.prepare` child, which a backend restart does not kill — a
+  // resume's existing checkout too; this only requests it and waits, durably
+  // (see `prepareWorktree`). Nothing here spawns: a child of the backend dies
+  // with every restart that overlaps it.
   //
-  // `signal` is the spawn dispatch's deadline. It reaches the in-process
-  // adopt (the lock and the install's freshness check), so an overrun stops
-  // instead of holding the spawn's slot.
+  // `signal` is the spawn dispatch's deadline, bounding the git reads of
+  // `checkoutState`.
   async prepare({ attemptId, path }, { signal, step, waitFor, sleep }) {
     const input = { attemptId, path };
     await prepareWorktree({ step, waitFor, sleep }, attemptId, {
@@ -59,7 +58,6 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
       request: async () => {
         await worktreePrepareJob.enqueue(input);
       },
-      adopt: () => adoptCompleteCheckout(path, signal),
     });
   },
 

@@ -3,7 +3,6 @@ import {
   liveStatusFor,
   planConversationUpdate,
   sessionCandidate,
-  STARTING_TIMEOUT_MS,
   STUCK_TURN_MS,
   type Liveness,
   type PlanContext,
@@ -57,6 +56,7 @@ function ctx(overrides: Partial<PlanContext> = {}): PlanContext {
     lastSubmitAt: null,
     pendingTurnSince: null,
     spawnInFlight: false,
+    inlineLaunchInFlight: false,
     ...overrides,
   };
 }
@@ -413,17 +413,17 @@ describe("planConversationUpdate — no live session", () => {
     ).toEqual({ kind: "noop" });
   });
 
-  test("a hibernation resume still creating its process is left alone within the grace, hibernated past it", () => {
+  test("a hibernation resume is left alone while its create runs inline, hibernated once it does not — whatever its age", () => {
     expect(
       planConversationUpdate(
-        row({ resumingSince: new Date(NOW - 1000) }),
+        row({ resumingSince: new Date(NOW - 10 * 60_000) }),
         ABSENT,
-        ctx(),
+        ctx({ inlineLaunchInFlight: true }),
       ),
     ).toEqual({ kind: "noop" });
     expect(
       planConversationUpdate(
-        row({ resumingSince: new Date(NOW - STARTING_TIMEOUT_MS - 1) }),
+        row({ resumingSince: new Date(NOW - 1000) }),
         ABSENT,
         ctx(),
       ),
@@ -519,7 +519,7 @@ describe("planConversationUpdate — no live session", () => {
     ).toEqual({ kind: "noop" });
   });
 
-  describe("starting grace", () => {
+  describe("a starting row is decided by whether its launch is still coming, never by its age", () => {
     const startedAgo = (ms: number) =>
       row({
         status: "starting",
@@ -527,14 +527,21 @@ describe("planConversationUpdate — no live session", () => {
         createdAt: new Date(NOW - ms),
       });
 
-    test("inside the window → noop", () => {
+    test("an inline create still running → noop, however old", () => {
       expect(
         planConversationUpdate(
-          startedAgo(STARTING_TIMEOUT_MS - 1),
+          startedAgo(10 * 60_000),
           ABSENT,
-          ctx(),
+          ctx({ inlineLaunchInFlight: true }),
         ),
       ).toEqual({ kind: "noop" });
+    });
+
+    test("nothing coming, however young → gone, flagged as never started", () => {
+      expect(planConversationUpdate(startedAgo(1000), ABSENT, ctx())).toEqual({
+        kind: "gone",
+        stuckStartingMs: 1000,
+      });
     });
 
     test("past it, nothing to resume → gone, flagged as stuck", () => {

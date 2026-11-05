@@ -60,15 +60,14 @@ export interface PrepareDeps {
   latestRun(): Promise<SupervisedRunRow | null>;
   /** Ask for a prepare run (`worktreePrepareJob.enqueue`). */
   request(): Promise<void>;
-  /** Take over a complete checkout in process (`adoptCompleteCheckout`). */
-  adopt(): Promise<void>;
   /** The prepare job's supervised-run kind id, which `runEnded` filters on. */
   readonly kindId: string;
 }
 
 /**
- * Make the attempt's checkout exist — by waiting, durably, on the supervised
- * `worktree.prepare` child that makes it, never by making it here.
+ * Make the attempt's checkout exist, locked and installed — by waiting,
+ * durably, on the supervised `worktree.prepare` child that makes it, never by
+ * doing any of it here.
  *
  * Observe before waiting (`release`'s `awaitRelease` shape): each pass reads
  * the newest run and the checkout, and only then suspends.
@@ -76,16 +75,22 @@ export interface PrepareDeps {
  * - A run is open → wait for it to end. Checked FIRST: a checkout can read
  *   complete while its child still installs it, and nothing here may race the
  *   child.
- * - The checkout is complete → adopt it in process (re-lock, non-frozen
- *   install) and return. The resume path: a conversation whose checkout exists
- *   pays no child.
- * - Otherwise a run is needed. Our last request's run exited EX_TEMPFAIL (the
- *   database refused its connection, full) → pause durably and request again,
- *   from its own budget (`MAX_TEMPFAIL_REQUESTS`). Our last request's run
- *   ended any other way without a complete checkout → request again, up to
+ * - A run THIS spawn requested exited 0 and the checkout is complete → done:
+ *   that child made (or found), locked and installed it.
+ * - Otherwise a run is needed — a resume too, whose checkout already exists:
+ *   the child's `setupWorktree` takes its `existing` path (re-lock, non-frozen
+ *   install). Never in process: `./equin install` run from here is a child of
+ *   the BACKEND, and a restart signals the backend's whole process group —
+ *   the install died with every deploy that overlapped it, and the spawn
+ *   recorded a launch failure for what the next attempt then did fine
+ *   (2026-11-04 21:09Z: a new launch's checkout was complete and installed
+ *   by its child, then re-installed here and killed). Our last request's run
+ *   exited EX_TEMPFAIL (the database refused its connection, full) → pause
+ *   durably and request again, from its own budget (`MAX_TEMPFAIL_REQUESTS`).
+ *   Our last request's run ended any other way → request again, up to
  *   `MAX_PREPARE_REQUESTS`, then a `NonRetryableError` carrying that run's
- *   recorded error (the spawn records it and dead-letters). Our request has no
- *   run yet → wait for one.
+ *   recorded error (the spawn records it and dead-letters). Our request has
+ *   no run yet → wait for one.
  *
  * Replay-safe, which is the point: the spawn's run id is keyed per
  * conversation, so a graphile retry or a resume re-walks this loop from the
@@ -114,11 +119,13 @@ export async function prepareWorktree(
       await wait(ctx, deps.kindId, run.id, i);
       continue;
     }
-    if ((await deps.checkoutState()) === "complete") {
-      await deps.adopt();
-      return;
-    }
     const ours = request !== null && run !== null && run.id !== request.after;
+    if (
+      ours &&
+      run.exitCode === 0 &&
+      (await deps.checkoutState()) === "complete"
+    )
+      return;
     if (request !== null && !ours && pendingWakes < MAX_PENDING_WAKES) {
       // Requested, not claimed yet: wait for any run of the kind to end — ours
       // ends with one, and a timeout is a re-look.

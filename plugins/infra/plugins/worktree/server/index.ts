@@ -14,7 +14,6 @@ export {
   type WorktreeSetup,
   checkoutState,
   type CheckoutState,
-  adoptCompleteCheckout,
   type CheckoutSource,
   addCheckout,
   type CheckoutHead,

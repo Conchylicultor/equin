@@ -5,6 +5,7 @@ import {
   listRegisteredJobs,
   resolveJobCron,
   singletonJobKey,
+  suspendedRunIds,
   UNSAFE_runJobRow,
   type JobQueueImpl,
   type JobRowOpts,
@@ -336,13 +337,25 @@ export function createMemoryQueue(
       }
       activity();
     },
+    // Rows (memory) and pending waits (the database) cannot be read in one
+    // snapshot here, so the rows are read on both sides of the waits read —
+    // each a synchronous look. A run between them (a suspend inserts its wait
+    // before its row goes; a resume resolves its wait and lands its row at
+    // the same commit) holds one or the other at every instant: missed by
+    // all three looks only if it resumed AND suspended or finished inside the
+    // one waits query.
     async keysInFlight(keys) {
       const wanted = new Set(keys);
       const held = new Set<string>();
-      for (const row of rows.values()) {
-        if (row.jobKey !== null && !row.dead && wanted.has(row.jobKey))
-          held.add(row.jobKey);
-      }
+      const lookAtRows = (): void => {
+        for (const row of rows.values()) {
+          if (row.jobKey !== null && !row.dead && wanted.has(row.jobKey))
+            held.add(row.jobKey);
+        }
+      };
+      lookAtRows();
+      for (const key of await suspendedRunIds(keys)) held.add(key);
+      lookAtRows();
       return held;
     },
     // The `jobs` collection's questions, answered over every row held — the

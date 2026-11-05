@@ -20603,7 +20603,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs/supervised-job.runEnded`
               - `infra/jobs/supervised-job.RunEndedPayload`
               - `infra/jobs/supervised-job.SupervisedRunRow`
-              - `infra/worktree.adoptCompleteCheckout`
               - `infra/worktree.checkoutState`
               - `infra/worktree.ensureMainWorktreeRoot`
               - `infra/worktree.gitWorktreesDir`
@@ -32001,6 +32000,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resolveJobCron`
           - `RUNNERS`
           - `singletonJobKey`
+          - `suspendedRunIds`
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
           - `UNSAFE_getRegisteredJob`
@@ -32215,6 +32215,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs.QueuedJob`
               - `infra/jobs.resolveJobCron`
               - `infra/jobs.singletonJobKey`
+              - `infra/jobs.suspendedRunIds`
               - `infra/jobs.UNSAFE_runJobRow`
             - Exports (values): `settleJobQueue`
         - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
@@ -33711,7 +33712,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WorktreeSpec`
         - Exports (values):
           - `addCheckout`
-          - `adoptCompleteCheckout`
           - `appCheckoutOf`
           - `checkoutState`
           - `countReadySpares`

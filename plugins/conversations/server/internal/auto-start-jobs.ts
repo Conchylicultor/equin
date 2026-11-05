@@ -29,6 +29,7 @@ import { checkClaudeCode } from "@plugins/infra/plugins/claude-cli/plugins/avail
 import { resolveModel } from "@plugins/conversations/plugins/model-provider/core";
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { reportAutoStartModelUnavailable } from "./auto-start-model-report";
+import { withInlineLaunch } from "./inline-launch";
 import { resolveLaunchPrompt } from "./launch-prompt";
 
 // The transactional heart of an auto-launch: claim the marker and commit the
@@ -172,13 +173,19 @@ export async function launchTaskNow(
   // throw rolls back with the task still armed; under the queue graphile
   // retries, and if every attempt fails the row dead-letters (reported by queue
   // health) and the next boot's reconcile tries again.
-  const launched = await withTaskStatusBatch((tx) =>
-    launchArmedTask(tx, taskId, prepared, {
-      ifAlreadyStarted: opts.ifAlreadyStarted,
-    }),
-  );
+  //
+  // Held as an inline launch from before the commit until its create (a
+  // reuse target) settled (`inline-launch.ts`).
+  const launched = await withInlineLaunch(prepared.conversationId, async () => {
+    const committed = await withTaskStatusBatch((tx) =>
+      launchArmedTask(tx, taskId, prepared, {
+        ifAlreadyStarted: opts.ifAlreadyStarted,
+      }),
+    );
+    if (committed) await finishConversation(prepared);
+    return committed;
+  });
   if (!launched) return { started: false, reason: "claimed-elsewhere" };
-  await finishConversation(prepared);
 
   // `launchArmedTask` answers only whether THIS call launched; the committed
   // row is the conversation. It was written on the transaction that just

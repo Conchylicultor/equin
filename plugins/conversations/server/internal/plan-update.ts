@@ -17,21 +17,6 @@ import {
 // shell (status-reconciler.ts), which applies the plan this returns.
 
 /**
- * Grace window for a "starting" row with NO spawn job in flight and no live
- * session — a launch whose `runtime.create` runs inline in a request (a fork
- * into an existing attempt, a resume), with nothing durable to ask. Past it,
- * assume that create never came up (the backend died mid-create) and mark gone
- * so the UI moves off "Starting…".
- *
- * Never applied while the row's `conversations.spawn` job is still coming
- * (`PlanContext.spawnInFlight`): the job owns its launch — a restart re-runs
- * it, a failure retries it — and a clock cannot tell a spawn still on its way
- * from one that gave up. Sweeping on the clock while the job was waiting out a
- * restart is how a launch came up 30 s after its row had been called gone.
- */
-export const STARTING_TIMEOUT_MS = 30_000;
-
-/**
  * How long an agent at rest may hold a turn it was handed (turn ledger
  * `typing` / `typed`) without starting it before it reads **stuck** rather
  * than working. An idle CLI starts a queued turn at once, and a fresh one
@@ -106,6 +91,15 @@ export interface PlanContext {
    * settle, however long it takes.
    */
   spawnInFlight: boolean;
+  /**
+   * Whether a launch whose `runtime.create` runs inline — a fork into an
+   * existing attempt, a resume, a rewind, a hibernation resume — is still
+   * running in this backend (`inlineLaunchesInFlight`, read with
+   * `spawnInFlight`). Held from before the row turns `starting` / is stamped
+   * `resumingSince` until the create settled, and gone with the process that
+   * ran it, so its absence is a fact: that launch is not coming.
+   */
+  inlineLaunchInFlight: boolean;
 }
 
 export type UpdatePlan =
@@ -380,25 +374,25 @@ function planAbsent(row: PlanRow, ctx: PlanContext): UpdatePlan {
   // will not launch for a `done` row).
   if (row.status === "starting" && row.closeRequested)
     return { kind: "closed" };
-  // A "starting" row whose spawn job is still coming has no session YET: the
-  // job settles it — a live session the next reconcile adopts, or its last
-  // failed attempt leaving it to the sweep below.
-  if (row.status === "starting" && ctx.spawnInFlight) return { kind: "noop" };
-  // Without a spawn job: a create running inline (fork, resume) inside the
-  // grace window is normal — the runtime simply has no session to report yet.
-  const startingAgeMs =
-    row.status === "starting" ? ctx.now - row.createdAt.getTime() : null;
-  if (startingAgeMs !== null && startingAgeMs < STARTING_TIMEOUT_MS)
-    return { kind: "noop" };
-  // A hibernation resume whose `runtime.create` is still running inline: the
-  // same grace, timed from the resume's own claim. Past it the process never
-  // came up, and the row is hibernated again below (the shell clears
-  // `resumingSince` with it) — still `waiting`, resumed on the next open.
+  // A launch still coming has no session YET, however long it takes — never a
+  // clock: the 30 s grace this replaced read a launch waiting on its checkout
+  // as a dead one. Its spawn job (queued, retrying, running, or suspended on
+  // its checkout) settles it — a live session the next reconcile adopts, or
+  // its last failed attempt leaving it to the sweep below; an inline create
+  // (fork, resume, rewind) settles it itself, its failure write included.
   if (
-    row.resumingSince !== null &&
-    ctx.now - row.resumingSince.getTime() < STARTING_TIMEOUT_MS
+    row.status === "starting" &&
+    (ctx.spawnInFlight || ctx.inlineLaunchInFlight)
   )
     return { kind: "noop" };
+  // A hibernation resume whose `runtime.create` is still running inline. Once
+  // it is not, the process never came up, and the row is hibernated again
+  // below (the shell clears `resumingSince` with it) — still `waiting`,
+  // resumed on the next open.
+  if (row.resumingSince !== null && ctx.inlineLaunchInFlight)
+    return { kind: "noop" };
+  const startingAgeMs =
+    row.status === "starting" ? ctx.now - row.createdAt.getTime() : null;
 
   if (row.closeRequested) return { kind: "closed" };
 

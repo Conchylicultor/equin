@@ -26,6 +26,11 @@ import { Runtime, type RuntimeInspection, type RuntimeSignal } from "./runtime";
 import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
 import { spawnConversationJob } from "./spawn-job";
 import {
+  inlineLaunchesInFlight as inlineLaunchesInFlightOf,
+  inlineLaunchMark,
+  pruneInlineLaunchStamps,
+} from "./inline-launch";
+import {
   readQuestionHolds,
   reapQuestionHolds,
   type QuestionHold,
@@ -75,6 +80,8 @@ interface LiveSnapshot {
   failedRuntimes: Set<string>;
   /** The "starting" rows whose spawn job was still coming just before the runtimes were asked. */
   spawnsInFlight: ReadonlySet<string>;
+  /** The rows with an inline launch running in this backend, read at the same point. */
+  inlineLaunchesInFlight: ReadonlySet<string>;
 }
 
 /**
@@ -84,12 +91,20 @@ interface LiveSnapshot {
  */
 async function collectLive(
   rows: readonly Conversation[],
+  /** `inlineLaunchMark()`, taken before `rows` were read. */
+  mark: number,
   ids?: readonly string[],
 ): Promise<LiveSnapshot> {
   // Asked FIRST: a spawn that finishes after this read has a session the
   // runtimes below report, so a starting row is never seen with neither.
   const spawnsInFlight = await spawnConversationJob.inFlight(
     rows.filter((r) => r.status === "starting").map((r) => r.id),
+  );
+  const inlineLaunchesInFlight = inlineLaunchesInFlightOf(
+    rows
+      .filter((r) => r.status === "starting" || r.resumingSince !== null)
+      .map((r) => r.id),
+    mark,
   );
   const merged = new Map<string, LiveEntry>();
   const failedRuntimes = new Set<string>();
@@ -126,7 +141,12 @@ async function collectLive(
       merged.set(id, { ...info, runtime: runtime.id });
     }
   }
-  return { next: merged, failedRuntimes, spawnsInFlight };
+  return {
+    next: merged,
+    failedRuntimes,
+    spawnsInFlight,
+    inlineLaunchesInFlight,
+  };
 }
 
 /**
@@ -242,6 +262,7 @@ async function planFor(
     lastSubmitAt: submits.get(row.id) ?? null,
     pendingTurnSince: pending.get(row.id) ?? null,
     spawnInFlight: live.spawnsInFlight.has(row.id),
+    inlineLaunchInFlight: live.inlineLaunchesInFlight.has(row.id),
   });
   const rowStaysLive = plan.kind === "noop" || plan.kind === "patch";
   if (candidate !== null && gate === "no-transcript" && rowStaysLive) {
@@ -308,7 +329,7 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
           source: "server-caught",
           message: failure
             ? `Conversation never started — ${describeSpawnFailure(failure)} (${id} swept from "starting" to gone after ${stuckFor})`
-            : `Conversation ${id} stuck in "starting" for ${stuckFor} with no live session and nothing to resume, and its spawn recorded no failure — sweeping to gone`,
+            : `Conversation ${id} never started: ${stuckFor} after its launch, no spawn job or inline create is still coming for it, no session is live, there is nothing to resume, and its spawn recorded no failure — sweeping to gone`,
           data: {
             errorType: failure ? null : "StuckStartingError",
             label: "conversations.status.startingTimeout",
@@ -328,7 +349,7 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
           subjectName: conversationName(row),
           detail: failure
             ? describeSpawnFailure(failure)
-            : `stuck starting for ${stuckFor} with no session`,
+            : `its launch ended without a session (${stuckFor} after it was asked)`,
           variant: "error",
           linkTo: conversationRoute.link(agentManagerApp, { convId: id }),
           dedupeKey: `conversation-start-failed:${id}`,
@@ -418,8 +439,11 @@ function reconcileAll(): Promise<void> {
     // are both read after it), so a batch still pending would only repeat them.
     pendingAll = false;
     pendingIds.clear();
+    const mark = inlineLaunchMark();
     const rows = await listConversationsForInfra();
-    await reconcileRows(rows, await collectLive(rows));
+    await reconcileRows(rows, await collectLive(rows, mark));
+    // The gate runs one reconcile at a time, so no older mark is still read.
+    pruneInlineLaunchStamps(mark);
   });
 }
 
@@ -430,10 +454,12 @@ function reconcileAll(): Promise<void> {
  */
 function reconcileIds(ids: readonly string[]): Promise<void> {
   return reconcileGate.run(async () => {
+    const mark = inlineLaunchMark();
     const rows = await listConversationsForInfra({ ids });
     if (rows.length === 0) return;
     const live = await collectLive(
       rows,
+      mark,
       rows.map((r) => r.id),
     );
     await reconcileRows(rows, live);

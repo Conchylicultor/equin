@@ -92,10 +92,6 @@ function world(opts: {
       pendingRequest = true;
       return Promise.resolve();
     },
-    adopt: () => {
-      log.push("adopt");
-      return Promise.resolve();
-    },
   };
 
   const ctx = {
@@ -122,13 +118,19 @@ function world(opts: {
 }
 
 describe("prepareWorktree", () => {
-  test("a complete checkout is adopted in process: no request, no wait", async () => {
+  test("a complete checkout (a resume) is still installed by a prepare run — nothing in process", async () => {
     const w = world({ state: "complete" });
     await prepareWorktree(w.ctx, "att-1", w.deps);
-    expect(w.log).toEqual(["adopt"]);
+    expect(w.log).toEqual([
+      "request",
+      'wait:{"kindId":"worktreeprepare"}',
+      "claimed:run-0",
+      'wait:{"kindId":"worktreeprepare","runId":"run-0"}',
+      "ended:run-0",
+    ]);
   });
 
-  test("an absent checkout is requested once, waited on, then adopted", async () => {
+  test("an absent checkout is requested once, waited on, then done", async () => {
     const w = world({ state: "absent" });
     await prepareWorktree(w.ctx, "att-1", w.deps);
     expect(w.log).toEqual([
@@ -139,18 +141,37 @@ describe("prepareWorktree", () => {
       // Open: wait for THAT run.
       'wait:{"kindId":"worktreeprepare","runId":"run-0"}',
       "ended:run-0",
-      "adopt",
     ]);
   });
 
-  test("an open run is waited on before the checkout is read — never raced", async () => {
+  test("an open run is waited on — never raced — and one this spawn did not request does not stand for its own", async () => {
     const w = world({ state: "complete", openRun: true });
     await prepareWorktree(w.ctx, "att-1", w.deps);
     expect(w.log).toEqual([
       'wait:{"kindId":"worktreeprepare","runId":"run-0"}',
       "ended:run-0",
-      "adopt",
+      "request",
+      'wait:{"kindId":"worktreeprepare"}',
+      "claimed:run-1",
+      'wait:{"kindId":"worktreeprepare","runId":"run-1"}',
+      "ended:run-1",
     ]);
+  });
+
+  test("a run of ours that failed after the checkout was written is requested again, not taken as done", async () => {
+    // The child's checkout completed but its install failed: the disk reads
+    // complete, the run says it is not installed.
+    const w = world({
+      state: "complete",
+      outcomes: [{ error: "install" }, "ok"],
+    });
+    // `world` marks a failed run's checkout unfinished; keep it complete here.
+    const checkoutState = w.deps.checkoutState;
+    w.deps.checkoutState = async () =>
+      (await checkoutState()) === "unfinished" ? "complete" : checkoutState();
+    await prepareWorktree(w.ctx, "att-1", w.deps);
+    expect(w.log.filter((l) => l === "request")).toHaveLength(2);
+    expect(w.log.at(-1)).toBe("ended:run-1");
   });
 
   test("a failed run is requested again; the last failure is non-retryable and names its error", async () => {
@@ -171,17 +192,16 @@ describe("prepareWorktree", () => {
     expect(w.log.filter((l) => l === "request")).toHaveLength(
       MAX_PREPARE_REQUESTS,
     );
-    expect(w.log).not.toContain("adopt");
   });
 
-  test("a failed run then a good one ends adopted", async () => {
+  test("a failed run then a good one ends done", async () => {
     const w = world({
       state: "unfinished",
       outcomes: [{ error: "cut" }, "ok"],
     });
     await prepareWorktree(w.ctx, "att-1", w.deps);
     expect(w.log.filter((l) => l === "request")).toHaveLength(2);
-    expect(w.log.at(-1)).toBe("adopt");
+    expect(w.log.at(-1)).toBe("ended:run-1");
   });
 
   test("a replay re-reads its memoized request instead of making it again", async () => {
@@ -215,7 +235,7 @@ describe("prepareWorktree", () => {
     expect(thrown).toBe(suspend);
     await prepareWorktree(w.ctx, "att-1", w.deps);
     expect(w.log.filter((l) => l === "request")).toHaveLength(1);
-    expect(w.log.at(-1)).toBe("adopt");
+    expect(w.log.at(-1)).toBe("ended:run-0");
   });
 
   test("a run refused a database connection (EX_TEMPFAIL) is re-requested after a pause, without spending a request", async () => {
@@ -229,7 +249,7 @@ describe("prepareWorktree", () => {
       `sleep:${String(tempfailBackoffMs(0))}`,
       `sleep:${String(tempfailBackoffMs(1))}`,
     ]);
-    expect(w.log.at(-1)).toBe("adopt");
+    expect(w.log.at(-1)).toBe("ended:run-2");
   });
 
   test("EX_TEMPFAIL runs do not count against the failure budget", async () => {

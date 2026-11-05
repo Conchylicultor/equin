@@ -63,12 +63,20 @@ export interface JobQueueImpl {
     match: { key: string } | { keyPrefix: string },
   ): Promise<void>;
   /**
-   * The subset of `keys` held by a row that has not given up: queued, waiting
-   * out a retry backoff, or running (a running row counts on its last attempt
-   * too). A row past its attempts and unlocked (dead), or superseded, holds no
-   * key here; a finished row is gone. Presence of a row, never its age — so
-   * "is this keyed work still coming?" is answered by the queue itself, not
-   * guessed from how long ago it was enqueued.
+   * The subset of `keys` whose run is still coming: held by a row that has not
+   * given up — queued, waiting out a retry backoff, or running (a running row
+   * counts on its last attempt too) — OR a keyed run (its run id is its key)
+   * suspended on a pending `job_waits` row, which holds no row until its
+   * resume. A row past its attempts and unlocked (dead), or superseded, holds
+   * no key here; a finished row is gone. Presence, never age — so "is this
+   * keyed work still coming?" is answered by the queue itself, not guessed
+   * from how long ago it was enqueued.
+   *
+   * ONE consistent read of both. A run moves between them (a suspend inserts
+   * its pending wait before its row goes; `jobs.resume` resolves the wait and
+   * inserts the row in one transaction), so it always holds one — but two
+   * reads at two instants can see the row already gone and the wait not yet
+   * there, or the reverse, and answer "not coming" for a run that is.
    */
   keysInFlight(keys: readonly string[]): Promise<ReadonlySet<string>>;
   /**

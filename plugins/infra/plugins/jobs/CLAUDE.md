@@ -132,10 +132,18 @@ A job row has two identities (`server/internal/run-identity.ts`):
   - **resume rows** carry the suspended run's id explicitly.
 
 A keyed job's `inFlight(keys)` answers "is this run still coming?" from both
-halves: a row holding the key (`keysInFlight`), or the run suspended on a
-pending wait (`_jobWaits`, `suspendedRunIds`) — a suspend deletes the row, and
-the trigger or timeout racer re-enqueues it, so a workflow parked on
-`ctx.waitFor` (the spawn waiting on its checkout) is not "gone".
+halves, in ONE read the queue owns (`keysInFlight`): a row holding the key, or
+the run suspended on a pending wait (`_jobWaits`) — a suspend deletes the row,
+and the trigger or timeout racer re-enqueues it, so a workflow parked on
+`ctx.waitFor` (the spawn waiting on its checkout) is not "gone". A run always
+holds one of the two: a suspend inserts its wait before its row goes, and
+`jobs.resume` resolves the wait and inserts the row in one transaction (only
+the racer whose update matched a still-pending wait resumes). Two separate
+reads, or two separate commits, saw a resuming run with neither — the status
+sweep marked spawns waiting on their checkout "stuck starting" at exactly a
+30 s wait timeout (2026-11-04). The desktop reads both in one statement
+(`keys-in-flight.test.ts`); the in-process queue reads its rows on both sides
+of the waits query.
 
 So **"singleton" means at most one PENDING row, not at most one live
 workflow**: an enqueue while a singleton workflow is suspended starts a new run.
@@ -709,6 +717,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `resolveJobCron`
     - `RUNNERS`
     - `singletonJobKey`
+    - `suspendedRunIds`
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
     - `UNSAFE_getRegisteredJob`

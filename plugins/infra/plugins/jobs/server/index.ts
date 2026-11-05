@@ -26,6 +26,7 @@ export { refreshJobSchedules } from "./internal/refresh-schedules";
 export { JobQueue } from "./internal/queue";
 export type { JobQueueImpl, JobRowOpts, QueuedJob } from "./internal/queue";
 export { answerJobsInMemory } from "./internal/jobs-window";
+export { suspendedRunIds } from "./internal/workflow-log";
 export type { JobTaskPayload } from "./internal/registry";
 export { UNSAFE_runJobRow } from "./internal/run-row";
 export type { JobRowOutcome } from "./internal/run-row";

@@ -25,9 +25,12 @@ stays job-free, because the CLI imports it.
 
 A caller that only WAITS for a checkout made elsewhere reads
 `checkoutState(repoRoot, path)` — `absent` | `unfinished` | `complete`, read-only,
-never discarding (only the process making the checkout converges it) — and takes
-a complete one over with `adoptCompleteCheckout(path)` (re-lock + non-frozen
-install: `setupWorktree`'s `existing` path minus the convergence).
+never discarding (only the process making the checkout converges it). It
+reads the files, not the install: only a `setupWorktree` that returned says a
+checkout is locked and installed. Nothing in a backend installs a checkout —
+`./equin install` spawned there is a child of the backend, and a restart
+signals the backend's whole process group (see
+`conversations/workspace/worktree`).
 
 - **The lock reason is the readiness marker.** A spare is written
   (detached, sharing `addCheckout` with the cold path: one
@@ -122,7 +125,7 @@ background tier, output captured into the thrown error. Its own CLI because
 lock that belong to it. `createSpareIn` runs it before the lock (the installer is
 a required parameter, so a test passes its own); `setupWorktree` runs it after
 every path settles (fresh add, claimed spare — whose switch may move `bun.lock`
-— and `existing`, which covers checkouts made before this), outside the mutate
+— and `existing`: a resume's checkout, or a retry whose install failed), outside the mutate
 gate. Without it, a checkout's first program (the guard hook, not `./equin`)
 resolved npm packages by walking up into main's `node_modules`.
 
@@ -216,7 +219,6 @@ pid liveness.
     - `WorktreeSpec`
   - Exports (values):
     - `addCheckout`
-    - `adoptCompleteCheckout`
     - `appCheckoutOf`
     - `checkoutState`
     - `countReadySpares`

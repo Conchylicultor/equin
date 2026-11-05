@@ -24,6 +24,18 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   "Unknown" (tooltip: since when, last known status); the transcript foot says
   "Status unknown" instead of the quiet idle foot.
   Design: [`research/2026-10-25-conversations-turn-identity-and-fresh-projection.md`](../../research/2026-10-25-conversations-turn-identity-and-fresh-projection.md) (B3/B4).
+- **A `starting` row with no session is decided by whether its launch is
+  still coming, never by its age.** Two facts, read before the runtimes are
+  asked: its `conversations.spawn` job is in flight (`inFlight`: a queue row
+  or a pending wait, in one read — `infra/jobs`), or an inline launch (fork,
+  resume, rewind, hibernation resume — `inline-launch.ts`) is running in this
+  backend, held from before the row turns `starting` / is stamped
+  `resumingSince` until its create settled — or held at any point since the
+  mark the reconcile took before reading its rows (a launch that settled in
+  between may have rewritten the row it read). Neither → the launch is not
+  coming: gone (or hibernated, when there is a session to resume). The 30 s
+  `STARTING_TIMEOUT_MS` this replaced called launches waiting on their checkout
+  "Couldn't start" (2026-11-04 12:24Z / 12:52Z).
 - A live agent is `working` while it holds a turn-ledger turn it has not
   started (`typing` / `typed`) — but only for `STUCK_TURN_MS` once the runtime
   says it is at rest: past that it is **stuck** (`waiting`, `waitingFor:

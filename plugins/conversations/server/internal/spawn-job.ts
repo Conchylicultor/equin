@@ -32,15 +32,13 @@ export const spawnConversationJob = defineJob({
   description:
     "Prepares the workspace (the git worktree) and starts the agent session for a new conversation.",
   // minutes: what stays in process is still unbounded by anything shorter than
-  // the work — the install of an existing checkout (`./equin install`) and
-  // `runtime.create` starting the agent process. The checkout itself is not
-  // here: the workspace's `prepare` waits for it with `ctx.waitFor`, which
-  // releases the slot.
+  // the work — `runtime.create` starting the agent process. The checkout and
+  // its install are not here: the workspace's `prepare` waits for them with
+  // `ctx.waitFor`, which releases the slot.
   hold: "minutes",
   inProcess:
-    "The checkout runs in the supervised worktree.prepare child, which a restart does not kill; " +
-    "what stays here is safe under a kill — the install of an existing checkout is guarded by " +
-    "`./equin install`'s own lock and stamp, and `runtime.create` no-ops once a live session exists — " +
+    "The checkout and its install run in the supervised worktree.prepare child, which a restart does not kill; " +
+    "what stays here is safe under a kill — `runtime.create` no-ops once a live session exists — " +
     "so a spawn killed by a restart re-runs and skips whatever already landed.",
   input: z.object({
     conversationId: z.string(),

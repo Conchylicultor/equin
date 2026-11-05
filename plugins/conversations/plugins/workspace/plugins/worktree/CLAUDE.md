@@ -23,11 +23,20 @@ deploy. So `prepare` never makes it:
   `max_client_conn` refusals, three launches lost).
 - **`prepare`** (`prepare-wait.ts`, `prepareWorktree`) — a durable
   observe-before-wait loop in the spawn job: a run open → wait on `runEnded`
-  (30 s bound); the checkout `complete` (`checkoutState`, read-only) → adopt it
-  in process (`adoptCompleteCheckout`: re-lock + non-frozen install — the resume
-  path, no child); otherwise request a run (`ctx.step("prepare:request:<n>")`)
-  and wait for it. The checkout on disk is the authority, the event only a
-  wake-up. Up to 3 requests, then a `NonRetryableError` carrying the last run's
+  (30 s bound); a run THIS spawn requested exited 0 and the checkout reads
+  `complete` (`checkoutState`, read-only) → done; otherwise request a run
+  (`ctx.step("prepare:request:<n>")`) and wait for it. The checkout on disk is
+  the authority, the event only a wake-up.
+- **Nothing is installed in the spawn — a resume included.** A resume's
+  existing checkout is re-locked and installed (non-frozen) by a prepare run
+  too: `setupWorktree`'s `existing` path. It used to be adopted in process
+  (re-lock + `./equin install` as a child of the backend), and every new launch
+  re-ran that install after its child had just done it; a restart TERMs the
+  backend's process group, so a deploy overlapping it killed the install and
+  the spawn recorded a launch failure the next attempt then fixed (2026-11-04
+  21:09Z, "equin install was killed by SIGTERM"). The cost: a resume pays one
+  child boot (~6 s on an idle host, plus any wait for a `worktree-prepare`
+  slot). Up to 3 requests, then a `NonRetryableError` carrying the last run's
   recorded error, which the spawn records (`conversation-spawn-failed`).
   A run that exited EX_TEMPFAIL (75: its database connection was refused
   because the database was full) is back-pressure, not a failure: a durable
@@ -36,7 +45,9 @@ deploy. So `prepare` never makes it:
   of the 3 — a storm must not use up the launch, whose auto-start marker was
   already claimed when it committed.
 - While suspended, the spawn holds no queue row; `inFlight` counts a keyed run
-  parked on a pending wait, so the status sweep leaves the row `starting`.
+  parked on a pending wait — in one read with the queue rows, against a resume
+  that resolves the wait and inserts the row in one transaction (`infra/jobs`)
+  — so the status sweep leaves the row `starting`.
 
 Design: [`research/2026-10-28-global-supervised-worktree-checkout.md`](../../../../../../research/2026-10-28-global-supervised-worktree-checkout.md).
 
@@ -57,7 +68,6 @@ Design: [`research/2026-10-28-global-supervised-worktree-checkout.md`](../../../
     - `infra/jobs/supervised-job.runEnded`
     - `infra/jobs/supervised-job.RunEndedPayload`
     - `infra/jobs/supervised-job.SupervisedRunRow`
-    - `infra/worktree.adoptCompleteCheckout`
     - `infra/worktree.checkoutState`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `infra/worktree.gitWorktreesDir`

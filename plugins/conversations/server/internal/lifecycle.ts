@@ -23,6 +23,7 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import type { MandateRef } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { withInlineLaunch } from "./inline-launch";
 import { Runtime } from "./runtime";
 import {
   DEFAULT_CONVERSATION_RUNTIME,
@@ -652,11 +653,16 @@ export async function createConversation(
   opts: CreateConversationOpts,
 ): Promise<Conversation> {
   const prepared = await prepareConversation(opts);
-  const conv = await withTaskStatusBatch((tx) =>
-    commitConversation(tx, prepared),
-  );
-  await finishConversation(prepared);
-  return conv;
+  // Held from before the row exists `starting` until its inline create (a
+  // reuse target) settled: the status sweep's "still coming" for a launch
+  // with no spawn job (`inline-launch.ts`).
+  return withInlineLaunch(prepared.conversationId, async () => {
+    const conv = await withTaskStatusBatch((tx) =>
+      commitConversation(tx, prepared),
+    );
+    await finishConversation(prepared);
+    return conv;
+  });
 }
 
 export async function deleteConversation(id: string): Promise<void> {
@@ -746,76 +752,80 @@ async function respawnResume(
   // starts a fresh session (a new id the session chain records on launch).
   { fresh = false }: { fresh?: boolean } = {},
 ): Promise<void> {
-  const workspace = await workspaceOf(row);
-  const preflight = await preflightResume(row, workspace);
-  if (preflight.kind === "blocked") {
-    throw new ResumeBlockedError(preflight.reason, preflight.message);
-  }
+  // Held across the status write, the create and its failure write: the
+  // status sweep's "still coming" for this row (`inline-launch.ts`).
+  return withInlineLaunch(row.id, async () => {
+    const workspace = await workspaceOf(row);
+    const preflight = await preflightResume(row, workspace);
+    if (preflight.kind === "blocked") {
+      throw new ResumeBlockedError(preflight.reason, preflight.message);
+    }
 
-  // The user is continuing this conversation, not closing it: a close
-  // requested earlier (`exit_clean`) must be withdrawn before anything here
-  // stops the agent. Left set, the status reconciler closes the row again
-  // while the new agent is still `starting` (planAbsent's "closed while
-  // starting"), the Resume button comes back, and a second resume kills the
-  // first's agent mid-start — "exited during startup (stopped)", the row
-  // `done` over a live agent (conv-1792896432-q4y588).
-  if (row.closeRequested) {
-    await updateConversation(row.id, { closeRequested: false });
-  }
+    // The user is continuing this conversation, not closing it: a close
+    // requested earlier (`exit_clean`) must be withdrawn before anything here
+    // stops the agent. Left set, the status reconciler closes the row again
+    // while the new agent is still `starting` (planAbsent's "closed while
+    // starting"), the Resume button comes back, and a second resume kills the
+    // first's agent mid-start — "exited during startup (stopped)", the row
+    // `done` over a live agent (conv-1792896432-q4y588).
+    if (row.closeRequested) {
+      await updateConversation(row.id, { closeRequested: false });
+    }
 
-  const runtime = Runtime.get(row.runtime);
-  // Clear any stale agent for this conversation before re-spawning.
-  await runtime.delete(row.id);
+    const runtime = Runtime.get(row.runtime);
+    // Clear any stale agent for this conversation before re-spawning.
+    await runtime.delete(row.id);
 
-  // A `waiting` row (a hibernation resume, a rewind of an agent at rest) keeps
-  // its status: the user sees the conversation they left, never an agent
-  // briefly working. `resumingSince` is what holds sent turns until the new
-  // process answers, and what the status reconciler clears once it does.
-  // Any other row is reset to `starting` so the reconciler tracks the new
-  // session — without this, "done" rows are skipped and stay stuck as done.
-  const keepStatus = row.status === "waiting";
-  await updateConversation(
-    row.id,
-    keepStatus
-      ? { resumingSince: new Date() }
-      : { status: "starting", endedAt: null },
-  );
-
-  try {
-    await runtime.create(
+    // A `waiting` row (a hibernation resume, a rewind of an agent at rest) keeps
+    // its status: the user sees the conversation they left, never an agent
+    // briefly working. `resumingSince` is what holds sent turns until the new
+    // process answers, and what the status reconciler clears once it does.
+    // Any other row is reset to `starting` so the reconciler tracks the new
+    // session — without this, "done" rows are skipped and stay stuck as done.
+    const keepStatus = row.status === "waiting";
+    await updateConversation(
       row.id,
-      workspace.path,
-      Workspace.get(workspace.spec.kind).launch(workspace, {
-        conversationId: row.id,
-      }),
-      {
-        ...(fresh ? {} : { resumeSessionId: row.claudeSessionId! }),
-        // Not in the transcript: the system prompt is given anew on every spawn.
-        appendSystemPrompt: systemPromptAppend(
-          await getConversationPreprompt(row.id),
-        ),
-        model: row.model,
-        effort: await resolveTaskEffort(row.taskId),
-      },
+      keepStatus
+        ? { resumingSince: new Date() }
+        : { status: "starting", endedAt: null },
     );
-  } catch (err) {
-    await updateConversation(row.id, {
-      ...(keepStatus
-        ? { resumingSince: null }
-        : {
-            status: statusAfterFailedResume(row.status),
-            endedAt: row.endedAt,
-          }),
-      closeRequested: row.closeRequested,
-    });
-    throw err;
-  }
 
-  // A turn held while this conversation was last `starting` (a launch that
-  // never came up, then went `gone`) is delivered now that a session runs
-  // again. The flip out of `starting` / `resumingSince` enqueues the flush
-  // too; dedup folds the two.
-  await deliverHeldTurnsJob.enqueue({ conversationId: row.id });
+    try {
+      await runtime.create(
+        row.id,
+        workspace.path,
+        Workspace.get(workspace.spec.kind).launch(workspace, {
+          conversationId: row.id,
+        }),
+        {
+          ...(fresh ? {} : { resumeSessionId: row.claudeSessionId! }),
+          // Not in the transcript: the system prompt is given anew on every spawn.
+          appendSystemPrompt: systemPromptAppend(
+            await getConversationPreprompt(row.id),
+          ),
+          model: row.model,
+          effort: await resolveTaskEffort(row.taskId),
+        },
+      );
+    } catch (err) {
+      await updateConversation(row.id, {
+        ...(keepStatus
+          ? { resumingSince: null }
+          : {
+              status: statusAfterFailedResume(row.status),
+              endedAt: row.endedAt,
+            }),
+        closeRequested: row.closeRequested,
+      });
+      throw err;
+    }
+
+    // A turn held while this conversation was last `starting` (a launch that
+    // never came up, then went `gone`) is delivered now that a session runs
+    // again. The flip out of `starting` / `resumingSince` enqueues the flush
+    // too; dedup folds the two.
+    await deliverHeldTurnsJob.enqueue({ conversationId: row.id });
+  });
 }
 
 // The status a row whose resume failed goes back to: the one it had, except a
@@ -942,19 +952,23 @@ export async function ensureResumed(id: string): Promise<ResumeOutcome> {
   const preflight = await preflightResume(row, await workspaceOf(row));
   if (preflight.kind === "blocked") return preflight;
 
-  if (!(await claimHibernatedResume(id, new Date()))) {
-    return { kind: "not-hibernated" };
-  }
-  try {
-    await respawnResume(row);
-  } catch (err) {
-    // Still hibernated: the claim is released, and the next open (or sent
-    // turn) claims it again.
-    await updateConversation(id, { resumingSince: null });
-    await setConversationHibernated(id, row.hibernatedAt);
-    throw err;
-  }
-  return { kind: "resumed" };
+  // Held from before the claim stamps `resumingSince` until the resume
+  // settled (`inline-launch.ts`).
+  return withInlineLaunch(id, async () => {
+    if (!(await claimHibernatedResume(id, new Date()))) {
+      return { kind: "not-hibernated" } as const;
+    }
+    try {
+      await respawnResume(row);
+    } catch (err) {
+      // Still hibernated: the claim is released, and the next open (or sent
+      // turn) claims it again.
+      await updateConversation(id, { resumingSince: null });
+      await setConversationHibernated(id, row.hibernatedAt);
+      throw err;
+    }
+    return { kind: "resumed" } as const;
+  });
 }
 
 const REWIND_REFUSAL_MESSAGE: Record<LocateCutRefusal | "not-in-tail", string> =

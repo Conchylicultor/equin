@@ -14,7 +14,8 @@ import {
   installQueueSchema,
   withQueueSchemaAssert,
 } from "../../server/internal/queue-schema";
-import type { JobTaskPayload } from "../../server/internal/registry";
+import type { EnqueueTx, JobTaskPayload } from "../../server/internal/registry";
+import { _jobWaits } from "../../server/internal/tables";
 import { graphileSpecFor } from "./graphile-routing";
 import { reconcileDeadJobs } from "./dead-job-gc";
 import { graphileJobReads } from "./jobs-list";
@@ -175,22 +176,37 @@ async function cancelUnstarted(
  *  `max_attempts`). A superseded row has had its key cleared, so never matches;
  *  a dead one is unlocked past its attempts. A locked row whose worker died
  *  stays in flight until the stuck-lock sweeper reclaims it — by its lock, not
- *  by a clock. */
-async function keysInFlight(
+ *  by a clock. Or a run suspended on a pending wait (`job_waits`, keyed by its
+ *  run id = its queue key) — in the SAME statement, so both are read in one
+ *  snapshot: a run between its row and its wait is never seen with neither
+ *  (`JobQueueImpl.keysInFlight`). */
+function keysInFlight(keys: readonly string[]): Promise<ReadonlySet<string>> {
+  return keysInFlightOn(db, keys);
+}
+
+/** {@link keysInFlight} on a given database (a test's throwaway one). */
+export async function keysInFlightOn(
+  exec: EnqueueTx,
   keys: readonly string[],
 ): Promise<ReadonlySet<string>> {
   if (keys.length === 0) return new Set();
-  const rows = await executeRows(db, {
+  const wanted = sql.join(
+    keys.map((k) => sql`${k}`),
+    sql`, `,
+  );
+  const rows = await executeRows(exec, {
     label: "jobs.keysInFlight",
     row: z.object({ key: z.string() }),
     query: sql`
-      SELECT DISTINCT j.key
+      SELECT j.key
         FROM graphile_worker._private_jobs j
-       WHERE j.key IN (${sql.join(
-         keys.map((k) => sql`${k}`),
-         sql`, `,
-       )})
+       WHERE j.key IN (${wanted})
          AND (j.attempts < j.max_attempts OR j.locked_at IS NOT NULL)
+      UNION
+      SELECT w.workflow_run_id AS key
+        FROM ${_jobWaits} w
+       WHERE w.workflow_run_id IN (${wanted})
+         AND w.status = 'pending'
     `,
   });
   return new Set(rows.map((r) => r.key));

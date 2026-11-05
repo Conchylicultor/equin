@@ -1196,7 +1196,8 @@ export type CheckoutState = "absent" | "unfinished" | "complete";
 /**
  * Where the checkout at `wtPath` stands, READ ONLY: `absent` (no dir),
  * `unfinished` (a cut-off add or spare claim — `isUnfinishedCheckout`), else
- * `complete`. Unlike `setupWorktree` it never discards or checks anything out:
+ * `complete` — its files, not whether it is installed. Unlike `setupWorktree`
+ * it never discards, checks out or installs anything:
  * a caller that only waits for a checkout made elsewhere (the spawn, waiting
  * on the `worktree.prepare` child) must not converge one that child may still
  * be writing — only the child converges.
@@ -1210,22 +1211,6 @@ export async function checkoutState(
   return (await isUnfinishedCheckout(repoRoot, wtPath, signal))
     ? "unfinished"
     : "complete";
-}
-
-/**
- * Take over a checkout `checkoutState` reads `complete`: re-assert its lock and
- * install it — `setupWorktree`'s `existing` path minus the convergence, cheap
- * enough to run in a backend (~140 ms of freshness check when already
- * installed). Not frozen: its package.jsons are the agent's own edits (see
- * `installCheckout`).
- */
-export async function adoptCompleteCheckout(
-  wtPath: string,
-  signal?: AbortSignal,
-): Promise<void> {
-  const repoRoot = await ensureMainWorktreeRoot(signal);
-  await ensureWorktreeLocked(repoRoot, wtPath, signal);
-  await installCheckout(wtPath, { frozen: false }, signal);
 }
 
 /** Where an attempt's checkout came from: a claimed spare, or a cold add. */

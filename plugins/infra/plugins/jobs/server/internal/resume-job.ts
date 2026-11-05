@@ -5,6 +5,7 @@ import {
   defineJob,
   UNSAFE_getRegisteredJob,
   UNSAFE_insertJobRow,
+  type EnqueueTx,
   type JobTaskPayload,
 } from "./registry";
 import {
@@ -71,33 +72,28 @@ export const jobsResumeJob = defineJob({
       return;
     }
 
-    await db
-      .update(_jobWaits)
-      .set({
-        status: isTimeout ? "timed_out" : "resolved",
-        payloadJson: isTimeout
-          ? null
-          : (payloadRecord as Record<string, unknown>),
-        resolvedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(_jobWaits.workflowRunId, workflowRunId),
-          eq(_jobWaits.waitName, waitName),
-        ),
-      );
-
     const target = UNSAFE_getRegisteredJob(targetJobName);
     if (!target) {
       // Schema drift — the job was removed between suspend and resume.
-      // Preserve the wait row (status now resolved/timed_out) so an operator
-      // can diagnose; return cleanly so the events dispatcher doesn't retry.
+      // Resolve the wait row (kept so an operator can diagnose) and return
+      // cleanly so the events dispatcher doesn't retry.
+      await resolveWait(db, workflowRunId, waitName, isTimeout, payloadRecord);
       console.warn(
         `[jobs.resume] unknown target job "${targetJobName}" for workflow ${workflowRunId}:${waitName}`,
       );
       return;
     }
 
+    // The wait leaves `pending` and the target's row arrives in ONE
+    // transaction. A keyed run is "still coming" (`inFlight`) while it holds a
+    // row OR a pending wait; written as two commits, the instant between them
+    // had neither, and a status sweep reading then took a conversation whose
+    // spawn was resuming from its checkout wait for one that would never come
+    // (2026-11-04 12:24Z / 12:52Z: "stuck starting" at exactly a 30 s wait
+    // timeout). Never row first: a row running before its wait resolves
+    // replays the wait as still pending and suspends again, with nothing left
+    // to wake it.
+    //
     // Re-enqueue the handler with the ORIGINAL input via `UNSAFE_insertJobRow`,
     // NOT through `target.enqueue`. The public enqueue
     // path runs `spec.input.parse(input)` on every call; re-running that on
@@ -116,15 +112,29 @@ export const jobsResumeJob = defineJob({
     // come back OUTSIDE its queue and run alongside the sibling the queue exists
     // to exclude. Deriving from the registered target makes that impossible to
     // forget.
-    await UNSAFE_insertJobRow(
-      target,
-      {
-        jobName: targetJobName,
-        workflowRunId,
-        input: originalInput,
-      } satisfies JobTaskPayload,
-      { jobKey: workflowRunId, maxAttempts: target.maxAttempts },
-    );
+    const resumed = await db.transaction(async (tx) => {
+      if (
+        !(await resolveWait(
+          tx,
+          workflowRunId,
+          waitName,
+          isTimeout,
+          payloadRecord,
+        ))
+      )
+        return false; // The other racer resumed it first.
+      await UNSAFE_insertJobRow(
+        target,
+        {
+          jobName: targetJobName,
+          workflowRunId,
+          input: originalInput,
+        } satisfies JobTaskPayload,
+        { jobKey: workflowRunId, maxAttempts: target.maxAttempts, tx },
+      );
+      return true;
+    });
+    if (!resumed) return;
 
     // Event-path: cancel the scheduled timeout racer. We only know its
     // jobKey, not its id.
@@ -135,6 +145,36 @@ export const jobsResumeJob = defineJob({
     }
   },
 });
+
+/**
+ * Move one wait out of `pending`: resolved with its event, or timed out.
+ * Whether THIS call moved it — the event and its timeout racer may both get
+ * here, and only the one whose update matched a pending row resumes the run.
+ */
+async function resolveWait(
+  exec: EnqueueTx,
+  workflowRunId: string,
+  waitName: string,
+  isTimeout: boolean,
+  payload: Record<string, unknown>,
+): Promise<boolean> {
+  const moved = await exec
+    .update(_jobWaits)
+    .set({
+      status: isTimeout ? "timed_out" : "resolved",
+      payloadJson: isTimeout ? null : payload,
+      resolvedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(_jobWaits.workflowRunId, workflowRunId),
+        eq(_jobWaits.waitName, waitName),
+        eq(_jobWaits.status, "pending"),
+      ),
+    )
+    .returning({ waitName: _jobWaits.waitName });
+  return moved.length > 0;
+}
 
 /**
  * Schedule a `jobs.resume` row for a suspended workflow — the `scheduleResume`

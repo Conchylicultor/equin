@@ -65,6 +65,7 @@ here. Cron schedules are timers, not rows — a tick not yet due is left alone.
     - `infra/jobs.QueuedJob`
     - `infra/jobs.resolveJobCron`
     - `infra/jobs.singletonJobKey`
+    - `infra/jobs.suspendedRunIds`
     - `infra/jobs.UNSAFE_runJobRow`
   - Exports (values): `settleJobQueue`
 
