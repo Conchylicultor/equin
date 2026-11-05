@@ -9,7 +9,9 @@ import {
 import {
   scopeFilterRows,
   type DataViewRenderProps,
+  type DataViewRowsComplete,
   type DataViewSection,
+  type DataViewSectioning,
   type FieldDef,
   type HierarchyConfig,
 } from "../../../core";
@@ -147,13 +149,38 @@ export function useHierarchyTree(args: {
   // keeps its identity until the view's group-by changes.
   const groupBy = props.state.groupBy;
   const resolveGrouping = useGroupingRegistry().resolve;
-  const { now, groupOrder } = props;
+  const { now, groupOrder, sectioning, rowsComplete } = props;
   const grouped = useMemo(() => {
     const field = groupBy
       ? fields.find((f) => f.id === groupBy.fieldId)
       : undefined;
     // Unset / unresolvable / value-less group field → ungrouped.
     if (!groupBy || !field?.value) return null;
+    // The read's sections over the projection: a live tree's root window
+    // lowered onto server sections declares them (each section's rows are
+    // roots, its paging the section's own read); otherwise the roots are
+    // partitioned here, a paged read's counts reading as lower bounds.
+    const byId = new Map(sortedProjected.map((p) => [p.id, p]));
+    const projectedSectioning: DataViewSectioning<ProjectedRow<unknown>> =
+      sectioning.kind === "declared"
+        ? {
+            kind: "declared",
+            sections: sectioning.sections.map((section) => ({
+              ...section,
+              rows: section.rows.flatMap((row, i) => {
+                const p = byId.get(rowKey(row, i));
+                return p ? [p] : [];
+              }),
+            })),
+          }
+        : sectioning;
+    const projectedComplete: DataViewRowsComplete<ProjectedRow<unknown>> =
+      typeof rowsComplete === "boolean"
+        ? rowsComplete
+        : {
+            growable: (p) => rowsComplete.growable(p.__row),
+            total: rowsComplete.total,
+          };
     const sections = partitionIntoSections(
       projectedRoots(sortedProjected),
       fieldsForProjected(fields),
@@ -161,7 +188,14 @@ export function useHierarchyTree(args: {
       (p) => p.id,
       // Flat: the rows already nest by their own hierarchy, so a forest-shaped
       // grouping (`GroupBucket.ancestors`) partitions the roots one level deep.
-      { resolveGrouping, now, order: groupOrder, flat: true },
+      {
+        resolveGrouping,
+        now,
+        order: groupOrder,
+        flat: true,
+        sectioning: projectedSectioning,
+        rowsComplete: projectedComplete,
+      },
     );
     const buckets = bucketRowsByRootSection(sortedProjected, sections);
     return {
@@ -170,7 +204,17 @@ export function useHierarchyTree(args: {
       // only exists ungrouped).
       rowsBySectionKey: new Map(sections.map((s, i) => [s.key!, buckets[i]!])),
     };
-  }, [sortedProjected, fields, groupBy, resolveGrouping, now, groupOrder]);
+  }, [
+    sortedProjected,
+    fields,
+    groupBy,
+    resolveGrouping,
+    now,
+    groupOrder,
+    sectioning,
+    rowsComplete,
+    rowKey,
+  ]);
 
   // The host's `searchAccessor` (when provided) drives the subtree-preserving
   // search, so a consumer can match on more than the label. Falls back to the

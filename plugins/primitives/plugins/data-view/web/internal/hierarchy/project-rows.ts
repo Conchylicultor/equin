@@ -64,6 +64,8 @@ function mintAliasRanks(
  * original so `TreeList` callbacks recover the concrete `TRow`. Pure: the same
  * inputs always yield the same projection (the caller memoizes).
  *
+ * A `referenceOnly` row is drawn only as the aliases its alias parents hold.
+ *
  * `expanded` comes only from the view's own per-(surface, view-instance, row)
  * expand map, falling back to `defaultExpanded`: there is no consumer-supplied
  * expand accessor, so a row's collapse state can never be domain data.
@@ -82,9 +84,14 @@ export function projectRows<TRow>(args: {
   // mint after each host parent's last real child.
   const maxRankByParent = new Map<string, Rank>();
 
+  const referenceOnly = hierarchy.referenceOnly;
+  // The rows drawn at their own place — what an alias may hang under.
+  const drawn = new Set<string>();
   rows.forEach((row, i) => {
     const id = rowKey(row, i);
     byId.set(id, row);
+    if (referenceOnly?.(row)) return;
+    drawn.add(id);
     const parentId = hierarchy.getParentId(row);
     const rank = hierarchy.getRank(row);
     if (parentId !== null) {
@@ -114,7 +121,7 @@ export function projectRows<TRow>(args: {
       const id = rowKey(row, i);
       const realParentId = hierarchy.getParentId(row);
       for (const parent of getAliasParents(row)) {
-        if (parent === id || parent === realParentId || !byId.has(parent)) {
+        if (parent === id || parent === realParentId || !drawn.has(parent)) {
           continue;
         }
         const nodeId = aliasNodeId(id, parent);

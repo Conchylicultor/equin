@@ -20,8 +20,11 @@ import {
   type FieldDef,
   type FieldGrouping,
   type FilterGroup,
+  type HierarchyConfig,
   type ItemActionsDescriptor,
   type LiveDataSource,
+  type LiveHierarchyConfig,
+  type LiveTreeDataSource,
   type ManualOrderConfig,
   type DataViewAttachConfig,
   type DataViewFoldLines,
@@ -141,7 +144,17 @@ import {
   type Activation,
 } from "@plugins/primitives/plugins/link-gesture/core";
 import { CollectRowActivation } from "../internal/collection-row-activation";
-import { rootRows, withParentField } from "../internal/flat-hierarchy";
+import {
+  rootRows,
+  withLiveParentField,
+  withParentField,
+} from "../internal/flat-hierarchy";
+import type { LiveCollection } from "@plugins/network/plugins/live/core";
+import {
+  childCountOf,
+  useLiveTree,
+  withRootsScope,
+} from "../internal/live-tree/use-live-tree";
 import { attachRoots } from "../internal/attach";
 import type { CollectionActivation } from "../internal/fold-activations";
 import {
@@ -423,7 +436,7 @@ function DataViewBodyInner<TRow>(
     paging: heldPaging,
     errorState,
     notice,
-    hierarchy,
+    hierarchy: originHierarchy,
     viewOptions,
     manualOrder,
     aggregate,
@@ -469,6 +482,25 @@ function DataViewBodyInner<TRow>(
         (backdropType === undefined
           ? "is not a registered view type."
           : "is not a full-bleed view type — a backdrop is the surface's canvas."),
+    );
+  }
+
+  // The origin's structure: an in-memory `HierarchyConfig`, or a live source's
+  // collection `tree` (with the consumer's `LiveHierarchyConfig` — writes and
+  // references only). The props union admits a live `hierarchy` only beside a
+  // tree source (tsc); a cast or erased one is refused here, loudly.
+  const liveTree = props.source?.tree ?? null;
+  const hierarchy =
+    props.source == null
+      ? (originHierarchy as HierarchyConfig<TRow> | undefined)
+      : undefined;
+  const liveHierarchy =
+    props.source != null
+      ? (originHierarchy as LiveHierarchyConfig<TRow> | undefined)
+      : undefined;
+  if (liveHierarchy != null && liveTree == null) {
+    throw new Error(
+      `DataView(${storageKey}): a live source over "${props.source!.collection.key}" takes no \`hierarchy\` — its collection declares no \`tree\`.`,
     );
   }
 
@@ -605,7 +637,8 @@ function DataViewBodyInner<TRow>(
   // ONE decision: a view receives `hierarchy` only while it nests (renderProps
   // below), so the table's own nested/flat switch cannot disagree with it.
   const canNest =
-    hierarchy != null && activeInstance.viewType.nestsHierarchy === true;
+    (hierarchy != null || liveTree != null) &&
+    activeInstance.viewType.nestsHierarchy === true;
   // The same per-view setting draws attached rows (`attach`) under their
   // parent, on a view type that draws them (`nestsAttach`, the list). A row the
   // read pages never attaches: hung far from its page, it would report that
@@ -651,14 +684,34 @@ function DataViewBodyInner<TRow>(
   // controllers and render-props uniformly with no custom-columns knowledge here.
   // A `rowRead` field's cell draws the read the body makes for the rows on
   // screen (`RowReadsHost`, below).
+  // Over a live tree the parent is mostly not loaded: its Parent field reads
+  // it per row on screen (`withLiveParentField`).
+  const treeCollection =
+    liveTree != null ? props.source?.collection : undefined;
   const fields = useMemo(
     () =>
       withRowReadCells(
-        hierarchy != null && nesting === "flat" && heldRows
-          ? withParentField(props.fields, heldRows, rowKey, hierarchy)
-          : props.fields,
+        nesting !== "flat"
+          ? props.fields
+          : hierarchy != null && heldRows
+            ? withParentField(props.fields, heldRows, rowKey, hierarchy)
+            : liveTree != null && treeCollection !== undefined
+              ? withLiveParentField(
+                  props.fields,
+                  treeCollection as LiveCollection<unknown, unknown, string>,
+                  liveTree,
+                )
+              : props.fields,
       ),
-    [hierarchy, nesting, heldRows, rowKey, props.fields],
+    [
+      hierarchy,
+      nesting,
+      heldRows,
+      rowKey,
+      props.fields,
+      liveTree,
+      treeCollection,
+    ],
   );
 
   // The fold in effect: suspended while a search is typed (a match must never
@@ -706,6 +759,18 @@ function DataViewBodyInner<TRow>(
   // A live source: its fields resolved against the collection (what the Sort
   // and Filter controls offer, and each field's column).
   const liveSource = props.source;
+  // A live tree drawn nested reads level by level (`useLiveTree`); drawn
+  // flat it is the ordinary flat source — `roots` scoped to its top level.
+  const treeNests = liveTree != null && activeNests;
+  const flatLiveSource = useMemo(
+    () =>
+      liveSource == null || treeNests
+        ? undefined
+        : liveTree != null && nesting === "roots"
+          ? withRootsScope(liveSource, liveTree)
+          : liveSource,
+    [liveSource, treeNests, liveTree, nesting],
+  );
   const livePlan = useMemo(
     () =>
       liveSource
@@ -726,7 +791,7 @@ function DataViewBodyInner<TRow>(
   const now = useGroupingClock();
   const collapsedSections = viewModel.collapsedSectionsFor(activeViewId);
   const live = useLiveSource({
-    source: liveSource,
+    source: flatLiveSource,
     plan: livePlan,
     fields,
     state: activeState,
@@ -735,8 +800,30 @@ function DataViewBodyInner<TRow>(
     now,
     collapsedSections,
   });
+  const treeView = useLiveTree({
+    source: treeNests ? (liveSource as LiveTreeDataSource<TRow>) : undefined,
+    plan: livePlan,
+    fields,
+    state: activeState,
+    resolveOperatorSet,
+    resolveGrouping: groupingRegistry.resolve,
+    now,
+    collapsedSections,
+    hierarchy: liveHierarchy,
+    selectedRowId,
+  });
   // The server-ordered origin in effect, as the body renders it.
-  const origin: SourceView<TRow> | null = live;
+  const origin: SourceView<TRow> | null = treeView?.origin ?? live;
+  // A live tree drawn FLAT: its rows carry their child count, so a parent is
+  // still one. Nested, a view counts the children it draws (in hits mode a
+  // node has only those).
+  const liveHasChildren = useMemo(() => {
+    if (liveTree == null || treeNests || origin == null) return null;
+    const counts = new Map(
+      origin.rows.map((row, i) => [rowKey(row, i), childCountOf(row)]),
+    );
+    return (rowId: string) => (counts.get(rowId) ?? 0) > 0;
+  }, [liveTree, treeNests, origin, rowKey]);
 
   // Filter controller — the popover builder consumes the full surface (filter,
   // setFilter, filterableFields, resolveOperatorSet, ruleCount).
@@ -1386,7 +1473,11 @@ function DataViewBodyInner<TRow>(
     return (
       <>
         {rowOrderReader}
-        {origin?.kind === "sectioned" ? origin.readers : null}
+        {treeView
+          ? treeView.readers
+          : origin?.kind === "sectioned"
+            ? origin.readers
+            : null}
       </>
     );
   }
@@ -1458,7 +1549,7 @@ function DataViewBodyInner<TRow>(
           cover: cover as DataViewRenderProps<unknown>["cover"],
           // Only while the view nests: drawn flat, it is a view of rows.
           hierarchy: (activeNests
-            ? hierarchy
+            ? (treeView?.hierarchy ?? hierarchy)
             : undefined) as DataViewRenderProps<unknown>["hierarchy"],
           // `manualOrderActive` already implies `cfg != null` (TS cannot see it
           // through the boolean), hence the assertion.
@@ -1477,10 +1568,14 @@ function DataViewBodyInner<TRow>(
           rowSelection,
           rowDrag: rowDrag as DataViewRenderProps<unknown>["rowDrag"],
           rowDrop: viewRowDrop as DataViewRenderProps<unknown>["rowDrop"],
-          expanded: activeState.expanded,
+          // A live tree's hits are drawn open (`useLiveTree`'s `expanded`).
+          expanded: treeView?.expanded ?? activeState.expanded,
           setExpanded: (changes) =>
             viewModel.setExpanded(activeViewId, changes),
-          reportExpandAll,
+          // Expand-all over a live tree in expand mode would open a window per
+          // node — not offered; over its hits it opens the loaded nodes.
+          reportExpandAll:
+            treeView?.mode === "expand" ? undefined : reportExpandAll,
           now,
           groupOrder,
           // In memory without paging the rows are the whole set; a paged read
@@ -1511,7 +1606,7 @@ function DataViewBodyInner<TRow>(
           emptyState,
           itemActions:
             allItemActions as DataViewRenderProps<unknown>["itemActions"],
-          hasChildren,
+          hasChildren: liveHasChildren ?? hasChildren,
           creators,
           // The surface's own declaration, straight off the chrome (the ONE
           // place both hosts set it) — the view child decides what to tighten.
@@ -1683,7 +1778,11 @@ function DataViewBodyInner<TRow>(
             {/* A sectioned origin's reads (they draw nothing). Mounted
                 beside the view, so a read starting or stopping never
                 remounts it. */}
-            {origin?.kind === "sectioned" ? origin.readers : null}
+            {treeView
+              ? treeView.readers
+              : origin?.kind === "sectioned"
+                ? origin.readers
+                : null}
             {paging ? (
               <InfiniteScrollFooter
                 handle={scrollHandle}
@@ -1725,7 +1824,7 @@ function DataViewBodyInner<TRow>(
               searchPlaceholder={chrome.searchPlaceholder}
               actions={viewModel.actions}
               hostSettings={subItemsSettingsFor(
-                hierarchy != null
+                hierarchy != null || liveTree != null
                   ? "hierarchy"
                   : consumerAttach != null
                     ? "attach"

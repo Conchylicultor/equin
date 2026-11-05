@@ -22,6 +22,7 @@ dependency runs the other way. The compilers' main tests therefore live in
 | `compileUnionCollection` | a union's window / `:rows` / `:groups` (*Union collections*) |
 | `compileLookup` | a by-key read beside a hand-written value loader (*Lookups*) |
 | `compileOffFeedQuery` | the window / point loaders alone, for `serveCollection`'s `changes` (external membership + `reads`, declared unfed) |
+| `compileAncestorsQuery` | a tree collection's `:ancestors` (*Ancestors*) |
 
 Every keyed compiler takes ONE drizzle declaration and derives from it:
 
@@ -761,6 +762,27 @@ refactor broke):
 ./equin run plugins/network/plugins/live/server/testing/gen-compile-union-golden.ts
 ```
 
+## Ancestors — `compileAncestorsQuery` (`server/internal/compile-ancestors.ts`)
+
+A tree collection's `:ancestors` (network/live, *Trees*): the `:rows` point
+spec (projection, joins, static `where`) planned by `planArm`'s point arm,
+under a WINDOW membership whose ids are the closure of the tuple's seeds.
+
+- `windowIdsOf` = a recursive CTE up `parent` from the seeds (`= ANY`,
+  `"absent"`), the static `where` applied at every level (base columns only —
+  refused otherwise), carrying a text path: a cycle, a chain reaching
+  `maxDepth`, or more than `maxRows` ids throws.
+- FULL = the closure's rows (in closure order); scoped refill =
+  `closure ∩ affectedIds`, so a write to a row no seed descends from enters
+  nothing.
+- Order signature = the row's parent: a re-pointed member re-derives the
+  closure (new ancestors backfilled). The base use's `moves` add `parent`;
+  `whereReads` adds it to the base route's gate.
+- `limitOf` = 0: a closure is no prefix of an order, so every exit
+  re-derives (a deleted ancestor may take its own ancestors with it).
+- Never L2-persisted, no handoff definition. `parent` must be a projected base
+  column of the id's SQL type.
+
 ## The `db` seam
 
 `spec.db` defaults to the real `db` (top-level static import; inline `import()`
@@ -809,7 +831,9 @@ query.
     - `AllBind`
     - `AllCollectionContracts`
     - `AllCollectionSpec`
+    - `AncestorsClosure`
     - `CompiledAllCollection`
+    - `CompiledAncestors`
     - `CompiledCount`
     - `CompiledGroups`
     - `CompiledLookup`
@@ -843,6 +867,7 @@ query.
     - `assertStableRead`
     - `clockNow`
     - `compileAllCollection`
+    - `compileAncestorsQuery`
     - `compileCountQuery`
     - `compiledValueReach`
     - `compileGroupsQuery`

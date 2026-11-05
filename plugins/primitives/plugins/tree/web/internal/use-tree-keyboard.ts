@@ -20,7 +20,8 @@ import type { TreeItem } from "./types";
 
 /**
  * Arrow-key navigation for a tree whose rows are focusable: a key on a
- * focused row moves the selection (`onSelect`, the same path a click takes) and
+ * focused row moves the selection (a "Load more" line of a paged level is a
+ * stop too — focused, never selected, Enter grows its level) (`onSelect`, the same path a click takes) and
  * DOM focus together, or opens / closes the row. Keys pressed in a control
  * INSIDE a row (a rename field, an action button) are left alone.
  *
@@ -129,7 +130,16 @@ export function useTreeKeyboard<T extends TreeItem>(args: {
         void setExpanded([{ id: move.id, expanded: move.expanded }]);
         return;
       }
+      if (move.kind === "load") {
+        move.loadMore();
+        return;
+      }
       wanted.current = move.id;
+      // A "Load more" line takes focus, never the selection: it is no row.
+      if (move.line === "more") {
+        focusWanted();
+        return;
+      }
       reselect({ kind: "click", id: move.id });
       onSelect(move.id);
       focusWanted();

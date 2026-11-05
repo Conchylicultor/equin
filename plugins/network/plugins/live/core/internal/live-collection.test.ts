@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { z } from "zod";
-import { fieldsToZodObject } from "@plugins/fields/core";
+import { fieldsToZodObject, nullable } from "@plugins/fields/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { ResourceContractError } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
@@ -443,5 +443,74 @@ describe("liveCollection — a scoped `all` (`all: { by }`)", () => {
       void [_ok, _whole, _scoped, _rows];
     };
     void _typesOnly;
+  });
+});
+
+describe("liveCollection — tree", () => {
+  const T = {
+    ...F,
+    parentId: nullable(textField({ label: "Parent" })),
+    rank: textField({ label: "Rank" }),
+    note: textField({ label: "Note" }),
+  };
+  const spec = {
+    fields: T,
+    id: "id",
+    sortable: ["rank", "n"],
+    default: { orderBy: [["rank", "asc"]], limit: 2 },
+    maxLimit: 4,
+  } as const;
+
+  test("mints :ancestors and carries $childCount on its rows, never in rowKeys", () => {
+    const c = liveCollection("test.live-collection.tree", {
+      ...spec,
+      tree: { parent: "parentId", rank: "rank" },
+    });
+    expect(c.tree).toEqual({ parent: "parentId", rank: "rank" });
+    expect(c.ancestors.key).toBe("test.live-collection.tree:ancestors");
+    expect(resourceDescriptorByKey(c.ancestors.key)).toBe(c.ancestors);
+    expect(c.ancestors.point.maxIds).toBe(c.rows.point.maxIds);
+    expect(c.rowKeys).not.toContain("$childCount");
+    const row = { id: "a", n: 1, parentId: null, rank: "a", note: "" };
+    expect(c.row.safeParse({ ...row, $childCount: 2 }).success).toBe(true);
+    expect(c.row.safeParse(row).success).toBe(false);
+    const plain = liveCollection("test.live-collection.no-tree", spec);
+    expect(plain.tree).toBeNull();
+    expect(plain.ancestors).toBeNull();
+  });
+
+  test("refuses a default order not led by the rank, a parent that is not filterable, a rank that is not sortable", () => {
+    expect(() =>
+      liveCollection("test.live-collection.tree-order", {
+        ...spec,
+        default: { orderBy: [["n", "asc"]], limit: 2 },
+        tree: { parent: "parentId", rank: "rank" },
+      }),
+    ).toThrow(/the default order leads with "n", not the rank "rank"/);
+    expect(() =>
+      liveCollection("test.live-collection.tree-rank", {
+        ...spec,
+        // @ts-expect-error — the rank is a sortable field
+        tree: { parent: "parentId", rank: "note" },
+      }),
+    ).toThrow(/its rank "note" is not a sortable field/);
+  });
+
+  test("tsc: the parent is a nullable field of the id's type; no tree on a lookup or `all` set", () => {
+    // Never called — the assertions are the `@ts-expect-error`s.
+    const declare = () => [
+      liveCollection("test.live-collection.tree-parent", {
+        ...spec,
+        // @ts-expect-error — `note` is not nullable: no root could be spelled
+        tree: { parent: "note", rank: "rank" },
+      }),
+      // @ts-expect-error — a tree is a window's (no overload takes it without `default`)
+      liveCollection("test.live-collection.tree-lookup", {
+        fields: T,
+        id: "id",
+        tree: { parent: "parentId", rank: "rank" },
+      }),
+    ];
+    expect(typeof declare).toBe("function");
   });
 });

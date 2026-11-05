@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { TreeNode } from "./tree";
 import {
+  childPlaceholder,
   flatNodeIds,
   flattenVisible,
+  moreLineId,
   treeKeyMove,
   type KeyboardLine,
 } from "./flatten";
@@ -51,10 +53,12 @@ describe("treeKeyMove", () => {
   test("down and up walk the painted rows, skipping placeholders", () => {
     expect(treeKeyMove("ArrowDown", "src", lines, lazy)).toEqual({
       kind: "focus",
+      line: "node",
       id: "src/main.ts",
     });
     expect(treeKeyMove("ArrowDown", "docs", lines, lazy)).toEqual({
       kind: "focus",
+      line: "node",
       id: "README.md",
     });
     expect(treeKeyMove("ArrowUp", "src", lines, lazy)).toEqual({
@@ -62,6 +66,7 @@ describe("treeKeyMove", () => {
     });
     expect(treeKeyMove("End", "src", lines, lazy)).toEqual({
       kind: "focus",
+      line: "node",
       id: "README.md",
     });
   });
@@ -74,6 +79,7 @@ describe("treeKeyMove", () => {
     });
     expect(treeKeyMove("ArrowRight", "src", lines, lazy)).toEqual({
       kind: "focus",
+      line: "node",
       id: "src/main.ts",
     });
     expect(treeKeyMove("ArrowRight", "README.md", lines, lazy)).toEqual({
@@ -89,6 +95,7 @@ describe("treeKeyMove", () => {
     });
     expect(treeKeyMove("ArrowLeft", "src/util.ts", lines, lazy)).toEqual({
       kind: "focus",
+      line: "node",
       id: "src",
     });
     expect(treeKeyMove("ArrowLeft", "README.md", lines, lazy)).toEqual({
@@ -135,5 +142,72 @@ describe("flattenVisible", () => {
     });
     expect(flatNodeIds(flat)).toEqual(["src"]);
     expect(asked).toEqual([]);
+  });
+});
+
+describe('a partial level: the "Load more" line', () => {
+  const loadMore = () => {};
+  const partial = {
+    hasChildren: () => true,
+    state: () => ({
+      kind: "partial" as const,
+      growing: false,
+      loadMore,
+      stalled: null,
+    }),
+    load: () => {},
+  };
+  const kid = node("p/1", "p");
+  const p = node("p", null, [kid], true);
+  const after = node("q", null);
+
+  test("is drawn after the loaded children, not instead of them", () => {
+    const flat = flattenVisible([p, after], (n) =>
+      childPlaceholder(n, partial, false),
+    );
+    expect(flat.map((l) => (l.kind === "node" ? l.node.id : "more"))).toEqual([
+      "p",
+      "p/1",
+      "more",
+      "q",
+    ]);
+    const line = flat[2]!;
+    expect(line.kind === "placeholder" && line.placeholder.kind).toBe("more");
+  });
+
+  test("a search hides it (nobody asked for the level)", () => {
+    expect(childPlaceholder(p, partial, true)).toBeNull();
+  });
+
+  test("is a keyboard stop: arrows reach it, Enter grows the level, ← goes to the parent", () => {
+    const flat = flattenVisible([p, after], (n) =>
+      childPlaceholder(n, partial, false),
+    );
+    const more = moreLineId("p");
+    expect(treeKeyMove("ArrowDown", "p/1", flat, partial)).toEqual({
+      kind: "focus",
+      id: more,
+      line: "more",
+    });
+    expect(treeKeyMove("ArrowDown", more, flat, partial)).toEqual({
+      kind: "focus",
+      id: "q",
+      line: "node",
+    });
+    expect(treeKeyMove("Enter", more, flat, partial)).toEqual({
+      kind: "load",
+      loadMore,
+    });
+    expect(treeKeyMove("ArrowLeft", more, flat, partial)).toEqual({
+      kind: "focus",
+      id: "p",
+      line: "node",
+    });
+    // End is the LOADED end.
+    expect(treeKeyMove("End", "p", flat.slice(0, 3), partial)).toEqual({
+      kind: "focus",
+      id: more,
+      line: "more",
+    });
   });
 });

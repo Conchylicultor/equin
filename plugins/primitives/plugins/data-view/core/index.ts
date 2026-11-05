@@ -76,6 +76,9 @@ export type {
   LiveSearchableColumn,
   LiveSourceScope,
   LiveSurfaceBinding,
+  LiveTreeDataSource,
+  LiveTreeOf,
+  LiveTreeSpec,
   SurfaceCustomColumns,
 } from "./internal/live-data-source";
 
@@ -106,8 +109,11 @@ export type {
   FieldOption,
   FieldOptionsResult,
   FieldRowRead,
+  FieldValueRowRead,
+  FieldCollectionRowRead,
   RowTone,
   HierarchyConfig,
+  LiveHierarchyConfig,
   SelectionConfig,
   RowDragConfig,
   RowDropConfig,

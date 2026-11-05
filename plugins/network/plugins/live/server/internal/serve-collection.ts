@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import { and, getTableColumns, getTableName, sql, type SQL } from "drizzle-orm";
-import type { PgColumn } from "drizzle-orm/pg-core";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import {
   filterColumns,
   type Filter,
@@ -39,6 +39,7 @@ import {
 } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   assertStableRead,
+  compileAncestorsQuery,
   compileCountQuery,
   compileGroupsQuery,
   compileJoins,
@@ -48,6 +49,7 @@ import {
   joinRefs,
   pointQueryResource,
   windowQueryResource,
+  type AncestorsClosure,
   type FollowablePlan,
   type CompiledCount,
   type CompiledGroups,
@@ -59,7 +61,10 @@ import {
   type WindowQueryResourceSpec,
 } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import {
+  LIVE_CHILD_COUNT_KEY,
   LIVE_COLUMNS_KEY,
+  LIVE_TREE_ANCESTORS_MAX,
+  LIVE_TREE_MAX_DEPTH,
   LIVE_ROW_KEY,
   LIVE_ROW_KEY_MAX_BYTES,
   LIVE_SCOPED_KEY,
@@ -75,6 +80,7 @@ import {
   type ExternalLookupCollection,
   type ExternalWindowCollection,
   type LiveCollectionChanges,
+  type LiveTree,
   type ServedExternalAll,
   type ServedExternalLookup,
   type ServedExternalWindow,
@@ -195,7 +201,55 @@ type ColumnOverrides<
  * The row fields a collection binds to columns: every key of its row but
  * `$columns`, which a collection reaching exposures folds them into.
  */
-type BoundFields<Row> = Exclude<keyof Row & string, typeof LIVE_COLUMNS_KEY>;
+type BoundFields<Row> = Exclude<
+  keyof Row & string,
+  typeof LIVE_COLUMNS_KEY | typeof LIVE_CHILD_COUNT_KEY
+>;
+
+/**
+ * The materialized child count a tree collection's `$childCount` reads —
+ * query-resource's `materializeJoin(childrenJoin({ table, fk, where?,
+ * aggregates }), { host, table })`: the children join it materializes (its
+ * `table` is the served table, its `fk` the column `tree.parent` binds to),
+ * and the extension join reading the materialized table.
+ *
+ * TODO(7tzicj): a narrow stand-in for `materializeJoin`'s result (task
+ * task-1793848785-7tzicj), until it lands on main — then this is its type.
+ */
+export interface TreeChildCount {
+  readonly children: { readonly table: PgTable; readonly fk: PgColumn };
+  join(): ExtensionJoin;
+}
+
+/**
+ * How a tree collection's rows get `$childCount` (see `ServeCollectionOptions.childCount`):
+ * the materialized count (`of`), and its count column read off its join
+ * (`(j) => j.kids.count` — the join declared in `joins`).
+ */
+export interface TreeChildCountBinding<
+  T extends CollectionSource,
+  J extends readonly JoinSpec[],
+> {
+  of: TreeChildCount;
+  count: FieldBinding<T, J, number>;
+}
+
+/**
+ * A tree collection (declared `tree`) REQUIRES its `childCount` — the
+ * materialized count of the rows naming each row as their parent, joined in
+ * `joins` and read through `count`; its children join's `table` must be
+ * `from`'s and its `fk` the column `tree.parent` binds to (a bind-time throw),
+ * so the count is of THIS tree. On any other collection it is refused at
+ * bind (a throw) — not typed `never`, so options typed before the call
+ * (`ServeCollectionOptions`) stay assignable.
+ */
+export type ChildCountOption<
+  Tr,
+  T extends CollectionSource,
+  J extends readonly JoinSpec[],
+> = [Tr] extends [LiveTree]
+  ? { childCount: TreeChildCountBinding<T, J> }
+  : unknown;
 
 export type ServeCollectionOptions<
   T extends CollectionSource,
@@ -254,6 +308,11 @@ export type ServeCollectionOptions<
    * enumerated preload: never L2-persisted.
    */
   preloadRows?: PreloadRows;
+  /**
+   * A tree collection's `$childCount` — required there (`ChildCountOption`,
+   * tsc), refused elsewhere (a bind-time throw).
+   */
+  childCount?: TreeChildCountBinding<T, J>;
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
 } & ColumnOverrides<T, Row, BoundFields<Row>, J> &
@@ -280,6 +339,14 @@ export interface LookupCollectionSpecs {
 
 export interface CollectionSpecs extends LookupCollectionSpecs {
   window: WindowQueryResourceSpec<LiveWindowParams>;
+  /**
+   * A tree collection's `:ancestors` (the `:rows` spec and the closure it
+   * walks); `null` for any other.
+   */
+  ancestors: {
+    spec: PointQueryResourceSpec<PointParams>;
+    closure: AncestorsClosure;
+  } | null;
   /** The `:groups` server half — the two-arg `defineResource` opts, routed by `reach`. */
   groups: CompiledGroups<LiveGroup<FilterScalar>, LiveGroupParams>;
   /** The `:count` server half, when the collection is declared `count: true`. */
@@ -305,7 +372,9 @@ export interface ServedCollection<Row> {
   groups: Resource<LiveGroup<FilterScalar>[], LiveGroupParams>;
   /** The count sibling (`${key}:count`), when declared `count: true`. */
   count: Resource<number, LiveCountParams> | null;
-  /** Every minted key — `[key, key:rows, key:groups]`, then `key:count` when declared. */
+  /** The ancestors sibling (`${key}:ancestors`), when declared `tree`. */
+  ancestors: Resource<Row[], PointParams> | null;
+  /** Every minted key — `[key, key:rows, key:groups]`, then `key:count` and `key:ancestors` when declared. */
   keys: string[];
   /** Spread into the plugin's `contributions`: one `Resource.Declare` per minted resource. */
   declare: ReturnType<typeof ResourceContribution.Declare>[];
@@ -616,6 +685,54 @@ export function compileCollection<
       );
     }
     boundRefs.set(name, ref);
+  }
+  // A tree's `$childCount`: the materialized count of the rows naming each
+  // row as their parent — checked to be THIS tree's count.
+  const tree = (collection as { tree?: LiveTree | null }).tree ?? null;
+  const childCount = (opts as { childCount?: TreeChildCountBinding<T, J> })
+    .childCount;
+  let treeParent: PgColumn | null = null;
+  if (tree === null) {
+    if (childCount !== undefined) {
+      fail("`childCount` beside a collection that is not a `tree`.");
+    }
+  } else {
+    if (childCount === undefined) {
+      fail(
+        `a tree collection's rows carry \`${LIVE_CHILD_COUNT_KEY}\` — pass \`childCount\`: the materialized count of its children (\`materializeJoin(childrenJoin({ table, fk: <${tree.parent}'s column> … }))\`).`,
+      );
+    }
+    const parentRef = boundRefs.get(tree.parent);
+    if (parentRef === undefined || parentRef.from !== BASE_RELATION) {
+      fail(
+        `the tree's parent "${tree.parent}" binds to no base column — the closure and the child count walk the base table.`,
+      );
+    }
+    treeParent = parentRef!.col as PgColumn;
+    const { of, count } = childCount!;
+    if (of.children.table !== table) {
+      fail(
+        `\`childCount\` counts rows of "${getTableName(of.children.table)}", not of the served "${getTableName(table)}" — a tree's children are its own rows.`,
+      );
+    }
+    if (of.children.fk !== treeParent) {
+      fail(
+        `\`childCount\` counts children by "${of.children.fk.name}", but the tree's parent "${tree.parent}" binds to "${treeParent.name}".`,
+      );
+    }
+    const alias = of.join().alias;
+    if (!joinSpecs.some((j) => j.alias === alias)) {
+      fail(
+        `\`childCount\`'s join "${alias}" is not declared in \`joins\` — add \`${alias}.join()\` there.`,
+      );
+    }
+    const binding = count(refs as never);
+    if (isExprField(binding) || (binding as ColumnRef).from !== alias) {
+      fail(
+        `\`childCount.count\` reads no column of its join "${alias}" — bind it to the count column (\`(j) => j.${alias}.<count>\`).`,
+      );
+    }
+    bound.set(LIVE_CHILD_COUNT_KEY, joins.render(binding as ColumnRef));
   }
   // Exposed columns: each set's fields, read through its own join (by
   // property name) and projected flat under their wire names
@@ -1056,6 +1173,17 @@ export function compileCollection<
     rows,
     groups: groupsServed,
     count: countServed,
+    ancestors:
+      treeParent === null
+        ? null
+        : {
+            spec: rows,
+            closure: {
+              parent: treeParent,
+              maxRows: LIVE_TREE_ANCESTORS_MAX,
+              maxDepth: LIVE_TREE_MAX_DEPTH,
+            },
+          },
     select,
   };
 }
@@ -1121,9 +1249,11 @@ export interface ServeCollectionOverloads<H> {
     S extends string,
     T extends ServedSource,
     const J extends readonly JoinSpec[] = readonly [],
+    Tr extends LiveTree | null = null,
   >(
-    collection: SingleTableCollection<Row, F, S> & H,
-    opts: ServeCollectionOptions<T, Row, J, keyof F & string>,
+    collection: SingleTableCollection<Row, F, S> & H & { tree: Tr },
+    opts: ServeCollectionOptions<T, Row, J, keyof F & string> &
+      ChildCountOption<Tr, T, J>,
   ): ServedWindowCollection<Row>;
   <
     Row,
@@ -1327,8 +1457,19 @@ export function serveAnyCollection<
     collection.count === null || specs.count === null
       ? null
       : defineResource(collection.count, specs.count);
+  const ancestors =
+    collection.ancestors === null || specs.ancestors === null
+      ? null
+      : defineResource(
+          collection.ancestors,
+          compileAncestorsQuery(
+            collection.ancestors,
+            specs.ancestors.spec,
+            specs.ancestors.closure,
+          ).serverOpts,
+        );
   return {
-    ...servedWindow(collection, window, rows, groups, count, opts),
+    ...servedWindow(collection, window, rows, groups, count, ancestors, opts),
     [FOLLOW_SOURCE]: idsSource(collection, followable, false),
   };
 }
@@ -1433,6 +1574,11 @@ function serveOffFeedCollection<
       "a `scopedColumns` collection folds scoped column sets routed through the change feed — it cannot be served off it.",
     );
   }
+  if (((collection as { tree?: unknown }).tree ?? null) !== null) {
+    fail(
+      "a `tree` collection's `$childCount` and `:ancestors` are routed through the change feed — it cannot be served off it.",
+    );
+  }
   const windowed = collection as
     SingleTableCollection<Row, F, S> | LiveLookupCollection<Row>;
   const specs =
@@ -1461,14 +1607,22 @@ function servedWindow<Row>(
   rows: Resource<Row[], PointParams>,
   groups: Resource<LiveGroup<FilterScalar>[], LiveGroupParams>,
   count: Resource<number, LiveCountParams> | null,
+  ancestors: Resource<Row[], PointParams> | null,
   opts: { preloadRows?: PreloadRows },
 ): ServedCollection<Row> {
-  const all = [window, rows, groups, ...(count === null ? [] : [count])];
+  const all = [
+    window,
+    rows,
+    groups,
+    ...(count === null ? [] : [count]),
+    ...(ancestors === null ? [] : [ancestors]),
+  ];
   return {
     window,
     rows,
     groups,
     count,
+    ancestors,
     keys: all.map((r) => r.key),
     declare: all.map((r) =>
       r === rows
@@ -1613,8 +1767,22 @@ function serveDeferred<
           }
           return c;
         });
+  const ancestorsOf = collection.ancestors;
+  const ancestors =
+    ancestorsOf === null
+      ? null
+      : defineDeferredResource(ancestorsOf, () => {
+          const a = compiled().ancestors;
+          if (a === null) {
+            throw new Error(
+              `serveCollection("${collection.key}"): declared \`tree\` but compiled no ancestors`,
+            );
+          }
+          return compileAncestorsQuery(ancestorsOf, a.spec, a.closure)
+            .serverOpts;
+        });
   return {
-    ...servedWindow(collection, window, rows, groups, count, opts),
+    ...servedWindow(collection, window, rows, groups, count, ancestors, opts),
     [FOLLOW_SOURCE]: idsSource(collection, followable, true),
   };
 }

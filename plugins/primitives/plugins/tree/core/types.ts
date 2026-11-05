@@ -44,12 +44,23 @@ export interface TreeDisclosureProps {
  * - `loading` — a request is in flight; the node shows a loading placeholder row.
  * - `loaded` — the children present in `rows` are all of them (zero included).
  * - `failed` — the listing failed; the node shows the message and a Retry.
+ * - `partial` — the children in `rows` are a loaded PREFIX of the listing (a
+ *   paged level of a live tree): more exist past them. The node shows a
+ *   "Load more" line AFTER its loaded children; `loadMore` grows the level,
+ *   `growing` while that is in flight, `stalled` when the last grow failed
+ *   (the line's Retry re-reads it) — the paging shape of `DataViewPaging`.
  */
 export type TreeChildrenState =
   | { kind: "unloaded" }
   | { kind: "loading" }
   | { kind: "loaded" }
-  | { kind: "failed"; message: string; retry: () => void };
+  | { kind: "failed"; message: string; retry: () => void }
+  | {
+      kind: "partial";
+      growing: boolean;
+      loadMore: () => void;
+      stalled: { retry: () => void } | null;
+    };
 
 /**
  * Lazily-listed children: the node's child rows arrive only after the tree asks
@@ -67,7 +78,7 @@ export interface LazyChildren<TRow> {
    *  chevron. Rows with loaded children have one regardless. */
   hasChildren: (row: TRow) => boolean;
   /** Where this node's child listing stands. Only consulted for rows whose
-   *  `hasChildren` is true. */
+   *  `hasChildren` is true (a `partial` level draws its "Load more" line). */
   state: (row: TRow) => TreeChildrenState;
   /** Request this node's children. Called at most once per `unloaded` spell —
    *  the tree re-asks only after the state has left `unloaded` and returned. */

@@ -13,7 +13,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { fieldsToZodObject } from "@plugins/fields/core";
+import { fieldsToZodObject, nullable } from "@plugins/fields/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
@@ -27,6 +27,7 @@ import {
   type LiveGroupQuery,
   type LiveQuery,
   type LiveWhereOf,
+  type TreeRow,
 } from "@plugins/network/plugins/live/core";
 import { or } from "@plugins/network/plugins/live/plugins/filter/core";
 import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
@@ -36,6 +37,7 @@ import type {
   LiveRowResult,
   LiveUnavailable,
 } from "../internal/use-live";
+import type { VisibleRange } from "../internal/visible-range";
 
 const FIELDS = {
   id: textField({ label: "Id" }),
@@ -82,6 +84,65 @@ const machineRows = liveCollection("fx.machine", {
   id: "id",
   needsMachine: { feature: "Reading the checkout" },
 });
+const TREE_FIELDS = {
+  ...FIELDS,
+  parentId: nullable(textField({ label: "Parent" })),
+  rank: textField({ label: "Rank" }),
+};
+const tree = liveCollection("fx.tree", {
+  fields: TREE_FIELDS,
+  id: "id",
+  sortable: ["rank", "n"],
+  default: { orderBy: [["rank", "asc"]], limit: 2 },
+  maxLimit: 4,
+  tree: { parent: "parentId", rank: "rank" },
+});
+type TreeFxRow = TreeRow<
+  z.infer<ReturnType<typeof fieldsToZodObject<typeof TREE_FIELDS>>>
+>;
+
+// `tree` and `include: "ancestors"`: a tree's reads carry `$childCount` and,
+// with `include`, `ancestors` on the ready arm; anywhere else `include` is a
+// tsc error on its property.
+function useTreeReads(id: string, viewport: VisibleRange) {
+  const list = useLive(tree, { where: { n: 1 }, include: "ancestors" });
+  if (list.status === "ready") {
+    const a: readonly TreeFxRow[] = list.ancestors;
+    const c: number = list.data[0]!.$childCount;
+    void [a, c];
+  }
+  const row = useLive(tree, { id, include: "ancestors" });
+  if (row.status === "ready") {
+    const a: readonly TreeFxRow[] = row.ancestors;
+    void a;
+  }
+  const pages = useLive(tree, { include: "ancestors" }, { viewport });
+  if (pages.status === "ready") {
+    const a: readonly TreeFxRow[] = pages.ancestors;
+    void a;
+  }
+  const plain = useLive(tree, { where: { n: 1 } });
+  if (plain.status === "ready") {
+    const c: number = plain.data[0]!.$childCount;
+    void c;
+  }
+  // @ts-expect-error TS2345 — include on a collection that is no tree
+  useLive(windowed, {
+    where: { n: 1 },
+    include: "ancestors",
+  });
+  useLive(tree, {
+    ids: [id],
+    // @ts-expect-error TS2322 — include beside an id set
+    include: "ancestors",
+  });
+  useLive(tree, {
+    // @ts-expect-error TS2322 — include names no other part
+    include: "children",
+  });
+  return [list, row, pages, plain];
+}
+
 const withIdParam = liveValue("fx.value-with-id", {
   schema: z.object({ n: z.number() }),
   params: ["id"],
@@ -1058,6 +1119,7 @@ describe("useLive's collection read types", () => {
       useUndefinedKindKeys,
       useGenericMisuse,
       useUnionWherePositives,
+      useTreeReads,
     ]) {
       expect(typeof hook).toBe("function");
     }

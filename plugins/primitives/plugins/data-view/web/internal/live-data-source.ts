@@ -14,6 +14,8 @@ import type {
   LiveSearchableColumn,
   LiveSourceScope,
   LiveSurfaceBinding,
+  LiveTreeOf,
+  LiveTreeSpec,
 } from "../../core";
 
 // The constructor of a DataView's live data origin (its types are core's,
@@ -30,6 +32,9 @@ import type {
  * (`LiveSurfaceBinding`): a collection declared `scopedColumns` takes them as
  * scoped columns of THIS surface (its queries name it); one without says why
  * (`unscoped: { reason }`).
+ *
+ * Over a TREE collection (`tree` declared) the source is a tree source: its
+ * DataView nests, and takes a `hierarchy` (`DataViewLiveTree`).
  */
 export function liveDataSource<
   Row,
@@ -45,8 +50,11 @@ export function liveDataSource<
     searchable: readonly LiveSearchableColumn<F>[];
     facets?: readonly LiveFacetColumn<F>[];
   } & LiveSurfaceBinding<C["scopedColumns"]>,
-): LiveDataSourceOf<Row, F> {
+): LiveDataSourceOf<Row, F, LiveTreeOf<C>> {
+  type T = LiveTreeOf<C>;
   const surface = opts.surface;
+  // Read once, off the declaration: tsc carries it as `T`.
+  const tree = collection.tree as T & (LiveTreeSpec | null);
   // tsc already binds the two; this catches a widened or cast declaration at
   // module load, where it is declared.
   const customColumns: LiveCustomColumns = collection.scopedColumns
@@ -91,9 +99,10 @@ export function liveDataSource<
   }
   const codec = collection.window.window;
   const erased = collection as unknown as LiveCollection<Row, unknown, string>;
-  const make = (scope: Filter | undefined): LiveDataSourceOf<Row, F> => ({
+  const make = (scope: Filter | undefined): LiveDataSourceOf<Row, F, T> => ({
     kind: "live",
     collection: erased,
+    tree,
     searchable: opts.searchable,
     facets,
     surface,
@@ -130,6 +139,7 @@ export function liveDataSource<
       return {
         kind: "live",
         collection: erased,
+        tree,
         searchable: opts.searchable,
         facets,
         surface,

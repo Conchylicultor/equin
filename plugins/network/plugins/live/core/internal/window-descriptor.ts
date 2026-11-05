@@ -181,6 +181,11 @@ export function pointQueryResourceDescriptor<Row>(
   rowSchema: z.ZodType<Row>,
   pkField: RowKey<Row>,
   maxIds: number,
+  /**
+   * The most rows one tuple answers, when it is not one per id (a tree's
+   * `:ancestors`: its seeds and their ancestor chains) — the schema's `.max`.
+   */
+  maxRows?: number,
 ): PointQueryResourceContract<Row> {
   if (!Number.isSafeInteger(maxIds) || maxIds < 1) {
     throw new Error(
@@ -243,6 +248,7 @@ export function pointQueryResourceDescriptor<Row>(
 
   const d = keyedRows<Row, PointParams>(key, rowSchema, pkField, {
     validateParams,
+    ...(maxRows === undefined ? {} : { maxRows }),
   });
   return Object.assign(d, {
     point: { encode, decode, maxIds },

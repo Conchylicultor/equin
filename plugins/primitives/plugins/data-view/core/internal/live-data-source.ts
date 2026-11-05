@@ -4,6 +4,7 @@ import type {
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import type {
   LiveCollection,
+  LiveTree,
   LiveWhere,
 } from "@plugins/network/plugins/live/core";
 import type { DataViewId } from "./define-data-view";
@@ -44,13 +45,37 @@ export type LiveSourceScope =
   | { readonly kind: "awaiting"; readonly columns: readonly string[] };
 
 /**
+ * A tree collection's structure as a live source carries it
+ * (`LiveCollection.tree`, network/live): the filterable column holding a
+ * row's parent id (`null` = a root), and the sortable column ordering
+ * siblings.
+ */
+export type LiveTreeSpec = LiveTree;
+
+/** The tree a collection type declares (`LiveTreeSpec`), or `null`. */
+export type LiveTreeOf<C> = C extends { readonly tree: infer T }
+  ? [T] extends [LiveTreeSpec]
+    ? T
+    : null
+  : null;
+
+/**
  * A live DataView source (`<DataView source={…} />`): the collection, the
  * columns its search box matches, and its scope. Its row type is the
  * collection's, so a `DataView<T>` over another row type is a tsc error.
+ *
+ * `T` is its collection's tree (`LiveTreeSpec`, `null` for no tree): a source
+ * over a tree collection nests its rows, and only it takes a `hierarchy`
+ * (`DataViewLiveOrigin`).
  */
-export interface LiveDataSource<TRow> {
+export interface LiveDataSource<
+  TRow,
+  T extends LiveTreeSpec | null = LiveTreeSpec | null,
+> {
   readonly kind: "live";
   readonly collection: LiveCollection<TRow, unknown, string>;
+  /** The collection's tree (`collection.tree`), `null` for a flat collection. */
+  readonly tree: T;
   /** Text-domain filterable columns the search box matches (`contains`, any of). */
   readonly searchable: readonly string[];
   /**
@@ -97,20 +122,29 @@ export type LiveSurfaceBinding<Sc extends boolean> = [Sc] extends [true]
   ? { surface: DataViewId; unscoped?: never }
   : { surface: DataViewId; unscoped: { reason: string } };
 
+/** A live source over a tree collection — the one a DataView nests, and the one taking a `hierarchy`. */
+export type LiveTreeDataSource<TRow> = LiveDataSource<TRow, LiveTreeSpec>;
+
 /** A live source typed to its collection's filterable columns — what `scoped` narrows by. */
-export interface LiveDataSourceOf<TRow, F> extends LiveDataSource<TRow> {
+export interface LiveDataSourceOf<
+  TRow,
+  F,
+  T extends LiveTreeSpec | null = LiveTreeSpec | null,
+> extends LiveDataSource<TRow, T> {
   /**
    * The same source over the rows matching `where` too — scope stated as data
    * (mail's account). Its columns must be filterable (they are routed like any
    * other); no field lowers to a scope-only column, so the view's own filter
    * control can neither name nor widen it.
    */
-  scoped(opts: { where: LiveWhere<F> }): LiveDataSourceOf<TRow, F>;
+  scoped(opts: { where: LiveWhere<F> }): LiveDataSourceOf<TRow, F, T>;
   /**
    * The same source while its scope is not known yet: `columns` are the ones
    * the coming `scoped({ where })` will constrain (kept out of the Filter
    * control already, so it does not change under the user). Reads nothing —
    * the DataView shows its loading state with its toolbar mounted.
    */
-  awaitingScope(columns: readonly (keyof F & string)[]): LiveDataSource<TRow>;
+  awaitingScope(
+    columns: readonly (keyof F & string)[],
+  ): LiveDataSource<TRow, T>;
 }

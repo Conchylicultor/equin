@@ -12,6 +12,7 @@ export default [
       "server/internal/serve-off-feed.ts",
       "server/internal/serve-union.ts",
       "server/internal/serve-value.ts",
+      "web/internal/use-ancestors.ts",
       "web/internal/use-live.ts",
       "web/internal/use-pages.ts",
     ],

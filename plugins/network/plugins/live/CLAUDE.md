@@ -126,7 +126,7 @@ useLive(blocks, { where: { pageId } });
 
 | Form | Declared with | Mints | Reader type |
 |---|---|---|---|
-| Window | `default` + `maxLimit` (+ `sortable`, `count?`, `scopedColumns?`) | `key`, `key:rows`, `key:groups` (+ `key:count`) | `LiveCollection` |
+| Window | `default` + `maxLimit` (+ `sortable`, `count?`, `scopedColumns?`, `tree?`) | `key`, `key:rows`, `key:groups` (+ `key:count`, `key:ancestors`) | `LiveCollection` |
 | Lookup-only | neither `default` nor `all` | `key:rows` | `LiveLookupCollection` |
 | Whole set | `all: { orderBy, max \| unbounded }` | `key` (param-less), `key:rows` | `LiveAllCollection<Row>` |
 | Scoped set | `all: { by, orderBy, … }` | `key` (params = `by` fields), `key:rows` | `LiveAllCollection<Row, B>` |
@@ -190,6 +190,65 @@ useLive(blocks, { where: { pageId } });
   DataView's hand-`fields` arm takes `NotCollectionRow` rows only, so a list
   over a collection derives its fields (`collection=`) instead of restating
   them.
+
+### Trees — `tree` / `$childCount` / `include: "ancestors"`
+
+A window collection may declare its rows a tree
+(`research/2026-11-05-global-live-bounded-tree.md`); every level is then an
+ordinary bounded read (`where: { parentId: { isEmpty: true } }` for roots,
+`where: { parentId: x }` for a node's children).
+
+```ts
+// core/
+export const nodes = liveCollection("x.nodes", {
+  ...fields, id: "id",
+  sortable: ["rank", "title"],
+  default: { orderBy: [["rank", "asc"]], limit: 100 }, maxLimit: 500,
+  tree: { parent: "parentId", rank: "rank" },
+});
+// server/ — the materialized count (query-resource's `materializeJoin`)
+serveCollection(nodes, {
+  from: _nodes, joins: [kids.join()],
+  childCount: { of: kids, count: (j) => j.kids.count },
+});
+// web/
+useLive(nodes, { where, orderBy, include: "ancestors" }, { viewport });
+useLive(nodes, { id, include: "ancestors" }); // ready: row + ancestors (root-first)
+```
+
+- **Declaration** (window overload only; `all` / lookup / union: `tree?: never`).
+  tsc: `parent` is a filterable field whose type is the id's `| null`; `rank`
+  is sortable. A throw: the default order must lead with `rank`.
+  `c.tree` is `{ parent, rank }` (`null` on any other collection).
+- **`$childCount`** — every row of a tree (`TreeRow<Row>`): how many rows of the
+  collection name it as parent (its served `where` applied, never a read's).
+  Declared on the row schema beside `$columns` (so every parse keeps it),
+  never in `rowKeys`. `serveCollection` REQUIRES `childCount` on a tree
+  (`ChildCountOption`, tsc) and refuses one elsewhere; at bind it checks the
+  count's children join counts `from`'s table by the column `tree.parent`
+  binds to. `TreeChildCount` is a narrow stand-in for `materializeJoin`'s result
+  until task-1793848785-7tzicj lands (TODO(7tzicj)).
+- **`${key}:ancestors`** — a seed set (the point codec, `maxIds` like `:rows`)
+  answering the seeds and their whole chains up `parent`, deduped, projected
+  like `:rows` (query-resource's `compileAncestorsQuery`, *Ancestors*). At most
+  `LIVE_TREE_ANCESTORS_MAX` rows and `LIVE_TREE_MAX_DEPTH` levels — past
+  either, and on a cycle, a loud loader error. A tree's `where` may read base
+  columns only (the walk stops at a row outside it). Not served off the feed.
+- **`include: "ancestors"`** — a read option, not a kind key: on a tree's
+  window read (plain or viewport) and row read; a tsc error anywhere else
+  (`use-live-query-types.test.ts`). The ready arm adds `ancestors` (never mixed
+  into `rows`): per loaded PAGE one `:ancestors` tuple seeded by the parents of
+  its rows it does not hold, unioned, minus every row the read holds. Paging,
+  `canGrow` and counts are the plain read's; `include` never reaches the
+  window's params (page 0 stays the boot-hydrated tuple). A tuple IS its seed
+  set and answers only for it — never another tuple's answer, nor an older
+  one for other seeds. A window read is `loading` until every tuple answered
+  once, then stays `ready` with `ancestorsPending: true` while a tuple (a new
+  page, a page whose rows moved) has not answered. A row read is `loading`
+  whenever its parent's tuple has not answered (a re-parented row included).
+  Its own read kinds (`*-ancestors`), latched like the others.
+- Tests: `server/internal/serve-collection-tree-oracle.test.ts` (real feed),
+  `resource-vocabulary`'s `mints.test.ts`.
 
 ### Serve — `serveCollection(c, { from, joins?, where?, defaults?, columns?, … })`
 
@@ -1355,8 +1414,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `useLive`
     - `useLiveReader`
 - Server:
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live/query-resource` ×38
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live/query-resource` ×40
     - `database/sql-column` ×3
     - `network/live/filter.filterSql`
   - Exports (types):
@@ -1392,6 +1451,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `ServePagedValueOptions`
     - `ServeUnionOptions`
     - `ServeValueOptions`
+    - `TreeChildCount`
+    - `TreeChildCountBinding`
     - `UnionArmBinding`
     - `UnionArmColumns`
     - `UnionArmRefs`
@@ -1561,6 +1622,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveSnapshotBrand`
     - `LiveSortDirection`
     - `LiveTooLarge`
+    - `LiveTree`
+    - `LiveTreeCollection`
     - `LiveTypedParamValueSpec`
     - `LiveTypedValueParams`
     - `LiveValue`
@@ -1599,6 +1662,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `ServeValueOnOptions`
     - `ServeValueOptions`
     - `SnapshotPairing`
+    - `TreeRow`
     - `WithContributedColumns`
   - Exports (values):
     - `clientFields`
@@ -1625,11 +1689,14 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `followSubjectOf`
     - `isPointId`
     - `isRowUnknown`
+    - `LIVE_CHILD_COUNT_KEY`
     - `LIVE_COLUMNS_KEY`
     - `LIVE_QUERY_MAX_BYTES`
     - `LIVE_ROW_KEY`
     - `LIVE_ROW_KEY_MAX_BYTES`
     - `LIVE_SCOPED_KEY`
+    - `LIVE_TREE_ANCESTORS_MAX`
+    - `LIVE_TREE_MAX_DEPTH`
     - `LIVE_WEB_HOOKS`
     - `liveArm`
     - `liveCollection`
@@ -1678,7 +1745,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `tag-tree/engine`
 - Exemptions:
   - Exempts itself from:
-    - `live/no-legacy-resource-spelling` — `central/internal/serve-value.ts`, `server/internal/serve-collection.ts`, `server/internal/serve-off-feed.ts`, `server/internal/serve-union.ts`, `server/internal/serve-value.ts`, `web/internal/use-live.ts`, `web/internal/use-pages.ts` (sanctioned)
+    - `live/no-legacy-resource-spelling` — `central/internal/serve-value.ts`, `server/internal/serve-collection.ts`, `server/internal/serve-off-feed.ts`, `server/internal/serve-union.ts`, `server/internal/serve-value.ts`, `web/internal/use-ancestors.ts`, `web/internal/use-live.ts`, `web/internal/use-pages.ts` (sanctioned)
     - `live/no-row-absence-collapse` — `web/internal/row-or-stale.ts` (sanctioned)
     - `live/no-endpoint-read` — `web` (sanctioned)
     - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)

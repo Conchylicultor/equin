@@ -11,6 +11,7 @@ import {
   LIVE_ROW_KEY,
   type LivePagedValue,
   type LiveCollection,
+  type LiveTreeCollection,
   type LiveQuery,
   type LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
@@ -26,6 +27,7 @@ import {
   type PageSource,
 } from "./page-source";
 import type { VisibleRange } from "./visible-range";
+import { useSegmentAncestors, type AncestorsState } from "./use-ancestors";
 import {
   assemble,
   loadMore as loadMorePages,
@@ -259,6 +261,112 @@ export function useAllPages<Row, F, S extends string>(
   return useMemo(() => listResultOf(read), [read]);
 }
 
+/**
+ * A read result with a tree's ancestors beside its rows
+ * (`include: "ancestors"`), on its ready arm: `ancestors` — every ancestor of
+ * its rows that it does not hold, never mixed into them — and
+ * `ancestorsPending` — a page's ancestors have not answered yet (a new page,
+ * or one whose rows moved): its rows' ancestors are missing from `ancestors`
+ * until it turns `false`. Always `false` on a row read, which is `loading`
+ * until its chain is known.
+ */
+export type WithAncestors<R, Row> = R extends { status: "ready" }
+  ? R & { ancestors: readonly Row[]; ancestorsPending: boolean }
+  : R;
+
+/**
+ * `useLive(tree, { …, include: "ancestors" }, { viewport })` — the viewport
+ * read of `useViewportPages`, plus each loaded page's ancestors
+ * (`./use-ancestors`). Paging, `canGrow` and the rows are exactly the plain
+ * read's (the query without `include` — the same tuples).
+ */
+export function useTreeViewportPages<Row, F, S extends string>(
+  collection: LiveTreeCollection<Row, F, S>,
+  query: LivePagesQuery<F, S> | null,
+  options: LivePagesOptions,
+): WithAncestors<LivePagesResult<Row>, Row> {
+  const read = usePages(pageSourceOf(collection), query, {
+    viewport: options.viewport,
+    resetKey: options.resetKey,
+    step: undefined,
+  });
+  const ancestors = useSegmentAncestors(
+    collection as unknown as LiveTreeCollection<Row, unknown, string>,
+    read.segments,
+  );
+  return useMemo(
+    () => withAncestors(read.pages, ancestors, read.refetch),
+    [read, ancestors],
+  );
+}
+
+/**
+ * `useLive(tree, { …, include: "ancestors" })` — the plain window read of
+ * `useAllPages`, plus each loaded page's ancestors.
+ */
+export function useTreeAllPages<Row, F, S extends string>(
+  collection: LiveTreeCollection<Row, F, S>,
+  query: LiveQuery<F, S> | undefined,
+): WithAncestors<PagedResourceResult<Row>, Row> {
+  const { limit, ...rest } = query ?? {};
+  const read = usePages(pageSourceOf(collection), rest, {
+    viewport: null,
+    resetKey: undefined,
+    step: limit,
+  });
+  const ancestors = useSegmentAncestors(
+    collection as unknown as LiveTreeCollection<Row, unknown, string>,
+    read.segments,
+  );
+  return useMemo(() => {
+    const list = listResultOf(read);
+    if (list.status !== "ready") return list;
+    if (ancestors.status === "loading") {
+      return { status: "loading", refetch: read.refetch };
+    }
+    if (ancestors.status === "error") {
+      return {
+        status: "error",
+        error: ancestors.error,
+        stale: list.data,
+        refetch: ancestors.refetch,
+      };
+    }
+    return {
+      ...list,
+      ancestors: ancestors.rows,
+      ancestorsPending: ancestors.pending,
+    };
+  }, [read, ancestors]) as WithAncestors<PagedResourceResult<Row>, Row>;
+}
+
+/** A viewport read's result with its ancestors: loading / failed until they are known. */
+function withAncestors<Row>(
+  pages: LivePagesResult<Row>,
+  ancestors: AncestorsState<Row>,
+  refetch: () => Promise<void>,
+): WithAncestors<LivePagesResult<Row>, Row> {
+  if (pages.status !== "ready") return pages;
+  switch (ancestors.status) {
+    case "loading":
+      return { status: "loading" };
+    case "error":
+      return {
+        status: "error",
+        error: ancestors.error,
+        refetch: async () => {
+          await Promise.all([ancestors.refetch(), refetch()]);
+        },
+      };
+    case "ready":
+      return {
+        ...pages,
+        ancestors: ancestors.rows,
+        ancestorsPending: ancestors.pending,
+      };
+  }
+}
+
 /** `useLive(pagedValue, query, options?)` — a paged value read with no viewport. */
 export interface LiveValuePagesOptions {
   /**
@@ -331,6 +439,12 @@ function listResultOf<Row>(read: PagesRead<Row>): PagedResourceResult<Row> {
 interface PagesRead<Row> {
   pages: LivePagesResult<Row>;
   refetch: () => Promise<void>;
+  /**
+   * The rows shown, one segment per page (`rows` cut at each page's first
+   * row) — `null` until they are ready. What a tree read seeds each page's
+   * `:ancestors` tuple from (`./use-ancestors`).
+   */
+  segments: readonly (readonly Row[])[] | null;
 }
 
 /** How `usePages` reads: by a viewport or by none, from which first page. */
@@ -716,9 +830,12 @@ function usePages<Row, Q, P extends Record<string, string>>(
     });
   }, [readCurrent, observeIn, limits, capped]);
 
-  const result = useMemo((): LivePagesResult<Row> => {
+  const { result, segments } = useMemo((): {
+    result: LivePagesResult<Row>;
+    segments: readonly (readonly Row[])[] | null;
+  } => {
     const plan = readCurrent;
-    if (plan === null) return { status: "loading" };
+    if (plan === null) return { result: { status: "loading" }, segments: null };
     const own = assemble(plan.state, observeIn(plan));
     const handoff =
       readPrevious !== null && !own.loaded && own.headError === null;
@@ -726,9 +843,12 @@ function usePages<Row, Q, P extends Record<string, string>>(
     const a = handoff ? assemble(shown.state, observeIn(shown)) : own;
     if (a.headError !== null) {
       const head = read(shown, shown.state.pages[0]!.page)!.result;
-      return { status: "error", error: a.headError, refetch: head.refetch };
+      return {
+        result: { status: "error", error: a.headError, refetch: head.refetch },
+        segments: null,
+      };
     }
-    if (!a.loaded) return { status: "loading" };
+    if (!a.loaded) return { result: { status: "loading" }, segments: null };
     const rows = a.entries.map((e) => withoutWindowFields(e.row as Row));
     const pageErrors: LivePageError[] = a.failures.map((f) => {
       const before = a.firstOf[f.index]! - 1;
@@ -746,19 +866,25 @@ function usePages<Row, Q, P extends Record<string, string>>(
       rows: p.size,
     });
     return {
-      status: "ready",
-      rows,
-      placeholders: {
-        before: a.before.map(placeholderOf),
-        after: a.after.map(placeholderOf),
+      result: {
+        status: "ready",
+        rows,
+        placeholders: {
+          before: a.before.map(placeholderOf),
+          after: a.after.map(placeholderOf),
+        },
+        exhausted: !handoff && a.exhausted,
+        canGrow:
+          !handoff && a.canGrow && (!capped || fits(rows.length, limits)),
+        growing: !handoff && a.growing,
+        loadMore,
+        truncated:
+          !handoff && a.truncated !== null ? { reason: a.truncated } : false,
+        pageErrors,
       },
-      exhausted: !handoff && a.exhausted,
-      canGrow: !handoff && a.canGrow && (!capped || fits(rows.length, limits)),
-      growing: !handoff && a.growing,
-      loadMore,
-      truncated:
-        !handoff && a.truncated !== null ? { reason: a.truncated } : false,
-      pageErrors,
+      segments: a.firstOf.map((start, i) =>
+        rows.slice(start, a.firstOf[i + 1] ?? rows.length),
+      ),
     };
   }, [readCurrent, readPrevious, read, observeIn, loadMore, capped, limits]);
 
@@ -781,7 +907,10 @@ function usePages<Row, Q, P extends Record<string, string>>(
   const refetch = useCallback(async () => {
     await Promise.all(results.map((r) => r.refetch()));
   }, [results]);
-  return useMemo(() => ({ pages: result, refetch }), [result, refetch]);
+  return useMemo(
+    () => ({ pages: result, refetch, segments }),
+    [result, refetch, segments],
+  );
 }
 
 /** A capped read may page once more: the new page's step still fits under `maxLimit`. */

@@ -9,6 +9,7 @@ import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { nullable } from "@plugins/fields/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { resourceDescriptorByKey } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { mintsOf } from "./mints";
@@ -31,7 +32,7 @@ const WHERE = { file: "x.ts", line: 1 };
 
 /** The keys a collection minted, with whether each is keyed, read off the runtime registry. */
 function runtimeMints(c: { key: string }): { key: string; keyed: boolean }[] {
-  return ["", ":rows", ":groups"]
+  return ["", ":rows", ":groups", ":count", ":ancestors"]
     .map((suffix) => c.key + suffix)
     .flatMap((key) => {
       const d = resourceDescriptorByKey(key);
@@ -64,6 +65,27 @@ describe("mintsOf ≡ liveCollection's runtime mints (A28)", () => {
         `{ ${ROW_TEXT}, sortable: ["n"], default: { orderBy: [["n", "asc"]], limit: 10 }, maxLimit: 20 }`,
       ),
     ).toEqual(runtimeMints(c));
+  });
+
+  test("a tree collection: key, :rows, :groups, :ancestors", () => {
+    const c = liveCollection("test.mints.tree", {
+      fields: {
+        id: textField({ label: "Id" }),
+        parentId: nullable(textField({ label: "Parent" })),
+        rank: textField({ label: "Rank" }),
+      },
+      id: "id",
+      sortable: ["rank"],
+      default: { orderBy: [["rank", "asc"]], limit: 10 },
+      maxLimit: 20,
+      tree: { parent: "parentId", rank: "rank" },
+    });
+    const scanned = scannedMints(
+      "test.mints.tree",
+      `{ fields: { id: textField(), parentId: nullable(textField()), rank: textField() }, id: "id", sortable: ["rank"], default: { orderBy: [["rank", "asc"]], limit: 10 }, maxLimit: 20, tree: { parent: "parentId", rank: "rank" } }`,
+    );
+    expect(scanned).toEqual(runtimeMints(c));
+    expect(scanned.map((m) => m.key)).toContain("test.mints.tree:ancestors");
   });
 
   test("a lookup-only collection: :rows alone", () => {

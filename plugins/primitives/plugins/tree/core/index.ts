@@ -11,10 +11,13 @@ export {
   childPlaceholder,
   flatNodeIds,
   flattenVisible,
+  isMoreLineId,
+  moreLineId,
   treeKeyMove,
 } from "./internal/flatten";
 export type {
   ChildPlaceholder,
+  MorePlaceholder,
   FlatTreeLine,
   KeyboardLine,
   TreeKeyMove,

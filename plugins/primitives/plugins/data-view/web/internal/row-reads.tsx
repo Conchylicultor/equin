@@ -5,10 +5,20 @@ import {
   type LiveValueTupleRead,
 } from "@plugins/network/plugins/live/web";
 import type {
+  LiveCollection,
   LivePlainValue,
   LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
-import type { FieldDef, FieldRowRead } from "../../core";
+import {
+  mapResource,
+  type ResourceResult,
+} from "@plugins/network/plugins/live/plugins/live-state/web";
+import type {
+  FieldCollectionRowRead,
+  FieldDef,
+  FieldRowRead,
+  FieldValueRowRead,
+} from "../../core";
 
 // A field's per-row live read (`FieldDef.rowRead`), read by the DataView for
 // the rows on screen — never by each row's cell. A `useLive` per row is one
@@ -46,8 +56,39 @@ export function rowRead<Row, V extends AnyPlainValue>(spec: {
   value: V;
   params: (row: Row) => ParamsOf<V> | null;
   cell: (row: Row, read: LiveValueTupleRead<V>) => ReactNode;
-}): FieldRowRead<Row> {
-  return spec as unknown as FieldRowRead<Row>;
+}): FieldRowRead<Row>;
+/**
+ * …or ONE ROW of a collection per row — `id` names it (`null`: the row reads
+ * none), and `cell` is handed it as a `ResourceResult` whose data is the row,
+ * or `null` when the collection holds no such row — `undefined` while the row
+ * is off screen or reads none (no read made for it). The DataView reads every
+ * on-screen row's id in one `useLive(collection, { ids })`.
+ *
+ * ```tsx
+ * { id: "parent", label: "Parent",
+ *   rowRead: rowRead({
+ *     collection: tasks,
+ *     id: (t: Task) => t.folderId,
+ *     cell: (t, parent) => <ParentLabel parent={parent} />,
+ *   }) }
+ * ```
+ */
+export function rowRead<Row, Target, F, S extends string>(spec: {
+  collection: LiveCollection<Target, F, S>;
+  id: (row: Row) => string | null;
+  cell: (
+    row: Row,
+    read: ResourceResult<Target | null> | undefined,
+  ) => ReactNode;
+}): FieldRowRead<Row>;
+export function rowRead(
+  spec:
+    | { value: unknown; params: unknown; cell: unknown }
+    | { collection: unknown; id: unknown; cell: unknown },
+): FieldRowRead<unknown> {
+  return "collection" in spec
+    ? ({ kind: "row", ...spec } as unknown as FieldCollectionRowRead<unknown>)
+    : ({ kind: "value", ...spec } as unknown as FieldValueRowRead<unknown>);
 }
 
 /**
@@ -210,19 +251,34 @@ type ErasedListRead = (
   options: LiveValueListOptions,
 ) => readonly unknown[] | { status: "unavailable" };
 
-/**
- * One field's read: ONE `useLive` list read over the on-screen rows' tuples
- * (a row reading nothing is left out), released at once as rows leave —
- * handed on added to `reads`, the fields read before it.
- */
+/** One field's read, by the kind of read it declares. */
 function ReadField(props: {
   field: FieldDef<unknown>;
   visible: readonly { key: string; row: unknown }[];
   reads: RowReads;
   children: (reads: RowReads) => ReactNode;
 }): ReactNode {
-  const { field, visible, reads: before, children } = props;
-  const spec = field.rowRead!;
+  const spec = props.field.rowRead!;
+  return spec.kind === "value" ? (
+    <ReadValueField {...props} spec={spec} />
+  ) : (
+    <ReadRowField {...props} spec={spec} />
+  );
+}
+
+/**
+ * A value field's read: ONE `useLive` list read over the on-screen rows'
+ * tuples (a row reading nothing is left out), released at once as rows leave —
+ * handed on added to `reads`, the fields read before it.
+ */
+function ReadValueField(props: {
+  field: FieldDef<unknown>;
+  spec: FieldValueRowRead<unknown>;
+  visible: readonly { key: string; row: unknown }[];
+  reads: RowReads;
+  children: (reads: RowReads) => ReactNode;
+}): ReactNode {
+  const { field, spec, visible, reads: before, children } = props;
   const tuples = useMemo(() => {
     const keys: string[] = [];
     const params: Record<string, string>[] = [];
@@ -255,3 +311,97 @@ function ReadField(props: {
   }, [tuples, results, before, field.id]);
   return children(reads);
 }
+
+/**
+ * A row field's read: the ids the on-screen rows name, ONE `{ ids }` read of
+ * the collection (the set follows the screen: a row leaving drops its id) —
+ * each row handed the row its id names (`null`: not in the collection).
+ */
+function ReadRowField(props: {
+  field: FieldDef<unknown>;
+  spec: FieldCollectionRowRead<unknown>;
+  visible: readonly { key: string; row: unknown }[];
+  reads: RowReads;
+  children: (reads: RowReads) => ReactNode;
+}): ReactNode {
+  const { field, spec, visible, reads: before, children } = props;
+  const wanted = useMemo(() => {
+    const byKey = new Map<string, string>();
+    for (const { key, row } of visible) {
+      const id = spec.id(row);
+      if (id !== null) byKey.set(key, id);
+    }
+    return { byKey, ids: [...new Set(byKey.values())].sort() };
+  }, [spec, visible]);
+  const idKey = wanted.ids.join("\n");
+  // No row on screen names one: nothing to read.
+  if (idKey === "") {
+    return (
+      <WithReads before={before} field={field.id} byRow={NO_ROW_READS}>
+        {children}
+      </WithReads>
+    );
+  }
+  return (
+    <IdsRead key={idKey} collection={spec.collection} wanted={wanted}>
+      {(byRow) => (
+        <WithReads before={before} field={field.id} byRow={byRow}>
+          {children}
+        </WithReads>
+      )}
+    </IdsRead>
+  );
+}
+
+type Keyed = { readonly [k: string]: unknown };
+
+/**
+ * ONE `{ ids }` read of `collection` (keyed by the set, so its query never
+ * changes under it), each wanting row handed the row its id names.
+ */
+function IdsRead(props: {
+  collection: LiveCollection<unknown, unknown, string>;
+  wanted: { byKey: ReadonlyMap<string, string>; ids: readonly string[] };
+  children: (byRow: ReadonlyMap<string, unknown>) => ReactNode;
+}): ReactNode {
+  const { collection, wanted, children } = props;
+  const read = useLive(
+    collection as LiveCollection<Keyed, Record<string, never>, string>,
+    { ids: wanted.ids },
+  ) as ResourceResult<readonly Keyed[]>;
+  const idField = collection.id as string;
+  const byRow = useMemo(() => {
+    const out = new Map<string, unknown>();
+    for (const [key, id] of wanted.byKey) {
+      out.set(
+        key,
+        mapResource(
+          read,
+          (rows) => rows.find((r) => String(r[idField]) === id) ?? null,
+        ),
+      );
+    }
+    return out;
+  }, [read, wanted, idField]);
+  return children(byRow);
+}
+
+/** The reads so far, with this field's added. */
+function WithReads(props: {
+  before: RowReads;
+  field: string;
+  byRow: ReadonlyMap<string, unknown>;
+  children: (reads: RowReads) => ReactNode;
+}): ReactNode {
+  const { before, field, byRow, children } = props;
+  const reads = useMemo(
+    () => new Map([...before, [field, { byRow, notRead: NOT_READ }]]),
+    [before, field, byRow],
+  );
+  return children(reads);
+}
+
+const NO_ROW_READS: ReadonlyMap<string, unknown> = new Map();
+
+/** What a row handed no read gets: none (off screen, or reading nothing). */
+const NOT_READ = undefined;

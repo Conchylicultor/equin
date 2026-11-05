@@ -28,6 +28,8 @@ import type {
   LivePlainValue,
   LiveQueryValue,
   LiveRowsCollection,
+  LiveTree,
+  LiveTreeCollection,
   LiveValue,
   LiveValueOrigin,
   LiveWhereOf,
@@ -45,12 +47,16 @@ import {
 } from "@plugins/infra/plugins/endpoints/core";
 import {
   useAllPages,
+  useTreeAllPages,
+  useTreeViewportPages,
   useValuePages,
   useViewportPages,
   type LivePagesOptions,
   type LivePagesResult,
   type LiveValuePagesOptions,
+  type WithAncestors,
 } from "./use-pages";
+import { useRowAncestors } from "./use-ancestors";
 import type { LivePagesQuery } from "./page-source";
 import { useClockPin } from "./use-clock";
 
@@ -332,7 +338,9 @@ type OnlyKind<K extends CollectionKindKey | "none"> = {
  * against the forms. Intersected with them: a kind key a form refuses is
  * `never & V` there, an error on that key.
  */
-interface KindKeyValues<Row, I, Ids, C, G, R> {
+interface KindKeyValues<Row, I, Ids, C, G, R, In = undefined> {
+  /** Not a kind key: an option of a tree's window and row reads (`IncludeFor`). */
+  readonly include?: In;
   readonly id?: I;
   readonly ids?: Ids;
   readonly count?: C;
@@ -402,6 +410,25 @@ type KindGuard<
     : KindGuard<P, T>
   : unknown;
 
+/**
+ * `include: "ancestors"` — a tree collection's window and row reads add its
+ * rows' ancestors (`ancestors` on the ready arm); on any other collection,
+ * and beside any other read, `include` is a tsc error.
+ */
+type IncludeFor<D> = D extends { tree: LiveTree }
+  ? { readonly include?: "ancestors" }
+  : NoInclude;
+
+/** A form that takes no `include`. */
+interface NoInclude {
+  readonly include?: never;
+}
+
+/** A read's result with its `include` (`In`): its ancestors beside its rows. */
+type Included<Res, In, Row> = [In] extends ["ancestors"]
+  ? WithAncestors<Res, CollectionRow<Row>>
+  : Res;
+
 /** Every key some form of `Forms` names. */
 type FormKeys<Forms> = Forms extends unknown ? keyof Forms : never;
 
@@ -412,7 +439,7 @@ type FormKeys<Forms> = Forms extends unknown ? keyof Forms : never;
  */
 type QueryKeyName = FormKeys<
   | CollectionForms<
-      { window: object; count: object },
+      { window: object; count: object; tree: LiveTree },
       object,
       never,
       never,
@@ -448,10 +475,10 @@ type KnownKeysOnly<K extends PropertyKey, Known, W> = {
  * parameter and a {@link CollectionReads} row — never a signature or a hook.
  */
 type CollectionForms<D, Row, F, S extends string, B extends string, G> =
-  | (LiveRowQuery & OnlyKind<"id">)
-  | (LiveIdsQuery & OnlyKind<"ids">)
+  | (LiveRowQuery & OnlyKind<"id"> & IncludeFor<D>)
+  | (LiveIdsQuery & OnlyKind<"ids"> & NoInclude)
   | (D extends { window: object }
-      ? | (LiveQuery<F, NoInfer<S>> & OnlyKind<"none">)
+      ? | (LiveQuery<F, NoInfer<S>> & OnlyKind<"none"> & IncludeFor<D>)
         | (LiveGroupQuery<F, G & LiveGroupableColumn<F>> & OnlyKind<"groupBy">)
         | (D extends { count: object }
             ? LiveCountQuery<F> & OnlyKind<"count">
@@ -631,6 +658,7 @@ export function useLive<
   N = never,
   K extends PropertyKey = never,
   NM extends MachineFeature | undefined = undefined,
+  In extends "ancestors" | undefined = undefined,
 >(
   collection: D &
     LiveRowsCollection<Row> &
@@ -638,14 +666,20 @@ export function useLive<
     MachineDecl<NM>,
   query:
     | (CollectionForms<D, Row, F, S, B, G> &
-        KindKeyValues<Row, I, Ids, C, G, R> &
+        KindKeyValues<Row, I, Ids, C, G, R, In> &
         KindGuard<QueryKindValues<D, I, Ids, C, G, R, N>> &
         SkipGuard<N> &
         KnownKeysOnly<K, QueryKeyName, LiveWhereOf<D> | ScopeSkip<D>>)
     | QueryHoles<D, N>,
 ): WithMachine<
   NM,
-  CollectionReads<D, Row, G, R>[KindOf<QueryKindValues<D, I, Ids, C, G, R, N>>]
+  Included<
+    CollectionReads<D, Row, G, R>[KindOf<
+      QueryKindValues<D, I, Ids, C, G, R, N>
+    >],
+    In,
+    Row
+  >
 >;
 /**
  * - `useLive(c)` — a bounded window at the collection's default query,
@@ -688,18 +722,24 @@ export function useLive<V>(
  *   Without a viewport, `useLive(c, query?)` is the window read above, read
  *   as the same pages, every one live: `loadMore()` splits the last page, and
  *   never pages past `maxLimit` rows.
+ *
+ *   On a tree collection, `include: "ancestors"` adds `ancestors` to the ready
+ *   arm (one `:ancestors` read per loaded page) — the collection is then never
+ *   `null` (a `null` query reads nothing).
  */
 export function useLive<
   Row,
   F,
   S extends string,
   NM extends MachineFeature | undefined = undefined,
+  D extends object = object,
+  In extends "ancestors" | undefined = undefined,
 >(
-  collection: (LiveCollection<Row, F, S> & MachineDecl<NM>) | null,
-  query: LivePagesQuery<F, S> | null,
+  collection: (LiveCollection<Row, F, S> & MachineDecl<NM> & D) | null,
+  query:
+    (LivePagesQuery<F, S> & IncludeFor<D> & { readonly include?: In }) | null,
   options: LivePagesOptions,
-): WithMachine<NM, LivePagesResult<CollectionRow<Row>>>;
-/**
+): WithMachine<NM, Included<LivePagesResult<CollectionRow<Row>>, In, Row>>; /**
  * - `useLive(all)` — a collection declared `all`: every row, in its declared
  *   order, as `ResourceResult<Row[]>` (settled on its first render when the
  *   boot snapshot hydrated it). Read straight off the cache with no row map
@@ -1049,6 +1089,28 @@ export function useLive<Row, F, S extends string>(
         source as LiveRowsCollection<Row>,
         (query as LiveRowQuery).id,
       );
+    case "viewport-pages-ancestors":
+      return useTreeViewportPages(
+        source as LiveTreeCollection<Row, F, S>,
+        usePinnedClock(
+          source,
+          withoutInclude(query as LivePagesQuery<F, S> | null),
+        ),
+        options as LivePagesOptions,
+      );
+    case "all-pages-ancestors":
+      return useTreeAllPages(
+        source as LiveTreeCollection<Row, F, S>,
+        usePinnedClock(
+          source,
+          withoutInclude(query as LiveQuery<F, S> | null | undefined),
+        ) ?? undefined,
+      );
+    case "row-ancestors":
+      return useTreeRow(
+        source as LiveTreeCollection<Row, unknown, string>,
+        (query as LiveRowQuery).id,
+      );
     case "collection":
       return useCollection(
         source as LiveCollection<Row, F, S> | LiveRowsCollection<Row>,
@@ -1091,6 +1153,19 @@ function usePinnedClock<Q extends object | null | undefined>(
   );
 }
 
+/**
+ * The query without `include` — what the window's codec and pages read, so a
+ * tree read's tuples are byte-identical to the plain read's (the boot-hydrated
+ * default page included). Memoized by the caller's `usePinnedClock`.
+ */
+function withoutInclude<Q extends object | null | undefined>(query: Q): Q {
+  if (query === null || query === undefined || !("include" in query)) {
+    return query;
+  }
+  const { include: _include, ...rest } = query as Q & { include?: unknown };
+  return rest as Q;
+}
+
 /** What one `useLive` call reads — each a different set of hooks — in words. */
 const READ_KIND = {
   unavailable: "read that needs the computer, under a transport without it",
@@ -1105,10 +1180,59 @@ const READ_KIND = {
   "all-pages": "window read (its pages every one live, no viewport)",
   row: "row by id",
   collection: "grouping or id set",
+  "viewport-pages-ancestors":
+    "tree read with its ancestors, kept live by a viewport",
+  "all-pages-ancestors": "tree window read with its ancestors",
+  "row-ancestors": "tree row by id with its ancestors",
 } as const;
 type ReadKind = keyof typeof READ_KIND;
 
 function readKindOf(
+  source: object | null,
+  query: object | null | undefined,
+  options: object | undefined,
+): ReadKind {
+  const kind = plainReadKindOf(source, query, options);
+  const include =
+    query == null ? undefined : (query as { include?: unknown }).include;
+  if (include === undefined) return kind;
+  const key = keyOf(source);
+  if (include !== "ancestors") {
+    throw new Error(
+      `useLive("${key}"): \`include\` is "ancestors" or absent, got ${JSON.stringify(include)}.`,
+    );
+  }
+  if (((source as { tree?: unknown } | null)?.tree ?? null) === null) {
+    throw new Error(
+      `useLive("${key}"): \`include: "ancestors"\` reads a tree collection's ancestors — this one is not declared \`tree\`.`,
+    );
+  }
+  switch (kind) {
+    case "viewport-pages":
+      return "viewport-pages-ancestors";
+    case "all-pages":
+      return "all-pages-ancestors";
+    case "row":
+      return "row-ancestors";
+    case "unavailable":
+    case "count":
+    case "value-pages":
+    case "query-value":
+    case "value":
+    case "query-value-list":
+    case "value-list":
+    case "all":
+    case "collection":
+    case "viewport-pages-ancestors":
+    case "all-pages-ancestors":
+    case "row-ancestors":
+      throw new Error(
+        `useLive("${key}"): \`include: "ancestors"\` goes with a window or a row read — not with a ${READ_KIND[kind]}.`,
+      );
+  }
+}
+
+function plainReadKindOf(
   source: object | null,
   query: object | null | undefined,
   options: object | undefined,
@@ -1627,4 +1751,43 @@ function useRow<Row>(
       }
     }
   }, [absent, result]);
+}
+
+/**
+ * One row by id with its ancestors (`useLive(tree, { id, include:
+ * "ancestors" })`): {@link useRow}, and on its ready arm the row's parent
+ * chain, root-first (none for a root or a row not found) — `loading` until
+ * the chain is known.
+ */
+function useTreeRow<Row>(
+  collection: LiveTreeCollection<Row, unknown, string>,
+  id: string | null,
+): WithAncestors<LiveRowResult<CollectionRow<Row>>, CollectionRow<Row>> {
+  const read = useRow(collection, id);
+  const row =
+    read.status !== "ready" ? undefined : read.found ? (read.row as Row) : null;
+  const ancestors = useRowAncestors(collection, row);
+  return useMemo(() => {
+    if (read.status !== "ready") return read;
+    switch (ancestors.status) {
+      case "loading":
+        return { status: "loading", refetch: read.refetch };
+      case "error":
+        return {
+          status: "error",
+          error: ancestors.error,
+          ...(read.found ? { stale: read.row } : {}),
+          refetch: ancestors.refetch,
+        };
+      case "ready":
+        return {
+          ...read,
+          ancestors: ancestors.rows as readonly CollectionRow<Row>[],
+          ancestorsPending: false,
+        };
+    }
+  }, [read, ancestors]) as WithAncestors<
+    LiveRowResult<CollectionRow<Row>>,
+    CollectionRow<Row>
+  >;
 }

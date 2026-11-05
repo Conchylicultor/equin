@@ -149,7 +149,9 @@ function DataViewHost<TRow>({
       viewShortcuts={props.viewShortcuts}
       pinnedView={props.pinnedView}
       subItems={
-        props.hierarchy != null
+        // A hierarchy, or a live source over a tree collection (which nests
+        // with or without one).
+        props.hierarchy != null || props.source?.tree != null
           ? HIERARCHY_SUB_ITEMS
           : props.attach != null
             ? ATTACH_SUB_ITEMS

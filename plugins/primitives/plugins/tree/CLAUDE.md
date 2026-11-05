@@ -89,13 +89,21 @@ children are fetched per node — a host directory, a remote listing:
   LOADED children (unfolding a subtree the tree has never seen is not a gesture
   it can keep).
 - `state(row)` is a `TreeChildrenState` — `unloaded` / `loading` / `loaded` /
-  `failed {message, retry}`. An open row with no children yet renders ONE
+  `failed {message, retry}` / `partial {growing, loadMore, stalled}` (a paged
+  level: the children loaded are a prefix — data-view's live trees). An open row with no children yet renders ONE
   placeholder child row from it (`TreeChildPlaceholder`): loading, the failure
   with Retry (children or not — a stale listing must not read as current), or
   "Empty" for a loaded row with none. The rule is `childPlaceholder`, applied by
   `flattenVisible`: the placeholder is a line of `flat` of its own, so every
   renderer paints the same rows. Under a search, an
   `unloaded` row shows nothing and "Empty" is suppressed.
+- A `partial` level draws a **"Load more" line AFTER its loaded children**
+  (`childPlaceholder` → `{ kind: "more", … }`; never under a search): a
+  spinner while `growing`, Retry when `stalled`, else the button. It is a
+  keyboard stop — `treeKeyMove` walks it with ↑/↓ (Home/End are the LOADED
+  ends), ← steps to its parent, Enter grows the level (`{ kind: "load" }`);
+  `useTreeKeyboard` focuses it by its `moreLineId(parentId)` (`data-tree-id`)
+  and never selects it.
 - `load(row)` is called by `useLazyLoadRequests` for every OPEN, VISIBLE
   (`expanded` all the way up, on the UNSEARCHED forest) `unloaded` row, at most
   once per `unloaded` spell. Declarative on purpose: a chevron click,
@@ -353,6 +361,7 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `FlatTreeLine`
     - `KeyboardLine`
     - `LazyChildren`
+    - `MorePlaceholder`
     - `RowMenuHelpers`
     - `RowMenuItem`
     - `RowSelectionGesture`
@@ -369,6 +378,8 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `flatNodeIds`
     - `flattenVisible`
     - `isDescendant`
+    - `isMoreLineId`
+    - `moreLineId`
     - `nextRowSelection`
     - `resolveDropParent`
     - `selectionRoots`

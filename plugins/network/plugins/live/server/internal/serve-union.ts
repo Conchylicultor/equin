@@ -916,8 +916,9 @@ export function serveUnionCollection<
     window,
     rows,
     groups,
-    // A union has no total (`count` is refused beside `arms`).
+    // A union has no total (`count` is refused beside `arms`), and is no tree.
     count: null,
+    ancestors: null,
     keys: [window.key, rows.key, groups.key],
     declare: [
       ResourceContribution.Declare(window),

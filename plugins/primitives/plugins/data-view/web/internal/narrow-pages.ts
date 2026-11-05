@@ -79,6 +79,7 @@ export function usePagesNarrowing<Row, F, S extends string>(
               unknown,
               string
             >,
+            tree: null,
             searchable: [],
             facets: [],
             scope: { kind: "all" },

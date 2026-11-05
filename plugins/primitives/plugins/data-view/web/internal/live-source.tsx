@@ -68,7 +68,7 @@ import { useLivePagesPaging } from "./use-live-pages-paging";
 // `FieldDef.column` maps one to the collection column it reads.
 
 /** The search box, debounced: each keystroke would otherwise mint, load and release a tuple. */
-function useDebounced<T>(value: T, delayMs: number): T {
+export function useDebounced<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
     const id = setTimeout(() => setDebounced(value), delayMs);
@@ -105,6 +105,18 @@ interface SourceViewBase<TRow> {
 /** One paged read over the whole query; any grouping partitions its loaded rows. */
 export interface FlatSourceView<TRow> extends SourceViewBase<TRow> {
   kind: "flat";
+  /**
+   * The ancestors of the loaded rows that are not themselves loaded — read
+   * only when asked (`include: "ancestors"`, a live tree's hits), else empty.
+   * Never part of `rows`: the paging is the rows' alone.
+   */
+  ancestors: readonly TRow[];
+  /**
+   * Some loaded page's ancestors have not answered yet (`include:
+   * "ancestors"`): `ancestors` omits them — a row whose chain is missing is
+   * pending, not an orphan. `false` when ancestors are not read.
+   */
+  ancestorsPending: boolean;
   /** How the read pages; `complete` once every row of the query is loaded. */
   paging: DataViewPaging<TRow>;
   sectionOrder: "bucket" | "appearance";
@@ -140,7 +152,7 @@ export class UngroupableFilterError extends Error {
   }
 }
 
-const SEARCH_DEBOUNCE_MS = 200;
+export const SEARCH_DEBOUNCE_MS = 200;
 
 /**
  * Read a live `source` for the active view: lower its sort, filter, search and
@@ -171,6 +183,13 @@ export function useLiveSource<TRow>(args: {
   now: number;
   /** The view's collapsed group sections: a collapsed section reads nothing. */
   collapsedSections: ReadonlySet<string>;
+  /**
+   * A live tree's level read (`live-tree/`): `orderTail` is the column every
+   * order ends in (the tree's rank — a sort orders siblings, the rank breaks
+   * its ties), and `include: "ancestors"` also reads the loaded rows'
+   * ancestors (`FlatSourceView.ancestors`).
+   */
+  tree?: { orderTail: string; include?: "ancestors" };
 }): SourceView<TRow> | null {
   const {
     source,
@@ -181,7 +200,10 @@ export function useLiveSource<TRow>(args: {
     resolveGrouping,
     now,
     collapsedSections,
+    tree,
   } = args;
+  const orderTail = tree?.orderTail;
+  const include = tree?.include;
   const deferredComplete = useDeferredLoadComplete();
   const query = useDebounced(state.query, SEARCH_DEBOUNCE_MS);
 
@@ -302,6 +324,9 @@ export function useLiveSource<TRow>(args: {
           lowering satisfies never;
       }
     }
+    // A tree level ends in its rank: siblings tie-break by it, and the
+    // default order (which leads with it) is kept as it is.
+    if (orderTail !== undefined) order = [...order, [orderTail, "asc"]];
     // A column named twice (the prepend, or two fields on one column): the
     // codec refuses a duplicate, and the second can never reorder anything.
     const seen = new Set<string>();
@@ -386,6 +411,7 @@ export function useLiveSource<TRow>(args: {
     query,
     deferredComplete,
     resolveGrouping,
+    orderTail,
   ]);
 
   const pagesQuery = useMemo(
@@ -401,9 +427,12 @@ export function useLiveSource<TRow>(args: {
             ...(lowering.columns.length > 0
               ? { columns: lowering.columns }
               : {}),
+            // A tree's hits read (`live-tree/`): the collection is erased
+            // here, so the include rides untyped — `useLive` dispatches on it.
+            ...(include !== undefined ? { include } : {}),
           }
         : null,
-    [lowering],
+    [lowering, include],
   );
   const { pages, paging: pagesPaging } = useLivePagesPaging(
     // No source, or a sectioned view (each section reads its own): a
@@ -469,6 +498,13 @@ export function useLiveSource<TRow>(args: {
   const settled =
     pages.status === "loading" || pages.status === "error" ? null : pages;
   const rows = (settled?.rows ?? NO_ROWS) as readonly TRow[];
+  // The ready arm's `ancestors` when the read included them (erased above).
+  const withAncestors = settled as {
+    ancestors?: readonly unknown[];
+    ancestorsPending?: boolean;
+  } | null;
+  const ancestors = (withAncestors?.ancestors ?? NO_ROWS) as readonly TRow[];
+  const ancestorsPending = withAncestors?.ancestorsPending ?? false;
   const paging = useMemo(
     () =>
       pagesPaging === null
@@ -485,6 +521,8 @@ export function useLiveSource<TRow>(args: {
     return {
       kind: "flat",
       rows: NO_ROWS as readonly TRow[],
+      ancestors: NO_ROWS as readonly TRow[],
+      ancestorsPending: false,
       loading: false,
       error: lowering.error,
       readError: null,
@@ -496,6 +534,8 @@ export function useLiveSource<TRow>(args: {
   return {
     kind: "flat",
     rows,
+    ancestors,
+    ancestorsPending,
     loading: lowering.kind !== "ok" || pages.status === "loading",
     error: null,
     readError: pages.status === "error" ? pages : null,

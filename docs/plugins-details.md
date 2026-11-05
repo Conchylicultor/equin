@@ -35000,8 +35000,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useLive`
           - `useLiveReader`
       - Server:
-        - Uses: 42 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `network/live/query-resource` ×38
+        - Uses: 44 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `network/live/query-resource` ×40
           - `database/sql-column` ×3
           - `network/live/filter.filterSql`
         - Exports (types):
@@ -35037,6 +35037,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ServePagedValueOptions`
           - `ServeUnionOptions`
           - `ServeValueOptions`
+          - `TreeChildCount`
+          - `TreeChildCountBinding`
           - `UnionArmBinding`
           - `UnionArmColumns`
           - `UnionArmRefs`
@@ -35206,6 +35208,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveSnapshotBrand`
           - `LiveSortDirection`
           - `LiveTooLarge`
+          - `LiveTree`
+          - `LiveTreeCollection`
           - `LiveTypedParamValueSpec`
           - `LiveTypedValueParams`
           - `LiveValue`
@@ -35244,6 +35248,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ServeValueOnOptions`
           - `ServeValueOptions`
           - `SnapshotPairing`
+          - `TreeRow`
           - `WithContributedColumns`
         - Exports (values):
           - `clientFields`
@@ -35270,11 +35275,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `followSubjectOf`
           - `isPointId`
           - `isRowUnknown`
+          - `LIVE_CHILD_COUNT_KEY`
           - `LIVE_COLUMNS_KEY`
           - `LIVE_QUERY_MAX_BYTES`
           - `LIVE_ROW_KEY`
           - `LIVE_ROW_KEY_MAX_BYTES`
           - `LIVE_SCOPED_KEY`
+          - `LIVE_TREE_ANCESTORS_MAX`
+          - `LIVE_TREE_MAX_DEPTH`
           - `LIVE_WEB_HOOKS`
           - `liveArm`
           - `liveCollection`
@@ -35323,7 +35331,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tag-tree/engine`
       - Exemptions:
         - Exempts itself from:
-          - `live/no-legacy-resource-spelling` — `central/internal/serve-value.ts`, `server/internal/serve-collection.ts`, `server/internal/serve-off-feed.ts`, `server/internal/serve-union.ts`, `server/internal/serve-value.ts`, `web/internal/use-live.ts`, `web/internal/use-pages.ts` (sanctioned)
+          - `live/no-legacy-resource-spelling` — `central/internal/serve-value.ts`, `server/internal/serve-collection.ts`, `server/internal/serve-off-feed.ts`, `server/internal/serve-union.ts`, `server/internal/serve-value.ts`, `web/internal/use-ancestors.ts`, `web/internal/use-live.ts`, `web/internal/use-pages.ts` (sanctioned)
           - `live/no-row-absence-collapse` — `web/internal/row-or-stale.ts` (sanctioned)
           - `live/no-endpoint-read` — `web` (sanctioned)
           - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)
@@ -35789,7 +35797,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AllBind`
               - `AllCollectionContracts`
               - `AllCollectionSpec`
+              - `AncestorsClosure`
               - `CompiledAllCollection`
+              - `CompiledAncestors`
               - `CompiledCount`
               - `CompiledGroups`
               - `CompiledLookup`
@@ -35823,6 +35833,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `assertStableRead`
               - `clockNow`
               - `compileAllCollection`
+              - `compileAncestorsQuery`
               - `compileCountQuery`
               - `compiledValueReach`
               - `compileGroupsQuery`
@@ -43542,11 +43553,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 138 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 139 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×23
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
-          - `network/live/live-state` ×6
+          - `network/live/live-state` ×7
           - `primitives/slot-render` ×5
           - `primitives/css/control-panel` ×4
           - `primitives/collapsible` ×3
@@ -43869,6 +43880,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewViewEdits`
           - `DataViewViewportSink`
           - `DataViewVisibleRows`
+          - `FieldCollectionRowRead`
           - `FieldDef`
           - `FieldGrouping`
           - `FieldGroupingSet`
@@ -43879,6 +43891,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldRowRead`
           - `FieldSchemaSection`
           - `FieldValue`
+          - `FieldValueRowRead`
           - `FilterConjunction`
           - `FilterFieldValue`
           - `FilterGroup`
@@ -43913,9 +43926,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveDataSource`
           - `LiveDataSourceOf`
           - `LiveFacetColumn`
+          - `LiveHierarchyConfig`
           - `LiveSearchableColumn`
           - `LiveSourceScope`
           - `LiveSurfaceBinding`
+          - `LiveTreeDataSource`
+          - `LiveTreeOf`
+          - `LiveTreeSpec`
           - `ManualOrderConfig`
           - `Nesting`
           - `PlacementMatch`
@@ -48944,6 +48961,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FlatTreeLine`
           - `KeyboardLine`
           - `LazyChildren`
+          - `MorePlaceholder`
           - `RowMenuHelpers`
           - `RowMenuItem`
           - `RowSelectionGesture`
@@ -48960,6 +48978,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `flatNodeIds`
           - `flattenVisible`
           - `isDescendant`
+          - `isMoreLineId`
+          - `moreLineId`
           - `nextRowSelection`
           - `resolveDropParent`
           - `selectionRoots`

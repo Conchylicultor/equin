@@ -11,6 +11,11 @@ export type {
   CompiledOffFeedQuery,
   FollowablePoint,
 } from "./internal/compile-window";
+export { compileAncestorsQuery } from "./internal/compile-ancestors";
+export type {
+  AncestorsClosure,
+  CompiledAncestors,
+} from "./internal/compile-ancestors";
 export { followRead } from "./internal/follow";
 export type {
   FollowablePlan,

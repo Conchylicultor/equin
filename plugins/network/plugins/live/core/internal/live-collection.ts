@@ -326,9 +326,60 @@ export interface LiveCollection<
   // `NoInfer`: a method parameter would otherwise widen `S` to every
   // filterable name wherever a collection is passed to a generic function.
   column(name: NoInfer<(keyof F & string) | S>): LiveColumnRef;
+  /**
+   * Declared `tree: { parent, rank }`: the rows form a tree — `parent` (a
+   * filterable column holding the parent's id, `null` at a root) and `rank`
+   * (a sortable column ordering siblings). Its rows carry `$childCount`
+   * ({@link TreeRow}) and it mints `${key}:ancestors` ({@link ancestors}).
+   * `null` = not a tree.
+   */
+  tree: LiveTree | null;
+  /**
+   * `${key}:ancestors` — a tree collection's closure read: a set of SEED ids
+   * (the point codec) answering those rows and every ancestor of them, up
+   * the `parent` column (`useLive(c, { …, include: "ancestors" })` composes
+   * it). `null` unless the collection is declared `tree`.
+   */
+  ancestors: PointQueryResourceContract<Row> | null;
   /** A whole ordered set is the `all` overload's ({@link LiveAllCollection}). */
   all?: never;
 }
+
+/**
+ * A tree collection's shape (`liveCollection(key, { tree })`): the column
+ * naming a row's parent (its id, `null` at a root) and the one ordering
+ * siblings — row field names, kept literal on the minted collection.
+ */
+export interface LiveTree<
+  P extends string = string,
+  R extends string = string,
+> {
+  readonly parent: P;
+  readonly rank: R;
+}
+
+/** The wire field a tree collection's rows carry their child count under. */
+export const LIVE_CHILD_COUNT_KEY = "$childCount";
+
+/**
+ * A row of a tree collection: its fields, and `$childCount` — how many rows
+ * of the collection (its served `where` applied, never a read's filter) name
+ * it as their parent. Server-computed, on every read of the collection.
+ */
+export type TreeRow<Row> = Row & { readonly $childCount: number };
+
+/**
+ * The most rows one `${key}:ancestors` tuple answers (its seeds and their
+ * whole ancestor chains, deduped) — a loud loader error past it, never a
+ * silent truncation.
+ */
+export const LIVE_TREE_ANCESTORS_MAX = 2000;
+
+/**
+ * The deepest ancestor chain a `${key}:ancestors` read walks: a chain still
+ * going past it (or a cycle) is a loud loader error.
+ */
+export const LIVE_TREE_MAX_DEPTH = 64;
 
 /**
  * What `liveCollection` mints for a window declaration: a collection whose row
@@ -342,12 +393,75 @@ export type LiveCollectionOf<
   S extends string,
   Cn = undefined,
   Ex = undefined,
-> = ([Ex] extends [undefined]
-  ? LiveCollection<Row, F, S>
-  : LiveCollection<WithContributedColumns<Row>, F, S>) &
+  Tr extends LiveTree | undefined = undefined,
+> =
+  // Distributive over `Tr`: the resource vocabulary infers `liveCollection`'s
+  // return from its signature, where `Tr` reads as its constraint (a union of
+  // both arms) — and a signature instantiated at `never` must still match it.
+  Tr extends LiveTree
+    ? LiveCollectionShapeOf<
+        [Ex] extends [undefined]
+          ? TreeRow<Row>
+          : WithContributedColumns<TreeRow<Row>>,
+        F,
+        S,
+        Cn
+      > & {
+        tree: LiveTree<Tr["parent"], Tr["rank"]>;
+        ancestors: PointQueryResourceContract<
+          [Ex] extends [undefined]
+            ? TreeRow<Row>
+            : WithContributedColumns<TreeRow<Row>>
+        >;
+      }
+    : LiveCollectionShapeOf<
+        [Ex] extends [undefined] ? Row : WithContributedColumns<Row>,
+        F,
+        S,
+        Cn
+      > & { tree: null; ancestors: null };
+
+/** {@link LiveCollectionOf} over its final row, but its tree facet. */
+type LiveCollectionShapeOf<Row, F, S extends string, Cn> = LiveCollection<
+  Row,
+  F,
+  S
+> &
   (Cn extends true ? { count: LiveCountDescriptor<F> } : { count: null }) & {
     arms: null;
   };
+
+/**
+ * A tree collection (declared `tree`) — the kind `useLive(c, { …, include:
+ * "ancestors" })` reads: its `tree` and `:ancestors` are present.
+ */
+export type LiveTreeCollection<Row, F, S extends string> = LiveCollection<
+  Row,
+  F,
+  S
+> & { tree: LiveTree; ancestors: PointQueryResourceContract<Row> };
+
+/**
+ * What a window declaration may name as its `tree` (tsc): `parent` a
+ * filterable column holding the id's type or `null` (a root), `rank` a
+ * sortable column. That the default order leads with `rank` is checked at
+ * declaration (a throw).
+ */
+export interface LiveTreeSpec<Row, F, S extends string, I extends keyof Row> {
+  readonly parent: TreeParentField<Row, F, I>;
+  readonly rank: S;
+}
+
+/** The filterable fields whose value is the id's type or `null` — the ones a `parent` may name. */
+export type TreeParentField<Row, F, I extends keyof Row> = {
+  [K in keyof F & keyof Row & string]: null extends Row[K]
+    ? [NonNullable<Row[K]>] extends [Row[I]]
+      ? [Row[I]] extends [NonNullable<Row[K]>]
+        ? K
+        : never
+      : never
+    : never;
+}[keyof F & keyof Row & string];
 
 /**
  * A collection declared `count: true` — the only kind `useLive(c, { count })`
@@ -377,6 +491,8 @@ export type LiveArmsCollection<
 > = LiveCollection<WithContributedColumns<Row>, F, S> & {
   arms: LiveArms<D>;
   count: null;
+  tree: null;
+  ancestors: null;
 };
 
 /**
@@ -506,6 +622,8 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
    * collected.
    */
   exposes?: LiveExposes;
+  /** The rows form a tree (see {@link LiveCollection.tree}). */
+  tree?: LiveTree;
   /** A union collection is the `arms` overload's ({@link LiveArmsSpec}). */
   arms?: never;
   /** A whole ordered set is the `all` overload's ({@link LiveAllSpec}). */
@@ -738,6 +856,8 @@ export function liveCollection<
     all?: Al;
     /** Scoped columns join a window — this declares none. */
     scopedColumns?: never;
+    /** A tree is a window's: its levels are read as paged windows. */
+    tree?: never;
   } & LiveFieldsForm<undefined, Al, never, undefined, R> &
     LiveMachineSpec<NM>,
 ): LiveNoWindowCollection<
@@ -789,6 +909,8 @@ export function liveCollection<
     pick?: never;
     related?: never;
     baseExposures?: never;
+    /** A union is no tree: its rows are several tables'. */
+    tree?: never;
   },
 ): LiveArmsCollection<
   FieldsRow<undefined, never, never, OF, CF>,
@@ -814,6 +936,8 @@ export function liveCollection<
   const Cn extends true | undefined = undefined,
   NM extends MachineFeature | undefined = undefined,
   const Sc extends true | undefined = undefined,
+  const I extends keyof FieldsRow<E, P, CP, OF, CF> & string = never,
+  const Tr extends LiveTree | undefined = undefined,
 >(
   key: string,
   spec: Omit<
@@ -821,7 +945,7 @@ export function liveCollection<
     "related" | "fields" | "scopedColumns"
   > & {
     /** The row field that identifies a row — a picked, carried or own field. */
-    id: NoInfer<keyof FieldsRow<E, P, CP, OF, CF> & string>;
+    id: I;
     fields?: OF & RequireLabel<OF>;
     related?: R;
     baseExposures?: B;
@@ -833,6 +957,19 @@ export function liveCollection<
      * (`LiveScopedColumnsOf`). Outside the form conditional so tsc infers it.
      */
     scopedColumns?: Sc;
+    /**
+     * The rows form a tree (see {@link LiveCollection.tree}): `parent` a
+     * filterable field holding the parent's id (`null` at a root), `rank` a
+     * sortable one ordering siblings, which the default order leads with.
+     * Its rows carry `$childCount`; it mints `${key}:ancestors`.
+     */
+    tree?: Tr &
+      LiveTreeSpec<
+        FieldsRow<E, P, CP, OF, CF>,
+        FieldsSpecFilterable<E, P, OF>,
+        NoInfer<S>,
+        I
+      >;
   } & LiveFieldsForm<LiveFieldsDefault<S>, undefined, S, Cn, R> &
     LiveMachineSpec<NM>,
 ): LiveCollectionOf<
@@ -840,7 +977,8 @@ export function liveCollection<
   FieldsSpecFilterable<E, P, OF>,
   S,
   Cn,
-  FieldsSpecExposes<E, R, B>
+  FieldsSpecExposes<E, R, B>,
+  Tr
 > &
   LiveScopedColumnsOf<Sc> & {
   fields: LiveFields<P | (keyof OF & string)>;
@@ -1073,6 +1211,7 @@ const NOT_ALL_FIELDS: readonly string[] = [
   "maxLimit",
   "scopedColumns",
   "count",
+  "tree",
 ];
 
 const SORT_DIRECTIONS: readonly LiveSortDirection[] = ["asc", "desc"];
@@ -1310,6 +1449,7 @@ const WINDOW_FIELDS: readonly string[] = [
   "scopedColumns",
   "arms",
   "count",
+  "tree",
 ];
 
 /** The `:rows` point sibling and the row schema — what every collection mints. */
@@ -1367,10 +1507,15 @@ function fullCollection<Row, F, S extends string>(
   // author's fields: declared on the row schema (so every parse keeps it),
   // never bound to a column (the server folds the arms' projections into it).
   // A collection reaching exposures carries its exposed slices the same way.
+  const tree = checkTree(key, spec);
+  // A tree's rows carry `$childCount` the same way: declared on the row
+  // schema, never bound to a column (the server computes it).
+  const treeRow =
+    tree === null ? spec.row : withChildCountSchema(key, spec.row);
   const row =
     arms !== null || exposes !== null
-      ? withColumnsSchema(key, spec.row)
-      : spec.row;
+      ? withColumnsSchema(key, treeRow)
+      : treeRow;
   const scopedColumns = spec.scopedColumns === true;
   if (
     spec.scopedColumns !== undefined &&
@@ -1513,6 +1658,19 @@ function fullCollection<Row, F, S extends string>(
       sortable,
     });
   };
+  // Minted after `:count` (descriptor registration order), only for a tree:
+  // a seed set (the point codec, capped like `:rows`) answering the seeds and
+  // their whole ancestor chains.
+  const ancestors =
+    tree === null
+      ? null
+      : pointQueryResourceDescriptor(
+          `${key}:ancestors`,
+          row,
+          spec.id,
+          base.rows.point.maxIds,
+          LIVE_TREE_ANCESTORS_MAX,
+        );
   return {
     ...base,
     window,
@@ -1523,7 +1681,70 @@ function fullCollection<Row, F, S extends string>(
     scopedColumns,
     arms,
     column,
+    tree,
+    ancestors,
   };
+}
+
+/**
+ * A declared `tree`, checked (tsc holds a typed caller; this, an untyped one
+ * and what tsc cannot see): `parent` a filterable field other than the id,
+ * `rank` a sortable one, the default order leading with `rank`, never on a
+ * union.
+ */
+function checkTree<Row, F, S extends string>(
+  key: string,
+  spec: LiveCollectionSpec<Row, F, S> | LiveArmsSpec<Row, F, S, string>,
+): LiveTree | null {
+  const tree = (spec as { tree?: LiveTree }).tree;
+  if (tree === undefined) return null;
+  const fail = (message: string): never => {
+    throw new Error(`liveCollection("${key}"): tree — ${message}`);
+  };
+  if (spec.arms !== undefined) {
+    fail("a union collection is no tree: its rows are several tables'.");
+  }
+  const { parent, rank } = tree;
+  if (!Object.hasOwn(spec.filterable as object, parent)) {
+    fail(
+      `its parent "${parent}" is not a filterable field — a level of the tree is read as \`where: { ${parent}: id }\`.`,
+    );
+  }
+  if (parent === spec.id) fail(`its parent "${parent}" is the id.`);
+  if (!Object.hasOwn(spec.row.shape, parent)) {
+    fail(`its parent "${parent}" is not a row field.`);
+  }
+  if (!(spec.sortable as readonly string[]).includes(rank)) {
+    fail(`its rank "${rank}" is not a sortable field.`);
+  }
+  const lead = spec.default.orderBy[0]?.[0];
+  if (lead !== rank) {
+    fail(
+      `the default order leads with ${lead === undefined ? "nothing" : `"${lead}"`}, not the rank "${rank}" — a level's default order is its siblings' rank.`,
+    );
+  }
+  return Object.freeze({ parent, rank });
+}
+
+/** The row schema with `$childCount` declared beside the author's fields (as {@link withColumnsSchema}). */
+function withChildCountSchema<Row>(
+  key: string,
+  row: LiveRowSchema<Row>,
+): LiveRowSchema<Row> {
+  const extend = (row as unknown as { extend?: unknown }).extend;
+  if (typeof extend !== "function") {
+    throw new Error(
+      `liveCollection("${key}"): a tree collection's row must be a zod object`,
+    );
+  }
+  if (Object.hasOwn(row.shape, LIVE_CHILD_COUNT_KEY)) {
+    throw new Error(
+      `liveCollection("${key}"): "${LIVE_CHILD_COUNT_KEY}" is reserved — a tree's rows carry their child count under it`,
+    );
+  }
+  return (row as unknown as z.ZodObject).extend({
+    [LIVE_CHILD_COUNT_KEY]: z.number().int().nonnegative(),
+  }) as unknown as LiveRowSchema<Row>;
 }
 
 /** The row schema with `$columns` declared beside the author's fields (a zod object's `extend`, so its keys stay readable). */

@@ -7,6 +7,7 @@ import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge
 import type {
   FieldCellContext,
   LiveArms,
+  LiveCollection,
   LiveColumnRef,
   LivePlainValue,
   LiveRowsCollection,
@@ -39,7 +40,7 @@ import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { AssetPath } from "@plugins/infra/plugins/endpoints/core";
 import type { ColorTokenRef } from "@plugins/ui/plugins/tokens/plugins/color-ref/core";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
-import type { LiveDataSource } from "./live-data-source";
+import type { LiveDataSource, LiveTreeDataSource } from "./live-data-source";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
 
@@ -167,6 +168,13 @@ export interface HierarchyConfig<TRow> {
    * already a child there) is skipped.
    */
   getAliasParents?: (row: TRow) => readonly string[];
+  /**
+   * A row present ONLY as a reference: drawn under its alias parents
+   * (`getAliasParents`) and never at its own place — a live tree's alias
+   * target read by id for an open node, whose own parent is not loaded.
+   * Absent: every row is drawn where it is.
+   */
+  referenceOnly?: (row: TRow) => boolean;
   getRank: (row: TRow) => Rank;
   /**
    * DnD reorder/reparent. Omit → read-only nav tree (no drag). The destination
@@ -215,6 +223,37 @@ export interface HierarchyConfig<TRow> {
    * children are already in `rows`.
    */
   lazyChildren?: LazyChildren<TRow>;
+}
+
+/**
+ * The hierarchy of a LIVE tree (`DataViewLiveOrigin.hierarchy`, over a
+ * `liveDataSource` whose collection declares `tree`): only what the consumer
+ * adds — the writes and the reference edges. The structure is the
+ * collection's: a row's parent and rank are its `tree.parent` / `tree.rank`
+ * columns, and its children are read per open node (`web/internal/live-tree`),
+ * so `getParentId` / `getRank` / `lazyChildren` cannot be spelled here.
+ *
+ * `onMove` / `onCreate` mean exactly {@link HierarchyConfig}'s — positional
+ * intent, the server mints the rank against the complete sibling set (a partial
+ * level never shows it all).
+ */
+export interface LiveHierarchyConfig<TRow> {
+  getParentId?: never;
+  getRank?: never;
+  lazyChildren?: never;
+  /** Use {@link LiveHierarchyConfig.getAliasChildren}: an unloaded row's alias parents cannot be asked. */
+  getAliasParents?: never;
+  /**
+   * The ids an OPEN node also draws as read-only reference children ("aliases"
+   * — {@link HierarchyConfig.getAliasParents}'s edges, asked from the parent's
+   * side): over a paged tree the referenced rows are mostly not loaded, so
+   * only the parent can say which to read. A target not loaded is read by id
+   * (`useLive(c, { ids })`) while its alias parent is open. A node with alias
+   * children has a chevron.
+   */
+  getAliasChildren?: (parentId: string) => readonly string[];
+  onMove?: HierarchyConfig<TRow>["onMove"];
+  onCreate?: HierarchyConfig<TRow>["onCreate"];
 }
 
 /**
@@ -562,9 +601,16 @@ type FieldOptionsSpec =
 
 /**
  * A field's per-row live read ({@link FieldDefBase.rowRead}), its read type
- * erased — `rowRead()` (data-view web) builds one typed by the value it reads.
+ * erased — `rowRead()` (data-view web) builds one typed by what it reads:
+ * a live VALUE per row (`kind: "value"`), or ONE ROW of a collection per row
+ * (`kind: "row"` — a row's parent, say).
  */
-export interface FieldRowRead<TRow> {
+export type FieldRowRead<TRow> =
+  FieldValueRowRead<TRow> | FieldCollectionRowRead<TRow>;
+
+/** A per-row read of a live value: one tuple of `value` per row on screen. */
+export interface FieldValueRowRead<TRow> {
+  readonly kind: "value";
   /** The live value read once per row on screen. */
   readonly value: LivePlainValue<
     unknown,
@@ -576,6 +622,23 @@ export interface FieldRowRead<TRow> {
   /**
    * The cell, handed the row's read — `loading` while the row is off screen
    * or reads nothing (`params` `null`). Erased here; typed by `rowRead()`.
+   */
+  readonly cell: (row: TRow, read: unknown) => ReactNode;
+}
+
+/**
+ * A per-row read of one row of a collection: the rows on screen name the ids
+ * they read (`id`), read together as ONE `{ ids }` read of `collection`.
+ */
+export interface FieldCollectionRowRead<TRow> {
+  readonly kind: "row";
+  readonly collection: LiveCollection<unknown, unknown, string>;
+  /** The id of the row this row reads; `null`: it reads none. */
+  readonly id: (row: TRow) => string | null;
+  /**
+   * The cell, handed the read row as a `ResourceResult` (`null` data: not in
+   * the collection) — `undefined` while the row is off screen or reads none.
+   * Erased here; typed by `rowRead()`.
    */
   readonly cell: (row: TRow, read: unknown) => ReactNode;
 }
@@ -1701,10 +1764,11 @@ export type DataViewProps<TRow> = DataViewBaseProps<TRow> &
 
 /**
  * The props a surface's rows are identified and shaped by — for rows the
- * consumer holds in memory. A live `source` refuses these and `hierarchy`:
- * its row key is its collection's `id`, a tree over a partial paged set
- * orphans children, a consumer's rank would reorder server-sorted segments,
- * and its search is the source's `searchable`.
+ * consumer holds in memory. A live `source` refuses these: its row key is
+ * its collection's `id`, a consumer's rank would reorder server-sorted
+ * segments, and its search is the source's `searchable`. (Its structure, if
+ * any, is its collection's `tree` — never a `HierarchyConfig` over a partial
+ * paged set, which would orphan children.)
  */
 interface DataViewHeldRowProps<TRow> {
   rowKey: (row: TRow, index: number) => string;
@@ -2016,7 +2080,26 @@ export interface DataViewPaging<TRow> {
  * (`liveDataSource`): the view's sort, filter, search and group-by lower onto
  * its window params, and the rows stay live through the routed runtime.
  */
-export interface DataViewLiveOrigin<TRow> {
+export type DataViewLiveOrigin<TRow> =
+  DataViewLiveRows<TRow> | DataViewLiveTree<TRow>;
+
+/**
+ * A live source over a TREE collection (`tree` declared): its rows nest —
+ * the root window paged by the viewport, each open node's children read by
+ * a window of its own ("Load more" per level), a filter or search read as
+ * its hits plus their ancestors (data-view CLAUDE.md, "Hierarchy" → live
+ * trees). `hierarchy` adds the consumer's writes and reference edges; it is
+ * optional — a tree source nests without it (read-only).
+ */
+export interface DataViewLiveTree<TRow> extends Omit<
+  DataViewLiveRows<TRow>,
+  "source" | "hierarchy"
+> {
+  source: LiveTreeDataSource<TRow>;
+  hierarchy?: LiveHierarchyConfig<TRow>;
+}
+
+interface DataViewLiveRows<TRow> {
   /** The source also names the surface it is listed on (`source.surface`) — the DataView's config, views and custom columns. */
   source: LiveDataSource<TRow>;
   /** The surface is the source's (`liveDataSource(c, { surface })`): never stated twice. */
@@ -2029,6 +2112,7 @@ export interface DataViewLiveOrigin<TRow> {
   paging?: never;
   rowKey?: never;
   searchAccessor?: never;
+  /** A source over a flat collection has no structure to nest: only a tree collection's takes one (`DataViewLiveTree`). */
   hierarchy?: never;
   manualOrder?: never;
   /** Sections and order are the server's; attaching is in-memory only. */

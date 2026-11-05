@@ -330,6 +330,15 @@ export const resourceDescriptorFactories = {
         preloadable: true,
         requires: "count",
       },
+      // A tree's closure read (declared `tree`): a seed set → the seeds and
+      // their ancestor chains, a keyed window whose ids are the closure.
+      {
+        suffix: ":ancestors",
+        keyed: true,
+        membership: "window",
+        preloadable: false,
+        requires: "tree",
+      },
     ],
   },
 } satisfies Record<MintingFactoryName, DescriptorFactory>;

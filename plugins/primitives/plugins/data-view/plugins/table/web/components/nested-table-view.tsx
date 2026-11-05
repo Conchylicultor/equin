@@ -97,8 +97,9 @@ type Line = FlatTreeLine<Row>;
 type NodeLine = Extract<Line, { kind: "node" }>;
 
 /** A line's key: a row's is its node id (the DataView row key, or an alias's
- *  projection id); a placeholder's is derived from its parent's, NUL-prefixed
- *  so it can never be a row key. */
+ *  projection id); a placeholder's (a lazy level's loading / failed / empty
+ *  line, or a paged level's "Load more") is derived from its parent's,
+ *  NUL-prefixed so it can never be a row key. */
 function lineKey(line: Line): string {
   return line.kind === "node"
     ? line.node.id
@@ -184,8 +185,9 @@ function TreeHead({
  * `useTreeKeyboard` on the grid, the lazy placeholder as a full-span line.
  *
  * It bypasses `useDataViewSections`: no flat sort (the sort is per sibling
- * group), no fold, no aggregate, no paging (a hierarchy is never paged) and no
- * flat manual order — a nested row's order is its rank, reordered by the
+ * group), no fold, no aggregate, no paging of its own (a live tree's root
+ * window is paged by the body's footer, each level by its "Load more" line)
+ * and no flat manual order — a nested row's order is its rank, reordered by the
  * tree's own drag (before / after / into), which any sort suspends.
  */
 export function NestedTableView(
@@ -511,6 +513,7 @@ export function NestedTableView(
         <TreeChildPlaceholder
           placeholder={line.placeholder}
           depth={line.depth}
+          parentId={line.parent.id}
           guides={options.guides}
         />
       ) : null,

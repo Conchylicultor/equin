@@ -207,6 +207,70 @@ describe("data-view nested table: lazy children", () => {
   });
 });
 
+describe("data-view nested table: a partial (paged) level", () => {
+  const child: Row = { ...FILE, id: "main", parent: "src", name: "main.ts" };
+  const partial = (loadMore: () => void, growing = false) => ({
+    hasChildren: (r: Row) => r.isDir,
+    state: (): TreeChildrenState => ({
+      kind: "partial",
+      growing,
+      loadMore,
+      stalled: null,
+    }),
+    load: vi.fn(),
+  });
+
+  it("draws Load more as a full-span line after the loaded children", () => {
+    const loadMore = vi.fn();
+    const { getByText, container } = renderTable({
+      rows: [DIR, FILE, child],
+      lazy: partial(loadMore),
+      expanded: { src: true },
+    });
+    const line = container.querySelector<HTMLElement>(
+      "[data-tree-placeholder='more']",
+    )!;
+    expect(line.closest(".col-span-full")).not.toBeNull();
+    // After the children, before the next sibling.
+    const order = [
+      ...container.querySelectorAll("[data-tree-placeholder], [data-tree-row]"),
+    ].map((el) => el.textContent);
+    expect(order.indexOf(line.textContent)).toBe(
+      order.findIndex((t) => t?.includes("main.ts")) + 1,
+    );
+    fireEvent.click(getByText("Load more"));
+    expect(loadMore).toHaveBeenCalledTimes(1);
+  });
+
+  it("is reached with the arrow keys and Enter grows the level", () => {
+    const loadMore = vi.fn();
+    const { getByText, container } = renderTable({
+      rows: [DIR, FILE, child],
+      lazy: partial(loadMore),
+      expanded: { src: true },
+      onRowOpen: vi.fn(),
+    });
+    const line = container.querySelector<HTMLElement>(
+      "[data-tree-placeholder='more']",
+    )!;
+    fireEvent.keyDown(rowOf(getByText("main.ts")), { key: "ArrowDown" });
+    expect(document.activeElement).toBe(line);
+    fireEvent.keyDown(line, { key: "Enter" });
+    expect(loadMore).toHaveBeenCalledTimes(1);
+  });
+
+  it("spins while the level grows", () => {
+    const { container } = renderTable({
+      rows: [DIR, FILE, child],
+      lazy: partial(vi.fn(), true),
+      expanded: { src: true },
+    });
+    expect(
+      container.querySelector("[data-tree-placeholder='more']")?.textContent,
+    ).toContain("Loading");
+  });
+});
+
 describe("data-view nested table: the open gesture", () => {
   it("opens on double-click and Enter, apart from the click", () => {
     const onRowOpen = vi.fn();

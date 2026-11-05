@@ -266,8 +266,10 @@ The table declares `nestsHierarchy: true`, so over a hierarchy the host applies:
 `HierarchyConfig`: required `getParentId`, `getRank`; optional `getAliasParents`,
 `onMove`, `onCreate`.
 
-`hierarchy` and `paging` are exclusive on the in-memory origin (a type union), and
-a live `source` refuses `hierarchy` — a tree over a paged prefix orphans children.
+`hierarchy` and `paging` are exclusive on the in-memory origin (a type union).
+A live `source` over a flat collection refuses `hierarchy` (a tree over a paged
+prefix orphans children); one over a **tree collection** nests — see
+"Live trees" below.
 
 - **Nesting is per view (`ViewState.nesting`, Notion's Sub-items).** `nested`
   (default), `flat` (every row top-level), `roots` (only top-level rows).
@@ -300,6 +302,91 @@ a live `source` refuses `hierarchy` — a tree over a paged prefix orphans child
 - **Aliases** (`getAliasParents`): the row also appears as a read-only leaf under each
   returned parent — navigation only; a `child` drop or add-child resolves to the
   real row.
+
+### Live trees: a `source` over a collection declaring `tree`
+
+`liveDataSource(c, …)` over a collection declared `tree: { parent, rank }`
+(`network/live`) is a tree source (`LiveTreeDataSource`, carried in tsc as
+`source.tree`). Its DataView nests with or without a `hierarchy`; the one it
+takes is `LiveHierarchyConfig` — `{ onMove?, onCreate?, getAliasChildren? }`
+(`DataViewLiveTree`; beside a flat source it is a tsc error, and a cast one
+throws). Parent and rank are the collection's: no `getParentId` / `getRank` /
+`lazyChildren`.
+
+```tsx
+const pages = liveDataSource(pagesTreeWindow, { surface, searchable: ["title"], … });
+<DataView source={pages} hierarchy={{ onMove, onCreate }} views={["table"]} … />;
+```
+
+Implemented in `web/internal/live-tree/` (`useLiveTree`, readers that report
+up, the pure `assembleTreeRows`); its rows and a synthetic `HierarchyConfig`
+go to the ordinary nested pipeline (`useHierarchyTree`). Two modes, per the
+view's state:
+
+| View state | Mode | Reads |
+|---|---|---|
+| no filter and no search, or `filterScope: "roots"` | **expand** | the root window (`parent isEmpty ∧ scope [∧ filter]`), viewport-paged (the body's footer pages it, `isPaged` = the roots), plus one `ChildWindowReader` per OPEN node (`parent = X`), mounted from `lazyChildren.onOpenChange`, unmounted (released) on collapse |
+| a filter under scope `rows`, or a search | **hits** | one viewport-paged window `filter ∧ search` with `include: "ancestors"`; the ancestors are context rows (the in-memory "matches plus ancestors"), placed among their siblings by the sort (else rank). No child windows and no `lazyChildren`: a node's chevron is "has drawn children"; nodes are drawn open (the expand map's explicit `false` wins, except under a search) |
+
+- **The scope is the ROOT level's** (`source.scoped({ where })`): it narrows
+  which roots are drawn; a subtree under a drawn root is whole (what
+  `filterScope: "roots"` means). Child windows read `parent = X` alone, so a
+  node's `$childCount` (counted over the collection) is exactly what its open
+  reads — a chevron never opens onto "Empty". In hits mode the hits are read
+  unscoped and kept when the root of their drawn chain matches the scope.
+  Drawn flat, the scope narrows every row (a flat list has no subtrees).
+- **Chevrons** (expand mode): `hasChildren` = `row.$childCount > 0` (or alias
+  children); a row without `$childCount` throws.
+- **Mode flips start over**: the open set and the levels read are expand
+  mode's own — a flip to hits releases every child window, and back reads
+  them again.
+- **Hits whose chain is not drawn**: while some page's ancestors are pending
+  (`ancestorsPending`) such a hit is held out of the rows and the read reads
+  as growing (the footer's loading line) — pending, never a stand-in root.
+  Once every page's ancestors answered, a hit whose parent is not in the
+  collection (its served `where`) is drawn as a root — the in-memory orphan
+  rule (`AssembledTree.orphans`). A level whose parent no window draws is
+  not drawn (its reader is being released).
+- **Load more per level**: a child window grows by `loadMore` — the tree's
+  `partial` state, drawn as a "Load more" line after the loaded children
+  (tree CLAUDE.md). The root window pages like any live source.
+- **Sort is sibling-scoped**: every level's order is `[sort…, rank]`; rows are
+  drawn in window order (`buildTree` keeps incoming order, nothing re-sorts).
+  Drag is suspended while sorted.
+- **Group-by is over the roots**: expand mode lowers it onto the root window
+  (`liveGroupLowering` — server sections with exact counts; children follow
+  their root); hits mode partitions the loaded forest's roots in memory, counts
+  lower bounds while paging.
+- **Nesting `flat`** is the ordinary flat live source, with the derived
+  **Parent** field read per row on screen (`withLiveParentField`: a
+  collection-row `rowRead`, one `{ ids }` read of the visible rows' parents;
+  display only — no column, so it neither sorts, filters nor groups);
+  **`roots`** the same source scoped to `parent isEmpty`.
+- **Disabled**: fold (as on every nesting view); expand-all in expand mode (it
+  would mount a window per node) — in hits mode it opens the loaded nodes.
+- **Drag**: `onMove` keeps its positional intent; the server mints the rank. A
+  move in flight follows the moved row by a live read (`useLive(c, { id })`,
+  `MovedRowReader`): it is drawn from that read at its destination beside its
+  anchor, hidden at its source, and settles when the read says the row's
+  parent IS the destination (or the row is gone, or the write rejects) — so a
+  row landing past a level's loaded prefix settles and is simply not drawn;
+  nothing is ever drawn from a stale copy past the first frame.
+- **Reveal**: a `selectedRowId` no window draws (expand mode, no server
+  sections) is read with `useLive(c, { id, include: "ancestors" })` — started
+  only once every open (or about-to-open) level has answered — and its path
+  pinned into its levels at its place among the loaded siblings; the tree
+  model's reveal-on-select then opens the ancestors. Pins exist only while
+  that read is mounted (another selection, or the row drawn by a window,
+  unpins them). A failed path read is a notice with Retry above the rows
+  (`DataViewPaging.notices`), never the view's failure.
+- **Aliases**: `getAliasChildren(parentId)` — asked from the parent's side, as
+  only an open node can say which unloaded rows it references. A target no
+  window holds is read with `useLive(c, { ids })` and drawn only as the alias
+  (`HierarchyConfig.referenceOnly`).
+
+Pinned by `web/__tests__/live-tree.test.tsx`,
+`web/internal/live-tree/tree-rows.test.ts` and the table's
+`nested-lazy-open.test.tsx` ("a partial level").
 
 ### Placement: where each field is drawn
 
@@ -1660,7 +1747,11 @@ layout when its value lands. One slow probe holds one row, never the body. A
 `null` stays a KNOWN empty answer. (Case: the deploy Release column.)
 
 **Per-row reads: `rowRead`, never a `useLive` in a cell.** A cell that draws a
-live read of its own per row (a folder's item count) declares it on the field:
+live read of its own per row (a folder's item count, a row's parent) declares
+it on the field — a live VALUE per row (`rowRead({ value, params, cell })`) or
+ONE ROW of a collection per row (`rowRead({ collection, id, cell })`: the
+visible rows' ids read in one `useLive(collection, { ids })`, each cell handed
+a `ResourceResult<Row | null>`, `undefined` off screen):
 
 ```tsx
 { id: "size", label: "Size",
@@ -1813,8 +1904,9 @@ key of the same config doc (via the `presetsExtraFields` seam).
 - `{ rows; readiness?; rowKey; fields | collection }` — in memory;
 - `{ source }` — `liveDataSource` (web), read as `useLive` key-range pages. Refuses
   `storageKey` (the surface is `source.surface`), `rowKey` (key = collection
-  `id`), `hierarchy`, `manualOrder`, `searchAccessor` (search is
-  `searchable`); `RowOrder` stays off. `DataViewSourceBundle` is a
+  `id`), `manualOrder`, `searchAccessor` (search is `searchable`), and
+  `hierarchy` unless its collection is a tree ("Live trees"); `RowOrder`
+  stays off. `DataViewSourceBundle` is a
   DISTRIBUTIVE `Omit` (pinned by `web/internal/body-types.test.ts`).
 
 ```tsx
@@ -2088,11 +2180,11 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 138 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 139 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×23
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
-    - `network/live/live-state` ×6
+    - `network/live/live-state` ×7
     - `primitives/slot-render` ×5
     - `primitives/css/control-panel` ×4
     - `primitives/collapsible` ×3
@@ -2415,6 +2507,7 @@ list, table and `primitives/tree` share it.
     - `DataViewViewEdits`
     - `DataViewViewportSink`
     - `DataViewVisibleRows`
+    - `FieldCollectionRowRead`
     - `FieldDef`
     - `FieldGrouping`
     - `FieldGroupingSet`
@@ -2425,6 +2518,7 @@ list, table and `primitives/tree` share it.
     - `FieldRowRead`
     - `FieldSchemaSection`
     - `FieldValue`
+    - `FieldValueRowRead`
     - `FilterConjunction`
     - `FilterFieldValue`
     - `FilterGroup`
@@ -2459,9 +2553,13 @@ list, table and `primitives/tree` share it.
     - `LiveDataSource`
     - `LiveDataSourceOf`
     - `LiveFacetColumn`
+    - `LiveHierarchyConfig`
     - `LiveSearchableColumn`
     - `LiveSourceScope`
     - `LiveSurfaceBinding`
+    - `LiveTreeDataSource`
+    - `LiveTreeOf`
+    - `LiveTreeSpec`
     - `ManualOrderConfig`
     - `Nesting`
     - `PlacementMatch`

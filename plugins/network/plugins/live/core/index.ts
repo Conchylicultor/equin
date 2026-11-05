@@ -143,9 +143,17 @@ export type {
   LivePreload,
   LiveRowsCollection,
   LiveRowSchema,
+  LiveTree,
+  LiveTreeCollection,
   LiveWindowCodec,
   LiveWhereOf,
   LiveWindowDescriptor,
+  TreeRow,
+} from "./internal/live-collection";
+export {
+  LIVE_CHILD_COUNT_KEY,
+  LIVE_TREE_ANCESTORS_MAX,
+  LIVE_TREE_MAX_DEPTH,
 } from "./internal/live-collection";
 export { LIVE_ROW_KEY, LIVE_ROW_KEY_MAX_BYTES } from "./internal/row-key";
 // The one serving code path every host runs (Bun server, central, a browser
