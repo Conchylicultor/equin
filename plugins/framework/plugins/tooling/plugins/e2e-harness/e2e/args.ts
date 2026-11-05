@@ -27,7 +27,7 @@
  * A trailing `--name` with nothing after it yields `undefined` (there is no
  * value), while `--name=` yields `""` (there is one, and it is empty).
  */
-function argValue(name: string): string | undefined {
+export function harnessArg(name: string): string | undefined {
   const bare = `--${name}`;
   const inline = `${bare}=`;
   const argv = process.argv;
@@ -40,10 +40,24 @@ function argValue(name: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Flags a SCRIPT asked for (`arg` / `numArg` / `flag`), as opposed to the ones
+ * the harness reads itself (`harnessArg`). A flag the harness shares with the
+ * script (`--path`) is honoured once the script reads it, so the teardown check
+ * for an ignored `--path` (`target.ts`'s `unconsumedPage`) can tell "the script
+ * drives its own page" from "the script took `--path` itself".
+ */
+const readByScript = new Set<string>();
+
+export function wasReadByScript(name: string): boolean {
+  return readByScript.has(name);
+}
+
 export function arg(name: string): string | undefined;
 export function arg(name: string, fallback: string): string;
 export function arg(name: string, fallback?: string): string | undefined {
-  return argValue(name) ?? fallback;
+  readByScript.add(name);
+  return harnessArg(name) ?? fallback;
 }
 
 /** Numeric flag. A non-numeric value is a caller error, not a silent 0. */
@@ -63,6 +77,7 @@ export function numArg(name: string, fallback: number): number {
  * "named it and gave nothing" from "did not name it".
  */
 export function flag(name: string): boolean {
+  readByScript.add(name);
   const bare = `--${name}`;
   const inline = `${bare}=`;
   return process.argv.some((t) => t === bare || t.startsWith(inline));

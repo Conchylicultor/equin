@@ -89,7 +89,7 @@ import {
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
-import { arg, flag, usage } from "./args";
+import { arg, flag, harnessArg, usage, wasReadByScript } from "./args";
 
 /**
  * The resolved target, carrying HOW it was resolved.
@@ -394,7 +394,7 @@ function target(): Target {
   // explicitly with `pathUrl("/")`.
   const suffix = `${url.pathname}${url.search}${url.hash}`;
   const fromUrl = suffix === "/" ? undefined : suffix;
-  const fromFlag = arg("path");
+  const fromFlag = harnessArg("path");
 
   if (fromUrl !== undefined && fromFlag !== undefined) {
     usage(
@@ -492,7 +492,17 @@ let pageConsumed = false;
  */
 export function unconsumedPage(): string | undefined {
   if (pageConsumed) return undefined;
-  return target().page;
+  const page = target().page;
+  // `--path` the script read itself (`arg("path")`) was consumed by it. Only
+  // the flag counts: a page in `--url` is never what `arg("path")` returns.
+  if (
+    page !== undefined &&
+    wasReadByScript("path") &&
+    harnessArg("path") === page
+  ) {
+    return undefined;
+  }
+  return page;
 }
 
 /** The target's origin joined to an app path, with exactly one slash between. */
