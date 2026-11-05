@@ -32,6 +32,7 @@ import {
   readFileSync,
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
+import { tmpdirEnv, withRunTmpdir } from "./run-tmpdir";
 
 // No args ⇒ every test in the repo. `plugins/` is the whole of it: both runners
 // are scoped to that tree (vitest's `include` literally starts `plugins/**`).
@@ -245,100 +246,109 @@ const run: CliAction<[string[]], object> = async (paths) => {
       max: cpuBudget().B,
       flight: testFlight([...found], runnerArgs, treeHash),
     },
-    async (grant, ctx) => {
-      const env = { ...process.env, ...grant.env() };
-      // The run's machine-readable record, written before either runner starts
-      // so a killed run reads `running` rather than a previous run's verdict.
-      // `toolchain upgrade` compares two of these, before and after.
-      const { slug } = ctx;
-      const status: TestStatus = {
-        opId: ctx.opId,
-        pid: process.pid,
-        startedAt: new Date().toISOString(),
-        targets: runnerArgs,
-        status: "running",
-        finishedAt: null,
-        runners: [],
-      };
-      writeTestStatus(slug, status);
-      const bunReport = worktreeArtifacts.testReport(slug, ctx.opId, "bun");
-      const domReport = worktreeArtifacts.testReport(slug, ctx.opId, "vitest");
-
-      const bunExit =
-        bun.length > 0
-          ? await runRunner(
-              "bun:test",
-              [
-                process.execPath,
-                "test",
-                "--reporter=junit",
-                `--reporter-outfile=${bunReport}`,
-                ...runnerArgs,
-              ],
-              root,
-              env,
-            )
-          : null;
-      // `bun x vitest` resolves the repo's own vitest and honors its
-      // `#!/usr/bin/env node` shebang — the same runtime `bun run test:dom`
-      // gives it. `vitest run` picks up the root `vitest.config.ts` from `cwd`.
-      const domExit =
-        dom.length > 0
-          ? await runRunner(
-              "vitest",
-              [
-                process.execPath,
-                "x",
-                "vitest",
-                "run",
-                `--maxWorkers=${grant.units}`,
-                // `default` first: naming any reporter replaces vitest's
-                // console output unless it is named too.
-                "--reporter=default",
-                "--reporter=junit",
-                `--outputFile.junit=${domReport}`,
-                ...runnerArgs,
-              ],
-              root,
-              env,
-            )
-          : null;
-
-      // The summary names BOTH buckets, always — an empty one is stated, never
-      // implied by silence. That line is the whole reason this command exists:
-      // `bun test <plugin-dir>` is green and partial in exactly the case where
-      // this prints "no jsdom tests under this path".
-      const where = targets.length > 1 ? "these paths" : "this path";
-      const report = (
-        label: string,
-        exit: number | null,
-        count: number,
-        empty: string,
-      ) =>
-        console.log(
-          exit === null
-            ? `${label.padEnd(10)}${empty} under ${where}`
-            : `${label.padEnd(10)}${count} ${count === 1 ? "file " : "files"}   exit ${exit}`,
+    // Every dir a test makes through `os.tmpdir()` lands in this run's own
+    // scratch root, removed when the run ends — see run-tmpdir.ts.
+    (grant, ctx) =>
+      withRunTmpdir(async (scratch) => {
+        const env = { ...process.env, ...grant.env(), ...tmpdirEnv(scratch) };
+        // The run's machine-readable record, written before either runner starts
+        // so a killed run reads `running` rather than a previous run's verdict.
+        // `toolchain upgrade` compares two of these, before and after.
+        const { slug } = ctx;
+        const status: TestStatus = {
+          opId: ctx.opId,
+          pid: process.pid,
+          startedAt: new Date().toISOString(),
+          targets: runnerArgs,
+          status: "running",
+          finishedAt: null,
+          runners: [],
+        };
+        writeTestStatus(slug, status);
+        const bunReport = worktreeArtifacts.testReport(slug, ctx.opId, "bun");
+        const domReport = worktreeArtifacts.testReport(
+          slug,
+          ctx.opId,
+          "vitest",
         );
-      console.log("");
-      report("bun:test", bunExit, bun.length, "no bun:test files");
-      report("vitest", domExit, dom.length, "no jsdom tests");
 
-      const failed = [
-        bunExit !== null && bunExit !== 0 ? "bun:test" : null,
-        domExit !== null && domExit !== 0 ? "vitest" : null,
-      ].filter((name): name is string => name !== null);
-      if (bunExit !== null)
-        status.runners.push(runnerOutcome("bun:test", bunExit, bun, bunReport));
-      if (domExit !== null)
-        status.runners.push(runnerOutcome("vitest", domExit, dom, domReport));
-      status.status = failed.length === 0 ? "passed" : "failed";
-      status.finishedAt = new Date().toISOString();
-      writeTestStatus(slug, status);
-      if (failed.length === 0) return "success";
-      console.error(`\nFAILED: ${failed.join(", ")}`);
-      return "failed";
-    },
+        const bunExit =
+          bun.length > 0
+            ? await runRunner(
+                "bun:test",
+                [
+                  process.execPath,
+                  "test",
+                  "--reporter=junit",
+                  `--reporter-outfile=${bunReport}`,
+                  ...runnerArgs,
+                ],
+                root,
+                env,
+              )
+            : null;
+        // `bun x vitest` resolves the repo's own vitest and honors its
+        // `#!/usr/bin/env node` shebang — the same runtime `bun run test:dom`
+        // gives it. `vitest run` picks up the root `vitest.config.ts` from `cwd`.
+        const domExit =
+          dom.length > 0
+            ? await runRunner(
+                "vitest",
+                [
+                  process.execPath,
+                  "x",
+                  "vitest",
+                  "run",
+                  `--maxWorkers=${grant.units}`,
+                  // `default` first: naming any reporter replaces vitest's
+                  // console output unless it is named too.
+                  "--reporter=default",
+                  "--reporter=junit",
+                  `--outputFile.junit=${domReport}`,
+                  ...runnerArgs,
+                ],
+                root,
+                env,
+              )
+            : null;
+
+        // The summary names BOTH buckets, always — an empty one is stated, never
+        // implied by silence. That line is the whole reason this command exists:
+        // `bun test <plugin-dir>` is green and partial in exactly the case where
+        // this prints "no jsdom tests under this path".
+        const where = targets.length > 1 ? "these paths" : "this path";
+        const report = (
+          label: string,
+          exit: number | null,
+          count: number,
+          empty: string,
+        ) =>
+          console.log(
+            exit === null
+              ? `${label.padEnd(10)}${empty} under ${where}`
+              : `${label.padEnd(10)}${count} ${count === 1 ? "file " : "files"}   exit ${exit}`,
+          );
+        console.log("");
+        report("bun:test", bunExit, bun.length, "no bun:test files");
+        report("vitest", domExit, dom.length, "no jsdom tests");
+
+        const failed = [
+          bunExit !== null && bunExit !== 0 ? "bun:test" : null,
+          domExit !== null && domExit !== 0 ? "vitest" : null,
+        ].filter((name): name is string => name !== null);
+        if (bunExit !== null)
+          status.runners.push(
+            runnerOutcome("bun:test", bunExit, bun, bunReport),
+          );
+        if (domExit !== null)
+          status.runners.push(runnerOutcome("vitest", domExit, dom, domReport));
+        status.status = failed.length === 0 ? "passed" : "failed";
+        status.finishedAt = new Date().toISOString();
+        writeTestStatus(slug, status);
+        if (failed.length === 0) return "success";
+        console.error(`\nFAILED: ${failed.join(", ")}`);
+        return "failed";
+      }),
   );
   if (outcome !== "success") process.exit(1);
 };

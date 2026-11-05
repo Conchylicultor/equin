@@ -45,6 +45,17 @@ The two classification failures (a file in neither scope, no files at all) are
 refused **before** the op, so a wrong path never queues for a host slot to be
 told it was wrong.
 
+## A run's scratch dirs die with the run
+
+Both runners get `TMPDIR` (and `TMP` / `TEMP`) pointed at a run-scoped root,
+`<os tmpdir>/equin-test-tmp/<pid>-<random>`, removed when the run ends
+(`cli/run-tmpdir.ts`). Every dir a test makes through `os.tmpdir()` — a
+fixture's `mkdtemp`, a spawn's capture dir, anything the code under test writes
+— lands inside it, so a fixture needs no cleanup of its own for its dirs not to
+outlive the run, and a runner killed mid-file leaks nothing. A run whose CLI
+died before its `finally` is reclaimed by the next run's sweep (a root whose pid
+is gone). A test that hardcodes `/tmp` escapes this — use `os.tmpdir()`.
+
 ## The run's record
 
 Every run writes `test-status-<opId>.json` in the worktree data dir
