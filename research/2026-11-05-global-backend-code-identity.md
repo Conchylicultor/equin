@@ -38,7 +38,7 @@ few edges:
 | `asset-mirror/bundle/server` | `runAssetMirrorPrewarm`'s `import(registry)` (release only) | **fixed:** moved to the bundle's `cli/` barrel (no backend registers it) |
 | `server-core/bin` | registry selection (`plugins-active.ts`) and `coreBarrel` | **fixed:** each composition has its own serving entry (`bin/index.ts` for main, a generated `bin/index.composition.<id>.generated.ts` otherwise) importing its registries by literal path; the spec's `command` runs it and `serve` checks it against the spec's `composition`. Core barrels warm through a literal `core` loader per registry entry |
 | `plugin-tree/server`, `composition/server`, `deploy-secrets/approvals/server` | the facet framework (`load-facets.ts`, which hides `facet.generated` behind a computed specifier on purpose), and through it codegen, web-artifacts, exempt and lint | **fixed:** `facets/core` holds only the data accessors (the loader moved to `facets/loader`), the faceted build moved out of `plugin-tree/core` into `plugin-tree/faceted`, and the backend reads the faceted tree as JSON from `./equin plugin-tree-facets` (a child reading the shared plugin records) |
-| `type-check/server`, `type-check/backstop/server` (a `run` body) | `checks/core` runner | task-1793843085-tgrdel |
+| `type-check/server`, `type-check/backstop/server` (a `run` body) | `checks/core` runner | **fixed:** the backstop's `argv` body runs `./equin type-check-backstop`; `spawnTypeCheckWorker` takes a required `tree`, read by CLI callers through `type-check/cli`'s `readTypeCheckTree` |
 | `worktree/reclaim/server`, `serve-composition/server` | codegen's barrel, used for a registry listing and a reset | task-1793843090-eqagj3 |
 
 The headline finding is that **main runs build tooling in-process**. The

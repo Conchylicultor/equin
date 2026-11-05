@@ -16,6 +16,7 @@ import {
   type CodegenStep,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { repoProgram } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { readTypeCheckTree } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/cli";
 import { spawnTypeCheckWorker } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/server";
 import {
   admitThroughGate,
@@ -770,6 +771,7 @@ export async function fastValidationJobs(opts: {
       root,
       name: program.name,
       tsconfigPath: program.tsconfigPath,
+      tree: await readTypeCheckTree(root, program.tsconfigPath),
       tscMode: "keyed",
       // A missed prediction answers from one whole program and is reported,
       // never a failed build (`type-check`'s `shared/name-run.ts`).

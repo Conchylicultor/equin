@@ -26935,7 +26935,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 48 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 49 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×31
               - `framework/cli/bootstrap` ×4
               - `framework/cli/migrations` ×3
@@ -26944,6 +26944,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/run-ledger.createBuildRunRecorder`
               - `framework/cli/doctor.assertPrerequisites`
               - `framework/cli/git-artifacts.registerMergeDrivers`
+              - `framework/tooling/checks/type-check.readTypeCheckTree`
               - `infra/jobs/supervised-job.runAttached`
           - Plugins:
             - **`experimental-marks`** — The Show experimental marks setting (view-options popover and Settings → Config, on an experimental build): useShowExperimentalMarks() is true when the build stamped this document experimental and the marks are on; the frame and the Wish banner both follow it. Registers the Show experimental marks config and, while it is off, serves a head script that hides the marks before the first frame.
@@ -28073,27 +28074,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `TYPE_CHECK_WORKER_UNITS`
                   - `TypeCheckDivergencePayloadSchema`
               - Cross-plugin:
-                - Imported by: `framework/tooling/checks/type-check/backstop`
+                - Imported by:
+                  - `framework/cli/build`
+                  - `framework/tooling/checks/type-check/backstop`
               - Exemptions:
                 - Exempts itself from:
                   - `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
                   - `user-path/no-unproven-claim` — `shared/worker.ts`, `shared/batch-worker.ts` (sanctioned)
                   - `check-thread-safety/no-blocking-check-work` — `check/import-graph.ts` (debt)
-                  - `boot:closure-digestable` — `server/index.ts` (debt)
+              - Cli:
+                - Exports (values): `readTypeCheckTree`
               - Plugins:
                 - **`backstop`** — The two-program type check's backstop: a daily main-only job runs the type-check worker in dual mode (the two-program check beside a full check of a fresh whole program, compared file by file) and files a type-check-divergence report for every file whose result differs.
                   - Server:
                     - Contributes: `report-kind` "type-check-divergence"
                     - Uses:
-                      - `framework/tooling/checks/type-check.spawnTypeCheckWorker`
-                      - `infra/host/host-admission.inheritedGrant`
-                      - `infra/host/host-admission.withHostGrant`
                       - `infra/jobs/supervised-job.defineSupervisedJob`
                       - `primitives/log-channels.defineLogSink`
                       - `reports.ReportKind`
                     - Register: `defineSupervisedJob('type-check.backstop')`
-                  - Exemptions:
-                    - Exempts itself from: `boot:closure-digestable` — `server/index.ts` (debt)
+                  - Cli:
+                    - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
             - Uses: 136 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
@@ -31572,7 +31573,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/admin`
               - `debug/profiling/boot-bench`
               - `framework/tooling/checks/type-check`
-              - `framework/tooling/checks/type-check/backstop`
               - `infra/host/host-read-pool`
               - `infra/jobs/supervised-job`
               - `infra/safe-fetch/browser-fetch`

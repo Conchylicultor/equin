@@ -35,6 +35,7 @@ export const cliEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/cli/plugins/test", id: "framework.cli.test", loader: () => import("@plugins/framework/plugins/cli/plugins/test/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/upstream", id: "framework.cli.upstream", loader: () => import("@plugins/framework/plugins/cli/plugins/upstream/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/cache-prune", id: "framework.tooling.checks.cache-prune", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/cache-prune/cli"), dependsOn: [] },
+  { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/type-check/plugins/backstop", id: "framework.tooling.checks.type-check.backstop", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/plugins/backstop/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/exempt", id: "framework.tooling.exempt", loader: () => import("@plugins/framework/plugins/tooling/plugins/exempt/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/web-artifacts/plugins/prune", id: "framework.tooling.web-artifacts.prune", loader: () => import("@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/prune/cli"), dependsOn: [] },
   { pluginPath: "infra/plugins/audio-analysis", id: "infra.audio-analysis", loader: () => import("@plugins/infra/plugins/audio-analysis/cli"), dependsOn: ["infra/plugins/jobs/plugins/supervised-job"] },

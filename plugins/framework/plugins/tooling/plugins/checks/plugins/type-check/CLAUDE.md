@@ -265,7 +265,9 @@ A base naming a missing shard is refused (full path, reason logged). Correctness
 
 ## Host-wide worker admission — `server/spawnTypeCheckWorker`
 
-`spawnTypeCheckWorker` (`server/`) is the ONE place a worker starts (this check and build's `--skip-checks` path). It takes the caller's `Grant`, so admission and priority cannot be skipped:
+`spawnTypeCheckWorker` (`server/`) is the ONE place a worker starts (this check, build's `--skip-checks` path and the backstop). The caller hands it the tree (`tree`, required). The check's preparation already read it; a CLI caller reads the working tree with `readTypeCheckTree` (`cli/`). `server/` never reads it: that loads the TypeScript compiler and the check runner, and a server barrel is in every backend's closure (`boot:closure-no-dev-tooling`, `boot:closure-digestable`). One read also gives a small attempt and its heavy retry the same tree.
+
+It takes the caller's `Grant`, so admission and priority cannot be skipped:
 
 1. **A slot, small run or heavy** (host-admission's `HOST_POOLS`; `server/internal/worker-pool.ts`). Taken FIRST, so a queued worker holds no grant units. **This is the memory bound** — the grant alone never was.
    - **Small first:** a keyed run sending ≤ `TYPE_CHECK_LIGHT_SOURCES` (100) lint files takes a slot of the laned `type-check-light` pool (size 3, background may hold 2) and runs with `batch: refuse`: its worker builds no program over 100 sources (`refuseBatches`, `shared/batch-run.ts`) and answers `over-budget` instead (`TypeCheckWorkerOutput`), having recorded nothing (the name store is written after both programs).
@@ -348,13 +350,16 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
     - `TYPE_CHECK_WORKER_UNITS`
     - `TypeCheckDivergencePayloadSchema`
 - Cross-plugin:
-  - Imported by: `framework/tooling/checks/type-check/backstop`
+  - Imported by:
+    - `framework/cli/build`
+    - `framework/tooling/checks/type-check/backstop`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
     - `user-path/no-unproven-claim` — `shared/worker.ts`, `shared/batch-worker.ts` (sanctioned)
     - `check-thread-safety/no-blocking-check-work` — `check/import-graph.ts` (debt)
-    - `boot:closure-digestable` — `server/index.ts` (debt)
+- Cli:
+  - Exports (values): `readTypeCheckTree`
 - Sub-plugins:
   - **`backstop`** — The two-program type check's backstop: a daily main-only job runs the type-check worker in dual mode (the two-program check beside a full check of a fresh whole program, compared file by file) and…
 

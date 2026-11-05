@@ -39,22 +39,6 @@ import { typeCheckLightPool, typeCheckWorkerPool } from "./worker-pool";
 // A wedge-breaker for one metadata read, not a latency budget.
 const GIT_TIMEOUT_MS = 30_000;
 
-/**
- * The run's input tree, read when no caller handed one. `repo-view` parses the
- * tsconfig with the TypeScript compiler, so it is loaded HERE, on the first run
- * that needs it, and not at module scope: this module is in every backend's
- * boot closure (the backstop plugin spawns workers), and a static edge put the
- * whole of `typescript` (8.9 MB, ~250 ms warm) on every boot for a function no
- * boot calls. `boot:closure-no-dev-tooling` keeps it out.
- */
-async function readTree(
-  root: AppPath,
-  tsconfigPath: string,
-): Promise<TypeCheckTree> {
-  const { readCheckTree } = await import("../../shared/repo-view");
-  return (await readCheckTree(root, tsconfigPath)).tree;
-}
-
 /** The real outbox, and the checkout's HEAD. */
 function outboxSink(root: string): MissReportSink {
   return {
@@ -197,11 +181,15 @@ export async function spawnTypeCheckWorker(opts: {
    */
   walkBase?: TypeCheckWorkerJob["walkBase"];
   /**
-   * The input to check — the git tree and its overlay — when the caller has
-   * already read it: the check's preparation does, and keys lint on the same
-   * versions. Omitted, it is read here, from the working tree as it is now.
+   * The input to check — the git tree and its overlay. The check's
+   * preparation reads it (and keys lint on the same versions); another caller
+   * reads the working tree with `readTypeCheckTree` (`../../cli`). Required,
+   * and never read here: reading it loads the TypeScript compiler and the check
+   * runner, and this module is a server barrel's — in every backend's closure
+   * (`boot:closure-no-dev-tooling`, `boot:closure-digestable`). One read also
+   * hands the light attempt and its heavy retry the same tree.
    */
-  tree?: TypeCheckTree;
+  tree: TypeCheckTree;
   /**
    * Batching, by default a small run's refusal past
    * `TYPE_CHECK_LIGHT_SOURCES`, then batches of `TYPE_CHECK_BATCH_FILES`.
@@ -210,11 +198,11 @@ export async function spawnTypeCheckWorker(opts: {
   batch?: TypeCheckWorkerJob["batch"];
   grant: Grant;
 }): Promise<TypeCheckWorkerRun> {
-  const { root, name, tsconfigPath, tscMode, onMiss, lintFiles, grant } = opts;
+  const { root, name, tsconfigPath, tscMode, onMiss, lintFiles, tree, grant } =
+    opts;
   const typedParts = opts.typedParts ?? { split: [], whole: [] };
   const lintBase = opts.lintBase ?? null;
   const walkBase = opts.walkBase ?? { kind: "hint" };
-  const tree = opts.tree ?? (await readTree(root, tsconfigPath));
   const job = (batch: TypeCheckWorkerJob["batch"]): TypeCheckWorkerJob => ({
     root,
     name,
