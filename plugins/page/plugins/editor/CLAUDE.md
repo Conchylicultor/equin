@@ -836,8 +836,14 @@ targets = writtenIds(before, after) ∪ opNamedIds(op)
 
 Don't revert to a class per row (N boxes with seams). `internal/selection-bands.ts`
 resolves runs, `components/selection-bands.tsx` paints, `block-editor.tsx` calls. A run
-splits into touching bands where the decoration edge steps. The band spans `C` → row's
+splits into touching bands where either edge steps. The band spans `C` → row's
 right edge, one `BLOCK_INSET` outside `ContainerBackdrop`'s box.
+
+**A line wider than its column widens its own band** by exactly what it overhangs
+the column on each side (same margin around the widened box as around any content).
+Only the box knows its `max-content` width, so it measures and reports the overhang
+(`components/row-overhang.tsx`, `useReportRowOverhang` — `WideBlock` does). No
+overhang, no change; rounding stays at the run's ends.
 
 ## The block list is a document, not a listbox
 

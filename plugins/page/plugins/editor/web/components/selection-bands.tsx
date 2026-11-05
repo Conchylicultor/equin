@@ -16,7 +16,8 @@ import type { SelectionBand } from "../internal/selection-bands";
  *    a selection are continuous.
  *  - **`C` to the content box's right edge** — the same box a container's
  *    backdrop fills, so a selected callout's tint and its selection band are
- *    concentric rather than offset by a few pixels.
+ *    concentric rather than offset by a few pixels — widened, on a line wider
+ *    than the column (a `WideBlock` table), to surround what it really paints.
  *
  * Emitted after the container frames and before the rows, so it tints a
  * container's own decoration while the text stays fully legible above it.
@@ -38,9 +39,10 @@ export function SelectionBands({ bands }: { bands: readonly SelectionBand[] }) {
         >
           {/* The backdrop fills the row-span box, inset on the left by the
               JS-computed decoration edge `C` (same shape as page/container's
-              ContainerBackdrop). */}
+              ContainerBackdrop); a wide line's band overhangs the box on
+              both sides (negative `end`, `start` left of `C`). */}
           <Placed
-            x={{ start: band.left, end: 0 }}
+            x={{ start: band.left, end: band.right }}
             y="fill"
             className={cn(
               "bg-primary/15",

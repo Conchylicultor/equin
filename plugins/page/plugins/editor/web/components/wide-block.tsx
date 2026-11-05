@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 import { WIDE_BLOCK_MAX } from "../internal/page-column";
+import { useReportRowOverhang } from "./row-overhang";
 import { useCaretCueTarget } from "./void-caret";
 
 /**
@@ -22,7 +23,9 @@ import { useCaretCueTarget } from "./void-caret";
  *
  * In the editor it also takes the CARET CUE (`useCaretCueTarget`): the host
  * around a void block is column-wide, so its ring and tint would cut through
- * the widened content instead of surrounding it.
+ * the widened content instead of surrounding it. And it reports how far it
+ * overhangs the column to its row (`useReportRowOverhang`), so a block selection's band
+ * surrounds the widened box rather than covering only the column under it.
  */
 export function WideBlock({
   children,
@@ -32,10 +35,14 @@ export function WideBlock({
   className?: string;
 }) {
   const cue = useCaretCueTarget();
+  const column = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+  useReportRowOverhang(column, box);
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- a centered grid item is the one way to overflow a column symmetrically without a transform; the ramp has no breakout primitive
-    <div className="grid grid-cols-1 justify-items-center">
+    <div ref={column} className="grid grid-cols-1 justify-items-center">
       <div
+        ref={box}
         className={cn("relative w-max min-w-full", cue, className)}
         style={{ maxWidth: WIDE_BLOCK_MAX }}
       >

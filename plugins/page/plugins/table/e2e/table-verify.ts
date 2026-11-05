@@ -14,7 +14,11 @@
 //      table for the line above becomes a block range, never a native selection
 //      running across the page;
 //   7. the caret cue is painted on the table's widened box, not on the
-//      column-wide host around it.
+//      column-wide host around it;
+//   8. a table WIDER than the column, block-selected, gets a selection band
+//      covering its whole widened box (not just the column under it), and a
+//      run of "above" + the table is two touching bands: the column-wide one
+//      above, the widened one under it.
 //
 // Usage: ./equin run plugins/page/plugins/table/e2e/table-verify.ts [--url <deploy>]
 import type { Page } from "playwright";
@@ -199,6 +203,72 @@ await withBrowser(async (h) => {
     cue.wide !== "rgba(0, 0, 0, 0)" && cue.wide !== "missing",
   );
   await snap(page, out, "cue");
+
+  // ---- 8: the selection band surrounds a widened table ------------------------
+  await table.hover();
+  await page.getByRole("button", { name: "Edit source" }).first().click();
+  await source.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
+  const longCell = "a very long cell that keeps going ".repeat(4).trim();
+  await source.fill(
+    (await source.inputValue()).replace("| plum | 7 |", `| ${longCell} | 7 |`),
+  );
+  await page.keyboard.press("Meta+Enter");
+  await source.waitFor({ state: "detached", timeout: ELEMENT_TIMEOUT_MS });
+
+  await table.getByText("apple", { exact: true }).click();
+  await page.keyboard.press("Escape");
+  const band = page.locator("[data-selection-band]");
+  await band.first().waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
+  await page.waitForTimeout(200);
+  type Rect = { left: number; right: number; top: number; bottom: number };
+  const geometry = () =>
+    page.evaluate(() => {
+      const rect = (el: Element | null) => {
+        if (!el) throw new Error("missing element");
+        const b = el.getBoundingClientRect();
+        return { left: b.left, right: b.right, top: b.top, bottom: b.bottom };
+      };
+      const t = document.querySelector("[data-block-id] table");
+      const wide = t?.closest(".w-max") ?? null;
+      const host = t?.closest("[data-caret-host]") ?? null;
+      const bands = [
+        ...document.querySelectorAll("[data-selection-band] > *"),
+      ].map(rect);
+      return { wide: rect(wide), host: rect(host), bands };
+    });
+  const one = await geometry();
+  r.ok(
+    `8a: the table is wider than the column (box ${Math.round(one.wide.right - one.wide.left)}px, column ${Math.round(one.host.right - one.host.left)}px)`,
+    one.wide.right - one.wide.left > one.host.right - one.host.left + 20,
+  );
+  r.eq("8b: one band for the selected table", one.bands.length, 1);
+  const covers = (b: Rect, w: Rect) =>
+    b.left <= w.left + 2 && b.right >= w.right - 2;
+  r.ok(
+    `8c: the band covers the widened table horizontally (band ${JSON.stringify(one.bands[0])}, table ${JSON.stringify(one.wide)})`,
+    one.bands[0] !== undefined && covers(one.bands[0], one.wide),
+  );
+  await snap(page, out, "wide-selected");
+
+  await page.keyboard.press("Shift+ArrowUp");
+  await page.waitForTimeout(200);
+  const two = await geometry();
+  r.eq("8d: above + table is two bands", two.bands.length, 2);
+  const [top, bottom] = two.bands;
+  r.ok(
+    `8e: the table's band still covers it (band ${JSON.stringify(bottom)})`,
+    bottom !== undefined && covers(bottom, two.wide),
+  );
+  r.ok(
+    `8f: the line above keeps the column band, touching the table's (above ${JSON.stringify(top)})`,
+    top !== undefined &&
+      bottom !== undefined &&
+      top.left > bottom.left &&
+      top.right < bottom.right &&
+      Math.abs(top.bottom - bottom.top) <= 1,
+  );
+  await snap(page, out, "wide-run");
+  await page.keyboard.press("Escape");
 });
 
 await r.finish();

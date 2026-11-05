@@ -89,7 +89,10 @@ import { computeFrameSpans, type FlatBlock } from "../internal/block-frames";
 import { flattenVisible, subtreeOf } from "../internal/flatten-blocks";
 import { resolveFramePadInsets, resolveRailSeats } from "../internal/rail-seat";
 import { resolveFrameFeet, type FootSeat } from "../internal/frame-foot";
-import { resolveSelectionBands } from "../internal/selection-bands";
+import {
+  resolveSelectionBands,
+  type RowOverhang,
+} from "../internal/selection-bands";
 import {
   blockContentScope,
   blockRowsIn,
@@ -106,6 +109,7 @@ import {
 } from "../internal/use-block-selection";
 import { BlockRow } from "./block-row";
 import { FrameFoot } from "./frame-foot";
+import { RowOverhangProvider } from "./row-overhang";
 import { SelectionBands } from "./selection-bands";
 import { TextSpanHighlight, type SpanLinePaint } from "./text-span-highlight";
 import {
@@ -263,15 +267,21 @@ function isInsideEditingHost(target: EventTarget | null): boolean {
  * change to any `gridRow` arithmetic — see `components/frame-foot.tsx`.
  */
 function RowCell({
+  blockId,
   row,
   frames,
   feet,
+  onOverhang,
   children,
 }: {
+  blockId: string;
   row: number;
   frames: readonly string[];
   /** The container feet ending on this row, innermost first. Usually empty. */
   feet: readonly FootSeat[];
+  /** Where a box inside this row wider than its column reports how far it
+   * overhangs it (`components/row-overhang.tsx`) — the selection band reads it. */
+  onOverhang: (blockId: string, overhang: RowOverhang | null) => void;
   children: ReactNode;
 }) {
   const setFrameHover = useSetFrameHover();
@@ -282,7 +292,9 @@ function RowCell({
       style={{ gridRow: row + 1 }}
       onPointerEnter={() => setFrameHover(frames)}
     >
-      {children}
+      <RowOverhangProvider blockId={blockId} onOverhang={onOverhang}>
+        {children}
+      </RowOverhangProvider>
       {feet.map((seat) => (
         <FrameFoot key={`foot:${seat.block.id}`} seat={seat} />
       ))}
@@ -2305,9 +2317,32 @@ function SelectionLayer({
   // The covered set the rows and bands read: the block selection, or — while
   // a span is live — the text-less lines it fully covers.
   const painted = spanPaint?.bands ?? selection;
+  // Lines wider than the column, as their boxes measured them — the one
+  // horizontal fact about a row the editor cannot derive (`components/row-overhang.tsx`).
+  const [rowOverhangs, setRowOverhangs] = useState<
+    ReadonlyMap<string, RowOverhang>
+  >(() => new Map());
+  const reportRowOverhang = useCallback(
+    (blockId: string, overhang: RowOverhang | null) =>
+      setRowOverhangs((prev) => {
+        const current = prev.get(blockId);
+        if (
+          overhang === null
+            ? current === undefined
+            : current?.left === overhang.left &&
+              current.right === overhang.right
+        )
+          return prev;
+        const next = new Map(prev);
+        if (overhang === null) next.delete(blockId);
+        else next.set(blockId, overhang);
+        return next;
+      }),
+    [],
+  );
   const selectionBands = useMemo(
-    () => resolveSelectionBands(flat, frameSpans, painted),
-    [flat, frameSpans, painted],
+    () => resolveSelectionBands(flat, frameSpans, painted, rowOverhangs),
+    [flat, frameSpans, painted, rowOverhangs],
   );
   // A span END that leaves the document (another client deleted the line, an
   // undo removed it) leaves offsets into nothing: the span is gone with it.
@@ -2517,9 +2552,11 @@ function SelectionLayer({
                 {flat.map((f, i) => (
                   <RowCell
                     key={f.block.id}
+                    blockId={f.block.id}
                     row={i}
                     frames={frameIdsByRow[i]!}
                     feet={feetByRow[i]!}
+                    onOverhang={reportRowOverhang}
                   >
                     <BlockRow
                       block={f.block}
