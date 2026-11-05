@@ -27666,7 +27666,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `framework/tooling/checks`
-          - `framework/tooling/codegen`
           - `framework/tooling/web-artifacts`
       - Exemptions:
         - Exempts itself from:
@@ -28152,7 +28151,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 138 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 135 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×19
               - `config_v2` ×14
               - `framework/plugin-id` ×13
@@ -28165,7 +28164,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/composition` ×5
               - `plugin-meta/facets` ×5
               - `framework/tooling/codegen/composition-registries` ×4
-              - `framework/tooling` ×3
               - `infra/host-fs/user-path` ×3
               - `config_v2/ledger` ×2
               - `framework/tooling/boundaries` ×2
@@ -28193,6 +28191,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AuthoredOverrideSeedResult`
               - `BarrelEvaluation`
               - `BrowserHostDecl`
+              - `CodegenPass`
               - `CodegenStep`
               - `CollectedRawEntry`
               - `DeclaredApp`
@@ -28227,6 +28226,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `buildRegistryGenContext`
               - `CLAUDE_SETTINGS_REL_PATH`
               - `claudeSettingsPath`
+              - `codegenPassOver`
               - `collectAllPlugins`
               - `collectBareSpecifiers`
               - `collectDataViews`
@@ -28340,6 +28340,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `withPackageName`
               - `writeGenerated`
               - `writePreBarrelManifest`
+              - `writingCodegenPass`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
           - Exemptions:
@@ -28347,12 +28348,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
               - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
-              - `repo-walk-safety/no-adhoc-repo-listing` — `core/barrel-free-tree.ts`, `core/evaluated-barrels.ts` (debt)
           - Plugins:
             - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, and every per-name registry and backend entry on disk — without the build pipeline, so a serving backend (worktree reclaim) can list them.
               - Core:
                 - Uses:
-                  - `framework/tooling/collected-dir/discovery.discoverCollectedDirs`
+                  - `framework/tooling/collected-dir/discovery.discoverCollectedDirsIn`
                   - `framework/tooling/collected-dir/discovery.DiscoveredCollectedDir`
                   - `infra/host-fs/user-path.AppPath`
                   - `infra/host-fs/user-path.joinAppPath`
@@ -28410,14 +28410,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/plugin-id.PluginFolder`
                   - `infra/host-fs/user-path.AppPath`
                   - `infra/host-fs/user-path.joinAppPath`
-                  - `packages/timed-fs.readFileSync`
                   - `plugin-meta/parse-utils.findMarkerCalls`
                   - `plugin-meta/parse-utils.FsSnapshot`
                 - Exports (types): `DiscoveredCollectedDir`
                 - Exports (values):
-                  - `discoverCollectedDirs`
                   - `discoverCollectedDirsIn`
-                  - `standardPluginDirs`
                   - `standardPluginDirsFromSnapshot`
                   - `standardPluginDirsIn`
               - Cross-plugin:
@@ -28425,9 +28422,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/tooling/codegen`
                   - `framework/tooling/codegen/composition-registries`
               - Exemptions:
-                - Exempts itself from:
-                  - `boundaries/no-platform-api` — `core/discover.ts` (debt)
-                  - `repo-walk-safety/no-adhoc-repo-listing` — `core/discover.ts` (debt)
+                - Exempts itself from: `boundaries/no-platform-api` — `core/discover.ts` (debt)
         - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./equin deps install chromium`). Also owns the two generic tools (screenshot, perf).
           - Core:
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
@@ -28821,14 +28816,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/tooling/checks` (0 debt)
                   - `framework/tooling/checks/no-gitlinks` (0 debt)
                   - `framework/tooling/checks/type-check` (0 debt)
-                  - `framework/tooling/codegen` (2 debt)
-                  - `framework/tooling/collected-dir/discovery` (1 debt)
                   - `framework/tooling/lint` (0 debt)
                   - `framework/tooling/web-artifacts` (0 debt)
                   - `infra/deps/build` (0 debt)
                   - `infra/deps/npm` (0 debt)
                   - `infra/deps/python/uv-updater` (0 debt)
                   - `infra/deps/rust/cargo-updater` (0 debt)
+                  - `infra/worktree/reclaim` (0 debt)
                   - `plugin-meta/plugin-tree` (0 debt)
                   - `review/plugin-changes` (0 debt)
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
@@ -34025,7 +34019,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/serve-composition`
               - `debug/worktree-cleanup`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/owned-namespaces.ts`, `server/internal/reclaim-namespace.ts` (debt)
+            - Exempts itself from:
+              - `boundaries/no-platform-api` — `server/internal/owned-namespaces.ts`, `server/internal/reclaim-namespace.ts` (debt)
+              - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/reclaim-namespace.ts` (sanctioned)
         - **`spare-pool`** — Spare worktree pool: the worktree.spare-refill job (enqueued after every launch's checkout, at main's boot, and daily) keeps one locked, detached checkout of main ready under .claude/worktrees/spare-*, so setupWorktree claims it with a rename and a branch switch instead of a cold git worktree add.
           - Server:
             - Uses:
@@ -36724,8 +36720,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call past FS_WAIT_FLOOR_MS handed to onSlowFsCall subscribers as a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `framework` ×15
+        - Imported by: 36 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `framework` ×14
           - `infra` ×6
           - `plugin-meta` ×4
           - `packages` ×3

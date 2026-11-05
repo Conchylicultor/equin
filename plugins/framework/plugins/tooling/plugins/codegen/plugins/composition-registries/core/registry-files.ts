@@ -125,10 +125,12 @@ export async function compositionRegistryRedirects(
   composition: string,
 ): Promise<{ committed: string; filtered: string }[]> {
   if (composition === MAIN_COMPOSITION_ID) return [];
-  return (await compositionFilteredRegistries(repo)).map(({ def, committed }) => ({
-    committed,
-    filtered: collectedDirNamedCompositionRegistryPath(def, composition),
-  }));
+  return (await compositionFilteredRegistries(repo)).map(
+    ({ def, committed }) => ({
+      committed,
+      filtered: collectedDirNamedCompositionRegistryPath(def, composition),
+    }),
+  );
 }
 
 /**
