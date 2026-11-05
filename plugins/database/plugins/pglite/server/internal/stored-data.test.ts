@@ -67,7 +67,12 @@ if (!IN_CHILD) {
   });
 }
 
-const NO_DERIVED = { views: [], derivedTables: [], updatedAtSpecs: [] };
+const NO_DERIVED = {
+  views: [],
+  derivedTables: [],
+  updatedAtSpecs: [],
+  triggers: [],
+};
 
 function committedMigrations(): Migration[] {
   const dir = join(REPO_ROOT, MIGRATIONS_DATA_DIR);

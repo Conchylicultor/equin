@@ -11,6 +11,7 @@ import { buildRegistryGenContext } from "@plugins/framework/plugins/tooling/plug
 import { View } from "@plugins/database/plugins/derived-views/server";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
 import { registeredDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+import { DbTrigger } from "@plugins/database/plugins/db-triggers/server";
 import type { SchemaLayerInputs } from "@plugins/database/plugins/migrations/server";
 
 export type DeclaredSchemaInputsResult =
@@ -61,6 +62,7 @@ export async function declaredSchemaInputs(
     views: View.from(definitions),
     derivedTables: DerivedTable.from(definitions),
     updatedAtSpecs: registeredDerivedUpdatedAt(),
+    triggers: DbTrigger.from(definitions),
   };
   if (inputs.views.length === 0) {
     return {

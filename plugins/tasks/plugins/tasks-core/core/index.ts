@@ -50,6 +50,7 @@ export type { ConversationSummary, AttemptWithConversations } from "./schemas";
 export {
   taskRows,
   taskClusterRows,
+  TASK_CLUSTER_MAX,
   type TaskRow,
   taskDescriptions,
   attemptRows,

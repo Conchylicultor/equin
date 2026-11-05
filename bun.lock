@@ -2459,6 +2459,10 @@
       "name": "@equin/plugin-database-db-test-fixture-worktree-db",
       "version": "0.0.1",
     },
+    "plugins/database/plugins/db-triggers": {
+      "name": "@equin/plugin-database-db-triggers",
+      "version": "0.0.1",
+    },
     "plugins/database/plugins/derived-tables": {
       "name": "@equin/plugin-database-derived-tables",
       "version": "0.0.1",
@@ -8423,6 +8427,8 @@
     "@equin/plugin-database-db-test-fixture-sweep": ["@equin/plugin-database-db-test-fixture-sweep@workspace:plugins/database/plugins/db-test-fixture/plugins/sweep"],
 
     "@equin/plugin-database-db-test-fixture-worktree-db": ["@equin/plugin-database-db-test-fixture-worktree-db@workspace:plugins/database/plugins/db-test-fixture/plugins/worktree-db"],
+
+    "@equin/plugin-database-db-triggers": ["@equin/plugin-database-db-triggers@workspace:plugins/database/plugins/db-triggers"],
 
     "@equin/plugin-database-derived-tables": ["@equin/plugin-database-derived-tables@workspace:plugins/database/plugins/derived-tables"],
 

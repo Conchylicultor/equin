@@ -46,7 +46,7 @@ function mig(
 }
 
 function withViews(...views: DeclaredView[]): SchemaLayerInputs {
-  return { views, derivedTables: [], updatedAtSpecs: [] };
+  return { views, derivedTables: [], updatedAtSpecs: [], triggers: [] };
 }
 
 // The pre-push history: a table with the column the push will retire.

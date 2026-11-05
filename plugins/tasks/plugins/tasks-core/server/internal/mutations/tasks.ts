@@ -21,7 +21,6 @@ import {
   taskTitleChanged,
 } from "../tables-events";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
-import { unionTaskClusters } from "./clusters";
 import { withTaskStatusBatch, type DbExecutor } from "../status-batch";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 
@@ -70,10 +69,9 @@ export async function createTask(
 ) {
   // Handed the pool, run the whole creation in ONE transaction; handed a tx, join
   // it (the caller owns the boundary — `handle-insert-between` already calls this
-  // under `withTaskStatusBatch`). The INSERT and the folder union must be atomic:
-  // the union's `FOR UPDATE` is only a real lock inside a transaction, and having
-  // both commit together removes the crash window as well. Only the pool path
-  // wraps, and on that path the caller holds no locks, so this cannot deadlock.
+  // under `withTaskStatusBatch`). The INSERT, the mandate refresh and the events
+  // commit together. Only the pool path wraps, and on that path the caller holds
+  // no locks, so this cannot deadlock.
   if (exec === db) return db.transaction((tx) => createTaskOn(input, tx));
   return createTaskOn(input, exec);
 }
@@ -89,7 +87,8 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
   // keeps the mutation/event surface uniform with updateTask.
   await withTaskStatusChange(id, exec, async () => {
     // `clusterId` is never an input: a new task is its own singleton, and the
-    // unions below move it into its folder's and its group's cluster.
+    // database unions it into its folder's and its group's cluster as the row
+    // lands (`../cluster-triggers.ts`) — the edge write IS the union.
     await exec.insert(_tasks).values({
       id,
       clusterId: id,
@@ -103,20 +102,6 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
       description: input.description ?? null,
     });
   });
-  // Filing under a folder IS a membership edge, so the new task joins the
-  // folder's cluster — routed through `unionTaskClusters` rather than an inline
-  // `clusterLabelOf` read so it inherits the `FOR UPDATE`. An unlocked
-  // read-then-write here would strand the new task on a label its folder had
-  // already left: read F's label L1, a concurrent union moves F's whole cluster
-  // to L0, then this INSERT lands L1 — a label no other row carries. That is the
-  // vanishing-from-its-tree failure this column exists to prevent, and it needs
-  // no crash, just ordinary concurrency.
-  if (folderId) await unionTaskClusters(id, folderId, exec);
-  // A group is a membership edge too: the readers that walk a task's group
-  // (the dependency card, the draft popover's relate) read one cluster, so the
-  // group must be inside it — by construction here, not because every caller
-  // that sets a group happens to add a dependency edge as well.
-  if (input.groupId) await unionTaskClusters(id, input.groupId, exec);
   await refreshEffectiveMandates([id], exec);
   // On the creating executor, so the event commits (or rolls back) with the
   // row. Same PgTransaction ⇄ EmitTx cast as `withTaskStatusChange`'s emit.
@@ -132,7 +117,7 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
   // owned by the data-view primitive, not a column. The tree reveals a new child
   // client-side (`useTreeRow.addChild` expands the row it created under). Which
   // columns move `updatedAt` is declared once, in the tasks entity's `touchedBy`
-  // (`tables.ts`) — the union above relabels `clusterId`, which does not count.
+  // (`tables.ts`) — the insert's union relabels `clusterId`, which does not count.
   const [full] = await exec
     .select()
     .from(tasks)
@@ -146,11 +131,9 @@ export async function updateTask(
   patch: UpdateTaskPatch,
   exec: DbExecutor = db,
 ) {
-  // Same executor-resolving split as `createTask`, for the same reason: a folder
-  // re-file unions, and the union's `FOR UPDATE` is only a real lock inside a
-  // transaction. Opening one here also makes the union and the folder write
-  // atomic, so the two can no longer disagree. Only the pool path wraps, and on
-  // that path the caller holds no locks, so this cannot deadlock.
+  // Same executor-resolving split as `createTask`: a re-file's write, its
+  // mandate refresh and `tasks.refiled` commit together. Only the pool path
+  // wraps, and on that path the caller holds no locks, so this cannot deadlock.
   if (exec === db) return db.transaction((tx) => updateTaskOn(id, patch, tx));
   return updateTaskOn(id, patch, exec);
 }
@@ -237,8 +220,7 @@ async function updateTaskOn(
 /**
  * The part of a re-file that is not the write itself, run before it on the
  * same executor (after the caller's self / descendant guards — a rejected
- * re-file must not union): filing under a folder unions the clusters; filing
- * to the root keeps the mandate the task had under its folder — a root names
+ * re-file must not write): filing to the root keeps the mandate the task had under its folder — a root names
  * one (the CHECK) — copied as its own. Returns the columns the write sets.
  * After the write, the caller runs {@link finishRefile}. Shared by
  * `updateTask` and the tree's drag move, so no re-file path skips either half.
@@ -248,12 +230,9 @@ export async function prepareRefile(
   folderId: string | null,
   exec: DbExecutor,
 ): Promise<{ folderId: string | null; mandateRef?: string }> {
-  if (folderId !== null) {
-    // Union BEFORE the write. On the same executor as the write, so the label
-    // and the folder edge commit or roll back together.
-    await unionTaskClusters(id, folderId, exec);
-    return { folderId };
-  }
+  // Filing under a folder needs nothing here: the folder edge's write unions
+  // the clusters in the database (`../cluster-triggers.ts`).
+  if (folderId !== null) return { folderId };
   const own = await nearestMandate(id, exec);
   if (own.kind === "none") {
     throw new Error(
@@ -380,16 +359,9 @@ export async function addTaskDependency(
   if (await taskDependsOn(dependsOnTaskId, taskId, exec)) {
     throw new DependencyCycleError();
   }
-  // THE ORDERING RULE: union at or before the edge write, NEVER after. A
-  // committed union whose edge write is lost over-approximates membership —
-  // harmless, that IS the invariant (membership grows, never shrinks). A
-  // committed edge write whose union is lost UNDER-approximates, which is exactly
-  // the bug this label exists to fix. So the union goes first, and it goes after
-  // the guards above so a rejected cycle can never fuse two clusters.
-  //
-  // This is the only writer of `task_dependencies` — all 7 server and 6 web call
-  // sites funnel through here — so this one line covers every edge creation.
-  await unionTaskClusters(taskId, dependsOnTaskId, exec);
+  // The edge write unions the two clusters in the database, in this
+  // transaction (`../cluster-triggers.ts`), after the guards above — a rejected
+  // cycle never reaches it, so it can never fuse two clusters.
   // Seeded with the DEPENDENT end only. `dependsOnTaskId`'s own status is a
   // function of ITS ancestors, which this edge does not touch, and everything
   // downstream of `taskId` is already in `taskId`'s closure. The closure is the

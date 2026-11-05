@@ -1,6 +1,8 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { View } from "@plugins/database/plugins/derived-views/server";
 import { IdKinds } from "@plugins/ids/server";
+import { DbTrigger } from "@plugins/database/plugins/db-triggers/server";
+import { taskClusterTriggers } from "./internal/cluster-triggers";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
 import { TASK_ROLLUPS } from "./internal/rollup-spec";
 import {
@@ -205,14 +207,6 @@ export type {
   UpdateTaskPatch,
 } from "./internal/mutations/tasks";
 
-// Monotone dependency-tree membership (`tasks.clusterId`). Every writer of a
-// membership edge (dependency edge, `folderId` or `groupId`) must union at or
-// before the edge commits; nothing ever un-unions.
-export {
-  clusterLabelOf,
-  unionTaskClusters,
-} from "./internal/mutations/clusters";
-
 export { createAttempt, deleteAttempt } from "./internal/mutations/attempts";
 export type { CreateAttemptInput } from "./internal/mutations/attempts";
 
@@ -352,6 +346,10 @@ export default {
     ...conversationsGoneServed.declare,
     ...conversationsByIdServed.declare,
     ...TASK_ROLLUPS.map((r) => DerivedTable(r)),
+    // Monotone cluster membership (`tasks.cluster_id`), kept by the database:
+    // every edge write unions, no label write leaves an edge across clusters, no
+    // cluster outgrows TASK_CLUSTER_MAX.
+    DbTrigger(taskClusterTriggers),
     View({ view: attempts }),
     View({ view: conversations }),
     View({ view: taskBlocking, dependsOn: ["attempts_v"] }),

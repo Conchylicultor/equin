@@ -131,15 +131,26 @@ export const taskRows = liveCollection("tasks", {
   maxIds: 2000,
 });
 
+/**
+ * The most tasks one dependency cluster may hold — a declared, checked bound,
+ * not an observation. Clusters only grow, and only by union, and the database
+ * refuses a union that would cross it (`tasks_union_clusters`,
+ * `../server/internal/cluster-triggers.ts`), so no cluster can exceed it and
+ * `taskClusterRows` reads at most this many rows. Largest on main: 137
+ * (2026-11-05).
+ */
+export const TASK_CLUSTER_MAX = 500;
+
 // One dependency cluster's tasks (`useLive(taskClusterRows, { where: {
 // clusterId } })`), the same rows as `taskRows` (one spec, one server binding:
-// `taskRowsServeOptions`). `clusterId` is the monotone union-find label
-// (`../server/internal/mutations/clusters.ts`): every dependency, folder and
-// group edge stays inside one cluster (`clusterEdgeViolations` is empty), so a
-// reader walking those edges from one task — the dependency graph, the deps
-// tree, the dependency card, a dependent count, the draft popover's relate —
-// needs exactly its task's cluster. A union moves the loser's rows out of its
-// tuple into the winner's.
+// `taskRowsServeOptions`). `clusterId` is the monotone union-find label: the
+// database unions on every dependency, folder and group edge write and refuses
+// a label write leaving an edge across clusters (`../server/internal/cluster-triggers.ts`),
+// so a reader walking those edges from one task — the dependency graph, the
+// deps tree, the dependency card, a dependent count, the draft popover's
+// relate — needs exactly its task's cluster. Bounded by TASK_CLUSTER_MAX, which
+// the union enforces. A union moves the loser's rows out of its tuple into the
+// winner's.
 export const taskClusterRows = liveCollection("task-cluster", {
   from: tasksEntityRef,
   pick: TASK_ROW_PICK,
@@ -149,10 +160,7 @@ export const taskClusterRows = liveCollection("task-cluster", {
   all: {
     by: ["clusterId"],
     orderBy: TASK_ROW_ORDER,
-    unbounded: {
-      reason:
-        "one dependency cluster: the edges the graph, the deps tree and the dependency card walk never leave it (largest 137 tasks on main, 2026-11-05)",
-    },
+    max: TASK_CLUSTER_MAX,
   },
 });
 

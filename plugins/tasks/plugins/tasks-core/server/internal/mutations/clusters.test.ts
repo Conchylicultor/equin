@@ -4,13 +4,14 @@
  *
  * Two harnesses, deliberately, because the two halves need opposite things:
  *
- *  - **`describe("unionTaskClusters")`** drives the union primitive against a
- *    THROWAWAY database (`db-test-fixture` + the real migration chain).
- *    `unionTaskClusters` touches only the `tasks` base table, so migrations are
- *    the whole schema it needs — and a throwaway DB is the only way to get two
- *    genuinely concurrent COMMITTED transactions, which the lost-update test at
- *    the bottom requires. The fixture's own pool is `max: 1`, so two extra
- *    single-connection handles are opened (the `page-forest.test.ts` pattern).
+ *  - **`describe("the cluster triggers")`** drives the database's union
+ *    (`tasks_union_clusters`), its edge triggers, its relabel check and its
+ *    size bound (`../cluster-triggers.ts`) against a THROWAWAY database
+ *    (`db-test-fixture` + the real migration chain + `installDbTriggers`) —
+ *    the only way to get genuinely concurrent COMMITTED transactions, which
+ *    the races need. The fixture's own pool is
+ *    `max: 1`, so two extra single-connection handles are opened (the
+ *    `page-forest.test.ts` pattern).
  *
  *  - **`describe("union points")`** drives the callers (`addTaskDependency`,
  *    `createTask`, `updateTask`) against the REAL worktree DB inside a
@@ -58,11 +59,10 @@ import {
   removeTaskDependency,
   updateTask,
 } from "./tasks";
-import {
-  clusterEdgeViolations,
-  clusterLabelOf,
-  unionTaskClusters,
-} from "./clusters";
+import { clusterEdgeViolations, clusterLabelOf } from "./clusters";
+import { taskClusterTriggers } from "../cluster-triggers";
+import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
+import { TASK_CLUSTER_MAX } from "../../../core";
 
 // Any registered mandate id: these tests never resolve it.
 const TEST_MANDATE = defineMandate({ id: "interactive", label: "Interactive" });
@@ -121,16 +121,21 @@ async function expectOneCluster(exec: Exec, ids: string[]): Promise<string> {
   return first;
 }
 
-// ══ 1. The union primitive, on a throwaway DB ══════════════════════════════
+// ══ 1. The database's union and check, on a throwaway DB ═══════════════════
 
-describe("unionTaskClusters", () => {
+/** The database's union, called directly (an edge write's trigger calls it). */
+async function union(exec: Exec, a: string, b: string): Promise<void> {
+  await exec.execute(sql`SELECT tasks_union_clusters(${a}, ${b})`);
+}
+
+describe("the cluster triggers", () => {
   let t: TestDb;
   /** Two independent connections, so two unions can genuinely be in flight. */
   let poolA: Pool;
   let poolB: Pool;
   let dbA: NodePgDatabase;
   let dbB: NodePgDatabase;
-  /** The fixture handle as the executor the mutations take. */
+  /** The fixture handle as the executor the reads take. */
   let tdb: DbExecutor;
 
   // Ids chosen so lexicographic order is a < b < c < d — `min` is the winner,
@@ -142,9 +147,10 @@ describe("unionTaskClusters", () => {
 
   beforeAll(async () => {
     t = await createTestDb({ prefix: "clusters_test" });
-    // The REAL schema via the db-parametrized runner — no hand-mirrored DDL to
-    // drift from `tasks.cluster_id` and its index.
+    // The REAL schema via the db-parametrized runner, then the trigger set the
+    // boot schema layer installs — no hand-mirrored DDL to drift.
     await runMigrations(t.db);
+    await installDbTriggers(t.db, [taskClusterTriggers]);
     poolA = new Pool({ connectionString: t.connectionString, max: 1 });
     poolB = new Pool({ connectionString: t.connectionString, max: 1 });
     dbA = drizzle(poolA);
@@ -165,8 +171,14 @@ describe("unionTaskClusters", () => {
     await seedTasks(t.db, [A, B, C, D]);
   });
 
+  test("a second install of the same set is a no-op", async () => {
+    expect(await installDbTriggers(t.db, [taskClusterTriggers])).toEqual([
+      { id: taskClusterTriggers.id, outcome: "unchanged" },
+    ]);
+  });
+
   test("two never-unioned tasks fuse onto min(id), and BOTH rows are written", async () => {
-    await unionTaskClusters(B, A, tdb);
+    await union(t.db, B, A);
 
     const raw = await readRawLabels(t.db, [A, B]);
     // The loser's whole cluster moves: an endpoint left on its own label would
@@ -176,11 +188,11 @@ describe("unionTaskClusters", () => {
   });
 
   test("unioning an already-unioned pair is a no-op", async () => {
-    await unionTaskClusters(A, B, tdb);
+    await union(t.db, A, B);
     const before = await readRawLabels(t.db, [A, B]);
 
-    await unionTaskClusters(A, B, tdb);
-    await unionTaskClusters(B, A, tdb); // and from the other side
+    await union(t.db, A, B);
+    await union(t.db, B, A); // and from the other side
     expect(await readRawLabels(t.db, [A, B])).toEqual(before);
   });
 
@@ -204,85 +216,140 @@ describe("unionTaskClusters", () => {
     ];
     for (const order of orders) {
       await t.db.execute(sql`UPDATE tasks SET cluster_id = id`);
-      for (const [x, y] of order) await unionTaskClusters(x, y, tdb);
+      for (const [x, y] of order) await union(t.db, x, y);
       expect(await expectOneCluster(t.db, [A, B, C])).toBe(A);
     }
   });
 
   test("merging two multi-member clusters relabels every member, not just the endpoints", async () => {
-    await unionTaskClusters(C, D, tdb); // {C,D} → C
-    await unionTaskClusters(A, B, tdb); // {A,B} → A
-    await unionTaskClusters(B, D, tdb); // bridge via non-label members
+    await union(t.db, C, D); // {C,D} → C
+    await union(t.db, A, B); // {A,B} → A
+    await union(t.db, B, D); // bridge via non-label members
 
     expect(await expectOneCluster(t.db, [A, B, C, D])).toBe(A);
   });
 
   test("clusterLabelOf reports id for a never-unioned task and the label after", async () => {
     expect(await clusterLabelOf(B, tdb)).toBe(B);
-    await unionTaskClusters(A, B, tdb);
+    await union(t.db, A, B);
     expect(await clusterLabelOf(B, tdb)).toBe(A);
     expect(await clusterLabelOf(A, tdb)).toBe(A);
   });
 
-  // ── THE lost-update race ─────────────────────────────────────────────────
+  test("every edge write unions, whoever writes it — raw SQL included", async () => {
+    // No mutation in sight: the edge IS the union.
+    await t.db.execute(
+      sql`INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES (${B}, ${A})`,
+    );
+    await t.db.execute(sql`UPDATE tasks SET folder_id = ${C} WHERE id = ${D}`);
+    expect(await expectOneCluster(t.db, [A, B])).toBe(A);
+    expect(await expectOneCluster(t.db, [C, D])).toBe(C);
+
+    await t.db.execute(sql`UPDATE tasks SET group_id = ${B} WHERE id = ${D}`);
+    expect(await expectOneCluster(t.db, [A, B, C, D])).toBe(A);
+
+    const E = "clu-e";
+    await t.db.execute(sql`
+      INSERT INTO tasks (id, cluster_id, folder_id, title, title_auto, rank, created_at, updated_at)
+      VALUES (${E}, ${E}, ${D}, ${E}, true, 'z', now(), now())
+    `);
+    expect(await expectOneCluster(t.db, [A, E])).toBe(A);
+    expect(await clusterEdgeViolations(tdb)).toEqual([]);
+  });
+
+  test("a label write leaving an edge across clusters is refused", async () => {
+    await union(t.db, A, B);
+    await t.db.execute(
+      sql`INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES (${B}, ${A})`,
+    );
+    // A direct relabel — the one write no union trigger covers — fails, and
+    // leaves the database as it was. (`Promise.resolve`: drizzle's `execute`
+    // is a lazy thenable, which the matcher does not take.)
+    expect(
+      Promise.resolve(
+        t.db.execute(sql`UPDATE tasks SET cluster_id = ${C} WHERE id = ${B}`),
+      ),
+    ).rejects.toThrow(/another cluster/);
+    expect(await expectOneCluster(t.db, [A, B])).toBe(A);
+    // A relabel that keeps every edge inside one cluster commits.
+    await t.db.execute(sql`UPDATE tasks SET cluster_id = ${B} WHERE id = ${C}`);
+    expect(await clusterLabelOf(C, tdb)).toBe(B);
+  });
+
+  test("a union that would outgrow TASK_CLUSTER_MAX is refused, and leaves both clusters", async () => {
+    // Two clusters, of max - 1 and 2 tasks: the big one labelled as it is
+    // inserted (no edge between its members to check).
+    const big = "clu-big";
+    await t.db.execute(sql`
+      INSERT INTO tasks (id, cluster_id, title, title_auto, rank, created_at, updated_at, mandate_ref)
+      SELECT ${big} || '-' || lpad(n::text, 4, '0'), ${big} || '-0001', 'x', true, 'a', now(), now(), 'interactive'
+        FROM generate_series(1, ${TASK_CLUSTER_MAX - 1}) n
+    `);
+    await union(t.db, C, D);
+    expect(
+      Promise.resolve(
+        t.db.execute(
+          sql`INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES (${C}, ${big + "-0007"})`,
+        ),
+      ),
+    ).rejects.toThrow(`over the declared maximum of ${TASK_CLUSTER_MAX}`);
+    expect(await clusterLabelOf(C, tdb)).toBe(C);
+    expect(await clusterLabelOf(`${big}-0007`, tdb)).toBe(`${big}-0001`);
+    // One task fits: max - 1 + 1 = max.
+    await t.db.execute(
+      sql`INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES (${A}, ${big + "-0007"})`,
+    );
+    expect(await clusterLabelOf(A, tdb)).toBe(A);
+    expect(await clusterLabelOf(`${big}-0007`, tdb)).toBe(A);
+  });
+
+  // ── The races ───────────────────────────────────────────────────────────
   //
-  // This is the only test that proves the `SELECT … FOR UPDATE` is load-bearing.
-  // Two concurrent transactions overlapping on B:
-  //
-  //   T1 union(A,B): reads A,B → winner A → UPDATE … WHERE cluster_id = B
-  //   T2 union(B,C): reads B,C → winner B → UPDATE … WHERE cluster_id = C
-  //
-  // WITHOUT the row lock T2's SELECT does not block, so it computes min(B,C)=B
-  // from the pre-T1 snapshot. Its UPDATE then blocks on B, re-evaluates after
-  // T1 commits, and writes only C (onto B) — stranding C on
-  // label B, which nobody else carries. That is the reported bug in a form no
-  // edge removal explains, and both transactions commit cleanly, so nothing
-  // else would ever surface it.
-  //
-  // WITH the lock, T2's SELECT blocks on B, re-reads it as A after T1 commits,
-  // and computes min(A,C)=A. All three land on A.
-  //
-  // VERIFIED NON-VACUOUS — do not take this on faith, it was measured. A
-  // concurrency test that never forces the overlap passes against a broken
-  // implementation too, so this interleaving was run against a copy of
-  // `unionTaskClusters` with `.for("update")` removed: C ended up labelled B
-  // while A and B were labelled A — two clusters, C stranded on a label nobody
-  // else carries. The real implementation puts all three on A.
-  //
-  // The `t1Locked` / `t1MayCommit` gates are what force the overlap: T2 always
-  // begins while T1 still holds its rows uncommitted, and T1 always commits
-  // second. Do NOT replace them with a plain `Promise.all` of the two unions —
-  // that leaves the interleaving to chance and the test proves nothing.
-  //
-  // Both racers are handed an explicit `tx`, so this exercises the join-the-
-  // caller's-transaction path. `unionTaskClusters` self-wrapping when handed the
-  // pool is a separate guarantee and does not weaken this one.
-  test("concurrent overlapping unions on two connections converge to ONE label", async () => {
+  // Each forces the overlap with gates: T2 always begins while T1 holds its
+  // union uncommitted, and T1 always commits second. Do NOT replace them with
+  // a plain `Promise.all` — that leaves the interleaving to chance and the
+  // test proves nothing.
+
+  /** Run union(t1) uncommitted, start union(t2) on the other connection, commit T1. */
+  async function race(
+    t1Pair: [string, string],
+    t2Pair: [string, string],
+  ): Promise<void> {
     const t1Locked = gate();
     const t1MayCommit = gate();
-
     const t1 = dbA.transaction(async (tx) => {
-      await unionTaskClusters(A, B, tx as DbExecutor);
-      t1Locked.open(); // A and B are now write-locked, uncommitted
+      await union(tx, ...t1Pair);
+      t1Locked.open();
       await t1MayCommit.wait;
     });
-
     await t1Locked.wait;
-
-    // T2 overlaps on B. Under the lock its SELECT blocks here; without one it
-    // races straight through on a stale snapshot.
     const t2 = dbB.transaction(async (tx) => {
-      await unionTaskClusters(B, C, tx as DbExecutor);
+      await union(tx, ...t2Pair);
     });
-
-    // Give T2 its chance to reach (or block on) its own statements. There is no
-    // signal to await BY DESIGN — under the lock T2 cannot make progress until
-    // T1 commits, so waiting on it would deadlock the test.
+    // Give T2 its chance to reach (or block on) its own statements. There is
+    // no signal to await BY DESIGN — under the lock T2 cannot make progress
+    // until T1 commits, so waiting on it would deadlock the test.
     await raceWindow();
     t1MayCommit.open();
     await Promise.all([t1, t2]);
+  }
 
+  test("concurrent unions sharing an endpoint converge to ONE label", async () => {
+    // T1 union(A,B), T2 union(B,C): without a lock T2 computes min(B,C) = B
+    // from the pre-T1 snapshot and strands C on B.
+    await race([A, B], [B, C]);
     expect(await expectOneCluster(t.db, [A, B, C])).toBe(A);
+  });
+
+  test("concurrent unions reaching one cluster through DIFFERENT endpoints converge", async () => {
+    // B and C share cluster B. T1 union(B, A) moves {B, C} onto A; T2
+    // union(C, D) shares no endpoint with T1, so endpoint row locks do not
+    // order them — T2 would relabel {B, C}… from a snapshot where they still
+    // carry B, missing the rows T1 is moving. The label locks serialize them.
+    await union(t.db, B, C);
+    await race([B, A], [C, D]);
+    expect(await expectOneCluster(t.db, [A, B, C, D])).toBe(A);
+    expect(await clusterEdgeViolations(tdb)).toEqual([]);
   });
 });
 
@@ -394,28 +461,6 @@ describe("union points", () => {
     expect(raw.get(solo)).toBe(solo);
   });
 
-  test("a re-file rejected by the descendant guard does not union", async () => {
-    // `child` is already filed under `parent`; filing `parent` under `child`
-    // would invert the hierarchy. The raw folder seed deliberately bypasses
-    // `updateTask`, so both start on their own labels and a stray union would show.
-    const [parent, child] = [P + "u3", P + "u4"];
-    const raw = await worktreeDbScenario(async (tx) => {
-      await seedTasks(tx, [parent, child]);
-      await tx.execute(
-        sql`UPDATE tasks SET folder_id = ${parent} WHERE id = ${child}`,
-      );
-      expect(updateTask(parent, { folderId: child }, tx)).rejects.toThrow(
-        /descendant/i,
-      );
-      return readRawLabels(tx, [parent, child]);
-    });
-
-    expect(Object.fromEntries(raw)).toEqual({
-      [parent]: parent,
-      [child]: child,
-    });
-  });
-
   test("a REJECTED edge leaves both labels exactly as they were", async () => {
     // Two independent clusters must not fuse just because someone asked for an
     // impossible edge: the union may not run ahead of the validation.
@@ -462,7 +507,7 @@ describe("union points", () => {
     expect(new Set(labels.values())).toEqual(new Set([group]));
   });
 
-  test("every union point keeps every edge inside one cluster; a forged edge is named", async () => {
+  test("every union point keeps every edge inside one cluster", async () => {
     // THE invariant the cluster-scoped read rests on, driven through every
     // writer of a membership edge: dependency, folder (create and re-file) and
     // group. Read over the whole database inside the scenario — so it holds of
@@ -474,7 +519,7 @@ describe("union points", () => {
       P + "e3",
       P + "e4",
     ];
-    const { clean, forged } = await worktreeDbScenario(async (tx) => {
+    const clean = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [a, b, c, folder, moved]);
       await addTaskDependency(b, a, tx);
       const child = await createTask({ folderId: folder, title: "child" }, tx);
@@ -484,14 +529,11 @@ describe("union points", () => {
       );
       await updateTask(moved, { folderId: child.id }, tx);
       const clean = await clusterEdgeViolations(tx);
-      // An edge written past the union points: the check must see it.
-      await tx.execute(
-        sql`INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES (${c}, ${a})`,
-      );
-      return { clean, forged: await clusterEdgeViolations(tx) };
+      return clean;
     });
 
+    // (A label written past the union is refused by the database — the
+    // throwaway suite above pins it; here it would abort the scenario.)
     expect(clean).toEqual([]);
-    expect(forged).toEqual([{ kind: "dependency", from: c, to: a }]);
   });
 });

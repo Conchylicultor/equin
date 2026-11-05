@@ -20,8 +20,8 @@ import {
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { installDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 import { _conversations, _tasks, tasksCoreDerivedUpdatedAt } from "./tables";
-import { unionTaskClusters } from "./mutations/clusters";
-import type { DbExecutor } from "./status-batch";
+import { taskClusterTriggers } from "./cluster-triggers";
+import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
 
 type ConvStatus = "starting" | "working" | "waiting" | "gone" | "done";
 
@@ -92,6 +92,7 @@ beforeAll(async () => {
     "conversations",
     "tasks",
   ]);
+  await installDbTriggers(t.db, [taskClusterTriggers]);
 });
 
 afterAll(async () => {
@@ -170,16 +171,16 @@ describe("conversations.updated_at", () => {
 });
 
 describe("tasks.updated_at", () => {
-  test("a cluster relabel (unionTaskClusters) does not bump", async () => {
+  test("a cluster relabel (tasks_union_clusters) does not bump", async () => {
     const a = await seedTask();
     const b = await seedTask();
-    await unionTaskClusters(a, b, t.db as DbExecutor);
+    await t.db.execute(sql`SELECT tasks_union_clusters(${a}, ${b})`);
     const rows = await t.db
       .select({ id: _tasks.id, clusterId: _tasks.clusterId })
       .from(_tasks)
       .where(sql`${_tasks.id} IN (${a}, ${b})`);
-    // The union really wrote both rows — the no-bump is not vacuous.
-    expect(rows.every((r) => r.clusterId !== null)).toBe(true);
+    // The union really relabelled one of the rows — the no-bump is not vacuous.
+    expect(new Set(rows.map((r) => r.clusterId)).size).toBe(1);
     expect(await bumped("tasks", a)).toBe(false);
     expect(await bumped("tasks", b)).toBe(false);
   });

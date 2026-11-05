@@ -150,6 +150,79 @@ does.
   separate constant (the wire could omit an exposure slice equal to its
   defaults).
 
+## Cluster bound (follow-up, task-1793850943-wp9f4s)
+
+After step 2, `taskClusterRows` was correct and bounded only while two things
+held, and neither was guaranteed:
+
+1. **No edge crosses a cluster.** Held by every mutation remembering to call
+   `unionTaskClusters` before its edge write (`handle-move.ts`, outside
+   tasks-core, had to remember `prepareRefile`); checked only by a test.
+2. **Cluster size.** Observed (largest 137), declared `unbounded`.
+
+There was also a race the endpoint `FOR UPDATE` did not cover: two unions
+reaching ONE cluster through different endpoints (`union(X1, Y)` ∥
+`union(X2, Z)`, X1 and X2 in X) share no locked row, so the second relabels
+X's rows from a snapshot that cannot see the Y rows the first is moving into
+X, stranding them on a label nobody else carries.
+
+### End state: the database keeps the label
+
+`tasks-core/server/internal/cluster-triggers.ts`, a `DbTrigger` set (new
+generic primitive `database/db-triggers`, installed by the boot schema layer):
+
+- **The edge write IS the union.** AFTER triggers on `task_dependencies`
+  (insert / update) and `tasks` (insert / update of `folder_id`, `group_id`)
+  call `tasks_union_clusters(a, b)` in the writing transaction. App code calls
+  no union; there is nothing to forget.
+- **No label write leaves a crossing edge.** An `AFTER UPDATE OF cluster_id`
+  trigger re-reads every edge of each relabelled task at the end of the
+  statement and refuses it if one crosses — the direct `UPDATE tasks SET
+  cluster_id` the union triggers cannot see (the union's own relabel moves a
+  whole cluster in one statement, so it passes). Immediate, not deferred: the
+  change feed refuses a deferred trigger on a table it routes.
+- **The union locks labels, not rows**: transaction advisory locks on both
+  labels in one order, re-reading the endpoints until both still carry them.
+  Every label writer holds its lock, so the race above serializes.
+- **A real bound.** `TASK_CLUSTER_MAX = 500` (tasks-core/core). The union
+  counts the two clusters under their locks and refuses (check_violation, with
+  a hint naming the fix) when the merge would exceed it. Clusters grow only by
+  union, so no cluster can exceed it, and `taskClusterRows` declares
+  `all: { max: TASK_CLUSTER_MAX }` — its loader's check is now a guarantee.
+
+What the refusal costs: past 500, the write that would merge (a dependency, a
+filing under a folder) fails loudly. That is the right moment — the only way
+to reach it is a long-lived hub task that things are filed under or depend on
+without end, and that is a modelling problem (a category, not a folder) the
+error names, not a load to absorb.
+
+### Are clusters the right primitive?
+
+Yes, as the **scope** of the edge-walking reads — with the bound above.
+
+- **Why not per-task closures** (a server read of "this task's dependency
+  closure / dependents / folder subtree")? A closure is not a column: its
+  membership changes with edges elsewhere in the graph, so routing a write to
+  the closures it affects is a recursive walk per change (or a whole-scope
+  recompute), where a cluster write routes by one column. Five surfaces also
+  need five different closures (dependencies, dependents, transitive
+  dependents, the folder forest, groups) of the same few rows; one cluster
+  read serves all of them from one tuple.
+- **The deps tree needs the cluster itself.** Its membership is monotone by
+  design (`research/2026-08-03-tasks-monotone-deps-tree-membership.md`: a task
+  never vanishes from the tree when its last edge is detached), i.e. path
+  dependent: it cannot be recomputed from current edges, so it must be a
+  persisted label. A closure read would reintroduce that bug.
+- **What grows a cluster** is history, not open work: settled tasks stay. On
+  main the growth is driven by human-sized work trees (a perf umbrella, an
+  audit); the one hub-shaped folder (`task-meta-crashes`, 71 children,
+  cluster 109) is legacy and no longer filed under. If a hub appears, the
+  bound refuses it at the write, before any reader pays for it.
+- **Where it would stop being right**: if the task list (step 4) wanted to
+  expand a root by reading its cluster, a 500-task cluster under one root
+  would be a big expand. The tree should then page a root's children
+  (the data-view live hierarchy source) rather than load the cluster.
+
 ## Steps (filed as a main-track chain)
 
 1. Point readers → `useLive(taskRows, { id })` / `{ ids }` (chips, referents,

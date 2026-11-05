@@ -2,7 +2,9 @@ import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { compileCreateView } from "@plugins/database/plugins/derived-views/core";
 import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";
+import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
 import { TASK_ROLLUPS } from "../internal/rollup-spec";
+import { taskClusterTriggers } from "../internal/cluster-triggers";
 import {
   attempts,
   conversations,
@@ -10,8 +12,8 @@ import {
   tasks,
 } from "../internal/views";
 
-// Install this plugin's derived layer — the two attempt rollups and the four
-// views — onto a database that has only the migration chain: a `createTestDb`
+// Install this plugin's derived layer — the two attempt rollups, the four
+// views and the cluster triggers — onto a database that has only the migration chain: a `createTestDb`
 // throwaway. At boot the same DDL comes from `rebuildDerivedTables` /
 // `rebuildDerivedViews` over this plugin's contributions; a headless suite has
 // no plugin registry, so it installs the SAME exported declarations here
@@ -35,6 +37,9 @@ export async function installTaskDerivedSchema(
   ]) {
     await db.execute(sql.raw(`DROP VIEW IF EXISTS "public"."${name}" CASCADE`));
   }
+
+  // Every edge write unions its clusters, as at boot.
+  await installDbTriggers(db, [taskClusterTriggers]);
 
   // attempts_v LEFT JOINs the two trigger-maintained rollups.
   await installRollups(db, TASK_ROLLUPS);

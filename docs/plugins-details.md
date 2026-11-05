@@ -20630,6 +20630,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Server:
     - Contributes: `host-service:database.driver` "database.driver"
     - Uses:
+      - `database/db-triggers.DbTrigger`
       - `database/derived-tables.DerivedTable`
       - `database/derived-tables.publishReconciledRollups`
       - `database/derived-updated-at.registeredDerivedUpdatedAt`
@@ -20893,6 +20894,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Server: `@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server/testing`
               - `worktreeDbScenario` — Run one scenario against the REAL worktree database inside a transaction that is always rolled back, returning whatever the body read just before the rollback.
               - Types: `DbExecutor`
+    - **`db-triggers`** — Declared database triggers: defineDbTriggers names a set of plpgsql functions and the triggers that call them (asserted at module eval to create what they are named), contributed as DbTrigger and installed by the boot schema layer after the migrations — signature-in-COMMENT, advisory-locked, a no-op when current, asserted after — so an invariant a plugin needs the database itself to keep (a write that must always come with another) holds for every writer.
+      - Cross-plugin:
+        - Imported by:
+          - `database`
+          - `database/migrations`
+          - `tasks/tasks-core`
+      - Server:
+        - Exports (types):
+          - `DbFunctionDdl`
+          - `DbTriggerDdl`
+          - `DbTriggerInstall`
+          - `DbTriggerSet`
+        - Exports (values):
+          - `DbTrigger`
+          - `defineDbTriggers`
+          - `installDbTriggers`
     - **`derived-tables`** — Trigger-maintained materialized rollup tables as data: defineRollup generates a rollup's table, a maintain function and triggers per source (diffing the columns it reads, advisory-locked per key) and a diff-first reconcile; the boot schema layer installs only what changed, one source table per savepoint, and reports what each reconcile healed (reconciledRollups). rollupSources() maps each rollup to the tables whose writes move it.
       - Server:
         - Uses: `primitives/log-channels.defineLogSink`
@@ -21131,6 +21148,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes: `host-service:database.migration-source` "database.migration-source"
         - Uses:
+          - `database/db-triggers.DbTriggerSet`
+          - `database/db-triggers.installDbTriggers`
           - `database/derived-tables.rebuildDerivedTables`
           - `database/derived-updated-at.DerivedUpdatedAtSpec`
           - `database/derived-updated-at.installDerivedUpdatedAt`
@@ -54226,16 +54245,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTaskCluster`
           - `useTaskConversations`
       - Server:
-        - Contributes: 48 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Contributes: 49 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `resource.declare` ×35
           - `derived-view` ×4
           - `ids.kind` ×3
           - `attachments.link` ×2
           - `derived-table` ×2
+          - `db-trigger` "tasks.cluster"
           - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
           - `live.columns.expose` "tasks ← tasks_ext_mandate"
         - Uses:
           - `database.db`
+          - `database/db-triggers.DbTrigger`
+          - `database/db-triggers.defineDbTriggers`
           - `database/derived-tables.DerivedTable`
           - `database/derived-views.View`
           - `database/sql-projection.nullable`
@@ -54317,7 +54339,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `attemptWorkspacesServed`
           - `claimHibernatedResume`
           - `clearMandate`
-          - `clusterLabelOf`
           - `conversationAttachments`
           - `conversationCreated`
           - `ConversationKindSchema`
@@ -54397,7 +54418,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasksView`
           - `taskTitleChanged`
           - `touchConversationViewed`
-          - `unionTaskClusters`
           - `updateConversation`
           - `updateConversationsTitleForTask`
           - `updateTask`
@@ -54536,6 +54556,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PushSchema`
           - `RECENT_GONE_LIMIT`
           - `SETTLED_STATUSES`
+          - `TASK_CLUSTER_MAX`
           - `TASK_FILING_STARTS`
           - `TASK_STATUS_OPTIONS`
           - `taskAttachmentLinks`

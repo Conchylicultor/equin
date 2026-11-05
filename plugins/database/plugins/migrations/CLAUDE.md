@@ -589,6 +589,8 @@ only agreement that matters.
 - Server:
   - Contributes: `host-service:database.migration-source` "database.migration-source"
   - Uses:
+    - `database/db-triggers.DbTriggerSet`
+    - `database/db-triggers.installDbTriggers`
     - `database/derived-tables.rebuildDerivedTables`
     - `database/derived-updated-at.DerivedUpdatedAtSpec`
     - `database/derived-updated-at.installDerivedUpdatedAt`

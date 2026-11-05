@@ -15,6 +15,10 @@ import {
   installDerivedUpdatedAt,
   type DerivedUpdatedAtSpec,
 } from "@plugins/database/plugins/derived-updated-at/server";
+import {
+  installDbTriggers,
+  type DbTriggerSet,
+} from "@plugins/database/plugins/db-triggers/server";
 // The phase grammar from its own portable leaf (`migrations/phases`), not
 // `migrations/core`: that barrel also carries the generator's and the checks'
 // filesystem tooling (drizzle-kit staging, the published set, the snapshot
@@ -597,6 +601,7 @@ export interface SchemaLayerInputs {
   views: readonly DeclaredView[];
   derivedTables: readonly Rollup[];
   updatedAtSpecs: readonly DerivedUpdatedAtSpec[];
+  triggers: readonly DbTriggerSet[];
 }
 
 // Force-rollback sentinel: thrown to abort a non-committing layer so it never
@@ -785,6 +790,7 @@ export async function applySchemaLayerFrom(
       // rollup tables need the migrated columns; a view may read a rollup
       // table. Each skips its DDL when unchanged.
       await installDerivedUpdatedAt(tx, inputs.updatedAtSpecs);
+      await installDbTriggers(tx, inputs.triggers);
       rollups = await rebuildDerivedTables(tx, inputs.derivedTables);
       await rebuildDerivedViews(tx, inputs.views);
 
@@ -804,7 +810,8 @@ export async function applySchemaLayerFrom(
 //      contract, which boot defers (`deferContract`): it is what breaks the
 //      previous backend's code, still serving. `completeDeferredContract` runs
 //      it once that code is gone;
-//   3. `installDerivedUpdatedAt`, `rebuildDerivedTables`, `rebuildDerivedViews`.
+//   3. `installDerivedUpdatedAt`, `installDbTriggers`, `rebuildDerivedTables`,
+//      `rebuildDerivedViews`.
 //
 // One transaction because the previous backend keeps serving during a hot-swap:
 // it waits on this transaction's locks instead of reading missing views, and a

@@ -204,15 +204,24 @@ serves them.
   conversation's `waiting_for`) nothing.
 - **`taskClusterRows`** (`task-cluster`) — one dependency cluster's tasks, a
   scoped `all` by `clusterId` over the same row and binding as `taskRows`
-  (`taskRowsServeOptions`). `tasks.cluster_id` is the monotone union-find label
-  (`server/internal/mutations/clusters.ts`), total (`= id` on insert): every
-  dependency, folder and group edge is a union point, so no edge leaves a
-  cluster (`clusterEdgeViolations`, held empty by `clusters.test.ts`). Readers
-  walking a task's edges (graph, deps tree, dependency card and button,
-  dependent counts, the draft popover's relate) read `useTaskCluster(taskId)`
-  (`web/cluster.ts`): the task's row by id, then its cluster
-  (`{ where: { clusterId } }`, skipped with `where: null` until the row is
-  known), with the `TaskGraph` built once per snapshot.
+  (`taskRowsServeOptions`), capped at `TASK_CLUSTER_MAX` (`all: { max }`).
+  `tasks.cluster_id` is the monotone union-find label, **kept by the database**
+  (`server/internal/cluster-triggers.ts`, a `DbTrigger` set): every dependency,
+  folder and group edge write unions the two clusters in its own transaction (no
+  app code calls a union, so no writer can forget one); an `AFTER UPDATE OF
+  cluster_id` trigger refuses a label write that leaves any edge across
+  clusters (a direct `cluster_id` write); and a union that would build a cluster over
+  `TASK_CLUSTER_MAX` is refused in the write that asked for it — clusters grow
+  only by union, so the read's `max` is a guarantee, not an observation. The
+  union locks the two LABELS (advisory, in order), not the endpoint rows, so
+  two unions reaching one cluster through different endpoints serialize.
+  `clusterEdgeViolations` is the test oracle. Readers walking a task's edges
+  (graph, deps tree, dependency card and button, dependent counts, the draft
+  popover's relate) read `useTaskCluster(taskId)` (`web/cluster.ts`): the
+  task's row by id, then its cluster (`{ where: { clusterId } }`, skipped with
+  `where: null` until the row is known), with the `TaskGraph` built once per
+  snapshot. Why clusters (and not per-task closures):
+  `research/2026-11-05-tasks-bounded-task-rows.md` § Cluster bound.
 - **`taskDescriptions`** (`task-descriptions`, lookup-only: `:rows`) — one
   task's `description`, the heavy text the set omits, by id
   (`useLive(taskDescriptions, { id })`). A description autosave is that row's
@@ -358,16 +367,19 @@ serves them.
     - `useTaskCluster`
     - `useTaskConversations`
 - Server:
-  - Contributes: 48 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 49 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `resource.declare` ×35
     - `derived-view` ×4
     - `ids.kind` ×3
     - `attachments.link` ×2
     - `derived-table` ×2
+    - `db-trigger` "tasks.cluster"
     - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
     - `live.columns.expose` "tasks ← tasks_ext_mandate"
   - Uses:
     - `database.db`
+    - `database/db-triggers.DbTrigger`
+    - `database/db-triggers.defineDbTriggers`
     - `database/derived-tables.DerivedTable`
     - `database/derived-views.View`
     - `database/sql-projection.nullable`
@@ -449,7 +461,6 @@ serves them.
     - `attemptWorkspacesServed`
     - `claimHibernatedResume`
     - `clearMandate`
-    - `clusterLabelOf`
     - `conversationAttachments`
     - `conversationCreated`
     - `ConversationKindSchema`
@@ -529,7 +540,6 @@ serves them.
     - `tasksView`
     - `taskTitleChanged`
     - `touchConversationViewed`
-    - `unionTaskClusters`
     - `updateConversation`
     - `updateConversationsTitleForTask`
     - `updateTask`
@@ -668,6 +678,7 @@ serves them.
     - `PushSchema`
     - `RECENT_GONE_LIMIT`
     - `SETTLED_STATUSES`
+    - `TASK_CLUSTER_MAX`
     - `TASK_FILING_STARTS`
     - `TASK_STATUS_OPTIONS`
     - `taskAttachmentLinks`

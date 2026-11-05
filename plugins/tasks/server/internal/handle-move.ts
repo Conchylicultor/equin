@@ -64,10 +64,10 @@ export const handleMove = implement(moveTask, async ({ params, body }) => {
       new Set([params.id]),
     );
 
-    // The re-file's other halves, on the same tx as the write: the cluster
-    // union (at or before the edge write — the label must never lag behind
-    // it), the mandate a task moved to the root keeps, then the subtree's
-    // effective mandates and `tasks.refiled`.
+    // The re-file's other halves, on the same tx as the write: the mandate a
+    // task moved to the root keeps, then the subtree's effective mandates and
+    // `tasks.refiled`. (The folder write itself unions the clusters, in the
+    // database.)
     const refile = await prepareRefile(params.id, body.folderId, tx);
     await tx
       .update(_tasks)
