@@ -47,6 +47,7 @@ import {
   recordPushRejection,
   resolvePublishTarget,
 } from "@plugins/infra/plugins/git/plugins/remotes/core";
+import { withTreeWrite } from "@plugins/infra/plugins/git/plugins/tree-lock/core";
 import {
   actAsCheckoutNamespace,
   checkoutRef,
@@ -891,9 +892,13 @@ const pushAction: CliAction<
 
         if (publish.kind === "publish") {
           profiler.stepStart("ff-main");
-          await exec(
-            ["git", "merge", "--ff-only", `${publish.remote}/main`],
-            mainWorktree,
+          // Under main's tree write lock, like step 7: a child booting out of
+          // main's checkout must not load half of this fast-forward.
+          await withTreeWrite(mainWorktree, () =>
+            exec(
+              ["git", "merge", "--ff-only", `${publish.remote}/main`],
+              mainWorktree,
+            ),
           );
           profiler.stepEnd("ff-main");
         }
@@ -1095,7 +1100,22 @@ const pushAction: CliAction<
         //    The last step: main's own auto-build takes it from there.
         profiler.stepStart("ff-merge");
         console.log(`Merging ${branch} into main...`);
-        await exec(["git", "merge", "--ff-only", branch], mainWorktree);
+        //    Under main's tree write lock (`infra/git/tree-lock`): the merge
+        //    rewrites main's files one by one, and every supervised child on
+        //    main boots its plugin graph out of this tree — one loading mid-merge
+        //    reads two commits at once (2026-11-05: `worktree.prepare` and
+        //    `database.fork` died on an export the half-written tree lacked).
+        //    Remote main already moved (step 6), so a failure here leaves local
+        //    main behind it — say so, with the one command that finishes it.
+        await withTreeWrite(mainWorktree, () =>
+          exec(["git", "merge", "--ff-only", branch], mainWorktree),
+        ).catch((err: unknown) => {
+          throw new Error(
+            `${branch} is pushed${publish.kind === "publish" ? " and remote main already points at it" : ""}, ` +
+              `but local main was not fast-forwarded. Finish it: git -C ${mainWorktree} merge --ff-only ${branch}`,
+            { cause: err },
+          );
+        });
         profiler.stepEnd("ff-merge");
       },
       onLockRequested,

@@ -52,25 +52,12 @@ A leaf with no imports, so a browser bundle, a server or a script can import it.
 
 - Description: The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×9
+    - `framework` ×5
+    - `database` ×3
     - `apps/website/shell`
     - `conversations/workspace/scratch`
-    - `database/connection`
-    - `database/derived-views`
-    - `database/migrations/phases`
-    - `framework/cli`
-    - `framework/cli/cli-name`
-    - `framework/plugin-id`
-    - `framework/tooling/lint`
-    - `framework/tooling/web-artifacts`
-    - `infra/endpoints`
-    - `infra/git/remotes`
-    - `infra/host-fs`
-    - `infra/launcher`
-    - `infra/launcher/env-names`
-    - `infra/namespace`
-    - `infra/paths`
-    - `infra/request-origin`
     - `network/live/resource-protocol`
     - `tasks/tasks-core`
 - Exemptions:

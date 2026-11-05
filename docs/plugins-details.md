@@ -27437,25 +27437,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNSTAMPED_GATEWAY_WARNING`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by:
+        - Imported by: 21 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
+          - `infra` ×9
+          - `framework` ×5
+          - `database` ×3
           - `apps/website/shell`
           - `conversations/workspace/scratch`
-          - `database/connection`
-          - `database/derived-views`
-          - `database/migrations/phases`
-          - `framework/cli`
-          - `framework/cli/cli-name`
-          - `framework/plugin-id`
-          - `framework/tooling/lint`
-          - `framework/tooling/web-artifacts`
-          - `infra/endpoints`
-          - `infra/git/remotes`
-          - `infra/host-fs`
-          - `infra/launcher`
-          - `infra/launcher/env-names`
-          - `infra/namespace`
-          - `infra/paths`
-          - `infra/request-origin`
           - `network/live/resource-protocol`
           - `tasks/tasks-core`
       - Exemptions:
@@ -27869,6 +27856,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/file-watcher/background-arm` (1 debt)
               - `infra/git/checkout-watch` (1 debt)
               - `infra/git/remotes` (2 debt)
+              - `infra/git/tree-lock` (1 debt)
               - `infra/host-fs` (16 debt)
               - `infra/host-fs/image` (1 debt)
               - `infra/host-fs/zip` (1 debt)
@@ -31596,6 +31584,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `upstream`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/internal/commit-identity.ts`, `core/internal/publish-target.ts` (debt)
+        - **`tree-lock`** — A checkout's working tree as a reader/writer lock: holdTreeRead(root) while a process loads code from the tree (shared, in-process fast path), withTreeWrite(root, write) around a git command that rewrites it (push's fast-forward of main) — so a booting process sees the tree wholly before or wholly after a fast-forward, never a mix of the two commits.
+          - Core:
+            - Uses:
+              - `framework/product-name.LEGACY_IDS`
+              - `infra/host-fs/user-path.AppPath`
+              - `infra/host-fs/user-path.asAppPath`
+              - `infra/host-fs/user-path.joinAppPath`
+              - `packages/flock.flockTryShared`
+              - `packages/flock.HeldFlock`
+              - `packages/flock.waitForFlock`
+              - `packages/owned-fd.openOwnedFd`
+              - `packages/timed-fs.existsSync`
+              - `packages/timed-fs.readFileSync`
+              - `packages/timed-fs.statSync`
+            - Exports (values):
+              - `holdTreeRead`
+              - `treeLockPath`
+              - `withTreeWrite`
+          - Exemptions:
+            - Exempts itself from:
+              - `user-path/no-unproven-claim` — `core/internal/tree-lock.ts` (sanctioned)
+              - `boundaries/no-platform-api` — `core/internal/tree-lock.ts` (debt)
     - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers; reports the server and central socket connection as the health report's Connection row. Liveness endpoint used by clients to detect server restarts.
       - Web:
         - Contributes:
@@ -32119,9 +32129,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 34 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+            - Imported by: 35 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
               - `framework` ×10
-              - `infra` ×8
+              - `infra` ×9
               - `plugin-meta` ×4
               - `packages` ×3
               - `config_v2` ×2
@@ -32145,6 +32155,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts` (0 debt)
               - `infra/claude-cli/sdk` (0 debt)
               - `infra/deps/playwright-browser` (0 debt)
+              - `infra/git/tree-lock` (0 debt)
               - `infra/host-fs/user-path` (0 debt)
               - `infra/launcher/env-names` (0 debt)
               - `infra/launcher/login-services` (0 debt)
@@ -36391,6 +36402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/browser-recordings/writer`
           - `framework/tooling/checks`
           - `framework/tooling/web-artifacts`
+          - `infra/git/tree-lock`
           - `infra/spawn`
           - `infra/worktree`
           - `packages/host-semaphore`
@@ -36526,6 +36538,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/guards`
           - `framework/tooling/web-artifacts`
           - `infra/file-sink`
+          - `infra/git/tree-lock`
           - `infra/spawn`
           - `packages/flock`
           - `packages/single-flight`
@@ -36816,9 +36829,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call past FS_WAIT_FLOOR_MS handed to onSlowFsCall subscribers as a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 36 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `framework` ×14
-          - `infra` ×6
+          - `infra` ×7
           - `plugin-meta` ×4
           - `packages` ×3
           - `config_v2` ×2

@@ -71,6 +71,7 @@ double close in our own code loud at its source.
     - `framework/tooling/guards`
     - `framework/tooling/web-artifacts`
     - `infra/file-sink`
+    - `infra/git/tree-lock`
     - `infra/spawn`
     - `packages/flock`
     - `packages/single-flight`

@@ -109,7 +109,17 @@ export type BootSpec = {
         ordered: LoadedServerPlugin[],
       ) => void | Promise<void>;
     }
-  | { mode: "exec" }
+  | {
+      mode: "exec";
+      /**
+       * Runs once every module of the graph is loaded, before contributions,
+       * `register` and the ready barrier. `exec` releases its read of the
+       * checkout's tree here (`infra/git/tree-lock`): the code is in memory, and
+       * what follows may be slow (the barrier talks to the database) — a push's
+       * fast-forward must not wait on it.
+       */
+      afterLoad?: () => void;
+    }
   // A Web Worker in the page (`./browser-host.ts`): the portable graph only,
   // no socket — the page reaches it over a MessagePort.
   | { mode: "browser" }
@@ -131,6 +141,7 @@ export async function bootPluginGraph(
   // Before any plugin loads, so every phase hook can ask which mode it runs in.
   setBootMode(spec.mode);
   const ordered = await loadServerPlugins(spec.entries);
+  if (spec.mode === "exec") spec.afterLoad?.();
 
   // ── Contributions ──────────────────────────────────────────────
   // Collect declarative contributions from all plugins — static data on the

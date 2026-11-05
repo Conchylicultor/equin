@@ -110,9 +110,9 @@ out-of-scope folders.
 
 - Description: Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
 - Cross-plugin:
-  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×10
-    - `infra` ×8
+    - `infra` ×9
     - `plugin-meta` ×4
     - `packages` ×3
     - `config_v2` ×2
@@ -136,6 +136,7 @@ out-of-scope folders.
     - `framework/tooling/web-artifacts` (0 debt)
     - `infra/claude-cli/sdk` (0 debt)
     - `infra/deps/playwright-browser` (0 debt)
+    - `infra/git/tree-lock` (0 debt)
     - `infra/host-fs/user-path` (0 debt)
     - `infra/launcher/env-names` (0 debt)
     - `infra/launcher/login-services` (0 debt)

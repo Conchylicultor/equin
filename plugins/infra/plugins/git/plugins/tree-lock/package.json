@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-git-tree-lock",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A checkout's working tree as a reader/writer lock: holdTreeRead(root) while a process loads code from the tree (shared, in-process fast path), withTreeWrite(root, write) around a git command that rewrites it (push's fast-forward of main) — so a booting process sees the tree wholly before or wholly after a fast-forward, never a mix of the two commits."
+}

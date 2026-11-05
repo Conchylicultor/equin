@@ -1,5 +1,7 @@
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { holdTreeRead } from "@plugins/infra/plugins/git/plugins/tree-lock/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { recordMemoryCheckpoint } from "../core/profiler";
 import { bootPluginGraph, runShutdownHooks } from "../core/boot-stages";
 
@@ -124,6 +126,12 @@ export async function runExec(
   declareRuntimeNamespace(namespace);
   recordMemoryCheckpoint("boot-start");
   let ordered;
+  // The plugin graph loads from the checkout's live tree, which a push's
+  // fast-forward rewrites file by file (main's children boot out of main's
+  // checkout). Held from the registry import to the end of the load waves, so
+  // every module comes from one commit — not new `runtime-sdk` beside an old
+  // `workspace` barrel (2026-11-05, `infra/git/tree-lock`).
+  const treeRead = await holdTreeRead(REPO_ROOT);
   try {
     // Dynamic on purpose. A command DECLARATION (`cli/index.ts`) is measured by
     // `cli:command-declarations-light`, which stops at dynamic-import edges — so
@@ -134,11 +142,13 @@ export async function runExec(
       await import("../bin/active-runtime");
     ordered = await bootPluginGraph({
       mode: "exec",
+      afterLoad: treeRead.releaseSync,
       // The same graph a serving desktop backend boots: both halves.
       entries: [...serverEntries, ...machineEntries],
     });
     await body();
   } catch (err) {
+    treeRead.releaseSync(); // a boot that failed mid-load never reached afterLoad
     console.error("[exec] failed", err);
     if (ordered) await runShutdownHooks(ordered);
     process.exit(opts.exitCodeFor?.(err) ?? 1);

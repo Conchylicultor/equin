@@ -317,6 +317,7 @@ takes a `debt` exemption on the check's id.
     - `infra/file-watcher/background-arm` (1 debt)
     - `infra/git/checkout-watch` (1 debt)
     - `infra/git/remotes` (2 debt)
+    - `infra/git/tree-lock` (1 debt)
     - `infra/host-fs` (16 debt)
     - `infra/host-fs/image` (1 debt)
     - `infra/host-fs/zip` (1 debt)

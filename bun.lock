@@ -4227,6 +4227,10 @@
       "name": "@equin/plugin-infra-git-remotes",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/git/plugins/tree-lock": {
+      "name": "@equin/plugin-infra-git-tree-lock",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/health": {
       "name": "@equin/plugin-infra-health",
       "version": "0.0.1",
@@ -9300,6 +9304,8 @@
     "@equin/plugin-infra-git-git-watcher": ["@equin/plugin-infra-git-git-watcher@workspace:plugins/infra/plugins/git/plugins/git-watcher"],
 
     "@equin/plugin-infra-git-remotes": ["@equin/plugin-infra-git-remotes@workspace:plugins/infra/plugins/git/plugins/remotes"],
+
+    "@equin/plugin-infra-git-tree-lock": ["@equin/plugin-infra-git-tree-lock@workspace:plugins/infra/plugins/git/plugins/tree-lock"],
 
     "@equin/plugin-infra-health": ["@equin/plugin-infra-health@workspace:plugins/infra/plugins/health"],
 

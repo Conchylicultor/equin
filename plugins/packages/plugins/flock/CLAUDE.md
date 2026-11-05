@@ -91,6 +91,7 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
     - `debug/browser-recordings/writer`
     - `framework/tooling/checks`
     - `framework/tooling/web-artifacts`
+    - `infra/git/tree-lock`
     - `infra/spawn`
     - `infra/worktree`
     - `packages/host-semaphore`
