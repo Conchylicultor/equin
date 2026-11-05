@@ -54,6 +54,12 @@ export { _blocks } from "./internal/tables";
 // the predicate never spelled). `_blocks` itself is for the trash machinery —
 // `page-editor/no-unfiltered-blocks-read` flags any other read of it.
 export { liveBlocks } from "./internal/live-blocks";
+// A page id's existence, trashed rows included — for an index derived from
+// content that outlives its referent's trash (link edges).
+export { existingPageIds } from "./internal/existing-pages";
+// The live pages as a rollup a materialized join nests (link edges into a
+// live page).
+export { pageLive } from "./internal/rollup-spec";
 export { blocksChanged } from "./internal/tables-events";
 export type { BlocksChangedPayload } from "./internal/tables-events";
 export { BlockLifecycle } from "./internal/document-hooks";

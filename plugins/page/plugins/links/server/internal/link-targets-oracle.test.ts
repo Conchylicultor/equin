@@ -7,8 +7,8 @@
  *
  * The workload is the link graph's own: root pages W, X, Y, Z, each with a
  * content block (W and X two), and edges X→W (from two blocks), Y→W, W→X and a self-link
- * W→W. Every step is one SQL transaction in the shape the reindexer, the trash
- * hook or the editor's writers emit.
+ * W→W. Every step is one SQL transaction in the shape the reindexer or the
+ * editor's writers emit (a trash or restore writes no edge).
  *
  * After every step:
  *
@@ -19,7 +19,8 @@
  *   only when the source's stored list changed (a second linking block of the
  *   same pair loads nothing); a keystroke's projection on a content block and
  *   a page rename load nothing; a trashed page reads not found (one load per
- *   route it trips).
+ *   route it trips); a trashed TARGET leaves the lists of the pages linking
+ *   to it, and its restore brings it back, with no edge written either way.
  *
  * Then C39: a tab still running a bundle that subscribed an old key
  * (`page-links.sources`, the whole set this replaced, or the legacy
@@ -49,6 +50,7 @@ import {
 import {
   liveBlocks,
   PAGE_BLOCK_TYPE,
+  pageLive,
 } from "@plugins/page/plugins/editor/server";
 import {
   createTreeOracle,
@@ -95,8 +97,8 @@ const edge = (source: string, target: string, block: string) =>
 
 /**
  * The old `page-links` loader, verbatim (one row per page PAIR), folded per
- * SOURCE page — self-links dropped, targets in id order — over the watched
- * pages that are live.
+ * SOURCE page — self-links and trashed targets dropped, targets in id order —
+ * over the watched pages that are live.
  */
 async function oldLoaderFolded(): Promise<PageLinkTargetsRow[]> {
   const edges = await oracle.db
@@ -106,18 +108,20 @@ async function oldLoaderFolded(): Promise<PageLinkTargetsRow[]> {
     })
     .from(_pageLinks)
     .orderBy(asc(_pageLinks.sourcePageId), asc(_pageLinks.targetPageId));
-  const bySource = new Map<string, string[]>();
-  for (const e of edges) {
-    if (e.sourcePageId === e.targetPageId) continue;
-    const list = bySource.get(e.sourcePageId);
-    if (list) list.push(e.targetPageId);
-    else bySource.set(e.sourcePageId, [e.targetPageId]);
-  }
   const pages = await oracle.db
     .select({ id: liveBlocks.id })
     .from(liveBlocks)
     .where(eq(liveBlocks.type, PAGE_BLOCK_TYPE))
     .orderBy(asc(liveBlocks.id));
+  const live = new Set(pages.map((p) => p.id));
+  const bySource = new Map<string, string[]>();
+  for (const e of edges) {
+    if (e.sourcePageId === e.targetPageId) continue;
+    if (!live.has(e.targetPageId)) continue;
+    const list = bySource.get(e.sourcePageId);
+    if (list) list.push(e.targetPageId);
+    else bySource.set(e.sourcePageId, [e.targetPageId]);
+  }
   return pages
     .filter((p) => (WATCHED as readonly string[]).includes(p.id))
     .map((p) => ({ id: p.id, linksTo: bySource.get(p.id) ?? [] }));
@@ -151,8 +155,8 @@ beforeAll(async () => {
     persisted: [],
   });
   // The materialized join, installed through the boot path (ON the feed:
-  // readers are routed by its own rows).
-  await installRollups(oracle.db, [pageLinkTargetsJoin.rollup]);
+  // readers are routed by its own rows), and the target liveness it nests.
+  await installRollups(oracle.db, [pageLive, pageLinkTargetsJoin.rollup]);
   oracle.registerLookup(
     pageLinkTargets,
     compileCollection(pageLinkTargets, {
@@ -275,26 +279,61 @@ describe("page-links.targets — a lookup-only collection on the tree oracle", (
       [],
     );
 
-    // The trash hook drops a trashed page's outgoing edges with the trash: the
-    // watched row reads not found. Two one-id loads of Y, one per route: the
-    // base `where`'s flip (`deleted_at`) and the rollup's own row (Y's stored
-    // list emptied).
+    const edgeCount = async () =>
+      (await oracle.db.select({ id: _pageLinks.sourcePageId }).from(_pageLinks))
+        .length;
+    const edgesBefore = await edgeCount();
+
+    // Trash a TARGET (X, linked from W and Y): no edge is written, yet both
+    // lists drop X — the nested `page_live` row's delete re-aggregates every
+    // page linking to X. Loads: X itself (the base `where`'s flip), and W and
+    // Y (their stored lists changed).
     await runStep(
       {
-        label: "trash",
+        label: "trash.target",
         statements: [
-          `UPDATE page_blocks SET deleted_at = now(), trash_entry_id = 'te-y' WHERE id = ${q(Y)}`,
-          `DELETE FROM page_links WHERE source_page_id = ${q(Y)}`,
+          `UPDATE page_blocks SET deleted_at = now(), trash_entry_id = 'te-x' WHERE id = ${q(X)}`,
         ],
       },
-      [{ ids: [Y] }, { ids: [Y] }],
+      [{ ids: [W, X, Y] }],
+    );
+    expect(await edgeCount()).toBe(edgesBefore);
+
+    // Restore it: every alias comes back at once, with no reindex of W or Y.
+    await runStep(
+      {
+        label: "restore.target",
+        statements: [
+          `UPDATE page_blocks SET deleted_at = NULL, trash_entry_id = NULL WHERE id = ${q(X)}`,
+        ],
+      },
+      [{ ids: [W, X, Y] }],
     );
     expect(
-      await oracle.db
-        .select({ id: _pageLinks.sourcePageId })
-        .from(_pageLinks)
-        .where(inArray(_pageLinks.sourcePageId, [Y])),
-    ).toEqual([]);
+      PageLinkTargetsRowSchema.array()
+        .parse(oracle.view(ROWS_KEY, pointParams()))
+        .find((r) => r.id === Y),
+    ).toEqual({ id: Y, linksTo: [X] });
+
+    // Trash a SOURCE (Y): it reads not found, and keeps its edges (its
+    // content, restored with it).
+    await runStep(
+      {
+        label: "trash.source",
+        statements: [
+          `UPDATE page_blocks SET deleted_at = now(), trash_entry_id = 'te-y' WHERE id = ${q(Y)}`,
+        ],
+      },
+      [{ ids: [Y] }],
+    );
+    expect(
+      (
+        await oracle.db
+          .select({ id: _pageLinks.sourcePageId })
+          .from(_pageLinks)
+          .where(inArray(_pageLinks.sourcePageId, [Y]))
+      ).length,
+    ).toBeGreaterThan(0);
     oracle.unsubscribe(ROWS_KEY, pointParams());
   });
 });

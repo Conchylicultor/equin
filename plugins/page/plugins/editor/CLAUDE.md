@@ -2282,6 +2282,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `resource.declare` "pages.tree.v2:groups"
     - `resource.declare` "pages.tree.v2:rows"
     - `derived-table` "page_content_edited_at"
+    - `derived-table` "page_live"
     - `derived-table` "page_tree_children"
     - `page.block-data` "page"
     - `page.block-annotation`
@@ -2339,10 +2340,12 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `deleteBlocksSubtree`
     - `docRankDriftSink`
     - `Editor`
+    - `existingPageIds`
     - `liveBlocks`
     - `PAGE_BLOCK_TYPE`
     - `pageData`
     - `PageDataSchema`
+    - `pageLive`
     - `readPageEditedAt`
     - `renamePage`
     - `resolveBlockAnnotations`
@@ -2608,6 +2611,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `page-editor/no-adhoc-forest-write` — `server/internal/forest-writer.ts` (sanctioned)
     - `page-editor/no-adhoc-doc-write` — `web/__tests__`, `web/internal/block-text-write.ts`, `web/internal/live-state-yjs-provider.ts`, `web/internal/local-yjs-provider.ts` (sanctioned)
     - `page-editor/no-unfiltered-blocks-read` — `server/internal/forest-writer.ts`, `server/internal/handle-patch-blocks.ts`, `server/internal/live-blocks.ts`, `server/internal/page-forest.ts`, `server/internal/trash-blocks.ts` (sanctioned)
+    - `page-editor/no-unfiltered-blocks-read` — `server/internal/existing-pages.ts` (sanctioned)
     - `page-editor/no-unfiltered-blocks-read` — `server/internal/page-clipboard.ts` (sanctioned)
     - `page-editor/no-adhoc-structural-write` — `web/block-store.ts`, `web/composite-block-store.tsx` (sanctioned)
     - `page-editor/no-unhistoried-block-field` — `web/components/block-text-area.tsx` (sanctioned)

@@ -168,6 +168,7 @@ and re-export it from `core/index.ts`. See
     - `MIGRATIONS_TABLE_NAME`
     - `PAGE_CONTENT_EDITED_AT_TABLE`
     - `PAGE_LINK_TARGETS_TABLE`
+    - `PAGE_LIVE_TABLE`
     - `PAGE_TREE_CHILDREN_TABLE`
     - `READ_ALIAS_SCHEMA`
     - `readAliasStem`

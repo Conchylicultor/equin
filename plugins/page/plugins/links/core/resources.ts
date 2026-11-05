@@ -30,7 +30,8 @@ export const pageBacklinks = liveValue("page-backlinks", {
 // an edge insert or delete re-aggregates its SOURCE page's stored list, and a
 // reader holding that page hears of it only when the list changed; a write to
 // a content block — the ~1s `data.text` typing projection — or a rename
-// loads nothing; a trashed page reads not found.
+// loads nothing; a trashed page reads not found, and a trashed TARGET is left
+// out of `linksTo` (the edge itself is kept, so a restore brings it back).
 //
 // The key is NEW (`page-links.targets`; it was `page-links.sources`, the
 // whole set of every page with the pages linking TO it, and before it the

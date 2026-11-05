@@ -236,6 +236,16 @@ export const PAGE_TREE_CHILDREN_TABLE = "page_tree_children";
 export const PAGE_LINK_TARGETS_TABLE = "page_link_targets";
 
 /**
+ * The live pages (a derived-tables rollup over `page_blocks`, in
+ * `plugins/page/plugins/editor/server/internal/rollup-spec.ts`): one row per
+ * page that is not trashed — the editor's `livePageSql`, stored so a
+ * materialized join can nest it (`page_link_targets` keeps only the edges into
+ * a live page). Created and reconciled by `rebuildDerivedTables` like the
+ * ones above.
+ */
+export const PAGE_LIVE_TABLE = "page_live";
+
+/**
  * The full allowlist of public tables created imperatively (outside drizzle),
  * keyed BY THE NAME OF THE CONSTANT that holds each table name.
  *
@@ -279,6 +289,7 @@ export const IMPERATIVE_PUBLIC_TABLES = {
   TASK_ACTIVE_DEPENDENTS_TABLE,
   PAGE_TREE_CHILDREN_TABLE,
   PAGE_LINK_TARGETS_TABLE,
+  PAGE_LIVE_TABLE,
 } as const satisfies Record<string, string>;
 
 /**

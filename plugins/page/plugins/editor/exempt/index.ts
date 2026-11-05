@@ -35,6 +35,13 @@ export default [
   },
   {
     rule: "page-editor/no-unfiltered-blocks-read",
+    paths: ["server/internal/existing-pages.ts"],
+    kind: "sanctioned",
+    reason:
+      "Whether an id names a page at all, trashed or not: a content-derived index (link edges) keeps a reference to a trashed page so its restore brings it back, and filters liveness at read time.",
+  },
+  {
+    rule: "page-editor/no-unfiltered-blocks-read",
     paths: ["server/internal/page-clipboard.ts"],
     kind: "sanctioned",
     reason:

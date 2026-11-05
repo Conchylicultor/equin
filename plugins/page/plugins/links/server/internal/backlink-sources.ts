@@ -21,8 +21,9 @@ export interface BacklinkSource {
  * of ANOTHER page, read without that page's audience policy, so a reader that
  * wants the context reads the source page through its own gate.
  *
- * Live rows only (`liveBlocks`): a trashed source page's edges are dropped by
- * the trash hook, and the join makes that a fact rather than a race.
+ * Live sources only (`liveBlocks`): a trashed source page keeps its edges
+ * (an edge is its content, restored with it), so the live join is what hides
+ * them while it is in the trash.
  */
 export async function loadBacklinkSources(
   pageId: string,

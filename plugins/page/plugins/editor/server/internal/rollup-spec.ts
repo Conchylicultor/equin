@@ -1,4 +1,6 @@
 import { sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
+import { defineRollup } from "@plugins/database/plugins/derived-tables/core";
 import {
   aggregate,
   childrenJoin,
@@ -6,7 +8,11 @@ import {
 } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { materializeJoin } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import { PAGE_BLOCK_TYPE } from "../../core";
-import { _pageContentEditedAt, _pageTreeChildren } from "./rollup-table";
+import {
+  _pageContentEditedAt,
+  _pageLive,
+  _pageTreeChildren,
+} from "./rollup-table";
 import { _blocks } from "./tables";
 
 // The page rows' two MATERIALIZED joins (query-resource's `materializeJoin`):
@@ -63,6 +69,11 @@ export function livePageSql(
   return sql`(${type} = ${PAGE_BLOCK_TYPE} AND ${deletedAt} IS NULL)`;
 }
 
+/** {@link livePageSql} over `page_blocks b`, as the plain SQL text a rollup's `select` is. */
+const LIVE_PAGE_ROW = new PgDialect().sqlToQuery(
+  livePageSql(sql.raw("b.type"), sql.raw("b.deleted_at")).inlineParams(),
+).sql;
+
 /**
  * Per page P, how many LIVE PAGES ({@link livePageSql}) name P as their
  * nearest page ancestor — the tree's `$childCount` (network/live `tree`).
@@ -86,6 +97,35 @@ export const pageTreeChildren = materializeJoin(
 );
 
 /**
+ * The live pages ({@link livePageSql}), one row per page that is not trashed,
+ * keyed by its id — the liveness a materialized join over ANOTHER table nests
+ * (`NestedRollupJoin`, `on` the column naming a page) when what it aggregates
+ * must follow its referent's trash and restore: `page_link_targets` keeps an
+ * edge only while its target is live, and a trash or restore re-aggregates
+ * every page linking there (the nested rollup's `via` hop), with no write to
+ * the edges. A plain rollup, not on the change feed: nobody reads it as a
+ * collection, only through the joins nesting it, whose triggers fire on its
+ * writes — i.e. only when a page's liveness really flipped (a rename, a
+ * typing projection or a move writes nothing here: the source reads `type`
+ * and `deleted_at` alone).
+ */
+export const pageLive = defineRollup({
+  table: _pageLive,
+  key: _pageLive.pageId,
+  select: (scope) => `
+    SELECT b.id AS page_id, true AS live
+      FROM page_blocks b
+     WHERE ${LIVE_PAGE_ROW} AND ${scope("b.id")}`,
+  sources: [
+    {
+      table: _blocks,
+      carry: _blocks.id,
+      reads: [_blocks.type, _blocks.deletedAt],
+    },
+  ],
+});
+
+/**
  * Every rollup this plugin contributes (`DerivedTable`, server/index.ts) — the
  * one list the boot contributions and the suites installing the derived layer
  * read, so a new one cannot be missed by either.
@@ -93,4 +133,5 @@ export const pageTreeChildren = materializeJoin(
 export const PAGE_ROLLUPS = [
   pageContent.rollup,
   pageTreeChildren.rollup,
+  pageLive,
 ] as const;

@@ -15,11 +15,7 @@ import {
   pageLinkTargetsServed,
 } from "./internal/resources";
 import { pageLinkTargetsJoin } from "./internal/link-target-rows";
-import {
-  backlinksDeleteHook,
-  backlinksTrashHook,
-  backlinksRestoreHook,
-} from "./internal/delete-hook";
+import { backlinksDeleteHook } from "./internal/delete-hook";
 
 export { PageLinks } from "./internal/extractor";
 export type { PageLinkExtractor } from "./internal/extractor";
@@ -50,10 +46,8 @@ export default {
     }),
     // Re-push the backlinks panels of pages a deleted subtree linked to: the FK
     // cascade wipes those page_links edges without going through the reindexer.
+    // A trash or restore writes no edge: readers filter liveness
+    // (`./internal/delete-hook.ts`).
     BlockLifecycle.OnDelete(backlinksDeleteHook),
-    // A TRASH never cascades, so a trashed page's outgoing edges must be dropped
-    // explicitly; restore rebuilds them.
-    BlockLifecycle.OnTrash(backlinksTrashHook),
-    BlockLifecycle.OnRestore(backlinksRestoreHook),
   ],
 } satisfies ServerPluginDefinition;

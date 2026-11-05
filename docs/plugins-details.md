@@ -21074,6 +21074,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MIGRATIONS_TABLE_NAME`
           - `PAGE_CONTENT_EDITED_AT_TABLE`
           - `PAGE_LINK_TARGETS_TABLE`
+          - `PAGE_LIVE_TABLE`
           - `PAGE_TREE_CHILDREN_TABLE`
           - `READ_ALIAS_SCHEMA`
           - `readAliasStem`
@@ -28476,11 +28477,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 183 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 184 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×54
               - `primitives` ×28
               - `conversations` ×26
-              - `page` ×25
+              - `page` ×26
               - `debug` ×8
               - `apps-core` ×6
               - `tasks` ×5
@@ -37885,6 +37886,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "pages.tree.v2:groups"
           - `resource.declare` "pages.tree.v2:rows"
           - `derived-table` "page_content_edited_at"
+          - `derived-table` "page_live"
           - `derived-table` "page_tree_children"
           - `page.block-data` "page"
           - `page.block-annotation`
@@ -37942,10 +37944,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deleteBlocksSubtree`
           - `docRankDriftSink`
           - `Editor`
+          - `existingPageIds`
           - `liveBlocks`
           - `PAGE_BLOCK_TYPE`
           - `pageData`
           - `PageDataSchema`
+          - `pageLive`
           - `readPageEditedAt`
           - `renamePage`
           - `resolveBlockAnnotations`
@@ -38211,6 +38215,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page-editor/no-adhoc-forest-write` — `server/internal/forest-writer.ts` (sanctioned)
           - `page-editor/no-adhoc-doc-write` — `web/__tests__`, `web/internal/block-text-write.ts`, `web/internal/live-state-yjs-provider.ts`, `web/internal/local-yjs-provider.ts` (sanctioned)
           - `page-editor/no-unfiltered-blocks-read` — `server/internal/forest-writer.ts`, `server/internal/handle-patch-blocks.ts`, `server/internal/live-blocks.ts`, `server/internal/page-forest.ts`, `server/internal/trash-blocks.ts` (sanctioned)
+          - `page-editor/no-unfiltered-blocks-read` — `server/internal/existing-pages.ts` (sanctioned)
           - `page-editor/no-unfiltered-blocks-read` — `server/internal/page-clipboard.ts` (sanctioned)
           - `page-editor/no-adhoc-structural-write` — `web/block-store.ts`, `web/composite-block-store.tsx` (sanctioned)
           - `page-editor/no-unhistoried-block-field` — `web/components/block-text-area.tsx` (sanctioned)
@@ -38641,19 +38646,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `derived-table` "page_link_targets"
           - `trigger` "page.links.reindex"
           - `page.editor.block.onDelete`
-          - `page.editor.block.onTrash`
-          - `page.editor.block.onRestore`
-        - Uses: 22 symbols — full list in [`plugins/page/plugins/links/REFERENCE.md`](../plugins/page/plugins/links/REFERENCE.md)
-          - `page/editor` ×9
-          - `database/sql-projection` ×2
-          - `database` ×2
-          - `network/live` ×2
-          - `primitives/text-editor/inline-chip` ×2
+        - Uses:
+          - `database.db`
+          - `database.DbExecutor`
           - `database/derived-tables.DerivedTable`
+          - `database/sql-projection.nullable`
+          - `database/sql-projection.parsed`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
           - `infra/warmup.defineWarmup`
+          - `network/live.serveCollection`
+          - `network/live.serveValue`
           - `network/live/query-resource.materializeJoin`
+          - `page/editor._blocks`
+          - `page/editor.BlockLifecycle`
+          - `page/editor.blocksChanged`
+          - `page/editor.existingPageIds`
+          - `page/editor.liveBlocks`
+          - `page/editor.PAGE_BLOCK_TYPE`
+          - `page/editor.pageLive`
+          - `primitives/text-editor/inline-chip.inlineTokenReferentTables`
+          - `primitives/text-editor/inline-chip.inlineTokensAsText`
         - DB schema:
           - `plugins/page/plugins/links/server/internal/rollup-table.ts`
           - `plugins/page/plugins/links/server/internal/tables.ts`

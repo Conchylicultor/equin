@@ -1,8 +1,8 @@
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
+  existingPageIds,
   liveBlocks,
-  PAGE_BLOCK_TYPE,
 } from "@plugins/page/plugins/editor/server";
 import { PageLinks } from "./extractor";
 import { _pageLinks } from "./tables";
@@ -13,13 +13,28 @@ import { _pageLinks } from "./tables";
 // 2. Dispatch each block generically by `block.type` over the collected
 //    extractors (collection-consumer separation — never names a block type),
 //    recording WHICH block each link came from: an edge is (target, block).
-// 3. Drop self-references and ids that aren't `type="page"` blocks.
+// 3. Drop self-references and ids that name no `type="page"` row. A TRASHED
+//    target is kept: an edge is the source's content, whatever its target's
+//    state — readers filter liveness (`pageLive`, `liveBlocks`), so a
+//    restore brings the edge back with no reindex of this page.
 // 4. Diff against the existing page_links rows for this source; insert added
 //    edges, delete removed ones. Each affected target's backlinks panel
 //    refreshes automatically — the page_links insert/delete is invalidated by
 //    the L4 DB change-feed, which recomputes every subscribed `pageBacklinks`
 //    tuple.
+//
+// A TRASHED source page is left as it is: its content is trashed with it and
+// frozen until restored, so its edges already say what it links to — reading
+// its (now non-live) blocks would wipe them, and the restore would need a
+// reindex to bring them back. Readers hide a trashed source's edges.
 export async function reindexPage(pageId: string): Promise<void> {
+  const [source] = await db
+    .select({ id: liveBlocks.id })
+    .from(liveBlocks)
+    .where(eq(liveBlocks.id, pageId))
+    .limit(1);
+  if (!source) return;
+
   // Built fresh each call so newly-registered extractors are always honored.
   // `getContributions()` reads the populated server registry. Typed extractors
   // run on their matching block type; global (type-less) ones run on every block.
@@ -54,21 +69,11 @@ export async function reindexPage(pageId: string): Promise<void> {
     for (const g of globalExtractors) collect(g, block);
   }
 
-  // Validate targets against pages — drop links to non-existent / non-page ids.
-  const targets = new Set([...found.values()].map((e) => e.targetPageId));
-  let validTargets = new Set<string>();
-  if (targets.size > 0) {
-    const existing = await db
-      .select({ id: liveBlocks.id })
-      .from(liveBlocks)
-      .where(
-        and(
-          inArray(liveBlocks.id, [...targets]),
-          eq(liveBlocks.type, PAGE_BLOCK_TYPE),
-        ),
-      );
-    validTargets = new Set(existing.map((r) => r.id));
-  }
+  // Validate targets: a page row, live or trashed (a non-page id, or one
+  // naming nothing, is dropped — the FK would refuse it).
+  const validTargets = await existingPageIds([
+    ...new Set([...found.values()].map((e) => e.targetPageId)),
+  ]);
   const next = new Map(
     [...found].filter(([, e]) => validTargets.has(e.targetPageId)),
   );

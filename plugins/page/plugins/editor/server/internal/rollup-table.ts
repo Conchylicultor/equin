@@ -1,7 +1,14 @@
-import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 import {
   PAGE_CONTENT_EDITED_AT_TABLE,
   PAGE_TREE_CHILDREN_TABLE,
+  PAGE_LIVE_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
 
 // Drizzle READ handles for the page rows' two materialized joins
@@ -15,6 +22,12 @@ import {
 //  - `page_tree_children`: how many live pages name the page as their nearest
 //    page ancestor — every `pagesTree` row's `$childCount`. NOT NULL: the
 //    count reads 0 for a page with none (its `ifNone`).
+//
+// And the live pages (`./rollup-spec.ts`'s `pageLive`, a plain rollup):
+//
+//  - `page_live`: one row per live page (`livePageSql`), `live` a constant
+//    `true` marker — a missing row reads NULL, "not a live page" — so a
+//    materialized join nesting it filters on `live`.
 //
 // These live in a NON-glob file (NOT `tables.ts`/`schema.ts`) so the drizzle
 // codegen glob (`**/internal/{schema,tables}{,-*}.ts`) never sees them: the
@@ -33,4 +46,9 @@ export const _pageContentEditedAt = pgTable(PAGE_CONTENT_EDITED_AT_TABLE, {
 export const _pageTreeChildren = pgTable(PAGE_TREE_CHILDREN_TABLE, {
   pageId: text("page_id").primaryKey(),
   count: integer("count").notNull(),
+});
+
+export const _pageLive = pgTable(PAGE_LIVE_TABLE, {
+  pageId: text("page_id").primaryKey(),
+  live: boolean("live").notNull(),
 });

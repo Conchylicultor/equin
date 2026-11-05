@@ -51,10 +51,13 @@ MATERIALIZED children join (`materializeJoin`) over `page_links` on
 `source_page_id` (`array_agg(DISTINCT target_page_id ORDER BY target_page_id)`,
 `ifNone` an empty array), stored in the derived rollup `page_link_targets`
 (`DerivedTable`, on the change feed). Materialized because an unmaterialized
-grouped join is `all`-only, and this is read by id.
+grouped join is `all`-only, and this is read by id. It keeps only the edges
+into a LIVE page: the join nests the editor's `pageLive` rollup on
+`target_page_id` (below).
 
 - **One row per SOURCE page**: a `page_links` write — the reindexer's diff,
-  the trash hook's drop, an FK cascade — re-aggregates its source's stored
+  an FK cascade — or a target's trash / restore (a `page_live` write, routed
+  to every page linking there) re-aggregates its source's stored
   list, and a reader holding that page refills it only when the list changed
   (a second linking block of one pair loads nothing). The base route reads
   only `id`, `type` and `deleted_at`, so the `data.text` typing projection, a
@@ -68,6 +71,20 @@ grouped join is `all`-only, and this is read by id.
   on the tree oracle.
 - Not folded into `pagesTree`'s row: `links/server` imports `editor/server`, so
   the editor joining `page_links` would be an import cycle.
+
+## An edge outlives its pages' trash
+
+An edge is derived from its SOURCE page's content alone: A's content links to
+B whatever B's state, so trash and restore write no edge (there is no trash or
+restore hook; only a purge's FK cascade removes edges). `reindexPage` keeps an
+edge to a trashed target (`existingPageIds`, the editor's trash-aware
+existence read) and does nothing for a trashed source (its content is frozen
+with it). Liveness is the READERS' filter, through the editor's one
+live-page predicate: the backlinks reads join the source to `liveBlocks`, and
+`pageLinkTargets` nests `pageLive` (a rollup of `livePageSql`) on the target.
+So a restore brings every edge back at once, with no reindex — the sidebar's
+alias to B, A's backlink on B's page — and a trashed B leaves no dangling
+alias chevron on A.
 
 `page_links` is derived state, so a shape change rebuilds rather than migrates
 it: the `page.links.backfill` boot warm-up reindexes every page (diff-based, so
@@ -85,19 +102,27 @@ a steady-state reboot writes nothing).
     - `derived-table` "page_link_targets"
     - `trigger` "page.links.reindex"
     - `page.editor.block.onDelete`
-    - `page.editor.block.onTrash`
-    - `page.editor.block.onRestore`
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page/editor` ×9
-    - `database/sql-projection` ×2
-    - `database` ×2
-    - `network/live` ×2
-    - `primitives/text-editor/inline-chip` ×2
+  - Uses:
+    - `database.db`
+    - `database.DbExecutor`
     - `database/derived-tables.DerivedTable`
+    - `database/sql-projection.nullable`
+    - `database/sql-projection.parsed`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `infra/warmup.defineWarmup`
+    - `network/live.serveCollection`
+    - `network/live.serveValue`
     - `network/live/query-resource.materializeJoin`
+    - `page/editor._blocks`
+    - `page/editor.BlockLifecycle`
+    - `page/editor.blocksChanged`
+    - `page/editor.existingPageIds`
+    - `page/editor.liveBlocks`
+    - `page/editor.PAGE_BLOCK_TYPE`
+    - `page/editor.pageLive`
+    - `primitives/text-editor/inline-chip.inlineTokenReferentTables`
+    - `primitives/text-editor/inline-chip.inlineTokensAsText`
   - DB schema:
     - `plugins/page/plugins/links/server/internal/rollup-table.ts`
     - `plugins/page/plugins/links/server/internal/tables.ts`

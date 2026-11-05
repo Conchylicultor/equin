@@ -43,8 +43,8 @@ const iconExpr = sql`${liveBlocks.data} ->> 'icon'`.mapWith(
 // snippet of its first linking block in document order. A db-arm value: the
 // declared reads (`page_links`, `page_blocks`, and the tables the snippets'
 // chip titles come from) route
-// every edge write — the reindexer's insert/delete, the trash
-// hook's drop, an FK cascade — and every source page's title / icon / text edit
+// every edge write — the reindexer's insert/delete, an FK cascade — every
+// source page's trash or restore, and every source page's title / icon / text edit
 // — or a rename of a task, song, … a snippet's chip shows —
 // recomputes the subscribed tuples; push drops a byte-identical result.
 export const pageBacklinksServed = serveValue(pageBacklinks, {
@@ -65,8 +65,8 @@ export const pageBacklinksServed = serveValue(pageBacklinks, {
         sourceBlockId: _pageLinks.sourceBlockId,
       })
       .from(_pageLinks)
-      // A trashed source page's edges are dropped by the trash hook; the LIVE
-      // join is what makes that a fact rather than a race.
+      // A trashed source page keeps its edges (they are its content, restored
+      // with it): the LIVE join is what hides them meanwhile.
       .innerJoin(liveBlocks, eq(_pageLinks.sourcePageId, liveBlocks.id))
       .where(eq(_pageLinks.targetPageId, pageId))
       // The id breaks a title tie (every "Untitled" source): push compares
