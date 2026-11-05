@@ -25,6 +25,8 @@ import {
   type HostGraphInputs,
 } from "./browser-host-gen";
 import { buildRegistryGenContext } from "./plugin-registry-gen";
+import { codegenPassOver } from "./codegen-pass";
+import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 
 setDefaultTimeout(300_000);
 
@@ -33,7 +35,9 @@ const DEMO = "apps/plugins/website/plugins/demos/plugins/lumen";
 describe("deriveBrowserHostGraph over the repo", () => {
   test("reproduces the committed demo graph, one provider per service", async () => {
     const root = await getWorktreeRoot();
-    const ctx = await buildRegistryGenContext(root);
+    const ctx = await buildRegistryGenContext(
+      codegenPassOver(await loadRepoSnapshot(root)),
+    );
     const host = discoverBrowserHosts(await ctx.repo()).find(
       (h) => h.pluginPath === DEMO,
     );

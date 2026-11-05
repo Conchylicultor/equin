@@ -2,14 +2,16 @@ import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import { buildRegistryGenContext } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  buildRegistryGenContext,
+  codegenPassOver,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
   explainInclusion,
   resolveComposition,
   type CompositionManifest,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 // Applying a committed slot layout ships wherever slots render: reorder's
 // middleware is a companion of `primitives.slot-render`. Editing one is the
@@ -29,9 +31,10 @@ const check: Check = {
   id: "reorder:apply-is-lean",
   description:
     "The hard closure of primitives.slot-render (reorder's apply path, a companion in every served bundle) does not reach the layout editor, reorder.editor.",
-  async run(): Promise<CheckResult> {
-    const root = await getWorktreeRoot();
-    const { graph } = await buildRegistryGenContext(root);
+  async run(ctx): Promise<CheckResult> {
+    const { graph } = await buildRegistryGenContext(
+      codegenPassOver(await ctx.repo()),
+    );
     const manifest: CompositionManifest = {
       name: "reorder-apply",
       entryPoints: [APPLY_ROOT],

@@ -39,6 +39,7 @@ import {
   applyConfigMigrations,
   type AppliedConfigMigration,
 } from "@plugins/config_v2/plugins/ledger/core";
+import type { CodegenPass } from "./codegen-pass";
 
 interface DiscoveredConfig {
   hierarchyPath: string;
@@ -72,11 +73,12 @@ function isConfigDescriptor(v: unknown): v is ConfigDescriptor {
  * a field carries.
  */
 async function discoverConfigs(
-  root: AppPath,
+  pass: CodegenPass,
   opts?: { live?: boolean },
 ): Promise<DiscoveredConfig[]> {
+  const { root } = pass;
   if (!opts?.live) {
-    const ev = await evaluateAllBarrels(root);
+    const ev = await evaluateAllBarrels(pass);
     const bundle = mainBundle(ev.tree, root);
     const results: DiscoveredConfig[] = [];
     for (const node of ev.tree.byDir.values()) {
@@ -90,7 +92,7 @@ async function discoverConfigs(
     return results;
   }
 
-  const tree = await buildEnrichedTree(root);
+  const tree = await buildEnrichedTree(pass);
   registerBarrelStubs(root);
 
   // A plugin outside the app's composition is omitted from the registry, so its
@@ -257,7 +259,7 @@ export function resolveOriginAnnotations(
  * (e.g. reorder's contribution catalog) can only be built after walking the
  * enriched plugin tree — an async operation. A sync `OriginAnnotationsProvider`
  * can't do that itself, so a preparer module registers a function here that,
- * given the repo root, builds whatever it needs (the tree is already cached by
+ * given the codegen pass, builds whatever it needs (the tree is already cached by
  * the time `renderConfigOriginContent` runs) and returns the resolved sync
  * provider.
  *
@@ -269,7 +271,7 @@ export function resolveOriginAnnotations(
  * processes resolve identical annotation comments.
  */
 export type OriginAnnotationsPreparer = (
-  root: AppPath,
+  pass: CodegenPass,
 ) => Promise<OriginAnnotationsProvider | undefined>;
 
 let defaultOriginAnnotationsPreparer: OriginAnnotationsPreparer | undefined;
@@ -321,14 +323,14 @@ export function resolveOriginDefaults(
  * Async, root-aware default-defaults *preparer*, symmetric to
  * {@link OriginAnnotationsPreparer}. Reorder's materialized catalog can only be
  * built after walking the enriched plugin tree (async), so a preparer module
- * registers a function here that, given the repo root, builds the provider. As
+ * registers a function here that, given the codegen pass, builds the provider. As
  * with annotations, the preparer must be registered as a side effect of
  * *importing* a shared module that BOTH the build step and the
  * `config-origins-in-sync` check import, so both separate processes resolve
  * identical defaults.
  */
 export type OriginDefaultsPreparer = (
-  root: AppPath,
+  pass: CodegenPass,
 ) => Promise<OriginDefaultsProvider | undefined>;
 
 let defaultOriginDefaultsPreparer: OriginDefaultsPreparer | undefined;
@@ -408,11 +410,11 @@ export function renderOriginJsonc(
 }
 
 export async function renderConfigOriginContent(opts: {
-  root: AppPath;
+  pass: CodegenPass;
   originAnnotations?: OriginAnnotationsProvider;
   originDefaults?: OriginDefaultsProvider;
 }): Promise<Map<string, string>> {
-  const configs = await discoverConfigs(opts.root);
+  const configs = await discoverConfigs(opts.pass);
   const result = new Map<string, string>();
   // Prefer an explicit/sync default provider; otherwise, if an async preparer
   // is registered (e.g. reorder's catalog), build the provider now. The
@@ -421,14 +423,14 @@ export async function renderConfigOriginContent(opts: {
   // step and the in-sync check — keeps the emitted comments byte-identical.
   let annotations = resolveOriginAnnotations(opts.originAnnotations);
   if (!annotations && defaultOriginAnnotationsPreparer) {
-    annotations = await defaultOriginAnnotationsPreparer(opts.root);
+    annotations = await defaultOriginAnnotationsPreparer(opts.pass);
   }
   // Same explicit→sync→async-preparer chain for the defaults override. With no
   // provider registered this stays `undefined`, so `renderOriginJsonc` falls
   // back to `descriptor.defaults` — byte-identical to today.
   let originDefaults = resolveOriginDefaults(opts.originDefaults);
   if (!originDefaults && defaultOriginDefaultsPreparer) {
-    originDefaults = await defaultOriginDefaultsPreparer(opts.root);
+    originDefaults = await defaultOriginDefaultsPreparer(opts.pass);
   }
 
   for (const { hierarchyPath, descriptor } of configs) {
@@ -449,14 +451,14 @@ export async function renderConfigOriginContent(opts: {
  * {@link renderConfigOriginContent}, so the two maps zip by key.
  */
 export async function loadConfigDescriptorsByOriginPath(opts: {
-  root: AppPath;
+  pass: CodegenPass;
   /**
    * Import the barrels for LIVE descriptors (their zod `schema`, their code),
    * rather than reading the evaluated records' data — see `discoverConfigs`.
    */
   live?: boolean;
 }): Promise<Map<string, ConfigDescriptor>> {
-  const configs = await discoverConfigs(opts.root, { live: opts.live });
+  const configs = await discoverConfigs(opts.pass, { live: opts.live });
   const result = new Map<string, ConfigDescriptor>();
   for (const { hierarchyPath, descriptor } of configs) {
     result.set(`${hierarchyPath}/${descriptor.name}.origin.jsonc`, descriptor);
@@ -588,13 +590,13 @@ export function pruneOrphanedConfigFiles(opts: {
 }
 
 export async function generateConfigOrigins(opts: {
-  root: AppPath;
+  pass: CodegenPass;
   originAnnotations?: OriginAnnotationsProvider;
   originDefaults?: OriginDefaultsProvider;
 }): Promise<void> {
   const rendered = await renderConfigOriginContent(opts);
   // `root`: the checkout root the caller works in.
-  const configDir = joinAppPath(opts.root, "config");
+  const configDir = joinAppPath(opts.pass.root, "config");
 
   for (const [relPath, content] of rendered) {
     // `.jsonc` is not in the format allowlist, so the funnel returns these bytes
@@ -637,14 +639,14 @@ export async function generateConfigOrigins(opts: {
  * and not a namespace: that path is the bundle's own layout, not the root's.
  */
 export async function propagateConfigToUser(opts: {
-  root: AppPath;
+  pass: CodegenPass;
   userConfigDir: AppPath;
 }): Promise<{ migrations: AppliedConfigMigration[] }> {
   // The checkout root and the namespace's user-config dir (or the release
   // bundle's staged one): both the app's own.
-  const root = opts.root;
+  const root = opts.pass.root;
   const userConfigDir = opts.userConfigDir;
-  const configs = await discoverConfigs(root);
+  const configs = await discoverConfigs(opts.pass);
 
   // Saved values follow a config's shape change BEFORE propagation compares
   // them: replay every config migration this namespace has not applied yet.

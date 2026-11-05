@@ -33,6 +33,7 @@ import {
   summaryCount,
   summaryLines,
 } from "./fact-summary";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Marker appended to a plugin's `name — description` line when the app's own
@@ -290,11 +291,13 @@ function renderPluginTreeMd(
 }
 
 export interface GenerateDocsOptions {
-  root: AppPath;
+  pass: CodegenPass;
 }
 
-export async function collectAllPlugins(root: AppPath): Promise<PluginNode[]> {
-  const tree = await buildBarrelFreeTree(root);
+export async function collectAllPlugins(
+  pass: CodegenPass,
+): Promise<PluginNode[]> {
+  const tree = await buildBarrelFreeTree(pass);
   return Array.from(tree.byDir.values());
 }
 
@@ -323,15 +326,15 @@ const DETAILS_HEADER =
   `A list longer than ${DOC_LIST_MAX} values (importers, uses, contributions) is summarized here and in the plugin's CLAUDE.md as one count per group; the linked \`REFERENCE.md\` beside the plugin lists it in full.\n\n`;
 
 export async function renderCompactDoc({
-  root,
+  pass,
 }: GenerateDocsOptions): Promise<string> {
-  return renderCompactDocFromTree(await buildEnrichedTree(root), root);
+  return renderCompactDocFromTree(await buildEnrichedTree(pass), pass.root);
 }
 
 export async function renderDetailsDoc({
-  root,
+  pass,
 }: GenerateDocsOptions): Promise<string> {
-  return renderDetailsDocFromTree(await buildEnrichedTree(root), root);
+  return renderDetailsDocFromTree(await buildEnrichedTree(pass), pass.root);
 }
 
 function renderPluginClaudeAutogen(
@@ -470,9 +473,10 @@ function legacyPluginDocsPath(root: AppPath): AppPath {
 }
 
 export async function generatePluginDocs({
-  root,
+  pass,
 }: GenerateDocsOptions): Promise<void> {
-  const tree = await buildEnrichedTree(root);
+  const { root } = pass;
+  const tree = await buildEnrichedTree(pass);
   const main = mainComposition(tree, root);
 
   // Markdown is not in the format allowlist, so the funnel hands these bytes

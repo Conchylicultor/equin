@@ -13,7 +13,7 @@
 // filesystem fact the verdict depends on, so validate-by-replay turns a change
 // touching none of them into a HIT. It records a SOUND SUPERSET as pure snapshot
 // projections (no byte reads, no extra git calls), rather than threading the view
-// through buildPluginTree / standardPluginDirs (which read the fs directly —
+// through buildPluginTree / standardPluginDirsIn (which read the fs directly —
 // Stage 3 of the plan would do that; a superset here is strictly sound today).
 // The superset can only ever OVER-invalidate (an unnecessary re-run), never
 // UNDER-invalidate (which would be the catastrophic stale PASS).
@@ -24,8 +24,8 @@
 // plugins/plugin-meta/plugins/plugin-tree/, which `CHECK_SOURCE_PREFIXES`
 // (read-set.ts) was widened to cover — else a change to the plugin-position walk
 // or the compositionRoot marker could flip the verdict with no recorded tree-fact
-// change. Everything else the check calls (standardPluginDirs / discoverCollected-
-// Dirs in codegen/, runtimeNames in boundaries/, findImports/maskSource in
+// change. Everything else the check calls (standardPluginDirsIn / discoverCollected-
+// DirsIn in codegen/, runtimeNames in boundaries/, findImports/maskSource in
 // parse-utils/) is already under a covered prefix.
 
 import type { FileSystemView } from "@plugins/framework/plugins/tooling/plugins/checks/core";
@@ -36,7 +36,7 @@ import type { FileSystemView } from "@plugins/framework/plugins/tooling/plugins/
  *
  *  (a) MEMBERSHIP of the whole plugins/ file set — the H3/H9 fact. EVERYTHING
  *      the check reads lives under plugins/ (both source roots, buildPluginTree
- *      over `plugins/`, standardPluginDirs → discoverCollectedDirs over
+ *      over `plugins/`, standardPluginDirsIn → discoverCollectedDirsIn over
  *      `plugins/`). Any ADDED / REMOVED / RENAMED path under plugins/ changes
  *      this match set → MISS: a new .ts with a violating import, a new plugin dir
  *      (even one holding only a non-.ts file — buildPluginTree's content gate
@@ -50,7 +50,7 @@ import type { FileSystemView } from "@plugins/framework/plugins/tooling/plugins/
  *
  *  (b) CONTENT of every file whose BYTES the verdict reads: the .ts/.tsx sources
  *      the walk parses (R4–R10 import grammar, R3 barrel purity, the cross-plugin
- *      re-export provenance chase, discoverCollectedDirs' `defineCollectedDir`
+ *      re-export provenance chase, discoverCollectedDirsIn's `defineCollectedDir`
  *      scan of core/*.ts) AND every package.json (R1 naming + the compositionRoot
  *      marker buildPluginTree reads). A change to any of them can flip the verdict
  *      → each is a FileFact → any edit is a MISS. Non-source files

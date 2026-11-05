@@ -401,7 +401,7 @@ describe("the scan over a file set", () => {
       browserHostGraphs: new Map(),
       sourceScans: () => Promise.resolve(createSourceScans(repo)),
     };
-    return await renderEagerTierManifest(root, ctx);
+    return await renderEagerTierManifest(ctx);
   }
 
   test("a watched slot in a plugin's source pins it; the same call in a test does not", async () => {

@@ -15,6 +15,7 @@ import {
 import { isIconRefModule } from "@plugins/ui/plugins/icons/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { scanFiles, type FileScan } from "./file-scans";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Generates the icon manifest — every icon name the code draws, collected from
@@ -119,8 +120,9 @@ const ICON_SCAN: FileScan<IconManifest> = {
 
 /** Every icon name the repo draws, scanned from source now (not read from the generated file). */
 export async function collectIconManifest(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<IconManifest> {
+  const { root } = pass;
   const symbols = new Set<string>();
   const brands = new Set<string>();
   const seti = new Set<string>();
@@ -128,7 +130,7 @@ export async function collectIconManifest(
   // its own node). Not filtered by composition: a name drawn by any plugin in
   // the repo ships, which costs a symbol, never a missing glyph. Each file's
   // names are a file record: only a file whose blob changed is read.
-  const tree = await buildBarrelFreeTree(root);
+  const tree = await buildBarrelFreeTree(pass);
   const files: string[] = [];
   for (const node of tree.byDir.values()) {
     for (const file of sourceFilesIn(tree.repo, node.dir)) {
@@ -179,6 +181,6 @@ export function iconManifestPath(root: AppPath): AppPath {
   return joinAppPath(root, MANIFEST_REL_PATH);
 }
 
-export async function renderIconManifest(root: AppPath): Promise<string> {
-  return renderIconManifestContent(await collectIconManifest(root));
+export async function renderIconManifest(pass: CodegenPass): Promise<string> {
+  return renderIconManifestContent(await collectIconManifest(pass));
 }

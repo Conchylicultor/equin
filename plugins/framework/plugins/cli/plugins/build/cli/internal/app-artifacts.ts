@@ -8,10 +8,13 @@ import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
   buildBarrelFreeTree,
+  buildRegistryGenContext,
   generateCompositionRegistry,
   regenerateManifestCodegen,
   regenerateRegistryCodegen,
   seedAuthoredOverrides,
+  writingCodegenPass,
+  type CodegenPass,
   type CodegenStep,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { listNamedCompositionRegistries } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
@@ -389,7 +392,7 @@ export async function prepareCompositionSources(opts: {
    */
   grant: Grant;
   hooks: ArtifactHooks;
-}): Promise<void> {
+}): Promise<{ pass: CodegenPass }> {
   const { root, compositions, hooks } = opts;
   const codegenStep = codegenStepFor(hooks);
 
@@ -437,6 +440,10 @@ export async function prepareCompositionSources(opts: {
     })),
   );
   const repo = await loadRepoSnapshot(root);
+  // The build's codegen pass, handed to stage 2 and the deploy: the trees read
+  // `repo`, and each barrel-evaluation phase re-takes the snapshot when it
+  // starts, after the previous phase's writes.
+  const pass = writingCodegenPass(repo, () => loadRepoSnapshot(root));
   endSpan();
 
   endSpan = hooks.span("bunInstall", "build:setup", "bun install");
@@ -465,8 +472,7 @@ export async function prepareCompositionSources(opts: {
   // spans are threaded through `onStep` so build keeps its granularity.
   hooks.log("Generating plugin registry...");
   const { renamedPackages, browserHosts } = await regenerateRegistryCodegen({
-    root,
-    repo,
+    pass,
     onStep: codegenStep,
   });
   for (const line of browserHosts) hooks.log(line);
@@ -529,7 +535,11 @@ export async function prepareCompositionSources(opts: {
   // whether or not this build named it — `planCompositionSet` states why.
   const plan = planCompositionSet(
     compositions.filter((id) => id !== MAIN_COMPOSITION_ID),
-    [...new Set(listNamedCompositionRegistries(root).map((r) => r.name))],
+    [
+      ...new Set(
+        (await listNamedCompositionRegistries(repo)).map((r) => r.name),
+      ),
+    ],
     (id) => byId.has(id),
   );
   for (const id of plan.unverifiable) {
@@ -543,7 +553,8 @@ export async function prepareCompositionSources(opts: {
     const allManifests = opts.manifest.map(manifestItemToManifest);
     // ONE faceted tree for N compositions — the barrel-free tree the registry
     // codegen above already built; resolving a closure against it is cheap.
-    const tree = await buildBarrelFreeTree(root, repo);
+    const tree = await buildBarrelFreeTree(pass);
+    const ctx = await buildRegistryGenContext(pass);
     for (const composition of filtered) {
       // Non-null: `plan.build` holds only ids `byId.has` accepted.
       const item = byId.get(composition)!;
@@ -554,7 +565,7 @@ export async function prepareCompositionSources(opts: {
       // registry written lazily per dist would be read for a composition whose
       // turn had not come.
       await generateCompositionRegistry({
-        root,
+        ctx,
         bundle,
         name: composition,
         home: item.home,
@@ -565,6 +576,7 @@ export async function prepareCompositionSources(opts: {
     }
   }
   endSpan();
+  return { pass };
 }
 
 /**
@@ -578,6 +590,8 @@ export async function prepareCompositionSources(opts: {
  */
 export async function generateAppSources(opts: {
   root: AppPath;
+  /** Stage 1's codegen pass (`prepareCompositionSources`). */
+  pass: CodegenPass;
   migration: {
     name?: string;
     reset?: boolean;
@@ -626,7 +640,7 @@ export async function generateAppSources(opts: {
   // plugin move's re-stamp compares the regenerated ones against (4b'').
   const priorOrigins = snapshotConfigOrigins(joinAppPath(root, "config"));
   try {
-    await regenerateManifestCodegen({ root, onStep: codegenStep });
+    await regenerateManifestCodegen({ pass: opts.pass, onStep: codegenStep });
   } finally {
     // The last record misses are the manifest codegen's: the workers (each
     // holding the modules it evaluated) are not kept through the frontend.
@@ -655,7 +669,7 @@ export async function generateAppSources(opts: {
     "build:codegen",
     "seed authored config overrides",
   );
-  const seedResult = await seedAuthoredOverrides({ root });
+  const seedResult = await seedAuthoredOverrides({ pass: opts.pass });
   endSpan();
   for (const rel of seedResult.seeded) {
     hooks.log(

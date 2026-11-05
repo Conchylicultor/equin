@@ -1,3 +1,4 @@
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 import {
   existsSync,
   readFileSync,
@@ -7,18 +8,23 @@ import {
   renderDataViewsManifest,
   dataViewsManifestPath,
   formatGenerated,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(ctx: CheckContext): Promise<CheckResult>;
+};
 
 const check: Check = {
   id: "data-views-in-sync",
   description:
     "plugins/primitives/plugins/data-view/shared/data-views.generated.ts matches the current defineDataView ids",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
     const file = dataViewsManifestPath(root);
     const rel = relative(root, file);
     if (!existsSync(file)) {
@@ -36,7 +42,7 @@ const check: Check = {
     try {
       expected = await formatGenerated({
         file,
-        content: await renderDataViewsManifest(root),
+        content: await renderDataViewsManifest(pass),
       });
     } catch (err) {
       return {

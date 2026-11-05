@@ -15,6 +15,7 @@ import {
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { mainBundle } from "./main-bundle";
 import { scanFiles, type FileScan } from "./file-scans";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Generates the data-views manifest consumed by the data-view primitive: the
@@ -122,9 +123,10 @@ const DATA_VIEW_SCAN: FileScan<string[]> = {
 };
 
 export async function collectDataViews(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<DataViewEntry[]> {
-  const tree = await buildBarrelFreeTree(root);
+  const { root } = pass;
+  const tree = await buildBarrelFreeTree(pass);
   // A plugin the app's composition does not bundle never registers its data-view
   // descriptor at runtime (its barrel is omitted from the registry), so emitting
   // its `config/<pluginId>/` origin would orphan user overrides under
@@ -189,17 +191,19 @@ export function dataViewsManifestPath(root: AppPath): AppPath {
 }
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
-export async function renderDataViewsManifest(root: AppPath): Promise<string> {
-  const entries = await collectDataViews(root);
+export async function renderDataViewsManifest(
+  pass: CodegenPass,
+): Promise<string> {
+  const entries = await collectDataViews(pass);
   return renderManifest(entries);
 }
 
 /** Regenerate `data-views.generated.ts` if it drifted. */
 export async function generateDataViews(opts: {
-  root: AppPath;
+  pass: CodegenPass;
 }): Promise<void> {
   await writeGenerated({
-    file: dataViewsManifestPath(opts.root),
-    content: await renderDataViewsManifest(opts.root),
+    file: dataViewsManifestPath(opts.pass.root),
+    content: await renderDataViewsManifest(opts.pass),
   });
 }

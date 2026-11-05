@@ -1,10 +1,10 @@
-import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { join } from "path";
 import {
   buildEnrichedTree,
   declareSlotsFromBarrels,
+  type CodegenPass,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
@@ -12,7 +12,6 @@ import {
   importBarrel,
   registerBarrelStubs,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { type BlockHandle } from "../define-block";
 
 // Canonical slot tokens for the two WEB block slots (see
@@ -45,12 +44,12 @@ export const WEB_BLOCK_FRAME_SLOT = "page.editor.block-frame"; // Editor.BlockFr
  * check's reporting.
  */
 export async function resolveBlockSlots(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<
   | { ok: true; block: SlotHandle; frame: SlotHandle }
   | { ok: false; message: string }
 > {
-  const naming = await declareSlotsFromBarrels(root, "registry");
+  const naming = await declareSlotsFromBarrels(pass, "registry");
   const block = naming.findSlot(WEB_BLOCK_SLOT);
   const frame = naming.findSlot(WEB_BLOCK_FRAME_SLOT);
   const missing = [
@@ -92,15 +91,17 @@ export async function resolveBlockSlots(
  * report to write takes {@link loadBlockHandles}, which turns the same three
  * into a throw.
  */
-export async function collectBlockHandles(): Promise<
+export async function collectBlockHandles(
+  pass: CodegenPass,
+): Promise<
   | { ok: true; handles: { pluginId: string; handle: BlockHandle<unknown> }[] }
   | { ok: false; reason: string }
 > {
-  const root = await getWorktreeRoot();
-  const tree = await buildEnrichedTree(root);
+  const { root } = pass;
+  const tree = await buildEnrichedTree(pass);
   registerBarrelStubs(root);
 
-  const slots = await resolveBlockSlots(root);
+  const slots = await resolveBlockSlots(pass);
   if (!slots.ok) return { ok: false, reason: slots.message };
 
   const candidateDirs = new Set<string>();
@@ -170,8 +171,10 @@ export async function collectBlockHandles(): Promise<
  * `bulleted-list` on `- [ ] x`) is resolved by `markdown.precedence`, which
  * `claimersOf` sorts on — so this is for reproducibility, not correctness.
  */
-export async function loadBlockHandles(): Promise<BlockHandle<unknown>[]> {
-  const collected = await collectBlockHandles();
+export async function loadBlockHandles(
+  pass: CodegenPass,
+): Promise<BlockHandle<unknown>[]> {
+  const collected = await collectBlockHandles(pass);
   if (!collected.ok) {
     throw new Error(
       `[page.editor] No block handles could be read: ${collected.reason}`,

@@ -1,14 +1,16 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
-import { buildEnrichedTree } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  buildEnrichedTree,
+  codegenPassOver,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import {
   importBarrel,
   registerBarrelStubs,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   conversionPrefixesOf,
   markdownLineClaim,
@@ -57,15 +59,15 @@ const check: Check = {
   id: "page.editor:block-data-registered",
   description:
     "every block TYPE rendered on the web (`Editor.Block`) also has a server-side `data` schema (`Editor.BlockData`), so the write boundary can validate its data",
-  async run(): Promise<CheckResult> {
-    const root = await getWorktreeRoot();
+  async run(ctx): Promise<CheckResult> {
+    const pass = codegenPassOver(await ctx.repo());
 
     // The barrel-imported ("enriched") tree — the same tree docgen renders the
     // `Contributes: Editor.Block "<type>" → …` lines from. Its contributions
     // facet carries each web contribution's resolved doc label (the block type),
     // which a static source scan (banned by `no-adhoc-marker-scan`) could not
-    // recover from `Editor.Block({ match: fooBlock.type, … })`. Memoized per-root.
-    const tree = await buildEnrichedTree(root);
+    // recover from `Editor.Block({ match: fooBlock.type, … })`. Memoized per pass.
+    const tree = await buildEnrichedTree(pass);
 
     // The invariant is keyed on the block TYPE, not the plugin: a type's web
     // renderer and its server schema may live in DIFFERENT plugins. `page` is
@@ -174,12 +176,13 @@ const anchorHasDecoration: Check = {
   id: "page-editor:anchor-has-decoration",
   description:
     "every block handle declaring `anchor: true` has a matching `anchor` component on its plugin's `Editor.BlockFrame` contribution",
-  async run(): Promise<CheckResult> {
-    const root = await getWorktreeRoot();
-    const tree = await buildEnrichedTree(root);
+  async run(ctx): Promise<CheckResult> {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
+    const tree = await buildEnrichedTree(pass);
     registerBarrelStubs(root);
 
-    const slots = await resolveBlockSlots(root);
+    const slots = await resolveBlockSlots(pass);
     if (!slots.ok) return slots;
 
     // Only plugins that actually contribute a block renderer can declare a
@@ -301,12 +304,13 @@ const markdownTagNamesUnique: Check = {
   id: "page.editor:markdown-tag-names-unique",
   description:
     "at most one block handle claims each markdown tag name on parse (`markdown.tag.serializeOnly` opts the others out)",
-  async run(): Promise<CheckResult> {
-    const root = await getWorktreeRoot();
-    const tree = await buildEnrichedTree(root);
+  async run(ctx): Promise<CheckResult> {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
+    const tree = await buildEnrichedTree(pass);
     registerBarrelStubs(root);
 
-    const slots = await resolveBlockSlots(root);
+    const slots = await resolveBlockSlots(pass);
     if (!slots.ok) return slots;
 
     const candidateDirs = new Set<string>();
@@ -392,8 +396,10 @@ const splitTargetsAreTextBearing: Check = {
   id: "page.editor:split-targets-are-text-bearing",
   description:
     "every declared split target (`splitInto`, `splitChildWhenExpanded.childType`) names a text-bearing block type, so the tail row the reducer mints can carry the text it splits off",
-  async run(): Promise<CheckResult> {
-    const collected = await collectBlockHandles();
+  async run(ctx): Promise<CheckResult> {
+    const collected = await collectBlockHandles(
+      codegenPassOver(await ctx.repo()),
+    );
     if (!collected.ok) {
       return {
         ok: false,
@@ -471,8 +477,10 @@ const blockPrefixesUnique: Check = {
   id: "page.editor:block-prefixes-unique",
   description:
     "no two block handles declare the same conversion prefix (`markdownPrefixes` ∪ `typingPrefixes`), which the typing shortcut would resolve by registration order",
-  async run(): Promise<CheckResult> {
-    const collected = await collectBlockHandles();
+  async run(ctx): Promise<CheckResult> {
+    const collected = await collectBlockHandles(
+      codegenPassOver(await ctx.repo()),
+    );
     if (!collected.ok) {
       return {
         ok: false,
@@ -546,8 +554,10 @@ const markdownClaimsAreEscapable: Check = {
   id: "page.editor:markdown-claims-are-escapable",
   description:
     "every line a block type declares it claims (`markdown.parseLine.claims`, `markdown.lineRun.claims`, `markdownPrefixes`) is claimed by that type, and stops being claimed once escaped with one leading backslash",
-  async run(): Promise<CheckResult> {
-    const collected = await collectBlockHandles();
+  async run(checkCtx): Promise<CheckResult> {
+    const collected = await collectBlockHandles(
+      codegenPassOver(await checkCtx.repo()),
+    );
     if (!collected.ok) {
       return {
         ok: false,
@@ -675,8 +685,10 @@ const markdownRoundTripCoversEveryBlock: Check = {
   id: "page.editor:markdown-round-trip-covers-every-block",
   description:
     "every registered block type has a generator in the markdown round-trip fuzzer (`core/testing/round-trip-corpus.ts`), so its markdown round trip is asserted",
-  async run(): Promise<CheckResult> {
-    const collected = await collectBlockHandles();
+  async run(ctx): Promise<CheckResult> {
+    const collected = await collectBlockHandles(
+      codegenPassOver(await ctx.repo()),
+    );
     if (!collected.ok) {
       return {
         ok: false,

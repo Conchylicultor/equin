@@ -15,6 +15,7 @@ import {
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { loadConfigDescriptorsByOriginPath } from "./config-origin-gen";
 import { writeGenerated } from "./write-generated";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Re-stamp the `// @legend` block (a descriptor's `overrideLegend`) into every
@@ -76,13 +77,13 @@ export async function applyOverrideLegends(opts: {
 
 /** Re-stamp every override legend under `<root>/config`. */
 export async function stampOverrideLegends(opts: {
-  root: AppPath;
+  pass: CodegenPass;
 }): Promise<void> {
   await applyOverrideLegends({
     // `root`: the checkout root the caller works in.
-    configDir: joinAppPath(opts.root, "config"),
+    configDir: joinAppPath(opts.pass.root, "config"),
     descriptorsByOriginRel: await loadConfigDescriptorsByOriginPath({
-      root: opts.root,
+      pass: opts.pass,
     }),
   });
 }

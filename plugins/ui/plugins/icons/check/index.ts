@@ -9,8 +9,8 @@ import {
   formatGenerated,
   iconManifestPath,
   renderIconManifest,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { IconifyJSON } from "@iconify/types";
 import {
   SYMBOL_NAMES_REL_PATH,
@@ -37,8 +37,9 @@ const symbolNamesInSync: Check = {
   id: "icons:symbol-names-in-sync",
   description:
     "icons/core/symbol-names.generated.ts and the saved-names runtime list were generated from the installed @iconify-json sets",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
     const expected = symbolNamesInputsHash(installedSetVersions());
     for (const [rel, read] of [
       [SYMBOL_NAMES_REL_PATH, readInputsHash],
@@ -65,14 +66,15 @@ const manifestInSync: Check = {
   id: "icons:manifest-in-sync",
   description:
     'icons/core/icon-manifest.generated.ts lists every symbol("…") / brand("…") / seti("…") literal in the repo',
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
     const file = iconManifestPath(root);
     const rel = relative(root, file);
     // A non-literal icon name is a scan failure, reported as the check's message.
     let expected: string;
     try {
-      expected = await renderIconManifest(root);
+      expected = await renderIconManifest(pass);
     } catch (err) {
       return {
         ok: false,
@@ -108,8 +110,9 @@ const setiInSync: Check = {
   id: "icons:seti-in-sync",
   description:
     "the vendored Seti set, its license and core/seti-names.generated.ts were produced by scripts/vendor-seti.ts from the commit pinned in shared/seti.ts",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
     for (const rel of [
       SETI_JSON_REL_PATH,
       SETI_LICENSE_REL_PATH,
@@ -150,11 +153,11 @@ const lucideCoverage: Check = {
   id: "icons:lucide-coverage",
   description:
     'every symbol("…") the repo draws has an entry in icons/core/lucide-map.ts — its Lucide counterpart, or MATERIAL_ONLY',
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const pass = codegenPassOver(await ctx.repo());
     let symbols: readonly string[];
     try {
-      ({ symbols } = await collectIconManifest(root));
+      ({ symbols } = await collectIconManifest(pass));
     } catch (err) {
       return {
         ok: false,

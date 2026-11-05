@@ -1,5 +1,4 @@
 import type { Check } from "@plugins/framework/plugins/tooling/core";
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   buildRegistryGenContext,
@@ -7,6 +6,7 @@ import {
   inferBrowserHostGraph,
   resolveHostConfigCoverage,
   serverBarrelBlockers,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { serverPortabilityOf } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import {
@@ -25,8 +25,9 @@ const check: Check = {
     // graphs are the ones `plugins-registry-in-sync` derived, so taking them
     // here costs nothing and cannot disagree with what codegen emitted.
     const repo = await checkCtx.repo();
-    const ctx = await buildRegistryGenContext(asAppPath(repo.root), repo);
-    const loaded = await loadConfigRegistrations(ctx);
+    const pass = codegenPassOver(repo);
+    const ctx = await buildRegistryGenContext(pass);
+    const loaded = await loadConfigRegistrations(pass);
     if (!loaded.ok) return loaded;
 
     // A plugin the app's composition does NOT bundle registers on neither

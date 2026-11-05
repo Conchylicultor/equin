@@ -34,7 +34,6 @@
 - Cross-plugin:
   - Imported by:
     - `framework/tooling/checks`
-    - `framework/tooling/codegen`
     - `framework/tooling/web-artifacts`
 - Exemptions:
   - Exempts itself from:

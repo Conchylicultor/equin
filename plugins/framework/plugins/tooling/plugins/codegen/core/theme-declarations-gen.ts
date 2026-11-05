@@ -6,6 +6,7 @@ import {
   collectWebSlotContributions,
   type WebSlotContribution,
 } from "./web-slot-contributions";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Generates the theme-declarations manifest: every token group, code theme,
@@ -52,9 +53,9 @@ const MANIFEST_HEADER = [
 ].join("\n");
 
 async function collectThemeDeclarations(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<Record<Section, unknown[]>> {
-  const found = await collectWebSlotContributions(root, SLOT_IDS);
+  const found = await collectWebSlotContributions(pass, SLOT_IDS);
   const out = {} as Record<Section, unknown[]>;
   for (const section of Object.keys(SLOT_IDS) as Section[]) {
     out[section] = found[section].map((c) => project(section, c));
@@ -117,7 +118,7 @@ export function themeDeclarationsManifestPath(root: AppPath): AppPath {
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
 export async function renderThemeDeclarationsManifest(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<string> {
-  return renderManifest(await collectThemeDeclarations(root));
+  return renderManifest(await collectThemeDeclarations(pass));
 }

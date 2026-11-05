@@ -3,6 +3,7 @@ import {
   regenerateRegistryCodegen,
   regenerateManifestCodegen,
   listReviewMarkedOverrides,
+  writingCodegenPass,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
@@ -15,11 +16,13 @@ const run: CliAction<[], object> = async () => {
   // evaluated barrels of the plugins this push did not touch are not computed
   // again.
   installRecordStore(openRecordStore());
-  const { renamedPackages } = await regenerateRegistryCodegen({
-    root,
-    repo: await loadRepoSnapshot(root),
-  });
-  await regenerateManifestCodegen({ root });
+  // One pass for both pipelines: the trees read the first snapshot, and each
+  // barrel-evaluation phase re-takes it after the previous phase's writes.
+  const pass = writingCodegenPass(await loadRepoSnapshot(root), () =>
+    loadRepoSnapshot(root),
+  );
+  const { renamedPackages } = await regenerateRegistryCodegen({ pass });
+  await regenerateManifestCodegen({ pass });
 
   // A created or corrected package.json leaves `bun.lock` without the new
   // member, or recording its old name. This

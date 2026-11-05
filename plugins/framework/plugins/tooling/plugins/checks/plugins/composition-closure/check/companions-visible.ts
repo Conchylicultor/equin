@@ -1,6 +1,10 @@
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
-import { buildRegistryGenContext } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  buildRegistryGenContext,
+  codegenPassOver,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
@@ -8,11 +12,14 @@ import {
   registerBarrelStubs,
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(ctx: CheckContext): Promise<CheckResult>;
+};
 
 /**
  * Every companion contribution the browser loads is one the closure engine can
@@ -41,9 +48,12 @@ export const companionsVisible: Check = {
   id: "companions-visible",
   description:
     "Every `companion: true` contribution a web or server barrel carries at runtime is written inline in its `contributions: [ … ]` literal, where the closure engine's static parse reads it (and none sits in a `machine/` barrel)",
-  async run() {
-    const root = await getWorktreeRoot();
-    const { tree, graph } = await buildRegistryGenContext(root);
+  async run(ctx) {
+    const repo = await ctx.repo();
+    const root = repo.root;
+    const { tree, graph } = await buildRegistryGenContext(
+      codegenPassOver(repo),
+    );
     const ruleKeys = new Map<string, string[]>();
     for (const rule of graph.rules) {
       const list = ruleKeys.get(rule.then) ?? [];

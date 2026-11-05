@@ -1,3 +1,4 @@
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 import {
   existsSync,
   readFileSync,
@@ -7,12 +8,16 @@ import {
   renderReorderableSlotsManifest,
   reorderableSlotsManifestPath,
   formatGenerated,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(ctx: CheckContext): Promise<CheckResult>;
+};
 
 // One manifest row, as `renderManifest` emits it. Parsing the two strings this
 // check ALREADY holds is what makes the added-slot report free — there is no
@@ -40,8 +45,9 @@ const check: Check = {
   id: "reorderable-slots-in-sync",
   description:
     "plugins/reorder/shared/reorderable-slots.generated.ts matches the current reorderable render slots",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
     const file = reorderableSlotsManifestPath(root);
     const rel = relative(root, file);
     if (!existsSync(file)) {
@@ -60,7 +66,7 @@ const check: Check = {
     try {
       rendered = await formatGenerated({
         file,
-        content: await renderReorderableSlotsManifest(root),
+        content: await renderReorderableSlotsManifest(pass),
       });
     } catch (err) {
       return {

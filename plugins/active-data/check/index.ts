@@ -1,3 +1,4 @@
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
@@ -5,6 +6,8 @@ import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core
 import {
   buildEnrichedTree,
   declareSlotsFromBarrels,
+  codegenPassOver,
+  type CodegenPass,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
@@ -19,7 +22,7 @@ type Check = {
   id: string;
   description: string;
   inputKeyed?: boolean;
-  run(): Promise<CheckResult>;
+  run(ctx: CheckContext): Promise<CheckResult>;
 };
 
 // A CHECK, not a lint rule, on purpose: a contributed lint rule runs repo-wide
@@ -137,15 +140,15 @@ type ChipScan =
  * chip checks below join over. A scan that recognises nothing is a failure,
  * never a clean pass.
  */
-async function scanInlineChips(): Promise<ChipScan> {
-  const root = await getWorktreeRoot();
+async function scanInlineChips(pass: CodegenPass): Promise<ChipScan> {
+  const { root } = pass;
   // The barrel-imported ("enriched") tree — the same one docgen renders the
   // contribution lines from. Its contributions facet carries BOTH halves:
   // web slot contributions and server registry contributions.
-  const tree = await buildEnrichedTree(root);
+  const tree = await buildEnrichedTree(pass);
   registerBarrelStubs(root);
 
-  const naming = await declareSlotsFromBarrels(root, "registry");
+  const naming = await declareSlotsFromBarrels(pass, "registry");
   const tagSlot: SlotHandle | undefined = naming.findSlot(TAG_SLOT);
   if (tagSlot === undefined) {
     return {
@@ -236,8 +239,8 @@ const documentChipHasServerToken: Check = {
   id: "active-data:document-chip-has-server-token",
   description:
     'every inline chip declaring `surfaces: ["…","document"]` also contributes the server `Editor.InlineToken` half, so a page block holding it stays agent-readable',
-  async run() {
-    const scan = await scanInlineChips();
+  async run(ctx) {
+    const scan = await scanInlineChips(codegenPassOver(await ctx.repo()));
     if (!scan.ok) return scan;
     const serverPatterns = scan.serverPatterns.get(SERVER_INLINE_TOKEN_SLOT);
     if (serverPatterns === undefined || serverPatterns.size === 0) {
@@ -306,8 +309,8 @@ const resolvedChipHasReferent: Check = {
   id: "active-data:resolved-chip-has-referent",
   description:
     'every inline chip declaring `modelText: "resolved"` also contributes a server `InlineTokenReferentSource` over the same pattern, so a model reads the referent\'s title instead of an opaque id',
-  async run() {
-    const scan = await scanInlineChips();
+  async run(ctx) {
+    const scan = await scanInlineChips(codegenPassOver(await ctx.repo()));
     if (!scan.ok) return scan;
     const referentPatterns =
       scan.serverPatterns.get(SERVER_REFERENT_SLOT) ?? new Set<string>();

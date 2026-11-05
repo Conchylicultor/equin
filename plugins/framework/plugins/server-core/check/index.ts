@@ -10,6 +10,7 @@ import {
 import {
   buildRegistryGenContext,
   renderBackendEntry,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import {
@@ -61,7 +62,7 @@ const check: Check = {
     "every host service has exactly one `machine/` provider; one declared in a portable `server/` barrel also has exactly one host provider (a plugin whose `server/index.ts` provides it); every host provider is portable, provides only declared host services, and is a lone `server/` barrel nothing imports",
   async run(ctx): Promise<CheckResult> {
     const repo = await ctx.repo();
-    const gen = await buildRegistryGenContext(repo.root, repo);
+    const gen = await buildRegistryGenContext(codegenPassOver(repo));
     const portability = await serverPortabilityOf(repo);
 
     const decls: (HostServiceDecl & { module: string })[] = [];

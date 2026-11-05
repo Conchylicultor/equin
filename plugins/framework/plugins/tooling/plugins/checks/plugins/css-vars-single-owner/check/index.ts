@@ -1,8 +1,10 @@
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
-import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  collectTokenGroupVars,
+  codegenPassOver,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { maskNonDeclarations } from "./mask";
 
 /**
@@ -28,12 +30,13 @@ const check: Check = {
   description:
     "Every token-group CSS var has exactly one declaring owner (no cross-group collision; no static-CSS re-declaration outside @theme)",
   async run(ctx) {
-    const root = await getWorktreeRoot();
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
 
     // Fresh from the real `defineTokenGroup` descriptors — NOT the committed
     // manifest, whose static import is frozen in the ESM cache before codegen
     // rewrites it within the same build (see collectTokenGroupVars).
-    const tokenGroupVarsByGroup = await collectTokenGroupVars(root);
+    const tokenGroupVarsByGroup = await collectTokenGroupVars(pass);
 
     // (a) Cross-group collisions: var → the groups that claim it.
     const owners = new Map<string, string[]>();

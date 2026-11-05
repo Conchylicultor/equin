@@ -1,8 +1,5 @@
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
-import {
-  joinAppPath,
-  type AppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { relative } from "path";
 import {
   importBarrel,
@@ -23,6 +20,7 @@ import { mainBundle } from "./main-bundle";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { undeclaredSlots } from "./evaluated-barrels";
 import type { CreatedSlot } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Load the web runtime the way the browser loads it, and run one declaration
@@ -69,7 +67,7 @@ import type { CreatedSlot } from "@plugins/plugin-meta/plugins/plugin-records/co
  * evaluated records and the naming settled over them (`recordSlotNaming`,
  * `evaluated-barrels.ts`), whose slots are stand-ins this naming cannot name.
  *
- * Memoized per (scope, root) — NOT per root. The barrel imports are ESM-cache
+ * Memoized per (scope, pass) — NOT per pass. The barrel imports are ESM-cache
  * hits on a second call, but each scope's declaration pass must run exactly once
  * per process, and the two scopes settle different sets: sharing one memo would
  * hand whichever caller arrived second the other's answer, silently.
@@ -82,26 +80,31 @@ import type { CreatedSlot } from "@plugins/plugin-meta/plugins/plugin-records/co
  * per root that preceded this one serialized them by accident; the lane states
  * it, for these two passes and for the five other loops in this process.
  */
-const declaredByScopeAndRoot = new Map<string, Promise<SlotNaming>>();
+const declaredByPass = new WeakMap<
+  CodegenPass,
+  Map<SlotScope, Promise<SlotNaming>>
+>();
 
 export function declareSlotsFromBarrels(
-  root: AppPath,
+  pass: CodegenPass,
   scope: SlotScope,
 ): Promise<SlotNaming> {
-  const key = `${scope}\0${root}`;
-  let cached = declaredByScopeAndRoot.get(key);
+  let byScope = declaredByPass.get(pass);
+  if (!byScope) declaredByPass.set(pass, (byScope = new Map()));
+  let cached = byScope.get(scope);
   if (!cached) {
-    cached = runDeclarationPass(root, scope);
-    declaredByScopeAndRoot.set(key, cached);
+    cached = runDeclarationPass(pass, scope);
+    byScope.set(scope, cached);
   }
   return cached;
 }
 
 async function runDeclarationPass(
-  root: AppPath,
+  pass: CodegenPass,
   scope: SlotScope,
 ): Promise<SlotNaming> {
-  const tree = await buildBarrelFreeTree(root);
+  const { root } = pass;
+  const tree = await buildBarrelFreeTree(pass);
   // `null` under `"source"` — NO membership filter at all, because an excluded
   // plugin's barrel is exactly what a source-scoped reader came for.
   //
@@ -174,10 +177,10 @@ async function runDeclarationPass(
  * prevent. Re-enabling a plugin puts its modules back in the set and the guard
  * names any slot it forgot; that is the whole coverage story.
  */
-export async function assertSlotsDeclared(root: AppPath): Promise<void> {
-  const orphans = await undeclaredSlots(root);
+export async function assertSlotsDeclared(pass: CodegenPass): Promise<void> {
+  const orphans = await undeclaredSlots(pass);
   if (orphans.length === 0) return;
-  throw new Error(await renderOrphanReport(root, orphans));
+  throw new Error(await renderOrphanReport(pass, orphans));
 }
 
 /**
@@ -189,18 +192,18 @@ export async function assertSlotsDeclared(root: AppPath): Promise<void> {
  * no key to look one up by. The directories that constructed slots are still
  * exactly where an author has to go, so that is what the report names.
  */
-async function slotBearingDirs(root: AppPath): Promise<string[]> {
-  const tree = await buildBarrelFreeTree(root);
+async function slotBearingDirs(pass: CodegenPass): Promise<string[]> {
+  const tree = await buildBarrelFreeTree(pass);
   const dirs: string[] = [];
   for (const node of tree.byDir.values()) {
     const slots = getFacet(node, slotsFacetDef) ?? [];
-    if (slots.length > 0) dirs.push(relative(root, node.dir));
+    if (slots.length > 0) dirs.push(relative(pass.root, node.dir));
   }
   return dirs.sort();
 }
 
 async function renderOrphanReport(
-  root: AppPath,
+  pass: CodegenPass,
   orphans: readonly CreatedSlot[],
 ): Promise<string> {
   const byKind = new Map<string, number>();
@@ -211,7 +214,7 @@ async function renderOrphanReport(
   const lines = [...byKind.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([kind, n]) => `  ${n} × ${kind}`);
-  const dirs = await slotBearingDirs(root);
+  const dirs = await slotBearingDirs(pass);
 
   return [
     `[slots] ${orphans.length} slot(s) exist that no plugin declares.`,

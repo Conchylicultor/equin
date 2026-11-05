@@ -1,6 +1,5 @@
 import { setPreBarrelImportGuard } from "@plugins/plugin-meta/plugins/barrel-import/core";
-import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import type { CodegenPass } from "./codegen-pass";
 import { generateBarrelStubs } from "./barrel-stubs-gen";
 import { generateBrowserHosts } from "./browser-host-gen";
 import { generateConfigOrigins } from "./config-origin-gen";
@@ -73,12 +72,12 @@ export type CodegenStep = (
 const runInline: CodegenStep = (_id, _label, run) => run();
 
 export interface RegenCodegenOptions {
-  root: AppPath;
   /**
-   * The pass's file set (the build's snapshot). The plugin trees are read off
-   * it, so the pipeline lists the repo once; omitted, the first tree asks git.
+   * The pass (`writingCodegenPass`): the plugin trees are read off its set,
+   * and each barrel-evaluation phase off the set it re-takes after the
+   * previous phase's writes — so the pipeline never lists the repo itself.
    */
-  repo?: RepoFiles;
+  pass: CodegenPass;
   /** Optional per-step wrapper (build threads its profiler through this). */
   onStep?: CodegenStep;
 }
@@ -118,26 +117,26 @@ export interface RegistryCodegenResult {
  * is reported before the heavier steps run.
  */
 export async function regenerateRegistryCodegen({
-  root,
-  repo,
+  pass,
   onStep = runInline,
 }: RegenCodegenOptions): Promise<RegistryCodegenResult> {
+  const { root } = pass;
   let renamedPackages: string[] = [];
   await onStep("packageNames", "plugin package names", async () => {
     renamedPackages = await syncPluginPackageNames({
       root,
-      tree: await buildBarrelFreeTree(root, repo),
+      tree: await buildBarrelFreeTree(pass),
     });
   });
   await onStep("barrelStubs", "barrel stubs", () =>
     generateBarrelStubs({ root }),
   );
-  const ctx = await buildRegistryGenContext(root);
+  const ctx = await buildRegistryGenContext(pass);
   await onStep("pluginRegistry", "plugin registry", () =>
-    generatePluginRegistry({ root, ctx }),
+    generatePluginRegistry({ ctx }),
   );
   await onStep("eagerTier", "eager-tier manifest", () =>
-    generateEagerTier({ root, ctx }),
+    generateEagerTier({ ctx }),
   );
   // Not wrapped in one span: the generator opens its own per-phase spans
   // (inference, coverage guard, write), which a wrapping span would nest.
@@ -207,9 +206,10 @@ export async function regenerateRegistryCodegen({
  *     plugin runtime barrel, and nothing in this pipeline reads its output.
  */
 export async function regenerateManifestCodegen({
-  root,
+  pass,
   onStep = runInline,
 }: RegenCodegenOptions): Promise<void> {
+  const { root } = pass;
   await onStep("symbolNames", "icon symbol names", () =>
     generateSymbolNames({ root }),
   );
@@ -218,14 +218,14 @@ export async function regenerateManifestCodegen({
   // barrel import freezes the ESM cache. Set defined by `preBarrelManifests`.
   for (const m of preBarrelManifests) {
     await onStep(m.id, `${m.id} manifest`, () =>
-      writePreBarrelManifest(m, root),
+      writePreBarrelManifest(m, pass),
     );
   }
 
   // Arm the freeze-point guard: the first barrel import (inside generatePluginDocs)
   // now asserts every pre-barrel manifest is still fresh, turning the ordering
   // invariant into a loud runtime failure instead of silent config pruning.
-  setPreBarrelImportGuard(() => assertPreBarrelManifestsFresh(root));
+  setPreBarrelImportGuard(() => assertPreBarrelManifestsFresh(pass));
   try {
     // The web barrels are evaluated here (inside both steps below, shared and
     // memoized — `evaluated-barrels.ts`): read from their evaluated records,
@@ -241,35 +241,35 @@ export async function regenerateManifestCodegen({
     // descriptor. Failing first is what keeps a declaration mistake from costing
     // authored files.
     await onStep("slotDeclarations", "slot declaration guard", () =>
-      assertSlotsDeclared(root),
+      assertSlotsDeclared(pass),
     );
     // POST-WEB manifests: their renderers need those same declarations, read
     // from the same evaluated records.
     for (const m of postWebManifests) {
       await onStep(m.id, `${m.id} manifest`, () =>
-        writePreBarrelManifest(m, root),
+        writePreBarrelManifest(m, pass),
       );
     }
     await onStep("pluginDocs", "generate plugin docs", () =>
-      generatePluginDocs({ root }),
+      generatePluginDocs({ pass }),
     );
     await onStep("tokenGroupVars", "token-group vars manifest", () =>
-      generateTokenGroupVars({ root }),
+      generateTokenGroupVars({ pass }),
     );
     // Same descriptor pass (memoized). Only type-only imports reach the file,
     // so no barrel freezes a stale copy at module-load.
     await onStep("colorTokenRef", "ColorTokenRef union", () =>
-      generateColorTokenRef({ root }),
+      generateColorTokenRef({ pass }),
     );
     await onStep("configOrigins", "generate config origins", () =>
-      generateConfigOrigins({ root }),
+      generateConfigOrigins({ pass }),
     );
     // After the origins: the stamp reads the same descriptor set. It writes
     // only comment lines into overrides that already exist (never a file, never
     // a marker), so unlike the seeder it belongs in this shared pipeline — push
     // normalizes a legend a runtime write or a hand edit dropped.
     await onStep("overrideLegends", "stamp config override legends", () =>
-      stampOverrideLegends({ root }),
+      stampOverrideLegends({ pass }),
     );
   } finally {
     // Disarm so a guard never leaks into a later run / unrelated barrel import.

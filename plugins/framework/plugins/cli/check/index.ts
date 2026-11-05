@@ -160,7 +160,7 @@ function resolvesWithoutNodeModules(spec: string): boolean {
  *
  * STAGE-1 REGISTRIES are the same hazard on a different clock, and a third
  * rule. Every collected dir's committed `<dir>.generated.ts` (discovered, never
- * listed — `discoverCollectedDirs`) is rewritten by stage 1 inside the
+ * listed — `discoverCollectedDirsIn`) is rewritten by stage 1 inside the
  * regenerating process and read later in it: `lint.generated.ts` was imported
  * at `lint/core`'s load, so `build` (through the codegen barrel) evaluated the
  * PREVIOUS entry list before stage 1 ran, and a new `lint/index.ts` was missing

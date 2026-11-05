@@ -8,9 +8,10 @@ import { assertCompositionName } from "@plugins/plugin-meta/plugins/composition/
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { SERVER_CORE_RELATIVE } from "@plugins/infra/plugins/paths/core";
 import {
-  discoverCollectedDirs,
+  discoverCollectedDirsIn,
   type DiscoveredCollectedDir,
 } from "@plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery/core";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 
 export function collectedDirRegistryPath(def: DiscoveredCollectedDir): AppPath {
   return joinAppPath(def.ownerDir, "core", `${def.dir}.generated.ts`);
@@ -119,12 +120,12 @@ export function compositionRegistryPath(
  * call site. Empty for the main composition, whose registries ARE the committed
  * files (`compositionRegistryFileName`).
  */
-export function compositionRegistryRedirects(
-  root: AppPath,
+export async function compositionRegistryRedirects(
+  repo: RepoFiles,
   composition: string,
-): { committed: string; filtered: string }[] {
+): Promise<{ committed: string; filtered: string }[]> {
   if (composition === MAIN_COMPOSITION_ID) return [];
-  return compositionFilteredRegistries(root).map(({ def, committed }) => ({
+  return (await compositionFilteredRegistries(repo)).map(({ def, committed }) => ({
     committed,
     filtered: collectedDirNamedCompositionRegistryPath(def, composition),
   }));
@@ -135,10 +136,10 @@ export function compositionRegistryRedirects(
  * committed registry's absolute path — the registries whose contents depend on
  * the composition, as opposed to the code that imports them.
  */
-export function compositionFilteredRegistries(
-  root: AppPath,
-): { def: DiscoveredCollectedDir; committed: string }[] {
-  return discoverCollectedDirs(root)
+export async function compositionFilteredRegistries(
+  repo: RepoFiles,
+): Promise<{ def: DiscoveredCollectedDir; committed: string }[]> {
+  return (await discoverCollectedDirsIn(repo))
     .filter((def) => COMPOSITION_RUNTIME_DIRS.has(def.dir))
     .map((def) => ({ def, committed: collectedDirRegistryPath(def) }));
 }
@@ -160,16 +161,16 @@ export function parseNamedCompositionRegistryFileName(
  * composition's backend entry (`bin/index.composition.<name>.generated.ts`) — the auto-serve
  * stage's sweep input (delete the entries whose name is no longer activated).
  *
- * Synchronous (callers include a synchronous program-key read), so it takes the
- * git-listed sync discovery front. The per-name registries themselves are
- * GITIGNORED, so no file set holds them: reading the (at most three) owning
- * `core/` directories is the only way to see them.
+ * The owning plugins are discovered from the caller's file set. The per-name
+ * registries themselves are GITIGNORED, so no file set holds them: reading the
+ * (at most five) owning `core/` directories is the only way to see them.
  */
-export function listNamedCompositionRegistries(
-  root: AppPath,
-): Array<{ dir: string; name: string; file: string }> {
+export async function listNamedCompositionRegistries(
+  repo: RepoFiles,
+): Promise<Array<{ dir: string; name: string; file: string }>> {
+  const root = repo.root;
   const out: Array<{ dir: string; name: string; file: string }> = [];
-  for (const def of discoverCollectedDirs(root)) {
+  for (const def of await discoverCollectedDirsIn(repo)) {
     if (!COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
     // The plugin dir of a collected dir of this checkout.
     const coreDir = joinAppPath(def.ownerDir, "core");

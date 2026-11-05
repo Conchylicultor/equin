@@ -1,3 +1,5 @@
+import { codegenPassOver } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 /**
  * Fresh-install guard: the WHOLE real `data/` directory, replayed from an empty
  * database through the boot schema layer with the real derived layer (every
@@ -39,7 +41,9 @@ afterAll(async () => {
 });
 
 test("the whole data/ directory plus the real derived layer applies from scratch", async () => {
-  const declared = await declaredSchemaInputs(await getWorktreeRoot());
+  const declared = await declaredSchemaInputs(
+    codegenPassOver(await loadRepoSnapshot(await getWorktreeRoot())),
+  );
   if (!declared.ok) throw new Error(declared.message);
   const { inputs } = declared;
 

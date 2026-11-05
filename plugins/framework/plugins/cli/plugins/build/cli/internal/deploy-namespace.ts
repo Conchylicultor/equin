@@ -9,7 +9,10 @@ import { fixed, retryUntil } from "@plugins/packages/plugins/retry/core";
 import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/core";
 import { getHealth } from "@plugins/infra/plugins/health/core";
-import { propagateConfigToUser } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  propagateConfigToUser,
+  type CodegenPass,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { ensureDatabase } from "@plugins/database/plugins/admin/server";
 import {
   stampCompositionMarker,
@@ -90,6 +93,8 @@ export interface DeployNamespaceOptions {
   target: BuildTarget;
   /** The checkout being built. */
   root: AppPath;
+  /** The build's codegen pass (stage 1's): config propagation reads its evaluation. */
+  pass: CodegenPass;
   /** Only ever the `.build.lock`'s home — see `BuildWebDistOptions.webDir`. */
   webDir: string;
   buildId: string;
@@ -544,7 +549,7 @@ export async function deployNamespace(
       async () => {
         console.log("Propagating config to user...");
         const { migrations } = await propagateConfigToUser({
-          root,
+          pass: opts.pass,
           userConfigDir: configDir.file(ns),
         });
         for (const m of migrations) {

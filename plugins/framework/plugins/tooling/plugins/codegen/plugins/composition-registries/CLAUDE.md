@@ -7,7 +7,7 @@
 - Description: The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, and every per-name registry and backend entry on disk — without the build pipeline, so a serving backend (worktree reclaim) can list them.
 - Core:
   - Uses:
-    - `framework/tooling/collected-dir/discovery.discoverCollectedDirs`
+    - `framework/tooling/collected-dir/discovery.discoverCollectedDirsIn`
     - `framework/tooling/collected-dir/discovery.DiscoveredCollectedDir`
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.joinAppPath`

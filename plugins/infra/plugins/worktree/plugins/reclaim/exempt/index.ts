@@ -11,4 +11,11 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "repo-walk-safety/no-adhoc-repo-listing",
+    paths: ["server/internal/reclaim-namespace.ts"],
+    kind: "sanctioned",
+    reason:
+      "A read of another checkout: the composing checkout whose filtered registries a reclaim deletes is not this backend's, so no pass holds its file set — the plugins that own a registry are discovered from its own listing, once per reclaimed namespace.",
+  },
 ] satisfies Exemptions;

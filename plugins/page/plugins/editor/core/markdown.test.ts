@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
+import { codegenPassOver } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   conversionPrefixesOf,
   defineBlock,
@@ -56,7 +59,9 @@ import {
 // `lexical` among them), and Bun's default per-test timeout is
 // 5 s, which nothing in this repo overrides. At module scope no test timer
 // covers it; inside a hook one would, and every run would fail on the clock.
-const handles = await loadBlockHandles();
+const handles = await loadBlockHandles(
+  codegenPassOver(await loadRepoSnapshot(await getWorktreeRoot())),
+);
 
 /**
  * The real handle for one block type, or a THROW naming what IS registered.

@@ -1,13 +1,10 @@
-import {
-  joinAppPath,
-  type AppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { buildFacetedPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
-import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { evaluateAllBarrels, recordSlotNaming } from "./evaluated-barrels";
+import type { CodegenPass } from "./codegen-pass";
 
-const enrichedTreeCache = new Map<string, Promise<PluginTree>>();
+const enrichedTrees = new WeakMap<CodegenPass, Promise<PluginTree>>();
 
 /**
  * The ENRICHED plugin tree: every facet, enriched with every barrel as the
@@ -28,25 +25,25 @@ const enrichedTreeCache = new Map<string, Promise<PluginTree>>();
  * a barrel against the full declaration (`resolveDeclarationDependent`), and
  * the facets receive modules and naming as one value — so this tree, and every
  * generated artifact downstream of it, is a function of the checkout, whatever
- * process asks for it.
+ * process asks for it. Memoized per pass (`codegen-pass.ts`).
  */
-export function buildEnrichedTree(root: AppPath): Promise<PluginTree> {
-  let cached = enrichedTreeCache.get(root);
+export function buildEnrichedTree(pass: CodegenPass): Promise<PluginTree> {
+  let cached = enrichedTrees.get(pass);
   if (!cached) {
     cached = (async () => {
-      const evaluation = await evaluateAllBarrels(root);
-      const naming = await recordSlotNaming(root, "source");
+      const evaluation = await evaluateAllBarrels(pass);
+      const naming = await recordSlotNaming(pass, "source");
       // The set the barrel-free tree was read off: its records are this
-      // tree's, one listing per process.
-      return buildFacetedPluginTree(joinAppPath(root, "plugins"), {
-        repo: (await buildBarrelFreeTree(root)).repo,
+      // tree's.
+      return buildFacetedPluginTree(joinAppPath(pass.root, "plugins"), {
+        repo: pass.repo,
         enrich: {
           naming,
           modulesOf: (node) => evaluation.modulesOf(node),
         },
       });
     })();
-    enrichedTreeCache.set(root, cached);
+    enrichedTrees.set(pass, cached);
   }
   return cached;
 }

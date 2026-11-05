@@ -11,13 +11,15 @@
  * the first per pass should be a memo hit; each line names the import-closure
  * builds its inference ran.
  */
-import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   buildRegistryGenContext,
   deriveBrowserHostGraph,
   discoverBrowserHosts,
   inferBrowserHostGraph,
+  codegenPassOver,
+  writingCodegenPass,
 } from "../core";
 
 async function timed<T>(label: string, run: () => Promise<T>): Promise<T> {
@@ -33,8 +35,11 @@ const root = await getWorktreeRoot();
 
 console.log("build codegen (regenerateRegistryCodegen's ctx):");
 {
+  const snapshot = await loadRepoSnapshot(root);
   const ctx = await timed("buildRegistryGenContext", () =>
-    buildRegistryGenContext(root),
+    buildRegistryGenContext(
+      writingCodegenPass(snapshot, () => loadRepoSnapshot(root)),
+    ),
   );
   for (const host of discoverBrowserHosts(await ctx.repo())) {
     const graph = await timed(`${host.pluginPath}: inference`, () =>
@@ -49,8 +54,8 @@ console.log("build codegen (regenerateRegistryCodegen's ctx):");
 
 console.log("check pass (the run's file set):");
 {
-  const repo = await loadRepoFiles(root);
-  const ask = () => buildRegistryGenContext(root, repo);
+  const repo = await loadRepoSnapshot(root);
+  const ask = () => buildRegistryGenContext(codegenPassOver(repo));
   for (const host of discoverBrowserHosts(repo)) {
     await timed("plugins-registry-in-sync: derive", async () =>
       deriveBrowserHostGraph(await ask(), host),

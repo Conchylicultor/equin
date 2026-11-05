@@ -28,7 +28,10 @@ import {
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
+import {
+  loadRepoFiles,
+  loadRepoSnapshot,
+} from "@plugins/framework/plugins/tooling/core";
 import {
   asNamespace,
   namespaceUrl,
@@ -48,6 +51,7 @@ import type { SymbolName } from "@plugins/ui/plugins/icons/core";
 import { appIconToSvg } from "@plugins/apps-core/plugins/app-icon/core";
 import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/plugins/bundle/cli";
 import {
+  codegenPassOver,
   propagateConfigToUser,
   readDefineApp,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
@@ -1103,16 +1107,19 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   // resolving to a file that is not there must not silently fall back to the
   // committed (whole-app) registry.
   const registries: RegistryRedirects = new Map(
-    compositionRegistryRedirects(root, opts.composition).map(
-      ({ committed, filtered }) => {
-        if (!existsSync(filtered)) {
-          throw new Error(
-            `Composition build did not produce ${relative(root, filtered)}.`,
-          );
-        }
-        return [committed, { kind: "file", path: filtered }];
-      },
-    ),
+    (
+      await compositionRegistryRedirects(
+        await loadRepoFiles(root),
+        opts.composition,
+      )
+    ).map(({ committed, filtered }) => {
+      if (!existsSync(filtered)) {
+        throw new Error(
+          `Composition build did not produce ${relative(root, filtered)}.`,
+        );
+      }
+      return [committed, { kind: "file", path: filtered }];
+    }),
   );
 
   console.log("  • backend (filtered closure)");
@@ -1327,7 +1334,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   //     harmless (the backend only reads registered descriptors).
   console.log("  • resolved config defaults");
   await propagateConfigToUser({
-    root,
+    pass: codegenPassOver(await loadRepoSnapshot(root)),
     userConfigDir: joinAppPath(out, "config-seed", "config", opts.composition),
   });
 

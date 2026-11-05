@@ -1,6 +1,5 @@
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type {
   Check,
   CheckResult,
@@ -8,6 +7,7 @@ import type {
 import {
   collectTokenGroups,
   collectTokenGroupVars,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
@@ -296,7 +296,8 @@ const check: Check = {
       "reads a raw `var(--font-size-*)` / `var(--line-height-*)` in TS, which skips --font-scale (use typeVar())",
   },
   async run(ctx): Promise<CheckResult> {
-    const root = await getWorktreeRoot();
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
     // Every leak is reported in one run, not the first one only.
     const failures: Failure[] = [];
     const report = (message: string, hint: string): void => {
@@ -325,7 +326,7 @@ const check: Check = {
     }
 
     // (2) No other token group declares type metrics.
-    const byGroup = await collectTokenGroupVars(root);
+    const byGroup = await collectTokenGroupVars(pass);
     const leaks: string[] = [];
     for (const [group, vars] of Object.entries(byGroup)) {
       if (group === TYPE_SCALE_GROUP_ID) continue;
@@ -447,7 +448,7 @@ const check: Check = {
     // (6b) Every pick token declares exactly its axis's vocabulary.
     const pickLeaks: string[] = [];
     for (const [groupId, group] of Object.entries(
-      await collectTokenGroups(root),
+      await collectTokenGroups(pass),
     )) {
       for (const [key, field] of Object.entries(group.schema)) {
         const axis = PICK_AXES.find((a) => key.endsWith(a.suffix));

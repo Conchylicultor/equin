@@ -1,3 +1,4 @@
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 import {
   existsSync,
   readFileSync,
@@ -7,18 +8,23 @@ import {
   renderThemeDeclarationsManifest,
   themeDeclarationsManifestPath,
   formatGenerated,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(ctx: CheckContext): Promise<CheckResult>;
+};
 
 const check: Check = {
   id: "theme-declarations-in-sync",
   description:
     "plugins/ui/plugins/theme-engine/server/internal/theme-declarations.generated.ts matches the token groups and themes the browser registers",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
     const file = themeDeclarationsManifestPath(root);
     const rel = relative(root, file);
     if (!existsSync(file)) {
@@ -30,7 +36,7 @@ const check: Check = {
     }
     const expected = await formatGenerated({
       file,
-      content: await renderThemeDeclarationsManifest(root),
+      content: await renderThemeDeclarationsManifest(pass),
     });
     if (readFileSync(file, "utf8") !== expected) {
       return {

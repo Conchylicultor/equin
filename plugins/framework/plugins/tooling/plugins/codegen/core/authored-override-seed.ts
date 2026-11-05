@@ -22,6 +22,7 @@ import {
   walkJsoncFiles,
 } from "./config-origin-gen";
 import { writeGenerated } from "./write-generated";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Build-time seeding of the **mandatory** committed overrides — the files a
@@ -382,18 +383,18 @@ export async function applyAuthoredOverrideSeeding(opts: {
  * see the deliberate omission from `regenerateManifestCodegen` (regen-pipeline.ts).
  */
 export async function seedAuthoredOverrides(opts: {
-  root: AppPath;
+  pass: CodegenPass;
 }): Promise<AuthoredOverrideSeedResult> {
   let live$: Promise<Map<string, ConfigDescriptor>> | undefined;
   return await applyAuthoredOverrideSeeding({
     // `root`: the checkout root the caller works in.
-    configDir: joinAppPath(opts.root, "config"),
+    configDir: joinAppPath(opts.pass.root, "config"),
     descriptorsByOriginRel: await loadConfigDescriptorsByOriginPath({
-      root: opts.root,
+      pass: opts.pass,
     }),
     liveDescriptor: async (originRel) => {
       const live = (live$ ??= loadConfigDescriptorsByOriginPath({
-        root: opts.root,
+        pass: opts.pass,
         live: true,
       }));
       const d = (await live).get(originRel);

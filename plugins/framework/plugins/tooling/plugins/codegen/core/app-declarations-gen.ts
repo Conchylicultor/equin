@@ -3,6 +3,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { collectWebSlotContributions } from "./web-slot-contributions";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Generates the app-declarations manifest: every app the browser registers
@@ -49,8 +50,10 @@ interface ProjectedApp {
   launch: "tab" | "surface";
 }
 
-async function collectAppDeclarations(root: AppPath): Promise<ProjectedApp[]> {
-  const { apps } = await collectWebSlotContributions(root, SLOT_IDS);
+async function collectAppDeclarations(
+  pass: CodegenPass,
+): Promise<ProjectedApp[]> {
+  const { apps } = await collectWebSlotContributions(pass, SLOT_IDS);
   return apps
     .map((c): ProjectedApp => {
       const app = c.app as ProjectedApp["app"];
@@ -90,7 +93,7 @@ export function appDeclarationsManifestPath(root: AppPath): AppPath {
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
 export async function renderAppDeclarationsManifest(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<string> {
-  return renderManifest(await collectAppDeclarations(root));
+  return renderManifest(await collectAppDeclarations(pass));
 }

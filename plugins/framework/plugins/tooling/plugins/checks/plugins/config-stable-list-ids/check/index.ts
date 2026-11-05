@@ -3,14 +3,16 @@ import {
   readFileSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
-import { loadConfigDescriptorsByOriginPath } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  loadConfigDescriptorsByOriginPath,
+  codegenPassOver,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
   APP_SCOPE_DIR,
   CONFIG_HASH_RE,
   mapConfigLists,
 } from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type {
   Check,
   CheckContext,
@@ -36,7 +38,8 @@ const check: Check = {
   description:
     "Every identity-bearing config listField (stableIdentity) row carries an explicit, unique id",
   async run(ctx: CheckContext) {
-    const root = await getWorktreeRoot();
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
     const configDir = join(root, "config");
     if (!existsSync(configDir)) return { ok: true };
 
@@ -45,7 +48,7 @@ const check: Check = {
     // Live: the fields' list mapping runs each field's own code, which no
     // evaluated record holds.
     const descriptorsByOriginRel = await loadConfigDescriptorsByOriginPath({
-      root,
+      pass,
       live: true,
     });
 

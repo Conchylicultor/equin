@@ -1,3 +1,4 @@
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 import {
   existsSync,
   readFileSync,
@@ -7,11 +8,15 @@ import {
   companionManifestPath,
   formatGenerated,
   renderCompanionManifest,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(ctx: CheckContext): Promise<CheckResult>;
+};
 
 /**
  * The web-sdk's companion manifest states the companions the code declares.
@@ -22,8 +27,9 @@ export const companionsInSync: Check = {
   id: "companions-in-sync",
   description:
     "plugins/framework/plugins/web-sdk/core/companions.generated.ts matches the companion slots and contributions the code declares",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
     const file = companionManifestPath(root);
     const rel = relative(root, file);
     if (!existsSync(file))
@@ -34,7 +40,7 @@ export const companionsInSync: Check = {
       };
     const expected = await formatGenerated({
       file,
-      content: await renderCompanionManifest(root),
+      content: await renderCompanionManifest(pass),
     });
     if (readFileSync(file, "utf8") !== expected)
       return {

@@ -49,8 +49,9 @@ export default createRule({
         "buildPluginTree() or buildFacetedPluginTree() itself rebuilds a tree the run has already built — six " +
         "checks used to do exactly that, back to back. Read the shared one: " +
         "buildStructureTreeOnce(pluginsRoot) from the same barrel for the structure " +
-        "(paths, ids, runtimes, descriptions), or buildBarrelFreeTree(root) / " +
-        "buildEnrichedTree(root) from the codegen core barrel when you need facets. " +
+        "(paths, ids, runtimes, descriptions), or buildBarrelFreeTree(pass) / " +
+        "buildEnrichedTree(pass) from the codegen core barrel when you need facets " +
+        "(the pass: codegenPassOver(await ctx.repo())). " +
         "Type-only imports are allowed.",
     },
   },

@@ -44,12 +44,4 @@ export default [
     reason:
       "a relative import specifier read from a testing barrel of the checkout's own plugins, resolved against the barrel that names it",
   },
-  {
-    rule: "repo-walk-safety/no-adhoc-repo-listing",
-    paths: ["core/barrel-free-tree.ts", "core/evaluated-barrels.ts"],
-    kind: "debt",
-    task: "task-1793856387-73tcw0",
-    reason:
-      "The codegen tree family lists the repo itself when its caller hands no set (the barrel-free tree), per evaluation phase (the build must re-read the tree after each phase writes generated files), and synchronously for collected-dir discovery \u2014 ~3 whole-tree listings per check pass, memoized per process.",
-  },
 ] satisfies Exemptions;

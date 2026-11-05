@@ -5,6 +5,7 @@ import {
 import { collectCompanionSlots } from "@plugins/plugin-meta/plugins/closure/core";
 import type { CompanionSlot } from "@plugins/plugin-meta/plugins/closure/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Generates the companion manifest: every slot opened to companions, and which
@@ -92,11 +93,13 @@ export function companionManifestPath(root: AppPath): AppPath {
 }
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
-export async function renderCompanionManifest(root: AppPath): Promise<string> {
+export async function renderCompanionManifest(
+  pass: CodegenPass,
+): Promise<string> {
   // The web-sdk's manifest: web slots only. A server kind's companions are
   // held to their owner by the closure edge and by the owner itself at boot.
   return renderManifest(
-    collectCompanionSlots(await buildBarrelFreeTree(root)).filter(
+    collectCompanionSlots(await buildBarrelFreeTree(pass)).filter(
       (s) => s.runtime === "web",
     ),
   );

@@ -1,4 +1,3 @@
-import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
@@ -7,7 +6,10 @@ import {
   registerBarrelStubs,
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
-import { buildRegistryGenContext } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  buildRegistryGenContext,
+  type CodegenPass,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { View } from "@plugins/database/plugins/derived-views/server";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
 import { registeredDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
@@ -34,9 +36,10 @@ export type DeclaredSchemaInputsResult =
 // this repo declares both — so it fails rather than dry-running a layer that
 // tests nothing.
 export async function declaredSchemaInputs(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<DeclaredSchemaInputsResult> {
-  const ctx = await buildRegistryGenContext(root);
+  const { root } = pass;
+  const ctx = await buildRegistryGenContext(pass);
   registerBarrelStubs(root);
 
   const definitions: { contributions?: readonly ServerContribution[] }[] = [];

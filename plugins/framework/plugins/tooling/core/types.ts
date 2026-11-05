@@ -301,7 +301,7 @@ export interface Check {
    * Commit `18126884a` is the fix shape to copy — BOTH halves, neither optional:
    *   - MOVE THE PRECONDITION INTO THE PRODUCER. `buildEnrichedTree`
    *     (`../plugins/codegen/core/enriched-tree.ts`) runs the declaration pass
-   *     itself, memoized per root, so every caller gets it. It used to live in one
+   *     itself, memoized per pass, so every caller gets it. It used to live in one
    *     caller's pipeline ordering, where it held for that pipeline and nowhere
    *     else.
    *   - LEAVE THE EARLY READ NO SPELLING. The contributions facet

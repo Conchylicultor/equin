@@ -9,7 +9,6 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import {
   declaredSlotSources,
   settleSlotNaming,
@@ -35,6 +34,7 @@ import type {
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { mainBundle } from "./main-bundle";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * The build's barrels, EVALUATED: what importing each plugin barrel produced,
@@ -53,8 +53,10 @@ import { mainBundle } from "./main-bundle";
  *   post-web manifests are written (a server barrel reads them at load). It
  *   feeds the enriched tree and the config origins.
  *
- * Each takes its own repo snapshot when it starts, so a generated file written
- * by an earlier phase is keyed by its new content.
+ * Each reads its pass's phase set (`CodegenPass.phaseRepo`), taken when it
+ * starts: in a build, re-taken after the earlier phase's writes, so a
+ * generated file written by it is keyed by its new content; in a check run,
+ * the run's one set.
  *
  * What the records hold is DATA: a contribution's component is a named
  * function stand-in, its slot a stand-in that {@link recordSlotNaming}
@@ -92,11 +94,12 @@ function readOutside(root: AppPath, rel: string): string | null {
 }
 
 async function evaluate(
-  root: AppPath,
+  pass: CodegenPass,
   runtimes: readonly BarrelRuntime[],
 ): Promise<BarrelEvaluation> {
-  const tree = await buildBarrelFreeTree(root);
-  const snapshot = await loadRepoSnapshot(root);
+  const { root } = pass;
+  const tree = await buildBarrelFreeTree(pass);
+  const snapshot = await pass.phaseRepo();
   const refs: BarrelRef[] = [];
   const byNode = new Map<string, BarrelRef[]>();
   const add = (node: PluginNode, ref: BarrelRef): void => {
@@ -147,38 +150,45 @@ async function evaluate(
   };
 }
 
-const webByRoot = new Map<string, Promise<BarrelEvaluation>>();
-const allByRoot = new Map<string, Promise<BarrelEvaluation>>();
+const webByPass = new WeakMap<CodegenPass, Promise<BarrelEvaluation>>();
+const allByPass = new WeakMap<CodegenPass, Promise<BarrelEvaluation>>();
 
-/** Every web barrel, evaluated (memoized per root). */
-export function evaluateWebBarrels(root: AppPath): Promise<BarrelEvaluation> {
-  let e = webByRoot.get(root);
-  if (!e) webByRoot.set(root, (e = evaluate(root, ["web"])));
+/** Every web barrel, evaluated (memoized per pass). */
+export function evaluateWebBarrels(
+  pass: CodegenPass,
+): Promise<BarrelEvaluation> {
+  let e = webByPass.get(pass);
+  if (!e) webByPass.set(pass, (e = evaluate(pass, ["web"])));
   return e;
 }
 
 /**
  * Every barrel of every runtime, evaluated — the declaration-dependent ones
  * (whose plugin fills its contributions from the whole declared set) resolved
- * against the full source-scope declaration (memoized per root).
+ * against the full source-scope declaration (memoized per pass).
  */
-export function evaluateAllBarrels(root: AppPath): Promise<BarrelEvaluation> {
-  let e = allByRoot.get(root);
+export function evaluateAllBarrels(
+  pass: CodegenPass,
+): Promise<BarrelEvaluation> {
+  let e = allByPass.get(pass);
   if (!e) {
     e = (async () => {
       // The web phase first: its slot naming is what a later reader (and the
       // orphan guard) settled, and its records are hits for this one.
-      await evaluateWebBarrels(root);
-      const all = await evaluate(root, RUNTIMES);
+      await evaluateWebBarrels(pass);
+      const all = await evaluate(pass, RUNTIMES);
       await all.barrels.resolveDeclarationDependent(all.refs);
       return all;
     })();
-    allByRoot.set(root, e);
+    allByPass.set(pass, e);
   }
   return e;
 }
 
-const namingByKey = new Map<string, Promise<SlotNaming>>();
+const namingByPass = new WeakMap<
+  CodegenPass,
+  Map<SlotScope, Promise<SlotNaming>>
+>();
 
 /**
  * The slot naming over the evaluated records — the build's twin of a live
@@ -191,20 +201,21 @@ const namingByKey = new Map<string, Promise<SlotNaming>>();
  * browser loads them. `"source"`: every barrel of every plugin.
  */
 export function recordSlotNaming(
-  root: AppPath,
+  pass: CodegenPass,
   scope: SlotScope,
 ): Promise<SlotNaming> {
-  const key = `${scope}\0${root}`;
-  let n = namingByKey.get(key);
+  let byScope = namingByPass.get(pass);
+  if (!byScope) namingByPass.set(pass, (byScope = new Map()));
+  let n = byScope.get(scope);
   if (!n) {
     n = (async () => {
       const ev =
         scope === "registry"
-          ? await evaluateWebBarrels(root)
-          : await evaluateAllBarrels(root);
-      return settleSlotNaming(declaringPlugins(ev, root, scope), scope);
+          ? await evaluateWebBarrels(pass)
+          : await evaluateAllBarrels(pass);
+      return settleSlotNaming(declaringPlugins(ev, pass.root, scope), scope);
     })();
-    namingByKey.set(key, n);
+    byScope.set(scope, n);
   }
   return n;
 }
@@ -232,10 +243,10 @@ function declaringPlugins(
 
 /** The bundled web barrels (and web-sdk's seed): what the browser loads. */
 export async function bundledWebBarrels(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<{ ev: BarrelEvaluation; refs: BarrelRef[]; bundle: Set<PluginId> }> {
-  const ev = await evaluateWebBarrels(root);
-  const bundle = mainBundle(ev.tree, root);
+  const ev = await evaluateWebBarrels(pass);
+  const bundle = mainBundle(ev.tree, pass.root);
   return {
     ev,
     bundle,
@@ -252,9 +263,11 @@ export async function bundledWebBarrels(
  * declares. Identities, so a factory used by ten panes cannot hide one
  * missing declaration behind another.
  */
-export async function undeclaredSlots(root: AppPath): Promise<CreatedSlot[]> {
-  const { ev, refs } = await bundledWebBarrels(root);
-  const naming = await recordSlotNaming(root, "registry");
+export async function undeclaredSlots(
+  pass: CodegenPass,
+): Promise<CreatedSlot[]> {
+  const { ev, refs } = await bundledWebBarrels(pass);
+  const naming = await recordSlotNaming(pass, "registry");
   const declared = new Set<string>();
   for (const entry of naming.declarations()) {
     const id = ev.barrels.identityOf(entry.slot);

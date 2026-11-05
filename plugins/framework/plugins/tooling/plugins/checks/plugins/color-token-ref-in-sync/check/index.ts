@@ -1,3 +1,4 @@
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 import {
   existsSync,
   readFileSync,
@@ -7,18 +8,23 @@ import {
   colorTokenRefPath,
   formatGenerated,
   renderColorTokenRef,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(ctx: CheckContext): Promise<CheckResult>;
+};
 
 const check: Check = {
   id: "color-token-ref-in-sync",
   description:
     "plugins/ui/plugins/tokens/plugins/color-ref/core/color-token-ref.generated.ts (the ColorTokenRef union) matches the vars the palette token groups declare",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
     const file = colorTokenRefPath(root);
     const rel = relative(root, file);
     if (!existsSync(file)) {
@@ -30,7 +36,7 @@ const check: Check = {
     }
     const expected = await formatGenerated({
       file,
-      content: await renderColorTokenRef(root),
+      content: await renderColorTokenRef(pass),
     });
     if (readFileSync(file, "utf8") !== expected) {
       return {

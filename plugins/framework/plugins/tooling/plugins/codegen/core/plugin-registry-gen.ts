@@ -11,6 +11,7 @@ import {
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
+import type { CodegenPass } from "./codegen-pass";
 import { createSourceScans, type SourceScans } from "./browser-host-coverage";
 import type {
   DerivedBrowserHostGraph,
@@ -113,11 +114,8 @@ export interface RegistryGenContext {
   // its resolved home app. Resolved (and validated) once here, alongside
   // `mainBundle`, so every committed render names the same composition.
   main: RegistryComposition;
-  // The repo's file set every scan below enumerates and reads — a check's own
-  // run set when a check built this ctx, else listed from git on first use.
-  // Lazy because half the callers (composition-closure, config_v2's
-  // registrations-paired) read only the tree and never scan; memoized so one
-  // ctx lists at most once.
+  // The repo's file set every scan below enumerates and reads — the check's
+  // own set when a check built this ctx, else the pass's.
   repo(): Promise<RepoFiles>;
   // Per-`<dir>` scan (the collected entry list plus the raw import-derived
   // dependency graph), memoized for this context's lifetime.
@@ -177,13 +175,15 @@ interface DirEntryScan {
   rawDeps: Map<string, string[]>;
 }
 
-// One ctx per check run's file set: see `buildRegistryGenContext`.
+// One ctx per file set (a pass's, or a check's own): see
+// `buildRegistryGenContext`.
 const contextsByRepo = new WeakMap<RepoFiles, Promise<RegistryGenContext>>();
 
 /**
- * The shared registry-generation context for `root`. A check passes its run's
- * file set as `repo` (so the scans read through it); codegen omits it and the
- * scans read the set the barrel-free tree was built from.
+ * The shared registry-generation context of `pass`. A check passes its own
+ * file set as `repo` (so the scans read through it — recorded, for an
+ * input-keyed check); omitted, the scans read the pass's set, the one the
+ * barrel-free tree was built from.
  *
  * Given a `repo`, the ctx is memoized on it: every check of one run asking
  * with the run's set gets the SAME ctx, so its memos (`dirScans`,
@@ -194,33 +194,31 @@ const contextsByRepo = new WeakMap<RepoFiles, Promise<RegistryGenContext>>();
  * gets its own ctx and every read it makes is recorded.)
  */
 export function buildRegistryGenContext(
-  root: AppPath,
-  repo?: RepoFiles,
+  pass: CodegenPass,
+  repo: RepoFiles = pass.repo,
 ): Promise<RegistryGenContext> {
-  if (repo === undefined) return buildContext(root, undefined);
-  if (repo.root !== root) {
+  if (repo.root !== pass.root) {
     throw new Error(
-      `buildRegistryGenContext(${root}) was handed the file set of ${repo.root}.`,
+      `buildRegistryGenContext(${pass.root}) was handed the file set of ${repo.root}.`,
     );
   }
   let ctx = contextsByRepo.get(repo);
   if (ctx === undefined) {
-    ctx = buildContext(root, repo);
+    ctx = buildContext(pass, repo);
     contextsByRepo.set(repo, ctx);
   }
   return ctx;
 }
 
 async function buildContext(
-  root: AppPath,
-  repo: RepoFiles | undefined,
+  pass: CodegenPass,
+  repo: RepoFiles,
 ): Promise<RegistryGenContext> {
-  const tree = await buildBarrelFreeTree(root);
+  const { root } = pass;
+  const tree = await buildBarrelFreeTree(pass);
   const graph = classifyEdges(tree);
   const main = resolveMainComposition(graph, root);
-  // Without a run's set, the one the tree was read off: same membership, and
-  // no second listing.
-  const listing = Promise.resolve(repo ?? tree.repo);
+  const listing = Promise.resolve(repo);
   const files = (): Promise<RepoFiles> => listing;
   let scans: Promise<SourceScans> | undefined;
   return {
@@ -642,7 +640,7 @@ export interface RegistryComposition {
 // The apps a tree declares, per tree. `readDeclaredApps` reads every plugin's
 // `core/` from disk (~0.5 s), and one ctx resolves several homes against one
 // tree — main's, each named composition's, each browser host's. A tree is a
-// snapshot (`buildBarrelFreeTree` memoizes it per root), so the answer lives
+// snapshot (`buildBarrelFreeTree` memoizes it per pass), so the answer lives
 // exactly as long as the tree it was read for.
 const declaredAppsByTree = new WeakMap<PluginTree, Map<string, DeclaredApp>>();
 
@@ -753,14 +751,14 @@ export function committedRegistryBundle(
     : ctx.mainBundle;
 }
 
-export async function generatePluginRegistry(opts: {
-  root: AppPath;
-  // Optional prebuilt context so the pipeline can share ONE tree walk between the
+export async function generatePluginRegistry({
+  ctx,
+}: {
+  // The pass's context, so the pipeline shares ONE tree walk between the
   // registry and eager-tier generators (both are pure functions of the same
-  // barrel-free tree). Built here when absent so standalone callers still work.
-  ctx?: RegistryGenContext;
+  // barrel-free tree).
+  ctx: RegistryGenContext;
 }): Promise<void> {
-  const ctx = opts.ctx ?? (await buildRegistryGenContext(opts.root));
   const defs = await discoverCollectedDirsIn(await ctx.repo());
   for (const def of defs) {
     await writeGenerated({
@@ -780,7 +778,6 @@ export async function generatePluginRegistry(opts: {
 }
 
 export async function generateCompositionRegistry(opts: {
-  root: AppPath;
   bundle: Set<string>;
   /**
    * The composition id these registries belong to. REQUIRED: every filtered
@@ -789,9 +786,9 @@ export async function generateCompositionRegistry(opts: {
   name: string;
   /** The manifest's declared `home`, resolved against `bundle` (throws when invalid). */
   home: string;
-  // Optional prebuilt context so one build shares ONE tree walk across several
-  // compositions' registries. Built here when absent so standalone callers work.
-  ctx?: RegistryGenContext;
+  // The pass's context (`buildRegistryGenContext`, memoized per pass), so one
+  // build shares ONE tree walk across several compositions' registries.
+  ctx: RegistryGenContext;
 }): Promise<void> {
   assertCompositionName(opts.name);
   // The main composition's registry is the COMMITTED `<dir>.generated.ts`
@@ -803,7 +800,7 @@ export async function generateCompositionRegistry(opts: {
   // refused. Nothing may produce it, so the skip is here, at the one writer,
   // rather than as a guard at each caller.
   if (opts.name === MAIN_COMPOSITION_ID) return;
-  const ctx = opts.ctx ?? (await buildRegistryGenContext(opts.root));
+  const { ctx } = opts;
   const composition: RegistryComposition = {
     id: opts.name,
     home: resolveRegistryHome(ctx.tree, opts.bundle, opts.name, opts.home),
@@ -824,7 +821,7 @@ export async function generateCompositionRegistry(opts: {
   // The backend that boots those registries: its serving entry, written last
   // so it never names a registry not yet on disk.
   await writeGenerated({
-    file: backendEntryPath(opts.root, opts.name),
+    file: backendEntryPath(ctx.root, opts.name),
     content: renderBackendEntry(opts.name),
   });
 }

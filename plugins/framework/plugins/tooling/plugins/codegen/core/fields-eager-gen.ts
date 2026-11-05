@@ -6,6 +6,7 @@ import {
 import { writeGenerated } from "./write-generated";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Generates the fields eager-capability manifest: side-effect imports of every
@@ -75,9 +76,9 @@ function hasDefaultExport(file: AppPath): boolean {
  * pre-barrel manifests read, so the pass lists the repo for it once.
  */
 export async function collectFieldEagerBarrels(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<string[]> {
-  const tree = await buildBarrelFreeTree(root);
+  const tree = await buildBarrelFreeTree(pass);
   const specifiers: string[] = [];
   for (const node of tree.byDir.values()) {
     if (!CAPABILITY_RE.test(node.path)) continue;
@@ -104,17 +105,17 @@ export function fieldsEagerManifestPath(root: AppPath): AppPath {
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
 export async function renderFieldsEagerManifest(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<string> {
-  return renderManifest(await collectFieldEagerBarrels(root));
+  return renderManifest(await collectFieldEagerBarrels(pass));
 }
 
 /** Regenerate `eager.generated.ts` if it drifted. */
 export async function generateFieldsEager(opts: {
-  root: AppPath;
+  pass: CodegenPass;
 }): Promise<void> {
   await writeGenerated({
-    file: fieldsEagerManifestPath(opts.root),
-    content: await renderFieldsEagerManifest(opts.root),
+    file: fieldsEagerManifestPath(opts.pass.root),
+    content: await renderFieldsEagerManifest(opts.pass),
   });
 }

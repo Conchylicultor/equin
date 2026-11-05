@@ -1,9 +1,11 @@
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { matchBracket } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  collectTokenGroupVars,
+  codegenPassOver,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 /**
  * Enforces that INHERITED, themed CSS defaults are consumed at a theme-scope
@@ -142,12 +144,13 @@ const check: Check = {
   description:
     "Inherited themed CSS defaults (font-family, text color, …) and derived custom-property helpers (--chrome-mask, …) are consumed at a theme-scope root (:root, [data-theme-scope]), never on a bare html/body above the scope boundary",
   async run(ctx) {
-    const root = await getWorktreeRoot();
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
 
     // Fresh token-group vars (the live descriptors, not the committed manifest —
     // see collectTokenGroupVars). Used to tell a themed `var()` / utility apart
     // from a structural one (`--z-nav`, `--radius`, system colors).
-    const byGroup = await collectTokenGroupVars(root);
+    const byGroup = await collectTokenGroupVars(pass);
     const themedVars = new Set(Object.values(byGroup).flat());
 
     // Selected from the run's file set (`ctx.repo()`)'s one git-backed enumeration, never a

@@ -1,4 +1,3 @@
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import {
   joinAppPath,
   type AppPath,
@@ -30,12 +29,10 @@ export interface DiscoveredCollectedDir extends CollectedDirDef {
 // priority that held the shared check thread for 16–40 s. It also saw
 // gitignored directories, which no verdict may depend on.
 //
-// One pure core, three fronts that differ only in where the file list and the
+// One pure core, two fronts that differ only in where the file list and the
 // text come from:
-//   - `discoverCollectedDirsIn(repo)` — async, for checks and for codegen that
-//     already holds a file set (a `RegistryGenContext`).
-//   - `discoverCollectedDirs(root)` — sync, for callers that cannot await: one
-//     `git ls-files`, then reads of the candidates.
+//   - `discoverCollectedDirsIn(repo)` — the caller's file set: a check's run
+//     set, codegen's pass set (a `RegistryGenContext`), a command's listing.
 //   - `standardPluginDirsFromSnapshot(root, fs)` — the structure facet, over the
 //     in-memory snapshot its own tree build already read. No disk at all.
 
@@ -179,67 +176,6 @@ export async function discoverCollectedDirsIn(
   return collectedDirsFrom(repo.root, sources);
 }
 
-// Wedge-breaker for a metadata-only git read, not a latency budget — the bound
-// `listRepoFiles` uses, for the same reason.
-const GIT_TIMEOUT_MS = 60_000;
-
-function lsFilesSync(root: AppPath, args: string[]): string[] {
-  const result = Bun.spawnSync(["git", "ls-files", "-z", ...args], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
-    timeout: GIT_TIMEOUT_MS,
-  });
-  if (result.exitCode !== 0) {
-    // Loud, never `[]`: an empty listing would read as "no collected dirs".
-    throw new Error(
-      `git ls-files ${args.join(" ")} failed in ${root} (exit ${result.exitCode}): ${result.stderr.toString().trim()}`,
-    );
-  }
-  return result.stdout
-    .toString()
-    .split("\0")
-    .filter((p) => p.length > 0);
-}
-
-/**
- * The files under `plugins/`, repo-relative and sorted — `listRepoFiles`'
- * universe (tracked + untracked-not-ignored, minus index entries whose file is
- * gone), listed synchronously for the callers that cannot await.
- */
-function listPluginFilesSync(root: AppPath): string[] {
-  const present = lsFilesSync(root, [
-    "--cached",
-    "--others",
-    "--exclude-standard",
-    "--",
-    "plugins",
-  ]);
-  const gone = new Set(lsFilesSync(root, ["--deleted", "--", "plugins"]));
-  return [...new Set(present.filter((p) => !gone.has(p)))].sort();
-}
-
-/**
- * `discoverCollectedDirsIn`, for callers that cannot await
- * (`listNamedCompositionRegistries`, whose callers include a synchronous
- * program-key read). Same file set, listed with ONE blocking `git ls-files`
- * instead of a directory walk, then a read of each candidate. Nothing on a
- * check pass's shared thread should call it: checks hold a file set already.
- */
-export function discoverCollectedDirs(root: AppPath): DiscoveredCollectedDir[] {
-  const files = listPluginFilesSync(root);
-  const listed = new Set(files);
-  const candidates = collectedDirCandidates(files, (rel) => listed.has(rel));
-  return collectedDirsFrom(
-    root,
-    candidates.map((c) => ({
-      ...c,
-      // `root`: the checkout root the caller works in.
-      text: readFileSync(joinAppPath(root, c.rel), "utf8"),
-    })),
-  );
-}
-
 // ── Standard plugin folders ────────────────────────────────────────
 
 // The set of directory names considered "standard" inside a plugin: the
@@ -258,12 +194,6 @@ export async function standardPluginDirsIn(
   repo: RepoFiles,
 ): Promise<Set<string>> {
   await discoverCollectedDirsIn(repo); // throws on an undeclared name
-  return new Set(STANDARD_DIRS);
-}
-
-/** The standard plugin folder names, for callers that cannot await. */
-export function standardPluginDirs(root: AppPath): Set<string> {
-  discoverCollectedDirs(root); // throws on an undeclared name
   return new Set(STANDARD_DIRS);
 }
 

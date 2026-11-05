@@ -4,6 +4,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { collectTokenGroups } from "./token-group-vars-gen";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Generates `ColorTokenRef` — the string-literal union of every CSS var the
@@ -61,8 +62,8 @@ export function colorTokenRefPath(root: AppPath): AppPath {
 }
 
 /** Render the generated file contents in-memory (used by the in-sync check). */
-export async function renderColorTokenRef(root: AppPath): Promise<string> {
-  const groups = await collectTokenGroups(root);
+export async function renderColorTokenRef(pass: CodegenPass): Promise<string> {
+  const groups = await collectTokenGroups(pass);
   const vars = new Set<string>();
   for (const id of COLOR_TOKEN_REF_GROUPS) {
     const group = groups[id];
@@ -88,10 +89,10 @@ export async function renderColorTokenRef(root: AppPath): Promise<string> {
 
 /** Regenerate `color-token-ref.generated.ts` if it drifted. */
 export async function generateColorTokenRef(opts: {
-  root: AppPath;
+  pass: CodegenPass;
 }): Promise<void> {
   await writeGenerated({
-    file: colorTokenRefPath(opts.root),
-    content: await renderColorTokenRef(opts.root),
+    file: colorTokenRefPath(opts.pass.root),
+    content: await renderColorTokenRef(opts.pass),
   });
 }

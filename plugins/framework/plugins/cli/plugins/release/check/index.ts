@@ -29,10 +29,11 @@ const fixedEntrypointsBundleCheck: Check = {
   id: "release:fixed-entrypoints-bundle",
   description:
     "the launcher, pg-start, pgbouncer-start and teardown bundle with every npm package resolved (composition registries empty) — what `release` compiles for every composition",
-  async run() {
+  async run(ctx) {
     const root = await getWorktreeRoot();
     const redirects: RegistryRedirects = new Map(
-      compositionFilteredRegistries(root).map(({ def, committed }) => [
+      (await compositionFilteredRegistries(await ctx.repo())).map(
+        ({ def, committed }) => [
         committed,
         {
           kind: "contents",
@@ -42,7 +43,8 @@ const fixedEntrypointsBundleCheck: Check = {
             home: null,
           }),
         },
-      ]),
+        ],
+      ),
     );
     const failures: string[] = [];
     for (const [name, entry] of Object.entries(FIXED_ENTRIES)) {

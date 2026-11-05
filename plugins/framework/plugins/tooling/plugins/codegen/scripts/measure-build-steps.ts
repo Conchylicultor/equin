@@ -10,8 +10,8 @@
  * `./equin build` runs them (`idealRecordWorkerThreads()`, clamped to its
  * grant); `--workers ideal` takes that count. Without it: in-process.
  *
- * `--records`: read and write the shared plugin-record store, from a repo
- * snapshot, as `./equin build` does (without it: the process's memory store,
+ * `--records`: read and write the shared plugin-record store, as
+ * `./equin build` does (without it: the process's memory store,
  * every record computed — a cold run). Reports how many barrels each
  * evaluation imported live.
  *
@@ -78,6 +78,7 @@ import {
   renderDetailsDoc,
   pluginCompactDocPath,
   pluginDetailsDocPath,
+  writingCodegenPass,
 } from "../core";
 
 const ORDERS = [
@@ -179,14 +180,14 @@ const recordWorkers =
     ? createPooledRecordWorkers({ threads: workerThreads })
     : undefined;
 installRecordWorkers(recordWorkers);
-const snapshot = records
-  ? await step("repo snapshot", () => loadRepoSnapshot(root))
-  : undefined;
+const snapshot = await step("repo snapshot", () => loadRepoSnapshot(root));
+// A writing pass, as the build's: each evaluation phase re-takes the snapshot.
+const pass = writingCodegenPass(snapshot, () => loadRepoSnapshot(root));
 const before = await trackedMtimes();
 const modulesAtStart = moduleCount();
 
 const barrelCount = async () => {
-  const tree = await buildBarrelFreeTree(root);
+  const tree = await buildBarrelFreeTree(pass);
   const out: Record<string, number> = { plugins: tree.byDir.size };
   for (const rt of ["web", "server", "machine", "central", "core"]) {
     out[`${rt}Barrels`] = [...tree.byDir.values()].filter(
@@ -199,24 +200,24 @@ const barrelCount = async () => {
 async function docsRender() {
   const compact = await formatGenerated({
     file: pluginCompactDocPath(root),
-    content: await renderCompactDoc({ root }),
+    content: await renderCompactDoc({ pass }),
   });
   const details = await formatGenerated({
     file: pluginDetailsDocPath(root),
-    content: await renderDetailsDoc({ root }),
+    content: await renderDetailsDoc({ pass }),
   });
   return { compact: compact.length, details: details.length };
 }
 
 const treeCounts = async (): Promise<Record<string, number>> => {
-  const tree = await buildBarrelFreeTree(root);
+  const tree = await buildBarrelFreeTree(pass);
   return { plugins: tree.byDir.size };
 };
 
 if (order === "tree-only") {
   await step(
     "barrel-free tree",
-    () => buildBarrelFreeTree(root, snapshot),
+    () => buildBarrelFreeTree(pass),
     (t) => ({
       plugins: t.byDir.size,
     }),
@@ -228,7 +229,7 @@ if (order === "tree-only") {
 if (order === "guard-first") {
   await step(
     "barrel-free tree",
-    () => buildBarrelFreeTree(root, snapshot),
+    () => buildBarrelFreeTree(pass),
     (t) => ({
       plugins: t.byDir.size,
     }),
@@ -236,17 +237,17 @@ if (order === "guard-first") {
   await step(
     "web barrels evaluated + slot guard",
     async () => {
-      await assertSlotsDeclared(root);
-      return evaluateWebBarrels(root);
+      await assertSlotsDeclared(pass);
+      return evaluateWebBarrels(pass);
     },
     (e) => ({ barrels: e.refs.length, imported: e.barrels.imported }),
   );
   await step(
     "enriched tree (server/machine/central + facets)",
-    () => buildEnrichedTree(root),
+    () => buildEnrichedTree(pass),
     (t) => ({ plugins: t.byDir.size }),
   );
-  const all = await evaluateAllBarrels(root);
+  const all = await evaluateAllBarrels(pass);
   rows[rows.length - 1]!.counts = {
     ...rows[rows.length - 1]!.counts,
     barrels: all.refs.length,
@@ -261,7 +262,7 @@ if (order === "guard-first") {
 if (order === "docs-first") {
   await step(
     "enriched tree cold (tree + web + server barrels)",
-    () => buildEnrichedTree(root),
+    () => buildEnrichedTree(pass),
     (t) => ({ plugins: t.byDir.size }),
   );
   await step("docs render+format (no write)", docsRender, (o) => ({
@@ -320,18 +321,17 @@ if (order === "pipeline") {
     };
   await step("regenerateRegistryCodegen (total)", async () => {
     await regenerateRegistryCodegen({
-      root,
-      ...(snapshot ? { repo: snapshot } : {}),
+      pass,
       onStep: record("  reg: "),
     });
   });
   await step("regenerateManifestCodegen (total)", async () => {
-    await regenerateManifestCodegen({ root, onStep: record("  man: ") });
+    await regenerateManifestCodegen({ pass, onStep: record("  man: ") });
   });
   const t = await treeCounts();
   const first = rows[0]!;
-  const web = await evaluateWebBarrels(root);
-  const all = await evaluateAllBarrels(root);
+  const web = await evaluateWebBarrels(pass);
+  const all = await evaluateAllBarrels(pass);
   first.counts = {
     ...first.counts,
     ...t,
@@ -346,8 +346,8 @@ await recordWorkers?.close();
 if (dumpOut) {
   const dump: Record<string, unknown> = {};
   for (const [name, tree] of [
-    ["barrel-free", await buildBarrelFreeTree(root)],
-    ["enriched", await buildEnrichedTree(root)],
+    ["barrel-free", await buildBarrelFreeTree(pass)],
+    ["enriched", await buildEnrichedTree(pass)],
   ] as const) {
     const nodes: Record<string, unknown> = {};
     for (const n of [...tree.byDir.values()].sort((a, b) =>

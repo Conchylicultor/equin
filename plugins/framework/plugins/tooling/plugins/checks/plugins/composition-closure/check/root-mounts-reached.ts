@@ -1,6 +1,8 @@
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 import {
   buildRegistryGenContext,
   readCompositionManifestsFromDisk,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
   flattenManifest,
@@ -14,10 +16,13 @@ import {
   asPath,
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(ctx: CheckContext): Promise<CheckResult>;
+};
 
 /**
  * The framework's own slot group — web-sdk's `Core` (`Core.Root`, `Core.Boot`):
@@ -49,9 +54,12 @@ export const rootMountsReached: Check = {
   id: "root-mounts-reached",
   description:
     "Every plugin mounted at the app root (Core.Root / Core.Boot) is reached by an edge (import, token, companion, usage) or named by a composition other than main",
-  async run() {
-    const root = await getWorktreeRoot();
-    const { tree, graph } = await buildRegistryGenContext(root);
+  async run(ctx) {
+    const repo = await ctx.repo();
+    const root = repo.root;
+    const { tree, graph } = await buildRegistryGenContext(
+      codegenPassOver(repo),
+    );
 
     const reachedByRule = new Set<PluginId>(graph.rules.map((r) => r.then));
     const items = readCompositionManifestsFromDisk(root);

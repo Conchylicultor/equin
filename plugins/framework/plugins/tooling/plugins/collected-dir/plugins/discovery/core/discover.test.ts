@@ -1,6 +1,5 @@
 /**
- * Collected-dir discovery (over a file set, over git, over a tree-build
- * snapshot).
+ * Collected-dir discovery (over a file set, over a tree-build snapshot).
  *
  * Discovery must ignore a `defineCollectedDir("…")` written inside a comment or
  * string (routed through `findMarkerCalls`), and must consider only the files a
@@ -8,21 +7,14 @@
  * at a plugin position, and not a test.
  */
 
-import {
-  asAppPath,
-  type AppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { test, expect, afterAll } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";
-import { tmpdir } from "os";
-import { dirname, join } from "path";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { test, expect } from "bun:test";
 import { PLUGIN_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
 import {
   globPaths,
   type RepoFiles,
 } from "@plugins/framework/plugins/tooling/core";
 import {
-  discoverCollectedDirs,
   discoverCollectedDirsIn,
   standardPluginDirsFromSnapshot,
   standardPluginDirsIn,
@@ -58,19 +50,6 @@ function memRepo(
       return Promise.resolve(Object.hasOwn(files, p) ? files[p]! : null);
     },
   };
-}
-
-/** A fresh git repository holding `files` untracked (so `--others` lists them). */
-function gitFixture(files: Record<string, string>): AppPath {
-  const root = asAppPath(mkdtempSync(join(tmpdir(), "collected-dir-git-")));
-  afterAll(() => rmSync(root, { recursive: true, force: true }));
-  const init = Bun.spawnSync(["git", "init", "-q"], { cwd: root });
-  if (init.exitCode !== 0) throw new Error(init.stderr.toString());
-  for (const [rel, text] of Object.entries(files)) {
-    mkdirSync(dirname(join(root, rel)), { recursive: true });
-    writeFileSync(join(root, rel), text);
-  }
-  return root;
 }
 
 const sortedDirs = (defs: DiscoveredCollectedDir[]) =>
@@ -179,9 +158,7 @@ test("an undeclared collected-dir name throws, naming the file", async () => {
     new RegExp(`${file}.*"widget".*not a plugin folder`),
   );
   expect(standardPluginDirsIn(repo)).rejects.toThrow(/not a plugin folder/);
-  // The sync and snapshot fronts share the same pure core.
-  const root = gitFixture(files);
-  expect(() => discoverCollectedDirs(root)).toThrow(/not a plugin folder/);
+  // The snapshot front shares the same pure core.
   const fs = {
     files: new Map(
       Object.entries(files).map(([rel, text]) => [`/repo/${rel}`, text]),
@@ -191,15 +168,6 @@ test("an undeclared collected-dir name throws, naming the file", async () => {
   expect(() => standardPluginDirsFromSnapshot(asAppPath("/repo"), fs)).toThrow(
     /not a plugin folder/,
   );
-});
-
-test("the sync front lists the same universe from git: untracked counts, gitignored does not", () => {
-  const root = gitFixture({
-    ".gitignore": "plugins/ignored/\n",
-    [pj("fresh/core/index.ts")]: 'defineCollectedDir("check");',
-    [pj("ignored/core/index.ts")]: 'defineCollectedDir("hidden");',
-  });
-  expect(sortedDirs(discoverCollectedDirs(root))).toEqual(["check"]);
 });
 
 test("the snapshot front answers from a tree build's snapshot alone", () => {

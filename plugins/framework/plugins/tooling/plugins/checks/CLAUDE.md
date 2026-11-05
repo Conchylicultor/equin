@@ -97,7 +97,7 @@ Commit `18126884a` fixed it. Copy both halves — neither is optional:
 
 - **Move the precondition into the producer.** `buildEnrichedTree`
   ([`codegen/core/enriched-tree.ts`](../codegen/core/enriched-tree.ts)) runs the
-  declaration pass itself, memoized per root. It used to live in one caller's
+  declaration pass itself, memoized per pass. It used to live in one caller's
   pipeline ordering, where it held for that pipeline and nowhere else.
 - **Leave the early read no spelling.** The contributions facet is handed the
   imported barrels and the naming the declaration pass over them settled as ONE

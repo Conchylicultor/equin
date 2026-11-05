@@ -34,6 +34,8 @@ import {
   eagerTierManifestPath,
   renderEagerTierManifest,
 } from "./eager-tier-gen";
+import type { CodegenPass } from "./codegen-pass";
+import { buildRegistryGenContext } from "./plugin-registry-gen";
 
 /**
  * The single source of truth for the PRE-BARREL manifest set.
@@ -75,7 +77,7 @@ import {
 export interface PreBarrelManifest {
   id: string;
   path: (root: AppPath) => AppPath;
-  render: (root: AppPath) => string | Promise<string>;
+  render: (pass: CodegenPass) => string | Promise<string>;
 }
 
 export const preBarrelManifests: readonly PreBarrelManifest[] = [
@@ -87,12 +89,12 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
   {
     id: "customUtilities",
     path: customUtilitiesManifestPath,
-    render: renderCustomUtilities,
+    render: (pass) => renderCustomUtilities(pass.root),
   },
   {
     id: "spaceRamp",
     path: spaceRampManifestPath,
-    render: renderSpaceRamp,
+    render: (pass) => renderSpaceRamp(pass.root),
   },
   {
     // Side-effect imports of the fields storage server barrels. The
@@ -114,7 +116,8 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
     // a no-op when phase 1 already ran.
     id: "eagerTier",
     path: eagerTierManifestPath,
-    render: renderEagerTierManifest,
+    render: async (pass) =>
+      renderEagerTierManifest(await buildRegistryGenContext(pass)),
   },
   {
     // The icon names the code draws. The sprites server barrel reads it, and its
@@ -187,7 +190,10 @@ export const postWebManifests: readonly PreBarrelManifest[] = [
  */
 export async function writePreBarrelManifest(
   m: PreBarrelManifest,
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<void> {
-  await writeGenerated({ file: m.path(root), content: await m.render(root) });
+  await writeGenerated({
+    file: m.path(pass.root),
+    content: await m.render(pass),
+  });
 }

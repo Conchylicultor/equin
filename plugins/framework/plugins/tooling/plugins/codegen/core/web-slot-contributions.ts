@@ -1,6 +1,6 @@
-import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { bundledWebBarrels, recordSlotNaming } from "./evaluated-barrels";
+import type { CodegenPass } from "./codegen-pass";
 
 /** One web contribution as its barrel exported it (slot plumbing included). */
 export type WebSlotContribution = Record<string, unknown> & {
@@ -19,14 +19,14 @@ export type WebSlotContribution = Record<string, unknown> & {
  * A stale slot id throws (resolved up front) instead of matching nothing.
  */
 export async function collectWebSlotContributions<S extends string>(
-  root: AppPath,
+  pass: CodegenPass,
   slotIds: Record<S, string>,
 ): Promise<Record<S, WebSlotContribution[]>> {
   // The evaluated bundled web barrels, and the registry naming settled over
   // them — so each contribution's slot can be named, with no barrel imported
   // when nothing changed.
-  const { ev, refs } = await bundledWebBarrels(root);
-  const naming = await recordSlotNaming(root, "registry");
+  const { ev, refs } = await bundledWebBarrels(pass);
+  const naming = await recordSlotNaming(pass, "registry");
   const sectionBySlotId = new Map<string, S>(
     (Object.entries(slotIds) as [S, string][]).map(([s, id]) => {
       naming.slotNamed(id);

@@ -16,6 +16,7 @@ import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugi
 import { mainBundle } from "./main-bundle";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { REORDER_NODE_LEGEND } from "@plugins/fields/plugins/reorder-tree/core";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Generates the reorderable-slots manifest consumed by the reorder plugin and
@@ -92,12 +93,12 @@ interface ReorderableSlotsData {
  * same — one entry per declared id, sorted by slotId.
  */
 async function collectReorderableSlotSet(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<ReorderableSlotEntry[]> {
   // The registry naming over the evaluated web barrels — shared with the
   // orphan guard, which has already proved every created slot is in it. Each
   // declared slot's stand-in carries its `meta`, as the live slot does.
-  const naming = await recordSlotNaming(root, "registry");
+  const naming = await recordSlotNaming(pass, "registry");
 
   // Exactly the derivation the web runtime runs (`syncReorderDescriptors`):
   // every DECLARED slot whose own `meta.reorderable` is true, attributed to the
@@ -134,18 +135,18 @@ async function collectReorderableSlotSet(
  * is primed, which is what the facet read needs and the slot set alone does not.
  */
 async function collectReorderableSlots(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<ReorderableSlotsData> {
-  const tree = await buildEnrichedTree(root);
+  const tree = await buildEnrichedTree(pass);
   // Drop catalog entries contributed by plugins the app's composition does not
   // bundle: their barrels never load, so listing them in a bundled slot's
   // materialized default would point the origin hash at contributions that don't
   // register. (The slot SET itself is already membership-filtered inside
   // `collectReorderableSlotSet`.)
-  const bundle = mainBundle(tree, root);
+  const bundle = mainBundle(tree, pass.root);
 
   // (1) The reorderable-slot set — the declarations (barrels already primed).
-  const slots = await collectReorderableSlotSet(root);
+  const slots = await collectReorderableSlotSet(pass);
   const reorderableIds = new Set(slots.map((s) => s.slotId));
   // slotId -> the descriptor's address, `<hierarchyPath>/<configName>`. The
   // catalog is keyed by that address rather than by the slot id because the
@@ -230,11 +231,11 @@ export function reorderableSlotsManifestPath(root: AppPath): AppPath {
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
 export async function renderReorderableSlotsManifest(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<string> {
   // Needs the declarations, hence the web barrels — but NOT the contribution
   // catalog, which is a facet read and lives in `collectReorderableSlots`.
-  const slots = await collectReorderableSlotSet(root);
+  const slots = await collectReorderableSlotSet(pass);
   return renderManifest(slots);
 }
 
@@ -269,8 +270,8 @@ function buildOriginAnnotationsProvider(
  * Returns a no-op for descriptors that aren't reorder directives (their slotId
  * isn't in the catalog) — keeping the provider generic.
  */
-setDefaultOriginAnnotationsPreparer(async (root: AppPath) => {
-  const { catalog } = await collectReorderableSlots(root);
+setDefaultOriginAnnotationsPreparer(async (pass: CodegenPass) => {
+  const { catalog } = await collectReorderableSlots(pass);
   return buildOriginAnnotationsProvider(catalog);
 });
 
@@ -284,8 +285,8 @@ setDefaultOriginAnnotationsPreparer(async (root: AppPath) => {
  * function). Returns `undefined` for descriptors whose slotId isn't in the
  * catalog, so non-reorder descriptors fall back to `descriptor.defaults`.
  */
-setDefaultOriginDefaultsPreparer(async (root: AppPath) => {
-  const { catalog } = await collectReorderableSlots(root);
+setDefaultOriginDefaultsPreparer(async (pass: CodegenPass) => {
+  const { catalog } = await collectReorderableSlots(pass);
   return (descriptor: ConfigDescriptor, hierarchyPath: string) => {
     const items = catalog.get(`${hierarchyPath}/${descriptor.name}`);
     return items ? { items: items.map((c) => c.entryKey) } : undefined;
@@ -294,10 +295,10 @@ setDefaultOriginDefaultsPreparer(async (root: AppPath) => {
 
 /** Regenerate `reorderable-slots.generated.ts` if it drifted. */
 export async function generateReorderableSlots(opts: {
-  root: AppPath;
+  pass: CodegenPass;
 }): Promise<void> {
   await writeGenerated({
-    file: reorderableSlotsManifestPath(opts.root),
-    content: await renderReorderableSlotsManifest(opts.root),
+    file: reorderableSlotsManifestPath(opts.pass.root),
+    content: await renderReorderableSlotsManifest(opts.pass),
   });
 }

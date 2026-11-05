@@ -2,10 +2,13 @@ import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import { buildEnrichedTree } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  buildEnrichedTree,
+  codegenPassOver,
+  type CodegenPass,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { parseKindLabel } from "../core";
 import { pkDeclared } from "./internal/pk-declared";
 
@@ -40,8 +43,8 @@ type Scan =
       referents: Registration[];
     };
 
-async function scan(): Promise<Scan> {
-  const tree = await buildEnrichedTree(await getWorktreeRoot());
+async function scan(pass: CodegenPass): Promise<Scan> {
+  const tree = await buildEnrichedTree(pass);
   const kinds: Registration[] = [];
   const presenters: Registration[] = [];
   const referents: Registration[] = [];
@@ -80,8 +83,8 @@ const prefixUnique: Check = {
   id: "ids:prefix-unique",
   description:
     "every id kind's prefix is unique repo-wide, and no kind's alias is another kind's prefix",
-  async run(): Promise<CheckResult> {
-    const s = await scan();
+  async run(ctx): Promise<CheckResult> {
+    const s = await scan(codegenPassOver(await ctx.repo()));
     if (!s.ok) return s;
     const problems: string[] = [];
     for (const runtime of ["web", "server"] as const) {
@@ -128,8 +131,8 @@ const kindBothRuntimes: Check = {
   id: "ids:kind-both-runtimes",
   description:
     "every id kind registered on one runtime's IdKinds.Kind is registered on the other, with the same aliases",
-  async run(): Promise<CheckResult> {
-    const s = await scan();
+  async run(ctx): Promise<CheckResult> {
+    const s = await scan(codegenPassOver(await ctx.repo()));
     if (!s.ok) return s;
     const labels = (runtime: Runtime) =>
       new Map(
@@ -164,8 +167,8 @@ const presenterHasReferent: Check = {
   id: "ids:presenter-has-referent",
   description:
     "every id kind presented in the browser (IdKinds.Presenter) has a server IdKinds.Referent — the join is on the kind's prefix",
-  async run(): Promise<CheckResult> {
-    const s = await scan();
+  async run(ctx): Promise<CheckResult> {
+    const s = await scan(codegenPassOver(await ctx.repo()));
     if (!s.ok) return s;
     const referents = new Set(s.referents.map((r) => r.label));
     const missing = s.presenters.filter((p) => !referents.has(p.label));

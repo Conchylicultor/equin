@@ -1,3 +1,4 @@
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 import {
   existsSync,
   readFileSync,
@@ -7,18 +8,23 @@ import {
   renderFieldsEagerManifest,
   fieldsEagerManifestPath,
   formatGenerated,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(ctx: CheckContext): Promise<CheckResult>;
+};
 
 const check: Check = {
   id: "fields-eager-in-sync",
   description:
     "plugins/fields/plugins/server-capabilities-loader/server/internal/eager.generated.ts matches the current fields storage server barrels",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
     const file = fieldsEagerManifestPath(root);
     const rel = relative(root, file);
     if (!existsSync(file)) {
@@ -30,7 +36,7 @@ const check: Check = {
     }
     const expected = await formatGenerated({
       file,
-      content: await renderFieldsEagerManifest(root),
+      content: await renderFieldsEagerManifest(pass),
     });
     if (readFileSync(file, "utf8") !== expected) {
       return {

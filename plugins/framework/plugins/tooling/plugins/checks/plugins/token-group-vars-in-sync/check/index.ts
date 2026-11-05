@@ -1,4 +1,4 @@
-import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 import {
   existsSync,
   readFileSync,
@@ -10,15 +10,20 @@ import {
   renderTokenGroupVarsManifest,
   tokenGroupVarsManifestPath,
   formatGenerated,
+  codegenPassOver,
+  type CodegenPass,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { asPath } from "@plugins/framework/plugins/plugin-id/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(ctx: CheckContext): Promise<CheckResult>;
+};
 
 /**
  * The static reading of the token groups (cross-refs `tokenGroups`: each
@@ -28,10 +33,10 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
  * closure edge to the token's plugin; if it drifted, a bundle would silently
  * lose the group its members paint with.
  */
-async function staticOwnershipProblems(root: AppPath): Promise<string[]> {
+async function staticOwnershipProblems(pass: CodegenPass): Promise<string[]> {
   const [imported, tree] = await Promise.all([
-    collectTokenGroupVars(root),
-    buildBarrelFreeTree(root),
+    collectTokenGroupVars(pass),
+    buildBarrelFreeTree(pass),
   ]);
   const declared = new Map<string, { plugin: string; vars: string[] }>();
   const registrars = new Map<string, string[]>();
@@ -75,8 +80,9 @@ const check: Check = {
   id: "token-group-vars-in-sync",
   description:
     "plugins/framework/plugins/tooling/plugins/checks/core/token-group-vars.generated.ts matches the current token-group descriptors, and their static reading (which derives token-use closure edges) matches too",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
     const file = tokenGroupVarsManifestPath(root);
     const rel = relative(root, file);
     if (!existsSync(file)) {
@@ -88,7 +94,7 @@ const check: Check = {
     }
     const expected = await formatGenerated({
       file,
-      content: await renderTokenGroupVarsManifest(root),
+      content: await renderTokenGroupVarsManifest(pass),
     });
     if (readFileSync(file, "utf8") !== expected) {
       return {
@@ -97,7 +103,7 @@ const check: Check = {
         hint: "Run `./equin build` and commit the regenerated file.",
       };
     }
-    const problems = await staticOwnershipProblems(root);
+    const problems = await staticOwnershipProblems(pass);
     if (problems.length > 0) {
       return {
         ok: false,

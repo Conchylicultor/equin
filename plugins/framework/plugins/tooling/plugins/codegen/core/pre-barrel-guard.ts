@@ -2,13 +2,13 @@ import {
   existsSync,
   readFileSync,
 } from "@plugins/packages/plugins/timed-fs/core";
-import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { relative } from "path";
 import {
   preBarrelManifests,
   type PreBarrelManifest,
 } from "./pre-barrel-manifests";
 import { formatGenerated } from "./write-generated";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Runtime freeze-point guard for the pre-barrel manifest invariant.
@@ -22,8 +22,9 @@ import { formatGenerated } from "./write-generated";
  * let `generateConfigOrigins` silently prune freshly-authored overrides.
  */
 export async function assertPreBarrelManifestsFresh(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<void> {
+  const { root } = pass;
   const stale: { m: PreBarrelManifest; rel: string }[] = [];
   for (const m of preBarrelManifests) {
     const file = m.path(root);
@@ -32,7 +33,7 @@ export async function assertPreBarrelManifestsFresh(
     // manifest as stale and abort the build.
     const next = await formatGenerated({
       file,
-      content: await m.render(root),
+      content: await m.render(pass),
     });
     const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
     if (next !== existing) stale.push({ m, rel: relative(root, file) });

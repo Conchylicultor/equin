@@ -27,7 +27,6 @@ import {
   type PreloadFlag,
 } from "@plugins/network/plugins/live/plugins/resource-vocabulary/core";
 import {
-  buildRegistryGenContext,
   collectEntriesWithDeps,
   type RegistryGenContext,
 } from "./plugin-registry-gen";
@@ -534,24 +533,21 @@ export function eagerTierManifestPath(root: AppPath): AppPath {
 
 /**
  * Render the manifest file contents in-memory (used by the in-sync check). May
- * THROW the reachability error. Builds its own context when none is supplied.
+ * THROW the reachability error.
  */
 export async function renderEagerTierManifest(
-  root: AppPath,
-  ctx?: RegistryGenContext,
+  ctx: RegistryGenContext,
 ): Promise<string> {
-  const resolvedCtx = ctx ?? (await buildRegistryGenContext(root));
-  const result = computeEagerTier(await scanEagerTierInputs(resolvedCtx));
+  const result = computeEagerTier(await scanEagerTierInputs(ctx));
   return renderManifest(result);
 }
 
 /** Regenerate `web-tiers.generated.ts` if it drifted. */
 export async function generateEagerTier(opts: {
-  root: AppPath;
-  ctx?: RegistryGenContext;
+  ctx: RegistryGenContext;
 }): Promise<void> {
   await writeGenerated({
-    file: eagerTierManifestPath(opts.root),
-    content: await renderEagerTierManifest(opts.root, opts.ctx),
+    file: eagerTierManifestPath(opts.ctx.root),
+    content: await renderEagerTierManifest(opts.ctx),
   });
 }

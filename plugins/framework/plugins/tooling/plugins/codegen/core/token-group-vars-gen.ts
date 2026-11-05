@@ -5,6 +5,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeGenerated } from "./write-generated";
 import { evaluateWebBarrels, recordSlotNaming } from "./evaluated-barrels";
+import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Generates the token-group-vars manifest consumed by the build-time CSS
@@ -52,14 +53,14 @@ interface CollectedTokenGroup {
   schema: Record<string, { default?: unknown; values?: readonly string[] }>;
 }
 
-// Memoize per root: the descriptors are immutable for a process's lifetime, so
+// Memoize per pass: the descriptors are immutable for a pass's lifetime, so
 // the (barrel-importing) collection runs at most once even though the codegen
 // step plus several checks (`token-group-vars-in-sync`, `css-vars-supplied`,
 // `css-vars-single-owner`, `type-scale:closed-role-ladder`) all consume it.
 // Promise-valued so concurrent callers share one in-flight pass; evicted on
 // rejection so a transient failure doesn't poison later retries.
-const collectCache = new Map<
-  string,
+const collectCache = new WeakMap<
+  CodegenPass,
   Promise<Record<string, CollectedTokenGroup>>
 >();
 
@@ -77,9 +78,9 @@ const collectCache = new Map<
  * data). The committed file remains only a reviewable, in-sync-guarded snapshot.
  */
 export async function collectTokenGroupVars(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<Record<string, string[]>> {
-  const groups = await collectTokenGroups(root);
+  const groups = await collectTokenGroups(pass);
   return Object.fromEntries(
     Object.entries(groups).map(([id, g]) => [id, g.vars]),
   );
@@ -91,28 +92,28 @@ export async function collectTokenGroupVars(
  * beyond its var (an enumerated token's `values`).
  */
 export function collectTokenGroups(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<Record<string, CollectedTokenGroup>> {
-  let cached = collectCache.get(root);
+  let cached = collectCache.get(pass);
   if (!cached) {
-    cached = collectTokenGroupsUncached(root).catch((err) => {
-      collectCache.delete(root);
+    cached = collectTokenGroupsUncached(pass).catch((err) => {
+      collectCache.delete(pass);
       throw err;
     });
-    collectCache.set(root, cached);
+    collectCache.set(pass, cached);
   }
   return cached;
 }
 
 async function collectTokenGroupsUncached(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<Record<string, CollectedTokenGroup>> {
-  const ev = await evaluateWebBarrels(root);
+  const ev = await evaluateWebBarrels(pass);
   // A contribution names its slot by object, and that slot's id comes from
   // whichever plugin declares it — the registry naming over the evaluated
   // records. Without it the token-group set reads as empty — a smaller, wrong
   // answer that looks right.
-  const naming = await recordSlotNaming(root, "registry");
+  const naming = await recordSlotNaming(pass, "registry");
   // Resolved ONCE, here, rather than compared as a string inside the loop: a
   // stale id then fails at this named line instead of matching nothing and
   // emitting an empty manifest (which is how `css-vars-supplied` once reported
@@ -184,18 +185,18 @@ export function tokenGroupVarsManifestPath(root: AppPath): AppPath {
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
 export async function renderTokenGroupVarsManifest(
-  root: AppPath,
+  pass: CodegenPass,
 ): Promise<string> {
-  const byGroup = await collectTokenGroupVars(root);
+  const byGroup = await collectTokenGroupVars(pass);
   return renderManifest(byGroup);
 }
 
 /** Regenerate `token-group-vars.generated.ts` if it drifted. */
 export async function generateTokenGroupVars(opts: {
-  root: AppPath;
+  pass: CodegenPass;
 }): Promise<void> {
   await writeGenerated({
-    file: tokenGroupVarsManifestPath(opts.root),
-    content: await renderTokenGroupVarsManifest(opts.root),
+    file: tokenGroupVarsManifestPath(opts.pass.root),
+    content: await renderTokenGroupVarsManifest(opts.pass),
   });
 }

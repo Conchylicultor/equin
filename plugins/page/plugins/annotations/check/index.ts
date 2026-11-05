@@ -4,6 +4,7 @@ import { dirname, join, relative, sep } from "path";
 import {
   buildEnrichedTree,
   declareSlotsFromBarrels,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
@@ -11,7 +12,6 @@ import {
   importBarrel,
   registerBarrelStubs,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { BlockHandle } from "@plugins/page/plugins/editor/core";
 import type {
   Check,
@@ -85,9 +85,10 @@ const partiesDeclared: Check = {
   id: "annotations:parties-declared",
   description:
     "every block type defined under `page/annotations` goes through `defineAnnotationBlock`, so it declares both of the page's parties — who may receive its content (`audience`) and whose words it holds (`author`) — instead of falling through to the defaults that are right for ordinary prose",
-  async run(): Promise<CheckResult> {
-    const root = await getWorktreeRoot();
-    const tree = await buildEnrichedTree(root);
+  async run(ctx): Promise<CheckResult> {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
+    const tree = await buildEnrichedTree(pass);
     registerBarrelStubs(root);
 
     // The block slot resolved ONCE, then compared by IDENTITY in the loop below,
@@ -102,7 +103,7 @@ const partiesDeclared: Check = {
     // `findSlot`, never `slotNamed`: the runner awaits every check under
     // `Promise.all` and rethrows, so a throw here would kill every other check's
     // reporting. A miss is this check's own failure value.
-    const naming = await declareSlotsFromBarrels(root, "registry");
+    const naming = await declareSlotsFromBarrels(pass, "registry");
     const blockSlot = naming.findSlot(WEB_BLOCK_SLOT);
     if (blockSlot === undefined) {
       return {

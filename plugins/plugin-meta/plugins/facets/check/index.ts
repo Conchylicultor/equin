@@ -2,7 +2,10 @@ import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/cor
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { declareSlotsFromBarrels } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  declareSlotsFromBarrels,
+  codegenPassOver,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { loadFacets } from "@plugins/plugin-meta/plugins/facets/plugins/loader/core";
 import {
   registerBarrelStubs,
@@ -70,7 +73,10 @@ const check: Check = {
     // below, `review.plugin-changes.diff-renderer`, is owned by the disabled
     // `review/plugins/plugin-changes`, so under registry scope it would not be
     // declared at all and every facet would read as missing its diff renderer.
-    const naming = await declareSlotsFromBarrels(root, "source");
+    const naming = await declareSlotsFromBarrels(
+      codegenPassOver(repo),
+      "source",
+    );
 
     // Resolved ONCE, here, and compared by object identity in the loop below.
     // A slot id is derived from its declaring plugin, so moving that plugin

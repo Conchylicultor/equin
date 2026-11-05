@@ -1,3 +1,11 @@
+// The pass every memo of the tree family hangs off: the caller's file set (a
+// check run's, or a writing pass's that re-takes it per evaluation phase).
+export {
+  codegenPassOver,
+  writingCodegenPass,
+  type CodegenPass,
+} from "./codegen-pass";
+
 // The two plugin-tree constructors: the barrel-free tree (the plugin records)
 // and the enriched one (the same records, enriched with the evaluated barrels
 // and the slot naming settled over them — `evaluated-barrels.ts`).

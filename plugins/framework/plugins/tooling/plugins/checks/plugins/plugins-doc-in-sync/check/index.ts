@@ -1,3 +1,4 @@
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 import { existsSync, readFile } from "@plugins/packages/plugins/timed-fs/core";
 
 import {
@@ -12,12 +13,16 @@ import {
   renderPluginClaudeMd,
   renderPluginReferenceMd,
   formatGenerated,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(ctx: CheckContext): Promise<CheckResult>;
+};
 
 /** A file's text, or null when it does not exist. */
 async function readIfPresent(file: string): Promise<string | null> {
@@ -33,8 +38,9 @@ const check: Check = {
   id: "plugins-doc-in-sync",
   description:
     "docs/plugins-compact.md, docs/plugins-details.md, every plugin's CLAUDE.md AUTOGEN block, and every plugin's REFERENCE.md (present exactly when a list is summarized) match the current plugin source",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
 
     const compactFile = pluginCompactDocPath(root);
     if (!existsSync(compactFile)) {
@@ -57,7 +63,7 @@ const check: Check = {
       (await readFile(compactFile, "utf8")) !==
       (await formatGenerated({
         file: compactFile,
-        content: await renderCompactDoc({ root }),
+        content: await renderCompactDoc({ pass }),
       }))
     ) {
       return {
@@ -70,7 +76,7 @@ const check: Check = {
       (await readFile(detailsFile, "utf8")) !==
       (await formatGenerated({
         file: detailsFile,
-        content: await renderDetailsDoc({ root }),
+        content: await renderDetailsDoc({ pass }),
       }))
     ) {
       return {
@@ -81,11 +87,11 @@ const check: Check = {
     }
 
     // The SAME inputs `generatePluginDocs` renders each CLAUDE.md from: the
-    // enriched tree (memoized per root, so this is the very tree docgen used) and
+    // enriched tree (memoized per pass, so this is the very tree docgen used) and
     // the main composition resolved off it. The AUTOGEN block annotates
     // the plugins main's closure leaves out, so a check that computed membership
     // any other way would disagree with the generator it exists to check.
-    const tree = await buildEnrichedTree(root);
+    const tree = await buildEnrichedTree(pass);
     const main = mainComposition(tree, root);
     // One CLAUDE.md per plugin (~800): read each without blocking, and pause
     // every ~10 ms of rendering, so the loop never holds the check runner's

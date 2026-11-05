@@ -19,6 +19,7 @@ import {
   resolveHostContributionCoverage,
   serverBarrelBlockers,
   type HostContributionBarrel,
+  codegenPassOver,
 } from "../core";
 import { serverPortabilityOf } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import {
@@ -56,7 +57,7 @@ const check: Check = {
     "every server contribution a browser host's scoped web plugins make, to a kind a graph member declares (and not `absentOnHost`), comes from a `server/` barrel the host boots",
   async run(ctx): Promise<CheckResult> {
     const repo = await ctx.repo();
-    const gen = await buildRegistryGenContext(repo.root, repo);
+    const gen = await buildRegistryGenContext(codegenPassOver(repo));
 
     const kinds = new Map<
       string,

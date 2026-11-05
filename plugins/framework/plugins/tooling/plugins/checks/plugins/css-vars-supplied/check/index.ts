@@ -1,8 +1,10 @@
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
-import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  collectTokenGroupVars,
+  codegenPassOver,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 /**
  * Checks the SOURCE-demand class of CSS custom-property gaps: a fallback-less
@@ -31,7 +33,8 @@ const check: Check = {
   description:
     "Every fallback-less var(--x) in repo CSS must reference a token supplied by a token-group schema or a CSS declaration",
   async run(ctx) {
-    const root = await getWorktreeRoot();
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
 
     // Selected from the run's file set (`ctx.repo()`)'s one git-backed enumeration, never a
     // hand-rolled `git ls-files <glob>`: that lists index entries whose file the
@@ -52,7 +55,7 @@ const check: Check = {
     // descriptors (via their web-slot contributions) — NOT the committed
     // manifest, whose static import is frozen in the ESM cache before codegen
     // rewrites it, which would make a rename pass only on the second build.
-    const tokenGroupVars = await collectTokenGroupVars(root);
+    const tokenGroupVars = await collectTokenGroupVars(pass);
     for (const vars of Object.values(tokenGroupVars)) {
       for (const v of vars) supply.add(v);
     }

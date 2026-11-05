@@ -1,20 +1,14 @@
-import {
-  joinAppPath,
-  type AppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { buildFacetedPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
-import {
-  loadRepoFiles,
-  type RepoFiles,
-} from "@plugins/framework/plugins/tooling/core";
+import type { CodegenPass } from "./codegen-pass";
 
-const barrelFreeTreeCache = new Map<string, Promise<PluginTree>>();
+const barrelFreeTrees = new WeakMap<CodegenPass, Promise<PluginTree>>();
 
 /**
  * The barrel-FREE plugin tree — a pure function of committed plugin source
  * (facet extraction reads only .ts/.tsx/package.json; no generated manifest
- * feeds it), so it is IDENTICAL for every caller in a build. Memoized per root
+ * feeds it), so it is IDENTICAL for every caller in a pass. Memoized per pass
  * so one `./equin build` does ONE barrel-free tree build, not one per codegen
  * step. `buildEnrichedTree` reads the same facet records again and enriches
  * them with the evaluated barrels.
@@ -24,24 +18,16 @@ const barrelFreeTreeCache = new Map<string, Promise<PluginTree>>();
  * enriched tree needs the evaluation. Keeping this tier free of the other two
  * is what lets them depend on it without closing an import cycle.
  *
- * `repo`: the pass's file set when the caller holds one. The build's is a
- * SNAPSHOT (blob ids), which makes the facets plugin records read from the
- * shared store; the first call's builds the tree, so the build hands it to the
- * first.
+ * Read off the pass's set (`CodegenPass.repo`): a snapshot (blob ids), which
+ * makes the facets plugin records read from the shared store.
  */
-export function buildBarrelFreeTree(
-  root: AppPath,
-  repo?: RepoFiles,
-): Promise<PluginTree> {
-  let cached = barrelFreeTreeCache.get(root);
+export function buildBarrelFreeTree(pass: CodegenPass): Promise<PluginTree> {
+  let cached = barrelFreeTrees.get(pass);
   if (!cached) {
-    cached = (async () =>
-      buildFacetedPluginTree(joinAppPath(root, "plugins"), {
-        // Debt (task-1793856387-73tcw0): a caller without the pass's set
-        // makes the tree list the repo itself.
-        repo: repo ?? (await loadRepoFiles(root)),
-      }))();
-    barrelFreeTreeCache.set(root, cached);
+    cached = buildFacetedPluginTree(joinAppPath(pass.root, "plugins"), {
+      repo: pass.repo,
+    });
+    barrelFreeTrees.set(pass, cached);
   }
   return cached;
 }

@@ -31,6 +31,8 @@ import {
 } from "@plugins/infra/plugins/worktree/server";
 import { assertServableCompositionNamespace } from "@plugins/plugin-meta/plugins/composition/core";
 import { listNamedCompositionRegistries } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 
 /** A refused reclaim — a guard rejected the target before anything was touched. */
 export class NamespaceReclaimError extends Error {
@@ -165,9 +167,9 @@ export async function reclaimNamespace(
  * ENUMERATED, never named. `listNamedCompositionRegistries` is the same sweep
  * input the deleted deactivation stage used, so `web`, `server` and `prewarm` are
  * all reclaimed together and a fourth filtered runtime added later is reclaimed
- * with no edit here. It walks the checkout's plugin tree, which is why it is the
+ * with no edit here. It lists the checkout's files, which is why it is the
  * last thing this does rather than something on a hot path — and why a vanished
- * checkout costs one failed `readdir`, not a walk. A vanished checkout is the
+ * checkout is checked first and costs no listing. A vanished checkout is the
  * NORMAL case: the usual trigger is the checkout itself disappearing.
  */
 async function removeFilteredRegistries(
@@ -180,7 +182,11 @@ async function removeFilteredRegistries(
   // unknown owner could cause here — so the unknown arm does nothing. Stated as a
   // decision, not an oversight: `checkout.reason` carries why.
   if (!checkout.known) return;
-  for (const { name, file } of listNamedCompositionRegistries(checkout.root)) {
+  // Gone with its registries: nothing to list.
+  if (!existsSync(checkout.root)) return;
+  // Another checkout than this backend's, so its file set is listed here.
+  const repo = await loadRepoFiles(checkout.root);
+  for (const { name, file } of await listNamedCompositionRegistries(repo)) {
     if (name === composition) await rm(file, { force: true });
   }
 }

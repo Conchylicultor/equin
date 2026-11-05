@@ -1,11 +1,18 @@
-import { buildRegistryGenContext } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
+import {
+  buildRegistryGenContext,
+  codegenPassOver,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 import { asPath } from "@plugins/framework/plugins/plugin-id/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(ctx: CheckContext): Promise<CheckResult>;
+};
 
 /**
  * Every key a keyed companion serves, and every view type a DataView uses,
@@ -26,9 +33,10 @@ export const keysDefined: Check = {
   id: "keys-defined",
   description:
     "Every field type a keyed companion serves is defined, and every view type a DataView authors or whitelists has a renderer",
-  async run() {
-    const root = await getWorktreeRoot();
-    const { tree, graph } = await buildRegistryGenContext(root);
+  async run(ctx) {
+    const { tree, graph } = await buildRegistryGenContext(
+      codegenPassOver(await ctx.repo()),
+    );
 
     const definedFieldTypes = new Set<string>();
     for (const node of tree.byDir.values())

@@ -21,7 +21,7 @@ export interface UnknownDirOptions {
   pluginRelPath: string;
   /** Same, for every plugin in the tree — child plugins are recognized from it. */
   allPluginRelPaths: readonly string[];
-  /** The recognized zone names (derived, not hardcoded — see `standardPluginDirs`). */
+  /** The recognized zone names (derived, not hardcoded — see `standardPluginDirsIn`). */
   known: ReadonlySet<string>;
   repo: RepoTree;
 }

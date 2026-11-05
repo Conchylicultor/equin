@@ -1,3 +1,5 @@
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
+import { codegenPassOver } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { Pool } from "pg";
 import {
@@ -52,7 +54,7 @@ type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = {
   id: string;
   description: string;
-  run(): Promise<CheckResult>;
+  run(ctx: CheckContext): Promise<CheckResult>;
   cacheSignature?(): string | null | Promise<string | null>;
 };
 
@@ -99,7 +101,7 @@ const check: Check = {
     const [main] = await publishedMigrationRefs(await getWorktreeRoot());
     return main.sha;
   },
-  async run() {
+  async run(ctx) {
     const root = await getWorktreeRoot();
 
     // FAST PATH: if this branch changes no migration file vs local `main` there
@@ -121,7 +123,9 @@ const check: Check = {
     // migrations (views, rollup tables, derived-updatedAt triggers). Read from
     // the server barrels because this process never boots, so no contribution
     // is collected (`getContributions()` throws).
-    const declared = await declaredSchemaInputs(root);
+    const declared = await declaredSchemaInputs(
+      codegenPassOver(await ctx.repo()),
+    );
     if (!declared.ok) return { ok: false, message: declared.message };
 
     // Then a migration differs from main → replay the pending delta against

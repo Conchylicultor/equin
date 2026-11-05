@@ -13,6 +13,7 @@ import {
   formatGenerated,
   renderBrowserHost,
   renderBrowserHostScope,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { discoverCollectedDirsIn } from "@plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery/core";
 import { collectedDirRegistryPath } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
@@ -38,7 +39,7 @@ const check: Check = {
     // set — the collected dirs, every scanned source, the committed registries.
     const repo = await checkCtx.repo();
     const { root } = repo;
-    const ctx = await buildRegistryGenContext(root, repo);
+    const ctx = await buildRegistryGenContext(codegenPassOver(repo));
     const defs = await discoverCollectedDirsIn(repo);
 
     // ── Identity, not equivalence ────────────────────────────────────────────

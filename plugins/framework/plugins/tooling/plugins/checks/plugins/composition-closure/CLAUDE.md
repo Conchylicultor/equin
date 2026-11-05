@@ -6,8 +6,9 @@ manifests straight off disk via `readCompositionManifestsFromDisk(root)` (codege
 core — no server runtime, strict `// @hash` header contract, falls back to the
 seeded defaults on a fresh checkout). The same helper backs
 `plugins-registry-in-sync`, so the two checks can never disagree about what the
-repo declares. The plugin tree comes from `buildRegistryGenContext(root)`, whose
-memoized barrel-free faceted tree is shared with every other check in the run.
+repo declares. The plugin tree comes from
+`buildRegistryGenContext(codegenPassOver(await ctx.repo()))`, whose memoized
+barrel-free faceted tree is shared with every other check in the run.
 
 For each composition it enforces: unique `name`, unique `id`, every
 entry/contributor id resolves to a real plugin, every `extends` reference

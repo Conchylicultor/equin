@@ -7,8 +7,9 @@ import {
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import {
+  buildRegistryGenContext,
   declareSlotsFromBarrels,
-  type RegistryGenContext,
+  type CodegenPass,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 /** The runtime a config registration was found in. */
@@ -109,11 +110,12 @@ const RUNTIMES: readonly RegistrationRuntime[] = ["web", "server", "machine"];
  * reporting.
  */
 export async function loadConfigRegistrations(
-  ctx: RegistryGenContext,
+  pass: CodegenPass,
 ): Promise<
   | { ok: true; registrations: ConfigRegistration[] }
   | { ok: false; message: string }
 > {
+  const ctx = await buildRegistryGenContext(pass);
   const root = ctx.root;
   registerBarrelStubs(root);
 
@@ -124,7 +126,7 @@ export async function loadConfigRegistrations(
   // `PluginProvider` runs one before it reads any plugin's contributions, and
   // this is the build-time twin of that pass, over the same registry the
   // browser would load.
-  const naming = await declareSlotsFromBarrels(root, "registry");
+  const naming = await declareSlotsFromBarrels(pass, "registry");
 
   // The id is derived — the plugin directory is `config_v2` (underscore) and
   // the slot is declared under the key `WebRegister`, so it is

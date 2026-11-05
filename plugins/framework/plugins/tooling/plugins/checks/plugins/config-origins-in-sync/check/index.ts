@@ -7,6 +7,7 @@ import {
   renderConfigOriginContent,
   loadConfigDescriptorsByOriginPath,
   formatGenerated,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
   computeHash,
@@ -15,7 +16,6 @@ import {
 } from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import type { ConfigDescriptor, JsonValue } from "@plugins/config_v2/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type {
   Check,
   CheckContext,
@@ -63,17 +63,18 @@ const check: Check = {
   description:
     "config/ origin files match defineConfig defaults, overwrite hashes are consistent, and all content validates against its schema",
   async run(ctx: CheckContext) {
-    const root = await getWorktreeRoot();
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
     const configDir = join(root, "config");
     // `renderConfigOriginContent` resolves origin annotations through codegen's
     // shared default provider (see `setDefaultOriginAnnotations`), so the check
     // injects the exact same comment lines the build wrote into committed
     // origins. With no provider registered this is byte-identical to before.
-    const expected = await renderConfigOriginContent({ root });
+    const expected = await renderConfigOriginContent({ pass });
     // Live: the files are validated with each descriptor's zod `schema`,
     // which no evaluated record holds.
     const descriptorsByOriginRel = await loadConfigDescriptorsByOriginPath({
-      root,
+      pass,
       live: true,
     });
 

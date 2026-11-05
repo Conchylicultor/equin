@@ -1,7 +1,9 @@
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 import {
   buildRegistryGenContext,
   readCompositionManifestsFromDisk,
   readDeclaredApps,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
   expandEntrySeeds,
@@ -24,14 +26,17 @@ import {
   resolveCompositionHome,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { companionsVisible } from "./companions-visible";
 import { keysDefined } from "./keys-defined";
 import { rootMountsReached } from "./root-mounts-reached";
 import { companionsInSync } from "./companions-in-sync";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(ctx: CheckContext): Promise<CheckResult>;
+};
 
 const fail = (message: string, hint?: string): CheckResult => ({
   ok: false,
@@ -43,17 +48,20 @@ const check: Check = {
   id: "composition-closure",
   description:
     "Every declared composition is valid: unique name, all entry/contributor ids resolve, the reserved main and `base-exclusions` rows are well-formed, every declared exclusion actually took effect, no negative is dead everywhere, each selected contributor is a genuine load-bearing soft option (no redundant selections), every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard), and every deployable composition's `home` is an app its bundle holds.",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const repo = await ctx.repo();
+    const root = repo.root;
     // The barrel-free faceted tree AND its classified edge graph, taken from the
     // shared registry-gen context rather than built here. `buildRegistryGenContext`
     // calls `buildBarrelFreeTree`, which memoizes exactly this
     // `buildFacetedPluginTree(<root>/plugins)`
-    // per root, and classifies its edges ONCE for every consumer that takes a ctx.
+    // per pass (the run's set), and classifies its edges ONCE for every consumer that takes a ctx.
     // Going through the memo means one 840-plugin faceted walk and one
     // `classifyEdges` pass are shared with every other check in the run instead of
     // a private duplicate of each.
-    const { tree, graph } = await buildRegistryGenContext(root);
+    const { tree, graph } = await buildRegistryGenContext(
+      codegenPassOver(repo),
+    );
     const allIds = new Set<PluginId>([...tree.byDir.values()].map((n) => n.id));
 
     // The committed git-layer `compositions` config, off disk — this check runs in

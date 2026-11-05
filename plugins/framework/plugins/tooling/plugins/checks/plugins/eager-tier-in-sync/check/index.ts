@@ -8,6 +8,7 @@ import {
   renderEagerTierManifest,
   eagerTierManifestPath,
   formatGenerated,
+  codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 const check: Check = {
@@ -33,8 +34,7 @@ const check: Check = {
     let expected: string;
     try {
       expected = await renderEagerTierManifest(
-        root,
-        await buildRegistryGenContext(root, repo),
+        await buildRegistryGenContext(codegenPassOver(repo)),
       );
     } catch (err) {
       return {

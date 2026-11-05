@@ -3,6 +3,30 @@
 Build-time generators run by `./equin build`: the plugin registries, the
 docs, and derived manifests such as the web load tiers.
 
+## The codegen pass (`core/codegen-pass.ts`)
+
+The tree family — the barrel-free tree, the web and all-runtime barrel
+evaluations, the slot namings, the enriched tree, the token groups, the
+registry-gen context — is memoized on a `CodegenPass`, never on a root, and
+none of it lists the working tree: the pass carries the caller's file set.
+
+- **A check** reads `codegenPassOver(await ctx.repo())`: memoized on the run's
+  set, so every check of a run shares one tree and one evaluation. Every
+  evaluation phase reads that same set (nothing writes during a check). An
+  input-keyed check's recording set is its own object, so it gets its own pass
+  and its reads are recorded.
+- **A writing pass** (`build`, `regen-generated`) is
+  `writingCodegenPass(snapshot, relist)`: the trees read the first snapshot,
+  and each evaluation phase calls `relist` when it starts — after the earlier
+  phase wrote the pre-barrel or post-web manifests — so its records are keyed
+  by the new content. The build takes it in stage 1
+  (`prepareCompositionSources`) and hands the same pass to stage 2 and to
+  config propagation.
+- **Anything else** (a `cli/` command, a script, a test, a server action
+  reading its own checkout) lists once and builds the pass itself; a listing
+  outside `cli/`, `bin/` and scripts is a declared
+  `repo-walk-safety/no-adhoc-repo-listing` exemption of the caller.
+
 ## Eager tier: preload pins (`core/eager-tier-gen.ts`)
 
 A plugin declaring a resource with `preload: "boot"` / `"boot-and-keep"` is
@@ -165,7 +189,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 138 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 135 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/parse-utils` ×19
     - `config_v2` ×14
     - `framework/plugin-id` ×13
@@ -178,7 +202,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `plugin-meta/composition` ×5
     - `plugin-meta/facets` ×5
     - `framework/tooling/codegen/composition-registries` ×4
-    - `framework/tooling` ×3
     - `infra/host-fs/user-path` ×3
     - `config_v2/ledger` ×2
     - `framework/tooling/boundaries` ×2
@@ -206,6 +229,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `AuthoredOverrideSeedResult`
     - `BarrelEvaluation`
     - `BrowserHostDecl`
+    - `CodegenPass`
     - `CodegenStep`
     - `CollectedRawEntry`
     - `DeclaredApp`
@@ -240,6 +264,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `buildRegistryGenContext`
     - `CLAUDE_SETTINGS_REL_PATH`
     - `claudeSettingsPath`
+    - `codegenPassOver`
     - `collectAllPlugins`
     - `collectBareSpecifiers`
     - `collectDataViews`
@@ -353,6 +378,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `withPackageName`
     - `writeGenerated`
     - `writePreBarrelManifest`
+    - `writingCodegenPass`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
 - Exemptions:
@@ -360,7 +386,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
     - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
-    - `repo-walk-safety/no-adhoc-repo-listing` — `core/barrel-free-tree.ts`, `core/evaluated-barrels.ts` (debt)
 - Sub-plugins:
   - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored…
 

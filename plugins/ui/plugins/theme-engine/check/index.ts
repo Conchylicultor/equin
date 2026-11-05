@@ -2,8 +2,10 @@ import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { collectWebSlotContributions } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import {
+  collectWebSlotContributions,
+  codegenPassOver,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
   SUB_THEME_CALL,
   readSubThemeId,
@@ -28,8 +30,9 @@ const check: Check = {
   description:
     "every `defineSubTheme` is contributed through `ThemeEngine.SubTheme`, so the region wearing it is painted",
   outOfScope: ["research"],
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const pass = codegenPassOver(await ctx.repo());
+    const root = pass.root;
     // Real-code calls only: grepCode masks comments and strings, so prose and
     // error messages naming `defineSubTheme(` are not calls.
     const calls = (
@@ -59,7 +62,7 @@ const check: Check = {
       };
     }
 
-    const { subThemes } = await collectWebSlotContributions(root, {
+    const { subThemes } = await collectWebSlotContributions(pass, {
       subThemes: SUB_THEME_SLOT,
     });
     const contributed = new Set(

@@ -13,6 +13,7 @@ import { tmpdir } from "os";
 import { dirname, join } from "path";
 import type { DiscoveredCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   collectedDirNamedCompositionRegistryPath,
   compositionRegistryFileName,
@@ -129,7 +130,7 @@ test("parse rejects the singleton, committed, and non-registry file names", () =
   ).toBeNull();
 });
 
-test("listNamedCompositionRegistries finds per-name files, skipping singletons", () => {
+test("listNamedCompositionRegistries finds per-name files, skipping singletons", async () => {
   // The collected dirs come from git; the per-name registries are found by
   // reading the owning core dirs (in the real repo they are gitignored).
   const names = [
@@ -155,7 +156,9 @@ test("listNamedCompositionRegistries finds per-name files, skipping singletons",
     "plugins/framework/plugins/server-core/bin/index.ts": "export {};\n",
   });
 
-  const listed = listNamedCompositionRegistries(namedRoot)
+  const listed = (
+    await listNamedCompositionRegistries(await loadRepoFiles(namedRoot))
+  )
     .map((e) => `${e.dir}:${e.name}`)
     .sort();
   expect(listed).toEqual([
