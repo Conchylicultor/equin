@@ -73,6 +73,13 @@ export const _jobWaits = pgTable(
     // claim the column can make is the one `Record<string, unknown>` made and
     // nothing checked: a non-null object. `z.record` keeps every key of it.
     payloadJson: parsedJson("payload_json", z.record(z.string(), z.unknown())),
+    // The queue key of the row sure to wake this wait — its timeout racer
+    // (`jobs.resume.timeout:…`) or its sleep's (`jobs.resume.sleep:…`); its
+    // event may come first, but need not come at all. NULL for an `unbounded`
+    // wait, which only its event wakes (and for a wait written before the
+    // column existed). A pending wait whose waker no longer holds its key will
+    // never be resolved: its run is not coming (`keysInFlight`).
+    wakerKey: text("waker_key"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

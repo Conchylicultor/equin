@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { resolveWaitTimeoutMs } from "./constants";
+import { JobQueue } from "./queue";
 import { RESUME_KEYS, type ResumeInput } from "./resume-contract";
 import { _jobSteps, _jobWaits } from "./tables";
 
@@ -182,6 +183,37 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
     return `wait:${eventName}:${n}`;
   };
 
+  /**
+   * A pending wait met again on replay: the run was dispatched while its wait
+   * was still pending — two resumes raced, or its worker died after writing
+   * the wait and before arming its waker, and the reclaimed retry replays to
+   * here. Suspending again is right only while the waker still holds its key
+   * (`keysInFlight`); one that is gone will never resolve the wait, and the
+   * run would park where nothing reaches it. So the wait ends now, as timed
+   * out (only if still pending: a racer that resolved it first wins, and its
+   * resume re-dispatches the run). Whether THIS call ended it.
+   */
+  const endOrphanedWait = async (
+    waitName: string,
+    wakerKey: string | null,
+  ): Promise<boolean> => {
+    if (wakerKey === null) return false;
+    const held = await JobQueue.get().keysInFlight([wakerKey]);
+    if (held.has(wakerKey)) return false;
+    const ended = await db
+      .update(_jobWaits)
+      .set({ status: "timed_out", resolvedAt: new Date() })
+      .where(
+        and(
+          eq(_jobWaits.workflowRunId, init.workflowRunId),
+          eq(_jobWaits.waitName, waitName),
+          eq(_jobWaits.status, "pending"),
+        ),
+      )
+      .returning({ waitName: _jobWaits.waitName });
+    return ended.length > 0;
+  };
+
   return {
     jobId: init.jobId,
     attempt: init.attempt,
@@ -261,19 +293,30 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
         if (row.status === "timed_out") return null;
         // `status === "pending"`: a rare replay-while-still-pending case
         // (e.g. the handler was resumed twice by concurrent forces). The
-        // trigger is still armed from the first suspend, so just suspend
-        // again without re-registering.
+        // trigger is still armed from the first suspend, so suspend again
+        // without re-registering — unless its waker is gone.
+        if (await endOrphanedWait(waitName, row.wakerKey)) return null;
         throw new SuspendSignal("wait");
       }
 
-      // First time reaching this wait. Record a pending row, register the
-      // event trigger, schedule the timeout, then suspend.
+      // First time reaching this wait. Record a pending row (naming the
+      // racer that will surely wake it, armed below), register the event
+      // trigger, schedule the timeout, then suspend.
+      const resolvedTimeoutMs = resolveWaitTimeoutMs(
+        opts.timeoutMs,
+        opts.unbounded,
+      );
+      const timeoutKey =
+        resolvedTimeoutMs === null
+          ? null
+          : `jobs.resume.timeout:${init.workflowRunId}:${waitName}`;
       await db
         .insert(_jobWaits)
         .values({
           workflowRunId: init.workflowRunId,
           waitName,
           status: "pending",
+          wakerKey: timeoutKey,
         })
         .onConflictDoNothing();
 
@@ -305,11 +348,7 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
       // Always arm a timeout racer unless the caller explicitly opts out via
       // `unbounded`. An omitted `timeoutMs` resolves to the engine default, so a
       // forgotten timeout can no longer suspend the run forever.
-      const resolvedTimeoutMs = resolveWaitTimeoutMs(
-        opts.timeoutMs,
-        opts.unbounded,
-      );
-      if (resolvedTimeoutMs !== null) {
+      if (resolvedTimeoutMs !== null && timeoutKey !== null) {
         await init.scheduleResume(
           {
             [RESUME_KEYS.workflowRunId]: init.workflowRunId,
@@ -319,7 +358,7 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
             [RESUME_KEYS.timeout]: true,
           },
           {
-            jobKey: `jobs.resume.timeout:${init.workflowRunId}:${waitName}`,
+            jobKey: timeoutKey,
             runAt: new Date(Date.now() + resolvedTimeoutMs),
           },
         );
@@ -343,15 +382,18 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
       const row = existing[0];
       if (row) {
         if (row.status === "resolved" || row.status === "timed_out") return;
+        if (await endOrphanedWait(waitName, row.wakerKey)) return;
         throw new SuspendSignal("sleep");
       }
 
+      const sleepKey = `jobs.resume.sleep:${init.workflowRunId}:${waitName}`;
       await db
         .insert(_jobWaits)
         .values({
           workflowRunId: init.workflowRunId,
           waitName,
           status: "pending",
+          wakerKey: sleepKey,
         })
         .onConflictDoNothing();
 
@@ -364,7 +406,7 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
           [RESUME_KEYS.timeout]: true,
         },
         {
-          jobKey: `jobs.resume.sleep:${init.workflowRunId}:${waitName}`,
+          jobKey: sleepKey,
           runAt: new Date(Date.now() + Math.max(0, ms)),
         },
       );

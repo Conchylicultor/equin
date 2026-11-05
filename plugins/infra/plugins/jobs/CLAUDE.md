@@ -133,9 +133,17 @@ A job row has two identities (`server/internal/run-identity.ts`):
 
 A keyed job's `inFlight(keys)` answers "is this run still coming?" from both
 halves, in ONE read the queue owns (`keysInFlight`): a row holding the key, or
-the run suspended on a pending wait (`_jobWaits`) — a suspend deletes the row,
-and the trigger or timeout racer re-enqueues it, so a workflow parked on
-`ctx.waitFor` (the spawn waiting on its checkout) is not "gone". A run always
+the run suspended on a pending wait (`_jobWaits`) whose **waker** still holds
+ITS key — a suspend deletes the row, and the trigger or timeout racer
+re-enqueues it, so a workflow parked on `ctx.waitFor` (the spawn waiting on its
+checkout) is not "gone". The wait names the row sure to wake it
+(`wakerKey`: its timeout or sleep racer; NULL for an `unbounded` wait, which
+only its event wakes): a pending wait whose racer dead-lettered, was cancelled
+or never got armed (a worker killed between the two writes) will never be
+resolved, so its run is not coming — it used to count as coming forever, and
+a spawn whose wake-up died left its conversation `starting` for good
+(2026-11-05). A replay that meets such a wait ends it as timed out instead of
+suspending again. A run always
 holds one of the two: a suspend inserts its wait before its row goes, and
 `jobs.resume` resolves the wait and inserts the row in one transaction (only
 the racer whose update matched a still-pending wait resumes). Two separate
@@ -151,6 +159,31 @@ A dead run's log can no longer be replayed by the next run of the job. Dead-job
 GC and the sweeper's superseded DELETE discard the logs of the rows they remove
 — only row-owned run ids, since a baked (keyed/resume) id is shared with
 whatever row holds that key next.
+
+## A run's death is a fact its job is told: `onDead`
+
+`defineJob({ onDead })` is called once, at the instant the queue decides no
+attempt of a run will ever come (`server/internal/run-death.ts`,
+`RunDeath.cause`):
+
+| cause | where it is decided |
+|---|---|
+| `failed` | `dispatch()` / the in-process runner: the attempt that threw was the last (`classifyFailure().workflowDead`) |
+| `worker-died` | the stuck-lock sweeper releases a row with no attempt left — a restart or crash killed its last attempt |
+| `wake-failed` | `jobs.resume`'s own `onDead`: the wake-up of a suspended run died and no other waker holds its wait (a dying event resume leaves it to the timeout racer). The pending wait is deleted (only if still pending — a resume that won the race re-queued the run) and the run's job is told |
+| `cancelled` | `cancel(jobId)` (Debug → Queue) removed the row |
+
+The run already no longer counts as in flight when its hook runs, so the hook
+can turn the death into its owner's state at once — `conversations.spawn`
+records the launch as failed and asks the status reconciler to settle the row.
+On the desktop a dying last attempt is still LOCKED when its dispatch calls the
+hook (graphile writes the failure after the handler returns, un-awaited), so
+the dispatch marks the row dying first (`machine/internal/dying-runs.ts`,
+process-local, pruned by the sweeper once the row is unlocked, unmarked by a
+retry) and `keysInFlight` skips it. A hook that throws is reported and changes
+nothing else: the run not being in flight stays true. Rows whose input no
+longer parses (schema drift) and unknown job names are not announced — their
+owners read the run as gone.
 
 ## A stopped runner: patched graphile, and exit
 
@@ -687,6 +720,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `_jobRunStats`
     - `abortDurableRun`
     - `ALL_JOB_TASKS`
+    - `announceRunDead`
     - `answerJobsInMemory`
     - `ceilingMsFor`
     - `deadlineMsFor`
@@ -710,6 +744,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `LEGACY_JOB_TASK`
     - `listRegisteredJobs`
     - `NonRetryableError`
+    - `pendingWaits`
     - `pickupTargetMsFor`
     - `priorityFor`
     - `reachableSlots`
@@ -717,7 +752,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `resolveJobCron`
     - `RUNNERS`
     - `singletonJobKey`
-    - `suspendedRunIds`
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
     - `UNSAFE_getRegisteredJob`

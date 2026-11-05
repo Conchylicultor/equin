@@ -65,8 +65,9 @@ function renderSpawnFailed(row: ReportRow, d: SpawnFailedPayload): string {
   lines.push("");
   lines.push(
     "The job retries up to its max attempts; each failure bumps this report's " +
-      "count. On exhaustion the conversation stays `starting` until the status " +
-      "sweep moves it to `gone`, from where Resume can retry it.",
+      "count. On exhaustion the job's `onDead` has the status reconciler move " +
+      "the conversation to `gone` at once, showing this failure; Resume can " +
+      "retry it from there.",
   );
   lines.push("");
   if (d.deadlineAborted) {

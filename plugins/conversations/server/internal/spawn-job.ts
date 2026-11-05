@@ -9,9 +9,11 @@ import { ClaudeCodeUnavailableError } from "@plugins/infra/plugins/claude-cli/pl
 import {
   clearSpawnFailure,
   recordSpawnFailure,
+  spawnFailures,
 } from "@plugins/conversations/plugins/spawn-failure/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { Runtime } from "./runtime";
+import { requestStatusReconcile } from "./status-reconciler";
 import { launchWithHeldTurn } from "./turns";
 
 // Durable, self-healing conversation spawn. Mirrors `databaseForkJob`: the
@@ -61,6 +63,25 @@ export const spawnConversationJob = defineJob({
   // jobKey "conversations.spawn:<conversationId>" — replace-if-not-running.
   dedup: { key: (input) => input.conversationId },
   maxAttempts: 5,
+  // No attempt of this launch will come again — its last attempt threw, its
+  // worker died on its last attempt (a restart mid-spawn), the wake-up from
+  // its checkout wait failed, or its row was removed. That is the fact that
+  // ends `starting`: the launch is recorded as failed, with why, and the
+  // status reconciler is asked about this row now. By then the run no longer
+  // counts as `inFlight`, so the reconcile moves the row to `gone` showing the
+  // failure — never a row left `starting` with nothing coming for it.
+  onDead: async ({ input: { conversationId }, death }) => {
+    // `failed`: the body's catch below recorded its last attempt's failure,
+    // with the step that threw — kept, unless that write itself failed. Every
+    // other death bypassed the body.
+    if (
+      death.cause !== "failed" ||
+      (await spawnFailures.get(conversationId)) === undefined
+    ) {
+      await recordSpawnFailure(conversationId, "job", death.error);
+    }
+    requestStatusReconcile([conversationId]);
+  },
   run: async ({
     input: {
       conversationId,
@@ -73,18 +94,21 @@ export const spawnConversationJob = defineJob({
     ctx,
   }) => {
     const { signal } = ctx;
-    // Closed (or deleted) before its agent started: the user is done with it,
-    // so no agent may start for it now — a retry that ran anyway would leave a
-    // process working for a conversation nothing shows or reaps.
-    const row = await getConversation(conversationId);
-    if (!row || row.status === "done") return;
     const at = { attemptId, path: worktreePath, spec };
-    const workspace = Workspace.get(spec.kind);
     // Which step threw, for the report: the checkout and the session start fail
     // for different reasons and are fixed in different places. ("worktree"
     // names the workspace's `prepare`, the value stored report rows carry.)
     let step: "worktree" | "runtime" = "worktree";
+    // The WHOLE body is inside the try: every failure of an attempt is
+    // recorded by the catch, which is what `onDead` relies on for a `failed`
+    // death.
     try {
+      // Closed (or deleted) before its agent started: the user is done with
+      // it, so no agent may start for it now — a retry that ran anyway would
+      // leave a process working for a conversation nothing shows or reaps.
+      const row = await getConversation(conversationId);
+      if (!row || row.status === "done") return;
+      const workspace = Workspace.get(spec.kind);
       // The workspace's `prepare` (git worktree add) MUST precede
       // `runtime.create`: the agent's cwd must exist.
       // Both are idempotent, so a mid-step crash re-runs the whole body safely.
@@ -119,9 +143,9 @@ export const spawnConversationJob = defineJob({
       if (isSuspendSignal(err)) throw err;
       // Claude Code went missing between the launch's check and this spawn.
       // Retrying cannot help until the user installs it, so say that — with
-      // the fix — and stop. The row stays `starting`, and the status
-      // sweep's starting timeout moves it to `gone`, from where Resume works once
-      // Claude Code is back.
+      // the fix — and stop. The job completes, so no spawn is in flight any
+      // more: the status reconciler moves the row to `gone` showing this
+      // failure, from where Resume works once Claude Code is back.
       if (err instanceof ClaudeCodeUnavailableError) {
         await recordSpawnFailure(conversationId, step, err.message);
         await recordReport({
@@ -155,9 +179,10 @@ export const spawnConversationJob = defineJob({
       // Rethrow so graphile retries (and dead-letters after maxAttempts —
       // observable in Debug → Queue + queue-health). While a retry is still
       // coming the status reconciler leaves the row `starting`
-      // (`spawnConversationJob.inFlight`); once the job gives up it is the
-      // single writer of `starting → gone`, and it resurrects a `gone` row the
-      // moment its agent is found running.
+      // (`spawnConversationJob.inFlight`); once the job gives up, `onDead`
+      // asks it to settle the row now, and it is the single writer of
+      // `starting → gone` — and resurrects a `gone` row the moment its agent
+      // is found running.
       throw err;
     }
   },

@@ -14,7 +14,9 @@ import {
   type ResumeInput,
 } from "./resume-contract";
 import { JobQueue } from "./queue";
+import { announceRunDead } from "./run-death";
 import { _jobWaits } from "./tables";
+import { discardWorkflowLog } from "./workflow-log";
 
 // Builtin — registered once at jobs plugin boot. Targeted by every
 // `ctx.waitFor(...)` trigger row and every `ctx.sleep(...)` / timeout
@@ -39,6 +41,51 @@ export const jobsResumeJob = defineJob({
   // Bumped — resolving a wait involves two DB writes and a target enqueue;
   // each is idempotent, so safe to retry on transient failure.
   maxAttempts: 5,
+  // This wake-up will never run again. The run it was to wake is dead with
+  // it unless something else can still wake it: an event's resume dying is
+  // not the run's end while the wait's timeout racer (its `wakerKey`) still
+  // holds its key — the racer resumes it, timed out. With no waker left, the
+  // wait is closed (only if still pending: a resume that won the race has
+  // already re-queued the run) and the run's own job is told why it died —
+  // so a run parked on a wait whose wake-up failed is an ended run with an
+  // error, never a suspended one nothing can reach.
+  onDead: async ({ input, death }) => {
+    const workflowRunId = input[RESUME_KEYS.workflowRunId];
+    const waitName = input[RESUME_KEYS.waitName];
+    const matchWait = and(
+      eq(_jobWaits.workflowRunId, workflowRunId),
+      eq(_jobWaits.waitName, waitName),
+      eq(_jobWaits.status, "pending"),
+    );
+    if (input[RESUME_KEYS.timeout] !== true) {
+      const [wait] = await db
+        .select({ wakerKey: _jobWaits.wakerKey })
+        .from(_jobWaits)
+        .where(matchWait)
+        .limit(1);
+      if (wait === undefined) return;
+      if (wait.wakerKey !== null) {
+        const held = await JobQueue.get().keysInFlight([wait.wakerKey]);
+        if (held.has(wait.wakerKey)) return;
+      }
+    }
+    const closed = await db
+      .delete(_jobWaits)
+      .where(matchWait)
+      .returning({ waitName: _jobWaits.waitName });
+    if (closed.length === 0) return;
+    await discardWorkflowLog(workflowRunId);
+    await announceRunDead(
+      {
+        jobName: input[RESUME_KEYS.jobName],
+        input: input[RESUME_KEYS.input],
+      },
+      {
+        cause: "wake-failed",
+        error: `its wake-up from "${waitName}" failed: ${death.error}`,
+      },
+    );
+  },
   run: async ({ input, event }) => {
     const workflowRunId = input[RESUME_KEYS.workflowRunId];
     const waitName = input[RESUME_KEYS.waitName];

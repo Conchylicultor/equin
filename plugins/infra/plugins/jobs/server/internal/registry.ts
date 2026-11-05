@@ -8,6 +8,7 @@ import { ceilingMsFor, type HoldClass } from "../../core";
 import { DEFAULT_MAX_ATTEMPTS } from "./constants";
 import { JobQueue, type JobRowOpts, type QueuedJob } from "./queue";
 import { singletonJobKey } from "./run-identity";
+import type { RunDeath } from "./run-death";
 import type { WaitForOptions } from "./step-ctx";
 
 export { DEFAULT_MAX_ATTEMPTS } from "./constants";
@@ -169,6 +170,9 @@ export interface RegisteredJob {
     ctx: JobCtx;
   }) => Promise<void> | void;
   maxAttempts: number;
+  /** What a run's death means to its owner — see the field's doc on
+   * {@link DefineJobSpec}. Called through `announceRunDead`. */
+  onDead?: (args: { input: unknown; death: RunDeath }) => Promise<void>;
   /** Per-job slow-op threshold (ms), if declared. When a run exceeds this the
    * slow-ops pipeline files a report; falls back to the `slow-op` config
    * `jobMs` default when unset. */
@@ -376,6 +380,20 @@ interface BaseJobSpec<
     ctx: JobCtx;
   }) => Promise<void> | void;
   maxAttempts?: number;
+  /**
+   * What a run ending for good means to whoever is waiting on it: called once
+   * when no attempt of the run will ever come — its last attempt threw, its
+   * worker died on its last attempt, the `jobs.resume` that was to wake it
+   * died, or its row was cancelled (`RunDeath`). By then the run no longer
+   * counts as `inFlight`, so the hook can turn the run's end into its owner's
+   * state at once (a launch recorded as failed, with its error) instead of
+   * leaving it for whoever notices the run is gone.
+   *
+   * A fact, not a clock: it fires on the queue's own transition, never on a
+   * timeout. Its errors are reported and never change the run's outcome; the
+   * run not being in flight stays true either way.
+   */
+  onDead?: (args: { input: z.infer<S>; death: RunDeath }) => Promise<void>;
   /**
    * Duration (ms) above which a run of this job files a slow-op report.
    * Defaults to the `slow-op` config `jobMs` (3000). Raise it for jobs
@@ -656,6 +674,7 @@ export function defineJob<
               : "keyed",
         run: spec.run as RegisteredJob["run"],
         maxAttempts: spec.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
+        onDead: spec.onDead as RegisteredJob["onDead"],
         slowThresholdMs: spec.slowThresholdMs,
         schedule: spec.schedule,
         serial: spec.serial,

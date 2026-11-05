@@ -51,19 +51,31 @@ export function classifyFailure(opts: {
   };
 }
 
+/** One pending wait of a suspended run, and the key of the row sure to wake it. */
+export interface PendingWait {
+  workflowRunId: string;
+  /** `_jobWaits.wakerKey`: null for a wait only its event wakes. */
+  wakerKey: string | null;
+}
+
 /**
- * Of `workflowRunIds`, the ones suspended right now: parked on a `ctx.waitFor`
- * / `ctx.sleep` whose wait is still pending. Such a run holds no queue row —
- * the suspend deleted it — yet it is still coming: a trigger or its timeout
- * racer re-enqueues it. A finished or dead run's log is discarded, so a
- * pending wait never outlives its workflow.
+ * The pending waits of `workflowRunIds`: runs parked on a `ctx.waitFor` /
+ * `ctx.sleep`. Such a run holds no queue row — the suspend deleted it — yet
+ * it is still coming while something can wake it: its waker row (the timeout
+ * or sleep racer, `wakerKey`) still holds its key, or, for an unbounded wait,
+ * its event may still fire. A finished or dead run's log is discarded, so a
+ * pending wait never outlives its workflow. The queue decides which waker
+ * still holds its key (`keysInFlight`).
  */
-export async function suspendedRunIds(
+export async function pendingWaits(
   workflowRunIds: readonly string[],
-): Promise<ReadonlySet<string>> {
-  if (workflowRunIds.length === 0) return new Set();
-  const rows = await db
-    .selectDistinct({ id: _jobWaits.workflowRunId })
+): Promise<readonly PendingWait[]> {
+  if (workflowRunIds.length === 0) return [];
+  return db
+    .select({
+      workflowRunId: _jobWaits.workflowRunId,
+      wakerKey: _jobWaits.wakerKey,
+    })
     .from(_jobWaits)
     .where(
       and(
@@ -71,7 +83,6 @@ export async function suspendedRunIds(
         eq(_jobWaits.status, "pending"),
       ),
     );
-  return new Set(rows.map((r) => r.id));
 }
 
 /**

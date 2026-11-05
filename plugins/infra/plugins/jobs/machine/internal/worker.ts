@@ -47,6 +47,8 @@ import {
   type JobTaskPayload,
 } from "../../server/internal/registry";
 import { scheduleResume } from "../../server/internal/resume-job";
+import { announceRunDead } from "../../server/internal/run-death";
+import { markRunDying } from "./dying-runs";
 import { queueNameFor } from "./graphile-routing";
 import { armDeadline } from "./deadline";
 import {
@@ -58,7 +60,7 @@ import {
   makeDurableCtx,
 } from "../../server/internal/step-ctx";
 import { LOCK_HELD, withJobLock } from "./job-lock";
-import { markJobPermanentlyFailed } from "./introspection";
+import { isRowSuperseded, markJobPermanentlyFailed } from "./introspection";
 import {
   classifyFailure,
   discardWorkflowLog,
@@ -836,7 +838,22 @@ async function dispatch(
         // deliberate feature, so nothing is dropped while another attempt could
         // still legitimately use it. If the collapse write above rejects we
         // never get here, and graphile retries with the log intact.
-        if (finality.workflowDead) await discardWorkflowLog(workflowRunId);
+        // A row superseded while it ran (a re-queue of its key retired it)
+        // is not its run's end: the newer row owns the run — its log and its
+        // outcome — so this failure neither discards nor announces anything.
+        if (
+          finality.workflowDead &&
+          !(await runInBackgroundLane(() => isRowSuperseded(meta.jobId)))
+        ) {
+          await discardWorkflowLog(workflowRunId);
+          // Marked before the hook runs, so what it sets off already reads
+          // this still-locked row as over (`dying-runs.ts`).
+          markRunDying(meta.jobId);
+          await announceRunDead(payload, {
+            cause: "failed",
+            error: errObj.message,
+          });
+        }
         throw err;
       } finally {
         // Both timers cleared on every exit path — success, suspend, failure.

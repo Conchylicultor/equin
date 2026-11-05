@@ -17,6 +17,8 @@ import {
 import type { EnqueueTx, JobTaskPayload } from "../../server/internal/registry";
 import { _jobWaits } from "../../server/internal/tables";
 import { graphileSpecFor } from "./graphile-routing";
+import { dyingRunIds, unmarkRunDying } from "./dying-runs";
+import { announceRunDead } from "../../server/internal/run-death";
 import { reconcileDeadJobs } from "./dead-job-gc";
 import { graphileJobReads } from "./jobs-list";
 import { emitQueueActivity, onQueueActivity } from "./slot-ledger";
@@ -173,27 +175,44 @@ async function cancelUnstarted(
 
 /** `keysInFlight`: a keyed row still within its attempts, or locked (graphile
  *  counts the attempt at fetch, so a row running its last one is at
- *  `max_attempts`). A superseded row has had its key cleared, so never matches;
- *  a dead one is unlocked past its attempts. A locked row whose worker died
- *  stays in flight until the stuck-lock sweeper reclaims it — by its lock, not
- *  by a clock. Or a run suspended on a pending wait (`job_waits`, keyed by its
- *  run id = its queue key) — in the SAME statement, so both are read in one
- *  snapshot: a run between its row and its wait is never seen with neither
- *  (`JobQueueImpl.keysInFlight`). */
+ *  `max_attempts`) — unless this process's dispatch has already declared its
+ *  run dead and graphile has not yet written the failure (`dying-runs.ts`).
+ *  A superseded row has had its key cleared, so never matches; a dead one is
+ *  unlocked past its attempts. A locked row whose worker died stays in flight
+ *  until the stuck-lock sweeper reclaims it — by its lock, not by a clock. Or
+ *  a run suspended on a pending wait (`job_waits`, keyed by its run id = its
+ *  queue key) whose waker row still holds ITS key by the same rule (or that
+ *  has none: an unbounded wait, which only its event wakes) — a wait whose
+ *  waker died will never be resolved, so its run is not coming. All in the
+ *  SAME statement, so it is one snapshot: a run between its row and its wait
+ *  is never seen with neither (`JobQueueImpl.keysInFlight`). */
 function keysInFlight(keys: readonly string[]): Promise<ReadonlySet<string>> {
-  return keysInFlightOn(db, keys);
+  return keysInFlightOn(db, keys, dyingRunIds());
 }
 
 /** {@link keysInFlight} on a given database (a test's throwaway one). */
 export async function keysInFlightOn(
   exec: EnqueueTx,
   keys: readonly string[],
+  /** Job ids of locked rows whose dispatch already declared the run dead. */
+  dying: readonly string[] = [],
 ): Promise<ReadonlySet<string>> {
   if (keys.length === 0) return new Set();
   const wanted = sql.join(
     keys.map((k) => sql`${k}`),
     sql`, `,
   );
+  const dyingIds = JSON.stringify(dying);
+  // One spelling of "this row still holds its key", for the run's own row and
+  // for a wait's waker row alike.
+  const holdsKey = (alias: "j" | "r") => {
+    const row = sql.raw(alias);
+    return sql`(
+         (${row}.locked_at IS NULL AND ${row}.attempts < ${row}.max_attempts)
+      OR (${row}.locked_at IS NOT NULL
+          AND ${row}.id::text NOT IN (SELECT jsonb_array_elements_text(${dyingIds}::jsonb)))
+    )`;
+  };
   const rows = await executeRows(exec, {
     label: "jobs.keysInFlight",
     row: z.object({ key: z.string() }),
@@ -201,12 +220,21 @@ export async function keysInFlightOn(
       SELECT j.key
         FROM graphile_worker._private_jobs j
        WHERE j.key IN (${wanted})
-         AND (j.attempts < j.max_attempts OR j.locked_at IS NOT NULL)
+         AND ${holdsKey("j")}
       UNION
       SELECT w.workflow_run_id AS key
         FROM ${_jobWaits} w
        WHERE w.workflow_run_id IN (${wanted})
          AND w.status = 'pending'
+         AND (
+               w.waker_key IS NULL
+            OR EXISTS (
+                 SELECT 1
+                   FROM graphile_worker._private_jobs r
+                  WHERE r.key = w.waker_key
+                    AND ${holdsKey("r")}
+               )
+             )
     `,
   });
   return new Set(rows.map((r) => r.key));
@@ -223,6 +251,8 @@ export const graphileQueue: JobQueueImpl = {
   keysInFlight,
   ...graphileJobReads(db),
   async retry(jobId) {
+    // A run its dispatch declared dead is coming again.
+    unmarkRunDying(jobId);
     const utils = await getWorkerUtils();
     await utils.rescheduleJobs([jobId], { attempts: 0, runAt: new Date() });
     // graphile_worker is outside the public-schema change-feed, and a
@@ -232,10 +262,18 @@ export const graphileQueue: JobQueueImpl = {
   },
   async cancel(jobId) {
     const utils = await getWorkerUtils();
-    await utils.completeJobs([jobId]);
+    // graphile's `complete_jobs` deletes only an unlocked row, and returns
+    // what it deleted: those runs are over.
+    const removed = await utils.completeJobs([jobId]);
     // graphile_worker is outside the public-schema change-feed, and a delete
     // sends no notification → announce it.
     emitQueueActivity();
+    for (const row of removed) {
+      await announceRunDead(row.payload as JobTaskPayload, {
+        cause: "cancelled",
+        error: "its queue row was removed (Debug → Queue)",
+      });
+    }
   },
   onActivity: onQueueActivity,
   // The queue schema is a property of the DATABASE, and this is where a

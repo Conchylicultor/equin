@@ -262,6 +262,24 @@ export async function queryDeadJobsByError(): Promise<DeadJobErrorStat[]> {
 // instead of burning the full retry budget on a payload that will never parse.
 // Lives here, beside `deadJobPredicate`, because it exists precisely to satisfy
 // it. Targeted single-row write by id — no task join needed.
+/**
+ * Whether job `jobId`'s row was superseded — retired by a re-queue of its key
+ * while it ran ({@link supersededExpr}). Its run belongs to the newer row then,
+ * so this row's failure is not that run's end. A row already gone reads false.
+ */
+export async function isRowSuperseded(jobId: string): Promise<boolean> {
+  const rows = await executeRows(db, {
+    label: "jobs.isRowSuperseded",
+    row: z.object({ superseded: z.boolean() }),
+    query: sql`
+      SELECT ${supersededExpr} AS superseded
+        FROM graphile_worker._private_jobs j
+       WHERE j.id = ${jobId}::bigint
+    `,
+  });
+  return rows[0]?.superseded === true;
+}
+
 export async function markJobPermanentlyFailed(jobId: string): Promise<void> {
   await db.execute(sql`
     UPDATE graphile_worker._private_jobs

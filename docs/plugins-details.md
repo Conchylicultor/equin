@@ -31982,6 +31982,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `_jobRunStats`
           - `abortDurableRun`
           - `ALL_JOB_TASKS`
+          - `announceRunDead`
           - `answerJobsInMemory`
           - `ceilingMsFor`
           - `deadlineMsFor`
@@ -32005,6 +32006,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LEGACY_JOB_TASK`
           - `listRegisteredJobs`
           - `NonRetryableError`
+          - `pendingWaits`
           - `pickupTargetMsFor`
           - `priorityFor`
           - `reachableSlots`
@@ -32012,7 +32014,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resolveJobCron`
           - `RUNNERS`
           - `singletonJobKey`
-          - `suspendedRunIds`
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
           - `UNSAFE_getRegisteredJob`
@@ -32217,6 +32218,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `host-service:jobs.queue` "jobs.queue"
             - Uses:
               - `database.afterCommit`
+              - `infra/jobs.announceRunDead`
               - `infra/jobs.answerJobsInMemory`
               - `infra/jobs.JobQueue`
               - `infra/jobs.JobQueueImpl`
@@ -32224,12 +32226,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs.JobRowOutcome`
               - `infra/jobs.JobTaskPayload`
               - `infra/jobs.listRegisteredJobs`
+              - `infra/jobs.pendingWaits`
               - `infra/jobs.QueuedJob`
               - `infra/jobs.resolveJobCron`
               - `infra/jobs.singletonJobKey`
-              - `infra/jobs.suspendedRunIds`
               - `infra/jobs.UNSAFE_runJobRow`
             - Exports (values): `settleJobQueue`
+          - Test helpers:
+            - Server: `@plugins/infra/plugins/jobs/plugins/in-process/server/testing`
+              - `createMemoryQueue` — An in-memory job queue: rows run in this process when they are due, nothing survives a reload.
         - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
           - Server:
             - Contributes: `fork-data-exclusion` "supervised_job_runs"

@@ -2,9 +2,11 @@
 // waits on between its steps. Rows run through a fake row runner, so the
 // suite exercises the queue's own bookkeeping, not registered jobs.
 
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, beforeAll, expect, test } from "bun:test";
+import { z } from "zod";
 import { withHostServices } from "@plugins/framework/plugins/server-core/core/testing";
 import {
+  defineJob,
   JobQueue,
   type JobQueueImpl,
   type JobRowOutcome,
@@ -158,4 +160,97 @@ test("settleJobQueue throws when the active queue is not the in-process one", as
   expect(
     withHostServices([JobQueue.provide(other)], () => settleJobQueue()),
   ).rejects.toThrow("not the in-process queue");
+});
+
+// `onDead`: a run's end, told to its job once no attempt of it will come.
+const deaths: {
+  input: unknown;
+  death: { cause: string; error: string };
+  stateThen: string;
+}[] = [];
+/** The queue and row the hook reads back, to see what its effects would. */
+let observe: { queue: JobQueueImpl; jobId: string } | null = null;
+let told: () => void = () => {};
+const nextDeath = () =>
+  new Promise<void>((resolve) => {
+    told = resolve;
+  });
+const MORTAL = "jobs.in-process-test-mortal";
+const mortalJob = defineJob({
+  name: MORTAL,
+  description: "Test job.",
+  hold: "instant",
+  input: z.object({ id: z.string() }),
+  event: z.never(),
+  dedup: "none",
+  run: () => {
+    throw new Error("[jobs] run through the fake row runner only");
+  },
+  onDead: async ({ input, death }) => {
+    // What the hook sets off must already read the run as over.
+    const [row] =
+      observe === null ? [] : await observe.queue.rows([observe.jobId]);
+    deaths.push({ input, death, stateThen: row?.state ?? "removed" });
+    told();
+  },
+});
+beforeAll(async () => {
+  await mortalJob.register();
+});
+const mortal = (id: string): JobTaskPayload => ({
+  jobName: MORTAL,
+  input: { id },
+});
+
+afterEach(() => {
+  deaths.length = 0;
+  observe = null;
+});
+
+test("a dead row tells its job, once it is dead", async () => {
+  const { queue } = harness({
+    [MORTAL]: () => ({
+      kind: "failed",
+      error: new Error("checkout lost"),
+      retry: false,
+    }),
+  });
+  await start(queue);
+  const { jobId } = await queue.enqueue(job(MORTAL), mortal("a"), {});
+  observe = { queue, jobId };
+  const death = nextDeath();
+  const pending = settle(queue);
+  expect(pending).rejects.toThrow("checkout lost");
+  await death;
+  expect(deaths).toEqual([
+    {
+      input: { id: "a" },
+      death: { cause: "failed", error: "checkout lost" },
+      // Already dead — no longer in flight — when the hook ran.
+      stateThen: "dead",
+    },
+  ]);
+});
+
+test("a row with a retry still to come tells nothing", async () => {
+  const { queue } = harness({
+    [MORTAL]: (attempt) =>
+      attempt === 1
+        ? { kind: "failed", error: new Error("blip"), retry: true }
+        : { kind: "completed" },
+  });
+  await start(queue);
+  await queue.enqueue(job(MORTAL), mortal("b"), {});
+  await settle(queue);
+  expect(deaths).toEqual([]);
+});
+
+test("a cancelled row tells its job it was cancelled", async () => {
+  const { queue } = harness({ [MORTAL]: completed });
+  // Not started: the row waits, so it can be removed.
+  const { jobId } = await queue.enqueue(job(MORTAL), mortal("c"), {});
+  await queue.cancel(jobId);
+  expect(deaths.map((d) => [d.input, d.death.cause])).toEqual([
+    [{ id: "c" }, "cancelled"],
+  ]);
 });

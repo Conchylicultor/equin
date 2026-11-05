@@ -3,6 +3,7 @@ import type { SpawnFailure, SpawnStep } from "./schemas";
 const STEP_LABELS: Record<SpawnStep, string> = {
   worktree: "Preparing the workspace failed",
   runtime: "Starting the agent session failed",
+  job: "The launch job ended",
 };
 
 /** The label every surface shows for a gone conversation whose launch failed. */

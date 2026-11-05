@@ -36,6 +36,15 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   coming: gone (or hibernated, when there is a session to resume). The 30 s
   `STARTING_TIMEOUT_MS` this replaced called launches waiting on their checkout
   "Couldn't start" (2026-11-04 12:24Z / 12:52Z).
+- **A spawn's end is announced, not discovered.** `conversations.spawn`'s
+  `onDead` (`infra/jobs`) fires once its run will never come — last attempt
+  failed, worker killed on the last attempt, the wake-up from its checkout
+  wait dead-lettered, or the row cancelled. It records the launch as failed
+  (`spawn-failure`; step `job` when no step of the body saw it end) and asks
+  for a reconcile of that row, which no longer counts the run in flight and
+  moves it to `gone` with the failure shown. A wait whose wake-up died no
+  longer reads as "still coming" either way (`keysInFlight` checks the
+  waker). `spawn-dead-letter.test.ts` drives it end to end.
 - A live agent is `working` while it holds a turn-ledger turn it has not
   started (`typing` / `typed`) — but only for `STUCK_TURN_MS` once the runtime
   says it is at rest: past that it is **stuck** (`waiting`, `waitingFor:

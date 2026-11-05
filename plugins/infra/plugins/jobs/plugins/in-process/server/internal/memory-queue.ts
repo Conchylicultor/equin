@@ -1,11 +1,12 @@
 import { afterCommit } from "@plugins/database/server";
 import {
+  announceRunDead,
   answerJobsInMemory,
   JobQueue,
   listRegisteredJobs,
   resolveJobCron,
+  pendingWaits,
   singletonJobKey,
-  suspendedRunIds,
   UNSAFE_runJobRow,
   type JobQueueImpl,
   type JobRowOpts,
@@ -148,6 +149,13 @@ export function createMemoryQueue(
         // Kept, as graphile keeps a permanently-failed row: Debug → Queue
         // lists it dead until it is retried or removed.
         row.dead = true;
+        activity();
+        // Dead first, so what the hook sets off reads the run as over.
+        await announceRunDead(row.payload, {
+          cause: "failed",
+          error: row.lastError,
+        });
+        return;
       }
     } else {
       rows.delete(row.id);
@@ -343,18 +351,24 @@ export function createMemoryQueue(
     // before its row goes; a resume resolves its wait and lands its row at
     // the same commit) holds one or the other at every instant: missed by
     // all three looks only if it resumed AND suspended or finished inside the
-    // one waits query.
+    // one waits query. A pending wait counts while its waker row still holds
+    // its key (or it has none — an unbounded wait), read right after it.
     async keysInFlight(keys) {
-      const wanted = new Set(keys);
+      const holder = (key: string): boolean => {
+        for (const row of rows.values()) {
+          if (row.jobKey === key && !row.dead) return true;
+        }
+        return false;
+      };
       const held = new Set<string>();
       const lookAtRows = (): void => {
-        for (const row of rows.values()) {
-          if (row.jobKey !== null && !row.dead && wanted.has(row.jobKey))
-            held.add(row.jobKey);
-        }
+        for (const key of keys) if (holder(key)) held.add(key);
       };
       lookAtRows();
-      for (const key of await suspendedRunIds(keys)) held.add(key);
+      for (const wait of await pendingWaits(keys)) {
+        if (wait.wakerKey === null || holder(wait.wakerKey))
+          held.add(wait.workflowRunId);
+      }
       lookAtRows();
       return held;
     },
@@ -386,6 +400,10 @@ export function createMemoryQueue(
       if (row === undefined || row.running) return;
       cancelRow(row);
       activity();
+      await announceRunDead(row.payload, {
+        cause: "cancelled",
+        error: "its queue row was removed (Debug → Queue)",
+      });
     },
     onActivity(listener) {
       listeners.add(listener);

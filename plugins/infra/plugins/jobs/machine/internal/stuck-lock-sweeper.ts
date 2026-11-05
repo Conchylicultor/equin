@@ -10,7 +10,12 @@ import {
   type EnqueueTx,
   UNSAFE_getRegisteredJob,
 } from "../../server/internal/registry";
-import { ownedWorkflowRunIds } from "../../server/internal/run-identity";
+import {
+  ownedWorkflowRunIds,
+  workflowRunIdFor,
+} from "../../server/internal/run-identity";
+import { announceRunDead } from "../../server/internal/run-death";
+import { pruneDyingRuns } from "./dying-runs";
 import { emitQueueActivity } from "./slot-ledger";
 import { discardWorkflowLogs } from "../../server/internal/workflow-log";
 
@@ -90,6 +95,11 @@ export function stopStuckLockSweeper(): void {
 const ReclaimedRowSchema = z.object({
   id: z.string(),
   job_name: z.string(),
+  // The attempt its dead worker was running was its last: released, the row
+  // is dead (graphile counts an attempt at fetch), not re-queued.
+  exhausted: z.boolean(),
+  baked_run_id: z.string().nullable(),
+  input: z.unknown(),
 });
 
 const ReclaimedQueueRowSchema = z.object({
@@ -219,7 +229,11 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
        AND j.locked_at < now() - ${LOCK_ACQUIRE_GRACE}::interval
        AND NOT ${jobLockHeldExpr}
        AND NOT ${supersededExpr}
-    RETURNING j.id::text AS id, ${jobNameExpr} AS job_name
+    RETURNING j.id::text AS id,
+              ${jobNameExpr} AS job_name,
+              (j.attempts >= j.max_attempts) AS exhausted,
+              j.payload->>'workflowRunId' AS baked_run_id,
+              j.payload->'input' AS input
   `,
   });
 
@@ -229,10 +243,40 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
   // sweeper steal live jobs unnoticed for three months.
   for (const row of reclaimed) {
     const message =
-      `[jobs] reclaimed ${row.job_name} (job ${row.id}) — locked with no live advisory lock holder; its worker died mid-run, re-queueing` +
+      `[jobs] reclaimed ${row.job_name} (job ${row.id}) — locked with no live advisory lock holder; its worker died mid-run, ` +
+      (row.exhausted
+        ? "on its last attempt: not re-queued, its run is dead"
+        : "re-queueing") +
       inProcessNote(row.job_name);
     console.warn(message);
     reportServerError({ message, stack: null });
+  }
+
+  // A worker that died on the row's LAST attempt ended its run: no dispatch
+  // reached its failure path, so the teardown that path makes happens here —
+  // the run's step / wait logs go (its own key is released with it: the row
+  // is dead, not superseded), and its job is told (`onDead`), which no code of
+  // the handler could be.
+  for (const row of reclaimed.filter((r) => r.exhausted)) {
+    await discardWorkflowLogs(
+      [
+        workflowRunIdFor(
+          {
+            jobName: row.job_name,
+            workflowRunId: row.baked_run_id ?? undefined,
+          },
+          row.id,
+        ),
+      ],
+      database,
+    );
+    await announceRunDead(
+      { jobName: row.job_name, input: row.input },
+      {
+        cause: "worker-died",
+        error: `its worker died mid-run on its last attempt (job ${row.id})`,
+      },
+    );
   }
 
   // The queue half. Same rule as above, one indirection out: a queue lock is
@@ -291,6 +335,8 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
   // nothing a reader could see.
   if (dropped.length > 0 || reclaimed.length > 0 || reclaimedQueues.length > 0)
     emitQueueActivity();
+
+  await pruneDyingRuns(database);
 }
 
 /**

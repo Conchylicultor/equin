@@ -7,8 +7,13 @@ import {
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
-/** Which step of the spawn failed: the workspace's `prepare` (the checkout) or starting the session. */
-export const SPAWN_STEPS = ["worktree", "runtime"] as const;
+/**
+ * Which step of the spawn failed: the workspace's `prepare` (the checkout),
+ * starting the session — or `job`: the spawn job itself ended with no step
+ * of it seeing why (its worker died on its last attempt, the wake-up from its
+ * checkout wait failed, or its queue row was removed).
+ */
+export const SPAWN_STEPS = ["worktree", "runtime", "job"] as const;
 export type SpawnStep = (typeof SPAWN_STEPS)[number];
 
 // The `conversations_ext_spawn_failure` row: the latest failure of a
