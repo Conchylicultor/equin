@@ -3,10 +3,17 @@ import type { TSESTree } from "@typescript-eslint/utils";
 
 const createRule = lintRuleCreator(import.meta.url);
 
-const PLUGIN_TREE_CORE = "@plugins/plugin-meta/plugins/plugin-tree/core";
-
-/** The uncached builder — every call walks and parses the whole plugin tree. */
-const BUILDER_NAME = "buildPluginTree";
+/**
+ * The uncached builders, by the barrel that exports them — every call walks
+ * and parses the whole plugin tree (the faceted one runs every facet too).
+ */
+const BUILDERS = new Map<string, string>([
+  ["@plugins/plugin-meta/plugins/plugin-tree/core", "buildPluginTree"],
+  [
+    "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core",
+    "buildFacetedPluginTree",
+  ],
+]);
 
 /**
  * Check code: a file under a `check/` directory that sits DIRECTLY under a plugin
@@ -32,14 +39,14 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Disallow calling buildPluginTree() from check code — a check reads the " +
+        "Disallow calling buildPluginTree() / buildFacetedPluginTree() from check code — a check reads the " +
         "process-shared tree instead.",
     },
     schema: [],
     messages: {
       uncachedTree:
         "A check pass runs ~100 checks on ONE JS thread, so a check that calls " +
-        "buildPluginTree() itself rebuilds a tree the run has already built — six " +
+        "buildPluginTree() or buildFacetedPluginTree() itself rebuilds a tree the run has already built — six " +
         "checks used to do exactly that, back to back. Read the shared one: " +
         "buildStructureTreeOnce(pluginsRoot) from the same barrel for the structure " +
         "(paths, ids, runtimes, descriptions), or buildBarrelFreeTree(root) / " +
@@ -52,30 +59,33 @@ export default createRule({
     const filename = context.filename.split("\\").join("/");
     if (!isCheckCode(filename)) return {};
 
-    // Local names bound to `import * as tree from "…/plugin-tree/core"`.
-    const nsLocals = new Set<string>();
+    // Local names bound to `import * as tree from "<a builder's barrel>"`, and
+    // the builder that barrel exports.
+    const nsLocals = new Map<string, string>();
 
     return {
       ImportDeclaration(node) {
         if (node.importKind === "type") return;
-        if (node.source.value !== PLUGIN_TREE_CORE) return;
+        const builder = BUILDERS.get(node.source.value);
+        if (builder === undefined) return;
         for (const spec of node.specifiers) {
           if (spec.type === "ImportSpecifier") {
             if (spec.importKind === "type") continue;
             if (
               spec.imported.type === "Identifier" &&
-              spec.imported.name === BUILDER_NAME
+              spec.imported.name === builder
             ) {
               context.report({ node: spec, messageId: "uncachedTree" });
             }
           } else if (spec.type === "ImportNamespaceSpecifier") {
-            nsLocals.add(spec.local.name);
+            nsLocals.set(spec.local.name, builder);
           }
         }
       },
       MemberExpression(node: TSESTree.MemberExpression) {
         if (node.object.type !== "Identifier") return;
-        if (!nsLocals.has(node.object.name)) return;
+        const builder = nsLocals.get(node.object.name);
+        if (builder === undefined) return;
         const prop =
           node.property.type === "Identifier"
             ? node.property.name
@@ -83,7 +93,7 @@ export default createRule({
                 typeof node.property.value === "string"
               ? node.property.value
               : null;
-        if (prop === BUILDER_NAME) {
+        if (prop === builder) {
           context.report({ node, messageId: "uncachedTree" });
         }
       },

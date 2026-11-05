@@ -178,7 +178,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `plugin-meta/composition` ×5
     - `plugin-meta/facets` ×5
     - `infra/host-fs/user-path` ×4
-    - `plugin-meta/plugin-tree` ×4
+    - `plugin-meta/plugin-tree` ×3
     - `config_v2/ledger` ×2
     - `framework/tooling/boundaries` ×2
     - `framework/tooling/format` ×2
@@ -195,6 +195,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `plugin-meta/facets/contributions.contributionsFacetDef`
     - `plugin-meta/facets/exemptions.exemptionsFacetDef`
     - `plugin-meta/facets/slots.slotsFacetDef`
+    - `plugin-meta/plugin-tree/faceted.buildFacetedPluginTree`
     - `primitives/css/ui-kit.APP_STYLESHEET_PATH`
     - `ui/icons/icon-sets.renderSymbolNameFiles`
     - `ui/icons.isIconRefModule`

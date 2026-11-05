@@ -1,10 +1,9 @@
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import { setFacet, type Facet } from "@plugins/plugin-meta/plugins/facets/core";
 import {
   loadFacets,
   loadFacetSources,
-  setFacet,
-  type Facet,
-} from "@plugins/plugin-meta/plugins/facets/core";
+} from "@plugins/plugin-meta/plugins/facets/plugins/loader/core";
 import {
   buildModuleGraph,
   defineRecordJob,
@@ -20,7 +19,7 @@ import {
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import { buildFsSnapshot, pluginFilesManifest } from "./fs-snapshot";
-import type { PluginNode } from "./plugin-tree";
+import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 
 /**
  * Facets as PLUGIN RECORDS: each facet's extract of each plugin, stored under
@@ -35,10 +34,11 @@ import type { PluginNode } from "./plugin-tree";
  * invalidate it.
  */
 
-/** The module whose code shapes every extraction (what the snapshot holds, how it is read). */
+/** The modules whose code shapes every extraction (what the snapshot holds, how it is read). */
 const HARNESS_MODULES = [
   "plugins/plugin-meta/plugins/plugin-tree/core/internal/plugin-tree.ts",
-  "plugins/plugin-meta/plugins/plugin-tree/core/internal/facet-records.ts",
+  "plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core/internal/faceted-tree.ts",
+  "plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core/internal/facet-records.ts",
 ];
 
 export interface FacetRecordsInput {

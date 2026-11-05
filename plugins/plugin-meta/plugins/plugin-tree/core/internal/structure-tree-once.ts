@@ -9,7 +9,7 @@ import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 const structureTreeCache = new Map<string, Promise<PluginTree>>();
 
 /**
- * The STRUCTURE-ONLY plugin tree (steps 1–3 of `buildPluginTree`: the walk,
+ * The STRUCTURE-ONLY plugin tree (`buildPluginTree`: the walk,
  * each barrel's description/flags, the hierarchy — no facets, no barrels
  * imported), built once per `pluginsRoot` for the life of the process and
  * handed to every caller as the SAME frozen value.

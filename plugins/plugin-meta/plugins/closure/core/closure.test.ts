@@ -14,10 +14,8 @@ import {
   asAppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  buildPluginTree,
-  type PluginTree,
-} from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildFacetedPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
 import {
   asPluginId,
   SHIPPED_RUNTIME_FOLDERS,
@@ -87,9 +85,7 @@ setDefaultTimeout(60_000);
 
 beforeAll(async () => {
   const root = (await Bun.$`git rev-parse --show-toplevel`.text()).trim();
-  tree = await buildPluginTree(joinAppPath(asAppPath(root), "plugins"), {
-    facets: true,
-  });
+  tree = await buildFacetedPluginTree(joinAppPath(asAppPath(root), "plugins"));
   graph = classifyEdges(tree);
 });
 

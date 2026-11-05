@@ -50,7 +50,7 @@ runtime-neutral `core`.
     - `framework/tooling/format`
     - `plugin-meta/barrel-import`
     - `plugin-meta/plugin-refs`
-    - `plugin-meta/plugin-tree`
+    - `plugin-meta/plugin-tree/faceted`
     - `plugin-meta/token-usage`
 - Core:
   - Exports (values):

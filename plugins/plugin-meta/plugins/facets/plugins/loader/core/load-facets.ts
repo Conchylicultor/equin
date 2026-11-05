@@ -1,5 +1,5 @@
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
-import type { Facet } from "./facets";
+import type { Facet } from "@plugins/plugin-meta/plugins/facets/core";
 
 function isFacet(value: unknown): value is Facet {
   return (
@@ -39,7 +39,7 @@ export async function loadFacetSources(
     const source = byId.get(f.def.id);
     if (source === undefined)
       throw new Error(
-        `[facets] facet "${f.def.id}" lives in no facets/plugins/${f.def.id}/ folder: a facet's id must be its plugin directory's name.`,
+        `[facets] facet "${f.def.id}" lives in no facets/plugins/${f.def.id}/facet/ folder: a facet's id must be its plugin directory's name.`,
       );
     out.set(f.def.id, source);
   }
@@ -47,8 +47,10 @@ export async function loadFacetSources(
 }
 
 export async function loadFacets(): Promise<Facet[]> {
-  // loadFacets is build/server-only (it reads facet/ folders via fs) and never
-  // runs in the browser. The specifier is held in a variable so the repo's
+  // loadFacets is build tooling: it runs in the CLI and the check runner,
+  // never in a serving backend (which reads the faceted tree as data — see
+  // plugin-tree/faceted's `plugin-tree-facets` command) and never in the
+  // browser. The specifier is held in a variable so the repo's
   // static import-closure analysis (tooling/import-closure — e.g. the CLI's
   // codegen-manifests-not-frozen check) does not follow it into
   // facet.generated → every facet/ barrel → codegen. Rolldown folds the

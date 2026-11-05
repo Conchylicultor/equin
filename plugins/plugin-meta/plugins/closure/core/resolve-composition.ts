@@ -1,4 +1,4 @@
-import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import type { PluginTreeData } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { classifyEdges } from "./classify-edges";
 import { inclusionPathWithin } from "./inclusion-path";
@@ -183,11 +183,11 @@ export function resolveComposition(
   manifest: CompositionManifest,
 ): Composition;
 export function resolveComposition(
-  tree: PluginTree,
+  tree: PluginTreeData,
   manifest: CompositionManifest,
 ): Composition;
 export function resolveComposition(
-  graphOrTree: EdgeGraph | PluginTree,
+  graphOrTree: EdgeGraph | PluginTreeData,
   manifest: CompositionManifest,
 ): Composition {
   const graph = isTree(graphOrTree) ? classifyEdges(graphOrTree) : graphOrTree;
@@ -307,6 +307,6 @@ export function resolveComposition(
   };
 }
 
-function isTree(x: EdgeGraph | PluginTree): x is PluginTree {
-  return (x as PluginTree).byDir instanceof Map;
+function isTree(x: EdgeGraph | PluginTreeData): x is PluginTreeData {
+  return (x as PluginTreeData).byDir instanceof Map;
 }

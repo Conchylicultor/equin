@@ -2,10 +2,8 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  buildPluginTree,
-  type PluginTree,
-} from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildFacetedPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { evaluateAllBarrels, recordSlotNaming } from "./evaluated-barrels";
 
@@ -40,8 +38,7 @@ export function buildEnrichedTree(root: AppPath): Promise<PluginTree> {
       const naming = await recordSlotNaming(root, "source");
       // The set the barrel-free tree was read off: its records are this
       // tree's, one listing per process.
-      return buildPluginTree(joinAppPath(root, "plugins"), {
-        facets: true,
+      return buildFacetedPluginTree(joinAppPath(root, "plugins"), {
         repo: (await buildBarrelFreeTree(root)).repo,
         enrich: {
           naming,

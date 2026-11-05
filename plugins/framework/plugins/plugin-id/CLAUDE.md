@@ -49,6 +49,7 @@
     - `plugin-meta/plugin-records`
     - `plugin-meta/plugin-refs`
     - `plugin-meta/plugin-tree`
+    - `plugin-meta/plugin-tree/faceted`
     - `plugin-meta/relocate`
     - `tasks/automations`
 

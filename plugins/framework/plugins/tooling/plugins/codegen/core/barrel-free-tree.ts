@@ -2,10 +2,8 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  buildPluginTree,
-  type PluginTree,
-} from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildFacetedPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 
 const barrelFreeTreeCache = new Map<string, Promise<PluginTree>>();
@@ -34,10 +32,10 @@ export function buildBarrelFreeTree(
 ): Promise<PluginTree> {
   let cached = barrelFreeTreeCache.get(root);
   if (!cached) {
-    cached = buildPluginTree(joinAppPath(root, "plugins"), {
-      facets: true,
-      ...(repo ? { repo } : {}),
-    });
+    cached = buildFacetedPluginTree(
+      joinAppPath(root, "plugins"),
+      repo ? { repo } : undefined,
+    );
     barrelFreeTreeCache.set(root, cached);
   }
   return cached;

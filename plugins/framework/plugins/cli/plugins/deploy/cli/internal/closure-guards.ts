@@ -20,7 +20,7 @@ import type {
   CompositionManifest,
   EdgeGraph,
 } from "@plugins/plugin-meta/plugins/closure/core";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildFacetedPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
 import {
   compositionsConfig,
   manifestItemToManifest,
@@ -81,9 +81,7 @@ async function loadClosureContext(): Promise<ClosureContext> {
     userConfigDir: configDir.file(await checkoutNamespace(REPO_ROOT)),
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
   });
-  const tree = await buildPluginTree(joinAppPath(REPO_ROOT, "plugins"), {
-    facets: true,
-  });
+  const tree = await buildFacetedPluginTree(joinAppPath(REPO_ROOT, "plugins"));
   return {
     graph: classifyEdges(tree),
     manifests: values.manifests.map(manifestItemToManifest),

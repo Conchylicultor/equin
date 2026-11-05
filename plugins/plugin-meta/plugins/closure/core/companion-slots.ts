@@ -1,5 +1,5 @@
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
-import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import type { PluginTreeData } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
@@ -42,7 +42,7 @@ export interface CompanionSlot {
  * slots skipped. A contribution names its slot by group, so this is how a
  * contribution finds its owner.
  */
-export function slotGroupOwners(tree: PluginTree): Map<string, PluginId> {
+export function slotGroupOwners(tree: PluginTreeData): Map<string, PluginId> {
   const owners = new Map<string, PluginId>();
   for (const node of tree.byDir.values())
     for (const slot of getFacet(node, slotsFacetDef) ?? []) {
@@ -54,7 +54,7 @@ export function slotGroupOwners(tree: PluginTree): Map<string, PluginId> {
 
 /** Every companion slot of the tree, sorted by slot id. */
 export function collectCompanionSlots(
-  tree: PluginTree,
+  tree: PluginTreeData,
   groupOwner: ReadonlyMap<string, PluginId> = slotGroupOwners(tree),
 ): CompanionSlot[] {
   const byRef = new Map<string, CompanionSlot>();
@@ -129,7 +129,7 @@ export function collectCompanionSlots(
  * companion naming a kind its owner does not open THROWS — the flag would draw
  * no edge, and the contribution would ship as an option.
  */
-function collectServerCompanionKinds(tree: PluginTree): CompanionSlot[] {
+function collectServerCompanionKinds(tree: PluginTreeData): CompanionSlot[] {
   const byOwner = new Map<string, CompanionSlot>();
   for (const node of tree.byDir.values())
     for (const k of getFacet(node, contributionsFacetDef)

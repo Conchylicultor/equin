@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-plugin-meta-facets-loader",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Loads the facet extractors: the facet collected dir (facet.generated, one entry per facets/plugins/<f>/facet barrel) and loadFacets / loadFacetSources. Build tooling only — kept out of facets/core so reading facet data never reaches the extractors."
+}

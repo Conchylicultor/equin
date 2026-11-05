@@ -66,7 +66,7 @@ relative specifier inside this leaf would resolve against the wrong module.
     - `infra/launcher/login-services`
     - `infra/paths`
     - `plugin-meta/exhibits`
-    - `plugin-meta/facets`
+    - `plugin-meta/facets/loader`
     - `wish/element-picker`
 - Core:
   - Exports (types):

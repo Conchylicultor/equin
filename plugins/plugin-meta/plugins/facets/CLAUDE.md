@@ -15,7 +15,12 @@ identical to the web/server/core split used everywhere else in the repo:
   Runtime-agnostic; importable from either build-time or the browser.
 - `facet/` — **build-time** operations (`extract`, `relate`, `renderDoc`),
   discovered by `loadFacets()` (dynamic import; runs inside `./equin build`,
-  browser-less). `loadFacets()` is a thin wrapper over the shared
+  browser-less), which lives in its own sub-plugin, `plugins/loader/core`,
+  together with the `facet` collected dir and its `facet.generated` registry.
+  It is build tooling: `facets/core` holds only the data accessors
+  (`getFacet`, `setFacet`, the types), so code that READS facet data — the
+  closure engine, a serving backend — never reaches the extractors
+  (`boot:closure-digestable`). `loadFacets()` is a thin wrapper over the shared
   `loadCollectedDir` helper (`@plugins/framework/plugins/tooling/plugins/collected-dir/core`),
   the same uniform discovery substrate every collected runtime uses (`facet`,
   `check`, `web`, `server`, …) — each marked by `defineCollectedDir("<runtime>")`.
@@ -29,8 +34,8 @@ different homes — this is coherence, not asymmetry.
 
 ## Generic collection API
 
-The facets plugin exposes a **generic API** (`loadFacets`, `getFacet`,
-`DocFact`). The four rendering/doc consumers (docgen, Studio detail, Studio
+The facets plugin exposes a **generic API** (`loadFacets` from `loader/core`,
+`getFacet`, `DocFact`). The four rendering/doc consumers (docgen, Studio detail, Studio
 contributions, PR diff) use only this generic API — they iterate over collected
 facets/renderers and call `renderDoc()` / `getFacet()` / the render slot, never
 importing or naming an individual facet sub-plugin. A consumer may read
@@ -88,28 +93,6 @@ See `plugins/commands/` for the reference implementation.
 ## Plugin reference
 
 - Description: Facet-based plugin metadata extraction and docgen pipeline
-- Core:
-  - Uses:
-    - `framework/tooling/collected-dir.defineCollectedDir`
-    - `framework/tooling/collected-dir.loadCollectedDir`
-  - Exports (types):
-    - `DocFact`
-    - `DocFactGroup`
-    - `EnrichContext`
-    - `ExtractBatch`
-    - `ExtractContext`
-    - `Facet`
-    - `FacetDef`
-    - `RenderDocContext`
-  - Exports (values):
-    - `createFacet`
-    - `defineFacet`
-    - `docFactValues`
-    - `facetCollectedDir`
-    - `getFacet`
-    - `loadFacets`
-    - `loadFacetSources`
-    - `setFacet`
 - Cross-plugin:
   - Imported by:
     - `framework/tooling/codegen`
@@ -125,9 +108,25 @@ See `plugins/commands/` for the reference implementation.
     - `plugin-meta/facets/routes`
     - `plugin-meta/facets/slots`
     - `plugin-meta/facets/structure`
-    - `plugin-meta/plugin-tree`
+    - `plugin-meta/plugin-tree/faceted`
 - Exemptions:
   - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
+- Core:
+  - Exports (types):
+    - `DocFact`
+    - `DocFactGroup`
+    - `EnrichContext`
+    - `ExtractBatch`
+    - `ExtractContext`
+    - `Facet`
+    - `FacetDef`
+    - `RenderDocContext`
+  - Exports (values):
+    - `createFacet`
+    - `defineFacet`
+    - `docFactValues`
+    - `getFacet`
+    - `setFacet`
 - Sub-plugins:
   - **`contributions`**
     - Plugins:
@@ -159,6 +158,7 @@ See `plugins/commands/` for the reference implementation.
       - **`render-contributions`** — Aggregated cross-plugin exports table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin exports section in the plugin detail pane.
       - **`render-diff`** (excluded — cascade) — Diff renderer for the exports facet (PR review).
+  - **`loader`** — Loads the facet extractors: the facet collected dir (facet.generated, one entry per facets/plugins/<f>/facet barrel) and loadFacets / loadFacetSources. Build tooling only — kept out of facets/core…
   - **`registrations`**
     - Plugins:
       - **`render-contributions`** — Aggregated cross-plugin registrations table in the Studio Contributions view.

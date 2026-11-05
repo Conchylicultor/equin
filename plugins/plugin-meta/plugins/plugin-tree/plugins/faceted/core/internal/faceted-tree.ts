@@ -1,0 +1,205 @@
+import type { SlotNaming } from "@plugins/framework/plugins/slot-declaration/core";
+import {
+  existsSync,
+  readFileSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
+import { relative } from "path";
+import type {
+  RepoFiles,
+  RepoSnapshot,
+} from "@plugins/framework/plugins/tooling/core";
+import {
+  getFacet,
+  setFacet,
+  type EnrichContext,
+  type Facet,
+} from "@plugins/plugin-meta/plugins/facets/core";
+import { loadFacets } from "@plugins/plugin-meta/plugins/facets/plugins/loader/core";
+import { currentRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import { runWithFsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  createTimeSlicer,
+  yieldMacrotask,
+} from "@plugins/packages/plugins/macrotask-yield/core";
+import {
+  buildPluginTree,
+  type PluginNode,
+  type PluginTree,
+} from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { buildFsSnapshot } from "./fs-snapshot";
+import { extractFacetRecords } from "./facet-records";
+
+/**
+ * What makes a tree ENRICHED: each plugin's barrels as the build evaluated them
+ * (the evaluated records, revived — `codegen`'s evaluation pass), and the
+ * naming of the slots their contributions target. Applied by each facet's
+ * `enrich`; see `EnrichContext` for why the two travel as one value.
+ */
+export interface TreeEnrichment {
+  modulesOf(node: PluginNode): EnrichContext["imported"]["modules"];
+  naming: SlotNaming;
+}
+
+export interface BuildFacetedTreeOptions {
+  /**
+   * The repo's file set. A SNAPSHOT (with blob ids — a build's) makes the
+   * facets plugin records: read from the process's record store, extracted
+   * only where they missed. Absent, the tree asks git for a file set.
+   */
+  repo?: RepoFiles;
+  /** Enrich the facets with the evaluated barrels (see {@link TreeEnrichment}). */
+  enrich?: TreeEnrichment;
+}
+
+function isSnapshot(repo: RepoFiles): repo is RepoSnapshot {
+  return typeof (repo as Partial<RepoSnapshot>).blobOf === "function";
+}
+
+/** A gitignored file's content from disk, for the module graph (null when absent). */
+function readOutside(root: AppPath, rel: string): string | null {
+  const abs = joinAppPath(root, rel);
+  if (!existsSync(abs) || !statSync(abs).isFile()) return null;
+  return readFileSync(abs, "utf8");
+}
+
+/**
+ * The plugin tree under `pluginsRoot` with every facet extracted (and, with
+ * `enrich`, enriched), then related: `buildPluginTree`'s structure plus the
+ * facet extractors.
+ *
+ * Build tooling: it loads every facet extractor (`facets/loader`), and through
+ * them the parsers and codegen. It runs in the CLI and the check runner, never
+ * in a serving backend — a backend reads the faceted tree as data, produced by
+ * this plugin's `plugin-tree-facets` command (`plugin-tree/server`'s
+ * `getFacetsTreeCached`).
+ */
+export async function buildFacetedPluginTree(
+  pluginsRoot: AppPath,
+  opts?: BuildFacetedTreeOptions,
+): Promise<PluginTree> {
+  const tree = await buildPluginTree(
+    pluginsRoot,
+    opts?.repo ? { repo: opts.repo } : undefined,
+  );
+  const { repo } = tree;
+  const facets = await loadFacets();
+  tree.facets = facets;
+  const nodes = [...tree.byDir.values()];
+
+  // Step 1: extract. From a snapshot, facets are plugin records (see
+  // `facet-records.ts`): only the plugins whose files changed are read.
+  // Without one there is nothing to key a record by, so every plugin is read
+  // and extracted — through the same JSON spelling a record has, so both
+  // paths hand `relate` and `renderDoc` the same values.
+  if (isSnapshot(repo)) {
+    await extractFacetRecords(
+      {
+        snapshot: repo,
+        store: currentRecordStore(),
+        readOutside: (rel) => readOutside(repo.root, rel),
+      },
+      nodes,
+      facets,
+    );
+  } else {
+    await extractEveryFacet(repo, nodes, facets);
+  }
+
+  // Step 2: enrich with the evaluated barrels (the enriched tree only). Never
+  // a record: the naming is the whole tree's.
+  const enrich = opts?.enrich;
+  if (enrich) {
+    for (const node of nodes) {
+      const modules = enrich.modulesOf(node);
+      for (const facet of facets) {
+        if (!facet.enrich) continue;
+        setFacet(
+          node,
+          facet.def,
+          facet.enrich(getFacet(node, facet.def), {
+            dir: node.dir,
+            pluginId: node.id,
+            imported: { modules, naming: enrich.naming },
+          }),
+        );
+      }
+    }
+  }
+
+  // Step 3: facet relate, over every plugin's data in memory. Yield between
+  // facets so the residual block is one facet's relate, not all of them summed.
+  for (const facet of facets) {
+    if (!facet.relate) continue;
+    facet.relate({ tree });
+    await yieldMacrotask();
+  }
+
+  return tree;
+}
+
+/**
+ * Every facet of every plugin, extracted from a file set with no blob ids (so
+ * no record can be keyed): the files are read once, in memory, and each
+ * result is spelled as JSON exactly as a record is.
+ */
+async function extractEveryFacet(
+  repo: RepoFiles,
+  nodes: readonly PluginNode[],
+  facets: readonly Facet[],
+): Promise<void> {
+  const fs = await buildFsSnapshot(
+    repo,
+    nodes.map((n) => n.dir),
+  );
+  // The extract loop shares its thread with whoever else is running (a check
+  // pass runs ~100 checks on it), so it yields a macrotask after ~10 ms of work
+  // rather than per node count: one node's facets can cost far more than
+  // another's. The reads are in-memory, so this bounds CPU, not I/O.
+  const slice = createTimeSlicer();
+  const data = new Map<PluginNode, Map<string, unknown>>();
+  for (const node of nodes) {
+    const byFacet = new Map<string, unknown>();
+    for (const facet of facets) {
+      byFacet.set(
+        facet.def.id,
+        runWithFsSnapshot(fs, () =>
+          facet.extract({
+            dir: node.dir,
+            relDir: relative(repo.root, node.dir),
+            pluginId: node.id,
+            fs,
+          }),
+        ),
+      );
+      await slice();
+    }
+    data.set(node, byFacet);
+  }
+  for (const facet of facets) {
+    if (!facet.extractBatch) continue;
+    await facet.extractBatch.run({
+      root: repo.root,
+      fs,
+      plugins: nodes.map((node) => ({
+        dir: node.dir,
+        data: data.get(node)!.get(facet.def.id),
+      })),
+    });
+  }
+  for (const node of nodes) {
+    for (const facet of facets) {
+      setFacet(
+        node,
+        facet.def,
+        JSON.parse(
+          JSON.stringify(data.get(node)!.get(facet.def.id)),
+        ) as unknown,
+      );
+    }
+  }
+}

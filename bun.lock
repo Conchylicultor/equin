@@ -5217,6 +5217,10 @@
       "name": "@equin/plugin-plugin-meta-facets-exports-render-diff",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/facets/plugins/loader": {
+      "name": "@equin/plugin-plugin-meta-facets-loader",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/facets/plugins/registrations": {
       "name": "@equin/plugin-plugin-meta-facets-registrations",
       "version": "0.0.1",
@@ -5315,6 +5319,10 @@
     },
     "plugins/plugin-meta/plugins/plugin-tree": {
       "name": "@equin/plugin-plugin-meta-plugin-tree",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/plugin-tree/plugins/faceted": {
+      "name": "@equin/plugin-plugin-meta-plugin-tree-faceted",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/plugin-view": {
@@ -9708,6 +9716,8 @@
 
     "@equin/plugin-plugin-meta-facets-exports-render-diff": ["@equin/plugin-plugin-meta-facets-exports-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/exports/plugins/render-diff"],
 
+    "@equin/plugin-plugin-meta-facets-loader": ["@equin/plugin-plugin-meta-facets-loader@workspace:plugins/plugin-meta/plugins/facets/plugins/loader"],
+
     "@equin/plugin-plugin-meta-facets-registrations": ["@equin/plugin-plugin-meta-facets-registrations@workspace:plugins/plugin-meta/plugins/facets/plugins/registrations"],
 
     "@equin/plugin-plugin-meta-facets-registrations-render-contributions": ["@equin/plugin-plugin-meta-facets-registrations-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/registrations/plugins/render-contributions"],
@@ -9757,6 +9767,8 @@
     "@equin/plugin-plugin-meta-plugin-refs": ["@equin/plugin-plugin-meta-plugin-refs@workspace:plugins/plugin-meta/plugins/plugin-refs"],
 
     "@equin/plugin-plugin-meta-plugin-tree": ["@equin/plugin-plugin-meta-plugin-tree@workspace:plugins/plugin-meta/plugins/plugin-tree"],
+
+    "@equin/plugin-plugin-meta-plugin-tree-faceted": ["@equin/plugin-plugin-meta-plugin-tree-faceted@workspace:plugins/plugin-meta/plugins/plugin-tree/plugins/faceted"],
 
     "@equin/plugin-plugin-meta-plugin-view": ["@equin/plugin-plugin-meta-plugin-view@workspace:plugins/plugin-meta/plugins/plugin-view"],
 

@@ -12,7 +12,7 @@ import {
   compositionData,
   type CompositionData,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import type { PluginTreeData } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 
 // The expensive part is the facets tree build, which plugin-tree already caches
 // (watcher-invalidated, warmed post-boot on main). The derivations on top of it
@@ -22,9 +22,9 @@ import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 // old process-lifetime module cache, which never invalidated — after any live
 // plugin change it kept serving the boot-time graph forever (the staleness
 // follow-up noted in this plugin's CLAUDE.md).
-const derived = new WeakMap<PluginTree, CompositionData>();
+const derived = new WeakMap<PluginTreeData, CompositionData>();
 
-function deriveCompositionData(tree: PluginTree): CompositionData {
+function deriveCompositionData(tree: PluginTreeData): CompositionData {
   const hit = derived.get(tree);
   if (hit) return hit;
   const edgeGraph = classifyEdges(tree);

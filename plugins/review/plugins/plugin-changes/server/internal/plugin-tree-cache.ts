@@ -1,15 +1,13 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  buildPluginTree,
-  type PluginTree,
-} from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildFacetedPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
 import { createGitStateMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { lastKnownMainSha } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
 import { editedFilesSignature } from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 
-// buildPluginTree is a build-time primitive: a fully synchronous recursive
+// buildFacetedPluginTree is a build-time primitive: a fully synchronous recursive
 // readdirSync walk over hundreds of plugin dirs plus per-node facet extraction
 // (several facets walk every .ts file in the repo). It blocks the event loop
 // for tens of seconds. computePluginChanges only needs the two trees, so each
@@ -39,12 +37,7 @@ export function getMainPluginTree(
       // aborts the memo recompute, retaining the previous cached tree (stale-safe).
       lastKnownMainSha() ??
       (await runGit(["rev-parse", "main"], mainPluginsDir)).trim(),
-    () =>
-      withHeavyReadSlot(() =>
-        buildPluginTree(mainPluginsDir, {
-          facets: true,
-        }),
-      ),
+    () => withHeavyReadSlot(() => buildFacetedPluginTree(mainPluginsDir)),
   );
 }
 
@@ -76,11 +69,6 @@ export function getWorktreePluginTree(
   return worktreeTreeMemo.get(
     worktreePath,
     () => editedFilesSignature(worktreePath),
-    () =>
-      withHeavyReadSlot(() =>
-        buildPluginTree(worktreePluginsDir, {
-          facets: true,
-        }),
-      ),
+    () => withHeavyReadSlot(() => buildFacetedPluginTree(worktreePluginsDir)),
   );
 }

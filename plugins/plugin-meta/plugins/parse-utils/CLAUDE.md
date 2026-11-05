@@ -213,6 +213,7 @@ snapshot they read the disk and compute, unchanged.
     - `network/live/resource-vocabulary`
     - `plugin-meta/plugin-refs`
     - `plugin-meta/plugin-tree`
+    - `plugin-meta/plugin-tree/faceted`
     - `plugin-meta/token-usage`
 - Exemptions:
   - Exempts itself from:

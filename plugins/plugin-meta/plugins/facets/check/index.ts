@@ -3,7 +3,7 @@ import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { declareSlotsFromBarrels } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { loadFacets } from "@plugins/plugin-meta/plugins/facets/core";
+import { loadFacets } from "@plugins/plugin-meta/plugins/facets/plugins/loader/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   registerBarrelStubs,

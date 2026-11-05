@@ -10,7 +10,7 @@ import {
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { deploySecretsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/deploy-secrets/core";
-import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import type { PluginTreeData } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { getFacetsTreeCached } from "@plugins/plugin-meta/plugins/plugin-tree/server";
 import { mergeDeclarations, type RequiredSecret } from "./plan";
 
@@ -23,8 +23,11 @@ import { mergeDeclarations, type RequiredSecret } from "./plan";
  * `core/`). No plugin is named here: a second plugin declaring a secret is
  * picked up with no edit to this file.
  *
- * Throws for a composition the `compositions` config does not hold: a gate
- * that cannot compute the closure must not pass the run.
+ * Throws for a composition the `compositions` config does not hold, one whose
+ * closure resolves to no plugin, and a tree that could not be read (the
+ * faceted tree is a child process's output — `plugin-tree`'s
+ * `getFacetsTreeCached`): a gate that cannot compute the closure must not
+ * pass the run.
  */
 export async function requiredDeploySecrets(
   compositionId: string,
@@ -33,7 +36,7 @@ export async function requiredDeploySecrets(
 }
 
 function requiredInTree(
-  tree: PluginTree,
+  tree: PluginTreeData,
   compositionId: string,
 ): RequiredSecret[] {
   const items = getConfig(compositionsConfig).manifests;
@@ -48,6 +51,14 @@ function requiredInTree(
     items.map(manifestItemToManifest),
   );
   const bundle = resolveComposition(classifyEdges(tree), flat).bundle;
+  // A deployable composition bundles something. An empty closure means its
+  // entries name no plugin of this tree — a tree read wrong, or a stale
+  // manifest — and would read as "needs no secret", passing the gate.
+  if (bundle.size === 0) {
+    throw new Error(
+      `[deploy-secrets] "${compositionId}" resolves to no plugin in the plugin tree, so the secrets its closure needs cannot be computed.`,
+    );
+  }
   const declared = [...tree.byDir.values()]
     .filter((node) => bundle.has(node.id))
     .flatMap((node) => {

@@ -1,5 +1,5 @@
 import {
-  type PluginTree,
+  type PluginTreeData,
   type PluginNode as TreePluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { PluginNode, PluginTreePayload } from "../../core/types";
@@ -33,7 +33,7 @@ function toApiNode(node: TreePluginNode): PluginNode {
   };
 }
 
-export function treeToPayload(tree: PluginTree): PluginTreePayload {
+export function treeToPayload(tree: PluginTreeData): PluginTreePayload {
   const plugins = tree.roots.map(toApiNode);
   const totals = { plugins: 0, loadBearing: 0, umbrellas: 0 };
   for (const p of plugins) tally(p, totals);

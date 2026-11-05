@@ -1,5 +1,5 @@
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
-import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import type { PluginTreeData } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   SHIPPED_RUNTIME_FOLDERS,
   type PluginId,
@@ -41,7 +41,7 @@ function pushUnique(
  * slots — exactly mirroring `contributions.relate()`, but keyed by `PluginId`
  * rather than `name`.
  */
-export function classifyEdges(tree: PluginTree): EdgeGraph {
+export function classifyEdges(tree: PluginTreeData): EdgeGraph {
   const hardForward = new Map<PluginId, PluginId[]>();
   const hardReverse = new Map<PluginId, PluginId[]>();
   const softForward = new Map<PluginId, PluginId[]>();

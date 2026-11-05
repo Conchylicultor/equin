@@ -151,7 +151,7 @@ with.
     - `framework/cli/regen-generated`
     - `framework/tooling/boundaries`
     - `framework/tooling/codegen`
-    - `plugin-meta/plugin-tree`
+    - `plugin-meta/plugin-tree/faceted`
 - Exemptions:
   - Exempts itself from: `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
 

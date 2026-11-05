@@ -48,7 +48,7 @@ const check: Check = {
     // The barrel-free faceted tree AND its classified edge graph, taken from the
     // shared registry-gen context rather than built here. `buildRegistryGenContext`
     // calls `buildBarrelFreeTree`, which memoizes exactly this
-    // `buildPluginTree(<root>/plugins, { facets: true })`
+    // `buildFacetedPluginTree(<root>/plugins)`
     // per root, and classifies its edges ONCE for every consumer that takes a ctx.
     // Going through the memo means one 840-plugin faceted walk and one
     // `classifyEdges` pass are shared with every other check in the run instead of

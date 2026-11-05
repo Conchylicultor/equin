@@ -1,6 +1,7 @@
 import {
   buildPluginTree,
   type PluginTree,
+  type PluginTreeData,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { createGitStateMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
@@ -10,8 +11,10 @@ import {
 } from "@plugins/infra/plugins/file-watcher/server";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
 import { createTreeChangeSignal } from "./tree-change-signal";
+import { FacetedTreeSource } from "./faceted-source";
 
-// Cached, watcher-invalidated plugin-tree accessors.
+// Cached, watcher-invalidated plugin-tree accessors: the structure tree built
+// here, the faceted tree read as data from a child (`getFacetsTreeCached`).
 //
 // The hot path (the `plugin-view.tree` live value: chip mounts, Settings config-nav)
 // only ever wants the cheap structural skeleton — never facets — so it is served
@@ -93,9 +96,9 @@ const structureMemo = createGitStateMemo<PluginTree>({
   name: "plugin-tree.structure",
 });
 
-// Full faceted tree, shared by the two genuine facet consumers (Contributions +
-// the detail pane). Barrel-free, as the previous hot-path build.
-const facetsMemo = createGitStateMemo<PluginTree>({
+// Full faceted tree, shared by the facet consumers (Studio's composition graph,
+// the plugin detail pane, the deploy-secrets gate). Barrel-free, as data.
+const facetsMemo = createGitStateMemo<PluginTreeData>({
   name: "plugin-tree.facets",
 });
 
@@ -108,12 +111,25 @@ export async function getStructureTreeCached(): Promise<PluginTree> {
   );
 }
 
-export async function getFacetsTreeCached(): Promise<PluginTree> {
+/**
+ * The faceted tree, as data: what the facet extractors made of every plugin,
+ * with no extractor in this process.
+ *
+ * Building it runs every facet extractor — build tooling, which reaches the
+ * parsers, codegen and lint, and loads the extractors by a computed path. A
+ * serving backend must not run that: the code it runs could no longer be
+ * measured (`boot:closure-digestable`, research/
+ * 2026-11-05-global-backend-code-identity.md), and the build is seconds of CPU
+ * on the event loop. So the tree comes from the `FacetedTreeSource` host
+ * service — on the desktop, `./equin plugin-tree-facets` run in a child
+ * (`plugin-tree#machine`) — memoized on the same watcher generation as the
+ * structure tree.
+ */
+export async function getFacetsTreeCached(): Promise<PluginTreeData> {
   await ensureWatcher();
   return facetsMemo.get(
     PLUGINS_DIR,
     () => Promise.resolve(treeChange.token()),
-    () =>
-      withHeavyReadSlot(() => buildPluginTree(PLUGINS_DIR, { facets: true })),
+    () => withHeavyReadSlot(() => FacetedTreeSource.get().read()),
   );
 }

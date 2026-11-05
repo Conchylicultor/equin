@@ -1,14 +1,38 @@
 # plugin-tree
 
+## The faceted tree is data in a backend (`server/internal/structure-tree-cache.ts`)
+
+`core/` builds the STRUCTURE tree only (`buildPluginTree`: the walk, each
+barrel's description and flags, the hierarchy). Extracting facets is build
+tooling — it loads every facet extractor by a computed path
+(`facets/loader`), and through them the parsers and codegen — so it lives in
+the `faceted` sub-plugin (`buildFacetedPluginTree`), which only the CLI, the
+check runner and codegen import.
+
+A serving backend never runs it: `getFacetsTreeCached` reads the tree through
+the `FacetedTreeSource` host service, whose desktop provider (`machine/`) spawns
+`./equin plugin-tree-facets <out>` (`faceted/cli`) in this checkout and reads
+the JSON it writes back with `pluginTreeFromJson`, as a `PluginTreeData` (the
+nodes and their indexes, no extractors, no file set). A file, not stdout: a CLI
+that finds its dependencies stale prints the install on stdout first. The child reads a
+snapshot of the checkout with the shared plugin records installed, as a build
+does, so a call after a small edit extracts only the plugins it touched. Why:
+a backend whose closure reaches a computed load has code no digest can
+measure (`boot:closure-digestable`,
+`research/2026-11-05-global-backend-code-identity.md`), and the extraction is
+seconds of CPU that no longer runs on the backend's event loop. The tree's
+consumers — `classifyEdges`, plugin-view's payload, the deploy-secrets gate —
+take `PluginTreeData`, so a faceted tree built in-process and one read back
+are the same input to them.
+
 ## Boot warm-up (`server/internal/warmup.ts`)
 
-Both tree caches are in-memory and die with the process, and the facets build is
-~5s of pure CPU — so on main (which restarts on every deploy) the first
-Studio/plugin-view request of each process used to pay the whole build
-synchronously. A `host`-scoped `defineWarmup` pre-builds structure + facets in
-the throttled post-boot drain instead. Worktree backends keep the lazy cold path
-on purpose: their Studio surfaces are rarely opened, and N×-worktree boots would
-multiply the CPU burn exactly when the host is busiest.
+Both tree caches are in-memory and die with the process, so on main (which
+restarts on every deploy) the first Studio/plugin-view request of each process
+would wait for both. A `host`-scoped `defineWarmup` reads structure + facets in
+the throttled post-boot drain instead (the faceted one through the child
+above). Worktree backends keep the lazy cold path on purpose: their Studio
+surfaces are rarely opened.
 
 ## One structure tree per check pass (`core/internal/structure-tree-once.ts`)
 
@@ -26,13 +50,13 @@ are codegen's `buildBarrelFreeTree` / `buildEnrichedTree`.
   `getStructureTreeCached` from the `server` barrel, which rebuilds on a watcher.
 - **Enforced** by this plugin's `no-uncached-tree-in-checks` lint rule: a file
   under a plugin's `check/` folder, or the runner's `checks/core/`, may not import
-  `buildPluginTree` as a value. It sees paths, not call graphs — a helper a check
+  `buildPluginTree` (or `faceted`'s `buildFacetedPluginTree`) as a value. It sees paths, not call graphs — a helper a check
   calls from elsewhere (`tooling/boundaries/core/check.ts`) is not covered and
   was moved by hand.
 
-## Facet extraction yields by time
+## Facet extraction yields by time (`faceted/core/internal/faceted-tree.ts`)
 
-The extract loop (step 4b) and the relate loop (4c) share their thread with
+The extract loop and the relate loop share their thread with
 everything else in the process. Extract yields a macrotask after ~10 ms of work
 (`createTimeSlicer`), checked after every facet of every node, not after a fixed
 node count — one node's facets can cost far more than another's. Relate still
@@ -59,8 +83,9 @@ dynamic value.
 
 ## Plugin reference
 
-- Description: Cached, watcher-invalidated plugin-tree accessors: structure-only for the hot path and a shared full-faceted build for the two facet consumers.
+- Description: Cached, watcher-invalidated plugin-tree accessors: the structure tree, built in-process for the hot path, and the faceted tree, read as data through the FacetedTreeSource host service (never extracted in the backend).
 - Server:
+  - Contributes: `host-service:plugin-tree.faceted-source` "plugin-tree.faceted-source"
   - Uses:
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
@@ -68,7 +93,9 @@ dynamic value.
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/paths.PLUGINS_DIR`
     - `infra/warmup.defineWarmup`
+  - Exports (types): `FacetedTreeSourceImpl`
   - Exports (values):
+    - `FacetedTreeSource`
     - `getFacetsTreeCached`
     - `getStructureTreeCached`
     - `onPluginTreeChanged`
@@ -77,24 +104,33 @@ dynamic value.
     - `defineWarmup('plugin-tree.trees')`
     - `defineFileWatcher('plugin-tree.plugins-dir')`
 - Core:
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `plugin-meta/plugin-records` ×7
-    - `framework/plugin-id` ×6
-    - `plugin-meta/facets` ×6
-    - `plugin-meta/parse-utils` ×5
-    - `framework/tooling` ×3
-    - `infra/host-fs/user-path` ×3
-    - `packages/timed-fs` ×3
-    - `packages/macrotask-yield` ×2
+  - Uses:
+    - `framework/plugin-id.asPluginId`
+    - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
+    - `framework/plugin-id.PluginId`
+    - `framework/tooling.loadRepoFiles`
+    - `framework/tooling.RepoFiles`
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.appPathParent`
+    - `infra/host-fs/user-path.joinAppPath`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
+    - `plugin-meta/parse-utils.defaultExportObjectBody`
+    - `plugin-meta/parse-utils.parseBoolField`
+    - `plugin-meta/parse-utils.parseStringField`
   - Exports (types):
     - `BuildPluginTreeOptions`
     - `PluginNode`
+    - `PluginNodeJson`
     - `PluginTree`
+    - `PluginTreeData`
+    - `PluginTreeJson`
     - `Runtime`
-    - `TreeEnrichment`
   - Exports (values):
     - `buildPluginTree`
     - `buildStructureTreeOnce`
+    - `pluginTreeFromJson`
+    - `pluginTreeToJson`
     - `resolvePluginSpecifier`
 - Cross-plugin:
   - Imported by:
@@ -103,9 +139,10 @@ dynamic value.
     - `framework/tooling/checks`
     - `framework/tooling/codegen`
     - `plugin-meta/composition`
+    - `plugin-meta/plugin-tree/faceted`
 - Exemptions:
-  - Exempts itself from:
-    - `boundaries/no-platform-api` — `core/internal/fs-snapshot.ts`, `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
-    - `boot:closure-digestable` — `core/index.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
+- Sub-plugins:
+  - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and `./equin…
 
 <!-- AUTOGENERATED:END -->

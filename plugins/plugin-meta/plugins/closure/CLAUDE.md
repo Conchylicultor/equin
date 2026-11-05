@@ -72,8 +72,9 @@ validity check, build-gating) builds on it. Designed in
 Every input is read from per-node **facet data** already serialized into the
 tree (`node.facets[id]`, via `getFacet`). No `fs`, no `path`, no barrel imports.
 It runs identically at build time, in the `plugin-view.tree` /
-`composition.data` live values' loaders, and client-side in Studio. `buildPluginTree(...,
-{ facets: true })` populates everything the engine consumes.
+`composition.data` live values' loaders, and client-side in Studio. `buildFacetedPluginTree`
+(`plugin-tree/faceted`) populates everything the engine consumes; a serving
+backend reads that tree as data (`plugin-tree/server`'s `getFacetsTreeCached`).
 
 The one runtime import outside this plugin is `BASE_EXCLUSIONS_ID` from
 `@plugins/infra/plugins/namespace/core`, which is a zero-import leaf for exactly
@@ -311,7 +312,7 @@ take effect is a value in the result rather than silence.
 
 ## Tests
 
-`core/closure.test.ts` runs `buildPluginTree` + `classifyEdges` +
+`core/closure.test.ts` runs `buildFacetedPluginTree` + `classifyEdges` +
 `resolveComposition` against the **real** tree for the `agent-manager`
 composition. Under the conservative model: the default bundle is small (16/512 —
 hard closure of the entries alone), `shell` is `required`, the whole

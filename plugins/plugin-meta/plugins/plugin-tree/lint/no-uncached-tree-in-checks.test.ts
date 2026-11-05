@@ -11,6 +11,7 @@ import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lin
 const ruleTester = createRuleTester();
 
 const CORE = "@plugins/plugin-meta/plugins/plugin-tree/core";
+const FACETED = "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
 const CHECK = "/repo/plugins/tasks/plugins/foo/check/index.ts";
 const RUNNER =
   "/repo/plugins/framework/plugins/tooling/plugins/checks/core/runner.ts";
@@ -45,6 +46,16 @@ ruleTester.run("no-uncached-tree-in-checks", rule, {
     },
   ],
   invalid: [
+    {
+      code: `import { buildFacetedPluginTree } from "${FACETED}";`,
+      filename: CHECK,
+      errors: [{ messageId: "uncachedTree" }],
+    },
+    {
+      code: `import * as ft from "${FACETED}"; ft.buildFacetedPluginTree("/p");`,
+      filename: RUNNER,
+      errors: [{ messageId: "uncachedTree" }],
+    },
     {
       code: `import { buildPluginTree } from "${CORE}";`,
       filename: CHECK,

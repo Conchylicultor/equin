@@ -15,7 +15,7 @@ import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildFacetedPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
 import {
   repoFilesOver,
   type RepoFiles,
@@ -139,12 +139,10 @@ async function loadPushPluginChanges(
       // load per tuple among its readers, and the heavy-read slot caps how many
       // run at once, so just build both trees inside the one slot.
       const [headTree, baseTree] = await Promise.all([
-        buildPluginTree(joinAppPath(headDir, "plugins"), {
-          facets: true,
+        buildFacetedPluginTree(joinAppPath(headDir, "plugins"), {
           repo: head.repo,
         }),
-        buildPluginTree(joinAppPath(baseDir, "plugins"), {
-          facets: true,
+        buildFacetedPluginTree(joinAppPath(baseDir, "plugins"), {
           repo: base.repo,
         }),
       ]);
