@@ -15,6 +15,7 @@ export { FileContent } from "./components/file-content";
 export { FileTabs } from "./components/file-tabs";
 export {
   NoPreview,
+  type PreviewFailure,
   useArchiveMembership,
   useOpenHostFile,
 } from "./components/no-preview";

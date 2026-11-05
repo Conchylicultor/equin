@@ -121,6 +121,7 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
     - `FileRendererTarget`
     - `FileTextState`
     - `FileTextUnavailable`
+    - `PreviewFailure`
     - `RendererMatch`
     - `ResolvedRenderer`
   - Exports (values):

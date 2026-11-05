@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Video and audio player for host media files (.mp4, .mov, .webm, .mp3, .wav, .flac, …): the browser's native player with controls, auto-playing on open, Space to play / pause, seeking over byte ranges; a codec the browser cannot decode shows No preview.
+- Description: Video and audio player for host media files (.mp4, .mov, .webm, .mp3, .wav, .flac, …): the browser's native player with controls, auto-playing on open, Space to play / pause, seeking over byte ranges; a file the player cannot open (damaged or incomplete, unreadable, an unsupported codec) says why, with Retry and Open with default app.
 - Web:
   - Contributes:
     - `FileViewer.Renderer` "Video" → `VideoView`
@@ -18,6 +18,7 @@
     - `primitives/file-viewer.FileRendererProps`
     - `primitives/file-viewer.FileViewer`
     - `primitives/file-viewer.NoPreview`
+    - `primitives/file-viewer.PreviewFailure`
     - `primitives/file-viewer.UnloadedFile`
     - `primitives/shortcuts.usePlayPauseShortcut`
 - Cross-plugin:

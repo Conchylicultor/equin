@@ -26,23 +26,73 @@ function kindLabel(name: string): string {
 }
 
 /**
- * The fallback body for a file no renderer can show: a large file icon, "No
- * preview for <kind> files", and — for a file on the host, which has a default
- * app — an Open with default app button (not for a file inside an archive,
- * which has no file of its own to hand an app). The fallback renderer shows it when
- * no other renderer is offered; the code renderer shows it when a read finds
- * the file binary.
+ * Why a renderer that should have shown the file could not — told instead of
+ * "No preview for … files", which would claim the kind cannot be previewed
+ * when this one file failed. `technical` is the raw reason (a browser's
+ * decoder message), shown small and selectable for whoever debugs it.
  */
-export function NoPreview({ file }: { file: FileRef }) {
+export interface PreviewFailure {
+  title: string;
+  detail: string;
+  technical?: string;
+}
+
+/**
+ * The fallback body for a file no renderer can show: a large file icon, "No
+ * preview for <kind> files" — or, given a `failure`, what went wrong with this
+ * file — and, for a file on the host, which has a default app, an Open with
+ * default app button (not for a file inside an archive, which has no file of
+ * its own to hand an app), after a Retry button when `onRetry` is given. The fallback
+ * renderer shows it when no other renderer is offered; the code renderer
+ * shows it when a read finds the file binary; the media renderer, with a
+ * failure, when the player cannot open the file.
+ */
+export function NoPreview({
+  file,
+  failure,
+  onRetry,
+}: {
+  file: FileRef;
+  failure?: PreviewFailure;
+  onRetry?: () => void;
+}) {
   const name = fileRefName(file);
   return (
     <Center axis="both" className="h-full p-lg">
-      <Stack direction="col" align="center" gap="md">
+      <Stack direction="col" align="center" gap="md" className="max-w-md">
         <FileTypeIcon name={name} className="size-12" />
-        <Text as="p" variant="body" className="text-muted-foreground">
-          No preview for {kindLabel(name)} files
-        </Text>
-        {file.source === "host" && <OpenWithDefaultApp path={file.path} />}
+        {failure ? (
+          <Stack direction="col" align="center" gap="xs">
+            <Text as="p" variant="label">
+              {failure.title}
+            </Text>
+            <Text as="p" variant="body" tone="muted" className="text-center">
+              {failure.detail}
+            </Text>
+            {failure.technical && (
+              <Text
+                as="p"
+                variant="code"
+                tone="faint"
+                className="text-center break-all select-text"
+              >
+                {failure.technical}
+              </Text>
+            )}
+          </Stack>
+        ) : (
+          <Text as="p" variant="body" className="text-muted-foreground">
+            No preview for {kindLabel(name)} files
+          </Text>
+        )}
+        <Stack direction="row" align="center" gap="sm">
+          {onRetry && (
+            <Button variant="outline" onClick={onRetry}>
+              Retry
+            </Button>
+          )}
+          {file.source === "host" && <OpenWithDefaultApp path={file.path} />}
+        </Stack>
       </Stack>
     </Center>
   );
