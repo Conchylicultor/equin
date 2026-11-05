@@ -6,10 +6,8 @@ import {
   type PickRung,
   type RolePart,
 } from "@plugins/primitives/plugins/css/plugins/text/core";
-import {
-  defineTokenGroup,
-  tokenVarName,
-} from "@plugins/ui/plugins/theme-engine/core";
+import { defineTokenGroup } from "@plugins/ui/plugins/theme-engine/core";
+import { tokenVarName } from "@plugins/ui/plugins/theme-engine/plugins/token-var-name/core";
 
 /**
  * Each picked part and its fallback rung (= its default role, today's). A

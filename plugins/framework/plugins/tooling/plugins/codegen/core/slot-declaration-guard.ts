@@ -19,7 +19,7 @@ import { slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots
 import { mainBundle } from "./main-bundle";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { undeclaredSlots } from "./evaluated-barrels";
-import type { CreatedSlot } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import type { CreatedSlot } from "@plugins/plugin-meta/plugins/plugin-records/plugins/evaluate/core";
 import type { CodegenPass } from "./codegen-pass";
 
 /**

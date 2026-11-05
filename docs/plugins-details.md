@@ -28219,7 +28219,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/web-sdk`
           - `plugin-meta/barrel-import`
           - `plugin-meta/composition`
-          - `plugin-meta/plugin-records`
+          - `plugin-meta/plugin-records/evaluate`
           - `primitives/pane`
           - `reorder`
       - Core:
@@ -28811,13 +28811,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2` ×14
               - `framework/plugin-id` ×13
               - `network/live/resource-vocabulary` ×10
-              - `plugin-meta/plugin-records` ×10
               - `framework/slot-declaration` ×6
               - `packages/timed-fs` ×6
               - `plugin-meta/barrel-import` ×6
               - `plugin-meta/closure` ×5
               - `plugin-meta/composition` ×5
               - `plugin-meta/facets` ×5
+              - `plugin-meta/plugin-records/evaluate` ×5
+              - `plugin-meta/plugin-records` ×5
               - `framework/tooling/codegen/composition-registries` ×4
               - `infra/host-fs/user-path` ×3
               - `config_v2/ledger` ×2
@@ -40913,7 +40914,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `framework/tooling/codegen`
-          - `plugin-meta/plugin-records`
+          - `plugin-meta/plugin-records/evaluate`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/stubs.ts`, `core/internal/load-guard.ts` (debt)
       - Test helpers:
@@ -42057,30 +42058,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`plugin-records`** — Content-addressed records of what the build learns about each plugin (file facts, facet extracts, evaluated barrels), shared by every worktree's build and check pass; the daily plugin-records.verify job recomputes them on main and fails on any record that disagrees with its key.
       - Core:
         - Uses:
-          - `framework/plugin-id.asPluginId`
-          - `framework/slot-declaration.declarationPassCount`
-          - `framework/slot-declaration.declaredSlotSources`
-          - `framework/slot-declaration.declarePluginSlots`
-          - `framework/slot-declaration.isSlot`
-          - `framework/slot-declaration.moduleEvaluation`
-          - `framework/slot-declaration.SlotDeclaringPlugin`
-          - `framework/slot-declaration.SlotHandle`
-          - `framework/slot-declaration.slotSite`
-          - `framework/slot-declaration.slotSitesTracked`
           - `packages/string-hash.sha1Hex`
           - `packages/string-hash.sha256Hex`
-          - `plugin-meta/barrel-import.barrelLoadInputs`
-          - `plugin-meta/barrel-import.importBarrel`
-          - `plugin-meta/barrel-import.registerBarrelStubs`
         - Exports (types):
-          - `BarrelRef`
-          - `BarrelRuntime`
           - `BundledClosure`
-          - `CreatedSlot`
-          - `EvaluatedBarrels`
-          - `EvaluationInput`
           - `FileScan`
-          - `Json`
           - `ModuleGraph`
           - `ModuleGraphInput`
           - `ModuleNode`
@@ -42089,14 +42071,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RecordStore`
           - `RecordTable`
           - `RecordWorkers`
-          - `ReviveOptions`
-          - `SerializeOptions`
         - Exports (values):
           - `buildModuleGraph`
           - `createMemoryRecordStore`
           - `currentRecordStore`
           - `defineRecordJob`
-          - `evaluateBarrels`
           - `gitBlobId`
           - `installRecordStore`
           - `installRecordWorkers`
@@ -42104,12 +42083,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `recordKey`
           - `recordWorkerCount`
           - `repoModuleOf`
-          - `reviveValue`
           - `runRecordJobRequest`
           - `runRecordJobs`
           - `scanFilesCached`
           - `scanRepoFiles`
-          - `serializeValue`
       - Cli:
         - Uses: `packages/thread-pool.createThreadPool`
         - Exports (types):
@@ -42130,11 +42107,61 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/regen-generated`
           - `framework/tooling/boundaries`
           - `framework/tooling/codegen`
+          - `plugin-meta/plugin-records/evaluate`
+          - `plugin-meta/plugin-records/key-width`
           - `plugin-meta/plugin-tree/faceted`
           - `plugin-meta/relocate`
       - Exemptions:
         - Exempts itself from: `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
       - Plugins:
+        - **`evaluate`** — Evaluated records: what importing a plugin barrel produced (its definition, slots, contributions), serialized as data under the barrel's module Merkle key, so a build reads it without importing anything. Apart from plugin-records' core so a record producer that only makes keys and stores records (the facet harness) does not key on barrel-import's stubs and the slot-declaration engine.
+          - Core:
+            - Uses:
+              - `framework/plugin-id.asPluginId`
+              - `framework/slot-declaration.declarationPassCount`
+              - `framework/slot-declaration.declaredSlotSources`
+              - `framework/slot-declaration.declarePluginSlots`
+              - `framework/slot-declaration.isSlot`
+              - `framework/slot-declaration.moduleEvaluation`
+              - `framework/slot-declaration.SlotDeclaringPlugin`
+              - `framework/slot-declaration.SlotHandle`
+              - `framework/slot-declaration.slotSite`
+              - `framework/slot-declaration.slotSitesTracked`
+              - `plugin-meta/barrel-import.barrelLoadInputs`
+              - `plugin-meta/barrel-import.importBarrel`
+              - `plugin-meta/barrel-import.registerBarrelStubs`
+              - `plugin-meta/plugin-records.buildModuleGraph`
+              - `plugin-meta/plugin-records.ModuleGraph`
+              - `plugin-meta/plugin-records.ModuleGraphInput`
+              - `plugin-meta/plugin-records.recordKey`
+            - Exports (types):
+              - `BarrelRef`
+              - `BarrelRuntime`
+              - `CreatedSlot`
+              - `EvaluatedBarrels`
+              - `EvaluationInput`
+              - `Json`
+              - `ReviveOptions`
+              - `SerializeOptions`
+            - Exports (values):
+              - `evaluateBarrels`
+              - `reviveValue`
+              - `serializeValue`
+          - Cross-plugin:
+            - Imported by: `framework/tooling/codegen`
+        - **`key-width`** — How much of a record producer's key is code it never calls: keyWidths walks a producer's closure through the names it actually imports from each barrel and attributes the rest to the barrel imports that drag it in; describeWideKeys fails producers over MAX_UNUSED_KEY_MODULES. Run by the producers' owners' checks (file scans, facets), never in the build path.
+          - Core:
+            - Uses:
+              - `plugin-meta/plugin-records.buildModuleGraph`
+              - `plugin-meta/plugin-records.ModuleGraph`
+              - `plugin-meta/plugin-records.ModuleGraphInput`
+            - Exports (types):
+              - `BarrelWaste`
+              - `KeyWidth`
+            - Exports (values):
+              - `describeWideKeys`
+              - `keyWidths`
+              - `MAX_UNUSED_KEY_MODULES`
         - **`verify`** — The daily plugin-records.verify job: on main, recomputes every plugin record a tree check pass reads (`./equin check --verify-records`) and fails when one disagrees with the shared store under the same key.
           - Server:
             - Uses:
@@ -42278,7 +42305,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `BuildFacetedTreeOptions`
               - `TreeEnrichment`
-            - Exports (values): `buildFacetedPluginTree`
+            - Exports (values):
+              - `buildFacetedPluginTree`
+              - `facetRecordProducers`
           - Cli:
             - Uses: `plugin-meta/plugin-records.openRecordStore`
           - Cross-plugin:
@@ -42538,7 +42567,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/timed-fs.readFileSync`
           - `plugin-meta/parse-utils.maskSource`
           - `primitives/css/ui-kit.APP_STYLESHEET_PATH`
-          - `ui/theme-engine.tokenVarName`
+          - `ui/theme-engine/token-var-name.tokenVarName`
         - Exports (types):
           - `DeclaredTokenGroup`
           - `SourceText`
@@ -57202,6 +57231,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.themeScopeSelectors`
           - `primitives/pane.APP_COLOR_MODES`
           - `primitives/pane.AppColorMode`
+          - `ui/theme-engine/token-var-name.tokenVarName`
         - Exports (types):
           - `AppColorModeOverride`
           - `ColorAdjustment`
@@ -57255,7 +57285,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TokenGroupFragmentSchema`
           - `TokenGroupFragmentsSchema`
           - `tokenGroupMatchesSearch`
-          - `tokenVarName`
           - `transformValues`
       - Cross-plugin:
         - Uses tokens: 68 vars — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
@@ -57265,14 +57294,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×4
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/data-view` ×2
-        - Imported by: 52 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Imported by: 51 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×29
           - `apps` ×17
           - `apps-core/chrome-theme`
           - `hints`
           - `map`
           - `menu-bar`
-          - `plugin-meta/token-usage`
           - `reports/theme-resolution`
       - Exemptions:
         - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
@@ -57489,6 +57517,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
+        - **`token-var-name`** — The CSS custom property a token-group schema key paints (tokenVarName: `--` + its kebab case). A leaf with no imports, so the static token-group reader (token-usage, run by the cross-refs facet) spells vars exactly as defineTokenGroup does without loading the theme engine — that facet's record key follows this module, not the theme-engine barrel.
+          - Cross-plugin:
+            - Imported by:
+              - `plugin-meta/token-usage`
+              - `ui/theme-engine`
+              - `ui/tokens/data-view`
+          - Core:
+            - Exports (values): `tokenVarName`
     - **`theme-toggle`** — Light/dark controls: the Dark mode and Match system switches inside the quick-theme popover (editing the scheme of the focused app's scope, or the global setting when no app fills the surface), and a Color mode customizer section — the current app's choice (its declared default or an override) and the global setting.
       - Web:
         - Contributes:
@@ -57730,7 +57766,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.PickRung`
               - `primitives/css/text.RolePart`
               - `ui/theme-engine.defineTokenGroup`
-              - `ui/theme-engine.tokenVarName`
+              - `ui/theme-engine/token-var-name.tokenVarName`
             - Exports (types):
               - `DataViewPickedPart`
               - `DataViewTokenValues`

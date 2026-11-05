@@ -20,14 +20,14 @@ import {
   asPluginId,
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
+import { currentRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
-  currentRecordStore,
   evaluateBarrels,
   type BarrelRef,
   type BarrelRuntime,
   type CreatedSlot,
   type EvaluatedBarrels,
-} from "@plugins/plugin-meta/plugins/plugin-records/core";
+} from "@plugins/plugin-meta/plugins/plugin-records/plugins/evaluate/core";
 import type {
   PluginNode,
   PluginTree,

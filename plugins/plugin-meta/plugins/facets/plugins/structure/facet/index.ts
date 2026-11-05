@@ -1,11 +1,9 @@
 import { PLUGIN_MANIFEST_KEY } from "@plugins/framework/plugins/plugin-id/core";
-import { dirname } from "path";
 import {
   createFacet,
   type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import { standardPluginDirsFromSnapshot } from "@plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery/core";
-import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import {
   readIfExists,
   type FsSnapshot,
@@ -25,14 +23,26 @@ import {
 // here would suspend this dynamically-imported facet mid-evaluation inside the
 // facets ⇄ codegen import cycle, a TDZ crash ("Cannot access 'default' before
 // initialization") in loadFacets(). The snapshot is keyed by absolute path, so
-// pass the repo root its `plugins/` sits under.
-function standardDirs(fs: FsSnapshot | undefined): Set<string> {
+// pass the repo root — the root of the checkout being extracted (the plugin's
+// dir less its repo-relative one), never this process's own checkout.
+function standardDirs(
+  fs: FsSnapshot | undefined,
+  dir: string,
+  relDir: string,
+): Set<string> {
   if (fs === undefined) {
     throw new Error(
       "structure facet: extract ran without the tree build's FS snapshot, so it cannot classify folders.",
     );
   }
-  return standardPluginDirsFromSnapshot(asAppPath(dirname(PLUGINS_DIR)), fs);
+  if (!dir.endsWith(`/${relDir}`))
+    throw new Error(
+      `structure facet: plugin dir ${dir} does not end with its repo-relative dir ${relDir}.`,
+    );
+  return standardPluginDirsFromSnapshot(
+    asAppPath(dir.slice(0, dir.length - relDir.length - 1)),
+    fs,
+  );
 }
 
 /**
@@ -81,7 +91,7 @@ export default createFacet<StructureFacetData>({
   def: structureFacetDef,
 
   extract(ctx) {
-    const STD = standardDirs(ctx.fs);
+    const STD = standardDirs(ctx.fs, ctx.dir, ctx.relDir);
     const entries = readEntries(ctx.fs, ctx.dir);
     const folders = entries
       .filter((e) => e.isDirectory() && !isIgnoredDir(e.name))

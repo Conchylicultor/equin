@@ -16,12 +16,12 @@ import {
   registerBarrelStubs,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
-import { recordKey } from "./keys";
 import {
   buildModuleGraph,
+  recordKey,
   type ModuleGraph,
   type ModuleGraphInput,
-} from "./module-graph";
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { reviveValue, serializeValue, type Json } from "./serialize";
 
 /**
@@ -82,7 +82,7 @@ export interface CreatedSlot {
  * packages, so they shape what a barrel evaluates to.
  */
 const EVALUATOR_MODULES = [
-  "plugins/plugin-meta/plugins/plugin-records/core/internal/evaluate.ts",
+  "plugins/plugin-meta/plugins/plugin-records/plugins/evaluate/core/evaluate.ts",
   "plugins/plugin-meta/plugins/barrel-import/core/index.ts",
 ];
 

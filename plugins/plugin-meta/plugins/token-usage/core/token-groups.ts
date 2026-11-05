@@ -1,5 +1,5 @@
 import ts from "typescript";
-import { tokenVarName } from "@plugins/ui/plugins/theme-engine/core";
+import { tokenVarName } from "@plugins/ui/plugins/theme-engine/plugins/token-var-name/core";
 
 /** One token group a source file declares: its id and the CSS vars it supplies. */
 export interface DeclaredTokenGroup {

@@ -19,7 +19,9 @@
   - Exports (types):
     - `BuildFacetedTreeOptions`
     - `TreeEnrichment`
-  - Exports (values): `buildFacetedPluginTree`
+  - Exports (values):
+    - `buildFacetedPluginTree`
+    - `facetRecordProducers`
 - Cli:
   - Uses: `plugin-meta/plugin-records.openRecordStore`
 - Cross-plugin:

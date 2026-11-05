@@ -18,26 +18,12 @@ export type {
   RecordJobRequest,
   RecordWorkers,
 } from "./internal/workers";
-export { reviveValue, serializeValue } from "./internal/serialize";
-export type {
-  Json,
-  ReviveOptions,
-  SerializeOptions,
-} from "./internal/serialize";
 export { buildModuleGraph } from "./internal/module-graph";
 export type {
   ModuleGraph,
   ModuleGraphInput,
   ModuleNode,
 } from "./internal/module-graph";
-export { evaluateBarrels } from "./internal/evaluate";
-export type {
-  BarrelRef,
-  BarrelRuntime,
-  CreatedSlot,
-  EvaluatedBarrels,
-  EvaluationInput,
-} from "./internal/evaluate";
 export {
   repoModuleOf,
   scanFilesCached,

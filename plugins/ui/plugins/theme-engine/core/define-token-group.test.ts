@@ -1,11 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
-import {
-  both,
-  defineTokenGroup,
-  tokenVarName,
-  type TokenVarOf,
-} from "./define-token-group";
+import { tokenVarName } from "@plugins/ui/plugins/theme-engine/plugins/token-var-name/core";
+import { both, defineTokenGroup, type TokenVarOf } from "./define-token-group";
 
 const group = defineTokenGroup("policy", {
   icon: {

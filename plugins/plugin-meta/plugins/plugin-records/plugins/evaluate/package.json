@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-plugin-meta-plugin-records-evaluate",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Evaluated records: what importing a plugin barrel produced (its definition, slots, contributions), serialized as data under the barrel's module Merkle key, so a build reads it without importing anything. Apart from plugin-records' core so a record producer that only makes keys and stores records (the facet harness) does not key on barrel-import's stubs and the slot-declaration engine."
+}

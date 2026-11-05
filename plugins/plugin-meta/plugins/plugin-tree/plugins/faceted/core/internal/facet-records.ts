@@ -1,4 +1,7 @@
-import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import type {
+  RepoFiles,
+  RepoSnapshot,
+} from "@plugins/framework/plugins/tooling/core";
 import { setFacet, type Facet } from "@plugins/plugin-meta/plugins/facets/core";
 import {
   loadFacets,
@@ -42,6 +45,16 @@ import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
  * in each record's key already, so the tree builder above it is not.
  */
 const HARNESS_URL = import.meta.url;
+
+/**
+ * Every module whose Merkle key keys facet records: the extraction harness
+ * and each facet's own module — the producers the facet key-width check
+ * measures.
+ */
+export async function facetRecordProducers(repo: RepoFiles): Promise<string[]> {
+  const sources = await loadFacetSources(await loadFacets());
+  return [repoModuleOf(repo, HARNESS_URL), ...sources.values()];
+}
 
 export interface FacetRecordsInput {
   snapshot: RepoSnapshot;

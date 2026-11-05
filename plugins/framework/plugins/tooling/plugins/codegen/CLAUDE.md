@@ -203,13 +203,14 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `config_v2` ×14
     - `framework/plugin-id` ×13
     - `network/live/resource-vocabulary` ×10
-    - `plugin-meta/plugin-records` ×10
     - `framework/slot-declaration` ×6
     - `packages/timed-fs` ×6
     - `plugin-meta/barrel-import` ×6
     - `plugin-meta/closure` ×5
     - `plugin-meta/composition` ×5
     - `plugin-meta/facets` ×5
+    - `plugin-meta/plugin-records/evaluate` ×5
+    - `plugin-meta/plugin-records` ×5
     - `framework/tooling/codegen/composition-registries` ×4
     - `infra/host-fs/user-path` ×3
     - `config_v2/ledger` ×2

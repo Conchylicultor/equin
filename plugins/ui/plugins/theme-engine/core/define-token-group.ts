@@ -1,3 +1,4 @@
+import { tokenVarName } from "@plugins/ui/plugins/theme-engine/plugins/token-var-name/core";
 export interface TokenGroupField {
   /**
    * The token's value when no theme says otherwise — in light mode, and in dark
@@ -117,11 +118,6 @@ export type TokenVarName<K extends string> = `--${KebabCase<K>}`;
 export type TokenVarOf<G extends { schema: TokenGroupSchema }> = TokenVarName<
   keyof G["schema"] & string
 >;
-
-/** The CSS custom property a token-group schema key paints: `--` + its kebab case. */
-export function tokenVarName(key: string): string {
-  return `--${key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}`;
-}
 
 export function defineTokenGroup<T extends TokenGroupSchema>(
   id: string,

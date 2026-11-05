@@ -116,7 +116,7 @@ The pane's shared content inset is not here: it is density's `contentInset`
     - `primitives/css/text.PickRung`
     - `primitives/css/text.RolePart`
     - `ui/theme-engine.defineTokenGroup`
-    - `ui/theme-engine.tokenVarName`
+    - `ui/theme-engine/token-var-name.tokenVarName`
   - Exports (types):
     - `DataViewPickedPart`
     - `DataViewTokenValues`

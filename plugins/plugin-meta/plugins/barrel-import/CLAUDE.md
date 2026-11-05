@@ -111,7 +111,7 @@ barrel written after its folder was first read would not be found.
 - Cross-plugin:
   - Imported by:
     - `framework/tooling/codegen`
-    - `plugin-meta/plugin-records`
+    - `plugin-meta/plugin-records/evaluate`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/stubs.ts`, `core/internal/load-guard.ts` (debt)
 - Test helpers:

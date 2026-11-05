@@ -29,7 +29,7 @@ import — keep it that way.
     - `framework/web-sdk`
     - `plugin-meta/barrel-import`
     - `plugin-meta/composition`
-    - `plugin-meta/plugin-records`
+    - `plugin-meta/plugin-records/evaluate`
     - `primitives/pane`
     - `reorder`
 - Core:

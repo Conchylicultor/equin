@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-theme-engine-token-var-name",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The CSS custom property a token-group schema key paints (tokenVarName: `--` + its kebab case). A leaf with no imports, so the static token-group reader (token-usage, run by the cross-refs facet) spells vars exactly as defineTokenGroup does without loading the theme engine — that facet's record key follows this module, not the theme-engine barrel."
+}

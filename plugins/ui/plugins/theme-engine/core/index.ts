@@ -3,7 +3,6 @@ export {
   defineTokenGroup,
   lightOnly,
   tokenGroupMatchesSearch,
-  tokenVarName,
 } from "./define-token-group";
 export type {
   TokenGroupField,

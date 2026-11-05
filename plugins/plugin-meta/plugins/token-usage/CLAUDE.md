@@ -54,7 +54,7 @@ changes them fails a test rather than an edge.
     - `packages/timed-fs.readFileSync`
     - `plugin-meta/parse-utils.maskSource`
     - `primitives/css/ui-kit.APP_STYLESHEET_PATH`
-    - `ui/theme-engine.tokenVarName`
+    - `ui/theme-engine/token-var-name.tokenVarName`
   - Exports (types):
     - `DeclaredTokenGroup`
     - `SourceText`

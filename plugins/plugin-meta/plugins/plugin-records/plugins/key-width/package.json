@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-plugin-meta-plugin-records-key-width",
+  "version": "0.0.1",
+  "private": true,
+  "description": "How much of a record producer's key is code it never calls: keyWidths walks a producer's closure through the names it actually imports from each barrel and attributes the rest to the barrel imports that drag it in; describeWideKeys fails producers over MAX_UNUSED_KEY_MODULES. Run by the producers' owners' checks (file scans, facets), never in the build path."
+}

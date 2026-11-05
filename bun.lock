@@ -5372,6 +5372,14 @@
       "name": "@equin/plugin-plugin-meta-plugin-records",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/plugin-records/plugins/evaluate": {
+      "name": "@equin/plugin-plugin-meta-plugin-records-evaluate",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/plugin-records/plugins/key-width": {
+      "name": "@equin/plugin-plugin-meta-plugin-records-key-width",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/plugin-records/plugins/verify": {
       "name": "@equin/plugin-plugin-meta-plugin-records-verify",
       "version": "0.0.1",
@@ -7011,6 +7019,10 @@
     },
     "plugins/ui/plugins/theme-engine/plugins/theme-gallery": {
       "name": "@equin/plugin-ui-theme-engine-theme-gallery",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/theme-engine/plugins/token-var-name": {
+      "name": "@equin/plugin-ui-theme-engine-token-var-name",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/theme-toggle": {
@@ -9865,6 +9877,10 @@
 
     "@equin/plugin-plugin-meta-plugin-records": ["@equin/plugin-plugin-meta-plugin-records@workspace:plugins/plugin-meta/plugins/plugin-records"],
 
+    "@equin/plugin-plugin-meta-plugin-records-evaluate": ["@equin/plugin-plugin-meta-plugin-records-evaluate@workspace:plugins/plugin-meta/plugins/plugin-records/plugins/evaluate"],
+
+    "@equin/plugin-plugin-meta-plugin-records-key-width": ["@equin/plugin-plugin-meta-plugin-records-key-width@workspace:plugins/plugin-meta/plugins/plugin-records/plugins/key-width"],
+
     "@equin/plugin-plugin-meta-plugin-records-verify": ["@equin/plugin-plugin-meta-plugin-records-verify@workspace:plugins/plugin-meta/plugins/plugin-records/plugins/verify"],
 
     "@equin/plugin-plugin-meta-plugin-refs": ["@equin/plugin-plugin-meta-plugin-refs@workspace:plugins/plugin-meta/plugins/plugin-refs"],
@@ -10632,6 +10648,8 @@
     "@equin/plugin-ui-theme-engine-theme-customizer": ["@equin/plugin-ui-theme-engine-theme-customizer@workspace:plugins/ui/plugins/theme-engine/plugins/theme-customizer"],
 
     "@equin/plugin-ui-theme-engine-theme-gallery": ["@equin/plugin-ui-theme-engine-theme-gallery@workspace:plugins/ui/plugins/theme-engine/plugins/theme-gallery"],
+
+    "@equin/plugin-ui-theme-engine-token-var-name": ["@equin/plugin-ui-theme-engine-token-var-name@workspace:plugins/ui/plugins/theme-engine/plugins/token-var-name"],
 
     "@equin/plugin-ui-theme-toggle": ["@equin/plugin-ui-theme-toggle@workspace:plugins/ui/plugins/theme-toggle"],
 
