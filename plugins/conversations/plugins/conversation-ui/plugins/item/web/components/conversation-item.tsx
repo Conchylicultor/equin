@@ -50,7 +50,7 @@ function AvatarSlot({ conv }: { conv: ConversationItemConv }) {
 }
 
 // Structural prop type — accepts both the full `Conversation` and the
-// narrower `ConversationSummary` carried by the `attempts` set (`attemptRows`). Anything
+// narrower `ConversationSummary` carried by the attempts set (`attemptRows`). Anything
 // with these fields renders. `taskId` is optional because `ConversationSummary`
 // doesn't carry it (only the full Conversation row does); contributions that
 // need it should bail out when it's undefined.

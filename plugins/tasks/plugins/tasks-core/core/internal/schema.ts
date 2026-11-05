@@ -126,9 +126,9 @@ export type Task = z.infer<typeof TaskSchema>;
 export const TaskListItemSchema = TaskSchema.omit({ description: true });
 export type TaskListItem = z.infer<typeof TaskListItemSchema>;
 
-// `workspace` is left off: the `attempts` row is pinned by the C39 old-bundle
-// check (`attemptRows`), so the attempt's workspace crosses the wire on its
-// own lookup collection, `attemptWorkspaces`.
+// `workspace` is left off: the attempt's workspace crosses the wire on its own
+// lookup collection, `attemptWorkspaces`, which the values computed from it
+// follow without recomputing on every other attempt write.
 export const AttemptSchema = fieldsToZodObject(attemptFields)
   .omit({ workspace: true })
   .extend({

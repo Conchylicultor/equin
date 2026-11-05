@@ -29,7 +29,7 @@ export function useConversationReferent(id: string): IdReferentState {
 }
 
 /** The link that toggles a conversation's column beside the surface holding its id. */
-export function useConversationTarget(): (id: string) => LinkTarget {
+export function useConversationTarget(id: string): LinkTarget {
   const opener = useConversationOpener();
-  return (id) => opener.toggle(id);
+  return opener.toggle(id);
 }

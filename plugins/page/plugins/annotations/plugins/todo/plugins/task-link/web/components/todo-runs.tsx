@@ -56,7 +56,7 @@ export function TodoRuns({ blockId }: { blockId: string }) {
  * conditionally.
  */
 function DispatchedRuns({ taskId }: { taskId: string }) {
-  const runs = useTaskConversations([taskId]);
+  const runs = useTaskConversations(taskId);
   // Nothing while the runs are still loading, and nothing when there are none —
   // rendered the same, decided separately. A placeholder strip at the foot of
   // every dispatched card on a freshly-opened page would be noise, and the

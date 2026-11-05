@@ -16,7 +16,8 @@
  * rebuilt on the same builders (`./derived.ts`): the two readers of one
  * definition, held equal row for row. Both read "waiting" off the conversation
  * rollup's `has_waiting_conv`. Since step 20 the attempts half is the shipped
- * `attemptRows` too (`./attempt-rows.ts`), against `attempts_v`, and since
+ * `attemptRows` too (`./attempt-rows.ts`), against `attempts_v` — scoped by
+ * task, so every task's scope together is the view, and since
  * step 22 the active conversations are the shipped `conversationsActive`
  * (`./conversation-rows.ts`), against `conversations_v`.
  *
@@ -67,7 +68,7 @@ function compileTasks(db: QueryDb) {
   return compileCollection(taskRows, { ...taskRowsServeOptions, db });
 }
 
-/** The shipped `attempts` set (`attemptRows`), compiled with its real serve options. */
+/** The shipped attempts set (`attemptRows`, scoped by task), compiled with its real serve options. */
 function compileAttempts(db: QueryDb) {
   return compileCollection(attemptRows, { ...attemptRowsServeOptions, db });
 }
@@ -262,7 +263,15 @@ async function checkTasks(): Promise<number> {
 async function checkAttempts(): Promise<number> {
   return inParis(async (db, raw) => {
     const compiled = compileAttempts(db);
-    const full = (await compiled.all.loader({})) as Rec[];
+    // The set is scoped by task: every task's scope, together, is every
+    // attempt — each scope holding exactly its task's.
+    const scopes = new Map<string, Rec[]>();
+    for (const taskId of taskIds) {
+      const rows = (await compiled.all.loader({ taskId })) as Rec[];
+      expect(rows.every((r) => r.taskId === taskId)).toBe(true);
+      scopes.set(taskId, rows);
+    }
+    const full = [...scopes.values()].flat();
     const view = await raw.select().from(attempts);
     const withoutList = full.map(({ conversations: _c, ...rest }) => rest);
     expect(sortedById(withoutList)).toEqual(sortedById(view));
@@ -303,17 +312,24 @@ async function checkAttempts(): Promise<number> {
         list: listOf(String(row.id)),
       });
     }
+    // scoped(S) ≡ scope∩S, S mixing the scope's own attempts with other
+    // tasks' and an id that is no attempt's.
+    const attempted = taskIds.filter((t) => scopes.get(t)!.length > 0);
     for (let i = 0; i < 4; i++) {
+      const taskId = pick(attempted);
       const s = [
         ...new Set([
+          String(pick(scopes.get(taskId)!).id),
           ...Array.from({ length: 1 + Math.floor(rand() * 8) }, () =>
             pick(attemptIds),
           ),
           "att-none",
         ]),
       ];
-      const scoped = await compiled.all.loader({}, { affectedIds: s });
-      const want = json(full).filter((r) => s.includes(String(r.id)));
+      const scoped = await compiled.all.loader({ taskId }, { affectedIds: s });
+      const want = json(scopes.get(taskId)!).filter((r) =>
+        s.includes(String(r.id)),
+      );
       expect(sortedById(scoped)).toEqual(want.sort(byId));
     }
     return full.length;

@@ -246,11 +246,14 @@ serves them.
   to its conversations, a task write through `attempts` (never the changed
   `tasks`, A10). The conversation lists (`all-conversations`) serve through
   them; the tree's conversation collections reuse them.
-- **`attemptRows`** (`attempts`) — every attempt with its non-system
-  conversations (`AttemptWithConversations`), the WHOLE ordered set
-  (`createdAt`, `preload: "boot"`), read with `useLive(attemptRows[, { select
-  }])` (`web/hooks.ts`' `useTaskAttempts` / `useTaskConversations`). Same
-  legacy-key C39 rule as `tasks`. Served from `server/internal/attempt-rows.ts`
+- **`attemptRows`** (`attempts.v2`) — one task's attempts with their
+  non-system conversations (`AttemptWithConversations`): a scoped set
+  (`all: { by: ["taskId"] }`, `createdAt` order, no preload), read with
+  `useLive(attemptRows, { where: { taskId } })` (`web/hooks.ts`'
+  `useTaskAttempts` / `useTaskConversations`) or one attempt by id
+  (`useLive(attemptRows, { id })` — chips, the attempt pane, worktree
+  identity). No reader holds every attempt. The key was renamed from the old
+  whole-set `attempts` (C39: an old tab is refused `unknown-key`). Served from `server/internal/attempt-rows.ts`
   over `attempts`, the two rollups joined row-wise (`attemptDerived`) and a
   children `jsonAgg` of its conversations (`kind <> 'system'`, oldest first;
   `createdAt` crosses as ISO text). Costs: an attempt write its own row; a
@@ -331,7 +334,7 @@ serves them.
 
 ## Plugin reference
 
-- Description: tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
+- Description: tasks-core web presence: eagerly registers the boot-critical tasks / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced, each a read of the task's own scope; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
 - Load-bearing: yes
 - Web:
   - Contributes:
@@ -551,8 +554,8 @@ serves them.
     - `attempt-push-ids:rows` (keyed, point)
     - `attempt-tasks:rows` (keyed, point)
     - `attempt-workspaces:rows` (keyed, point)
-    - `attempts` (keyed)
-    - `attempts:rows` (keyed, point)
+    - `attempts.v2` (keyed)
+    - `attempts.v2:rows` (keyed, point)
     - `conversation-runtimes:rows` (keyed, point)
     - `conversation-session-tails:rows` (keyed, point)
     - `conversation-workspaces:rows` (keyed, point)

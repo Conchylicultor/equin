@@ -29,14 +29,14 @@ export function genericIdChip(
   function GenericIdChip({ content }: { content: string }) {
     const id = content.trim();
     const referent = useReferent(id);
-    const target = useTarget();
+    const target = useTarget(id);
     const anchorRef = useHintAnchor(hint?.anchor);
     useHintMoment(hint, referent.status === "found");
     if (referent.status !== "found") return <>{id}</>;
     return (
       <LinkChip
         ref={anchorRef}
-        activation={target(id)}
+        activation={target}
         tooltip={`${referent.title} · ${id}`}
         leading={icon ? <Icon icon={icon} /> : undefined}
       >

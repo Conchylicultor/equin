@@ -14,16 +14,16 @@ informational only, so it can never change the health dot.
 
 ## How the task is found
 
-The attempt whose worktree path ends in this page's CHECKOUT name, then that
-attempt's task. The checkout comes from `namespaceParts`
+The attempt this page's CHECKOUT is named after, then that attempt's task: a
+worktree lives at `<root>/<attemptId>` (conversations/workspace's `pathFor`), so
+the checkout name IS the attempt id. The checkout comes from `namespaceParts`
 (`@plugins/infra/plugins/namespace/core`): the second half of
 `<composition>.<checkout>`, or the lone label itself. Matching the whole
 namespace would miss every composition served from an agent checkout
 (`sonata.att-…`).
 
-The attempt is a `select` over the resident attempt set
-(`useLive(attemptRows, { select })`); the title is a point read of that task's
-own row (`useLive(taskRows, { id })`). While either is still
+Both reads are point reads — `useLive(attemptRows, { id: checkout })`, then
+`useLive(taskRows, { id: taskId })` — one row each. While either is still
 loading the lookup is `pending`, which renders exactly like "no task" (the
 namespace as title, no "Open task"), so nothing on screen claims an answer that
 later reverses.
@@ -45,9 +45,8 @@ outside `apps/…` it loads in the eager tier, so the row is there at first pain
   - Contributes: `HealthReport.Row` "worktree"
   - Uses:
     - `apps-core/tabs.useAppLinkProps`
-    - `network/live.mapRow`
+    - `network/live.rowOrStale`
     - `network/live.useLive`
-    - `network/live/live-state.foldResource`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/icon-button.IconButton`
     - `shell/health-report.HealthReport`

@@ -3,8 +3,8 @@
 // `liveCollection(...)` call registers into the live-state key→descriptor map
 // on module evaluation).
 //
-// tasks / attempts / conversations-* (incl. the `conversations-gone:count`
-// total) are boot-critical (preloaded; served in ../server). boot-snapshot
+// tasks / conversations-* (incl. the `conversations-gone:count` total) are
+// boot-critical (preloaded; served in ../server). boot-snapshot
 // resolves every boot-critical key to its client descriptor via
 // `resourceDescriptorByKey` BEFORE first paint — so the descriptor module must
 // sit in the EAGER web import graph, not behind a lazy boundary. The `pushes`

@@ -26,10 +26,9 @@ export function useSongReferent(id: string): IdReferentState {
  * `core/`: importing its web barrel here would make the library eager (chips
  * load at boot) and split it from the deferred sources a player hydrates from.
  */
-export function useSongTarget(): (id: string) => LinkTarget {
+export function useSongTarget(id: string): LinkTarget {
   const inAppLink = useAppLink();
-  return (id) =>
-    inAppLink(
+  return inAppLink(
       sonataPlayerRoute.link(sonataApp, { songId: songIdKind.key(id) }),
     );
 }

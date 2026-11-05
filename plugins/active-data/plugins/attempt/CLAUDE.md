@@ -36,6 +36,7 @@ kind's `IdKinds.Presenter` (`useAttemptReferent` / `useAttemptTarget`).
     - `active-data/id-chip.idChip`
     - `conversations/conversation-view.useConversationOpener`
     - `network/live.mapRow`
+    - `network/live.rowOrStale`
     - `network/live.useLive`
     - `network/live/live-state.foldResource`
     - `network/live/live-state.mapResource`

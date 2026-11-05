@@ -8,10 +8,9 @@ import { useBlockPromptTasks } from "@plugins/page/plugins/prompt/plugins/link/w
  * The conversations this prompt block has launched, as a row of chips.
  *
  * Two reads, joined client-side: the link rows say WHICH tasks this block
- * launched, and `useTaskConversations` turns that set of tasks into their runs
- * off the already-boot-critical global `attempts` resource. Nothing is stored on
- * the block, so the row is correct after a reload and updates live as an agent's
- * status changes.
+ * launched, and `useTaskConversations` reads each task's runs (one scoped read
+ * per task, in launch order). Nothing is stored on the block, so the row is
+ * correct after a reload and updates live as an agent's status changes.
  *
  * Both halves are shared: the join is tasks-core's, the chip is
  * `ConversationChip`. This component owns only which tasks to ask about.
@@ -40,11 +39,18 @@ export function LaunchedConversations({ blockId }: { blockId: string }) {
   }
   if (links.data.length === 0) return null;
 
-  return <LaunchedChips taskIds={links.data.map((link) => link.taskId)} />;
+  return (
+    <Cluster gap="xs">
+      {links.data.map((link) => (
+        <TaskRunChips key={link.taskId} taskId={link.taskId} />
+      ))}
+    </Cluster>
+  );
 }
 
-function LaunchedChips({ taskIds }: { taskIds: readonly string[] }) {
-  const convs = useTaskConversations(taskIds);
+/** One launched task's runs, oldest first, as chips inside the block's row. */
+function TaskRunChips({ taskId }: { taskId: string }) {
+  const convs = useTaskConversations(taskId);
 
   if (convs.status === "loading") return null;
   if (convs.status === "error") {
@@ -53,17 +59,11 @@ function LaunchedChips({ taskIds }: { taskIds: readonly string[] }) {
         error={convs.error}
         refetch={convs.refetch}
         variant="inline"
-        subject="this block's conversations"
+        subject="this launch's conversations"
       />
     );
   }
-  if (convs.data.length === 0) return null;
-
-  return (
-    <Cluster gap="xs">
-      {convs.data.map((conv) => (
-        <ConversationChip key={conv.id} conv={conv} />
-      ))}
-    </Cluster>
-  );
+  return convs.data.map((conv) => (
+    <ConversationChip key={conv.id} conv={conv} />
+  ));
 }

@@ -62,22 +62,6 @@ export type LinkedTask =
   | { kind: "none" }
   | { kind: "linked"; taskId: string; title: string };
 
-/** The final segment of a path, ignoring a trailing slash. */
-function basename(path: string): string {
-  const trimmed = path.endsWith("/") ? path.slice(0, -1) : path;
-  return trimmed.slice(trimmed.lastIndexOf("/") + 1);
-}
-
-/** The task of the attempt running in `checkout`, or `null` when none is. */
-export function linkedTaskIdOf(
-  attempts: ReadonlyArray<{ worktreePath: string; taskId: string }>,
-  checkout: string,
-): string | null {
-  return (
-    attempts.find((a) => basename(a.worktreePath) === checkout)?.taskId ?? null
-  );
-}
-
 /** The one-line summary: the namespace (as shown — its public label), and what
  *  kind of place it names. */
 export function summaryOf(place: WorktreePlace): string {

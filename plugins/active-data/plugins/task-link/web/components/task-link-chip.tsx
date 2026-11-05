@@ -71,7 +71,7 @@ export function useTaskReferent(taskId: string): IdReferentState {
 }
 
 /** The link to a task's detail pane beside the surface holding its id. */
-export function useTaskTarget(): (taskId: string) => LinkTarget {
+export function useTaskTarget(taskId: string): LinkTarget {
   const openPane = useOpenPane();
-  return (taskId) => openPane.to(taskDetailPane, { taskId }, { mode: "push" });
+  return openPane.to(taskDetailPane, { taskId }, { mode: "push" });
 }

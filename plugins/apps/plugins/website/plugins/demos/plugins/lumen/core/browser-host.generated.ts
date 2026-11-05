@@ -825,7 +825,7 @@ export const hostReads: readonly {
   { key: "attachments.bytes", needsMachine: false },
   { key: "attempt-work", needsMachine: true },
   { key: "attempt-workspaces", needsMachine: false },
-  { key: "attempts", needsMachine: false },
+  { key: "attempts.v2", needsMachine: false },
   { key: "background.catalog", needsMachine: false },
   { key: "background.central-catalog", needsMachine: true },
   { key: "background.central-recent-runs", needsMachine: true },

@@ -123,7 +123,7 @@ function DispatchedTask({
  * answer computed here.
  */
 function LatestRun({ taskId, onOpen }: { taskId: string; onOpen: () => void }) {
-  const runs = useTaskConversations([taskId]);
+  const runs = useTaskConversations(taskId);
   if (runs.status === "loading") return null;
   if (runs.status === "error") {
     return (

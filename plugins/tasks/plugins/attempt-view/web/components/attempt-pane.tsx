@@ -1,6 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { rowOrStale, useLive } from "@plugins/network/plugins/live/web";
 import {
   PaneChrome,
   PaneInstanceContext,
@@ -144,13 +144,12 @@ function AttemptSection({
   );
 }
 
-/** Every attempt of the task the given attempt belongs to. */
-function taskAttemptsOf(
-  attempts: AttemptWithConversations[],
-  attemptId: string,
-): AttemptWithConversations[] {
-  const attempt = attempts.find((a) => a.id === attemptId);
-  return attempt ? attempts.filter((a) => a.taskId === attempt.taskId) : [];
+/**
+ * The task the given attempt belongs to, as far as the attempt's row is read
+ * — the pane's resolve guard answered that row before the body mounts.
+ */
+function useAttemptTaskId(attemptId: string): string | undefined {
+  return rowOrStale(useLive(attemptRows, { id: attemptId }))?.taskId;
 }
 
 /**
@@ -159,7 +158,13 @@ function taskAttemptsOf(
  */
 export function AttemptsTitle() {
   const { attemptId } = attemptPane.useParams();
-  const result = useLive(attemptRows);
+  const taskId = useAttemptTaskId(attemptId);
+  if (taskId === undefined) return "Attempts";
+  return <TaskAttemptsTitle taskId={taskId} />;
+}
+
+function TaskAttemptsTitle({ taskId }: { taskId: string }) {
+  const result = useLive(attemptRows, { where: { taskId } });
   switch (result.status) {
     case "loading":
     case "error":
@@ -167,7 +172,7 @@ export function AttemptsTitle() {
     case "ready":
       break;
   }
-  const totalConversations = taskAttemptsOf(result.data, attemptId).reduce(
+  const totalConversations = result.data.reduce(
     (sum, a) => sum + a.conversations.length,
     0,
   );
@@ -181,7 +186,20 @@ export function AttemptsTitle() {
 
 export function AttemptPane() {
   const { attemptId } = attemptPane.useParams();
-  const result = useLive(attemptRows);
+  const taskId = useAttemptTaskId(attemptId);
+  if (taskId === undefined) return null;
+  return <TaskAttemptsPane attemptId={attemptId} taskId={taskId} />;
+}
+
+/** Every attempt of the task the pane's attempt belongs to, oldest first. */
+function TaskAttemptsPane({
+  attemptId,
+  taskId,
+}: {
+  attemptId: string;
+  taskId: string;
+}) {
+  const result = useLive(attemptRows, { where: { taskId } });
   const openPane = useOpenPane();
   // ONE read of "the conversation column this pane opened". It used to be two —
   // the first conversation pane in the chain for the highlight, the last one for
@@ -205,7 +223,7 @@ export function AttemptPane() {
     );
   }
 
-  const taskAttempts = taskAttemptsOf(result.data, attemptId);
+  const taskAttempts = result.data;
 
   const convTarget = (convId: string) =>
     openPane.to(conversationPane, { convId }, { mode: "push" });

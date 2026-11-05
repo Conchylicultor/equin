@@ -15,8 +15,7 @@ export function useReportReferent(id: string): IdReferentState {
 }
 
 /** The link to the report's detail pane beside the surface holding the id (`push`). */
-export function useReportTarget(): (id: string) => LinkTarget {
+export function useReportTarget(id: string): LinkTarget {
   const openPane = useOpenPane();
-  return (id) =>
-    openPane.to(reportDetailPane, { reportId: id }, { mode: "push" });
+  return openPane.to(reportDetailPane, { reportId: id }, { mode: "push" });
 }

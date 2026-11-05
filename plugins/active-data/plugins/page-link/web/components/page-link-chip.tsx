@@ -1,5 +1,4 @@
-import { useLive } from "@plugins/network/plugins/live/web";
-import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { rowOrStale, useLive } from "@plugins/network/plugins/live/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { pagesTree, pageData } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
@@ -88,20 +87,14 @@ export function useBlockReferent(blockId: string): IdReferentState {
 /**
  * The link to what a block id names: a page id its page, a content-block id
  * the block view (that block as a page of its own), as a column beside the
- * surface holding the id. Which one is decided from the live pages list; an id
- * the list does not hold is a content block, whose view resolves its own page.
+ * surface holding the id. Which one is decided by the id's page row; an id
+ * that is no page (or not read yet) is a content block, whose view resolves
+ * its own page.
  */
-export function useBlockTargetById(): (blockId: string) => LinkTarget {
-  const pages = useLive(pagesTree);
+export function useBlockTargetById(blockId: string): LinkTarget {
+  const isPage = rowOrStale(useLive(pagesTree, { id: blockId })) !== undefined;
   const openPane = useOpenPane();
-  return (blockId) => {
-    const isPage = foldResource(pages, {
-      loading: () => false,
-      error: () => false,
-      ready: (list) => list.some((p) => p.id === blockId),
-    });
-    return isPage
-      ? openPane.to(pageDetailPane, { pageId: blockId }, { mode: "push" })
-      : openPane.to(blockDetailPane, { blockId }, { mode: "push" });
-  };
+  return isPage
+    ? openPane.to(pageDetailPane, { pageId: blockId }, { mode: "push" })
+    : openPane.to(blockDetailPane, { blockId }, { mode: "push" });
 }

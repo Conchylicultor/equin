@@ -17,7 +17,7 @@ export function useBuildRunReferent(id: string): IdReferentState {
 }
 
 /** The link to the build's run-detail pane beside the surface holding the id (`push`). */
-export function useBuildRunTarget(): (id: string) => LinkTarget {
+export function useBuildRunTarget(id: string): LinkTarget {
   const openPane = useOpenPane();
-  return (id) => openPane.to(buildDetailPane, { runId: id }, { mode: "push" });
+  return openPane.to(buildDetailPane, { runId: id }, { mode: "push" });
 }

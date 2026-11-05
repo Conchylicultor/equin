@@ -41,8 +41,9 @@ wrote.
 
 The block stores no task ids. The tasks it launched are derived from the
 `tasks_ext_prompt_block` link rows (`useBlockPromptTasks` from the sibling `link`
-plugin), joined against the global `attempts` resource for the conversations —
-the same read `tasks/task-events` performs, so no new resource exists for this.
+plugin), each task's conversations read from its own scope of the attempts set
+(`useTaskConversations(taskId)`, one strip of chips per task) — the same read
+`tasks/task-events` performs, so no new resource exists for this.
 One direction of truth: a deleted task disappears from the block on its own (FK
 CASCADE), a launch from another tab shows up live, and block data and task rows
 can never drift apart.

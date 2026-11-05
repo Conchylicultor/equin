@@ -29,8 +29,7 @@ export function usePrototypeReferent(id: string): IdReferentState {
  * The link to the mock: a column to the RIGHT of the surface holding the id
  * (`push`), so the conversation stays beside it: `/agents/c/<convId>/proto/proto-…`.
  */
-export function usePrototypeTarget(): (id: string) => LinkTarget {
+export function usePrototypeTarget(id: string): LinkTarget {
   const openPane = useOpenPane();
-  return (id) =>
-    openPane.to(prototypeDetailPane, { name: id }, { mode: "push" });
+  return openPane.to(prototypeDetailPane, { name: id }, { mode: "push" });
 }

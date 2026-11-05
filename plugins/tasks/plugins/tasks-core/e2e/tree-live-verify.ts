@@ -27,7 +27,8 @@
  *    push as one upsert of the
  *    attempt (`completed`) and of the task (`done`); the attempt's delete as a
  *    delete, and the task back to `new`. The page is the task's detail pane,
- *    whose attempt sections read the set.
+ *    whose attempt sections read the task's scope of the set (`attempts.v2`,
+ *    `{ taskId }` — not boot-preloaded since 2026-11-05).
  *
  *    What a write no field reads (the poller's `waiting_for` /
  *    `last_viewed_at`) costs is NOT checked here: the runtime diffs a refill
@@ -88,7 +89,7 @@ const OUT = arg("out") ?? "/tmp/tree-live";
 /** Every seeded id starts with this, so a crashed run's leftovers are swept by prefix. */
 const SEED_PREFIX = "e2e-tree-";
 /** The live keys this script watches, and what an HTTP read of one looks like. */
-const TREE_KEYS = ["task-categories", "tasks", "attempts"] as const;
+const TREE_KEYS = ["task-categories", "tasks", "attempts.v2"] as const;
 
 const db = openDeployDb();
 
@@ -134,7 +135,11 @@ function recordHttpReads(
   const reads: string[] = [];
   page.on("request", (req) => {
     const path = new URL(req.url()).pathname;
-    if (keys.some((k) => path.startsWith(`/api/resources/${k}`))) {
+    // The key itself or one of its siblings (`<key>:rows`) — never another
+    // key that merely starts with it (`tasks.repo-info` is not `tasks`).
+    const read = (k: string) =>
+      path === `/api/resources/${k}` || path.startsWith(`/api/resources/${k}:`);
+    if (keys.some(read)) {
       reads.push(req.url());
     }
   });
@@ -359,10 +364,10 @@ interface AttemptRow {
 }
 
 /**
- * Step 20: `attempts` — an entrant, a conversation, a write no field reads, a
- * retitle, a push, a delete: each one scoped delta of the attempt it moves
- * (and of the task, where the attempt's status moves the task's), and over
- * the whole phase no frame re-sent the whole set.
+ * Step 20: `attempts.v2` (the task's scope) — an entrant, a conversation, a
+ * write no field reads, a retitle, a push, a delete: each one scoped delta of
+ * the attempt it moves (and of the task, where the attempt's status moves the
+ * task's), and over the whole phase no frame re-sent the whole scope.
  */
 async function attemptsPhase(
   r: Report,
@@ -371,7 +376,7 @@ async function attemptsPhase(
   taskId: string,
   measureFrom: number,
 ): Promise<void> {
-  const KEY = "attempts";
+  const KEY = "attempts.v2";
   const attemptId = `${taskId}-att`;
   const convId = `${taskId}-conv`;
   const upsertWhere = async <Row>(
@@ -506,7 +511,7 @@ async function attemptsPhase(
 
   const phase = framesOf(frames, KEY, measureFrom);
   r.ok(
-    "no `attempts` frame re-sent the whole set, over the whole phase",
+    "no `attempts.v2` frame re-sent the whole scope, over the whole phase",
     phase.every((f) => f.value === undefined),
     phase
       .map((f) => `${f.kind ?? "?"}${f.value !== undefined ? "(value)" : ""}`)
@@ -951,7 +956,7 @@ try {
     const frames = await recordFrames(page);
     const httpReads = recordHttpReads(page);
 
-    // The task's detail pane: its attempt sections read the `attempts` set.
+    // The task's detail pane: its attempt sections read the task's attempts scope.
     await boot(page, pathUrl(`/agents/tasks/t/${taskId}`), {
       marker: `text=${taskTitle}`,
       timeoutMs: 120_000,

@@ -171,31 +171,34 @@ export const taskDescriptions = liveCollection("task-descriptions", {
   baseExposures: false,
   id: "id",
 });
-// Every attempt — the WHOLE ordered set (`all`), each with its non-system
-// conversations (`ConversationSummary`, oldest first): the attempt pane, the
-// attempt chips, the task's attempt and run lists (`../web/hooks.ts`) and the
-// worktree's linked task each read a value for every attempt. Served over the
+// One task's attempts — a scoped set (`all: { by: ["taskId"] }`, read with
+// `useLive(attemptRows, { where: { taskId } })`), each with its non-system
+// conversations (`ConversationSummary`, oldest first): the task's attempt and
+// run lists (`../web/hooks.ts`) and the attempt pane read one task's; the
+// attempt chip, the attempt-switch button and the worktree's linked task read
+// one attempt by id (`{ id }`, the `:rows` point sibling). No reader needs
+// every attempt, so none is held whole: an attempt is O(its task's), never
+// O(every attempt ever filed) — the whole set was 3.4 MB of every boot
+// snapshot and restart replay on main (2026-11-05). Served over the
 // `attempts` table, its two rollups and a children `jsonAgg` of its
 // conversations (`../server/internal/attempt-rows.ts`), never `attempts_v`:
 // an attempt write is its own row's refill, a conversation write its
 // attempt's (gated: `waiting_for` / `last_viewed_at` / `updated_at` reach
-// nothing), a push its attempt's, an insert an entrant, a delete an exit —
-// never a whole-set reload. Ordered as the old list was: `createdAt` (the id
+// nothing), a push its attempt's, an insert an entrant, a delete an exit, a
+// write to another task's attempts nothing. Ordered by `createdAt` (the id
 // breaks ties).
 //
-// The wire row is EXACTLY `AttemptWithConversations`, under the legacy key
-// `attempts`: a tab still running a bundle that declared `attempts` as an old
-// param-less keyed descriptor subscribes `{}`, passes the `all`
-// gate and parses these rows with its own (identical) schema — the C39
-// old-bundle check, pinned by `../server/internal/tree-oracle.test.ts`. A
-// change to the row must rename the key.
+// The wire row is `AttemptWithConversations`. Key `attempts.v2`: the old
+// `attempts` was a param-less whole set, so a tab still running a bundle that
+// declared it subscribes a key no longer served and is refused, rather than
+// passing a params gate it cannot name (C39). A change to the row must rename
+// the key.
 //
-// Boot-critical (`preload: "boot"`). Named `attemptRows` because `attempts`
-// is the server's view handle.
-export const attemptRows = liveCollection("attempts", {
+// Named `attemptRows` because `attempts` is the server's view handle.
+export const attemptRows = liveCollection("attempts.v2", {
   from: attemptsEntityRef,
-  // `workspace` is left off: the row is pinned by the C39 old-bundle check, so
-  // the workspace crosses the wire on its own lookup (`attemptWorkspaces`).
+  // `workspace` is left off: the workspace crosses the wire on its own lookup
+  // (`attemptWorkspaces`), which the values computed from it follow.
   carry: {
     pick: ["id", "taskId", "worktreePath", "createdAt", "updatedAt"],
     fields: {
@@ -214,13 +217,12 @@ export const attemptRows = liveCollection("attempts", {
   baseExposures: false,
   id: "id",
   all: {
+    by: ["taskId"],
     orderBy: [["createdAt", "asc"]],
     unbounded: {
-      reason:
-        "the attempt pane, the attempt chips, the task's attempt and run lists and the worktree's linked task read every attempt's status and conversations",
+      reason: "one task's attempts — a handful each (at most 8 on main)",
     },
   },
-  preload: "boot",
 });
 // One attempt's workspace (conversations/workspace: a worktree, or a scratch
 // dir and its profile) and checkout by attempt id — lookup-only, read with
@@ -229,7 +231,7 @@ export const attemptRows = liveCollection("attempts", {
 // FOLLOWED by `{ ids: [attemptId] }` by the values computed from where an
 // attempt runs (`attemptWorkspacesServed`, `../server`: attempt-work,
 // commits-graph, code-explorer's files). Its own key rather than a field of
-// `attempts`, whose row C39 pins. Served over the `attempts` table in
+// `attemptRows`, whose readers do not want it. Served over the `attempts` table in
 // `../server/internal/resources.ts`.
 //
 // The row is EXACTLY what its followers read — the workspace, the checkout

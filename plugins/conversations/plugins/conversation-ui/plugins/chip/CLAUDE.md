@@ -22,7 +22,7 @@ What it wraps `ConversationItem` in:
 
 `conv` is structural, the same type `ConversationItem` accepts
 (`ConversationItemConv`): a full `Conversation` row and the narrower
-`ConversationSummary` carried by the `attempts` set (`attemptRows`) both fit.
+`ConversationSummary` carried by the attempts set (`attemptRows`) both fit.
 
 ## Chip or row?
 

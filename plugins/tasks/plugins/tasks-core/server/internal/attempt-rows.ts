@@ -14,7 +14,7 @@ import { attemptConvAgg, attemptPushAgg } from "./rollup-spec";
 import { _attemptPushAgg } from "./rollup-table";
 import { _attempts, _conversations } from "./tables";
 
-// How `attemptRows` (core: the whole ordered set of attempts, key `attempts`)
+// How `attemptRows` (core: one task's attempts, key `attempts.v2`)
 // binds to the database — the ONE spelling both the served collection
 // (`./resources.ts`) and the tests (`./tree-oracle.test.ts`, which compiles it
 // against a throwaway database; `./all-parity.test.ts`, which holds it equal

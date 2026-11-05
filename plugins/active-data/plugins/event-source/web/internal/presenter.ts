@@ -12,8 +12,7 @@ export function useEventSourceReferent(id: string): IdReferentState {
 }
 
 /** The link to the source's detail pane beside the surface holding the id (`push`). */
-export function useEventSourceTarget(): (id: string) => LinkTarget {
+export function useEventSourceTarget(id: string): LinkTarget {
   const openPane = useOpenPane();
-  return (id) =>
-    openPane.to(eventSourceDetailPane, { sourceId: id }, { mode: "push" });
+  return openPane.to(eventSourceDetailPane, { sourceId: id }, { mode: "push" });
 }

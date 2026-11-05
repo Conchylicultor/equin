@@ -27,15 +27,17 @@
  * deleted id leaves the read. Then the C39 old-bundle check against the real
  * key, with a literal frozen copy of the legacy row.
  *
- * Step 20 adds the REAL `attempts` set (`attemptRows`, its shipped serve
- * options), subscribed `{}` and as a `:rows` point reader of two ids, and
- * pins its cost per step: an attempt write is its own row (an insert an
- * entrant), a conversation write its attempt's (a retitle and a `system`
- * conversation included — the list's route reads `title`, and the rollup
- * reads every kind's `status`), a push its attempt's, a write to a column
- * nothing reads (the poller's `waiting_for` / `last_viewed_at`) nothing, and
- * a task or edge write nothing — C1: no write reaches it as a FULL. Then its
- * own C39 check.
+ * Step 20 adds the REAL attempts set (`attemptRows`, its shipped serve
+ * options — since 2026-11-05 scoped by task, key `attempts.v2`), subscribed
+ * on every scripted task's scope and as a `:rows` point reader of two ids,
+ * and pins its cost per step: an attempt write is its own row (an insert an
+ * entrant, a move to another task an exit and an entrant), a conversation
+ * write its attempt's (a retitle and a `system` conversation included — the
+ * list's route reads `title`, and the rollup reads every kind's `status`), a
+ * push its attempt's, a write to a column nothing reads (the poller's
+ * `waiting_for` / `last_viewed_at`) nothing, and a task or edge write
+ * nothing — C1: no write reaches it as a FULL. Then its C39 check: a tab on
+ * the old whole-set key is refused `unknown-key`.
  * Step 22 adds the conversation lists, each compiled with its shipped serve
  * options (`./conversation-rows.ts`): the live `all` sets
  * `conversations-active` and `conversations-system` (subscribed `{}`,
@@ -144,7 +146,7 @@ let oracle: TreeOracle;
 beforeAll(async () => {
   oracle = await createTreeOracle({
     prefix: "tree_oracle",
-    persisted: [PROBE, TASKS, ATTEMPTS, ACTIVE, SYSTEM],
+    persisted: [PROBE, TASKS, ACTIVE, SYSTEM],
   });
   const queryDb = oracle.queryDb as unknown as QueryDb;
   oracle.registerAll(
@@ -228,6 +230,11 @@ afterAll(async () => {
 });
 
 const [T1, T2, T3, T4, T5, T6] = TREE_IDS.tasks;
+/**
+ * The attempts set's subscribed scopes: every task the script gives an
+ * attempt — A1 (T1), A2 (T2, then T4), A3 (T3).
+ */
+const ATTEMPT_SCOPES = [T1, T2, T3, T4];
 const [A1, A2, A3] = TREE_IDS.attempts;
 const [C1, C2, C3] = TREE_IDS.conversations;
 /** A `system` conversation of A3 — machine-spawned, never listed. */
@@ -433,8 +440,9 @@ const DESCRIPTIONS_COST: Record<string, TreeLoad[]> = {
 };
 
 /**
- * What each step must cost the real `attempts` set: its loads and `orderOf`
- * calls, and the `:rows` point reader's loads (its point set is A2, A3).
+ * What each step must cost the real attempts set, over its four subscribed
+ * scopes (`ATTEMPT_SCOPES`): its loads and `orderOf` calls, and the `:rows`
+ * point reader's loads (its point set is A2, A3).
  * The attempts are A1 (T1), A2 (T2, then T4) and A3 (T3, from
  * `attempt.insert`). Any step not listed loads nothing — every task and edge
  * write, the drag, the poller's `waiting_for` / `last_viewed_at` write.
@@ -458,8 +466,14 @@ const ATTEMPTS_COST: Record<string, TasksCost> = {
     orderOf: 0,
     rowLoads: [ids(A3)],
   },
-  // `task_id` is a row field: the attempt's own refill.
-  "attempt.move": { loads: [ids(A2)], orderOf: 0, rowLoads: [ids(A2)] },
+  // `task_id` is the scope: a move from T2 to T4 is an exit of T2's tuple
+  // (its refill, which no longer finds A2) and an entrant of T4's (a load
+  // and one `orderOf`); the point reader refills A2.
+  "attempt.move": {
+    loads: [ids(A2), ids(A2)],
+    orderOf: 1,
+    rowLoads: [ids(A2)],
+  },
   // An exit. Its conversation and push are cascade-deleted in the same
   // transaction, and their routes ask for A1's refill — one scoped load that
   // reads nothing (the pending holds the delete and the refill as sets; see
@@ -570,7 +584,9 @@ describe("tree oracle — the scripted workload over the real feed", () => {
     await oracle.subscribe(TASKS);
     const pointParams = taskRows.rows.point.encode([T1, T3]);
     await oracle.subscribe(TASK_ROWS, pointParams);
-    await oracle.subscribe(ATTEMPTS);
+    for (const taskId of ATTEMPT_SCOPES) {
+      await oracle.subscribe(ATTEMPTS, { taskId });
+    }
     // A3 is inserted mid-script: the point set holds an id before its row.
     const attemptParams = attemptRows.rows.point.encode([A2, A3]);
     await oracle.subscribe(ATTEMPT_ROWS, attemptParams);
@@ -677,6 +693,9 @@ describe("tree oracle — the scripted workload over the real feed", () => {
       steps.flatMap((s) => (ATTEMPTS_COST[s.label] ?? NOTHING).rowLoads),
     );
     oracle.unsubscribe(ATTEMPT_ROWS, attemptParams);
+    for (const taskId of ATTEMPT_SCOPES) {
+      oracle.unsubscribe(ATTEMPTS, { taskId });
+    }
     // Every point-reader load after the subscribe is one a step pinned.
     expect(oracle.loadsOf(TASK_ROWS).slice(rowsBaseline)).toEqual(
       steps.flatMap((s) => TASKS_COST[s.label]!.rowLoads),
@@ -694,7 +713,6 @@ describe("tree oracle — the scripted workload over the real feed", () => {
   test("with nobody subscribed, the persisted `{}` snapshots stay current through the workload's writes", async () => {
     oracle.unsubscribe(PROBE);
     oracle.unsubscribe(TASKS);
-    oracle.unsubscribe(ATTEMPTS);
     oracle.unsubscribe(ACTIVE);
     oracle.unsubscribe(SYSTEM);
     const conversationBaselines = new Map(
@@ -702,7 +720,6 @@ describe("tree oracle — the scripted workload over the real feed", () => {
     );
     const baseline = oracle.loadsOf(PROBE).length;
     const tasksBaseline = oracle.loadsOf(TASKS).length;
-    const attemptsBaseline = oracle.loadsOf(ATTEMPTS).length;
     await oracle.run({
       label: "idle.rename",
       statements: [`UPDATE tasks SET title = 'zz' WHERE id = '${T1}'`],
@@ -746,7 +763,6 @@ describe("tree oracle — the scripted workload over the real feed", () => {
     await oracle.converged("idle");
     expect(oracle.kept(PROBE)).toBeDefined();
     expect(oracle.kept(TASKS)).toBeDefined();
-    expect(oracle.kept(ATTEMPTS)).toBeDefined();
     expect(oracle.kept(ACTIVE)).toBeDefined();
     expect(oracle.kept(SYSTEM)).toBeDefined();
     for (const key of [ACTIVE, SYSTEM]) {
@@ -757,12 +773,6 @@ describe("tree oracle — the scripted workload over the real feed", () => {
           .some((l) => l.ids === "FULL"),
       ).toBe(false);
     }
-    expect(
-      oracle
-        .loadsOf(ATTEMPTS)
-        .slice(attemptsBaseline)
-        .some((l) => l.ids === "FULL"),
-    ).toBe(false);
     expect(
       oracle
         .loadsOf(PROBE)
@@ -933,63 +943,17 @@ describe("C39 — a tab on the legacy `tasks` descriptor", () => {
   });
 });
 
-// What the legacy `attempts` descriptor (param-less, keyed) parsed its payload
-// with (`z.array(AttemptWithConversationsSchema)`), restated as a LITERAL frozen at step 20 — never derived from the live
-// schema (see `LegacyRowsSchema` above). Not `strict` at either level (see
-// there): only a removed, renamed or retyped key fails the parse.
-const LegacyAttemptsSchema = z.array(
-  z.object({
-    id: z.string(),
-    taskId: z.string(),
-    worktreePath: z.string(),
-    createdAt: z.coerce.date(),
-    updatedAt: z.coerce.date(),
-    status: z.enum([
-      "pending",
-      "in_progress",
-      "pushed",
-      "completed",
-      "dormant",
-      "closed",
-    ]),
-    active: z.boolean(),
-    retained: z.boolean(),
-    finishedAt: z.coerce.date().nullable(),
-    conversations: z.array(
-      z.object({
-        id: z.string(),
-        title: z.string().nullable(),
-        status: z.enum(["starting", "working", "waiting", "gone", "done"]),
-        kind: z.enum(["user", "agent", "system"]),
-        createdAt: z.coerce.date(),
-        spawnedBy: z.string().nullable(),
-      }),
-    ),
-  }),
-);
-
-describe("C39 — a tab on the legacy `attempts` descriptor", () => {
-  test("subscribes `{}`, passes the gate, and parses the compiled rows with its OLD schema to the same values", async () => {
-    const wire: unknown = JSON.parse(JSON.stringify(oracle.kept(ATTEMPTS)));
-    // The set is not trivially empty: the conversation list is what changed shape.
-    expect(
-      (wire as { conversations: unknown[] }[]).some(
-        (a) => a.conversations.length > 0,
-      ),
-    ).toBe(true);
-    for (const schema of [
-      LegacyAttemptsSchema,
-      z.array(AttemptWithConversationsSchema),
-    ]) {
-      const old = await subscribeAsOldDescriptor(
-        { key: ATTEMPTS, schema },
-        { handler: oracle.runtime.notificationsWsHandler },
-      );
-      expect(old.kind).toBe("parsed");
-      expect(canonical(old.kind === "parsed" ? old.value : null)).toBe(
-        canonical(schema.parse(wire)),
-      );
-    }
+describe("C39 — a tab on the legacy whole-set `attempts` key", () => {
+  test("is refused `unknown-key`, a `skew` verdict (the Reload prompt)", async () => {
+    const old = await subscribeAsOldDescriptor(
+      { key: "attempts", schema: z.array(AttemptWithConversationsSchema) },
+      { handler: oracle.runtime.notificationsWsHandler },
+    );
+    expect(old).toEqual({
+      kind: "refused",
+      reason: "unknown-key",
+      verdict: "skew",
+    });
   });
 });
 

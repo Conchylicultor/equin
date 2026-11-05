@@ -29,9 +29,11 @@ export interface IdPresenter {
   useReferent: Hook<(id: string) => IdReferentState>;
   /**
    * The link to the referent (a pane, beside the surface holding the id): its
-   * plain open, and the URL a ⌘/middle-click opens in a new browser tab.
+   * plain open, and the URL a ⌘/middle-click opens in a new browser tab. Per
+   * id, like `useReferent`, so a target that depends on the referent (an
+   * attempt opens its first conversation) reads that one row.
    */
-  useTarget: Hook<() => (id: string) => LinkTarget>;
+  useTarget: Hook<(id: string) => LinkTarget>;
 }
 
 /**

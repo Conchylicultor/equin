@@ -3,13 +3,7 @@ import {
   asNamespace,
   MAIN_WORKTREE_NAME,
 } from "@plugins/infra/plugins/namespace/core";
-import {
-  identityInfo,
-  linkedTaskIdOf,
-  placeOf,
-  summaryOf,
-  type LinkedTask,
-} from "./identity";
+import { identityInfo, placeOf, summaryOf, type LinkedTask } from "./identity";
 
 const PENDING: LinkedTask = { kind: "pending" };
 const NONE: LinkedTask = { kind: "none" };
@@ -47,28 +41,6 @@ describe("placeOf", () => {
       checkout: "att-1",
       composition: "sonata",
     });
-  });
-});
-
-describe("linkedTaskIdOf", () => {
-  const attempts = [
-    { worktreePath: "/repo/.claude/worktrees/att-1", taskId: "task-1" },
-    { worktreePath: "/repo/.claude/worktrees/att-10/", taskId: "task-10" },
-  ];
-
-  test("matches the attempt whose worktree path ends in the checkout", () => {
-    expect(linkedTaskIdOf(attempts, "att-1")).toBe("task-1");
-    expect(linkedTaskIdOf(attempts, "att-10")).toBe("task-10");
-  });
-
-  test("matches the whole final segment, not a suffix of it", () => {
-    expect(linkedTaskIdOf(attempts, "1")).toBeNull();
-    expect(linkedTaskIdOf(attempts, "att")).toBeNull();
-  });
-
-  test("no matching attempt is null", () => {
-    expect(linkedTaskIdOf(attempts, "att-2")).toBeNull();
-    expect(linkedTaskIdOf([], "att-1")).toBeNull();
   });
 });
 

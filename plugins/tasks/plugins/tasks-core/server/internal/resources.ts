@@ -60,11 +60,11 @@ export const conversationsByIdServed = serveCollection(
 // `pushes_attempt_id_idx` backs the per-attempt read.
 export const pushRowsServed = serveCollection(pushRows, { from: pushes });
 
-// Every attempt with its non-system conversations (`attemptRows`, key
-// `attempts`) and its `:rows` point sibling — compiled from the `attempts`
-// table, the two attempt rollups and a children `jsonAgg` of the attempt's
-// conversations (`./attempt-rows.ts`), never `attempts_v`. A routed,
-// L2-persisted alias: an attempt write refills its own row, a conversation or
+// One task's attempts with their non-system conversations (`attemptRows`, key
+// `attempts.v2`, scoped by `taskId`) and its `:rows` point sibling — compiled
+// from the `attempts` table, the two attempt rollups and a children `jsonAgg`
+// of the attempt's conversations (`./attempt-rows.ts`), never `attempts_v`. A
+// routed alias: an attempt write refills its own row, a conversation or
 // push write its attempt's — through the conversation route's gate and the
 // rollups' source routes, so a poller write (`waiting_for`,
 // `last_viewed_at`) and a push reach no FULL reload (C1) — an insert is an

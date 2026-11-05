@@ -2,7 +2,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import {
   Pane,
   defineRoute,
-  resolveFrom,
+  resolveRow,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
@@ -14,9 +14,7 @@ function useResolveAttempt({
 }: {
   attemptId: string;
 }): ResolveResult {
-  return resolveFrom(useLive(attemptRows), (attempts) =>
-    attempts.some((a) => a.id === attemptId),
-  );
+  return resolveRow(useLive(attemptRows, { id: attemptId }));
 }
 
 export const attemptPane = Pane.define({

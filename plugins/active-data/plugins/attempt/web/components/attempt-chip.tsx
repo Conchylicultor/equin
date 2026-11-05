@@ -1,4 +1,4 @@
-import { mapRow, useLive } from "@plugins/network/plugins/live/web";
+import { mapRow, rowOrStale, useLive } from "@plugins/network/plugins/live/web";
 import {
   foldResource,
   mapResource,
@@ -44,28 +44,25 @@ function firstConversation(
 }
 
 /**
- * The attempt and its task's row, both live: the attempt out of the attempt
- * set, its task by id (a point read — the chip names one task, it does not
- * need the whole task set). The ready arm is `null` for an attempt the set
- * does not hold; `task` is `null` for a task the list no longer holds.
+ * The attempt and its task's row, both live point reads — the chip names one
+ * attempt and one task, it needs neither whole set. The ready arm is `null`
+ * for an attempt that does not exist; `task` is `null` for a task the list no
+ * longer holds.
  */
 function useAttemptWithTask(attemptId: string): ResourceResult<{
   attempt: AttemptWithConversations;
   task: TaskRow | null;
 } | null> {
-  const attempts = useLive(attemptRows);
-  const taskId = foldResource(attempts, {
-    loading: () => null,
-    error: () => null,
-    ready: (rows) => rows.find((a) => a.id === attemptId)?.taskId ?? null,
-  });
-  const task = mapRow(useLive(taskRows, { id: taskId }), (row) => row);
+  const read = useLive(attemptRows, { id: attemptId });
+  const attempt = mapRow(read, (row) => row);
+  const task = mapRow(
+    useLive(taskRows, { id: rowOrStale(read)?.taskId ?? null }),
+    (row) => row,
+  );
   return mapResource(
-    useCombinedResources({ attempts, task }),
-    ({ attempts: rows, task: row }) => {
-      const attempt = rows.find((a) => a.id === attemptId);
-      return attempt ? { attempt, task: row } : null;
-    },
+    useCombinedResources({ attempt, task }),
+    ({ attempt: row, task: taskRow }) =>
+      row ? { attempt: row, task: taskRow } : null,
   );
 }
 
@@ -163,21 +160,15 @@ export function useAttemptReferent(attemptId: string): IdReferentState {
 /**
  * The link to an attempt, the way its chip opens it: its first conversation
  * (most attempts hold one), else the attempt pane — a push beside the surface
- * holding the id.
+ * holding the id. Until the attempt is read (or when it is gone) the target is
+ * the attempt pane, which answers both itself.
  */
-export function useAttemptTarget(): (attemptId: string) => LinkTarget {
-  const attempts = useLive(attemptRows);
+export function useAttemptTarget(attemptId: string): LinkTarget {
+  const attempt = rowOrStale(useLive(attemptRows, { id: attemptId }));
   const openPane = useOpenPane();
   const opener = useConversationOpener();
-  return (attemptId) => {
-    const attempt = foldResource(attempts, {
-      loading: () => undefined,
-      error: () => undefined,
-      ready: (rows) => rows.find((a) => a.id === attemptId),
-    });
-    const conv = attempt ? firstConversation(attempt) : undefined;
-    return conv
-      ? opener.toggle(conv.id)
-      : openPane.to(attemptPane, { attemptId }, { mode: "push" });
-  };
+  const conv = attempt ? firstConversation(attempt) : undefined;
+  return conv
+    ? opener.toggle(conv.id)
+    : openPane.to(attemptPane, { attemptId }, { mode: "push" });
 }

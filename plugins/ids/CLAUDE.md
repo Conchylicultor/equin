@@ -81,8 +81,8 @@ a list:
   BOTH runtimes (`ids:kind-both-runtimes`); `useIdKinds()` / `getIdKinds()` read
   them at call time.
 - **`IdKinds.Presenter`** (web): how a kind's ids are shown and opened — `icon?`,
-  `useReferent(id)` → `loading | found{title} | missing | failed`, `useTarget()` →
-  `(id) => LinkTarget` (a link, so a chip honours ⌘/middle-click). Optional per kind, and separate from the kind so `ids` stays
+  `useReferent(id)` → `loading | found{title} | missing | failed`, `useTarget(id)` →
+  `LinkTarget` (a link, so a chip honours ⌘/middle-click; per id, so a target may read its referent). Optional per kind, and separate from the kind so `ids` stays
   below the UI.
 - **`IdKinds.Referent`** (server): `resolve(id)` → `{found, title}`. Every
   presented kind has one (`ids:presenter-has-referent`, joined on the prefix).

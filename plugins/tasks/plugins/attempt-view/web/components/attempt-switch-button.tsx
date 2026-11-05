@@ -13,7 +13,7 @@ const splitscreenIcon = symbol("splitscreen");
 export function AttemptSwitchButton() {
   const { convId } = conversationPane.useParams();
   const conversation = rowOrStale(useConversationById(convId));
-  const result = useLive(attemptRows);
+  const result = useLive(attemptRows, { id: conversation?.attemptId ?? null });
 
   const { isOpen, toggle } = attemptPane.useToggle(
     { attemptId: conversation?.attemptId ?? "" },
@@ -44,9 +44,7 @@ export function AttemptSwitchButton() {
       );
   }
 
-  const attempt =
-    result.data.find((a) => a.id === conversation?.attemptId) ?? null;
-  const count = attempt?.conversations.length ?? 0;
+  const count = result.found ? result.row.conversations.length : 0;
 
   return (
     <Button

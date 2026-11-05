@@ -1,16 +1,10 @@
-import { useCallback, useMemo } from "react";
-import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { useMemo } from "react";
 import { namespaceFromHost } from "@plugins/infra/plugins/namespace/core";
-import { mapRow, useLive } from "@plugins/network/plugins/live/web";
-import {
-  attemptRows,
-  taskRows,
-  type AttemptWithConversations,
-} from "@plugins/tasks/plugins/tasks-core/core";
+import { rowOrStale, useLive } from "@plugins/network/plugins/live/web";
+import { attemptRows, taskRows } from "@plugins/tasks/plugins/tasks-core/core";
 import type { HealthInfo } from "@plugins/shell/plugins/health-report/web";
 import {
   identityInfo,
-  linkedTaskIdOf,
   placeOf,
   type LinkedTask,
   type WorktreePlace,
@@ -26,47 +20,28 @@ export function useWorktreePlace(): WorktreePlace {
 }
 
 /**
- * The task this page's checkout is working on: the attempt whose worktree path
- * ends in the checkout, then that attempt's task.
- *
- * The attempt is a `select` over the resident attempt set, so this re-renders
- * when THIS checkout's link changes, not on every push to the global list (a
- * gated read, `useLive(all, { select })`, which keeps the pending → settled
- * flip reliable, since `pending` is an answer of its own here). The title is a
- * point read of the linked task's row.
+ * The task this page's checkout is working on: the attempt the checkout is
+ * named after — a worktree lives at `<root>/<attemptId>` (conversations/
+ * workspace's `pathFor`), so the checkout IS the attempt id — then that
+ * attempt's task. Two point reads, one row each. (Checkouts made before
+ * 2026-05-02 were named differently and read as unlinked; none still exists.)
  */
 export function useLinkedTask(place: WorktreePlace): LinkedTask {
   const checkout = place.kind === "worktree" ? place.checkout : null;
-
-  const selectTaskId = useCallback(
-    (attempts: readonly AttemptWithConversations[]) =>
-      checkout === null ? null : linkedTaskIdOf(attempts, checkout),
-    [checkout],
-  );
-  // `useLive(all, { select })` is a gated read already.
-  const attempt = useLive(attemptRows, { select: selectTaskId });
-
+  const attempt = useLive(attemptRows, { id: checkout });
   // The title lookup keys off the attempt's task id once it is known; until
-  // then (or when the attempts read failed) it looks nothing up, and the answer
+  // then (or when the attempt read failed) it looks nothing up, and the answer
   // below comes from the attempt read's own state.
-  const taskId = foldResource(attempt, {
-    loading: () => null,
-    error: () => null,
-    ready: (id) => id,
-  });
-  const task = mapRow(
-    useLive(taskRows, { id: taskId }),
-    (row) => row?.title ?? null,
-  );
+  const task = useLive(taskRows, { id: rowOrStale(attempt)?.taskId ?? null });
 
   if (checkout === null) return { kind: "none" };
   if (attempt.status === "loading") return { kind: "pending" };
   if (attempt.status === "error") return { kind: "failed" };
-  if (attempt.data === null) return { kind: "none" };
+  if (!attempt.found) return { kind: "none" };
   if (task.status === "loading") return { kind: "pending" };
   if (task.status === "error") return { kind: "failed" };
-  if (task.data === null) return { kind: "none" };
-  return { kind: "linked", taskId: attempt.data, title: task.data };
+  if (!task.found) return { kind: "none" };
+  return { kind: "linked", taskId: attempt.row.taskId, title: task.row.title };
 }
 
 /** The health report's worktree row: `{ title, summary }` for this page. */

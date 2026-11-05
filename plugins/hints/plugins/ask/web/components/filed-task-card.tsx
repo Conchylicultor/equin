@@ -40,7 +40,7 @@ export function FiledTaskCard({
   title: string;
 }) {
   const task = useLive(taskRows, { id: taskId });
-  const runs = useTaskConversations([taskId]);
+  const runs = useTaskConversations(taskId);
   const openPane = useOpenPane();
   if (task.status === "loading" || runs.status === "loading")
     return <Loading variant="rows" count={1} />;

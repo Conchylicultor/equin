@@ -116,6 +116,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/id-chip.idChip`
           - `conversations/conversation-view.useConversationOpener`
           - `network/live.mapRow`
+          - `network/live.rowOrStale`
           - `network/live.useLive`
           - `network/live/live-state.foldResource`
           - `network/live/live-state.mapResource`
@@ -355,8 +356,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/page-tree.useBlockTarget`
           - `apps/pages/page-tree.useBlockTargetLink`
           - `apps/pages/page-tree.useBlockTargetTitle`
+          - `network/live.rowOrStale`
           - `network/live.useLive`
-          - `network/live/live-state.foldResource`
           - `page/editor.PageIcon`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/pane.useOpenPane`
@@ -35630,17 +35631,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 302 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 300 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×83
               - `conversations` ×48
               - `debug` ×29
               - `ui` ×25
-              - `tasks` ×24
+              - `tasks` ×23
               - `page` ×16
               - `primitives` ×14
               - `infra` ×8
               - `build` ×7
-              - `active-data` ×6
+              - `active-data` ×5
               - `plugin-meta` ×5
               - `auth` ×4
               - `apps-core` ×3
@@ -54173,7 +54174,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --radius`
         - Imported by: `tasks/sidequest-autopilot`
-    - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
+    - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced, each a read of the task's own scope; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Web:
         - Contributes:
           - `FieldPresentation.Register` "exposure:tasks_ext_mandate"
@@ -54392,8 +54393,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `attempt-push-ids:rows` (keyed, point)
           - `attempt-tasks:rows` (keyed, point)
           - `attempt-workspaces:rows` (keyed, point)
-          - `attempts` (keyed)
-          - `attempts:rows` (keyed, point)
+          - `attempts.v2` (keyed)
+          - `attempts.v2:rows` (keyed, point)
           - `conversation-runtimes:rows` (keyed, point)
           - `conversation-session-tails:rows` (keyed, point)
           - `conversation-workspaces:rows` (keyed, point)
@@ -54602,9 +54603,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `HealthReport.Row` "worktree"
         - Uses:
           - `apps-core/tabs.useAppLinkProps`
-          - `network/live.mapRow`
+          - `network/live.rowOrStale`
           - `network/live.useLive`
-          - `network/live/live-state.foldResource`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/icon-button.IconButton`
           - `shell/health-report.HealthReport`

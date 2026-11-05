@@ -133,9 +133,9 @@ the page are one text — and returns `{ taskId, prompt }`.
 
 ## The runs are one join, read by both surfaces
 
-`useTaskConversations([taskId])` (tasks-core's, the one join every surface in the
-repo uses) is the card's runs, oldest first, off the boot-critical `attempts`
-resource. The foot renders all of them as chips; the panel takes `.at(-1)` as the
+`useTaskConversations(taskId)` (tasks-core's, the one join every surface in the
+repo uses) is the card's runs, oldest first, off the task's own scope of the
+attempts set (`attemptRows`, `{ where: { taskId } }`). The foot renders all of them as chips; the panel takes `.at(-1)` as the
 run its "open" row navigates to. One list, so the run the panel offers is by
 construction the last chip at the foot.
 
