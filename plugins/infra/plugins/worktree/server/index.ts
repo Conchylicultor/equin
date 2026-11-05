@@ -27,6 +27,10 @@ export {
   countReadySpares,
 } from "./internal/spare";
 export { withWorktreeMutateSlot } from "./internal/mutate-gate";
+export {
+  dropRetiredBranchReflogs,
+  type RetiredReflogSweep,
+} from "./internal/retired-reflogs";
 export { isCanonicalWorktreeName } from "./internal/worktree-name";
 export {
   type WorktreeOp,

@@ -3,6 +3,7 @@
 // pane, the op-status banner) imports this barrel to read the branch convention
 // and the op-kind vocabulary.
 export {
+  ATTEMPT_BRANCH_PREFIX,
   attemptBranchName,
   attemptBranchRef,
   stripAttemptBranchPrefix,

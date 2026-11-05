@@ -24545,8 +24545,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "worktree-reap-failed"
           - `resource.declare` "debug.worktree-cleanup.worktrees"
           - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-        - Uses: 35 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
-          - `infra/worktree` ×10
+        - Uses: 36 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
+          - `infra/worktree` ×11
           - `infra/worktree/reclaim` ×4
           - `tasks/tasks-core` ×4
           - `database/admin` ×3
@@ -33720,6 +33720,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CompositionMarker`
           - `NamespaceClaimant`
           - `NamespaceProbe`
+          - `RetiredReflogSweep`
           - `WorktreeEntry`
           - `WorktreeHead`
           - `WorktreeOp`
@@ -33733,6 +33734,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `checkoutState`
           - `countReadySpares`
           - `createSpareWorktree`
+          - `dropRetiredBranchReflogs`
           - `emptyWorktreeTrash`
           - `ensureMainWorktreeRoot`
           - `gitWorktreesDir`
@@ -33783,6 +33785,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OpKind`
           - `OpKindMeta`
         - Exports (values):
+          - `ATTEMPT_BRANCH_PREFIX`
           - `attemptBranchName`
           - `attemptBranchRef`
           - `isOpKind`

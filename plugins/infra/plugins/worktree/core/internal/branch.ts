@@ -16,7 +16,7 @@
 // import of the sibling `server/` tree. Same rule, and same reason, as
 // `infra/paths/display`.
 
-const ATTEMPT_BRANCH_PREFIX = "claude-web/";
+export const ATTEMPT_BRANCH_PREFIX = "claude-web/";
 
 /**
  * The branch `setupWorktree` creates for an attempt. Everything that looks a

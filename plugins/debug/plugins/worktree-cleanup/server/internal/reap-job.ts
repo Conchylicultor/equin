@@ -6,6 +6,7 @@ import {
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
 import {
+  dropRetiredBranchReflogs,
   emptyWorktreeTrash,
   WorktreeGitTimeoutError,
 } from "@plugins/infra/plugins/worktree/server";
@@ -188,6 +189,16 @@ export const worktreeReapJob = defineSupervisedJob({
       `auto-reap: ${reaped}/${targets.length} reaped, ` +
         `${reclaimed}/${namespaceTargets.length} orphaned namespaces reclaimed`,
     );
+
+    // After the checkout pass, so the branches it just retired go this sweep.
+    // Keeps git's reflog count bounded by the live checkouts: every `--reflog`
+    // walk (each auto-gc's repack) reads each shared reflog once per worktree.
+    await contain("retired-branch-reflogs", async () => {
+      const r = await dropRetiredBranchReflogs();
+      log(
+        `auto-reap: dropped ${r.dropped}/${r.attemptReflogs} attempt-branch reflogs (merged into main, checked out nowhere)`,
+      );
+    });
 
     // The sweep itself is finished; now fail the run so a broken reporting path
     // is visible as a dead-lettered job (the built-in ledger records this message)

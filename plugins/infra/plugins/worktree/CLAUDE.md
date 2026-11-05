@@ -142,6 +142,16 @@ state. A trash delete that is killed or dies with its process is retried by
 `emptyWorktreeTrash`, which the reaper calls each sweep for entries older than an
 hour (younger ones may still be under their own removal's delete).
 
+## Retired branches lose their reflog (`server/internal/retired-reflogs.ts`)
+
+git's `--reflog` walk (every auto-gc's `pack-objects --all --reflog`, `prune`) re-reads
+every shared reflog once per linked worktree, so it costs worktrees × reflogs: 324 × 10.6k
+took a repack 7–10 min. `dropRetiredBranchReflogs()` drops the reflog of each attempt
+branch (and its `refs/remotes/*/claude-web/*` twin) that is merged into main and checked out
+nowhere. The refs stay. The worktree-cleanup sweep runs it hourly, which keeps the reflog
+count bounded by the live checkouts. See
+`research/2026-11-05-global-git-repack-reflog-walk.md`.
+
 ## Cancellation
 
 `setupWorktree(id, path, compositionIds, signal?)`,
@@ -210,6 +220,7 @@ pid liveness.
     - `CompositionMarker`
     - `NamespaceClaimant`
     - `NamespaceProbe`
+    - `RetiredReflogSweep`
     - `WorktreeEntry`
     - `WorktreeHead`
     - `WorktreeOp`
@@ -223,6 +234,7 @@ pid liveness.
     - `checkoutState`
     - `countReadySpares`
     - `createSpareWorktree`
+    - `dropRetiredBranchReflogs`
     - `emptyWorktreeTrash`
     - `ensureMainWorktreeRoot`
     - `gitWorktreesDir`
@@ -273,6 +285,7 @@ pid liveness.
     - `OpKind`
     - `OpKindMeta`
   - Exports (values):
+    - `ATTEMPT_BRANCH_PREFIX`
     - `attemptBranchName`
     - `attemptBranchRef`
     - `isOpKind`
