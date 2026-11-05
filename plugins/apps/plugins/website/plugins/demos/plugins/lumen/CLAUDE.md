@@ -88,7 +88,9 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   available"; `research/2026-11-04-global-desktop-mode-in-browser-demo.md`).
   Its samples load
   through the worker's asset mirror (`infra/asset-mirror`, portable), fetched
-  from the instruments' public CDNs once per session; reading Ultimate Guitar,
+  from the instruments' public CDNs once per browser profile (the mirror's
+  cache is the host's `data-files` store, kept in the demo's IndexedDB;
+  `apps/demo`'s `sonata-in-demo.ts` asserts both); reading Ultimate Guitar,
   aligning a sheet to a recording and watching MIDI folders need the computer
   and say so. Home is the composition's home, as on
   main, so the launcher inside the embed lists the Agent Manager and its "All

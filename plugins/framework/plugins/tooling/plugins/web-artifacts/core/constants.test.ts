@@ -10,6 +10,14 @@ describe("isWorkerChunkPath", () => {
     ).toBe(true);
   });
 
+  test("a module of a worker tree (a browser host's worker)", () => {
+    expect(
+      isWorkerChunkPath(
+        "/artifacts/worker-tree.acf276983f235246/apps.website.demos.lumen.bin/index.js",
+      ),
+    ).toBe(true);
+  });
+
   test("anything else is not", () => {
     for (const path of [
       "/artifacts/primitives.networking.web.9a30bf2b5ff8827f/index.js",
@@ -17,6 +25,8 @@ describe("isWorkerChunkPath", () => {
       "/assets/style-D0aYsD9r.css",
       "/assets/app.js",
       "/artifacts/x.web.1/nested/assets/w.js",
+      "/artifacts/worker-tree.acf276983f235246/x.bin/index.js.map",
+      "/artifacts/worker-tree.acf276983f235246",
     ]) {
       expect(isWorkerChunkPath(path)).toBe(false);
     }

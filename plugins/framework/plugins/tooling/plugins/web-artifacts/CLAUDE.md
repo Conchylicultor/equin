@@ -410,6 +410,7 @@ Key invariants:
     - `isBrowserUnreachableDynamic`
     - `isInlinedPackage`
     - `isWorkerChunkPath`
+    - `isWorkerTreePath`
     - `makeArtifactExternal`
     - `packageNameOf`
     - `pruneWebArtifactCaches`

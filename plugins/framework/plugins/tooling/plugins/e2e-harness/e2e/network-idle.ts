@@ -10,8 +10,9 @@ import { isWorkerChunkPath } from "@plugins/framework/plugins/tooling/plugins/we
  * started it, but the response lands in the worker's target, which Playwright
  * does not attach to — so the request never finishes and `networkidle` waits
  * forever. This tracker counts the page's in-flight requests itself and leaves
- * out a worker-chunk load (`isWorkerChunkPath`, the one place web-artifacts
- * emits worker scripts).
+ * out a worker's script load (`isWorkerChunkPath`, the one place web-artifacts
+ * says where it emits worker scripts: vite's worker chunks and the browser
+ * hosts' worker trees).
  *
  * Every page a harness session creates is tracked from its first request (the
  * session's page, and any `context.newPage()` after it); `waitForNetworkIdle`

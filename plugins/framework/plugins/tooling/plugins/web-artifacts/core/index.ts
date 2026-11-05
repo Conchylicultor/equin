@@ -8,6 +8,7 @@ export {
   isBrowserUnreachableDynamic,
   isInlinedPackage,
   isWorkerChunkPath,
+  isWorkerTreePath,
   packageNameOf,
   WORKER_ASSETS_DIR,
 } from "./constants";

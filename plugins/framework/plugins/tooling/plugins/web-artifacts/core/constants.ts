@@ -135,12 +135,32 @@ export function isInlinedPackage(specifier: string): boolean {
 export const WORKER_ASSETS_DIR = "assets";
 
 /**
- * Whether a served URL path is an artifact's worker chunk. The e2e harness uses
- * it to leave a worker's script load out of its network-idle count: Playwright
- * reports that load as the page's request but never sees it finish (the
- * response lands in the worker's target).
+ * Whether a served URL path is a module of a worker tree
+ * (`/artifacts/worker-tree.<hash>/…/<file>.js`): a browser host's worker
+ * entry and what it loads — nothing but a worker loads from a tree.
+ */
+export function isWorkerTreePath(pathname: string): boolean {
+  const parts = pathname.split("/");
+  // ["", "artifacts", "worker-tree.<hash>", …, <file>.js]
+  return (
+    parts.length >= 4 &&
+    parts[0] === "" &&
+    parts[1] === "artifacts" &&
+    parts[2]!.startsWith(WORKER_TREE_PREFIX) &&
+    parts.at(-1)!.endsWith(".js")
+  );
+}
+
+/**
+ * Whether a served URL path is a worker's script: an artifact's worker chunk
+ * (`/artifacts/<dir>/assets/<file>.js`) or a module of a worker tree
+ * (`isWorkerTreePath`). The e2e harness uses it to leave a worker's script
+ * load out of its network-idle count: Playwright reports that load as the
+ * page's request but never sees it finish (the response lands in the worker's
+ * target).
  */
 export function isWorkerChunkPath(pathname: string): boolean {
+  if (isWorkerTreePath(pathname)) return true;
   const parts = pathname.split("/");
   // ["", "artifacts", <dir>, "assets", <file>.js]
   return (

@@ -28738,6 +28738,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isBrowserUnreachableDynamic`
               - `isInlinedPackage`
               - `isWorkerChunkPath`
+              - `isWorkerTreePath`
               - `makeArtifactExternal`
               - `packageNameOf`
               - `pruneWebArtifactCaches`
@@ -29405,7 +29406,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:
-    - **`asset-mirror`** — Generic asset mirror, on every host: plugins declare a remote asset source via defineAssetMirror; GET /api/asset-mirror/:id/:file (and /:id/:dir/:file) downloads each file on its first request into the assetMirrorFiles data-files root and serves it same-origin thereafter — offline-capable after one warm-up on the desktop (the computer's disk, shared by every worktree), once per session in a browser host (memory).
+    - **`asset-mirror`** — Generic asset mirror, on every host: plugins declare a remote asset source via defineAssetMirror; GET /api/asset-mirror/:id/:file (and /:id/:dir/:file) downloads each file on its first request into the assetMirrorFiles data-files root and serves it same-origin thereafter — offline-capable after one warm-up on the desktop (the computer's disk, shared by every worktree), once per browser profile in a browser host (its data-files store, kept in the host's storage).
       - Server:
         - Contributes: `data-files.root-location` "infra.asset-mirror"
         - Uses:

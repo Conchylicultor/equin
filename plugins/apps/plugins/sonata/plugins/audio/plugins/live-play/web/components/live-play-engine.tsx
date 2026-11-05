@@ -23,6 +23,12 @@ const DEFAULT_VELOCITY = 90;
  * generically via the `SonataAudio.Instrument` collection API (never naming a
  * contributor).
  *
+ * A key pressed before the instrument's samples are in is never dropped: it
+ * waits for `voices.loaded` and sounds then (released at once if the key was
+ * let go meanwhile, so a quick tap still answers) — the first press of a
+ * session lands in that window whenever it beats the load, on a cold cache
+ * (samples downloading) as on a warm one (still decoding).
+ *
  * The published `LivePlayApi` is a STABLE object whose methods read refs, so the
  * keyboard can depend on it without churning. The graph + resolved instrument
  * are mirrored through `useLatestRef` and read live inside those methods.
@@ -43,6 +49,12 @@ export function LivePlayEngine() {
 
   const voicesRef = useRef<InstrumentVoices | null>(null);
   const heldRef = useRef<Map<number, () => void>>(new Map());
+  /** Whether `voicesRef.current`'s samples are in (its `loaded` resolved). */
+  const readyRef = useRef(false);
+  /** Presses waiting for the samples: pitch → velocity, and whether it was let go. */
+  const pendingRef = useRef<
+    Map<number, { velocity: number; released: boolean }>
+  >(new Map());
 
   const { setApi } = useLivePlayControls();
 
@@ -60,11 +72,27 @@ export function LivePlayEngine() {
         assetsRef.current,
       );
       voicesRef.current = voices;
+      readyRef.current = false;
       // Start the sample load; surface a rejected load loudly (async throw →
       // unhandled rejection) rather than leaving it floating or silenced.
       void voices.loaded.then(
-        () => {},
+        () => {
+          // Disposed or replaced meanwhile: its presses went with it.
+          if (voicesRef.current !== voices) return;
+          readyRef.current = true;
+          // Taken off the queue first, so a throwing play leaves nothing stale.
+          const pending = [...pendingRef.current];
+          pendingRef.current.clear();
+          for (const [pitch, { velocity, released }] of pending) {
+            heldRef.current.delete(pitch);
+            const stop = voices.play?.(pitch, velocity);
+            if (!stop) continue;
+            if (released) stop();
+            else heldRef.current.set(pitch, stop);
+          }
+        },
         (err: unknown) => {
+          if (voicesRef.current === voices) pendingRef.current.clear();
           throw err instanceof Error ? err : new Error(String(err));
         },
       );
@@ -84,6 +112,15 @@ export function LivePlayEngine() {
           prev();
           heldRef.current.delete(pitch);
         }
+        if (voicesRef.current && !readyRef.current) {
+          // Samples not in yet: sound it once they are (see the doc above).
+          const pending = { velocity, released: false };
+          pendingRef.current.set(pitch, pending);
+          heldRef.current.set(pitch, () => {
+            pending.released = true;
+          });
+          return;
+        }
         const stop = voicesRef.current?.play?.(pitch, velocity);
         if (stop) heldRef.current.set(pitch, stop);
       },
@@ -95,6 +132,8 @@ export function LivePlayEngine() {
         }
       },
       releaseAll() {
+        // A panic is no quick tap: what still waits for the samples is dropped.
+        pendingRef.current.clear();
         for (const stop of heldRef.current.values()) stop();
         heldRef.current.clear();
       },
@@ -110,9 +149,11 @@ export function LivePlayEngine() {
     // Capture the stable held-voices map for the cleanup (the Map identity never
     // changes; reading the ref directly in cleanup trips react-hooks/refs).
     const held = heldRef.current;
+    const pending = pendingRef.current;
     return () => {
       for (const stop of held.values()) stop();
       held.clear();
+      pending.clear();
       voicesRef.current?.dispose();
       voicesRef.current = null;
     };
@@ -122,9 +163,11 @@ export function LivePlayEngine() {
   useEffect(() => {
     setApi(api);
     const held = heldRef.current;
+    const pending = pendingRef.current;
     return () => {
       for (const stop of held.values()) stop();
       held.clear();
+      pending.clear();
       voicesRef.current?.dispose();
       voicesRef.current = null;
       setApi(null);

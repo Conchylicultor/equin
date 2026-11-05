@@ -6,7 +6,10 @@ remote source; the primitive downloads each requested file once into its cache
 it same-origin thereafter. On the desktop that root is the computer's disk
 (bound by `machine/`, outside any worktree, so the download happens at most
 once per machine, and a release bundle seeds it); in a browser host it is
-memory, so each file is fetched from its remote once per session.
+the host's `data-files` store — memory written through to the host's storage
+(`browser-server/host-storage`), so with a persistent host (the demo's
+IndexedDB) each file is fetched from its remote once per browser profile, and
+a returning visitor's samples never leave the browser.
 
 ## API
 
@@ -107,7 +110,7 @@ without booting the server.
 
 ## Plugin reference
 
-- Description: Generic asset mirror, on every host: plugins declare a remote asset source via defineAssetMirror; GET /api/asset-mirror/:id/:file (and /:id/:dir/:file) downloads each file on its first request into the assetMirrorFiles data-files root and serves it same-origin thereafter — offline-capable after one warm-up on the desktop (the computer's disk, shared by every worktree), once per session in a browser host (memory).
+- Description: Generic asset mirror, on every host: plugins declare a remote asset source via defineAssetMirror; GET /api/asset-mirror/:id/:file (and /:id/:dir/:file) downloads each file on its first request into the assetMirrorFiles data-files root and serves it same-origin thereafter — offline-capable after one warm-up on the desktop (the computer's disk, shared by every worktree), once per browser profile in a browser host (its data-files store, kept in the host's storage).
 - Server:
   - Contributes: `data-files.root-location` "infra.asset-mirror"
   - Uses:

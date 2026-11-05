@@ -62,3 +62,10 @@ export { describeRenderEnv, renderEnvLines } from "./render-env";
 export type { RenderEnv } from "./render-env";
 export { detectOsColorScheme } from "./color-scheme";
 export type { ColorScheme } from "./color-scheme";
+// Playwright never attaches to a SharedWorker — see shared-worker-requests.ts.
+export { tapSharedWorkerRequests } from "./shared-worker-requests";
+export type {
+  SharedWorkerRequest,
+  SharedWorkerState,
+  SharedWorkerTap,
+} from "./shared-worker-requests";
