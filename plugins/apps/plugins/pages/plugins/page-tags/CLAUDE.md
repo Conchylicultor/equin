@@ -18,7 +18,7 @@
     - `page/tags.TagChipRow`
     - `page/tags.TagDot`
     - `page/tags.TagPicker`
-    - `page/tags.usePageTagIndex`
+    - `page/tags.useListedPageTags`
     - `page/tags.usePageTags`
     - `page/tags.usePageTagsEditor`
     - `primitives/css/inline.Inline`

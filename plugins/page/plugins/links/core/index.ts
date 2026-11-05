@@ -1,4 +1,4 @@
 export { BacklinkRowSchema } from "./schemas";
 export type { BacklinkRow, BacklinkSnippet } from "./schemas";
-export { pageBacklinks, pageLinkSources } from "./resources";
-export type { PageLinkSourcesRow } from "./schemas";
+export { pageBacklinks, pageLinkTargets } from "./resources";
+export type { PageLinkTargetsRow } from "./schemas";

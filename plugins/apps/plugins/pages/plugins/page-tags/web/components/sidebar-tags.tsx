@@ -1,21 +1,23 @@
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
-import type { PageRow } from "@plugins/page/plugins/editor/core";
-import { TagDot, usePageTagIndex } from "@plugins/page/plugins/tags/web";
+import type { PagesTreeRow } from "@plugins/page/plugins/editor/core";
+import { TagDot, useListedPageTags } from "@plugins/page/plugins/tags/web";
 
 /** Dots a row shows at most; a page with more still lists them all on hover. */
 const MAX_DOTS = 3;
 
 /**
  * The sidebar row's mark (`PageTree.RowMarker`): one small dot per tag in the
- * tag's hue, the names on hover. Nothing for an untagged page — and nothing
- * while the tags load: a missing dot claims nothing, it appears once known.
+ * tag's hue, the names on hover. The tags are the row's own (its exposed
+ * `tags` field), resolved against the vocabulary — nothing reads every page's
+ * tags. Nothing for an untagged page — and nothing while the vocabulary
+ * loads: a missing dot claims nothing, it appears once known.
  */
-export function TagDotsMarker({ page }: { page: PageRow }) {
-  const tags = foldResource(usePageTagIndex(), {
+export function TagDotsMarker({ page }: { page: PagesTreeRow }) {
+  const tags = foldResource(useListedPageTags(page), {
     loading: () => undefined,
-    error: (_error, stale) => stale?.get(page.id),
-    ready: (map) => map.get(page.id),
+    error: (_error, stale) => stale,
+    ready: (list) => list,
   });
   if (tags === undefined || tags.length === 0) return null;
   return (

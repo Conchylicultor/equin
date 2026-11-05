@@ -32,12 +32,12 @@ export const BacklinkRowSchema = z.object({
 });
 export type BacklinkRow = z.infer<typeof BacklinkRowSchema>;
 
-// One live page and the pages that link TO it: the distinct source pages of
-// its `page_links` edges, a self-link excluded, in id order (`[]` for a page
-// nothing links to). The row of `pageLinkSources` — the pages sidebar draws
-// each source as a reference parent of the page.
-export const PageLinkSourcesRowSchema = z.object({
+// One live page and the pages it links TO: the distinct target pages of its
+// `page_links` edges, a self-link excluded, in id order (`[]` for a page that
+// links nowhere). The row of `pageLinkTargets` — the pages sidebar draws each
+// target as a reference child of the page.
+export const PageLinkTargetsRowSchema = z.object({
   id: z.string(),
-  linkedFrom: z.array(z.string()),
+  linksTo: z.array(z.string()),
 });
-export type PageLinkSourcesRow = z.infer<typeof PageLinkSourcesRowSchema>;
+export type PageLinkTargetsRow = z.infer<typeof PageLinkTargetsRowSchema>;

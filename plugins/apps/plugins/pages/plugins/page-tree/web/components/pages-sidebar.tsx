@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { useLive } from "@plugins/network/plugins/live/web";
 import {
   useEndpointMutation,
   useFetchEndpoint,
@@ -17,6 +16,7 @@ import {
   defineDataView,
   fieldOverrides,
   liveDataSource,
+  treeAliases,
   type CreateOption,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
@@ -30,7 +30,7 @@ import {
   type PageRow,
   type PagesTreeRow,
 } from "@plugins/page/plugins/editor/core";
-import { pageLinkSources } from "@plugins/page/plugins/links/core";
+import { pageLinkTargets } from "@plugins/page/plugins/links/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { usePageReferenceTint } from "@plugins/page/plugins/page-reference/web";
 import { pageDetailPane, pagesTreePane } from "../panes";
@@ -60,7 +60,19 @@ const SECTIONS: SectionsToolbar = {
 /** The open page's row reads in the title tier: strong text, medium weight. */
 const ACTIVE_LABEL = cn("font-medium text-strong-foreground");
 
-const NO_LINK_CHILDREN: readonly string[] = [];
+/**
+ * Pages a page links to (page-link blocks, inline [[links]]) appear as
+ * read-only reference children of the linking page. The tree reads each held
+ * row's link targets by id (`pageLinkTargets`, one read per loaded level), so
+ * the sidebar holds the links of the rows its windows hold, never every link;
+ * a target no window holds is read by id while its linking page is open.
+ * While a level's targets load the tree renders without them (they pop in —
+ * never a wrong hierarchy; the aliases are an enrichment).
+ */
+const LINK_ALIASES = treeAliases({
+  collection: pageLinkTargets,
+  targets: (row) => row.linksTo,
+});
 
 /**
  * The pages as a live TREE source (`pagesTree` declares `tree: { parent:
@@ -128,7 +140,6 @@ function useSidebarOverrides() {
 export function PagesSidebar() {
   const fetchEndpoint = useFetchEndpoint();
   const overrides = useSidebarOverrides();
-  const links = useLive(pageLinkSources);
   const openPane = useOpenPane();
   const tintOf = usePageReferenceTint();
   const selectedId = pageDetailPane.useRouteEntry()?.params.pageId;
@@ -146,32 +157,11 @@ export function PagesSidebar() {
   const inOwnColumn = useCurrentPane()?.id === pagesTreePane.id;
   const openMode = inOwnColumn ? ("swap" as const) : ("push" as const);
 
-  // linking page id → the pages it links to. Feeds the tree's alias edges,
-  // asked from the parent's side (`getAliasChildren`): a page linked from
-  // another page shows up as a read-only reference child of the linking page
-  // (a target no window holds is read by id while its alias parent is open).
-  // `pageLinkSources` holds, per page, the pages linking TO it; inverted here.
-  // While the sources are still loading — or when their read failed — the
-  // tree simply renders without aliases (they pop in — never a wrong
-  // hierarchy; the aliases are an enrichment, the pages read is the tree).
-  const linkTargetsBySource = useMemo(() => {
-    const map = new Map<string, string[]>();
-    if (links.status === "loading" || links.status === "error") return map;
-    for (const row of links.data) {
-      for (const source of row.linkedFrom) {
-        const targets = map.get(source);
-        if (targets) targets.push(row.id);
-        else map.set(source, [row.id]);
-      }
-    }
-    return map;
-  }, [links]);
-
   // Plain literals (not the view children's options helpers) to respect
   // data-view's collection-consumer separation — consumers never import a view
   // child.
   const viewOptions = useMemo(() => {
-    const activeLabel = (b: PageRow) =>
+    const activeLabel = (b: PagesTreeRow) =>
       b.id === selectedId ? ACTIVE_LABEL : undefined;
     return {
       table: {
@@ -196,7 +186,7 @@ export function PagesSidebar() {
         // the row's right edge. Only while something contributes: with no
         // marker at all, the rows keep their whole width for the title.
         trailing: hasMarkers
-          ? (b: PageRow) => <RowMarkers page={b} />
+          ? (b: PagesTreeRow) => <RowMarkers page={b} />
           : undefined,
         rowAccent: (b: PageRow) => {
           const tint = tintOf(pageData(b));
@@ -261,10 +251,7 @@ export function PagesSidebar() {
             openPane.to(pageDetailPane, { pageId: b.id }, { mode: openMode })
           }
           hierarchy={{
-            // Pages a page links to (page-link blocks, inline [[links]]) appear
-            // as read-only reference children of the linking page.
-            getAliasChildren: (parentId) =>
-              linkTargetsBySource.get(parentId) ?? NO_LINK_CHILDREN,
+            aliases: LINK_ALIASES,
             // No expand hooks — the sidebar chevron and the in-document sub-page
             // arrow are deliberately decoupled. This chevron is device-local view
             // state owned by the data-view primitive (per surface + view
@@ -316,7 +303,7 @@ export function PagesSidebar() {
 }
 
 /** Every `PageTree.RowMarker` contribution for one row, in one rigid cluster. */
-function RowMarkers({ page }: { page: PageRow }) {
+function RowMarkers({ page }: { page: PagesTreeRow }) {
   return (
     <Inline gap="2xs" className={rigidClass()}>
       <PageTree.RowMarker.Render>

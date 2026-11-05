@@ -111,6 +111,7 @@ import {
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import { nullable } from "@plugins/fields/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
 import {
   liveCollection,
   type LiveCollection,
@@ -130,6 +131,8 @@ import type {
   ViewState,
 } from "../../core";
 import { liveDataSource } from "../internal/live-data-source";
+import { treeAliases } from "../internal/live-tree/tree-aliases";
+import { aliasNodeId } from "../internal/hierarchy/project-rows";
 import { defineDataViewSources } from "../internal/define-data-view-sources";
 import { useHierarchyTree } from "../internal/hierarchy/use-hierarchy-tree";
 import { withLiveParentField } from "../internal/flat-hierarchy";
@@ -777,6 +780,75 @@ describe("DataView — a live tree in expand mode", () => {
     expect(json(childRead(c, "r")!.query.where)).not.toContain('"kind"');
     answer(childRead(c, "r"), list([row("k", "r", "a0", 0, "y")]));
     await waitFor(() => expect(lines()).toEqual(["r", "-k"]));
+  });
+});
+
+describe("DataView — a live tree's aliases", () => {
+  // The reference edges, one row per parent: a lookup-only collection.
+  const edgesOf = () =>
+    liveCollection(`test.data-view.live-tree-edges-${n++}`, {
+      carry: { fields: { id: textField(), linksTo: stringListField() } },
+      id: "id",
+    });
+  const edgeReads = (key: string) =>
+    [...fake.mounted]
+      .filter(([, count]) => count > 0)
+      .map(([k]) => JSON.parse(k) as [string, { ids?: string[] }, boolean])
+      .filter(([k, q]) => k === key && q.ids !== undefined)
+      .map(([, q]) => q.ids!);
+
+  it("reads the held rows' edges by id, per level, and draws an open node's targets as references", async () => {
+    const c = nodes();
+    const edges = edgesOf();
+    mount(c, base, {
+      hierarchy: {
+        aliases: treeAliases({ collection: edges, targets: (e) => e.linksTo }),
+      },
+    });
+    await waitFor(() => expect(rootRead(c)).toBeDefined());
+    // Nothing read before a window holds rows.
+    expect(edgeReads(edges.key)).toEqual([]);
+    answer(rootRead(c), pages([row("a", null, "a0", 1), row("b", null, "a1")]));
+    await waitFor(() => expect(edgeReads(edges.key)).toEqual([["a", "b"]]));
+    // No chevron on b until its edges answer.
+    expect(
+      screen.getByText("b").closest("li")!.getAttribute("data-chevron"),
+    ).toBe("false");
+    const edgeKey = fake.keyOf(edges, { ids: ["a", "b"] }, undefined);
+    act(() => {
+      fake.results.set(edgeKey, list([{ id: "b", linksTo: ["x"] }]));
+      fake.notify();
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByText("b").closest("li")!.getAttribute("data-chevron"),
+      ).toBe("true"),
+    );
+
+    // Opening b reads its target, which no window holds, by id — and a's
+    // level read adds one edge read of its own rows.
+    click("toggle b");
+    const targetRead = () =>
+      reads(c).find((r) => json(r.query.ids) === json(["x"]));
+    await waitFor(() => expect(targetRead()).toBeDefined());
+    answer(targetRead(), list([row("x", "elsewhere", "a0")]));
+    // Drawn as the alias (its projected id), never as a row of its own.
+    await waitFor(() =>
+      expect(lines()).toEqual(["a", "b", `-${aliasNodeId("x", "b")}`]),
+    );
+
+    click("toggle a");
+    await waitFor(() => expect(childRead(c, "a")).toBeDefined());
+    answer(childRead(c, "a"), list([row("a1", "a", "a0")]));
+    await waitFor(() =>
+      expect(edgeReads(edges.key)).toEqual([["a", "b"], ["a1"]]),
+    );
+    // The roots' answer is kept while a's level is read: b's reference stays.
+    expect(lines()).toEqual(["a", "-a1", "b", `-${aliasNodeId("x", "b")}`]);
+
+    // Collapsing a releases its level's edge read.
+    click("toggle a");
+    await waitFor(() => expect(edgeReads(edges.key)).toEqual([["a", "b"]]));
   });
 });
 

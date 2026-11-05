@@ -197,10 +197,10 @@ it, so an id means the same thing wherever it is clicked.
     - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
     - `PageTree.RowActions` "delete" → `DeletePageAction`
     - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-  - Uses: 85 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 86 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×9
+    - `primitives/data-view` ×8
     - `page/editor` ×7
-    - `primitives/data-view` ×7
     - `infra/endpoints` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/overlay/image-viewer` ×4

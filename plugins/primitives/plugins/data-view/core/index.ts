@@ -115,6 +115,7 @@ export type {
   RowTone,
   HierarchyConfig,
   LiveHierarchyConfig,
+  LiveTreeAliases,
   SelectionConfig,
   RowDragConfig,
   RowDropConfig,

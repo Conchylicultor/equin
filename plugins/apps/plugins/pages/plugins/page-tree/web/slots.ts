@@ -2,11 +2,7 @@ import type { ComponentType } from "react";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import { defineDetailSections } from "@plugins/primitives/plugins/detail-sections/web";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
-import type {
-  Block,
-  PageRow,
-  PagesTreeRow,
-} from "@plugins/page/plugins/editor/core";
+import type { Block, PagesTreeRow } from "@plugins/page/plugins/editor/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /**
@@ -123,6 +119,6 @@ export const PageTree = {
    * hover the actions cover the marker rather than crowding the title.
    */
   RowMarker: defineRenderSlot<{
-    component: ComponentType<{ page: PageRow }>;
+    component: ComponentType<{ page: PagesTreeRow }>;
   }>({ docLabel: (p) => p.id }),
 };

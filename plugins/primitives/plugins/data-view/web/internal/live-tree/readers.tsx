@@ -4,6 +4,7 @@ import type {
   LiveCollection,
   LiveColumnsDeclaration,
   LiveOrderBy,
+  LiveRowsCollection,
   LiveTreeCollection,
 } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -218,7 +219,7 @@ export function MovedRowReader(props: {
 }
 
 /**
- * The rows open nodes draw as references (`getAliasChildren`) that the tree
+ * The rows open nodes draw as references (`LiveHierarchyConfig.aliases`) that the tree
  * has not loaded, read by id. Renders nothing; reports the rows found.
  */
 export function AliasTargetsReader(props: {
@@ -241,6 +242,50 @@ export function AliasTargetsReader(props: {
   return null;
 }
 
+/**
+ * One chunk of a level's reference edges (`LiveHierarchyConfig.aliases`):
+ * ONE `{ ids }` read of the edge collection for the rows a level holds.
+ * Renders nothing; reports, once the read has answered, each asked id's
+ * referenced ids (`[]` for an id the collection holds no row for). Nothing is
+ * reported while loading, and a failure reports what it last saw — the tree's
+ * own rows still draw; only the references wait (an enrichment, never the
+ * hierarchy).
+ */
+export function AliasEdgesReader(props: {
+  collection: LiveRowsCollection<unknown> & { readonly id: string };
+  readKey: string;
+  ids: readonly string[];
+  targets: (edges: unknown) => readonly string[];
+  onResult: (
+    readKey: string,
+    answer: ReadonlyMap<string, readonly string[]>,
+  ) => void;
+}): ReactNode {
+  const { collection, readKey, ids, targets, onResult } = props;
+  // Erased: any collection answers `{ ids }` through its `:rows`.
+  const read = useLive(collection as AnyCollection, { ids: [...ids] });
+  const rows = foldResource(read, {
+    ready: (data) => data as readonly unknown[],
+    loading: () => null,
+    error: (_error, stale) => (stale as readonly unknown[] | undefined) ?? null,
+  });
+  const idField = collection.id;
+  const answer = useMemo(() => {
+    if (rows === null) return null;
+    const out = new Map<string, readonly string[]>();
+    for (const id of ids) out.set(id, NO_TARGETS);
+    for (const row of rows) {
+      out.set(String((row as Record<string, unknown>)[idField]), targets(row));
+    }
+    return out;
+  }, [rows, ids, idField, targets]);
+  useEffect(() => {
+    if (answer !== null) onResult(readKey, answer);
+  }, [onResult, readKey, answer]);
+  return null;
+}
+
+const NO_TARGETS: readonly string[] = [];
 const NO_ROWS: readonly unknown[] = [];
 const LOADING: TreeChildrenState = { kind: "loading" };
 const LOADED: TreeChildrenState = { kind: "loaded" };

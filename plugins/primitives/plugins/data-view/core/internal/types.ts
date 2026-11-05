@@ -241,19 +241,36 @@ export interface LiveHierarchyConfig<TRow> {
   getParentId?: never;
   getRank?: never;
   lazyChildren?: never;
-  /** Use {@link LiveHierarchyConfig.getAliasChildren}: an unloaded row's alias parents cannot be asked. */
+  /** Use {@link LiveHierarchyConfig.aliases}: an unloaded row's alias parents cannot be asked. */
   getAliasParents?: never;
   /**
-   * The ids an OPEN node also draws as read-only reference children ("aliases"
-   * — {@link HierarchyConfig.getAliasParents}'s edges, asked from the parent's
-   * side): over a paged tree the referenced rows are mostly not loaded, so
-   * only the parent can say which to read. A target not loaded is read by id
-   * (`useLive(c, { ids })`) while its alias parent is open. A node with alias
-   * children has a chevron.
+   * The read-only reference children ("aliases" — {@link
+   * HierarchyConfig.getAliasParents}'s edges, asked from the parent's side)
+   * of every row the tree's windows hold, as a DECLARED read, never a
+   * consumer-held map: `collection` holds one row per parent (keyed by the
+   * tree row's id; no row: no references) and `targets` its referenced ids.
+   * The tree reads it by id for the rows its windows hold — one `{ ids }`
+   * read per loaded level, in chunks of the collection's `maxIds` — so what
+   * it holds is bounded by the windows, never by the edge set. A target no
+   * window holds is read by id (`useLive(c, { ids })`) while its alias
+   * parent is open. A node with alias children has a chevron. Built with
+   * `treeAliases()` (data-view web), which types `targets` by the collection.
    */
-  getAliasChildren?: (parentId: string) => readonly string[];
+  aliases?: LiveTreeAliases;
   onMove?: HierarchyConfig<TRow>["onMove"];
   onCreate?: HierarchyConfig<TRow>["onCreate"];
+}
+
+/**
+ * A live tree's reference edges ({@link LiveHierarchyConfig.aliases}), their
+ * row type erased — `treeAliases()` (data-view web) builds one typed by the
+ * collection it reads.
+ */
+export interface LiveTreeAliases {
+  /** Any collection read by id (`:rows`) — a lookup-only one, a window, an `all` set — keyed by one field. */
+  readonly collection: LiveRowsCollection<unknown> & { readonly id: string };
+  /** The ids one parent's edge row references. Erased here; typed by `treeAliases()`. */
+  readonly targets: (edges: unknown) => readonly string[];
 }
 
 /**

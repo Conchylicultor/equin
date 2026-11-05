@@ -66,7 +66,16 @@ export const pageTagAssignmentShape = defineExtensionShape({
 export const PageTagAssignmentRowSchema = pageTagAssignmentShape.schema;
 export type PageTagAssignmentRow = z.infer<typeof PageTagAssignmentRowSchema>;
 
-/** The workspace's tag vocabulary, whole. */
+/**
+ * How many tags the vocabulary may hold. It is read whole — every picker lists
+ * it, every chip resolves against it — so it is capped rather than held
+ * unbounded: the `all` set's schema and loader refuse past it, and the store
+ * refuses a create that would cross it (400), so the bound holds by the
+ * writes. A hand-curated vocabulary has tens of names.
+ */
+export const PAGE_TAG_VOCABULARY_MAX = 500;
+
+/** The workspace's tag vocabulary, whole (at most {@link PAGE_TAG_VOCABULARY_MAX}). */
 export const pageTagVocabulary = liveCollection("page-tags.vocabulary", {
   // The entity's wire record (its server-only `nameKey` is not on the ref).
   from: pageTagsEntityRef,
@@ -76,28 +85,18 @@ export const pageTagVocabulary = liveCollection("page-tags.vocabulary", {
   id: "id",
   all: {
     orderBy: [["createdAt", "asc"]],
-    unbounded: {
-      reason:
-        "the tag vocabulary is user-curated and small (tens of names); every picker lists it whole",
-    },
+    max: PAGE_TAG_VOCABULARY_MAX,
   },
 });
 
 /**
- * Every tagged page's tags, whole: the sidebar's row markers read a page's tags
- * from this one index (`usePageTagIndex`) — at most one row per TAGGED page,
- * usually a handful. Filtering pages by tag is not this read's: the sidebar's
- * tree (`pagesTree`, a bounded window) filters on its exposed `tags` field
- * server-side.
+ * Tagged pages' tags, by page id — lookup-only, never a whole set: one page's
+ * header chips and picker read `useLive(pageTagAssignments, { id })`. A list
+ * of pages reads its rows' tags off the rows themselves: the extension EXPOSES
+ * `tags` on every list whose rows are blocks (the sidebar's dots and filters
+ * read the `pages.tree.v2` window's `$columns`).
  */
 export const pageTagAssignments = liveCollection("page-tags.assignments", {
   from: pageTagAssignmentShape,
   id: "pageId",
-  all: {
-    orderBy: [["pageId", "asc"]],
-    unbounded: {
-      reason:
-        "one row per TAGGED page — the sidebar row markers' tag index; usually a handful",
-    },
-  },
 });

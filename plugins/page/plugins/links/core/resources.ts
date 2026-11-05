@@ -18,36 +18,31 @@ export const pageBacklinks = liveValue("page-backlinks", {
   params: ["pageId"],
 });
 
-// Every live page with the pages that link TO it (`linkedFrom`, distinct, a
-// self-link excluded, `[]` when nothing does), the WHOLE set (`all`): the pages
-// sidebar draws each source as a reference parent of the page, over the same
-// set of pages `pagesTree` renders. One row per page rather than one per edge,
-// so a `page_links` write is the refill of its TARGET page's row alone.
+// A live page with the pages it links TO (`linksTo`, distinct, a self-link
+// excluded, `[]` when it links nowhere), read BY ID — lookup-only, no whole
+// set: the pages sidebar reads the rows its tree windows hold (data-view's
+// live-tree `aliases`, one `{ ids }` read per loaded level) and draws each
+// target as a read-only reference child of the page. So what it holds is
+// bounded by the tree's windows, never by how many pages or links exist.
 //
-// Served over the `page_blocks` TABLE with a children join over `page_links`
-// on `target_page_id` (`../server/internal/link-source-rows.ts`): an edge
-// insert or delete refills the target's row; a write to a content block — the
-// ~1s `data.text` typing projection — loads nothing (the route reads only the
-// page row's `id`, `type` and `deleted_at`); a trashed target leaves the set,
-// its edges with it.
+// Served over the `page_blocks` TABLE with a MATERIALIZED children join over
+// `page_links` on `source_page_id` (`../server/internal/link-target-rows.ts`):
+// an edge insert or delete re-aggregates its SOURCE page's stored list, and a
+// reader holding that page hears of it only when the list changed; a write to
+// a content block — the ~1s `data.text` typing projection — or a rename
+// loads nothing; a trashed page reads not found.
 //
-// The key is NEW (`page-links.sources`; it was the legacy push resource
-// `page-links`, one row per edge): a tab still running a bundle that
-// subscribed the old key gets `unknown-key` — a `skew` verdict, the Reload
-// prompt — rather than rows its schema cannot read. Pinned by
-// `../server/internal/link-sources-oracle.test.ts`.
-//
-// Not preloaded: nothing reads it until the Pages sidebar mounts.
-export const pageLinkSources = liveCollection("page-links.sources", {
-  // A page row (`page_blocks`) with the ids of the pages linking to it — an
-  // aggregate of the children join, computed by the server half.
+// The key is NEW (`page-links.targets`; it was `page-links.sources`, the
+// whole set of every page with the pages linking TO it, and before it the
+// legacy push resource `page-links`): a tab still running a bundle that
+// subscribed an old key gets `unknown-key` — a `skew` verdict, the Reload
+// prompt. Pinned by `../server/internal/link-targets-oracle.test.ts`.
+export const pageLinkTargets = liveCollection("page-links.targets", {
+  // A page row (`page_blocks`) with the ids of the pages it links to — an
+  // aggregate of the materialized children join, bound by the server half.
   from: pagesEntityRef,
-  carry: { pick: ["id"], fields: { linkedFrom: stringListField() } },
-  // Its wire rows stay `{ id, linkedFrom }`: no exposure of a page folds in.
+  carry: { pick: ["id"], fields: { linksTo: stringListField() } },
+  // Its wire rows stay `{ id, linksTo }`: no exposure of a page folds in.
   baseExposures: false,
   id: "id",
-  all: {
-    orderBy: [["id", "asc"]],
-    unbounded: { reason: "one row per live page" },
-  },
 });

@@ -19,5 +19,6 @@ export {
   pageTagsEntityRef,
   PageTagRowSchema,
   pageTagVocabulary,
+  PAGE_TAG_VOCABULARY_MAX,
 } from "./resources";
 export type { PageTagAssignmentRow, PageTagRow } from "./resources";

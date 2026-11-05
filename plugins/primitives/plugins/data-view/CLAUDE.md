@@ -308,7 +308,7 @@ prefix orphans children); one over a **tree collection** nests — see
 `liveDataSource(c, …)` over a collection declared `tree: { parent, rank }`
 (`network/live`) is a tree source (`LiveTreeDataSource`, carried in tsc as
 `source.tree`). Its DataView nests with or without a `hierarchy`; the one it
-takes is `LiveHierarchyConfig` — `{ onMove?, onCreate?, getAliasChildren? }`
+takes is `LiveHierarchyConfig` — `{ onMove?, onCreate?, aliases? }`
 (`DataViewLiveTree`; beside a flat source it is a tsc error, and a cast one
 throws). Parent and rank are the collection's: no `getParentId` / `getRank` /
 `lazyChildren`.
@@ -379,10 +379,17 @@ view's state:
   that read is mounted (another selection, or the row drawn by a window,
   unpins them). A failed path read is a notice with Retry above the rows
   (`DataViewPaging.notices`), never the view's failure.
-- **Aliases**: `getAliasChildren(parentId)` — asked from the parent's side, as
-  only an open node can say which unloaded rows it references. A target no
-  window holds is read with `useLive(c, { ids })` and drawn only as the alias
-  (`HierarchyConfig.referenceOnly`).
+- **Aliases**: a declared read, `aliases: treeAliases({ collection, targets })`
+  — the edges asked from the parent's side (only a parent can say which
+  unloaded rows it references), one row per parent in `collection`, keyed by
+  the tree row's id. The tree reads it by id for the rows its windows hold:
+  one `AliasEdgesReader` per loaded level (the roots, each open node's
+  children), in chunks of the collection's `maxIds` — so the edges held are
+  bounded by the windows, never by the edge set, and a consumer never holds a
+  whole edge map. A re-read chunk (a level grew) keeps the answer it replaces
+  until it answers, so a reference never blinks. A target no window holds is
+  read with `useLive(c, { ids })` while its parent is open and drawn only as
+  the alias (`HierarchyConfig.referenceOnly`). Expand mode only.
 
 Pinned by `web/__tests__/live-tree.test.tsx`,
 `web/internal/live-tree/tree-rows.test.ts` and the table's
@@ -2424,6 +2431,7 @@ list, table and `primitives/tree` share it.
     - `rowToneClass`
     - `SectionBody`
     - `SubtitleRun`
+    - `treeAliases`
     - `UNGROUPED_FOLD_KEY`
     - `useDataViewControls`
     - `useDataViewSections`
@@ -2567,6 +2575,7 @@ list, table and `primitives/tree` share it.
     - `LiveSearchableColumn`
     - `LiveSourceScope`
     - `LiveSurfaceBinding`
+    - `LiveTreeAliases`
     - `LiveTreeDataSource`
     - `LiveTreeOf`
     - `LiveTreeSpec`

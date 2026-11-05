@@ -16,8 +16,8 @@ edge write or source-page edit.
 linking from three paragraphs is three rows. The backlinks loader folds them
 back to one row per source page — its FIRST linking block in document order
 (`inDocumentOrder`; a page's block forest is read only when it links from more
-than one block) — and `pageLinkSources` (one row per live page) aggregates the
-DISTINCT source pages of its edges.
+than one block) — and `pageLinkTargets` (one row per page, read by id)
+aggregates the DISTINCT target pages of its edges.
 
 That block is what the row's **snippet** is read from: its plain text
 (`textOf`), with every inline token a chip family resolves shown as its title
@@ -32,27 +32,40 @@ root first, walked up the `pageId` relation one batched query per tree level —
 so the list can say where the linking page sits without its web half reading
 the whole page tree (`pagesTree`).
 
-## The page-pair graph is a routed collection (`pageLinkSources`)
+## The page-pair graph, read by id (`pageLinkTargets`)
 
-`liveCollection("page-links.sources", { all: { orderBy: id, unbounded } })`,
-no preload: every live page as `{ id, linkedFrom }` — the distinct source pages
-of its edges, a self-link excluded, `[]` when nothing links to it — read whole
-by the Pages sidebar (`useLive`) as each page's alias parents. Served by
-`serveCollection` over the `page_blocks` TABLE (`server/internal/link-source-rows.ts`,
-the ONE spelling the server and the tests compile): `where type = 'page' AND
-deleted_at IS NULL`, `linkedFrom` a `childrenJoin` over `page_links` on
-`target_page_id` (`array_agg(DISTINCT source_page_id ORDER BY source_page_id)`,
-`ifNone` an empty array).
+`liveCollection("page-links.targets", { from: pagesEntityRef, id })` —
+LOOKUP-ONLY: a live page as `{ id, linksTo }`, the distinct pages it links to,
+a self-link excluded, `[]` when it links nowhere. No whole set: the Pages
+sidebar declares it as its live tree's `aliases` (data-view
+`treeAliases({ collection, targets })`), and the tree reads it by id for the
+rows its windows hold — one `{ ids }` read per loaded level, in chunks of the
+collection's `maxIds` — drawing each target as a reference child. What the
+sidebar holds is bounded by its windows, never by how many pages or links
+exist.
 
-- **One row per TARGET page**, not one per edge: a `page_links` write — the
-  reindexer's diff, the trash hook's drop, an FK cascade — refills its target's
-  row alone. The base route reads only `id`, `type` and `deleted_at`, so the
-  `data.text` typing projection, a rename or a `doc_rank` re-mint reach
-  nothing; a trashed target exits, its edges with it.
-- **The key is new** (it was the legacy push resource `page-links`, one row per
-  edge), so a tab still running an old bundle is refused `unknown-key` — the
-  skew/Reload prompt. Costs, parity with the old DISTINCT loader and C39 are
-  pinned by `server/internal/link-sources-oracle.test.ts` on the tree oracle.
+Served by `serveCollection` over the `page_blocks` TABLE
+(`server/internal/link-target-rows.ts`, the ONE spelling the server and the
+tests compile): `where type = 'page' AND deleted_at IS NULL`, `linksTo` a
+MATERIALIZED children join (`materializeJoin`) over `page_links` on
+`source_page_id` (`array_agg(DISTINCT target_page_id ORDER BY target_page_id)`,
+`ifNone` an empty array), stored in the derived rollup `page_link_targets`
+(`DerivedTable`, on the change feed). Materialized because an unmaterialized
+grouped join is `all`-only, and this is read by id.
+
+- **One row per SOURCE page**: a `page_links` write — the reindexer's diff,
+  the trash hook's drop, an FK cascade — re-aggregates its source's stored
+  list, and a reader holding that page refills it only when the list changed
+  (a second linking block of one pair loads nothing). The base route reads
+  only `id`, `type` and `deleted_at`, so the `data.text` typing projection, a
+  rename or a `doc_rank` re-mint reach nothing; a trashed page reads not
+  found.
+- **The key is new** (it was `page-links.sources`, the whole set of every page
+  with its linking pages, and before it the legacy push resource
+  `page-links`), so a tab still running an old bundle is refused
+  `unknown-key` — the skew/Reload prompt. Costs, parity with the old DISTINCT
+  loader and C39 are pinned by `server/internal/link-targets-oracle.test.ts`
+  on the tree oracle.
 - Not folded into `pagesTree`'s row: `links/server` imports `editor/server`, so
   the editor joining `page_links` would be an import cycle.
 
@@ -68,34 +81,26 @@ a steady-state reboot writes nothing).
 - Server:
   - Contributes:
     - `resource.declare` "page-backlinks"
-    - `resource.declare` "page-links.sources"
-    - `resource.declare` "page-links.sources:rows"
+    - `resource.declare` "page-links.targets:rows"
+    - `derived-table` "page_link_targets"
     - `trigger` "page.links.reindex"
     - `page.editor.block.onDelete`
     - `page.editor.block.onTrash`
     - `page.editor.block.onRestore`
-  - Uses:
-    - `database.db`
-    - `database.DbExecutor`
-    - `database/sql-projection.nullable`
-    - `database/sql-projection.parsed`
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×9
+    - `database/sql-projection` ×2
+    - `database` ×2
+    - `network/live` ×2
+    - `primitives/text-editor/inline-chip` ×2
+    - `database/derived-tables.DerivedTable`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `infra/warmup.defineWarmup`
-    - `network/live.serveCollection`
-    - `network/live.serveValue`
-    - `page/editor._blocks`
-    - `page/editor.BlockDeleteHook`
-    - `page/editor.BlockLifecycle`
-    - `page/editor.BlockRestoreHook`
-    - `page/editor.blocksChanged`
-    - `page/editor.BlockTrashHook`
-    - `page/editor.DeletedBlockRow`
-    - `page/editor.liveBlocks`
-    - `page/editor.PAGE_BLOCK_TYPE`
-    - `primitives/text-editor/inline-chip.inlineTokenReferentTables`
-    - `primitives/text-editor/inline-chip.inlineTokensAsText`
-  - DB schema: `plugins/page/plugins/links/server/internal/tables.ts`
+    - `network/live/query-resource.materializeJoin`
+  - DB schema:
+    - `plugins/page/plugins/links/server/internal/rollup-table.ts`
+    - `plugins/page/plugins/links/server/internal/tables.ts`
   - Exports (types):
     - `BacklinkSource`
     - `PageLinkExtractor`
@@ -109,8 +114,7 @@ a steady-state reboot writes nothing).
     - `defineWarmup('page.links.backfill')`
   - Resources:
     - `page-backlinks` (push, whole: the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table, whole: one page's ancestors — as deep as the page tree nests)
-    - `page-links.sources` (keyed)
-    - `page-links.sources:rows` (keyed, point)
+    - `page-links.targets:rows` (keyed, point)
 - Web:
   - Uses:
     - `network/live.useLive`
@@ -141,11 +145,11 @@ a steady-state reboot writes nothing).
   - Exports (types):
     - `BacklinkRow`
     - `BacklinkSnippet`
-    - `PageLinkSourcesRow`
+    - `PageLinkTargetsRow`
   - Exports (values):
     - `BacklinkRowSchema`
     - `pageBacklinks`
-    - `pageLinkSources`
+    - `pageLinkTargets`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`

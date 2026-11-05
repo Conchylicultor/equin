@@ -225,6 +225,17 @@ export const TASK_ACTIVE_DEPENDENTS_TABLE = "task_active_dependents";
 export const PAGE_TREE_CHILDREN_TABLE = "page_tree_children";
 
 /**
+ * The pages sidebar's link aliases (query-resource's `materializeJoin` of
+ * `page_links` by `source_page_id`, in
+ * `plugins/page/plugins/links/server/internal/link-target-rows.ts`): per page,
+ * the distinct pages it links to, a self-link excluded — read by id
+ * (`page-links.targets:rows`) for the tree's loaded rows. A rollup on the
+ * change feed, created and reconciled by `rebuildDerivedTables` like the ones
+ * above.
+ */
+export const PAGE_LINK_TARGETS_TABLE = "page_link_targets";
+
+/**
  * The full allowlist of public tables created imperatively (outside drizzle),
  * keyed BY THE NAME OF THE CONSTANT that holds each table name.
  *
@@ -267,6 +278,7 @@ export const IMPERATIVE_PUBLIC_TABLES = {
   TASK_CHILD_COUNT_TABLE,
   TASK_ACTIVE_DEPENDENTS_TABLE,
   PAGE_TREE_CHILDREN_TABLE,
+  PAGE_LINK_TARGETS_TABLE,
 } as const satisfies Record<string, string>;
 
 /**

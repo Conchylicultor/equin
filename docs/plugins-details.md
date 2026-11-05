@@ -5739,7 +5739,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/tags.TagChipRow`
               - `page/tags.TagDot`
               - `page/tags.TagPicker`
-              - `page/tags.usePageTagIndex`
+              - `page/tags.useListedPageTags`
               - `page/tags.usePageTags`
               - `page/tags.usePageTagsEditor`
               - `primitives/css/inline.Inline`
@@ -5798,10 +5798,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 85 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+            - Uses: 86 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
               - `primitives/pane` ×9
+              - `primitives/data-view` ×8
               - `page/editor` ×7
-              - `primitives/data-view` ×7
               - `infra/endpoints` ×4
               - `primitives/css/ui-kit` ×4
               - `primitives/overlay/image-viewer` ×4
@@ -21015,6 +21015,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/change-feed`
           - `network/live/live-state-snapshot`
           - `page/editor`
+          - `page/links`
           - `tasks/tasks-core`
       - Test helpers:
         - Server: `@plugins/database/plugins/derived-tables/server/testing`
@@ -21072,6 +21073,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LIVE_STATE_TRIGGER_STATE_TABLE`
           - `MIGRATIONS_TABLE_NAME`
           - `PAGE_CONTENT_EDITED_AT_TABLE`
+          - `PAGE_LINK_TARGETS_TABLE`
           - `PAGE_TREE_CHILDREN_TABLE`
           - `READ_ALIAS_SCHEMA`
           - `readAliasStem`
@@ -36100,6 +36102,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live`
               - `page/attachment-block`
               - `page/editor`
+              - `page/links`
               - `primitives/data-view/custom-columns/values`
               - `primitives/data-view/view-order`
               - `runs`
@@ -38630,34 +38633,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `resource.declare` "page-backlinks"
-          - `resource.declare` "page-links.sources"
-          - `resource.declare` "page-links.sources:rows"
+          - `resource.declare` "page-links.targets:rows"
+          - `derived-table` "page_link_targets"
           - `trigger` "page.links.reindex"
           - `page.editor.block.onDelete`
           - `page.editor.block.onTrash`
           - `page.editor.block.onRestore`
-        - Uses:
-          - `database.db`
-          - `database.DbExecutor`
-          - `database/sql-projection.nullable`
-          - `database/sql-projection.parsed`
+        - Uses: 22 symbols — full list in [`plugins/page/plugins/links/REFERENCE.md`](../plugins/page/plugins/links/REFERENCE.md)
+          - `page/editor` ×9
+          - `database/sql-projection` ×2
+          - `database` ×2
+          - `network/live` ×2
+          - `primitives/text-editor/inline-chip` ×2
+          - `database/derived-tables.DerivedTable`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
           - `infra/warmup.defineWarmup`
-          - `network/live.serveCollection`
-          - `network/live.serveValue`
-          - `page/editor._blocks`
-          - `page/editor.BlockDeleteHook`
-          - `page/editor.BlockLifecycle`
-          - `page/editor.BlockRestoreHook`
-          - `page/editor.blocksChanged`
-          - `page/editor.BlockTrashHook`
-          - `page/editor.DeletedBlockRow`
-          - `page/editor.liveBlocks`
-          - `page/editor.PAGE_BLOCK_TYPE`
-          - `primitives/text-editor/inline-chip.inlineTokenReferentTables`
-          - `primitives/text-editor/inline-chip.inlineTokensAsText`
-        - DB schema: `plugins/page/plugins/links/server/internal/tables.ts`
+          - `network/live/query-resource.materializeJoin`
+        - DB schema:
+          - `plugins/page/plugins/links/server/internal/rollup-table.ts`
+          - `plugins/page/plugins/links/server/internal/tables.ts`
         - Exports (types):
           - `BacklinkSource`
           - `PageLinkExtractor`
@@ -38671,8 +38666,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineWarmup('page.links.backfill')`
         - Resources:
           - `page-backlinks` (push, whole: the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table, whole: one page's ancestors — as deep as the page tree nests)
-          - `page-links.sources` (keyed)
-          - `page-links.sources:rows` (keyed, point)
+          - `page-links.targets:rows` (keyed, point)
       - Web:
         - Uses:
           - `network/live.useLive`
@@ -38703,11 +38697,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `BacklinkRow`
           - `BacklinkSnippet`
-          - `PageLinkSourcesRow`
+          - `PageLinkTargetsRow`
         - Exports (values):
           - `BacklinkRowSchema`
           - `pageBacklinks`
-          - `pageLinkSources`
+          - `pageLinkTargets`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --foreground`
@@ -39500,7 +39494,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/type-scale --font-weight-medium`
-    - **`tags`** — Page tags, web half: the vocabulary and per-page reads (usePageTags, usePageTagIndex, the editable usePageTagsEditor), the soft TagChip / TagDot, the read-only PageTagChips, and the TagPicker popover (search or create, toggle, and per-tag rename / recolor / delete). Shows a page's tags after its title on every page reference (sub-page rows, link blocks, backlinks), and presents the exposed `tags` field (options read live from the vocabulary) in every list whose rows are blocks. Page tags, server half: the page_tags vocabulary and the page_blocks_ext_tags assignments (one ordered tag-id list per tagged page), both served live; the vocabulary CRUD and per-page PUT endpoints; and the reads/writes other plugins use — loadPageTags (the <page-meta> header), resolveTagNames (name → tag, refusing unknown names unless created explicitly) and writeResolvedPageTags / setPageTags. A page's tags are exposed as the `tags` field of every list whose rows are blocks (LiveColumns.Expose).
+    - **`tags`** — Page tags, web half: the vocabulary and per-page reads (usePageTags, useListedPageTags off a listed row's exposed `tags`, the editable usePageTagsEditor), the soft TagChip / TagDot, the read-only PageTagChips, and the TagPicker popover (search or create, toggle, and per-tag rename / recolor / delete). Shows a page's tags after its title on every page reference (sub-page rows, link blocks, backlinks), and presents the exposed `tags` field (options read live from the vocabulary) in every list whose rows are blocks. Page tags, server half: the page_tags vocabulary and the page_blocks_ext_tags assignments (one ordered tag-id list per tagged page), both served live; the vocabulary CRUD and per-page PUT endpoints; and the reads/writes other plugins use — loadPageTags (the <page-meta> header), resolveTagNames (name → tag, refusing unknown names unless created explicitly) and writeResolvedPageTags / setPageTags. A page's tags are exposed as the `tags` field of every list whose rows are blocks (LiveColumns.Expose).
       - Web:
         - Contributes:
           - `IdKinds.Kind` "tag"
@@ -39532,13 +39526,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TagChipRow`
           - `TagDot`
           - `TagPicker`
-          - `usePageTagIndex`
+          - `useListedPageTags`
           - `usePageTags`
           - `usePageTagsEditor`
       - Server:
         - Contributes:
           - `ids.kind` "tag"
-          - `resource.declare` "page-tags.assignments"
           - `resource.declare` "page-tags.assignments:rows"
           - `resource.declare` "page-tags.vocabulary"
           - `resource.declare` "page-tags.vocabulary:rows"
@@ -39571,7 +39564,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `setPageTags`
           - `writeResolvedPageTags`
         - Resources:
-          - `page-tags.assignments` (keyed)
           - `page-tags.assignments:rows` (keyed, point)
           - `page-tags.vocabulary` (keyed)
           - `page-tags.vocabulary:rows` (keyed, point)
@@ -39602,6 +39594,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `closestTagNames`
           - `defaultTagColor`
           - `normalizeTagName`
+          - `PAGE_TAG_VOCABULARY_MAX`
           - `PageTagAssignmentRowSchema`
           - `pageTagAssignments`
           - `pageTagAssignmentShape`
@@ -43975,6 +43968,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `rowToneClass`
           - `SectionBody`
           - `SubtitleRun`
+          - `treeAliases`
           - `UNGROUPED_FOLD_KEY`
           - `useDataViewControls`
           - `useDataViewSections`
@@ -44118,6 +44112,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveSearchableColumn`
           - `LiveSourceScope`
           - `LiveSurfaceBinding`
+          - `LiveTreeAliases`
           - `LiveTreeDataSource`
           - `LiveTreeOf`
           - `LiveTreeSpec`

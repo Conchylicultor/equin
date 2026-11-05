@@ -267,6 +267,7 @@ is recomputed in `onReady`.
     - `network/live/change-feed`
     - `network/live/live-state-snapshot`
     - `page/editor`
+    - `page/links`
     - `tasks/tasks-core`
 - Test helpers:
   - Server: `@plugins/database/plugins/derived-tables/server/testing`

@@ -12,7 +12,7 @@ export interface BacklinkSource {
 /**
  * The live pages that link TO `pageId` — id and title only, ordered by title
  * then id (the backlinks panel's order), one entry per page however many of its
- * blocks carry the link, a self-link excluded (as `pageLinkSources` does).
+ * blocks carry the link, a self-link excluded (as `pageLinkTargets` does).
  *
  * The plain server read for a caller that states "who links here" as text — the
  * `<page-meta>` header an agent's `read_page` opens with — where the backlinks

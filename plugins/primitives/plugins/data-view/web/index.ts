@@ -107,6 +107,7 @@ export {
 } from "./components/primary-over-thumbnail";
 export { FieldCell } from "./components/field-cell";
 export { rowRead } from "./internal/row-reads";
+export { treeAliases } from "./internal/live-tree/tree-aliases";
 export { EditableTreeLabel } from "./components/editable-tree-label";
 export type { FieldCellProps } from "./components/field-cell";
 export { MissingDataCellError, readFallback } from "./components/field-cell";

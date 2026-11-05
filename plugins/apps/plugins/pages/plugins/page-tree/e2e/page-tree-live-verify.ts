@@ -12,8 +12,9 @@
  *     follows (the client sorts by `docRank`).
  *  3. **Renaming** a page produces one upsert, of that page, carrying the new
  *     title.
- *  4. **Adding a `[[page:…]]` link** produces one `page-links.sources` upsert,
- *     of the TARGET page, with the source in `linkedFrom`.
+ *  4. **Adding a `[[page:…]]` link** produces one `page-links.targets:rows`
+ *     upsert, of the SOURCE page (the sidebar reads its held rows' link
+ *     targets by id), with the target in `linksTo`.
  *
  * The writes go through the app's own endpoints (`agentFetch`), never straight
  * into the database: `doc_rank` is maintained by the server's structural-write
@@ -31,7 +32,7 @@
 import { randomBytes } from "node:crypto";
 import type { Locator, Page } from "playwright";
 import { pagesTree } from "@plugins/page/plugins/editor/core";
-import { pageLinkSources } from "@plugins/page/plugins/links/core";
+import { pageLinkTargets } from "@plugins/page/plugins/links/core";
 import {
   agentFetch,
   arg,
@@ -49,7 +50,7 @@ import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 
 const OUT = arg("out") ?? "/tmp/page-tree-live";
 const TREE_KEY = pagesTree.key;
-const LINKS_KEY = pageLinkSources.key;
+const LINKS_KEY = pageLinkTargets.rows.key;
 /**
  * How long a write that must produce NO frame is watched. Absence cannot be
  * polled: this covers the projection's ~1 s debounce, the doc flush and the
@@ -141,7 +142,7 @@ const row = (page: Page, name: string): Locator =>
     .filter({ has: page.getByText(title(name), { exact: true }) })
     .first();
 
-const r = report("pages.tree / page-links.sources are routed end to end");
+const r = report("pages.tree / page-links.targets are routed end to end");
 
 await withBrowser(async (h) => {
   // The seed: root R holding a to-do whose child is sub-page S1, then sub-pages
@@ -282,8 +283,9 @@ await withBrowser(async (h) => {
     );
   }
 
-  // 4. A `[[page:S3]]` link written into R: one `page-links.sources` upsert,
-  //    of S3, linked from R — and no `pages.tree` frame (a content block).
+  // 4. A `[[page:S3]]` link written into R: one `page-links.targets:rows`
+  //    upsert, of R (a root the sidebar holds, so its targets are read),
+  //    linking to S3 — and no `pages.tree` frame (a content block).
   {
     const at = frames.length;
     await createBlock(root.id, "text", text(`see [[page:${s3.id}]]`));
@@ -294,14 +296,14 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(QUIET_MS);
     const ups = upsertsOf(frames, LINKS_KEY, at);
     r.eq(
-      `the link produced one ${LINKS_KEY} upsert, of the target page`,
+      `the link produced one ${LINKS_KEY} upsert, of the source page`,
       ups.map(([id]) => id),
-      [s3.id],
+      [root.id],
     );
     r.eq(
-      "…with the source page in linkedFrom",
-      (ups[0]?.[1] as { linkedFrom?: string[] } | undefined)?.linkedFrom,
-      [root.id],
+      "…with the target page in linksTo",
+      (ups[0]?.[1] as { linksTo?: string[] } | undefined)?.linksTo,
+      [s3.id],
     );
     r.eq(
       `the link's content block produced no ${TREE_KEY} frame`,

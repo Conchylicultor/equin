@@ -907,7 +907,7 @@ export const hostReads: readonly {
   { key: "page-backlinks", needsMachine: false },
   { key: "page-block-docs", needsMachine: false },
   { key: "page-blocks.v2", needsMachine: false },
-  { key: "page-links.sources", needsMachine: false },
+  { key: "page-links.targets", needsMachine: false },
   { key: "page-tags.assignments", needsMachine: false },
   { key: "page-tags.vocabulary", needsMachine: false },
   { key: "page.block-locations", needsMachine: false },

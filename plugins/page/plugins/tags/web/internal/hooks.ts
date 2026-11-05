@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import {
@@ -6,9 +7,13 @@ import {
   type ResourceResult,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
+  exposedColumns,
+  type ContributedColumns,
+} from "@plugins/network/plugins/live/core";
+import {
   pageTagAssignments,
+  pageTagAssignmentShape,
   pageTagVocabulary,
-  type PageTagAssignmentRow,
   type PageTagRow,
 } from "../../core";
 import { putPageTags } from "../../shared/endpoints";
@@ -53,48 +58,25 @@ export function usePageTags(pageId: string): ResourceResult<PageTagRow[]> {
   );
 }
 
+/** The `tags` field every list whose rows are blocks carries (`$columns`). */
+const tagColumns = exposedColumns(pageTagAssignmentShape.exposure);
+
 /**
- * Every tagged page's tags, keyed by page id — the whole-set read a surface
- * listing many pages projects per row (the sidebar's field and its row
- * markers). A page absent from the map carries no tags.
- *
- * Cheap to call once per row: both reads are shared cache entries whose arrays
- * keep their identity until a push changes them, so the index is built once
- * per snapshot pair (a module-level `WeakMap`) and every row's call hits it.
+ * A listed page's tags, in its order — read off the ROW (the `tags` field the
+ * extension exposes on every list whose rows are blocks, e.g. a
+ * `pages.tree.v2` window row), resolved against the vocabulary: a list never
+ * reads every page's tags to mark the rows it shows. `loading` until the
+ * vocabulary lands; an untagged page (NULL) is `ready` with `[]`.
  */
-export function usePageTagIndex(): ResourceResult<
-  ReadonlyMap<string, PageTagRow[]>
-> {
-  const assignments = useLive(pageTagAssignments);
+export function useListedPageTags(row: {
+  readonly $columns: ContributedColumns;
+}): ResourceResult<PageTagRow[]> {
+  const tagIds = tagColumns.read(row).tagIds;
   const vocabulary = useTagVocabulary();
-  return mapResource(combineResources({ assignments, vocabulary }), (data) =>
-    tagIndexOf(data.assignments, data.vocabulary),
+  return useMemo(
+    () => mapResource(vocabulary, (vocab) => resolveTags(tagIds ?? [], vocab)),
+    [vocabulary, tagIds],
   );
-}
-
-const indexCache = new WeakMap<
-  readonly PageTagAssignmentRow[],
-  WeakMap<readonly PageTagRow[], ReadonlyMap<string, PageTagRow[]>>
->();
-
-function tagIndexOf(
-  assignments: readonly PageTagAssignmentRow[],
-  vocabulary: readonly PageTagRow[],
-): ReadonlyMap<string, PageTagRow[]> {
-  let byVocab = indexCache.get(assignments);
-  if (byVocab === undefined) {
-    byVocab = new WeakMap();
-    indexCache.set(assignments, byVocab);
-  }
-  const cached = byVocab.get(vocabulary);
-  if (cached !== undefined) return cached;
-  const map = new Map<string, PageTagRow[]>();
-  for (const a of assignments) {
-    const tags = resolveTags(a.tagIds, vocabulary);
-    if (tags.length > 0) map.set(a.pageId, tags);
-  }
-  byVocab.set(vocabulary, map);
-  return map;
 }
 
 /** One page's tags, editable: what the header chips and the picker share. */

@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import {
   blocksChanged,
@@ -11,8 +12,9 @@ import {
 } from "./internal/backfill-job";
 import {
   pageBacklinksServed,
-  pageLinkSourcesServed,
+  pageLinkTargetsServed,
 } from "./internal/resources";
+import { pageLinkTargetsJoin } from "./internal/link-target-rows";
 import {
   backlinksDeleteHook,
   backlinksTrashHook,
@@ -33,7 +35,9 @@ export default {
   register: [reindexLinksJob, backfillPageLinksJob, pageLinksBackfillWarmup],
   contributions: [
     ...pageBacklinksServed.declare,
-    ...pageLinkSourcesServed.declare,
+    ...pageLinkTargetsServed.declare,
+    // Each page's outgoing link targets, materialized (`page_link_targets`).
+    DerivedTable(pageLinkTargetsJoin.rollup),
     // Reindex a page's outgoing links whenever its blocks change. Declared (not
     // imperatively bound) so the events plugin's syncTriggerContributions makes
     // it idempotent across reboots. Match-any on pageId — the per-emit pageId

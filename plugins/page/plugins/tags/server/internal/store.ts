@@ -8,6 +8,7 @@ import {
 import {
   defaultTagColor,
   normalizeTagName,
+  PAGE_TAG_VOCABULARY_MAX,
   pageTagIdKind,
   tagKey,
   type TagColor,
@@ -163,6 +164,7 @@ export async function writeResolvedPageTags(
     const fresh = tags.filter((t) => t.kind === "new");
     const created: string[] = [];
     if (fresh.length > 0) {
+      await assertVocabularyRoom(tx, fresh.length);
       const inserted = await tx
         .insert(_pageTags)
         .values(
@@ -205,12 +207,38 @@ export async function writeResolvedPageTags(
   });
 }
 
+/**
+ * Refuse a write adding `adding` tags past {@link PAGE_TAG_VOCABULARY_MAX}:
+ * the vocabulary is read whole under that cap, so a tag past it would make
+ * it unreadable — refused here, where the user is told, rather than at the
+ * next load. A count, not a lock: two creates racing at the cap may pass it
+ * together; the `all` set's `max` (schema and loader) is the hard bound, and
+ * fails loudly past it.
+ */
+async function assertVocabularyRoom(
+  executor: DbExecutor,
+  adding: number,
+): Promise<void> {
+  const [row] = await executor
+    .select({ n: sql`count(*)::int`.mapWith(Number) })
+    .from(_pageTags);
+  if (row === undefined) throw new Error("page-tags: count(*) returned no row");
+  const held = row.n;
+  if (held + adding > PAGE_TAG_VOCABULARY_MAX) {
+    throw new HttpError(
+      400,
+      `The tag vocabulary holds at most ${PAGE_TAG_VOCABULARY_MAX} tags (it has ${held}) — delete some before adding more`,
+    );
+  }
+}
+
 /** Add a tag to the vocabulary; 409 when its name (by key) is already one. */
 export async function createPageTag(
   name: string,
   color?: TagColor,
 ): Promise<{ id: string }> {
   const stored = normalizeTagName(name);
+  await assertVocabularyRoom(db, 1);
   const inserted = await db
     .insert(_pageTags)
     .values({

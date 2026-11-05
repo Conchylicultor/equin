@@ -9,7 +9,7 @@ export { TagChipRow } from "./components/page-tag-chips";
 export { TagDot } from "./components/tag-chip";
 export { TagPicker } from "./components/tag-picker";
 export {
-  usePageTagIndex,
+  useListedPageTags,
   usePageTags,
   usePageTagsEditor,
   type PageTagsEditor,
@@ -17,7 +17,7 @@ export {
 
 export default {
   description:
-    "Page tags, web half: the vocabulary and per-page reads (usePageTags, usePageTagIndex, the editable usePageTagsEditor), the soft TagChip / TagDot, the read-only PageTagChips, and the TagPicker popover (search or create, toggle, and per-tag rename / recolor / delete). Shows a page's tags after its title on every page reference (sub-page rows, link blocks, backlinks), and presents the exposed `tags` field (options read live from the vocabulary) in every list whose rows are blocks.",
+    "Page tags, web half: the vocabulary and per-page reads (usePageTags, useListedPageTags off a listed row's exposed `tags`, the editable usePageTagsEditor), the soft TagChip / TagDot, the read-only PageTagChips, and the TagPicker popover (search or create, toggle, and per-tag rename / recolor / delete). Shows a page's tags after its title on every page reference (sub-page rows, link blocks, backlinks), and presents the exposed `tags` field (options read live from the vocabulary) in every list whose rows are blocks.",
   contributions: [
     IdKinds.Kind({ kind: pageTagIdKind }),
     PageReference.Trailing({ id: "tags", component: PageTagChips }),

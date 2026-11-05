@@ -20,9 +20,9 @@ import {
   inlineTokenReferentTables,
   inlineTokensAsText,
 } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
-import { pageBacklinks, pageLinkSources } from "../../core";
+import { pageBacklinks, pageLinkTargets } from "../../core";
 import type { BacklinkRow } from "../../core";
-import { linkSourceRowsServeOptions } from "./link-source-rows";
+import { linkTargetRowsServeOptions } from "./link-target-rows";
 import { deriveSnippet } from "./snippet";
 import { _pageLinks } from "./tables";
 
@@ -235,11 +235,11 @@ function toNode(row: {
   return { ...row, rank: String(row.rank) };
 }
 
-// Every live page with the pages linking to it — a routed `all` collection
-// over `page_blocks` and its `page_links` children (`./link-source-rows.ts`):
-// an edge write — reindex insert/delete, the trash hook's edge drop, an FK
-// cascade from a hard delete — refills its target page's row alone.
-export const pageLinkSourcesServed = serveCollection(
-  pageLinkSources,
-  linkSourceRowsServeOptions,
+// A live page with the pages it links to, by id — a lookup-only `:rows` over
+// `page_blocks` and the materialized `page_link_targets` join
+// (`./link-target-rows.ts`): an edge write re-aggregates its source page's
+// stored list, refilling that row alone for a reader holding it.
+export const pageLinkTargetsServed = serveCollection(
+  pageLinkTargets,
+  linkTargetRowsServeOptions,
 );
