@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import type { DesktopTileApp } from "@plugins/apps/plugins/desktop/plugins/shell/web";
+import type { StripSlots } from "../internal/tab-strip-layout";
 
 /** Live pointer position, in viewport coordinates. */
 export interface DragPointer {
@@ -12,13 +13,15 @@ export interface DragPointer {
  * every pointermove from {@link document.elementFromPoint}:
  *
  * - `strip` — over a window's tab-strip drop-zone (`data-floating-window-id`),
- *   with the computed insertion `index` among that window's member chips. A drop
- *   here reorders (same window) or merges (different window).
+ *   with the insertion `index` among that window's members without the dragged
+ *   one, and the strip's chips as measured at rest (`layout`) — what the strip
+ *   shifts its chips from to open the gap. A drop here reorders (same window)
+ *   or merges (different window).
  * - `desktop` — over empty desktop (no window strip under the cursor). A drop
  *   here tears the tab off into a fresh window at the drop point.
  */
 export type TabDragDrop =
-  | { kind: "strip"; windowId: string; index: number }
+  | { kind: "strip"; windowId: string; index: number; layout: StripSlots }
   | { kind: "desktop" };
 
 /**
@@ -34,6 +37,10 @@ export interface TabDragSession {
   sourceWindowId: string;
   /** Live pointer position (viewport coords), updated on every pointermove. */
   pointer: DragPointer;
+  /** Where the press started — the dragged chip slides by `pointer.x - origin.x` on its own strip. */
+  origin: DragPointer;
+  /** The dragged chip's resting width — the gap a strip opens for it. */
+  width: number;
   /** The drag ghost's label (the member's title). */
   label: string;
   /** The drag ghost's app tile (the member's app), if any. */

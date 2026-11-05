@@ -6,7 +6,7 @@ import { useTabDragSession } from "../hooks/use-tab-drag";
 import { WindowAppTile } from "./window-app-tile";
 
 /**
- * The mockup's tab-drag looks (`.tab-ghost`, `.tabs.drop-target`, `.tab-mark`,
+ * The mockup's tab-drag looks (`.tab-ghost`, `.tabs.drop-target`,
  * `.tear-preview`): fixed pixel chrome, its shadows and accent-on-glass mixes
  * literal because no theme token expresses them.
  */
@@ -25,12 +25,6 @@ const DROP_TARGET_STYLE = {
   boxShadow:
     "inset 0 0 0 1.5px color-mix(in oklab, var(--primary) 55%, transparent)",
   background: "color-mix(in oklab, var(--primary) 6%, transparent)",
-} as const;
-const MARK_STYLE = {
-  width: 2,
-  height: 22,
-  borderRadius: 1,
-  transform: "translateX(-1px)",
 } as const;
 const TEAR_STYLE = {
   borderRadius: 12,
@@ -56,10 +50,8 @@ interface DragMeasurements {
   /** Backdrop-origin x/y (the overlay root's own rect) to map viewport→backdrop. */
   ox: number;
   oy: number;
-  /** The hovered strip's drop-zone rect, if any. */
+  /** Another window's strip under the drag (a merge target), if any. */
   stripRect?: { left: number; top: number; width: number; height: number };
-  /** The insertion mark: its x (a chip's edge) and top (that chip's top + 3). */
-  mark?: { x: number; y: number };
 }
 
 /**
@@ -68,9 +60,10 @@ interface DragMeasurements {
  * theme. Reads the transient {@link useTabDragSession} channel and paints the
  * mockup's three cues:
  *
- * - a **ghost** — the tab's app tile and title on a tilted card riding the cursor;
- * - over a window's tab strip, the strip **lit as a drop target** and an
- *   **insertion mark** at the gap the tab would land in;
+ * - a **ghost** — the tab's app tile and title on a tilted card riding the cursor
+ *   (not over its own strip, where the chip itself rides the pointer);
+ * - over another window's tab strip, the strip **lit as a drop target** (the
+ *   strip opens the gap the tab would land in itself);
  * - over the empty desktop, a **tear-off preview** — the dashed outline of the
  *   window it would become, labelled "New window".
  *
@@ -93,27 +86,12 @@ export function TabDragOverlay() {
     const oy = originRect?.top ?? 0;
 
     const stripEl =
-      drop?.kind === "strip"
+      drop?.kind === "strip" && drop.windowId !== session.sourceWindowId
         ? document.querySelector<HTMLElement>(
             `[data-floating-window-id="${CSS.escape(drop.windowId)}"]`,
           )
         : null;
     const stripRect = stripEl?.getBoundingClientRect();
-
-    // The insertion mark (mockup `startTabDrag`): at the left edge of the chip
-    // the tab would land before, or past the right edge of the last chip.
-    let mark: DragMeasurements["mark"];
-    if (drop?.kind === "strip" && stripEl) {
-      const chips = stripEl.querySelectorAll<HTMLElement>(
-        "[data-floating-tab-id]",
-      );
-      const before = chips[drop.index];
-      const ref = before ?? chips[chips.length - 1];
-      if (ref) {
-        const r = ref.getBoundingClientRect();
-        mark = { x: before ? r.left - 1 : r.right + 1, y: r.top + 3 };
-      }
-    }
 
     setMeasured({
       ox,
@@ -126,14 +104,15 @@ export function TabDragOverlay() {
             height: stripRect.height,
           }
         : undefined,
-      mark,
     });
   }, [session, drop]);
 
   if (!session) return null;
 
-  const { ox, oy, stripRect, mark } = measured;
+  const { ox, oy, stripRect } = measured;
   const onDesktop = drop?.kind === "desktop";
+  const onOwnStrip =
+    drop?.kind === "strip" && drop.windowId === session.sourceWindowId;
 
   return (
     <div
@@ -183,16 +162,8 @@ export function TabDragOverlay() {
         />
       )}
 
-      {/* The insertion mark at the gap the tab would land in. */}
-      {mark && stripRect && (
-        <div
-          // eslint-disable-next-line layout/no-adhoc-layout -- transient insertion mark positioned from measured chip rects; no positioning primitive applies
-          className="absolute bg-primary"
-          style={{ ...MARK_STYLE, left: mark.x - ox, top: mark.y - oy }}
-        />
-      )}
-
       {/* The ghost: the tab's tile and title on a tilted card under the cursor. */}
+      {!onOwnStrip && (
       <Line
         // eslint-disable-next-line layout/no-adhoc-layout -- transient drag ghost positioned from the live pointer; no positioning primitive applies
         className="absolute bg-card text-label text-card-foreground"
@@ -205,6 +176,7 @@ export function TabDragOverlay() {
         <WindowAppTile app={session.app} size={16} radius={4} />
         <Text>{session.label}</Text>
       </Line>
+      )}
     </div>
   );
 }

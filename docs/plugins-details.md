@@ -3593,9 +3593,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `windowRectFraction`
               - `WindowSnapshot`
           - Cross-plugin:
-            - Uses tokens: 22 vars — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
+            - Uses tokens: 23 vars — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
               - `ui/tokens/color-palette` ×13
               - `ui/tokens/type-scale` ×8
+              - `ui/tokens/shadow --shadow-md`
               - `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/desktop/launcher`
@@ -56695,8 +56696,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 47 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
-              - `apps` ×18
+            - Tokens used by: 48 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+              - `apps` ×19
               - `primitives` ×9
               - `ui` ×5
               - `framework` ×3

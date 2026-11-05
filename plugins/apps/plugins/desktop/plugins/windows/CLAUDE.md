@@ -36,7 +36,7 @@ sidebar needs no change here. There is no setting and no per-app flag.
 `FloatingForeground` (the placement's `Foreground`, above every window) mounts:
 
 - this plugin's own window cues, inside the desktop theme (`app:desktop`): the
-  snap ghost, the tab-drag ghost / insertion mark / tear-off preview, and the
+  snap ghost, the tab-drag ghost / merge-target highlight / tear-off preview, and the
   overview's labels and click targets;
 - every `Desktop.Overlay` contribution, each isolated, inside the same theme —
   the windows plugin names none of them (collection–consumer separation);
@@ -211,9 +211,10 @@ new window of the focused window's app; F3 toggles the overview.
     - `windowRectFraction`
     - `WindowSnapshot`
 - Cross-plugin:
-  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×13
     - `ui/tokens/type-scale` ×8
+    - `ui/tokens/shadow --shadow-md`
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/desktop/launcher`
