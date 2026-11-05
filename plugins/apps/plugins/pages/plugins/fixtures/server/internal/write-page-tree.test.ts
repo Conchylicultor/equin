@@ -7,8 +7,9 @@
  * The graph is the portable `dependsOn` closure (from the app's server
  * registry) of the writer plus the consumers a written page reaches (links and its inline-link
  * extractor, the text and to-do blocks, Pages' content search and history),
- * the providers of a host without the computer, and the committed migration
- * history read off disk. Booted through `bootBrowserHost` — the browser host's
+ * and what a host without the computer boots beside it (`test-host`'s
+ * `withPortableHost`: derived providers, the committed migrations and config,
+ * memory host storage). Booted through `bootBrowserHost` — the browser host's
  * own boot (the graph portable by construction — derived from its closure,
  * nothing asserted at boot), then the post-ready phases (the
  * events' trigger sync, the in-process queue's start, the change feed's
@@ -25,31 +26,17 @@
  */
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { declareMemoryHostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { sql } from "drizzle-orm";
+import { bootBrowserHost } from "@plugins/framework/plugins/server-core/core";
 import {
-  bootBrowserHost,
-  type ServerPluginDefinition,
-} from "@plugins/framework/plugins/server-core/core";
-import {
-  serverEntries,
-  serverEntryFor,
-} from "@plugins/framework/plugins/server-core/core/testing";
+  portableClosureOf,
+  withPortableHost,
+} from "@plugins/framework/plugins/browser-server/plugins/test-host/server/testing";
 import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
-import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server";
 import { db } from "@plugins/database/server";
-import {
-  isMigrationFileName,
-  migrationsFrom,
-  MigrationSource,
-} from "@plugins/database/plugins/migrations/server";
-import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
-import { serverPortabilityOf } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import { blockIdKind } from "@plugins/page/plugins/editor/core";
 import { EmojiSchema } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 import { pageLinkToken } from "@plugins/page/plugins/inline-page-link/core";
@@ -59,8 +46,6 @@ import type { PageTreeFixture } from "../../core";
 import { writePageTree } from "./write-page-tree";
 
 setDefaultTimeout(300_000);
-
-type Entry = (typeof serverEntries)[number];
 
 const SUBJECT = "apps/plugins/pages/plugins/fixtures";
 
@@ -84,86 +69,6 @@ const HOST = [
   "network/plugins/live/plugins/change-feed",
   "network/plugins/live/plugins/live-state-snapshot",
 ];
-
-// The portable providers, as registry entries: none is in the app's registry
-// (they are host providers, which no composition bundles).
-const PROVIDERS: Entry[] = [
-  serverEntryFor("database/plugins/pglite", ["database"]),
-  serverEntryFor("infra/plugins/jobs/plugins/in-process", [
-    "infra/plugins/jobs",
-    "database",
-  ]),
-  serverEntryFor("primitives/plugins/log-channels/plugins/memory-persistence", [
-    "primitives/plugins/log-channels",
-  ]),
-  serverEntryFor("infra/plugins/warmup/plugins/sole-host", [
-    "infra/plugins/warmup",
-  ]),
-  // The editor's page icons reach the emoji data mirror, whose cache is a
-  // data-files root.
-  serverEntryFor("infra/plugins/paths/plugins/data-files/plugins/memory", [
-    "infra/plugins/paths/plugins/data-files",
-  ]),
-];
-
-// The committed migration history, read off disk by THIS harness.
-const MIGRATIONS_DATA = join(PLUGINS_DIR, "database/plugins/migrations/data");
-const migrationSource: Entry = {
-  pluginPath: `${SUBJECT}/boot-test-migrations`,
-  id: "apps.pages.fixtures.boot-test-migrations",
-  loader: async () => ({
-    default: {
-      contributions: [
-        MigrationSource.provide({
-          list: () =>
-            migrationsFrom(
-              readdirSync(MIGRATIONS_DATA)
-                .filter(isMigrationFileName)
-                .map((file) => ({
-                  file,
-                  sqlText: readFileSync(join(MIGRATIONS_DATA, file), "utf8"),
-                })),
-            ),
-        }),
-      ],
-    } satisfies ServerPluginDefinition,
-  }),
-  dependsOn: ["database/plugins/migrations"],
-  core: null,
-};
-
-/**
- * The portable `dependsOn` closure of `roots` in the app's server registry:
- * only edges to portable server barrels (derived from their closures,
- * `serverPortabilityOf`) are followed — the graph a browser host boots
- * (`browser-host-gen` keeps each entry's registry edges to its graph the same
- * way; its build guard proves the portable code loads no other barrel). A
- * root that is not portable fails loudly.
- */
-async function portableClosureOf(roots: string[]): Promise<Entry[]> {
-  const byPath = new Map(serverEntries.map((e) => [e.pluginPath, e]));
-  const portability = await serverPortabilityOf(await loadRepoFiles(REPO_ROOT));
-  const isPortable = (path: string) =>
-    portability.isPortable(`plugins/${path}/server/index.ts`);
-  for (const root of roots) {
-    if (!isPortable(root)) throw new Error(`${root} is not portable`);
-  }
-  const seen = new Set<string>();
-  const stack = [...roots];
-  while (stack.length > 0) {
-    const path = stack.pop()!;
-    if (seen.has(path)) continue;
-    const entry = byPath.get(path);
-    if (entry === undefined) {
-      throw new Error(`${path} is not in the server registry`);
-    }
-    seen.add(path);
-    stack.push(...entry.dependsOn.filter(isPortable));
-  }
-  return serverEntries
-    .filter((e) => seen.has(e.pluginPath))
-    .map((e) => ({ ...e, dependsOn: e.dependsOn.filter((d) => seen.has(d)) }));
-}
 
 const IN_CHILD = process.env.PAGES_FIXTURES_BOOT_CHILD === "1";
 
@@ -244,14 +149,10 @@ const TREE: PageTreeFixture = [
 
 describe.if(IN_CHILD)("writePageTree on a portable host", () => {
   beforeAll(async () => {
-    // A browser host keeps its state where its entry point declares; here, in memory.
-    declareMemoryHostStorage();
     const host = await bootBrowserHost({
-      entries: [
-        ...(await portableClosureOf([SUBJECT, ...CONSUMERS, ...HOST])),
-        ...PROVIDERS,
-        migrationSource,
-      ],
+      entries: await withPortableHost(
+        await portableClosureOf([SUBJECT, ...CONSUMERS, ...HOST]),
+      ),
       onUnmatched: unmatchedApiResponse,
     });
     // The boot warm-ups (links and search backfills) enqueue over the empty

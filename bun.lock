@@ -3342,6 +3342,10 @@
       "name": "@equin/plugin-framework-browser-server-host-storage",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/browser-server/plugins/test-host": {
+      "name": "@equin/plugin-framework-browser-server-test-host",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/central-core": {
       "name": "@equin/plugin-framework-central-core",
       "devDependencies": {
@@ -8859,6 +8863,8 @@
     "@equin/plugin-framework-browser-server-demo-scope": ["@equin/plugin-framework-browser-server-demo-scope@workspace:plugins/framework/plugins/browser-server/plugins/demo/plugins/scope"],
 
     "@equin/plugin-framework-browser-server-host-storage": ["@equin/plugin-framework-browser-server-host-storage@workspace:plugins/framework/plugins/browser-server/plugins/host-storage"],
+
+    "@equin/plugin-framework-browser-server-test-host": ["@equin/plugin-framework-browser-server-test-host@workspace:plugins/framework/plugins/browser-server/plugins/test-host"],
 
     "@equin/plugin-framework-central-core": ["@equin/plugin-framework-central-core@workspace:plugins/framework/plugins/central-core"],
 

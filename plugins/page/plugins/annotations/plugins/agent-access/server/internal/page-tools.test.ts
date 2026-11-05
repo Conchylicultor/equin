@@ -7,10 +7,10 @@
  * write outside every agent-authored block refused with nothing written.
  *
  * The graph is agent-access's `dependsOn` closure from the app's server
- * registry, plus the plain text block (a page needs one to hold prose), the
- * providers of a host without the computer, and the committed migration
- * history read off disk — the harness of `tasks/task-category`'s portable-boot
- * suite. Only the graph under test must be portable, not this harness.
+ * registry, plus the plain text block (a page needs one to hold prose), and
+ * what a host without the computer boots beside it (`test-host`'s
+ * `withPortableHost`). Only the graph under test must be portable, not this
+ * harness.
  *
  * Boots in a FRESH bun process (this file re-run as a child with
  * `PAGE_TOOLS_BOOT_CHILD` set): a boot collects its own host-service providers
@@ -21,93 +21,21 @@
  */
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { declareMemoryHostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { sql } from "drizzle-orm";
-import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { bootPluginGraph } from "@plugins/framework/plugins/server-core/core/testing";
 import {
-  bootPluginGraph,
-  serverEntries,
-  serverEntryFor,
-} from "@plugins/framework/plugins/server-core/core/testing";
-import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
+  registryClosureOf,
+  withPortableHost,
+} from "@plugins/framework/plugins/browser-server/plugins/test-host/server/testing";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { db } from "@plugins/database/server";
-import {
-  isMigrationFileName,
-  migrationsFrom,
-  MigrationSource,
-} from "@plugins/database/plugins/migrations/server";
 import { pageTools } from "./page-tools";
 
 setDefaultTimeout(300_000);
 
-type Entry = (typeof serverEntries)[number];
-
 const SUBJECT = "page/plugins/annotations/plugins/agent-access";
-
-// The portable providers, as registry entries: none is in the app's registry
-// (they are host providers, which no composition bundles).
-const PROVIDERS: Entry[] = [
-  serverEntryFor("database/plugins/pglite", ["database"]),
-  serverEntryFor("infra/plugins/jobs/plugins/in-process", [
-    "infra/plugins/jobs",
-    "database",
-  ]),
-  serverEntryFor("primitives/plugins/log-channels/plugins/memory-persistence", [
-    "primitives/plugins/log-channels",
-  ]),
-  serverEntryFor("infra/plugins/warmup/plugins/sole-host", [
-    "infra/plugins/warmup",
-  ]),
-];
-
-// The committed migration history, read off disk by THIS harness.
-const MIGRATIONS_DATA = join(PLUGINS_DIR, "database/plugins/migrations/data");
-const migrationSource: Entry = {
-  pluginPath: `${SUBJECT}/page-tools-boot-migrations`,
-  id: "page.annotations.agent-access.page-tools-boot-migrations",
-  loader: async () => ({
-    default: {
-      contributions: [
-        MigrationSource.provide({
-          list: () =>
-            migrationsFrom(
-              readdirSync(MIGRATIONS_DATA)
-                .filter(isMigrationFileName)
-                .map((file) => ({
-                  file,
-                  sqlText: readFileSync(join(MIGRATIONS_DATA, file), "utf8"),
-                })),
-            ),
-        }),
-      ],
-    } satisfies ServerPluginDefinition,
-  }),
-  dependsOn: ["database/plugins/migrations"],
-  core: null,
-};
-
-/** The `dependsOn` closure of `roots` in the app's server registry. */
-function closureOf(roots: string[]): Entry[] {
-  const byPath = new Map(serverEntries.map((e) => [e.pluginPath, e]));
-  const seen = new Set<string>();
-  const stack = [...roots];
-  while (stack.length > 0) {
-    const path = stack.pop()!;
-    if (seen.has(path)) continue;
-    const entry = byPath.get(path);
-    if (entry === undefined) {
-      throw new Error(`${path} is not in the server registry`);
-    }
-    seen.add(path);
-    stack.push(...entry.dependsOn);
-  }
-  return serverEntries.filter((e) => seen.has(e.pluginPath));
-}
 
 const IN_CHILD = process.env.PAGE_TOOLS_BOOT_CHILD === "1";
 
@@ -184,15 +112,11 @@ const caller = { conversationId: CONVERSATION };
 
 describe.if(IN_CHILD)("pageTools on a portable host", () => {
   beforeAll(async () => {
-    // A browser host keeps its state where its entry point declares; here, in memory.
-    declareMemoryHostStorage();
     await bootPluginGraph({
       mode: "exec",
-      entries: [
-        ...closureOf([SUBJECT, "page/plugins/text"]),
-        ...PROVIDERS,
-        migrationSource,
-      ],
+      entries: await withPortableHost(
+        registryClosureOf([SUBJECT, "page/plugins/text"]),
+      ),
     });
     for (const r of ROWS) {
       await db.execute(

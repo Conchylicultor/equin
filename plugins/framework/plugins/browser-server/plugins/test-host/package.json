@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-browser-server-test-host",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Test harness that boots a slice of the app's server registry as a portable host under bun test: the registry or portable dependsOn closure of some roots, plus — derived, never hand-listed — one host provider per service the graph's modules declare (to a fixpoint), the committed migrations and config read off disk, and in-memory host storage."
+}

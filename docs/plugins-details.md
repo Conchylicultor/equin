@@ -26833,6 +26833,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Test helpers:
             - Core: `@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing`
               - `declareMemoryHostStorage` — Declare that this process's browser host keeps its state in memory — what a test that boots a browser graph (PGlite and the in-memory host stores) declares before `bootBrowserHost`, as a host's entry point declares its storage.
+        - **`test-host`** — Test harness that boots a slice of the app's server registry as a portable host under bun test: the registry or portable dependsOn closure of some roots, plus — derived, never hand-listed — one host provider per service the graph's modules declare (to a fixpoint), the committed migrations and config read off disk, and in-memory host storage.
+          - Test helpers:
+            - Server: `@plugins/framework/plugins/browser-server/plugins/test-host/server/testing`
+              - `portableClosureOf` — The portable `dependsOn` closure of `roots` in the app's server registry: only edges to portable server barrels (derived from their closures, `serverPortabilityOf`) are followed, and each entry's edges are kept to the graph — the graph a browser host boots (`browser-host-gen` does the same; its build guard proves the portable code loads no other barrel).
+              - `registryClosureOf` — The `dependsOn` closure of `roots` in the app's server registry, every edge followed — the graph `bootPluginGraph`'s `exec` mode boots (it loads the desktop's edges as they are).
+              - `withPortableHost` — `graph` as a host without the computer boots it, for a suite booting a slice of the registry (`bootPluginGraph` / `bootBrowserHost`) in its own process:
     - **`central-core`**
       - Core:
         - Uses:

@@ -1,8 +1,9 @@
 /**
  * `writePrototypeFixture` against a real host: the fixture writer's server
- * closure booted on a browser host's providers (PGlite with the real
- * migrations, the in-process job queue, the memory data-files store, snapshot
- * history, no thumbnail renderer), PAST its post-ready phases — so the files watcher, its history adoption and the
+ * closure booted on a browser host's providers (`test-host`'s
+ * `withPortableHost`: PGlite with the real migrations, the in-process job
+ * queue, the memory data-files store, snapshot history, no thumbnail
+ * renderer — chosen, never listed), PAST its post-ready phases — so the files watcher, its history adoption and the
  * thumbnails sync are live, as they are when a demo's seed runs — then
  * written, and read back through the served resources and routes: each
  * history's steps, the picks, the tags and pin, and every version's
@@ -20,36 +21,28 @@
  */
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { declareMemoryHostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import type {
   PrototypeHistory,
   StoredPicks,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import type { ThumbnailState } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/core";
-import { diskConfigGitLayer } from "@plugins/config_v2/server/testing";
 import { db } from "@plugins/database/server";
-import {
-  isMigrationFileName,
-  migrationsFrom,
-  MigrationSource,
-} from "@plugins/database/plugins/migrations/server";
 import {
   hostHttpRoutes,
   loadResourceByKey,
-  type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
 import {
   bootPluginGraph,
   runPostReadyPhases,
-  serverEntries,
   serverEntryFor,
 } from "@plugins/framework/plugins/server-core/core/testing";
+import {
+  registryClosureOf,
+  withPortableHost,
+} from "@plugins/framework/plugins/browser-server/plugins/test-host/server/testing";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
-import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { injectFrameAgent } from "@plugins/primitives/plugins/embed/plugins/frame/plugins/agent/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
@@ -63,8 +56,6 @@ import {
 import { writePrototypeFixture } from "./write";
 
 setDefaultTimeout(300_000);
-
-type Entry = (typeof serverEntries)[number];
 
 const SUBJECT = "apps/plugins/prototypes/plugins/fixtures";
 
@@ -85,100 +76,6 @@ const HOST_PLUMBING = [
   "network/plugins/live/plugins/change-feed",
   "network/plugins/live/plugins/live-state-snapshot",
 ];
-
-// The providers of a host without the computer, as registry entries: none is
-// in the app's registry (they are host providers, which no
-// composition bundles).
-const PROVIDERS: Entry[] = [
-  serverEntryFor("database/plugins/pglite", ["database"]),
-  serverEntryFor("infra/plugins/jobs/plugins/in-process", [
-    "infra/plugins/jobs",
-    "database",
-  ]),
-  serverEntryFor("infra/plugins/attachments/plugins/memory-blobs", [
-    "infra/plugins/attachments",
-  ]),
-  serverEntryFor("primitives/plugins/log-channels/plugins/memory-persistence", [
-    "primitives/plugins/log-channels",
-  ]),
-  serverEntryFor("tasks/plugins/tasks-core/plugins/seeded-push-ledger", [
-    "tasks/plugins/tasks-core",
-  ]),
-  serverEntryFor("infra/plugins/paths/plugins/data-files/plugins/memory", [
-    "infra/plugins/paths/plugins/data-files",
-  ]),
-  serverEntryFor(
-    "apps/plugins/prototypes/plugins/files/plugins/snapshot-history",
-    [
-      "apps/plugins/prototypes",
-      "apps/plugins/prototypes/plugins/files",
-      "infra/plugins/paths/plugins/data-files",
-    ],
-  ),
-  serverEntryFor(
-    "apps/plugins/prototypes/plugins/thumbnails/plugins/no-renderer",
-    ["apps/plugins/prototypes/plugins/thumbnails"],
-  ),
-  serverEntryFor("config_v2/plugins/browser-store", ["config_v2"]),
-  serverEntryFor("infra/plugins/warmup/plugins/sole-host", [
-    "infra/plugins/warmup",
-  ]),
-];
-
-const diskGitLayer: Entry = {
-  pluginPath: `${SUBJECT}/boot-test-config`,
-  id: "apps.prototypes.fixtures.boot-test-config",
-  loader: async () => ({
-    default: {
-      contributions: [diskConfigGitLayer()],
-    } satisfies ServerPluginDefinition,
-  }),
-  dependsOn: ["config_v2"],
-  core: null,
-};
-
-// The committed migration history, read off disk by THIS harness.
-const MIGRATIONS_DATA = join(PLUGINS_DIR, "database/plugins/migrations/data");
-const migrationSource: Entry = {
-  pluginPath: `${SUBJECT}/boot-test-migrations`,
-  id: "apps.prototypes.fixtures.boot-test-migrations",
-  loader: async () => ({
-    default: {
-      contributions: [
-        MigrationSource.provide({
-          list: () =>
-            migrationsFrom(
-              readdirSync(MIGRATIONS_DATA)
-                .filter(isMigrationFileName)
-                .map((file) => ({
-                  file,
-                  sqlText: readFileSync(join(MIGRATIONS_DATA, file), "utf8"),
-                })),
-            ),
-        }),
-      ],
-    } satisfies ServerPluginDefinition,
-  }),
-  dependsOn: ["database/plugins/migrations"],
-  core: null,
-};
-
-/** The `dependsOn` closure of `roots` in the app's server registry. */
-function closureOf(roots: readonly string[]): Entry[] {
-  const byPath = new Map(serverEntries.map((e) => [e.pluginPath, e]));
-  const seen = new Set<string>();
-  const stack = [...roots];
-  while (stack.length > 0) {
-    const path = stack.pop()!;
-    if (seen.has(path)) continue;
-    const entry = byPath.get(path);
-    if (entry === undefined)
-      throw new Error(`${path} is not in the server registry`);
-    seen.add(path);
-    stack.push(...entry.dependsOn);
-  }
-  return serverEntries.filter((e) => seen.has(e.pluginPath));
-}
 
 /**
  * This test's own small fixture: two prototypes, one with a two-step history
@@ -261,19 +158,14 @@ describe.if(IN_CHILD)("writePrototypeFixture, after the host is up", () => {
   const fixture = IN_CHILD ? testFixture() : null;
 
   beforeAll(async () => {
-    // A browser host keeps its state where its entry point declares; here, in memory.
-    declareMemoryHostStorage();
     // `exec` mode: the app registry's edges are the desktop's, which reach a
     // few non-portable server barrels a worker's own graph does not.
     const ordered = await bootPluginGraph({
       mode: "exec",
-      entries: [
-        ...closureOf([...SUBJECT_ENTRY.dependsOn, ...HOST_PLUMBING]),
+      entries: await withPortableHost([
+        ...registryClosureOf([...SUBJECT_ENTRY.dependsOn, ...HOST_PLUMBING]),
         SUBJECT_ENTRY,
-        ...PROVIDERS,
-        migrationSource,
-        diskGitLayer,
-      ],
+      ]),
     });
     // Past ready, as a demo's seed runs: the watcher, the job queue, LISTEN.
     await runPostReadyPhases(ordered);
