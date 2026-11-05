@@ -15,7 +15,7 @@ export async function getPromptTaskOrigin(taskId: string) {
 
 // Create a task from a prompt block's text and stamp its provenance. Mirrors the
 // task-creation block of `handleCreateChain` (instant synthesised title, Haiku
-// upgrade scheduled in the background) plus `registerReportsInvestigation`'s
+// upgrade scheduled in the background) plus `reportInvestigationHandler`'s
 // create-then-stamp pattern.
 //
 // The link row is the SINGLE SOURCE OF TRUTH for the block↔task relation — the

@@ -28,7 +28,8 @@ import {
   runtimeNamespace,
 } from "@plugins/infra/plugins/runtime-identity/core";
 import { resetRuntimeNamespaceForTest } from "@plugins/infra/plugins/runtime-identity/core/testing";
-import { setErrorReporter } from "@plugins/framework/plugins/server-core/core";
+import type { ServerErrorReport } from "@plugins/framework/plugins/server-core/core";
+import { setServerErrorHandler } from "@plugins/framework/plugins/server-core/core/testing";
 import { createDbClient, createDbPool, type DbClient } from "./client";
 import {
   QueryDeadlineExceededError,
@@ -400,8 +401,8 @@ describe("query deadline on a pooled client", () => {
   });
 
   it("an unexpected error on a closed lost client is reported once, never swallowed or fatal", async () => {
-    const reports: Parameters<Parameters<typeof setErrorReporter>[0]>[0][] = [];
-    setErrorReporter((r) => reports.push(r));
+    const reports: ServerErrorReport[] = [];
+    setServerErrorHandler((r) => reports.push(r));
     try {
       const client = createDbClient({
         name: "change-feed",
@@ -418,7 +419,7 @@ describe("query deadline on a pooled client", () => {
         "[db] pool=change-feed: error on a connection closed after a missed deadline: late surprise",
       );
     } finally {
-      setErrorReporter(() => {});
+      setServerErrorHandler(() => {});
     }
   });
 
@@ -709,14 +710,14 @@ describe("withQueryDeadline", () => {
 // ---------------------------------------------------------------------------
 
 describe("connection errors on a pooled client", () => {
-  const reports: Parameters<Parameters<typeof setErrorReporter>[0]>[0][] = [];
+  const reports: ServerErrorReport[] = [];
 
   beforeEach(() => {
     reports.length = 0;
-    setErrorReporter((r) => reports.push(r));
+    setServerErrorHandler((r) => reports.push(r));
   });
   afterEach(() => {
-    setErrorReporter(() => {});
+    setServerErrorHandler(() => {});
   });
 
   async function backendPid(client: PoolClient): Promise<number> {

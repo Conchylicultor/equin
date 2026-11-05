@@ -26,7 +26,6 @@ import { liveStateCompactJob } from "./internal/compact";
 import { snapshotLog as log } from "./internal/log-sink";
 import { assertNoPersistedProducedReader } from "./internal/produced-guard";
 import { liveStateChangelogPruneJob } from "./internal/prune";
-import { openProducedPersistReports } from "./internal/produced-reports";
 
 // L2 persisted materialization. Owns the `live_state_snapshot` table (the durable
 // materialized value), injects the runtime's persist hooks, runs the bounded
@@ -159,11 +158,5 @@ export default {
         `[live-state-snapshot] shutdown: dropped ${dropped} pending floor persist(s) — catch-up replays them`,
       );
     }
-  },
-  // The A6 reports (boot sweep, runtime refusal) are held until every plugin's
-  // `onReady` ran: the reports plugin installs server-core's error reporter in
-  // its own, and a report filed before that would be dropped.
-  onAllReady() {
-    openProducedPersistReports();
   },
 } satisfies ServerPluginDefinition;

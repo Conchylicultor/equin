@@ -12,10 +12,10 @@ export type { HostService } from "./host-service";
 export {
   reportServerError,
   reportServerFatalSync,
-  setErrorReporter,
+  serverErrorSink,
   setFatalReporter,
 } from "./error-reporter";
-export type { ServerFatalReport } from "./error-reporter";
+export type { ServerErrorReport, ServerFatalReport } from "./error-reporter";
 export { setProfilerHooks } from "./profiler-hooks";
 export type {
   LoaderReadsSink,
@@ -64,6 +64,8 @@ export type {
 export type { ServerRegistryEntry } from "./boot-stages";
 export { recordLoaderReadSet } from "./read-set";
 export { getBootMode, registeringPlugin } from "./boot-mode";
+export { sinkHandler } from "./sink-handler";
+export type { SinkHandler } from "./sink-handler";
 export type { BootMode } from "./boot-mode";
 export {
   Resource,

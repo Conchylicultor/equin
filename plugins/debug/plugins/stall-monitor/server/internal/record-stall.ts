@@ -50,7 +50,7 @@ export function recordEventLoopStall(
 
   // Plain `void` — recordReport already wraps its own DB/bell writes in
   // runInBackgroundLane(runWithoutProfiling(…)) internally, so the caller must NOT
-  // double-wrap (precedent: reports' setErrorReporter does `void recordReport(…)`
+  // double-wrap (precedent: reports' server-error handler does `void recordReport(…)`
   // from a sync callback). Satisfies no-floating-promises; no catch (no-bare-catch).
   void recordReport({
     kind: "event-loop-stall",

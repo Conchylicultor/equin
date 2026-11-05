@@ -144,6 +144,7 @@ export type ExemptableRuleId =
   | "relocate:moved-plugins-unnamed"
   | "repo-root/no-depth-counted-path"
   | "repo-walk-safety/no-adhoc-repo-walk"
+  | "report-sink/no-direct-sink-register"
   | "resize-observer-safety/no-raw-resize-observer"
   | "resource-runtime:compiled-routes"
   | "route-teardown-safety/no-unroute"

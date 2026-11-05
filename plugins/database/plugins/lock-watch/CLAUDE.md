@@ -49,9 +49,8 @@ client's (`equin:<pool>`, `isDbApplicationName` — a backend, serving or exec;
 a CLI process logs in as `equin-cli:<pool>` and is reported by the watch) is
 that client's to report, so the watch only logs it (`[lock-watch] … reported
 by its client`) — every reap the watch concludes is in `db.jsonl` either way.
-The handler registers in `onReadyBlocking`, not `onReady`, because an exec
-child (a supervised job's body) skips `onReady` and its ends would sit in the
-sink's hold. Left to the client and so unreported: a backend whose event loop
+The handler is a `sinkHandlers` entry, attached by the framework in every
+boot mode, so an exec child (a supervised job's body) reports its ends too. Left to the client and so unreported: a backend whose event loop
 never runs again — its session was named by `db-lock-holder` every minute
 before the end. Lost to the watch: an end between a backend's last look and
 its successor's first (`previous` lives in memory), and an unrelated FATAL in

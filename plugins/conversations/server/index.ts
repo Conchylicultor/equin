@@ -13,7 +13,7 @@ import {
   conversationsStatusSweepJob,
   startStatusReconciler,
 } from "./internal/status-reconciler";
-import { registerOrphanedAttemptReport } from "./internal/orphaned-attempt-report";
+import { orphanedAttemptReport } from "./internal/orphaned-attempt-report";
 import {
   startTurnEmitter,
   turnEmitterReconcileJob,
@@ -146,8 +146,8 @@ export default {
     conversationTurnCompleted,
     conversationsStatusSweepJob,
   ],
+  sinkHandlers: [orphanedAttemptReport],
   onReady: async () => {
-    registerOrphanedAttemptReport();
     await startStatusReconciler();
     await startTurnEmitter();
   },

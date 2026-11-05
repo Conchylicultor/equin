@@ -1,5 +1,6 @@
 import {
-  setErrorReporter,
+  serverErrorSink,
+  sinkHandler,
   setFatalReporter,
 } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
@@ -24,6 +25,7 @@ export {
   uninvestigatedReports,
 } from "./internal/uninvestigated";
 export { recordReport, recordReportIncident } from "./internal/record-report";
+export { reportOutboxSink } from "./internal/outbox-sink";
 export { investigateReport } from "./internal/investigate";
 export type { RecordReportResult } from "./internal/record-report";
 export { recordReportDebounced } from "./internal/record-report-debounced";
@@ -61,15 +63,11 @@ export default {
     }),
   ],
   register: [backfillNoiseWarmup, reportsRetention],
-  onReady: async () => {
-    // Cheap, serving-critical error-capture wiring stays EAGER: it installs the
-    // process crash hooks + the server error reporter and drains the on-disk
-    // crash buffer from the previous boot. These are near-instant (register a
-    // listener; flush a small JSONL buffer) and must run before first request so
-    // crashes are captured from t=0. Only the heavy `_reports` scan moved to the
-    // deferred/throttled backfill warm-up (see backfillNoiseWarmup).
-    installProcessHooks();
-    setErrorReporter((report) => {
+  // Every caught server error becomes a crash report. A `sinkHandlers` entry,
+  // so it is attached in every boot mode (an exec child's errors are filed
+  // too), and what was reported before it attached is replayed.
+  sinkHandlers: [
+    sinkHandler(serverErrorSink, () => (report) => {
       void recordReport({
         kind: "crash",
         source: "server-caught",
@@ -80,7 +78,16 @@ export default {
           scope: report.scope ?? null,
         },
       });
-    });
+    }),
+  ],
+  onReady: async () => {
+    // Cheap, serving-critical error-capture wiring stays EAGER: it installs the
+    // process crash hooks + the fatal reporter and drains the on-disk
+    // crash buffer from the previous boot. These are near-instant (register a
+    // listener; flush a small JSONL buffer) and must run before first request so
+    // crashes are captured from t=0. Only the heavy `_reports` scan moved to the
+    // deferred/throttled backfill warm-up (see backfillNoiseWarmup).
+    installProcessHooks();
     // The synchronous twin, for a backend on its way out of a deliberate exit.
     // It cannot go through `recordReport` for the same reason the crash hooks
     // cannot: that is a Postgres write, and the caller's next statement is

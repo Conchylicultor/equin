@@ -2,10 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { deadlineExceededKind, jobZombieKind } from "./internal/deadline-kinds";
 import { slotFloorKind } from "./internal/slot-floor-kind";
 import { runnerDiedKind } from "./internal/runner-died-kind";
-import {
-  registerDeadlineReports,
-  unregisterDeadlineReports,
-} from "./internal/register";
+import { deadlineReports } from "./internal/register";
 
 export { deadlineExceededKind, jobZombieKind } from "./internal/deadline-kinds";
 export { slotFloorKind } from "./internal/slot-floor-kind";
@@ -26,10 +23,5 @@ export default {
     slotFloorKind,
     runnerDiedKind,
   ],
-  onReady: () => {
-    registerDeadlineReports();
-  },
-  onShutdown: () => {
-    unregisterDeadlineReports();
-  },
+  sinkHandlers: [deadlineReports],
 } satisfies ServerPluginDefinition;

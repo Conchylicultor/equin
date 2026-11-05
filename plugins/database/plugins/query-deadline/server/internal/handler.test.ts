@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { setErrorReporter } from "@plugins/framework/plugins/server-core/core";
+import { setServerErrorHandler } from "@plugins/framework/plugins/server-core/core/testing";
 import type { QueryDeadlineEvent } from "@plugins/database/plugins/connection/server";
 import type { recordReport } from "@plugins/reports/plugins/engine/server";
 import type { TraceTrigger } from "@plugins/debug/plugins/trace/plugins/engine/core";
@@ -142,7 +142,7 @@ describe("deadline event", () => {
 
   test("a trace capture that throws is reported, and the report still files", () => {
     const errors: string[] = [];
-    setErrorReporter((e) => errors.push(e.message));
+    setServerErrorHandler((e) => errors.push(e.message));
     try {
       const h = harness({
         traceAdmits: () => {
@@ -158,7 +158,7 @@ describe("deadline event", () => {
         "[db] query-deadline: capturing the trace of a lost call failed: trace class blew up",
       ]);
     } finally {
-      setErrorReporter(() => {});
+      setServerErrorHandler(() => {});
     }
   });
 

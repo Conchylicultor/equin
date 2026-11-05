@@ -18,7 +18,7 @@ import type {
   WorkerEvents,
   WorkerPluginContext,
 } from "graphile-worker";
-import { setErrorReporter } from "@plugins/framework/plugins/server-core/core";
+import { setServerErrorHandler } from "@plugins/framework/plugins/server-core/core/testing";
 import { LEGACY_JOB_TASK, taskFor } from "../../core/hold";
 import {
   PICKUP_SAMPLE_CAP,
@@ -192,7 +192,7 @@ describe("occupancy", () => {
 
   test("a job row without a Date lock stamp is reported, never recorded as NaN", () => {
     const reported: string[] = [];
-    setErrorReporter((r) => reported.push(r.message));
+    setServerErrorHandler((r) => reported.push(r.message));
     const originalError = console.error;
     console.error = () => {};
     try {
@@ -205,7 +205,7 @@ describe("occupancy", () => {
       expect(reported[0]).toContain("locked_at");
     } finally {
       console.error = originalError;
-      setErrorReporter(() => {});
+      setServerErrorHandler(() => {});
     }
   });
 });
@@ -246,7 +246,7 @@ describe("activity", () => {
 
   test("a throwing listener is reported and does not stop the others or reach graphile", () => {
     const reported: string[] = [];
-    setErrorReporter((r) => reported.push(r.message));
+    setServerErrorHandler((r) => reported.push(r.message));
     const originalError = console.error;
     console.error = () => {};
     let reached = 0;
@@ -267,7 +267,7 @@ describe("activity", () => {
       offBad();
       offGood();
       console.error = originalError;
-      setErrorReporter(() => {});
+      setServerErrorHandler(() => {});
     }
   });
 });

@@ -4,9 +4,12 @@ import { automationConfigRegistration } from "@plugins/tasks/plugins/automations
 import { reportInvestigationsConfig } from "../shared/config";
 import {
   REPORTS_CATEGORY_ID,
-  registerReportsInvestigation,
+  reportInvestigationHandler,
 } from "./internal/register";
-import { reportInvestigationsAutomation } from "./internal/automation";
+import {
+  reportInvestigationsAutomation,
+  reportRecordedWake,
+} from "./internal/automation";
 import { reportInvestigationsScopeServed } from "./internal/scope";
 
 export default {
@@ -18,7 +21,5 @@ export default {
     ...reportInvestigationsScopeServed.declare,
   ],
   register: [reportInvestigationsAutomation],
-  onReady: () => {
-    registerReportsInvestigation(() => reportInvestigationsAutomation.fire());
-  },
+  sinkHandlers: [reportInvestigationHandler, reportRecordedWake],
 } satisfies ServerPluginDefinition;

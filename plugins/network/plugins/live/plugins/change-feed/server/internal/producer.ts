@@ -152,6 +152,12 @@ export interface ChangeProducer<T extends PgTable> {
     build: (q: ProducerExecutor, table: T) => ProducerBuilder<T>,
     opts: ChangeProducerOptions<R>,
   ): Promise<SelectResultFields<R>[]>;
+  /**
+   * Whether `mutate` may write in this process: it is a serving host (A13).
+   * False in an exec child or a CLI — where a writer files through its own
+   * outbox instead of failing (`reports`' `recordReport`).
+   */
+  writesHere(): boolean;
   /** The contribution that mounts this producer — put it in the owner's `contributions`. */
   readonly declare: ChangeProducerContribution;
 }
@@ -258,10 +264,22 @@ export function defineChangeProducer<T extends PgTable>(
     table: spec.table,
     tableName,
     mutate,
+    writesHere: () => writesHere(tableName),
     declare: ChangeProducerDecl({ table: spec.table }),
   };
   byTable.set(tableName, producer as ChangeProducer<PgTable>);
   return producer;
+}
+
+// The two serving hosts: the desktop's backend and the browser host (a page's
+// worker), each with its own change feed.
+function isServingMode(mode: BootMode): boolean {
+  return mode === "serve" || mode === "browser";
+}
+
+// A13 as a question, for a writer with somewhere else to go.
+function writesHere(tableName: string): boolean {
+  return isServingMode(testMounts.get(tableName)?.mode ?? getBootMode());
 }
 
 // A12 + A13, then where the table's changes route.
@@ -279,9 +297,7 @@ function liveRoute(tableName: string): (change: RoutedChange) => void {
     );
   }
   const mode = test?.mode ?? getBootMode();
-  // The two serving hosts: the desktop's backend and the browser host (a
-  // page's worker), each with its own change feed.
-  if (mode !== "serve" && mode !== "browser") {
+  if (!isServingMode(mode)) {
     throw new Error(
       `[change-feed] change producer for "${tableName}" refused a write in boot mode "${mode}": only a serving host has the subscribers its change must reach (A13) — file the write through the outbox instead`,
     );

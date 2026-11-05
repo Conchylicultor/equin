@@ -17,6 +17,7 @@ import {
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { reportsProducer } from "./producer";
+import { reportOutboxSink } from "./outbox-sink";
 import { bumpWindowAndCheck } from "./velocity";
 import { isNoiseReport } from "./noise";
 import {
@@ -59,7 +60,11 @@ export type RecordReportResult =
   | { outcome: "shed" }
   // Folded into a fan-out storm rollup: no row, no notification. `stormKind`
   // is the kind of the rollup report that accounts for it.
-  | { outcome: "collapsed"; stormKind: string };
+  | { outcome: "collapsed"; stormKind: string }
+  // Filed from a process that cannot write `reports` (an exec child — a
+  // supervised job's body — or a CLI): handed to the report outbox, which
+  // main's backend drains and records (`reports/outbox`).
+  | { outcome: "outbox" };
 
 // The generic one-line summary is unbounded (an aggregated error can be hundreds
 // of KB). Clamp it at the ingestion boundary so nothing downstream — the row,
@@ -204,6 +209,7 @@ const fanOut = createFanOutGate({
 export async function recordReport(
   input: ReportInput,
 ): Promise<RecordReportResult> {
+  if (!reportsProducer.writesHere()) return toOutbox(input);
   const filed = await fileReport(input);
   if (filed.bell) ringBell(filed.bell, null);
   return filed.result;
@@ -223,6 +229,11 @@ export async function recordReportIncident(
 ): Promise<RecordReportResult[]> {
   // Sequential: the order is the caller's significance order, and the fan-out
   // budget is spent in it.
+  if (!reportsProducer.writesHere()) {
+    const outboxed: RecordReportResult[] = [];
+    for (const input of inputs) outboxed.push(toOutbox(input));
+    return outboxed;
+  }
   const filed: FiledReport[] = [];
   for (const input of inputs) filed.push(await fileReport(input));
   const ringing = filed.flatMap((f) => (f.bell ? [f.bell] : []));
@@ -244,6 +255,16 @@ export async function recordReportIncident(
     });
   }
   return filed.map((f) => f.result);
+}
+
+// Only a serving host writes `reports` (the producer's A13): anywhere else —
+// an exec child, whose sink handlers attach in every boot mode, or a CLI — the
+// report goes to the outbox (`./outbox-sink`), which main drains and records
+// under the `cli` source. The one chokepoint, so no caller has to know which
+// process it is in.
+function toOutbox(input: ReportInput): RecordReportResult {
+  reportOutboxSink.emit(input);
+  return { outcome: "outbox" };
 }
 
 // What ringing a recorded row's bell needs — everything the notification reads.

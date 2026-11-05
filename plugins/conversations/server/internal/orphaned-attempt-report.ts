@@ -1,3 +1,4 @@
+import { sinkHandler } from "@plugins/framework/plugins/server-core/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { orphanedAttemptSink } from "@plugins/tasks/plugins/tasks-core/server";
 
@@ -6,9 +7,12 @@ import { orphanedAttemptSink } from "@plugins/tasks/plugins/tasks-core/server";
 // so one of these means a write path nobody can explain: file it as a crash so
 // the bell shows it. Registered here because this plugin owns that launch
 // invariant, and tasks-core cannot import reports (see the sink's comment).
-// The sink holds what the sweep emitted before this registers, then replays it.
-export function registerOrphanedAttemptReport(): void {
-  orphanedAttemptSink.register(({ attemptId, taskId }) => {
+// The sink holds what the sweep emitted before this attaches (a
+// `sinkHandlers` entry), then replays it.
+export const orphanedAttemptReport = sinkHandler(
+  orphanedAttemptSink,
+  () =>
+    ({ attemptId, taskId }) => {
     void recordReport({
       kind: "crash",
       source: "server-caught",
@@ -20,5 +24,5 @@ export function registerOrphanedAttemptReport(): void {
         label: "tasks-core.sweepOrphanedAttempts",
       },
     });
-  });
-}
+    },
+);

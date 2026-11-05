@@ -7,7 +7,7 @@
 // import made the cross-plugin graph cyclic. Instead, server-core declares the
 // hooks it needs here with safe no-op defaults, and runtime-profiler INJECTS the
 // real implementation at boot via `setProfilerHooks` — mirroring the
-// `setErrorReporter` pattern in ./error-reporter.
+// `setFatalReporter` pattern in ./error-reporter.
 
 /** Minimal view of a loader aggregate that server-core reads for the _debug endpoint. */
 export interface LoaderAggregateView {

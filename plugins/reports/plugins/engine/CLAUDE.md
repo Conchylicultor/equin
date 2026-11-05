@@ -83,7 +83,12 @@ Rules that follow:
   the `change-feed:producer-writes` check fails on it.
 - **Only the serving backend writes.** `mutate` throws in an exec child (a
   supervised job body) or a CLI: its change would reach no subscriber. Such a
-  process files through the outbox (below).
+  process files through the outbox (below) — and `recordReport` does that by
+  itself: when `reportsProducer.writesHere()` is false it hands the report to
+  `reportOutboxSink` (result `{ outcome: "outbox" }`), whose writer the outbox
+  plugin attaches in every boot mode. So a sink handler that files reports
+  (a missed query deadline, an ended idle transaction) works unchanged in a
+  supervised child.
 - **Volatile.** A change still pending in the 2 s window is lost on a restart;
   an open reader reloads in full when it resubscribes. Within one subscription a
   lost change heals the window's membership but not the values of rows already
@@ -144,6 +149,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `recordReportDebounced`
     - `recordReportIncident`
     - `renderReportTask`
+    - `reportOutboxSink`
     - `uninvestigatedReportCounts`
     - `uninvestigatedReports`
   - Register:

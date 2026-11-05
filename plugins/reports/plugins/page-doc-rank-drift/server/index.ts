@@ -4,7 +4,7 @@ import {
   PAGE_DOC_RANK_DRIFT_KIND,
   PageDocRankDriftPayloadSchema,
   pageDocRankDriftFingerprint,
-  registerPageDocRankDriftReport,
+  pageDocRankDriftReport,
   renderPageDocRankDriftTask,
 } from "./internal/page-doc-rank-drift";
 
@@ -24,7 +24,5 @@ export default {
       renderTask: renderPageDocRankDriftTask,
     }),
   ],
-  onReady() {
-    registerPageDocRankDriftReport();
-  },
+  sinkHandlers: [pageDocRankDriftReport],
 } satisfies ServerPluginDefinition;

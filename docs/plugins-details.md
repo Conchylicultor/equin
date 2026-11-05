@@ -27322,6 +27322,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/resource-runtime.createResourceRuntime`
           - `network/live/resource-runtime.ResourceGuardError`
           - `packages/string-hash.hash64`
+          - `primitives/report-sink.defineReportSink`
         - Exports (types):
           - `BootJournalEntry`
           - `BootMode`
@@ -27375,10 +27376,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SeedOutcome`
           - `ServerContribution`
           - `ServerContributionToken`
+          - `ServerErrorReport`
           - `ServerFatalReport`
           - `ServerPluginDefinition`
           - `ServerRegistryEntry`
           - `ServerResourceOptions`
+          - `SinkHandler`
           - `Span`
           - `TableChange`
           - `TableLayoutRequirement`
@@ -27442,14 +27445,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seedPersistedSnapshot`
           - `seedRouteDrift`
           - `serverCollectedDir`
+          - `serverErrorSink`
           - `setClientBuildIdentity`
           - `setEpochHandoffHooks`
-          - `setErrorReporter`
           - `setFatalReporter`
           - `setLiveStateSnapshotHooks`
           - `setProfilerHooks`
           - `setRelationBases`
           - `setWatermarkSource`
+          - `sinkHandler`
           - `triggerResourcePush`
           - `unboundedWindowKeys`
           - `unfedResourceTables`
@@ -27483,6 +27487,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runSettledPhase` — The settled phase of a SERVING host (`serve`, `browser`): every plugin's `onSettled`, once the host is already serving and every post-ready phase has resolved — post-serving catch-up work (infra/warmup drains every declared warm-up here). `exec` has no path to it: a short-lived child must never run heavy post-serving work, and this function is the only caller of the hook.
           - `serverEntries`
           - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states.
+          - `setServerErrorHandler` — Route every `reportServerError` to `fn` — or to nobody (`null`) — discarding whatever was held before, so a suite never receives another suite's reports.
           - `withHostServices` — Run `fn` with `providers` (each a `Svc.provide(impl)`) answering their services — over the unbooted host's providers and over a collected graph's — and put the previous answers back once it settles, so a suite swapping a service cannot leak it into the suites after it in the same bun process.
     - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots` record declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
       - Cross-plugin:
@@ -47609,6 +47614,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `debug/slow-ops`
+          - `framework/server-core`
           - `primitives/perfs/latency-signal`
       - Core:
         - Exports (types):
@@ -49862,6 +49868,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `recordReportDebounced`
           - `recordReportIncident`
           - `renderReportTask`
+          - `reportOutboxSink`
           - `uninvestigatedReportCounts`
           - `uninvestigatedReports`
         - Register:
@@ -50045,13 +50052,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `optimisticRejectionFingerprint`
           - `OptimisticRejectionPayloadSchema`
-    - **`outbox`** — Report outbox drain: on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged; one from another repository (the writer stamps its own) is filed without that check, its message saying where it came from; an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
+    - **`outbox`** — Report outbox writer and drain: writes every report recordReport hands to the engine's reportOutboxSink (a process that cannot write reports — an exec child, a CLI) into the outbox, in every boot mode, awaiting the writes on shutdown; and on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged; one from another repository (the writer stamps its own) is filed without that check, its message saying where it came from; an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
       - Server:
         - Uses:
           - `infra/file-watcher.defineFileWatcher`
           - `infra/file-watcher.FileWatcher`
           - `reports.isReportKindRegistered`
           - `reports/engine.recordReport`
+          - `reports/engine.reportOutboxSink`
         - Register: `defineFileWatcher('reports-outbox.outbox-dir')`
       - Core:
         - Uses:

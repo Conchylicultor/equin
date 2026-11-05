@@ -1,7 +1,10 @@
 // Server-level error reporter hook.
-// Plugins (e.g. crashes) register a handler via setErrorReporter();
-// infrastructure code (resources, jobs) calls reportServerError() to surface
-// caught errors that would otherwise only hit console.error.
+// Infrastructure code (resources, jobs) calls reportServerError() to surface
+// caught errors that would otherwise only hit console.error; the reports plugin
+// handles `serverErrorSink` (a `sinkHandlers` entry). A held report sink: an
+// error reported before the handler attaches — during boot, in any boot mode —
+// is replayed to it, not dropped.
+import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
 
 export interface ServerErrorReport {
   message: string;
@@ -17,16 +20,10 @@ export interface ServerErrorReport {
   scope?: string | null;
 }
 
-type ErrorReporter = (report: ServerErrorReport) => void;
-
-let reporter: ErrorReporter | undefined;
-
-export function setErrorReporter(fn: ErrorReporter): void {
-  reporter = fn;
-}
+export const serverErrorSink = defineReportSink<ServerErrorReport>();
 
 export function reportServerError(report: ServerErrorReport): void {
-  reporter?.(report);
+  serverErrorSink.emit(report);
 }
 
 /**

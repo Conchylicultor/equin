@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { setErrorReporter } from "@plugins/framework/plugins/server-core/core";
+import { setServerErrorHandler } from "@plugins/framework/plugins/server-core/core/testing";
 import { handleMcpRequest } from "./handle-mcp";
 import { currentMcpHealth, resetMcpHealth } from "./health";
 import { Mcp } from "../../server";
@@ -30,7 +30,7 @@ let gateOpen: () => boolean;
 
 beforeEach(() => {
   resetMcpHealth();
-  setErrorReporter(() => {});
+  setServerErrorHandler(() => {});
   gateOpen = () => true;
   void Mcp.tool({
     name: "gated",

@@ -1,6 +1,7 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   type RoutedCut,
+  reportServerError,
   setLiveStateSnapshotHooks,
   seedRouteDrift,
   unboundedWindowKeys,
@@ -29,7 +30,6 @@ import {
   type RelationBases,
 } from "./produced-guard";
 import { snapshotLog as log } from "./log-sink";
-import { codeDigestReports, producedPersistReports } from "./produced-reports";
 
 // Install the L2 snapshot subsystem during the `onReadyBlocking` barrier: create
 // the snapshot table, inject the persist hooks into the resource runtime, and seed
@@ -199,21 +199,22 @@ export async function initSnapshotSubsystem(
 }
 
 // One A6 report: the boot sweep and the runtime refusal each file at most one
-// per key. Logged at once; filed through a HELD sink, because both can fire
-// before the reports plugin installs server-core's error reporter (the sweep
-// runs in `onReadyBlocking`, a refusal can follow `onReady`'s forced
-// recomputes) — `reportServerError` itself drops a report with no reporter.
+// per key. Logged at once, and filed (`reportServerError` holds one reported
+// before the reports plugin's handler attaches, so the sweep's — in
+// `onReadyBlocking` — is not lost).
 function reportProducedPersist(message: string): void {
   log.publish(`[live-state-snapshot] A6: ${message}`, "stderr");
-  producedPersistReports.emit(`[live-state-snapshot] A6: ${message}`);
+  reportServerError({
+    message: `[live-state-snapshot] A6: ${message}`,
+    errorType: "ProducedTablePersisted",
+  });
 }
 
 // A key whose code digest failed: not persisted this boot (its stamp is
-// unknown, and the persist gate is a known stamp). Logged at once; filed
-// through a held sink, like A6's — the digest runs in `onReadyBlocking`,
-// before the reports plugin installs server-core's error reporter.
+// unknown, and the persist gate is a known stamp). Logged at once and filed,
+// like A6's.
 function reportCodeDigestFailure(key: string, err: unknown): void {
   const message = `[live-state-snapshot] "${key}" is not persisted this boot: the digest of its code failed — ${String(err)}`;
   log.publish(message, "stderr");
-  codeDigestReports.emit(message);
+  reportServerError({ message, errorType: "L2CodeDigestFailed" });
 }

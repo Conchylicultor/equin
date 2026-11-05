@@ -31,7 +31,8 @@ import {
   runWithoutProfiling,
   type SlowSpan,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { setErrorReporter } from "@plugins/framework/plugins/server-core/core";
+import type { ServerErrorReport } from "@plugins/framework/plugins/server-core/core";
+import { setServerErrorHandler } from "@plugins/framework/plugins/server-core/core/testing";
 import {
   changesOf,
   defineChangeProducer,
@@ -266,8 +267,8 @@ describe("mutate", () => {
 describe("flush", () => {
   test("a throw routing one change is filed, and the flush's other changes still route", async () => {
     unmount();
-    const reports: Parameters<Parameters<typeof setErrorReporter>[0]>[0][] = [];
-    setErrorReporter((r) => reports.push(r));
+    const reports: ServerErrorReport[] = [];
+    setServerErrorHandler((r) => reports.push(r));
     unmount = mountProducersForTest([items, now], {
       route: (c) => {
         if (c.op === "D") throw new Error("router broke");
@@ -299,7 +300,7 @@ describe("flush", () => {
       expect(reports[0]!.errorType).toBe("ChangeProducerRouteError");
       expect(reports[0]!.message).toContain("router broke");
     } finally {
-      setErrorReporter(() => {});
+      setServerErrorHandler(() => {});
     }
   });
 });

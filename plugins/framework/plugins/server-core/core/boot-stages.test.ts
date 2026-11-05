@@ -10,8 +10,11 @@ import type { LoadedServerPlugin } from "./types";
 import {
   bootPluginGraph,
   runPostReadyPhases,
+  runReadyBarrier,
   runSettledPhase,
+  runShutdownHooks,
 } from "./boot-stages";
+import { sinkHandler } from "./sink-handler";
 import { isolateHostServices } from "./testing/host-services";
 import { clearCollectedContributions } from "./contributions";
 
@@ -127,5 +130,62 @@ describe("runSettledPhase — the onSettled hook", () => {
       caught = err;
     }
     expect((caught as Error).message).toBe("settle-boom");
+  });
+});
+
+// A sink handler attaches in the ready barrier — the phase every boot mode
+// runs; an `exec` boot (the supervised job child) runs no `onReady`, and a
+// handler registered there never drained the child's sink. It attaches after
+// its `dependsOn` parents' blocking hooks, before its plugin's own, and
+// detaches only after every `onShutdown`. Plugins are handed in directly.
+describe("sinkHandlers — attached in the ready barrier", () => {
+  test("attaches after the parents' onReadyBlocking and before its own; detaches after every onShutdown", async () => {
+    const log: string[] = [];
+    const sink = {
+      register(fn: ((body: string) => void) | null) {
+        log.push(fn ? "attach" : "detach");
+      },
+    };
+    const parent: LoadedServerPlugin = {
+      id: "test.parent",
+      onReadyBlocking: () => {
+        log.push("parent onReadyBlocking");
+      },
+    };
+    const child: LoadedServerPlugin = {
+      id: "test.child",
+      dependsOn: [parent],
+      sinkHandlers: [sinkHandler(sink, () => (body: string) => log.push(body))],
+      onReadyBlocking: () => {
+        log.push("child onReadyBlocking");
+      },
+      onShutdown: () => {
+        log.push("child onShutdown");
+      },
+    };
+    await runReadyBarrier([parent, child]);
+    expect(log).toEqual([
+      "parent onReadyBlocking",
+      "attach",
+      "child onReadyBlocking",
+    ]);
+    await runShutdownHooks([parent, child]);
+    expect(log.slice(3)).toEqual(["child onShutdown", "detach"]);
+  });
+});
+
+describe("sinkHandler — one handler per sink", () => {
+  test("a second handler on an attached sink throws; the same one re-attaches", () => {
+    const sink = { register(_fn: ((body: string) => void) | null) {} };
+    const first = sinkHandler(sink, () => (_body: string) => {});
+    const second = sinkHandler(sink, () => (_body: string) => {});
+    first.attach();
+    first.attach();
+    expect(() => second.attach()).toThrow(
+      "two sinkHandlers attached to one sink",
+    );
+    first.detach();
+    second.attach();
+    second.detach();
   });
 });

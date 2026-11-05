@@ -1,3 +1,4 @@
+import { sinkHandler } from "@plugins/framework/plugins/server-core/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
   jobDeadlineSink,
@@ -9,14 +10,16 @@ import { formatDurationMs } from "./format-duration";
 /**
  * Route deadline announcements from the parent's seam into the reports engine.
  *
- * Registered in `onReady` and cleared in `onShutdown`. Until it is registered
+ * A `sinkHandlers` entry, attached by the framework in every boot mode. Until it is attached
  * the seam is a no-op that returns `undefined`, and the parent treats that as its explicit
  * fallback branch (`reportServerError`) — so a deadline firing before this
  * plugin is ready is still loud, it just lands as a plain server error instead
  * of a typed report.
  */
-export function registerDeadlineReports(): void {
-  jobDeadlineSink.register((event: JobDeadlineEvent): boolean => {
+export const deadlineReports = sinkHandler(
+  jobDeadlineSink,
+  () =>
+    (event: JobDeadlineEvent): boolean => {
     const data: JobDeadlinePayload = {
       jobName: event.jobName,
       jobId: event.jobId,
@@ -66,9 +69,5 @@ export function registerDeadlineReports(): void {
       data,
     });
     return true;
-  });
-}
-
-export function unregisterDeadlineReports(): void {
-  jobDeadlineSink.register(null);
-}
+    },
+);

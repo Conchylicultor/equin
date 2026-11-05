@@ -46,8 +46,10 @@ this plugin owns the interpretation. Same split, same reason, as
 (`queryDeadlineSink`, `QueryDeadlineEvent` from `@plugins/database/plugins/connection/server`); the
 parent never imports the child.
 
-The seam is a fire-and-forget `defineReportSink`, registered in `onReady` and
-cleared in `onShutdown`. It holds what is emitted before registration, so a
+The seam is a fire-and-forget `defineReportSink`; the handler is a
+`sinkHandlers` entry (`server-core`'s `sinkHandler`), which the framework
+attaches in every boot mode — an exec child (a supervised job's body) drains
+it too. The sink holds what is emitted before the handler attaches, so a
 deadline that fires during boot is replayed rather than lost.
 
 ## The kind

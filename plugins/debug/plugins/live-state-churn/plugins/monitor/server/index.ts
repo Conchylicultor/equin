@@ -16,8 +16,7 @@ export default {
   ],
   // Install the push accumulator at boot. onResourcePush returns an unsubscribe,
   // but this is a process-lifetime registration (one observer for the whole
-  // backend), so we intentionally never tear it down — mirroring reports'
-  // setErrorReporter install in its own onReady.
+  // backend), so we intentionally never tear it down.
   onReady: () => {
     onResourcePush(recordPush);
   },

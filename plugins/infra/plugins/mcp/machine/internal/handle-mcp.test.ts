@@ -8,7 +8,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { setErrorReporter } from "@plugins/framework/plugins/server-core/core";
+import { setServerErrorHandler } from "@plugins/framework/plugins/server-core/core/testing";
 import { handleMcpRequest } from "./handle-mcp";
 import { Mcp, type McpToolContext } from "../../server";
 import { instructionsRegistry, registry } from "../../server/internal/registry";
@@ -57,7 +57,7 @@ let reported: string[] = [];
 beforeEach(() => {
   renders = [];
   reported = [];
-  setErrorReporter((report) => reported.push(report.message));
+  setServerErrorHandler((report) => reported.push(report.message));
   instructionsRegistry.clear();
   registry.clear();
   void Mcp.tool({

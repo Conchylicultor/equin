@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sinkHandler } from "@plugins/framework/plugins/server-core/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import type { ReportRow } from "@plugins/reports/server";
 import { docRankDriftSink } from "@plugins/page/plugins/editor/server";
@@ -60,10 +61,11 @@ function render(d: PageDocRankDriftPayload): string {
 /**
  * File the drift the editor's boot reconcile announces on `docRankDriftSink`.
  * The sink held what the editor's `onReadyBlocking` emitted before this
- * registers, and replays it here.
+ * attaches (a `sinkHandlers` entry), and replays it here.
  */
-export function registerPageDocRankDriftReport(): void {
-  docRankDriftSink.register((drift) => {
+export const pageDocRankDriftReport = sinkHandler(
+  docRankDriftSink,
+  () => (drift) => {
     const data: PageDocRankDriftPayload = {
       written: drift.written,
       rekeyed: drift.rekeyed,
@@ -76,5 +78,5 @@ export function registerPageDocRankDriftReport(): void {
       message: title(data),
       data,
     });
-  });
-}
+  },
+);

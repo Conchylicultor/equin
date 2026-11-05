@@ -412,11 +412,15 @@ async function runGraphPhase(
   for (const p of ordered) {
     const deps = (p.dependsOn ?? []).map((d) => resolved.get(d.id)!);
     const ready = Promise.all(deps).then(async () => {
+      // A sink handler attaches here, in the phase every boot mode runs (see
+      // `./sink-handler.ts`), before the plugin's own blocking hook.
+      const handlers = hook === "onReadyBlocking" ? (p.sinkHandlers ?? []) : [];
       const fn = p[hook];
-      if (!fn) return;
+      if (!fn && handlers.length === 0) return;
       const end = profilerStart(`${hook}:${p.id}`, hook, p.id, p.id);
       try {
-        await fn.call(p);
+        for (const h of handlers) h.attach();
+        await fn?.call(p);
       } catch (err) {
         console.error(`[plugin.${p.id}] ${hook} failed`, err);
         if (hook === "onReadyBlocking" || p.loadBearing) throw err;
@@ -443,7 +447,9 @@ async function runGraphPhase(
 // registry. ANY plugin's rejection here aborts boot — this is a hard barrier, so
 // its fatality is NOT gated on `loadBearing` (a plugin with optional blocking work
 // handles its own failure inside the hook). See `runGraphPhase`.
-async function runReadyBarrier(ordered: LoadedServerPlugin[]): Promise<void> {
+export async function runReadyBarrier(
+  ordered: LoadedServerPlugin[],
+): Promise<void> {
   const end = profilerStart(
     "onReadyBlocking",
     "onReadyBlocking",
@@ -569,6 +575,14 @@ export async function runShutdownHooks(
         ),
     ),
   );
+  // After every `onShutdown`: what a draining worker emits on its way out
+  // still reaches its handler.
+  detachSinkHandlers(ordered);
+}
+
+// Detach every plugin's `sinkHandlers` (the sinks are process-global).
+function detachSinkHandlers(ordered: LoadedServerPlugin[]): void {
+  for (const p of ordered) for (const h of p.sinkHandlers ?? []) h.detach();
 }
 
 /** A load failure that is only a CONSEQUENCE of some other barrel throwing. */

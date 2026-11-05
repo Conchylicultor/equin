@@ -7,7 +7,12 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
-import { ReportKind, type ReportRow } from "@plugins/reports/server";
+import {
+  ReportKind,
+  reportRecordedSignal,
+  type ReportRow,
+} from "@plugins/reports/server";
+import { sinkHandler } from "@plugins/framework/plugins/server-core/core";
 import {
   linkReportsToTask,
   renderReportTask,
@@ -136,3 +141,12 @@ export const reportInvestigationsAutomation = defineAutomation({
     };
   },
 });
+
+// Every recorded report wakes the Report investigations automation, which
+// decides for itself whether it is on and the report in scope. Only a serving
+// host records (a report from an exec child goes through the outbox and is
+// recorded — and signalled — by main), so in a child this never fires.
+export const reportRecordedWake = sinkHandler(
+  reportRecordedSignal,
+  () => () => reportInvestigationsAutomation.fire(),
+);

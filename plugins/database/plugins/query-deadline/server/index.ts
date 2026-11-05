@@ -1,10 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { abandonCapKind, queryDeadlineKind } from "./internal/kinds";
 import { dbQueryDeadlinesServed } from "./internal/resource";
-import {
-  registerQueryDeadlineReports,
-  unregisterQueryDeadlineReports,
-} from "./internal/register";
+import { queryDeadlineReports } from "./internal/register";
 
 export { abandonCapKind, queryDeadlineKind } from "./internal/kinds";
 
@@ -16,10 +13,5 @@ export default {
     abandonCapKind,
     ...dbQueryDeadlinesServed.declare,
   ],
-  onReady: () => {
-    registerQueryDeadlineReports();
-  },
-  onShutdown: () => {
-    unregisterQueryDeadlineReports();
-  },
+  sinkHandlers: [queryDeadlineReports],
 } satisfies ServerPluginDefinition;

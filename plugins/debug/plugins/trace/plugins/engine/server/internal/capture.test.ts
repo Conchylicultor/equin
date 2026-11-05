@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { z } from "zod";
 import {
   collectContributions,
-  setErrorReporter,
+  type ServerErrorReport,
 } from "@plugins/framework/plugins/server-core/core";
+import { setServerErrorHandler } from "@plugins/framework/plugins/server-core/core/testing";
 import type { TraceTrigger, TripContext } from "../../core";
 import { defineTraceEventClass, type TraceEventClassSpec } from "./registry";
 import { resetRateLimit } from "./rate-limit";
@@ -20,19 +21,16 @@ import {
 } from "./trace-shed";
 
 // Capture the loud server-error reports the engine files on a bad section, so
-// "isolated but loud" is asserted, not assumed. setErrorReporter is global —
-// save/restore around each test.
-type ServerErrorReport = Parameters<Parameters<typeof setErrorReporter>[0]>[0];
+// "isolated but loud" is asserted, not assumed. The server error handler is
+// global — set before each test, cleared after.
 let reports: ServerErrorReport[] = [];
-let prevReporter: ((r: ServerErrorReport) => void) | undefined;
 
 beforeEach(() => {
   reports = [];
-  prevReporter = undefined;
-  setErrorReporter((r) => reports.push(r));
+  setServerErrorHandler((r) => reports.push(r));
 });
 afterEach(() => {
-  setErrorReporter(prevReporter ?? (() => {}));
+  setServerErrorHandler(null);
 });
 
 const ctx: TripContext = {

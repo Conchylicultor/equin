@@ -1,3 +1,4 @@
+import type { SinkHandler } from "./sink-handler";
 import type { ServerWebSocket } from "bun";
 import type { EndpointAccess } from "@plugins/framework/plugins/principal/core";
 
@@ -175,6 +176,17 @@ export interface ServerPluginDefinition {
    * ready registry.
    */
   onReadyBlocking?: () => void | Promise<void>;
+  /**
+   * This plugin's handlers on one-handler sinks (`primitives/report-sink`),
+   * each `sinkHandler(sink, () => handler)`. The framework attaches them in the
+   * `onReadyBlocking` phase — which EVERY boot mode runs (`serve`, `exec`,
+   * `browser`), so a supervised job's child drains its sinks too — just before
+   * this plugin's own `onReadyBlocking`, and detaches them after the process's
+   * `onShutdown` hooks. Never `sink.register(fn)` from a hook instead
+   * (`report-sink/no-direct-sink-register`): a hook a mode skips leaves the sink
+   * holding, then dropping, what that process emitted. See `./sink-handler.ts`.
+   */
+  sinkHandlers?: SinkHandler[];
   /**
    * Called once after `onReadyBlocking` has completed across all plugins (so a
    * migrated DB and ready registry are guaranteed). Use this for background

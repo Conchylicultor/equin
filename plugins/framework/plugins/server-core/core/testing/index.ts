@@ -63,3 +63,8 @@ export { serverEntries } from "../server.generated";
 // provider, which no composition bundles), loaded the way the
 // registry loads one — for a suite booting a graph with it.
 export { serverEntryFor } from "./server-entry";
+
+// The server error sink is process-global and HOLDS what nobody handles: a
+// suite capturing `reportServerError` routes it to its own handler, discarding
+// what earlier suites left held (`null`: none — later reports are held again).
+export { setServerErrorHandler } from "./server-errors";
