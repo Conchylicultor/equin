@@ -132,7 +132,11 @@ describe("runRepoFiles (the run's ctx.repo)", () => {
         loadSnapshot: () => Promise.resolve(null),
         root: () => Promise.resolve(notARepo),
       });
-      expect(repo()).rejects.toThrow("git ls-files");
+      // The fallback runs several git reads at once and the first to fail
+      // names the rejection, so assert the cause, not which command lost.
+      expect(repo()).rejects.toThrow(
+        /^git .* failed in .*not a git repository/s,
+      );
     } finally {
       rmSync(notARepo, { recursive: true, force: true });
     }
