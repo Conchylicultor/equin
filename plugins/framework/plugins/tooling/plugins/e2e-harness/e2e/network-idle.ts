@@ -14,6 +14,16 @@ import { isWorkerChunkPath } from "@plugins/framework/plugins/tooling/plugins/we
  * says where it emits worker scripts: vite's worker chunks and the browser
  * hosts' worker trees).
  *
+ * What a SharedWorker fetches itself is not counted: it reaches no page
+ * listener, and attaching to the worker over CDP to see it keeps the worker
+ * alive past its last page (see `tapSharedWorkerRequests`), which changes what a
+ * returning page meets. So idle here is the PAGE's network: on /demo it comes
+ * while the host is still loading in its worker. Wait on what the page shows
+ * for that — a marker, or `waitForNotBusy` (no `aria-busy` loader left).
+ *
+ * A request the previous document left in flight is dropped when the next one
+ * commits: Playwright never reports it finished.
+ *
  * Every page a harness session creates is tracked from its first request (the
  * session's page, and any `context.newPage()` after it); `waitForNetworkIdle`
  * refuses a page the harness never saw.
@@ -34,7 +44,13 @@ function track(page: Page): void {
   const notify = (): void => {
     for (const fn of [...tracker.changed]) fn();
   };
+  // The URL of the latest main-frame navigation: a commit landing there (or
+  // on about:blank, which sends none) replaces the document.
+  let navigatingTo: string | null = null;
+  const isMainNavigation = (req: Request): boolean =>
+    req.isNavigationRequest() && req.frame() === page.mainFrame();
   page.on("request", (req) => {
+    if (isMainNavigation(req)) navigatingTo = withoutHash(req.url());
     if (isWorkerChunkPath(new URL(req.url()).pathname)) return;
     tracker.inflight.add(req);
     notify();
@@ -44,6 +60,32 @@ function track(page: Page): void {
   };
   page.on("requestfinished", settle);
   page.on("requestfailed", settle);
+  // What the replaced document still had in flight is never reported finished
+  // or failed — a request sent as it unloaded (a log flush) would hold every
+  // wait on the next document forever. At the commit, nothing of the new
+  // document has been sent yet, so every request but the navigation itself is
+  // the old one's. A same-document navigation (pushState, a hash) commits
+  // nothing new: it lands neither where a navigation request went nor on
+  // about:blank — so a navigation that never committed (a 204, a download)
+  // leaves no pending drop for the next pushState to take.
+  page.on("framenavigated", (frame) => {
+    if (frame !== page.mainFrame()) return;
+    const url = frame.url();
+    if (url !== "about:blank" && withoutHash(url) !== navigatingTo) return;
+    navigatingTo = null;
+    let dropped = false;
+    for (const req of tracker.inflight) {
+      if (isMainNavigation(req)) continue;
+      tracker.inflight.delete(req);
+      dropped = true;
+    }
+    if (dropped) notify();
+  });
+}
+
+function withoutHash(url: string): string {
+  const hash = url.indexOf("#");
+  return hash === -1 ? url : url.slice(0, hash);
 }
 
 /** Track every page of a harness session's context, from its first request. */

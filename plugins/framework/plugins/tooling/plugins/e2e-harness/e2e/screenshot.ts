@@ -22,7 +22,8 @@
 // The capture waits for the page to be RENDERED, not for a fixed time: it
 // re-captures until the screen is more than one flat colour (an app still
 // booting is its bare background — the "black screenshot"), then for network
-// idle, then `--wait` more for post-paint settling. A page that never paints
+// idle and for no visible `aria-busy` loader (`busy.ts`), then `--wait` more
+// for post-paint settling. A page that never paints
 // within the deadline fails the run (exit 1) instead of handing back a black
 // PNG that reads as evidence; so does any capture `snap()` finds blank.
 //
@@ -50,6 +51,7 @@ import { snap } from "./shots";
 import { flatness, hexColor } from "./pixels";
 import { waitFor, ELEMENT_TIMEOUT_MS } from "./wait";
 import { waitForNetworkIdle } from "./network-idle";
+import { waitForNotBusy } from "./busy";
 
 const url = pageUrl();
 const click = arg("click");
@@ -88,6 +90,17 @@ await withBrowser(async (h) => {
   }
   console.log(`painted after ${painted.waitedMs}ms`);
   await waitForNetworkIdle(page);
+  // Network idle is the page's own requests: work it waits on can run where
+  // they do not show (the demo's host boots in a SharedWorker), so also wait
+  // for the app to stop showing a loader.
+  const settled = await waitForNotBusy(page, { timeoutMs: ELEMENT_TIMEOUT_MS });
+  if (!settled.ok) {
+    console.error(
+      `STILL-LOADING after ${settled.waitedMs}ms — capturing anyway: ${settled.value.join(" | ")}`,
+    );
+  } else if (settled.attempts > 1) {
+    console.log(`loaders cleared after ${settled.waitedMs}ms`);
+  }
   await page.waitForTimeout(waitMs);
   if (!(await snap(page, out, "before")).ok) process.exitCode = 1;
 

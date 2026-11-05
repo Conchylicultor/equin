@@ -235,10 +235,22 @@ script load as a request of the page that started it, but the response lands in
 the worker's target, which Playwright does not attach to — so that request never
 finishes. `waitForNetworkIdle(page)` (`e2e/network-idle.ts`, and `boot()`
 without a marker) counts the page's in-flight requests itself and leaves out a
-worker-chunk load (`isWorkerChunkPath` from web-artifacts, the one place worker
-scripts are emitted). Every page a session creates is tracked from its first
-request; a page the harness never saw is refused. The `e2e-harness/no-networkidle`
-lint rule rejects the literal in e2e scripts.
+worker script load (`isWorkerChunkPath` from web-artifacts, read off the two
+layouts it emits worker scripts in: an artifact's worker chunk, and a browser
+host's worker tree — the demo's SharedWorker host). The request carries no other
+sign of being a worker's: resource type `script`, no `Sec-Fetch-Dest`. Every
+page a session creates is tracked from its first request; a page the harness
+never saw is refused. The `e2e-harness/no-networkidle` lint rule rejects the
+literal in e2e scripts.
+
+Idle is the PAGE's network. What a SharedWorker fetches itself reaches no page
+listener, and attaching to the worker over CDP to count it would keep the
+worker alive past its last page — changing what a returning page meets — so it
+is not counted. On `/demo` the page goes idle while the host is still booting
+in its worker (its modules, then its database: seconds of work with nothing in
+flight). For "the app has settled", wait on what the page shows: a marker, or
+`waitForNotBusy(page)` (`e2e/busy.ts`) — no visible `aria-busy` region left,
+the state every `Loading` renders. `screenshot.ts` waits for both.
 
 For the same reason, `page.on("websocket")` and `routeWebSocket` see nothing of
 the live sockets: frame assertions and socket faults go through

@@ -84,6 +84,8 @@ import {
   report,
   snap,
   waitFor,
+  waitForNetworkIdle,
+  waitForNotBusy,
   withBrowser,
   type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -367,12 +369,7 @@ await withBrowser(async (h) => {
   // From here on, every /api request the page itself sends is recorded.
   const leaked: string[] = [];
   const sanctioned: string[] = [];
-  // When the page last sent anything: step 4 waits for each landing to go
-  // quiet (the harness's network-idle cannot: the host's SharedWorker script
-  // load never finishes in Playwright's view).
-  let lastRequestAt = Date.now();
   const onRequest = (req: Request): void => {
-    lastRequestAt = Date.now();
     const url = new URL(req.url());
     if (!url.pathname.startsWith("/api/")) return;
     const line = `${req.method()} ${url.pathname}`;
@@ -723,17 +720,24 @@ await withBrowser(async (h) => {
       .first()
       .click();
     await closeLauncherGrid(grid);
-    // The landing's own reads and loads (covers, thumbnails), and what renders
-    // once they answer: until the page has sent nothing for two seconds.
-    const quiet = await waitFor(
-      () => Promise.resolve(Date.now() - lastRequestAt),
-      (idleMs) => idleMs >= 2_000,
-      { timeoutMs: RENDER_TIMEOUT_MS },
-    );
-    if (!quiet.ok)
-      r.note(
-        `${tile.name}: the page never went quiet (${quiet.value} ms idle)`,
-      );
+    // The landing's own reads (through the worker: its loaders show them),
+    // then what the rendered landing loads itself (covers, thumbnails): two
+    // seconds with nothing in flight.
+    const loaded = await waitForNotBusy(embed, {
+      timeoutMs: RENDER_TIMEOUT_MS,
+    });
+    if (!loaded.ok)
+      r.note(`${tile.name}: still loading — ${loaded.value.join(" | ")}`);
+    await waitForNetworkIdle(page, {
+      timeoutMs: RENDER_TIMEOUT_MS,
+      idleMs: 2_000,
+    }).catch((err: unknown) => {
+      if (!(
+        err instanceof Error && err.message.startsWith("waitForNetworkIdle:")
+      ))
+        throw err;
+      r.note(`${tile.name}: the page never went quiet — ${err.message}`);
+    });
     r.ok(
       `${tile.name}: its landing (${(await embed.getAttribute("data-app-embed")) ?? "?"}) loads nothing from the page's origin`,
       leaked.length === leakedBefore,

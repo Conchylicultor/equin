@@ -10,6 +10,7 @@
  * whatever the caller knows how to read about its own app (`describe`).
  */
 import type { Page } from "playwright";
+import { busyRegions } from "./busy";
 import { inflightUrls } from "./network-idle";
 
 /** How the page looked: one line per signal, ready to print. */
@@ -28,28 +29,21 @@ export async function describeBootStall(
       return t.length > max ? `${t.slice(0, max)}…` : t;
     };
     const matches = [...document.querySelectorAll(sel)];
-    const busy = [...document.querySelectorAll('[aria-busy="true"]')].map(
-      (el) =>
-        squash(
-          el.getAttribute("aria-label") ?? (el.textContent || el.tagName),
-          60,
-        ),
-    );
     return {
       matches: matches.length,
       firstBox: matches[0] ? boxOf(matches[0]) : null,
-      busy,
       text: squash(document.body.innerText, 300),
     };
   }, marker);
+  const busy = await busyRegions(page);
   const lines = [
     `url: ${page.url()}`,
     seen.matches === 0
       ? "marker: no element matches"
       : `marker: ${String(seen.matches)} match(es), never visible (first box ${seen.firstBox ?? "?"})`,
-    seen.busy.length === 0
+    busy.length === 0
       ? "loading: nothing aria-busy on the page"
-      : `loading: ${String(seen.busy.length)} aria-busy region(s): ${seen.busy.slice(0, 5).join(" | ")}`,
+      : `loading: ${String(busy.length)} aria-busy region(s): ${busy.slice(0, 5).join(" | ")}`,
   ];
   const inflight = inflightUrls(page);
   if (inflight !== null) {
