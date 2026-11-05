@@ -34,6 +34,17 @@ import { mountShared, type World } from "./chapters/shared";
 const SPLIT = 2.3;
 const SPLIT_LEN = 0.65;
 
+/** Frame k's drawing fades in over p ∈ [k - 1 + FIN_AT, k - 1 + FIN_AT + FIN_LEN]. */
+const FIN_AT = 0.25;
+const FIN_LEN = 0.55;
+/**
+ * At p = k + COVERED frame k + 1's drawing has fully faded in over frame k: frame k's loop rests
+ * (back at its start) from there on. Played on beneath, it would still show wherever the next
+ * frame does not cover it (chapter 1's spark, in the title bar above chapter 2's apps, sending
+ * out a wish every step that flashes and dives under them).
+ */
+const COVERED = FIN_AT + FIN_LEN;
+
 export interface Zoom {
   /** p: continuous progress, 0 (an idea) … 5 (every app). */
   update(p: number): void;
@@ -159,6 +170,8 @@ export function mountZoom(
   let last = 0;
   let lastP = -1;
   let split = false;
+  /** Chapter 2's loop stops where it is while it is taken apart. */
+  const frozen = (k: number) => k === 2 && split;
   let sep = 0;
   const baseBack: number[] = [];
   const baseFront: number[] = [];
@@ -214,7 +227,9 @@ export function mountZoom(
     for (let k = 0; k < N; k++) {
       const s = S[k]! / Cam;
       const fin =
-        k === 0 || F[k]!.selfFades ? 1 : smooth((p - (k - 1) - 0.25) / 0.55);
+        k === 0 || F[k]!.selfFades
+          ? 1
+          : smooth((p - (k - 1) - FIN_AT) / FIN_LEN);
       baseBack[k] =
         (k === 0 ? 1 : smooth((p - (k - 1)) / 0.5)) *
         (k === N - 1 ? 1 : 1 - smooth((p - k) / 0.8));
@@ -245,9 +260,12 @@ export function mountZoom(
     os.update(p, sep);
     for (const l of lives) l?.update(p);
     paint();
-    // a chapter's loop starts over while it is still hidden, so it is seen from its beginning
+    // a chapter's loop starts over while it is still hidden, so it is seen from its beginning, and
+    // rests at its start once the next chapter covers it (chapter 2's is frozen by the split before)
     timelines.forEach((sc, k) => {
-      if (sc && lastP < k - 0.8 && p >= k - 0.8) sc.restart();
+      if (!sc || frozen(k)) return;
+      const crossed = (at: number) => lastP < at && p >= at;
+      if (crossed(k - 0.8) || crossed(k + COVERED)) sc.restart();
     });
     lastP = p;
     wish.setOn(p < 0.6 && opts.ideaRead());
@@ -265,6 +283,8 @@ export function mountZoom(
   let prev: number | null = null;
   let raf = 0;
   const shown = (k: number) => fronts[k]!.style.visibility === "visible";
+  // a loop plays while its frame is on screen and not yet covered by the next one
+  const playing = (k: number) => shown(k) && !frozen(k) && last < k + COVERED;
   function play(now: number) {
     if (!running) {
       prev = null;
@@ -277,7 +297,7 @@ export function mountZoom(
     raf = requestAnimationFrame(play);
     // only what is on screen is animated: a hidden frame's loop waits (a timeline is reset before it shows)
     timelines.forEach((sc, k) => {
-      if (sc && !(k === 2 && split) && shown(k)) {
+      if (sc && playing(k)) {
         sc.advance(dt);
         sc.render();
       }
