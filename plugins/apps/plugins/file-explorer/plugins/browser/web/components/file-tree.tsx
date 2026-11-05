@@ -5,6 +5,7 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   DataView,
   defineDataView,
+  rowRead,
   type FieldDef,
   type HierarchyConfig,
   type RowDragConfig,
@@ -25,7 +26,7 @@ import {
   type HostFsDirPeek,
   type HostFsEntry,
 } from "@plugins/infra/plugins/host-fs/core";
-import { useLive } from "@plugins/network/plugins/live/web";
+import type { LiveValueTupleRead } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
@@ -304,25 +305,26 @@ function listedFolder(listing: Listing | undefined): ListedFolder | undefined {
 /**
  * A folder's Size cell: how many items it holds, by the browser's visibility
  * rules (Show hidden files, every lens hide rule), expanded or not. An
- * expanded folder counts its listing; any other is peeked (`host-fs.peek`:
- * its child names, one directory read, pushed while read) by this cell — so
- * only folders on screen are read, as the tree renders only the rows it
- * shows. Never a 0 that is really a failure.
+ * expanded folder counts its listing; any other is counted from its peek
+ * (`host-fs.peek`: its child names, one directory read, pushed while read) —
+ * read by the DataView for the folders on screen (the Size field's
+ * `rowRead`), never by this cell, so what the tree keeps subscribed is the
+ * folders it shows, however long the folder and however far it was
+ * scrolled. Never a 0 that is really a failure.
  */
 function FolderSize({
   path,
   listing,
   shows,
+  peek,
 }: {
   path: string;
   listing: Listing | undefined;
   shows: EntryFilter;
+  /** The folder's peek: `loading` while off screen, or while listed (not read). */
+  peek: LiveValueTupleRead<typeof hostFsDirPeek>;
 }): ReactNode {
   const listed = listedFolder(listing);
-  const peek = useLive(
-    hostFsDirPeek,
-    listed?.kind === "listed" ? null : { path },
-  );
   if (peek.status === "unavailable") {
     return muted("—", peek.message);
   }
@@ -489,16 +491,26 @@ export function FileTree({
         type: "byte-size",
         width: "80px",
         value: (r) => (r.kind === "dir" ? null : r.size),
-        cell: (r) =>
-          r.kind === "dir" ? (
-            <FolderSize
-              path={r.path}
-              listing={listings.get(r.path)}
-              shows={shows}
-            />
-          ) : (
-            formatSize(r.size)
-          ),
+        // A folder not listed is peeked — for the folders on screen only.
+        rowRead: rowRead({
+          value: hostFsDirPeek,
+          params: (r: EntryRow) =>
+            r.kind === "dir" &&
+            listedFolder(listings.get(r.path))?.kind !== "listed"
+              ? { path: r.path }
+              : null,
+          cell: (r, peek) =>
+            r.kind === "dir" ? (
+              <FolderSize
+                path={r.path}
+                listing={listings.get(r.path)}
+                shows={shows}
+                peek={peek}
+              />
+            ) : (
+              formatSize(r.size)
+            ),
+        }),
       },
       timeField("created", "Created", (r) => r.birthtimeMs, now, {
         visible: false,

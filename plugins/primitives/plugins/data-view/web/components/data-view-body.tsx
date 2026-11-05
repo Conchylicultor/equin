@@ -123,6 +123,7 @@ import {
   FieldExtentsContext,
   useFieldExtents,
 } from "../internal/field-extents";
+import { RowReadsHost, withRowReadCells } from "../internal/row-reads";
 import type {
   DataViewBodyProps,
   DistributiveOmit,
@@ -360,6 +361,9 @@ function CollectBodyFields<TRow>(props: {
     </CollectClientValues>
   );
 }
+
+/** The measurement's reads when only a row read asks for it (no paged read). */
+const ROW_READS_ONLY: readonly (readonly string[])[] = [];
 
 /** A live origin holds no rows here: its client fields are refused at derivation. */
 const NO_CLIENT_ROWS: readonly unknown[] = [];
@@ -645,11 +649,15 @@ function DataViewBodyInner<TRow>(
   // `DataViewBody` derived it and folded the global `DataViewSlots.FieldExtension`
   // slot (custom columns, keyed by `{ storageKey, rowKey }`) into it. So the merged fields reach the
   // controllers and render-props uniformly with no custom-columns knowledge here.
+  // A `rowRead` field's cell draws the read the body makes for the rows on
+  // screen (`RowReadsHost`, below).
   const fields = useMemo(
     () =>
-      hierarchy != null && nesting === "flat" && heldRows
-        ? withParentField(props.fields, heldRows, rowKey, hierarchy)
-        : props.fields,
+      withRowReadCells(
+        hierarchy != null && nesting === "flat" && heldRows
+          ? withParentField(props.fields, heldRows, rowKey, hierarchy)
+          : props.fields,
+      ),
     [hierarchy, nesting, heldRows, rowKey, props.fields],
   );
 
@@ -1259,11 +1267,30 @@ function DataViewBodyInner<TRow>(
   );
   // …and how much room each row takes (its advance), which a placeholder of
   // released rows is sized by.
+  // A field's per-row read (`FieldDef.rowRead`) is made for the rows on
+  // screen, so the same measurement runs for it — with no paged read behind
+  // it, over no read's keys: no epoch to wait for, only the rows drawn.
+  const readsRows = useMemo(
+    () => fields.some((f) => f.rowRead !== undefined),
+    [fields],
+  );
   const {
     keys: visibleKeys,
     advances,
     rowPitch,
-  } = useVisibleRowKeys(rowsHost, viewportReads);
+  } = useVisibleRowKeys(
+    rowsHost,
+    viewportReads ?? (readsRows ? ROW_READS_ONLY : null),
+  );
+  // The rows a row read reads: the last settled measurement, held while the
+  // next one is taken (a new epoch is `measuring`) — re-measuring after the
+  // rows change must not release every tuple and read it again.
+  const [rowsOnScreen, setRowsOnScreen] = useState<ReadonlySet<string> | null>(
+    null,
+  );
+  if (visibleKeys !== "measuring" && visibleKeys !== rowsOnScreen) {
+    setRowsOnScreen(visibleKeys);
+  }
   // The room the rows last took: a query starting over holds it while it
   // loads, so the page never shrinks under a reader scrolled down.
   const heldHeight = useHeldHeight(rowsHost, bodyState.kind === "view");
@@ -1599,6 +1626,16 @@ function DataViewBodyInner<TRow>(
                           placeholders={flatPlaceholders.before}
                         />
                       ) : null}
+                      {/* Every row drawn below reads its `rowRead` fields
+                      from here. */}
+                      <RowReadsHost
+                        fields={fields as FieldDef<unknown>[]}
+                        rows={effectiveRows}
+                        rowKey={
+                          rowKey as (row: unknown, index: number) => string
+                        }
+                        onScreen={rowsOnScreen}
+                      >
                       {/* A live page that could not refresh keeps its rows on
                       screen; its notice sits above them, naming where. */}
                       {paging && paging.notices.length > 0 ? (
@@ -1618,11 +1655,11 @@ function DataViewBodyInner<TRow>(
                       >
                         {(manualOrder) => (
                           <FieldExtentsContext.Provider value={fieldExtents}>
-                            {renderIsolated(
-                              DataViewSlots.View,
-                              activeInstance.viewType as unknown as Contribution,
-                              { ...renderProps, manualOrder },
-                            )}
+                              {renderIsolated(
+                                DataViewSlots.View,
+                                activeInstance.viewType as unknown as Contribution,
+                                { ...renderProps, manualOrder },
+                              )}
                           </FieldExtentsContext.Provider>
                         )}
                       </PendingMoveOverlay>
@@ -1632,6 +1669,7 @@ function DataViewBodyInner<TRow>(
                         />
                       ) : null}
                       <NotKnownRowsTail rows={notKnown} />
+                      </RowReadsHost>
                     </>
                   )}
                 </PlaceholderHeightContext.Provider>

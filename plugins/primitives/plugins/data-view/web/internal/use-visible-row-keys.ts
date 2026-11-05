@@ -136,7 +136,9 @@ export function useVisibleRowKeys(
           : { epoch: ep, keys: next },
       );
       const reads = readsRef.current;
-      if (reads !== null) {
+      // No read's keys (a row read alone asked for the measurement): no
+      // advances to measure.
+      if (reads !== null && reads.length > 0) {
         const measuredNow = advancesOf(container, reads);
         setSizes((prev) => nextSizes(prev, reads, measuredNow));
       }

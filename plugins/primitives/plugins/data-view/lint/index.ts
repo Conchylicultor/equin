@@ -1,8 +1,10 @@
 import noAdhocRowList from "./no-adhoc-row-list";
+import noCellLiveRead from "./no-cell-live-read";
 import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
- * Lint barrel for the `no-adhoc-row-list` rule. The root `eslint.config.ts`
+ * Lint barrel for the `no-adhoc-row-list` and `no-cell-live-read` rules (a
+ * field's per-row read is its `rowRead`, never a `useLive` in its cell). The root `eslint.config.ts`
  * auto-discovers this default export and registers `data-view/no-adhoc-row-list`
  * repo-wide as `error`.
  *
@@ -17,5 +19,6 @@ export default {
   name: "data-view",
   rules: {
     "no-adhoc-row-list": noAdhocRowList,
+    "no-cell-live-read": noCellLiveRead,
   },
 } satisfies LintContribution;

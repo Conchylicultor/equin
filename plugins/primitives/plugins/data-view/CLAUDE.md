@@ -1659,6 +1659,33 @@ match it does not have — and draws it in the pending tail under the view
 layout when its value lands. One slow probe holds one row, never the body. A
 `null` stays a KNOWN empty answer. (Case: the deploy Release column.)
 
+**Per-row reads: `rowRead`, never a `useLive` in a cell.** A cell that draws a
+live read of its own per row (a folder's item count) declares it on the field:
+
+```tsx
+{ id: "size", label: "Size",
+  rowRead: rowRead({
+    value: hostFsDirPeek,
+    params: (r: EntryRow) => (r.kind === "dir" ? { path: r.path } : null),
+    cell: (r, peek) => <FolderSize row={r} peek={peek} />, // peek typed by the value
+  }) }
+```
+
+- The body makes ONE `useLive(value, tuples, { release: "now" })` per such field
+  (`web/internal/row-reads.tsx`, `RowReadsHost`) over the rows ON SCREEN — the
+  `useVisibleRowKeys` measurement (settled, so a fling reads none of the rows it
+  flies past; the last measurement held while the next is taken) — and releases
+  a row's tuple the moment it leaves. Subscriptions are bounded by what the list
+  shows, never by its length or how far it was scrolled.
+- A row off screen, or whose `params` is `null`, is handed `loading`.
+- The body synthesizes the field's `cell` / `token` from `rowRead.cell`, so every
+  view draws it; `rowRead` beside an own `cell` / `token` throws.
+- Why: a `useLive` per cell was one subscription per row MOUNTED, held for the
+  keep-alive after the row left — the file explorer sent 314 `host-fs.peek`
+  subs for one scroll through /tmp. The lint `data-view/no-cell-live-read`
+  rejects a `cell` / `token` that calls `useLive` or renders a same-file
+  component that does.
+
 **A field's own read: `pending` and `readError`, never a stand-in value.**
 
 - `pending: true` while loading with nothing held → cells draw loading, and a view
@@ -2061,8 +2088,8 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 136 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live` ×21
+  - Uses: 138 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×23
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
     - `network/live/live-state` ×6
@@ -2291,6 +2318,7 @@ list, table and `primitives/tree` share it.
     - `readFallback`
     - `resolveBodyFields`
     - `resolveCover`
+    - `rowRead`
     - `rowToneClass`
     - `SectionBody`
     - `SubtitleRun`
@@ -2394,6 +2422,7 @@ list, table and `primitives/tree` share it.
     - `FieldOptionsResult`
     - `FieldOverride`
     - `FieldOverrides`
+    - `FieldRowRead`
     - `FieldSchemaSection`
     - `FieldValue`
     - `FilterConjunction`

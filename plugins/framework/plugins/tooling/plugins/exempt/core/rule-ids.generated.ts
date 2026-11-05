@@ -37,6 +37,7 @@ export type ExemptableRuleId =
   | "daemon/no-raw-worker"
   | "data-files/no-direct-store"
   | "data-view/no-adhoc-row-list"
+  | "data-view/no-cell-live-read"
   | "database/no-pool-await-in-transaction"
   | "database/no-pure-write-transaction"
   | "db-client-tools/no-path-pg-client"

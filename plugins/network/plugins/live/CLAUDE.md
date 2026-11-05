@@ -1119,6 +1119,11 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
 - **Many tuples — `useLive(value, [p1, p2, …])`** → one result per entry in
   order (via `useResources`, diffed: a kept tuple keeps its subscription and
   data identity). `null` entries skip. Not for param-less or paged values.
+  `{ release: "now" }` (third argument) unsubscribes a tuple dropped from the
+  list at once instead of after the keep-alive — for a reader that drops
+  tuples on purpose (data-view's `rowRead`: a row leaving the screen).
+  `LiveValueTupleRead<V>` types one entry's read, for a host reading on a
+  caller's behalf.
 
 ## Typed-query values — `liveValue(key, { query })`
 
@@ -1309,7 +1314,9 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveRowResult`
     - `LiveSnapshotResult`
     - `LiveUnavailable`
+    - `LiveValueListOptions`
     - `LiveValuePagesOptions`
+    - `LiveValueTupleRead`
     - `PagesTruncation`
     - `PresentationOwner`
     - `RowViewProps`

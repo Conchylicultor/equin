@@ -105,6 +105,7 @@ export type {
   FieldDef,
   FieldOption,
   FieldOptionsResult,
+  FieldRowRead,
   RowTone,
   HierarchyConfig,
   SelectionConfig,

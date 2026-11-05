@@ -138,6 +138,39 @@ export type WithMachine<M, R> = [M] extends [MachineFeature]
   : R;
 
 /**
+ * How a list read (`useLive(value, [p1, p2, …])`) lets go of a tuple dropped
+ * from its list while it stays mounted. `release: "now"`: unsubscribed at
+ * once, its cached value dropped, instead of after the keep-alive window —
+ * for a reader that drops a tuple on purpose (a DataView row read whose row
+ * left the screen, `FieldDef.rowRead`), so what stays subscribed is what the
+ * list holds NOW, never every tuple it held in the last keep-alive window.
+ * Unmounting still releases through the keep-alive. Default: the keep-alive.
+ */
+export interface LiveValueListOptions {
+  release?: "now";
+}
+
+/** The refusal codes a declaration declares (`never`: none). */
+type RefusalOf<V> = V extends { refusals?: readonly (infer C extends string)[] }
+  ? string extends C
+    ? never
+    : C
+  : never;
+
+/**
+ * One tuple's read in a list read of the plain value `V`
+ * (`useLive(v, [p…])[i]`), typed by the declaration as that read types it —
+ * its refusal codes, a snapshot's `refresh()`, and the unavailable arm of a
+ * value that needs the computer (under a transport without it the whole list
+ * is that one result). For a host that reads a value on a caller's behalf and
+ * hands each tuple's read back (data-view's `rowRead`).
+ */
+export type LiveValueTupleRead<V> =
+  V extends LivePlainValue<infer T, Record<string, string>, LiveValueOrigin>
+    ? WithMachine<MachineOf<V>, LiveValueRead<V, T, RefusalOf<V>>>
+    : never;
+
+/**
  * A derived slice of a collection declared `all` (`useLive(all, { select })`).
  * The read re-renders only when the SELECTED value changes (structurally
  * compared), so a reader of one fact about the set (a count, one row's field)
@@ -724,7 +757,10 @@ export function useLive<
     RefusalsDecl<C> &
     MachineDecl<NM> &
     V,
-  ...args: ValueArgs<V, [queries: LiveQueryList<NoInfer<QIn>>]>
+  ...args: ValueArgs<
+    V,
+    [queries: LiveQueryList<NoInfer<QIn>>, options?: LiveValueListOptions]
+  >
 ): WithMachine<NM, readonly LiveValueRead<V, T, C>[]>;
 export function useLive<
   T,
@@ -737,7 +773,10 @@ export function useLive<
     RefusalsDecl<C> &
     MachineDecl<NM> &
     V,
-  ...args: ValueArgs<V, [params: LiveValueParamsList<NoInfer<P>>]>
+  ...args: ValueArgs<
+    V,
+    [params: LiveValueParamsList<NoInfer<P>>, options?: LiveValueListOptions]
+  >
 ): WithMachine<NM, readonly LiveValueRead<V, T, C>[]>;
 /**
  * - `useLive(pagedValue, query, { viewport, resetKey? })` — a key-range-paged
@@ -885,7 +924,7 @@ export function useLive<Row, F, S extends string>(
     | Record<string, string>
     | readonly unknown[]
     | null,
-  options?: LivePagesOptions | LiveValuePagesOptions,
+  options?: LivePagesOptions | LiveValuePagesOptions | LiveValueListOptions,
   // A value overload's `ValueArgs` never-arm (an impossible arity) — never passed.
   ..._unreachable: never[]
 ):
@@ -971,11 +1010,13 @@ export function useLive<Row, F, S extends string>(
       return useQueryValueList(
         source as LiveQueryValue<unknown, unknown, unknown, LiveValueOrigin>,
         query as readonly unknown[],
+        options as LiveValueListOptions | undefined,
       );
     case "value-list":
       return useValueList(
         source as LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
         query as readonly (Record<string, string> | null)[],
+        options as LiveValueListOptions | undefined,
       );
     case "all":
       return useAll(
@@ -1186,6 +1227,10 @@ function useQueryValue<T, Q, QIn>(
   return useResource(value, params);
 }
 
+/** `useResources`' options for a list read's `release`. */
+const RELEASE_NOW = { release: "now" } as const;
+const KEEP_ALIVE = {};
+
 /** A skipped tuple of a list read: loading, nothing read, nothing to refetch. */
 const SKIPPED_TUPLE: ResourceResult<never> = {
   status: "loading",
@@ -1209,11 +1254,13 @@ function tupleIdentity(p: Record<string, string>): string {
  * never re-subscribed and keeps its settled state — and the results handed
  * back per entry, in order; a `null` entry is {@link SKIPPED_TUPLE}. A
  * snapshot value's results add `refresh()`, as its single read does. The
- * returned array keeps its identity until an entry's result changes.
+ * returned array keeps its identity until an entry's result changes. A tuple
+ * dropped from the list is released as `options.release` says.
  */
 function useValueList(
   value: LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
   list: readonly (Record<string, string> | null)[],
+  options: LiveValueListOptions = {},
 ): readonly (ResourceResult<unknown> | LiveSnapshotResult<unknown>)[] {
   const listJson = JSON.stringify(
     list.map((p) =>
@@ -1237,7 +1284,11 @@ function useValueList(
     });
     return { distinct, slots };
   }, [listJson]);
-  const results = useResources(value, plan.distinct);
+  const results = useResources(
+    value,
+    plan.distinct,
+    options.release === "now" ? RELEASE_NOW : KEEP_ALIVE,
+  );
   const snapshot = isSnapshot(value);
   // One `refresh` wrapper per tuple RESULT: `useResources` keeps an unchanged
   // tuple's result object, so the wrapper is kept with it and a tuple whose
@@ -1269,6 +1320,7 @@ function useValueList(
 function useQueryValueList<T, Q, QIn>(
   value: LiveQueryValue<T, Q, QIn, LiveValueOrigin>,
   queries: readonly unknown[],
+  options?: LiveValueListOptions,
 ): readonly ResourceResult<unknown>[] {
   const tuples = queries.map((q) =>
     q === null ? null : value.query.encode(q as QIn),
@@ -1280,6 +1332,7 @@ function useQueryValueList<T, Q, QIn>(
       LiveValueOrigin
     >,
     tuples,
+    options,
   );
 }
 

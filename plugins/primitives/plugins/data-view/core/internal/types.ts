@@ -8,7 +8,9 @@ import type {
   FieldCellContext,
   LiveArms,
   LiveColumnRef,
+  LivePlainValue,
   LiveRowsCollection,
+  LiveValueOrigin,
   NotCollectionRow,
   RowFieldState,
 } from "@plugins/network/plugins/live/core";
@@ -558,6 +560,26 @@ type FieldOptionsSpec =
       optionsResult: FieldOptionsResult;
     };
 
+/**
+ * A field's per-row live read ({@link FieldDefBase.rowRead}), its read type
+ * erased — `rowRead()` (data-view web) builds one typed by the value it reads.
+ */
+export interface FieldRowRead<TRow> {
+  /** The live value read once per row on screen. */
+  readonly value: LivePlainValue<
+    unknown,
+    Record<string, string>,
+    LiveValueOrigin
+  >;
+  /** The row's tuple of `value`; `null`: this row reads nothing. */
+  readonly params: (row: TRow) => Record<string, string> | null;
+  /**
+   * The cell, handed the row's read — `loading` while the row is off screen
+   * or reads nothing (`params` `null`). Erased here; typed by `rowRead()`.
+   */
+  readonly cell: (row: TRow, read: unknown) => ReactNode;
+}
+
 /** A field of a DataView's schema. `options` xor `optionsResult` (see {@link FieldOptionsSpec}). */
 export type FieldDef<TRow> = FieldDefBase<TRow> & FieldOptionsSpec;
 
@@ -650,6 +672,18 @@ interface FieldDefBase<TRow> {
    * whole field is `pending` / failed).
    */
   rowState?: (row: TRow) => RowFieldState;
+  /**
+   * The field's cell draws a live read of its OWN per row (a folder's item
+   * count, a row's probe) — declared here, never a `useLive` inside `cell`.
+   * The DataView reads it, ONE list read per field, for the rows on SCREEN
+   * (`useVisibleRowKeys`: settled, so a fling reads none of the rows it flies
+   * past) and releases a row's tuple the moment the row leaves it — so what a
+   * list keeps subscribed is bounded by what it shows, never by its length,
+   * nor by how far it was scrolled. A row off screen is handed `loading`.
+   * Built with `rowRead()` (data-view web), which types `cell`'s read by the
+   * declaration; a field declares `rowRead` or `cell` / `token`, never both.
+   */
+  rowRead?: FieldRowRead<TRow>;
   /**
    * Inline-edit write-back. Present → the table cell for this field becomes
    * editable (click-to-edit); absent → the cell stays read-only (the default for

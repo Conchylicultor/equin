@@ -68,6 +68,8 @@ export type {
   LiveRowResult,
   LiveSnapshotResult,
   LiveUnavailable,
+  LiveValueListOptions,
+  LiveValueTupleRead,
   WithMachine,
 } from "./internal/use-live";
 

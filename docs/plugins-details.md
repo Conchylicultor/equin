@@ -4442,8 +4442,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 63 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
-              - `primitives/data-view` ×9
+            - Uses: 64 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+              - `primitives/data-view` ×10
               - `primitives/css/ui-kit` ×8
               - `primitives/file-viewer` ×5
               - `network/live` ×4
@@ -34896,7 +34896,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveRowResult`
           - `LiveSnapshotResult`
           - `LiveUnavailable`
+          - `LiveValueListOptions`
           - `LiveValuePagesOptions`
+          - `LiveValueTupleRead`
           - `PagesTruncation`
           - `PresentationOwner`
           - `RowViewProps`
@@ -43418,8 +43420,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 136 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `network/live` ×21
+        - Uses: 138 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `network/live` ×23
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
           - `network/live/live-state` ×6
@@ -43648,6 +43650,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readFallback`
           - `resolveBodyFields`
           - `resolveCover`
+          - `rowRead`
           - `rowToneClass`
           - `SectionBody`
           - `SubtitleRun`
@@ -43751,6 +43754,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldOptionsResult`
           - `FieldOverride`
           - `FieldOverrides`
+          - `FieldRowRead`
           - `FieldSchemaSection`
           - `FieldValue`
           - `FilterConjunction`
