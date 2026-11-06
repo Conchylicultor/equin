@@ -279,17 +279,22 @@ function PopoverHeading({
           {title}
         </Text>
       </Fill>
-      {onReset !== null ? (
-        <ControlSizeProvider size="xs">
-          <Button
-            variant="ghost"
-            className="text-faint-foreground"
-            onClick={onReset}
-          >
-            Reset to defaults
-          </Button>
-        </ControlSizeProvider>
-      ) : null}
+      {/* Always laid out, hidden while there is nothing to reset: the row is
+          as tall as the button either way, so a first pick or a reset never
+          resizes the popover. `invisible` also takes it out of the tab order. */}
+      <ControlSizeProvider size="xs">
+        <Button
+          variant="ghost"
+          className={cn(
+            "text-faint-foreground",
+            onReset === null && "invisible",
+          )}
+          onClick={onReset ?? undefined}
+          aria-hidden={onReset === null}
+        >
+          Reset to defaults
+        </Button>
+      </ControlSizeProvider>
     </Line>
   );
 }
