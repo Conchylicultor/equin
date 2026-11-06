@@ -1,6 +1,6 @@
 {
-  "id": "fb369c9c-2676-4cba-9182-4e18a777e502",
-  "prevId": "fa138b7e-9a47-4771-b3a1-15addadafd8e",
+  "id": "60dec196-7ede-4019-b83e-532e4ffe7dbe",
+  "prevId": "fb369c9c-2676-4cba-9182-4e18a777e502",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -12487,52 +12487,6 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.conversation_mandate_notices": {
-      "name": "conversation_mandate_notices",
-      "schema": "",
-      "columns": {
-        "conversation_id": {
-          "name": "conversation_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "turn_id": {
-          "name": "turn_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "requested_at": {
-          "name": "requested_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "conversation_mandate_notices_conversation_id_conversations_id_fk": {
-          "name": "conversation_mandate_notices_conversation_id_conversations_id_fk",
-          "tableFrom": "conversation_mandate_notices",
-          "tableTo": "conversations",
-          "columnsFrom": [
-            "conversation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},

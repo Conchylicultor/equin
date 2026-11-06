@@ -341,7 +341,6 @@ withdrawn).
     - `conversations/runtime-sdk`
     - `conversations/self-compact`
     - `conversations/transcript-source`
-    - `tasks/orchestration/mandate/change-notice`
     - `tasks/orchestration/watch`
     - `tasks/task-title`
 - Exemptions:

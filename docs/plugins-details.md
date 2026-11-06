@@ -15356,7 +15356,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `conversations/self-compact`
-          - `tasks/orchestration/mandate/change-notice`
           - `tasks/orchestration/watch`
     - **`close`** — Closing a conversation, portable half: POST /api/conversations/:id/close marks it done on every host (markConversationClosed) — the demo's in-browser server included — then runs every CloseTeardown contribution before it returns (the desktop's stops the agent).
       - Server:
@@ -20815,7 +20814,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/runtime-sdk`
           - `conversations/self-compact`
           - `conversations/transcript-source`
-          - `tasks/orchestration/mandate/change-notice`
           - `tasks/orchestration/watch`
           - `tasks/task-title`
       - Exemptions:
@@ -21085,12 +21083,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `libpqEnv`
       - `readDatabaseConfig`
   - Cross-plugin:
-    - Imported by: 153 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 152 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×42
       - `conversations` ×17
       - `page` ×15
-      - `tasks` ×15
       - `infra` ×14
+      - `tasks` ×14
       - `active-data` ×8
       - `debug` ×7
       - `database` ×5
@@ -54787,31 +54785,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/orchestration/watch`
               - `tasks/outcome-report`
           - Plugins:
-            - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then gets the new Mandate section as an automatic event turn — the server instructions are read only at connect. A pending notice (conversation_mandate_notices) is a PendingTurn and is held while the agent cannot take an automatic turn, re-tried on conversation.statusChanged; an agent this backend does not run gets none.
+            - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then is sent the new Mandate section as an event turn — the server instructions are read only at connect. The notice is typed now, the way a user message is (a working agent reads it at its next step), and says it is information only, not a request to act; an agent this backend does not run gets none.
               - Server:
-                - Contributes:
-                  - `conversations.pending-turn` "mandate-change-notice"
-                  - `trigger` "mandate-change-notice.on-change"
-                  - `trigger` "mandate-change-notice.send"
+                - Contributes: `trigger` "mandate-change-notice.on-change"
                 - Uses:
                   - `conversations.Runtime`
                   - `conversations.submitTurn`
-                  - `conversations/automatic-turn.automaticTurnReadiness`
-                  - `conversations/automatic-turn.PendingTurn`
-                  - `database.db`
-                  - `database.DbExecutor`
                   - `infra/events.Trigger`
                   - `infra/jobs.defineJob`
                   - `tasks/orchestration/mandate.renderMandateInstructions`
-                  - `tasks/tasks-core._conversations`
-                  - `tasks/tasks-core.conversationStatusChanged`
-                  - `tasks/tasks-core.getConversation`
                   - `tasks/tasks-core.listActiveConversations`
                   - `tasks/tasks-core.taskMandateChanged`
-                - DB schema: `plugins/tasks/plugins/orchestration/plugins/mandate/plugins/change-notice/server/internal/tables.ts`
-                - Register:
-                  - `defineJob('mandate-change-notice.on-change')`
-                  - `defineJob('mandate-change-notice.send')`
+                - Register: `defineJob('mandate-change-notice.on-change')`
             - **`definitions`** — The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id and label) so boot-snapshot hydrates it before first paint. The named-mandate registry: MandateDefinitions.Definition (what one named mandate grants) and MandateDefinitions.Source (a runtime family of them — one per automation), read at every resolution through mandateDefinitionEntries, and the mandate.definitions value (every named mandate's id and label).
               - Server:
                 - Contributes: `resource.declare` "mandate.definitions"
