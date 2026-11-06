@@ -264,10 +264,16 @@ export function mountShared(
     flows.push({ src, dst, t0: t, ss, ds: dsv, app: a, k1, trail });
   }
 
+  // A part faded out is not posed: its state still moves on (apps land, trails end), but no
+  // attribute is written for what cannot be seen — on chapter 5 this frame is still on screen while
+  // its orbits and merged nodes sit at opacity 0, and re-posing them was ~30% of the zoom's DOM
+  // writes (each one a style recalc). A part fading back in is posed on its first visible frame.
   function render() {
     // leaving for chapter 5: the orbits fade into their nodes
+    const orbitsOpacity = (1 - q5).toFixed(3);
+    const orbitsSeen = orbitsOpacity !== "0.000";
     for (const g of [gUsers, gTrails, gFly])
-      setAttr(g, "opacity", (1 - q5).toFixed(3));
+      setAttr(g, "opacity", orbitsOpacity);
     setAttr(gNodes, "opacity", q5.toFixed(3));
     if (q5 <= 0.001) world.drop?.();
     const all = [youNode, ...users.map((U) => U.node!)];
@@ -289,11 +295,13 @@ export function mountShared(
             (p5[0] + (T.x - p5[0]) * m - o[0]) * far,
             (p5[1] + (T.y - p5[1]) * m - o[1]) * far,
           ];
-          setAttr(
-            N.g,
-            "opacity",
-            ((1 - smooth((mg - 0.75) / 0.25)) * (1 + (T.a - 1) * m)).toFixed(3),
-          );
+          const op = (
+            (1 - smooth((mg - 0.75) / 0.25)) *
+            (1 + (T.a - 1) * m)
+          ).toFixed(3);
+          setAttr(N.g, "opacity", op);
+          // merged into its person on the globe (or set behind it)
+          if (op === "0.000") return;
         }
         setAttr(
           N.g,
@@ -308,6 +316,14 @@ export function mountShared(
       });
     flows = flows.filter((F) => {
       const age = t - F.t0;
+      if (!orbitsSeen) {
+        land(F, age);
+        if (age > DUR + TRAIL) {
+          gTrails.removeChild(F.trail);
+          return false;
+        }
+        return true;
+      }
       const m = travel(age / DUR);
       const A = at(F.src, F.ss);
       const B = at(F.dst, F.ds);
@@ -333,19 +349,7 @@ export function mountShared(
           "transform",
           `translate(${n1(head[0])} ${n1(head[1])}) scale(${(f * (1 + 0.25 * Math.sin(Math.PI * m))).toFixed(3)})`,
         );
-      } else if (F.app) {
-        // it lands: in someone's orbit, or in yours, where your orbit draws it from now on
-        if (typeof F.ds === "number") {
-          const U = users[F.dst]!;
-          U.slots[F.ds] = F.app;
-          U.tiles.appendChild(F.app.g);
-          U.order = "";
-        } else {
-          home.land(F.ds, F.app);
-          gFly.removeChild(F.app.g);
-        }
-        F.app = null;
-      }
+      } else land(F, age);
       setAttr(F.trail, "d", polyline(pts));
       setAttr(F.trail, "stroke-dashoffset", (1 - m).toFixed(3));
       setAttr(
@@ -360,27 +364,43 @@ export function mountShared(
       return true;
     });
     // the orbits after the moves, so a tile that just landed is placed in its orbit this very frame
-    users.forEach((U, ui) => {
-      const c = centre(ui);
-      setAttr(U.g, "transform", `translate(${n1(c[0])} ${n1(c[1])})`);
-      const list: { z: number; x: App; j: number }[] = [];
-      U.slots.forEach((x, j) => {
-        if (!x || x === "res") return;
-        const q = at(ui, j);
-        setAttr(
-          x.g,
-          "transform",
-          `translate(${n1(q.x - c[0])} ${n1(q.y - c[1])}) scale(${q.f.toFixed(3)})`,
-        );
-        list.push({ z: q.z, x, j });
+    if (orbitsSeen)
+      users.forEach((U, ui) => {
+        const c = centre(ui);
+        setAttr(U.g, "transform", `translate(${n1(c[0])} ${n1(c[1])})`);
+        const list: { z: number; x: App; j: number }[] = [];
+        U.slots.forEach((x, j) => {
+          if (!x || x === "res") return;
+          const q = at(ui, j);
+          setAttr(
+            x.g,
+            "transform",
+            `translate(${n1(q.x - c[0])} ${n1(q.y - c[1])}) scale(${q.f.toFixed(3)})`,
+          );
+          list.push({ z: q.z, x, j });
+        });
+        list.sort((A, B) => A.z - B.z);
+        const sig = list.map((l) => l.j).join(",");
+        if (sig !== U.order) {
+          U.order = sig;
+          for (const l of list) U.tiles.appendChild(l.x.g);
+        }
       });
-      list.sort((A, B) => A.z - B.z);
-      const sig = list.map((l) => l.j).join(",");
-      if (sig !== U.order) {
-        U.order = sig;
-        for (const l of list) U.tiles.appendChild(l.x.g);
-      }
-    });
+  }
+
+  // a flight that has arrived lands: in someone's orbit, or in yours, where your orbit draws it from now on
+  function land(F: Flow, age: number) {
+    if (age < DUR || !F.app) return;
+    if (typeof F.ds === "number") {
+      const U = users[F.dst]!;
+      U.slots[F.ds] = F.app;
+      U.tiles.appendChild(F.app.g);
+      U.order = "";
+    } else {
+      home.land(F.ds, F.app);
+      gFly.removeChild(F.app.g);
+    }
+    F.app = null;
   }
 
   render();

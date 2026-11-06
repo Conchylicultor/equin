@@ -41,7 +41,12 @@ ladder.
 - `internal/zoom.ts` — the engine: mounts every frame (a disc behind, a
   drawing in front), places them by the camera for p, fades them, and runs
   the frames' own animations on ONE rAF loop, only while the stage is on
-  screen and the tab visible, and only for the frames that are visible.
+  screen and the tab visible, and only for the frames that are visible. The
+  engine sees a frame, not its layers: a chapter that fades its own layers
+  out (chapter 4's orbits and nodes, at opacity 0 on chapter 5) stops posing
+  them there and only moves their state on. Every attribute written is a
+  style recalc of that element; `e2e/vision-frames.ts` prints, per chapter
+  and per frame, the CPU, the DOM writes and the elements restyled.
 - `internal/chapters/` — one module per chapter (`idea`, `app`, `integrate` +
   its apps `integrate-apps`, `desktop`, `apart` (2 → 3), `os-orbit`,
   `shared`, `globe`), and `orbit-kit` (the sphere projection, an app as a
