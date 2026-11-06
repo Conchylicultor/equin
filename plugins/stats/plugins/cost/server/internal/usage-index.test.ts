@@ -4,7 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { TIER_THRESHOLD } from "../../core/buckets";
 import type { PriceTable } from "../../core/pricing";
-import { parseTranscript, rollup, type FilePartial } from "./usage-index";
+import {
+  parseTranscript,
+  rollup,
+  transcriptFormat,
+  type FilePartial,
+} from "./usage-index";
 
 // ─── Fixture ─────────────────────────────────────────────────────────────────
 // A tiny `projects/<dir>/<session>.jsonl` tree, standing in for ~/.claude/projects
@@ -456,4 +461,30 @@ test("an unknown model surfaces in `unpriced` with summed tokens and adds no sil
 test("unpriced is empty when every bucket resolves", async () => {
   const entries = await buildEntries();
   expect(rollup(entries, TABLE).unpriced).toEqual([]);
+});
+
+// ─── the index's append-only reading ─────────────────────────────────────────
+
+test("the transcript fold, fed line by line, matches the whole parse and never mutates an earlier partial", async () => {
+  if (transcriptFormat.read.kind !== "lines")
+    throw new Error("the transcript format is read as a line fold");
+  const { fold } = transcriptFormat.read;
+  const body =
+    entry("r1", "m1", "model-flat", "2026-07-01", [100, 8]) +
+    entry("r2", "m2", "model-flat", "2026-07-02", [300, 30]) +
+    // The first message's last block, appended later: tops its bucket up.
+    entry("r1", "m1", "model-flat", "2026-07-01", [100, 3778]);
+  const path = join(projectsRoot, ALPHA, "fold.jsonl");
+  await writeFile(path, body);
+
+  const state = fold.start(path);
+  const lines = body.split("\n").filter((l) => l !== "");
+  fold.line(state, lines[0]!);
+  const early = fold.partial(state);
+  const earlySnapshot = structuredClone(early);
+  for (const l of lines.slice(1)) fold.line(state, l);
+
+  expect(early).toEqual(earlySnapshot);
+  expect(fold.partial(state)).toEqual(await parseTranscript(path));
+  expect(fold.partial(state).outputTokens).toBe(3778 + 30);
 });

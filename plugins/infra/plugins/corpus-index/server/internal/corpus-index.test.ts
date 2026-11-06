@@ -15,15 +15,15 @@ import {
   createCorpusIndex,
   defineCorpusIndex,
   enumerate,
-  loadCorpusFile,
   refreshCorpus,
   refreshCorpusPaths,
-  type CorpusFile,
   type CorpusIndexEnv,
   type CorpusIndexSpec,
   type CorpusJournal,
   type RefreshDeps,
 } from "./corpus-index";
+import { loadCorpusFile, type CorpusFile } from "./store";
+import { readFileRange } from "./line-reader";
 import { corpusFormat } from "../../core";
 
 // ─── Fixture ─────────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ function deps(
   return {
     roots: [corpusRoot],
     match: (p) => p.endsWith(".txt"),
-    parse: async (p) => {
+    read: async (p) => {
       parseCount.set(p, (parseCount.get(p) ?? 0) + 1);
       return await readFile(p, "utf8");
     },
@@ -266,6 +266,7 @@ function env(overrides: Partial<CorpusIndexEnv> = {}): CorpusIndexEnv {
       changesSince: async () => ({ kind: "unknown", reason: "test" }),
     },
     digest: async () => VERSION,
+    readRange: readFileRange,
     ...overrides,
   };
 }

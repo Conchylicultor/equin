@@ -1,11 +1,6 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
-import { rename, writeFile, mkdir } from "node:fs/promises";
-import {
-  readdir,
-  readFile,
-  stat,
-} from "@plugins/packages/plugins/timed-fs/core";
-import { dirname, join } from "node:path";
+import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
+import { join } from "node:path";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
@@ -23,6 +18,13 @@ import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import type { SourceSet } from "@plugins/packages/plugins/source-digest/core";
 import { sourceDigest } from "@plugins/packages/plugins/source-digest/server";
 import type { CorpusFormat } from "../../core";
+import { createLineReader, readFileRange, type FileStamp } from "./line-reader";
+import {
+  loadCorpusFile,
+  recordCorpusChanges,
+  saveCorpusSnapshot,
+  type CorpusFile,
+} from "./store";
 
 // ─── What this is ─────────────────────────────────────────────────────────────
 //
@@ -51,11 +53,12 @@ export interface CorpusIndexSpec<TPartial> {
   roots: string[] | (() => string[]);
   /**
    * Which files belong and what each becomes — `corpusFormat(import.meta,
-   * { match, parse })` (this plugin's core), declared in a small module. The
-   * stored index is stamped with that module's code digest: an index built by
-   * another `match` / `parse` is rebuilt. `parse` is side-effect-free (data
-   * only, never persists); omitted, the corpus is enumerate-only (every
-   * partial `null`).
+   * { match, parse | lines })` (this plugin's core), declared in a small
+   * module. The stored index is stamped with that module's code digest: an
+   * index built by another `match` / reading is rebuilt. The reading is
+   * side-effect-free (data only, never persists): `parse` reads a changed file
+   * whole, `lines` folds only what was appended since the last read; neither
+   * ⇒ enumerate-only (every partial `null`).
    */
   format: CorpusFormat<TPartial>;
   /** On-disk index file path (host-global dir or a per-worktree data dir). */
@@ -176,27 +179,11 @@ export interface CorpusIndex<TPartial> {
   warmup(): Registration;
 }
 
-/** Persisted, per-file fingerprint + parsed partial. */
-interface CorpusEntry<TPartial> {
-  mtimeMs: number;
-  size: number;
-  partial: TPartial;
-}
-
-/** On-disk index document. */
-export interface CorpusFile<TPartial> {
-  /** The code digest of the format that built `files` — another one rebuilds. */
-  version: string;
-  files: Record<string, CorpusEntry<TPartial>>;
-  /**
-   * One file-system journal cursor per root, taken before the last full walk
-   * (or journal catch-up) whose result `files` holds: replaying the journal
-   * from them names everything that may have moved since. Saved in the same
-   * document as `files`, so the two cannot disagree. Absent ⇒ the next boot
-   * walks.
-   */
-  cursors?: JournalCursor[];
-}
+// How many files a `lines` format holds a fold state for (least recently read
+// evicted): the files being appended to now — main's live transcripts and
+// their sub-agents' — not the corpus. An evicted file's next read folds it
+// from its start, once.
+const HELD_LINE_STATES = 64;
 
 // Bounded parse concurrency: caps resident memory to ~K files' text at once
 // (killing the unbounded-Promise.all spike) while still admitting each read
@@ -214,53 +201,6 @@ export function computePersist(
   mainBackend: boolean,
 ): boolean {
   return scope === "host" ? mainBackend : true;
-}
-
-// ─── load / save (atomic) ──────────────────────────────────────────────────────
-
-export async function loadCorpusFile<TPartial>(
-  indexPath: string,
-  version: string,
-): Promise<CorpusFile<TPartial>> {
-  let raw: string;
-  try {
-    raw = await readFile(indexPath, "utf8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return { version, files: {} };
-  }
-  let parsed: CorpusFile<TPartial>;
-  try {
-    parsed = JSON.parse(raw) as CorpusFile<TPartial>;
-  } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
-    return { version, files: {} };
-  }
-  /* eslint-disable @typescript-eslint/no-unnecessary-condition -- runtime guard on untrusted on-disk JSON */
-  if (
-    !parsed ||
-    parsed.version !== version ||
-    typeof parsed.files !== "object"
-  ) {
-    // Another format's index (its code digest differs — or an index stamped
-    // with a pre-digest numeric version), or a corrupt/partial file ⇒ start
-    // empty and rebuild.
-    return { version, files: {} };
-  }
-  /* eslint-enable @typescript-eslint/no-unnecessary-condition */
-  return parsed;
-}
-
-async function saveCorpusFile<TPartial>(
-  indexPath: string,
-  index: CorpusFile<TPartial>,
-): Promise<void> {
-  await mkdir(dirname(indexPath), { recursive: true });
-  // Atomic write: a partially-written index would fail the version/shape guard
-  // and force a full rebuild, so write to a sibling temp file then rename.
-  const tmp = `${indexPath}.${process.pid}.tmp`;
-  await writeFile(tmp, JSON.stringify(index), "utf8");
-  await rename(tmp, indexPath);
 }
 
 // ─── enumerate ──────────────────────────────────────────────────────────────────
@@ -312,7 +252,11 @@ export async function enumerate(
 export interface RefreshDeps<TPartial> {
   roots: string[];
   match: (path: string) => boolean;
-  parse: (path: string) => Promise<TPartial>;
+  /**
+   * A changed file's partial; `file` is the pass's own stat of it (the size
+   * and inode the partial is read up to, and keyed on).
+   */
+  read: (path: string, file: FileStamp) => Promise<TPartial>;
   indexPath: string;
   concurrency: number;
   /** Whether to persist the index after a change (see {@link computePersist}). */
@@ -431,6 +375,7 @@ async function reindexFiles<TPartial>(
     path: string;
     mtimeMs: number;
     size: number;
+    ino: number;
     hadEntry: boolean;
   }> = [];
   const statGate = createSemaphore(deps.concurrency);
@@ -461,6 +406,7 @@ async function reindexFiles<TPartial>(
           path,
           mtimeMs: st.mtimeMs,
           size: st.size,
+          ino: st.ino,
           hadEntry: cached !== undefined,
         });
       }),
@@ -472,7 +418,9 @@ async function reindexFiles<TPartial>(
   await Promise.all(
     toParse.map((item) =>
       parseGate.run(async () => {
-        const partial = await deps.withSlot(() => deps.parse(item.path));
+        const partial = await deps.withSlot(() =>
+          deps.read(item.path, { size: item.size, ino: item.ino }),
+        );
         index.files[item.path] = {
           mtimeMs: item.mtimeMs,
           size: item.size,
@@ -490,7 +438,14 @@ async function reindexFiles<TPartial>(
     modifiedPaths.length > 0 ||
     removedPaths.length > 0;
   if (changed && deps.persist) {
-    await saveCorpusFile(deps.indexPath, index);
+    // The entries this pass moved, appended to the index's log — never the
+    // whole document (see `store.ts`).
+    await recordCorpusChanges(
+      deps.indexPath,
+      index,
+      [...addedPaths, ...modifiedPaths],
+      removedPaths,
+    );
   }
   return { changed, addedPaths, modifiedPaths, removedPaths };
 }
@@ -515,6 +470,8 @@ export interface CorpusIndexEnv {
   journal: CorpusJournal;
   /** The digest of the format's code (source-digest's `sourceDigest`). */
   digest: (code: SourceSet) => Promise<string>;
+  /** A byte range of a file, for a `lines` format (`readFileRange`). */
+  readRange: (path: string, start: number, end: number) => Promise<Uint8Array>;
 }
 
 /** What the index asks of the file-system journal (injectable for tests). */
@@ -613,7 +570,20 @@ export function createCorpusIndex<TPartial>(
   const changeListeners = new Set<() => void>();
   const concurrency = spec.concurrency ?? DEFAULT_CONCURRENCY;
 
-  const { match, parse } = spec.format;
+  const { match } = spec.format;
+  // How a changed file is read: whole, or — for an append-only line format —
+  // from where this process last stopped reading it (`line-reader.ts`).
+  const read: RefreshDeps<TPartial>["read"] =
+    spec.format.read.kind === "file"
+      ? spec.format.read.parse
+      : (() => {
+          const reader = createLineReader(spec.format.read.fold, {
+            maxHeld: HELD_LINE_STATES,
+            yieldMacrotask: env.yieldMacrotask,
+            readRange: env.readRange,
+          });
+          return (path: string, file: FileStamp) => reader.read(path, file);
+        })();
 
   const resolveRoots = (): string[] =>
     typeof spec.roots === "function" ? spec.roots() : spec.roots;
@@ -621,7 +591,7 @@ export function createCorpusIndex<TPartial>(
   const refreshDeps = (roots: string[]): RefreshDeps<TPartial> => ({
     roots,
     match,
-    parse,
+    read,
     indexPath: spec.indexPath,
     concurrency,
     persist: computePersist(spec.scope, env.isMain()),
@@ -678,41 +648,27 @@ export function createCorpusIndex<TPartial>(
     const next = persist
       ? [...saved.filter((c) => !passed.includes(c.root)), ...taken]
       : saved;
-    const setCursors = (c: JournalCursor[]): void => {
-      if (c.length === 0) delete idx.cursors;
-      else idx.cursors = c;
-    };
-    // Set before the pass, so the save it makes when something moved carries
-    // them; put back if it fails, so the retry replays from the old ones.
-    setCursors(next);
-    let result: RefreshResult;
-    try {
-      const walked =
-        walk.length > 0
-          ? await refreshCorpus(idx, refreshDeps(walk))
-          : emptyResult();
-      // A path under a walked root was just re-checked by the walk.
-      const targeted = [...paths].filter(
-        (p) => !walk.some((r) => isUnder(p, r)),
-      );
-      const rechecked =
-        targeted.length > 0
-          ? await refreshCorpusPaths(idx, targeted, refreshDeps(roots))
-          : emptyResult();
-      result = mergeResults(walked, rechecked);
-    } catch (err) {
-      setCursors(saved);
-      throw err;
-    }
+    const walked =
+      walk.length > 0
+        ? await refreshCorpus(idx, refreshDeps(walk))
+        : emptyResult();
+    // A path under a walked root was just re-checked by the walk.
+    const targeted = [...paths].filter((p) => !walk.some((r) => isUnder(p, r)));
+    const rechecked =
+      targeted.length > 0
+        ? await refreshCorpusPaths(idx, targeted, refreshDeps(roots))
+        : emptyResult();
+    const result = mergeResults(walked, rechecked);
     for (const root of passed)
       if ((watchEpoch.get(root) ?? 0) === epochs.get(root)) caughtUp.add(root);
-    // A pass that moved nothing saved nothing: save the advanced cursors.
-    if (
-      persist &&
-      !result.changed &&
-      JSON.stringify(next) !== JSON.stringify(saved)
-    ) {
-      await saveCorpusFile(spec.indexPath, idx);
+    // The advanced cursors, only once the whole pass has landed: the entries
+    // it moved are already in the log, and a cursor saved before them could
+    // vouch for a change the stored entries do not hold yet. Cursors live in
+    // the snapshot alone, so moving them writes one.
+    if (persist && JSON.stringify(next) !== JSON.stringify(saved)) {
+      if (next.length === 0) delete idx.cursors;
+      else idx.cursors = next;
+      await saveCorpusSnapshot(spec.indexPath, idx);
     }
     return result;
   }
@@ -916,6 +872,7 @@ export function defineCorpusIndex<TPartial>(
     withSlot: withHeavyReadSlot,
     yieldMacrotask,
     digest: (code) => sourceDigest([code]),
+    readRange: readFileRange,
     watcherRegistration: watcher,
     startFileWatcher: async ({ dirs, onChange, onLost }) => {
       // Process-lifetime watcher — the handle is intentionally discarded (the

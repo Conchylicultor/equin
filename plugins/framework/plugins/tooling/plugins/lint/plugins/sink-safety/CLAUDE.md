@@ -113,6 +113,7 @@ retention's `getTableGrowthBounds()` and file-sink's `getFileSinks()`.
     - `debug/stuck-spans` (0 debt)
     - `debug/trace/gates` (0 debt)
     - `debug/trace/spans` (0 debt)
+    - `infra/corpus-index` (0 debt)
     - `infra/file-sink` (0 debt)
     - `infra/host/io-health/monitor` (0 debt)
     - `reports/engine` (0 debt)

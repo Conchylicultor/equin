@@ -1,5 +1,8 @@
 import { basename, dirname } from "node:path";
-import { corpusFormat } from "@plugins/infra/plugins/corpus-index/core";
+import {
+  corpusFormat,
+  type LineFold,
+} from "@plugins/infra/plugins/corpus-index/core";
 import {
   emptyUsageBuckets,
   foldUsageEntry,
@@ -7,6 +10,7 @@ import {
   type DayBucket,
   type PriceTable,
   type TieredTokens,
+  type UsageBuckets,
 } from "../../core";
 
 // ─── What this is ──────────────────────────────────────────────────────────────
@@ -15,9 +19,11 @@ import {
 // file-index mechanics (enumerate → fingerprint-diff → bounded parse → atomic
 // persist → drop-vanished) live in `@plugins/infra/plugins/corpus-index`;
 // `load-usage.ts` drives a `defineCorpusIndex` instance keyed on `FilePartial`
-// with `parseTranscript` as the per-file parse. This file owns only:
+// with `transcriptFold` as the per-file reading. This file owns only:
 //
-//   • `parseTranscript` — the token parse of one JSONL transcript (pricing-free);
+//   • `transcriptFold`  — the token parse of one JSONL transcript (pricing-free),
+//                         as a fold over its lines: the index reads only what
+//                         an agent appended since its last read;
 //   • `rollup`          — the pure in-memory rollup of the per-file partials into
 //                         daily/session bundles, priced EXACTLY per bucket from
 //                         the price table.
@@ -32,7 +38,7 @@ import {
 // Keep this module's imports narrow: every file it reaches moves that stamp.
 export const transcriptFormat = corpusFormat(import.meta, {
   match: (p: string) => p.endsWith(".jsonl"),
-  parse: (p: string) => parseTranscript(p),
+  lines: transcriptFold(),
 });
 
 /**
@@ -97,64 +103,97 @@ export interface UnpricedModel {
 
 // ─── Parse one file (tokens only, pricing-free) ──────────────────────────────
 
+/** A transcript's fold state: what its lines so far counted. */
+interface TranscriptState {
+  sessionId: string;
+  projectDir: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+  lastActivity: string;
+  models: Set<string>;
+  // Within-file dedup by ccusage's entry hash (`foldUsageEntry`), each message
+  // at its largest output, matching its counting. Rare cross-file duplicates
+  // are NOT deduped — persisting every hash would bloat the index by hundreds
+  // of MB. Measured divergence: +$56.52 on $13,980.67 (+0.404%), i.e. we
+  // over-count. This gap GROWS with `--fork-session`, because a fork copies the
+  // parent transcript into a new file, so every fork double-counts the
+  // parent's whole history.
+  fold: UsageBuckets;
+}
+
 /**
- * The corpus index's per-file `parse`. Token-only, pricing-free, side-effect
- * free. `projectDir`/`sessionId` are derived from the (2-level
- * `<projectDir>/<sessionId>.jsonl`) path so the parse needs only the full path.
+ * The corpus index's per-file reading, as a fold over a transcript's lines.
+ * Token-only, pricing-free, side-effect free. `projectDir`/`sessionId` are
+ * derived from the (2-level `<projectDir>/<sessionId>.jsonl`) path so the
+ * fold needs only the full path. A function (a fresh object per call) only so
+ * it can be declared after `transcriptFormat` above.
+ */
+function transcriptFold(): LineFold<TranscriptState, FilePartial> {
+  return {
+    start: (path) => ({
+      sessionId: basename(path, ".jsonl"),
+      projectDir: basename(dirname(path)),
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheCreationTokens: 0,
+      cacheReadTokens: 0,
+      lastActivity: "",
+      models: new Set(),
+      fold: emptyUsageBuckets(),
+    }),
+    line: (s, line) => {
+      let obj: unknown;
+      try {
+        obj = JSON.parse(line);
+      } catch (err) {
+        if (!(err instanceof SyntaxError)) throw err;
+        return; // tolerate a malformed line
+      }
+      const counted = foldUsageEntry(s.fold, obj);
+      if (!counted) return;
+      s.inputTokens += counted.input;
+      s.outputTokens += counted.output;
+      s.cacheCreationTokens += counted.cacheCreation;
+      s.cacheReadTokens += counted.cacheRead;
+      if (counted.day && counted.day > s.lastActivity)
+        s.lastActivity = counted.day;
+      if (counted.model) s.models.add(counted.model);
+    },
+    // A snapshot: the fold keeps topping its buckets up in place after this.
+    partial: (s) => ({
+      sessionId: s.sessionId,
+      projectDir: s.projectDir,
+      inputTokens: s.inputTokens,
+      outputTokens: s.outputTokens,
+      cacheCreationTokens: s.cacheCreationTokens,
+      cacheReadTokens: s.cacheReadTokens,
+      totalTokens:
+        s.inputTokens +
+        s.outputTokens +
+        s.cacheCreationTokens +
+        s.cacheReadTokens,
+      lastActivity: s.lastActivity,
+      modelsUsed: [...s.models],
+      dayBuckets: [...s.fold.buckets.values()].map((b) => structuredClone(b)),
+    }),
+  };
+}
+
+/**
+ * One transcript parsed whole through the same fold the index reads it with
+ * (the verification script and tests). Every complete line counts, the last
+ * one included even without its newline.
  */
 export async function parseTranscript(path: string): Promise<FilePartial> {
-  const sessionId = basename(path, ".jsonl");
-  const projectDir = basename(dirname(path));
+  const fold = transcriptFold();
+  const state = fold.start(path);
   const text = await Bun.file(path)
     .text()
     .catch(() => "");
-  let inputTokens = 0;
-  let outputTokens = 0;
-  let cacheCreationTokens = 0;
-  let cacheReadTokens = 0;
-  let lastActivity = "";
-  const models = new Set<string>();
-  // Within-file dedup by ccusage's entry hash (`foldUsageEntry`), each message
-  // at its largest output, matching its counting. Rare cross-file duplicates are NOT deduped — persisting every hash
-  // would bloat the index by hundreds of MB. Measured divergence: +$56.52 on
-  // $13,980.67 (+0.404%), i.e. we over-count. This gap GROWS with
-  // `--fork-session`, because a fork copies the parent transcript into a new
-  // file, so every fork double-counts the parent's whole history.
-  const fold = emptyUsageBuckets();
-
-  for (const line of text.split("\n")) {
-    if (!line) continue;
-    let obj: unknown;
-    try {
-      obj = JSON.parse(line);
-    } catch (err) {
-      if (!(err instanceof SyntaxError)) throw err;
-      continue; // tolerate a malformed line
-    }
-    const counted = foldUsageEntry(fold, obj);
-    if (!counted) continue;
-
-    inputTokens += counted.input;
-    outputTokens += counted.output;
-    cacheCreationTokens += counted.cacheCreation;
-    cacheReadTokens += counted.cacheRead;
-    if (counted.day && counted.day > lastActivity) lastActivity = counted.day;
-    if (counted.model) models.add(counted.model);
-  }
-
-  return {
-    sessionId,
-    projectDir,
-    inputTokens,
-    outputTokens,
-    cacheCreationTokens,
-    cacheReadTokens,
-    totalTokens:
-      inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens,
-    lastActivity,
-    modelsUsed: [...models],
-    dayBuckets: [...fold.buckets.values()],
-  };
+  for (const line of text.split("\n")) if (line) fold.line(state, line);
+  return fold.partial(state);
 }
 
 // ─── Rollup (pure, in-memory) ────────────────────────────────────────────────

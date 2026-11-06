@@ -28492,7 +28492,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts` (20 debt)
               - `framework/web-core` (1 debt)
               - `infra/asset-mirror/bundle` (1 debt)
-              - `infra/corpus-index` (1 debt)
+              - `infra/corpus-index` (2 debt)
               - `infra/deps/mise` (2 debt)
               - `infra/deps/npm` (1 debt)
               - `infra/deps/playwright-browser` (1 debt)
@@ -29586,6 +29586,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `debug/stuck-spans` (0 debt)
                   - `debug/trace/gates` (0 debt)
                   - `debug/trace/spans` (0 debt)
+                  - `infra/corpus-index` (0 debt)
                   - `infra/file-sink` (0 debt)
                   - `infra/host/io-health/monitor` (0 debt)
                   - `reports/engine` (0 debt)
@@ -31172,14 +31173,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `packages/source-digest.defineSourceSet`
           - `packages/source-digest.SourceSet`
-        - Exports (types): `CorpusFormat`
+        - Exports (types):
+          - `CorpusFormat`
+          - `CorpusRead`
+          - `LineFold`
         - Exports (values): `corpusFormat`
       - Cross-plugin:
         - Imported by:
           - `apps/sonata/sources/midi/folders`
           - `stats/cost`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/corpus-index.ts` (debt)
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `server/internal/corpus-index.ts`, `server/internal/store.ts` (debt)
+          - `sink-safety/no-adhoc-file-sink` — `server/internal/store.ts` (sanctioned)
     - **`deps`** — Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request. The daily deps.sweep is its sweep sub-plugin.
       - Web:
         - Slots:

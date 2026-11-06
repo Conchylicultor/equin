@@ -305,7 +305,7 @@ takes a `debt` exemption on the check's id.
     - `framework/tooling/web-artifacts` (20 debt)
     - `framework/web-core` (1 debt)
     - `infra/asset-mirror/bundle` (1 debt)
-    - `infra/corpus-index` (1 debt)
+    - `infra/corpus-index` (2 debt)
     - `infra/deps/mise` (2 debt)
     - `infra/deps/npm` (1 debt)
     - `infra/deps/playwright-browser` (1 debt)

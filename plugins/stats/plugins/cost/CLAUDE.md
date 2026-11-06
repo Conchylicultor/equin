@@ -40,7 +40,13 @@ bucket.
 
 ## Tokens are stored, dollars are derived
 
-`parseTranscript` is pricing-free: it emits `(date, model, speed)` token buckets
+The transcript reading (`transcriptFold` in `usage-index.ts`) is a fold over
+a transcript's lines, so the corpus index reads only what an agent appended
+since its last read (`infra/corpus-index`'s `lines` format) — never the whole
+transcript per line. Only newline-terminated lines count (a line still being
+written is counted once its newline lands), so a transcript whose writer died
+mid-line never counts that last line — where `parseTranscript` (the
+verification script's whole-file read) does. It is pricing-free: it emits `(date, model, speed)` token buckets
 and nothing else. `rollup` turns buckets into dollars with today's table, so
 **every archived bucket is re-priceable forever** instead of freezing whatever
 the table said the day it was parsed — a pricing bug fixed tomorrow repairs all
