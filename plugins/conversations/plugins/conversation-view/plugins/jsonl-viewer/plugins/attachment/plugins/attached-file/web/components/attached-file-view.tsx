@@ -1,7 +1,12 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import { CodeListing } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
-import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import type {
+  AttachmentEvent,
+  AttachmentRendererProps,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import type { AttachmentRole } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
+import { isAttachmentDiskPath } from "@plugins/conversations/core";
 import { AssetThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import type { TranscriptImage } from "@plugins/conversations/plugins/transcript-source/core";
 import { transcriptImage } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
@@ -58,6 +63,21 @@ function readContent(attachment: unknown): ImageContent | TextContent {
   const kind: string = content.type;
   if (kind === "image" || kind === "text") return content;
   throw new Error(`file attachment carries an unhandled content type: ${kind}`);
+}
+
+/**
+ * A file sent from equin's composer reaches the agent as `@<attachment disk
+ * path>`, and the user's message already draws that ref as the file itself (a
+ * thumbnail or chip). Its attachment event is then only the harness's record of
+ * what it fed the model — context, folded after the prompt — not a second copy
+ * of the picture. A file the prompt only names (`@src/foo.ts`) keeps its row:
+ * the content is shown nowhere else.
+ */
+export function attachedFileRole(event: AttachmentEvent): AttachmentRole {
+  const path = (event.attachment as AttachedFilePayload).filename;
+  return path !== undefined && isAttachmentDiskPath(path)
+    ? "context"
+    : "conversation";
 }
 
 function formatSize(bytes: number): string {

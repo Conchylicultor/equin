@@ -14795,6 +14795,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `interruptConversationTurn`
       - `isActiveStatus`
       - `isAgentBusy`
+      - `isAttachmentDiskPath`
       - `isTurnRunning`
       - `listConversations`
       - `listConversationTurns`
@@ -14815,8 +14816,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 81 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `conversations` ×55
+    - Imported by: 82 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `conversations` ×56
       - `tasks` ×8
       - `apps` ×6
       - `infra` ×3
@@ -16693,7 +16694,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --foreground`
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/type-scale --font-weight-semibold`
-                - **`attached-file`** — Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, or a text file as a syntax-highlighted listing behind its path.
+                - **`attached-file`** — Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, or a text file as a syntax-highlighted listing behind its path. A file the prompt already draws (an equin attachment) folds into the context after the prompt instead of repeating it.
                   - Web:
                     - Contributes:
                       - `JsonlViewerAttachment.Renderer` "file" → `AttachedFileView`

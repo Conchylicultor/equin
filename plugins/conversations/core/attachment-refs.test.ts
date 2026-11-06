@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { attachmentDiskRef, attachmentRefsOf } from "./attachment-refs";
+import {
+  attachmentDiskRef,
+  attachmentRefsOf,
+  isAttachmentDiskPath,
+} from "./attachment-refs";
 
 const ID = "5ab235d4-8a1c-43fe-9de3-c1a3bdb5a18c";
 const DIR = "/data/state/attachments";
@@ -28,5 +32,18 @@ describe("attachmentRefsOf", () => {
   test("a path outside the attachments dir is left alone", () => {
     const text = `@/repo/plugins/${ID}.png and @research/x.md`;
     expect(attachmentRefsOf(text)).toBe(text);
+  });
+});
+
+describe("isAttachmentDiskPath", () => {
+  test("an attachment's stored file is one", () => {
+    expect(isAttachmentDiskPath(`${DIR}/${ID}.png`)).toBe(true);
+    expect(isAttachmentDiskPath(`/data/apps/attachments/${ID}`)).toBe(true);
+  });
+
+  test("any other path is not", () => {
+    expect(isAttachmentDiskPath(`/repo/plugins/${ID}.png`)).toBe(false);
+    expect(isAttachmentDiskPath("research/x.md")).toBe(false);
+    expect(isAttachmentDiskPath(`${DIR}/${ID}.png and more`)).toBe(false);
   });
 });

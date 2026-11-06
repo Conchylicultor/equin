@@ -16,6 +16,16 @@ the answer differs by kind:
   with the path as the interactive `aside`. Collapsed, like every other content
   card.
 
+**A file the prompt already draws is context, not a row.** A file sent from
+equin's composer reaches the agent as `@<attachment disk path>`
+(`~/.equin/state/attachments/<uuid>.<ext>`), and the user's message draws that
+ref back as the attachment itself (`attachmentRefsOf`). Its attachment event is
+then a second copy of the same picture, so `attachedFileRole` classifies it
+`context`: it folds into the context after the prompt (`Session context` /
+`Context update`), still one click away. A file the prompt only names
+(`@src/foo.ts`, typed by hand) stays a `conversation` row — its content is shown
+nowhere else.
+
 **The image row deliberately shows no path.** An attached image lives at
 `~/.equin/state/attachments/<uuid>.png` (`apps/attachments/` in older
 transcripts — every one of the 60 in the sample) — so its name identifies
@@ -38,7 +48,7 @@ rendering a card with an empty body.
 
 ## Plugin reference
 
-- Description: Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, or a text file as a syntax-highlighted listing behind its path.
+- Description: Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, or a text file as a syntax-highlighted listing behind its path. A file the prompt already draws (an equin attachment) folds into the context after the prompt instead of repeating it.
 - Web:
   - Contributes:
     - `JsonlViewerAttachment.Renderer` "file" → `AttachedFileView`

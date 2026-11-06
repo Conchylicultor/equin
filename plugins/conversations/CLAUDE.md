@@ -236,6 +236,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `interruptConversationTurn`
     - `isActiveStatus`
     - `isAgentBusy`
+    - `isAttachmentDiskPath`
     - `isTurnRunning`
     - `listConversations`
     - `listConversationTurns`
@@ -256,8 +257,8 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `SYSTEM_CATEGORY_ID`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 81 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×55
+  - Imported by: 82 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×56
     - `tasks` ×8
     - `apps` ×6
     - `infra` ×3
