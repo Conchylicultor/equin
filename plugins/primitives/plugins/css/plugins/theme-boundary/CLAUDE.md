@@ -191,13 +191,14 @@ the code:
   - Uses tokens:
     - `ui/tokens/sidebar-palette --sidebar`
     - `ui/tokens/sidebar-palette --sidebar-accent`
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core` ×7
     - `apps` ×7
     - `hints` ×2
     - `shell` ×2
     - `layouts/miller`
     - `map`
+    - `media/player`
     - `plugin-meta/exhibits`
     - `primitives/pane`
 - Exemptions:

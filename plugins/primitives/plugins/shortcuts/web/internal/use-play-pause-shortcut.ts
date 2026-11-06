@@ -21,8 +21,17 @@ function nativeMediaClaims(event: KeyboardEvent): boolean {
  * to a button merely left focused: the link that opened the player keeps focus,
  * and Space must still pause what it opened. Pass `toggle: null` while there is
  * nothing to play yet.
+ *
+ * `when` narrows it further, for a player that knows more about where the key
+ * landed: a player drawing its own controls yields Space to a focused button
+ * of its own (that button activates on Space itself, so toggling here too
+ * would act twice), and with several players on one surface each takes only
+ * the keys meant for it.
  */
-export function usePlayPauseShortcut(toggle: (() => void) | null): void {
+export function usePlayPauseShortcut(
+  toggle: (() => void) | null,
+  when?: (event: KeyboardEvent) => boolean,
+): void {
   const descriptors = useMemo(
     () =>
       toggle === null
@@ -33,11 +42,12 @@ export function usePlayPauseShortcut(toggle: (() => void) | null): void {
               keys: "space",
               label: "Play / pause",
               group: "Playback",
-              when: (e: KeyboardEvent) => !nativeMediaClaims(e),
+              when: (e: KeyboardEvent) =>
+                !nativeMediaClaims(e) && (when === undefined || when(e)),
               handler: toggle,
             },
           ],
-    [toggle],
+    [toggle, when],
   );
   useSurfaceShortcuts(descriptors);
 }

@@ -1,0 +1,579 @@
+/*
+ * The media player's geometry and motion — the prototype
+ * (`proto-1793924689-zwfacl`) at its `slim` size, measure for measure. The
+ * numbers are the prototype's own (`geometry.ts` names the ones the code
+ * computes with); every colour is a token of the player's fixed theme
+ * (`theme.ts`), or a tint of its foreground, so nothing here paints a raw
+ * colour. The glass itself is the `float` / `overlay` surface roles' material
+ * (`SURFACE_LEVELS`), set on the elements by the components.
+ *
+ * `--k` is the settings panel's scale: the pill's height over the regular
+ * design's 48px. Its words scale through the settings sub-theme's
+ * `fontScale`; its measures here.
+ */
+.mp-slot,
+.mp-host {
+  display: contents;
+}
+
+.mp {
+  --k: 0.875;
+  --fg-tint: var(--foreground);
+  /* A glyph's soft shadow over bright frames: the black ground at 45%. */
+  --glyph-shadow: color-mix(in oklab, var(--background) 45%, transparent);
+  position: relative;
+  display: block;
+  user-select: none;
+  outline: none;
+  color: var(--foreground);
+}
+
+.mp[data-kind="video"] {
+  overflow: hidden;
+}
+.mp[data-kind="video"] video {
+  display: block;
+  width: 100%;
+  max-height: inherit;
+  object-fit: contain;
+}
+.mp[data-idle] {
+  cursor: none;
+}
+.mp:fullscreen {
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mp:fullscreen video {
+  max-height: 100vh;
+}
+
+/* In our picture-in-picture window the player fills it. */
+html[data-pip],
+html[data-pip] body {
+  height: 100%;
+  margin: 0;
+}
+html[data-pip] .mp {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+}
+html[data-pip] .mp video {
+  height: 100%;
+  max-height: 100vh;
+}
+html[data-pip] .mp-fs {
+  display: none;
+}
+
+/* Legibility over bright frames: a soft shadow under every glyph and figure. */
+.mp-pill svg,
+.mp-pop svg,
+.mp-big-play svg,
+.mp-flash {
+  filter: drop-shadow(0 1px 1.5px var(--glyph-shadow));
+}
+.mp-time,
+.mp-pop {
+  text-shadow: 0 1px 2px var(--glyph-shadow);
+}
+
+/* ── The control pill ── */
+.mp-pill {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(760px, calc(100% - 28px));
+  padding: 3px 5px;
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+.mp[data-idle] .mp-pill {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 10px);
+}
+/* Audio has no picture to float over: the same pill, in the flow. */
+.mp[data-kind="audio"] .mp-pill {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  width: 100%;
+}
+.mp-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 34px;
+}
+
+/* A button that holds its panel open stays lit. */
+.mp-pill [data-open] {
+  background: var(--hover-fill);
+}
+.mp-pill svg {
+  transition: transform 0.3s ease;
+}
+.mp-gear [data-open] svg {
+  transform: rotate(60deg);
+}
+.mp-gear {
+  position: relative;
+}
+.mp-badge {
+  position: absolute;
+  top: -3px;
+  right: -6px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--popover) 80%, transparent);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  pointer-events: none;
+}
+
+/* The tooltip of a button whose panel is open would sit over the panel (only
+   that button's: the others keep theirs). */
+.mp[data-settings-open] [data-slot="tooltip-content"]:has(.mp-gear-tip),
+.mp[data-volume-open] [data-slot="tooltip-content"]:has(.mp-mute-tip) {
+  display: none;
+}
+
+.mp-time {
+  padding: 0 6px;
+  white-space: nowrap;
+}
+.mp-time-total {
+  color: var(--muted-foreground);
+  cursor: pointer;
+  border-radius: 6px;
+}
+.mp-time-total:hover {
+  color: var(--foreground);
+}
+
+/* ── Seek bar ── */
+.mp-seek {
+  position: relative;
+  flex: 1;
+  min-width: 60px;
+  margin: 0 10px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+  outline: none;
+}
+.mp-track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--fg-tint) 28%, transparent);
+  transition: height 0.12s ease;
+}
+.mp-seek:hover .mp-track,
+.mp-seek[data-dragging] .mp-track {
+  height: 6px;
+}
+.mp-buffered,
+.mp-hovered,
+.mp-played {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: inherit;
+}
+.mp-buffered {
+  background: color-mix(in oklab, var(--fg-tint) 40%, transparent);
+}
+.mp-hovered {
+  background: color-mix(in oklab, var(--fg-tint) 22%, transparent);
+  opacity: 0;
+}
+.mp-seek:hover .mp-hovered {
+  opacity: 1;
+}
+.mp-played {
+  background: var(--primary);
+}
+.mp-thumb {
+  position: absolute;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  margin: -6.5px 0 0 -6.5px;
+  border-radius: 50%;
+  background: var(--foreground);
+  box-shadow: 0 1px 4px color-mix(in oklab, var(--background) 35%, transparent);
+  transform: scale(0);
+  transition: transform 0.12s ease;
+}
+.mp-seek:hover .mp-thumb,
+.mp-seek[data-dragging] .mp-thumb,
+.mp-seek:focus-visible .mp-thumb {
+  transform: scale(1);
+}
+.mp-bubble {
+  position: absolute;
+  bottom: 26px;
+  transform: translateX(-50%);
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--popover) 88%, transparent);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  pointer-events: none;
+}
+.mp-seek:hover .mp-bubble,
+.mp-seek[data-dragging] .mp-bubble {
+  opacity: 1;
+}
+
+/* ── Floating panels, placed above their button from the code ── */
+.mp-pop {
+  position: absolute;
+  opacity: 0;
+  transform: translateY(6px) scale(0.97);
+  pointer-events: none;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+.mp-pop[data-open] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* Volume: a capsule centred over the speaker, its button + 4px wide. Its
+   padding stops the thumb's centre half a capsule-width from either end, so
+   at 0 and at the top the thumb is concentric with the round end (the
+   slider insets the rest: `css/slider`'s vertical rail). An invisible bridge
+   spans the gap to the pill, so moving up from the button keeps the hover. */
+.mp-volume {
+  width: 34px;
+  height: calc(34px + 80px);
+  padding: calc(34px / 2 - 1px - 12px / 2) 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: bottom center;
+  transform: translateY(10px) scale(0.94);
+  transition:
+    opacity 0.26s ease,
+    transform 0.34s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+.mp-volume[data-open] {
+  transform: none;
+}
+.mp-volume::after {
+  content: "";
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  top: 100%;
+  height: calc(6px + 4px);
+}
+.mp-vslider {
+  flex: 1 1 0;
+  min-height: 0;
+  align-self: stretch;
+}
+
+/* ── Settings ── */
+.mp-settings {
+  width: calc(300px * var(--k));
+  padding: calc(8px * var(--k));
+  transform-origin: bottom right;
+}
+.mp-settings-section {
+  padding: calc(8px * var(--k)) calc(8px * var(--k)) calc(10px * var(--k));
+}
+.mp-settings-head {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--k));
+}
+.mp-settings-title {
+  flex: 1;
+  color: var(--muted-foreground);
+}
+.mp-speed {
+  min-width: calc(52px * var(--k));
+  text-align: right;
+}
+.mp-reset {
+  border: 0;
+  padding: 0;
+  width: calc(22px * var(--k));
+  height: calc(22px * var(--k));
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in oklab, var(--fg-tint) 12%, transparent);
+  color: var(--foreground);
+  cursor: pointer;
+  transition:
+    opacity 0.15s ease,
+    background 0.12s ease;
+}
+.mp-reset:hover {
+  background: color-mix(in oklab, var(--fg-tint) 22%, transparent);
+}
+.mp-reset svg {
+  width: calc(14px * var(--k));
+  height: calc(14px * var(--k));
+}
+.mp-reset[data-hidden] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The speed dial: a ruler sliding under a fixed centre needle. */
+.mp-dial {
+  position: relative;
+  height: calc(52px * var(--k));
+  margin-top: calc(8px * var(--k));
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+  border-radius: calc(12px * var(--k));
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 22%,
+    #000 78%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 22%,
+    #000 78%,
+    transparent
+  );
+}
+.mp-dial[data-dragging] {
+  cursor: grabbing;
+}
+.mp-ruler {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 100%;
+  will-change: transform;
+}
+.mp-ruler[data-settle] {
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.mp-tick {
+  position: absolute;
+  top: calc(8px * var(--k));
+  width: calc(2px * var(--k));
+  height: calc(10px * var(--k));
+  margin-left: -1px;
+  border-radius: 1px;
+  background: color-mix(in oklab, var(--fg-tint) 42%, transparent);
+}
+.mp-tick[data-kind="mid"] {
+  top: calc(6px * var(--k));
+  height: calc(13px * var(--k));
+  background: color-mix(in oklab, var(--fg-tint) 60%, transparent);
+}
+.mp-tick[data-kind="major"] {
+  top: calc(4px * var(--k));
+  height: calc(18px * var(--k));
+  background: color-mix(in oklab, var(--fg-tint) 90%, transparent);
+}
+.mp-tick-label {
+  position: absolute;
+  top: calc(28px * var(--k));
+  transform: translateX(-50%);
+  color: var(--muted-foreground);
+}
+.mp-needle {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: calc(3px * var(--k));
+  height: calc(26px * var(--k));
+  margin-left: -1.5px;
+  border-radius: calc(2px * var(--k));
+  background: var(--primary);
+  box-shadow: 0 0 calc(10px * var(--k)) var(--primary);
+}
+/* Keyboard focus marks the needle, never a box around the ruler. */
+.mp-dial:focus-visible .mp-needle {
+  box-shadow:
+    0 0 10px var(--primary),
+    0 0 0 2px color-mix(in oklab, var(--fg-tint) 55%, transparent);
+}
+.mp-chips {
+  display: flex;
+  gap: calc(4px * var(--k));
+  margin-top: calc(6px * var(--k));
+}
+.mp-chip {
+  flex: 1;
+  height: calc(28px * var(--k));
+  border: 0;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--fg-tint) 12%, transparent);
+  color: var(--foreground);
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+.mp-chip:hover {
+  background: color-mix(in oklab, var(--fg-tint) 16%, transparent);
+}
+.mp-chip[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.mp-sep {
+  height: 1px;
+  margin: 0 calc(8px * var(--k));
+  background: color-mix(in oklab, var(--fg-tint) 10%, transparent);
+}
+.mp-items {
+  padding-top: 4px;
+}
+.mp-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: calc(12px * var(--k));
+  height: calc(40px * var(--k));
+  padding: 0 calc(10px * var(--k));
+  margin-top: calc(2px * var(--k));
+  border: 0;
+  border-radius: calc(12px * var(--k));
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mp-item:hover,
+.mp-item:focus-visible {
+  background: var(--popover-hover);
+  outline: none;
+}
+.mp-item > svg {
+  width: calc(20px * var(--k));
+  height: calc(20px * var(--k));
+  opacity: 0.85;
+}
+.mp-item-label {
+  flex: 1;
+}
+
+/* ── Centre feedback ── */
+.mp-flash {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+.mp-flash svg {
+  width: 32px;
+  height: 32px;
+}
+.mp-flash[data-wide] {
+  width: auto;
+  min-width: 64px;
+  padding: 0 18px;
+  margin-left: 0;
+  transform: translateX(-50%);
+  border-radius: 32px;
+}
+.mp-flash[data-go] {
+  animation: mp-flash 0.6s ease-out;
+}
+@keyframes mp-flash {
+  0% {
+    opacity: 1;
+    scale: 0.8;
+  }
+  40% {
+    opacity: 1;
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.15;
+  }
+}
+.mp-big-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 72px;
+  height: 72px;
+  margin: -36px 0 0 -36px;
+  border-radius: 50%;
+  color: var(--foreground);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease,
+    opacity 0.2s ease;
+}
+.mp-big-play:hover {
+  transform: scale(1.06);
+  background: var(--primary);
+}
+.mp-big-play svg {
+  width: 36px;
+  height: 36px;
+  margin-left: 3px;
+}
+.mp:not([data-paused]) .mp-big-play {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* What stays on the page while the player is in its own window. */
+.mp-pip-holder {
+  max-width: 100%;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: color-mix(in oklab, var(--fg-tint) 70%, transparent);
+}
+.mp-pip-holder > svg {
+  width: 32px;
+  height: 32px;
+}

@@ -22,6 +22,20 @@ export interface SliderProps extends Passthrough<HTMLInputElement> {
    * a fader that can be pushed past it. Must lie within `[min, max]`.
    */
   detent?: number;
+  /**
+   * Which way the value runs: `horizontal` (the default, low at the left) or
+   * `vertical` (low at the bottom — a volume capsule). The track geometry and
+   * the thumb's travel belong to the slider, never to a rotation applied by
+   * the caller: a rotated box keeps its unrotated layout size, so the caller
+   * would be sizing the wrong axis.
+   *
+   * Vertical draws its own track, inset so that its round caps are centred
+   * exactly where the thumb's centre stops (half a thumb from either end): a
+   * vertical slider sits in a capsule whose round ends are concentric with
+   * those stops, and a full-length track would poke past them. Size it with
+   * `className` (`h-full`, a flex share) — the wrapper is the column.
+   */
+  orientation?: "horizontal" | "vertical";
   /** Fired with the new value, already snapped to `detent` where it applies. */
   onValueChange: (value: number) => void;
   /**
@@ -68,6 +82,7 @@ export function Slider({
   max,
   step,
   detent,
+  orientation = "horizontal",
   onValueChange,
   className,
   ref,
@@ -100,11 +115,17 @@ export function Slider({
   } as CSSProperties;
 
   return (
-    <span className={cn("slider", className)} style={style}>
+    <span
+      className={cn("slider", className)}
+      style={style}
+      data-orientation={orientation}
+    >
+      {orientation === "vertical" ? <span className="slider-rail" /> : null}
       <input
         {...rest}
         ref={ref}
         type="range"
+        aria-orientation={orientation}
         min={min}
         max={max}
         // `step="any"` rather than leaving the attribute off: an absent `step`

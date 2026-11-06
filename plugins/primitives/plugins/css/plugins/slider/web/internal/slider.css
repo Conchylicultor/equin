@@ -20,8 +20,9 @@
 
   --slider-track: var(--slider-track-h);
   --slider-thumb: var(--slider-knob-size);
-  /* The halo: a 3px ring in the knob-ring colour (transparent by default). */
-  --slider-halo: 0 0 0 3px var(--slider-knob-ring);
+  /* The knob's shadow (shadow group, none by default) under its halo: a 3px
+     ring in the knob-ring colour (transparent by default). */
+  --slider-halo: var(--shadow-slider-knob), 0 0 0 3px var(--slider-knob-ring);
 }
 
 .slider-input {
@@ -47,10 +48,14 @@
   outline: none;
 }
 .slider-input:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px var(--ring);
+  box-shadow:
+    var(--shadow-slider-knob),
+    0 0 0 3px var(--ring);
 }
 .slider-input:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 3px var(--ring);
+  box-shadow:
+    var(--shadow-slider-knob),
+    0 0 0 3px var(--ring);
 }
 
 /* WebKit / Blink */
@@ -141,4 +146,86 @@
   border-radius: 9999px;
   background: var(--muted-foreground);
   opacity: 0.5;
+}
+
+/*
+ * Vertical: low at the bottom. The input runs in vertical writing mode
+ * (`direction: rtl` puts its minimum at the bottom), so dragging, the arrow
+ * keys and the thumb's travel stay the browser's own.
+ *
+ * The track is NOT the input's: it is `.slider-rail`, drawn behind it, because
+ * the geometry a vertical slider lives in needs the track's round caps centred
+ * where the thumb's centre stops. A range input insets the thumb's travel by
+ * half a thumb at each end (see the mark layer below), so the rail is inset by
+ * half a thumb minus half a track: its caps' centres are those stops. A
+ * capsule whose round ends are concentric with the stops then holds the thumb,
+ * the cap and the end on one centre at 0 and at the top.
+ *
+ * The fill ends at the thumb's centre: `track/2` (the bottom cap) plus the
+ * value's share of the rest of the rail.
+ */
+.slider[data-orientation="vertical"] {
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The input takes the wrapper's whole height and no more: a flex share with
+   a zero basis, since a range input's own (vertical) length is the UA's
+   ~130px and a percentage height would resolve against nothing definite. */
+.slider[data-orientation="vertical"] .slider-input {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: var(--slider-thumb);
+  height: auto;
+  flex: 1 1 0;
+  min-height: 0;
+  background: transparent;
+}
+
+.slider-rail {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--slider-thumb) / 2 - var(--slider-track) / 2);
+  bottom: calc(var(--slider-thumb) / 2 - var(--slider-track) / 2);
+  width: var(--slider-track);
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  background: linear-gradient(
+    to top,
+    var(--primary)
+      calc(
+        var(--slider-track) / 2 + (100% - var(--slider-track)) *
+          var(--slider-fill, 0) / 100
+      ),
+    var(--border) 0
+  );
+  pointer-events: none;
+}
+
+.slider[data-orientation="vertical"]
+  .slider-input::-webkit-slider-runnable-track {
+  block-size: var(--slider-thumb);
+  background: transparent;
+}
+.slider[data-orientation="vertical"] .slider-input::-webkit-slider-thumb {
+  margin: 0;
+}
+.slider[data-orientation="vertical"] .slider-input::-moz-range-track,
+.slider[data-orientation="vertical"] .slider-input::-moz-range-progress {
+  background: transparent;
+}
+
+.slider[data-orientation="vertical"] .slider-marks {
+  left: 0;
+  right: 0;
+  top: calc(var(--slider-thumb) / 2);
+  bottom: calc(var(--slider-thumb) / 2);
+}
+.slider[data-orientation="vertical"] .slider-detent {
+  top: auto;
+  left: 50%;
+  bottom: calc(var(--slider-detent, 0) * 1%);
+  width: 9px;
+  height: 2px;
+  transform: translate(-50%, 50%);
 }

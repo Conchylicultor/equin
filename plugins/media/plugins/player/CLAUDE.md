@@ -1,0 +1,162 @@
+# media-player
+
+`<MediaPlayer kind src label autoPlay? onError? className? />` — a themed
+video / audio player in place of the browser's native `controls`, which
+cannot be themed, cannot grow a control (a fine speed, loop in the bar) and
+float an unthemable picture in picture. The design is the prototype
+`proto-1793924689-zwfacl` (its `slim` size and `clear` glass), implemented
+measure for measure, animations included. Plan:
+[`research/2026-11-06-primitives-media-player.md`](../../../../research/2026-11-06-primitives-media-player.md).
+
+```tsx
+<MediaPlayer
+  key={attempt}            // the caller's Retry: a fresh element opens the file again
+  kind="video"
+  src={src}
+  label={name}
+  autoPlay
+  onError={(error) => setFailed(describe(error))}  // the caller owns the error UI
+  className="max-h-full"
+/>
+```
+
+## What it draws
+
+- **Video**: the picture, and over it a **floating glass pill** — play ·
+  volume · current time · seek bar · time left (click: the total) · settings ·
+  full screen. The controls fade after 2 s while playing and the pointer
+  rests (never while paused, a panel is open or the seek bar is dragged; the
+  cursor hides with them). A big play button while paused, and a **centre
+  flash** for what a key or click just did (play, pause, skip, volume, speed,
+  loop).
+- **Audio**: the same pill as a static bar in the flow — no idle fade, no
+  full screen, no picture in picture; settings = speed + loop. (A small
+  extrapolation of the prototype, which designs video only.)
+- **Volume capsule**: hovering (or focusing) the speaker opens a vertical
+  `Slider` (`css/slider`'s `orientation="vertical"`) in a glass capsule
+  centred over it, 6px above the pill, an invisible bridge over the gap.
+  Wheel, drag and arrow keys; no number.
+- **Settings panel**: the speed readout and reset, the **speed dial** (a
+  ruler under a fixed needle: 0.25–3× in 0.05 steps, drag / wheel / click /
+  ← → / Home End, settling onto the step), preset chips 0.5 / 1 / 1.5 / 2,
+  Loop (R) and Picture in picture (P). The gear turns while it is open and
+  wears the speed as a badge when it is not 1×.
+
+## Keyboard
+
+Space / K play · ← → 5 s · ↑ ↓ volume · M mute · F full screen · P picture
+in picture · R loop · `<` `>` speed ±0.25 · 0–9 jump · Esc closes the
+settings. The table is data (`internal/keymap.ts`). On the page every key is
+a surface shortcut (`useSurfaceShortcuts`, Space through
+`usePlayPauseShortcut`) — never a raw listener — gated by **whose key it
+is**: every key landing inside a player is that player's; from elsewhere on
+the surface only Space reaches a player (the playing one, else the first), so
+a page with a video block keeps its own arrows and letters. The focused seek
+bar takes a slider's keys (← → ↑ ↓ 5 s, Page Up/Down a tenth, Home/End), and
+the volume capsule — drawn outside the pill so its blur sees the picture —
+sits right after the speaker in the tab order and closes when focus leaves
+both. Space on one of the player's own focused buttons is
+that button's (it activates on Space itself), so it never toggles twice.
+Focus rings show only after keyboard input (`:focus-visible`).
+
+## Theming
+
+The controls are dark glass with white glyphs whatever the app's theme (the
+video convention): a **fixed theme**, `media-player` (`internal/theme.ts`),
+so the tooltips and panels opened from it wear it too. Its pieces are the
+surface roles: the pill, capsule, flash and big play button are `float`
+glass (the `material` group's float fill / backdrop / border,
+`shadow-float`), the settings panel the denser `overlay` glass (popover fill
+and backdrop). A hovered or open button is the float surface's hover
+(`accent`), the accent — played part, needle, picked chip, Loop on — is
+`primary`. Two sub-themes: the settings panel's `fontScale` (it is drawn at
+the pill's scale, `SLIM.k`), and the volume slider's white fill and track.
+`media-player.css` holds the prototype's geometry and motion; every colour
+there is a token or a tint of the foreground.
+
+## Full screen and picture in picture
+
+Full screen puts the player's own root in full screen, so the controls come
+along; a `PortalHost` inside the root keeps tooltips drawn there.
+
+Picture in picture is a **Document Picture-in-Picture** window holding the
+whole player. `MediaPlayer` renders the player through `createPortal` into a
+host element it owns, and moves that host into the window: the same
+`<video>` keeps playing, and every React listener comes along (React listens
+on a portal's container). The window is dressed as the page — stylesheets,
+the `<html>` attributes the theme paints through, and the inline icon
+sprites (`<use href="#…">` draws nothing without them) — and kept in sync
+by a mutation observer while open. The page keeps a placeholder with **Bring
+back**. In the window the page's shortcut listener hears nothing, so the
+player answers the same key table itself. Where the browser has no such
+window, or refuses it (inside a frame Chrome answers "only allowed from a
+top-level browsing context" — a `DOMException`), the video's own picture in
+picture is used, with a `console.warn` naming why; any other error throws.
+
+## Sizes and glass
+
+Only `slim` and `clear` ship. Their numbers are named constants
+(`internal/geometry.ts`, `internal/theme.ts`), with the prototype's
+`regular` / `slimmer` sizes and `frosted` / `dark` glass written beside them,
+so a size or glass option later is one set switched as a whole.
+
+<!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
+
+## Plugin reference
+
+- Description: Themed video / audio player in place of the browser's native controls: a floating glass control pill (play, volume, time, seek, settings, full screen) that fades while playing, a vertical volume capsule, a settings panel with a fine speed dial (0.25–3×), presets, loop and picture in picture (a Document Picture-in-Picture window holding the whole player, falling back to the video's own), centre feedback and the YouTube-style keyboard. Audio draws the same controls as a static bar.
+- Web:
+  - Contributes:
+    - `ThemeEngine.FixedTheme` "Media player controls"
+    - `ThemeEngine.SubTheme` "Media player settings panel"
+    - `ThemeEngine.SubTheme` "Media player volume"
+  - Uses:
+    - `primitives/css/slider.Slider`
+    - `primitives/css/switch.SwitchIndicator`
+    - `primitives/css/text.Text`
+    - `primitives/css/theme-boundary.Theme`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/css/ui-kit.SURFACE_LEVELS`
+    - `primitives/css/ui-kit.TooltipProvider`
+    - `primitives/icon-button.IconButton`
+    - `primitives/latest-ref.useEventCallback`
+    - `primitives/latest-ref.useLatestRef`
+    - `primitives/overlay/portal-host.PortalHost`
+    - `primitives/overlay/tooltip.Kbd`
+    - `primitives/scope/surface-id.useSurfaceTabId`
+    - `primitives/shortcuts.targetClaimsKey`
+    - `primitives/shortcuts.usePlayPauseShortcut`
+    - `primitives/shortcuts.useSurfaceShortcuts`
+    - `ui/icons.Icon`
+    - `ui/theme-engine.ThemeEngine`
+  - Exports (types): `MediaPlayerProps`
+  - Exports (values): `MediaPlayer`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --card`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --popover`
+    - `ui/tokens/color-palette --popover-hover`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-foreground`
+    - `ui/tokens/shadow --shadow-float`
+    - `ui/tokens/shadow --shadow-lg`
+    - `ui/tokens/shadow --shadow-popover`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-2xs`
+    - `ui/tokens/type-scale --font-size-tag-compact`
+    - `ui/tokens/type-scale --font-weight-bold`
+    - `ui/tokens/type-scale --line-height-2xs`
+    - `ui/tokens/type-scale --line-height-tag-compact`
+  - Imported by:
+    - `page/audio`
+    - `page/video`
+    - `primitives/file-viewer/media`
+
+<!-- AUTOGENERATED:END -->

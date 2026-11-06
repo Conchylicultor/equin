@@ -162,6 +162,7 @@ function Button({
   onClick,
   tooltip,
   tooltipSide,
+  tooltipAlign,
   children,
   ...props
 }: ButtonOwnProps) {
@@ -213,7 +214,7 @@ function Button({
     (aspect === "icon" && typeof tooltip === "string" ? tooltip : undefined);
 
   return (
-    <WithTooltip content={tooltip} side={tooltipSide}>
+    <WithTooltip content={tooltip} side={tooltipSide} align={tooltipAlign}>
       <ButtonPrimitive
         data-slot="button"
         className={cn(

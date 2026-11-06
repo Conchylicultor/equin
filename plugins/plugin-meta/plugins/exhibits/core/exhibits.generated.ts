@@ -21,6 +21,7 @@ export const exhibitsEntries: CollectedEntry[] = [
   { pluginPath: "conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context", id: "conversations.conversation-view.jsonl-viewer.transcript-stats.context", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/exhibits"), dependsOn: [] },
   { pluginPath: "hints", id: "hints", loader: () => import("@plugins/hints/exhibits"), dependsOn: ["primitives/plugins/css/plugins/coords", "primitives/plugins/css/plugins/ui-kit"] },
   { pluginPath: "infra/plugins/claude-cli", id: "infra.claude-cli", loader: () => import("@plugins/infra/plugins/claude-cli/exhibits"), dependsOn: [] },
+  { pluginPath: "media/plugins/player", id: "media.player", loader: () => import("@plugins/media/plugins/player/exhibits"), dependsOn: [] },
   { pluginPath: "primitives/plugins/adaptive-bar", id: "primitives.adaptive-bar", loader: () => import("@plugins/primitives/plugins/adaptive-bar/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text"] },
   { pluginPath: "primitives/plugins/css/plugins/color-picker", id: "primitives.css.color-picker", loader: () => import("@plugins/primitives/plugins/css/plugins/color-picker/exhibits"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/control-panel", id: "primitives.css.control-panel", loader: () => import("@plugins/primitives/plugins/css/plugins/control-panel/exhibits"), dependsOn: ["primitives/plugins/css/plugins/ui-kit"] },

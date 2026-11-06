@@ -57,6 +57,8 @@ export function buildShadowTiers(p: ShadowParams): ShadowTokenValues {
     // Nor these: a cover rests on the `sm` tier and lifts to the `xl` one.
     "shadow-cover": "var(--shadow-sm)",
     "shadow-cover-hover": "var(--shadow-xl)",
+    // Nor this: a slider's knob casts none unless a theme gives it one.
+    "shadow-slider-knob": "0 0 #0000",
   };
 }
 

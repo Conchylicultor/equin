@@ -10,11 +10,14 @@
   - Uses:
     - `infra/attachments.uploadAttachment`
     - `infra/endpoints.useAssetSrc`
+    - `media/player.MediaPlayer`
     - `page/attachment-block.AttachmentUpload`
     - `page/editor.Editor`
     - `page/editor.registerBlockPasteHandler`
     - `primitives/css/center.Center`
-    - `primitives/css/pin.Pin`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/hover-reveal.hoverRevealGroup`

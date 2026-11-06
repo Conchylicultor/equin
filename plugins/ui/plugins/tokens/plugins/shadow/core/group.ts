@@ -59,6 +59,14 @@ export const shadowGroup = defineTokenGroup("shadow", {
     default: "var(--shadow-xl)",
     label: "Shadow cover hover",
   },
+  // A slider's knob (`css/slider`), under its halo. Default none (a
+  // transparent zero shadow, so it composes in a shadow list): a knob on a
+  // plain track sits flat; one floated over a picture (the media player's
+  // volume) lifts off it.
+  "shadow-slider-knob": {
+    default: "0 0 #0000",
+    label: "Shadow slider knob",
+  },
 });
 
 export type ShadowTokenValues = {

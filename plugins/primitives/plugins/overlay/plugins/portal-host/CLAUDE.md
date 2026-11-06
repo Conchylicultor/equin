@@ -46,6 +46,7 @@ precedent as `popup-open` and `overlay-boundary`.
   - Imported by:
     - `apps/prototypes/canvas`
     - `apps/prototypes/present`
+    - `media/player`
     - `primitives/css/ui-kit`
     - `primitives/css/viewport-overlay`
     - `shell/toast`

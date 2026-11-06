@@ -235,12 +235,12 @@ exactly.
     - `ThemeEngine.SubTheme`
     - `ThemeEngine.FixedTheme`
     - `ThemeEngine.ThemeSource`
-  - Slot contributors: 50 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 52 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `ThemeEngine.TokenGroup` ×19
     - `ThemeEngine.Theme` ×14
-    - `ThemeEngine.SubTheme` ×6
+    - `ThemeEngine.SubTheme` ×7
     - `ThemeEngine.VariantGroup` ×6
-    - `ThemeEngine.FixedTheme` ×3
+    - `ThemeEngine.FixedTheme` ×4
     - `ThemeEngine.ThemeSource` ×2
   - Contributes:
     - `Core.Root` → `ThemeInjector`
@@ -388,12 +388,13 @@ exactly.
     - `ui/tokens/shape` ×4
     - `ui/tokens/type-scale` ×4
     - `ui/tokens/data-view` ×2
-  - Imported by: 51 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui` ×29
     - `apps` ×17
     - `apps-core/chrome-theme`
     - `hints`
     - `map`
+    - `media/player`
     - `menu-bar`
     - `reports/theme-resolution`
 - Exemptions:

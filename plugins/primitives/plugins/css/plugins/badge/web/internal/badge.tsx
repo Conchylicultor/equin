@@ -74,6 +74,7 @@ export function Badge({
   className,
   tooltip,
   tooltipSide,
+  tooltipAlign,
   children,
   ...rest
 }: BadgeProps) {
@@ -93,7 +94,7 @@ export function Badge({
     ? "p-chip-compact text-tag-compact font-tag"
     : "p-chip text-tag font-tag";
   return (
-    <WithTooltip content={tooltip} side={tooltipSide}>
+    <WithTooltip content={tooltip} side={tooltipSide} align={tooltipAlign}>
       <As
         className={cn(
           // The chip shell, shared by every chip role (LinkChip/ToggleChip compose this).

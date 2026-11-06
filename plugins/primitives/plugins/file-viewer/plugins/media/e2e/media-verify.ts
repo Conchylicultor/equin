@@ -25,9 +25,12 @@ const url = pathUrl(
 await withBrowser(async (h) => {
   const { page } = await h.session({ viewport: { width: 1400, height: 900 } });
   await page.goto(url);
-  const media = page.locator("video, audio");
+  // The player's root (the themed MediaPlayer): an audio player's own
+  // <audio> element is never visible, its control bar is.
+  const player = page.locator("[data-media-player]");
+  const media = player.locator("video, audio");
   const fallback = page.getByText(/No preview for/);
-  await media.or(fallback).first().waitFor({ timeout: 30_000 });
+  await player.or(fallback).first().waitFor({ timeout: 30_000 });
   await page.waitForTimeout(2000);
   if (await fallback.isVisible()) {
     console.log("state: No preview fallback (browser could not decode)");

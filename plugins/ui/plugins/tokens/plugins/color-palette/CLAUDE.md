@@ -28,7 +28,7 @@
   - Uses tokens:
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
-  - Tokens used by: 527 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 528 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×118
     - `conversations` ×92
     - `primitives` ×73
@@ -61,6 +61,7 @@
     - `framework/web-core`
     - `layouts/miller`
     - `map`
+    - `media/player`
     - `music/chord-box`
     - `network/live/live-state`
     - `release/runs-arm`
@@ -84,6 +85,7 @@
     - `apps/website/pages/foundations`
     - `apps/website/shell`
     - `hints`
+    - `media/player`
     - `menu-bar`
     - `ui/theme-engine/theme-gallery`
 

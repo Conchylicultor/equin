@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { AttachmentUpload } from "@plugins/page/plugins/attachment-block/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
@@ -14,12 +15,13 @@ import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { videoBlock } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { MediaPlayer } from "@plugins/media/plugins/player/web";
 
 const movieIcon = symbol("movie");
 const swapHorizIcon = symbol("swap-horiz");
 
 export function VideoBlock({ block, isFocused, editor }: BlockRendererProps) {
-  const { attachmentId } = videoBlock.parse(block.data);
+  const { attachmentId, filename } = videoBlock.parse(block.data);
 
   if (!attachmentId) {
     return (
@@ -42,7 +44,10 @@ export function VideoBlock({ block, isFocused, editor }: BlockRendererProps) {
   return (
     <div className="px-md py-xs">
       <div className={cn(hoverRevealGroup, "relative")}>
-        <AttachmentVideo attachmentId={attachmentId} />
+        <AttachmentVideo
+          attachmentId={attachmentId}
+          label={filename ?? "Video"}
+        />
         <Pin to="top-right" offset="xs">
           <button
             type="button"
@@ -65,10 +70,21 @@ export function VideoBlock({ block, isFocused, editor }: BlockRendererProps) {
 
 /**
  * The video's player, its bytes loaded over the subtree's transport
- * (`useAssetSrc`): loading until loadable, the reason when it cannot be.
+ * (`useAssetSrc`): loading until loadable, the reason when it cannot be —
+ * nor when the player cannot open or decode them.
  */
-function AttachmentVideo({ attachmentId }: { attachmentId: string }) {
+function AttachmentVideo({
+  attachmentId,
+  label,
+}: {
+  attachmentId: string;
+  label: string;
+}) {
   const src = useAssetSrc(attachmentUrl(attachmentId));
+  // Keyed by address so a failure never sticks to a replaced video.
+  const [failed, setFailed] = useState<{ src: string; message: string } | null>(
+    null,
+  );
   switch (src.kind) {
     case "loading":
       return <Loading variant="spinner" />;
@@ -80,12 +96,30 @@ function AttachmentVideo({ attachmentId }: { attachmentId: string }) {
         </Text>
       );
     case "ready":
+      if (failed?.src === src.src) {
+        return (
+          <Text variant="caption" tone="muted">
+            {failed.message}
+          </Text>
+        );
+      }
       return (
-        <video
-          controls
+        <MediaPlayer
+          kind="video"
           src={src.src}
-          className="w-full max-w-full rounded-md"
+          label={label}
+          onError={(error) =>
+            setFailed({ src: src.src, message: playbackFailure(error) })
+          }
+          className="w-full"
         />
       );
   }
+}
+
+/** Why the player gave up, in one caption line (its own message as detail). */
+function playbackFailure(error: MediaError | null): string {
+  const detail =
+    error === null || error.message === "" ? "" : ` (${error.message})`;
+  return `Can't play this video${detail}.`;
 }

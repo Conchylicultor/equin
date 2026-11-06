@@ -62,7 +62,7 @@ follow.
   - Exports (values): `typeScaleGroup`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --space-sm`
-  - Tokens used by: 228 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 229 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×59
     - `conversations` ×38
     - `primitives` ×38
@@ -86,6 +86,7 @@ follow.
     - `infra/claude-cli`
     - `integrations/youtube`
     - `layouts/miller`
+    - `media/player`
     - `menu-bar`
     - `screenshot`
     - `search/quick-find`
@@ -104,6 +105,7 @@ follow.
     - `apps/website/pages/apps`
     - `apps/website/shell`
     - `hints`
+    - `media/player`
     - `menu-bar`
 - Exemptions:
   - Exempts itself from:

@@ -35809,7 +35809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: `map/google`
 
-- **`media`** — Umbrella for producing media from equin itself: the film engine (frame-exact composited video from captured app stills) and the ffmpeg it encodes with.
+- **`media`** — Umbrella for media in equin: the player every surface plays video and audio in, the film engine (frame-exact composited video from captured app stills) and the ffmpeg it encodes with.
   - Plugins:
     - **`ffmpeg`** — ffmpeg + ffprobe as an on-demand dependency: a pinned static macOS arm64 build (libx264, aac), sha256-checked, installed by infra/deps on first use — the encoder and probe the film engine renders with.
       - Deps:
@@ -35842,6 +35842,60 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resolveMouseSounds`
       - Cross-plugin:
         - Imported by: `apps/website/promo-film`
+    - **`player`** — Themed video / audio player in place of the browser's native controls: a floating glass control pill (play, volume, time, seek, settings, full screen) that fades while playing, a vertical volume capsule, a settings panel with a fine speed dial (0.25–3×), presets, loop and picture in picture (a Document Picture-in-Picture window holding the whole player, falling back to the video's own), centre feedback and the YouTube-style keyboard. Audio draws the same controls as a static bar.
+      - Web:
+        - Contributes:
+          - `ThemeEngine.FixedTheme` "Media player controls"
+          - `ThemeEngine.SubTheme` "Media player settings panel"
+          - `ThemeEngine.SubTheme` "Media player volume"
+        - Uses:
+          - `primitives/css/slider.Slider`
+          - `primitives/css/switch.SwitchIndicator`
+          - `primitives/css/text.Text`
+          - `primitives/css/theme-boundary.Theme`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/css/ui-kit.SURFACE_LEVELS`
+          - `primitives/css/ui-kit.TooltipProvider`
+          - `primitives/icon-button.IconButton`
+          - `primitives/latest-ref.useEventCallback`
+          - `primitives/latest-ref.useLatestRef`
+          - `primitives/overlay/portal-host.PortalHost`
+          - `primitives/overlay/tooltip.Kbd`
+          - `primitives/scope/surface-id.useSurfaceTabId`
+          - `primitives/shortcuts.targetClaimsKey`
+          - `primitives/shortcuts.usePlayPauseShortcut`
+          - `primitives/shortcuts.useSurfaceShortcuts`
+          - `ui/icons.Icon`
+          - `ui/theme-engine.ThemeEngine`
+        - Exports (types): `MediaPlayerProps`
+        - Exports (values): `MediaPlayer`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --background`
+          - `ui/tokens/color-palette --border`
+          - `ui/tokens/color-palette --card`
+          - `ui/tokens/color-palette --foreground`
+          - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/color-palette --popover`
+          - `ui/tokens/color-palette --popover-hover`
+          - `ui/tokens/color-palette --primary`
+          - `ui/tokens/color-palette --primary-foreground`
+          - `ui/tokens/shadow --shadow-float`
+          - `ui/tokens/shadow --shadow-lg`
+          - `ui/tokens/shadow --shadow-popover`
+          - `ui/tokens/shape --radius`
+          - `ui/tokens/type-scale --font-scale`
+          - `ui/tokens/type-scale --font-size-2xs`
+          - `ui/tokens/type-scale --font-size-tag-compact`
+          - `ui/tokens/type-scale --font-weight-bold`
+          - `ui/tokens/type-scale --line-height-2xs`
+          - `ui/tokens/type-scale --line-height-tag-compact`
+        - Imported by:
+          - `page/audio`
+          - `page/video`
+          - `primitives/file-viewer/media`
 
 - **`menu-bar`** — The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode light — the panel is designed light) mounted at /home/menu-bar, whose whole layout is the panel (no pane; chromeless under ?embed=1), whose body is the MenuBar.Section slot, drawn in its own theme (a native menu's: the system font, 13px rows, a 2–16px spacing ramp, the menu palette), plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. useNativeApps() reads the device's installed and pinned apps from the helper that keeps them (pending / unavailable / ready / error), re-read on panel focus and after a pin. usePanelInput() is the panel's typed text (the task field writes it, the app grid filters by it), kept as a draft across reloads. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper, shows no toasts, and reloads itself while hidden once main serves a newer web bundle.
   - Web:
@@ -38481,11 +38535,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/attachments.uploadAttachment`
           - `infra/endpoints.useAssetSrc`
+          - `media/player.MediaPlayer`
           - `page/attachment-block.AttachmentUpload`
           - `page/editor.Editor`
           - `page/editor.registerBlockPasteHandler`
           - `primitives/css/center.Center`
-          - `primitives/css/pin.Pin`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/hover-reveal.hoverRevealGroup`
@@ -40875,6 +40932,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/attachments.uploadAttachment`
           - `infra/endpoints.useAssetSrc`
+          - `media/player.MediaPlayer`
           - `page/attachment-block.AttachmentUpload`
           - `page/editor.Editor`
           - `page/editor.registerBlockPasteHandler`
@@ -40904,7 +40962,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-xs`
-          - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
@@ -43573,12 +43630,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 179 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 180 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×53
               - `primitives` ×31
               - `conversations` ×26
               - `debug` ×17
-              - `page` ×10
+              - `page` ×11
               - `ui` ×9
               - `tasks` ×8
               - `infra` ×4
@@ -43902,10 +43959,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×18
               - `apps` ×16
-              - `page` ×10
+              - `page` ×9
               - `conversations` ×4
               - `tasks` ×2
               - `apps-core/app-rail`
@@ -43998,13 +44055,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 142 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 143 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×36
               - `conversations` ×26
               - `primitives` ×20
               - `debug` ×13
+              - `page` ×8
               - `tasks` ×8
-              - `page` ×7
               - `ui` ×6
               - `plugin-meta` ×4
               - `review` ×4
@@ -44141,6 +44198,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --slider-knob-ring`
               - `ui/tokens/density --slider-knob-size`
               - `ui/tokens/density --slider-track-h`
+              - `ui/tokens/shadow --shadow-slider-knob`
             - Imported by:
               - `apps/chord/piano`
               - `apps/prototypes/canvas`
@@ -44149,6 +44207,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/recording`
               - `apps/sonata/rich/swing`
               - `apps/sonata/track-mixer`
+              - `media/player`
               - `primitives/overlay/image-viewer`
         - **`space-ramp`** — The spacing ramp's one declaration: the closed step set and the literal class each step-keyed @utility family gives each step, generated from app.css so a step that exists in TypeScript but has no @utility behind it is unspellable. Read by every consumer (Stack, Inset, Column, railClass, Sticky, Pin) instead of re-spelling the steps.
           - Cross-plugin:
@@ -44212,13 +44271,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 434 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 435 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×109
               - `conversations` ×72
               - `primitives` ×54
               - `debug` ×38
               - `ui` ×31
-              - `page` ×25
+              - `page` ×26
               - `plugin-meta` ×16
               - `tasks` ×14
               - `fields` ×9
@@ -44421,6 +44480,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/improve`
               - `config_v2/fields`
               - `debug/queue`
+              - `media/player`
               - `primitives/css/control-panel`
               - `primitives/launch`
               - `shell/notifications/native`
@@ -44451,7 +44511,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 417 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 418 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×79
               - `primitives` ×47
@@ -44480,6 +44540,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `screenshot` ×2
               - `history/dialog`
               - `layouts/route-fallback`
+              - `media/player`
               - `menu-bar`
               - `search/quick-find`
               - `tag-tree/picker`
@@ -44523,13 +44584,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/sidebar-palette --sidebar`
               - `ui/tokens/sidebar-palette --sidebar-accent`
-            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
+            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
               - `apps-core` ×7
               - `apps` ×7
               - `hints` ×2
               - `shell` ×2
               - `layouts/miller`
               - `map`
+              - `media/player`
               - `plugin-meta/exhibits`
               - `primitives/pane`
           - Exemptions:
@@ -44748,7 +44810,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 458 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 459 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×111
               - `apps` ×106
               - `conversations` ×53
@@ -44778,6 +44840,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `code-explorer/commit-detail`
               - `history/dialog`
               - `map`
+              - `media/player`
               - `music/chord-box`
               - `network/live/live-state`
               - `search/quick-find`
@@ -46966,13 +47029,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-2xs`
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-xs`
-        - **`media`** — Video and audio player for host media files (.mp4, .mov, .webm, .mp3, .wav, .flac, …): the browser's native player with controls, auto-playing on open, Space to play / pause, seeking over byte ranges; a file the player cannot open (damaged or incomplete, unreadable, an unsupported codec) says why, with Retry and Open with default app.
+        - **`media`** — Video and audio player for host media files (.mp4, .mov, .webm, .mp3, .wav, .flac, …): the themed media player (media/player), auto-playing on open, its keyboard (Space to play / pause) on the file pane, seeking over byte ranges; a file the player cannot open (damaged or incomplete, unreadable, an unsupported codec) says why, with Retry and Open with default app.
           - Web:
             - Contributes:
               - `FileViewer.Renderer` "Video" → `VideoView`
               - `FileViewer.Renderer` "Audio" → `AudioView`
             - Uses:
               - `infra/endpoints.useAssetSrc`
+              - `media/player.MediaPlayer`
               - `primitives/css/center.Center`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -46982,7 +47046,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/file-viewer.NoPreview`
               - `primitives/file-viewer.PreviewFailure`
               - `primitives/file-viewer.UnloadedFile`
-              - `primitives/shortcuts.usePlayPauseShortcut`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/density --space-lg`
@@ -47151,7 +47214,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 130 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 131 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×46
           - `conversations` ×20
           - `primitives` ×20
@@ -47169,6 +47232,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/enum/column-config`
           - `fullscreen`
           - `map/google`
+          - `media/player`
           - `menu-bar/app-grid`
           - `network/live/live-state`
           - `plugin-meta/exhibits`
@@ -47253,7 +47317,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 82 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×33
           - `apps` ×24
           - `page` ×5
@@ -47268,6 +47332,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli/sign-in`
           - `integrations/youtube`
           - `layouts/miller`
+          - `media/player`
           - `reorder`
           - `reports/main-thread-stall`
           - `screenshot`
@@ -48599,6 +48664,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/prototypes/canvas`
               - `apps/prototypes/present`
+              - `media/player`
               - `primitives/css/ui-kit`
               - `primitives/css/viewport-overlay`
               - `shell/toast`
@@ -48651,11 +48717,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-2xs`
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --line-height-2xs`
-            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
+            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
               - `primitives` ×9
               - `page` ×6
               - `apps` ×5
               - `tasks` ×3
+              - `media/player`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
@@ -49469,6 +49536,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/controls`
               - `conversations/conversation-view/jsonl-viewer`
               - `layouts/miller`
+              - `media/player`
               - `primitives/app-shell`
               - `primitives/pane`
               - `primitives/shortcuts`
@@ -49671,13 +49739,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
           - `apps` ×15
-          - `primitives` ×11
+          - `primitives` ×10
           - `apps-core` ×3
           - `hints`
+          - `media/player`
           - `tasks/task-draft-form`
       - Exemptions:
         - Exempts itself from: `shortcuts/no-window-key-listener` — `web/internal/shortcut-manager.tsx` (sanctioned)
         - Exempted by: `primitives/shortcuts` (0 debt)
+      - Test helpers:
+        - Web: `@plugins/primitives/plugins/shortcuts/web/testing`
+          - `WithShortcuts` — The shortcut registry, live, around `children`: the one window keydown listener that dispatches every `useSurfaceShortcuts` / `usePlayPauseShortcut` registration.
     - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
       - Web:
         - Slots:
@@ -56521,7 +56593,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 541 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 542 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×154
           - `conversations` ×82
           - `page` ×52
@@ -56551,6 +56623,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `screenshot` ×2
           - `fullscreen`
           - `layouts/miller`
+          - `media/player`
           - `network/live/live-state`
           - `runs/run-outcome`
           - `stats`
@@ -57162,12 +57235,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 50 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Slot contributors: 52 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ThemeEngine.TokenGroup` ×19
           - `ThemeEngine.Theme` ×14
-          - `ThemeEngine.SubTheme` ×6
+          - `ThemeEngine.SubTheme` ×7
           - `ThemeEngine.VariantGroup` ×6
-          - `ThemeEngine.FixedTheme` ×3
+          - `ThemeEngine.FixedTheme` ×4
           - `ThemeEngine.ThemeSource` ×2
         - Contributes:
           - `Core.Root` → `ThemeInjector`
@@ -57315,12 +57388,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×4
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/data-view` ×2
-        - Imported by: 51 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Imported by: 52 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×29
           - `apps` ×17
           - `apps-core/chrome-theme`
           - `hints`
           - `map`
+          - `media/player`
           - `menu-bar`
           - `reports/theme-resolution`
       - Exemptions:
@@ -57701,7 +57775,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 527 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 528 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×118
               - `conversations` ×92
               - `primitives` ×73
@@ -57734,6 +57808,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/web-core`
               - `layouts/miller`
               - `map`
+              - `media/player`
               - `music/chord-box`
               - `network/live/live-state`
               - `release/runs-arm`
@@ -57757,6 +57832,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/foundations`
               - `apps/website/shell`
               - `hints`
+              - `media/player`
               - `menu-bar`
               - `ui/theme-engine/theme-gallery`
         - **`color-ref`** — ColorTokenRef: a typed reference to a declared palette colour token (its CSS var, drawn as var(<ref>)) — a GENERATED string-literal union of every var the palette token groups declare, in a zero-import leaf so data-view, network/live and apps can carry a tint without importing theme-engine.
@@ -57908,6 +57984,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/apps`
               - `apps/website/shell`
               - `hints`
+              - `media/player`
               - `menu-bar`
         - **`file-type-palette`** — File-type colour token group: the closed --file-<tone> tints file-type glyphs are drawn in (Seti's palette on dark, darkened on light) and the --folder tint, with their customizer section.
           - Web:
@@ -58051,6 +58128,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/shell`
               - `apps/sonata/shell`
               - `hints`
+              - `media/player`
         - **`material`** — Material token group (a floating panel's fill and backdrop filter — opaque, unfiltered by default; frosted glass when a theme sets them) with its customizer section.
           - Web:
             - Contributes:
@@ -58082,6 +58160,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/shell`
               - `apps/prototypes/shell`
               - `apps/sonata/shell`
+              - `media/player`
               - `menu-bar`
         - **`overlay`** — Overlay token group (how a floating panel enters — instant by default — and the tooltip's fill, ink, ring, corners, padding, shadow, distance and arrow) with its customizer section.
           - Web:
@@ -58124,6 +58203,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/prototypes/shell`
               - `apps/sonata/shell`
+              - `media/player`
         - **`place-palette`** — Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), plus --place-overlay — the accent of a page's places laid over the Places map — and their customizer section.
           - Web:
             - Contributes:
@@ -58235,9 +58315,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 49 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 51 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×19
-              - `primitives` ×9
+              - `primitives` ×10
               - `ui` ×5
               - `framework` ×3
               - `page` ×3
@@ -58247,6 +58327,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `hints`
               - `map`
+              - `media/player`
               - `network/live/resource-runtime`
             - Imported by:
               - `apps-core/chrome-theme`
@@ -58256,6 +58337,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/shell`
               - `apps/sonata/shell`
               - `hints`
+              - `media/player`
         - **`shape`** — Shape token group (border radius, base spacing) with its customizer section and "Fill from…" shortcuts.
           - Web:
             - Contributes:
@@ -58281,7 +58363,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 389 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 390 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×82
               - `conversations` ×82
               - `primitives` ×60
@@ -58310,6 +58392,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `history/dialog`
               - `integrations/google-maps`
               - `layouts/miller`
+              - `media/player`
               - `reports/launch-fix`
               - `search/quick-find`
               - `tag-tree/picker`
@@ -58328,6 +58411,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/apps`
               - `apps/website/shell`
               - `hints`
+              - `media/player`
               - `menu-bar`
         - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap — no type: the nav label is the `label` role) with its customizer section.
           - Web:
@@ -58434,7 +58518,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Tokens used by: 228 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 229 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×59
               - `conversations` ×38
               - `primitives` ×38
@@ -58458,6 +58542,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/claude-cli`
               - `integrations/youtube`
               - `layouts/miller`
+              - `media/player`
               - `menu-bar`
               - `screenshot`
               - `search/quick-find`
@@ -58476,6 +58561,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/apps`
               - `apps/website/shell`
               - `hints`
+              - `media/player`
               - `menu-bar`
           - Exemptions:
             - Exempts itself from:

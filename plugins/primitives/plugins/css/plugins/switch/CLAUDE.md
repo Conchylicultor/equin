@@ -69,6 +69,7 @@ padding on the track that a flex direction could reinterpret.
     - `apps/website/improve`
     - `config_v2/fields`
     - `debug/queue`
+    - `media/player`
     - `primitives/css/control-panel`
     - `primitives/launch`
     - `shell/notifications/native`

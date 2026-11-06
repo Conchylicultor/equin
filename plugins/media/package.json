@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-media",
-  "description": "Umbrella for producing media from equin itself: the film engine (frame-exact composited video from captured app stills) and the ffmpeg it encodes with.",
+  "description": "Umbrella for media in equin: the player every surface plays video and audio in, the film engine (frame-exact composited video from captured app stills) and the ffmpeg it encodes with.",
   "private": true,
   "version": "0.0.1"
 }

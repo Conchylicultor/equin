@@ -428,6 +428,7 @@ export const browserHost = {
     "layouts.full-pane",
     "layouts.miller",
     "layouts.route-fallback",
+    "media.player",
     "music.chord-box",
     "network.live",
     "network.live.boot-snapshot",

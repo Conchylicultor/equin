@@ -1,4 +1,4 @@
-import { useMemo, useState, type SyntheticEvent } from "react";
+import { useState } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -14,17 +14,18 @@ import {
 } from "@plugins/primitives/plugins/file-viewer/web";
 import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
-import { usePlayPauseShortcut } from "@plugins/primitives/plugins/shortcuts/web";
+import { MediaPlayer } from "@plugins/media/plugins/player/web";
 import type { MediaKind } from "../internal/supports";
 
 /**
- * The browser's native player with its controls, playing as soon as it opens
- * (a browser that refuses unprompted playback leaves it paused). Space plays /
- * pauses from anywhere on the surface (`usePlayPauseShortcut`). The host raw route answers byte
- * ranges, so seeking streams instead of downloading the whole file. A file the
- * player cannot open says why (`mediaFailure`: damaged or incomplete,
- * unreadable, an encoding the browser cannot decode — never "No preview for
- * video files", which blames the kind), with Retry and Open with default app.
+ * The themed `MediaPlayer`, playing as soon as it opens (a browser that
+ * refuses unprompted playback leaves it paused). The player owns its keys —
+ * Space plays / pauses from anywhere on the surface. The host raw route
+ * answers byte ranges, so seeking streams instead of downloading the whole
+ * file. A file the player cannot open says why (`mediaFailure`: damaged or
+ * incomplete, unreadable, an encoding the browser cannot decode — never "No
+ * preview for video files", which blames the kind), with Retry and Open with
+ * default app.
  */
 function MediaView(props: FileRendererProps & { kind: MediaKind }) {
   // The file's bytes over the subtree's transport (`useAssetSrc`).
@@ -39,27 +40,14 @@ function LoadedMediaView({
   src,
 }: FileRendererProps & { kind: MediaKind; src: string }) {
   const name = fileRefName(file);
-  const [media, setMedia] = useState<HTMLMediaElement | null>(null);
   // Keyed by address so a failure on one file never sticks to the next.
   const [failed, setFailed] = useState<{
     src: string;
     failure: PreviewFailure;
   } | null>(null);
-  // Bumped by Retry: a fresh element opens the file again (one still being
+  // Bumped by Retry: a fresh player opens the file again (one still being
   // written may be whole by now).
   const [attempt, setAttempt] = useState(0);
-
-  const toggle = useMemo(
-    () =>
-      media === null
-        ? null
-        : () => {
-            if (media.paused) void media.play();
-            else media.pause();
-          },
-    [media],
-  );
-  usePlayPauseShortcut(toggle);
 
   if (failed?.src === src) {
     return (
@@ -73,35 +61,32 @@ function LoadedMediaView({
       />
     );
   }
-  const common = {
-    ref: setMedia,
-    src,
-    "aria-label": name,
-    controls: true,
-    autoPlay: true,
-    preload: "metadata",
-    onError: (e: SyntheticEvent<HTMLMediaElement>) =>
-      setFailed({ src, failure: mediaFailure(kind, e.currentTarget.error) }),
-  } as const;
+  const player = (className: string) => (
+    <MediaPlayer
+      key={`${src}#${attempt}`}
+      kind={kind}
+      src={src}
+      label={name}
+      autoPlay
+      onError={(error) =>
+        setFailed({ src, failure: mediaFailure(kind, error) })
+      }
+      className={className}
+    />
+  );
   return (
     <Center axis="both" className="h-full p-lg">
       {kind === "video" ? (
-        <video
-          key={`${src}#${attempt}`}
-          {...common}
-          className="max-h-full max-w-full object-contain"
-        />
+        player("max-h-full max-w-full")
       ) : (
+        // Audio has no picture: the file's icon and name stand where it
+        // would be, the player's bar under them.
         <Stack direction="col" align="center" gap="md" className="w-full">
           <FileTypeIcon name={name} className="size-12" />
           <Text as="p" variant="body" className="max-w-full truncate">
             {name}
           </Text>
-          <audio
-            key={`${src}#${attempt}`}
-            {...common}
-            className="w-full max-w-md"
-          />
+          {player("w-full max-w-md")}
         </Stack>
       )}
     </Center>
