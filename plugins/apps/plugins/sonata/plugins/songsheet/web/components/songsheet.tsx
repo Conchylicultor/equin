@@ -5,6 +5,7 @@ import {
   useSession,
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
+import { useMarkDisplayDrawn } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import type {
   Score,
@@ -48,6 +49,8 @@ function SongsheetInner({ score }: SongsheetProps) {
   const { content } = useSongDocument();
   const scorePending = content.kind === "pending";
   const scoreFailure = content.kind === "failed" ? content.failure : null;
+  // Drawn once the score is composed (a failure is a final state too).
+  useMarkDisplayDrawn(!scorePending);
 
   // Lyric lines, sorted by start = the songsheet's rows. Memoized off the Score
   // so the per-frame cursor selectors below only walk this stable array.

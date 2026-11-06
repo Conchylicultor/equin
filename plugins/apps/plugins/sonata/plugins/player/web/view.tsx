@@ -63,6 +63,14 @@ export interface PlayerView {
    * in it. Gates the `SonataPlayer.Effect` mount (the keyboard transport).
    */
   shown: boolean;
+  /**
+   * Whether a shown display has drawn: it shows the song (or a final state —
+   * an error, an empty song), not a loading state of its own. Each display
+   * reports it with {@link useMarkDisplayDrawn}. A host that must not reveal a
+   * half-loaded player, or start playing before there is anything to see (a
+   * file preview), waits on it.
+   */
+  drawn: boolean;
 }
 
 const PlayerViewContext = createContext<PlayerView | null>(null);
@@ -179,6 +187,27 @@ export function useMarkPlayerShown(): void {
   useEffect(() => markShown(), [markShown]);
 }
 
+/** Mark-drawn registration, the sibling of {@link MarkShownContext}. */
+const MarkDrawnContext = createContext<(() => () => void) | null>(null);
+
+/**
+ * Report whether the calling display has drawn — `true` once it shows the
+ * song or a final state (an error, nothing to show), `false` while any part
+ * of it is still loading (its lazy chunk is implied: until it loads, the
+ * display is not mounted to report). Every `SonataPlayer.Display` calls it,
+ * unconditionally at its top: a display that never reports keeps
+ * {@link PlayerView.drawn} false, and a host waiting on it loading.
+ */
+export function useMarkDisplayDrawn(drawn: boolean): void {
+  const markDrawn = useContext(MarkDrawnContext);
+  if (!markDrawn) {
+    throw new Error(
+      "useMarkDisplayDrawn must be used within <SonataPlayerScope>",
+    );
+  }
+  useEffect(() => (drawn ? markDrawn() : undefined), [drawn, markDrawn]);
+}
+
 export function PlayerViewProvider({ children }: { children: ReactNode }) {
   const displays = SonataPlayer.Display.useContributions();
   // The user's explicit pick (null = "no pick yet, fall back to the default").
@@ -230,6 +259,14 @@ export function PlayerViewProvider({ children }: { children: ReactNode }) {
   }, []);
   const shown = shownCount > 0;
 
+  // How many mounted displays report drawn — a count for the same reasons.
+  const [drawnCount, setDrawnCount] = useState(0);
+  const markDrawn = useCallback(() => {
+    setDrawnCount((n) => n + 1);
+    return () => setDrawnCount((n) => n - 1);
+  }, []);
+  const drawn = drawnCount > 0;
+
   const value = useMemo<PlayerView>(
     () => ({
       displayId,
@@ -240,8 +277,17 @@ export function PlayerViewProvider({ children }: { children: ReactNode }) {
       setSpread,
       setSpreadFloor,
       shown,
+      drawn,
     }),
-    [displayId, effectiveSpread, spreadMin, setSpread, setSpreadFloor, shown],
+    [
+      displayId,
+      effectiveSpread,
+      spreadMin,
+      setSpread,
+      setSpreadFloor,
+      shown,
+      drawn,
+    ],
   );
 
   const pick = useMemo(
@@ -251,11 +297,13 @@ export function PlayerViewProvider({ children }: { children: ReactNode }) {
 
   return (
     <MarkShownContext.Provider value={markShown}>
-      <DisplayPickContext.Provider value={pick}>
-        <PlayerViewContext.Provider value={value}>
-          {children}
-        </PlayerViewContext.Provider>
-      </DisplayPickContext.Provider>
+      <MarkDrawnContext.Provider value={markDrawn}>
+        <DisplayPickContext.Provider value={pick}>
+          <PlayerViewContext.Provider value={value}>
+            {children}
+          </PlayerViewContext.Provider>
+        </DisplayPickContext.Provider>
+      </MarkDrawnContext.Provider>
     </MarkShownContext.Provider>
   );
 }

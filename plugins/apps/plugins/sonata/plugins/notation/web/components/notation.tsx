@@ -12,6 +12,7 @@ import {
   useSession,
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
+import { useMarkDisplayDrawn } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import {
   useHiddenTrackIds,
@@ -145,6 +146,8 @@ function NotationInner({ score }: NotationProps) {
     scorePending ||
     hiddenTrackIds.kind !== "settled" ||
     trackEntries.kind !== "settled";
+  // Drawn once the track views are known (a failure is a final state too).
+  useMarkDisplayDrawn(scoreFailure !== null || !viewPending);
   const visibleScore = useMemo<Score>(() => {
     if (hiddenTrackIds.kind !== "settled") return { ...score, notes: [] };
     const hidden = hiddenTrackIds.value;

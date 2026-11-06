@@ -11,6 +11,7 @@
     - `apps/sonata/document.useSongDocument`
     - `apps/sonata/lyric-line.LyricLineText`
     - `apps/sonata/player.SonataPlayer`
+    - `apps/sonata/player.useMarkDisplayDrawn`
     - `apps/sonata/session.useCursorSelector`
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`

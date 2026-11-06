@@ -17,8 +17,13 @@ tab.
 - **Body:** `PlayerDisplay displayId="piano-roll"` — the roll mounts its own
   keyboard through the pitch axis. The renderer sizes itself to its host's body
   (`h-full`), with a floor for a host whose body has no definite height.
-- **Plays on open:** the load arms the session's `requestPlayOnLoad`, so the
-  song starts as soon as its score is composed.
+- **One loading state, then play:** until the player reports `drawn`
+  (`usePlayerView().drawn` — the roll's lazy chunk, its track views and its
+  canvas are all in) the preview shows a single `Loading` over the laid-out but
+  transparent, inert player, so nothing pops in by stages; then everything is revealed
+  at once and the song starts (`play()`, once per file) — never a transport
+  reading Pause over an empty body, nor a lead-in running out behind a
+  spinner.
 - **Footer:** `PlayerTransport` — play / pause, the scrubber and loop (no
   `PlayerTime`: the scrubber already shows the playhead and duration).
 - **Keyboard:** Space plays / pauses and ←/→ jump a bar (hold to scrub). The
@@ -46,10 +51,10 @@ preview, then the same in Sonata after Open in Sonata.
 - Description: Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi files, host or workspace) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes piano roll in its own player with a play bar, and Open in Sonata — imported into the library idempotently by content — at the playhead's bar.
 - Web:
   - Contributes: `FileViewer.Renderer` "MIDI" → `MidiFilePreview`
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/player` ×4
     - `apps/sonata/sources/midi` ×4
     - `primitives/file-viewer` ×4
-    - `apps/sonata/player` ×3
     - `apps/sonata/document` ×2
     - `apps/sonata/session` ×2
     - `primitives/css/spacing` ×2
@@ -62,6 +67,7 @@ preview, then the same in Sonata after Open in Sonata.
     - `primitives/css/cluster.Cluster`
     - `primitives/css/column.Column`
     - `primitives/css/fill.Fill`
+    - `primitives/css/overlay.Overlay`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`

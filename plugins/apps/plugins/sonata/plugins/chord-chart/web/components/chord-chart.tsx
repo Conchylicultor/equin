@@ -6,6 +6,7 @@ import {
   useSession,
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
+import { useMarkDisplayDrawn } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import {
   chordBars,
@@ -110,6 +111,8 @@ function ChordChartInner({ score }: ChordChartProps) {
   const lyricsOn = useConfig(chordChartConfig).lyrics;
   const scorePending = content.kind === "pending";
   const scoreFailure = content.kind === "failed" ? content.failure : null;
+  // Drawn once the score is composed (a failure is a final state too).
+  useMarkDisplayDrawn(!scorePending);
 
   const bars = useMemo(() => chordBars(score), [score]);
   const groups = useMemo(

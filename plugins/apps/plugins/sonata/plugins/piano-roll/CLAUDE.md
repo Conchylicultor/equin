@@ -58,8 +58,8 @@ frames at all. The contract lives in `web/internal/pixi/render-scheduler.ts`:
     - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "piano-roll"
     - `Sonata.ViewSection` "piano-roll-fx" → `FxViewSection`
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/sonata/player` ×3
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/player` ×4
     - `apps/sonata/track-mixer` ×3
     - `config_v2` ×3
     - `apps/sonata/session` ×2

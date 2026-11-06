@@ -213,13 +213,13 @@ instrument grouping — while `convert` itself stays pure.
     - `SonataPlayer.Display` "Notation" → `LazyBoundary`
     - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "notation"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/player` ×2
     - `apps/sonata/session` ×2
     - `apps/sonata/track-mixer` ×2
     - `config_v2` ×2
     - `primitives/css/spacing` ×2
     - `apps/sonata/document.useSongDocument`
-    - `apps/sonata/player.SonataPlayer`
     - `apps/sonata/shell.Sonata`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/center.Center`

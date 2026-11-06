@@ -7731,15 +7731,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SonataPlayer.Display` "Chord grid" → `ChordChart`
               - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "chord-chart-lyrics"
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/sonata/plugins/chord-chart/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/chord-chart/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/sonata/plugins/chord-chart/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/chord-chart/REFERENCE.md)
               - `apps/sonata/rich/chord-label` ×3
               - `apps/sonata/session` ×3
               - `apps/sonata/lyric-line` ×2
+              - `apps/sonata/player` ×2
               - `config_v2` ×2
               - `music/chord-box` ×2
               - `primitives/css/spacing` ×2
               - `apps/sonata/document.useSongDocument`
-              - `apps/sonata/player.SonataPlayer`
               - `apps/sonata/shell.Sonata`
               - `network/live/live-state.ResourceErrorInline`
               - `primitives/css/center.Center`
@@ -8176,13 +8176,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SonataPlayer.Display` "Notation" → `LazyBoundary`
               - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "notation"
-            - Uses: 22 symbols — full list in [`plugins/apps/plugins/sonata/plugins/notation/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/notation/REFERENCE.md)
+            - Uses: 23 symbols — full list in [`plugins/apps/plugins/sonata/plugins/notation/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/notation/REFERENCE.md)
+              - `apps/sonata/player` ×2
               - `apps/sonata/session` ×2
               - `apps/sonata/track-mixer` ×2
               - `config_v2` ×2
               - `primitives/css/spacing` ×2
               - `apps/sonata/document.useSongDocument`
-              - `apps/sonata/player.SonataPlayer`
               - `apps/sonata/shell.Sonata`
               - `network/live/live-state.ResourceErrorInline`
               - `primitives/css/center.Center`
@@ -8260,8 +8260,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "piano-roll"
               - `Sonata.ViewSection` "piano-roll-fx" → `FxViewSection`
-            - Uses: 35 symbols — full list in [`plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md)
-              - `apps/sonata/player` ×3
+            - Uses: 36 symbols — full list in [`plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md)
+              - `apps/sonata/player` ×4
               - `apps/sonata/track-mixer` ×3
               - `config_v2` ×3
               - `apps/sonata/session` ×2
@@ -8438,7 +8438,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/shape --spacing`
           - Exemptions:
             - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/record-play-observer.tsx` (sanctioned)
-        - **`player`** — Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport (the strip row of every Transport contribution: play, scrubber, loop), PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown), whose display pick a host can bind to its own value (a URL param) with PlayerDisplayBinding.
+        - **`player`** — Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport (the strip row of every Transport contribution: play, scrubber, loop), PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown, drawn — each display reports when it has drawn with useMarkDisplayDrawn), whose display pick a host can bind to its own value (a URL param) with PlayerDisplayBinding.
           - Web:
             - Slots:
               - `SonataPlayer.Display`
@@ -8484,6 +8484,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SonataPlayer`
               - `SonataPlayerScope`
               - `useDisplayCover`
+              - `useMarkDisplayDrawn`
               - `usePlayerView`
           - Cross-plugin:
             - Uses tokens:
@@ -9571,6 +9572,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/document.useSongDocument`
               - `apps/sonata/lyric-line.LyricLineText`
               - `apps/sonata/player.SonataPlayer`
+              - `apps/sonata/player.useMarkDisplayDrawn`
               - `apps/sonata/session.useCursorSelector`
               - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
@@ -9772,10 +9774,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - **`file-preview`** — Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi files, host or workspace) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes piano roll in its own player with a play bar, and Open in Sonata — imported into the library idempotently by content — at the playhead's bar.
                   - Web:
                     - Contributes: `FileViewer.Renderer` "MIDI" → `MidiFilePreview`
-                    - Uses: 34 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md)
+                    - Uses: 36 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md)
+                      - `apps/sonata/player` ×4
                       - `apps/sonata/sources/midi` ×4
                       - `primitives/file-viewer` ×4
-                      - `apps/sonata/player` ×3
                       - `apps/sonata/document` ×2
                       - `apps/sonata/session` ×2
                       - `primitives/css/spacing` ×2
@@ -9788,6 +9790,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/cluster.Cluster`
                       - `primitives/css/column.Column`
                       - `primitives/css/fill.Fill`
+                      - `primitives/css/overlay.Overlay`
                       - `primitives/css/placeholder.Placeholder`
                       - `primitives/css/rigid.rigidClass`
                       - `primitives/css/text.Text`
@@ -44021,6 +44024,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/trainer`
               - `apps/prototypes/thumbnails`
               - `apps/sonata/rich/readout-keyboard`
+              - `apps/sonata/sources/midi/file-preview`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `debug/timeline`
               - `music/chord-box`

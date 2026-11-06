@@ -1,4 +1,10 @@
-import { useEffect, useMemo, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from "react";
 import {
   fileBytesUnavailableMessage,
   useFileBytes,
@@ -13,6 +19,7 @@ import {
   PlayerDisplay,
   PlayerTransport,
   SonataPlayerScope,
+  usePlayerView,
 } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import {
   useLoadDocument,
@@ -40,6 +47,7 @@ import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
@@ -112,13 +120,21 @@ function ParsedPreview({ file, bytes }: { file: FileRef; bytes: ArrayBuffer }) {
     );
   }
   return (
-    <SonataPlayerScope>
+    // One player per file: another file is a fresh player — drawn, played
+    // and loading afresh — never this one's state carried over the switch.
+    <SonataPlayerScope key={fileRefKey(file)}>
       <PlayerPreview file={file} bytes={bytes} meta={parsed.meta} />
     </SonataPlayerScope>
   );
 }
 
-/** The preview inside its own player: loads the file as a file document. */
+/**
+ * The preview inside its own player: loads the file as a file document, and
+ * shows ONE loading state until the display has drawn (`usePlayerView().drawn`
+ * — its code, its settings and its canvas are all in), only then revealing the
+ * header, the roll and the transport together and starting playback. Laid out
+ * (transparent, inert) meanwhile, so the display mounts, measures and draws behind it.
+ */
 function PlayerPreview({
   file,
   bytes,
@@ -129,16 +145,27 @@ function PlayerPreview({
   meta: MidiSongMeta;
 }) {
   const loadDocument = useLoadDocument();
-  const { requestPlayOnLoad } = useSession();
+  const { play } = useSession();
+  const { drawn } = usePlayerView();
   const key = fileRefKey(file);
   useEffect(() => {
-    // Opening a file plays it: the intent is consumed by the session's content
-    // reset once the composed score is ready.
-    requestPlayOnLoad();
     // A file document: no library song, so no persisted settings — every
     // setting reads its default and nothing can be written for it.
     loadDocument({ kind: "file", key }, { [MIDI_SOURCE_ID]: bytes });
-  }, [requestPlayOnLoad, loadDocument, key, bytes]);
+  }, [loadDocument, key, bytes]);
+
+  // Opening a file plays it — once there is something to see play, never
+  // under the loading state (the transport would read as playing over an
+  // empty body, and the song's lead-in would run out behind it). Once: a
+  // display re-drawing does not restart it (the scope is keyed per file). A
+  // layout effect, so the reveal and the playing transport paint in the same
+  // frame — a passive one lands after whatever work the reveal starts.
+  const playedRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!drawn || playedRef.current) return;
+    playedRef.current = true;
+    play();
+  }, [drawn, play]);
 
   const { content } = useSongDocument();
   if (content.kind === "failed") {
@@ -148,60 +175,78 @@ function PlayerPreview({
       </Placeholder>
     );
   }
-  if (content.kind !== "ready") return <Loading />;
 
   return (
-    <Column
+    // Fills the host's body; the floor keeps the roll usable in a host whose
+    // body has no definite height (a pane that scrolls its content).
+    <Overlay
       fill
-      scrollBody={false}
-      // Fills the host's body; the floor keeps the roll usable in a host whose
-      // body has no definite height (a pane that scrolls its content).
       className="h-full min-h-96"
-      header={
-        <Inset x="lg" t="md" b="md">
-          <Stack direction="row" gap="md" align="center">
-            <Center
-              axis="both"
-              className={cn(
-                rigidClass(),
-                "size-11 rounded-lg bg-primary text-primary-foreground",
-              )}
-            >
-              <Icon icon={musicIcon} className="size-6" />
-            </Center>
-            <Fill>
-              <Stack gap="2xs">
-                <Text variant="subheading">{meta.title}</Text>
-                <Facts
-                  score={content.score}
-                  durationSec={meta.durationSec}
-                  size={bytes.byteLength}
-                />
+      above={
+        drawn ? null : (
+          <Center axis="both" className="h-full">
+            <Loading />
+          </Center>
+        )
+      }
+    >
+      {content.kind === "ready" ? (
+        <Column
+          fill
+          scrollBody={false}
+          // Held transparent and inert, not `invisible`: a child's own
+          // transition (a button's) would fade visibility back in after the
+          // rest, revealing the player by stages again.
+          className={cn("h-full", !drawn && "opacity-0")}
+          inert={!drawn}
+          header={
+            <Inset x="lg" t="md" b="md">
+              <Stack direction="row" gap="md" align="center">
+                <Center
+                  axis="both"
+                  className={cn(
+                    rigidClass(),
+                    "size-11 rounded-lg bg-primary text-primary-foreground",
+                  )}
+                >
+                  <Icon icon={musicIcon} className="size-6" />
+                </Center>
+                <Fill>
+                  <Stack gap="2xs">
+                    <Text variant="subheading">{meta.title}</Text>
+                    <Facts
+                      score={content.score}
+                      durationSec={meta.durationSec}
+                      size={bytes.byteLength}
+                    />
+                  </Stack>
+                </Fill>
+                <OpenInSonata file={file} bytes={bytes} />
               </Stack>
-            </Fill>
-            <OpenInSonata file={file} bytes={bytes} />
-          </Stack>
-        </Inset>
-      }
-      body={
-        <Inset x="lg" className="h-full">
-          <Clip className="h-full rounded-lg border border-border">
-            {/* A flex column, so the display's filling clip takes the whole
-                stage rather than its content's height. */}
-            <Stack gap="none" className="h-full">
-              <PlayerDisplay displayId="piano-roll" />
-            </Stack>
-          </Clip>
-        </Inset>
-      }
-      footer={
-        <Inset x="lg" y="md">
-          {/* The player's transport strip: play / pause, the scrubber (which
-              shows the playhead and duration, so no PlayerTime) and loop. */}
-          <PlayerTransport />
-        </Inset>
-      }
-    />
+            </Inset>
+          }
+          body={
+            <Inset x="lg" className="h-full">
+              <Clip className="h-full rounded-lg border border-border">
+                {/* A flex column, so the display's filling clip takes the
+                    whole stage rather than its content's height. */}
+                <Stack gap="none" className="h-full">
+                  <PlayerDisplay displayId="piano-roll" />
+                </Stack>
+              </Clip>
+            </Inset>
+          }
+          footer={
+            <Inset x="lg" y="md">
+              {/* The player's transport strip: play / pause, the scrubber
+                  (which shows the playhead and duration, so no PlayerTime)
+                  and loop. */}
+              <PlayerTransport />
+            </Inset>
+          }
+        />
+      ) : null}
+    </Overlay>
   );
 }
 

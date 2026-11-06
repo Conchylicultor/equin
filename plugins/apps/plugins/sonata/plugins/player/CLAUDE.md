@@ -34,7 +34,19 @@ into it with `useLoadDocument()` and composes only the parts it wants:
 `setDisplay` — the explicit pick, else the default-flagged or first display)
 and the piano roll's spread (`spread`, `spreadMin`, `spreadMax`, `setSpread`,
 `setSpreadFloor`), shared by header controls and the display body, and
-`shown` — whether any `PlayerDisplay` of this player is mounted.
+`shown` — whether any `PlayerDisplay` of this player is mounted — and `drawn`
+— whether a mounted display has drawn.
+
+## Drawn (`useMarkDisplayDrawn`)
+
+Every `SonataPlayer.Display` calls `useMarkDisplayDrawn(drawn)` at its top:
+`true` once it shows the song or a final state (an error, nothing to show),
+`false` while any part of it still loads (its settings, its canvas — a lazy
+chunk is implied, since the display is not mounted to report until it loads).
+`usePlayerView().drawn` is true while any mounted display reports drawn. A host
+that must not reveal a half-loaded player, or start playing before there is
+anything to see, waits on it (the MIDI file preview). A display that never
+reports keeps such a host loading — visibly, so it gets fixed.
 
 ## Shown effects (`SonataPlayer.Effect`)
 
@@ -57,7 +69,7 @@ the scope, so the player cannot import the shell).
 
 ## Plugin reference
 
-- Description: Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport (the strip row of every Transport contribution: play, scrubber, loop), PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown), whose display pick a host can bind to its own value (a URL param) with PlayerDisplayBinding.
+- Description: Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport (the strip row of every Transport contribution: play, scrubber, loop), PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown, drawn — each display reports when it has drawn with useMarkDisplayDrawn), whose display pick a host can bind to its own value (a URL param) with PlayerDisplayBinding.
 - Web:
   - Slots:
     - `SonataPlayer.Display`
@@ -103,6 +115,7 @@ the scope, so the player cannot import the shell).
     - `SonataPlayer`
     - `SonataPlayerScope`
     - `useDisplayCover`
+    - `useMarkDisplayDrawn`
     - `usePlayerView`
 - Cross-plugin:
   - Uses tokens:

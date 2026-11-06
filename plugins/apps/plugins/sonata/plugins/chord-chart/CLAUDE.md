@@ -10,15 +10,15 @@
     - `SonataPlayer.Display` "Chord grid" → `ChordChart`
     - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "chord-chart-lyrics"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/rich/chord-label` ×3
     - `apps/sonata/session` ×3
     - `apps/sonata/lyric-line` ×2
+    - `apps/sonata/player` ×2
     - `config_v2` ×2
     - `music/chord-box` ×2
     - `primitives/css/spacing` ×2
     - `apps/sonata/document.useSongDocument`
-    - `apps/sonata/player.SonataPlayer`
     - `apps/sonata/shell.Sonata`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/center.Center`

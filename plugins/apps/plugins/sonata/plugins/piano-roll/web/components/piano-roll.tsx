@@ -39,6 +39,7 @@ import { usePerformedScore } from "@plugins/apps/plugins/sonata/plugins/rich/plu
 import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import {
   useDisplayCover,
+  useMarkDisplayDrawn,
   usePlayerView,
 } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import {
@@ -439,6 +440,12 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // its WebGL probe per page — so there is no in-page way back to false.
   const [gpuUnavailable, setGpuUnavailable] = useState(false);
   const handleGpuUnavailable = useCallback(() => setGpuUnavailable(true), []);
+
+  // Drawn once the canvas is up and the track views are known — the notes are
+  // on it — or the lane shows a final state instead (no GPU, a failed read).
+  useMarkDisplayDrawn(
+    gpuUnavailable || scoreFailure !== null || (pixi !== null && !viewPending),
+  );
 
   // Latest-geometry refs for the FX context. The context is identity-stable
   // (memoized on the pixi pair only) so effects never remount on resize —
