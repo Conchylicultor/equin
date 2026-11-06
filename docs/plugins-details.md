@@ -4983,6 +4983,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2.useConfig`
               - `config_v2.useSetConfig`
               - `config_v2/fields.FieldRenderer`
+              - `primitives/app-shell.AppShellBrand`
               - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/icon-button.IconButton`
@@ -11278,7 +11279,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`demos`** — The website's live demos, one plugin each: a demo owns its story and its data (pages, prototypes, agent runs) and writes them into its own browser host through each app's fixture writer.
           - Plugins:
-            - **`workspace`** — The workspace demo — the website's live demo of the Agent Manager, Pages, Prototypes and Sonata on Demo's own equin (core: workspaceDemo — the app, the route /c/conv-demo-practice-timer and its browser host: real server code in a Web Worker on PGlite, starting from a build-time snapshot of the demo's own data written through each app's fixture writer — agents at work on Demo's wishes, one waiting for review after adding a practice timer to Sonata, pages showing every block type, prototypes and songs, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
+            - **`workspace`** — The workspace demo — the website's live demo of the Agent Manager, Pages, Prototypes, Sonata and Keyboard Party on Demo's own equin (core: workspaceDemo — the app, the route /c/conv-demo-practice-timer and its browser host: real server code in a Web Worker on PGlite, starting from a build-time snapshot of the demo's own data written through each app's fixture writer — agents at work on Demo's wishes, one waiting for review after adding a practice timer to Sonata, pages showing every block type, prototypes and songs, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
               - Core:
                 - Uses:
                   - `conversations.CONVERSATIONS_CATEGORY_ID`
@@ -11953,15 +11954,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2/settings`
           - `framework/cli/release`
           - `menu-bar`
-    - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. In solo (fullscreen) mode, a surface that draws no brand gets the launcher floating at the top-left, revealed as the pointer nears the corner.
+    - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. Where no app switcher frames the surface — solo (fullscreen), or an AppEmbed, which draws no rail or tab bar — a surface that draws no brand gets the launcher floating at the top-left of its box, revealed as the pointer nears that corner.
       - Web:
         - Contributes:
           - `AppShell.Brand` "Brand" → `AppBrand`
           - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
           - `FieldPresentation.Register` "collection:apps.installed-app"
           - `Fields.Identity` "app-icon"
-        - Uses: 43 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
-          - `apps-core/tabs` ×5
+        - Uses: 44 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
+          - `apps-core/tabs` ×6
           - `apps-core` ×5
           - `network/live/live-state` ×4
           - `primitives/data-view` ×3
@@ -42943,8 +42944,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/sidebar-palette --sidebar-accent`
           - `ui/tokens/sidebar-palette --sidebar-foreground`
           - `ui/tokens/sidebar-palette --sidebar-icon`
-        - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
-          - `apps` ×22
+        - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
+          - `apps` ×23
           - `conversations` ×2
           - `tasks` ×2
           - `apps-core/app-launcher`

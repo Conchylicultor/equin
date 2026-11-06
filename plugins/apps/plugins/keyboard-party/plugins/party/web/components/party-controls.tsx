@@ -1,6 +1,7 @@
 import { useEffect, useState, type RefObject } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
+import { AppShellBrand } from "@plugins/primitives/plugins/app-shell/web";
 import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -35,10 +36,12 @@ function useIsLocked(stageRef: RefObject<HTMLDivElement | null>) {
 }
 
 /**
- * The grown-up's corner: Lock (the stage full screen, with the keyboard
- * locked so system keys play the toy instead of leaving it) and the party's
- * settings. Hidden while locked — the child sees only the stage. Sits beside
- * the stage, not inside it, so its buttons keep their own keys.
+ * The grown-up's corner: the app brand (the launcher to every other app — the
+ * stage is a bespoke full surface, so the shell places no brand for it), Lock
+ * (the stage full screen, with the keyboard locked so system keys play the toy
+ * instead of leaving it) and the party's settings. Hidden while locked — the
+ * child sees only the stage. Sits beside the stage, not inside it, so its
+ * buttons keep their own keys.
  */
 export function PartyControls({
   stageRef,
@@ -58,6 +61,7 @@ export function PartyControls({
 
   return (
     <div className="kp-controls" onPointerDown={(e) => e.stopPropagation()}>
+      <AppShellBrand form="icon" />
       <IconButton
         icon={lockIcon}
         label="Lock full screen (hold Esc to leave)"

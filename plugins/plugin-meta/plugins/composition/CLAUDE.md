@@ -49,7 +49,7 @@ explorer — and adds Prototypes back (`apps.prototypes.**`: its files are a
 agent-manager profile) and Home (`apps.home.**`), the app gallery, which is its
 home as on main: the app launcher's grid lists every app but the home, and its
 "All apps" opens the home, so an agent-manager home would hide the agent manager
-from the demo's launcher (Home's onboarding tour, `apps.home.tour`, stays out). Its web plugins are the scope the demo page renders in
+from the demo's launcher (Home's onboarding tour, `apps.home.tour`, stays out). Sonata, the Desktop and Keyboard Party (`apps.keyboard-party.**`) join it whole, minus what needs the computer. Its web plugins are the scope the demo page renders in
 (`web-sdk`'s `<PluginScope>`) and its portable server barrels (portability
 derived from each barrel's closure, `serverPortabilityOf`) the worker's graph,
 both derived by codegen (`browser-host-gen.ts`). A plugin portable by its

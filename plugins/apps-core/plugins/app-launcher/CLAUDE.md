@@ -34,14 +34,18 @@ never draw their own header (the shell places it; see
   flexible, truncating cell; the launcher is rigid.
 - **`form="icon"`** (leading edge of a sidebar-less app's top chrome) — the
   launcher alone.
-- **Floating** (`FloatingAppLauncher`, `Apps.Overlay` — inside the tab state, which switching apps needs; `Core.Root` is outside it) — solo (fullscreen) hides
-  the rail and tab bar, so an app that draws no brand (Home's gallery, the
-  website) would have no way to another app. In solo, when the focused surface
-  draws no brand, the launcher floats at the top-left on the same anchored band
-  as the floating action bar (`floating-bar-band`), hidden until the pointer
-  comes within 96px of the corner (a window `pointermove` listener — an
-  invisible hover zone would swallow clicks on the app) and kept shown while
-  focused or while its grid is open. "Draws no brand" is read from what is
+- **Floating** (`FloatingAppLauncher`, `Apps.Overlay` — inside the tab state, which switching apps needs; `Core.Root` is outside it; the page's layout and every `AppEmbed` mount it) — a surface no app switcher frames would leave an
+  app that draws no brand (Home's gallery, the website, Keyboard Party) with
+  no way to another app: solo (fullscreen) hides the rail and tab bar, and a
+  contained tab set (an `AppEmbed`) never draws them, so there a mode that
+  does not draw its own frame (docked) has none either (the desktop keeps its
+  shelf's launcher). There, when the focused surface draws no brand, the
+  launcher floats at the top-left of its box (the viewport, or the embed's)
+  on the same anchored band as the floating action bar
+  (`floating-bar-band`), hidden until the pointer comes within 96px of that
+  box's corner (a window `pointermove` listener measured against a fixed
+  zero-size corner marker — an invisible hover zone would swallow clicks on
+  the app) and kept shown while focused or while its grid is open. "Draws no brand" is read from what is
   mounted — `useBrandDrawnOn(focusedTabId)` from `primitives/app-shell` —
   never declared per app.
 
@@ -49,15 +53,15 @@ never draw their own header (the shell places it; see
 
 ## Plugin reference
 
-- Description: The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. In solo (fullscreen) mode, a surface that draws no brand gets the launcher floating at the top-left, revealed as the pointer nears the corner.
+- Description: The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. Where no app switcher frames the surface — solo (fullscreen), or an AppEmbed, which draws no rail or tab bar — a surface that draws no brand gets the launcher floating at the top-left of its box, revealed as the pointer nears that corner.
 - Web:
   - Contributes:
     - `AppShell.Brand` "Brand" → `AppBrand`
     - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
     - `FieldPresentation.Register` "collection:apps.installed-app"
     - `Fields.Identity` "app-icon"
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps-core/tabs` ×5
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps-core/tabs` ×6
     - `apps-core` ×5
     - `network/live/live-state` ×4
     - `primitives/data-view` ×3

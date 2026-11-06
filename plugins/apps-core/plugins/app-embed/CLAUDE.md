@@ -35,6 +35,10 @@ around nothing the real instance. Designs:
   tab set's viewport (the set is `contained`): a `viewport`-framed placement
   (solo — a desktop window's Full screen) fills the embed box, and the embed
   still opens as a box, never in solo.
+- **Its own overlays** (`Apps.Overlay`, mounted as the page's layout mounts
+  them, inside its tab state): the floating launcher stands in for the rail
+  and tab bar an embed never draws, so an app that draws no brand of its own
+  is never a dead end in the box.
 - **Keyboard.** Its tabs register their surface shortcuts (`mod+z`) like any
   tab; pointing at the embed claims the page's focused surface and tab set
   (`claimTabSet`), so shortcuts — the desktop's included — act on it.

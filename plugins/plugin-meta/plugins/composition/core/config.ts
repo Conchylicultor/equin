@@ -425,6 +425,11 @@ export const compositionsConfig = defineConfig({
             // says "not available".
             "apps.desktop.**",
             "!apps.desktop.wallpaper.openverse.**",
+            // Keyboard Party, whole: its server half only registers the
+            // party's settings (served by the worker's config), and the toy
+            // loads nothing — emoji pictures, WebAudio-synthesized sounds,
+            // the browser's own speechSynthesis.
+            "apps.keyboard-party.**",
             // The OS menu-bar panel and its sections: a page the native
             // helper opens on the computer, meaningless in a demo.
             "!menu-bar.**",

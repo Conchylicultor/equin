@@ -8,7 +8,7 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
-import { useNavigate } from "@plugins/apps-core/plugins/tabs/web";
+import { useNavigate, useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { useRouteState } from "@plugins/primitives/plugins/pane/web";
 import { ErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { AppEmbed } from "../components/app-embed";
@@ -20,6 +20,12 @@ import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/co
 // embed's — a same-app URL moves its route, another tab app in scope swaps the
 // embed's tab to it, a surface-mode app's base path switches the embed's mode,
 // anything else is `onLeave`.
+
+/** An overlay that says which tab set it is drawn in. */
+function OverlayProbe() {
+  const { id, contained } = useTabs();
+  return <div data-testid="overlay">{`${id} contained=${contained}`}</div>;
+}
 
 /** Where the probe's button navigates — set by the test before clicking. */
 const target = { url: "" };
@@ -61,6 +67,7 @@ const appsPlugin = {
       },
       component: () => <Probe app="emb" />,
     }),
+    Apps.Overlay({ id: "probe-overlay", component: OverlayProbe }),
     // A surface-mode app: it owns no URL, so the embed cannot hold it.
     Apps.App({
       app: {
@@ -191,6 +198,13 @@ describe("<AppEmbed>", () => {
     expect(onLeave.mock.calls).toEqual([["/other/c/x"]]);
     expect(screen.getByTestId("app").textContent).toBe("emb");
     expect(screen.getByTestId("route").textContent).toBe("pending:c/one");
+  });
+
+  it("draws the apps overlays inside, over its own tab set", () => {
+    mount();
+    expect(screen.getByTestId("overlay").textContent).toMatch(
+      /^embed:.* contained=true$/,
+    );
   });
 
   it("a surface-mode app switches the embed's own mode, never leaves", () => {

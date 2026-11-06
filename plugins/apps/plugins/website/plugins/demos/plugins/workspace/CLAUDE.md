@@ -1,7 +1,7 @@
 # workspace
 
 The workspace demo — the website's live demo: the Agent Manager, Pages,
-Prototypes and Sonata on Demo's own equin, the story being what equin is for:
+Prototypes, Sonata and Keyboard Party on Demo's own equin, the story being what equin is for:
 a person shaping their apps with agents. Its
 scenario is `workspaceDemo` (`core`) — the app, the
 route it opens at (`/c/conv-demo-practice-timer`) and its browser host
@@ -108,8 +108,12 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   turns the embed's own tab set into floating windows — its layout lives in
   the embed, never in the page's storage, and its pinned apps and wallpaper
   are the worker's config; importing a wallpaper from a link says "not
-  available"; `research/2026-11-04-global-desktop-mode-in-browser-demo.md`).
-  Its samples load
+  available"; `research/2026-11-04-global-desktop-mode-in-browser-demo.md`),
+  and Keyboard Party (`apps.keyboard-party.**`, whole: its server half only
+  registers the party's settings, which the worker's config serves at their
+  product defaults, and the toy loads nothing — emoji pictures, sounds
+  synthesized with WebAudio, the browser's own `speechSynthesis`;
+  `apps/demo`'s `keyboard-party-in-demo.ts`). Sonata's samples load
   through the worker's asset mirror (`infra/asset-mirror`, portable), fetched
   from the instruments' public CDNs once per browser profile (the mirror's
   cache is the host's `data-files` store, kept in the demo's IndexedDB;
@@ -208,7 +212,7 @@ data and seed; no app folder changes:
 
 ## Plugin reference
 
-- Description: The workspace demo — the website's live demo of the Agent Manager, Pages, Prototypes and Sonata on Demo's own equin (core: workspaceDemo — the app, the route /c/conv-demo-practice-timer and its browser host: real server code in a Web Worker on PGlite, starting from a build-time snapshot of the demo's own data written through each app's fixture writer — agents at work on Demo's wishes, one waiting for review after adding a practice timer to Sonata, pages showing every block type, prototypes and songs, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
+- Description: The workspace demo — the website's live demo of the Agent Manager, Pages, Prototypes, Sonata and Keyboard Party on Demo's own equin (core: workspaceDemo — the app, the route /c/conv-demo-practice-timer and its browser host: real server code in a Web Worker on PGlite, starting from a build-time snapshot of the demo's own data written through each app's fixture writer — agents at work on Demo's wishes, one waiting for review after adding a practice timer to Sonata, pages showing every block type, prototypes and songs, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
 - Core:
   - Uses:
     - `conversations.CONVERSATIONS_CATEGORY_ID`

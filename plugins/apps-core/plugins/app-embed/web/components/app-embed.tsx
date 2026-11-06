@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { Fragment, useMemo, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
@@ -53,6 +53,10 @@ const refuseLeave: AppEmbedLeave = () => {
  *   `transform-gpu` so `position: fixed` app chrome (a sidebar) resolves
  *   against the embed, not the viewport. A placement that would escape to the
  *   viewport (solo) fills the embed box instead — the embed is its viewport.
+ * - **Its own overlays** (`Apps.Overlay`, as the page's layout mounts them):
+ *   floating chrome inside the tab state, resolved against the embed's box —
+ *   the floating launcher, so an app that draws no brand of its own is not a
+ *   dead end in a box with no rail or tab bar.
  *
  * Size it with `className` (it fills its box). `app` / `route` seed the first
  * tab only.
@@ -109,8 +113,20 @@ function EmbedFrame({ className }: { className: string | undefined }) {
           ) : (
             <AppTabsBody />
           )}
+          <EmbedOverlays />
         </PluginErrorBoundary>
       </RenderOrigin>
     </Theme>
   );
+}
+
+/** Every `Apps.Overlay` contribution, each isolated in its own boundary — the
+ * embed's twin of the page layout's overlay host. */
+function EmbedOverlays() {
+  const overlays = Apps.Overlay.useContributions();
+  return overlays.map((overlay) => (
+    <Fragment key={overlay.id}>
+      {renderIsolated(Apps.Overlay, overlay as unknown as Contribution, {})}
+    </Fragment>
+  ));
 }

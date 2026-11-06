@@ -1,4 +1,4 @@
-// @hash 189f2886aa53
+// @hash 7caffe1c2a35
 {
   "manifests": [
     {
@@ -170,6 +170,7 @@
         "!apps.sonata.transcription.**",
         "apps.desktop.**",
         "!apps.desktop.wallpaper.openverse.**",
+        "apps.keyboard-party.**",
         "!menu-bar.**",
         "!conversations.menu-bar-status.**",
         "!tasks.menu-bar-task.**",

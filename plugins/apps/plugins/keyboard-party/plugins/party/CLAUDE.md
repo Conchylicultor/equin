@@ -12,6 +12,7 @@
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `config_v2/fields.FieldRenderer`
+    - `primitives/app-shell.AppShellBrand`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`
