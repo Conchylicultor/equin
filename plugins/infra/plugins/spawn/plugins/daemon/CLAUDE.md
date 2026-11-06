@@ -43,10 +43,13 @@ Four ways to start an instance — the arm decides how liveness is known:
   (the primitive terminates afterwards); the instance's `postMessage` reaches
   the current incarnation. Liveness: the `close` event.
 - **`launchDetached({ argv, env?, onOutputLine?, pidFile })`** — a bootstrap
-  that starts something detached and exits (a release preview). Liveness: the
-  pid file, read when the catalog loads.
+  that starts something detached and exits (a release preview), or the
+  long-lived process itself (an sdk agent). Liveness: the pid file, watched
+  (below); the bootstrap's exit reads it once more. A failed bootstrap with no
+  pid file is `exited` with its reason.
 - **`attach({ pidFile })`** — a process this backend did not start but runs on
-  (the gateway). Liveness: the pid file; a new pid is a restart.
+  (the gateway). Liveness: the pid file, watched; a new pid is a restart.
+  The call returns it `starting`; its first read lands after.
 
 `launchDetached` and `attach` exist only on a `restart: { kind: "never" }`
 declaration (tsc): nothing here can respawn what it is not the parent of.
@@ -75,8 +78,33 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
   declares `onCodeAdopted: "stop"`: it is not judged, it is stopped on
   adoption (`stopOnCodeAdopted`), and its owner starts it again on next use
   (the faceted-tree worker, `plugin-meta/plugin-tree`).
-- Pid-file liveness is read on demand (catalog load, `instance.state`), never
-  polled: a pid-file daemon that dies is seen at the next read.
+- **Pid-file liveness is watched, and a get reads memory**
+  (`server/internal/pid-file-watch.ts`). The pid file's folder gets a
+  children-scope watch through the shared dir hub (`acquireDirWatch`); each
+  change of the file is read async (`readPidFile`, one read at a time,
+  changes landing mid-read folded into one more) and pushed into the follow
+  logic, so `running` / `exited` / a restart fire on the change.
+  `instance.pid` / `.state`, `listDaemons` and `daemonRecentRuns` judge the
+  HELD read with a `kill(0)` — never the disk — so a process killed leaving
+  its file behind (no file event, nothing polls) is seen at the next get.
+  Before the first read the instance stays `starting`, never a stand-in
+  "absent".
+- **The watch is a best effort; a get backs it up.** A single-folder watch
+  goes live a moment after it opens, and the process's shared FSEvents
+  stream can miss a write while another watch opens or closes
+  (`infra/file-watcher`). So a get that finds nothing alive (`starting`, or
+  an attached instance `exited`) also asks for a fresh async read: a missed
+  write is caught by the next look, never by a timer. The folder is never
+  created here: while it is missing, or after it went (its watch dropped),
+  there is no watch and the read says `absent`; the next read opens it
+  again. A failure to open it other than a missing folder is reported
+  (`reportServerError`) and retried on the next read, which still runs.
+- **A bootstrap's exit is judged by a read that started after it.** Each
+  read is numbered when it starts; until one numbered past the bootstrap's
+  exit lands, a launch is still booting — an older read may predate the
+  bootstrap's last write. That read decides: a pid, or the bootstrap's own
+  failure, or "no pid file". `stop()` (and a detached instance's final exit)
+  releases the watch.
 - Piped stderr carries bun 1.3.13's exit-during-pull wedge risk
   (`infra/spawn/CLAUDE.md`). Ask for lines only when you publish them.
 
@@ -94,27 +122,10 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
 ## Plugin reference
 
 - Description: defineDaemon: the one declared long-lived process or thread a backend runs on its own — a named, described declaration (startedBy boot | on-demand, where every-worktree | main | host-singleton, restart never | backoff) whose spawnProcess / spawnWorker supervise a child process or Bun Worker (one respawn loop: doubling backoff, give-up after repeated rapid exits, healthy on survival or a ready signal), and whose launchDetached / attach follow a detached process by its pid file. Records per declaration its instances (pid, since, restarts, last exit) and each incarnation as a run for the Background activity catalog (onDaemonActivity / listDaemons / daemonRecentRuns).
-- Cross-plugin:
-  - Imported by:
-    - `apps/browser/engine`
-    - `build/restart-skip`
-    - `conversations/runtime-sdk`
-    - `debug/paging-probe`
-    - `debug/sentinel`
-    - `debug/sentinel/machine-usage`
-    - `infra/launcher`
-    - `infra/mcp/browser`
-    - `infra/paths/root-migration`
-    - `infra/spawn/daemon/background-arm`
-    - `plugin-meta/plugin-tree`
-    - `release`
-- Exemptions:
-  - Exempts itself from:
-    - `daemon/no-raw-worker` — `.` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/registry.ts`, `server/internal/pid-file-sync.ts` (debt)
-    - `blocking-fs/no-sync-fs` — `server/internal/pid-file-sync.ts` (debt)
-  - Exempted by: `infra/spawn/daemon` (0 debt)
 - Server:
+  - Uses:
+    - `infra/file-watcher.acquireDirWatch`
+    - `infra/file-watcher.DirWatchRelease`
   - Exports (types):
     - `AttachOptions`
     - `DaemonArm`
@@ -150,6 +161,25 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `pidAlive`
     - `readPidFile`
     - `stopOnCodeAdopted`
+- Cross-plugin:
+  - Imported by:
+    - `apps/browser/engine`
+    - `build/restart-skip`
+    - `conversations/runtime-sdk`
+    - `debug/paging-probe`
+    - `debug/sentinel`
+    - `debug/sentinel/machine-usage`
+    - `infra/launcher`
+    - `infra/mcp/browser`
+    - `infra/paths/root-migration`
+    - `infra/spawn/daemon/background-arm`
+    - `plugin-meta/plugin-tree`
+    - `release`
+- Exemptions:
+  - Exempts itself from:
+    - `daemon/no-raw-worker` — `.` (sanctioned)
+    - `boundaries/no-platform-api` — `server/internal/registry.ts`, `server/internal/pid-file-watch.ts` (debt)
+  - Exempted by: `infra/spawn/daemon` (0 debt)
 - Sub-plugins:
   - **`background-arm`** — Long-lived processes in the Background activity catalog: registers the `daemon` background kind — every declaration made with defineDaemon under Long-lived processes, triggered at boot or on demand…
 

@@ -350,9 +350,9 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `resource.declare` "sentinel.status"
     - `resource.declare` "sentinel.vitals"
     - `ConfigV2.Register` "sentinel"
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/host/duress/latch` ×8
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug/sentinel/status-file` ×7
+    - `infra/host/duress/latch` ×7
     - `infra/spawn/daemon` ×5
     - `primitives/log-channels/log-files` ×4
     - `config_v2` ×3

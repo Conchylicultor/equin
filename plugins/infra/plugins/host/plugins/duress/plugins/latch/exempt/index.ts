@@ -9,11 +9,10 @@ export default [
     reason: "not yet split into server/ + machine/",
   },
   {
-    rule: "blocking-fs/no-sync-fs",
+    rule: "watcher-safety/no-raw-fs-watch",
     paths: ["server/internal/latch.ts"],
-    kind: "debt",
-    task: "task-1793970457-7rrcc4",
+    kind: "sanctioned",
     reason:
-      "isUnderDuress() / duressEpisode() are a synchronous gate read from many synchronous hot paths (log-channel ingress, the shed buffer's admit, the latency-ledger recorder, the CLI admission valve), so they stat/read the latch file on the calling thread (memoized 2 s). The fix is a redesign: serve them from an in-process value pushed by a watch on the latch dir (lapse computed from the held mtime against the clock), with a fresh async read for the woken CLI valve. The writers (setDuress / refreshDuress / clearDuress, and readDuress) run on the sentinel's own worker thread, plus tests.",
+      "The duress gate's held copy is kept current by ONE non-recursive, non-persistent fs.watch on the latch directory, filtered to one filename — per process, opened by the plugin's onReadyBlocking (or the first gate read). A defineFileWatcher cannot serve it: this plugin is a leaf imported by processes with no plugin runtime to mount a declaration in (the CLI's admission valve, the cluster sentinel's worker thread) and by tests that never boot one, and @parcel/watcher's native addon would join the CLI's startup closure through the barrel. Not a cycle: file-watcher reaches only runtime-profiler.",
   },
 ] satisfies Exemptions;

@@ -15,7 +15,10 @@ export function loginServiceManager(): LoginServiceManager | null {
   return null;
 }
 
-/** The service `id` under this host's manager, or null when it has none. */
-export function loginService(id: LoginServiceId): LoginService | null {
-  return loginServiceManager()?.service(id) ?? null;
+/** The service `id` under this host's manager (bound), or null when it has none. */
+export async function loginService(
+  id: LoginServiceId,
+): Promise<LoginService | null> {
+  const manager = loginServiceManager();
+  return manager === null ? null : manager.service(id);
 }

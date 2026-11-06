@@ -186,21 +186,28 @@ export interface ServedCollection {
   rows: ServedResource;
 }
 
-/** Every export of `M` that is a function returning a served resource. */
+/** Every export of `M` that is a function returning a served resource. A
+ * function returning `never` (one that exits, like server-core's
+ * `exitWithFatalReport`) is not one: `never` extends every type vacuously. */
 export type ServedResourceFnNames<M> = {
   [K in keyof M]-?: M[K] extends (...args: never[]) => infer R
-    ? [R] extends [ServedResource]
-      ? K
-      : never
+    ? [R] extends [never]
+      ? never
+      : [R] extends [ServedResource]
+        ? K
+        : never
     : never;
 }[keyof M];
 
-/** Every export of `M` that is a function returning a served collection. */
+/** Every export of `M` that is a function returning a served collection (a
+ * `never`-returning function excluded, as above). */
 export type ServedCollectionFnNames<M> = {
   [K in keyof M]-?: M[K] extends (...args: never[]) => infer R
-    ? [R] extends [ServedCollection]
-      ? K
-      : never
+    ? [R] extends [never]
+      ? never
+      : [R] extends [ServedCollection]
+        ? K
+        : never
     : never;
 }[keyof M];
 

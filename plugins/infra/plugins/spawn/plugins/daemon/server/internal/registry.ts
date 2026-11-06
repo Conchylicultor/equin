@@ -330,7 +330,10 @@ interface InstanceRec {
   code: SpawnedCode | null;
   /** The open run of the current incarnation. */
   run: BackgroundRun | null;
-  /** Re-reads liveness that no event reports (pid-file arms). */
+  /**
+   * Judges the held pid-file read again (pid-file arms): memory and a
+   * `kill(0)`, never the disk — the file itself is watched.
+   */
   observe: (() => void) | null;
   /** The instance's `stop()`, once its handle exists. */
   stop: (() => Promise<void>) | null;

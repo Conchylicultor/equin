@@ -10,7 +10,9 @@ import {
   loginServiceHolder,
   loginServiceId,
   loginServiceJob,
+  referredLabels,
 } from "./define";
+import type { LoginService, LoginServiceManager } from "./login-service";
 
 const helper = defineDep({
   id: "example-helper",
@@ -63,6 +65,7 @@ describe("defineLoginService", () => {
         decl,
         ready,
         unbundledExecutable(decl.executable.build(ready)),
+        {},
       ),
     ).toEqual({
       description: "An example tray helper",
@@ -75,16 +78,62 @@ describe("defineLoginService", () => {
 
   test("a bundled executable runs from its path, its build named in the environment", () => {
     const ready = readyForTests(helper, asAppPath("/cache/x/env"), "x");
-    const job = loginServiceJob(decl, ready, {
-      path: "/app/equin.app/Contents/MacOS/example",
-      identity: "example-helper@x",
-      bundled: true,
-    });
+    const job = loginServiceJob(
+      decl,
+      ready,
+      {
+        path: "/app/equin.app/Contents/MacOS/example",
+        identity: "example-helper@x",
+        bundled: true,
+      },
+      {},
+    );
     expect(job.argv).toEqual(["/app/equin.app/Contents/MacOS/example", "tray"]);
     expect(job.env).toEqual({
       HOME: "/h/me",
       ...envEntries({ APP_COMPONENT: "example-helper@x" }),
     });
+  });
+
+  test("spec reads the bound label of every service it refers to, by its own key", async () => {
+    const gateway = {
+      label: "dev.equin.gateway",
+      session: "background",
+      installedAs: ["dev.legacy.gateway"],
+    } as const;
+    const referring = defineLoginService({
+      ...decl,
+      refersTo: { gateway },
+      spec: (ready, executable, labels) => ({
+        argv: [executable],
+        cwd: ready.dir,
+        env: { GATEWAY: labels.gateway },
+        stdioLog: asAppPath("/h/me/logs/example.log"),
+      }),
+    });
+    // A manager that has the gateway installed under its legacy label.
+    const manager: LoginServiceManager = {
+      manager: "fake",
+      service: async (id) =>
+        ({
+          id:
+            id.label === gateway.label
+              ? { ...id, label: "dev.legacy.gateway" }
+              : id,
+        }) as LoginService,
+    };
+    const labels = await referredLabels(manager, referring);
+    expect(labels).toEqual({ gateway: "dev.legacy.gateway" });
+    const ready = readyForTests(helper, asAppPath("/cache/x/env"), "x");
+    const job = loginServiceJob(
+      referring,
+      ready,
+      unbundledExecutable(referring.executable.build(ready)),
+      labels,
+    );
+    expect(job.env).toEqual({ GATEWAY: "dev.legacy.gateway" });
+    // A declaration that refers to nothing gets no labels.
+    expect(await referredLabels(manager, decl)).toEqual({});
   });
 
   test("the hold names the service in holdDep's holder grammar", () => {

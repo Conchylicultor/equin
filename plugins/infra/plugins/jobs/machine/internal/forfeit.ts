@@ -1,4 +1,7 @@
-import { reportServerFatalSync } from "@plugins/framework/plugins/server-core/core";
+import {
+  exitWithFatalReport,
+  reportServer,
+} from "@plugins/framework/plugins/server-core/core";
 import { HOLD_CLASSES, RUNNERS, type HoldClass } from "../../core/hold";
 import {
   JOB_SLOT_FLOOR_KIND,
@@ -168,14 +171,16 @@ const MIN_USABLE_SLOTS = 2;
  * Two outcomes, and they are different in kind:
  *
  * - The longest-class runner is below the floor ⇒ this process can no longer do
- *   the work only it can do. Write the report SYNCHRONOUSLY to disk and exit.
+ *   the work only it can do. Write the report SYNCHRONOUSLY to disk and exit
+ *   (`exitWithFatalReport`).
  *   Postgres drops every advisory lock during backend teardown, so the next
  *   boot's sweeper reclaims those rows cleanly and the work re-runs — which is
  *   the one thing that actually returns the slots.
  * - A NARROWER runner has gone fully forfeited ⇒ report, and stay up. Its
  *   classes still reach the wider runners (the task lists are nested), so the
  *   pool is degraded, not dead, and exiting would throw away live capacity to
- *   fix a shortage that is not fatal.
+ *   fix a shortage that is not fatal. The report is async (`reportServer`): a
+ *   backend that stays up must not freeze on a synchronous disk write.
  */
 export async function checkSlotFloor(): Promise<void> {
   const usable = usableSlots(LONGEST_CLASS_RUNNER.id);
@@ -193,7 +198,7 @@ export async function checkSlotFloor(): Promise<void> {
         `are held by handlers that ignored their deadline. Its work still reaches the wider ` +
         `runners, so the pool is degraded rather than dead.`,
     );
-    reportServerFatalSync({
+    reportServer({
       kind: JOB_SLOT_FLOOR_KIND,
       message: `${spec.id} runner fully forfeited — ${spec.concurrency} slots held by zombie handlers`,
       data: report,
@@ -226,7 +231,7 @@ async function tripFloor(usable: number): Promise<void> {
         `within the last ${LATCH_WINDOW_MS} ms, so the exit is suppressed — another restart ` +
         `would not fix what is holding these slots.`,
     );
-    reportServerFatalSync({
+    reportServer({
       kind: JOB_SLOT_FLOOR_KIND,
       message: `${LONGEST_CLASS_RUNNER.id} runner below its slot floor — restart suppressed by the anti-loop latch`,
       data: report,
@@ -235,15 +240,17 @@ async function tripFloor(usable: number): Promise<void> {
   }
 
   console.error(`${summary}. Exiting so Postgres drops the locks.`);
-  // Synchronous by contract — `reportServerFatalSync` has completed its durable
-  // write (one appended JSONL line, replayed on the next boot) before it
-  // returns, which is the only reason a report can exist at all on this path.
-  reportServerFatalSync({
-    kind: JOB_SLOT_FLOOR_KIND,
-    message: `${LONGEST_CLASS_RUNNER.id} runner below its slot floor (${usable}/${LONGEST_CLASS_RUNNER.concurrency} usable) — backend exited`,
-    data: report,
-  });
-  process.exit(1);
+  // Synchronous by contract — `exitWithFatalReport` completes its durable write
+  // (one appended JSONL line, replayed on the next boot) before it exits, which
+  // is the only reason a report can exist at all on this path.
+  exitWithFatalReport(
+    {
+      kind: JOB_SLOT_FLOOR_KIND,
+      message: `${LONGEST_CLASS_RUNNER.id} runner below its slot floor (${usable}/${LONGEST_CLASS_RUNNER.concurrency} usable) — backend exited`,
+      data: report,
+    },
+    (code) => process.exit(code),
+  );
 }
 
 function describe(

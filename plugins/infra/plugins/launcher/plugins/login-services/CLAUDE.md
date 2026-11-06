@@ -37,6 +37,13 @@ export default [
 ];
 ```
 
+- **`refersTo`** names other login services the job mentions by label
+  (menu-bar: `refersTo: { gateway: GATEWAY_SERVICE }`, for its Start
+  button). `spec`'s third argument holds each one's BOUND label under the
+  same key (`labels.gateway`), resolved by the reconcile before `spec` runs
+  (`referredLabels`) — `spec` is synchronous data in, data out, and never
+  looks a binding up itself. A relabel changes those labels, so it renders a
+  changed job and reloads the service.
 - `start` (after the gateway): ensures `dep` from the MAIN checkout (building
   it in the foreground if needed), then reconciles the service under `start`
   (or `force` with `--force`).
@@ -64,10 +71,28 @@ export default [
 
 (`<gateway-label>` is the gateway's launchd label / systemd unit name, `dev.equin.gateway` (`GATEWAY_SERVICE` in `infra/launcher/core`); an install from before the rename keeps `LEGACY_IDS.launchdLabel` until `./equin data-dir migrate` relabels it — the service stays bound to whichever label is installed (`installedAs`).)
 
+## Binding to the installed label
+
+`LoginServiceManager.service(id)` is **async**: it binds `id` to the label
+actually installed (`bindInstalledLabel`, `machine/internal/installed-label.ts`
+— the first `installedAs` label whose definition file exists, else its own) and
+returns the `LoginService` for it; read the label a command acts on from
+`service.id.label`. The binding stats a file, and this code runs on main's
+backend (`followMain`, the gateway-drift row), so it is an async `exists` —
+never a sync stat on a backend's JS thread (`blocking-fs/no-sync-fs`). It is
+bound afresh on every call, never cached: a relabel this process makes
+(`data-dir migrate` removing the old definition, then `start` writing the new
+one) is seen by the next `service(id)`, while a `LoginService` already held
+keeps the label it was bound to. An id without `installedAs` (every declared
+service — `loginServiceId` never sets it) binds to itself without touching the
+disk. `loginService(id)` is the same through this host's manager (null without
+one).
+
 ## One reconcile, three policies
 
-`reconcileLoginService(service, decl, ready, policy, app)` (`machine/internal/reconcile.ts`)
-is the one per-service body: hold the dependency (`loginServiceHolder` — off
+`reconcileLoginService(manager, decl, ready, policy, app)` (`machine/internal/reconcile.ts`)
+is the one per-service body, answering `{ service, outcome }`: bind the
+service and every service it `refersTo` under `manager`, hold the dependency (`loginServiceHolder` — off
 macOS the job names the binary by path long after main moves on), install its
 executable into the equin app (macOS, below), write the job, unload +
 `awaitProcessGone` when loaded, truncate the stdio log, load.
@@ -205,9 +230,7 @@ folder needs only its boundary row, not a barrel's doc and shipping policy.
     - `infra/launcher/gateway-drift`
     - `infra/paths/root-migration`
 - Exemptions:
-  - Exempts itself from:
-    - `user-path/no-unproven-claim` — `machine/internal/launchd.ts`, `machine/internal/systemd.ts` (sanctioned)
-    - `blocking-fs/no-sync-fs` — `machine/internal/installed-label.ts` (debt)
+  - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/launchd.ts`, `machine/internal/systemd.ts` (sanctioned)
 - Machine:
   - Exports (types):
     - `DefineLoginServiceSpec`

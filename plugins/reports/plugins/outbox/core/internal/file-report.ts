@@ -86,7 +86,7 @@ export async function fileReportFromProcess(
 
 /**
  * {@link fileReportFromProcess}, synchronously: for a report filed on the way
- * out of a process (`reportServerFatalSync` in an exec child), whose next
+ * out of a process (`exitWithFatalReport` in an exec child, or an uncaught exception), whose next
  * statement is `process.exit()` — the entry is renamed into place before this
  * returns. Never throws, same result arms.
  *

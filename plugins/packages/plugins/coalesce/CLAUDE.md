@@ -31,13 +31,16 @@ is bounded by construction.
     - `conversations/runtime-sdk`
     - `conversations/transcript-watcher`
     - `debug/profiling/op-log/op-store`
+    - `debug/sentinel`
     - `framework/tooling/web-artifacts`
     - `infra/file-watcher`
     - `infra/git/checkout-watch`
     - `infra/git/git-watcher`
+    - `infra/host/duress/latch`
     - `infra/host/io-health`
     - `infra/jobs/supervised-job`
     - `infra/paths/data-files/memory`
+    - `infra/spawn/daemon`
     - `packages/watched-memo`
     - `plugin-meta/plugin-tree`
     - `reports/outbox`

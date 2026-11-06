@@ -30,26 +30,27 @@ export function reportServerError(report: ServerErrorReport): void {
 }
 
 /**
- * A report filed on the way OUT of the process — the last thing a backend says
- * before it deliberately exits.
+ * A report a backend files about a named condition of its own — not a caught
+ * error but a state it decided is wrong (a runner forfeited, a floor tripped).
  *
- * Separate from {@link ServerErrorReport} because the two differ in the one way
- * that matters here: `reportServerError` hands its report to an ASYNC durable
- * path (a Postgres write), and the event loop a dying process has left cannot
- * run one. So this pair's contract is **synchronous, and durable before it
- * returns** — the implementation writes to disk (the serving backend's crash
- * buffer, flushed by its next boot; the report outbox, drained by main, from a
- * process that does not serve).
+ * Separate from {@link ServerErrorReport} because it carries a `kind`: the
+ * thing being reported is not a crash, and the kind is what lets it be
+ * recorded as itself rather than as an anonymous stack.
  *
- * It carries a `kind` because, unlike a caught error, the thing being reported
- * is not a crash: it is a named condition the caller decided to exit on, and the
- * kind is what lets the next boot render it as itself rather than as an
- * anonymous stack.
+ * Filed one of two ways, and which one is decided by whether the process lives
+ * on — never by the caller's taste:
+ *
+ * - {@link reportServer} — the process keeps running. Async, through the same
+ *   durable path every report takes (a Postgres write, or the outbox from a
+ *   process that does not serve).
+ * - {@link exitWithFatalReport} — the process exits on the spot. Synchronous,
+ *   because a dying event loop cannot finish an async write; the only way to
+ *   reach the synchronous path, and it does the exit itself.
  */
-export interface ServerFatalReport {
-  /** The report kind the durable line resolves to when it is recorded. The
-   * kind must be registered by SOME plugin in the recording composition, or the
-   * flush logs a wiring error instead of filing anything. */
+export interface ServerReport {
+  /** The report kind this resolves to when it is recorded. The kind must be
+   * registered by SOME plugin in the recording composition, or recording it
+   * logs a wiring error instead of filing anything. */
   kind: string;
   message: string;
   /** The kind's payload. Validated when recorded, by the kind's own schema —
@@ -58,32 +59,61 @@ export interface ServerFatalReport {
 }
 
 /**
- * The synchronous twin of {@link serverErrorSink}: a REQUEST sink, never held —
- * a report held for a handler that attaches later is lost when the caller's
- * next statement exits the process. The reports engine handles it through
- * `sinkHandlers`, so it is attached in every boot mode (an exec child — a
- * supervised job's body — included) from the `onReadyBlocking` phase on. The
- * handler answers whether the durable write landed.
+ * A typed report from a process that LIVES ON. A held report sink, like
+ * {@link serverErrorSink}: one emitted before the handler attaches is replayed
+ * to it. The reports engine handles it (a `sinkHandlers` entry) with
+ * `recordReport` — async, so the backend's JS thread never waits on a disk.
  */
-export const serverFatalSink = defineRequestSink<ServerFatalReport, boolean>();
+export const serverReportSink = defineReportSink<ServerReport>();
+
+/** File a typed report from a process that keeps running (async, held). */
+export function reportServer(report: ServerReport): void {
+  serverReportSink.emit(report);
+}
 
 /**
- * File a report synchronously, immediately before a deliberate `process.exit()`.
+ * The synchronous twin of {@link serverReportSink}: a REQUEST sink, never held —
+ * a report held for a handler that attaches later is lost when the process
+ * exits. The reports engine handles it through `sinkHandlers`, so it is
+ * attached in every boot mode (an exec child — a supervised job's body —
+ * included) from the `onReadyBlocking` phase on. The handler writes to disk
+ * SYNCHRONOUSLY (the serving backend's crash buffer, flushed by its next boot;
+ * the report outbox, drained by main, from a process that does not serve) and
+ * answers whether the durable write landed.
  *
- * The handler has completed its durable write by the time this returns — the
- * caller's next statement is the exit. When nothing filed it (no handler
- * attached: the reports engine is not in this composition, or boot has not
- * reached its `onReadyBlocking`; or the write failed) it says so on stderr,
- * naming the report: a caller on the way out can do nothing else with that.
+ * Emitted only by {@link exitWithFatalReport}: a synchronous disk write on a
+ * backend that lives on freezes its JS thread for as long as the disk answers.
  */
-export function reportServerFatalSync(report: ServerFatalReport): void {
+export const serverFatalSink = defineRequestSink<ServerReport, boolean>();
+
+/**
+ * File a report synchronously, then exit the process with code 1 — the last
+ * thing a process says before it deliberately leaves.
+ *
+ * It takes the exit and returns `never`, so a synchronous report from a
+ * process that goes on running has no spelling: a caller that stays up files
+ * through {@link reportServer}. `exit` is the caller's `process.exit` (this
+ * module is portable and has no `process`).
+ *
+ * The handler has completed its durable write before `exit` runs. When nothing
+ * filed it (no handler attached: the reports engine is not in this
+ * composition, or boot has not reached its `onReadyBlocking`; or the write
+ * failed) it says so on stderr, naming the report: a process on its way out
+ * can do nothing else with that.
+ */
+export function exitWithFatalReport(
+  report: ServerReport,
+  exit: (code: number) => never,
+): never {
   const filed = serverFatalSink.emit(report);
-  if (filed === true) return;
-  console.error(
-    `[server-fatal] the "${report.kind}" report was NOT filed (${
-      filed === undefined
-        ? "no handler attached to serverFatalSink"
-        : "its durable write failed"
-    }): ${report.message}`,
-  );
+  if (filed !== true) {
+    console.error(
+      `[server-fatal] the "${report.kind}" report was NOT filed (${
+        filed === undefined
+          ? "no handler attached to serverFatalSink"
+          : "its durable write failed"
+      }): ${report.message}`,
+    );
+  }
+  return exit(1);
 }

@@ -76,5 +76,13 @@ export type LoginServiceState =
 /** A service manager: hands out a bound {@link LoginService} per id. */
 export interface LoginServiceManager {
   readonly manager: string;
-  service(id: LoginServiceId): LoginService;
+  /**
+   * The service `id` names, bound to the label actually installed
+   * (`LoginServiceId.installedAs`): its `id.label` is the one to act on.
+   * Async because binding looks at the disk (a legacy label's definition
+   * file) — never on a backend's JS thread synchronously. Bound afresh on
+   * every call, so a relabel this process makes is seen by the next one; a
+   * held `LoginService` keeps the label it was bound to.
+   */
+  service(id: LoginServiceId): Promise<LoginService>;
 }

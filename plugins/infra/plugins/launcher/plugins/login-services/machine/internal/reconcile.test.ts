@@ -21,7 +21,11 @@ import {
 } from "../../core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { defineLoginService, loginServiceId, loginServiceJob } from "./define";
-import type { LoginService, LoginServiceState } from "./login-service";
+import type {
+  LoginService,
+  LoginServiceManager,
+  LoginServiceState,
+} from "./login-service";
 import type { MacosAppHost } from "./macos-app";
 import { reconcileLoginService, type ReconcilePolicy } from "./reconcile";
 
@@ -101,6 +105,7 @@ function fakeService(
             d,
             writtenFrom,
             unbundledExecutable(d.executable.build(writtenFrom)),
+            {},
           ),
         );
   let state: LoginServiceState =
@@ -144,7 +149,16 @@ function fakeService(
       state = { kind: "not-loaded" };
     },
   };
-  return { service, calls, definition: () => definition };
+  // The manager hands out this one service: the reconcile binds it itself.
+  const manager: LoginServiceManager = {
+    manager: "fake",
+    service: async (id) => {
+      if (id.label !== service.id.label)
+        throw new Error(`no fake service ${id.label}`);
+      return service;
+    },
+  };
+  return { service, manager, calls, definition: () => definition };
 }
 
 /** A host with no app bundle (Linux): the service runs its build where it is. */
@@ -177,10 +191,10 @@ const run = (
   const ready = job === "same" ? oldBuild : newBuild;
   return {
     fake,
-    outcome: reconcileLoginService(fake.service, decl, ready, policy, {
+    outcome: reconcileLoginService(fake.manager, decl, ready, policy, {
       host: unbundled,
       log: () => {},
-    }),
+    }).then((r) => r.outcome),
   };
 };
 
@@ -263,8 +277,8 @@ describe("reconcileLoginService — a periodic service", () => {
 
   test("held by the manager between runs (no pid) counts as running", async () => {
     const fake = fakeService("loaded", oldBuild, periodic, null);
-    const outcome = await reconcileLoginService(
-      fake.service,
+    const { outcome } = await reconcileLoginService(
+      fake.manager,
       periodic,
       oldBuild,
       "start",
@@ -322,16 +336,19 @@ describe("reconcileLoginService — macOS (the equin app bundle)", () => {
     register: async () => {},
     executablesInUse: async () => [],
   };
-  const reconcile = (service: LoginService, ready: ReturnType<typeof build>) =>
-    reconcileLoginService(service, decl, ready, "follow", {
+  const reconcile = (
+    manager: LoginServiceManager,
+    ready: ReturnType<typeof build>,
+  ) =>
+    reconcileLoginService(manager, decl, ready, "follow", {
       host,
       log: () => {},
-    });
+    }).then((r) => r.outcome);
 
   test("the job runs the executable from the bundle and names its build in the environment", async () => {
     const one = build("one");
     const fake = fakeService("loaded", one);
-    await reconcile(fake.service, one);
+    await reconcile(fake.manager, one);
     const job = JSON.parse(fake.definition()!) as LoginServiceJob;
     expect(job.argv[0]).toBe(join(bundle, "Contents", "MacOS", "example"));
     expect(readEnv("APP_COMPONENT", job.env)).toBe("example-helper@one");
@@ -344,9 +361,9 @@ describe("reconcileLoginService — macOS (the equin app bundle)", () => {
     const one = build("one");
     const two = build("two");
     const fake = fakeService("loaded", one);
-    await reconcile(fake.service, one);
+    await reconcile(fake.manager, one);
     fake.calls.length = 0;
-    const outcome = await reconcile(fake.service, two);
+    const outcome = await reconcile(fake.manager, two);
     expect(outcome).toMatchObject({ kind: "started", reloaded: true });
     expect(fake.calls).toEqual(["write", "unload", "load"]);
     const job = JSON.parse(fake.definition()!) as LoginServiceJob;

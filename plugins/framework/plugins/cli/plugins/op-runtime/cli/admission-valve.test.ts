@@ -157,10 +157,10 @@ function harness(opts: { duress?: boolean } = {}) {
   const deps: ValveDeps = {
     isUnderDuress: () => {
       duressChecks++;
-      return duress;
+      return Promise.resolve(duress);
     },
     duressGuard: async () => ({ kind: "on" }),
-    duressReason: () => "cluster-onset: decompressionsPerSec",
+    duressReason: () => Promise.resolve("cluster-onset: decompressionsPerSec"),
     waitForWake: (signal) =>
       new Promise((resolve) => {
         const done = (): void => {

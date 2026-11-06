@@ -7,10 +7,9 @@ import { join } from "node:path";
 import {
   duressLatchDir,
   FRESHNESS_LEASE_MS,
-  isUnderDuress,
   LATCH_FILENAME,
-  MEMO_TTL_MS,
   readDuress,
+  readFreshDuress,
 } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import {
   duressGuard,
@@ -142,11 +141,15 @@ export interface GateLocks {
  * latch, no flock, no timers). Production uses `createValveDeps()`.
  */
 export interface ValveDeps {
-  isUnderDuress(): boolean;
+  /**
+   * Is the latch fresh, read from disk now — never a held copy: the valve is
+   * woken by the latch changing and must see the change it was woken for.
+   */
+  isUnderDuress(): Promise<boolean>;
   /** Whether the machine watcher is running to raise the latch at all. */
   duressGuard(): Promise<DuressGuard>;
   /** Latch trip cause for the hold line, null when unreadable/absent. */
-  duressReason(): string | null;
+  duressReason(): Promise<string | null>;
   /**
    * Sleep until the latch plausibly changed (latch event or lease deadline).
    * Resolves early, never throws, when `signal` aborts. Event-driven — see the
@@ -211,8 +214,8 @@ export async function admitThroughGate(
 
   try {
     for (;;) {
-      if (deps.isUnderDuress()) {
-        holdStart(deps.duressReason());
+      if (await deps.isUnderDuress()) {
+        holdStart(await deps.duressReason());
         const alone = await exclusiveUnlessCleared(deps, line);
         if (alone) return admitted(alone, "acquired");
         continue;
@@ -227,7 +230,7 @@ export async function admitThroughGate(
       }
       // Duress may have tripped while we waited: then this build runs alone,
       // after the ones already running — go round as a duress admission.
-      if (deps.isUnderDuress()) {
+      if (await deps.isUnderDuress()) {
         await shared.release();
         heldOn = undefined;
         deps.onRequeue();
@@ -300,7 +303,7 @@ async function exclusiveUnlessCleared(
   const stopWatching = new AbortController();
   const watching = (async () => {
     while (!stopWatching.signal.aborted) {
-      if (!deps.isUnderDuress()) {
+      if (!(await deps.isUnderDuress())) {
         clear.abort(new DuressCleared());
         return;
       }
@@ -369,10 +372,10 @@ export function createValveDeps(): ValveDeps {
     endHoldSpan = undefined;
   };
   return {
-    isUnderDuress,
+    isUnderDuress: async () => (await readFreshDuress()) !== null,
     duressGuard: async () =>
       duressGuard(await readSentinelWatch(sentinelStatusDir.path)),
-    duressReason: () => readDuress()?.reason ?? null,
+    duressReason: async () => (await readDuress())?.latch.reason ?? null,
     waitForWake: waitForLatchWake,
     gate: createGateLocks(agentBuildGateDir),
     onHoldStart: (reason) => {
@@ -451,9 +454,8 @@ export function createGateLocks(dir: GateDir): GateLocks {
  * Sleep until the latch plausibly changed state: fs.watch on the latch's own
  * directory scoped to the latch filename, plus one deadline timer at latch
  * mtime + lease (+ε). When the latch is already gone or its lease already
- * lapsed, the latch's in-process stat memo may still report duress for up to
- * MEMO_TTL_MS — wait that long instead of spinning; the memo converges within
- * it. Spurious wakes are harmless (the caller re-checks); an abort resolves.
+ * lapsed, it resolves at once: the caller re-checks with a fresh read of the
+ * file. Spurious wakes are harmless (the caller re-checks); an abort resolves.
  */
 function waitForLatchWake(signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
@@ -480,7 +482,9 @@ function waitForLatchWake(signal: AbortSignal): Promise<void> {
         throw err;
       leaseLapsesInMs = 0; // latch vanished between check and stat
     }
-    const waitMs = leaseLapsesInMs > 0 ? leaseLapsesInMs : MEMO_TTL_MS;
+    // Already gone or lapsed: wake at once — the caller's check reads the
+    // file fresh, so it sees the clear rather than spinning on a stale answer.
+    const waitMs = Math.max(0, leaseLapsesInMs);
 
     const watcher = watch(dir, (_event, filename) => {
       // A null filename is a platform edge; wake and let the caller re-check.

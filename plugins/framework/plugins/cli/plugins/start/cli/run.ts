@@ -39,7 +39,6 @@ import {
   awaitProcessGone,
   declaredLoginServices,
   installServiceExecutable,
-  loginServiceId,
   loginServiceManager,
   machineMacosAppHost,
   plannedServiceExecutable,
@@ -63,8 +62,10 @@ const run: CliAction<[], Opts> = async (opts) => {
   const manager = loginServiceManager();
   // The label the gateway's service is bound to on this machine — the old one
   // until `./equin data-dir migrate` relabels it (`installedAs`).
-  const gatewayLabel =
-    manager?.service(GATEWAY_SERVICE).id.label ?? GATEWAY_SERVICE.label;
+  const gatewayService = manager
+    ? await manager.service(GATEWAY_SERVICE)
+    : null;
+  const gatewayLabel = gatewayService?.id.label ?? GATEWAY_SERVICE.label;
   const selected = selectServices(opts.only, gatewayLabel, declared);
   // The releases mise.lock records, installed if a lock arrived without them
   // (a clone, a pull, an upstream merge) — before the doctor, which would
@@ -81,8 +82,7 @@ const run: CliAction<[], Opts> = async (opts) => {
   // The equin app bundle every service runs from on macOS (a no-op elsewhere).
   const app = machineMacosAppHost({ exec: cliExecContext() }, console.log);
   if (selected(gatewayLabel)) {
-    if (manager)
-      await startAsLoginService(manager.service(GATEWAY_SERVICE), opts, app);
+    if (gatewayService) await startAsLoginService(gatewayService, opts, app);
     else await startDetached(opts, app);
   }
   // Then every login service a plugin declares — none named here.
@@ -255,9 +255,8 @@ async function startDeclaredLoginServices(
       root,
       log: console.log,
     });
-    const service = manager.service(loginServiceId(decl));
-    const outcome = await reconcileLoginService(
-      service,
+    const { service, outcome } = await reconcileLoginService(
+      manager,
       decl,
       ready,
       opts.force ? "force" : "start",

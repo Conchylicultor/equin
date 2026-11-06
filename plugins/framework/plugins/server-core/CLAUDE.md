@@ -151,10 +151,15 @@ sink held and then dropped what the child emitted. Outside `web/`, the
 
 The reporters server-core itself offers are sinks for the same reason:
 `reportServerError` emits on `serverErrorSink` (held until the engine attaches),
-and `reportServerFatalSync` — the synchronous report a process files just
-before a deliberate `process.exit()` — on `serverFatalSink`, a REQUEST sink
-(never held: a report held past the exit is lost) whose handler answers
-whether the durable write landed; with none attached it says so on stderr.
+`reportServer` — a typed report (`kind` + `data`) from a process that lives
+on — on `serverReportSink` (held, recorded async), and
+`exitWithFatalReport(report, exit)` — the synchronous report a process files
+on its way out — on `serverFatalSink`, a REQUEST sink (never held: a report
+held past the exit is lost) whose handler answers whether the durable write
+landed; with none attached it says so on stderr. `exitWithFatalReport` takes
+the exit (`(code) => process.exit(code)`; core has no `process`) and returns
+`never`, so a synchronous disk write from a process that keeps running — which
+freezes its JS thread for as long as the disk answers — has no spelling.
 There is no `set*Reporter` setter to call from a hook an exec child skips.
 
 The process's crash listeners (`uncaughtException` / `unhandledRejection`) are
@@ -574,9 +579,9 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ServerContribution`
     - `ServerContributionToken`
     - `ServerErrorReport`
-    - `ServerFatalReport`
     - `ServerPluginDefinition`
     - `ServerRegistryEntry`
+    - `ServerReport`
     - `ServerResourceOptions`
     - `SinkHandler`
     - `Span`
@@ -597,6 +602,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `defineResource`
     - `defineServerContribution`
     - `dropPendingPersists`
+    - `exitWithFatalReport`
     - `getBootMode`
     - `getProfilingData`
     - `handleResourceHttp`
@@ -635,8 +641,8 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `recordMemoryCheckpoint`
     - `registeringPlugin`
     - `relationResourceReads`
+    - `reportServer`
     - `reportServerError`
-    - `reportServerFatalSync`
     - `Resource`
     - `routedTableRequirements`
     - `routeTableChange`
@@ -646,6 +652,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `serverCollectedDir`
     - `serverErrorSink`
     - `serverFatalSink`
+    - `serverReportSink`
     - `setClientBuildIdentity`
     - `setEpochHandoffHooks`
     - `setLiveStateSnapshotHooks`
@@ -660,8 +667,8 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `validatePersistedValue`
     - `withNotifyBatch`
 - Cross-plugin:
-  - Imported by: 103 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×24
+  - Imported by: 104 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×25
     - `debug` ×13
     - `conversations` ×10
     - `tasks` ×10

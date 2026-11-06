@@ -10,12 +10,14 @@ export type {
 export { defineHostService, provideHostServicesUnbooted } from "./host-service";
 export type { HostService } from "./host-service";
 export {
+  exitWithFatalReport,
+  reportServer,
   reportServerError,
-  reportServerFatalSync,
   serverErrorSink,
   serverFatalSink,
+  serverReportSink,
 } from "./error-reporter";
-export type { ServerErrorReport, ServerFatalReport } from "./error-reporter";
+export type { ServerErrorReport, ServerReport } from "./error-reporter";
 export { setProfilerHooks } from "./profiler-hooks";
 export type {
   LoaderReadsSink,

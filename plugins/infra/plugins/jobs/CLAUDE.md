@@ -410,11 +410,14 @@ time provably, their owner no longer exists — and the work re-runs.
 
 The report is one kind, `job-slot-floor`, with a discriminated
 `action: "crashed" | "degraded"` — one condition, two honest arms. It reaches
-the next boot through `reportServerFatalSync`, the synchronous twin of
-`reportServerError`: `recordReport` is a Postgres write and the caller's next
-statement is the exit, so it takes the same durable path a crash does (one
+the next boot through `exitWithFatalReport` (server-core), which files it
+synchronously and then exits: `recordReport` is a Postgres write and the
+process exits next, so it takes the same durable path a crash does (one
 appended JSONL line, replayed on the next boot) and adds only that the line
-names its own kind.
+names its own kind. The arms that stay up — the `degraded` report of a
+narrower runner fully forfeited, or of a restart the latch suppressed — file
+through `reportServer` instead, asynchronously: a synchronous disk write on a
+backend that keeps serving freezes it.
 
 **There is no `Promise.race`, and there must never be one.** Racing would let the
 wrapper return while the handler still runs — releasing the lock, letting the

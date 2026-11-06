@@ -195,5 +195,6 @@ function systemdService(id: LoginServiceId): LoginService {
 
 export const systemdManager: LoginServiceManager = {
   manager: "systemd",
-  service: (id) => systemdService(bindInstalledLabel(id, systemdUnitPath)),
+  service: async (id) =>
+    systemdService(await bindInstalledLabel(id, systemdUnitPath)),
 };

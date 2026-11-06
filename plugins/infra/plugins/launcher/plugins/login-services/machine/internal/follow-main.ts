@@ -17,7 +17,7 @@ import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { loginServiceId, type LoginServiceDeclaration } from "./define";
 import { loginServiceManager } from "./host";
-import type { LoginService } from "./login-service";
+import type { LoginServiceManager } from "./login-service";
 import { machineMacosAppHost, macosAppToolDeps } from "./macos-app";
 import { reconcileLoginService, type ReconcileOutcome } from "./reconcile";
 import { declaredLoginServices } from "./registry";
@@ -48,20 +48,20 @@ export async function followMain(): Promise<void> {
   const manager = loginServiceManager();
   if (manager === null) return;
   for (const decl of await declaredLoginServices()) {
-    const service = manager.service(loginServiceId(decl));
+    const service = await manager.service(loginServiceId(decl));
     // Opt-in: only what a `start` registered follows main. Checked again
     // inside the reconcile, which owns the rule; here it spares an identity
     // hash for every service nobody started.
     if (!(await exists(service.definitionPath()))) continue;
-    await followOne(service, decl);
+    await followOne(manager, decl);
   }
 }
 
 async function followOne<S extends DepSource>(
-  service: LoginService,
+  manager: LoginServiceManager,
   decl: LoginServiceDeclaration<S>,
 ): Promise<void> {
-  if (await reconcileIfBuilt(service, decl)) return;
+  if (await reconcileIfBuilt(manager, decl)) return;
   // Every dependency the reconcile waits for: the service's own build, and
   // what installing it into the macOS app needs (a backend may not install
   // anything on its event loop, so it waits through `deps` like the build).
@@ -72,7 +72,7 @@ async function followOne<S extends DepSource>(
       // A settle that leaves something still unbuilt (another dependency, or
       // another request's run) keeps waiting for the next; ready reconciles,
       // failed throws — both stop.
-      void reconcileIfBuilt(service, decl).then(
+      void reconcileIfBuilt(manager, decl).then(
         (settled) => {
           if (settled) offAll();
         },
@@ -100,7 +100,7 @@ async function followOne<S extends DepSource>(
  * rather than a service that silently never follows main again.
  */
 async function reconcileIfBuilt<S extends DepSource>(
-  service: LoginService,
+  manager: LoginServiceManager,
   decl: LoginServiceDeclaration<S>,
 ): Promise<boolean> {
   return serviceMutex.run(decl.id, async () => {
@@ -114,11 +114,17 @@ async function reconcileIfBuilt<S extends DepSource>(
     }
     const log = (line: string) =>
       followLog.publish(`${decl.id} (${decl.owner}): ${line}`);
-    const outcome = await reconcileLoginService(service, decl, now, "follow", {
-      // Off macOS nothing is installed, so nothing asks for the tool.
-      host: machineMacosAppHost(tool, log),
-      log,
-    });
+    const { outcome } = await reconcileLoginService(
+      manager,
+      decl,
+      now,
+      "follow",
+      {
+        // Off macOS nothing is installed, so nothing asks for the tool.
+        host: machineMacosAppHost(tool, log),
+        log,
+      },
+    );
     const line = describeFollow(outcome);
     if (line !== null) log(line);
     return true;

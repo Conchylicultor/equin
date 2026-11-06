@@ -4,11 +4,11 @@
 import "./declare-namespace";
 import {
   clearDuress,
-  isUnderDuress,
   readDuress,
   refreshDuress,
   setDuress,
 } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
+import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import {
   channelFileSink,
   logEnvelope,
@@ -122,8 +122,8 @@ function writeEpisodeLine(
   );
 }
 
-function endEpisode(forced: boolean, wall: number): void {
-  clearDuress();
+async function endEpisode(forced: boolean, wall: number): Promise<void> {
+  await clearDuress();
   // Capture the ending episode BEFORE nulling it — both the clear line and the
   // enriched clear frame (the duress-episode report's payload) read from it.
   const ended = episode;
@@ -220,28 +220,57 @@ async function writeVitals(
   }
 }
 
-async function processSample(sample: ClusterSample): Promise<void> {
+function processSample(sample: ClusterSample): void {
   if (!detector || !thresholds) return;
   // Best-effort mirror to main (ring + listeners). postMessage buffers while
   // main is wedged; the sample carries its own `wall`, so late delivery is
   // harmless — and nothing below waits on main.
   emit({ type: "sample", sample });
-
-  const t = thresholds;
-  applyDetector(detector.feed(sample, t, cadenceMs), sample);
-  // After the latch work, so the file's trip state is this tick's outcome.
-  await writeVitals(sample, t);
+  latestSample = sample;
+  latchStep.trigger();
 }
 
+/** The newest sample not yet fed to the detector; older unfed ones are dropped. */
+let latestSample: ClusterSample | null = null;
+
+/**
+ * Feed the detector and write the latch, one step at a time and always on the
+ * NEWEST sample. Ticks can overlap (a slow gather) and the latch writes are
+ * async: run unordered, a clear could land before the set it follows. Queued
+ * per tick, a latch write stalled on the disk — exactly under duress — would
+ * pile up ticks without bound and feed stale samples in order on recovery. So
+ * at most one step runs and one is pending, and the pending one takes whatever
+ * sample is newest when it starts (the detector skips the ones in between).
+ */
+const latchStep = createCoalescer({
+  run: async () => {
+    const sample = latestSample;
+    latestSample = null;
+    if (!sample || !detector || !thresholds) return;
+    const t = thresholds;
+    try {
+      await applyDetector(detector.feed(sample, t, cadenceMs), sample);
+    } catch (err) {
+      // A failing step must not stop the next one, but it is never silent.
+      log(`latch step failed: ${String(err)}`);
+    }
+    // After the latch work, so the file's trip state is this step's outcome.
+    await writeVitals(sample, t);
+  },
+});
+
 /** The latch lifecycle for one detector outcome: set on trip, clear, or refresh. */
-function applyDetector(event: DetectorEvent, sample: ClusterSample): void {
+async function applyDetector(
+  event: DetectorEvent,
+  sample: ClusterSample,
+): Promise<void> {
   if (!detector) return;
   if (event?.kind === "trip") {
     const reason = `cluster-onset: ${event.elevated.join(", ")}`;
-    setDuress(reason);
-    // The latch's own setAt is the episode identity — read it back rather
-    // than re-deriving, so lines and shed first-N keys can never disagree.
-    const setAt = readDuress()?.setAt ?? Date.now();
+    // The latch's own setAt is the episode identity — take it from what was
+    // written rather than re-deriving, so lines and shed first-N keys can
+    // never disagree.
+    const { setAt } = await setDuress(reason);
     episode = { setAt, reason, elevated: event.elevated };
     writeEpisodeLine("trip", reason, setAt);
     emit({
@@ -255,7 +284,7 @@ function applyDetector(event: DetectorEvent, sample: ClusterSample): void {
   }
 
   if (event?.kind === "clear") {
-    endEpisode(false, sample.wall);
+    await endEpisode(false, sample.wall);
     return;
   }
 
@@ -268,13 +297,13 @@ function applyDetector(event: DetectorEvent, sample: ClusterSample): void {
       log(
         `max-episode-hold exceeded (${String(maxEpisodeHoldMs)}ms) — forcing clear + re-eval`,
       );
-      endEpisode(true, sample.wall);
+      await endEpisode(true, sample.wall);
       detector = createOnsetDetector();
       return;
     }
     // Mid-episode tick: keep the latch's freshness lease alive. THE critical
     // path this worker exists for.
-    refreshDuress();
+    await refreshDuress();
   }
 }
 
@@ -283,15 +312,23 @@ async function tick(): Promise<void> {
   if (!g) return;
   try {
     const sample = syntheticSample ?? (await g.gather());
-    await processSample(sample);
+    processSample(sample);
   } catch (err) {
     // A failing tick must not kill the interval, but it is never silent.
     log(`tick failed: ${String(err)}`);
   }
 }
 
-function handleInit(frame: Extract<MainToWorkerFrame, { type: "init" }>): void {
-  if (interval) return;
+/** Set by the first init frame; a second one is ignored. */
+let initStarted = false;
+/** Set by a stop frame — one may arrive while init still reads the latch. */
+let stopping = false;
+
+async function handleInit(
+  frame: Extract<MainToWorkerFrame, { type: "init" }>,
+): Promise<void> {
+  if (initStarted) return;
+  initStarted = true;
   cadenceMs = frame.cadenceMs;
   thresholds = frame.thresholds;
   maxEpisodeHoldMs = frame.maxEpisodeHoldMs;
@@ -305,21 +342,24 @@ function handleInit(frame: Extract<MainToWorkerFrame, { type: "init" }>): void {
   // the lease and eventually emits the clear; no trip line, the previous
   // worker already wrote it. Lapsed (nobody refreshed it for a lease): close
   // it, so its trip line does not stay open forever.
-  const latch = readDuress();
-  if (latch && isUnderDuress()) {
+  const reading = await readDuress();
+  if (stopping) return;
+  const latch = reading?.latch ?? null;
+  if (latch && reading?.fresh) {
     detector = createOnsetDetector({ tripped: true });
     episode = { setAt: latch.setAt, reason: latch.reason, elevated: [] };
     log(
       `adopted existing duress latch (setAt=${String(latch.setAt)}, reason=${latch.reason})`,
     );
   } else if (latch) {
-    clearDuress();
+    await clearDuress();
     writeEpisodeLine("clear", `lease-lapsed: ${latch.reason}`, latch.setAt);
     log(
       `closed a lapsed duress latch (setAt=${String(latch.setAt)}, reason=${latch.reason})`,
     );
   }
   detector ??= createOnsetDetector();
+  if (stopping) return;
 
   interval = setInterval(() => {
     void tick();
@@ -328,6 +368,7 @@ function handleInit(frame: Extract<MainToWorkerFrame, { type: "init" }>): void {
 }
 
 async function handleStop(): Promise<void> {
+  stopping = true;
   if (interval) {
     clearInterval(interval);
     interval = null;
@@ -348,7 +389,7 @@ self.onmessage = (event: MessageEvent) => {
   const frame = event.data as MainToWorkerFrame;
   switch (frame.type) {
     case "init":
-      handleInit(frame);
+      void handleInit(frame);
       break;
     case "config":
       thresholds = frame.thresholds;

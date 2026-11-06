@@ -14,9 +14,9 @@ import type { ReportSource } from "@plugins/reports/core";
 // The same constraint applies to a DELIBERATE exit — a backend that decides its
 // own state is unrecoverable and calls `process.exit(1)` has exactly as little
 // event loop left as one that crashed. So the buffered line carries an optional
-// `kind` + `data`, which is what lets `reportServerFatalSync` file a TYPED
+// `kind` + `data`, which is what lets `exitWithFatalReport` file a TYPED
 // report on the way out instead of an anonymous crash. Lines written without
-// them (every `appendReportSync` caller, and every line left by an older
+// them (every uncaught-exception line, and every line left by an older
 // backend) read back as the `crash` kind, so nothing about the existing path
 // changed.
 

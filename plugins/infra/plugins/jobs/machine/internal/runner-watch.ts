@@ -1,5 +1,8 @@
 import type { WorkerEvents } from "graphile-worker";
-import { reportServerFatalSync } from "@plugins/framework/plugins/server-core/core";
+import {
+  exitWithFatalReport,
+  reportServer,
+} from "@plugins/framework/plugins/server-core/core";
 import type { RunnerSpec } from "../../core/hold";
 import {
   JOB_RUNNER_DIED_KIND,
@@ -51,7 +54,8 @@ export function watchRunner(opts: {
 }
 
 /**
- * A runner died: file the report synchronously and exit, so the next boot starts
+ * A runner died: file the report synchronously and exit
+ * (`exitWithFatalReport`), so the next boot starts
  * every runner and the cron schedule again. Postgres drops the dead backend's
  * advisory locks, so the sweeper reclaims whatever it was holding.
  *
@@ -60,7 +64,9 @@ export function watchRunner(opts: {
  * process, and a restart returns it. The restart is lazy, as for the floor: the
  * next request through the gateway starts a fresh backend.
  *
- * Returns only when the anti-loop latch suppressed the exit.
+ * Returns only when the anti-loop latch suppressed the exit — and then the
+ * report is async (`reportServer`): the backend stays up, so it must not
+ * freeze on a synchronous disk write.
  */
 export async function exitForDeadRunner(
   spec: RunnerSpec,
@@ -86,7 +92,7 @@ export async function exitForDeadRunner(
     console.error(
       `${summary}. STAYING UP: this worktree already exited ${trips - 1} time(s) within the last ${LATCH_WINDOW_MS} ms, so another restart would not fix it.`,
     );
-    reportServerFatalSync({
+    reportServer({
       kind: JOB_RUNNER_DIED_KIND,
       message: `${spec.id} runner died — restart suppressed by the anti-loop latch`,
       data: report,
@@ -95,12 +101,14 @@ export async function exitForDeadRunner(
   }
 
   console.error(`${summary}. Exiting so the next boot restarts it.`);
-  // Synchronous by contract: the durable line is written before this returns,
-  // which is the only reason a report can exist at all on this path.
-  reportServerFatalSync({
-    kind: JOB_RUNNER_DIED_KIND,
-    message: `${spec.id} runner died — backend exited`,
-    data: report,
-  });
-  process.exit(1);
+  // Synchronous by contract: the durable line is written before it exits, which
+  // is the only reason a report can exist at all on this path.
+  exitWithFatalReport(
+    {
+      kind: JOB_RUNNER_DIED_KIND,
+      message: `${spec.id} runner died — backend exited`,
+      data: report,
+    },
+    (code) => process.exit(code),
+  );
 }

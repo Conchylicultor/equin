@@ -97,15 +97,35 @@ Rules that follow:
   fingerprint is rate-limited the bell stays quiet, but its row's count keeps
   moving in an open pane (every 2 s).
 
-## Fatal reports: `serverFatalSink`
+## Typed server reports: `serverReportSink` and `serverFatalSink`
 
-`reportServerFatalSync` (server-core) files a report synchronously just before
-a deliberate exit (the jobs runner floor, a dead runner). The engine handles it
-through `sinkHandlers` (`server/internal/fatal.ts`), so it is attached in every
-boot mode. Where it lands follows `recordReport`: the serving backend appends a
-line naming its kind to its crash buffer (replayed by its next boot's
-`flushBufferedReports`); any other process (an exec child) hands it to
-`reportOutboxFatalSink`, which `reports/outbox` writes synchronously.
+server-core files a typed report (`kind` + `data`) one of two ways, decided by
+whether the process lives on:
+
+- **`reportServer`** — the process keeps running (a narrower jobs runner
+  forfeited, a restart the anti-loop latch suppressed). A held sink the engine
+  handles with plain `recordReport`, async (`serverReportHandler`).
+- **`exitWithFatalReport(report, exit)`** — the process exits on the spot (the
+  jobs runner floor, a dead runner). It takes the exit and returns `never`, so
+  a synchronous report from a process that lives on has no spelling. The
+  engine's `serverFatalSink` handler (`fatalReportHandler`) writes
+  synchronously: the serving backend appends a line naming its kind to its
+  crash buffer (replayed by its next boot's `flushBufferedReports`); any other
+  process (an exec child) hands it to `reportOutboxFatalSink`, which
+  `reports/outbox` writes synchronously.
+
+Both handlers are `sinkHandlers` entries (`server/internal/fatal.ts`), attached
+in every boot mode.
+
+## Sync writes only on a dying process
+
+`server/internal/crash-append.ts` is the one synchronous file append (a
+sanctioned `blocking-fs/no-sync-fs` exemption), and only the dying path
+reaches it: the crash handler's `crash-buffer-sync` lane (an uncaught
+exception on the serving backend) and the `serverFatalSink` handler. A sync append on a backend that lives on freezes its
+JS thread for as long as the disk answers (3-13 s stalls on main), so every
+path a serving backend survives — a rejection, `reportServer` — records
+asynchronously. Never import it from anywhere else.
 
 ## Process crashes: `processCrashSink`
 
@@ -114,10 +134,19 @@ listeners, which each process entry point (`serve`, `runExec`) installs before
 the graph loads, and dispatched to `processCrashSink`. The engine handles it
 through `sinkHandlers` (`server/internal/process-hooks.ts`), so an exec child's
 crash — a supervised job's body throwing outside its await chain — is filed
-too. The serving backend, once ready, appends it to its crash buffer (a
-rejection, which the process survives, is flushed at once); anything else (an
-exec child, or a serving backend still booting, which may crash again before
-it flushes) hands it to `reportOutboxFatalSink`. Before the handler attaches,
+too. Where it is written is one decision, `crashWriteLane(event, serving)`:
+a synchronous write is safe on a dying process (an uncaught exception: the
+listener exits 1 next) and on one that does not serve (an exec child, a CLI, a
+serving backend still booting), and freezes only a serving backend that lives
+on. So:
+
+- **uncaught exception, serving** (the ready backend): its crash buffer, sync;
+- **not serving, either event**: `reportOutboxFatalSink`, sync — durable
+  before the handler returns, so a boot that rejects and then exits, or an
+  exec child's rejection after its shutdown drained the async writes, is still
+  filed; with no outbox writer attached it answers false and says so;
+- **unhandled rejection, serving** (survived): `recordReport`, async; a failed
+  write is printed. Before the handler attaches,
 the serving backend's boot crashes belong to `debug/boot-events`. The engine
 installs no listener itself: `server-core/no-process-crash-listener` forbids it.
 
@@ -153,7 +182,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 
 ## Plugin reference
 
-- Description: Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, files every crash the process's listeners catch (processCrashSink, in every boot mode: the crash buffer from a ready serving backend, the report outbox from anything else) and replays the on-disk crash buffer, and owns the reports table's change producer, retention and fork exclusion.
+- Description: Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, files every crash the process's listeners catch (processCrashSink, in every boot mode: an uncaught exception synchronously — the crash buffer from a ready serving backend, the report outbox from anything else — and a survived rejection asynchronously), files server-core's typed reports (reportServer, async; exitWithFatalReport, synchronously on the way out) and replays the on-disk crash buffer, and owns the reports table's change producer, retention and fork exclusion.
 - Server:
   - Contributes:
     - `change-producer` "reports"
@@ -208,7 +237,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Exemptions:
   - Exempts itself from:
     - `sink-safety/no-adhoc-file-sink` — `server/internal/crash-append.ts` (sanctioned)
-    - `blocking-fs/no-sync-fs` — `server/internal/crash-append.ts` (debt)
+    - `blocking-fs/no-sync-fs` — `server/internal/crash-append.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/buffer.ts`, `server/internal/crash-append.ts` (debt)
 
 <!-- AUTOGENERATED:END -->

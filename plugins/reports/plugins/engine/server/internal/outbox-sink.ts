@@ -2,7 +2,7 @@ import {
   defineReportSink,
   defineRequestSink,
 } from "@plugins/primitives/plugins/report-sink/core";
-import type { ServerFatalReport } from "@plugins/framework/plugins/server-core/core";
+import type { ServerReport } from "@plugins/framework/plugins/server-core/core";
 import type { ReportInput } from "@plugins/reports/core";
 
 /**
@@ -18,12 +18,9 @@ export const reportOutboxSink = defineReportSink<ReportInput>();
 
 /**
  * The synchronous twin of {@link reportOutboxSink}: a fatal report
- * (`reportServerFatalSync`) from a process that cannot write `reports`, whose
+ * (`exitWithFatalReport`) from a process that cannot write `reports`, whose
  * next statement is `process.exit()`. `reports/outbox` attaches the writer the
  * same way; it answers whether the entry is in place. A request sink — never
  * held: a report held past the exit is lost anyway, and the caller must know.
  */
-export const reportOutboxFatalSink = defineRequestSink<
-  ServerFatalReport,
-  boolean
->();
+export const reportOutboxFatalSink = defineRequestSink<ServerReport, boolean>();

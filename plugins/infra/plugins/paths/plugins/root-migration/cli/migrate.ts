@@ -154,7 +154,9 @@ async function gatherFacts(stopAgents: boolean): Promise<MigrationFacts> {
       currentExists: existsSync(backups.current),
     },
     oldLabelInstalled:
-      manager?.service(GATEWAY_SERVICE).id.label === LEGACY_IDS.launchdLabel,
+      manager !== null &&
+      (await manager.service(GATEWAY_SERVICE)).id.label ===
+        LEGACY_IDS.launchdLabel,
     runByAgent: readEnv("CONVERSATION_ID") !== undefined,
     cwdInsideRoot:
       root !== null && inside(process.cwd(), root) ? process.cwd() : null,
@@ -415,7 +417,7 @@ async function applyStopped(
     const manager = loginServiceManager();
     if (manager === null)
       throw new Error("unreachable: an old label was found installed");
-    const old = manager.service({
+    const old = await manager.service({
       label: LEGACY_IDS.launchdLabel,
       session: GATEWAY_SERVICE.session,
     });

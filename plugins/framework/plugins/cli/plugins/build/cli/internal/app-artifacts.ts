@@ -72,7 +72,7 @@ import {
   type Lane,
   type Priority,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
-import { isUnderDuress } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
+import { readFreshDuress } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import type { TicketPlace } from "@plugins/packages/plugins/ticket-line/core";
 import {
   acquireCheckoutLock,
@@ -1016,7 +1016,8 @@ export async function withBuildAdmission<T>(
           hooks: admission.grantHooks,
         },
         async (grant) => {
-          if (mustRequeue(gate, isUnderDuress())) return REQUEUE;
+          if (mustRequeue(gate, (await readFreshDuress()) !== null))
+            return REQUEUE;
           endGrantWait();
           return { value: await fn(grant) };
         },

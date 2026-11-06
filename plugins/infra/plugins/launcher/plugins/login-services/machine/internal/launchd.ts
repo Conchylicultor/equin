@@ -161,5 +161,6 @@ function launchdService(id: LoginServiceId): LoginService {
 
 export const launchdManager: LoginServiceManager = {
   manager: "launchd",
-  service: (id) => launchdService(bindInstalledLabel(id, launchdPlistPath)),
+  service: async (id) =>
+    launchdService(await bindInstalledLabel(id, launchdPlistPath)),
 };

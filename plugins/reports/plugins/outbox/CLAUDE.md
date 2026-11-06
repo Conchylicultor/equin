@@ -38,7 +38,7 @@ await fileReportFromProcess({ kind, message, data, code? });
   the engine's `reportOutboxSink`) lands here through this plugin's
   `sinkHandlers` entry (`server/internal/writer.ts`), attached in every boot
   mode; its `onShutdown` awaits the writes still in flight.
-- **A fatal report from such a process** (`reportServerFatalSync` in an exec
+- **A fatal report from such a process** (`exitWithFatalReport` in an exec
   child exiting on purpose: the engine's `reportOutboxFatalSink`) is written
   SYNCHRONOUSLY (`fileReportFromProcessSync`, also a `sinkHandlers` entry), so
   the entry is in place before the caller's `process.exit()`. Its `writer.repo`

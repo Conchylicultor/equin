@@ -54,7 +54,7 @@ export async function checkGatewayDrift(): Promise<GatewayDrift> {
   if (isRelease()) {
     return notApplicable("A release runs the gateway its bundle sealed");
   }
-  const service = loginService(GATEWAY_SERVICE);
+  const service = await loginService(GATEWAY_SERVICE);
   if (service === null) {
     return notApplicable(
       "This machine has no service manager: the gateway is started by hand",

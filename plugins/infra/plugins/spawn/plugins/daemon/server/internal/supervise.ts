@@ -11,7 +11,6 @@ import {
   type DaemonInstance,
   type DaemonStartCommon,
   type DaemonTransition,
-  type PidFileRead,
   type SpawnedCode,
   type DetachedLaunch,
   type ProcessLaunch,
@@ -19,7 +18,7 @@ import {
   type WorkerLaunch,
 } from "./registry";
 import type { newDeclState } from "./registry";
-import { readPidFileSync } from "./pid-file-sync";
+import { holdPidFile, type HeldPidFile, type HeldRead } from "./pid-file-watch";
 
 type DeclState = ReturnType<typeof newDeclState>;
 
@@ -357,22 +356,42 @@ export function spawnWorkerIn(
 }
 
 /**
- * Pid-file liveness, read when the catalog asks (no event exists for a
- * process this backend is not the parent of, and nothing polls). Each pid it
- * sees is an incarnation: a new pid is a restart, a dead one an exit.
+ * Pid-file liveness. The pid file is watched (`holdPidFile`): each change of
+ * it is read off the thread and pushed here, so a transition fires when the
+ * file moves, not when someone looks. A get (`instance.pid` / `.state`, the
+ * catalog) judges the HELD read again with a `kill(0)` — memory and one
+ * syscall, never the disk — so a process that dies leaving its file behind
+ * is seen there (no event exists for a process this backend is not the
+ * parent of, and nothing polls). A get that finds nothing alive also asks
+ * for a fresh read, async: the watch can miss a write (see `holdPidFile`),
+ * and the next look must not trust a read the watch never refreshed.
+ *
+ * Before the first read lands the instance stays `starting`: its liveness
+ * is not known yet. Each pid it sees is an incarnation: a new pid is a
+ * restart, a dead one an exit.
  *
  * A detached launch's exit is final (its owner relaunches it as a new
- * instance); an attached process may come back under a new pid (launchd
- * restarting the gateway), so it is followed past an exit.
+ * instance; its watch is released then); an attached process may come back
+ * under a new pid (launchd restarting the gateway), so it is followed past an
+ * exit.
  */
 function followPidFile(
   state: DeclState,
   rec: InstanceRec,
   pidFile: AppPath,
   emit: (t: DaemonTransition) => void,
-  /** Whether a not-yet-seen process may still be coming up. */
-  stillBooting: (read: PidFileRead) => boolean,
-): () => void {
+  opts: {
+    /** Whether a not-yet-seen process may still be coming up, per that read. */
+    stillBooting: (held: HeldRead) => boolean;
+    /**
+     * Why the launch failed before its process appeared (a failed
+     * bootstrap), as of that read — `null` when it did not, or when the read
+     * cannot tell yet.
+     */
+    failedEarly?: (held: HeldRead) => string | null;
+  },
+): HeldPidFile {
+  const final = rec.info.arm === "detached";
   let lastPid: number | null = null;
   const exit = (reason: string): void => {
     rec.info.lastExit = { at: new Date(), reason };
@@ -382,11 +401,14 @@ function followPidFile(
     closeRun(state, rec, "failed", reason);
     setState(state, rec, "exited");
     emit({ state: "exited", at: Date.now(), lastError: reason });
+    // Nothing can follow a final exit: stop watching.
+    if (final) held.release();
   };
-  return () => {
-    const final = rec.info.arm === "detached";
+  const judge = (): void => {
     if (final && rec.info.state === "exited") return;
-    const read = readPidFileSync(pidFile);
+    const current = held.current();
+    if (current === null) return; // not read yet: still `starting`
+    const { read } = current;
     if (read.kind === "pid" && read.pid !== lastPid && pidAlive(read.pid)) {
       // A pid we have not followed yet, and it is alive: a new incarnation.
       if (rec.info.pid !== null) {
@@ -424,7 +446,13 @@ function followPidFile(
       return;
     }
     // Never seen alive yet.
-    if (stillBooting(read)) return;
+    const failed = opts.failedEarly?.(current) ?? null;
+    if (failed !== null && read.kind !== "pid") {
+      // The long-lived process never appeared, and now never will.
+      exit(failed);
+      return;
+    }
+    if (opts.stillBooting(current)) return;
     exit(
       read.kind === "pid"
         ? `pid ${String(read.pid)} in ${pidFile} is not running`
@@ -433,7 +461,28 @@ function followPidFile(
           : `no pid file at ${pidFile}`,
     );
   };
+  // Its first read lands after an await, so `held` is assigned before
+  // `judge` can run.
+  const held = holdPidFile(pidFile, judge);
+  // A get: judge the held read, and when nothing is alive (not seen yet, or
+  // gone and still followed) ask for a fresh one — never from `judge` itself,
+  // which every read runs: that would be a read loop.
+  rec.observe = () => {
+    judge();
+    const s = rec.info.state;
+    if (s === "starting" || (s === "exited" && !final)) held.refresh();
+  };
+  return held;
 }
+
+/** Where a detached launch's bootstrap is, for the pid-file follower. */
+type Bootstrap =
+  | { kind: "running" }
+  /**
+   * Exited after the read numbered `afterSeq` started: only a later read
+   * saw what it wrote before exiting.
+   */
+  | { kind: "exited"; afterSeq: number; failure: string | null };
 
 export function launchDetachedIn(
   state: DeclState,
@@ -441,7 +490,22 @@ export function launchDetachedIn(
 ): DaemonInstance {
   const rec = claimInstance(state, opts.instance, "detached", opts.pidFile);
   const emit = (t: DaemonTransition): void => opts.onState?.(t);
-  let bootstrapRunning = true;
+  let bootstrap: Bootstrap = { kind: "running" };
+  emit({ state: "starting", at: Date.now() });
+  openRun(state, rec);
+  setState(state, rec, "starting");
+  // A missing pid file is "booting" while the bootstrap runs — and until a
+  // read that started after its exit lands, since an older read cannot have
+  // seen what it wrote last. After that, the process it started must have
+  // written one.
+  const held = followPidFile(state, rec, opts.pidFile, emit, {
+    stillBooting: ({ seq }) =>
+      bootstrap.kind === "running" || seq <= bootstrap.afterSeq,
+    failedEarly: ({ seq }) =>
+      bootstrap.kind === "exited" && seq > bootstrap.afterSeq
+        ? bootstrap.failure
+        : null,
+  });
   const proc = Bun.spawn(opts.argv, {
     detached: true,
     env: opts.env,
@@ -454,23 +518,17 @@ export function launchDetachedIn(
       opts.outputFd?.fd ??
       (opts.onOutputLine === undefined ? "ignore" : "pipe"),
     onExit: (_p, code, signalCode) => {
-      bootstrapRunning = false;
-      if (code !== 0) {
-        const reason = `bootstrap ${exitReason(code, signalCode === null ? null : String(signalCode))}`;
+      bootstrap = {
+        kind: "exited",
+        afterSeq: held.issued(),
         // A failed bootstrap: the long-lived process may never appear.
-        if (
-          rec.info.pid === null &&
-          readPidFileSync(opts.pidFile).kind !== "pid"
-        ) {
-          rec.info.lastExit = { at: new Date(), reason };
-          if (rec.run === null) openRun(state, rec);
-          closeRun(state, rec, "failed", reason);
-          setState(state, rec, "exited");
-          emit({ state: "exited", at: Date.now(), lastError: reason });
-          return;
-        }
-      }
-      rec.observe?.();
+        failure:
+          code === 0
+            ? null
+            : `bootstrap ${exitReason(code, signalCode === null ? null : String(signalCode))}`,
+      };
+      // Read the file again, after the exit: that read decides.
+      held.refresh();
     },
   });
   const onLine = opts.onOutputLine;
@@ -480,21 +538,10 @@ export function launchDetachedIn(
     if (proc.stderr instanceof ReadableStream)
       pumpLines(proc.stderr, (l) => onLine(l, "stderr"));
   }
-  emit({ state: "starting", at: Date.now() });
-  openRun(state, rec);
-  setState(state, rec, "starting");
-  // A missing pid file is "booting" while the bootstrap runs; after it
-  // exits cleanly the process it started must have written one.
-  rec.observe = followPidFile(
-    state,
-    rec,
-    opts.pidFile,
-    emit,
-    () => bootstrapRunning,
-  );
   return instanceHandle(state, rec, () => {
     // The owner tears the detached stack down (it knows how); this drops the
     // record.
+    held.release();
     closeRun(state, rec, "succeeded", null);
     releaseInstance(state, rec);
     emit({ state: "stopped", at: Date.now() });
@@ -510,17 +557,14 @@ export function attachIn(
   const emit = (t: DaemonTransition): void => opts.onState?.(t);
   emit({ state: "starting", at: Date.now() });
   setState(state, rec, "starting");
-  // Attached before the process exists (the gateway writes its pid file a
-  // moment after it spawns the backend) reads as starting, not as dead.
-  rec.observe = followPidFile(
-    state,
-    rec,
-    opts.pidFile,
-    emit,
-    (read) => read.kind === "absent",
-  );
-  rec.observe();
+  // `starting` until the first read lands. Attached before the process
+  // exists (the gateway writes its pid file a moment after it spawns the
+  // backend), a missing file reads as starting, not as dead.
+  const held = followPidFile(state, rec, opts.pidFile, emit, {
+    stillBooting: ({ read }) => read.kind === "absent",
+  });
   return instanceHandle(state, rec, () => {
+    held.release();
     closeRun(state, rec, "succeeded", null);
     releaseInstance(state, rec);
     emit({ state: "stopped", at: Date.now() });

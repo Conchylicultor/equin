@@ -1,12 +1,23 @@
 import { reportsBufferDir } from "@plugins/reports/data-dirs";
-import type { ReportSource } from "@plugins/reports/core";
 import { appendFileSync } from "node:fs";
 import { bufferFile, type BufferedReport } from "./buffer";
 
-// The crash path's writes: synchronous BY NECESSITY — they run inside an
-// `uncaughtException` handler or just before a deliberate `process.exit`, where
-// the event loop is dying and an async write would never finish. The reads and
-// the flush (buffer.ts) are async.
+// The DYING path's writes: synchronous BY NECESSITY — the process exits on the
+// caller's next statement, so an async write would never finish. Only two
+// callers, both on that path, and nothing else may import this file:
+//
+// - `appendUncaughtExceptionSync` — process-hooks.ts's `crash-buffer-sync`
+//   lane: an uncaught exception on the serving backend (the listener exits 1
+//   right after it returns). A rejection that backend survives takes the
+//   async `record-async` lane instead (`crashWriteLane` decides, in one place);
+// - `appendFatalReportSync` — fatal.ts's `serverFatalSink` handler, which only
+//   server-core's `exitWithFatalReport` emits (it takes the exit and returns
+//   `never`, so a process that lives on cannot reach it).
+//
+// A sync append on a backend that LIVES ON freezes its JS thread for as long
+// as the disk answers (3-13 s stalls were measured on main) — so a new caller
+// that is not exiting files through `recordReport` / `reportServer`, never
+// here. The reads and the flush (buffer.ts) are async.
 
 // The one write. Both public writers below go through it so the file format is
 // described in exactly one place — and so the best-effort catch (we are on a
@@ -29,12 +40,10 @@ function appendLine(line: Omit<BufferedReport, "at">): BufferAppend {
 /** Whether a buffered line landed. */
 export type BufferAppend = { ok: true } | { ok: false; error: unknown };
 
-export function appendReportSync(
-  source: ReportSource,
-  err: Error,
-): BufferAppend {
+/** Buffer an uncaught exception synchronously — the process exits next. */
+export function appendUncaughtExceptionSync(err: Error): BufferAppend {
   return appendLine({
-    source,
+    source: "server-uncaught",
     errorType: err.name,
     message: err.message,
     stack: err.stack,
@@ -42,8 +51,8 @@ export function appendReportSync(
 }
 
 /**
- * Buffer a TYPED report synchronously — the durable half of
- * `reportServerFatalSync`.
+ * Buffer a TYPED report synchronously — the durable half of server-core's
+ * `exitWithFatalReport` (through fatal.ts).
  *
  * Returns once the bytes are handed to `appendFileSync` (or the write failed —
  * the result says which), so a caller may exit on the next statement. `data`
@@ -52,13 +61,12 @@ export function appendReportSync(
  * flush, where a stack trace can still be read.
  */
 export function appendFatalReportSync(line: {
-  source: ReportSource;
   kind: string;
   message: string;
   data: Record<string, unknown>;
 }): BufferAppend {
   return appendLine({
-    source: line.source,
+    source: "server-fatal",
     kind: line.kind,
     data: line.data,
     // Flat crash fields carry the same message so a corrupt/unregistered-kind

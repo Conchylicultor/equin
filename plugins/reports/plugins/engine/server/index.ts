@@ -15,7 +15,7 @@ import {
   flushBufferedReports,
   processCrashHandler,
 } from "./internal/process-hooks";
-import { fatalReportHandler } from "./internal/fatal";
+import { fatalReportHandler, serverReportHandler } from "./internal/fatal";
 
 export {
   linkReportsToTask,
@@ -44,7 +44,7 @@ export type { StormSummary, StormRosterEntry } from "./internal/fan-out";
 // is the seed, read-only.
 export default {
   description:
-    "Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, files every crash the process's listeners catch (processCrashSink, in every boot mode: the crash buffer from a ready serving backend, the report outbox from anything else) and replays the on-disk crash buffer, and owns the reports table's change producer, retention and fork exclusion.",
+    "Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, files every crash the process's listeners catch (processCrashSink, in every boot mode: an uncaught exception synchronously — the crash buffer from a ready serving backend, the report outbox from anything else — and a survived rejection asynchronously), files server-core's typed reports (reportServer, async; exitWithFatalReport, synchronously on the way out) and replays the on-disk crash buffer, and owns the reports table's change producer, retention and fork exclusion.",
   httpRoutes: {
     [submitReport.route]: handleReport,
   },
@@ -81,8 +81,12 @@ export default {
         },
       });
     }),
-    // A report filed synchronously before a deliberate exit — in an exec child
-    // too, which never runs `onReady` (./internal/fatal.ts).
+    // A typed report from a process that lives on (`reportServer`) — async
+    // (./internal/fatal.ts).
+    serverReportHandler,
+    // A report filed synchronously before a deliberate exit
+    // (`exitWithFatalReport`) — in an exec child too, which never runs
+    // `onReady` (./internal/fatal.ts).
     fatalReportHandler,
     // Every uncaught exception and unhandled rejection the process's listeners
     // catch — server-core installs them at each process entry point, so an

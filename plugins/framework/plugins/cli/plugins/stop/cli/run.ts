@@ -16,10 +16,12 @@ const run: CliAction<[], { disable?: boolean }> = async (opts) => {
   // Every declared login service first — they run against the gateway, so they
   // go before it. None is named here.
   const declared = manager
-    ? (await declaredLoginServices()).map((d) => ({
-        decl: d,
-        service: manager.service(loginServiceId(d)),
-      }))
+    ? await Promise.all(
+        (await declaredLoginServices()).map(async (d) => ({
+          decl: d,
+          service: await manager.service(loginServiceId(d)),
+        })),
+      )
     : [];
   for (const { decl, service } of declared) {
     if (await unloadIfLoaded(service, `${decl.id} (${decl.owner})`))
@@ -27,7 +29,7 @@ const run: CliAction<[], { disable?: boolean }> = async (opts) => {
   }
 
   let stopped = false;
-  const loginService = manager?.service(GATEWAY_SERVICE) ?? null;
+  const loginService = manager ? await manager.service(GATEWAY_SERVICE) : null;
   if (loginService && (await unloadIfLoaded(loginService, "the gateway")))
     stopped = true;
 

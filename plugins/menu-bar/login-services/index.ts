@@ -4,10 +4,7 @@
 // and relaunched if it dies. `graphical`: it needs the desktop session.
 import { userInfo } from "node:os";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
-import {
-  defineLoginService,
-  loginService,
-} from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
+import { defineLoginService } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
 import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { cargoBinary } from "@plugins/infra/plugins/deps/plugins/rust/deps";
@@ -15,8 +12,12 @@ import { componentIdentity } from "@plugins/infra/plugins/launcher/plugins/login
 import { menuBarHelper, menuBarHelperIcon } from "../deps";
 import { menuBarLogs } from "../data-dirs";
 
-/** The environment the tray runs with — the whole of it (nothing is inherited). */
-function trayEnv(): Record<string, string> {
+/**
+ * The environment the tray runs with — the whole of it (nothing is
+ * inherited). `gatewayLabel`: the label the gateway's service is bound to on
+ * this machine (`refersTo`).
+ */
+function trayEnv(gatewayLabel: string): Record<string, string> {
   const env: Record<string, string> = {
     HOME: HOME_DIR,
     USER: userInfo().username,
@@ -25,10 +26,7 @@ function trayEnv(): Record<string, string> {
     // Start kicks the gateway's service by the label it is bound to here —
     // the old one until `./equin data-dir migrate` relabels it — so a
     // relabel rewrites (and reloads) this job too.
-    ...envEntries({
-      GATEWAY_LABEL:
-        loginService(GATEWAY_SERVICE)?.id.label ?? GATEWAY_SERVICE.label,
-    }),
+    ...envEntries({ GATEWAY_LABEL: gatewayLabel }),
   };
   // A graphical systemd unit inherits the session's display from the user
   // manager's environment; these carry it when `start` itself has them.
@@ -65,12 +63,14 @@ export const menuBarService = defineLoginService({
       };
     },
   },
-  spec: (ready, executable) => ({
+  // Start kicks the gateway's service: its bound label is part of the job.
+  refersTo: { gateway: GATEWAY_SERVICE },
+  spec: (ready, executable, labels) => ({
     // Inside equin.app on macOS (so notifications carry the app's identity),
     // the bare binary on Linux.
     argv: [executable, "tray"],
     cwd: ready.dir,
-    env: trayEnv(),
+    env: trayEnv(labels.gateway),
     stdioLog: menuBarLogs.file("helper-stdio.log"),
   }),
 });

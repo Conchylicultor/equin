@@ -82,16 +82,16 @@ function makeBuffer(replay?: (items: Item[]) => Promise<void>) {
   return { buffer, replayedChunks, summaries };
 }
 
-// Latch mutations use the overridden clock for setAt, but writeFileSync stamps
-// the REAL wall-clock mtime — advancing t by small deltas keeps the lease fresh
-// while giving each episode a distinct setAt.
-function startEpisode(reason: string): void {
+// Latch mutations use the overridden clock for setAt and the lease's mtime;
+// advancing t by small deltas keeps the lease fresh while giving each episode
+// a distinct setAt.
+async function startEpisode(reason: string): Promise<void> {
   t += 10;
-  setDuress(reason);
+  await setDuress(reason);
 }
 
 describe("admit outside duress", () => {
-  test("always persists and never arms a flush when nothing is owed", () => {
+  test("always persists and never arms a flush when nothing is owed", async () => {
     const { buffer } = makeBuffer();
     for (let i = 0; i < 10; i++) {
       expect(buffer.admit({ key: "a", n: i }).persist).toBe(true);
@@ -99,10 +99,10 @@ describe("admit outside duress", () => {
     expect(armedFlushes.length).toBe(0);
   });
 
-  test("disabled config → persists even under duress", () => {
+  test("disabled config → persists even under duress", async () => {
     _setShedConfigForTests(cfg({ enabled: false }));
     const { buffer } = makeBuffer();
-    startEpisode("storm");
+    await startEpisode("storm");
     for (let i = 0; i < 10; i++) {
       expect(buffer.admit({ key: "a", n: i }).persist).toBe(true);
     }
@@ -110,9 +110,9 @@ describe("admit outside duress", () => {
 });
 
 describe("first-N per cascade key", () => {
-  test("first N persist, the tail buffers; keys count independently", () => {
+  test("first N persist, the tail buffers; keys count independently", async () => {
     const { buffer } = makeBuffer();
-    startEpisode("storm");
+    await startEpisode("storm");
     const a = Array.from(
       { length: 5 },
       (_, n) => buffer.admit({ key: "a", n }).persist,
@@ -127,10 +127,10 @@ describe("first-N per cascade key", () => {
 
   test("a new episode (setAt change) re-grants first-N; earlier buffered items stay owed", async () => {
     const { buffer, replayedChunks, summaries } = makeBuffer();
-    startEpisode("one");
+    await startEpisode("one");
     for (let n = 0; n < 4; n++) buffer.admit({ key: "a", n }); // 3 persist, 1 buffered
 
-    startEpisode("two"); // distinct setAt → counters reset
+    await startEpisode("two"); // distinct setAt → counters reset
     const again = Array.from(
       { length: 4 },
       (_, n) => buffer.admit({ key: "a", n: 10 + n }).persist,
@@ -138,7 +138,7 @@ describe("first-N per cascade key", () => {
     expect(again).toEqual([true, true, true, false]);
 
     t += 10;
-    clearDuress();
+    await clearDuress();
     buffer.admit({ key: "a", n: 99 }); // observes the clear → arms the one-shot
     expect(armedFlushes.length).toBe(1);
     await armedFlushes[0]!();
@@ -156,12 +156,12 @@ describe("buffer bounds", () => {
   test("entry cap drops the newest incoming and keeps the drop count", async () => {
     _setShedConfigForTests(cfg({ persistFirstN: 0, bufferMaxEntries: 2 }));
     const { buffer, replayedChunks, summaries } = makeBuffer();
-    startEpisode("storm");
+    await startEpisode("storm");
     for (let n = 0; n < 5; n++) {
       expect(buffer.admit({ key: "a", n }).persist).toBe(false);
     }
     t += 10;
-    clearDuress();
+    await clearDuress();
     buffer.admit({ key: "a", n: 99 });
     await armedFlushes[0]!();
 
@@ -175,11 +175,11 @@ describe("buffer bounds", () => {
       cfg({ persistFirstN: 0, bufferMaxBytes: oneItemBytes }),
     );
     const { buffer, replayedChunks, summaries } = makeBuffer();
-    startEpisode("storm");
+    await startEpisode("storm");
     buffer.admit({ key: "a", n: 0 });
     buffer.admit({ key: "a", n: 1 });
     t += 10;
-    clearDuress();
+    await clearDuress();
     buffer.admit({ key: "a", n: 99 });
     await armedFlushes[0]!();
 
@@ -190,10 +190,10 @@ describe("buffer bounds", () => {
   test("drop-only accounting still flushes a summary (no surviving items)", async () => {
     _setShedConfigForTests(cfg({ persistFirstN: 0, bufferMaxEntries: 0 }));
     const { buffer, replayedChunks, summaries } = makeBuffer();
-    startEpisode("storm");
+    await startEpisode("storm");
     for (let n = 0; n < 5; n++) buffer.admit({ key: "a", n });
     t += 10;
-    clearDuress();
+    await clearDuress();
     buffer.admit({ key: "a", n: 99 });
     expect(armedFlushes.length).toBe(1);
     await armedFlushes[0]!();
@@ -208,10 +208,10 @@ describe("flush", () => {
   test("replays in bounded chunks with a correct summary", async () => {
     _setShedConfigForTests(cfg({ persistFirstN: 0 }));
     const { buffer, replayedChunks, summaries } = makeBuffer();
-    startEpisode("storm");
+    await startEpisode("storm");
     for (let n = 0; n < 250; n++) buffer.admit({ key: "a", n });
     t += 10;
-    clearDuress();
+    await clearDuress();
     buffer.admit({ key: "a", n: 999 });
     expect(armedDelays[0]).toBe(30_000);
     await armedFlushes[0]!();
@@ -221,13 +221,13 @@ describe("flush", () => {
     expect(summaries[0]!.byCascade["a"]!.shed).toBe(250);
   });
 
-  test("the one-shot arms once — a second clear-observing admit does not double-arm", () => {
+  test("the one-shot arms once — a second clear-observing admit does not double-arm", async () => {
     _setShedConfigForTests(cfg({ persistFirstN: 0 }));
     const { buffer } = makeBuffer();
-    startEpisode("storm");
+    await startEpisode("storm");
     buffer.admit({ key: "a", n: 0 });
     t += 10;
-    clearDuress();
+    await clearDuress();
     buffer.admit({ key: "a", n: 1 });
     buffer.admit({ key: "a", n: 2 });
     expect(armedFlushes.length).toBe(1);
@@ -236,19 +236,19 @@ describe("flush", () => {
   test("a timer firing mid-episode declines; the next clear re-arms and flushes everything", async () => {
     _setShedConfigForTests(cfg({ persistFirstN: 0 }));
     const { buffer, replayedChunks, summaries } = makeBuffer();
-    startEpisode("one");
+    await startEpisode("one");
     buffer.admit({ key: "a", n: 0 });
     t += 10;
-    clearDuress();
+    await clearDuress();
     buffer.admit({ key: "a", n: 1 }); // arms (and persists)
 
-    startEpisode("two"); // re-trip before the one-shot fires
+    await startEpisode("two"); // re-trip before the one-shot fires
     await armedFlushes[0]!(); // fires mid-episode → must not flush
     expect(replayedChunks.length).toBe(0);
 
     buffer.admit({ key: "a", n: 2 }); // buffered under episode two
     t += 10;
-    clearDuress();
+    await clearDuress();
     buffer.admit({ key: "a", n: 3 }); // re-arms
     expect(armedFlushes.length).toBe(2);
     await armedFlushes[1]!();
@@ -270,10 +270,10 @@ describe("flush", () => {
       },
       onFlushSummary: (summary) => summaries.push(summary),
     });
-    startEpisode("storm");
+    await startEpisode("storm");
     for (let n = 0; n < 150; n++) buffer.admit({ key: "a", n });
     t += 10;
-    clearDuress();
+    await clearDuress();
     buffer.admit({ key: "a", n: 999 });
     await armedFlushes[0]!(); // resolves — never rejects
 
@@ -292,10 +292,10 @@ describe("flush", () => {
         throw new Error("consumer bug");
       },
     });
-    startEpisode("storm");
+    await startEpisode("storm");
     buffer.admit({ key: "a", n: 0 });
     t += 10;
-    clearDuress();
+    await clearDuress();
     buffer.admit({ key: "a", n: 1 });
     await armedFlushes[0]!(); // would reject the test if the throw propagated
   });

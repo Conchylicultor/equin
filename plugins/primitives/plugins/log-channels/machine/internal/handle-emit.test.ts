@@ -50,8 +50,8 @@ beforeAll(() => {
   _setLatchDirForTests(latchDir);
 });
 
-afterAll(() => {
-  clearDuress();
+afterAll(async () => {
+  await clearDuress();
   _setLatchDirForTests(null);
   rmSync(latchDir, { recursive: true, force: true });
   rmSync(join(worktreesDir(), worktree), { recursive: true, force: true });
@@ -59,8 +59,8 @@ afterAll(() => {
   declareRuntimeNamespace(ORIGINAL_WORKTREE);
 });
 
-beforeEach(() => {
-  clearDuress();
+beforeEach(async () => {
+  await clearDuress();
 });
 
 /** A fresh browser-supplied channel id per test — the registry is process-global. */
@@ -95,7 +95,7 @@ describe("POST /api/logs/emit", () => {
 
   test("answers paused with a 200 while the duress latch is set, touching nothing", async () => {
     const channel = nextChannel();
-    setDuress("test");
+    await setDuress("test");
     const res = await handleEmit(emitRequest(channel, ["dropped"]), {});
 
     // A 200 is asserted as a LITERAL on purpose. The browser prints "Failed to
@@ -111,12 +111,12 @@ describe("POST /api/logs/emit", () => {
 
   test("resumes ingesting once the latch clears", async () => {
     const channel = nextChannel();
-    setDuress("test");
+    await setDuress("test");
     expect(
       await (await handleEmit(emitRequest(channel, ["x"]), {})).json(),
     ).toEqual({ status: "paused", reason: "duress" });
 
-    clearDuress();
+    await clearDuress();
     expect(
       await (await handleEmit(emitRequest(channel, ["x"]), {})).json(),
     ).toEqual({ status: "accepted" });

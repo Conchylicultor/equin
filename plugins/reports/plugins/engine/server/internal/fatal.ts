@@ -1,17 +1,41 @@
 import {
   serverFatalSink,
+  serverReportSink,
   sinkHandler,
 } from "@plugins/framework/plugins/server-core/core";
-import type { ServerFatalReport } from "@plugins/framework/plugins/server-core/core";
+import type { ServerReport } from "@plugins/framework/plugins/server-core/core";
 import { appendFatalReportSync } from "./crash-append";
 import { reportOutboxFatalSink } from "./outbox-sink";
 import { reportsProducer } from "./producer";
+import { recordReport } from "./record-report";
+
+/**
+ * The engine's handler on `serverReportSink` — a typed report (`reportServer`)
+ * from a process that LIVES ON: a narrower jobs runner forfeited, a restart the
+ * anti-loop latch suppressed. Plain `recordReport`, async: the backend keeps
+ * serving, so its JS thread must not wait on a disk (the synchronous twin below
+ * is for a process that exits on the spot). A failed write rejects, unhandled,
+ * so the process's crash listeners print and file it — loud, never absorbed.
+ */
+export const serverReportHandler = sinkHandler(
+  serverReportSink,
+  () => (report: ServerReport) => {
+    void recordReport({
+      kind: report.kind,
+      source: "server-caught",
+      message: report.message,
+      data: report.data ?? {},
+    });
+  },
+);
 
 /**
  * The engine's handler on `serverFatalSink` — a report filed synchronously on
- * the way out of a deliberate exit. A `sinkHandlers` entry, so it is attached
- * in every boot mode: an exec child (a supervised job's body) files its fatal
- * exit like the serving backend does.
+ * the way out of a deliberate exit. Only server-core's `exitWithFatalReport`
+ * emits it, and that exits next, so this is never reached from a process that
+ * lives on. A `sinkHandlers` entry, so it is attached in every boot mode: an
+ * exec child (a supervised job's body) files its fatal exit like the serving
+ * backend does.
  *
  * It cannot go through `recordReport`, for the same reason the crash hooks
  * cannot: that is a Postgres write, and the caller's next statement is
@@ -31,10 +55,9 @@ export const fatalReportHandler = sinkHandler(
   () => fileFatalReportSync,
 );
 
-function fileFatalReportSync(report: ServerFatalReport): boolean {
+function fileFatalReportSync(report: ServerReport): boolean {
   if (reportsProducer.writesHere()) {
     const appended = appendFatalReportSync({
-      source: "server-fatal",
       kind: report.kind,
       message: report.message,
       data: report.data ?? {},

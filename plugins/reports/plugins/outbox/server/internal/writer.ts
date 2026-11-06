@@ -58,7 +58,7 @@ export async function resolveWriterRepo(): Promise<void> {
 
 /**
  * The engine's `reportOutboxFatalSink` → the outbox, synchronously: a fatal
- * report (`reportServerFatalSync`) from a process that cannot write `reports`
+ * report (`exitWithFatalReport`) from a process that cannot write `reports`
  * — an exec child exiting on purpose — is one entry, renamed into place before
  * the handler returns, so the caller may exit on its next statement. Answers
  * whether it landed (a refusal or failure has printed why).

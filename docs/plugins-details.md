@@ -24171,9 +24171,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "sentinel.status"
           - `resource.declare` "sentinel.vitals"
           - `ConfigV2.Register` "sentinel"
-        - Uses: 40 symbols — full list in [`plugins/debug/plugins/sentinel/REFERENCE.md`](../plugins/debug/plugins/sentinel/REFERENCE.md)
-          - `infra/host/duress/latch` ×8
+        - Uses: 39 symbols — full list in [`plugins/debug/plugins/sentinel/REFERENCE.md`](../plugins/debug/plugins/sentinel/REFERENCE.md)
           - `debug/sentinel/status-file` ×7
+          - `infra/host/duress/latch` ×7
           - `infra/spawn/daemon` ×5
           - `primitives/log-channels/log-files` ×4
           - `config_v2` ×3
@@ -28220,9 +28220,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ServerContribution`
           - `ServerContributionToken`
           - `ServerErrorReport`
-          - `ServerFatalReport`
           - `ServerPluginDefinition`
           - `ServerRegistryEntry`
+          - `ServerReport`
           - `ServerResourceOptions`
           - `SinkHandler`
           - `Span`
@@ -28243,6 +28243,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineResource`
           - `defineServerContribution`
           - `dropPendingPersists`
+          - `exitWithFatalReport`
           - `getBootMode`
           - `getProfilingData`
           - `handleResourceHttp`
@@ -28281,8 +28282,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `recordMemoryCheckpoint`
           - `registeringPlugin`
           - `relationResourceReads`
+          - `reportServer`
           - `reportServerError`
-          - `reportServerFatalSync`
           - `Resource`
           - `routedTableRequirements`
           - `routeTableChange`
@@ -28292,6 +28293,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serverCollectedDir`
           - `serverErrorSink`
           - `serverFatalSink`
+          - `serverReportSink`
           - `setClientBuildIdentity`
           - `setEpochHandoffHooks`
           - `setLiveStateSnapshotHooks`
@@ -28306,8 +28308,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:
-        - Imported by: 103 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
-          - `infra` ×24
+        - Imported by: 104 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+          - `infra` ×25
           - `debug` ×13
           - `conversations` ×10
           - `tasks` ×10
@@ -29688,6 +29690,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/cli/foreground-handoff` (0 debt)
                   - `framework/cli/op-runtime` (0 debt)
                   - `infra/file-watcher` (0 debt)
+                  - `infra/host/duress/latch` (0 debt)
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
           - Core:
             - Uses: `framework/tooling/collected-dir.defineCollectedDir`
@@ -32253,8 +32256,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `core/internal/file-sink.ts`, `core/internal/history.ts`, `core/internal/read.ts` (debt)
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
-          - `infra` ×12
+        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+          - `infra` ×13
           - `debug` ×7
           - `build` ×5
           - `conversations` ×5
@@ -32570,7 +32573,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by: `infra/host/duress/shed`
           - Plugins:
-            - **`latch`** — The host-global duress latch file (mtime-leased, set/refresh/clear by the cluster sentinel, read via the cheap synchronous isUnderDuress()). A leaf on purpose: module-eval depends only on node:fs + infra/paths — no config, no DB, no worktree identity — so env-independent processes (the CLI's build admission valve) can import it safely.
+            - **`latch`** — The host-global duress latch file (mtime-leased, set/refresh/clear by the cluster sentinel, read via the free synchronous isUnderDuress() from an in-process copy a watch on the latch dir keeps current). A leaf on purpose: module-eval depends only on node:fs + infra/paths — no config, no DB, no worktree identity — so env-independent processes (the CLI's build admission valve, the sentinel's worker) can import it safely.
               - Cross-plugin:
                 - Imported by:
                   - `debug/latency-ledger`
@@ -32582,25 +32585,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempts itself from:
                   - `boundaries/no-platform-api` — `server/internal/latch.ts` (debt)
-                  - `blocking-fs/no-sync-fs` — `server/internal/latch.ts` (debt)
+                  - `watcher-safety/no-raw-fs-watch` — `server/internal/latch.ts` (sanctioned)
               - Server:
-                - Exports (types): `DuressLatch`
+                - Exports (types):
+                  - `DuressLatch`
+                  - `DuressLatchFault`
+                  - `DuressReading`
                 - Exports (values):
                   - `clearDuress`
                   - `duressEpisode`
                   - `duressLatchDir`
+                  - `duressLatchFaultSink`
                   - `FRESHNESS_LEASE_MS`
                   - `isUnderDuress`
                   - `LATCH_FILENAME`
-                  - `MEMO_TTL_MS`
                   - `readDuress`
                   - `readFreshDuress`
                   - `refreshDuress`
                   - `setDuress`
               - Test helpers:
                 - Server: `@plugins/infra/plugins/host/plugins/duress/plugins/latch/server/testing`
-                  - `_setClockForTests` — Override the clock (memo TTL + freshness math).
-                  - `_setLatchDirForTests` — Point the latch at a temp dir.
+                  - `_breakLatchWatchForTests` — Break the open watch as the platform would (its "error" event).
+                  - `_nextLatchReadForTests` — Resolves after the watch next re-reads the file — a write from "another process" landed.
+                  - `_setClockForTests` — Override the clock (lease math, setAt).
+                  - `_setLatchDirForTests` — Point the latch at a temp dir (null restores the declared dir); drops the watch.
             - **`shed`** — The duress shed engine: createShedBuffer routes an observability choke point's durable writes through per-episode first-N persistence, a bounded in-memory buffer and a flush-on-clear replay, gated on the duress latch and tuned live by the duress config.
               - Server:
                 - Uses:
@@ -32998,12 +33006,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/boot-events` (0 debt)
               - `debug/paging-probe` (0 debt)
               - `infra/asset-mirror/bundle` (0 debt)
-              - `infra/host/duress/latch` (1 debt)
-              - `infra/launcher/login-services` (1 debt)
-              - `infra/spawn/daemon` (1 debt)
               - `infra/worktree` (0 debt)
               - `packages/signal-origin` (0 debt)
-              - `reports/engine` (1 debt)
+              - `reports/engine` (0 debt)
         - **`image`** — Images on the host filesystem: the daily host-fs-image.sweep keeps the resized-copy cache (machine/'s GET resized) within 30 days unused and 1 GB.
           - Server:
             - Contributes: `resource.declare` "host-fs.image-sizes"
@@ -33758,9 +33763,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/gateway-drift`
               - `infra/paths/root-migration`
           - Exemptions:
-            - Exempts itself from:
-              - `user-path/no-unproven-claim` — `machine/internal/launchd.ts`, `machine/internal/systemd.ts` (sanctioned)
-              - `blocking-fs/no-sync-fs` — `machine/internal/installed-label.ts` (debt)
+            - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/launchd.ts`, `machine/internal/systemd.ts` (sanctioned)
           - Machine:
             - Exports (types):
               - `DefineLoginServiceSpec`
@@ -34599,8 +34602,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 68 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
-          - `infra` ×21
+        - Imported by: 69 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+          - `infra` ×22
           - `debug` ×20
           - `conversations` ×6
           - `apps` ×5
@@ -34823,27 +34826,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/flock` (0 debt)
       - Plugins:
         - **`daemon`** — defineDaemon: the one declared long-lived process or thread a backend runs on its own — a named, described declaration (startedBy boot | on-demand, where every-worktree | main | host-singleton, restart never | backoff) whose spawnProcess / spawnWorker supervise a child process or Bun Worker (one respawn loop: doubling backoff, give-up after repeated rapid exits, healthy on survival or a ready signal), and whose launchDetached / attach follow a detached process by its pid file. Records per declaration its instances (pid, since, restarts, last exit) and each incarnation as a run for the Background activity catalog (onDaemonActivity / listDaemons / daemonRecentRuns).
-          - Cross-plugin:
-            - Imported by:
-              - `apps/browser/engine`
-              - `build/restart-skip`
-              - `conversations/runtime-sdk`
-              - `debug/paging-probe`
-              - `debug/sentinel`
-              - `debug/sentinel/machine-usage`
-              - `infra/launcher`
-              - `infra/mcp/browser`
-              - `infra/paths/root-migration`
-              - `infra/spawn/daemon/background-arm`
-              - `plugin-meta/plugin-tree`
-              - `release`
-          - Exemptions:
-            - Exempts itself from:
-              - `daemon/no-raw-worker` — `.` (sanctioned)
-              - `boundaries/no-platform-api` — `server/internal/registry.ts`, `server/internal/pid-file-sync.ts` (debt)
-              - `blocking-fs/no-sync-fs` — `server/internal/pid-file-sync.ts` (debt)
-            - Exempted by: `infra/spawn/daemon` (0 debt)
           - Server:
+            - Uses:
+              - `infra/file-watcher.acquireDirWatch`
+              - `infra/file-watcher.DirWatchRelease`
             - Exports (types):
               - `AttachOptions`
               - `DaemonArm`
@@ -34879,6 +34865,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pidAlive`
               - `readPidFile`
               - `stopOnCodeAdopted`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/browser/engine`
+              - `build/restart-skip`
+              - `conversations/runtime-sdk`
+              - `debug/paging-probe`
+              - `debug/sentinel`
+              - `debug/sentinel/machine-usage`
+              - `infra/launcher`
+              - `infra/mcp/browser`
+              - `infra/paths/root-migration`
+              - `infra/spawn/daemon/background-arm`
+              - `plugin-meta/plugin-tree`
+              - `release`
+          - Exemptions:
+            - Exempts itself from:
+              - `daemon/no-raw-worker` — `.` (sanctioned)
+              - `boundaries/no-platform-api` — `server/internal/registry.ts`, `server/internal/pid-file-watch.ts` (debt)
+            - Exempted by: `infra/spawn/daemon` (0 debt)
           - Plugins:
             - **`background-arm`** — Long-lived processes in the Background activity catalog: registers the `daemon` background kind — every declaration made with defineDaemon under Long-lived processes, triggered at boot or on demand, its scope from `where`, and its facts (each instance's state, pid, since when, restarts, memory and CPU from one `ps`, the last exit, the restart policy, how liveness is known) — plus each incarnation as a run in this process. Pushes the catalog on every instance transition (start, ready, death, respawn, give-up, stop).
               - Server:
@@ -37555,13 +37560,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/runtime-sdk`
           - `conversations/transcript-watcher`
           - `debug/profiling/op-log/op-store`
+          - `debug/sentinel`
           - `framework/tooling/web-artifacts`
           - `infra/file-watcher`
           - `infra/git/checkout-watch`
           - `infra/git/git-watcher`
+          - `infra/host/duress/latch`
           - `infra/host/io-health`
           - `infra/jobs/supervised-job`
           - `infra/paths/data-files/memory`
+          - `infra/spawn/daemon`
           - `packages/watched-memo`
           - `plugin-meta/plugin-tree`
           - `reports/outbox`
@@ -49684,9 +49692,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useNow`
     - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths.
       - Cross-plugin:
-        - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/report-sink/REFERENCE.md`](../plugins/primitives/plugins/report-sink/REFERENCE.md)
+        - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/report-sink/REFERENCE.md`](../plugins/primitives/plugins/report-sink/REFERENCE.md)
           - `primitives` ×8
-          - `infra` ×3
+          - `infra` ×4
           - `network` ×2
           - `reports` ×2
           - `ui` ×2
@@ -51951,7 +51959,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.EndpointErrorInfo`
           - `infra/endpoints.endpointErrorSink`
           - `reports.report`
-    - **`engine`** — Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, files every crash the process's listeners catch (processCrashSink, in every boot mode: the crash buffer from a ready serving backend, the report outbox from anything else) and replays the on-disk crash buffer, and owns the reports table's change producer, retention and fork exclusion.
+    - **`engine`** — Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, files every crash the process's listeners catch (processCrashSink, in every boot mode: an uncaught exception synchronously — the crash buffer from a ready serving backend, the report outbox from anything else — and a survived rejection asynchronously), files server-core's typed reports (reportServer, async; exitWithFatalReport, synchronously on the way out) and replays the on-disk crash buffer, and owns the reports table's change producer, retention and fork exclusion.
       - Server:
         - Contributes:
           - `change-producer` "reports"
@@ -52006,7 +52014,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `sink-safety/no-adhoc-file-sink` — `server/internal/crash-append.ts` (sanctioned)
-          - `blocking-fs/no-sync-fs` — `server/internal/crash-append.ts` (debt)
+          - `blocking-fs/no-sync-fs` — `server/internal/crash-append.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/buffer.ts`, `server/internal/crash-append.ts` (debt)
     - **`host-check`** — Host-check report kind's Debug → Reports summary view: one line naming the failing host-scoped check and the first line of its message. Filed by main's hourly host audit through the report outbox — no collector here. Host-check report kind: one row per failing host-scoped check (fingerprint = check id), filed through the report outbox by main's hourly checks.host-audit job (`./equin check --scope host --file-reports`) — the only place a host check's verdict is delivered, since no worktree's check pass asserts the shared machine. Renders a task carrying the check's message and hint verbatim. Warning, re-arms every 6 h.
       - Web:

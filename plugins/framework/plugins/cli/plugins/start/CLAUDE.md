@@ -58,7 +58,7 @@ Linux). `KillMode=process`: a stop signals the gateway alone, because every runn
 agent process (started detached) lives in the unit's cgroup.
 
 `start` and `stop` drive both through one `LoginService` interface
-(`loginServiceManager().service(GATEWAY_SERVICE)`), so the bullets above hold
+(`await loginServiceManager().service(GATEWAY_SERVICE)`), so the bullets above hold
 for systemd too (reload is `stop` + `enable --now` after a `daemon-reload`).
 
 ## Declared login services

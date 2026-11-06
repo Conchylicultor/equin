@@ -9,10 +9,12 @@ import {
 } from "@plugins/infra/plugins/deps/deps";
 import {
   loginServiceHolder,
+  loginServiceId,
   loginServiceJob,
+  referredLabels,
   type LoginServiceDeclaration,
 } from "./define";
-import type { LoginService } from "./login-service";
+import type { LoginService, LoginServiceManager } from "./login-service";
 import { installServiceExecutable, type MacosAppHost } from "./macos-app";
 import { awaitProcessGone } from "./process";
 
@@ -43,16 +45,38 @@ export type ReconcileOutcome =
    */
   | { kind: "started"; pid: number | null; path: string; reloaded: boolean };
 
+/** What a reconcile did, and the service it did it to (as bound by the manager). */
+export interface Reconciled {
+  service: LoginService;
+  outcome: ReconcileOutcome;
+}
+
 /**
- * Bring one declared login service to `ready`'s job under `policy`: hold the
- * dependency (off macOS the job names its binary by path long after main
- * moves on), install its executable into the equin app (macOS), write the
- * job, and (re)load it when the policy says so. The one per-service body
- * shared by `./equin start` and main's boot (`follow-main.ts`), so the two
- * cannot disagree on what "changed" means or on the unload → gone → load
- * order.
+ * Bring one declared login service to `ready`'s job under `policy`: bind it
+ * and every service it refers to under `manager`, hold the dependency (off
+ * macOS the job names its binary by path long after main moves on), install
+ * its executable into the equin app (macOS), write the job, and (re)load it
+ * when the policy says so. The one per-service body shared by `./equin start`
+ * and main's boot (`follow-main.ts`), so the two cannot disagree on what
+ * "changed" means, on the unload → gone → load order, or on which labels the
+ * job names.
  */
 export async function reconcileLoginService<S extends DepSource>(
+  manager: LoginServiceManager,
+  decl: LoginServiceDeclaration<S>,
+  ready: Ready<S>,
+  policy: ReconcilePolicy,
+  app: { host: MacosAppHost; log: (line: string) => void },
+): Promise<Reconciled> {
+  const service = await manager.service(loginServiceId(decl));
+  return {
+    service,
+    outcome: await reconcileBound(manager, service, decl, ready, policy, app),
+  };
+}
+
+async function reconcileBound<S extends DepSource>(
+  manager: LoginServiceManager,
   service: LoginService,
   decl: LoginServiceDeclaration<S>,
   ready: Ready<S>,
@@ -74,7 +98,12 @@ export async function reconcileLoginService<S extends DepSource>(
     decl.executable.build(ready),
     app.log,
   );
-  const job = loginServiceJob(decl, ready, executable);
+  const job = loginServiceJob(
+    decl,
+    ready,
+    executable,
+    await referredLabels(manager, decl),
+  );
   const written = await service.write(job);
   const runningPid = before.kind === "loaded" ? before.pid : null;
   // An always-running service runs while it has a pid; a periodic one while
