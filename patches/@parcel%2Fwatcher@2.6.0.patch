@@ -1,0 +1,230 @@
+diff --git a/index.js b/index.js
+index 78ee744d74900c39a839cafa46b295258fc86307..75613c7548f7ad2c38bd5013654fdce6f1b9db54 100644
+--- a/index.js
++++ b/index.js
+@@ -11,13 +11,18 @@ if (process.platform === 'linux') {
+   }
+ }
+ 
++// equin: a local build (build/Release) wins over the prebuilt package. The
++// prebuild is upstream's unpatched source; infra/file-watcher's
++// `parcel-watcher-addon` dependency compiles this patched source and
++// `./equin build` links it here. Without that link (a checkout never built,
++// another platform) the prebuild loads, as upstream does.
+ let binding;
+ try {
+-  binding = require(name);
++  binding = require('./build/Release/watcher.node');
+ } catch (err) {
+   handleError(err);
+   try {
+-    binding = require('./build/Release/watcher.node');
++    binding = require(name);
+   } catch (err) {
+     handleError(err);
+     try {
+diff --git a/src/kqueue/KqueueBackend.cc b/src/kqueue/KqueueBackend.cc
+index 2991c32fa320cd61d5b575a49ace19cb8a940d03..5526cb226362939c759b1ed6f161d27038deb97d 100644
+--- a/src/kqueue/KqueueBackend.cc
++++ b/src/kqueue/KqueueBackend.cc
+@@ -58,6 +58,10 @@ void KqueueBackend::start() {
+ 
+     // Track all of the watchers that are touched so we can notify them at the end of the events.
+     std::unordered_set<WatcherRef> watchers;
++    // Descriptors of entries that stopped being watched in this batch. Closed only
++    // once the batch is handled: closing one mid-batch would let a watchDir below
++    // reuse its number while a later event of this batch still names the old file.
++    std::unordered_set<int> closing;
+ 
+     for (int i = 0; i < event_count; i++) {
+       int flags = events[i].fflags;
+@@ -75,21 +79,44 @@ void KqueueBackend::start() {
+ 
+       DirEntry *entry = it->second;
+ 
+-      if (flags & NOTE_WRITE && entry && entry->isDir) {
++      // A delete or rename first: a directory whose last entry went and which was
++      // then removed reports NOTE_WRITE | NOTE_DELETE in one event, and diffing
++      // it would leave its own descriptor behind.
++      if (flags & (NOTE_DELETE | NOTE_RENAME | NOTE_REVOKE)) {
++        // The watched file is gone from this path: stop watching it and close its
++        // descriptor. Copy the path first — removing it from a tree frees `entry`.
++        // Every tree holding the path holds its own descriptor of it (watchers
++        // rooted at nested dirs keep separate trees), and a directory's entries
++        // go with it: forget them all before the trees drop the entries.
++        std::string path = entry->path;
++        bool isDir = entry->isDir;
++        std::vector<KqueueSubscription *> subs = findSubscriptions(path);
++        for (auto it = subs.begin(); it != subs.end(); it++) {
++          KqueueSubscription *sub = *it;
++          watchers.insert(sub->watcher);
++          sub->watcher->mEvents.remove(path);
++          if (isDir) {
++            forgetDescendants(sub->tree, path, subs, watchers, closing);
++          }
++          mFdToEntry.erase(sub->fd);
++          closing.insert(sub->fd);
++        }
++        for (auto it = subs.begin(); it != subs.end(); it++) {
++          (*it)->tree->remove(path);
++        }
++        mFdToEntry.erase(fd);
++        mSubscriptions.erase(path);
++        closing.insert(fd);
++      } else if (flags & NOTE_WRITE && entry && entry->isDir) {
+         // If a write occurred on a directory, we have to diff the contents of that
+         // directory to determine what file was added/deleted.
+-        compareDir(fd, entry->path, watchers);
++        compareDir(fd, entry->path, watchers, closing);
+       } else {
+         std::vector<KqueueSubscription *> subs = findSubscriptions(entry->path);
+         for (auto it = subs.begin(); it != subs.end(); it++) {
+           KqueueSubscription *sub = *it;
+           watchers.insert(sub->watcher);
+-          if (flags & (NOTE_DELETE | NOTE_RENAME | NOTE_REVOKE)) {
+-            sub->watcher->mEvents.remove(sub->path);
+-            sub->tree->remove(sub->path);
+-            mFdToEntry.erase((int)(size_t)entry->state);
+-            mSubscriptions.erase(sub->path);
+-          } else if (flags & (NOTE_WRITE | NOTE_ATTRIB | NOTE_EXTEND)) {
++          if (flags & (NOTE_WRITE | NOTE_ATTRIB | NOTE_EXTEND)) {
+             struct stat st;
+             lstat(sub->path.c_str(), &st);
+             if (entry->mtime != CONVERT_TIME(st.st_mtim)) {
+@@ -101,6 +128,11 @@ void KqueueBackend::start() {
+       }
+     }
+ 
++    // Closing a descriptor also removes its kqueue registration.
++    for (auto it = closing.begin(); it != closing.end(); it++) {
++      close(*it);
++    }
++
+     for (auto it = watchers.begin(); it != watchers.end(); it++) {
+       (*it)->notify();
+     }
+@@ -188,7 +220,7 @@ std::vector<KqueueSubscription *> KqueueBackend::findSubscriptions(std::string &
+   return subs;
+ }
+ 
+-bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<WatcherRef> &watchers) {
++bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing) {
+   // macOS doesn't support fdclosedir, so we have to duplicate the file descriptor
+   // to ensure the closedir doesn't also stop watching.
+   #if __APPLE__
+@@ -197,6 +229,9 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+ 
+   DIR *dir = fdopendir(fd);
+   if (dir == NULL) {
++    #if __APPLE__
++      close(fd); // the dup above; the watched descriptor stays open
++    #endif
+     return false;
+   }
+ 
+@@ -242,6 +277,11 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+             bool success = watchDir(sub->watcher, fullpath, sub->tree);
+             if (!success) {
+               sub->tree->remove(fullpath);
++              #if __APPLE__
++                closedir(dir);
++              #else
++                fdclosedir(dir);
++              #endif
+               return false;
+             }
+           }
+@@ -270,7 +310,16 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+           }
+         }
+ 
+-        mFdToEntry.erase((int)(size_t)entry->second.state);
++        // A directory's entries go with it; an entry that was never watched
++        // (ignored) holds no descriptor.
++        if (entry->second.isDir) {
++          forgetDescendants(tree, entry->first, subs, watchers, closing);
++        }
++        int removedFd = (int)(size_t)entry->second.state;
++        if (removedFd > 0) {
++          mFdToEntry.erase(removedFd);
++          closing.insert(removedFd);
++        }
+         mSubscriptions.erase(entry->first);
+         entry = tree->entries.erase(entry);
+       } else {
+@@ -288,13 +337,59 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+   return true;
+ }
+ 
++// Every entry below `path` in `tree` goes with it: each watcher of the tree that
++// did not ignore it hears it removed, its descriptor is queued for closing, and
++// the entry leaves the tree — nothing keeps mapping to it once it is freed, and
++// a directory recreated under the same name is watched afresh. `subs` are the
++// subscriptions of the directory's own parent (or of the directory itself).
++void KqueueBackend::forgetDescendants(std::shared_ptr<DirTree> tree, const std::string &path, std::vector<KqueueSubscription *> &subs, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing) {
++  std::string prefix = path + DIR_SEP;
++  for (auto it = tree->entries.begin(); it != tree->entries.end();) {
++    if (it->first.rfind(prefix, 0) != 0) {
++      it++;
++      continue;
++    }
++    for (auto sub = subs.begin(); sub != subs.end(); sub++) {
++      if ((*sub)->tree == tree && !(*sub)->watcher->isIgnored(it->first)) {
++        (*sub)->watcher->mEvents.remove(it->first);
++        watchers.emplace((*sub)->watcher);
++      }
++    }
++    int fd = (int)(size_t)it->second.state;
++    if (fd > 0) {
++      mFdToEntry.erase(fd);
++      closing.insert(fd);
++    }
++    mSubscriptions.erase(it->first);
++    it = tree->entries.erase(it);
++  }
++}
++
+ void KqueueBackend::unsubscribe(WatcherRef watcher) {
+   // Find any subscriptions pointing to this watcher, and remove them.
+   for (auto it = mSubscriptions.begin(); it != mSubscriptions.end();) {
+     if (it->second.watcher.get() == watcher.get()) {
+-      if (mSubscriptions.count(it->first) == 1) {
++      // The descriptor is shared only by subscriptions of the same tree;
++      // watchers rooted at nested dirs hold their own for one path, so
++      // counting the path's subscriptions would keep the last-but-one open.
++      bool shared = false;
++      auto range = mSubscriptions.equal_range(it->first);
++      for (auto other = range.first; other != range.second; other++) {
++        if (other != it && other->second.fd == it->second.fd) {
++          shared = true;
++          break;
++        }
++      }
++      if (!shared) {
+         // Closing the file descriptor automatically unwatches it in the kqueue.
++        // Forget it on the entry too: the tree is cached by path and outlives this
++        // subscription when another one shares it, and a later watchDir of the
++        // entry must open a descriptor of its own, not reuse this closed number.
+         close(it->second.fd);
++        auto entry = mFdToEntry.find(it->second.fd);
++        if (entry != mFdToEntry.end() && entry->second) {
++          entry->second->state = nullptr;
++        }
+         mFdToEntry.erase(it->second.fd);
+       }
+ 
+diff --git a/src/kqueue/KqueueBackend.hh b/src/kqueue/KqueueBackend.hh
+index 3c6a9cdd5c1de26b0eb5c5f2835409098fb601ae..c57769fc94a8a37f20fdcc30254220de73e3f56d 100644
+--- a/src/kqueue/KqueueBackend.hh
++++ b/src/kqueue/KqueueBackend.hh
+@@ -28,8 +28,9 @@ private:
+   Signal mEndedSignal;
+ 
+   bool watchDir(WatcherRef watcher, std::string path, std::shared_ptr<DirTree> tree);
+-  bool compareDir(int fd, std::string &dir, std::unordered_set<WatcherRef> &watchers);
++  bool compareDir(int fd, std::string &dir, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing);
+   std::vector<KqueueSubscription *> findSubscriptions(std::string &path);
++  void forgetDescendants(std::shared_ptr<DirTree> tree, const std::string &path, std::vector<KqueueSubscription *> &subs, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing);
+ };
+ 
+ #endif

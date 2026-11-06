@@ -118,6 +118,7 @@ import {
   buildRunIdKind,
 } from "@plugins/build/plugins/run-ledger/core";
 import { runAttached } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
+import { linkParcelWatcherAddon } from "@plugins/infra/plugins/file-watcher/plugins/parcel-addon/cli";
 import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/plugins/build-status/core";
 
 // Wedge-breaker for the local `git` metadata reads in this file — orders of
@@ -1215,6 +1216,18 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         grant,
         hooks,
       });
+
+      // 1c. The patched @parcel/watcher addon (kqueue closes a deleted or
+      // renamed file's descriptor), into the `node_modules` stage 1 just made
+      // current: the backend this build restarts loads it. Cached per machine;
+      // a cold build compiles it once. See infra/file-watcher/parcel-addon.
+      endSpan = buildProfilerStart(
+        "parcelWatcherAddon",
+        "build:setup",
+        "parcel-watcher addon",
+      );
+      await linkParcelWatcherAddon({ root, log: hooks.log });
+      endSpan();
 
       // 2b'. Write the central spec early too — otherwise the gateway has no
       // way to spawn central. (Repeated at end of build for idempotency.)

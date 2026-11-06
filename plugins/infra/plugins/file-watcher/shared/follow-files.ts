@@ -26,12 +26,15 @@ import { WatchedDirGoneError } from "./dir-gone";
 //   changes. Between the close and the re-open nothing is heard, so after every
 //   open each follower is handed an `update` for each of its files on disk: a
 //   follower reads from its own cursor, and a spurious update costs a read.
-// - **A followed file deleted or renamed leaks its descriptor** — parcel's
-//   kqueue backend drops it from its tables without closing it, and
-//   `unsubscribe` closes only what it still tracks (measured: 70 deletes under
-//   a dir-wide watch left 90 descriptors held after unsubscribe). Naming the
-//   files bounds that too: only a NAMED file deleted while followed leaks (an
-//   events file rotating), not every entry a prune removes.
+// - **Upstream leaks a followed file's descriptor when it is deleted or
+//   renamed** — its kqueue backend drops it from its tables without closing
+//   it, and `unsubscribe` closes only what it still tracks (measured: 70
+//   deletes under a dir-wide watch left 90 descriptors held after
+//   unsubscribe). The addon this engine loads on darwin is built from a
+//   patched source that closes it (`patches/@parcel%2Fwatcher@*.patch`, built
+//   by the `parcel-addon` child plugin and copied into the checkout by
+//   `./equin build`); a checkout never built, or a release, still runs the
+//   upstream prebuild.
 
 /** One follower's files in one directory, and where its events go. */
 interface Member {

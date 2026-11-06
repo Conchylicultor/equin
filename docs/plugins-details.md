@@ -27692,7 +27692,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 50 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 51 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×31
               - `framework/cli/bootstrap` ×4
               - `framework/tooling/web-artifacts` ×4
@@ -27702,6 +27702,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/doctor.assertPrerequisites`
               - `framework/cli/git-artifacts.registerMergeDrivers`
               - `framework/tooling/checks/type-check.readTypeCheckTree`
+              - `infra/file-watcher/parcel-addon.linkParcelWatcherAddon`
               - `infra/jobs/supervised-job.runAttached`
           - Plugins:
             - **`experimental-marks`** — The Show experimental marks setting (view-options popover and Settings → Config, on an experimental build): useShowExperimentalMarks() is true when the build stamped this document experimental and the marks are on; the frame and the Wish banner both follow it. Registers the Show experimental marks config and, while it is off, serves a head script that hides the marks before the first frame.
@@ -31358,8 +31359,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-        - Imported by: 28 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
-          - `infra` ×10
+        - Imported by: 29 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
+          - `infra` ×11
           - `apps` ×5
           - `framework` ×5
           - `integrations` ×2
@@ -31422,6 +31423,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `conversations/runtime-sdk`
               - `infra/deps/rust`
+              - `infra/file-watcher/parcel-addon`
               - `infra/host/io-health/monitor`
               - `infra/launcher`
               - `packages/signal-origin`
@@ -32336,6 +32338,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register: `defineBackgroundKind('file-watcher')`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/provider.ts` (debt)
+        - **`parcel-addon`** — @parcel/watcher's native addon built from the repo's patched source (its kqueue backend closes the descriptor of a watched file that is deleted or renamed): the parcel-watcher-addon build dependency, and the step ./equin build runs to copy it into the checkout's @parcel/watcher.
+          - Cli:
+            - Uses: `infra/jobs/supervised-job.cliExecContext`
+            - Exports (values): `linkParcelWatcherAddon`
+          - Deps:
+            - Uses:
+              - `infra/deps.defineDep`
+              - `infra/deps/build.build`
+            - Exports (values):
+              - `parcelWatcherAddon`
+              - `parcelWatcherPackageDir`
+          - Cross-plugin:
+            - Imported by: `framework/cli/build`
     - **`git`** — Umbrella for the two plugins that answer 'has git state moved, and must I read it again?': the ref watcher that reports every advance, and the signature-keyed memo that skips a gated recompute when a cheap probe says nothing changed.
       - Plugins:
         - **`checkout-watch`** — The checkout watch hub: acquireCheckoutWatch(root, { refs, onChange }) hears every change that can move a git checkout's state — its working tree and its git dir (HEAD, index, and the refs the reader names beside its own branch; a linked worktree's git dir and the common refs live outside it) — each change tagged worktree or git, refcounted per checkout over the shared directory-watch hub, each reader's reaction coalesced (one running plus one pending).
@@ -33058,8 +33073,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 103 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
-              - `infra` ×34
+            - Imported by: 104 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+              - `infra` ×35
               - `framework` ×21
               - `apps` ×8
               - `debug` ×7
@@ -33534,10 +33549,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `cliExecContext`
               - `runAttached`
           - Cross-plugin:
-            - Imported by: 26 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+            - Imported by: 27 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
               - `framework` ×9
+              - `infra` ×5
               - `apps` ×4
-              - `infra` ×4
               - `build` ×3
               - `backup`
               - `conversations/workspace/worktree`
@@ -38154,8 +38169,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call past FS_WAIT_FLOOR_MS handed to onSlowFsCall subscribers as a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 159 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `infra` ×45
+        - Imported by: 160 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `infra` ×46
           - `framework` ×23
           - `apps` ×15
           - `debug` ×14

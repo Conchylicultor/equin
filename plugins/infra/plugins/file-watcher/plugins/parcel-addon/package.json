@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-infra-file-watcher-parcel-addon",
+  "description": "@parcel/watcher's native addon built from the repo's patched source (its kqueue backend closes the descriptor of a watched file that is deleted or renamed): the parcel-watcher-addon build dependency, and the step ./equin build runs to copy it into the checkout's @parcel/watcher.",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "node-api-headers": "^1.9.0"
+  }
+}

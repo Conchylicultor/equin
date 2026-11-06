@@ -373,8 +373,8 @@ torch.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×10
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×11
     - `apps` ×5
     - `framework` ×5
     - `integrations` ×2

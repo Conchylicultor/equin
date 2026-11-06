@@ -76,6 +76,7 @@ const path = builtFile(ready);
   - Imported by:
     - `conversations/runtime-sdk`
     - `infra/deps/rust`
+    - `infra/file-watcher/parcel-addon`
     - `infra/host/io-health/monitor`
     - `infra/launcher`
     - `packages/signal-origin`

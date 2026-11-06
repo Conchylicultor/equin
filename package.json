@@ -114,6 +114,7 @@
   },
   "patchedDependencies": {
     "eslint-plugin-react-hooks@7.1.1": "patches/eslint-plugin-react-hooks@7.1.1.patch",
-    "graphile-worker@0.18.0": "patches/graphile-worker@0.18.0.patch"
+    "graphile-worker@0.18.0": "patches/graphile-worker@0.18.0.patch",
+    "@parcel/watcher@2.6.0": "patches/@parcel%2Fwatcher@2.6.0.patch"
   }
 }

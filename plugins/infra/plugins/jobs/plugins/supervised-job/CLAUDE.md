@@ -813,10 +813,10 @@ construction, and the job and the body it spawns cannot drift apart.
     - `cliExecContext`
     - `runAttached`
 - Cross-plugin:
-  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×9
+    - `infra` ×5
     - `apps` ×4
-    - `infra` ×4
     - `build` ×3
     - `backup`
     - `conversations/workspace/worktree`
