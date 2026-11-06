@@ -10,6 +10,12 @@ import { type EnqueueTx } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { eventTriggerColumns } from "./base-columns";
+import {
+  enqueueDelivery,
+  enqueuesOnCallerTx,
+  resolveDelivery,
+  type TriggerDelivery,
+} from "./deliver";
 import { eventsDispatchJob } from "./dispatch-job";
 import { triggerTableRegistry } from "./registry";
 import { EMISSIONS_CAP } from "../../core";
@@ -208,7 +214,9 @@ async function dispatch<T>(
   const rows = await exec
     .select()
     .from(def.table)
-    .where(and(...predicates));
+    .where(and(...predicates))
+    // biome-ignore lint/suspicious/noExplicitAny: base-column property access on PgTable.
+    .orderBy((def.table as any).id as AnyPgColumn);
 
   // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
   const matchedIds = rows.map((r) => (r as any).id as string);
@@ -216,33 +224,42 @@ async function dispatch<T>(
 
   if (rows.length === 0) return;
 
-  // Enqueue one events-dispatch job per matching row. The dispatch job
-  // validates the event payload, enqueues the target via `target.enqueue()`,
-  // and handles oneShot cleanup. emit() resolves once dispatch jobs are
-  // durable in `graphile_worker.jobs`, not when target handlers finish.
+  // Deliver to every matched trigger: each target job gets its own queue row,
+  // run id and dedup key, the same path as a direct `.enqueue()`. emit()
+  // resolves once they are durable in the queue, not when the targets finish.
   //
-  // When `tx` is provided, `eventsDispatchJob.enqueue` writes the queue row
-  // on the caller's connection (see plugins/jobs/server/internal/registry.ts),
-  // so the job lives or dies with the caller's transaction.
-  await Promise.all(
-    rows.map((row) => {
-      return eventsDispatchJob.enqueue(
-        {
-          eventName: def.name,
-          // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
-          triggerId: (row as any).id as string,
-          // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
-          jobName: (row as any).jobName as string,
-          // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
-          jobWith: ((row as any).jobWith ?? {}) as Record<string, unknown>,
-          eventPayload: (payload ?? {}) as Record<string, unknown>,
-          // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
-          oneShot: (row as any).oneShot as boolean,
-        },
-        { tx },
-      );
-    }),
-  );
+  // Without `tx`, every target is enqueued right here. With one, a target is
+  // enqueued on the caller's transaction (so it lives or dies with the
+  // emitter's writes) only when that locks nothing other emitters share — a
+  // `dedup: "none"` row. Keyed and singleton targets go into ONE outbox row
+  // (`events.dispatch`) on the transaction, which enqueues them after commit
+  // (see `enqueuesOnCallerTx`). Sequential: on a transaction they share one
+  // connection anyway, and the id order keeps the lock order stable.
+  const deferred: TriggerDelivery[] = [];
+  for (const row of rows) {
+    // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
+    const r = row as any;
+    const resolved = await resolveDelivery(
+      {
+        eventName: def.name,
+        triggerId: r.id as string,
+        jobName: r.jobName as string,
+        jobWith: (r.jobWith ?? {}) as Record<string, unknown>,
+        eventPayload: (payload ?? {}) as Record<string, unknown>,
+        oneShot: r.oneShot as boolean,
+      },
+      tx,
+    );
+    if (!resolved) continue;
+    if (tx && !enqueuesOnCallerTx(resolved.target)) {
+      deferred.push(resolved.delivery);
+    } else {
+      await enqueueDelivery(resolved, tx);
+    }
+  }
+  if (deferred.length > 0) {
+    await eventsDispatchJob.enqueue({ deliveries: deferred }, { tx });
+  }
 }
 
 // Append to the emission log and trim back to the cap. Runs inside dispatch()

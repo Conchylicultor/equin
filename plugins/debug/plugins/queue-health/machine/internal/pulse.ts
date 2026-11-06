@@ -17,11 +17,13 @@ import {
   PULSE_WAITING_LIMIT,
   queueHealthConfig,
   queuePulse,
+  queueVerdictValue,
   type QueuePulse,
 } from "../../core";
 import { assemblePulse } from "./assemble-pulse";
 
-// The health report's Job queue row, as a live value.
+// The health report's Job queue row, as two live values: the verdict every
+// tab holds (the dot), and the full pulse the open report reads.
 //
 // PUSH-BASED, with no poll. Graphile's tables live outside the schema the DB
 // change feed covers, so the feed never invalidates this; it is served external
@@ -51,31 +53,47 @@ import { assemblePulse } from "./assemble-pulse";
 // setTimeout's largest delay; anything longer fires immediately in Bun/Node.
 const MAX_TIMEOUT_MS = 2 ** 31 - 1;
 
-// The subscribed tuple's `notify`, set for exactly as long as a tab is
-// subscribed (`whileSubscribed` below). The value is param-less, so there is at
-// most one.
-let pulseNotify: (() => void) | undefined;
-let changeTimer: ReturnType<typeof setTimeout> | undefined;
-
-function clearChangeTimer(): void {
-  if (changeTimer !== undefined) clearTimeout(changeTimer);
-  changeTimer = undefined;
+// The served values' notify wiring: each value (pulse, verdict) has its own —
+// set for exactly as long as a tab subscribes to it (`whileSubscribed`), and
+// its own change timer, re-armed by each of its loads. Both values are
+// param-less, so each has at most one subscribed tuple.
+interface Subscription {
+  notify: (() => void) | undefined;
+  timer: ReturnType<typeof setTimeout> | undefined;
 }
 
-// One timer, re-armed by every load. Armed only while someone is subscribed: a
-// load with no subscriber (an HTTP read) must not leave a timer behind.
-function armChangeTimer(at: number | null): void {
-  clearChangeTimer();
-  const notify = pulseNotify;
+function clearChangeTimer(sub: Subscription): void {
+  if (sub.timer !== undefined) clearTimeout(sub.timer);
+  sub.timer = undefined;
+}
+
+// One timer per value, re-armed by every load. Armed only while someone is
+// subscribed: a load with no subscriber (an HTTP read) must not leave a timer
+// behind.
+function armChangeTimer(sub: Subscription, at: number | null): void {
+  clearChangeTimer(sub);
+  const notify = sub.notify;
   if (notify === undefined || at === null) return;
   const delay = Math.min(Math.max(0, at - Date.now()), MAX_TIMEOUT_MS);
-  changeTimer = setTimeout(() => {
-    changeTimer = undefined;
+  sub.timer = setTimeout(() => {
+    sub.timer = undefined;
     notify();
   }, delay);
 }
 
-async function loadQueuePulse(): Promise<QueuePulse> {
+function whileSubscribedTo(sub: Subscription) {
+  return (_params: unknown, notify: () => void) => {
+    sub.notify = notify;
+    const stopActivity = onQueueActivity(notify);
+    return () => {
+      sub.notify = undefined;
+      stopActivity();
+      clearChangeTimer(sub);
+    };
+  };
+}
+
+async function loadQueuePulse(sub: Subscription): Promise<QueuePulse> {
   const since = Date.now() - PULSE_DEAD_WINDOW_MS;
   const [classes, oldestWaiting, dead] = await Promise.all([
     queryQueuePulse(),
@@ -99,29 +117,41 @@ async function loadQueuePulse(): Promise<QueuePulse> {
     getConfig(queueHealthConfig),
     now,
   );
-  armChangeTimer(nextChangeAt);
+  armChangeTimer(sub, nextChangeAt);
   return pulse;
 }
 
+const DEAD_JOBS_READ = {
+  tables: [_deadJobs],
+  reason:
+    "the pulse counts the last day's deaths across the whole dead_jobs archive, so archiving any job may change it; its other reads are graphile-worker's private queue tables, outside the schema the change feed covers, which the queue-activity signal and the next-change timer notify instead",
+};
+
+const pulseSub: Subscription = { notify: undefined, timer: undefined };
+const verdictSub: Subscription = { notify: undefined, timer: undefined };
+
+// The full pulse: subscribed only while the health report is open (the row's
+// glance and detail). It moves on nearly every job start and finish.
 // The runtime starts `whileSubscribed` before the first subscriber's load, so
-// that load already sees `pulseNotify` and arms its timer.
+// that load already sees the notify and arms its timer.
 export const queuePulseServed = serveValue(queuePulse, {
   source: "external",
   changes: "notified",
-  reads: {
-    tables: [_deadJobs],
-    reason:
-      "the pulse counts the last day's deaths across the whole dead_jobs archive, so archiving any job may change it; its other reads are graphile-worker's private queue tables, outside the schema the change feed covers, which the queue-activity signal and the next-change timer notify instead",
-  },
-  loader: loadQueuePulse,
+  reads: DEAD_JOBS_READ,
+  loader: () => loadQueuePulse(pulseSub),
   throttleMs: 1000,
-  whileSubscribed: (_params, notify) => {
-    pulseNotify = notify;
-    const stopActivity = onQueueActivity(notify);
-    return () => {
-      pulseNotify = undefined;
-      stopActivity();
-      clearChangeTimer();
-    };
-  },
+  whileSubscribed: whileSubscribedTo(pulseSub),
+});
+
+// The verdict alone: every tab's always-on subscription (the dot). Same reads
+// and timer as the pulse, but a load whose verdict did not change pushes
+// nothing — the runtime compares it against the value its holders hold — so a
+// busy queue that stays green costs its tabs no frames at all.
+export const queueVerdictServed = serveValue(queueVerdictValue, {
+  source: "external",
+  changes: "notified",
+  reads: DEAD_JOBS_READ,
+  loader: async () => (await loadQueuePulse(verdictSub)).verdict,
+  throttleMs: 1000,
+  whileSubscribed: whileSubscribedTo(verdictSub),
 });

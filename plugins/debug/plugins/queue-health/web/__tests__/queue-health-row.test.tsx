@@ -24,10 +24,20 @@ const live = vi.hoisted(() => ({
   result: undefined as unknown,
 }));
 
-vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useLive: () => live.result,
-}));
+// The row's status reads the verdict value, the glance and detail the full
+// pulse: one stubbed pulse serves both, the verdict read as its `verdict`.
+vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => {
+  const core = await import("../../core");
+  return {
+    ...(await importOriginal<object>()),
+    useLive: (decl: unknown) => {
+      const r = live.result as { status: string; data?: { verdict: unknown } };
+      return decl === core.queueVerdictValue && r.status === "ready"
+        ? { ...r, data: r.data?.verdict }
+        : r;
+    },
+  };
+});
 
 vi.mock(
   "@plugins/network/plugins/live/plugins/live-state/web",

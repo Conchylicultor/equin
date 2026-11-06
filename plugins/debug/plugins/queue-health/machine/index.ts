@@ -13,7 +13,7 @@ import { classStarvedKind } from "./internal/class-starved-kind";
 import { wedgedKind } from "./internal/wedged-kind";
 import { queueHealthTool } from "./internal/mcp-tool";
 import { handleQueueHealthSummary } from "./internal/summary-endpoint";
-import { queuePulseServed } from "./internal/pulse";
+import { queuePulseServed, queueVerdictServed } from "./internal/pulse";
 
 export { queueHealthTickOnce } from "./internal/watchdog";
 
@@ -26,6 +26,7 @@ export default {
   register: [queueHealthTool, queueHealthTimer],
   contributions: [
     ...queuePulseServed.declare,
+    ...queueVerdictServed.declare,
     deadJobKind,
     backlogKind,
     slotHogKind,

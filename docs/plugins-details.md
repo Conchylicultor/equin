@@ -23737,6 +23737,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.ConfigV2`
           - `network/live.useLive`
           - `network/live/live-state.foldResource`
+          - `network/live/live-state.ResourceResult`
           - `network/live/live-state.useNotificationsChannelStatuses`
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.Fill`
@@ -23755,6 +23756,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `ConfigV2.Register` "queue-health"
           - `resource.declare` "queue-health.pulse"
+          - `resource.declare` "queue-health.verdict"
           - `report-kind` "queue-backlog"
           - `report-kind` "queue-class-starved"
           - `report-kind` "queue-dead-job"
@@ -23762,7 +23764,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "queue-slot-hog"
           - `report-kind` "queue-wedged"
         - Uses: `config_v2.ConfigV2`
-        - Resources: `queue-health.pulse` (push, notified)
+        - Resources:
+          - `queue-health.pulse` (push, notified)
+          - `queue-health.verdict` (push, notified)
       - Machine:
         - Uses:
           - `infra/endpoints.implementMachine`
@@ -23847,6 +23851,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `QueueToneSchema`
           - `queueVerdict`
           - `QueueVerdictSchema`
+          - `queueVerdictValue`
           - `QueueWaitingJobSchema`
           - `QueueWedgedPayloadSchema`
           - `stuckHoldMs`
@@ -31831,7 +31836,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/jobs.defineJob`
           - `infra/jobs.EnqueueTx`
           - `infra/jobs.getAllRegisteredJobNames`
-          - `infra/jobs.NonRetryableError`
+          - `infra/jobs.RegisteredJob`
           - `infra/jobs.UNSAFE_getRegisteredJob`
           - `infra/jobs.UNSAFE_installDurableHooks`
           - `network/live.serveCollection`

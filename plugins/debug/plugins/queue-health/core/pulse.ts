@@ -132,3 +132,14 @@ export type QueueDeadGroup = z.infer<typeof QueueDeadGroupSchema>;
 export const queuePulse = liveValue("queue-health.pulse", {
   schema: QueuePulseSchema,
 });
+
+// The row's always-on read: only what colours the dot and writes its summary.
+// Every tab's health report holds this subscription whether or not the popover
+// is open, so it carries the verdict alone — a few dozen bytes that change only
+// when the colour or summary does (an unchanged load is not pushed). The full
+// `queuePulse` — running jobs, pickup stats, bars, all moving on every job start
+// and finish — is subscribed only by the glance and detail, which render while
+// the report is open. Same loader reads, same timer (`server/internal/pulse.ts`).
+export const queueVerdictValue = liveValue("queue-health.verdict", {
+  schema: QueueVerdictSchema,
+});

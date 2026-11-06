@@ -5,8 +5,8 @@
 A trigger binding is a **persisted DB row** (one per subscription, in the
 event's `<event_name>_triggers` table), not in-memory state. So a binding can
 outlive the code that created it — most dangerously when its target job is
-deleted but the row survives. Every emission of that event then enqueues an
-`events.dispatch` job that can never resolve a handler; pre-fix those threw and
+deleted but the row survives. Every emission of that event then tries to
+deliver to a job that cannot resolve; pre-fix those threw and
 graphile retried each into a dead job (the `improve.apply-queue-top` ×589
 retry storm). Two independent layers now make that drift self-correcting, so a
 stale binding can never re-accumulate dead jobs:
@@ -16,10 +16,10 @@ stale binding can never re-accumulate dead jobs:
    the live job registry, and reports what it removed. It runs after the
    register phase, so the registry is complete (an empty-registry guard prevents
    wiping valid triggers if ever called too early).
-2. **Dispatch self-heal** — `events.dispatch` (`dispatch-job.ts`) resolves the
+2. **Delivery self-heal** — `deliverToTrigger` (`deliver.ts`) resolves the
    target by name; an unknown job means the binding is dead, so it removes that
-   trigger row and returns without throwing (no retry, no dead job). This covers
-   the window between a job's removal and the next boot sweep.
+   trigger row and returns without throwing. This covers the window between a
+   job's removal and the next boot sweep.
 
 Static triggers are declared as `Trigger({ on, do, with })` contributions and
 re-projected from code each boot by `syncTriggerContributions()`: their rows
@@ -32,17 +32,36 @@ error, once per database.) The sweep is therefore only ever about a row a
 runtime `trigger()` call made for a job that has since gone — a real leak. Trigger **tables** are real Drizzle tables
 built inside `defineTriggerEvent`; deleting an event's source file makes
 drizzle-kit generate a `DROP` migration on the next build, so orphaned trigger
-tables can't linger either. Event-payload schema drift (target job exists but
-the stored payload no longer parses) is a genuine code-contract bug and is
-deliberately **not** self-healed — the binding is still valid; the contract
-just needs fixing, so deleting the trigger would be wrong. But it is also
-*deterministic*: the same stored payload will never parse on retry, so the
-dispatch handler throws a `NonRetryableError` (from `@plugins/jobs`) rather than
-a plain `Error`. The jobs worker dead-letters it after a single attempt instead
-of burning `maxAttempts` retries on every emission — so a frequently-emitted
-drifted event reports + dead-letters once per emission rather than ×maxAttempts.
-The failure stays loud and visible (reported, and surfaced as a dead-letter by
-queue-health); only the wasted retry churn is removed.
+tables can't linger either. Contract drift (target job exists but the stored `with` or the event
+payload no longer parses against its schemas) is a genuine code-contract bug
+and is deliberately **not** self-healed — the binding is still valid; the
+contract just needs fixing, so deleting the trigger would be wrong. Delivery
+reports it (`reportServerError`, scoped to the job) and skips that one target:
+the failure is deterministic, so there is nothing to retry, and a drifted
+subscriber must never fail — or roll back — the emitter.
+
+## Delivery: inline, plus one outbox row per transactional emit
+
+`emit()` resolves each matched trigger (`resolveDelivery`: unknown target →
+self-heal, drift → report and skip) and enqueues its target with
+`target.enqueue(with, { _event, tx })` — the target's own queue row, run id and
+dedup key — right away when it can:
+
+- **No `tx`**: every target is enqueued inline.
+- **With `tx`**: a `dedup: "none"` target is enqueued on the caller's
+  transaction (a plain insert; it commits or rolls back with the emitter's
+  writes). A keyed or singleton target is NOT — its `job_key` upsert would hold
+  that key's row lock until the caller commits, serializing emitters on shared
+  keys and deadlocking two that take two keys in opposite orders. Those go into
+  ONE `events.dispatch` row per emission, inserted on the transaction (the
+  outbox), whose run enqueues each of them after commit (`enqueuesOnCallerTx`).
+
+So an event costs its targets' runs plus at most one dispatch run. Until 2026-11
+emit enqueued an `events.dispatch` row per matched trigger whose only work was
+the target's enqueue — every event-triggered run cost two queue rows, two runs
+and their bookkeeping (`tasks.statusChanged` matches ~7 triggers: ~14 runs per
+status change, `events.dispatch` 29% of all lifetime runs on main). The job
+still accepts that per-trigger shape, to drain rows queued before the change.
 
 ## Live reads
 
@@ -96,7 +115,7 @@ insert and the ring's inline prune reach it through the change feed. The
     - `infra/jobs.defineJob`
     - `infra/jobs.EnqueueTx`
     - `infra/jobs.getAllRegisteredJobNames`
-    - `infra/jobs.NonRetryableError`
+    - `infra/jobs.RegisteredJob`
     - `infra/jobs.UNSAFE_getRegisteredJob`
     - `infra/jobs.UNSAFE_installDurableHooks`
     - `network/live.serveCollection`

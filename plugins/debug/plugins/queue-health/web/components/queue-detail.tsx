@@ -309,14 +309,14 @@ export function QueueDetailView({
         </Text>
       );
     case "ready":
-      return <ReadyDetail pulse={read.pulse} now={now} />;
+      return <ReadyDetail pulse={read.value} now={now} />;
   }
 }
 
 export function QueueDetail() {
   const read = useQueuePulse();
   const anchors =
-    read.kind === "ready" ? detailModel(read.pulse).items.map(anchorOf) : [];
+    read.kind === "ready" ? detailModel(read.value).items.map(anchorOf) : [];
   const now = useAgeClock(anchors);
   return <QueueDetailView read={read} now={now} />;
 }

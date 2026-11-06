@@ -58,7 +58,7 @@ export async function flushStatusBatch(batch: StatusBatch): Promise<void> {
       payload,
       // `batch.tx` is a PgTransaction here (structurally an EmitTx /
       // NodePgDatabase); the narrow cast reconciles the PgTransaction ⇄ EmitTx
-      // nominal mismatch that eventsDispatchJob.enqueue accepts at runtime.
+      // nominal mismatch that the jobs enqueue accepts at runtime.
       { tx: batch.tx as EmitTx },
     );
   }

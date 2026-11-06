@@ -79,7 +79,7 @@ export async function syncTriggerContributions(): Promise<void> {
 
 // A dangling trigger is a row whose `jobName` is not in the live job registry —
 // its target job was removed, so the trigger can never deliver and every
-// emission of its event would enqueue an `events.dispatch` job that fails. The
+// emission of its event would try to deliver to a job that is gone. The
 // retry storm that motivated this sweep (`improve.apply-queue-top` ×589 dead
 // jobs) is exactly that: a deleted job whose trigger row outlived it.
 //

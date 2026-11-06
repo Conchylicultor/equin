@@ -91,7 +91,7 @@ export async function withTaskStatusChange<T>(
       // SELECT + emission audit + job INSERT commit atomically with the write.
       // `exec` is a PgTransaction there (structurally an EmitTx /
       // NodePgDatabase); the narrow cast reconciles the PgTransaction ⇄ EmitTx
-      // nominal mismatch that eventsDispatchJob.enqueue accepts at runtime.
+      // nominal mismatch that the jobs enqueue accepts at runtime.
       exec === db ? undefined : { tx: exec as EmitTx },
     );
   }

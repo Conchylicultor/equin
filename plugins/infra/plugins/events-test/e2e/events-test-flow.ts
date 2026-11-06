@@ -14,7 +14,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const URL = pathUrl("/events-test");
+const URL = pathUrl("/debug/events-test");
 const OUT = "/tmp/events-test-flow";
 
 interface TriggersResponse {
@@ -22,7 +22,7 @@ interface TriggersResponse {
 }
 
 interface LogResponse {
-  entries: { label: string; payload: { userId: string; message: unknown } }[];
+  entries: { label: string; userId: string; message: string }[];
 }
 
 await withBrowser(async (h) => {
@@ -81,7 +81,7 @@ await withBrowser(async (h) => {
   // Sweep all triggers with label=any-recurring via the Delete-by-config form
   const sweepSection = page
     .locator("section")
-    .filter({ hasText: "Delete triggers by action config" })
+    .filter({ hasText: "Delete triggers by job config" })
     .first();
   await sweepSection.getByPlaceholder(/JSONB/).fill("any-recurring");
   await sweepSection.getByRole("button", { name: /Sweep/i }).click();
@@ -101,7 +101,7 @@ await withBrowser(async (h) => {
   );
   for (const e of log.entries) {
     console.log(
-      ` - ${e.label} userId=${e.payload.userId} msg=${JSON.stringify(e.payload.message)}`,
+      ` - ${e.label} userId=${e.userId} msg=${JSON.stringify(e.message)}`,
     );
   }
 });

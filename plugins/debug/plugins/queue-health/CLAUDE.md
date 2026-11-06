@@ -292,10 +292,19 @@ this plugin's too: it owns the queue thresholds. Design:
   `core/pulse.ts` (pushed, not preloaded, no placeholder: not loaded yet is
   `pending`), served `queuePulseServed = serveValue(queuePulse, { source:
   "external", … })` in `server/internal/pulse.ts`, read with `useLive(queuePulse)`
-  in `useQueuePulse`. Its loader reads the slot ledger + forfeit registry (memory)
+  in `useQueuePulse` — by the row's glance and detail only, which render while
+  the report is open. Its loader reads the slot ledger + forfeit registry (memory)
   and three bounded jobs queries (`queryQueuePulse`, `queryOldestWaiting`,
   `queryRecentDeadJobs` over 24 h). Every array in the schema is `.max()`-bounded.
   Not boot-critical. The joins live in the pure `assemble-pulse.ts`.
+- **`queue-health.verdict`** — `queueVerdictValue`, the verdict alone (state,
+  summary, per-class cause), served by `queueVerdictServed` from the same loader
+  and timer. It is the row's `useStatus` read — the one every tab holds whether
+  the report is open or not — so it must stay this small: the runtime pushes a
+  load only when the value changed, and the verdict changes only when the colour
+  or summary does, while the full pulse (running jobs, pickup stats) moves on
+  nearly every job start and finish. Before the split, every tab took the ~3 KB
+  pulse about once a second on a busy queue to colour one dot.
 - **No poll.** Notified by `onQueueActivity` (start / complete / insert / the jobs
   plugin's own mutations), throttled to one load per second (`throttleMs: 1000`),
   plus ONE timer armed at the verdict's `nextChangeAt`. A wedged queue emits no
@@ -381,6 +390,7 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `config_v2.ConfigV2`
     - `network/live.useLive`
     - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceResult`
     - `network/live/live-state.useNotificationsChannelStatuses`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
@@ -399,6 +409,7 @@ them to include 1, which would put the warning on the same instant as the abort.
   - Contributes:
     - `ConfigV2.Register` "queue-health"
     - `resource.declare` "queue-health.pulse"
+    - `resource.declare` "queue-health.verdict"
     - `report-kind` "queue-backlog"
     - `report-kind` "queue-class-starved"
     - `report-kind` "queue-dead-job"
@@ -406,7 +417,9 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `report-kind` "queue-slot-hog"
     - `report-kind` "queue-wedged"
   - Uses: `config_v2.ConfigV2`
-  - Resources: `queue-health.pulse` (push, notified)
+  - Resources:
+    - `queue-health.pulse` (push, notified)
+    - `queue-health.verdict` (push, notified)
 - Machine:
   - Uses:
     - `infra/endpoints.implementMachine`
@@ -491,6 +504,7 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `QueueToneSchema`
     - `queueVerdict`
     - `QueueVerdictSchema`
+    - `queueVerdictValue`
     - `QueueWaitingJobSchema`
     - `QueueWedgedPayloadSchema`
     - `stuckHoldMs`

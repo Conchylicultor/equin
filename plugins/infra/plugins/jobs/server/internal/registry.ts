@@ -206,7 +206,7 @@ export interface EnqueueOpts {
   /**
    * Event payload threaded by the events dispatcher. Stored in the
    * graphile queue row and delivered to the handler as `event`. Internal
-   * plumbing — only the dispatch job should set this.
+   * plumbing — only event delivery (`@plugins/infra/plugins/events`) sets this.
    */
   _event?: unknown;
 }

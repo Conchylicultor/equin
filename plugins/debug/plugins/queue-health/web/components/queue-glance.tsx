@@ -127,7 +127,7 @@ function ClassBar({
 /** The bars for any read — drawn unfilled with "–" when the queue is unknown,
  * never as an empty queue. */
 export function QueueGlanceView({ read }: { read: QueuePulseRead }) {
-  const pulse = read.kind === "ready" ? read.pulse : undefined;
+  const pulse = read.kind === "ready" ? read.value : undefined;
   return (
     <Stack gap="2xs">
       {HOLD_CLASSES.map((hold) => (
