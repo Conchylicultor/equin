@@ -28312,10 +28312,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CHECKOUT_SCOPES`
           - `globPaths`
           - `InconclusiveCheckError`
+          - `listRepoMembers`
           - `loadRepoFiles`
           - `loadRepoSnapshot`
           - `pathspecToRegex`
           - `pathsUnder`
+          - `repoFileReader`
           - `repoFilesOver`
           - `repoSnapshotOver`
       - Cross-plugin:
@@ -29126,7 +29128,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 185 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 186 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×54
               - `primitives` ×28
               - `conversations` ×26
@@ -29142,13 +29144,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints` ×2
               - `infra` ×2
               - `network` ×2
+              - `plugin-meta` ×2
               - `reports` ×2
               - `build`
               - `database/admin`
               - `map/google`
               - `media/film`
               - `menu-bar`
-              - `plugin-meta/exhibits`
               - `release`
               - `reorder/node-types`
               - `runs`
@@ -29533,7 +29535,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/deps/python/uv-updater` (0 debt)
                   - `infra/deps/rust/cargo-updater` (0 debt)
                   - `infra/worktree/reclaim` (0 debt)
-                  - `plugin-meta/plugin-tree` (0 debt)
                   - `review/plugin-changes` (0 debt)
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
               - Exemptions:
@@ -42330,11 +42331,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `scanCssRefs` — Relative paths in one CSS source: `@source "rel"` (and `@source not "rel"`) and `@import "rel"`.
           - `scanMarkdownRefs` — Relative targets in one markdown source: `[x](rel)` / `![x](rel)`, `[x]: rel` definitions, and `<img src>` / `<a href>` attributes.
           - `scanPathRefs` — `path` refs in one TS/TSX source: every string literal that is wholly a `plugins/…` path, and every `@plugins/…` module specifier (static, dynamic and mocked imports).
-    - **`plugin-tree`** — Cached, watcher-invalidated plugin-tree accessors: the structure tree, built in-process for the hot path, and the faceted tree, read as data through the FacetedTreeSource host service (never extracted in the backend).
+    - **`plugin-tree`** — Watcher-kept plugin-tree accessors: the structure tree, kept up to date in-process by what changed (a plugin added or removed, a key file edited — O(changes), with its own change signal), and the faceted tree, read as data through the FacetedTreeSource host service (never extracted in the backend).
       - Server:
         - Contributes: `host-service:plugin-tree.faceted-source` "plugin-tree.faceted-source"
         - Uses:
           - `infra/file-watcher.defineFileWatcher`
+          - `infra/file-watcher.FileChangeEvent`
           - `infra/file-watcher.FileWatcher`
           - `infra/git/git-read-cache.createGitStateMemo`
           - `infra/host/host-read-pool.withHeavyReadSlot`
@@ -42345,7 +42347,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FacetedTreeSource`
           - `getFacetsTreeCached`
           - `getStructureTreeCached`
+          - `onPluginStructureChanged`
           - `onPluginTreeChanged`
+          - `pluginStructureGeneration`
           - `pluginTreeGeneration`
         - Register:
           - `defineWarmup('plugin-tree.trees')`
@@ -42371,9 +42375,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginTreeData`
           - `PluginTreeJson`
           - `Runtime`
+          - `StructureIndex`
+          - `StructureIndexIo`
         - Exports (values):
           - `buildPluginTree`
           - `buildStructureTreeOnce`
+          - `createStructureIndex`
           - `pluginTreeFromJson`
           - `pluginTreeToJson`
           - `resolvePluginSpecifier`
@@ -42389,9 +42396,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-view`
           - `plugin-meta/relocate`
       - Exemptions:
-        - Exempts itself from:
-          - `boundaries/no-platform-api` — `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
-          - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/structure-tree-cache.ts` (sanctioned)
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
       - Plugins:
         - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and `./equin plugin-tree-facets`, which writes it as JSON for the serving backend to read as data.
           - Core:

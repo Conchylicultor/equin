@@ -25,10 +25,12 @@
     - `CHECKOUT_SCOPES`
     - `globPaths`
     - `InconclusiveCheckError`
+    - `listRepoMembers`
     - `loadRepoFiles`
     - `loadRepoSnapshot`
     - `pathspecToRegex`
     - `pathsUnder`
+    - `repoFileReader`
     - `repoFilesOver`
     - `repoSnapshotOver`
 - Cross-plugin:

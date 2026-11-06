@@ -1,7 +1,9 @@
 import {
   getFacetsTreeCached,
   getStructureTreeCached,
+  onPluginStructureChanged,
   onPluginTreeChanged,
+  pluginStructureGeneration,
   pluginTreeGeneration,
 } from "@plugins/plugin-meta/plugins/plugin-tree/server";
 import { serveValue } from "@plugins/network/plugins/live/machine";
@@ -18,19 +20,19 @@ import { treeToPayload } from "./to-payload";
 // graph — neither payload carries a membership field.
 
 /**
- * Structure-only + cached: the hot path never reads facets (no facet
- * extract/relate, no barrel import). Throttled like the faceted values: every
- * code span in an open conversation subscribes it, and a build or a burst of
- * saves moves the generation once per watcher batch, so each subscribed tab
- * re-reads the ~1.4k-node payload at most every 2 s rather than once per batch.
+ * Structure-only: the hot path never reads facets (no facet extract/relate, no
+ * barrel import). Told of STRUCTURE changes only (`onPluginStructureChanged`:
+ * a plugin added or removed, a barrel or package.json edited) — an edit to any
+ * other file under `plugins/` never reaches the tabs holding it — and the tree
+ * it reads is kept up to date by what changed, so no throttle stands between a
+ * change and the tabs.
  */
 export const pluginTreeServed = serveValue(pluginTree, {
   source: "external",
   changes: "notified",
   loader: async () => treeToPayload(await getStructureTreeCached()),
-  revalidate: () => pluginTreeGeneration(),
-  whileSubscribed: (_params, notify) => onPluginTreeChanged(notify),
-  throttleMs: 2_000,
+  revalidate: () => pluginStructureGeneration(),
+  whileSubscribed: (_params, notify) => onPluginStructureChanged(notify),
 });
 
 /**

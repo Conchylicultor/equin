@@ -104,12 +104,16 @@ function isWalkable(name: string): boolean {
 const MAX_DEPTH = 10;
 
 /**
- * Every plugin directory, read off the repo's file set — no `readdir`.
+ * The plugin positions a file supports, as paths under the plugins root
+ * (`apps`, `apps/plugins/home`) — every directory along `relUnderRoot` that
+ * sits at a plugin position and from which no non-walkable directory leads
+ * down to the file.
  *
- * Purely positional: each directory directly under `pluginsRoot`, and each
+ * Purely positional: each directory directly under the plugins root, and each
  * directory directly under a plugin's `plugins/`, sits at a plugin position. It
  * is a plugin when it holds source content: at least one file of the set
- * somewhere under it, not inside `node_modules` or a dot-dir.
+ * somewhere under it, not inside `node_modules` or a dot-dir — i.e. when at
+ * least one file supports it.
  *
  * The content gate guards against *hollow shells*: when a plugin is relocated,
  * `git mv` removes its tracked files but leaves behind the untracked
@@ -121,54 +125,92 @@ const MAX_DEPTH = 10;
  * freshly authored, not-yet-committed plugin is untracked-not-ignored, so it is
  * in the set and still found.
  */
-function findAllPluginDirs(pluginsRoot: AppPath, repo: RepoFiles): AppPath[] {
+export function pluginPositionsOf(relUnderRoot: string): string[] {
+  const segs = relUnderRoot.split("/");
+  const dirCount = segs.length - 1; // the last segment is the file
+  const positions: string[] = [];
+  // `k` indexes a plugin position's own segment; `walkable` holds while every
+  // directory from it down to the file is walkable.
+  for (let k = 0, depth = 1; k < dirCount && depth <= MAX_DEPTH; depth++) {
+    if (!isWalkable(segs[k]!)) break;
+    let walkable = true;
+    for (let i = k + 1; i < dirCount; i++) {
+      if (!isWalkable(segs[i]!)) {
+        walkable = false;
+        break;
+      }
+    }
+    if (walkable) positions.push(segs.slice(0, k + 1).join("/"));
+    if (segs[k + 1] !== "plugins" || k + 2 >= dirCount) break;
+    k += 2;
+  }
+  return positions;
+}
+
+/** Every plugin directory (relative to `pluginsRoot`), read off the repo's file set — no `readdir`. */
+function findAllPluginDirs(pluginsRoot: AppPath, repo: RepoFiles): string[] {
   const rel = relative(repo.root, pluginsRoot);
   const found = new Set<string>();
   for (const path of repo.under(rel)) {
-    const segs = path.slice(rel.length + 1).split("/");
-    const dirCount = segs.length - 1; // the last segment is the file
-    // `k` indexes a plugin position's own segment; `walkable` holds while every
-    // directory from it down to the file is walkable.
-    for (let k = 0, depth = 1; k < dirCount && depth <= MAX_DEPTH; depth++) {
-      if (!isWalkable(segs[k]!)) break;
-      let walkable = true;
-      for (let i = k + 1; i < dirCount; i++) {
-        if (!isWalkable(segs[i]!)) {
-          walkable = false;
-          break;
-        }
-      }
-      if (walkable) found.add(segs.slice(0, k + 1).join("/"));
-      if (segs[k + 1] !== "plugins" || k + 2 >= dirCount) break;
-      k += 2;
-    }
+    for (const p of pluginPositionsOf(path.slice(rel.length + 1))) found.add(p);
   }
-  return [...found].map((d) => joinAppPath(pluginsRoot, ...d.split("/")));
+  return [...found];
 }
 
 // ── Per-plugin collection ───────────────────────────────────────────
 
-interface CollectedPlugin {
-  node: PluginNode;
-  parentDir: AppPath | null;
+/**
+ * What a plugin's node says about it, read from its own key files (the
+ * {@link PLUGIN_KEY_FILES}) and nothing else — so a node is re-read exactly
+ * when one of them is added, removed or edited.
+ */
+export interface PluginFields {
+  description?: string;
+  descriptions: Partial<Record<Runtime, string>>;
+  loadBearing: boolean;
+  collapsed: boolean;
+  compositionRoot: boolean;
+  runtimes: Record<Runtime, boolean>;
 }
 
-async function collectCoreFields(
+const RUNTIME_BARRELS = {
+  web: "web/index.ts",
+  server: "server/index.ts",
+  machine: "machine/index.ts",
+  central: "central/index.ts",
+} as const satisfies Record<Runtime, string>;
+
+/** The files, relative to a plugin's folder, its {@link PluginFields} are read from. */
+export const PLUGIN_KEY_FILES: readonly string[] = [
+  ...Object.values(RUNTIME_BARRELS),
+  "package.json",
+];
+
+/**
+ * The plugin a key file belongs to (its path under the plugins root), when
+ * `relUnderRoot` is one of {@link PLUGIN_KEY_FILES} of the folder it sits in —
+ * null for any other file. Positional only: whether that folder IS a plugin is
+ * the caller's question ({@link pluginPositionsOf}).
+ */
+export function keyFileOwner(relUnderRoot: string): string | null {
+  for (const key of PLUGIN_KEY_FILES) {
+    if (relUnderRoot.endsWith(`/${key}`)) {
+      return relUnderRoot.slice(0, relUnderRoot.length - key.length - 1);
+    }
+  }
+  return null;
+}
+
+/**
+ * Read a plugin's {@link PluginFields}. `read` answers a key file's text by its
+ * path relative to the plugin's folder, or null when it is not in the set.
+ */
+export async function collectPluginFields(
   dir: AppPath,
-  pluginsRoot: AppPath,
-  repo: RepoFiles,
-): Promise<CollectedPlugin> {
-  const dirRel = relative(repo.root, dir);
+  read: (keyFile: string) => Promise<string | null>,
+): Promise<PluginFields> {
   const [webIndex, serverIndex, machineIndex, centralIndex, pkgSrc] =
-    await Promise.all(
-      [
-        "web/index.ts",
-        "server/index.ts",
-        "machine/index.ts",
-        "central/index.ts",
-        "package.json",
-      ].map((f) => repo.read(`${dirRel}/${f}`)),
-    );
+    await Promise.all(PLUGIN_KEY_FILES.map(read));
 
   // Read each runtime barrel's OWN default-exported object literal from ORIGINAL
   // source — never transpiler output, which re-quotes string literals and silently
@@ -228,35 +270,17 @@ async function collectCoreFields(
     } catch {}
   }
 
-  const rel = relative(pluginsRoot, dir);
-  const segs = rel.split(/[\\/]+/);
-  let parentDir: AppPath | null = null;
-  if (segs.length >= 3 && segs[segs.length - 2] === "plugins") {
-    parentDir = joinAppPath(pluginsRoot, ...segs.slice(0, segs.length - 2));
-  }
-
-  const path = rel.split("\\").join("/");
-
   return {
-    parentDir,
-    node: {
-      dir,
-      path,
-      name: basename(dir),
-      id: asPluginId(""),
-      description,
-      descriptions,
-      loadBearing,
-      collapsed,
-      compositionRoot,
-      runtimes: {
-        web: !!webIndex,
-        server: !!serverIndex,
-        machine: !!machineIndex,
-        central: !!centralIndex,
-      },
-      children: [],
-      facets: {},
+    description,
+    descriptions,
+    loadBearing,
+    collapsed,
+    compositionRoot,
+    runtimes: {
+      web: !!webIndex,
+      server: !!serverIndex,
+      machine: !!machineIndex,
+      central: !!centralIndex,
     },
   };
 }
@@ -268,6 +292,66 @@ function computeIds(nodes: PluginNode[], parentId: string): void {
     node.id = asPluginId(parentId ? `${parentId}.${node.name}` : node.name);
     computeIds(node.children, node.id);
   }
+}
+
+/**
+ * Link plugins into a tree: each node under its nearest plugin ancestor,
+ * siblings by name, hierarchy ids computed. Pure and in memory — `plugins`
+ * maps each plugin's path under `pluginsRoot` to its fields, in any order.
+ */
+export function assemblePluginTree(
+  pluginsRoot: AppPath,
+  plugins: Iterable<readonly [string, PluginFields]>,
+): PluginTreeData {
+  const byDir = new Map<string, PluginNode>();
+  const byPath = new Map<string, PluginNode>();
+  const sorted = [...plugins].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  for (const [path, fields] of sorted) {
+    const dir = joinAppPath(pluginsRoot, ...path.split("/"));
+    const node: PluginNode = {
+      dir,
+      path,
+      name: basename(dir),
+      id: asPluginId(""),
+      description: fields.description,
+      descriptions: { ...fields.descriptions },
+      loadBearing: fields.loadBearing,
+      collapsed: fields.collapsed,
+      compositionRoot: fields.compositionRoot,
+      runtimes: { ...fields.runtimes },
+      children: [],
+      facets: {},
+    };
+    byDir.set(dir, node);
+    byPath.set(path, node);
+  }
+
+  // Parent resolution: the nearest `<…>/plugins/<name>` ancestor that is a plugin.
+  const roots: PluginNode[] = [];
+  for (const node of byPath.values()) {
+    let segs = node.path.split("/");
+    let parent: PluginNode | undefined;
+    while (
+      !parent &&
+      segs.length >= 3 &&
+      segs[segs.length - 2] === NESTING_SEGMENT
+    ) {
+      segs = segs.slice(0, segs.length - 2);
+      parent = byPath.get(segs.join("/"));
+    }
+    if (parent) parent.children.push(node);
+    else roots.push(node);
+  }
+
+  const sortRec = (list: PluginNode[]) => {
+    list.sort((a, b) => a.name.localeCompare(b.name));
+    for (const c of list) sortRec(c.children);
+  };
+  sortRec(roots);
+
+  computeIds(roots, "");
+
+  return { pluginsRoot, byDir, byPath, roots };
 }
 
 export interface BuildPluginTreeOptions {
@@ -296,50 +380,18 @@ export async function buildPluginTree(
       `buildPluginTree(${pluginsRoot}): the repo set is of ${repo.root}, not of the plugins root's parent.`,
     );
   }
-  // Step 1: find all plugin directories, sorted for a deterministic order.
-  const dirs = findAllPluginDirs(pluginsRoot, repo).sort();
-
-  // Step 2: collect core fields for each plugin (async parallel reads)
-  const byDir = new Map<string, PluginNode>();
-  const byPath = new Map<string, PluginNode>();
-  const parentDirs = new Map<string, AppPath | null>();
-
-  const collected = await Promise.all(
-    dirs.map((d) => collectCoreFields(d, pluginsRoot, repo)),
+  const rootRel = relative(repo.root, pluginsRoot);
+  const plugins = await Promise.all(
+    findAllPluginDirs(pluginsRoot, repo).map(
+      async (path) =>
+        [
+          path,
+          await collectPluginFields(
+            joinAppPath(pluginsRoot, ...path.split("/")),
+            (keyFile) => repo.read(`${rootRel}/${path}/${keyFile}`),
+          ),
+        ] as const,
+    ),
   );
-  for (const c of collected) {
-    byDir.set(c.node.dir, c.node);
-    byPath.set(c.node.path, c.node);
-    parentDirs.set(c.node.dir, c.parentDir);
-  }
-
-  // Step 3: assemble tree — parent resolution, children, sort, hierarchy IDs
-  const roots: PluginNode[] = [];
-  for (const [dir, node] of byDir) {
-    let parent = parentDirs.get(dir) ?? null;
-    while (parent && !byDir.has(parent)) {
-      const rel = relative(pluginsRoot, parent);
-      const segs = rel.split(/[\\/]+/);
-      if (segs.length >= 3 && segs[segs.length - 2] === "plugins") {
-        parent = joinAppPath(pluginsRoot, ...segs.slice(0, segs.length - 2));
-      } else {
-        parent = null;
-      }
-    }
-    if (parent && byDir.has(parent)) {
-      byDir.get(parent)!.children.push(node);
-    } else {
-      roots.push(node);
-    }
-  }
-
-  const sortRec = (list: PluginNode[]) => {
-    list.sort((a, b) => a.name.localeCompare(b.name));
-    for (const c of list) sortRec(c.children);
-  };
-  sortRec(roots);
-
-  computeIds(roots, "");
-
-  return { pluginsRoot, repo, byDir, byPath, roots, facets: [] };
+  return { ...assemblePluginTree(pluginsRoot, plugins), repo, facets: [] };
 }

@@ -64,8 +64,17 @@ async function git(
   return result.stdout;
 }
 
-async function lsFiles(root: string, args: string[]): Promise<string[]> {
-  const out = await git(root, ["ls-files", "-z", ...args]);
+async function lsFiles(
+  root: string,
+  args: string[],
+  literalPathspecs = false,
+): Promise<string[]> {
+  const out = await git(root, [
+    ...(literalPathspecs ? ["--literal-pathspecs"] : []),
+    "ls-files",
+    "-z",
+    ...args,
+  ]);
   return out.split("\0").filter((p) => p.length > 0);
 }
 
@@ -108,6 +117,23 @@ async function readWorkingTree(
 }
 
 /**
+ * The working-tree text of a repo-relative path, read through one gate of
+ * `readConcurrency` (default 64) — null when the file is gone. `RepoFiles.read`
+ * minus the membership test, for a holder that tracks membership itself (a
+ * `listRepoMembers` caller).
+ */
+export function repoFileReader(
+  root: AppPath,
+  opts?: RepoFilesOptions,
+): (path: string) => Promise<string | null> {
+  const gate = createSemaphore(opts?.readConcurrency ?? READ_CONCURRENCY);
+  return (path) => {
+    assertRepoPath("read", path, false);
+    return gate.run(() => readWorkingTree(root, path));
+  };
+}
+
+/**
  * A `RepoFiles` over `sorted` — every file path, repo-relative, in
  * `Array.prototype.sort()` order. Takes ownership of the array and freezes it,
  * so `all()` can hand it out uncopied. Content is read from the working tree
@@ -121,7 +147,7 @@ export function repoFilesOver(
 ): RepoFiles {
   const paths = Object.freeze(sorted);
   const members = new Set(paths);
-  const gate = createSemaphore(opts?.readConcurrency ?? READ_CONCURRENCY);
+  const readMember = repoFileReader(root, opts);
   return {
     root,
     all: () => paths,
@@ -137,7 +163,7 @@ export function repoFilesOver(
     read: async (path) => {
       assertRepoPath("read", path, false);
       if (!members.has(path)) return null;
-      return gate.run(() => readWorkingTree(root, path));
+      return readMember(path);
     },
   };
 }
@@ -171,6 +197,34 @@ export async function loadRepoFiles(
     lsFiles(root, ["--deleted"]),
   ]);
   return repoFilesOver(root, membership(present, deleted), opts);
+}
+
+/**
+ * `loadRepoFiles`' membership, asked of git for `paths` only: the members at or
+ * under each (repo-relative; a file or a folder, present or gone — `""` is the
+ * whole repo), sorted. Same rule, same two listings, scoped by LITERAL
+ * pathspecs — so git walks those folders' untracked content and nothing else.
+ * For a long-lived holder of a set that re-asks about what a watcher saw
+ * change, instead of listing the whole repo again.
+ *
+ * Throws on any git failure — never an empty set.
+ */
+export async function listRepoMembers(
+  root: AppPath,
+  paths: readonly string[],
+): Promise<string[]> {
+  for (const p of paths) assertRepoPath("listRepoMembers", p, true);
+  if (paths.length === 0) return [];
+  const spec = ["--", ...paths.map((p) => (p === "" ? "." : p))];
+  const [present, deleted] = await Promise.all([
+    lsFiles(
+      root,
+      ["--cached", "--others", "--exclude-standard", ...spec],
+      true,
+    ),
+    lsFiles(root, ["--deleted", ...spec], true),
+  ]);
+  return membership(present, deleted);
 }
 
 /**

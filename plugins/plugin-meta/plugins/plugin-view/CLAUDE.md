@@ -10,10 +10,13 @@ sibling plugins (e.g. publish's tree component). The tree is two live values
 (`core/values.ts`), read with `useLive`: `pluginTree` (`plugin-view.tree`,
 structure only) and `pluginFacetsTree` (`plugin-view.facets-tree`, every facet
 extracted — the heavy build). Both are on-demand external values
-`"notified"` by plugin-tree's `onPluginTreeChanged` while a tab holds them,
-throttled 2 s (a build or a burst of saves re-reads at most once per window),
-and ETagged by `pluginTreeGeneration()`, so an unchanged generation answers 304. There
-is no request/response endpoint for either tree.
+`"notified"` while a tab holds them. `pluginTree` follows plugin-tree's
+`onPluginStructureChanged` (a plugin added or removed, a barrel or package.json
+edited — never an ordinary source edit), ETagged by `pluginStructureGeneration()`,
+unthrottled: the tree it reads is kept up to date by what changed.
+`pluginFacetsTree` follows `onPluginTreeChanged` (any file under `plugins/`),
+ETagged by `pluginTreeGeneration()` and throttled 2 s. An unchanged generation
+answers 304. There is no request/response endpoint for either tree.
 
 Both are declared `needsMachine` ("Reading the plugin tree") and served by the
 machine half (`machine/`; there is no `server/`): the tree is this checkout's

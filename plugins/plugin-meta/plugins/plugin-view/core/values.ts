@@ -4,9 +4,9 @@ import { pluginTreePayloadSchema } from "./schema";
 /**
  * This checkout's plugin tree, structure only (every node's `facets` is `{}`)
  * — the cheap skeleton the explorer, chips and Settings read. On-demand (the
- * payload is large): each tab reads it over HTTP, and the server's
- * `plugins/` watcher tells it to read again after a file under `plugins/`
- * changes (throttled 2 s; an unchanged watcher generation answers 304).
+ * payload is large): each tab reads it over HTTP, and the server tells it to
+ * read again only when the structure changed — a plugin added or removed, a
+ * barrel or package.json edited (an unchanged generation answers 304).
  */
 export const pluginTree = liveValue("plugin-view.tree", {
   schema: pluginTreePayloadSchema,
@@ -19,7 +19,8 @@ export const pluginTree = liveValue("plugin-view.tree", {
 /**
  * The same tree with every facet extracted and related (exports, routes,
  * `importedBy`, …) — the heavy build, for the plugin detail pane and Studio
- * Contributions. On-demand and watcher-notified like {@link pluginTree}.
+ * Contributions. On-demand; told to read again after ANY file under
+ * `plugins/` changes (throttled 2 s), since facets read every file.
  */
 export const pluginFacetsTree = liveValue("plugin-view.facets-tree", {
   schema: pluginTreePayloadSchema,

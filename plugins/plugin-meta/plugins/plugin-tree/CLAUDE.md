@@ -25,14 +25,46 @@ consumers — `classifyEdges`, plugin-view's payload, the deploy-secrets gate �
 take `PluginTreeData`, so a faceted tree built in-process and one read back
 are the same input to them.
 
-## The structure build reads narrow in a backend
+## The structure tree follows what changed (`core/internal/structure-index.ts`)
 
-`getStructureTreeCached` reads through a file set of width 8
-(`loadRepoFiles(…, { readConcurrency })`), not the default 64: the build hands
-every plugin's barrels to the fs pool at once (~8k reads), and that pool also
-serves the backend's requests — at 64 every other fs call of main queued behind
-the warm-up (fs-wait, 2026-11-04: ~100 ms per read, all queue time). Width 8
-builds as fast warm (~135 ms).
+A node is a function of two inputs only: whether its folder holds any file of
+the repo's set (the content gate, `pluginPositionsOf`), and the text of its own
+key files (`PLUGIN_KEY_FILES`: the four runtime barrels and `package.json`). So
+a backend does not rebuild the tree on a change — it holds a `StructureIndex`
+(those inputs: the member files under `plugins/`, sorted; a support count per
+plugin position; each plugin's read fields) and `getStructureTreeCached` hands
+out its current tree. The one `plugins/` watcher feeds it each batch:
+
+- a watcher `update` of a file that is already a member: membership cannot have
+  moved, so nothing is asked — a key file is re-read, any other file costs
+  nothing at all;
+- a create / delete (a file or a folder): re-asked of git for those paths only
+  (`listRepoMembers` — `loadRepoFiles`' membership rule, scoped by literal
+  pathspecs), support counts moved, and the key files of the plugins touched
+  re-read. A `.gitignore` edit re-asks its folder.
+
+The tree is re-linked (`assemblePluginTree`, in memory) only when a plugin
+actually changed, and only then does `onPluginStructureChanged` fire — the
+`plugin-view.tree` live value listens to that, not to every edit, and has no
+throttle. The faceted tree and its consumers still follow `onPluginTreeChanged`
+(any file), since facets read every file's content.
+
+Cold builds happen once per process (the first read) and again only when the
+index was dropped: the watcher lost events (`onLost`), a batch named more than
+2,000 paths (a checkout or rebase — one listing is cheaper), a path came outside
+the root, or a refresh failed (a half-applied refresh is never kept). A cold
+build lists `plugins/` only, not the whole repo, and reads key files at width 8:
+the fs pool also serves the backend's requests — at 64 every other fs call of
+main queued behind the warm-up (fs-wait, 2026-11-04: ~100 ms per read, all
+queue time). Its biggest cost is git's untracked walk of `plugins/`
+(`ls-files --others`). `scripts/bench-structure-tree.ts` measures cold and
+per-edit costs (2026-11-06, medians: whole rebuild per change 1,073 ms → cold
+804 ms once, then 0 ms per save, ~48 ms per file created or deleted, ~46 ms
+per plugin folder); `e2e/structure-tree-live.ts` checks the deployed value
+(an ordinary file is a 304; a plugin added, edited, removed reaches the tab).
+
+The repo-root `.gitignore` is outside the watch: an edit to it that moves
+membership under `plugins/` is seen at the next cold build, as before.
 
 ## Boot warm-up (`server/internal/warmup.ts`)
 
@@ -73,7 +105,7 @@ runs each facet's `relate` whole and yields between facets.
 
 ## Barrel metadata (`core/internal/barrel-meta.ts`)
 
-`collectCoreFields` reads each runtime barrel's `description` / `loadBearing` /
+`collectPluginFields` reads each runtime barrel's `description` / `loadBearing` /
 `collapsed` from the **original source**, never from transpiler output. Bun's
 transpiler re-quotes string literals (a `"` inside a double-quoted string is
 re-emitted single-quoted), so recovering a value by re-parsing stripped output
@@ -92,11 +124,12 @@ dynamic value.
 
 ## Plugin reference
 
-- Description: Cached, watcher-invalidated plugin-tree accessors: the structure tree, built in-process for the hot path, and the faceted tree, read as data through the FacetedTreeSource host service (never extracted in the backend).
+- Description: Watcher-kept plugin-tree accessors: the structure tree, kept up to date in-process by what changed (a plugin added or removed, a key file edited — O(changes), with its own change signal), and the faceted tree, read as data through the FacetedTreeSource host service (never extracted in the backend).
 - Server:
   - Contributes: `host-service:plugin-tree.faceted-source` "plugin-tree.faceted-source"
   - Uses:
     - `infra/file-watcher.defineFileWatcher`
+    - `infra/file-watcher.FileChangeEvent`
     - `infra/file-watcher.FileWatcher`
     - `infra/git/git-read-cache.createGitStateMemo`
     - `infra/host/host-read-pool.withHeavyReadSlot`
@@ -107,7 +140,9 @@ dynamic value.
     - `FacetedTreeSource`
     - `getFacetsTreeCached`
     - `getStructureTreeCached`
+    - `onPluginStructureChanged`
     - `onPluginTreeChanged`
+    - `pluginStructureGeneration`
     - `pluginTreeGeneration`
   - Register:
     - `defineWarmup('plugin-tree.trees')`
@@ -133,9 +168,12 @@ dynamic value.
     - `PluginTreeData`
     - `PluginTreeJson`
     - `Runtime`
+    - `StructureIndex`
+    - `StructureIndexIo`
   - Exports (values):
     - `buildPluginTree`
     - `buildStructureTreeOnce`
+    - `createStructureIndex`
     - `pluginTreeFromJson`
     - `pluginTreeToJson`
     - `resolvePluginSpecifier`
@@ -151,9 +189,7 @@ dynamic value.
     - `plugin-meta/plugin-view`
     - `plugin-meta/relocate`
 - Exemptions:
-  - Exempts itself from:
-    - `boundaries/no-platform-api` — `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
-    - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/structure-tree-cache.ts` (sanctioned)
+  - Exempts itself from: `boundaries/no-platform-api` — `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
 - Sub-plugins:
   - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and `./equin…
 
