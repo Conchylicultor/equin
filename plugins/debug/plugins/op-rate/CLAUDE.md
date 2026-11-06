@@ -16,8 +16,21 @@ radius** (the collateral slow spans).
 
 One cheap scheduled monitor job (`debug.op-rate-monitor`) samples
 `getRuntimeProfile()` per tick and diffs each op's cumulative counters against the
-previous tick along **two** axes — `count` (op-rate) and `totalMs` (op-time) —
-firing reports only when a per-kind threshold/budget trips:
+previous tick along **two** axes — `count` (op-rate) and **own time**
+`selfTotalMs` (op-time) — plus each gate's metered waits (`gates`), firing
+reports only when a per-kind threshold/budget trips.
+
+**op-time judges work, never waits.** An op's own time is its wall minus its
+gate waits, declared holds (a delivery's `throttle-hold`) and child executions
+(each child is judged under its own kind). Summing wall time charged every wait
+as slow work: `push deliver:queue-health.pulse — 37.8s/window` was 507 of every
+515 ms its own declared throttle, and the `sub *:rows` alarms were read-admit /
+read-coalesce queueing with ~1 ms of own work. The waits are not dropped: each
+gate's queue/io waits are metered once per wait by the recorder and judged here
+against `waitMsPerWindow` as `op-time` with `kind: "wait"`, `label: <layer>`
+(fingerprint `op-time:wait:<layer>`), carrying the gate's holders at the trip —
+congestion reported once, against what held it. A per-op report carries
+`wallMsInWindow` beside its own `msInWindow` for context.
 
 - **`op-rate`** (variant `warning`) — an op (`${kind}:${label}`) called more than
   its per-kind threshold within one monitor window. **One report per distinct hot

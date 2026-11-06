@@ -32,6 +32,7 @@ import {
   chargeWait,
   getRuntimeProfile,
   registerGateGauge,
+  runInRootContext,
 } from "./profiler-hooks";
 import {
   getLastLoaderReadSet,
@@ -512,7 +513,18 @@ const runtime = createResourceRuntime({
   // The notify-flush cycle as one `flush` entry — the per-resource `push` loads
   // it triggers nest under it (byParent = head-of-line attribution). See
   // research/2026-06-19-global-observability-frequency-delivery-and-dead-job-gc.md.
-  wrapFlush: (fn) => recordEntrySpan("flush", "flushNotifies", fn),
+  //
+  // Opened in the ROOT context: a flush is its own lane, never a child of
+  // whatever notified. A notify fired from a `whileSubscribed` watcher would
+  // otherwise schedule the flush inside the long-closed `sub start:<key>` span
+  // (1330 of 2962 flushes on main, 2026-11-06), one from a request inside that
+  // request, and one from an observability write inside its profiling
+  // suppression — misattributing the pass and breaking the lane's root-kind
+  // claims (runtime-profiler's *Lanes*). Deliberately outside suppression too:
+  // a flush an observability write triggered pushes real frames to real tabs,
+  // which is app work — only the write itself is monitoring.
+  wrapFlush: (fn) =>
+    runInRootContext(() => recordEntrySpan("flush", "flushNotifies", fn)),
   // Delivery latency as a `push` leaf under the active `flush` entry: enqueue→send
   // time per resource (first-notify staleness window). Attributes to the resource.
   // Fan-out and frame size ride as measures, so a delivery slowed by a wide

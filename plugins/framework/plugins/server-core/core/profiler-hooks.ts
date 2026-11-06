@@ -88,6 +88,8 @@ export interface ProfilerHooks {
   chargeWait(layer: string, ms: number, kind: "queue" | "join"): void;
   getRuntimeProfile(): RuntimeProfileView;
   registerGateGauge(layer: string, read: () => unknown): void;
+  /** Run `fn` outside every entry, lane and suppression scope (the profiler's `runInRootContext`). */
+  runInRootContext<T>(fn: () => T): T;
 }
 
 let hooks: ProfilerHooks | null = null;
@@ -157,4 +159,13 @@ export function getRuntimeProfile(): RuntimeProfileView {
 export function registerGateGauge(layer: string, read: () => unknown): void {
   if (hooks) hooks.registerGateGauge(layer, read);
   else pendingGauges.push({ layer, read });
+}
+
+/**
+ * Run `fn` in the root async context: outside every request, loader, lane and
+ * suppression scope, so the work it starts is attributed to itself, never to
+ * whatever happened to trigger it. Identity until the profiler is installed.
+ */
+export function runInRootContext<T>(fn: () => T): T {
+  return hooks ? hooks.runInRootContext(fn) : fn();
 }

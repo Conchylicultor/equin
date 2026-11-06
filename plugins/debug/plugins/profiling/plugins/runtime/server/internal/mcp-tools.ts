@@ -169,7 +169,16 @@ Default: profiles the current conversation's worktree server. Pass \`worktree\` 
         {
           type: "text",
           text: JSON.stringify(
-            { sinceMs: profile.sinceMs, kinds: result },
+            {
+              sinceMs: profile.sinceMs,
+              kinds: result,
+              // What ops were judged without: each gate's queue/io waits,
+              // metered once per wait (most time first).
+              gates: profile.gates.slice(0, limit).map((g) => ({
+                ...g,
+                totalMs: Math.round(g.totalMs),
+              })),
+            },
             null,
             2,
           ),

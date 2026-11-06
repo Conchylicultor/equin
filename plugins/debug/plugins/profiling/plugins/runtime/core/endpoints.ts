@@ -118,6 +118,16 @@ const byKind = <T extends z.ZodType>(list: () => z.ZodArray<T>) =>
     ) as Record<SpanKind, z.ZodDefault<z.ZodArray<T>>>,
   );
 
+// One gate's metered waits (the recorder's `GateMeter`): every queue / io wait
+// charged on the layer, counted once where it happened — the time ops were
+// judged without, kept against the gate that held it.
+const gateMeterSchema = z.object({
+  layer: z.string(),
+  kind: z.enum(["queue", "io"]),
+  count: z.number(),
+  totalMs: z.number(),
+});
+
 export const runtimeProfileSchema = z.object({
   aggregates: byKind(() =>
     wholeList(aggregateSchema, {
@@ -126,6 +136,10 @@ export const runtimeProfileSchema = z.object({
     }),
   ),
   slowest: byKind(() => cappedList(slowSpanSchema, { max: SLOWEST_CAP })),
+  gates: wholeList(gateMeterSchema, {
+    reason:
+      "one per gate layer any wait was charged on since the last reset — the closed set of charging layers, a dozen or so",
+  }).default([]),
   sinceMs: z.number(),
   // Elapsed wall-time of the current profiling window (now − sinceMs), computed
   // server-side. `sinceMs` is a process-relative performance.now() value, not an

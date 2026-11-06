@@ -160,3 +160,22 @@ export function createStuckSpanWatcher(
     },
   };
 }
+
+// The tick's findings, one per operation (`kind` + `label`): its oldest run
+// (findings arrive oldest first) and how many runs were found. Runs of one
+// operation stuck at one instant share their cause — on main (2026-11-04)
+// `sub reports.list:rows` was filed 387 times, many runs per tick, every run
+// queued behind the same blocked read gate — so they are one report, counting
+// its runs.
+export function groupByOperation(
+  findings: readonly StuckSpanFinding[],
+): { lead: StuckSpanFinding; runs: number }[] {
+  const byOp = new Map<string, { lead: StuckSpanFinding; runs: number }>();
+  for (const f of findings) {
+    const key = `${f.kind} ${f.label}`;
+    const g = byOp.get(key);
+    if (g) g.runs += 1;
+    else byOp.set(key, { lead: f, runs: 1 });
+  }
+  return [...byOp.values()];
+}

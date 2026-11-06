@@ -116,11 +116,28 @@ an in-flight resource read) (`server-core/core/resources.ts`); `endpoint-concurr
 span encloses them, so deduped GETs record one span per request with joiners showing
 `endpoint-dedupe ≈ wall`, `selfMs ≈ 0`); `git-coalesce:<name>` (joined an in-flight git
 recompute) and the 0 ms markers `git-memo-hit:<name>` / `git-memo-miss:<name>`
-(`infra/git/git-read-cache`); `fs-stat` / `fs-readdir` / `fs-read` / `fs-glob`
+(`infra/git/git-read-cache`); `memo-opening:<name>` (joined a watched memo's
+in-flight first pass, `packages/watched-memo`); `fs-stat` / `fs-readdir` / `fs-read` / `fs-glob`
 (kind `io`: a file call past `packages/timed-fs`'s floor, charged by
 `server/internal/install.ts`'s `onSlowFsCall` subscriber — a disk stall is the
 disk's time, filed like a `queue` wait as `wait fs-<op>`); `event-loop` (below). A `chargeWait` with no active entry (context-less jobs/pollers)
-falls back to a standalone `db [layer]` span so the wait is never lost. See
+falls back to a standalone `db [layer]` span so the wait is never lost — recorded
+as ALL wait (`waits: { [layer]: ms }`, own time 0) and, for a `queue`/`io` wait,
+handed to `onSlowWait` with that span as its caller: a wait is never booked as a
+`db` op's work.
+
+### Gate meters (`getRuntimeProfile().gates`) — where the waits are judged
+
+An op is judged on its own time (`selfTotalMs`: wall minus waits, declared holds
+and child executions), so the time it waited must be judged somewhere else, once:
+`chargeWait` meters every `queue` / `io` wait per layer (`GateMeter`: `count`,
+`totalMs`), ONCE per wait where it happens — never per ancestor and never per
+label. A `join` is not metered (it is the joined run's time, which that run's
+own span counts). Cumulative like the aggregates, cleared by a reset.
+`debug/op-rate` diffs them per tick and files `op-time` against the gate
+(`wait <layer>`, its holders named) — so 85 s of `sub` waits on `read-admit` is
+one report about the gate, not one per waiting resource. `Aggregate.totalMs`
+stays the WALL sum: a view, never a cost to judge. See
 `research/2026-07-02-global-profiler-wait-propagation.md`.
 
 ### Claims — one slow op, filed once (`excludedMs` / `claims`)
@@ -421,6 +438,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `FlightWindow`
     - `GateGauge`
     - `GateHolder`
+    - `GateMeter`
     - `LoopStall`
     - `OriginClass`
     - `ParentBreakdown`

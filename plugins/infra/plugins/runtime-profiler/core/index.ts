@@ -54,6 +54,7 @@ export type {
   FlightSpan,
   FlightWindow,
   GateGauge,
+  GateMeter,
   GateHolder,
   LoopStall,
 } from "./recorder";

@@ -20,7 +20,10 @@ export function SpanStuckSummary({ report }: { report: Report }) {
   return (
     <Inline gap="xs">
       <Badge variant="destructive">stuck</Badge>
-      <span>still running after {formatAge(d.ageMs)}:</span>
+      <span>
+        {d.runs !== undefined && d.runs > 1 ? `${d.runs} runs ` : ""}still
+        running after {formatAge(d.ageMs)}:
+      </span>
       <Badge mono>{describeChain(d)}</Badge>
       {traceId !== null && <TraceChip traceId={traceId} />}
     </Inline>

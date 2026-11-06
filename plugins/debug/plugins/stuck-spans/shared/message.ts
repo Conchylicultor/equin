@@ -30,10 +30,12 @@ export function describeChain(
 
 // The report's one-line message.
 export function stuckSpanMessage(
-  d: Pick<StuckSpanPayload, "kind" | "label" | "ageMs" | "ancestors">,
+  d: Pick<StuckSpanPayload, "kind" | "label" | "ageMs" | "ancestors" | "runs">,
 ): string {
-  return (
-    `An operation has been running for ${formatAge(d.ageMs)} and has not ` +
-    `finished: ${describeChain(d)}`
-  );
+  const runs = d.runs ?? 1;
+  return runs > 1
+    ? `${runs} runs of an operation have been running for up to ` +
+        `${formatAge(d.ageMs)} and have not finished: ${describeChain(d)}`
+    : `An operation has been running for ${formatAge(d.ageMs)} and has not ` +
+        `finished: ${describeChain(d)}`;
 }

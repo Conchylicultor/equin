@@ -22,7 +22,8 @@ export function OpTimeSummary({ report }: { report: Report }) {
         {d.label ? `${d.kind}:${d.label}` : `rollup:${d.kind}`}
       </Badge>
       <span>
-        — {secs}s/window across {d.callsInWindow} calls
+        — {secs}s{d.kind === "wait" ? " waited" : " own"}/window across{" "}
+        {d.callsInWindow} {d.kind === "wait" ? "waits" : "calls"}
       </span>
       <span className="text-muted-foreground">(budget {budgetSecs}s)</span>
       {d.traceId && <TraceChip traceId={d.traceId} />}

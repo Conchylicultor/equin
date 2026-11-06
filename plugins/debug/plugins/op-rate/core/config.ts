@@ -71,8 +71,9 @@ export const opRateConfig = defineConfig({
     }),
     // Per-kind aggregate-time (count×cost) budgets for the op-time trip-wire. Same
     // scheduled monitor, same tick: alongside the call-count delta above, the job
-    // diffs each op's cumulative `totalMs` and trips when a single op burned more
-    // than this many ms of wall-clock inside one monitor window — catching a
+    // diffs each op's cumulative OWN time (its waits excluded — those are the
+    // gate's, judged by `waitMsPerWindow`) and trips when a single op did more
+    // than this many ms of work inside one monitor window — catching a
     // fast-but-hammered op OR a moderately-called op that is individually slow,
     // neither of which per-call latency (slow-op) nor call count (op-rate) alone
     // sees. Defaults sit well above typical 5-min per-op deltas (single-digit
@@ -84,49 +85,59 @@ export const opRateConfig = defineConfig({
       min: 0,
       label: "HTTP ms per window",
       description:
-        "File an op-time report when an HTTP request label consumes more than this many ms of wall-clock within one monitor window.",
+        "File an op-time report when an HTTP request label consumes more than this many ms of its own time (waits excluded) within one monitor window.",
     }),
     loaderMsPerWindow: intField({
       default: 60000,
       min: 0,
       label: "Loader ms per window",
       description:
-        "File an op-time report when a resource loader label consumes more than this many ms of wall-clock within one monitor window.",
+        "File an op-time report when a resource loader label consumes more than this many ms of its own time (waits excluded) within one monitor window.",
     }),
     subMsPerWindow: intField({
       default: 15000,
       min: 0,
       label: "Subscription ms per window",
       description:
-        "File an op-time report when a WS-subscription origin entry consumes more than this many ms of wall-clock within one monitor window.",
+        "File an op-time report when a WS-subscription origin entry consumes more than this many ms of its own time (waits excluded) within one monitor window.",
     }),
     pushMsPerWindow: intField({
       default: 30000,
       min: 0,
       label: "Push ms per window",
       description:
-        "File an op-time report when a push/cascade origin entry consumes more than this many ms of wall-clock within one monitor window.",
+        "File an op-time report when a push/cascade origin entry consumes more than this many ms of its own time (waits excluded) within one monitor window.",
     }),
     flushMsPerWindow: intField({
       default: 60000,
       min: 0,
       label: "Flush ms per window",
       description:
-        "File an op-time report when a live-state notify-flush cycle consumes more than this many ms of wall-clock within one monitor window.",
+        "File an op-time report when a live-state notify-flush cycle consumes more than this many ms of its own time (waits excluded) within one monitor window.",
     }),
     dbMsPerWindow: intField({
       default: 60000,
       min: 0,
       label: "DB ms per window",
       description:
-        "File an op-time report when a database query label consumes more than this many ms of wall-clock within one monitor window.",
+        "File an op-time report when a database query label consumes more than this many ms of its own time (waits excluded) within one monitor window.",
     }),
     jobMsPerWindow: intField({
       default: 120000,
       min: 0,
       label: "Job ms per window",
       description:
-        "File an op-time report when a job label consumes more than this many ms of wall-clock within one monitor window (backfills/syncs run long, so this is loose).",
+        "File an op-time report when a job label consumes more than this many ms of its own time (waits excluded) within one monitor window (backfills/syncs run long, so this is loose).",
+    }),
+    // A gate's budget: the ms its waiters spent queued on it in one window
+    // (summed across concurrent waiters). Ops are judged on their own time, so
+    // the time they queued is judged here instead, against the gate.
+    waitMsPerWindow: intField({
+      default: 60000,
+      min: 0,
+      label: "Gate wait ms per window",
+      description:
+        "File an op-time report against a gate (read-admit, db-acquire, heavy-read-local, …) when the operations queued on it waited more than this many ms in total within one monitor window.",
     }),
     rollupFactor: intField({
       default: 4,

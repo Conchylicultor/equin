@@ -5,7 +5,11 @@ import { recordReport } from "@plugins/reports/plugins/engine/server";
 import type { ReportSource } from "@plugins/reports/core";
 import { SPAN_STUCK_KIND, type StuckSpanPayload } from "../../core";
 import { stuckSpanMessage } from "../../shared/message";
-import { createStuckSpanWatcher, type StuckSpanFinding } from "./detect";
+import {
+  createStuckSpanWatcher,
+  groupByOperation,
+  type StuckSpanFinding,
+} from "./detect";
 
 // The stuck-span watchdog: a raw `setInterval` on the backend's own event loop,
 // started from `onReady` and stopped in `onShutdown`.
@@ -82,7 +86,7 @@ export function stopStuckSpanWatchdog(): void {
   watcher.reset();
 }
 
-// Evidence first, then one report per newly stuck span.
+// Evidence first, then one report per newly stuck OPERATION.
 //
 // ONE trace per tick, shared by every report of that tick: a trace is a capture
 // of everything in flight at one instant, and all the spans found stuck on a
@@ -110,13 +114,14 @@ function fileStuckSpans(findings: readonly StuckSpanFinding[]): void {
     },
   });
 
-  for (const f of findings) {
+  for (const { lead: f, runs } of groupByOperation(findings)) {
     const data: StuckSpanPayload = {
       spanId: f.id,
       kind: f.kind,
       label: f.label,
       ageMs: Math.round(f.ageMs),
       thresholdMs: f.thresholdMs,
+      ...(runs > 1 && { runs }),
       ancestors: f.ancestors.map((a) => ({
         id: a.id,
         kind: a.kind,

@@ -71,6 +71,15 @@ function renderDescription(row: ReportRow, d: StuckSpanPayload): string {
       `is ${formatAge(d.thresholdMs)}. This is filed once per run, so that age ` +
       `is a lower bound — the run may still be going.`,
   );
+  if (d.runs !== undefined && d.runs > 1) {
+    lines.push("");
+    lines.push(
+      `**${d.runs} runs** of this operation were found stuck at the same instant ` +
+        `(the age and chain above are the oldest's). Many runs of one operation ` +
+        `stuck together usually share one cause — a gate or lock they all queue ` +
+        `on: look at the trace's gate lane for what holds it.`,
+    );
+  }
   lines.push("");
   lines.push(`**Where it was running:** \`${describeChain(d)}\``);
   if (d.ancestors.length > 0) {

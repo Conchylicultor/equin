@@ -371,8 +371,13 @@ export function installQueryWrapper(pool: Pool, background: Pool): void {
       // The leaf "[acquire]" span keeps rate visibility; the chargeWait ALSO
       // lands the same duration in the enclosing entry's waits ("db-acquire"
       // layer), so the caller's wall-clock decomposition sums instead of the
-      // connect-wait hiding inside a label-shared leaf bucket.
-      recordSpan("db", "[acquire]", acqMs);
+      // connect-wait hiding inside a label-shared leaf bucket. The leaf is a
+      // wait, not work: recorded as all `db-acquire` (own time 0), so no
+      // own-time judge (slow-ops, op-time) counts the pool's queue as a `db`
+      // op — the wait is reported once, against the gate.
+      recordSpan("db", "[acquire]", acqMs, undefined, {
+        waits: { "db-acquire": acqMs },
+      });
       chargeWait("db-acquire", acqMs, "queue");
       try {
         const exec0 = performance.now();

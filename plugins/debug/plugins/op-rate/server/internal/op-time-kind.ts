@@ -31,9 +31,12 @@ export const opTimeKind = ReportKind({
   renderTask: (row: ReportRow) => {
     const d = OpTimePayloadSchema.parse(row.data);
     const secs = (d.msInWindow / 1000).toFixed(1);
-    const what = d.label
-      ? `${d.kind} ${d.label}`
-      : `${d.kind} rollup`;
+    const what =
+      d.kind === "wait" && d.label
+        ? `wait ${d.label}`
+        : d.label
+          ? `${d.kind} ${d.label}`
+          : `${d.kind} rollup`;
     return {
       title: `[op-time] ${what} — ${secs}s/window`,
       description: renderDescription(row, d),
@@ -47,9 +50,29 @@ function renderDescription(row: ReportRow, d: OpTimePayload): string {
   const budgetSecs = (d.budgetMs / 1000).toFixed(1);
   const avgMs = d.callsInWindow > 0 ? Math.round(d.msInWindow / d.callsInWindow) : 0;
 
-  if (d.label) {
+  if (d.kind === "wait" && d.label) {
     lines.push(
-      `The \`${d.kind}\` op \`${d.label}\` consumed **${secs}s** of wall-clock ` +
+      `Operations waited **${secs}s** in total on the \`${d.label}\` gate ` +
+        `within a single monitor window (${d.callsInWindow} waits) — past the ` +
+        `gate budget of ${budgetSecs}s. Every op is judged on its own time, so ` +
+        `the time it queued is reported here, once, against the gate. Look at ` +
+        `what HOLDS the gate (below, and the trace's gate lane): why does it ` +
+        `hold a slot that long, or why are there so many waiters?`,
+    );
+    lines.push("");
+    lines.push(`**Gate:** \`${d.label}\``);
+    if (d.holders && d.holders.length > 0) {
+      lines.push(`**Holders when it tripped:**`);
+      for (const h of d.holders) lines.push(`- \`${h}\``);
+    }
+  } else if (d.label) {
+    const wall =
+      d.wallMsInWindow !== undefined
+        ? ` (${(d.wallMsInWindow / 1000).toFixed(1)}s wall — the rest was waits, ` +
+          `holds and children, each judged where it belongs)`
+        : "";
+    lines.push(
+      `The \`${d.kind}\` op \`${d.label}\` did **${secs}s** of its own work${wall} ` +
         `within a single monitor window — past its per-kind aggregate-time budget ` +
         `of ${budgetSecs}s. That is **${d.callsInWindow} calls × ~${avgMs}ms avg**: ` +
         `neither per-call latency (slow-op) nor call count (op-rate) alone would ` +
@@ -62,7 +85,7 @@ function renderDescription(row: ReportRow, d: OpTimePayload): string {
     lines.push(`**Budget:** ${budgetSecs}s`);
   } else {
     lines.push(
-      `The \`${d.kind}\` kind consumed **${secs}s** of wall-clock across all its ` +
+      `The \`${d.kind}\` kind did **${secs}s** of its own work across all its ` +
         `labels within a single monitor window — past the per-kind rollup budget of ` +
         `${budgetSecs}s (per-op budget × rollup factor). This catches cost smeared ` +
         `across many labels, each under its own per-op budget. The top contributors ` +
@@ -93,7 +116,7 @@ function renderDescription(row: ReportRow, d: OpTimePayload): string {
   lines.push("");
   lines.push(
     "Inspect the live per-op time aggregates in the **Debug → Slow Events** / " +
-      "runtime profiler surfaces (the per-op `totalMs` this monitor diffs).",
+      "runtime profiler surfaces (the per-op `selfTotalMs` and per-gate `gates` this monitor diffs).",
   );
   lines.push("");
   lines.push(`**Occurrences:** ${row.count}`);

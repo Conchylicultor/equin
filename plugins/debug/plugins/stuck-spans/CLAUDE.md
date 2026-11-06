@@ -38,7 +38,11 @@ and hands them to the detector (`server/internal/detect.ts`):
 For a tick that found new stuck spans, it captures **one** trace (everything in
 flight at that instant — every span found that tick is stuck at the same
 instant, so N captures would be N copies of one picture) and files one
-`span-stuck` report per span, all linked to that trace.
+`span-stuck` report per **operation** (`kind` + `label`), all linked to that
+trace: the runs of one operation found on one tick are one finding, `runs` of
+them, described by the oldest. On main (2026-11-04) `sub reports.list:rows`
+was filed 387 times, many runs per tick — every run queued behind the same
+blocked read gate, one cause.
 
 The detector takes its open-span source and its sink as arguments, so the tests
 (`detect.test.ts`) drive it with a fake flight window and a fake clock.
@@ -67,13 +71,15 @@ properties of the detector, as in `debug/queue-health`.
 `span-stuck`, variant `error`.
 
 - **Fingerprint** `span-stuck:<kind>:<label>`, so repeated stalls of the same
-  operation collapse onto one row whose count is the number of separate runs
-  that got stuck.
+  operation collapse onto one row whose count is the number of ticks that found
+  it newly stuck.
 - **Message:** `An operation has been running for 3 min and has not finished:
   flush flushNotifies → push conversations-gone:count` — open ancestors
   outermost first, then the stuck span. The age is the age *when detected*; a
   run is reported once and not re-measured, so it is a lower bound.
-- **Payload:** `spanId`, `kind`, `label`, `ageMs`, `thresholdMs`, `ancestors`
+- **Payload:** `spanId`, `kind`, `label`, `ageMs`, `thresholdMs`, `runs`
+  (how many runs of the operation the tick found, the others described by the
+  oldest; absent = 1), `ancestors`
   (`{id, kind, label, ageMs}`, outermost first, cut short where a parent had
   closed), `traceId` (null when the trace engine did not admit a capture).
 - **`duressExempt: true`.** A hang and a host duress episode are often the same

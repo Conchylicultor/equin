@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   getRuntimeProfile,
   SPAN_KINDS,
+  type GateHolder,
   type SpanKind,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
@@ -39,11 +40,24 @@ const TOP_N = 20;
 // the SAME worktree process.
 const lastCount = new Map<string, number>();
 
-// The aggregate-time twin of `lastCount`: each op's cumulative `totalMs` at the
-// previous tick, same `${kind}:${label}` key, same reset-safe delta + seed
-// semantics (see op-time-math.windowDelta). Diffed to catch count×cost breaches
-// that per-call latency and call count alone miss.
-const lastTotalMs = new Map<string, number>();
+// The aggregate-time twin of `lastCount`: each op's cumulative OWN time
+// (`selfTotalMs`) at the previous tick, same `${kind}:${label}` key, same
+// reset-safe delta + seed semantics (see op-time-math.windowDelta). Own time,
+// never wall: an op is judged on the work it did. A `sub` queued 85 s on
+// `read-admit`, a delivery held 500 ms by its own declared throttle, a loader
+// awaiting a memo's in-flight pass — none of that is the op's cost, so none of
+// it trips the op. Its wall (`lastWallMs`) rides the report as context.
+const lastSelfMs = new Map<string, number>();
+const lastWallMs = new Map<string, number>();
+
+// The waits an op is judged without are not dropped: each gate's metered
+// queue/io waits (`getRuntimeProfile().gates`, charged once per wait where it
+// happens) are diffed here by layer and judged against `waitMsPerWindow` — the
+// gate's congestion over the window, against the gate (with its holders),
+// instead of as N innocent waiters. (slow-ops' `wait <layer>` is the other
+// view: one wait, or a minute's residue, past its bar.)
+const lastGateMs = new Map<string, number>();
+const lastGateCount = new Map<string, number>();
 
 // Drop-count log for over-cap ops (one line per tick when the cap trips).
 const opRateLog = Log.channel("op-rate");
@@ -65,9 +79,18 @@ type PerOpTrip =
       type: "op-time";
       kind: SpanKind;
       label: string;
-      delta: number; // ms in window (the rank key)
+      delta: number; // own ms in window (the rank key)
+      wallDelta: number;
       callsDelta: number;
       budgetMs: number;
+    }
+  | {
+      type: "gate-wait";
+      layer: string;
+      delta: number; // ms waited on the gate in window (the rank key)
+      waitsDelta: number;
+      budgetMs: number;
+      holders: readonly GateHolder[];
     };
 
 // Cheap scheduled call-rate + aggregate-time monitor. Runs every 5 min in EACH
@@ -77,7 +100,8 @@ type PerOpTrip =
 // pile up, and `maxAttempts: 3` keeps a transiently-broken monitor from becoming
 // a dead-job storm of its own. Reads the profile through getRuntimeProfile()
 // (pull-only, no recorder hook) and diffs the cumulative `count` (op-rate) and
-// `totalMs` (op-time) against the previous tick. Reports fire only when a
+// own time `selfTotalMs` (op-time) and each gate's metered waits against the
+// previous tick. Reports fire only when a
 // per-kind threshold/budget trips (silent when healthy).
 export const opRateMonitorJob = defineJob({
   name: "debug.op-rate-monitor",
@@ -98,7 +122,7 @@ export const opRateMonitorJob = defineJob({
     const cfg = getConfig(opRateConfig);
     if (!cfg.enabled) return;
 
-    const { aggregates } = getRuntimeProfile();
+    const { aggregates, gates } = getRuntimeProfile();
     const perOp: PerOpTrip[] = [];
     // Per-kind rollup accumulator: every op's ms delta this window (so a kind
     // whose cost is smeared across many under-budget labels still trips), plus
@@ -131,10 +155,12 @@ export const opRateMonitorJob = defineJob({
             threshold,
           });
 
-        // --- op-time: cumulative wall-clock (totalMs) delta ---
-        const prevTotal = lastTotalMs.get(key);
-        lastTotalMs.set(key, agg.totalMs);
-        const msDelta = windowDelta(prevTotal, agg.totalMs);
+        // --- op-time: cumulative OWN-time (selfTotalMs) delta ---
+        const prevSelf = lastSelfMs.get(key);
+        lastSelfMs.set(key, agg.selfTotalMs);
+        const prevWall = lastWallMs.get(key);
+        lastWallMs.set(key, agg.totalMs);
+        const msDelta = windowDelta(prevSelf, agg.selfTotalMs);
         if (msDelta === null) continue; // first observation seeds, fires nothing
         kindDeltas.push({ label: agg.label, deltaMs: msDelta });
         callsSum += countDelta ?? 0;
@@ -144,11 +170,30 @@ export const opRateMonitorJob = defineJob({
             kind,
             label: agg.label,
             delta: msDelta,
+            wallDelta: windowDelta(prevWall, agg.totalMs) ?? msDelta,
             callsDelta: countDelta ?? 0,
             budgetMs,
           });
       }
       rollups.push({ kind, budgetMs, deltas: kindDeltas, callsSum });
+    }
+
+    // --- gate waits: each gate's metered wait time, judged as the gate's ---
+    for (const g of gates) {
+      const prevMs = lastGateMs.get(g.layer);
+      lastGateMs.set(g.layer, g.totalMs);
+      const prevCount = lastGateCount.get(g.layer);
+      lastGateCount.set(g.layer, g.count);
+      const msDelta = windowDelta(prevMs, g.totalMs);
+      if (msDelta === null || msDelta <= cfg.waitMsPerWindow) continue;
+      perOp.push({
+        type: "gate-wait",
+        layer: g.layer,
+        delta: msDelta,
+        waitsDelta: windowDelta(prevCount, g.count) ?? 0,
+        budgetMs: cfg.waitMsPerWindow,
+        holders: g.holders ?? [],
+      });
     }
 
     // Cap the COMBINED per-op ranking (op-rate + op-time) at top-N per tick,
@@ -176,6 +221,34 @@ export const opRateMonitorJob = defineJob({
           },
           message: `${h.kind} ${h.label} — ${h.delta} calls/window (threshold ${h.threshold})`,
         });
+      } else if (h.type === "gate-wait") {
+        // The gate's congestion, filed against the gate: who held it right now
+        // (its gauge's holders) and the flight window as evidence. Its waiters
+        // were judged without this time — this is where it is reported.
+        const holders = h.holders;
+        const trace = captureTrace({
+          kind: "op-time",
+          label: `wait ${h.layer}`,
+          durationMs: Math.min(h.delta, WINDOW_MS),
+          thresholdMs: h.budgetMs,
+        });
+        await recordReport({
+          kind: "op-time",
+          source: "server-op-rate-monitor",
+          data: {
+            kind: WAIT_KIND,
+            label: h.layer,
+            msInWindow: h.delta,
+            callsInWindow: h.waitsDelta,
+            windowMs: WINDOW_MS,
+            budgetMs: h.budgetMs,
+            ...(holders.length > 0 && {
+              holders: holders.slice(0, 10).map((x) => x.label),
+            }),
+            ...(trace ? { traceId: trace.id } : {}),
+          },
+          message: `wait ${h.layer} — ${(h.delta / 1000).toFixed(1)}s/window waited across ${h.waitsDelta} waits (budget ${(h.budgetMs / 1000).toFixed(1)}s)`,
+        });
       } else {
         // Evidence FIRST: captureTrace grabs the coherent-instant flight window
         // (what is in flight right now while this op burns time), proving the
@@ -201,12 +274,13 @@ export const opRateMonitorJob = defineJob({
             kind: h.kind,
             label: h.label,
             msInWindow: h.delta,
+            wallMsInWindow: h.wallDelta,
             callsInWindow: h.callsDelta,
             windowMs: WINDOW_MS,
             budgetMs: h.budgetMs,
             ...(trace ? { traceId: trace.id } : {}),
           },
-          message: `${h.kind} ${h.label} — ${(h.delta / 1000).toFixed(1)}s/window across ${h.callsDelta} calls (budget ${(h.budgetMs / 1000).toFixed(1)}s)`,
+          message: `${h.kind} ${h.label} — ${(h.delta / 1000).toFixed(1)}s own/window (${(h.wallDelta / 1000).toFixed(1)}s wall) across ${h.callsDelta} calls (budget ${(h.budgetMs / 1000).toFixed(1)}s)`,
         });
       }
     }
@@ -228,11 +302,15 @@ export const opRateMonitorJob = defineJob({
           budgetMs: breach.rollupBudgetMs,
           topLabels: breach.topLabels,
         },
-        message: `${r.kind} rollup — ${(breach.sumDeltaMs / 1000).toFixed(1)}s/window across ${r.deltas.length} labels (budget ${(breach.rollupBudgetMs / 1000).toFixed(1)}s)`,
+        message: `${r.kind} rollup — ${(breach.sumDeltaMs / 1000).toFixed(1)}s own/window across ${r.deltas.length} labels (budget ${(breach.rollupBudgetMs / 1000).toFixed(1)}s)`,
       });
     }
   },
 });
+
+// The `kind` a gate's op-time report carries: a gate is no span kind, so its
+// fingerprint (`op-time:wait:<layer>`) can never collide with an op's.
+const WAIT_KIND = "wait";
 
 // Map each SpanKind to its per-kind call-rate threshold field (same shape as
 // slow-ops' thresholdFor). Typed over the exported SpanKind so adding a kind is a

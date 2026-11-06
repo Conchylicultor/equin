@@ -348,6 +348,13 @@ export type LeafSpanOptions =
 export interface Aggregate {
   label: string;
   count: number;
+  /**
+   * Σ per-record WALL time: every wait, declared hold and child execution
+   * included. A view (the profile table's average), never a cost — an op
+   * queued 85 s on `read-admit` did not spend 85 s. Judge an op's cost on
+   * `selfTotalMs` (its own work); what it waited on is the gate's, metered
+   * once in `gates` (debug/op-rate judges both that way).
+   */
   totalMs: number;
   maxMs: number;
   lastMs: number;
@@ -980,6 +987,41 @@ export function onSlowWait(
       if (i >= 0) slowWaitSubs.splice(i, 1);
     },
   };
+}
+
+/**
+ * One gate's waits as the gate's own cost: every `queue` / `io` wait charged
+ * on `layer`, metered ONCE per wait — where it happens (`chargeWait`), never
+ * per ancestor (whose unions would count it once per level) and never per
+ * label (a wait is no op's work: the op is judged on its own time and the
+ * time it queued is metered here, against the gate that held it). Cumulative
+ * since boot, like the aggregates; a monitor diffs successive readings. A
+ * `join` wait is not metered: it is the time of the run joined, which that
+ * run's own span already counts.
+ */
+export interface GateMeter {
+  layer: string;
+  kind: "queue" | "io";
+  /** Waits charged on the layer. */
+  count: number;
+  /** Σ their ms — a sum across concurrent waiters, so it can exceed wall. */
+  totalMs: number;
+  /**
+   * Who holds the gate as the profile is read, longest first — its gauge's
+   * `holders` (`registerGateGauge`), absent when the gate names none. What
+   * the waiters waited BEHIND: the cost is the holder's to explain.
+   */
+  holders?: GateHolder[];
+}
+
+const gateMeters = new Map<string, GateMeter>();
+
+function meterGateWait(layer: string, ms: number, kind: "queue" | "io"): void {
+  const m = gateMeters.get(layer);
+  if (m) {
+    m.count += 1;
+    m.totalMs += ms;
+  } else gateMeters.set(layer, { layer, kind, count: 1, totalMs: ms });
 }
 
 // --- Store ---
@@ -2058,12 +2100,33 @@ function capDetail(detail: SpanDetail | undefined): SpanDetail | undefined {
 export function chargeWait(layer: string, ms: number, kind: WaitKind): void {
   if (profilingDisabled()) return;
   if (suppressionRuntime.suppressed()) return;
+  if (kind !== "join") meterGateWait(layer, ms, kind);
   const cur = contextRuntime.current();
+  // A context-less join is nobody's wait: the time is the joined run's, which
+  // its own span counts, and there is no waiter to take it off — a fallback
+  // span would only inflate `db` call counts.
+  if (!cur && kind === "join") return;
   if (!cur) {
     // Context-less by definition, so the fallback span is a root leaf: mint an
-    // id, no parent. That span is already named after the gate, so it is not
-    // also handed to `onSlowWait`.
-    record("db", `[${layer}]`, ms, nextSpanId++, null, null);
+    // id, no parent. It IS a wait, not work: recorded as all wait (own time
+    // 0), so no monitor judging own time charges the gate's queue to a `db`
+    // op, and — like any wait — handed to `onSlowWait` against its gate, the
+    // fallback span its caller.
+    const caller: SpanRef = { kind: "db", label: `[${layer}]` };
+    record(
+      caller.kind,
+      caller.label,
+      ms,
+      nextSpanId++,
+      null,
+      null,
+      { [layer]: ms },
+      ms,
+      0,
+      0,
+    );
+    if (!notifySlowWait({ layer, ms, caller }))
+      addGateWindow(layer, ms, 1, caller);
     return;
   }
   if (
@@ -2408,6 +2471,8 @@ export async function recordEntrySpan<T>(
 export function getRuntimeProfile(): {
   aggregates: Record<SpanKind, Aggregate[]>;
   slowest: Record<SpanKind, SlowSpan[]>;
+  /** Every gate's metered waits (see `GateMeter`), most time first. */
+  gates: GateMeter[];
   sinceMs: number;
 } {
   const nowMs = now();
@@ -2451,7 +2516,11 @@ export function getRuntimeProfile(): {
       (a, b) => b.durationMs - a.durationMs,
     );
   }
-  return { aggregates: aggOut, slowest: slowOut, sinceMs };
+  const gates = Array.from(gateMeters.values(), (m): GateMeter => {
+    const holders = gateGauges.get(m.layer)?.().holders;
+    return holders && holders.length > 0 ? { ...m, holders } : { ...m };
+  }).sort((a, b) => b.totalMs - a.totalMs);
+  return { aggregates: aggOut, slowest: slowOut, gates, sinceMs };
 }
 
 // Clears every per-aggregate accumulator (the new maxAtMs/recentBuckets/totals
@@ -2482,5 +2551,6 @@ export function resetRuntimeProfile(): void {
   lastLoopTurn = undefined;
   laneClaims.clear();
   gateWindows.clear();
+  gateMeters.clear();
   sinceMs = now();
 }

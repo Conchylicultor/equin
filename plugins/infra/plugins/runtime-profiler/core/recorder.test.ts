@@ -377,14 +377,30 @@ describe("rolling max", () => {
 });
 
 describe("chargeWait fallbacks and markers", () => {
-  test("no active entry → standalone db [layer] span", () => {
-    chargeWait("loader-acquire", 25, "queue");
+  test("no active entry → standalone db [layer] span, all wait, handed to onSlowWait", () => {
+    const seen: SlowWait[] = [];
+    const sub = onSlowWait(
+      (w) => {
+        seen.push(w);
+        return true;
+      },
+      { thresholdMs: 20 },
+    );
+    try {
+      chargeWait("loader-acquire", 25, "queue");
+    } finally {
+      sub.dispose();
+    }
     const a = agg("db", "[loader-acquire]");
     expect(a.count).toBe(1);
     expect(a.totalMs).toBe(25);
-    // Leaf-shaped record: the wait IS the span, decomposition defaults apply.
-    expect(a.waitTotalMs).toBe(0);
-    expect(a.selfTotalMs).toBe(25);
+    // The span IS a wait: no own time for a `db` op, the time is the gate's.
+    expect(a.waitTotalMs).toBe(25);
+    expect(a.selfTotalMs).toBe(0);
+    expect(a.waits).toEqual({ "loader-acquire": 25 });
+    expect(seen.map((w) => [w.layer, w.ms, w.caller.label])).toEqual([
+      ["loader-acquire", 25, "[loader-acquire]"],
+    ]);
   });
 
   test("zero-ms marker creates the layer key with 0 and leaves waitMs at 0", async () => {
@@ -397,6 +413,46 @@ describe("chargeWait fallbacks and markers", () => {
     expect(a.waits).toEqual({ "git-memo-hit": 0 });
     expect(a.waitTotalMs).toBe(0);
     expect(a.selfTotalMs).toBe(20);
+  });
+});
+
+describe("gate meters — every queue wait metered once, against its gate", () => {
+  test("a wait propagated to N ancestors is metered once; joins are not metered", async () => {
+    await recordEntrySpan("sub", "s", async () => {
+      await recordEntrySpan("loader", "l", async () => {
+        fakeNow = 30;
+        chargeWait("read-admit", 30, "queue");
+        chargeWait("read-coalesce", 10, "join");
+        chargeWait("fs-stat", 5, "io");
+      });
+    });
+    chargeWait("db-acquire", 7, "queue"); // context-less: metered too
+    expect(getRuntimeProfile().gates).toEqual([
+      { layer: "read-admit", kind: "queue", count: 1, totalMs: 30 },
+      { layer: "db-acquire", kind: "queue", count: 1, totalMs: 7 },
+      { layer: "fs-stat", kind: "io", count: 1, totalMs: 5 },
+    ]);
+  });
+
+  test("own time excludes waits and holds: wait-heavy entries and held leaves cost ~0", async () => {
+    await recordEntrySpan("sub", "queued", async () => {
+      fakeNow = 900;
+      chargeWait("read-admit", 900, "queue");
+      fakeNow = 901;
+    });
+    recordSpan("push", "deliver:held", 515, undefined, {
+      latency: true,
+      waits: { "throttle-hold": 507 },
+    });
+    expect(agg("sub", "queued").totalMs).toBe(901);
+    expect(agg("sub", "queued").selfTotalMs).toBe(1);
+    expect(agg("push", "deliver:held").selfTotalMs).toBe(8);
+  });
+
+  test("a reset clears the meters", () => {
+    chargeWait("db-acquire", 7, "queue");
+    resetRuntimeProfile();
+    expect(getRuntimeProfile().gates).toEqual([]);
   });
 });
 

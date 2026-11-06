@@ -23594,7 +23594,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.serveValue`
               - `tasks/tasks-core.getConversation`
             - Register: `mcpTool('get_runtime_profile')`
-            - Resources: `runtime-profiler.profile` (invalidate, snapshot, whole: one per distinct label of the kind since the last reset — route patterns, resource keys, job names, never per-call values (those ride `variant`), capped: SLOWEST_CAP, whole: one per distinct parent label (an entry's class, never one run) this label ran under since the last reset, whole: one key per gate layer the entry waited on — the closed set of charging layers, a dozen or so)
+            - Resources: `runtime-profiler.profile` (invalidate, snapshot, whole: one per distinct label of the kind since the last reset — route patterns, resource keys, job names, never per-call values (those ride `variant`), whole: one per gate layer any wait was charged on since the last reset — the closed set of charging layers, a dozen or so, capped: SLOWEST_CAP, whole: one per distinct parent label (an entry's class, never one run) this label ran under since the last reset, whole: one key per gate layer the entry waited on — the closed set of charging layers, a dozen or so)
             - Routes:
               - `GET /api/debug/profiling/runtime`
               - `POST /api/debug/profiling/runtime/reset`
@@ -34391,6 +34391,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FlightWindow`
           - `GateGauge`
           - `GateHolder`
+          - `GateMeter`
           - `LoopStall`
           - `OriginClass`
           - `ParentBreakdown`

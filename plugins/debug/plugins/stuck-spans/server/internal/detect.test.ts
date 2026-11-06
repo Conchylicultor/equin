@@ -6,6 +6,7 @@ import {
 import {
   createStuckSpanWatcher,
   findStuckSpans,
+  groupByOperation,
   type OpenSpan,
   type StuckSpanFinding,
 } from "./detect";
@@ -301,5 +302,29 @@ describe("STUCK_SPAN_POLICY", () => {
     expect(thresholdOf("http")).toBe(120 * SEC);
     for (const kind of WATCHED_KINDS.filter((k) => k !== "http"))
       expect(thresholdOf(kind)).toBe(90 * SEC);
+  });
+});
+
+describe("groupByOperation", () => {
+  test("runs of one operation found on one tick are one finding, led by the oldest", () => {
+    const f = (id: number, label: string, ageMs: number) => ({
+      id,
+      kind: "sub" as const,
+      label,
+      ageMs,
+      thresholdMs: 90_000,
+      ancestors: [],
+    });
+    // Oldest first, as findStuckSpans sorts them.
+    const groups = groupByOperation([
+      f(1, "reports.list:rows", 300_000),
+      f(2, "host-fs.peek", 200_000),
+      f(3, "reports.list:rows", 100_000),
+      f(4, "reports.list:rows", 95_000),
+    ]);
+    expect(groups.map((g) => [g.lead.id, g.lead.label, g.runs])).toEqual([
+      [1, "reports.list:rows", 3],
+      [2, "host-fs.peek", 1],
+    ]);
   });
 });
