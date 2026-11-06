@@ -59,19 +59,26 @@ export const MainThreadStallPayloadSchema = StallTabSchema.extend({
   // worker: the out-of-thread watchdog saw it. in-tab: the fallback when the
   // browser has no SharedWorker (LoAF, plus a heartbeat drained next load).
   detector: z.enum(["worker", "in-tab"]),
-  // Long frames the stalled tab completed WHILE the stall was open. 0 means
-  // one task never yielded (an endless synchronous loop); more means the
-  // thread still ran frames — a render storm rather than one blocked task.
+  // Long frames (≥ 200 ms) the stalled tab ran inside the stall window, by
+  // their own timestamps. 0 means one task never yielded (an endless
+  // synchronous loop) or no entry arrived; more means the thread still ran
+  // frames — a render storm rather than one blocked task.
   framesDuring: z.number(),
   // The LoAF entry covering the stall — the definitive attribution — when the
   // tab recovered and reported it. Null for gone / unknown stalls.
   stallFrame: StallFrameSchema.nullable(),
-  // The last long frames before the stall (breadcrumbs), oldest first.
+  // Those frames themselves (the longest, capped), oldest first: what ran
+  // during the freeze when no single entry covers it. Absent on reports
+  // filed before it existed.
+  during: z.array(StallFrameSchema).default([]),
+  // The long frames that ended within 10 s before the stall began
+  // (breadcrumbs), oldest first. Never the freeze itself.
   frames: z.array(StallFrameSchema),
   // Other tabs that froze with it (same renderer process): victims, not causes.
   cohort: z.array(StallTabSchema),
-  // The longest script of `stallFrame`, as `function (invoker)`; null when
-  // unattributed. THE attribution grain of the fingerprint.
+  // The longest-running script of `stallFrame` — or, without one, summed over
+  // `during` — as `function (invoker)`; null when unattributed. THE
+  // attribution grain of the fingerprint.
   topFunction: z.string().nullable(),
 });
 export type MainThreadStallPayload = z.infer<

@@ -21,7 +21,16 @@ export const STALL = {
   COHORT_WINDOW_MS: 1500,
   // After a tab recovers, wait this long for its LoAF entry before filing.
   FRAME_GRACE_MS: 2000,
-  // Breadcrumb ring per tab, scripts kept per frame, string cap.
+  // A long frame is a breadcrumb of a stall only if it ended this soon before
+  // the stall began: older ones are what the tab did earlier, not the freeze.
+  CRUMB_WINDOW_MS: 10_000,
+  // Without a LoAF entry for the freeze, its frames-during attribute it only
+  // when they cover at least this share of it. Silence no long frame covers
+  // ran no long task: most likely the renderer was not scheduled (host CPU
+  // starvation), and naming a short frame inside it would mislead.
+  DURING_ATTRIBUTION_MIN_SHARE: 0.5,
+  // Breadcrumb ring per tab (and frames-during kept per stall, the longest),
+  // scripts kept per frame, string cap.
   CRUMBS: 10,
   MAX_SCRIPTS: 5,
   STRING_CAP: 300,

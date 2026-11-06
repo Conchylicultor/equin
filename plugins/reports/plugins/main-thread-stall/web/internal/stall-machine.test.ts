@@ -236,6 +236,102 @@ describe("endings", () => {
     expect([...m.outbox.values()][0]?.payload.framesDuring).toBe(3);
   });
 
+  test("frames of the freeze that arrive after the pong are its own, and attribute it", () => {
+    // report-1793833639-4dssiq: a 13 s recovered stall with no single LoAF
+    // entry ≥ OPEN_AFTER_MS — its shorter frames arrived while settling.
+    const m = machine();
+    attach(m, "a", tab("A"));
+    run(m, T0, T0 + 13_000, []);
+    step(m, { type: "pong", portId: "a", now: T0 + 14_000 });
+    // Five 1.5 s frames (none a stall frame on its own) cover 7.5 of 14 s.
+    for (let i = 4; i >= 0; i--)
+      step(m, {
+        type: "frame",
+        portId: "a",
+        frame: frame(T0 + 1000 + i * 2000, 1500, "storm"),
+        now: T0 + 14_100,
+      });
+    step(m, {
+      type: "frame",
+      portId: "a",
+      frame: frame(T0 + 11_600, 900, "other"),
+      now: T0 + 14_200,
+    });
+    const [d] = of(run(m, T0 + 16_000, T0 + 16_000, ["a"]), "deliver");
+    expect(d?.payload.stallFrame).toBeNull();
+    expect(d?.payload.framesDuring).toBe(6);
+    expect(d?.payload.during.map((f) => f.startedAt)).toEqual([
+      T0 + 1000,
+      T0 + 3000,
+      T0 + 5000,
+      T0 + 7000,
+      T0 + 9000,
+      T0 + 11_600,
+    ]);
+    expect(d?.payload.frames).toEqual([]);
+    expect(d?.payload.topFunction).toBe("storm (Window.setTimeout)");
+  });
+
+  test("frames covering little of the silence do not attribute it (a starved thread)", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    run(m, T0, T0 + 13_000, []);
+    step(m, { type: "pong", portId: "a", now: T0 + 14_000 });
+    step(m, {
+      type: "frame",
+      portId: "a",
+      frame: frame(T0 + 6000, 400, "innocent"),
+      now: T0 + 14_100,
+    });
+    const [d] = of(run(m, T0 + 16_000, T0 + 16_000, ["a"]), "deliver");
+    expect(d?.payload.framesDuring).toBe(1);
+    expect(d?.payload.topFunction).toBeNull();
+  });
+
+  test("with a LoAF entry for the freeze, frames between the last pong and it are breadcrumbs", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    run(m, T0, T0 + 9000, []);
+    step(m, {
+      type: "frame",
+      portId: "a",
+      frame: frame(T0 + 200, 500, "before"),
+      now: T0 + 9100,
+    });
+    step(m, { type: "pong", portId: "a", now: T0 + 9200 });
+    step(m, {
+      type: "frame",
+      portId: "a",
+      frame: frame(T0 + 800, 8000),
+      now: T0 + 9300,
+    });
+    const [d] = of(run(m, T0 + 12_000, T0 + 12_000, ["a"]), "deliver");
+    expect(d?.payload.startedAt).toBe(T0 + 800);
+    expect(d?.payload.during).toEqual([]);
+    expect(d?.payload.framesDuring).toBe(0);
+    expect(d?.payload.frames.map((f) => f.startedAt)).toEqual([T0 + 200]);
+  });
+
+  test("breadcrumbs are only the long frames that ended shortly before the stall, oldest first", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    const old = T0 - STALL.CRUMB_WINDOW_MS - 20_000;
+    for (const f of [
+      frame(T0 - 3000, 400),
+      frame(old, 800),
+      frame(T0 - 6000, 300),
+    ])
+      step(m, { type: "frame", portId: "a", frame: f, now: T0 });
+    run(m, T0, T0 + 6000, []);
+    step(m, { type: "gone", portId: "a", now: T0 + 6500 });
+    const payload = [...m.outbox.values()][0]?.payload;
+    expect(payload?.frames.map((f) => f.startedAt)).toEqual([
+      T0 - 6000,
+      T0 - 3000,
+    ]);
+    expect(payload?.topFunction).toBeNull();
+  });
+
   test("an open stall is persisted at the report bar and at each doubling (lower bound for unknown)", () => {
     const m = machine();
     attach(m, "a", tab("A"));
@@ -265,6 +361,7 @@ describe("endings", () => {
           detector: "worker",
           framesDuring: 0,
           stallFrame: null,
+          during: [],
           frames: [],
           cohort: [],
           topFunction: null,

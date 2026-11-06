@@ -65,6 +65,6 @@ export function fileSlowFrame(frame: StallFrame, tab: StallTab): void {
     tab,
     durationMs: frame.durationMs,
     endedAt: frame.startedAt + frame.durationMs,
-    topFunction: topFunction(frame),
+    topFunction: topFunction([frame]),
   });
 }

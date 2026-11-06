@@ -30,12 +30,15 @@ export function renderMainThreadStallTask(row: ReportRow): {
   };
 }
 
-function frameLine(f: StallFrame): string {
+/** One frame, timed relative to the stall's start so its distance from the freeze is plain. */
+function frameLine(f: StallFrame, stallStartedAt: number): string {
   const top = f.scripts[0];
   const what = top
     ? `\`${top.sourceFunctionName || "(anonymous)"}\` via ${top.invokerType} \`${top.invoker}\` (${top.durationMs} ms script, ${top.forcedStyleAndLayoutDurationMs} ms forced layout) @ ${top.sourceURL}:${top.sourceCharPosition}`
     : "no script attributed";
-  return `${new Date(f.startedAt).toISOString()} — ${f.durationMs} ms (blocking ${f.blockingDurationMs} ms): ${what}`;
+  const offset = (f.startedAt - stallStartedAt) / 1000;
+  const at = `${offset < 0 ? "−" : "+"}${Math.abs(offset).toFixed(1)} s`;
+  return `${at} (${new Date(f.startedAt).toISOString()}) — ${f.durationMs} ms (blocking ${f.blockingDurationMs} ms): ${what}`;
 }
 
 function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
@@ -68,14 +71,35 @@ function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
         "- (the frame named no script: style/layout/paint, or a browser-internal task)",
       );
   } else {
-    lines.push(
-      `No Long Animation Frame entry: the tab never finished the frozen frame (${d.ended}). Frames completed during the stall: **${d.framesDuring}** — ${d.framesDuring === 0 ? "one task never yielded (an endless or very long synchronous loop)" : "the thread still ran frames: a render/update storm, not one blocked task"}.`,
-    );
+    const coveredMs = d.during.reduce((sum, f) => sum + f.durationMs, 0);
+    if (d.during.length > 0) {
+      lines.push(
+        `No single Long Animation Frame entry covers the freeze. **${d.framesDuring}** long frame(s) ran inside it; the longest${d.framesDuring > d.during.length ? ` ${d.during.length}` : ""}, timed from the stall's start, cover ${coveredMs} ms of the ${(d.durationMs / 1000).toFixed(1)} s:`,
+      );
+      for (const f of d.during) lines.push(`- ${frameLine(f, d.startedAt)}`);
+    } else if (d.framesDuring > 0) {
+      lines.push(
+        `**${d.framesDuring}** long frame(s) ran inside the stall (not kept: filed before a stall recorded its own frames).`,
+      );
+    }
+    if (d.ended === "recovered" && coveredMs < d.durationMs / 2) {
+      lines.push(
+        `${d.framesDuring > 0 ? "Most of the silence" : "The silence"} ran **no long task** — LoAF records every main-thread task ≥ 50 ms, and the tab recovered on its own. The thread was most likely **not scheduled** (the renderer starved of CPU — e.g. a backgrounded headless agent browser on a loaded host), not running app code${d.during.length > 0 ? ": the frames above are not the freeze's cause" : ""}. Check host load at that instant before reading app code.`,
+      );
+    } else if (d.during.length === 0) {
+      lines.push(
+        `No Long Animation Frame entry from inside the stall: the tab never finished the frozen frame (${d.ended}).${d.framesDuring === 0 ? " No frame completed during it: one task never yielded (an endless or very long synchronous loop)." : ""}`,
+      );
+    }
   }
   if (d.frames.length > 0) {
     lines.push("");
-    lines.push("**Long frames just before (breadcrumbs, oldest first)**");
-    for (const f of d.frames) lines.push(`- ${frameLine(f)}`);
+    lines.push(
+      "**Long frames before the stall (breadcrumbs, oldest first)** — what the tab did earlier, timed from the stall's start. Not the freeze itself:",
+    );
+    // Sorted here too: reports filed before the watchdog sorted them are in arrival order.
+    for (const f of [...d.frames].sort((a, b) => a.startedAt - b.startedAt))
+      lines.push(`- ${frameLine(f, d.startedAt)}`);
   }
   if (d.cohort.length > 0) {
     lines.push("");

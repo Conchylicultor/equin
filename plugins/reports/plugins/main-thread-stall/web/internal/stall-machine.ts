@@ -35,7 +35,10 @@ interface Incident {
   readonly id: string;
   readonly primary: string;
   readonly primaryTab: StallTab;
+  /** Long frames that ended within CRUMB_WINDOW_MS before the stall began. */
   readonly crumbs: StallFrame[];
+  /** Long frames inside the stall window (the longest CRUMBS), whenever they arrived. */
+  readonly during: StallFrame[];
   readonly cohort: Map<string, StallTab>;
   startedAt: number;
   phase: "open" | "settling";
@@ -254,7 +257,17 @@ function onFrame(
     p.lastPong = now;
     return;
   }
-  if (inc && inc.phase === "open") inc.framesDuring += 1;
+  // Classified by WHEN the frame ran, not when it arrived: LoAF entries are
+  // delivered late, often after the tab answered again (settling).
+  if (inc && duringStall(inc, frame, now)) {
+    inc.framesDuring += 1;
+    keepLongest(inc.during, frame);
+  } else if (inc && isCrumbOf(inc.startedAt, frame)) {
+    // A breadcrumb that arrived late: the latest CRUMBS before the stall.
+    inc.crumbs.push(frame);
+    inc.crumbs.sort((a, b) => a.startedAt - b.startedAt);
+    if (inc.crumbs.length > STALL.CRUMBS) inc.crumbs.shift();
+  }
   // Any frame is a sign of life only once no stall is open on the tab (a
   // render storm still posts frames while it never answers a ping).
   if (!inc || inc.phase !== "open") p.lastPong = now;
@@ -380,7 +393,8 @@ function openStalls(m: StallMachine, now: number, out: StallEffect[]): void {
     id: m.newId(),
     primary: primary.portId,
     primaryTab: { ...primary.tab },
-    crumbs: [...primary.crumbs],
+    crumbs: primary.crumbs.filter((f) => isCrumbOf(primary.lastPong, f)),
+    during: [],
     cohort: new Map(),
     startedAt: primary.lastPong,
     phase: "open",
@@ -416,7 +430,18 @@ function finalize(m: StallMachine, inc: Incident, out: StallEffect[]): void {
   const frame = inc.stallFrame;
   if (frame) {
     inc.startedAt = frame.startedAt;
-    inc.endedAt = frame.startedAt + frame.durationMs;
+    const frameEnd = frame.startedAt + frame.durationMs;
+    inc.endedAt = frameEnd;
+    // The frozen frame IS the stall: frames placed against the pong-measured
+    // window ran before it (between the last pong and the freeze) — they are
+    // breadcrumbs — or after it.
+    const inside = inc.during.filter((f) => duringStall(inc, f, frameEnd));
+    for (const f of inc.during)
+      if (isCrumbOf(inc.startedAt, f)) inc.crumbs.push(f);
+    inc.crumbs.sort((a, b) => a.startedAt - b.startedAt);
+    inc.crumbs.splice(0, Math.max(0, inc.crumbs.length - STALL.CRUMBS));
+    inc.framesDuring = inside.length;
+    inc.during.splice(0, inc.during.length, ...inside);
   }
   const endedAt = inc.endedAt ?? inc.startedAt;
   if (endedAt - inc.startedAt < STALL.REPORT_MIN_MS) {
@@ -478,9 +503,10 @@ function payloadOf(
     detector: "worker",
     framesDuring: inc.framesDuring,
     stallFrame: inc.stallFrame,
-    frames: inc.crumbs,
+    during: byStart(inc.during),
+    frames: byStart(inc.crumbs),
     cohort: [...inc.cohort.values()],
-    topFunction: topFunction(inc.stallFrame),
+    topFunction: stallTopFunction(inc, endedAt),
   };
 }
 
@@ -546,10 +572,64 @@ function isStallFrame(inc: Incident, frame: StallFrame, now: number): boolean {
   );
 }
 
-/** The frame's longest script as `function (invoker)`, or null when the browser attributed none. */
-export function topFunction(frame: StallFrame | null): string | null {
-  const top = frame?.scripts[0];
-  if (!top) return null;
-  const fn = top.sourceFunctionName || "(anonymous)";
-  return top.invoker ? `${fn} (${top.invoker})` : fn;
+/**
+ * The frozen frame's own attribution; without one, what ran in the frames
+ * inside the stall — only when they cover most of it (see
+ * DURING_ATTRIBUTION_MIN_SHARE).
+ */
+function stallTopFunction(inc: Incident, endedAt: number): string | null {
+  if (inc.stallFrame) return topFunction([inc.stallFrame]);
+  const coveredMs = inc.during.reduce((sum, f) => sum + f.durationMs, 0);
+  const share = coveredMs / Math.max(1, endedAt - inc.startedAt);
+  return share >= STALL.DURING_ATTRIBUTION_MIN_SHARE
+    ? topFunction(inc.during)
+    : null;
+}
+
+/** A frame that ran (at least partly) inside the stall window. */
+function duringStall(inc: Incident, frame: StallFrame, now: number): boolean {
+  const end = inc.endedAt ?? now;
+  return (
+    frame.startedAt < end && frame.startedAt + frame.durationMs > inc.startedAt
+  );
+}
+
+/** A frame that ended before `startedAt`, recently enough to be a breadcrumb of it. */
+function isCrumbOf(startedAt: number, frame: StallFrame): boolean {
+  const end = frame.startedAt + frame.durationMs;
+  return end <= startedAt && startedAt - end <= STALL.CRUMB_WINDOW_MS;
+}
+
+/** Add `frame`, keeping only the CRUMBS longest. */
+function keepLongest(frames: StallFrame[], frame: StallFrame): void {
+  frames.push(frame);
+  frames.sort((a, b) => b.durationMs - a.durationMs);
+  if (frames.length > STALL.CRUMBS) frames.length = STALL.CRUMBS;
+}
+
+/** Oldest first — LoAF entries arrive out of order. */
+function byStart(frames: readonly StallFrame[]): StallFrame[] {
+  return [...frames].sort((a, b) => a.startedAt - b.startedAt);
+}
+
+/**
+ * The function that ran longest across `frames`' attributed scripts, as
+ * `function (invoker)`; null when the browser attributed none.
+ */
+export function topFunction(frames: readonly StallFrame[]): string | null {
+  const totals = new Map<string, number>();
+  for (const f of frames)
+    for (const s of f.scripts) {
+      const fn = s.sourceFunctionName || "(anonymous)";
+      const label = s.invoker ? `${fn} (${s.invoker})` : fn;
+      totals.set(label, (totals.get(label) ?? 0) + s.durationMs);
+    }
+  let top: string | null = null;
+  let topMs = -1;
+  for (const [label, ms] of totals)
+    if (ms > topMs) {
+      top = label;
+      topMs = ms;
+    }
+  return top;
 }

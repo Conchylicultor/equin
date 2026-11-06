@@ -40,8 +40,15 @@ All rules live (and are tested) there:
 - **Cohort**: tabs silent within 1.5 s of each other froze together (one
   renderer): one incident, the focused visible tab primary, the others
   `cohort[]`; they stay `covered` (no second incident) until they answer.
-- **Fingerprint**: app + route pattern + top attributed function (or
-  `unattributed`). DevTools breakpoint pauses are accepted as noise.
+- **Frames are placed by when they ran, not when they arrived** (LoAF entries
+  land late, often after the pong): one ≥ 2 s overlapping the stall is the
+  `stallFrame`; shorter ones inside it are `during` (the longest 10, counted
+  in `framesDuring`); `frames` (breadcrumbs) are only those that ended within
+  10 s before the stall began — never the freeze itself.
+- **Fingerprint**: app + route pattern + top attributed function — the
+  `stallFrame`'s, else the function with the most script time across `during`
+  when those frames cover ≥ half the stall (else `unattributed`: silence no
+  long task fills is most likely a renderer starved of CPU, not app code). DevTools breakpoint pauses are accepted as noise.
 
 ## Filing goes through a live tab
 

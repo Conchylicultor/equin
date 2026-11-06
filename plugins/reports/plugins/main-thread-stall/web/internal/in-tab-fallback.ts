@@ -127,8 +127,9 @@ function payload(
     detector: "in-tab",
     framesDuring: 0,
     stallFrame: frame,
+    during: [],
     frames: [],
     cohort: [],
-    topFunction: topFunction(frame),
+    topFunction: topFunction(frame ? [frame] : []),
   };
 }
