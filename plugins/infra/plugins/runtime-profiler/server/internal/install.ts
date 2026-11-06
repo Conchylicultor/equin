@@ -13,6 +13,7 @@ import {
   recordLoaderReadSet,
   setProfilerHooks,
   type LoaderReadsSink,
+  type ProfilerEntryOptions,
   type ProfilerLeafOptions,
   type ProfilerMeasureName,
   type ProfilerSpanDetail,
@@ -35,6 +36,7 @@ import {
   type SpanKind,
   type SpanMeasure,
   type GateGauge,
+  type LeafSpanOptions,
 } from "../../core";
 import {
   installLeaseContextRuntime,
@@ -145,8 +147,9 @@ setProfilerHooks({
     fn: () => T | Promise<T>,
     detail?: ProfilerSpanDetail,
     onReads?: LoaderReadsSink,
+    opts?: ProfilerEntryOptions,
   ): Promise<T> =>
-    recordEntrySpan(kind as SpanKind, label, fn, detail, onReads),
+    recordEntrySpan(kind as SpanKind, label, fn, detail, onReads, opts),
   runTracked,
   recordSpan: (
     kind: string,
@@ -154,7 +157,22 @@ setProfilerHooks({
     durationMs: number,
     detail?: ProfilerSpanDetail,
     opts?: ProfilerLeafOptions,
-  ): void => recordSpan(kind as SpanKind, label, durationMs, detail, opts),
+  ): void =>
+    recordSpan(
+      kind as SpanKind,
+      label,
+      durationMs,
+      detail,
+      opts?.latency && opts.joinsOf
+        ? {
+            ...opts,
+            joinsOf: {
+              kind: opts.joinsOf.kind as SpanKind,
+              label: opts.joinsOf.label,
+            },
+          }
+        : (opts as LeafSpanOptions | undefined),
+    ),
   chargeWait,
   beginWait,
   runInRootContext,

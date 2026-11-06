@@ -90,7 +90,7 @@ describe("PROTOCOL — the frame vocabulary's id", () => {
   // runtime refuses their derivations. Update it only alongside the frame
   // change that moved it.
   test("is pinned", () => {
-    expect(PROTOCOL).toMatchInlineSnapshot(`"rp-06576ba449bd20"`);
+    expect(PROTOCOL).toMatchInlineSnapshot(`"rp-178f968dbe4ab7"`);
   });
 });
 

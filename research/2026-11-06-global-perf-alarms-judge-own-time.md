@@ -74,10 +74,18 @@ task-1793967465-8xd27d owns it.
 
 ## Not done (follow-ups)
 
-- `push deliver:<key>` and the client `element` still count the loader's join
-  wait inside their own drain window. A latency leaf is judged net of claims,
-  but not of the push load's join waits. `deliver:edited-files` was 26 s own of
-  30 s.
+- ~~`push deliver:<key>` and the client `element` still count the loader's join
+  wait inside their own drain window.~~ Done (task-1793971051-sfx116):
+  runtime-profiler keeps each entry's `join` waits positioned and hands them,
+  keyed by run, to the enclosing entry. `deliver:<key>` names its
+  `push <key>` (`joinsOf`) and takes only that run's joins off, never a
+  sibling's from the flush's mixed bands. The `sub` origin's join union rides
+  the sub-ack as `joinedMs`, and `element` takes it off as `server-join`.
+- A claim reaching back past a wait already charged to the same entry is
+  under-counted by the streaming union: a loader that joined 1500 → 4000 and
+  was then filed (0 → 4000) leaves its `push` and `flush` with only the join
+  excluded, so they can still be filed on time the loader owns. Latency leaves
+  are unaffected (they intersect positioned bands).
 - Identical-duration slow DB ops at one instant are NOT a loop stall. For
   example, `job_run_stats` upserts at 2393 ms had 0.9 ms `event-loop` charged.
   The cause is database-side and is uninvestigated.

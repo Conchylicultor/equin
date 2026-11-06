@@ -55,7 +55,15 @@ export type ProfilerLeafOptions =
       waits?: Record<string, number>;
       latency: true;
       queue?: { layer: string; ms: number };
+      /** The entry run this window delivers: its join waits are not the leaf's (the profiler's `joinsOf`). */
+      joinsOf?: { kind: string; label: string };
     };
+
+/** The profiler's `EntrySpanOptions`, seen through the seam (the part server-core uses). */
+export interface ProfilerEntryOptions {
+  /** Handed the entry's subtree join waits (ms) as it closes. */
+  onJoined?: (joinedMs: number) => void;
+}
 
 /**
  * The profiler operations server-core's resource runtime depends on. Param types
@@ -71,6 +79,7 @@ export interface ProfilerHooks {
     fn: () => T | Promise<T>,
     detail?: ProfilerSpanDetail,
     onReads?: LoaderReadsSink,
+    opts?: ProfilerEntryOptions,
   ): Promise<T>;
   /** `opts.budgetMs`: the bar the call site declares (the profiler's `SlowSpan.budgetMs`). */
   runTracked<T>(
@@ -115,9 +124,10 @@ export function recordEntrySpan<T>(
   fn: () => T | Promise<T>,
   detail?: ProfilerSpanDetail,
   onReads?: LoaderReadsSink,
+  opts?: ProfilerEntryOptions,
 ): Promise<T> {
   return hooks
-    ? hooks.recordEntrySpan(kind, label, fn, detail, onReads)
+    ? hooks.recordEntrySpan(kind, label, fn, detail, onReads, opts)
     : Promise.resolve(fn());
 }
 

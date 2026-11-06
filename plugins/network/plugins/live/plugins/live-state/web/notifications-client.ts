@@ -458,6 +458,15 @@ interface ActiveSub {
    */
   wire?: { value: unknown };
   /**
+   * The last value `sub-ack` applied: how much of the server's answer its read
+   * spent awaiting another run already in flight (the frame's `joinedMs`, 0
+   * when it carried none — that run's time, judged on its own span), the
+   * apply it came with (`appliedSeq`) and when (`performance.now()`). Read by
+   * the mount → first data report (`answerJoinedMs`) only while that sub-ack
+   * is still the value this sub holds, and only for a read mounted before it.
+   */
+  joined?: { ms: number; seq: number; at: number };
+  /**
    * The derivation this sub's in-flight `sub` asked for (`observe`'s
    * `derive`): the rows to adopt, and the id a derived `sub-ack` must echo
    * for them to be this tab's. Cleared by any answer, and by every
@@ -893,6 +902,30 @@ export class NotificationsClient {
   ): number {
     const channel = this.channels[socketKindFor(origin)];
     return channel?.subs.get(`${key}\0${paramsKey(params)}`)?.appliedSeq ?? 0;
+  }
+
+  /**
+   * How much of the server's answer to (key, params) was spent awaiting
+   * another run already in flight (`ActiveSub.joined`) — when the value this
+   * sub holds is that `sub-ack`'s (nothing applied since) and it landed after
+   * `since` (`performance.now()`: the asking read's mount), so a settle is
+   * never handed the join of an answer it did not wait for. `0` otherwise.
+   * A whole-value sub-ack shared with tabs that mounted meanwhile carries the
+   * asker's join: theirs overlapped it, so it can only over-subtract up to
+   * their own wait.
+   */
+  answerJoinedMs(
+    key: string,
+    params: ResourceParams,
+    origin: ResourceOrigin | undefined,
+    since: number,
+  ): number {
+    const sub = this.channels[socketKindFor(origin)]?.subs.get(
+      `${key}\0${paramsKey(params)}`,
+    );
+    const joined = sub?.joined;
+    if (!sub || !joined) return 0;
+    return joined.seq === sub.appliedSeq && joined.at >= since ? joined.ms : 0;
   }
 
   subscribeStatus(fn: (s: WsStatus) => void): () => void {
@@ -2603,6 +2636,14 @@ export class NotificationsClient {
         msg.watermark,
         msg.kind === "update" ? msg.ackTx : undefined,
       );
+      // Its join, tied to the apply it came with: a read settles in an
+      // effect after this commit, and any later apply supersedes it.
+      if (msg.kind === "sub-ack")
+        entry.joined = {
+          ms: ("joinedMs" in msg ? msg.joinedMs : undefined) ?? 0,
+          seq: entry.appliedSeq,
+          at: performance.now(),
+        };
       if (msg.kind === "update")
         this.reportUpdateLatency(msg.key, msg.params, msg.timing, receipt);
       return;

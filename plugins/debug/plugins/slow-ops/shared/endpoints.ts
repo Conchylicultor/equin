@@ -8,6 +8,11 @@ import { CallerRefSchema } from "@plugins/debug/plugins/slow-ops/plugins/sink/co
 // notifications socket was not ready when the resource mounted.
 export const TRANSPORT_LAYER = "notifications-transport";
 
+// The wait layer an `element` settle charges the server's join to: its answer
+// awaited another run already in flight (a push flight, a shared memo's pass),
+// which that run's own server span is judged on.
+export const SERVER_JOIN_LAYER = "server-join";
+
 // The op kind a wait charged to its OWN op files under — a server gate's queue
 // (`wait read-admit`) or the page's transport bring-up (`wait
 // notifications-transport`): the time an op spent waiting is judged against

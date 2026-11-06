@@ -246,6 +246,12 @@ const SERVER_FRAMES = {
     version: w.number,
     etag: w.optional(w.string),
     watermark: w.optional(w.string),
+    /**
+     * Of the server's time answering, the part its read spent awaiting
+     * another run already in flight (a push's flight it joined, a shared
+     * memo's pass) — that run's time, judged on its own span. Absent when 0.
+     */
+    joinedMs: w.optional(w.number),
     epoch: w.string,
   }),
   /**

@@ -45,6 +45,7 @@ export type {
   SpanRef,
   SlowSpan,
   SlowSpanHandler,
+  LeafSpanOptions,
   SlowWait,
   SlowWaitHandler,
   WaitKind,

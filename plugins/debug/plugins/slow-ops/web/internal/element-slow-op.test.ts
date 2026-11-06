@@ -19,6 +19,7 @@ const settle = (over: Partial<SlowResourceInfo> = {}): SlowResourceInfo => ({
   durationMs: 1609.4,
   transportColdStart: false,
   transportWaitMs: 0,
+  serverJoinedMs: 0,
   transportReadyAtMs: null,
   ...over,
 });
@@ -82,6 +83,24 @@ describe("elementSlowOp", () => {
           transportColdStart: true,
           transportWaitMs: 4800,
         }),
+        thresholds,
+        "/",
+      ),
+    ).toBeNull();
+  });
+
+  test("the server's join on another run is charged to its own layer, off its own time", () => {
+    const item = elementSlowOp(
+      settle({ durationMs: 3500, serverJoinedMs: 2400 }),
+      thresholds,
+      "/",
+    );
+    expect(item?.ownMs).toBe(1100);
+    expect(item?.waits).toEqual({ "server-join": 2400 });
+    // All of it the joined run's (a watcher pass, filed on its own span).
+    expect(
+      elementSlowOp(
+        settle({ durationMs: 3000, serverJoinedMs: 2600 }),
         thresholds,
         "/",
       ),

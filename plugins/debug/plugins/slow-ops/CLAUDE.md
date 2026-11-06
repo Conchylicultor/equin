@@ -93,6 +93,8 @@ all or it is charged to the op that owns it:
 | A span's time inside an enclosed op already filed (`claims`) | `slowSpanMs` over the profiler's `excludedMs` | That op, filed once (see "One cause, one report"). |
 | A server leaf's time on a blocked event loop (`event-loop`) | runtime-profiler's `noteLoopTurn` (health-monitor's 100 ms probe) or `noteLoopObserved` (a database reply read while the probe is overdue), charged by `recordSpan` to a plain leaf (a query) | The stall: its answer sat unread. A stall ≥ 3 s is filed with its stacks (`event-loop-stall`); shorter ones are on Debug → Health. Entries are not charged. |
 | A delivery's wait on its flush's filed ops, and its `throttle-hold` | `deliver:<key>` is a latency leaf (`recordSpan(…, { latency: true })`) | The filed op; the hold is declared. |
+| A delivery's own load's `join` waits (a watched memo's pass, a flight it coalesced onto) | the leaf's `joinsOf: push <key>` (runtime-profiler, "Joins") | The joined run, judged on its own span (a `bg` watcher pass). |
+| An element's server join (`server-join`) | the sub-ack's `joinedMs` (the `sub` origin's join union) → `SlowResourceInfo.serverJoinedMs`, in `elementSlowOp` | The joined run, as above. |
 | An update's `throttle-hold` | `EXCLUDED_PHASES` / `ownMsOf` (perfs/latency-signal) | Nobody. The resource declared the hold (`throttleMs`). |
 | An update's `server-deliver` (notify → send) | `EXCLUDED_PHASES` / `ownMsOf` | The server: exactly the window its `push deliver:<key>` span judges (and the loader or flush it waited on). |
 | An element's transport bring-up (`notifications-transport`) | `elementSlowOp` | The transport. It is filed once per page as `wait notifications-transport` (`transportSlowOp`). |
@@ -148,8 +150,9 @@ only waited in the same cycle) and four client `update`s. Now:
 - **The client does not re-file the server's window.** An update's
   `server-deliver` is that same window, so `ownMsOf` excludes it
   (`EXCLUDED_PHASES`, owner `server`); the update is judged on `server-notice +
-  transport + client-apply`, and the server's delivery on the same 1000 ms bar. An `element` carries no server split on the wire, so
-  it still counts the server's `sub` time.
+  transport + client-apply`, and the server's delivery on the same 1000 ms bar. An `element` carries one server split on the wire,
+  the sub-ack's `joinedMs` (the read's join on another run, taken off as
+  `server-join`); the rest of the server's `sub` time it still counts.
 - **A batch's burst is one incident, not one report** (`incidentsFor`,
   `server/internal/report-groups.ts`). A client batch (one tab's 250 ms window)
   with several items of one kind is one incident — a stalled socket delivers

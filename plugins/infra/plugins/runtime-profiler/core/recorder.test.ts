@@ -820,6 +820,131 @@ describe("claims — a slow op filed once, by the innermost op that was slow", (
   });
 });
 
+describe("joins — a delivery is not judged on its run's join waits", () => {
+  function fileOver(bar: number, filed: string[]) {
+    return onSlowSpan(
+      (span, claim) => {
+        if (span.durationMs - span.excludedMs < bar) return;
+        filed.push(`${span.kind} ${span.label}`);
+        claim();
+      },
+      { thresholdMs: 0 },
+    );
+  }
+  const deliverOf = (label: string) =>
+    getRuntimeProfile().slowest.push.find((s) => s.label === label)!;
+
+  test("its own push's join comes off; a sibling's join does not", async () => {
+    const filed: string[] = [];
+    const sub = fileOver(1500, filed);
+    try {
+      await recordEntrySpan("flush", "flushNotifies", async () => {
+        // A sibling resource waits 1000 ms on another flight.
+        await recordEntrySpan("push", "other", () => {
+          fakeNow = 1000;
+          chargeWait("read-coalesce", 1000, "join");
+        });
+        // edited-files' load awaits the watcher pass for 2500 ms.
+        await recordEntrySpan("push", "edited-files", async () => {
+          await recordEntrySpan("loader", "edited-files", () => {
+            fakeNow = 3600;
+            chargeWait("memo-opening:edited-files", 2500, "join");
+          });
+        });
+        fakeNow = 3700;
+        recordSpan("push", "deliver:edited-files", 3700, undefined, {
+          latency: true,
+          joinsOf: { kind: "push", label: "edited-files" },
+        });
+      });
+    } finally {
+      sub.dispose();
+    }
+    // 1200 ms own: under the bar, so the pass alone is reported (elsewhere).
+    expect(filed).toEqual([]);
+    const deliver = deliverOf("deliver:edited-files");
+    expect(deliver.excludedMs).toBe(2500);
+    expect(deliver.waitMs).toBe(2500);
+    expect(deliver.selfMs).toBe(1200);
+    expect(deliver.waits).toEqual({ "memo-opening:edited-files": 2500 });
+    expect(deliver.claims).toBeUndefined();
+  });
+
+  test("a join inside a filed loader is taken off once", async () => {
+    const filed: string[] = [];
+    const sub = fileOver(1000, filed);
+    try {
+      await recordEntrySpan("flush", "flushNotifies", async () => {
+        await recordEntrySpan("push", "x", async () => {
+          await recordEntrySpan("loader", "x", () => {
+            fakeNow = 4000; // 1500 own + 2500 joined: filed on its own
+            chargeWait("memo-opening:x", 2500, "join");
+          });
+        });
+        fakeNow = 4100;
+        recordSpan("push", "deliver:x", 4100, undefined, {
+          latency: true,
+          joinsOf: { kind: "push", label: "x" },
+        });
+      });
+    } finally {
+      sub.dispose();
+    }
+    expect(filed[0]).toBe("loader x");
+    expect(filed).not.toContain("push deliver:x");
+    // The claim (0 → 4000) already covers the join (1500 → 4000): the leaf
+    // intersects positioned bands, so the overlap is taken off once.
+    expect(deliverOf("deliver:x").excludedMs).toBe(4000);
+  });
+
+  test("a leaf naming no run, or another run, keeps the join as its own", async () => {
+    await recordEntrySpan("flush", "flushNotifies", async () => {
+      await recordEntrySpan("push", "y", () => {
+        fakeNow = 2000;
+        chargeWait("memo-opening:y", 2000, "join");
+      });
+      recordSpan("push", "deliver:y", 2000, undefined, { latency: true });
+      recordSpan("push", "deliver:z", 2000, undefined, {
+        latency: true,
+        joinsOf: { kind: "push", label: "z" },
+      });
+    });
+    expect(deliverOf("deliver:y").excludedMs).toBe(0);
+    expect(deliverOf("deliver:z").excludedMs).toBe(0);
+  });
+
+  test("onJoined hands an entry its subtree's join union as it closes", async () => {
+    const joined: number[] = [];
+    const onJoined = (ms: number) => joined.push(ms);
+    await recordEntrySpan(
+      "sub",
+      "edited-files",
+      async () => {
+        await recordEntrySpan("loader", "edited-files", () => {
+          fakeNow = 900;
+          chargeWait("read-coalesce", 600, "join");
+          chargeWait("read-admit", 900, "queue"); // a queue is the gate's, not a join
+        });
+        fakeNow = 1000;
+      },
+      undefined,
+      undefined,
+      { onJoined },
+    );
+    await recordEntrySpan(
+      "sub",
+      "plain",
+      () => {
+        fakeNow = 1500;
+      },
+      undefined,
+      undefined,
+      { onJoined },
+    );
+    expect(joined).toEqual([600, 0]);
+  });
+});
+
 describe("lanes — a delivery queued behind an earlier flush pass", () => {
   function fileOver(bar: number, filed: string[]) {
     return onSlowSpan(

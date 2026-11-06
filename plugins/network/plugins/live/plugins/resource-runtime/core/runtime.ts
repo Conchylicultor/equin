@@ -1986,11 +1986,18 @@ export interface ResourceRuntimeOptions {
    * recordEntrySpan(kind, key, fn);
    * central: omit (identity). See
    * research/2026-06-19-global-wait-attribution-instrumentation.md.
+   *
+   * `onJoined`, when given, is handed as the origin closes how much of it
+   * (ms) was spent awaiting another run already in flight — a coalesced
+   * flight, a shared memo's pass: that run's time, judged on its own span. A
+   * sub-ack carries it (`joinedMs`) so the browser does not judge the
+   * resource on it. Central / a host without a profiler: never called (0).
    */
   wrapOrigin?: <R>(
     kind: "sub" | "push" | "cascade" | "bg",
     key: string,
     fn: () => Promise<R>,
+    onJoined?: (joinedMs: number) => void,
   ) => Promise<R>;
   /**
    * Wrap the entire `flushNotifies` drain so the notify-flush cycle is measured
@@ -4365,13 +4372,16 @@ export function createResourceRuntime(
     params: ResourceParams,
     reader: GatedReader,
     seedEtag?: string,
+    onJoined?: (joinedMs: number) => void,
   ): Promise<FlightValue> {
     // No ackTx seed and the resolved ackTx is discarded: read-path frames
     // (sub-ack / HTTP body) never carry one — their snapshot watermark subsumes
     // it (Rule B).
     const run = () =>
       getResourceValue(entry, params, undefined, seedEtag, reader);
-    return opts.wrapOrigin ? opts.wrapOrigin("sub", entry.key, run) : run();
+    return opts.wrapOrigin
+      ? opts.wrapOrigin("sub", entry.key, run, onJoined)
+      : run();
   }
 
   // Compute a resource's conditional-revalidation ETag under the SAME gate + `sub`
@@ -9326,6 +9336,11 @@ export function createResourceRuntime(
     let raw: unknown;
     let etag: string | undefined;
     let watermark: string | undefined;
+    // How much of the read awaited another run already in flight (a push's
+    // flight it coalesced onto, a shared memo's pass): that run's time, which
+    // its own span is judged on. The sub-ack carries it so the browser's
+    // mount → first data (`element`) is not judged on it again.
+    let joinedMs = 0;
     try {
       // Origin = the subscription: establishes an entry context so the loader
       // span (and any gate waits it charges) is attributed to this `sub` request
@@ -9335,6 +9350,9 @@ export function createResourceRuntime(
         params,
         "sub",
         freshEtag,
+        (ms) => {
+          joinedMs = ms;
+        },
       ));
     } catch (err) {
       // Every holder of the tuple left while this read queued: nobody to
@@ -9438,6 +9456,7 @@ export function createResourceRuntime(
         version,
         ...(etag !== undefined ? { etag } : {}),
         ...(watermark !== undefined ? { watermark } : {}),
+        ...(joinedMs >= 1 ? { joinedMs: Math.round(joinedMs) } : {}),
         epoch: bootEpoch,
       }),
     );

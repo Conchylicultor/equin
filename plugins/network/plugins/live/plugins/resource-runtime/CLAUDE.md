@@ -843,7 +843,7 @@ Bound to profiler spans in `server-core/core/resources.ts`:
 | Seam | Wraps |
 |---|---|
 | `wrapLoad(key, info, fn)` | every loader run (`info.variant`, `info.scopedIds`) |
-| `wrapOrigin(kind, key, fn)` | `sub` \| `push` \| `cascade` — cascade is only the reverse-route resolve; `dependsOn` recomputes are `push` |
+| `wrapOrigin(kind, key, fn, onJoined?)` | `sub` \| `push` \| `cascade` — cascade is only the reverse-route resolve; `dependsOn` recomputes are `push`. `onJoined(ms)`: how much of the origin joined another run in flight — a subscription's read stamps it on its sub-ack (`joinedMs`) |
 | `wrapFlush` | a flush |
 | `wrapHttp` | an HTTP read |
 | `wrapMembership` | `windowIdsOf` |

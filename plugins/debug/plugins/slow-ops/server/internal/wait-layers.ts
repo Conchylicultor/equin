@@ -1,6 +1,7 @@
 import type { SlowOpReportPayload } from "../../core";
 import {
   HIDDEN_LAYER,
+  SERVER_JOIN_LAYER,
   SLEEP_LAYER,
   STALL_LAYER,
   TRANSPORT_LAYER,
@@ -18,6 +19,8 @@ const WAIT_LAYER_HINTS: Readonly<Record<string, string>> = {
   [STALL_LAYER]:
     "The page's main thread was frozen — not counted against this op; the stall is filed on its own (main-thread-stall).",
   [SLEEP_LAYER]: "The machine was asleep — not counted against this op.",
+  [SERVER_JOIN_LAYER]:
+    "The server's answer waited on another run already in flight (a push it joined, a shared memo's pass) — not counted against this op; that run is judged on its own server span (a `bg` watcher pass, a `deliver:<key>`, a loader).",
   [HIDDEN_LAYER]:
     "The tab was hidden or frozen, where the browser throttles it — not counted against this op.",
   "event-loop":

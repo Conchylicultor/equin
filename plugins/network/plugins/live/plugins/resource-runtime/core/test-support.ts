@@ -106,6 +106,8 @@ export interface RecordedFrame {
   tabId?: string;
   /** Boot epoch stamped on sub-ack / up-to-date / up-to-date-batch frames. */
   epoch?: string;
+  /** A sub-ack's time its read spent joined on another run (absent when 0). */
+  joinedMs?: number;
   /** A DERIVED sub-ack's echo of the id of the derivation it answers (no `value` rides it). */
   derived?: { id: string };
   /** `up-to-date-batch` entries. */

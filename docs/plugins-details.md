@@ -28195,6 +28195,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ProcessCrash`
           - `ProcessCrashEvent`
           - `ProcMemory`
+          - `ProfilerEntryOptions`
           - `ProfilerHooks`
           - `ProfilerLeafOptions`
           - `ProfilerMeasureName`
@@ -34539,6 +34540,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GateHolder`
           - `GateMeter`
           - `InProgressWait`
+          - `LeafSpanOptions`
           - `LoopStall`
           - `OriginClass`
           - `ParentBreakdown`

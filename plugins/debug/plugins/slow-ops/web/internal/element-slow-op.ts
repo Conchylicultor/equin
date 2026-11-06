@@ -3,6 +3,7 @@ import { canonicalJson } from "@plugins/network/plugins/live/plugins/canonical-p
 import type { ConfigValues } from "@plugins/config_v2/core";
 import type { slowOpConfig } from "../../core";
 import {
+  SERVER_JOIN_LAYER,
   TRANSPORT_LAYER,
   WAIT_KIND,
   type SlowOpClientItem,
@@ -20,6 +21,11 @@ type Thresholds = ConfigValues<(typeof slowOpConfig)["fields"]>;
  *   (`transportSlowOp`) — so at or under `elementMs` after it, the resource
  *   was not slow (the same `>` as every other signal). The wait stays in
  *   `waits`, charged to its layer.
+ * - Nor the time the server's answer awaited another run already in flight
+ *   (`serverJoinedMs`: the push flight it joined, a shared memo's pass). That
+ *   run is judged on its own server span (a watcher pass, a `deliver:<key>`),
+ *   so counting it here filed one slowness again from the browser. Kept in
+ *   `waits` as `server-join`.
  * - `operation` is the resource key alone, so one resource stays one row (one
  *   report, one toast) however many tuples of it settle slowly; which tuple ran
  *   is the `variant` (`canonicalJson(params)`), merged into the row's
@@ -31,7 +37,9 @@ export function elementSlowOp(
   route: string,
 ): SlowOpClientItem | null {
   const thresholdMs = thresholds.elementMs;
-  const ownMs = Math.round(Math.max(0, info.durationMs - info.transportWaitMs));
+  const ownMs = Math.round(
+    Math.max(0, info.durationMs - info.transportWaitMs - info.serverJoinedMs),
+  );
   if (ownMs <= thresholdMs) return null;
   return {
     operationKind: "element",
@@ -44,8 +52,17 @@ export function elementSlowOp(
     caller: { kind: "route", label: route },
     detail: { variant: canonicalJson(info.params) },
     transportColdStart: info.transportColdStart,
-    ...(info.transportWaitMs > 0
-      ? { waits: { [TRANSPORT_LAYER]: info.transportWaitMs } }
+    ...(info.transportWaitMs > 0 || info.serverJoinedMs > 0
+      ? {
+          waits: {
+            ...(info.transportWaitMs > 0
+              ? { [TRANSPORT_LAYER]: info.transportWaitMs }
+              : {}),
+            ...(info.serverJoinedMs > 0
+              ? { [SERVER_JOIN_LAYER]: info.serverJoinedMs }
+              : {}),
+          },
+        }
       : {}),
   };
 }

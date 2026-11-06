@@ -20,6 +20,7 @@ export { setProfilerHooks } from "./profiler-hooks";
 export type {
   LoaderReadsSink,
   ProfilerHooks,
+  ProfilerEntryOptions,
   ProfilerLeafOptions,
   ProfilerMeasureName,
   ProfilerSpanDetail,

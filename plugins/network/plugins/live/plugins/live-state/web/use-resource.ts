@@ -44,7 +44,11 @@ import type {
 } from "./notifications-client";
 import { canonicalParams } from "@plugins/network/plugins/live/plugins/canonical-params/core";
 import type { FailingResource } from "./resource-error-reporter";
-import type { ResourceDescriptor, ResourceError } from "../core";
+import type {
+  ResourceDescriptor,
+  ResourceError,
+  ResourceOrigin,
+} from "../core";
 import {
   transportScoped,
   useTransport,
@@ -574,6 +578,7 @@ function reportTupleSettled(
   key: string,
   params: ResourceParams,
   startedAt: number | null,
+  origin: ResourceOrigin | undefined,
 ): void {
   // Cold-start attribution (additive, never suppressing): was the transport
   // NOT yet ready when this tuple mounted, and how much of the settle window
@@ -594,6 +599,10 @@ function reportTupleSettled(
         : firstReadyAt === null
           ? now - startedAt
           : Math.max(0, Math.min(firstReadyAt, now) - startedAt),
+    serverJoinedMs:
+      startedAt === null
+        ? 0
+        : notifications.answerJoinedMs(key, params, origin, startedAt),
   });
 }
 
@@ -821,9 +830,9 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   useEffect(() => {
     if (hasValue && !reportedRef.current) {
       reportedRef.current = true;
-      reportTupleSettled(notifications, key, p, startRef.current);
+      reportTupleSettled(notifications, key, p, startRef.current, origin);
     }
-  }, [hasValue, notifications, key, p]);
+  }, [hasValue, notifications, key, p, origin]);
 
   // The query applies the selector itself (above), so `q.data` is already the
   // slice when one is passed.
@@ -1093,9 +1102,10 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
         key,
         p,
         startedRef.current.get(k) ?? null,
+        origin,
       );
     });
-  }, [notifications, key, list, tupleKeys, states]);
+  }, [notifications, key, list, tupleKeys, states, origin]);
 
   // One result object per tuple STATE and apply position: the combine shares
   // each tuple's state keyed by tuple (an unchanged tuple keeps its

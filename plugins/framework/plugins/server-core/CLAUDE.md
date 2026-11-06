@@ -553,6 +553,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ProcessCrash`
     - `ProcessCrashEvent`
     - `ProcMemory`
+    - `ProfilerEntryOptions`
     - `ProfilerHooks`
     - `ProfilerLeafOptions`
     - `ProfilerMeasureName`

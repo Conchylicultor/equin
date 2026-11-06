@@ -192,6 +192,24 @@ never less). A plain leaf (a `db` query) never subtracts a sibling's claim:
 concurrent siblings are independent work. See
 `research/2026-10-30-global-slow-op-one-cause-one-report.md`.
 
+**Joins — another run's time, wherever the latency is judged.** A `join` wait
+(awaiting a run already in flight: a coalesced read, a watched memo's pass) is
+also kept positioned per entry (`joinBands`, bounded at 16). As an entry
+closes it hands them to its nearest open ancestor, KEYED by the run
+(`childJoins`, `<kind> <label>`, at most 64 runs per entry). A latency leaf
+that names the run whose result it delivers — `joinsOf: { kind, label }`
+(server-core: `deliver:<key>` names its `push <key>`) — takes that run's joins
+inside its own part off as waits, unioned with the claims there (an interval
+both joined and claimed comes off once). Only that run's: the enclosing
+`flush`'s own wait bands mix every sibling resource, so subtracting them would
+take another resource's wait off this one. `EntrySpanOptions.onJoined(ms)` hands
+an entry, as it closes, its subtree's join union — for a latency judged
+elsewhere (server-core passes it through `wrapOrigin`, and the runtime stamps
+it on the sub-ack as `joinedMs`, which the browser's `element` takes off).
+Before this, `deliver:edited-files` was 26 s own of 30 s on main (61 min,
+2026-11-06): its time was the `bg watch-edited-files:pass` it joined, filed
+there.
+
 **Lanes — a queue behind an earlier entry.** A root entry kind is a *lane*
 (`flush` passes run one after another). Every claim that reaches a root entry,
 and a root entry filed itself, is also kept in its lane's ring (`laneClaims`,
@@ -467,6 +485,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `GateHolder`
     - `GateMeter`
     - `InProgressWait`
+    - `LeafSpanOptions`
     - `LoopStall`
     - `OriginClass`
     - `ParentBreakdown`

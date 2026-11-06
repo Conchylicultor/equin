@@ -299,6 +299,16 @@ export interface SlowSpan {
 export interface EntrySpanOptions {
   /** See {@link SlowSpan.budgetMs}. */
   budgetMs?: number;
+  /**
+   * Handed, as the entry closes, the union of the `join` waits in its subtree
+   * (ms): the part of its wall-clock spent awaiting ANOTHER run already in
+   * flight (a coalesced read, a shared memo's pass), which is that run's time,
+   * judged on that run's own span. For a caller that reports the entry's
+   * latency elsewhere (a sub-ack's answer time, judged by the browser) and
+   * must take the same time off it. Bounded like every band list
+   * (`JOIN_BAND_CAP`), so it can only under-count.
+   */
+  onJoined?: (joinedMs: number) => void;
 }
 
 /**
@@ -343,6 +353,16 @@ export type LeafSpanOptions =
        * against the lane.
        */
       queue?: { layer: string; ms: number };
+      /**
+       * The entry run whose result this window delivers (a delivery's own
+       * `push <key>` load), closed under the same enclosing entry. That run's
+       * `join` waits inside the own part — awaiting another run already in
+       * flight (a watched memo's pass, a coalesced read) — are the joined
+       * run's time, filed on its span: they are excluded too, as waits. Only
+       * this run's: the enclosing entry's own wait bands mix every sibling
+       * it ran, so they would take another resource's wait off this one.
+       */
+      joinsOf?: SpanRef;
     };
 
 export interface Aggregate {
@@ -627,6 +647,20 @@ export interface EntryContext {
    * (`CLAIM_BAND_CAP`): what a latency leaf intersects its window with.
    */
   claimBands?: WaitBand[];
+  /**
+   * The `join` waits in this entry's subtree, positioned and bounded
+   * (`JOIN_BAND_CAP`): time awaiting another run already in flight. Lazily
+   * created on the first join. Handed on close to the nearest open ancestor's
+   * `childJoins` (and to `EntrySpanOptions.onJoined`).
+   */
+  joinBands?: WaitBand[];
+  /**
+   * Per closed child run (`<kind> <label>`): the join bands it handed up as it
+   * closed — what a latency leaf naming that run (`joinsOf`) takes off its
+   * window. Keyed, not merged, so a leaf never subtracts a sibling's join.
+   * Bounded at `CHILD_JOIN_KEYS_CAP` keys (oldest dropped). Lazily created.
+   */
+  childJoins?: Map<string, WaitBand[]>;
   /**
    * The set of DB tables this entry read, lazily created on first
    * `recordReadTables` (unlike the tracks, which are always allocated). Handed
@@ -1887,6 +1921,34 @@ function rootOf(ctx: EntryContext): EntryContext {
 // be judged on MORE own time than it had, never less.
 const CLAIM_BAND_CAP = 16;
 
+// Max positioned join intervals kept per entry (and per child run in
+// `childJoins`); overflow drops the smallest, so a leaf can only be judged on
+// more own time, never less.
+const JOIN_BAND_CAP = 16;
+
+// Max child runs whose joins an entry keeps for latency leaves. A leaf reads its
+// run's right after it closed, so dropping the oldest key loses nothing a
+// later leaf still needs except in a pass wider than this — then under-counted.
+const CHILD_JOIN_KEYS_CAP = 64;
+
+/** Keep `ctx`'s join bands for a latency leaf of `parent` naming this run. */
+function handJoinsUp(ctx: EntryContext, bands: readonly WaitBand[]): void {
+  const a = nearestOpen(ctx.parent);
+  if (!a) return;
+  const joins = (a.childJoins ??= new Map());
+  const name = `${ctx.kind} ${ctx.label}`;
+  let kept = joins.get(name);
+  if (!kept) {
+    if (joins.size >= CHILD_JOIN_KEYS_CAP) {
+      const oldest = joins.keys().next();
+      if (!oldest.done) joins.delete(oldest.value);
+    }
+    kept = [];
+    joins.set(name, kept);
+  }
+  for (const b of bands) pushBand(kept, b.layer, b.t0, b.t1, JOIN_BAND_CAP);
+}
+
 /**
  * Take `[start, end]` — a span just filed as its own slow op — off the own time
  * of every open entry from `from` up: each unions it into its per-claimant
@@ -2017,7 +2079,25 @@ export function recordSpan(
     opts?.latency && cur
       ? claimsWithin(cur, ownStart, end)
       : { unionMs: 0, byName: undefined };
-  const leafWaitMs = waitMs + queueMs;
+  // The delivered run's joins inside the own part: waits of this leaf (the
+  // joined run's time), unioned with the claims so an interval both joined and
+  // claimed (a filed loader that waited on a memo) is taken off once.
+  // Read where `handJoinsUp` left them: the nearest OPEN entry.
+  const joinBands =
+    opts?.latency && opts.joinsOf
+      ? nearestOpen(cur)?.childJoins?.get(
+          `${opts.joinsOf.kind} ${opts.joinsOf.label}`,
+        )
+      : undefined;
+  const joined = joinBands
+    ? bandsWithin(joinBands, ownStart, end)
+    : { unionMs: 0, byName: undefined };
+  if (joined.byName) waits = { ...waits, ...joined.byName };
+  const ownExcludedMs = joinBands
+    ? bandsWithin([...(cur?.claimBands ?? []), ...joinBands], ownStart, end)
+        .unionMs
+    : claimed.unionMs;
+  const leafWaitMs = waitMs + queueMs + joined.unionMs;
   record(
     kind,
     label,
@@ -2032,7 +2112,7 @@ export function recordSpan(
     undefined,
     detail,
     undefined,
-    Math.min(durationMs, leafWaitMs + claimed.unionMs),
+    Math.min(durationMs, waitMs + queueMs + ownExcludedMs),
     claimed.byName,
     cur,
     opts?.latency,
@@ -2280,6 +2360,13 @@ export function chargeWait(layer: string, ms: number, kind: WaitKind): void {
         a.layerBands.set(layer, bands);
       }
       pushBand(bands, layer, end - covered, end, WAIT_BAND_CAP);
+    }
+    // A join is another run's time: kept positioned so whoever reports this
+    // entry's latency elsewhere can take it off (`childJoins`, `onJoined`).
+    if (kind === "join") {
+      const lo = start < a.startMs ? a.startMs : start;
+      if (end > lo)
+        pushBand((a.joinBands ??= []), layer, lo, end, JOIN_BAND_CAP);
     }
   }
 }
@@ -2634,8 +2721,13 @@ export async function recordEntrySpan<T>(
       loaderReadSetSink?.(label, ctx.tables ?? NO_TABLES, ctx.tags);
       onReads?.(ctx.tables ?? NO_TABLES, ctx.tags);
     }
+    if (ctx.joinBands) handJoinsUp(ctx, ctx.joinBands);
     // Last: a subscriber it reaches can never cost the read-set handoff.
     if (ctx.queueTallies) fileQueueResidue(ctx);
+    // After everything the recorder owes: the caller's callback cannot cost it.
+    opts?.onJoined?.(
+      ctx.joinBands ? bandsWithin(ctx.joinBands, t0, t1).unionMs : 0,
+    );
   }
 }
 

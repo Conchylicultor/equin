@@ -187,3 +187,28 @@ describe("onDelivered frameChars", () => {
     expect(delivered[0]!.frameChars).toBeGreaterThan(1000);
   });
 });
+
+describe("wrapOrigin onJoined", () => {
+  test("a sub-ack carries how long its read joined another run; none when it joined nothing", async () => {
+    const joined = new Map<string, number>([["slow", 742.4]]);
+    const h = createHarness({
+      wrapOrigin: async (kind, key, fn, onJoined) => {
+        const out = await fn();
+        if (kind === "sub") onJoined?.(joined.get(key) ?? 0);
+        return out;
+      },
+    });
+    for (const key of ["slow", "fast"])
+      h.runtime.defineExternalResource({
+        key,
+        mode: "push",
+        schema: z.number(),
+        loader: async () => 1,
+      });
+    await h.subscribe("slow");
+    await h.subscribe("fast");
+    const acks = h.frames.filter((f) => f.kind === "sub-ack");
+    expect(acks.find((f) => f.key === "slow")?.joinedMs).toBe(742);
+    expect(acks.find((f) => f.key === "fast")).not.toHaveProperty("joinedMs");
+  });
+});

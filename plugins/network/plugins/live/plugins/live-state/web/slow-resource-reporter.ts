@@ -20,6 +20,13 @@ export interface SlowResourceInfo {
    */
   transportWaitMs: number;
   /**
+   * Milliseconds of the settle window the SERVER spent awaiting another run
+   * already in flight while answering (the sub-ack's `joinedMs`: a push's
+   * flight it joined, a shared memo's pass) — that run's time, judged on its
+   * own server span, so not the resource's here. 0 when none or unknown.
+   */
+  serverJoinedMs: number;
+  /**
    * `performance.now()` the transport FIRST became ready (null: not yet) — the
    * page's whole bring-up wait, which the consumer files once, against the
    * transport, rather than against each resource that waited on it.

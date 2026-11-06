@@ -510,7 +510,15 @@ const runtime = createResourceRuntime({
   // non-null `parent` naming the request class that triggered it, so head-of-line
   // blocking is attributable. See
   // research/2026-06-19-global-wait-attribution-instrumentation.md.
-  wrapOrigin: (kind, key, fn) => recordEntrySpan(kind, key, fn),
+  wrapOrigin: (kind, key, fn, onJoined) =>
+    recordEntrySpan(
+      kind,
+      key,
+      fn,
+      undefined,
+      undefined,
+      onJoined && { onJoined },
+    ),
   // The notify-flush cycle as one `flush` entry — the per-resource `push` loads
   // it triggers nest under it (byParent = head-of-line attribution). See
   // research/2026-06-19-global-observability-frequency-delivery-and-dead-job-gc.md.
@@ -560,6 +568,10 @@ const runtime = createResourceRuntime({
         latency: true,
         ...(info.holdMs > 0 && { waits: { "throttle-hold": info.holdMs } }),
         queue: { layer: FLUSH_QUEUE_LAYER, ms: info.queueMs },
+        // The drain's own load is the `push <key>` origin `wrapOrigin` opened
+        // under this flush: its join waits (a watched memo's pass, a flight it
+        // coalesced onto) are the joined run's time, filed on that run's span.
+        joinsOf: { kind: "push", label: key },
       },
     );
     for (const observer of deliveryObservers) observer(key, info);
