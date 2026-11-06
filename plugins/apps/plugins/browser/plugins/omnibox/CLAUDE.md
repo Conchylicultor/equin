@@ -20,6 +20,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/shortcuts.useSurfaceShortcuts`

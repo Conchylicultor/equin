@@ -10,6 +10,7 @@ import type {
   BlockEditorHandle,
   CaretSurface,
 } from "@plugins/page/plugins/editor/web";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /** Any modifier turns an arrow into a selection/word move, never a surface crossing. */
 function isModified(event: KeyboardEvent<HTMLInputElement>): boolean {
@@ -48,11 +49,12 @@ export function PageTitle({
   useImperativeHandle(
     ref,
     (): CaretSurface => ({
-      focus: () => inputRef.current?.focus(),
-      focusBoundary: (edge) => {
+      focus: (opts) =>
+        focusElement(inputRef.current, { reveal: opts?.scroll ?? false }),
+      focusBoundary: (edge, opts) => {
         const el = inputRef.current;
         if (!el) return;
-        el.focus();
+        focusElement(el, { reveal: opts?.scroll ?? false });
         const at = edge === "start" ? 0 : el.value.length;
         el.setSelectionRange(at, at);
       },

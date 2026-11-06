@@ -194,6 +194,7 @@ clock is pinned with `vi.setSystemTime` so "today" is deterministic.
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.Separator`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/popover.InlinePopoverProps`

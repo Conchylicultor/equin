@@ -86,7 +86,7 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
     blockId: block.id,
     isFocused,
     editor,
-    focus: () => focusRef.current?.focus(),
+    focus: (opts) => focusRef.current?.focus({ reveal: opts?.scroll ?? false }),
   });
 
   // "The caret can always leave a void block" is the EDITOR's invariant, not this

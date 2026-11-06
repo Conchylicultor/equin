@@ -88,11 +88,7 @@ function linkStateOf(result: LiveRowResult<PageRow>): PageLinkState {
  * page invokes `onSelect(pageId)`.
  *
  * Its open-state is the BLOCK's, not this component's, so the block can open it
- * from its caret activation (Enter). It used to open itself on mount instead
- * (`autoOpen`), which races the caret host's pull-focus: the popover portals to
- * `document.body`, so the host's "is focus already inside me?" guard —
- * `contains(document.activeElement)` — cannot see through it, says no, and pulls
- * focus back onto the host, leaving an open picker the keyboard cannot reach.
+ * from its caret activation (Enter) rather than on mount (`autoOpen`).
  */
 function PagePicker({
   trigger,

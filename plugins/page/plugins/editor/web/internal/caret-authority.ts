@@ -25,6 +25,7 @@ import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
 import type { RichText } from "../../core";
 import type { CaretLandOptions, CaretSurface } from "../caret-surface";
 import type { KeystrokeKey } from "./keystroke-intent";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
  * Content surgery on a block's BOUND Lexical editor — the members only a block
@@ -461,7 +462,7 @@ export function createCaretAuthority({
     };
     queued = null;
     startCapturing(el);
-    el.focus({ preventScroll: true });
+    focusElement(el, { reveal: false });
     releaseCaret(el);
   }
 

@@ -14,6 +14,7 @@ import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import { useBlockEditor } from "../block-editor-context";
 import type { BlockEditorAPI, RowData } from "../types";
 import { useVoidCaret } from "./void-caret";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
  * The ONE way a page block may own a plain-text editing surface.
@@ -311,7 +312,8 @@ export function useBlockPlainText(opts: BlockPlainTextOptions): BlockPlainText {
     blockId,
     isFocused,
     editor,
-    focus: () => ref.current?.focus(),
+    focus: (opts) =>
+      focusElement(ref.current, { reveal: opts?.scroll ?? false }),
   });
 
   const onChange = useEventCallback(
@@ -387,7 +389,7 @@ export function useBlockPlainText(opts: BlockPlainTextOptions): BlockPlainText {
     if (!ta) return;
     // Undo/redo REVEALS the block it acted on, the same promise `commitRow`'s
     // own thunks keep with `focusBlock`.
-    ta.focus();
+    focusElement(ta, { reveal: true });
     ta.setSelectionRange(sel.start, sel.end);
     selectionRef.current = sel;
   });

@@ -449,7 +449,7 @@ surface isn't viewport-capped, it fails loudly.
 
 - Description: The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its three surfaces: ControlPanelPopover (a menu of choices), ControlPanelPane (a settings pane) and ControlPanelCard (a titled settings card under a gear — sections drawn as headings over prose). The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
 - Web:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×12
     - `primitives/row-actions` ×2
     - `primitives/css/fill.Fill`
@@ -459,6 +459,7 @@ surface isn't viewport-capped, it fails loudly.
     - `primitives/css/switch.SwitchIndicator`
     - `primitives/css/text.Text`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `ui/icons.Icon`

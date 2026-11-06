@@ -10,14 +10,17 @@ import {
 } from "react";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useTreeFocus } from "@plugins/primitives/plugins/dom/plugins/tree-focus/web";
 import { useBlockEditor } from "../block-editor-context";
 import { useSelectionControl } from "../selection-control";
 import type { BlockEditorAPI } from "../types";
+import type { CaretLandOptions } from "../caret-surface";
 import { useInsertParagraphBelow } from "./use-insert-block-below";
 import { useAnchorTypes } from "../internal/block-handles";
 import { resolveTab } from "../internal/keystroke-intent";
 import { toNodes } from "../internal/optimistic-block-ops";
 import { scopeNodes } from "../internal/zoom-scope";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
  * How a **void** block — one owning no editable text — takes part in the
@@ -69,8 +72,12 @@ export interface VoidCaretOptions {
    * and only the block knows which. It may be an inline arrow — it is wrapped
    * with `useEventCallback` internally, so a fresh closure every render does not
    * churn the handle registration.
+   *
+   * `opts.scroll` is the landing's own scroll intent (`CaretLandOptions`): a
+   * keyboard crossing reveals the block, a focus moved for the user never
+   * scrolls — the block passes it on to `focusElement`'s `reveal`.
    */
-  focus: () => void;
+  focus: (opts?: CaretLandOptions) => void;
 }
 
 export interface VoidCaret {
@@ -328,13 +335,13 @@ export interface BlockCaretHostProps {
  * 1. **Focus is already inside me.** Clicking "Remove image" focuses the button,
  *    which bubbles here, which makes this block the current one, which flips
  *    `isFocused` — and the pull would then yank focus off the button the user
- *    just clicked. So the focus capability declines when
- *    `contains(document.activeElement)`. This is a CONTAINMENT question and is
- *    load-bearing, unlike the identity guard `useVoidCaret` documents dropping.
- *    It cannot see through a **portal**, and nothing here can: a popover
- *    rendered to `document.body` is not a descendant. That is why a block whose
- *    affordance is a popover opens it from its own {@link useBlockActivate}
- *    rather than auto-opening on mount — an auto-open would race this.
+ *    just clicked. So the focus capability declines while focus is inside the
+ *    host. This is a CONTAINMENT question and is load-bearing, unlike the
+ *    identity guard `useVoidCaret` documents dropping — and it is asked of the
+ *    REACT tree (`useTreeFocus`), never the DOM: a block's menu or popover
+ *    portals to `document.body`, and a DOM `contains` said "outside" the moment
+ *    the menu focused itself on open, so the host pulled focus back — off the
+ *    menu, with a scroll (the table grip menu's page jump).
  * 2. **Focus went nowhere.** The block's own control can unmount under the
  *    user's feet: "Remove image" clears the payload, so the button that was
  *    focused disappears and DOM focus falls to `<body>`. `isFocused` never
@@ -352,8 +359,12 @@ export interface BlockCaretHostProps {
  * upload dropzone, a URL field, a link — ↑/↓ reach nothing at all and the user
  * cannot leave the block by keyboard. So:
  *
- * - **↑/↓ and Escape run wherever they originated**, subject only to
- *   `defaultPrevented`. That is the protocol: an inner control that genuinely
+ * - **A key typed in a portal is not the block's.** A menu the block opened
+ *   bubbles its keys here through React; Escape in it must close the menu,
+ *   not select the block. Every key is first checked to come from the host's
+ *   own DOM.
+ * - **↑/↓ and Escape run wherever they originated inside the host**, subject
+ *   only to `defaultPrevented`. That is the protocol: an inner control that genuinely
  *   wants the arrows says so by preventing default, which is exactly what the
  *   place block's result list already does while its suggestions are open.
  * - **Backspace/Delete/Enter/Space/Tab are origin-guarded**, so typing in an
@@ -376,6 +387,7 @@ export function BlockCaretHost({
   children,
 }: BlockCaretHostProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const treeFocus = useTreeFocus();
   const activateRef = useRef<(() => void) | null>(null);
   // Mounted with the caret already here = the block just became this type under
   // the caret (see `BlockActivateOptions.onArrival`). Pending until the first
@@ -428,11 +440,11 @@ export function BlockCaretHost({
     blockId,
     isFocused,
     editor,
-    // Rule 1 — see the docblock. The guard is CONTAINMENT, not identity.
-    focus: () => {
-      const el = ref.current;
-      if (!el || el.contains(document.activeElement)) return;
-      el.focus();
+    // Rule 1 — see the docblock. The guard is CONTAINMENT in the React tree
+    // (portals included), not identity.
+    focus: (opts) => {
+      if (treeFocus.holdsFocus()) return;
+      focusElement(ref.current, { reveal: opts?.scroll ?? false });
     },
   });
 
@@ -443,11 +455,15 @@ export function BlockCaretHost({
     if (!isFocused) return;
     const active = document.activeElement;
     if (active !== null && active !== document.body) return;
-    ref.current?.focus();
+    focusElement(ref.current, { reveal: false });
   });
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.defaultPrevented) return;
+    // A key from a portaled menu or popover bubbles here through React; it is
+    // that surface's, never the block's (see the docblock).
+    if (!(e.target instanceof Node) || !e.currentTarget.contains(e.target))
+      return;
 
     // The escapes. Unconditional, so the caret can leave from anywhere inside.
     if (e.key === "ArrowUp") {
@@ -536,6 +552,7 @@ export function BlockCaretHost({
         aria-label={label}
         aria-current={isFocused ? true : undefined}
         onKeyDown={handleKeyDown}
+            onFocusCapture={treeFocus.onFocusCapture}
         onFocus={onFocus}
           // The cue is the host's own unless a box inside claimed it (see
           // `useCaretCueTarget`); `group/caret-host` is what the claimer reads.

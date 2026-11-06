@@ -138,7 +138,8 @@ export function pageScript(): void {
         return;
       }
       e.preventDefault();
-      select.focus();
+      // A press does not scroll the page; neither does the focus it stood for.
+      select.focus({ preventScroll: true });
       w.__equinEngineSelect = select;
       const box = select.getBoundingClientRect();
       report({

@@ -5,6 +5,7 @@ import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/con
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { partyConfig } from "../../core";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const lockIcon = symbol("lock");
 const settingsIcon = symbol("tune");
@@ -52,7 +53,7 @@ export function PartyControls({
     const stage = stageRef.current;
     if (!stage) throw new Error("PartyControls: stage not mounted");
     void stage.requestFullscreen();
-    stage.focus();
+    focusElement(stage, { reveal: false });
   };
 
   return (
@@ -66,7 +67,7 @@ export function PartyControls({
         open={open}
         onOpenChange={(next) => {
           setOpen(next);
-          if (!next) stageRef.current?.focus();
+          if (!next) focusElement(stageRef.current, { reveal: false });
         }}
         align="start"
         side="bottom"

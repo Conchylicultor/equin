@@ -39,6 +39,7 @@ import { CreatorsControl } from "../creators-control";
 import { barArrangement } from "./bar-arrangement";
 import { SearchWithSuggestions } from "./search-suggestions";
 import { PillsRow, ToolbarPill } from "./pills-toolbar";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
  * Below this container width the toolbar folds: search AND every control
@@ -216,7 +217,7 @@ export function DataViewToolbar({
               keys: "/",
               label: "Focus search",
               when: () => searchRef.current !== null,
-              handler: () => searchRef.current?.focus(),
+              handler: () => focusElement(searchRef.current, { reveal: true }),
             },
           ],
     [compact],

@@ -17,6 +17,7 @@
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Input`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/embed/frame.ForeignFrame`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`

@@ -16,6 +16,7 @@ import { PartyAudio } from "../internal/audio";
 import { PartyEffects, type PartyOptions } from "../internal/effects";
 import { PartyControls } from "./party-controls";
 import "./party.css";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 interface Bead {
   readonly id: number;
@@ -60,7 +61,7 @@ export function PartyStage() {
     if (!layer) throw new Error("PartyStage: effects layer not mounted");
     const audio = new PartyAudio();
     effectsRef.current = new PartyEffects(layer, audio);
-    stageRef.current?.focus();
+    focusElement(stageRef.current, { reveal: false });
     return () => {
       effectsRef.current = null;
       audio.dispose();
@@ -103,7 +104,7 @@ export function PartyStage() {
 
   // little hands on a touchscreen get a letter where they tap
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
-    stageRef.current?.focus();
+    focusElement(stageRef.current, { reveal: false });
     const rect = e.currentTarget.getBoundingClientRect();
     const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
     play(classifyKey(letter), {

@@ -58,6 +58,7 @@ import type {
 } from "@plugins/primitives/plugins/data-view/core";
 import type { IconsViewOptions } from "../../core";
 import { useIconColumns } from "./use-icon-columns";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /** Above this tile count a section windows its grid, one measured lane per
  *  windowed row. Smaller launchers keep the plain grid. */
@@ -564,7 +565,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
     const next = nextTile(tiles, at, e.key);
     if (!next) return;
     e.preventDefault();
-    next.focus();
+    focusElement(next, { reveal: true });
   };
   const root = (activeId: string | null): ReactNode => (
     <div className="@container/icons" onKeyDown={onKeyDown}>

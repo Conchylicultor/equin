@@ -42,7 +42,7 @@ the meaning, so the view config sets no sort.
 
 - Description: The Places tag manager: the one tag tree as an editable table (colour, icon, name, parent, Google types, place count, + Child, Delete, Shade children) on a floating card the map opens, written through the tag-tree engine.
 - Web:
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
     - `primitives/data-view` ×4
     - `primitives/css/control-panel` ×2
@@ -56,6 +56,7 @@ the meaning, so the view config sets no sort.
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-picker.IconPicker`
     - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
     - `tag-tree/engine.useTagTreeActions`

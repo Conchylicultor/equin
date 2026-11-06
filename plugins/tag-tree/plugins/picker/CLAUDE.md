@@ -6,7 +6,7 @@
 
 - Description: The shared tag picker: TagPickerPanel (pure — search or create a typed path, the foldable tree with rolled-up counts, inline create and rename, a ⋯ menu to recolour, nest out and delete, whole-row drag to reorder and nest), TagPickerPopover wiring it to a declared tree, the TagPathChip header chip and TagMark.
 - Web:
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
     - `primitives/tree` ×5
     - `primitives/css/spacing` ×2
@@ -17,6 +17,7 @@
     - `primitives/css/grid.Grid`
     - `primitives/css/line.Line`
     - `primitives/css/text.Text`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`

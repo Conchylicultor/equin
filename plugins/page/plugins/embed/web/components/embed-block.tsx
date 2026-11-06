@@ -21,6 +21,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { NewTabLink } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import { ForeignFrame } from "@plugins/primitives/plugins/embed/plugins/frame/web";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const smartDisplayIcon = symbol("smart-display");
 
@@ -42,7 +43,7 @@ function EmptyEmbedBlock({ onSubmit }: { onSubmit: (url: string) => void }) {
   // block's caret host puts the caret in the URL field. Focus reported by the
   // field itself bubbles to the host (React `onFocus` is `focusin`), so there is
   // nothing to hand-report back to the editor.
-  useBlockActivate(() => inputRef.current?.focus());
+  useBlockActivate(() => focusElement(inputRef.current, { reveal: false }));
 
   function submit() {
     const trimmed = value.trim();

@@ -162,6 +162,7 @@ export type ExemptableRuleId =
   | "scoped-store/no-module-mutable-store"
   | "scroll-safety/no-adhoc-scroll-into-view"
   | "scroll-safety/no-adhoc-scroll-write"
+  | "scroll-safety/no-scrolling-focus"
   | "server-core/no-process-crash-listener"
   | "shortcuts/no-window-key-listener"
   | "sink-safety/no-adhoc-file-sink"

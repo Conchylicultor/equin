@@ -50,10 +50,11 @@ form either: it hands the visitor's idea off to GitHub as a prefilled issue.
 - Description: Getting in touch: the homepage's closing band — for anyone who wants to support the vision, the address in the sentence (copy on hover) and a Get in touch button that grows the card into a message form the site's server stores and emails on (sent, rate-limited and failed states said inline); for bug reports, feature requests and questions, GitHub issues.
 - Web:
   - Contributes: `Website.Section` "Contact" → `ContactSection`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `apps/website/shell` ×3
     - `infra/endpoints` ×2
+    - `primitives/dom/scroll-reveal` ×2
     - `primitives/hover-reveal` ×2
     - `apps/deploy/site-messages/intake.useSendSiteMessage`
     - `primitives/collapsible.FoldMotion`
@@ -65,7 +66,6 @@ form either: it hands the visitor's idea off to GitHub as a prefilled issue.
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/pane.currentRoutePath`
     - `ui/icons.Icon`
 - Cross-plugin:

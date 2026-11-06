@@ -11,6 +11,7 @@ import {
 } from "./stack-context";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const arrowBackIcon = symbol("arrow-back");
 
@@ -100,7 +101,7 @@ export function ControlPanelStack({
         'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])' +
         ")",
     );
-    first?.focus();
+    focusElement(first, { reveal: false });
   }, [depth]);
 
   const top = stack.at(-1);

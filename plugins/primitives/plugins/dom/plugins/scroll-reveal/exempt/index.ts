@@ -15,4 +15,11 @@ export default [
     reason:
       'A reveal scoped to the nearest scroll container (`scope: "nearest"`) scrolls that one container directly — `scrollIntoView` would move every ancestor.',
   },
+  {
+    rule: "scroll-safety/no-scrolling-focus",
+    paths: ["web/internal/focus-element.ts"],
+    kind: "sanctioned",
+    reason:
+      "focusElement is the one sanctioned spelling of a DOM focus: it always passes preventScroll and reveals only when asked.",
+  },
 ] satisfies Exemptions;

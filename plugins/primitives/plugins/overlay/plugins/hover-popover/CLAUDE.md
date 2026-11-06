@@ -34,6 +34,7 @@ close, re-entry always cancels the pending close). `floating-action`'s
     - `primitives/css/ui-kit.PopoverPadding`
     - `primitives/css/ui-kit.PopoverTrigger`
     - `primitives/css/ui-kit.PopoverWidth`
+    - `primitives/dom/scroll-reveal.focusElement`
   - Exports (types):
     - `HoverPopoverApi`
     - `HoverPopoverProps`

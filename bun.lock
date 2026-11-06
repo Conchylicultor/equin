@@ -5855,6 +5855,10 @@
       "name": "@equin/plugin-primitives-dom-scroll-reveal",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/dom/plugins/tree-focus": {
+      "name": "@equin/plugin-primitives-dom-tree-focus",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/dom/plugins/web-storage": {
       "name": "@equin/plugin-primitives-dom-web-storage",
       "version": "0.0.1",
@@ -10106,6 +10110,8 @@
     "@equin/plugin-primitives-dom-overscroll-hint": ["@equin/plugin-primitives-dom-overscroll-hint@workspace:plugins/primitives/plugins/dom/plugins/overscroll-hint"],
 
     "@equin/plugin-primitives-dom-scroll-reveal": ["@equin/plugin-primitives-dom-scroll-reveal@workspace:plugins/primitives/plugins/dom/plugins/scroll-reveal"],
+
+    "@equin/plugin-primitives-dom-tree-focus": ["@equin/plugin-primitives-dom-tree-focus@workspace:plugins/primitives/plugins/dom/plugins/tree-focus"],
 
     "@equin/plugin-primitives-dom-web-storage": ["@equin/plugin-primitives-dom-web-storage@workspace:plugins/primitives/plugins/dom/plugins/web-storage"],
 

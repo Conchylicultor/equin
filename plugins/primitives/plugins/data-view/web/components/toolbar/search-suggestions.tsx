@@ -5,6 +5,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { isInToast } from "@plugins/shell/plugins/toast/web";
 import type { DataViewSearchSuggestions } from "../../../core";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /** What ArrowDown can land on inside the panel. */
 const FOCUSABLE =
@@ -71,7 +72,7 @@ export function SearchWithSuggestions({
           const first = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE);
           if (first === null || first === undefined) return;
           e.preventDefault();
-          first.focus();
+          focusElement(first, { reveal: false });
         }}
       >
         {input}

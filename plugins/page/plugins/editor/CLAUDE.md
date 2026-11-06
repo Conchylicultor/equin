@@ -539,8 +539,12 @@ No third "nowhere" value. A type with no registration (`unknown`) falls into
 
 ### Escapes are unconditional; meanings are the host's own
 
-- **↑/↓ and Escape run wherever they originated**, unless `defaultPrevented` (an inner
-  control wanting arrows prevents default, e.g. the place block's suggestion list).
+- **A key from a portal is never the host's**: a menu the block opened bubbles its
+  keys through React, and Escape there closes the menu, not selects the block. The
+  host first checks the key came from its own DOM.
+- **↑/↓ and Escape run wherever they originated inside the host**, unless
+  `defaultPrevented` (an inner control wanting arrows prevents default, e.g. the
+  place block's suggestion list).
   An origin guard here would trap the caret inside inner controls.
 - **Backspace/Delete/Enter/Space are origin-guarded**.
 
@@ -552,9 +556,11 @@ hook (not a field on `useVoidCaret`) because textarea types must NOT take it.
 `useVoidCaret` moves DOM to the model and has no "already focused?" guard (`.focus()`
 on the focused element is a no-op). `BlockCaretHost` adds:
 
-1. **Focus is already inside me** → decline (`contains(document.activeElement)`), or a
-   click on an inner button would be yanked back. Cannot see through portals — hence
-   `page-link`'s picker opens from `useBlockActivate`, not on mount.
+1. **Focus is already inside me** → decline, or a click on an inner button would be
+   yanked back. Asked of the REACT tree (`dom/tree-focus`'s `useTreeFocus`), never
+   the DOM: a menu or popover the block opened portals to `<body>`, and a DOM
+   `contains` pulled focus back off it the moment it focused itself on open — with
+   a scroll (the table grip menu's page jump; `table/e2e/grip-menu-focus-verify.ts`).
 2. **Focus went nowhere** (an inner control unmounted) → reclaim on every commit, but
    ONLY from `null` / `<body>` (never from "outside this row", which would steal from a
    portal).
@@ -2166,7 +2172,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `Editor.TurnInto` ×2
     - `Editor.BlockMenuItem` ← `page.open-as-page`
   - Contributes: `IdKinds.Kind` "block"
-  - Uses: 98 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 100 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×6
     - `primitives/dom/web-storage` ×5
     - `primitives/text-editor/caret-trigger` ×5
@@ -2184,6 +2190,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `primitives/multi-select` ×3
     - `primitives/text-editor/caret-motion` ×3
     - `reorder` ×3
+    - `primitives/dom/scroll-reveal` ×2
     - `primitives/latest-ref` ×2
     - `ids.IdKinds`
     - `network/live.useLive`
@@ -2201,7 +2208,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/dom/auto-scroll.useEdgeAutoScroll`
     - `primitives/dom/element-size.useResizeObserver`
-    - `primitives/dom/scroll-reveal.useRevealOnActive`
+    - `primitives/dom/tree-focus.useTreeFocus`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/scope/dom-scope.defineDomScope`

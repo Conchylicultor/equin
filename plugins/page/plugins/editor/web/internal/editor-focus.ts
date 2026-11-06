@@ -1,4 +1,5 @@
 import type { LexicalEditor } from "lexical";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
  * Lexical's `skip-scroll-into-view` update tag: suppresses the
@@ -35,6 +36,6 @@ export function focusEditor(
   scroll: boolean,
   defaultSelection?: "rootStart" | "rootEnd",
 ): void {
-  editor.getRootElement()?.focus({ preventScroll: true });
+  focusElement(editor.getRootElement(), { reveal: false });
   if (scroll) editor.focus(undefined, { defaultSelection });
 }

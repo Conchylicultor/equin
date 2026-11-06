@@ -512,6 +512,7 @@ deliberately not round-robin.
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popup-open.PopupOpenScope`
     - `primitives/slot-render.SlotItemLayout`

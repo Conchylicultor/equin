@@ -35,6 +35,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const chevronLeftIcon = symbol("chevron-left");
 const chevronRightIcon = symbol("chevron-right");
@@ -176,7 +177,10 @@ export function Calendar({
   useLayoutEffect(() => {
     const iso = pendingFocus.current;
     if (iso === null) return;
-    gridRef.current?.querySelector<HTMLElement>(`[data-day="${iso}"]`)?.focus();
+    focusElement(
+      gridRef.current?.querySelector<HTMLElement>(`[data-day="${iso}"]`),
+      { reveal: true },
+    );
     pendingFocus.current = null;
   });
 

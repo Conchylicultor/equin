@@ -1,4 +1,5 @@
 import { planMoves } from "@plugins/primitives/plugins/adaptive-bar/core";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
  * Moving one DOM node without destroying what lives inside it.
@@ -92,7 +93,7 @@ function snapshotFragileState(container: Element): () => void {
     // `preventScroll` because the refocus is repair, not navigation: scrolling
     // an ancestor to reveal the node would move the page under a user who never
     // asked for it.
-    if (focused !== null) focused.focus({ preventScroll: true });
+    focusElement(focused, { reveal: false });
   };
 }
 

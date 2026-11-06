@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
  * A tag's name, edited in place: borderless until hovered or focused, saved
@@ -19,7 +20,7 @@ export function TagNameInput({
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!autoFocus) return;
-    ref.current?.focus();
+    focusElement(ref.current, { reveal: false });
     ref.current?.select();
   }, [autoFocus]);
   return (

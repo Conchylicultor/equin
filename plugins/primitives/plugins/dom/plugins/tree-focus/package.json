@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-dom-tree-focus",
+  "description": "Whether focus is inside a component's React tree, portals included: useTreeFocus().",
+  "private": true,
+  "version": "0.0.1"
+}

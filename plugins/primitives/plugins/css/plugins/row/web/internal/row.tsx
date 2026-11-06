@@ -13,6 +13,7 @@ import {
   type Passthrough,
 } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 export type RowSize = "sm" | "md";
 
@@ -23,8 +24,8 @@ export type RowSize = "sm" | "md";
  * else with it.
  */
 export interface RowFocus {
-  /** Move DOM focus onto the row's control. */
-  focus(): void;
+  /** Move DOM focus onto the row's control; `reveal` as `focusElement`'s. */
+  focus(opts: { reveal: boolean }): void;
 }
 
 /** Write one node into a ref of either form (callback or object). */
@@ -245,7 +246,7 @@ export function Row({
   useImperativeHandle(
     focusRef,
     () => ({
-      focus() {
+      focus({ reveal }) {
         // A non-interactive row renders a plain `<div>`, and focusing it would
         // do nothing while looking like it worked — exactly how the ref this
         // replaces failed. So it throws instead: the caller either meant to make
@@ -260,7 +261,7 @@ export function Row({
         }
         // Unreachable-null: the handle is published by the same commit that
         // attaches the ref below, so anyone holding it holds a mounted row.
-        controlRef.current?.focus();
+        focusElement(controlRef.current, { reveal });
       },
     }),
     [interactive],

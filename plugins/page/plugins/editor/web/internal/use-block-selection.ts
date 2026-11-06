@@ -7,6 +7,7 @@ import type { SelectionControl } from "../selection-control";
 import { releaseCaret, type FlightInput } from "./caret-authority";
 import type { SpanDir, SpanMotion } from "./span-motion";
 import { rangeWithDescendants, type VisibleBlock } from "./selection-closure";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
  * The block list container's ARIA identity, spread onto the element that carries
@@ -211,7 +212,7 @@ export function useBlockSelection({
     if (container === null) return;
     // Entering block-selection mode is not a pointer/keyboard caret motion the
     // user is chasing — never scroll the viewport to the container.
-    container.focus({ preventScroll: true });
+    focusElement(container, { reveal: false });
     // Both mode-switches that take the keyboard away from a block — this one and
     // the caret authority claiming a landing — drop the text caret through the
     // SAME `releaseCaret`, which is why it lives in `caret-authority.ts` (with

@@ -56,6 +56,7 @@ import {
 import { LatencyProbe } from "../internal/latency-probe";
 import { PageDialog, type PageDialogEvent } from "./page-dialog";
 import { SelectMenu, type PageSelectEvent } from "./select-menu";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /** Whether keys get macOS editing commands (the client stands in for the host's platform). */
 const IS_MAC =
@@ -370,7 +371,7 @@ function AttachedTab({
 
   const onMouseDown = (e: MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
-    inputRef.current?.focus({ preventScroll: true });
+    focusElement(inputRef.current, { reveal: false });
     flushMove();
     send(mouseMessage(e, "mousePressed"));
     probeRef.current.inputSent();

@@ -7,7 +7,7 @@
 - Description: Bookmark block type: a link pasted into an empty block can become one (via the pasted-link menu), scraping OG metadata server-side to render a rich preview card (title, description, site, favicon, og:image cached same-origin). Registers the bookmark block's `data` schema at the server write boundary. Its link scraping (the bookmark.link-preview and bookmark.link-meta values) is the machine half's.
 - Web:
   - Contributes: `Editor.Block` "bookmark" → `BookmarkBlock`
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/editor` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/css/spacing` ×2
@@ -22,6 +22,7 @@
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/loading.Loading`
     - `primitives/overlay/image-viewer.useImageLoad`
     - `primitives/text-editor/paste-images.attachmentUrl`

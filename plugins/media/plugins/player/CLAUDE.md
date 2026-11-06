@@ -110,25 +110,19 @@ so a size or glass option later is one set switched as a whole.
     - `ThemeEngine.FixedTheme` "Media player controls"
     - `ThemeEngine.SubTheme` "Media player settings panel"
     - `ThemeEngine.SubTheme` "Media player volume"
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×5
+    - `primitives/shortcuts` ×3
+    - `primitives/latest-ref` ×2
     - `primitives/css/slider.Slider`
     - `primitives/css/switch.SwitchIndicator`
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.SURFACE_LEVELS`
-    - `primitives/css/ui-kit.TooltipProvider`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`
-    - `primitives/latest-ref.useEventCallback`
-    - `primitives/latest-ref.useLatestRef`
     - `primitives/overlay/portal-host.PortalHost`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/scope/surface-id.useSurfaceTabId`
-    - `primitives/shortcuts.targetClaimsKey`
-    - `primitives/shortcuts.usePlayPauseShortcut`
-    - `primitives/shortcuts.useSurfaceShortcuts`
     - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`
   - Exports (types): `MediaPlayerProps`

@@ -21,6 +21,7 @@ import {
   useState,
 } from "react";
 import { createHoverIntent } from "../../core";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const DEFAULT_OPEN_DELAY = 120;
 const DEFAULT_CLOSE_DELAY = 200;
@@ -184,9 +185,10 @@ export function HoverPopover({
           e.preventDefault();
           if (open) {
             // Already open by hover: move into it rather than reopening.
-            popupRef.current
-              ?.querySelector<HTMLElement>(FIRST_TABBABLE)
-              ?.focus();
+            focusElement(
+              popupRef.current?.querySelector<HTMLElement>(FIRST_TABBABLE),
+              { reveal: false },
+            );
             return;
           }
           openWith("keyboard");

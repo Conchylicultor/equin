@@ -19,6 +19,7 @@ import {
 import { mediaPlayerThemeScope } from "../internal/theme";
 import { createPlayerHost, placeHost, removeHost } from "../internal/media-ops";
 import { Player } from "./player";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const pipIcon = symbol("picture-in-picture-alt");
 
@@ -86,7 +87,7 @@ export function MediaPlayer({
     // Moved, not copied: the same <video> keeps playing.
     placeHost(w.document.body, host);
     setWin(w);
-    root.focus({ preventScroll: true });
+    focusElement(root, { reveal: false });
     w.addEventListener(
       "pagehide",
       () => {

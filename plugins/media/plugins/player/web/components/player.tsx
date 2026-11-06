@@ -64,6 +64,7 @@ import { SettingsPanel } from "./settings-panel";
 import { VolumeCapsule } from "./volume-capsule";
 import type { SetRate } from "./speed-dial";
 import "../internal/media-player.css";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const playIcon = symbol("play-arrow");
 const pauseIcon = symbol("pause");
@@ -315,13 +316,13 @@ export function Player({
   const tabFromCapsule = (back: boolean) => {
     const speaker = speakerRef.current?.querySelector("button");
     if (back || !speaker) {
-      speaker?.focus();
+      focusElement(speaker, { reveal: false });
       return;
     }
     const controls = Array.from(
       pillRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [],
     );
-    controls[controls.indexOf(speaker) + 1]?.focus();
+    focusElement(controls[controls.indexOf(speaker) + 1], { reveal: false });
   };
 
   // A press anywhere outside the panel and its gear closes the settings —
@@ -403,7 +404,9 @@ export function Player({
         break;
       case "close-settings": {
         setSettings(null);
-        gearRef.current?.querySelector("button")?.focus();
+        focusElement(gearRef.current?.querySelector("button"), {
+          reveal: false,
+        });
         break;
       }
     }
@@ -562,7 +565,7 @@ export function Player({
           onSpeakerKeyDown={(e) => {
             if (e.key !== "Tab" || e.shiftKey || !volumeOpen) return;
             e.preventDefault();
-            volumeSliderRef.current?.focus();
+            focusElement(volumeSliderRef.current, { reveal: false });
           }}
           gearRef={gearRef}
         />

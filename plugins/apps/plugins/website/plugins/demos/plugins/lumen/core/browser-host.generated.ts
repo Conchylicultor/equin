@@ -575,6 +575,7 @@ export const browserHost = {
     "primitives.dom.movable",
     "primitives.dom.overscroll-hint",
     "primitives.dom.scroll-reveal",
+    "primitives.dom.tree-focus",
     "primitives.dom.web-storage",
     "primitives.dom.web-storage.health",
     "primitives.editable-field",

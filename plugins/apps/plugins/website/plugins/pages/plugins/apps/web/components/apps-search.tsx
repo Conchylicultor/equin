@@ -4,6 +4,7 @@ import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import "./apps-gallery.css";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
  * The gallery's search: one field under the heading, focused by `/`. It filters
@@ -17,7 +18,10 @@ export function AppsSearch({
   onQueryChange: (query: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const focusSearch = useCallback(() => inputRef.current?.focus(), []);
+  const focusSearch = useCallback(
+    () => focusElement(inputRef.current, { reveal: true }),
+    [],
+  );
   // Surface-scoped, and a plain key, so it yields to any focused text field
   // (the `/` is typed there).
   const shortcuts = useMemo(

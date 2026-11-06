@@ -214,7 +214,7 @@ describe("Row — focusRef is a capability, not a node", () => {
         solo
       </Row>,
     );
-    focusRef.current!.focus();
+    focusRef.current!.focus({ reveal: false });
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "solo" }),
     );
@@ -231,7 +231,7 @@ describe("Row — focusRef is a capability, not a node", () => {
         label
       </Row>,
     );
-    focusRef.current!.focus();
+    focusRef.current!.focus({ reveal: false });
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "label" }),
     );
@@ -253,7 +253,7 @@ describe("Row — focusRef is a capability, not a node", () => {
     // `ref` is the outermost element — what a drag source or a
     // scroll-into-view measures.
     expect(ref.current).toBe(container.firstElementChild);
-    focusRef.current!.focus();
+    focusRef.current!.focus({ reveal: false });
     // …and it is emphatically not what took focus.
     expect(document.activeElement).not.toBe(ref.current);
     expect(document.activeElement).toBe(
@@ -266,7 +266,9 @@ describe("Row — focusRef is a capability, not a node", () => {
     render(<Row focusRef={focusRef}>plain</Row>);
     // The old ref quietly called `.focus()` on an unfocusable <div>; a caller
     // bug that does nothing and says nothing is the failure this replaces.
-    expect(() => focusRef.current!.focus()).toThrow(/focusable control/);
+    expect(() => focusRef.current!.focus({ reveal: false })).toThrow(
+      /focusable control/,
+    );
   });
 });
 

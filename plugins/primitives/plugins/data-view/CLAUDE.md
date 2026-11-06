@@ -2197,7 +2197,7 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 139 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 140 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×23
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
@@ -2243,6 +2243,7 @@ list, table and `primitives/tree` share it.
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/auto-scroll.KeepAnchorAcross`
     - `primitives/dom/in-view.createInViewWatcher`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.Kbd`

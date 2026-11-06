@@ -45,6 +45,7 @@ import {
   splitSuggestion,
 } from "./path-bar-machine";
 import type { PathBarSource, PathTarget } from "./types";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const editIcon = symbol("edit");
 
@@ -164,7 +165,7 @@ export function PathBar({
     if (!editing) return;
     const input = inputRef.current;
     if (!input) return;
-    input.focus();
+    focusElement(input, { reveal: false });
     input.select();
   }, [editing]);
 

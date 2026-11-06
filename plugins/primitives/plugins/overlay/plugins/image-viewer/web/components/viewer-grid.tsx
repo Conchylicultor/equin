@@ -17,7 +17,10 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { keepInPlace } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
-import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
+import {
+  useRevealOnActive,
+  focusElement,
+} from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { thumbnailShape, type Area } from "../../core";
 import { knownSize, pixelRatio } from "../internal/pick-src";
@@ -233,9 +236,12 @@ export function ImageGrid({
     const active = document.activeElement;
     if (!grid || !(active instanceof HTMLElement) || !grid.contains(active))
       return;
-    grid
-      .querySelector<HTMLElement>(`[data-grid-tile="${index}"]`)
-      ?.focus({ preventScroll: true });
+    focusElement(
+      grid.querySelector<HTMLElement>(`[data-grid-tile="${index}"]`),
+      {
+        reveal: false,
+      },
+    );
   }, [gridRef, index]);
 
   const select = useEventCallback(onSelect);

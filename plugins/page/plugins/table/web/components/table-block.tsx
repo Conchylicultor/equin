@@ -65,6 +65,7 @@ import {
   TableChrome,
   type ChromeState,
 } from "./table-chrome";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
  * The cell being edited, where its caret lands when it opens, and the text it
@@ -201,7 +202,7 @@ export function TableBlock({ block, editor }: BlockRendererProps) {
     write();
     setActive(null);
     setRange(next);
-    hostRef.current?.focus({ preventScroll: true });
+    focusElement(hostRef.current, { reveal: false });
     // The closed field's caret would otherwise linger in its cell, and a copy
     // targets the selection's node rather than the focused grid.
     getSelection()?.removeAllRanges();

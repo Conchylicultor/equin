@@ -16,6 +16,7 @@ import {
   blockTextTokenExtensions,
 } from "./block-text-extensions";
 import { focusEditor, SKIP_SCROLL_TAG } from "./editor-focus";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 // Text surgery on a block's BOUND Lexical editor (per-block CRDT plan).
 // Split/merge are structural ops that also move TEXT between two content
@@ -264,7 +265,7 @@ export function focusHydratingAware(
     land?.onLanded?.();
     return;
   }
-  editor.getRootElement()?.focus(scroll ? undefined : { preventScroll: true });
+  focusElement(editor.getRootElement(), { reveal: scroll });
   const unregister = editor.registerUpdateListener(() => {
     const ready = editor
       .getEditorState()

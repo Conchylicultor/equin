@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
  * Pointer drag over `elRef`, reported as fractions (0..1) of its box. `onEnd`
@@ -21,7 +22,7 @@ export function useColorDrag(
       e.preventDefault();
       // preventDefault keeps the drag from selecting text, and with it the
       // focus a click would give: take it, so arrows continue the gesture.
-      el.focus();
+      focusElement(el, { reveal: false });
       el.setPointerCapture(e.pointerId);
 
       const emit = (ev: { clientX: number; clientY: number }) => {

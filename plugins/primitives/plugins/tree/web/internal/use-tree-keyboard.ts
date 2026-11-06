@@ -17,6 +17,7 @@ import {
   type RowSelectionState,
 } from "../../core";
 import type { TreeItem } from "./types";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
  * Arrow-key navigation for a tree whose rows are focusable: a key on a
@@ -74,7 +75,7 @@ export function useTreeKeyboard<T extends TreeItem>(args: {
     ).find((candidate) => candidate.dataset.treeId === id);
     if (!el) return;
     wanted.current = null;
-    el.focus();
+    focusElement(el, { reveal: true });
   }, []);
 
   // The painted rows, in paint order: what a range and select-all run over.

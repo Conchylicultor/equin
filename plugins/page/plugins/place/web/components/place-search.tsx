@@ -26,6 +26,7 @@ import { placeSearch, type PlaceSuggestion } from "../../core";
 import { useDebouncedValue } from "../internal/use-debounced-value";
 import type { PlaceProviderContribution } from "../slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const locationOnIcon = symbol("location-on");
 
@@ -64,7 +65,9 @@ export function PlaceSearch({ provider, session, onPick }: PlaceSearchProps) {
   // the block's caret host puts the caret in the search box — and so does the
   // block arriving under the caret (`/place`), where the next keystroke is the
   // query.
-  useBlockActivate(() => inputRef.current?.focus(), { onArrival: true });
+  useBlockActivate(() => focusElement(inputRef.current, { reveal: false }), {
+    onArrival: true,
+  });
   const debounced = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
 
   const searching = debounced.length > 0;

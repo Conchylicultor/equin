@@ -9,7 +9,7 @@
   - Contributes:
     - `Browser.Viewport` "Viewport" → `Viewport`
     - `Browser.Actions` "Chrome actions" → `OpenExternal`
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `apps/browser/shell` ×6
     - `primitives/css/overlay` ×2
@@ -23,6 +23,7 @@
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/log-channels.clientLog`

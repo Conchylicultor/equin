@@ -25,6 +25,7 @@ import { buildIssueUrl } from "../../core";
 import { ReplaySteps, type ReplayRun } from "./replay-steps";
 import { brand, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const adsClickIcon = symbol("ads-click");
 const githubIcon = brand("github");
@@ -64,7 +65,7 @@ function branchSuffix(): string {
  * no longer act in. "File it" is the replay's one action.
  */
 function focusOnMount(el: HTMLElement | null) {
-  el?.focus();
+  focusElement(el, { reveal: false });
 }
 
 /**
@@ -186,7 +187,7 @@ function ComposeView({
     // The button that armed the picker, mounted for as long as this view is.
     const point = pointRef.current;
     return () => {
-      if (!pickedRef.current) point?.focus();
+      if (!pickedRef.current) focusElement(point, { reveal: false });
       pickedRef.current = false;
     };
   }, [picking]);

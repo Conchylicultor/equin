@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
  * A tag's name typed in place (a rename, or a new tag's draft row): focused
@@ -20,7 +21,7 @@ export function TagNameInput({
   const ref = useRef<HTMLInputElement>(null);
   const done = useRef(false);
   useEffect(() => {
-    ref.current?.focus();
+    focusElement(ref.current, { reveal: false });
     ref.current?.select();
   }, []);
   const commit = (name: string) => {

@@ -45,7 +45,7 @@ disagree.
   - Slots: `Place.Provider`
   - Slot contributors: `Place.Provider` ← `page.place.google`
   - Contributes: `Editor.Block` "place" → `PlaceBlock`
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/editor` ×4
     - `network/live/live-state` ×2
     - `primitives/avatar` ×2
@@ -66,6 +66,7 @@ disagree.
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/undo-redo.localUndoProps`

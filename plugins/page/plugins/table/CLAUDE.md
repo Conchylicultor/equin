@@ -131,7 +131,7 @@ editor's line-claim escape, not this file's.
 - Description: Table block type: a GFM pipe table edited in place like Notion's — click a cell and type, Tab between cells, grips to move / duplicate / delete rows and columns, insert points, add bars and column resizing (widths are display-only data, never in the markdown). Table block type: registers its `data` schema (column alignment, header cells, body rows) at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "table" → `TableBlock`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/editor` ×11
     - `primitives/css/coords` ×4
     - `primitives/css/control-panel` ×2
@@ -143,6 +143,7 @@ editor's line-claim escape, not this file's.
     - `primitives/css/text.textVariantClass`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `ui/icons.Icon`
 - Server:
   - Contributes: `page.block-data` "table"

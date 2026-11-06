@@ -117,6 +117,7 @@ straight onto the page canvas; agents attaching to the user's tabs.
   - Exempts itself from:
     - `no-raw-websocket` — `machine/internal/relay.ts` (sanctioned)
     - `boundaries/no-platform-api` — `shared/code-id.ts` (sanctioned)
+    - `scroll-safety/no-scrolling-focus` — `bin/page-script.ts` (sanctioned)
 - Core:
   - Exports (types):
     - `ClientMessage`

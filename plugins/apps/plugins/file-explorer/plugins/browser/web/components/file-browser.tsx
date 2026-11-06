@@ -90,6 +90,7 @@ import { ExplorerControlsSlot } from "../internal/controls-slot";
 import { useViewportAtMost } from "../internal/use-viewport-at-most";
 import { FileTree } from "./file-tree";
 import { PreviewPane } from "./preview-pane";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const backIcon = symbol("chevron-left");
 const forwardIcon = symbol("chevron-right");
@@ -757,7 +758,7 @@ function focusRow(
   );
   const target =
     rows.find((r) => r.dataset.treeId === selected) ?? rows[0] ?? null;
-  target?.focus();
+  focusElement(target, { reveal: true });
 }
 
 /** Exactly `path`, which is the anchor — kept as is when it already is. */

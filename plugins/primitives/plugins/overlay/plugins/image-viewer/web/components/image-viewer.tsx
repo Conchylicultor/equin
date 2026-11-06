@@ -58,6 +58,7 @@ import {
   NavArrows,
   TopBar,
 } from "./viewer-chrome";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 export interface ImageViewerProps {
   /** Every image the viewer can step through, in order. */
@@ -186,7 +187,7 @@ function cycleFocus(e: ReactKeyboardEvent, root: HTMLElement) {
         ? items.length - 1
         : 0
       : (at + (e.shiftKey ? -1 : 1) + items.length) % items.length;
-  items[next]?.focus();
+  focusElement(items[next], { reveal: true });
 }
 
 /** Where focus goes on close: the thumbnail's own control, else whatever had
@@ -195,7 +196,7 @@ function restoreFocus(origin: Element | null, previous: Element | null) {
   const target =
     origin?.closest<HTMLElement>("button, a[href], [tabindex]") ??
     (previous instanceof HTMLElement ? previous : null);
-  target?.focus({ preventScroll: true });
+  focusElement(target, { reveal: false });
 }
 
 /** The keyboard's mode for a state: the slideshow outranks the layout. */
@@ -505,7 +506,7 @@ function ViewerFrame({
     // Guarded so a re-run (StrictMode) does not record the viewer itself.
     if (!root?.contains(document.activeElement))
       previousFocus.current = document.activeElement;
-    root?.focus({ preventScroll: true });
+    focusElement(root, { reveal: false });
   }, []);
 
   // --- the controls' idle fade ---------------------------------------------
@@ -595,7 +596,7 @@ function ViewerFrame({
   const openFromGrid = useEventCallback((i: number) => {
     goTo(i);
     ctl.setLayout("single");
-    rootRef.current?.focus({ preventScroll: true });
+    focusElement(rootRef.current, { reveal: false });
   });
 
   // --- slideshow: the browser's full screen, on the viewer itself ----------
@@ -762,7 +763,7 @@ function ViewerFrame({
       (!root.contains(active) ||
         (active instanceof HTMLButtonElement && active.disabled))
     )
-      root.focus({ preventScroll: true });
+      focusElement(root, { reveal: false });
   }, [layout, stripShown, slideshow, index]);
 
   return (

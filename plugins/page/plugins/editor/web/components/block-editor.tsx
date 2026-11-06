@@ -139,6 +139,7 @@ import "./block-selection-scope.css";
 import { isInsideSelectableText } from "./selectable-text";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const dragIndicatorIcon = symbol("drag-indicator");
 const formatIndentDecreaseIcon = symbol("format-indent-decrease");
@@ -1281,7 +1282,7 @@ function SelectionLayer({
     doc.addEventListener("copy", write, { capture: true, once: true });
     try {
       // Never scroll the viewport just to seat the clipboard.
-      container.focus({ preventScroll: true });
+      focusElement(container, { reveal: false });
       const sel = doc.defaultView?.getSelection();
       const range = doc.createRange();
       range.selectNodeContents(container);

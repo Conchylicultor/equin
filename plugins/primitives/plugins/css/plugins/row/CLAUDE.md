@@ -199,6 +199,7 @@ genuine transient-chrome list escapes with
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Separator`
     - `primitives/css/ui-kit.useMenuSurface`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/hover-reveal.hoverRevealClass`
     - `primitives/hover-reveal.useHoverReveal`
     - `primitives/row-actions.RowActions`

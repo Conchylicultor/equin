@@ -21,6 +21,7 @@ import { normalizeInput } from "../normalize";
 import { FOCUS_ADDRESS_KEYS } from "../focus-keys";
 import { SiteInfoButton } from "./site-info";
 import "./omnibox.css";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const searchIcon = symbol("search");
 
@@ -80,7 +81,7 @@ function OmniboxInput({
         id: "browser.focus-address",
         keys: FOCUS_ADDRESS_KEYS,
         label: "Focus the address bar",
-        handler: () => inputRef.current?.focus(),
+        handler: () => focusElement(inputRef.current, { reveal: true }),
       },
     ],
     [],

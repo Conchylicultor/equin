@@ -88,6 +88,14 @@ Object.defineProperty(window, "matchMedia", {
 
 HTMLCanvasElement.prototype.getContext = (() => null) as never;
 
+// jsdom has no layout engine, so it ships no `scrollIntoView`: there is
+// nothing to scroll. Every focus that follows the user's navigation reveals
+// its element (scroll-reveal's `focusElement` — a bare `focus()` used to
+// scroll implicitly, which jsdom silently skipped), so without this a keyboard
+// test throws on its first arrow key. A test asserting on the reveal itself
+// installs its own `Element.prototype.scrollIntoView` spy.
+Element.prototype.scrollIntoView = function (): void {};
+
 // jsdom ships no ResizeObserver, so any component reaching the `element-size`
 // primitive (StickyStack, data-table, Expandable, …) throws on mount. The stub is
 // deliberately inert rather than a polyfill: jsdom has no layout engine, so

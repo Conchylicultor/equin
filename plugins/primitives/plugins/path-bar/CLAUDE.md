@@ -84,6 +84,7 @@ primitive when a second consumer appears.
     - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.Input`
     - `primitives/css/ui-kit.useControlSize`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`

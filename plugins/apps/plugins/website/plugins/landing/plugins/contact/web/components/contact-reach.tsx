@@ -1,7 +1,10 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
-import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
+import {
+  revealElement,
+  focusElement,
+} from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -72,10 +75,10 @@ export function ContactReach() {
 
   useEffect(() => {
     if (open) {
-      messageRef.current?.focus({ preventScroll: true });
+      focusElement(messageRef.current, { reveal: false });
     } else if (returnFocus.current) {
       returnFocus.current = false;
-      triggerRef.current?.focus();
+      focusElement(triggerRef.current, { reveal: false });
     }
   }, [open]);
 
@@ -100,7 +103,7 @@ export function ContactReach() {
   const sendAnother = () => {
     openedAt.current = performance.now();
     setPhase(COMPOSING);
-    messageRef.current?.focus({ preventScroll: true });
+    focusElement(messageRef.current, { reveal: false });
   };
 
   // Returned to `Button`, which pends while it runs.

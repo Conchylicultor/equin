@@ -39,7 +39,7 @@ shell never names this page. The homepage's applications layer opens it.
     - `WebsiteHeader` "apps" → `AppsNavItem`
     - `ThemeEngine.SubTheme` "equin closing"
     - `ThemeEngine.SubTheme` "equin gallery"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/website/shell` ×5
     - `primitives/css/ui-kit` ×4
     - `primitives/pane` ×4
@@ -56,6 +56,7 @@ shell never names this page. The homepage's applications layer opens it.
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/filter-chips.FilterChip`
     - `primitives/search.SearchInput`
     - `primitives/shortcuts.useSurfaceShortcuts`

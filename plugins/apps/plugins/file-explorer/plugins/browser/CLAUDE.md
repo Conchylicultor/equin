@@ -24,7 +24,7 @@
     - `FieldPresentation.Register` "collection:file-explorer.entry"
     - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
     - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-  - Uses: 68 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 69 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×10
     - `primitives/css/ui-kit` ×8
     - `primitives/file-viewer` ×5
@@ -48,6 +48,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/file-type.FileTypeIcon`
     - `primitives/icon-button.IconButton`

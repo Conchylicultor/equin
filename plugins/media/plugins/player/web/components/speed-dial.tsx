@@ -11,6 +11,7 @@ import {
   rulerOffset,
   wheelRate,
 } from "../internal/math";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /** Set the speed: `snap` settles onto the dial's step (animated); unsnapped follows a drag or wheel. */
 export type SetRate = (rate: number, opts?: { snap?: boolean }) => void;
@@ -77,7 +78,7 @@ export function SpeedDial({
   // Once the panel is open (no longer inert), not before: an inert element
   // cannot take focus.
   useEffect(() => {
-    if (focused) wheelEl.current?.focus({ preventScroll: true });
+    if (focused) focusElement(wheelEl.current, { reveal: false });
   }, [focused]);
 
   // The drag's truth for the handlers: a release fires pointerup then

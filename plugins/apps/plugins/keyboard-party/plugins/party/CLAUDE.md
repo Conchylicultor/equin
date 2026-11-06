@@ -13,6 +13,7 @@
     - `config_v2.useSetConfig`
     - `config_v2/fields.FieldRenderer`
     - `primitives/css/control-panel.ControlPanelPopover`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`
   - Exports (values): `PartyStage`
 - Server:

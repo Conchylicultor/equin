@@ -168,6 +168,7 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.SURFACE_LEVELS`
+    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/overlay/popup-open.PopupOpenScope`
   - Exports (types): `RowActionsProps`
   - Exports (values):

@@ -46,6 +46,7 @@ import {
   GroupHeader,
   type CellWiring,
 } from "./launcher-rows";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const searchIcon = symbol("search");
 const openIcon = symbol("web-asset");
@@ -253,7 +254,7 @@ function LauncherPanelBody({
         onClose={() => {
           setMenu(null);
           // The menu took focus; hand it back so the keyboard keeps working.
-          input.current?.focus();
+          focusElement(input.current, { reveal: false });
         }}
         onDismissLauncher={onClose}
         activate={activate}

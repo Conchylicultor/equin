@@ -20,6 +20,7 @@ import {
   insetClass,
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
  * Apply to the row element whose **hover** should reveal its {@link RowActions}.
@@ -358,7 +359,7 @@ function RowActionsCluster(
     const stops = [...root.querySelectorAll<HTMLElement>(FOCUS_STOP)];
     if (to === "last") stops.reverse();
     for (const stop of stops) {
-      stop.focus();
+      focusElement(stop, { reveal: false });
       if (document.activeElement === stop) return;
     }
   }, [handoffRef]);

@@ -33,6 +33,7 @@ import {
 import { bookmarkBlock, linkPreview, type LinkPreview } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const bookmarkIcon = symbol("bookmark");
 const refreshIcon = symbol("refresh");
@@ -83,7 +84,7 @@ function EmptyBookmarkBlock({
   // the block's caret host puts the caret in the URL field. Focus reported by
   // the field itself bubbles to the host (React `onFocus` is `focusin`), so
   // there is nothing to hand-report back to the editor.
-  useBlockActivate(() => inputRef.current?.focus());
+  useBlockActivate(() => focusElement(inputRef.current, { reveal: false }));
 
   function submit() {
     const url = value.trim();

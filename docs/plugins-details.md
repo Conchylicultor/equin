@@ -728,6 +728,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `no-raw-websocket` — `machine/internal/relay.ts` (sanctioned)
               - `boundaries/no-platform-api` — `shared/code-id.ts` (sanctioned)
+              - `scroll-safety/no-scrolling-focus` — `bin/page-script.ts` (sanctioned)
           - Core:
             - Exports (types):
               - `ClientMessage`
@@ -808,6 +809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/icon-button.IconButton`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/shortcuts.useSurfaceShortcuts`
@@ -984,7 +986,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Browser.Viewport` "Viewport" → `Viewport`
               - `Browser.Actions` "Chrome actions" → `OpenExternal`
-            - Uses: 35 symbols — full list in [`plugins/apps/plugins/browser/plugins/webview/REFERENCE.md`](../plugins/apps/plugins/browser/plugins/webview/REFERENCE.md)
+            - Uses: 36 symbols — full list in [`plugins/apps/plugins/browser/plugins/webview/REFERENCE.md`](../plugins/apps/plugins/browser/plugins/webview/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `apps/browser/shell` ×6
               - `primitives/css/overlay` ×2
@@ -998,6 +1000,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/log-channels.clientLog`
@@ -3254,7 +3257,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Desktop.Overlay` "Desktop overlay" → `LauncherOverlay`
               - `Shortcuts.Shortcut` "desktop.launcher (mod+k)"
-            - Uses: 50 symbols — full list in [`plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md)
+            - Uses: 51 symbols — full list in [`plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md)
               - `apps/desktop/windows` ×11
               - `network/live/live-state` ×4
               - `apps-core` ×3
@@ -3263,6 +3266,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/shell` ×2
               - `config_v2` ×2
               - `primitives/css/fill` ×2
+              - `primitives/dom/scroll-reveal` ×2
               - `reorder` ×2
               - `apps-core/tabs.useTabs`
               - `primitives/css/clip.Clip`
@@ -3277,7 +3281,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/css/yield.yieldClass`
-              - `primitives/dom/scroll-reveal.useRevealOnActive`
               - `primitives/loading.Loading`
               - `primitives/overlay/cursor-menu.CursorAnchoredMenu`
               - `primitives/overlay/tooltip.Kbd`
@@ -4509,7 +4512,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 68 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 69 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×10
               - `primitives/css/ui-kit` ×8
               - `primitives/file-viewer` ×5
@@ -4533,6 +4536,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/theme-boundary.Theme`
+              - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/file-type.FileTypeIcon`
               - `primitives/icon-button.IconButton`
@@ -4980,6 +4984,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2.useSetConfig`
               - `config_v2/fields.FieldRenderer`
               - `primitives/css/control-panel.ControlPanelPopover`
+              - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/icon-button.IconButton`
             - Exports (values): `PartyStage`
           - Server:
@@ -5889,7 +5894,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 86 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+            - Uses: 87 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
               - `primitives/pane` ×9
               - `primitives/data-view` ×8
               - `page/editor` ×7
@@ -5924,6 +5929,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/yield.yieldClass`
               - `primitives/detail-sections.defineDetailSections`
+              - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
@@ -6616,7 +6622,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/places/places-map`
         - **`tag-manager`** — The Places tag manager: the one tag tree as an editable table (colour, icon, name, parent, Google types, place count, + Child, Delete, Shade children) on a floating card the map opens, written through the tag-tree engine.
           - Web:
-            - Uses: 28 symbols — full list in [`plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md`](../plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md)
+            - Uses: 29 symbols — full list in [`plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md`](../plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `primitives/data-view` ×4
               - `primitives/css/control-panel` ×2
@@ -6630,6 +6636,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.ToggleChip`
+              - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/icon-picker.IconPicker`
               - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
               - `tag-tree/engine.useTagTreeActions`
@@ -11309,7 +11316,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`improve`** — The website's Improve button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
           - Web:
             - Contributes: `WebsiteHeader` "improve" → `ImproveNavItem`
-            - Uses: 21 symbols — full list in [`plugins/apps/plugins/website/plugins/improve/REFERENCE.md`](../plugins/apps/plugins/website/plugins/improve/REFERENCE.md)
+            - Uses: 22 symbols — full list in [`plugins/apps/plugins/website/plugins/improve/REFERENCE.md`](../plugins/apps/plugins/website/plugins/improve/REFERENCE.md)
               - `primitives/css/ui-kit` ×3
               - `apps/website/shell` ×2
               - `primitives/css/spacing` ×2
@@ -11323,6 +11330,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spinner.Spinner`
               - `primitives/css/switch.Switch`
               - `primitives/css/text.Text`
+              - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/text-editor.TextEditor`
               - `primitives/ui-context/element-picker.ElementPicker`
@@ -11352,10 +11360,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`contact`** — Getting in touch: the homepage's closing band — for anyone who wants to support the vision, the address in the sentence (copy on hover) and a Get in touch button that grows the card into a message form the site's server stores and emails on (sent, rate-limited and failed states said inline); for bug reports, feature requests and questions, GitHub issues.
               - Web:
                 - Contributes: `Website.Section` "Contact" → `ContactSection`
-                - Uses: 24 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/contact/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/contact/REFERENCE.md)
+                - Uses: 25 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/contact/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/contact/REFERENCE.md)
                   - `primitives/css/ui-kit` ×4
                   - `apps/website/shell` ×3
                   - `infra/endpoints` ×2
+                  - `primitives/dom/scroll-reveal` ×2
                   - `primitives/hover-reveal` ×2
                   - `apps/deploy/site-messages/intake.useSendSiteMessage`
                   - `primitives/collapsible.FoldMotion`
@@ -11367,7 +11376,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/rigid.rigidClass`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-                  - `primitives/dom/scroll-reveal.revealElement`
                   - `primitives/pane.currentRoutePath`
                   - `ui/icons.Icon`
               - Cross-plugin:
@@ -11481,7 +11489,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `WebsiteHeader` "apps" → `AppsNavItem`
                   - `ThemeEngine.SubTheme` "equin closing"
                   - `ThemeEngine.SubTheme` "equin gallery"
-                - Uses: 31 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md)
+                - Uses: 32 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md)
                   - `apps/website/shell` ×5
                   - `primitives/css/ui-kit` ×4
                   - `primitives/pane` ×4
@@ -11498,6 +11506,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/surface.Surface`
                   - `primitives/css/text.Text`
                   - `primitives/css/theme-boundary.Theme`
+                  - `primitives/dom/scroll-reveal.focusElement`
                   - `primitives/filter-chips.FilterChip`
                   - `primitives/search.SearchInput`
                   - `primitives/shortcuts.useSurfaceShortcuts`
@@ -29529,6 +29538,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`scroll-safety`** — scroll-safety lint rules: no-adhoc-scroll-into-view, no-adhoc-scroll-write
               - Exemptions:
                 - Exempted by:
+                  - `apps/browser/engine` (0 debt)
                   - `primitives/dom/auto-scroll` (0 debt)
                   - `primitives/dom/scroll-reveal` (0 debt)
                   - `primitives/embed/frame/agent` (0 debt)
@@ -35848,25 +35858,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.FixedTheme` "Media player controls"
           - `ThemeEngine.SubTheme` "Media player settings panel"
           - `ThemeEngine.SubTheme` "Media player volume"
-        - Uses:
+        - Uses: 21 symbols — full list in [`plugins/media/plugins/player/REFERENCE.md`](../plugins/media/plugins/player/REFERENCE.md)
+          - `primitives/css/ui-kit` ×5
+          - `primitives/shortcuts` ×3
+          - `primitives/latest-ref` ×2
           - `primitives/css/slider.Slider`
           - `primitives/css/switch.SwitchIndicator`
           - `primitives/css/text.Text`
           - `primitives/css/theme-boundary.Theme`
-          - `primitives/css/ui-kit.Button`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/css/ui-kit.SURFACE_LEVELS`
-          - `primitives/css/ui-kit.TooltipProvider`
+          - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/icon-button.IconButton`
-          - `primitives/latest-ref.useEventCallback`
-          - `primitives/latest-ref.useLatestRef`
           - `primitives/overlay/portal-host.PortalHost`
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/scope/surface-id.useSurfaceTabId`
-          - `primitives/shortcuts.targetClaimsKey`
-          - `primitives/shortcuts.usePlayPauseShortcut`
-          - `primitives/shortcuts.useSurfaceShortcuts`
           - `ui/icons.Icon`
           - `ui/theme-engine.ThemeEngine`
         - Exports (types): `MediaPlayerProps`
@@ -38614,7 +38618,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`bookmark`** — Bookmark block type: a link pasted into an empty block can become one (via the pasted-link menu), scraping OG metadata server-side to render a rich preview card (title, description, site, favicon, og:image cached same-origin). Registers the bookmark block's `data` schema at the server write boundary. Its link scraping (the bookmark.link-preview and bookmark.link-meta values) is the machine half's.
       - Web:
         - Contributes: `Editor.Block` "bookmark" → `BookmarkBlock`
-        - Uses: 25 symbols — full list in [`plugins/page/plugins/bookmark/REFERENCE.md`](../plugins/page/plugins/bookmark/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/page/plugins/bookmark/REFERENCE.md`](../plugins/page/plugins/bookmark/REFERENCE.md)
           - `page/editor` ×3
           - `primitives/css/ui-kit` ×3
           - `primitives/css/spacing` ×2
@@ -38629,6 +38633,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/pin.Pin`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/text.Text`
+          - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/loading.Loading`
           - `primitives/overlay/image-viewer.useImageLoad`
           - `primitives/text-editor/paste-images.attachmentUrl`
@@ -38892,7 +38897,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
         - Contributes: `IdKinds.Kind` "block"
-        - Uses: 98 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 100 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `network/live/live-state` ×6
           - `primitives/dom/web-storage` ×5
           - `primitives/text-editor/caret-trigger` ×5
@@ -38910,6 +38915,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/multi-select` ×3
           - `primitives/text-editor/caret-motion` ×3
           - `reorder` ×3
+          - `primitives/dom/scroll-reveal` ×2
           - `primitives/latest-ref` ×2
           - `ids.IdKinds`
           - `network/live.useLive`
@@ -38927,7 +38933,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/dom/auto-scroll.useEdgeAutoScroll`
           - `primitives/dom/element-size.useResizeObserver`
-          - `primitives/dom/scroll-reveal.useRevealOnActive`
+          - `primitives/dom/tree-focus.useTreeFocus`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
           - `primitives/scope/dom-scope.defineDomScope`
@@ -39494,6 +39500,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Input`
+          - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/embed/frame.ForeignFrame`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
@@ -40267,7 +40274,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Place.Provider`
         - Slot contributors: `Place.Provider` ← `page.place.google`
         - Contributes: `Editor.Block` "place" → `PlaceBlock`
-        - Uses: 31 symbols — full list in [`plugins/page/plugins/place/REFERENCE.md`](../plugins/page/plugins/place/REFERENCE.md)
+        - Uses: 32 symbols — full list in [`plugins/page/plugins/place/REFERENCE.md`](../plugins/page/plugins/place/REFERENCE.md)
           - `page/editor` ×4
           - `network/live/live-state` ×2
           - `primitives/avatar` ×2
@@ -40288,6 +40295,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.SegmentedControl`
+          - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
           - `primitives/undo-redo.localUndoProps`
@@ -40660,7 +40668,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`table`** — Table block type: a GFM pipe table edited in place like Notion's — click a cell and type, Tab between cells, grips to move / duplicate / delete rows and columns, insert points, add bars and column resizing (widths are display-only data, never in the markdown). Table block type: registers its `data` schema (column alignment, header cells, body rows) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "table" → `TableBlock`
-        - Uses: 27 symbols — full list in [`plugins/page/plugins/table/REFERENCE.md`](../plugins/page/plugins/table/REFERENCE.md)
+        - Uses: 28 symbols — full list in [`plugins/page/plugins/table/REFERENCE.md`](../plugins/page/plugins/table/REFERENCE.md)
           - `page/editor` ×11
           - `primitives/css/coords` ×4
           - `primitives/css/control-panel` ×2
@@ -40672,6 +40680,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.textVariantClass`
           - `primitives/css/toggle-chip.SegmentedControl`
           - `primitives/css/ui-kit.cn`
+          - `primitives/dom/scroll-reveal.focusElement`
           - `ui/icons.Icon`
       - Server:
         - Contributes: `page.block-data` "table"
@@ -42706,6 +42715,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/element-size.useResizeObserver`
+          - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/popup-open.PopupOpenScope`
           - `primitives/slot-render.SlotItemLayout`
@@ -43433,7 +43443,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow`
         - **`color-picker`** — Composable color picker primitive: a fitted (always-in-gamut) OKLCH ColorArea, HueSlider, AlphaSlider, per-channel ColorValueFields (HEX / OKLCH / HSL), SwatchGrid with named suggestions, and ColorPicker / ColorPickerPopover with before/after, Reset, eyedropper and a shared Recent row. The Color math (parse, convert, gamut) is in core.
           - Web:
-            - Uses: 31 symbols — full list in [`plugins/primitives/plugins/css/plugins/color-picker/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/color-picker/REFERENCE.md)
+            - Uses: 32 symbols — full list in [`plugins/primitives/plugins/css/plugins/color-picker/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/color-picker/REFERENCE.md)
               - `primitives/css/ui-kit` ×6
               - `primitives/css/coords` ×2
               - `primitives/css/fill` ×2
@@ -43451,6 +43461,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
@@ -43513,7 +43524,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `history/dialog`
         - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its three surfaces: ControlPanelPopover (a menu of choices), ControlPanelPane (a settings pane) and ControlPanelCard (a titled settings card under a gear — sections drawn as headings over prose). The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
           - Web:
-            - Uses: 24 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `primitives/css/ui-kit` ×12
               - `primitives/row-actions` ×2
               - `primitives/css/fill.Fill`
@@ -43523,6 +43534,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/switch.SwitchIndicator`
               - `primitives/css/text.Text`
               - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `ui/icons.Icon`
@@ -44088,6 +44100,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.Separator`
               - `primitives/css/ui-kit.useMenuSurface`
+              - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/hover-reveal.hoverRevealClass`
               - `primitives/hover-reveal.useHoverReveal`
               - `primitives/row-actions.RowActions`
@@ -45106,7 +45119,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 139 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 140 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×23
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
@@ -45152,6 +45165,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/auto-scroll.KeepAnchorAcross`
           - `primitives/dom/in-view.createInViewWatcher`
+          - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/tooltip.Kbd`
@@ -45797,7 +45811,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
           - Web:
             - Contributes: `DataViewSlots.View` "Icons" → `IconsView`
-            - Uses: 37 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md)
+            - Uses: 38 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md)
               - `primitives/data-view` ×20
               - `primitives/avatar` ×2
               - `primitives/css/ui-kit` ×2
@@ -45809,6 +45823,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/link-gesture.activationProps`
               - `primitives/virtual-rows.VirtualRows`
               - `ui/icons.Icon`
@@ -46094,6 +46109,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.Separator`
+          - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/popover.InlinePopoverProps`
@@ -46466,28 +46482,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Gestures are batched per frame and a batch is wasted when no scroller on its chain scrolled or has room left; a two-stage physics (a saturating pull, drawn through a critically damped spring) turns bursty trackpad input into one smooth out-and-back.
           - Web:
             - Contributes: `Core.Root` → `OverscrollHintController`
-        - **`scroll-reveal`** — Reveal-on-activation primitive: useRevealOnActive() scrolls an element into view only when it TRANSITIONS active (or on explicit revealOnMount intent), never because it remounted already-active — so background data churn can't move the user's scroll. revealElement() is the imperative funnel for event handlers.
+        - **`scroll-reveal`** — Reveal-on-activation primitive: useRevealOnActive() scrolls an element into view only when it TRANSITIONS active (or on explicit revealOnMount intent), never because it remounted already-active — so background data churn can't move the user's scroll. revealElement() is the imperative funnel for event handlers. focusElement(el, { reveal }) is the one spelling of element.focus(): focus never scrolls (preventScroll), and a reveal is stated at every call (true / RevealOptions when focus follows the user's navigation, false when focus is moved for them).
           - Web:
             - Uses:
               - `primitives/dom/auto-scroll.announceNavigation`
               - `primitives/latest-ref.useLatestRef`
-            - Exports (types): `RevealOptions`
+            - Exports (types):
+              - `FocusElementOptions`
+              - `RevealOptions`
             - Exports (values):
+              - `focusElement`
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
-              - `apps` ×9
-              - `primitives` ×6
+            - Imported by: 46 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+              - `apps` ×17
+              - `primitives` ×16
+              - `page` ×6
               - `conversations` ×2
-              - `page` ×2
               - `apps-core/tab-bar`
               - `hints`
+              - `media/player`
               - `search/quick-find`
+              - `tag-tree/picker`
           - Exemptions:
             - Exempts itself from:
               - `scroll-safety/no-adhoc-scroll-into-view` — `web/internal/use-reveal-on-active.ts` (sanctioned)
               - `scroll-safety/no-adhoc-scroll-write` — `web/internal/use-reveal-on-active.ts` (sanctioned)
+              - `scroll-safety/no-scrolling-focus` — `web/internal/focus-element.ts` (sanctioned)
+        - **`tree-focus`** — Whether DOM focus is inside a component's REACT tree, portals included: useTreeFocus() → { onFocusCapture, holdsFocus() }. Spread onFocusCapture on the component's root; holdsFocus() is true while the focused element is one whose focus event reached it — a popover or menu it opened (portaled to the body, outside it in the DOM) counts as inside. The question a focus-pull guard asks before taking focus back; never `root.contains(document.activeElement)`, which a portal defeats.
+          - Cross-plugin:
+            - Imported by: `page/editor`
+          - Web:
+            - Exports (types): `TreeFocus`
+            - Exports (values): `useTreeFocus`
         - **`web-storage`** — The one door to browser storage (localStorage / sessionStorage): defineStore declares an owner — key prefix s:<owner>:, byte cap, TTL, what to do when full (evict-oldest for caches, refuse for what the user typed), a zod schema — and returns a typed read/write/remove/subscribe handle with one {v, ts} envelope — per composition scope by default (a ScopedStore, bound by useStore / in(useStorageScope()): a PluginScope subtree such as /demo writes s:<owner>@<scope>:, never the page's own s:<owner>: keys; pageWide: { reason } for state about the page itself), and clearStorageScope wipes one scope. The caps of an area's owners sum under the browser's quota (asserted at declaration and statically by the budget-fits check), so no owner can fill storage for another. Every refused write and unreadable entry is announced (onStorageFailure); useStorageUsage and scanArea feed the health row; the no-raw-web-storage lint rule bans touching Web Storage anywhere else.
           - Web:
             - Slots: `WebStorageSlots.Root`
@@ -48400,6 +48428,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.PopoverPadding`
               - `primitives/css/ui-kit.PopoverTrigger`
               - `primitives/css/ui-kit.PopoverWidth`
+              - `primitives/dom/scroll-reveal.focusElement`
             - Exports (types):
               - `HoverPopoverApi`
               - `HoverPopoverProps`
@@ -48415,7 +48444,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `createHoverIntent`
         - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge; a given width / height reserves its box before it loads, and a chip is one fixed height) and useImageViewerTrigger (for callers that keep their own <img>) open it; ThumbnailPlaceholder holds a thumbnail's box while its source is not known yet; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
-            - Uses: 52 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
+            - Uses: 53 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
               - `primitives/css/ui-kit` ×6
               - `primitives/networking` ×3
               - `primitives/persistent-draft` ×3
@@ -48425,6 +48454,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/motion` ×2
               - `primitives/css/rigid` ×2
               - `primitives/css/spacing` ×2
+              - `primitives/dom/scroll-reveal` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/announce.announce`
               - `primitives/css/badge.Badge`
@@ -48442,7 +48472,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/yield.yieldClass`
               - `primitives/dom/auto-scroll.keepInPlace`
               - `primitives/dom/element-size.useResizeObserver`
-              - `primitives/dom/scroll-reveal.useRevealOnActive`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
@@ -49102,6 +49131,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.ControlSize`
           - `primitives/css/ui-kit.Input`
           - `primitives/css/ui-kit.useControlSize`
+          - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/icon-button.IconButton`
@@ -49419,6 +49449,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.SURFACE_LEVELS`
+          - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/overlay/popup-open.PopupOpenScope`
         - Exports (types): `RowActionsProps`
         - Exports (values):
@@ -50505,9 +50536,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `Tree.Disclosure`
         - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
-        - Uses: 26 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
           - `primitives/css/ui-kit` ×6
           - `primitives/css/spacing` ×2
+          - `primitives/dom/scroll-reveal` ×2
           - `primitives/row-actions` ×2
           - `primitives/collapsible.CollapsibleChevron`
           - `primitives/css/center.Center`
@@ -50516,7 +50548,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/pin.Pin`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/text.Text`
-          - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/link-gesture.linkProps`
@@ -53658,7 +53689,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tag-tree/picker`
     - **`picker`** — The shared tag picker: TagPickerPanel (pure — search or create a typed path, the foldable tree with rolled-up counts, inline create and rename, a ⋯ menu to recolour, nest out and delete, whole-row drag to reorder and nest), TagPickerPopover wiring it to a declared tree, the TagPathChip header chip and TagMark.
       - Web:
-        - Uses: 29 symbols — full list in [`plugins/tag-tree/plugins/picker/REFERENCE.md`](../plugins/tag-tree/plugins/picker/REFERENCE.md)
+        - Uses: 30 symbols — full list in [`plugins/tag-tree/plugins/picker/REFERENCE.md`](../plugins/tag-tree/plugins/picker/REFERENCE.md)
           - `primitives/css/ui-kit` ×8
           - `primitives/tree` ×5
           - `primitives/css/spacing` ×2
@@ -53669,6 +53700,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/grid.Grid`
           - `primitives/css/line.Line`
           - `primitives/css/text.Text`
+          - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
