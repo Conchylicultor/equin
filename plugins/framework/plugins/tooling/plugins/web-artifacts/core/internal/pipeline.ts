@@ -111,6 +111,12 @@ export interface WebArtifactsPipelineOptions {
    * `ComposeOptions.materialize`.
    */
   materialize?: boolean;
+  /**
+   * A served dist's address dir (its namespace's persistent `<name> → store`
+   * links): compose links this graph into it and stages `artifacts` as a
+   * link to it — see `ComposeOptions.addressDir`. Unset for a release.
+   */
+  addressDir?: AppPath;
   log: (line: string) => void;
   /**
    * What needs the computer (boundaries' `isPlatformApi`): a browser host's
@@ -668,6 +674,7 @@ async function runPipeline(
         cssHref: css.href,
         links,
         materialize: opts.materialize,
+        addressDir: opts.addressDir,
         mapEntries,
         staticImportsByUrl,
         emitted,
@@ -701,6 +708,7 @@ async function runPipeline(
       const groundTruth = await scanStagedModules({
         stagingDir: opts.stagingDir,
         imports: importMap.imports,
+        linkNames: links.map((l) => l.linkName),
       });
       for (const w of groundTruth.warnings) {
         log(

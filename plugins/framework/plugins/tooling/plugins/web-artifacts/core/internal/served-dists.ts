@@ -92,19 +92,23 @@ function readLinkOrNull(path: AppPath): AppPath | null {
 }
 
 /**
- * Every dist root under a worktrees dir: each namespace's `web` link and its
- * `web.*` siblings (the `.live.<pid>` release behind it, a `.staging.<pid>` or
- * `.old.<pid>` mid-publish), plus release scratch dists under `release-web/`.
- * Symlinks are resolved and deduped, so a dist reached twice is scanned once.
+ * Every dist's link dir under a worktrees dir: the real `artifacts/` of each
+ * namespace's `web` link and its `web.*` siblings (the `.live.<pid>` release
+ * behind it, a `.staging.<pid>` or `.old.<pid>` mid-publish), plus release
+ * scratch dists under `release-web/`. Resolved and deduped, so a link dir
+ * reached twice is scanned once — a served namespace's releases all name ONE
+ * address dir (`web-addresses`, compose's `addressDir`) through their
+ * `artifacts` link. A dist with no `artifacts/` links nothing.
  */
-function distRoots(worktrees: AppPath): AppPath[] {
-  const roots = new Set<AppPath>();
-  const add = (path: AppPath): void => {
+function linkDirs(worktrees: AppPath): AppPath[] {
+  const dirs = new Set<AppPath>();
+  const add = (dist: AppPath): void => {
     try {
-      // The real location of a dist root under the worktrees dir.
-      roots.add(asAppPath(realpathSync(path)));
+      // The real location of a dist's link dir under the worktrees dir.
+      dirs.add(asAppPath(realpathSync(joinAppPath(dist, "artifacts"))));
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err; // dangling / raced
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT" && code !== "ENOTDIR") throw err; // dangling / raced / none
     }
   };
   for (const ns of readdirOrEmpty(worktrees)) {
@@ -121,17 +125,16 @@ function distRoots(worktrees: AppPath): AppPath[] {
     for (const name of readdirOrEmpty(releaseDir))
       add(joinAppPath(releaseDir, name));
   }
-  return [...roots];
+  return [...dirs];
 }
 
 /**
- * When a dist's links last changed: its `artifacts/` dir's inode and mtime
- * (adding, removing or replacing a link changes the dir's mtime), or null
- * when it has no such dir (it links nothing).
+ * When a link dir last changed: its inode and mtime (adding, removing or
+ * replacing a link changes the dir's mtime), or null when it is gone.
  */
-function linksStamp(root: AppPath): string | null {
+function linksStamp(dir: AppPath): string | null {
   try {
-    const st = statSync(joinAppPath(root, "artifacts"), { bigint: true });
+    const st = statSync(dir, { bigint: true });
     return `${st.ino}:${st.mtimeNs}`;
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
@@ -141,7 +144,7 @@ function linksStamp(root: AppPath): string | null {
 }
 
 /**
- * Every cache entry the dist at `root` links, read off its links. `final` is
+ * Every cache entry the link dir `root` links, read off its links. `final` is
  * false when a linked worker tree is missing: its children are unknown, and a
  * build may publish it again at the same address — which the dist's stamp
  * would not see — so what was read must not be memoized.
@@ -149,9 +152,8 @@ function linksStamp(root: AppPath): string | null {
 function readLinkTargets(root: AppPath): { targets: string[]; final: boolean } {
   const targets: string[] = [];
   let final = true;
-  const artifacts = joinAppPath(root, "artifacts");
-  for (const name of readdirOrEmpty(artifacts)) {
-    const target = readLinkOrNull(joinAppPath(artifacts, name));
+  for (const name of readdirOrEmpty(root)) {
+    const target = readLinkOrNull(joinAppPath(root, name));
     if (target === null) continue;
     targets.push(target);
     // A worker tree is itself a dir of links into the store: what it links
@@ -183,7 +185,7 @@ const memoSchema = z.object({
 });
 
 /** Bump when {@link memoSchema} changes: older memos are then not found, and go. */
-const MEMO_VERSION = 1;
+const MEMO_VERSION = 2; // 2: keyed by link dir, not dist root
 
 function memoName(root: AppPath): string {
   return `v${MEMO_VERSION}-${sha256Hex(root).slice(0, 32)}.json`;
@@ -281,7 +283,7 @@ function addDist(
   stamp: string | null,
 ): boolean {
   scan.stamps.set(root, stamp);
-  if (stamp === null) return false; // no artifacts/: links nothing
+  if (stamp === null) return false; // gone since the listing: links nothing
   const { targets, readLinks } = distTargets(layout, root, stamp);
   for (const t of targets) scan.targets.add(t);
   if (readLinks) scan.linksRead++;
@@ -302,7 +304,7 @@ export function scanServedDists(
     stamps: new Map(),
     linksRead: 0,
   };
-  const roots = distRoots(layout.worktrees);
+  const roots = linkDirs(layout.worktrees);
   for (const root of roots) addDist(scan, layout, root, linksStamp(root));
   const live = new Set(roots.map(memoName));
   for (const name of readdirOrEmpty(layout.memoDir)) {
@@ -327,7 +329,7 @@ export function refreshServedDists(
   layout: ServedDistLayout = DEFAULT_LAYOUT,
 ): { reread: number } {
   let reread = 0;
-  for (const root of distRoots(layout.worktrees)) {
+  for (const root of linkDirs(layout.worktrees)) {
     const stamp = linksStamp(root);
     if (scan.stamps.has(root) && scan.stamps.get(root) === stamp) continue;
     addDist(scan, layout, root, stamp);

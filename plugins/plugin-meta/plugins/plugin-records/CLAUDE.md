@@ -83,6 +83,13 @@ a pass computes only the records no checkout has made yet.
   2026-11-05: 8.7M rows held 30k distinct values — 99% duplicates, 4.4 GB in
   two days). A key row names its value by the value's sha256, and each
   distinct value is stored once.
+- **Writes are held back to one transaction.** `putMany` holds its records
+  (its own `getMany` answers them at once) and `flush()` commits them all in
+  one transaction: one commit per call made a cold codegen's ~3,700 calls cost
+  4 s on a loaded host. The build flushes at the end of codegen, before its
+  check pass (another process) reads; every process flushes at exit, and past
+  64 MB held a put flushes on its own. A killed process loses its held
+  records, which only means they are computed again.
 - **Reclaim**: key rows unread for 7 days are deleted once a day, then every
   value no row names, then the freed pages (`auto_vacuum = INCREMENTAL`). The
   first store's file (`records.sqlite`) is unlinked by the same daily pass.

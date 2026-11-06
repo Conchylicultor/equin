@@ -27574,11 +27574,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 49 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 50 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×31
               - `framework/cli/bootstrap` ×4
+              - `framework/tooling/web-artifacts` ×4
               - `framework/cli/migrations` ×3
-              - `framework/tooling/web-artifacts` ×3
               - `plugin-meta/plugin-records` ×3
               - `build/run-ledger.createBuildRunRecorder`
               - `framework/cli/doctor.assertPrerequisites`
@@ -29663,6 +29663,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `carryForwardServedEntries`
               - `createPooledArtifactBuilder`
               - `idealArtifactBuildThreads`
+              - `seedAddressDir`
           - Cross-plugin:
             - Imported by:
               - `apps/demo`

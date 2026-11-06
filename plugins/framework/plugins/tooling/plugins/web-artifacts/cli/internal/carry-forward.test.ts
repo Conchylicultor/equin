@@ -12,7 +12,11 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hasGlobalCssCache } from "../../core/internal/global-css";
-import { carryForwardServedEntries, globalCssCacheRoot } from "./carry-forward";
+import {
+  carryForwardServedEntries,
+  globalCssCacheRoot,
+  seedAddressDir,
+} from "./carry-forward";
 
 const tmp = mkdtempSync(join(tmpdir(), "carry-forward-test-"));
 afterAll(() => rmSync(tmp, { recursive: true, force: true }));
@@ -59,65 +63,42 @@ function linkArtifact(store: string, dist: string, name: string): string {
   return target;
 }
 
-describe("carryForwardServedEntries — artifacts", () => {
-  test("recreates a live link whose cache target still exists", () => {
+describe("seedAddressDir", () => {
+  test("seeds every live link whose cache target still exists, once", () => {
     const f = fixture();
-    const target = linkArtifact(f.store, f.live, "tasks.web.aaaa");
-    const r = carryForwardServedEntries({
-      liveDir: f.live,
-      stagingDir: f.staging,
-      cssCacheRoot: f.css,
-    });
-    expect(r.artifactsCarried).toEqual(["tasks.web.aaaa"]);
-    expect(r.artifactsDropped).toEqual([]);
-    expect(readlinkSync(join(f.staging, "artifacts", "tasks.web.aaaa"))).toBe(
-      target,
-    );
-  });
-
-  test("drops a live link whose cache target was pruned", () => {
-    const f = fixture();
-    const target = linkArtifact(f.store, f.live, "tasks.web.bbbb");
-    rmSync(target, { recursive: true });
-    const r = carryForwardServedEntries({
-      liveDir: f.live,
-      stagingDir: f.staging,
-      cssCacheRoot: f.css,
-    });
-    expect(r.artifactsCarried).toEqual([]);
-    expect(r.artifactsDropped).toEqual(["tasks.web.bbbb"]);
+    const kept = linkArtifact(f.store, f.live, "tasks.web.aaaa");
+    const pruned = linkArtifact(f.store, f.live, "tasks.web.bbbb");
+    rmSync(pruned, { recursive: true });
+    const addressDir = join(f.live, "..", "web-addresses");
+    expect(seedAddressDir({ liveDir: f.live, addressDir })).toBe(1);
+    expect(readlinkSync(join(addressDir, "tasks.web.aaaa"))).toBe(kept);
     expect(
-      lstatSync(join(f.staging, "artifacts", "tasks.web.bbbb"), {
-        throwIfNoEntry: false,
-      }),
+      lstatSync(join(addressDir, "tasks.web.bbbb"), { throwIfNoEntry: false }),
+    ).toBeUndefined();
+    // Seeded: a later build adds to it through compose, never re-seeds it.
+    linkArtifact(f.store, f.live, "tasks.web.cccc");
+    expect(seedAddressDir({ liveDir: f.live, addressDir })).toBe(0);
+    expect(
+      lstatSync(join(addressDir, "tasks.web.cccc"), { throwIfNoEntry: false }),
     ).toBeUndefined();
   });
 
-  test("leaves entries the new build already has untouched", () => {
+  test("seeds nothing without a live dist", () => {
     const f = fixture();
-    linkArtifact(f.store, f.live, "vendors.1234");
-    const newTarget = join(f.store, "vendors.1234-new");
-    mkdirSync(newTarget);
-    symlinkSync(newTarget, join(f.staging, "artifacts", "vendors.1234"));
-    const r = carryForwardServedEntries({
-      liveDir: f.live,
-      stagingDir: f.staging,
-      cssCacheRoot: f.css,
-    });
-    expect(r.artifactsCarried).toEqual([]);
-    expect(readlinkSync(join(f.staging, "artifacts", "vendors.1234"))).toBe(
-      newTarget,
-    );
+    const addressDir = join(f.live, "..", "web-addresses");
+    expect(
+      seedAddressDir({ liveDir: join(f.live, "..", "absent"), addressDir }),
+    ).toBe(0);
+    expect(lstatSync(addressDir, { throwIfNoEntry: false })).toBeUndefined();
   });
 
   test("refuses a live artifact that is not a symlink", () => {
     const f = fixture();
     mkdirSync(join(f.live, "artifacts", "tasks.web.cccc"));
     expect(() =>
-      carryForwardServedEntries({
+      seedAddressDir({
         liveDir: f.live,
-        stagingDir: f.staging,
-        cssCacheRoot: f.css,
+        addressDir: join(f.live, "..", "web-addresses"),
       }),
     ).toThrow(/not a symlink/);
   });
@@ -200,11 +181,7 @@ describe("carryForwardServedEntries — first build", () => {
       stagingDir: f.staging,
       cssCacheRoot: f.css,
     });
-    expect(r).toEqual({
-      artifactsCarried: [],
-      assetsCarried: [],
-      artifactsDropped: [],
-    });
+    expect(r).toEqual({ assetsCarried: [] });
   });
 });
 

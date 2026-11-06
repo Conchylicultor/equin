@@ -40,6 +40,14 @@ export interface RecordStore {
     table: RecordTable,
     entries: ReadonlyArray<readonly [key: string, value: string]>,
   ): void;
+  /**
+   * Make every record put so far visible to other processes. A store may hold
+   * puts back to write them in one transaction (the SQLite store does: one
+   * commit per call made a cold build's ~3.7k calls cost seconds); its own
+   * reads see them at once either way. Flush where another process is about
+   * to read (the build, before its checks start).
+   */
+  flush(): void;
 }
 
 /** A store that lives as long as the process: what a caller with no shared store gets. */
@@ -65,6 +73,7 @@ export function createMemoryRecordStore(environment = "memory"): RecordStore {
       const m = tableOf(table);
       for (const [k, v] of entries) if (!m.has(k)) m.set(k, v);
     },
+    flush() {},
   };
 }
 

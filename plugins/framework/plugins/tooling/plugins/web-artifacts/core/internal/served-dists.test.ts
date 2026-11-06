@@ -55,6 +55,26 @@ describe("servedDistTargets", () => {
     expect([...servedDistTargets(f.layout)]).toEqual([a]);
   });
 
+  test("releases sharing one address dir read it once, through their links", () => {
+    const f = fixture();
+    const a = f.entry("a", 0);
+    const b = f.entry("b", 0);
+    const ns = joinAppPath(f.worktrees, "ns2");
+    const addresses = joinAppPath(ns, "web-addresses");
+    mkdirSync(addresses, { recursive: true });
+    symlinkSync(a, joinAppPath(addresses, "a"));
+    symlinkSync(b, joinAppPath(addresses, "b"));
+    for (const rel of ["web.live.1", "web.staging.2"]) {
+      mkdirSync(joinAppPath(ns, rel), { recursive: true });
+      symlinkSync(addresses, joinAppPath(ns, rel, "artifacts"));
+    }
+    symlinkSync("web.live.1", joinAppPath(ns, "web"));
+    const scan = scanServedDists(f.layout);
+    expect([...scan.targets].sort()).toEqual([a, b].sort());
+    // ns/web.live.1's empty artifacts/ + ns2's one address dir.
+    expect(scan.linksRead).toBe(2);
+  });
+
   test("no worktrees dir yields nothing", () => {
     expect(
       servedDistTargets({

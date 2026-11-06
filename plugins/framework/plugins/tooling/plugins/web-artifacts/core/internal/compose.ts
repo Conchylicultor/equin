@@ -6,7 +6,9 @@
 import { cpSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import {
   existsSync,
+  lstatSync,
   readFileSync,
+  readlinkSync,
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import {
@@ -57,6 +59,18 @@ export interface ComposeOptions {
    * the whole point of the shared content-addressed store there.
    */
   materialize?: boolean;
+  /**
+   * A SERVED dist's address directory: the one persistent `<name> → store`
+   * link dir of its namespace, shared by every release of it. When set, the
+   * staged `artifacts` is a symlink to it and compose links into it only the
+   * names it does not hold yet — so a release serves every address its
+   * namespace ever composed (an open tab keeps loading the build it came from)
+   * for O(new names), not O(history), per build. Adding a link never changes
+   * what an existing name serves: every name is a write-once content address,
+   * so an existing name must already link the same store path (else throws).
+   * Exclusive with `materialize` (a release links nothing).
+   */
+  addressDir?: AppPath;
   /** The full import map (web + core + vendors + registry alias). */
   mapEntries: ImportMapEntry[];
   /** url → emitted STATIC import specifiers (bare or relative) — preload BFS. */
@@ -180,10 +194,29 @@ export function composeDist(opts: ComposeOptions): {
   // 3. Symlink artifacts from the shared store — or copy them, when the dist
   // must outlive the store it was composed from (see `materialize`).
   const artifactsDir = joinAppPath(stagingDir, "artifacts");
-  mkdirSync(artifactsDir, { recursive: true });
+  if (opts.addressDir !== undefined) {
+    if (opts.materialize) {
+      throw new Error("compose: `addressDir` and `materialize` are exclusive");
+    }
+    mkdirSync(opts.addressDir, { recursive: true });
+    symlinkSync(opts.addressDir, artifactsDir);
+  } else {
+    mkdirSync(artifactsDir, { recursive: true });
+  }
   for (const link of opts.links) {
     const dest = joinAppPath(artifactsDir, link.linkName);
-    if (opts.materialize) {
+    if (opts.addressDir !== undefined) {
+      if (lstatSync(dest, { throwIfNoEntry: false }) === undefined) {
+        symlinkSync(link.storePath, dest);
+      } else if (readlinkSync(dest) !== link.storePath) {
+        throw new Error(
+          `compose: ${dest} links ${readlinkSync(dest)}, not ${link.storePath} — ` +
+            `an address is write-once, so one name must always name one store path. ` +
+            `If the cache root itself moved, delete ${opts.addressDir} and build again ` +
+            `(open tabs of this namespace then reload).`,
+        );
+      }
+    } else if (opts.materialize) {
       // A worker tree is a dir of links into the store: copy what they name.
       cpSync(link.storePath, dest, { recursive: true, dereference: true });
     } else {

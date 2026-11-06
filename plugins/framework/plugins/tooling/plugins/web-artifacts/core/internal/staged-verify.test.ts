@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -12,6 +18,9 @@ import { scanStagedModules } from "./staged-verify";
 describe("scanStagedModules (ground-truth scan of the staged dist)", () => {
   let staging: AppPath;
   afterEach(() => rmSync(staging, { recursive: true, force: true }));
+
+  /** Every link the test staged (what compose would hand the scan). */
+  const staged = (): string[] => readdirSync(joinAppPath(staging, "artifacts"));
 
   const artifact = (linkName: string, files: Record<string, string>): void => {
     const dir = joinAppPath(staging, "artifacts", linkName);
@@ -40,11 +49,15 @@ describe("scanStagedModules (ground-truth scan of the staged dist)", () => {
 
     const { failures, warnings } = await scanStagedModules({
       stagingDir: staging,
+      linkNames: staged(),
       imports: { "mapped-pkg": "/artifacts/set.f/mapped-pkg.js" },
     });
     expect(failures).toEqual([
       { specifier: "unmapped-pkg", file: "artifacts/a.web.111/chunk-abc.mjs" },
-      { specifier: "./missing-chunk.mjs", file: "artifacts/a.web.111/chunk-abc.mjs" },
+      {
+        specifier: "./missing-chunk.mjs",
+        file: "artifacts/a.web.111/chunk-abc.mjs",
+      },
       {
         specifier: "@plugins/y/web",
         file: "artifacts/composition-web-registry.registry.333/index.js",
@@ -63,6 +76,7 @@ describe("scanStagedModules (ground-truth scan of the staged dist)", () => {
     });
     const { failures, warnings } = await scanStagedModules({
       stagingDir: staging,
+      linkNames: staged(),
       imports: { react: "/artifacts/set.f/react.js" },
     });
     expect(failures).toEqual([]);
@@ -73,6 +87,9 @@ describe("scanStagedModules (ground-truth scan of the staged dist)", () => {
 describe("scanStagedModules (link verification: names the target must export)", () => {
   let staging: AppPath;
   afterEach(() => rmSync(staging, { recursive: true, force: true }));
+
+  /** Every link the test staged (what compose would hand the scan). */
+  const staged = (): string[] => readdirSync(joinAppPath(staging, "artifacts"));
 
   const artifact = (linkName: string, files: Record<string, string>): void => {
     const dir = joinAppPath(staging, "artifacts", linkName);
@@ -87,15 +104,22 @@ describe("scanStagedModules (link verification: names the target must export)", 
     artifact("a.web.111", {
       "index.js": `import { TaskRow, TaskList } from "@plugins/tasks/web";\nexport default {};\n`,
     });
-    artifact("tasks.web.222", { "index.js": `export const TaskList = 1;\nexport default {};\n` });
+    artifact("tasks.web.222", {
+      "index.js": `export const TaskList = 1;\nexport default {};\n`,
+    });
 
     const { failures, linkFailures } = await scanStagedModules({
       stagingDir: staging,
+      linkNames: staged(),
       imports: { "@plugins/tasks/web": "/artifacts/tasks.web.222/index.js" },
     });
     expect(failures).toEqual([]);
     expect(linkFailures).toEqual([
-      { specifier: "@plugins/tasks/web", name: "TaskRow", file: "artifacts/a.web.111/index.js" },
+      {
+        specifier: "@plugins/tasks/web",
+        name: "TaskRow",
+        file: "artifacts/a.web.111/index.js",
+      },
     ]);
   });
 
@@ -109,12 +133,21 @@ describe("scanStagedModules (link verification: names the target must export)", 
 
     const { failures, linkFailures } = await scanStagedModules({
       stagingDir: staging,
+      linkNames: staged(),
       imports: { "@tonejs/midi": "/artifacts/set.f/midi.js" },
     });
     expect(failures).toEqual([]);
     expect(linkFailures).toEqual([
-      { specifier: "@tonejs/midi", name: "default", file: "artifacts/a.web.111/index.js" },
-      { specifier: "./chunk.mjs", name: "gone", file: "artifacts/a.web.111/index.js" },
+      {
+        specifier: "@tonejs/midi",
+        name: "default",
+        file: "artifacts/a.web.111/index.js",
+      },
+      {
+        specifier: "./chunk.mjs",
+        name: "gone",
+        file: "artifacts/a.web.111/index.js",
+      },
     ]);
   });
 
@@ -130,6 +163,7 @@ describe("scanStagedModules (link verification: names the target must export)", 
 
     const { failures, linkFailures } = await scanStagedModules({
       stagingDir: staging,
+      linkNames: staged(),
       imports: { "@plugins/tasks/web": "/artifacts/tasks.web.222/index.js" },
     });
     expect(failures).toEqual([]);
@@ -142,10 +176,13 @@ describe("scanStagedModules (link verification: names the target must export)", 
     artifact("a.web.111", {
       "index.js": `export { TaskList } from "@plugins/tasks/web";\nexport default {};\n`,
     });
-    artifact("tasks.web.222", { "index.js": `export const TaskList = 1;\nexport default {};\n` });
+    artifact("tasks.web.222", {
+      "index.js": `export const TaskList = 1;\nexport default {};\n`,
+    });
 
     const { failures, linkFailures } = await scanStagedModules({
       stagingDir: staging,
+      linkNames: staged(),
       imports: { "@plugins/tasks/web": "/artifacts/tasks.web.222/index.js" },
     });
     expect(failures).toEqual([]);
@@ -164,6 +201,7 @@ describe("scanStagedModules (link verification: names the target must export)", 
 
     const { failures, linkFailures, opaqueTargets } = await scanStagedModules({
       stagingDir: staging,
+      linkNames: staged(),
       imports: { "@plugins/tasks/web": "/artifacts/tasks.web.222/index.js" },
     });
     expect(failures).toEqual([]);
@@ -181,6 +219,7 @@ describe("scanStagedModules (link verification: names the target must export)", 
 
     const { failures, linkFailures } = await scanStagedModules({
       stagingDir: staging,
+      linkNames: staged(),
       imports: {
         "@plugins/tasks/web": "/artifacts/tasks.web.222/index.js",
         "@plugins/tasks/core": "/artifacts/tasks.core.444/index.js",
@@ -205,15 +244,32 @@ describe("scanStagedModules (link verification: names the target must export)", 
         `export default { t, def, helper };\n`,
       "chunk.mjs": `export const helper = 1;\nexport default 2;\n`,
     });
-    artifact("tasks.web.222", { "index.js": `export const TaskList = 1;\nexport default {};\n` });
-
-    const { failures, warnings, linkFailures, opaqueTargets } = await scanStagedModules({
-      stagingDir: staging,
-      imports: { "@plugins/tasks/web": "/artifacts/tasks.web.222/index.js" },
+    artifact("tasks.web.222", {
+      "index.js": `export const TaskList = 1;\nexport default {};\n`,
     });
+
+    const { failures, warnings, linkFailures, opaqueTargets } =
+      await scanStagedModules({
+        stagingDir: staging,
+        linkNames: staged(),
+        imports: { "@plugins/tasks/web": "/artifacts/tasks.web.222/index.js" },
+      });
     expect(failures).toEqual([]);
     expect(warnings).toEqual([]);
     expect(linkFailures).toEqual([]);
     expect(opaqueTargets).toEqual([]);
+  });
+
+  test("scans only the links compose made, never the rest of an address dir", async () => {
+    staging = asAppPath(mkdtempSync(join(tmpdir(), "staged-verify-")));
+    artifact("a.web.111", { "index.js": `export const a = 1;\n` });
+    // An address an earlier build composed: still served, not this graph's.
+    artifact("old.web.000", { "index.js": `import "long-gone-pkg";\n` });
+    const { failures } = await scanStagedModules({
+      stagingDir: staging,
+      imports: {},
+      linkNames: ["a.web.111"],
+    });
+    expect(failures).toEqual([]);
   });
 });

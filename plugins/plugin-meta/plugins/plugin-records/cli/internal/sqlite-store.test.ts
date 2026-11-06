@@ -20,12 +20,29 @@ test("records survive a reopen, per table, and a present key keeps its value", (
     [k("2"), "v2"],
   ]);
   a.putMany("facet", [[k("1"), "other"]]);
+  a.flush();
   const b = openRecordStore({ path });
   expect([...b.getMany("facet", [k("1"), k("2"), k("3")])]).toEqual([
     [k("1"), "v1"],
     [k("2"), "v2"],
   ]);
   expect(b.getMany("file", [k("1")]).size).toBe(0);
+});
+
+test("puts are held until a flush: own reads see them, another process's do not", () => {
+  const path = join(dir, "held.sqlite");
+  const a = openRecordStore({ path });
+  const b = openRecordStore({ path });
+  a.putMany("facet", [[k("h"), "held"]]);
+  expect(a.getMany("facet", [k("h")]).get(k("h"))).toBe("held");
+  expect(b.getMany("facet", [k("h")]).size).toBe(0);
+  a.flush();
+  expect(b.getMany("facet", [k("h")]).get(k("h"))).toBe("held");
+  // A key held twice keeps its first value, as a stored one does.
+  a.putMany("facet", [[k("h2"), "first"]]);
+  a.putMany("facet", [[k("h2"), "second"]]);
+  a.flush();
+  expect(b.getMany("facet", [k("h2")]).get(k("h2"))).toBe("first");
 });
 
 test("a batch larger than one statement's parameters is read whole", () => {
@@ -53,6 +70,7 @@ test("one value stored under many keys is stored once", () => {
   );
   s.putMany("facet", [[k("f"), value]]);
   expect(s.getMany("facet", [k("f")]).get(k("f"))).toBe(value);
+  s.flush();
   const db = new Database(path, { readonly: true });
   expect(db.query("SELECT count(*) AS n FROM vals").get()).toEqual({ n: 1 });
   expect(db.query("SELECT count(*) AS n FROM keys").get()).toEqual({ n: 51 });
@@ -67,6 +85,7 @@ test("the daily reclaim drops unread keys, then the values nobody names", () => 
     [k("shared-old"), "shared"],
     [k("new"), "shared"],
   ]);
+  s.flush();
   const db = new Database(path);
   db.query("UPDATE keys SET used = used - 30 WHERE key != ?").run(
     Buffer.from(k("new"), "hex"),

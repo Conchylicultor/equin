@@ -23,6 +23,12 @@ import { pluginRecordsDir } from "../../data-dirs";
  */
 
 const KEEP_DAYS = 7;
+// Puts are held back and written in ONE transaction per flush: every commit
+// costs a WAL append whose price grows with the commits before it, and a cold
+// codegen made ~3,700 of them (4.0 s on a loaded host,
+// research/2026-11-06-global-build-pipeline-step7-real-world-split-v2.md).
+// Past this many held bytes a put flushes on its own, so memory stays bounded.
+const FLUSH_BYTES = 64 * 1024 * 1024;
 // SQLite's default bound on host parameters per statement is 32766; a batch
 // stays well under it.
 const BATCH = 500;
@@ -41,6 +47,15 @@ const RecordRows = z.array(
     used: z.number(),
   }),
 );
+
+// The backstop: a process that never flushed (a script, a check pass) still
+// leaves its records behind. A killed one loses them, which only means they
+// are computed again: every record is a pure function of its key. One exit
+// listener for every store the process opened.
+const openStores = new Set<() => void>();
+process.on("exit", () => {
+  for (const flush of openStores) flush();
+});
 
 function today(): number {
   return Math.floor(Date.now() / 86_400_000);
@@ -119,14 +134,41 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
     "INSERT INTO keys (tbl, key, vid, used) VALUES (?, ?, ?, ?) ON CONFLICT (tbl, key) DO NOTHING",
   );
 
+  // What `putMany` has held back, per table, until the next `flush`.
+  const pending = new Map<RecordTable, Map<string, string>>();
+  let pendingBytes = 0;
+  const flush = (): void => {
+    if (pending.size === 0) return;
+    db.transaction(() => {
+      for (const [tbl, held] of pending) {
+        for (const [k, v] of held) {
+          const vid = new Bun.CryptoHasher("sha256").update(v).digest();
+          insertValue.run(vid, v);
+          insertKey.run(tbl, keyBytes(k), vid, day);
+        }
+      }
+    })();
+    pending.clear();
+    pendingBytes = 0;
+  };
+  openStores.add(flush);
+
   return {
     environment: `bun ${Bun.version} ${process.platform}-${process.arch}`,
     getMany(table, keys) {
       const tbl = tableId(table);
       const out = new Map<string, string>();
+      // A record put but not yet flushed answers from where it is held.
+      const held = pending.get(tbl);
+      const unheld: string[] = [];
+      for (const k of keys) {
+        const v = held?.get(k);
+        if (v === undefined) unheld.push(k);
+        else out.set(k, v);
+      }
       const stale: Buffer[] = [];
-      for (let i = 0; i < keys.length; i += BATCH) {
-        const chunk = keys.slice(i, i + BATCH).map(keyBytes);
+      for (let i = 0; i < unheld.length; i += BATCH) {
+        const chunk = unheld.slice(i, i + BATCH).map(keyBytes);
         for (const row of RecordRows.parse(
           select(chunk.length).all(tbl, ...chunk),
         )) {
@@ -146,14 +188,16 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
     },
     putMany(table, entries) {
       const tbl = tableId(table);
-      if (entries.length === 0) return;
-      db.transaction(() => {
-        for (const [k, v] of entries) {
-          const vid = new Bun.CryptoHasher("sha256").update(v).digest();
-          insertValue.run(vid, v);
-          insertKey.run(tbl, keyBytes(k), vid, day);
-        }
-      })();
+      let held = pending.get(tbl);
+      if (!held) pending.set(tbl, (held = new Map()));
+      for (const [k, v] of entries) {
+        keyBytes(k); // a bad key fails at its put, not at a later flush
+        if (held.has(k)) continue;
+        held.set(k, v);
+        pendingBytes += v.length;
+      }
+      if (pendingBytes >= FLUSH_BYTES) flush();
     },
+    flush,
   };
 }

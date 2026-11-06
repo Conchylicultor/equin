@@ -33,6 +33,7 @@ describe("distNames (path arithmetic)", () => {
       releaseName: "dist.live.42",
       releasePath: "/x/web-core/web/dist.live.42",
       swapPath: "/x/web-core/web/dist.swap.42",
+      addressesPath: "/x/web-core/web/dist-addresses",
       prefixes: {
         staging: "dist.staging.",
         live: "dist.live.",
@@ -92,6 +93,20 @@ describe("publishDistAtomic", () => {
     await publication.keep();
     expect(readFileSync(join(dir, "index.html"), "utf8")).toBe("new");
     expect(existsSync(join(parent, "dist.live.999"))).toBe(false);
+  });
+
+  test("keep and revert never reach through a release's artifacts link into the address dir", async () => {
+    for (const settle of ["keep", "revert"] as const) {
+      const { parent, dir, stagingPath } = republishFixture(`addr-${settle}`);
+      const addresses = join(parent, "dist-addresses");
+      mkdirSync(join(addresses, "a.web.1"), { recursive: true });
+      symlinkSync(addresses, join(parent, "dist.live.999", "artifacts"));
+      symlinkSync(addresses, join(stagingPath, "artifacts"));
+      const publication = await publishDistAtomic({ dir, stagingPath });
+      await publication[settle]();
+      expect(existsSync(join(addresses, "a.web.1"))).toBe(true);
+      expect(existsSync(join(dir, "artifacts", "a.web.1"))).toBe(true);
+    }
   });
 
   test("revert: the previous release is served again and the new one reclaimed", async () => {

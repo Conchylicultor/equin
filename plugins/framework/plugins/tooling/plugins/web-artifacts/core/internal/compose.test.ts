@@ -1,5 +1,19 @@
 import { describe, expect, test } from "bun:test";
-import { computeGraphHash } from "./compose";
+import {
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readlinkSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { composeDist, computeGraphHash } from "./compose";
 
 const graph = {
   htmlSrc: "<!doctype html><head><script>var a = 1;</script></head>",
@@ -74,5 +88,76 @@ describe("computeGraphHash", () => {
 
   test("is a 16-char hex digest", () => {
     expect(computeGraphHash(graph)).toMatch(/^[0-9a-f]{16}$/);
+  });
+});
+
+describe("composeDist with an address dir", () => {
+  function fixture() {
+    const base = asAppPath(mkdtempSync(join(tmpdir(), "compose-addresses-")));
+    const webSrcDir = joinAppPath(base, "web-src");
+    mkdirSync(webSrcDir);
+    writeFileSync(
+      joinAppPath(webSrcDir, "index.html"),
+      '<html><head></head><body><script type="module" src="/main.tsx"></script></body></html>',
+    );
+    const store = joinAppPath(base, "store");
+    const entry = (name: string) => {
+      const p = joinAppPath(store, name);
+      mkdirSync(p, { recursive: true });
+      writeFileSync(joinAppPath(p, "index.js"), "export {};");
+      return p;
+    };
+    const compose = (
+      staging: string,
+      links: Array<{ linkName: string; storePath: ReturnType<typeof entry> }>,
+    ) =>
+      composeDist({
+        stagingDir: joinAppPath(base, staging),
+        webSrcDir,
+        buildId: "b",
+        buildCommit: null,
+        minify: true,
+        cssHref: `/artifacts/${links[0]!.linkName}/index.js`,
+        links,
+        addressDir: joinAppPath(base, "web-addresses"),
+        mapEntries: [],
+        staticImportsByUrl: {},
+        emitted: [],
+        entryUrl: `/artifacts/${links[0]!.linkName}/index.js`,
+        preloadSeeds: [],
+      });
+    return { base, entry, compose };
+  }
+
+  test("links only new names, and every release sees every name", () => {
+    const f = fixture();
+    const a = f.entry("a.web.1");
+    const b = f.entry("b.web.2");
+    f.compose("web.staging.1", [{ linkName: "a.web.1", storePath: a }]);
+    f.compose("web.staging.2", [
+      { linkName: "a.web.1", storePath: a },
+      { linkName: "b.web.2", storePath: b },
+    ]);
+    const addresses = joinAppPath(f.base, "web-addresses");
+    expect(
+      readlinkSync(joinAppPath(f.base, "web.staging.2", "artifacts")),
+    ).toBe(addresses);
+    // The first release serves the second's new name too: one dir.
+    expect(
+      lstatSync(
+        joinAppPath(f.base, "web.staging.1", "artifacts", "b.web.2"),
+      ).isSymbolicLink(),
+    ).toBe(true);
+  });
+
+  test("an existing name linking another store path throws", () => {
+    const f = fixture();
+    const a = f.entry("a.web.1");
+    const other = f.entry("elsewhere");
+    mkdirSync(joinAppPath(f.base, "web-addresses"));
+    symlinkSync(other, joinAppPath(f.base, "web-addresses", "a.web.1"));
+    expect(() =>
+      f.compose("web.staging.1", [{ linkName: "a.web.1", storePath: a }]),
+    ).toThrow(/write-once/);
   });
 });

@@ -21,6 +21,8 @@ import {
   constants as fsConstants,
   copyFileSync,
   mkdirSync,
+  renameSync,
+  rmSync,
   symlinkSync,
 } from "node:fs";
 import {
@@ -42,66 +44,44 @@ export function globalCssCacheRoot(): string {
 }
 
 export interface CarryForwardResult {
-  /** `artifacts/<name>` links recreated in staging from the live dist. */
-  artifactsCarried: string[];
   /** `assets/<file>` files copied into staging from the live dist. */
   assetsCarried: string[];
-  /** `artifacts/<name>` links NOT carried: their cache target was pruned. */
-  artifactsDropped: string[];
 }
 
 /**
- * Before a served dist is published, copy into `stagingDir` every entry the
- * live dist has, the new build lacks, and the shared cache still holds:
+ * The served namespace's address dir: ONE persistent dir of `<name> → cache`
+ * links that every release of the namespace serves as its `artifacts` (a link
+ * to it). Compose adds this build's new names to it (`addressDir`), so a dist
+ * serves every address its namespace ever composed — what an open tab booted
+ * from an older build asks for — and a build costs O(new names), not a re-link
+ * of the whole history: carrying ~37k links on main took ~5 s per build
+ * (research/2026-11-06-global-build-pipeline-step7-real-world-split-v2.md).
  *
- * - `artifacts/<name>` — a symlink to an absolute path in the artifact store or
- *   the vendors dir. Recreated as the same link iff its target still exists. A
- *   target exists only once fully published (it is renamed into place after its
- *   `meta.json` is written), so existence is an exact test. A link whose target
- *   is gone is dropped: an honest 404 instead of a dangling link.
- * - `assets/<file>` — the global stylesheet and its fonts, which are COPIED into
- *   every dist rather than linked, so their mtime says nothing about age. One is
- *   kept only while some CSS cache dir still contains a file of that name (the
- *   names are content-hashed by vite, so a name is its bytes).
+ * Seeds the dir once, from a dist composed before it existed (whose
+ * `artifacts/` is a real dir of links): every link whose cache target still
+ * exists, absolute targets only. Built aside and renamed into place, so a
+ * crash leaves either no dir (seeded again next build) or a complete one.
+ * No-op when the dir exists, or when there is no live dist to seed from.
  *
- * Because each served dist already contains everything carried into it, a
- * build only diffs against the one dist before it. The carried set is therefore
- * "everything this namespace ever served that the cache still holds", bounded
- * by the cache's own pruning (14 days after last use). Carrying never touches a
- * target's mtime, so it never extends that life.
+ * How long an address stays is the cache's and the prune's business, as
+ * before: every link here is a prune root (served-dists), so nothing ages out
+ * of a served namespace yet (task-1793773096-i6fsda owns that rule).
  *
- * Only for a SERVED dist. A release is served by nobody and ships its dist
- * materialized; it never carries.
- *
- * ACCEPTED RACE — do not "fix" it with a lock: another worktree's build may
- * prune a target between the existence check here and the publish swap. That
- * one address then 404s until this namespace's next publish drops the link.
- * Serializing every build's prune against every other build's publish would
- * cost far more than the rare 404 it prevents.
- *
- * No-op when `liveDir` does not exist (the namespace's first build).
- *
- * @param opts.liveDir the served dist, still resolving to the PREVIOUS build.
- * @param opts.stagingDir this build's dist, fully composed, not yet published.
- * @param opts.cssCacheRoot test seam; defaults to {@link globalCssCacheRoot}.
+ * @returns how many links were seeded (0 when nothing was to be done).
  */
-export function carryForwardServedEntries(opts: {
+export function seedAddressDir(opts: {
   liveDir: string;
-  stagingDir: string;
-  cssCacheRoot?: string;
-}): CarryForwardResult {
-  const result: CarryForwardResult = {
-    artifactsCarried: [],
-    assetsCarried: [],
-    artifactsDropped: [],
-  };
-  if (!existsSync(opts.liveDir)) return result;
-
+  addressDir: string;
+}): number {
+  if (lstatSync(opts.addressDir, { throwIfNoEntry: false })) return 0;
   const liveArtifacts = join(opts.liveDir, "artifacts");
-  const stagingArtifacts = join(opts.stagingDir, "artifacts");
+  const st = lstatSync(liveArtifacts, { throwIfNoEntry: false });
+  if (!st?.isDirectory()) return 0; // no live dist, or one already on a dir link
+  const tmp = `${opts.addressDir}.tmp.${process.pid}`;
+  rmSync(tmp, { recursive: true, force: true });
+  mkdirSync(tmp, { recursive: true });
+  let seeded = 0;
   for (const name of listDir(liveArtifacts)) {
-    const dest = join(stagingArtifacts, name);
-    if (lstatSync(dest, { throwIfNoEntry: false })) continue; // this build has it
     const src = join(liveArtifacts, name);
     if (!lstatSync(src).isSymbolicLink()) {
       throw new Error(
@@ -118,14 +98,50 @@ export function carryForwardServedEntries(opts: {
           `what it points at.`,
       );
     }
-    if (!existsSync(target)) {
-      result.artifactsDropped.push(name);
-      continue;
-    }
-    mkdirSync(stagingArtifacts, { recursive: true });
-    symlinkSync(target, dest);
-    result.artifactsCarried.push(name);
+    if (!existsSync(target)) continue; // pruned from the cache — let it go
+    symlinkSync(target, join(tmp, name));
+    seeded++;
   }
+  try {
+    renameSync(tmp, opts.addressDir);
+  } catch (err) {
+    // Another process seeded it first (one checkout's `.build.lock` makes
+    // that unlikely, not impossible): its dir stands, ours goes.
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "ENOTEMPTY" && code !== "EEXIST") throw err;
+    rmSync(tmp, { recursive: true, force: true });
+    return 0;
+  }
+  return seeded;
+}
+
+/**
+ * Before a served dist is published, copy into `stagingDir` every
+ * `assets/<file>` the live dist has, the new build lacks, and the shared cache
+ * still holds — the global stylesheet and its fonts, which are COPIED into
+ * every dist rather than linked, so their mtime says nothing about age. One is
+ * kept only while some CSS cache dir still contains a file of that name (the
+ * names are content-hashed by vite, so a name is its bytes). Because each
+ * served dist already contains everything carried into it, a build only diffs
+ * against the one dist before it. (`artifacts/` needs no carrying: it is the
+ * namespace's address dir, {@link seedAddressDir}.)
+ *
+ * Only for a SERVED dist. A release is served by nobody and ships its dist
+ * materialized; it never carries.
+ *
+ * No-op when `liveDir` does not exist (the namespace's first build).
+ *
+ * @param opts.liveDir the served dist, still resolving to the PREVIOUS build.
+ * @param opts.stagingDir this build's dist, fully composed, not yet published.
+ * @param opts.cssCacheRoot test seam; defaults to {@link globalCssCacheRoot}.
+ */
+export function carryForwardServedEntries(opts: {
+  liveDir: string;
+  stagingDir: string;
+  cssCacheRoot?: string;
+}): CarryForwardResult {
+  const result: CarryForwardResult = { assetsCarried: [] };
+  if (!existsSync(opts.liveDir)) return result;
 
   const liveAssets = join(opts.liveDir, "assets");
   const stagingAssets = join(opts.stagingDir, "assets");

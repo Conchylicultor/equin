@@ -40,6 +40,12 @@ export interface DistNames {
   releaseName: string;
   releasePath: string;
   swapPath: string;
+  /**
+   * The namespace's address dir (`<base>-addresses`): every release's
+   * `artifacts` links to it. Persistent — no sweep touches it, and it is not a
+   * `<base>.*` name, so it never reads as a release, staging or swap.
+   */
+  addressesPath: string;
   prefixes: { staging: string; live: string; swap: string; old: string };
 }
 
@@ -61,6 +67,7 @@ export function distNames(dir: string, pid: number = process.pid): DistNames {
     releaseName,
     releasePath: join(parent, releaseName),
     swapPath: join(parent, `${prefixes.swap}${pid}`),
+    addressesPath: join(parent, `${base}-addresses`),
     prefixes,
   };
 }
@@ -71,6 +78,11 @@ export function distStagingPath(
   pid: number = process.pid,
 ): AppPath {
   return asAppPath(distNames(dir, pid).stagingPath);
+}
+
+/** The address dir every served release of `dir` links as its `artifacts`. */
+export function distAddressesPath(dir: string): AppPath {
+  return asAppPath(distNames(dir).addressesPath);
 }
 
 /**
@@ -117,7 +129,9 @@ export async function sweepDistLeftovers(dir: string): Promise<void> {
       // Legacy: a build once pinned its in-flight cache entries in a
       // `<base>.pins` sibling (now a build lease, web-artifacts' `lease.ts`);
       // one a failed build left would pin its entries forever.
-      entry === `${base}.pins`
+      entry === `${base}.pins` ||
+      // A crashed `seedAddressDir` (web-artifacts' cli): its aside copy.
+      entry.startsWith(`${base}-addresses.tmp.`)
     ) {
       await rm(join(parent, entry), { recursive: true, force: true });
     }

@@ -100,6 +100,12 @@ export async function scanStagedModules(opts: {
   stagingDir: AppPath;
   /** The composed map's `imports` record (specifier → URL). */
   imports: Record<string, string>;
+  /**
+   * The `artifacts/<name>` links compose made for THIS graph — scanned, never
+   * a listing of `artifacts/`: a served dist's is its namespace's address dir,
+   * which also holds every address earlier builds composed.
+   */
+  linkNames: readonly string[];
 }): Promise<StagedScanResult> {
   await esLexerInit();
   const failures: StagedModuleIssue[] = [];
@@ -120,7 +126,7 @@ export async function scanStagedModules(opts: {
   // scanned THROUGH the tree, so its relative imports resolve, and are joined
   // against their targets' exports, exactly as the worker resolves them.
   const roots: Array<{ linkName: string; linkDir: AppPath }> = [];
-  for (const linkName of readdirSync(artifactsDir).sort()) {
+  for (const linkName of [...opts.linkNames].sort()) {
     const linkDir = joinAppPath(artifactsDir, linkName);
     // A linked copy is also linked at the top level (so pruners keep it); its
     // relative imports resolve only inside the tree, where it is scanned.

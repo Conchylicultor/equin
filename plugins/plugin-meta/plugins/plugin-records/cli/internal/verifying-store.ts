@@ -60,6 +60,8 @@ export function verifyRecordsAgainst(shared: RecordStore): RecordVerification {
         else disagreements.push({ table, key, stored: s, fresh: value });
       }
     },
+    // Writes nothing to the shared store, so holds nothing back.
+    flush() {},
   };
   return {
     store,

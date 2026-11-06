@@ -37,9 +37,11 @@ import {
   carryForwardServedEntries,
   createPooledArtifactBuilder,
   idealArtifactBuildThreads,
+  seedAddressDir,
 } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/cli";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import {
+  currentRecordStore,
   installRecordStore,
   installRecordWorkers,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
@@ -88,6 +90,7 @@ import {
 } from "@plugins/framework/plugins/cli/plugins/migrations/cli";
 import { planCompositionSet } from "./composition-set";
 import {
+  distAddressesPath,
   distStagingPath,
   publishDistAtomic,
   type DistPublication,
@@ -647,6 +650,9 @@ export async function generateAppSources(opts: {
     installRecordWorkers(undefined);
     await recordWorkers?.close();
     recordWorkers = undefined;
+    // Codegen's records, written in one transaction now that it is done: the
+    // check pass this build starts next (another process) reads them.
+    currentRecordStore().flush();
   }
 
   // 4b''. A plugin move re-roots reorder keys in committed overrides, but the
@@ -1119,6 +1125,24 @@ export async function buildAndPublishWebDist(
 
   const livePath = webDistPath(opts.target);
   const stagingPath = distStagingPath(livePath);
+  // A served dist serves its namespace's ONE address dir as `artifacts`
+  // (compose links this graph into it): every address the namespace ever
+  // composed stays served for O(new names) per build. Seeded once from a dist
+  // composed before it existed. A release links nothing (`materialize`).
+  let addressDir: AppPath | undefined;
+  if (opts.target.kind === "served") {
+    addressDir = distAddressesPath(livePath);
+    const endSeed = hooks.span(
+      "artifacts:addresses",
+      "build:frontend",
+      "seed the address dir",
+    );
+    const seeded = seedAddressDir({ liveDir: livePath, addressDir });
+    endSeed();
+    if (seeded > 0) {
+      hooks.log(`Address dir seeded from the live dist: ${seeded} links`);
+    }
+  }
 
   hooks.log(
     "Running checks, type-checking, and building frontend in parallel...",
@@ -1183,6 +1207,7 @@ export async function buildAndPublishWebDist(
               buildCommit: opts.headAtStart,
               source,
               materialize: opts.materialize,
+              addressDir,
               log: (line) => lines.push({ text: line, stream: "stdout" }),
               isPlatformApi,
               onStage: async (id, label, run) => {
@@ -1282,18 +1307,23 @@ export async function buildAndPublishWebDist(
   if (opts.experimental) stampExperimentalMarker(stagingPath);
 
   // A tab loaded from an earlier build still fetches THAT build's addresses
-  // (lazily — the deferred plugin tier, fonts), so a served dist keeps every
-  // address the live one serves while the shared cache still holds it. Must run
-  // before the swap: `livePath` still resolves to the previous release here. A
-  // release is served by nobody and never carries.
+  // (lazily — the deferred plugin tier, fonts). Its modules stay served through
+  // the address dir (above); its stylesheet and fonts are copied files, carried
+  // here. Must run before the swap: `livePath` still resolves to the previous
+  // release here. A release is served by nobody and never carries.
   if (opts.target.kind === "served") {
+    const endCarry = hooks.span(
+      "artifacts:carry",
+      "build:frontend",
+      "carry forward served assets",
+    );
     const carried = carryForwardServedEntries({
       liveDir: livePath,
       stagingDir: stagingPath,
     });
+    endCarry();
     hooks.log(
-      `Carried forward from the previous dist: ${carried.artifactsCarried.length} artifacts, ` +
-        `${carried.assetsCarried.length} assets (${carried.artifactsDropped.length} dropped, pruned from the cache)`,
+      `Carried forward from the previous dist: ${carried.assetsCarried.length} assets`,
     );
   }
 

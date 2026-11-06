@@ -6,7 +6,10 @@
 // file under `core/` into every artifact address, so code that only touches a
 // served dist AFTER the fleet is built must stay out of it, or each edit to it
 // would rebuild the whole fleet on every host.
-export { carryForwardServedEntries } from "./internal/carry-forward";
+export {
+  carryForwardServedEntries,
+  seedAddressDir,
+} from "./internal/carry-forward";
 export type { CarryForwardResult } from "./internal/carry-forward";
 export {
   createPooledArtifactBuilder,
