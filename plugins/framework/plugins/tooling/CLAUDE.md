@@ -9,6 +9,7 @@
   - Uses:
     - `infra/spawn.spawnCaptured`
     - `packages/semaphore.createSemaphore`
+    - `packages/timed-fs.lstat`
     - `packages/timed-fs.readFile`
   - Exports (types):
     - `Check`
@@ -25,6 +26,7 @@
     - `CHECKOUT_SCOPES`
     - `globPaths`
     - `InconclusiveCheckError`
+    - `listAllRepoMembers`
     - `listRepoMembers`
     - `loadRepoFiles`
     - `loadRepoSnapshot`

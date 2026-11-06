@@ -53,11 +53,15 @@ Cold builds happen once per process (the first read) and again only when the
 index was dropped: the watcher lost events (`onLost`), a batch named more than
 2,000 paths (a checkout or rebase — one listing is cheaper), a path came outside
 the root, or a refresh failed (a half-applied refresh is never kept). A cold
-build lists `plugins/` only, not the whole repo, and reads key files at width 8:
+build lists the whole repo's members (`listAllRepoMembers`: one `git status`
+over the untracked cache, then only the wholly-untracked folders walked) and
+keeps those under `plugins/` — a pathspec-scoped listing would bypass the cache
+and walk all of `plugins/`. It reads key files at width 8:
 the fs pool also serves the backend's requests — at 64 every other fs call of
 main queued behind the warm-up (fs-wait, 2026-11-04: ~100 ms per read, all
-queue time). Its biggest cost is git's untracked walk of `plugins/`
-(`ls-files --others`). `scripts/bench-structure-tree.ts` measures cold and
+queue time). The listing was its biggest cost while it was git's untracked walk
+of `plugins/` (`ls-files --others`: ~0.8 s median, seconds under load; now
+~0.13–0.17 s). `scripts/bench-structure-tree.ts` measures cold and
 per-edit costs (2026-11-06, medians: whole rebuild per change 1,073 ms → cold
 804 ms once, then 0 ms per save, ~48 ms per file created or deleted, ~46 ms
 per plugin folder); `e2e/structure-tree-live.ts` checks the deployed value

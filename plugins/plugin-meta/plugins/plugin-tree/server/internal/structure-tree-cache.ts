@@ -4,6 +4,7 @@ import {
   type StructureIndex,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
+  listAllRepoMembers,
   listRepoMembers,
   repoFileReader,
 } from "@plugins/framework/plugins/tooling/core";
@@ -157,6 +158,7 @@ const REPO_ROOT = appPathParent(PLUGINS_DIR);
 const PLUGINS_REL = PLUGINS_DIR.slice(REPO_ROOT.length + 1);
 
 const io = {
+  allMembers: () => listAllRepoMembers(REPO_ROOT),
   membersIn: (paths: readonly string[]) => listRepoMembers(REPO_ROOT, paths),
   read: repoFileReader(REPO_ROOT, { readConcurrency: TREE_READ_CONCURRENCY }),
 };

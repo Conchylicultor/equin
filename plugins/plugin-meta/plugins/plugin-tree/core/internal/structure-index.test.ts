@@ -17,6 +17,7 @@ function fakeRepo(files: Record<string, string>) {
   const asked: string[][] = [];
   const reads: string[] = [];
   const io: StructureIndexIo = {
+    allMembers: async () => [...disk.keys()],
     membersIn: async (paths) => {
       asked.push([...paths]);
       return [...disk.keys()].filter((f) =>

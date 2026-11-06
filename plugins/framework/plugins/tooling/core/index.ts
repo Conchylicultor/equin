@@ -12,6 +12,7 @@ export { CHECK_SCOPES, CHECKOUT_SCOPES } from "./types";
 export { InconclusiveCheckError } from "./inconclusive";
 export {
   assertRepoPath,
+  listAllRepoMembers,
   listRepoMembers,
   loadRepoFiles,
   loadRepoSnapshot,

@@ -29,6 +29,13 @@ import {
 /** What the index reads through: the repo's file set, asked per path. */
 export interface StructureIndexIo {
   /**
+   * Every member of the repo's file set (repo-relative, the `RepoFiles` rule),
+   * for the cold build. Whole-repo rather than scoped to the plugins root:
+   * git answers the whole tree from its untracked cache, and a scoped listing
+   * walks the scope (`listAllRepoMembers`).
+   */
+  allMembers(): Promise<readonly string[]>;
+  /**
    * The members of the repo's file set (repo-relative, the `RepoFiles` rule)
    * at or under each of `paths` — each a file or a folder, present or gone.
    */
@@ -124,7 +131,8 @@ export async function createStructureIndex(
   };
 
   // ── cold ──
-  const listed = [...(await io.membersIn([pluginsRel]))].sort();
+  const listed = (await io.allMembers()).filter((m) => m.startsWith(prefix));
+  listed.sort();
   members.push(...listed);
   const coldMoved = new Set<string>();
   for (const m of members) addSupport(m, +1, coldMoved);

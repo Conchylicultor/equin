@@ -28323,6 +28323,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/spawn.spawnCaptured`
           - `packages/semaphore.createSemaphore`
+          - `packages/timed-fs.lstat`
           - `packages/timed-fs.readFile`
         - Exports (types):
           - `Check`
@@ -28339,6 +28340,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CHECKOUT_SCOPES`
           - `globPaths`
           - `InconclusiveCheckError`
+          - `listAllRepoMembers`
           - `listRepoMembers`
           - `loadRepoFiles`
           - `loadRepoSnapshot`

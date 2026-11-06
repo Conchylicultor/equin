@@ -12,7 +12,12 @@ import {
   asAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { pathsUnder } from "./pathspec";
-import { loadRepoFiles, loadRepoSnapshot } from "./repo-files";
+import {
+  listAllRepoMembers,
+  listRepoMembers,
+  loadRepoFiles,
+  loadRepoSnapshot,
+} from "./repo-files";
 
 let root!: AppPath;
 
@@ -28,7 +33,11 @@ const EXPECTED = [
   "a/b/y.ts",
   "a/c.ts",
   "a0.ts",
+  "became-dir/in.ts",
+  "fresh/d/z.ts",
+  "fresh/w.ts",
   "new.ts",
+  "sp ace.ts",
 ];
 
 async function git(...args: string[]): Promise<string> {
@@ -65,16 +74,32 @@ beforeAll(async () => {
     "a/c.ts",
     "a0.ts",
     "gone.ts",
+    "gone too.ts",
+    "became-dir",
   ]) {
     write(rel, `// ${rel}\n`);
   }
   await git("init", "-q");
   await git("config", "user.email", "t@t.t");
   await git("config", "user.name", "t");
+  // As every build sets it: the untracked half is read through git's cache.
+  await git("config", "core.untrackedCache", "true");
   await git("add", "-A");
   await git("commit", "-q", "-m", "fixture");
   rmSync(join(root, "gone.ts")); // tracked, deleted from disk, not staged
+  rmSync(join(root, "gone too.ts"));
+  // A tracked file replaced by a folder: the file is gone, its files are new.
+  rmSync(join(root, "became-dir"));
+  write("became-dir/in.ts", "// under a path that was a tracked file\n");
   write("new.ts", "// untracked, not ignored\n");
+  write("sp ace.ts", "// untracked, a space in its name\n");
+  // A wholly-untracked folder: status names it once (`fresh/`), and only it is
+  // walked — its ignored file stays out.
+  write("fresh/w.ts", "// untracked folder\n");
+  write("fresh/d/z.ts", "// untracked, nested\n");
+  write("fresh/ignored/q.ts", "// untracked folder, gitignored file\n");
+  // Writes the untracked cache, so the reads below go through it.
+  await git("status", "--porcelain");
   write("ignored/i.ts", "// on disk, gitignored\n");
 });
 
@@ -131,9 +156,39 @@ describe("loadRepoFiles", () => {
       mkdtempSync(join(tmpdir(), "repo-files-not-git-")),
     );
     try {
-      expect(loadRepoFiles(notARepo)).rejects.toThrow("git ls-files");
+      expect(loadRepoFiles(notARepo)).rejects.toThrow("failed in");
     } finally {
       rmSync(notARepo, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * The scoped walk's answer (`listRepoMembers`), minus the one place it is
+ * wrong: it keeps a tracked path that is now a folder (`ls-files --deleted`
+ * sees something there), which `add -A` — and so the cache key — drops.
+ */
+async function walked(): Promise<string[]> {
+  return (await listRepoMembers(root, [""])).filter((p) => p !== "became-dir");
+}
+
+describe("listAllRepoMembers", () => {
+  test("the walk's answer, from git status and the untracked folders only", async () => {
+    expect(await listAllRepoMembers(root)).toEqual(EXPECTED);
+    expect(await listAllRepoMembers(root)).toEqual(await walked());
+  });
+
+  test("follows a change the cache has not seen", async () => {
+    write("fresh/d/late.ts", "// after the cache was written\n");
+    write("later/n.ts", "// a new untracked folder\n");
+    try {
+      const members = await listAllRepoMembers(root);
+      expect(members).toContain("fresh/d/late.ts");
+      expect(members).toContain("later/n.ts");
+      expect(members).toEqual(await walked());
+    } finally {
+      rmSync(join(root, "fresh/d/late.ts"));
+      rmSync(join(root, "later"), { recursive: true });
     }
   });
 });

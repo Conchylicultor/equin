@@ -7,6 +7,7 @@ import {
   createStructureIndex,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
+  listAllRepoMembers,
   listRepoMembers,
   loadRepoFiles,
 } from "@plugins/framework/plugins/tooling/core";
@@ -29,6 +30,7 @@ const fmt = (ms: number[]) =>
 
 const gate = createSemaphore(8);
 const io = {
+  allMembers: () => listAllRepoMembers(ROOT),
   membersIn: (paths: readonly string[]) => listRepoMembers(ROOT, paths),
   read: (path: string) => gate.run(() => readFile(`${ROOT}/${path}`, "utf8")),
 };
@@ -37,6 +39,7 @@ const old: number[] = [];
 const oldList: number[] = [];
 const cold: number[] = [];
 const coldList: number[] = [];
+const walkList: number[] = [];
 for (let i = 0; i < ROUNDS; i++) {
   const [repo, l] = await time(() =>
     loadRepoFiles(ROOT, { readConcurrency: 8 }),
@@ -44,7 +47,9 @@ for (let i = 0; i < ROUNDS; i++) {
   const [, b] = await time(() => buildPluginTree(PLUGINS_DIR, { repo }));
   oldList.push(l);
   old.push(l + b);
-  const [, l2] = await time(() => listRepoMembers(ROOT, [REL]));
+  const [, w] = await time(() => listRepoMembers(ROOT, [REL]));
+  walkList.push(w);
+  const [, l2] = await time(() => listAllRepoMembers(ROOT));
   coldList.push(l2);
   const [, c] = await time(() => createStructureIndex(ROOT, REL, io));
   cold.push(c);
@@ -52,7 +57,8 @@ for (let i = 0; i < ROUNDS; i++) {
 console.log("before: per change (= cold)   ", fmt(old));
 console.log("  of which whole-repo listing ", fmt(oldList));
 console.log("after: cold build             ", fmt(cold));
-console.log("  of which plugins/ listing   ", fmt(coldList));
+console.log("  of which repo listing       ", fmt(coldList));
+console.log("  (plugins/ walk, scoped)     ", fmt(walkList));
 
 const index = await createStructureIndex(ROOT, REL, io);
 console.log("nodes:", index.tree().byPath.size);
