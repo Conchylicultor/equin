@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-framework-tooling-e2e-harness",
-  "description": "Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./equin deps install chromium`). Also owns the two generic tools (screenshot, perf).",
+  "description": "Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./equin deps install chromium`). Also owns the generic tools: screenshot, perf, and main-thread-trace (a page's main-thread tasks, wall time beside thread CPU time — so a browser starved of CPU is not read as a page doing work).",
   "private": true,
   "version": "0.0.1"
 }

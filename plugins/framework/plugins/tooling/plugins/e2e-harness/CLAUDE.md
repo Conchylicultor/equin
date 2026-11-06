@@ -294,6 +294,23 @@ the agent-write repair at both ends (the session owns those writes; its close
 reverts them), and allows ONE `session()` — a second context would outlive the
 script, owned by nobody.
 
+## A frame time from an agent's run is mostly waiting
+
+An agent's e2e run inherits darwinbg (the `e2e` host pool is `holder:
+"inherit"`), so its Chromium runs on the efficiency cores, throttled. On a
+loaded host the renderer then waits seconds to be scheduled, and every
+wall-clock measure — long tasks, long animation frames, a CPU profile's self
+time (the sampler charges a descheduled thread to whatever is on its stack) —
+reports that wait as work. /demo measured 36.5 s of > 50 ms tasks in 30 s, of
+which 1.6 s was CPU; in the foreground, 1.2 s
+(`research/2026-11-06-apps-demo-main-thread-is-scheduling-starvation.md`).
+
+`e2e/main-thread-trace.ts --path <route>` prints every main-thread task's wall
+time beside its thread CPU time (the Chrome trace's `tdur`), and breaks down
+the tasks that RAN longest by trace event (style recalc, layout, parse, GC)
+and JS call. `--foreground` takes the run out of darwinbg first, as the user's
+own browser runs.
+
 ## `diffImages` — two captures in, a number and a picture out
 
 `diffImages(page, aPng, bPng, { threshold, grid, labels })` compares two PNG
@@ -389,7 +406,7 @@ own `requestfailed` listener calls it too. Diagnosis:
 
 ## Plugin reference
 
-- Description: Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./equin deps install chromium`). Also owns the two generic tools (screenshot, perf).
+- Description: Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./equin deps install chromium`). Also owns the generic tools: screenshot, perf, and main-thread-trace (a page's main-thread tasks, wall time beside thread CPU time — so a browser starved of CPU is not read as a page doing work).
 - Core:
   - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
   - Exports (values): `isE2eScriptPath`

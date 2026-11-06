@@ -29224,7 +29224,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/tooling/codegen/composition-registries`
               - Exemptions:
                 - Exempts itself from: `boundaries/no-platform-api` — `core/discover.ts` (debt)
-        - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./equin deps install chromium`). Also owns the two generic tools (screenshot, perf).
+        - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on demand (the first run on a machine installs it through `./equin deps install chromium`). Also owns the generic tools: screenshot, perf, and main-thread-trace (a page's main-thread tasks, wall time beside thread CPU time — so a browser starved of CPU is not read as a page doing work).
           - Core:
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
@@ -38031,6 +38031,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `debug/profiling/cold-start`
+          - `framework/tooling/e2e-harness`
           - `infra/host/host-admission`
           - `infra/spawn`
       - Exemptions:
