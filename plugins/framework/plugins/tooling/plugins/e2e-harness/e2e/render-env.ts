@@ -74,8 +74,7 @@ export async function describeRenderEnv(page: Page): Promise<RenderEnv> {
     headless: !flag("headed"),
     ...inPage,
     softwareGpu: /swiftshader|llvmpipe|software/i.test(inPage.gpu),
-    tier:
-      arg("attach") !== undefined ? "unknown" : readDarwinBackground().kind,
+    tier: arg("attach") !== undefined ? "unknown" : readDarwinBackground().kind,
   };
 }
 
