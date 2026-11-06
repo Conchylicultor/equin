@@ -55,12 +55,12 @@ A leaf (its one import is `user-path/core`'s types), so `tooling/lint/core`'s
     - `infra/host-fs/user-path.asAppPath`
   - Exports (values): `REPO_ROOT`
 - Cross-plugin:
-  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×12
     - `infra` ×8
     - `apps` ×5
     - `build` ×5
-    - `plugin-meta` ×3
+    - `plugin-meta` ×2
     - `code-explorer`
     - `config_v2`
     - `conversations/workspace/scratch`

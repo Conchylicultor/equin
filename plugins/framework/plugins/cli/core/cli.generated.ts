@@ -20,7 +20,7 @@ export const cliEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/cli/plugins/build", id: "framework.cli.build", loader: () => import("@plugins/framework/plugins/cli/plugins/build/cli"), dependsOn: ["framework/plugins/tooling/plugins/codegen", "infra/plugins/jobs/plugins/supervised-job", "plugin-meta/plugins/relocate"] },
   { pluginPath: "framework/plugins/cli/plugins/check", id: "framework.cli.check", loader: () => import("@plugins/framework/plugins/cli/plugins/check/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/db", id: "framework.cli.db", loader: () => import("@plugins/framework/plugins/cli/plugins/db/cli"), dependsOn: [] },
-  { pluginPath: "framework/plugins/cli/plugins/deploy", id: "framework.cli.deploy", loader: () => import("@plugins/framework/plugins/cli/plugins/deploy/cli"), dependsOn: ["plugin-meta/plugins/plugin-tree/plugins/faceted"] },
+  { pluginPath: "framework/plugins/cli/plugins/deploy", id: "framework.cli.deploy", loader: () => import("@plugins/framework/plugins/cli/plugins/deploy/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/format", id: "framework.cli.format", loader: () => import("@plugins/framework/plugins/cli/plugins/format/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/install", id: "framework.cli.install", loader: () => import("@plugins/framework/plugins/cli/plugins/install/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/normalize-generated", id: "framework.cli.normalize-generated", loader: () => import("@plugins/framework/plugins/cli/plugins/normalize-generated/cli"), dependsOn: [] },
@@ -44,7 +44,6 @@ export const cliEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/deps", id: "infra.deps", loader: () => import("@plugins/infra/plugins/deps/cli"), dependsOn: ["infra/plugins/jobs/plugins/supervised-job"] },
   { pluginPath: "infra/plugins/jobs/plugins/supervised-job", id: "infra.jobs.supervised-job", loader: () => import("@plugins/infra/plugins/jobs/plugins/supervised-job/cli"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths/plugins/root-migration", id: "infra.paths.root-migration", loader: () => import("@plugins/infra/plugins/paths/plugins/root-migration/cli"), dependsOn: [] },
-  { pluginPath: "plugin-meta/plugins/plugin-tree/plugins/faceted", id: "plugin-meta.plugin-tree.faceted", loader: () => import("@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/cli"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/relocate", id: "plugin-meta.relocate", loader: () => import("@plugins/plugin-meta/plugins/relocate/cli"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "toolchain", id: "toolchain", loader: () => import("@plugins/toolchain/cli"), dependsOn: [] },
 ];

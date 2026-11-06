@@ -38,6 +38,7 @@ is bounded by construction.
     - `infra/host/io-health`
     - `infra/paths/data-files/memory`
     - `packages/watched-memo`
+    - `plugin-meta/plugin-tree`
     - `reports/outbox`
     - `shell/document-head`
 - Core:

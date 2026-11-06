@@ -1,5 +1,5 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { onPluginTreeChanged } from "@plugins/plugin-meta/plugins/plugin-tree/server";
+import { onPluginFacetsChanged } from "@plugins/plugin-meta/plugins/plugin-tree/server";
 import { deploySecretsStatus } from "../../core/resources";
 import { _deployDeployments } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
 import { loadSecretPlan } from "./state";
@@ -12,8 +12,8 @@ import { _deploySecretGrants } from "./tables";
  * - the grants table — a declared read, so an Approve recomputes it (and the
  *   deployments table, the composition the closure is read from);
  * - the local secrets store — no change feed, so Set value `notify()`s;
- * - the plugin tree (which secrets the closure declares) — the tree watcher,
- *   while a tab holds the value.
+ * - the plugin tree (which secrets the closure declares) — its faceted
+ *   tree's change signal, while a tab holds the value.
  *
  * Rows carry fingerprints, never values.
  */
@@ -26,6 +26,5 @@ export const deploySecretsStatusServed = serveValue(deploySecretsStatus, {
       "a grant written or replaced moves a row to approved; the deployment's composition decides which secrets its closure declares",
   },
   loader: async ({ deploymentId }) => (await loadSecretPlan(deploymentId)).rows,
-  whileSubscribed: (_params, notify) => onPluginTreeChanged(notify),
-  throttleMs: 2_000,
+  whileSubscribed: (_params, notify) => onPluginFacetsChanged(notify),
 });

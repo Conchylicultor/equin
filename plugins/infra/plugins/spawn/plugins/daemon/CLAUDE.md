@@ -68,6 +68,13 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
 - `stop()` cancels a pending respawn, runs the graceful step, SIGTERMs (SIGKILL
   after 5 s) or terminates, and drops the instance. For `launchDetached` /
   `attach` it only drops the record — the owner tears the stack down.
+- **Restart-skip.** A backend that adopts new code without restarting keeps
+  its supervised instances on the code they were spawned with, so their code
+  is judged (`liveSupervisedIncarnations`) and a change refuses the skip. An
+  `on-demand` daemon whose instance holds only a cache of its own code's work
+  declares `onCodeAdopted: "stop"`: it is not judged, it is stopped on
+  adoption (`stopOnCodeAdopted`), and its owner starts it again on next use
+  (the faceted-tree worker, `plugin-meta/plugin-tree`).
 - Pid-file liveness is read on demand (catalog load, `instance.state`), never
   polled: a pid-file daemon that dies is seen at the next read.
 - Piped stderr carries bun 1.3.13's exit-during-pull wedge risk
@@ -98,6 +105,7 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `infra/mcp/browser`
     - `infra/paths/root-migration`
     - `infra/spawn/daemon/background-arm`
+    - `plugin-meta/plugin-tree`
     - `release`
 - Exemptions:
   - Exempts itself from:
@@ -140,6 +148,7 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `parsePidFile`
     - `pidAlive`
     - `readPidFile`
+    - `stopOnCodeAdopted`
 - Sub-plugins:
   - **`background-arm`** — Long-lived processes in the Background activity catalog: registers the `daemon` background kind — every declaration made with defineDaemon under Long-lived processes, triggered at boot or on demand…
 

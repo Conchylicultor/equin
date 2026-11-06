@@ -59,6 +59,11 @@ function runtimeFor(where: DaemonWhere): DaemonRuntime {
 export function defineDaemon<const R extends DaemonRestart>(
   spec: DaemonSpec<R>,
 ): DaemonDecl<R> & Registration {
+  if (spec.onCodeAdopted === "stop" && spec.startedBy !== "on-demand") {
+    throw new Error(
+      `[daemon] ${spec.name}: onCodeAdopted "stop" needs startedBy "on-demand" — a boot daemon stopped on adoption would stay down until the next boot`,
+    );
+  }
   const state = newDeclState(spec, runtimeFor(spec.where));
   const decl = {
     name: spec.name,

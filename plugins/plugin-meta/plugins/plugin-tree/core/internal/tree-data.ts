@@ -4,20 +4,15 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import {
-  wholeList,
-  wholeRecord,
-} from "@plugins/packages/plugins/list-bound/core";
+import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 import type { PluginNode, PluginTreeData } from "./plugin-tree";
 
 /**
- * A plugin tree as JSON — how a tree crosses a process boundary. The faceted
- * tree is built out of process (the `plugin-tree-facets` command,
- * `plugin-tree/faceted`) and read back by the serving backend through
- * {@link pluginTreeFromJson}: the facet data is already JSON (every facet's
- * extract is stored as a record's text), so only the indexes are rebuilt.
+ * A plugin tree as JSON: each node's fields and facets, nested. What a tree
+ * compares as (a fresh build against one kept up to date), and the shape a
+ * {@link PluginNodeDelta} extends.
  *
- * A node carries no absolute `dir`: the reader derives it from its own plugins
+ * A node carries no absolute `dir`: a reader derives it from its own plugins
  * root and the node's `path`, the same join the build made.
  */
 export interface PluginNodeJson {
@@ -37,43 +32,6 @@ export interface PluginNodeJson {
 export interface PluginTreeJson {
   roots: PluginNodeJson[];
 }
-
-const TREE_REASON =
-  "this checkout's plugin tree — one node per plugin (about 1.5k), the code's own structure";
-
-const runtimesSchema = z.object({
-  web: z.boolean(),
-  server: z.boolean(),
-  machine: z.boolean(),
-  central: z.boolean(),
-});
-
-const nodeSchema: z.ZodType<PluginNodeJson> = z.lazy(() =>
-  z.object({
-    path: z.string(),
-    name: z.string(),
-    id: z.custom<PluginId>((v) => typeof v === "string"),
-    description: z.string().optional(),
-    descriptions: z.object({
-      web: z.string().optional(),
-      server: z.string().optional(),
-      machine: z.string().optional(),
-      central: z.string().optional(),
-    }),
-    loadBearing: z.boolean(),
-    collapsed: z.boolean(),
-    compositionRoot: z.boolean(),
-    runtimes: runtimesSchema,
-    children: wholeList(nodeSchema, { reason: TREE_REASON }),
-    facets: wholeRecord(z.unknown(), {
-      reason: "one entry per facet extractor — a closed set of a few dozen",
-    }),
-  }),
-);
-
-const treeSchema = z.object({
-  roots: wholeList(nodeSchema, { reason: TREE_REASON }),
-});
 
 function nodeToJson(node: PluginNode): PluginNodeJson {
   return {
@@ -98,25 +56,103 @@ export function pluginTreeToJson(tree: PluginTreeData): PluginTreeJson {
   return { roots: tree.roots.map(nodeToJson) };
 }
 
+const facetsSchema = wholeRecord(z.unknown(), {
+  reason: "one entry per facet extractor — a closed set of a few dozen",
+});
+
 /**
- * A tree read back from its JSON, rooted at `pluginsRoot`. Parsed, so a
- * payload of another shape — or one with no plugin at all — throws here,
- * instead of reaching a consumer as a tree with missing parts.
+ * A tree as what changed since the last one its reader holds — how a faceted
+ * tree kept up to date out of process (`plugin-tree/faceted`'s index) reaches
+ * the serving backend. The skeleton (every node, nested, with its structure
+ * fields) always travels: it is small. A node's facets travel as their JSON
+ * text only when they differ from what was last sent; `null` says "as you
+ * already hold". So a backend parses the facets of the plugins that changed,
+ * not the whole tree's.
  */
-export function pluginTreeFromJson(
+export interface PluginNodeDelta extends Omit<
+  PluginNodeJson,
+  "children" | "facets"
+> {
+  children: PluginNodeDelta[];
+  /** The node's facets as JSON text, or null when unchanged since the last delta. */
+  facets: string | null;
+}
+
+export interface PluginTreeDelta {
+  roots: PluginNodeDelta[];
+}
+
+/**
+ * The delta of `tree` against `sent` (each node's facets text as last sent,
+ * by path — what {@link pluginTreeFromDelta}'s reader holds). Updates `sent`
+ * to the tree's own texts, dropping nodes the tree no longer has. Returns the
+ * delta and how many nodes' facets it carries.
+ */
+export function pluginTreeDelta(
+  tree: PluginTreeData,
+  sent: Map<string, string>,
+): { delta: PluginTreeDelta; changed: number } {
+  let changed = 0;
+  const seen = new Set<string>();
+  const toDelta = (node: PluginNode): PluginNodeDelta => {
+    seen.add(node.path);
+    const text = JSON.stringify(node.facets);
+    const same = sent.get(node.path) === text;
+    if (!same) {
+      sent.set(node.path, text);
+      changed++;
+    }
+    return {
+      path: node.path,
+      name: node.name,
+      id: node.id,
+      ...(node.description === undefined
+        ? {}
+        : { description: node.description }),
+      descriptions: node.descriptions,
+      loadBearing: node.loadBearing,
+      collapsed: node.collapsed,
+      compositionRoot: node.compositionRoot,
+      runtimes: node.runtimes,
+      children: node.children.map(toDelta),
+      facets: same ? null : text,
+    };
+  };
+  const roots = tree.roots.map(toDelta);
+  for (const path of [...sent.keys()]) if (!seen.has(path)) sent.delete(path);
+  return { delta: { roots }, changed };
+}
+
+/**
+ * The tree a delta describes, its unchanged facets taken from `previous` (the
+ * tree read off the delta before — null for a first, whole one). A delta
+ * naming a node as unchanged that `previous` does not hold throws: the reader
+ * and the writer disagree on what was sent, and a tree with a hole would read
+ * as a plugin declaring nothing.
+ */
+export function pluginTreeFromDelta(
   pluginsRoot: AppPath,
-  json: unknown,
+  delta: PluginTreeDelta,
+  previous: PluginTreeData | null,
 ): PluginTreeData {
-  const parsed = treeSchema.parse(json);
-  // A checkout always has plugins: an empty tree is a writer that wrote
-  // nothing, and read as data it would say "no plugin declares anything".
-  if (parsed.roots.length === 0)
+  if (delta.roots.length === 0)
     throw new Error(
-      `[plugin-tree] the tree read for ${pluginsRoot} holds no plugin — refusing it rather than reading it as an empty checkout.`,
+      `[plugin-tree] the tree delta for ${pluginsRoot} holds no plugin — refusing it rather than reading it as an empty checkout.`,
     );
   const byDir = new Map<string, PluginNode>();
   const byPath = new Map<string, PluginNode>();
-  const toNode = (n: PluginNodeJson): PluginNode => {
+  const toNode = (n: PluginNodeDelta): PluginNode => {
+    let facets: Record<string, unknown>;
+    if (n.facets !== null) {
+      facets = facetsSchema.parse(JSON.parse(n.facets));
+    } else {
+      const held = previous?.byPath.get(n.path);
+      if (held === undefined)
+        throw new Error(
+          `[plugin-tree] the tree delta for ${pluginsRoot} says ${n.path}'s facets are unchanged, but no earlier tree holds that plugin.`,
+        );
+      facets = held.facets;
+    }
     const node: PluginNode = {
       dir: joinAppPath(pluginsRoot, ...n.path.split("/")),
       path: n.path,
@@ -129,12 +165,12 @@ export function pluginTreeFromJson(
       compositionRoot: n.compositionRoot,
       runtimes: n.runtimes,
       children: n.children.map(toNode),
-      facets: n.facets,
+      facets,
     };
     byDir.set(node.dir, node);
     byPath.set(node.path, node);
     return node;
   };
-  const roots = parsed.roots.map(toNode);
+  const roots = delta.roots.map(toNode);
   return { pluginsRoot, byDir, byPath, roots };
 }

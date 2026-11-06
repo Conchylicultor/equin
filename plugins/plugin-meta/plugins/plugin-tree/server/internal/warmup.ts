@@ -12,10 +12,11 @@ import {
 // throttled post-boot window. `host` scope: worktree backends skip it — their
 // Studio surfaces are rarely opened. They keep the lazy cold path.
 //
-// The faceted tree is not built in this process: it is the
-// `plugin-tree-facets` command's output, read as data (`getFacetsTreeCached`),
-// so its facet CPU (once ~4–5 s of this thread's, 2026-10-31) is a child's,
-// and mostly record reads at that.
+// The faceted tree is not built in this process: it is held by a worker
+// thread (`plugin-tree/faceted`), read as data (`getFacetsTreeCached`), so its
+// facet CPU (once ~4–5 s of this thread's, 2026-10-31) runs off the event loop,
+// and is mostly record reads at that. After this cold build it follows edits by
+// what changed.
 export const pluginTreeWarmup = defineWarmup({
   name: "plugin-tree.trees",
   description:

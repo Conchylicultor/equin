@@ -4,7 +4,11 @@ export {
 } from "./internal/plugin-tree";
 export { createStructureIndex } from "./internal/structure-index";
 export { buildStructureTreeOnce } from "./internal/structure-tree-once";
-export { pluginTreeFromJson, pluginTreeToJson } from "./internal/tree-data";
+export {
+  pluginTreeDelta,
+  pluginTreeFromDelta,
+  pluginTreeToJson,
+} from "./internal/tree-data";
 export type {
   BuildPluginTreeOptions,
   Runtime,
@@ -16,4 +20,9 @@ export type {
   StructureIndex,
   StructureIndexIo,
 } from "./internal/structure-index";
-export type { PluginNodeJson, PluginTreeJson } from "./internal/tree-data";
+export type {
+  PluginNodeDelta,
+  PluginNodeJson,
+  PluginTreeDelta,
+  PluginTreeJson,
+} from "./internal/tree-data";

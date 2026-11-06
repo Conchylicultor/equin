@@ -44,7 +44,7 @@
     - `infra/secrets.setSecret`
     - `network/live.serveValue`
     - `plugin-meta/plugin-tree.getFacetsTreeCached`
-    - `plugin-meta/plugin-tree.onPluginTreeChanged`
+    - `plugin-meta/plugin-tree.onPluginFacetsChanged`
   - DB schema: `plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/server/internal/tables.ts`
   - Resources: `deploy-secrets.status` (push, notified, whole: one row per deploy secret the deployment's composition closure declares — a handful, whole: the plugins in one closure declaring the same key — normally one)
   - Routes:

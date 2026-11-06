@@ -8,6 +8,8 @@ import { defineDaemon } from "./define";
 import {
   daemonRecentRuns,
   listDaemons,
+  liveSupervisedIncarnations,
+  stopOnCodeAdopted,
   type DaemonInstance,
   type DaemonTransition,
 } from "./registry";
@@ -306,5 +308,56 @@ describe("pid files", () => {
     expect(() => supervised.attach({ pidFile: "/nonexistent" })).toThrow(
       /restart: \{ kind: "never" \}/,
     );
+  });
+});
+
+describe("onCodeAdopted", () => {
+  const kept = defineDaemon({
+    name: "test.adopt-kept",
+    description: "A child kept across an adoption.",
+    startedBy: "on-demand",
+    where: "every-worktree",
+    restart: { kind: "never" },
+  });
+  const cache = defineDaemon({
+    name: "test.adopt-stopped",
+    description: "A child holding only a cache.",
+    startedBy: "on-demand",
+    where: "every-worktree",
+    restart: { kind: "never" },
+    onCodeAdopted: "stop",
+  });
+  kept.register();
+  cache.register();
+
+  test("a stop-on-adoption instance is not judged, and is stopped by stopOnCodeAdopted", async () => {
+    const r = recorder();
+    const a = kept.spawnProcess({ argv: sleeper });
+    live.push(a);
+    cache.spawnProcess({ argv: sleeper, onState: r.onState });
+    const labels = liveSupervisedIncarnations().map((i) => i.label);
+    expect(labels).toContain("test.adopt-kept");
+    expect(labels).not.toContain("test.adopt-stopped");
+    await stopOnCodeAdopted();
+    expect(r.states.at(-1)?.state).toBe("stopped");
+    expect(a.state).toBe("running");
+    expect(
+      listDaemons()
+        .find((d) => d.name === "test.adopt-stopped")
+        ?.instances.some((i) => i.instance === null),
+    ).toBe(false);
+  });
+
+  test("only an on-demand daemon may be stopped on adoption", () => {
+    expect(() =>
+      defineDaemon({
+        name: "test.adopt-boot",
+        description: "A boot daemon.",
+        startedBy: "boot",
+        where: "every-worktree",
+        restart: { kind: "never" },
+        onCodeAdopted: "stop",
+      }),
+    ).toThrow(/on-demand/);
   });
 });

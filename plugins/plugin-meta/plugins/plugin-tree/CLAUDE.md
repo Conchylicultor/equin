@@ -10,20 +10,69 @@ the `faceted` sub-plugin (`buildFacetedPluginTree`), which only the CLI, the
 check runner and codegen import.
 
 A serving backend never runs it: `getFacetsTreeCached` reads the tree through
-the `FacetedTreeSource` host service, whose desktop provider (`machine/`) spawns
-`./equin plugin-tree-facets <out>` (`faceted/cli`) in this checkout and reads
-the JSON it writes back with `pluginTreeFromJson`, as a `PluginTreeData` (the
-nodes and their indexes, no extractors, no file set). A file, not stdout: a CLI
-that finds its dependencies stale prints the install on stdout first. The child reads a
-snapshot of the checkout with the shared plugin records installed, as a build
-does, so a call after a small edit extracts only the plugins it touched. Why:
-a backend whose closure reaches a computed load has code no digest can
-measure (`boot:closure-digestable`,
+the `FacetedTreeSource` host service, whose desktop provider
+(`machine/`) keeps it in a worker thread — the
+`plugin-tree.faceted-index` daemon running `bin/faceted-tree-worker.ts`
+— and hands the backend a `PluginTreeData` (the nodes and their indexes, no
+extractors, no file set). Why: a backend whose closure reaches a computed load
+has code no digest can measure (`boot:closure-digestable`,
 `research/2026-11-05-global-backend-code-identity.md`), and the extraction is
-seconds of CPU that no longer runs on the backend's event loop. The tree's
-consumers — `classifyEdges`, plugin-view's payload, the deploy-secrets gate —
-take `PluginTreeData`, so a faceted tree built in-process and one read back
-are the same input to them.
+CPU that must not run on the backend's event loop. The tree's consumers —
+`classifyEdges`, plugin-view's payload, the deploy-secrets gate — take
+`PluginTreeData`, so a faceted tree built in-process and one read back are the
+same input to them.
+
+## The faceted tree follows what changed (`faceted/core/internal/faceted-index.ts`)
+
+It used to be rebuilt whole on every file event under `plugins/`: a child
+(`./equin plugin-tree-facets`) took a whole snapshot, the structure, every
+plugin's record keys and reads, relate, and a 7.8 MB JSON round trip, on top of
+its own boot and tooling load — 30–80 s of wall time per change on a loaded
+host (2026-11-06, load 45–75; ~3.5–5 s of it in-process work with every record
+warm), hidden behind a 2 s throttle on each consumer.
+
+A plugin's facets are plugin records: a function of its own files
+(`pluginFilesManifest`), the facet's code and its batch inputs. So the worker
+holds a `FacetedIndex`: a live snapshot of the checkout (`live-snapshot.ts`:
+`loadRepoSnapshot` once, then each batch's paths re-asked of git and its edited
+files re-hashed), the structure index over it, and each plugin's record keys
+and texts. The backend's one `plugins/` watcher hands it every batch (through
+a coalescer: batches landing mid-refresh fold into one trailing refresh), and
+a refresh:
+
+- re-keys only the plugins that own a changed path (the owner for an edited
+  file; every ancestor too for a file added or removed — a folder line of
+  theirs may move), all of them only when a batch input changed;
+- reads, or extracts and stores, only the records whose key moved;
+- runs `relate` — the one whole-tree step, it joins every plugin's data in
+  place — only when a record's TEXT or the structure changed. A save the facets
+  do not see (a function body, a test, a comment) moves a key, not a text:
+  nothing else runs;
+- sends the backend only the nodes whose related facets changed
+  (`pluginTreeDelta`, applied by `pluginTreeFromDelta`), and
+  `onPluginFacetsChanged` fires only then. Its consumers (plugin-view's facets
+  tree, the composition graph, deploy-secrets) have no throttle.
+
+A read waits for the refresh covering the batches the watcher reported before
+it. Measured by `scripts/bench-faceted-index.ts` (2026-11-06, load ~19,
+records warm): the old per-change work 1.2–2.1 s in-process (the child's boot
+and tooling load on top); now a cold build ~2.4 s once per process, then a
+save the facets do not see 1–5 ms, an export added ~210–350 ms (relate + one
+node shipped), a file created or deleted ~40–90 ms; the tree after every edit
+equals a fresh build. `e2e/facets-tree-live.ts` checks the deploy: a plugin
+added / an export added / the plugin removed seen in ~300 / ~280 / ~470 ms, an
+ordinary file or a body edit a 304, a worker module rewritten served again by
+a fresh worker in ~2.5 s.
+
+The session ends — and the next read opens a new one, cold — when the worker
+dies, a refresh fails, the watcher loses events or reports a batch over 2,000
+paths, or a changed path is code the worker loaded (`require.cache`: the
+extractors, the index; its records were made by code no longer on disk). On
+a restart-skip the daemon is stopped rather than judged
+(`onCodeAdopted: "stop"`, `infra/spawn/daemon`): its code is tooling no digest
+can measure, and it holds only what that code rebuilds. Files outside
+`plugins/` that key records (`bun.lock`, the runtime) are read at the cold
+build only.
 
 ## The structure tree follows what changed (`core/internal/structure-index.ts`)
 
@@ -46,8 +95,7 @@ out its current tree. The one `plugins/` watcher feeds it each batch:
 The tree is re-linked (`assemblePluginTree`, in memory) only when a plugin
 actually changed, and only then does `onPluginStructureChanged` fire — the
 `plugin-view.tree` live value listens to that, not to every edit, and has no
-throttle. The faceted tree and its consumers still follow `onPluginTreeChanged`
-(any file), since facets read every file's content.
+throttle. The faceted tree has its own signal (`onPluginFacetsChanged`, above).
 
 Cold builds happen once per process (the first read) and again only when the
 index was dropped: the watcher lost events (`onLost`), a batch named more than
@@ -75,8 +123,8 @@ membership under `plugins/` is seen at the next cold build, as before.
 Both tree caches are in-memory and die with the process, so on main (which
 restarts on every deploy) the first Studio/plugin-view request of each process
 would wait for both. A `host`-scoped `defineWarmup` reads structure + facets in
-the throttled post-boot drain instead (the faceted one through the child
-above). Worktree backends keep the lazy cold path on purpose: their Studio
+the throttled post-boot drain instead (the faceted one by starting its
+worker). Worktree backends keep the lazy cold path on purpose: their Studio
 surfaces are rarely opened.
 
 ## One structure tree per check pass (`core/internal/structure-tree-once.ts`)
@@ -128,26 +176,28 @@ dynamic value.
 
 ## Plugin reference
 
-- Description: Watcher-kept plugin-tree accessors: the structure tree, kept up to date in-process by what changed (a plugin added or removed, a key file edited — O(changes), with its own change signal), and the faceted tree, read as data through the FacetedTreeSource host service (never extracted in the backend).
+- Description: Watcher-kept plugin-tree accessors: the structure tree, kept up to date in-process by what changed (a plugin added or removed, a key file edited — O(changes), with its own change signal), and the faceted tree, kept up to date by what changed through the FacetedTreeSource host service (a worker holding the faceted index, never extracted in the backend), with its own change signal.
 - Server:
   - Contributes: `host-service:plugin-tree.faceted-source` "plugin-tree.faceted-source"
   - Uses:
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileChangeEvent`
     - `infra/file-watcher.FileWatcher`
-    - `infra/git/git-read-cache.createGitStateMemo`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/paths.PLUGINS_DIR`
     - `infra/warmup.defineWarmup`
-  - Exports (types): `FacetedTreeSourceImpl`
+  - Exports (types):
+    - `FacetedTreeSession`
+    - `FacetedTreeSourceImpl`
   - Exports (values):
+    - `FacetedSessionEnded`
     - `FacetedTreeSource`
     - `getFacetsTreeCached`
     - `getStructureTreeCached`
+    - `onPluginFacetsChanged`
     - `onPluginStructureChanged`
-    - `onPluginTreeChanged`
+    - `pluginFacetsGeneration`
     - `pluginStructureGeneration`
-    - `pluginTreeGeneration`
   - Register:
     - `defineWarmup('plugin-tree.trees')`
     - `defineFileWatcher('plugin-tree.plugins-dir')`
@@ -159,7 +209,6 @@ dynamic value.
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.appPathParent`
     - `infra/host-fs/user-path.joinAppPath`
-    - `packages/list-bound.wholeList`
     - `packages/list-bound.wholeRecord`
     - `plugin-meta/parse-utils.defaultExportObjectBody`
     - `plugin-meta/parse-utils.parseBoolField`
@@ -167,9 +216,11 @@ dynamic value.
   - Exports (types):
     - `BuildPluginTreeOptions`
     - `PluginNode`
+    - `PluginNodeDelta`
     - `PluginNodeJson`
     - `PluginTree`
     - `PluginTreeData`
+    - `PluginTreeDelta`
     - `PluginTreeJson`
     - `Runtime`
     - `StructureIndex`
@@ -178,7 +229,8 @@ dynamic value.
     - `buildPluginTree`
     - `buildStructureTreeOnce`
     - `createStructureIndex`
-    - `pluginTreeFromJson`
+    - `pluginTreeDelta`
+    - `pluginTreeFromDelta`
     - `pluginTreeToJson`
     - `resolvePluginSpecifier`
 - Cross-plugin:
@@ -194,7 +246,9 @@ dynamic value.
     - `plugin-meta/relocate`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
+- Machine:
+  - Register: `defineDaemon('plugin-tree.faceted-index')`
 - Sub-plugins:
-  - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and `./equin…
+  - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and the faceted index a…
 
 <!-- AUTOGENERATED:END -->

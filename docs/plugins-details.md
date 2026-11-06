@@ -2280,7 +2280,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/secrets.setSecret`
                   - `network/live.serveValue`
                   - `plugin-meta/plugin-tree.getFacetsTreeCached`
-                  - `plugin-meta/plugin-tree.onPluginTreeChanged`
+                  - `plugin-meta/plugin-tree.onPluginFacetsChanged`
                 - DB schema: `plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/server/internal/tables.ts`
                 - Resources: `deploy-secrets.status` (push, notified, whole: one row per deploy secret the deployment's composition closure declares — a handful, whole: the plugins in one closure declaring the same key — normally one)
                 - Routes:
@@ -27557,11 +27557,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readMergeMarkers`
           - `resolveGitDir`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
+        - Imported by: 36 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
           - `framework` ×26
           - `infra` ×5
           - `apps` ×3
-          - `plugin-meta` ×2
+          - `plugin-meta/relocate`
           - `toolchain`
       - Exemptions:
         - Exempts itself from:
@@ -27685,14 +27685,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CLI_NAMES`
               - `isCliName`
           - Cross-plugin:
-            - Imported by: 23 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
+            - Imported by: 22 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
               - `framework` ×6
               - `infra` ×6
               - `build` ×2
               - `debug` ×2
-              - `plugin-meta` ×2
               - `apps/deploy/deployments`
               - `database/admin`
+              - `plugin-meta/plugin-records/verify`
               - `primitives/css/layout-harness`
               - `release`
               - `upstream`
@@ -29574,6 +29574,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/deps/python/uv-updater` (0 debt)
                   - `infra/deps/rust/cargo-updater` (0 debt)
                   - `infra/worktree/reclaim` (0 debt)
+                  - `plugin-meta/plugin-tree/faceted` (0 debt)
                   - `review/plugin-changes` (0 debt)
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
               - Exemptions:
@@ -32286,7 +32287,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/subagents`
-              - `plugin-meta/plugin-tree`
               - `release`
               - `review/plugin-changes`
               - `tasks/attempt-work`
@@ -34305,12 +34305,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 40 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 39 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×12
               - `infra` ×8
               - `apps` ×5
               - `build` ×5
-              - `plugin-meta` ×3
+              - `plugin-meta` ×2
               - `code-explorer`
               - `config_v2`
               - `conversations/workspace/scratch`
@@ -34515,7 +34515,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 67 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 68 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×21
           - `debug` ×20
           - `conversations` ×6
@@ -34529,6 +34529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2`
           - `integrations/google-maps`
           - `network/live/change-feed`
+          - `plugin-meta/plugin-tree`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
@@ -34703,14 +34704,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 90 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 88 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `framework` ×29
           - `infra` ×24
           - `apps` ×9
           - `debug` ×5
-          - `plugin-meta` ×4
           - `database` ×3
           - `code-explorer` ×2
+          - `plugin-meta` ×2
           - `primitives` ×2
           - `release` ×2
           - `auth/apple-signing`
@@ -34749,6 +34750,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/mcp/browser`
               - `infra/paths/root-migration`
               - `infra/spawn/daemon/background-arm`
+              - `plugin-meta/plugin-tree`
               - `release`
           - Exemptions:
             - Exempts itself from:
@@ -34791,6 +34793,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `parsePidFile`
               - `pidAlive`
               - `readPidFile`
+              - `stopOnCodeAdopted`
           - Plugins:
             - **`background-arm`** — Long-lived processes in the Background activity catalog: registers the `daemon` background kind — every declaration made with defineDaemon under Long-lived processes, triggered at boot or on demand, its scope from `where`, and its facts (each instance's state, pid, since when, restarts, memory and CPU from one `ps`, the last exit, the restart policy, how liveness is known) — plus each incarnation as a run in this process. Pushes the catalog on every instance transition (start, ready, death, respawn, give-up, stop).
               - Server:
@@ -37455,6 +37458,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host/io-health`
           - `infra/paths/data-files/memory`
           - `packages/watched-memo`
+          - `plugin-meta/plugin-tree`
           - `reports/outbox`
           - `shell/document-head`
       - Core:
@@ -38032,7 +38036,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call past FS_WAIT_FLOOR_MS handed to onSlowFsCall subscribers as a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 160 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 159 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×45
           - `framework` ×23
           - `apps` ×15
@@ -38040,8 +38044,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup` ×12
           - `conversations` ×12
           - `packages` ×6
-          - `plugin-meta` ×6
           - `database` ×5
+          - `plugin-meta` ×5
           - `build` ×4
           - `config_v2` ×3
           - `primitives` ×3
@@ -41246,8 +41250,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.ConfigV2`
           - `network/live.serveValue`
           - `plugin-meta/plugin-tree.getFacetsTreeCached`
-          - `plugin-meta/plugin-tree.onPluginTreeChanged`
-          - `plugin-meta/plugin-tree.pluginTreeGeneration`
+          - `plugin-meta/plugin-tree.onPluginFacetsChanged`
+          - `plugin-meta/plugin-tree.pluginFacetsGeneration`
         - Resources: `composition.data` (invalidate, notified, whole: the plugin graph of this checkout — one entry per plugin (about 1.5k) and per edge between two, which the closure engine walks whole client-side, whole: the host-service bindings one plugin's server barrel provides, whole: the folders one edge holds through — a closed set of a dozen)
       - Core:
         - Uses:
@@ -42430,26 +42434,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `scanCssRefs` — Relative paths in one CSS source: `@source "rel"` (and `@source not "rel"`) and `@import "rel"`.
           - `scanMarkdownRefs` — Relative targets in one markdown source: `[x](rel)` / `![x](rel)`, `[x]: rel` definitions, and `<img src>` / `<a href>` attributes.
           - `scanPathRefs` — `path` refs in one TS/TSX source: every string literal that is wholly a `plugins/…` path, and every `@plugins/…` module specifier (static, dynamic and mocked imports).
-    - **`plugin-tree`** — Watcher-kept plugin-tree accessors: the structure tree, kept up to date in-process by what changed (a plugin added or removed, a key file edited — O(changes), with its own change signal), and the faceted tree, read as data through the FacetedTreeSource host service (never extracted in the backend).
+    - **`plugin-tree`** — Watcher-kept plugin-tree accessors: the structure tree, kept up to date in-process by what changed (a plugin added or removed, a key file edited — O(changes), with its own change signal), and the faceted tree, kept up to date by what changed through the FacetedTreeSource host service (a worker holding the faceted index, never extracted in the backend), with its own change signal.
       - Server:
         - Contributes: `host-service:plugin-tree.faceted-source` "plugin-tree.faceted-source"
         - Uses:
           - `infra/file-watcher.defineFileWatcher`
           - `infra/file-watcher.FileChangeEvent`
           - `infra/file-watcher.FileWatcher`
-          - `infra/git/git-read-cache.createGitStateMemo`
           - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/paths.PLUGINS_DIR`
           - `infra/warmup.defineWarmup`
-        - Exports (types): `FacetedTreeSourceImpl`
+        - Exports (types):
+          - `FacetedTreeSession`
+          - `FacetedTreeSourceImpl`
         - Exports (values):
+          - `FacetedSessionEnded`
           - `FacetedTreeSource`
           - `getFacetsTreeCached`
           - `getStructureTreeCached`
+          - `onPluginFacetsChanged`
           - `onPluginStructureChanged`
-          - `onPluginTreeChanged`
+          - `pluginFacetsGeneration`
           - `pluginStructureGeneration`
-          - `pluginTreeGeneration`
         - Register:
           - `defineWarmup('plugin-tree.trees')`
           - `defineFileWatcher('plugin-tree.plugins-dir')`
@@ -42461,7 +42467,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.appPathParent`
           - `infra/host-fs/user-path.joinAppPath`
-          - `packages/list-bound.wholeList`
           - `packages/list-bound.wholeRecord`
           - `plugin-meta/parse-utils.defaultExportObjectBody`
           - `plugin-meta/parse-utils.parseBoolField`
@@ -42469,9 +42474,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `BuildPluginTreeOptions`
           - `PluginNode`
+          - `PluginNodeDelta`
           - `PluginNodeJson`
           - `PluginTree`
           - `PluginTreeData`
+          - `PluginTreeDelta`
           - `PluginTreeJson`
           - `Runtime`
           - `StructureIndex`
@@ -42480,7 +42487,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `buildPluginTree`
           - `buildStructureTreeOnce`
           - `createStructureIndex`
-          - `pluginTreeFromJson`
+          - `pluginTreeDelta`
+          - `pluginTreeFromDelta`
           - `pluginTreeToJson`
           - `resolvePluginSpecifier`
       - Cross-plugin:
@@ -42496,34 +42504,41 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/relocate`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
+      - Machine:
+        - Register: `defineDaemon('plugin-tree.faceted-index')`
       - Plugins:
-        - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and `./equin plugin-tree-facets`, which writes it as JSON for the serving backend to read as data.
+        - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and the faceted index a backend keeps in a worker thread (FacetedTreeSource's desktop provider): built once, then refreshed by the watcher's paths — only the plugins owning them re-keyed, only moved records extracted, relate only when a record text changed.
           - Core:
-            - Uses: 29 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
-              - `plugin-meta/plugin-records` ×8
+            - Uses: 42 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
+              - `plugin-meta/plugin-records` ×9
+              - `plugin-meta/plugin-tree` ×9
+              - `framework/tooling` ×6
               - `plugin-meta/facets` ×4
               - `framework/plugin-id` ×3
               - `packages/timed-fs` ×3
-              - `plugin-meta/plugin-tree` ×3
               - `infra/host-fs/user-path` ×2
               - `packages/macrotask-yield` ×2
               - `plugin-meta/facets/loader` ×2
               - `plugin-meta/parse-utils` ×2
             - Exports (types):
               - `BuildFacetedTreeOptions`
+              - `FacetedIndex`
+              - `FacetedRefresh`
+              - `OpenFacetedIndexOptions`
               - `TreeEnrichment`
             - Exports (values):
               - `buildFacetedPluginTree`
               - `facetRecordProducers`
-          - Cli:
-            - Uses: `plugin-meta/plugin-records.openRecordStore`
+              - `openFacetedIndex`
           - Cross-plugin:
             - Imported by:
               - `framework/cli/deploy`
               - `framework/tooling/codegen`
               - `review/plugin-changes`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `core/internal/fs-snapshot.ts`, `core/internal/faceted-tree.ts` (debt)
+            - Exempts itself from:
+              - `boundaries/no-platform-api` — `core/internal/fs-snapshot.ts`, `core/internal/faceted-tree.ts` (debt)
+              - `repo-walk-safety/no-adhoc-repo-listing` — `core/internal/live-snapshot.ts` (sanctioned)
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections.
       - Web:
         - Slots:

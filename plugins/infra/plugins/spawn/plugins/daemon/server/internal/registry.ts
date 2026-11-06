@@ -49,6 +49,17 @@ export interface DaemonSpec<R extends DaemonRestart = DaemonRestart> {
   startedBy: DaemonStartedBy;
   where: DaemonWhere;
   restart: R;
+  /**
+   * What a backend that adopts new code without a restart (restart-skip)
+   * does with a live supervised instance. `"keep"` (the default): it goes on
+   * running the code it was spawned with, so that code must be unchanged for
+   * the adoption to pass (`liveSupervisedIncarnations`). `"stop"`: the
+   * instance holds nothing its code cannot rebuild (a cache of work it does)
+   * — it is stopped instead (`stopOnCodeAdopted`), as a fresh process would
+   * not have started it yet, and its owner starts it again on next use, on
+   * the new code. Only for an `on-demand` daemon (asserted).
+   */
+  onCodeAdopted?: "keep" | "stop";
 }
 
 /**
@@ -321,6 +332,8 @@ interface InstanceRec {
   run: BackgroundRun | null;
   /** Re-reads liveness that no event reports (pid-file arms). */
   observe: (() => void) | null;
+  /** The instance's `stop()`, once its handle exists. */
+  stop: (() => Promise<void>) | null;
 }
 
 interface DeclState {
@@ -383,6 +396,8 @@ export function newDeclState(
 export function liveSupervisedIncarnations(): SupervisedIncarnation[] {
   const out: SupervisedIncarnation[] = [];
   for (const state of declarations.values()) {
+    // Stopped on adoption rather than kept: its code is never run on.
+    if (state.spec.onCodeAdopted === "stop") continue;
     for (const rec of state.instances.values()) {
       const { arm, spawnedAt, instance } = rec.info;
       if (arm !== "process" && arm !== "worker") continue;
@@ -395,6 +410,22 @@ export function liveSupervisedIncarnations(): SupervisedIncarnation[] {
     }
   }
   return out;
+}
+
+/**
+ * Stop every live instance of a `onCodeAdopted: "stop"` daemon — what a
+ * backend adopting new code without a restart does with them, instead of
+ * keeping them on the code they were spawned with. Their owners start them
+ * again on next use.
+ */
+export async function stopOnCodeAdopted(): Promise<void> {
+  const stops: Promise<void>[] = [];
+  for (const state of declarations.values()) {
+    if (state.spec.onCodeAdopted !== "stop") continue;
+    for (const rec of state.instances.values())
+      if (rec.stop !== null) stops.push(rec.stop());
+  }
+  await Promise.all(stops);
 }
 
 export function registerDecl(state: DeclState): void {
@@ -450,6 +481,7 @@ export function claimInstance(
     },
     run: null,
     observe: null,
+    stop: null,
     code: null,
   };
   state.instances.set(key, rec);

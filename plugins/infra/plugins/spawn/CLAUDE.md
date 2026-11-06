@@ -260,14 +260,14 @@ presence only — **no re-exports**; import from `core/`.
     - `spawnPassthrough`
     - `spawnToFile`
 - Cross-plugin:
-  - Imported by: 90 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 88 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×29
     - `infra` ×24
     - `apps` ×9
     - `debug` ×5
-    - `plugin-meta` ×4
     - `database` ×3
     - `code-explorer` ×2
+    - `plugin-meta` ×2
     - `primitives` ×2
     - `release` ×2
     - `auth/apple-signing`

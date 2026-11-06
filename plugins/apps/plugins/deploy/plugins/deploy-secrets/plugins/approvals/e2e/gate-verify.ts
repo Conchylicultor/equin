@@ -1,14 +1,14 @@
 // Deploy-secrets gate, end to end, on a worktree build.
 //
 // The gate reads which secrets a composition's closure declares off the
-// faceted plugin tree, which a backend reads as data from a child process
-// (`plugin-tree`'s FacetedTreeSource → `./equin plugin-tree-facets`). This
+// faceted plugin tree, which a backend reads as data from a worker thread
+// (`plugin-tree`'s FacetedTreeSource → `plugin-tree/faceted`'s worker). This
 // drives a real run through the real gate and asserts its verdict:
 //
 //   --expect needs-approval (default): a fresh deployment of a composition
 //     whose closure declares a secret, with no grants, ends `needs-approval`
 //     naming the secret — required and recognised, nothing converged.
-//   --expect failed: run with the child broken on purpose (by hand, between
+//   --expect failed: run with the worker broken on purpose (by hand, between
 //     runs): the run ends `failed`, never `needs-approval` and never past the
 //     gate — a tree that cannot be read must not pass the gate.
 //

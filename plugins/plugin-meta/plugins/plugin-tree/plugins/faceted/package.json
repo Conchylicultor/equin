@@ -2,5 +2,5 @@
   "name": "@equin/plugin-plugin-meta-plugin-tree-faceted",
   "version": "0.0.1",
   "private": true,
-  "description": "The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and `./equin plugin-tree-facets`, which writes it as JSON for the serving backend to read as data."
+  "description": "The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and the faceted index a backend keeps in a worker thread (FacetedTreeSource's desktop provider): built once, then refreshed by the watcher's paths — only the plugins owning them re-keyed, only moved records extracted, relate only when a record text changed."
 }

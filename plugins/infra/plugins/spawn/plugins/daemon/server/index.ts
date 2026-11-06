@@ -11,6 +11,7 @@ export {
   parsePidFile,
   pidAlive,
   readPidFile,
+  stopOnCodeAdopted,
 } from "./internal/registry";
 export type {
   AttachOptions,

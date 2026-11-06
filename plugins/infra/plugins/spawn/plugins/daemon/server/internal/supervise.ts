@@ -533,6 +533,7 @@ function instanceHandle(
   rec: InstanceRec,
   stop: () => Promise<void>,
 ): DaemonInstance {
+  rec.stop = stop;
   return {
     name: state.spec.name,
     instance: rec.info.instance,

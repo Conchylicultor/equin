@@ -4,8 +4,8 @@ import {
 } from "@plugins/plugin-meta/plugins/closure/core";
 import {
   getFacetsTreeCached,
-  onPluginTreeChanged,
-  pluginTreeGeneration,
+  onPluginFacetsChanged,
+  pluginFacetsGeneration,
 } from "@plugins/plugin-meta/plugins/plugin-tree/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {
@@ -14,10 +14,10 @@ import {
 } from "@plugins/plugin-meta/plugins/composition/core";
 import type { PluginTreeData } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 
-// The expensive part is the facets tree build, which plugin-tree already caches
-// (watcher-invalidated, warmed post-boot on main). The derivations on top of it
+// The expensive part is the facets tree, which plugin-tree keeps up to date by
+// what changed (warmed post-boot on main). The derivations on top of it
 // are cheap (~10ms measured: classify 8ms + serialize 1ms + one id scan), so
-// they are memoized per tree IDENTITY: when plugin-tree's memo rebuilds, the new
+// they are memoized per tree IDENTITY: when plugin-tree's tree changes, the new
 // tree object misses the WeakMap and the graph is re-derived. This replaces the
 // old process-lifetime module cache, which never invalidated — after any live
 // plugin change it kept serving the boot-time graph forever (the staleness
@@ -42,15 +42,14 @@ function deriveCompositionData(tree: PluginTreeData): CompositionData {
 // Manifests are not served here — they are user data stored in the
 // `compositions` config_v2 config and read client-side. This value carries only
 // the code-derived graph structure, so its one input is the faceted tree of
-// `plugins/`: told of a change by plugin-tree's watcher (`onPluginTreeChanged`)
-// while a tab holds it, and ETagged by the same generation the tree's memo
-// rebuilds on, so an unchanged tree answers 304. Throttled like the faceted
-// tree itself: each re-read rebuilds every facet.
+// `plugins/`: told of a change of it (`onPluginFacetsChanged`) while a tab
+// holds it, and ETagged by its generation, so an unchanged tree answers 304.
+// No throttle: the signal moves only when the faceted tree did, and a re-read
+// costs the derivation above, not a facet build.
 export const compositionDataServed = serveValue(compositionData, {
   source: "external",
   changes: "notified",
   loader: async () => deriveCompositionData(await getFacetsTreeCached()),
-  revalidate: () => pluginTreeGeneration(),
-  whileSubscribed: (_params, notify) => onPluginTreeChanged(notify),
-  throttleMs: 2_000,
+  revalidate: () => pluginFacetsGeneration(),
+  whileSubscribed: (_params, notify) => onPluginFacetsChanged(notify),
 });

@@ -49,7 +49,7 @@ export async function loadFacetSources(
 export async function loadFacets(): Promise<Facet[]> {
   // loadFacets is build tooling: it runs in the CLI and the check runner,
   // never in a serving backend (which reads the faceted tree as data — see
-  // plugin-tree/faceted's `plugin-tree-facets` command) and never in the
+  // plugin-tree/faceted's worker) and never in the
   // browser. The specifier is held in a variable so the repo's
   // static import-closure analysis (tooling/import-closure — e.g. the CLI's
   // codegen-manifests-not-frozen check) does not follow it into

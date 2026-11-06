@@ -62,7 +62,7 @@ function isSnapshot(repo: RepoFiles): repo is RepoSnapshot {
 }
 
 /** A gitignored file's content from disk, for the module graph (null when absent). */
-function readOutside(root: AppPath, rel: string): string | null {
+export function readOutside(root: AppPath, rel: string): string | null {
   const abs = joinAppPath(root, rel);
   if (!existsSync(abs) || !statSync(abs).isFile()) return null;
   return readFileSync(abs, "utf8");
@@ -75,8 +75,8 @@ function readOutside(root: AppPath, rel: string): string | null {
  *
  * Build tooling: it loads every facet extractor (`facets/loader`), and through
  * them the parsers and codegen. It runs in the CLI and the check runner, never
- * in a serving backend — a backend reads the faceted tree as data, produced by
- * this plugin's `plugin-tree-facets` command (`plugin-tree/server`'s
+ * in a serving backend — a backend reads the faceted tree as data, kept by
+ * this plugin's faceted-tree worker (`openFacetedIndex`, `plugin-tree/server`'s
  * `getFacetsTreeCached`).
  */
 export async function buildFacetedPluginTree(
@@ -129,15 +129,22 @@ export async function buildFacetedPluginTree(
     }
   }
 
-  // Step 3: facet relate, over every plugin's data in memory. Yield between
-  // facets so the residual block is one facet's relate, not all of them summed.
-  for (const facet of facets) {
+  // Step 3: facet relate, over every plugin's data in memory.
+  await relateFacets(tree);
+
+  return tree;
+}
+
+/**
+ * Every facet's `relate` over the tree's data, in place. Yields between facets
+ * so the residual block is one facet's relate, not all of them summed.
+ */
+export async function relateFacets(tree: PluginTree): Promise<void> {
+  for (const facet of tree.facets) {
     if (!facet.relate) continue;
     facet.relate({ tree });
     await yieldMacrotask();
   }
-
-  return tree;
 }
 
 /**

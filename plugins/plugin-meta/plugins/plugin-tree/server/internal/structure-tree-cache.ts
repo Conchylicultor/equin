@@ -9,7 +9,6 @@ import {
   repoFileReader,
 } from "@plugins/framework/plugins/tooling/core";
 import { appPathParent } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { createGitStateMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import {
   defineFileWatcher,
@@ -17,19 +16,27 @@ import {
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
+import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createTreeChangeSignal } from "./tree-change-signal";
-import { FacetedTreeSource } from "./faceted-source";
+import {
+  FacetedSessionEnded,
+  FacetedTreeSource,
+  type FacetedTreeSession,
+} from "./faceted-source";
 
 // Watcher-kept plugin-tree accessors: the structure tree, kept up to date here
-// by what changed, and the faceted tree, read as data from a child
-// (`getFacetsTreeCached`).
+// by what changed, and the faceted tree, kept up to date by what changed in a
+// worker (`getFacetsTreeCached`).
 //
 // ONE lazy @parcel watcher on `PLUGINS_DIR` feeds two signals:
 //
-// - `treeChange` — ANY file under `plugins/` changed. The faceted tree and what
-//   is derived from it (composition, deploy-secrets) depend on every file's
-//   content, so they rebuild on it (`onPluginTreeChanged`,
-//   `pluginTreeGeneration`).
+// - `facetsChange` — the FACETED tree changed. The watcher hands each batch's
+//   paths to the faceted session (`FacetedTreeSource`), which re-keys only the
+//   plugins owning them and re-extracts only the records whose key moved; the
+//   signal moves only when the tree it hands back differs — an edit the facets
+//   do not see (a function body, a test) moves nothing
+//   (`onPluginFacetsChanged`, `pluginFacetsGeneration`).
 // - `structureChange` — the STRUCTURE tree changed. The structure tree (the
 //   `plugin-view.tree` hot path: chip mounts, Settings config-nav) is a
 //   function of which plugin folders hold files and of each plugin's key files
@@ -60,7 +67,7 @@ export const pluginsDirWatcher = defineFileWatcher({
   ignore: ["**/.git/**", "**/node_modules/**", "**/dist/**"],
 });
 
-const treeChange = createTreeChangeSignal();
+const facetsChange = createTreeChangeSignal();
 const structureChange = createTreeChangeSignal();
 let watcherStarted: Promise<FileWatcher> | null = null;
 
@@ -69,13 +76,14 @@ async function ensureWatcher(): Promise<void> {
     dirs: [PLUGINS_DIR],
     onChange: (events) => {
       if (events.length === 0) return;
-      treeChange.bump();
+      // Its own queue: a facets refresh never holds up the structure's.
+      if (facets !== null) facetsRefresh.trigger(events);
       return refreshStructure(events);
     },
     onLost: () => {
-      // Events may be gone: nothing the index holds can be trusted.
+      // Events may be gone: nothing either index holds can be trusted.
       dropIndex();
-      treeChange.bump();
+      dropFacets();
     },
   });
   const starting = watcherStarted;
@@ -90,36 +98,38 @@ async function ensureWatcher(): Promise<void> {
 }
 
 /**
- * Hear every change the plugins-dir watcher sees (a plugin added, removed or
- * any file under `plugins/` edited). Returns the unsubscribe.
+ * Hear every change of the FACETED tree ({@link getFacetsTreeCached}): an edit
+ * under `plugins/` that moved what a facet extracts, a plugin added or
+ * removed, or the tree dropped (rebuilt on the next read). Returns the
+ * unsubscribe.
  *
  * Registering does not arm the watcher — the first tree read (or
- * {@link pluginTreeGeneration}) does, and it is armed before that read builds
+ * {@link pluginFacetsGeneration}) does, and it is armed before that read builds
  * anything. So a process that never handed out a tree hears nothing, and has
  * nothing that could be stale. Listeners run synchronously on the watcher's
  * batch: keep them cheap (a `notify`), and expect one call per batch, not per
  * file.
  */
-export function onPluginTreeChanged(listener: () => void): () => void {
-  return treeChange.on(listener);
+export function onPluginFacetsChanged(listener: () => void): () => void {
+  return facetsChange.on(listener);
 }
 
 /**
- * The tree's current generation as an opaque token — a `revalidate` ETag for a
- * value derived from the tree: equal tokens mean the watcher saw no change in
+ * The faceted tree's current generation as an opaque token — a `revalidate`
+ * ETag for a value derived from it: equal tokens mean it did not change in
  * between, and tokens from two processes never match. Arms the watcher first,
  * so a token is never minted for a tree nothing is watching.
  */
-export async function pluginTreeGeneration(): Promise<string> {
+export async function pluginFacetsGeneration(): Promise<string> {
   await ensureWatcher();
-  return treeChange.token();
+  return facetsChange.token();
 }
 
 /**
  * Hear every change of the STRUCTURE tree (a plugin added, removed, or one of
  * its key files edited — its barrels, its package.json), and only those: an
  * edit to any other file under `plugins/` is not one. Same arming and listener
- * rules as {@link onPluginTreeChanged}. Returns the unsubscribe.
+ * rules as {@link onPluginFacetsChanged}. Returns the unsubscribe.
  */
 export function onPluginStructureChanged(listener: () => void): () => void {
   return structureChange.on(listener);
@@ -128,18 +138,12 @@ export function onPluginStructureChanged(listener: () => void): () => void {
 /**
  * The structure tree's generation as an opaque token — the `revalidate` ETag
  * of a value derived from {@link getStructureTreeCached} (see
- * {@link pluginTreeGeneration}). Arms the watcher first.
+ * {@link pluginFacetsGeneration}). Arms the watcher first.
  */
 export async function pluginStructureGeneration(): Promise<string> {
   await ensureWatcher();
   return structureChange.token();
 }
-
-// Full faceted tree, shared by the facet consumers (Studio's composition graph,
-// the plugin detail pane, the deploy-secrets gate). Barrel-free, as data.
-const facetsMemo = createGitStateMemo<PluginTreeData>({
-  name: "plugin-tree.facets",
-});
 
 // How many file reads the structure index holds open at once. A backend's fs
 // pool also serves its requests, and the cold build hands it every plugin's
@@ -264,6 +268,72 @@ export async function getStructureTreeCached(): Promise<PluginTreeData> {
   return (await coldIndex()).tree();
 }
 
+// ── faceted tree ──
+//
+// One session per process (opened by the first read, kept until it ends or is
+// dropped): the faceted index lives in a worker, refreshed by every watcher
+// batch through one coalescer — batches that land while a refresh runs fold
+// into one trailing refresh, so a burst of saves costs two refreshes, not one
+// each. A read waits for the refresh covering the batches before it, so it
+// never hands out a tree older than the edits the watcher already reported.
+
+/** The open faceted session — null until the first read, and after it ended. */
+let facets: FacetedTreeSession | null = null;
+
+function openFacets(): FacetedTreeSession {
+  if (facets !== null) return facets;
+  const session = FacetedTreeSource.get().open(() => {
+    // Ended on its own (its worker stopped, its code changed): the next read
+    // opens a new one, on the code on disk now.
+    if (facets !== session) return;
+    facets = null;
+    facetsChange.bump();
+  });
+  facets = session;
+  return session;
+}
+
+function dropFacets(): void {
+  const session = facets;
+  if (session === null) return;
+  facets = null;
+  facetsChange.bump();
+  void runTracked("plugin-tree:facets-close", () => session.close());
+}
+
+const facetsRefresh = createCoalescer<FileChangeEvent>({
+  run: (events) => refreshFacets(events),
+});
+
+async function refreshFacets(events: FileChangeEvent[]): Promise<void> {
+  const session = facets;
+  if (session === null || events.length === 0) return;
+  const batch = repoPathsOf(events);
+  if (batch === null) {
+    dropFacets();
+    throw new Error(
+      `plugin-tree: the plugins-dir watcher reported a path outside ${PLUGINS_DIR} — the faceted tree was dropped and is rebuilt cold on the next read.`,
+    );
+  }
+  if (batch.paths.length + batch.edited.length > MAX_SCOPED_PATHS) {
+    dropFacets();
+    return;
+  }
+  let changed: boolean;
+  try {
+    changed = await session.refresh(batch.paths, batch.edited);
+  } catch (err) {
+    // Ended by design (dropped, stopped on a restart-skip, its code changed):
+    // not a failure — the next read opens a new session.
+    if (err instanceof FacetedSessionEnded && !err.failed) return;
+    // A failed refresh leaves the index unusable: drop it, so the next read
+    // rebuilds cold (and fails the same way while the cause stays).
+    if (facets === session) dropFacets();
+    throw err;
+  }
+  if (changed && facets === session) facetsChange.bump();
+}
+
 /**
  * The faceted tree, as data: what the facet extractors made of every plugin,
  * with no extractor in this process.
@@ -274,15 +344,29 @@ export async function getStructureTreeCached(): Promise<PluginTreeData> {
  * measured (`boot:closure-digestable`, research/
  * 2026-11-05-global-backend-code-identity.md), and the build is seconds of CPU
  * on the event loop. So the tree comes from the `FacetedTreeSource` host
- * service — on the desktop, `./equin plugin-tree-facets` run in a child
- * (`plugin-tree#machine`) — memoized on the same watcher generation as the
- * structure tree.
+ * service — on the desktop, a worker thread holding the faceted index
+ * (`plugin-tree/faceted`) — built cold by the first read of the process, then
+ * kept up to date by the watcher's paths: O(changes), not a rebuild per edit.
  */
 export async function getFacetsTreeCached(): Promise<PluginTreeData> {
   await ensureWatcher();
-  return facetsMemo.get(
-    PLUGINS_DIR,
-    () => Promise.resolve(treeChange.token()),
-    () => withHeavyReadSlot(() => FacetedTreeSource.get().read()),
-  );
+  // A session that ends by design while this read waits on it (stopped on a
+  // restart-skip, its code changed) is followed to the next one; each turn
+  // of this loop needs such an end — an event, never a spin.
+  for (;;) {
+    try {
+      // Every batch the watcher handed over before this read is applied first.
+      await facetsRefresh.run();
+      if (facets === null) {
+        // The cold build (the worker's snapshot, records and relate) holds
+        // the heavy-read slot like the structure's: it reads every plugin's
+        // files.
+        return await withHeavyReadSlot(() => openFacets().tree());
+      }
+      return await facets.tree();
+    } catch (err) {
+      if (err instanceof FacetedSessionEnded && !err.failed) continue;
+      throw err;
+    }
+  }
 }

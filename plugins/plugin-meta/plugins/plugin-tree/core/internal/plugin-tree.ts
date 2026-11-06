@@ -36,7 +36,7 @@ export interface PluginNode {
  * A plugin tree as data: the nodes (each with whatever facet data it carries)
  * and their indexes — what a consumer that only READS facet data needs. The
  * serving backend holds the faceted tree in this form, read off the
- * `plugin-tree-facets` command's output (`plugin-tree/faceted`), never built
+ * faceted-tree worker's deltas (`plugin-tree/faceted`), never built
  * in-process: building it runs the facet extractors, which are build tooling.
  */
 export interface PluginTreeData {

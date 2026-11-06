@@ -1,21 +1,20 @@
 import {
   getFacetsTreeCached,
   getStructureTreeCached,
+  onPluginFacetsChanged,
   onPluginStructureChanged,
-  onPluginTreeChanged,
+  pluginFacetsGeneration,
   pluginStructureGeneration,
-  pluginTreeGeneration,
 } from "@plugins/plugin-meta/plugins/plugin-tree/server";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { pluginFacetsTree, pluginTree } from "../../core/values";
 import { treeToPayload } from "./to-payload";
 
 // Both trees live on disk under `plugins/`, so they are external values told of
-// a change by plugin-tree's one `plugins/` watcher (`onPluginTreeChanged`) for
-// as long as a tab holds them. Each read is ETagged by the watcher's generation
-// (`pluginTreeGeneration`), the same token plugin-tree's memos rebuild on: a tab
-// asked to read again after a change that left the tree alone still re-reads,
-// but an unchanged generation answers 304 without shipping the payload.
+// a change by plugin-tree (each tree has its own signal, moved only when that
+// tree changed) for as long as a tab holds them. Each read is ETagged by that
+// tree's generation, so an unchanged generation answers 304 without shipping
+// the payload.
 // Exclusion from the app is derived client-side, from the composition edge
 // graph — neither payload carries a membership field.
 
@@ -36,15 +35,15 @@ export const pluginTreeServed = serveValue(pluginTree, {
 });
 
 /**
- * The full faceted tree, from plugin-tree's shared faceted build. Throttled:
- * every edit under `plugins/` moves the generation, and each re-read rebuilds
- * every facet, so an agent saving files in a burst re-reads at most every 2 s.
+ * The full faceted tree, kept up to date by plugin-tree from what changed. Told
+ * of FACETED changes only (`onPluginFacetsChanged`: an edit that moved what a
+ * facet extracts, a plugin added or removed) — a save the facets do not see
+ * never reaches the tabs — so no throttle stands between a change and them.
  */
 export const pluginFacetsTreeServed = serveValue(pluginFacetsTree, {
   source: "external",
   changes: "notified",
   loader: async () => treeToPayload(await getFacetsTreeCached()),
-  revalidate: () => pluginTreeGeneration(),
-  whileSubscribed: (_params, notify) => onPluginTreeChanged(notify),
-  throttleMs: 2_000,
+  revalidate: () => pluginFacetsGeneration(),
+  whileSubscribed: (_params, notify) => onPluginFacetsChanged(notify),
 });

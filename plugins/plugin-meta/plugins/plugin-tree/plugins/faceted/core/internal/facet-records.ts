@@ -100,6 +100,134 @@ async function facetIdentities(
 }
 
 /**
+ * What keys every facet record of one snapshot: each facet's identity (its
+ * code, the harness, the environment) and the blobs of its batch inputs.
+ * Computed once per snapshot; a long-lived reader recomputes only
+ * {@link batchInputsOf} when one of those files changes.
+ */
+export interface FacetKeying {
+  identities: Map<string, string>;
+  /** Per batch facet, its inputs' `path\tblob` lines — part of its key. */
+  batchInputs: Map<string, string[]>;
+}
+
+export async function facetKeying(
+  input: FacetRecordsInput,
+  facets: readonly Facet[],
+): Promise<FacetKeying> {
+  return {
+    identities: await facetIdentities(input, facets),
+    batchInputs: batchInputsOf(input.snapshot, facets),
+  };
+}
+
+/** Each batch facet's inputs as `path\tblob` lines (see {@link FacetKeying}). */
+export function batchInputsOf(
+  snapshot: RepoSnapshot,
+  facets: readonly Facet[],
+): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const f of facets) {
+    if (!f.extractBatch) continue;
+    out.set(
+      f.def.id,
+      f.extractBatch.inputs.map((p) => `${p}\t${snapshot.blobOf(p)}`),
+    );
+  }
+  return out;
+}
+
+/**
+ * One plugin's record key per facet: the facet's identity over the plugin's
+ * own files (`pluginFilesManifest`) and the facet's batch inputs. A function
+ * of the plugin's folder alone, so a reader that knows which folders changed
+ * re-keys only those plugins.
+ */
+export function nodeFacetKeys(
+  snapshot: RepoSnapshot,
+  keying: FacetKeying,
+  facets: readonly Facet[],
+  node: PluginNode,
+): Map<string, string> {
+  const relDir = relDirOf(snapshot, node);
+  const files = pluginFilesManifest(snapshot, node.dir).sort();
+  const own = recordKey("own", relDir, node.id, ...files);
+  const perFacet = new Map<string, string>();
+  for (const f of facets) {
+    perFacet.set(
+      f.def.id,
+      recordKey(
+        keying.identities.get(f.def.id)!,
+        own,
+        ...(keying.batchInputs.get(f.def.id) ?? []),
+      ),
+    );
+  }
+  return perFacet;
+}
+
+/**
+ * The record text of every `(node, facet)` key given, read from the store and
+ * extracted (and stored) only where it missed. The missed plugins' files are
+ * the only ones read.
+ */
+export async function facetRecordTexts(
+  input: FacetRecordsInput,
+  facets: readonly Facet[],
+  keyed: ReadonlyMap<PluginNode, ReadonlyMap<string, string>>,
+): Promise<Map<string, string>> {
+  const { snapshot, store } = input;
+  const wanted: string[] = [];
+  for (const perFacet of keyed.values()) wanted.push(...perFacet.values());
+  const texts = store.getMany("facet", wanted);
+
+  // Nodes with at least one missed facet: the only plugins whose files are read.
+  const missed = [...keyed.keys()].filter((n) =>
+    [...keyed.get(n)!.values()].some((k) => !texts.has(k)),
+  );
+  if (missed.length === 0) return texts;
+  const wantedOf = (node: PluginNode): string[] =>
+    facets
+      .filter((f) => !texts.has(keyed.get(node)!.get(f.def.id)!))
+      .map((f) => f.def.id);
+  const chunks = chunksOf(missed);
+  const requests = await Promise.all(
+    chunks.map(async (chunk): Promise<FacetJobRequest> => {
+      const fs = await buildFsSnapshot(
+        snapshot,
+        chunk.map((n) => n.dir),
+        { strict: STRICT },
+      );
+      return {
+        root: snapshot.root,
+        files: [...fs.files],
+        dirs: [...fs.dirs].map(([dir, entries]) => [
+          dir,
+          entries.map((e) => [e.name, e.isDirectory()] as const),
+        ]),
+        plugins: chunk.map((node) => ({
+          dir: node.dir,
+          relDir: relDirOf(snapshot, node),
+          id: node.id,
+          facets: wantedOf(node),
+        })),
+      };
+    }),
+  );
+  const replies = await runRecordJobs(extractFacetsJob, requests);
+  const fresh: [string, string][] = [];
+  chunks.forEach((chunk, c) => {
+    chunk.forEach((node, i) => {
+      for (const [facetId, text] of replies[c]![i]!)
+        fresh.push([keyed.get(node)!.get(facetId)!, text]);
+    });
+  });
+  store.putMany("facet", fresh);
+  for (const [k, text] of fresh) texts.set(k, text);
+  return texts;
+}
+
+/**
  * Fill every node's facets from the records, extracting (and storing) only
  * the ones that missed.
  */
@@ -108,89 +236,18 @@ export async function extractFacetRecords(
   nodes: readonly PluginNode[],
   facets: readonly Facet[],
 ): Promise<void> {
-  const { snapshot, store } = input;
-  const identities = await facetIdentities(input, facets);
-  // A batch input's blob is part of its facet's key.
-  const batchInputs = new Map<string, string[]>();
-  for (const f of facets) {
-    if (!f.extractBatch) continue;
-    batchInputs.set(
-      f.def.id,
-      f.extractBatch.inputs.map((p) => `${p}\t${snapshot.blobOf(p)}`),
-    );
-  }
-
-  const keyOf = new Map<PluginNode, Map<string, string>>();
-  const wanted: string[] = [];
-  for (const node of nodes) {
-    const relDir = relDirOf(snapshot, node);
-    const files = pluginFilesManifest(snapshot, node.dir).sort();
-    const own = recordKey("own", relDir, node.id, ...files);
-    const perFacet = new Map<string, string>();
-    for (const f of facets) {
-      const k = recordKey(
-        identities.get(f.def.id)!,
-        own,
-        ...(batchInputs.get(f.def.id) ?? []),
-      );
-      perFacet.set(f.def.id, k);
-      wanted.push(k);
-    }
-    keyOf.set(node, perFacet);
-  }
-  const hits = store.getMany("facet", wanted);
-
-  // Nodes with at least one missed facet: the only plugins whose files are read.
-  const missed = nodes.filter((n) =>
-    [...keyOf.get(n)!.values()].some((k) => !hits.has(k)),
-  );
-  const fresh = new Map<string, string>();
-  if (missed.length > 0) {
-    const wantedOf = (node: PluginNode): string[] =>
-      facets
-        .filter((f) => !hits.has(keyOf.get(node)!.get(f.def.id)!))
-        .map((f) => f.def.id);
-    const chunks = chunksOf(missed);
-    const requests = await Promise.all(
-      chunks.map(async (chunk): Promise<FacetJobRequest> => {
-        const fs = await buildFsSnapshot(
-          snapshot,
-          chunk.map((n) => n.dir),
-          { strict: STRICT },
-        );
-        return {
-          root: snapshot.root,
-          files: [...fs.files],
-          dirs: [...fs.dirs].map(([dir, entries]) => [
-            dir,
-            entries.map((e) => [e.name, e.isDirectory()] as const),
-          ]),
-          plugins: chunk.map((node) => ({
-            dir: node.dir,
-            relDir: relDirOf(snapshot, node),
-            id: node.id,
-            facets: wantedOf(node),
-          })),
-        };
-      }),
-    );
-    const replies = await runRecordJobs(extractFacetsJob, requests);
-    chunks.forEach((chunk, c) => {
-      chunk.forEach((node, i) => {
-        for (const [facetId, text] of replies[c]![i]!)
-          fresh.set(keyOf.get(node)!.get(facetId)!, text);
-      });
-    });
-    store.putMany("facet", [...fresh]);
-  }
+  const keying = await facetKeying(input, facets);
+  const keyed = new Map<PluginNode, Map<string, string>>();
+  for (const node of nodes)
+    keyed.set(node, nodeFacetKeys(input.snapshot, keying, facets, node));
+  const texts = await facetRecordTexts(input, facets, keyed);
 
   // Every node's data is parsed from its record's text, hit or fresh: one
   // spelling, so a fresh extraction and a stored one cannot differ by what
   // JSON drops (an `undefined` field, a Map).
   for (const node of nodes) {
     for (const f of facets) {
-      const k = keyOf.get(node)!.get(f.def.id)!;
-      const text = hits.get(k) ?? fresh.get(k);
+      const text = texts.get(keyed.get(node)!.get(f.def.id)!);
       if (text === undefined)
         throw new Error(
           `[plugin-tree] no record for facet "${f.def.id}" of ${node.path}`,
