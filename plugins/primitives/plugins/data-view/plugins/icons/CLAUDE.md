@@ -55,6 +55,10 @@ phone home screen. Contributes one `DataViewSlots.View("icons")` entry.
   the ends. In a windowed section only mounted lanes are reachable by
   ArrowUp/Down.
 - Hover / keyboard focus lifts the tile 2px; press sinks it to 96%.
+- **A tile that appears** (a row added, or matched again by the search) fades
+  in, and the tiles it displaces — the add tile too — glide to their new cells
+  (`useFlowMotion`, `css/motion`). Plain grid only, and off while a tile is
+  dragged (the sortable strategy moves the tiles then).
 - **Item actions** sit on the tile's top-right corner (`useItemActionZones(desc,
   { hasPersistentSlot: true, hasPrimarySlot: false })`), the gallery card's
   shape: ONE `Pin to="top-right"` holding `[revealed][at rest]`, each arm its own
@@ -102,7 +106,7 @@ through the real body, `web/__tests__/paged-conformance.test.tsx` (data-view's
 - Description: Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
 - Web:
   - Contributes: `DataViewSlots.View` "Icons" → `IconsView`
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×20
     - `primitives/avatar` ×2
     - `primitives/css/ui-kit` ×2
@@ -110,6 +114,7 @@ through the real body, `web/__tests__/paged-conformance.test.tsx` (data-view's
     - `primitives/row-actions` ×2
     - `primitives/css/center.Center`
     - `primitives/css/grid.Grid`
+    - `primitives/css/motion.useFlowMotion`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

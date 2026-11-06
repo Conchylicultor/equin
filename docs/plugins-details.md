@@ -43979,11 +43979,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/slow-ops/cluster`
               - `debug/timeline`
               - `integrations/google-maps/usage`
-        - **`motion`** — How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in) — plus the no-unanimated-surface-exit lint rule.
+        - **`motion`** — How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, useFlowMotion fades a newly shown in-flow item in and glides the siblings it displaces, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in) — plus the no-unanimated-surface-exit lint rule.
           - Web:
             - Uses:
               - `primitives/dom/auto-scroll.FOLLOW_MOTION_ATTR`
               - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/dom/element-size.useResizeObserverSet`
             - Exports (types):
               - `ArrivalProps`
               - `PresenceChild`
@@ -43992,6 +43993,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Arrival`
               - `prefersReducedMotion`
               - `Presence`
+              - `useFlowMotion`
               - `useSizeMotion`
           - Cross-plugin:
             - Imported by:
@@ -44008,6 +44010,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/collapsible`
               - `primitives/collapsible-wrap`
               - `primitives/css/surface`
+              - `primitives/data-view/icons`
+              - `primitives/detail-sections`
               - `primitives/overlay/image-viewer`
               - `primitives/virtual-rows/row-fold`
         - **`overlay`** — In-flow positioning layout primitive: <Overlay behind above clickThrough> paints full-bleed layers under/over its content within its own box, plus the click-through-toggle idiom.
@@ -45891,7 +45895,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
           - Web:
             - Contributes: `DataViewSlots.View` "Icons" → `IconsView`
-            - Uses: 38 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md)
+            - Uses: 39 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md)
               - `primitives/data-view` ×20
               - `primitives/avatar` ×2
               - `primitives/css/ui-kit` ×2
@@ -45899,6 +45903,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/row-actions` ×2
               - `primitives/css/center.Center`
               - `primitives/css/grid.Grid`
+              - `primitives/css/motion.useFlowMotion`
               - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -46252,6 +46257,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Uses:
           - `primitives/css/inline.Inline`
+          - `primitives/css/motion.useFlowMotion`
           - `primitives/css/spacing.Stack`
           - `primitives/dom/scroll-reveal.revealElement`
           - `primitives/dom/web-storage.defineStore`

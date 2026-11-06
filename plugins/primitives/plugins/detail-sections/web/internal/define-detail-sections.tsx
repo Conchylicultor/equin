@@ -8,6 +8,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
+import { useFlowMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { type SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
@@ -539,6 +540,10 @@ export function defineDetailSections<
   }
 
   function SectionStack({ children }: { children: ReactNode }): ReactNode {
+    // A section that becomes shown (its `useAvailable` turning true, its hidden
+    // flag cleared) fades in, and the sections it pushes down glide there.
+    const ref = useRef<HTMLElement>(null);
+    useFlowMotion(ref, true);
     return (
       // This stack OPENS the region: `railClass` pads and publishes the same
       // step in one declaration. It replaced `insetClass`, and swapping it back
@@ -553,6 +558,7 @@ export function defineDetailSections<
       // pushing the content in a second time. An inspector stack always opens
       // it at zero, with no gap: its sections are divided by their own rules.
       <Stack
+        ref={ref}
         gap={chrome === "inspector" ? "none" : "sm"}
         className={railClass({ rail: inset })}
       >

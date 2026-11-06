@@ -105,10 +105,15 @@ beforeEach(() => {
   vi.spyOn(window, "getComputedStyle").mockImplementation((el, pseudo) => {
     const style = real(el, pseudo);
     return new Proxy(style, {
-      get: (target, prop) =>
-        prop === "gridTemplateColumns"
-          ? Array(COLUMNS).fill("116px").join(" ")
-          : Reflect.get(target, prop, target),
+      get: (target, prop) => {
+        if (prop === "gridTemplateColumns") {
+          return Array(COLUMNS).fill("116px").join(" ");
+        }
+        const value: unknown = Reflect.get(target, prop, target);
+        // A method (getPropertyValue) must run on the real declaration, not
+        // on the proxy, which jsdom's brand check rejects.
+        return typeof value === "function" ? value.bind(target) : value;
+      },
     });
   });
   // Every element 100 px tall, the scroller 10 000 px: a windowed grid mounts

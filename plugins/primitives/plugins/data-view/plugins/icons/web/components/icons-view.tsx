@@ -1,4 +1,10 @@
-import { useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
+import {
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+  type Ref,
+} from "react";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
@@ -12,6 +18,7 @@ import {
   cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
+import { useFlowMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
@@ -528,6 +535,11 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
           geometry={geometry}
           gridColumns={gridColumns}
           activeId={activeId}
+          // A drag moves the tiles itself (the sortable grid strategy, then
+          // its drop); a second motion of the same tiles would fight it. The
+          // drop re-attaches it at rest. (Manual order is every view's
+          // default, so it is the drag, not the mode, that turns it off.)
+          flowMotion={activeId === null}
           renderEntry={renderEntry}
           trailing={
             addTile && section === lastSection ? (
@@ -621,6 +633,7 @@ function IconsGrid({
   geometry,
   gridColumns,
   activeId,
+  flowMotion,
   renderEntry,
   trailing,
 }: {
@@ -629,6 +642,9 @@ function IconsGrid({
   geometry: Geometry;
   gridColumns: GridColumns;
   activeId: string | null;
+  /** Whether a tile that appears fades in and the tiles it displaces glide
+   *  (`useFlowMotion`) — in the plain grid only. */
+  flowMotion: boolean;
   renderEntry: (
     entry: DataViewRowEntry<unknown>,
     group: string | null,
@@ -648,6 +664,10 @@ function IconsGrid({
   // A menu's column count is declared; fixed-width cells' is measured.
   const columns = "cols" in gridColumns ? gridColumns.cols : measured;
   const windowed = entries.length > VIRTUALIZE_THRESHOLD;
+  // A new tile (an app just added) fades in and its neighbours — the add tile
+  // included — glide to their new cells instead of jumping a column.
+  const gridRef = useRef<HTMLElement>(null);
+  useFlowMotion(gridRef, flowMotion && !windowed);
   const probe =
     windowed || phase.paged ? (
       <Grid
@@ -665,7 +685,12 @@ function IconsGrid({
     return (
       <>
         {probe}
-        <Grid {...gridColumns} gap={geometry.gap} className={geometry.classes}>
+        <Grid
+          ref={gridRef}
+          {...gridColumns}
+          gap={geometry.gap}
+          className={geometry.classes}
+        >
           {Array.from({ length: phase.pad(columns) }, (_, i) => spacer(i))}
           {entries.map((entry) => renderEntry(entry, section.key))}
           {trailing}

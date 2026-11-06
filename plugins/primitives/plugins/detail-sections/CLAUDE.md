@@ -57,6 +57,11 @@ contribution type only. Such splits are render-time filters: `subId` does **not*
 partition reorder (layout is keyed by the base slot id), so all zones share one
 order.
 
+A section that becomes shown (its `useAvailable` turning true, its hidden flag
+cleared in the order config) fades in and the sections after it glide down:
+`SectionStack` attaches `useFlowMotion` (`css/motion`), so a multi-zone pane
+built on it gets the same motion.
+
 ## Open state
 
 **persisted toggle → `useDefaultOpen?.(props)` → `false`**, persisted per device
@@ -111,6 +116,7 @@ DataView dropped in is inset once, by the card. See `data-view/CLAUDE.md`
 - Web:
   - Uses:
     - `primitives/css/inline.Inline`
+    - `primitives/css/motion.useFlowMotion`
     - `primitives/css/spacing.Stack`
     - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/dom/web-storage.defineStore`
