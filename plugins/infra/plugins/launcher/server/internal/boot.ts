@@ -4,12 +4,9 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { writeFileSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import {
@@ -133,10 +130,13 @@ export function assertSupportedHost(): void {
  * opens a log — not a failure, so callers fall through to the next source;
  * every other read error propagates.
  */
-function readLogTail(path: AppPath, lines: number): string | null {
+async function readLogTail(
+  path: AppPath,
+  lines: number,
+): Promise<string | null> {
   let raw: string;
   try {
-    raw = readFileSync(path, "utf-8");
+    raw = await readFile(path, "utf-8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
@@ -161,10 +161,10 @@ const GATEWAY_LOG_TAIL_LINES = 20;
  * `gateway.log` is only the fallback: correct, but it also holds earlier
  * sessions, so its tail can describe a different boot.
  */
-function gatewayLogTail(): string {
+async function gatewayLogTail(): Promise<string> {
   const tail =
-    readLogTail(GATEWAY_STDIO_LOG, GATEWAY_LOG_TAIL_LINES) ??
-    readLogTail(GATEWAY_SLOG_LOG, GATEWAY_LOG_TAIL_LINES);
+    (await readLogTail(GATEWAY_STDIO_LOG, GATEWAY_LOG_TAIL_LINES)) ??
+    (await readLogTail(GATEWAY_SLOG_LOG, GATEWAY_LOG_TAIL_LINES));
   return tail ?? `(no output in ${GATEWAY_STDIO_LOG} or ${GATEWAY_SLOG_LOG})`;
 }
 
@@ -194,9 +194,9 @@ function pidFile(): AppPath {
   return gatewayLocks.file(GATEWAY_PID_FILENAME);
 }
 
-export function readPid(): number | null {
+export async function readPid(): Promise<number | null> {
   try {
-    const n = parseInt(readFileSync(pidFile(), "utf-8").trim(), 10);
+    const n = parseInt((await readFile(pidFile(), "utf-8")).trim(), 10);
     return isNaN(n) ? null : n;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
@@ -228,8 +228,8 @@ export async function isGatewayListening(port: number): Promise<boolean> {
   }
 }
 
-export function hasPgBouncerPackage(repoRoot: AppPath): boolean {
-  return existsSync(
+export function hasPgBouncerPackage(repoRoot: AppPath): Promise<boolean> {
+  return exists(
     joinAppPath(
       repoRoot,
       "plugins/database/plugins/pgbouncer/node_modules/@equin",
@@ -256,21 +256,23 @@ export function pgbouncerConnection() {
   return { host: PGBOUNCER_SOCKET_DIR, port: PGBOUNCER_PORT };
 }
 
-export function ensureDatabaseConfig(
+export async function ensureDatabaseConfig(
   repoRoot: AppPath,
   log: LogFn = noop,
-): void {
+): Promise<void> {
   // Upgrade existing config: add pgbouncer service if packages are now installed.
-  if (existsSync(DATABASE_CONFIG_PATH)) {
+  if (await exists(DATABASE_CONFIG_PATH)) {
     try {
-      const existing = JSON.parse(readFileSync(DATABASE_CONFIG_PATH, "utf-8"));
+      const existing = JSON.parse(
+        await readFile(DATABASE_CONFIG_PATH, "utf-8"),
+      );
       const services: Array<{ name: string }> = existing.services ?? [];
       const hasPgBouncer = services.some(
         (s) => s.name === PGBOUNCER_SERVICE_NAME,
       );
       let changed = false;
       let nextServices = services;
-      if (!hasPgBouncer && hasPgBouncerPackage(repoRoot)) {
+      if (!hasPgBouncer && (await hasPgBouncerPackage(repoRoot))) {
         existing.pgbouncer = pgbouncerConnection();
         nextServices = [...nextServices, pgbouncerService(repoRoot)];
         changed = true;
@@ -278,7 +280,7 @@ export function ensureDatabaseConfig(
       }
       if (changed) {
         existing.services = nextServices;
-        writeFileSync(
+        await writeFile(
           DATABASE_CONFIG_PATH,
           JSON.stringify(existing, null, 2) + "\n",
         );
@@ -294,8 +296,8 @@ export function ensureDatabaseConfig(
     repoRoot,
     "plugins/database/plugins/embedded/node_modules/@embedded-postgres",
   );
-  const hasEmbedded = existsSync(embeddedPkgDir);
-  const hasPgBouncer = hasEmbedded && hasPgBouncerPackage(repoRoot);
+  const hasEmbedded = await exists(embeddedPkgDir);
+  const hasPgBouncer = hasEmbedded && (await hasPgBouncerPackage(repoRoot));
 
   const startScript = join(
     repoRoot,
@@ -334,7 +336,7 @@ export function ensureDatabaseConfig(
       };
 
   dbConfigDir.ensure();
-  writeFileSync(DATABASE_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
+  await writeFile(DATABASE_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
   log(
     hasEmbedded
       ? `Generated database config (embedded Postgres${hasPgBouncer ? " + PgBouncer" : ""})`
@@ -356,10 +358,10 @@ export function ensureDatabaseConfig(
  * one — only the spawn command differs. PgBouncer is included only when a start
  * binary is supplied.
  */
-export function writeReleaseDatabaseConfig(
+export async function writeReleaseDatabaseConfig(
   opts: { pgStartBin: string; pgbouncerStartBin?: string },
   log: LogFn = noop,
-): void {
+): Promise<void> {
   const { pgStartBin, pgbouncerStartBin } = opts;
   const hasPgBouncer = pgbouncerStartBin !== undefined;
 
@@ -396,7 +398,7 @@ export function writeReleaseDatabaseConfig(
   };
 
   dbConfigDir.ensure();
-  writeFileSync(DATABASE_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
+  await writeFile(DATABASE_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
   log(
     `Generated release database config (embedded Postgres${hasPgBouncer ? " + PgBouncer" : ""})`,
   );
@@ -573,7 +575,9 @@ export function gatewayLaunchFlags(
  * Daemonize the gateway: spawn it detached (`unref()`), write its pid to the pid
  * file, and return the handle. The launch itself is {@link gatewayLaunchSpec}.
  */
-export function spawnGatewayDaemon(opts: GatewayLaunchOptions): Bun.Subprocess {
+export async function spawnGatewayDaemon(
+  opts: GatewayLaunchOptions,
+): Promise<Bun.Subprocess> {
   const spec = gatewayLaunchSpec(opts);
   // Truncate ("w"): only holds raw stdout/stderr until slog takes over, plus
   // any panic. The gateway writes its own rotating logs under -log-dir.
@@ -592,7 +596,7 @@ export function spawnGatewayDaemon(opts: GatewayLaunchOptions): Bun.Subprocess {
   // dies before it gets that far must still leave its (dead) pid behind, or a
   // preview's reaper — which reads a missing file as "still booting" — would
   // wait on it forever. The gateway then rewrites the same value.
-  writeFileSync(pidFile(), String(gw.pid) + "\n");
+  await writeFile(pidFile(), String(gw.pid) + "\n");
   // Detached by default: `./equin start` on a host without launchd and
   // the preview/desktop bring-up paths all outlive their launcher. A caller
   // that means to SUPERVISE the gateway (the release launcher under systemd)
@@ -632,7 +636,7 @@ export async function awaitGatewayReady(opts: {
       // and its evidence (the gateway's own last output) is already on disk.
       if (!isRunning(pid)) {
         throw new Error(
-          `Gateway exited during startup (PID ${pid}). Last output:\n${gatewayLogTail()}`,
+          `Gateway exited during startup (PID ${pid}). Last output:\n${await gatewayLogTail()}`,
         );
       }
       return (await isGatewayListening(port)) ? true : null;
@@ -640,9 +644,9 @@ export async function awaitGatewayReady(opts: {
     {
       delay: exponential({ initial: 100, max: 1_000 }),
       deadline: GATEWAY_READY_TIMEOUT_MS,
-      onDeadline: () => {
+      onDeadline: async () => {
         throw new Error(
-          `Gateway (PID ${pid}) is running but never listened on port ${port} within ${GATEWAY_READY_TIMEOUT_MS}ms. Last output:\n${gatewayLogTail()}`,
+          `Gateway (PID ${pid}) is running but never listened on port ${port} within ${GATEWAY_READY_TIMEOUT_MS}ms. Last output:\n${await gatewayLogTail()}`,
         );
       },
     },
@@ -705,7 +709,7 @@ export async function awaitPgReady(
   await retryUntil(
     async () => {
       try {
-        await getAdminPool().query("SELECT 1");
+        await (await getAdminPool()).query("SELECT 1");
         return true;
         // eslint-disable-next-line promise-safety/no-absorbed-failure -- retryUntil probe: null signals "not ready yet, retry" (lastErr captured for the deadline); a genuine failure surfaces when the retry deadline elapses
       } catch (err) {
@@ -846,7 +850,7 @@ export async function bootSelfContainedApp(opts: {
   const logLevel = opts.logLevel ?? "info";
   const log = opts.log ?? noop;
 
-  ensureDatabaseConfig(repoRoot, log);
+  await ensureDatabaseConfig(repoRoot, log);
   // Stamp the release identity BEFORE the gateway spawn: a child's env is
   // snapshotted at spawn, and the backend gets its env from the gateway (both
   // names are forwarded names of the declared runtime environment), so this is
@@ -854,7 +858,7 @@ export async function bootSelfContainedApp(opts: {
   if (opts.releaseIdentity) setReleaseIdentity(opts.releaseIdentity);
   // A self-contained app is single-namespace: route subdomain-less requests
   // (the desktop webview, single-origin web) to it via the gateway default.
-  const gateway = spawnGatewayDaemon({
+  const gateway = await spawnGatewayDaemon({
     // Where it was built: a self-contained app is not the machine's app bundle.
     executable: unbundledExecutable(gatewayBuild(opts.gateway)),
     cwd: repoRoot,
@@ -875,7 +879,7 @@ export async function bootSelfContainedApp(opts: {
 
   // Spec last: the gateway's fsnotify watcher only discovers the namespace once
   // its DB exists, so the backend's boot migrator never races DB creation.
-  writeWorktreeSpec({
+  await writeWorktreeSpec({
     name,
     server,
     web,
@@ -897,10 +901,10 @@ export async function bootSelfContainedApp(opts: {
 }
 
 /** Read a numeric PID from the first line of a pidfile; null if absent/invalid. */
-function readPidFile(path: AppPath): number | null {
+async function readPidFile(path: AppPath): Promise<number | null> {
   let raw: string;
   try {
-    raw = readFileSync(path, "utf-8");
+    raw = await readFile(path, "utf-8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
@@ -971,7 +975,7 @@ export async function teardownSelfContainedApp(
 
   // 1. Gateway — kill and wait, so the supervisor watchdog is gone before we touch
   // PG/PgBouncer (else it would restart them out from under us).
-  const gwPid = readPidFile(gatewayPidFile(root));
+  const gwPid = await readPidFile(gatewayPidFile(root));
   if (gwPid !== null && isRunning(gwPid)) {
     signalPid(gwPid, "SIGTERM");
     await retryUntil(async () => (isRunning(gwPid) ? null : true), {
@@ -986,11 +990,11 @@ export async function teardownSelfContainedApp(
   if (httpPort !== undefined) killListenerOnPort(httpPort);
 
   // 2. PgBouncer.
-  const pgbPid = readPidFile(asAppPath(pgbouncerPidFileUnder(root)));
+  const pgbPid = await readPidFile(asAppPath(pgbouncerPidFileUnder(root)));
   if (pgbPid !== null) signalPid(pgbPid, "SIGTERM");
 
   // 3. Postgres — immediate shutdown; the cluster is thrown away.
-  const pgPid = readPidFile(asAppPath(pgPostmasterPidFile(root)));
+  const pgPid = await readPidFile(asAppPath(pgPostmasterPidFile(root)));
   if (pgPid !== null) signalPid(pgPid, "SIGQUIT");
   if (pgPort !== undefined) killListenerOnPort(pgPort);
 
@@ -1048,12 +1052,12 @@ export function seedReleaseAssetMirror(opts: {
  * The bundle's own `config-seed/config/` layout is the release CLI's staging
  * convention, unrelated to the data root, so it stays spelled out.
  */
-export function propagateReleaseConfig(opts: {
+export async function propagateReleaseConfig(opts: {
   bundleRoot: AppPath;
   dataDir: AppPath;
   worktreeName: string;
   log?: LogFn;
-}): void {
+}): Promise<void> {
   const src = joinAppPath(
     opts.bundleRoot,
     "config-seed",
@@ -1065,9 +1069,9 @@ export function propagateReleaseConfig(opts: {
     userConfigRelativeToRoot(),
     opts.worktreeName,
   );
-  if (!existsSync(src)) return; // dev / no seed baked → no-op
+  if (!(await exists(src))) return; // dev / no seed baked → no-op
 
-  const { written, removed } = propagateOriginLayer(src, dest);
+  const { written, removed } = await propagateOriginLayer(src, dest);
   if (written > 0 || removed > 0) {
     opts.log?.(
       `Propagated config origins → ${dest} (${written} written, ${removed} removed)`,

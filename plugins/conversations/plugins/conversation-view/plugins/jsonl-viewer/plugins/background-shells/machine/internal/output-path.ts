@@ -1,4 +1,4 @@
-import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
+import { realpath } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
 import { SHELL_ID_PATTERN } from "../../core";
 
@@ -18,14 +18,19 @@ export interface ShellOutputPathContext {
  * spelling of the tmp dir this process can see is accepted; nothing outside
  * them is.
  */
-export function shellOutputPathContext(): ShellOutputPathContext {
+export async function shellOutputPathContext(): Promise<ShellOutputPathContext> {
   const uid = process.getuid?.();
   if (uid === undefined) {
     throw new Error(
       "[background-shells] process.getuid() is unavailable; cannot validate a shell output path.",
     );
   }
-  const candidates = ["/tmp", "/private/tmp", tmpdir(), realpathSync(tmpdir())];
+  const candidates = [
+    "/tmp",
+    "/private/tmp",
+    tmpdir(),
+    await realpath(tmpdir()),
+  ];
   const roots = [...new Set(candidates.map((r) => r.replace(/\/+$/, "")))];
   return { roots, uid };
 }

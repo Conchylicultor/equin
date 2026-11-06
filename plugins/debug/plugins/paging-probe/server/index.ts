@@ -19,10 +19,10 @@ export default {
   // (a release is a shipped composition, not a diagnostics host — unlike the
   // sentinel, which must run on releases too). Off unless explicitly enabled:
   // the fat variants allocate real cold heap, so this is an experiment switch.
-  onReady: () => {
+  onReady: async () => {
     if (!isMain() || isRelease()) return;
     if (!getConfig(pagingProbeConfig).enabled) return;
-    startPagingProbes();
+    await startPagingProbes();
   },
   onShutdown: async () => {
     await stopPagingProbes();

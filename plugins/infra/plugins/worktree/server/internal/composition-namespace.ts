@@ -22,12 +22,8 @@ import {
 // consume the exact same safety-critical logic; a marker-name or collision-rule
 // change can never drift between them.
 
-import { mkdirSync, renameSync, writeFileSync } from "node:fs";
-import {
-  existsSync,
-  readFileSync,
-  readFile,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, rename, writeFile } from "node:fs/promises";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 
 import { basename } from "node:path";
 import {
@@ -151,24 +147,27 @@ function branchExists(root: string, name: string): boolean {
  * manifest it read off disk, while worktree creation runs in a backend and reads
  * it through the config registry. One prober, two suppliers.
  */
-export function probeNamespace(
+export async function probeNamespace(
   root: AppPath,
   ns: Namespace,
   compositionIds: ReadonlySet<string>,
-): NamespaceProbe {
+): Promise<NamespaceProbe> {
   const specDir = joinAppPath(worktreesDir(), ns);
   return {
-    specDirExists: existsSync(specDir),
-    hasCompositionMarker: existsSync(
+    specDirExists: await exists(specDir),
+    hasCompositionMarker: await exists(
       joinAppPath(specDir, COMPOSITION_MARKER_FILE),
     ),
-    gitWorktreeDirExists: existsSync(
+    gitWorktreeDirExists: await exists(
       joinAppPath(root, ".claude", "worktrees", ns),
     ),
     branchExists: branchExists(root, ns),
     compositionIdExists: compositionIds.has(ns),
   };
 }
+
+/** Per-process staging-name counter: two stamps in flight never share a temp file. */
+let stampSeq = 0;
 
 /**
  * Stamp the provenance marker for a compose-serve namespace, and PROVE it
@@ -203,20 +202,20 @@ export function probeNamespace(
  * live. The second write carries the same bytes, so in the normal case it
  * changes nothing.
  */
-export function stampCompositionMarker(
+export async function stampCompositionMarker(
   ns: Namespace,
   marker: CompositionMarker,
-): void {
+): Promise<void> {
   const dir = joinAppPath(worktreesDir(), ns);
   const path = joinAppPath(dir, COMPOSITION_MARKER_FILE);
-  mkdirSync(dir, { recursive: true });
+  await mkdir(dir, { recursive: true });
   const tmp = joinAppPath(
     appPathParent(path),
-    `${basename(path)}.${process.pid}.tmp`,
+    `${basename(path)}.${process.pid}.${String(++stampSeq)}.tmp`,
   );
-  writeFileSync(tmp, JSON.stringify(marker, null, 2) + "\n");
-  renameSync(tmp, path);
-  const landed = readCompositionMarker(ns);
+  await writeFile(tmp, JSON.stringify(marker, null, 2) + "\n");
+  await rename(tmp, path);
+  const landed = await loadCompositionMarker(ns);
   if (landed === null || landed.composition !== marker.composition) {
     throw new Error(
       `composition marker for "${ns}" did not land at ${path} ` +
@@ -227,25 +226,14 @@ export function stampCompositionMarker(
 }
 
 /** True when `worktrees/<ns>/composition.json` exists — the namespace is compose-serve-owned. */
-export function hasCompositionMarker(ns: Namespace): boolean {
-  return existsSync(joinAppPath(worktreesDir(), ns, COMPOSITION_MARKER_FILE));
+export function hasCompositionMarker(ns: Namespace): Promise<boolean> {
+  return exists(joinAppPath(worktreesDir(), ns, COMPOSITION_MARKER_FILE));
 }
 
 /**
  * Read the provenance marker for a compose-serve namespace. Returns the parsed
  * marker, or `null` when the namespace carries no `composition.json` (not
  * compose-serve-owned).
- */
-export function readCompositionMarker(ns: Namespace): CompositionMarker | null {
-  const path = joinAppPath(worktreesDir(), ns, COMPOSITION_MARKER_FILE);
-  if (!existsSync(path)) return null;
-  return JSON.parse(readFileSync(path, "utf8")) as CompositionMarker;
-}
-
-/**
- * {@link readCompositionMarker} without blocking the event loop — for a reader
- * that runs inside the live-resource flush cycle (a loader), where a
- * synchronous read freezes every other loader and every socket send.
  */
 export async function loadCompositionMarker(
   ns: Namespace,

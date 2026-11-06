@@ -5,7 +5,6 @@ import {
   closeRun,
   openRun,
   pidAlive,
-  readPidFile,
   releaseInstance,
   setState,
   type AttachOptions,
@@ -20,6 +19,7 @@ import {
   type WorkerLaunch,
 } from "./registry";
 import type { newDeclState } from "./registry";
+import { readPidFileSync } from "./pid-file-sync";
 
 type DeclState = ReturnType<typeof newDeclState>;
 
@@ -386,7 +386,7 @@ function followPidFile(
   return () => {
     const final = rec.info.arm === "detached";
     if (final && rec.info.state === "exited") return;
-    const read = readPidFile(pidFile);
+    const read = readPidFileSync(pidFile);
     if (read.kind === "pid" && read.pid !== lastPid && pidAlive(read.pid)) {
       // A pid we have not followed yet, and it is alive: a new incarnation.
       if (rec.info.pid !== null) {
@@ -458,7 +458,10 @@ export function launchDetachedIn(
       if (code !== 0) {
         const reason = `bootstrap ${exitReason(code, signalCode === null ? null : String(signalCode))}`;
         // A failed bootstrap: the long-lived process may never appear.
-        if (rec.info.pid === null && readPidFile(opts.pidFile).kind !== "pid") {
+        if (
+          rec.info.pid === null &&
+          readPidFileSync(opts.pidFile).kind !== "pid"
+        ) {
           rec.info.lastExit = { at: new Date(), reason };
           if (rec.run === null) openRun(state, rec);
           closeRun(state, rec, "failed", reason);

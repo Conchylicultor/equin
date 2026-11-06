@@ -1,10 +1,10 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import {
-  existsSync,
-  readFileSync,
-  statSync,
+  exists,
+  readFile,
+  stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { spawnSync } from "node:child_process";
 import { userInfo } from "node:os";
@@ -95,7 +95,7 @@ export interface StartedAgent {
    */
   readonly exited: Promise<string>;
   /** What this launch has written to `agent.log` so far (stdout and stderr). */
-  output(): string;
+  output(): Promise<string>;
 }
 
 // The output a failure carries: enough for a stack trace or a usage error,
@@ -108,20 +108,21 @@ const MAX_OUTPUT_CHARS = 4_000;
  * account, which then becomes the active one (the next launches follow it).
  * Read at every process start, so a switch reaches an agent at its next start.
  */
-function chooseLaunchAccount(): string {
-  const chosen = nextLaunchAccount();
-  if (chosen !== readClaudeAccounts().active) selectClaudeAccountById(chosen);
+async function chooseLaunchAccount(): Promise<string> {
+  const chosen = await nextLaunchAccount();
+  if (chosen !== (await readClaudeAccounts()).active)
+    await selectClaudeAccountById(chosen);
   return chosen;
 }
 
 /** The account an agent process started now would run on — a read, selecting nothing. */
-export function nextLaunchAccount(): string {
-  const state = readClaudeAccounts();
+export async function nextLaunchAccount(): Promise<string> {
+  const state = await readClaudeAccounts();
   return launchAccount({
     accounts: claudeAccountRefs(state),
     active: state.active,
     autoSwitch: state.autoSwitch,
-    byAccount: readClaudeUsage().byAccount,
+    byAccount: (await readClaudeUsage()).byAccount,
     now: Date.now(),
   });
 }
@@ -130,16 +131,18 @@ export function nextLaunchAccount(): string {
  * The named claude the conversation's previous start spawned, from the options
  * file it left — so a relaunch keeps the name (and its macOS grants).
  */
-function previousNamedClaudeBin(id: string): string | null {
+async function previousNamedClaudeBin(id: string): Promise<string | null> {
   const path = agentOptionsPath(id);
-  if (!existsSync(path)) return null;
-  return readAgentOptions(id).namedClaudeBin;
+  if (!(await exists(path))) return null;
+  return (await readAgentOptions(id)).namedClaudeBin;
 }
 
 /** The options file the conversation's last start wrote. */
-export function readAgentOptions(id: string): AgentLaunchOptions {
+export async function readAgentOptions(
+  id: string,
+): Promise<AgentLaunchOptions> {
   return AgentLaunchOptionsSchema.parse(
-    JSON.parse(readFileSync(agentOptionsPath(id), "utf8")),
+    JSON.parse(await readFile(agentOptionsPath(id), "utf8")),
   );
 }
 
@@ -156,6 +159,16 @@ async function appliedSeq(id: string): Promise<number> {
     );
   }
   return row.cursorSeq;
+}
+
+/** A file's size, 0 when it does not exist yet. */
+async function sizeOrZero(path: string): Promise<number> {
+  try {
+    return (await stat(path)).size;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return 0;
+    throw err;
+  }
 }
 
 /**
@@ -182,18 +195,18 @@ export async function startAgentProcess(
       data: { errorType: "SdkAgentDuplicate", label: "runtime-sdk.exit" },
     });
   }
-  mkdirSync(agentDir(id), { recursive: true });
-  const claudeBin = bundledClaudeBin();
+  await mkdir(agentDir(id), { recursive: true });
+  const claudeBin = await bundledClaudeBin();
   const disclaimExec = await resolveDisclaimExec(id);
   const namedClaude = await namedClaudeBin({
     conversationId: id,
     claudeBin,
     disclaimExec,
-    previous: previousNamedClaudeBin(id),
+    previous: await previousNamedClaudeBin(id),
   });
   // This backend's own bun, by path (the login shell's PATH is the account's),
   // under the conversation's name so Activity Monitor tells the agents apart.
-  const bun = cloneNamedBinary({
+  const bun = await cloneNamedBinary({
     bin: asAppPath(process.execPath),
     dir: agentBinDir(id),
     name: processName("agent", id),
@@ -214,8 +227,8 @@ export async function startAgentProcess(
     namedBun,
     seqFloor: await appliedSeq(id),
   };
-  writeFileSync(agentOptionsPath(id), JSON.stringify(options, null, 2));
-  const account = chooseLaunchAccount();
+  await writeFile(agentOptionsPath(id), JSON.stringify(options, null, 2));
+  const account = await chooseLaunchAccount();
   // Not demoted: the agent leaves darwinbg itself and demotes only what its
   // CLI launches (bin/agent.ts, scheduling tier).
   const command = [
@@ -245,7 +258,7 @@ export async function startAgentProcess(
   });
   const logPath = agentLogPath(id);
   // `agent.log` appends across launches: this launch's output starts here.
-  const logOffset = existsSync(logPath) ? statSync(logPath).size : 0;
+  const logOffset = await sizeOrZero(logPath);
   let settle!: (reason: string) => void;
   const exited = new Promise<string>((resolve) => {
     settle = resolve;
@@ -272,8 +285,10 @@ export async function startAgentProcess(
   }
   return {
     exited,
-    output: () => {
-      const text = readFileSync(logPath).subarray(logOffset).toString("utf8");
+    output: async () => {
+      const text = (await readFile(logPath))
+        .subarray(logOffset)
+        .toString("utf8");
       return text.length > MAX_OUTPUT_CHARS
         ? `…${text.slice(-MAX_OUTPUT_CHARS)}`
         : text;
@@ -287,9 +302,9 @@ export async function startAgentProcess(
  * left behind can name a pid the system has since given to another process,
  * which must never be killed for it.
  */
-function livePid(id: string): number | null {
+async function livePid(id: string): Promise<number | null> {
   const pidFile = agentPidPath(id);
-  const read = readPidFile(pidFile);
+  const read = await readPidFile(pidFile);
   if (read.kind !== "pid" || !pidAlive(read.pid)) return null;
   const ps = spawnSync(PS, ["-ww", "-o", "command=", "-p", String(read.pid)], {
     encoding: "utf8",
@@ -334,14 +349,14 @@ function sigkill(pid: number): void {
  * alive.
  */
 export async function killAgentProcess(id: string): Promise<number | null> {
-  const pid = livePid(id);
+  const pid = await livePid(id);
   if (pid !== null) {
     for (const child of childPids(pid)) sigkill(child);
     sigkill(pid);
   }
   // What it would have removed on a clean exit.
-  rmSync(agentPidPath(id), { force: true });
-  rmSync(agentSocketPath(id), { force: true });
+  await rm(agentPidPath(id), { force: true });
+  await rm(agentSocketPath(id), { force: true });
   await forget(id);
   return pid;
 }
@@ -355,18 +370,18 @@ export async function awaitAgentExit(
   id: string,
   timeoutMs: number,
 ): Promise<"exited" | "timeout"> {
-  if (livePid(id) === null) return "exited";
+  if ((await livePid(id)) === null) return "exited";
   const { promise, resolve } = Promise.withResolvers<"exited" | "timeout">();
   const timer = setTimeout(() => resolve("timeout"), timeoutMs);
   const release = await acquireDirWatch({
     dir: ownAgentPidsDir(),
     scope: "children",
-    onChange: () => {
-      if (livePid(id) === null) resolve("exited");
+    onChange: async () => {
+      if ((await livePid(id)) === null) resolve("exited");
     },
   });
   // An exit between the first look and the watch opening sent no event.
-  if (livePid(id) === null) resolve("exited");
+  if ((await livePid(id)) === null) resolve("exited");
   try {
     return await promise;
   } finally {
@@ -381,8 +396,8 @@ export async function forgetAgentProcess(id: string): Promise<void> {
 }
 
 /** After a restart: follow every agent of this namespace that is still running. */
-export function attachRunningAgents(): void {
-  for (const id of liveAgentIds(runtimeNamespace())) {
+export async function attachRunningAgents(): Promise<void> {
+  for (const id of await liveAgentIds(runtimeNamespace())) {
     if (instances.has(id)) continue;
     instances.set(
       id,

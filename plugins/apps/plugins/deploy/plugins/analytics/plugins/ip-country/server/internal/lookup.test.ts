@@ -20,37 +20,52 @@ describe("createIpCountryLookup", () => {
   test("unavailable with no file, found once one is written and reloaded", async () => {
     const path = asAppPath(join(dir, "a.bin"));
     const lookup = createIpCountryLookup(() => path);
-    expect(lookup.lookup("2.1.1.1")).toEqual({ kind: "unavailable" });
+    expect(await lookup.lookup("2.1.1.1")).toEqual({ kind: "unavailable" });
 
     await writeSnapshot(path, "2.0.0.0,2.255.255.255,FR\n");
     // Held in memory until reloaded: no per-lookup disk probe.
-    expect(lookup.lookup("2.1.1.1")).toEqual({ kind: "unavailable" });
+    expect(await lookup.lookup("2.1.1.1")).toEqual({ kind: "unavailable" });
     lookup.reload();
-    expect(lookup.lookup("2.1.1.1")).toEqual({ kind: "found", country: "FR" });
-    expect(lookup.lookup("10.0.0.1")).toEqual({ kind: "unlisted" });
+    expect(await lookup.lookup("2.1.1.1")).toEqual({
+      kind: "found",
+      country: "FR",
+    });
+    expect(await lookup.lookup("10.0.0.1")).toEqual({ kind: "unlisted" });
   });
 
   test("reload picks up a replaced file", async () => {
     const path = asAppPath(join(dir, "b.bin"));
     await writeSnapshot(path, "2.0.0.0,2.255.255.255,FR\n");
     const lookup = createIpCountryLookup(() => path);
-    expect(lookup.lookup("2.1.1.1")).toEqual({ kind: "found", country: "FR" });
+    expect(await lookup.lookup("2.1.1.1")).toEqual({
+      kind: "found",
+      country: "FR",
+    });
 
     await writeSnapshot(path, "2.0.0.0,2.255.255.255,DE\n");
-    expect(lookup.lookup("2.1.1.1")).toEqual({ kind: "found", country: "FR" });
+    expect(await lookup.lookup("2.1.1.1")).toEqual({
+      kind: "found",
+      country: "FR",
+    });
     lookup.reload();
-    expect(lookup.lookup("2.1.1.1")).toEqual({ kind: "found", country: "DE" });
+    expect(await lookup.lookup("2.1.1.1")).toEqual({
+      kind: "found",
+      country: "DE",
+    });
   });
 
   test("a corrupt file throws on every lookup until reloaded", async () => {
     const path = asAppPath(join(dir, "c.bin"));
     writeFileSync(path, "not a snapshot");
     const lookup = createIpCountryLookup(() => path);
-    expect(() => lookup.lookup("2.1.1.1")).toThrow(/not a readable snapshot/);
-    expect(() => lookup.lookup("2.1.1.1")).toThrow(/not a readable snapshot/);
+    expect(lookup.lookup("2.1.1.1")).rejects.toThrow(/not a readable snapshot/);
+    expect(lookup.lookup("2.1.1.1")).rejects.toThrow(/not a readable snapshot/);
     await writeSnapshot(path, "2.0.0.0,2.255.255.255,FR\n");
     lookup.reload();
-    expect(lookup.lookup("2.1.1.1")).toEqual({ kind: "found", country: "FR" });
+    expect(await lookup.lookup("2.1.1.1")).toEqual({
+      kind: "found",
+      country: "FR",
+    });
   });
 });
 

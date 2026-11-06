@@ -433,8 +433,8 @@ export async function deployNamespace(
         buildId: opts.buildId,
         commit: opts.commit,
       };
-  const stampMarker = (): void => {
-    if (marker !== null) stampCompositionMarker(ns, marker);
+  const stampMarker = async (): Promise<void> => {
+    if (marker !== null) await stampCompositionMarker(ns, marker);
   };
 
   // MARKER FIRST — before anything else writes into the namespace dir, and only
@@ -445,7 +445,7 @@ export async function deployNamespace(
   // This is the CLAIM, not the guarantee: see the second stamp at the register
   // step below, and `stampCompositionMarker`'s docblock for why one is not
   // enough.
-  stampMarker();
+  await stampMarker();
 
   // WHICH dist this target publishes: the one SERVED for this namespace. The
   // caller swept its leftovers up front, through this same identity.
@@ -584,7 +584,7 @@ export async function deployNamespace(
     // nothing at all; when something did, it is the line that repairs it. It
     // throws if the marker cannot be read back, so a marker-less namespace can
     // never reach the spec write at all.
-    stampMarker();
+    await stampMarker();
     // The back-pointer a reader follows the other way: `deploysForCheckout`
     // matches specs against this same constant to answer which deploys a
     // checkout published, so writer and reader share one spelling.
@@ -595,12 +595,12 @@ export async function deployNamespace(
     // (written with its filtered registries) for any other. The `server` tree
     // is this checkout's, shared with every namespace it serves, so the entry
     // is what decides WHICH app the spawned backend boots.
-    const command = namedBackendCommand(
+    const command = await namedBackendCommand(
       ns,
       asAppPath(process.execPath),
       backendEntryFor(target.composition),
     );
-    writeWorktreeSpec({
+    await writeWorktreeSpec({
       name: ns,
       server,
       web: artifact.livePath,

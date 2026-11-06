@@ -1,8 +1,5 @@
 import { createHash } from "node:crypto";
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type { DepSource } from "@plugins/infra/plugins/deps/deps";
 import { uvEnv, uvVersion } from "./uv";
@@ -19,8 +16,10 @@ export interface PythonEnvSource extends DepSource<"python"> {
   readonly updater: "uv";
 }
 
-function sha256(path: string): string {
-  return createHash("sha256").update(readFileSync(path)).digest("hex");
+async function sha256(path: string): Promise<string> {
+  return createHash("sha256")
+    .update(await readFile(path))
+    .digest("hex");
 }
 
 /**
@@ -49,18 +48,17 @@ export function pythonEnv(opts: { project: string }): PythonEnvSource {
       const inputs: Record<string, string> = {};
       for (const file of INPUT_FILES) {
         const path = join(root, project, file);
-        if (!existsSync(path)) {
+        if (!(await exists(path))) {
           throw new Error(
             `${project}/${file} is missing: a python/ project needs pyproject.toml, a committed uv.lock and .python-version.`,
           );
         }
-        inputs[file] = sha256(path);
+        inputs[file] = await sha256(path);
       }
       // `3.12` would let two machines on the same identity run different
       // patch releases; the `uv` updater moves the exact pin.
-      const pinned = readFileSync(
-        join(root, project, ".python-version"),
-        "utf8",
+      const pinned = (
+        await readFile(join(root, project, ".python-version"), "utf8")
       ).trim();
       if (!/^\d+\.\d+\.\d+$/.test(pinned)) {
         throw new Error(
@@ -91,8 +89,8 @@ export function pythonEnv(opts: { project: string }): PythonEnvSource {
       );
     },
 
-    // `bin/python` is a symlink into uv's managed Pythons; `existsSync`
+    // `bin/python` is a symlink into uv's managed Pythons; `exists`
     // follows it, so a reclaimed `cache/uv-python` reads as not intact.
-    isIntact: (dir) => existsSync(join(dir, "bin", "python")),
+    isIntact: (dir) => exists(join(dir, "bin", "python")),
   };
 }

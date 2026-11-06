@@ -205,7 +205,9 @@ folder needs only its boundary row, not a barrel's doc and shipping policy.
     - `infra/launcher/gateway-drift`
     - `infra/paths/root-migration`
 - Exemptions:
-  - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/launchd.ts`, `machine/internal/systemd.ts` (sanctioned)
+  - Exempts itself from:
+    - `user-path/no-unproven-claim` — `machine/internal/launchd.ts`, `machine/internal/systemd.ts` (sanctioned)
+    - `blocking-fs/no-sync-fs` — `machine/internal/installed-label.ts` (debt)
 - Machine:
   - Exports (types):
     - `DefineLoginServiceSpec`

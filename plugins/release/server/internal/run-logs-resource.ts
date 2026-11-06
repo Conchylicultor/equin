@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import { basename, dirname } from "node:path";
 import { serveValue, sliceRange } from "@plugins/network/plugins/live/server";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
@@ -25,7 +25,7 @@ async function watchTranscript(
 ): Promise<() => void> {
   const path = releaseTranscriptPath(releaseId);
   const dir = dirname(path);
-  mkdirSync(dir, { recursive: true });
+  await mkdir(dir, { recursive: true });
   const file = basename(path);
   const release = await acquireDirWatch({
     dir,

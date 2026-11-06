@@ -1,5 +1,6 @@
 import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
-import type { ConfigProxy } from "./config-proxy";
+import type { ConfigFileContent } from "./config-proxy";
+import type { JsonValue } from "./types";
 import type { GitLayerDocument } from "./git-layer";
 import { APP_SCOPE_DIR, appScopeId } from "./scope-format";
 import type { Disposable } from "./types";
@@ -32,9 +33,9 @@ export interface ConfigFileRef extends ConfigDocRef {
  * Where the USER layer's documents live — the seam the server's registry reads
  * and writes through, so the same registry runs over files on the desktop and
  * over memory in a host without the computer. The tier cascade (`effective`,
- * `readTypedConfig`) reads each document's `proxy`; a write goes through
- * `edit`, which a store that keeps an agent-write ledger wraps in its record /
- * note-complete pair.
+ * `readTypedConfig`) reads each file through `loadedProxy(await read(ref))`; a
+ * write goes through `edit`, which a store that keeps an agent-write ledger
+ * wraps in its record / note-complete pair.
  *
  * The git layer is not here: the running registry never resolves values from
  * the repo — it cascades over the propagated `origin` (the build propagates it
@@ -43,20 +44,30 @@ export interface ConfigFileRef extends ConfigDocRef {
  * ({@link ConfigGitLayerImpl.document}).
  */
 export interface ConfigStoreImpl {
-  /** Synchronous read / write / exists of one file. */
-  proxy(ref: ConfigFileRef): ConfigProxy;
+  /**
+   * One file's parsed content, or `null` when it is absent. Asynchronous: on
+   * the desktop it is the disk, which a backend's thread never waits on.
+   * Callers hand the result to the tier cascade through `loadedProxy`.
+   */
+  read(ref: ConfigFileRef): Promise<ConfigFileContent | null>;
+  /** Write one file whole — its writes have landed when the promise settles. */
+  write(
+    ref: ConfigFileRef,
+    content: JsonValue,
+    hash: string | null,
+  ): Promise<void>;
   /** Remove one file; a no-op when it is absent. */
-  remove(ref: ConfigFileRef): void;
+  remove(ref: ConfigFileRef): Promise<void>;
   /** An identity for one file's current content: `"-"` when absent, and changed by every write. */
-  stamp(ref: ConfigFileRef): string;
+  stamp(ref: ConfigFileRef): Promise<string>;
   /**
    * The scope ids the store holds a scope for, under `storePath`'s hierarchy
    * (a scope may hold another descriptor's documents only — callers filter
    * through the document's own files).
    */
-  scopes(storePath: string): string[];
+  scopes(storePath: string): Promise<string[]>;
   /** Drop a scope's container once it holds nothing more (a no-op while it still does). */
-  dropScope(storePath: string, scopeId: string): void;
+  dropScope(storePath: string, scopeId: string): Promise<void>;
   /**
    * Hear the document's `origin` / `override` change OUT OF BAND — a writer
    * that is not this registry. Every in-process writer refreshes itself, so a
@@ -68,15 +79,16 @@ export interface ConfigStoreImpl {
   /**
    * Run one mutation of `doc`'s files. `writer` and `operation` are for a store
    * that ledgers agent-origin writes: it captures the trio before `mutate` and
-   * what it left after. `mutate` is synchronous — its file writes have landed
-   * when it returns.
+   * what it left after. `mutate`'s file writes have landed when it settles.
+   * The store does not serialize mutations — the registry runs every write
+   * of one document one at a time.
    */
   edit<T>(
     doc: ConfigDocRef,
     writer: WriteOrigin,
     operation: string,
-    mutate: () => T,
-  ): T;
+    mutate: () => Promise<T>,
+  ): Promise<T>;
 }
 
 /**

@@ -95,7 +95,7 @@ const lockedBun = await reexecUnderLockedBun(import.meta.path);
 if (lockedBun.kind === "reexeced") process.exit(lockedBun.exitCode);
 if (lockedBun.kind === "mismatch") console.error(`equin: ${lockedBun.reason}`);
 // Now on the Bun the lock picks: name the next `./equin` after it.
-else recordCheckoutBun();
+else await recordCheckoutBun();
 
 // The one dependency chokepoint: freshness-gated (the common case is ~140 ms and
 // silent — see its docblock for the measured breakdown), serialized against

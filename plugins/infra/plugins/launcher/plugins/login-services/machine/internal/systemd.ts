@@ -2,7 +2,7 @@ import {
   type AppPath,
   asAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { userInfo } from "node:os";
 import { join } from "node:path";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
@@ -156,13 +156,13 @@ function systemdService(id: LoginServiceId): LoginService {
 
   async function remove(): Promise<boolean> {
     const path = unitPath();
-    if (!existsSync(path)) return false;
+    if (!(await exists(path))) return false;
     // `disable` removes the `<target>.wants` link; it must run while the unit
     // file still exists.
     await spawnExpectOk(systemctl("disable", unit), {
       timeoutMs: SYSTEMCTL_TIMEOUT_MS,
     });
-    removeDefinition(path);
+    await removeDefinition(path);
     await spawnExpectOk(systemctl("daemon-reload"), {
       timeoutMs: SYSTEMCTL_TIMEOUT_MS,
     });
@@ -179,8 +179,8 @@ function systemdService(id: LoginServiceId): LoginService {
       writeDefinition(unitPath(), renderSystemdUserUnit({ ...id, ...job })),
     isCurrent: (job) =>
       isDefinitionCurrent(unitPath(), renderSystemdUserUnit({ ...id, ...job })),
-    installedJob: () => {
-      const content = readDefinition(unitPath());
+    installedJob: async () => {
+      const content = await readDefinition(unitPath());
       return content === null ? null : parseSystemdUserUnit(content);
     },
     remove,

@@ -28,7 +28,6 @@ another worktree's logs. See `plugins/primitives/plugins/log-channels/CLAUDE.md`
     - `logsDirFor`
     - `readChannelEntries`
     - `readChannelJson`
-    - `readChannelJsonAsync`
 - Cross-plugin:
   - Imported by:
     - `debug/backend-liveness`

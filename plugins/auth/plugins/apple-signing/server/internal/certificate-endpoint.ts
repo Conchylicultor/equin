@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
@@ -85,10 +85,10 @@ export const handleSetAppleCertificate = implement(
   setAppleCertificateEndpoint,
   async ({ body, req }) => {
     const writer = originOf(req);
-    const tmpDir = mkdtempSync(join(tmpdir(), "apple-cert-"));
+    const tmpDir = await mkdtemp(join(tmpdir(), "apple-cert-"));
     try {
       const p12Path = join(tmpDir, "cert.p12");
-      writeFileSync(p12Path, Buffer.from(body.p12Base64, "base64"), {
+      await writeFile(p12Path, Buffer.from(body.p12Base64, "base64"), {
         mode: 0o600,
       });
 
@@ -127,7 +127,7 @@ export const handleSetAppleCertificate = implement(
 
       return { signingIdentity };
     } finally {
-      rmSync(tmpDir, { recursive: true, force: true });
+      await rm(tmpDir, { recursive: true, force: true });
     }
   },
 );

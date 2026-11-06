@@ -11,9 +11,17 @@ const MAX_LINES = 1000;
 // log-channels primitive; a missing boot.jsonl — worktree predates this plugin,
 // or never booted — is a legitimately-empty history), pair them into boot
 // intervals, and keep those overlapping the window.
-export function readBootEvents(worktree: string, windowMs: number): BootEvent[] {
+export async function readBootEvents(
+  worktree: string,
+  windowMs: number,
+): Promise<BootEvent[]> {
   const cutoff = Date.now() - windowMs;
-  const lines = readChannelJson(worktree, "boot", MAX_LINES, BootLineSchema);
+  const lines = await readChannelJson(
+    worktree,
+    "boot",
+    MAX_LINES,
+    BootLineSchema,
+  );
   // A boot's interval starts at processStartedAt and ends at readyAt, at its
   // exit (a boot crash), at the superseding attempt's start, when it was known
   // dead (the watchdog's dead line), or (never-ready latest attempt) extends to

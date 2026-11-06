@@ -6,6 +6,7 @@ export {
   stat,
   lstat,
   access,
+  exists,
   realpath,
   readlink,
   readFileSync,

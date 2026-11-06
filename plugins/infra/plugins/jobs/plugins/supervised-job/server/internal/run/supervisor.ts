@@ -1,8 +1,8 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { basename } from "node:path";
-import { mkdirSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import {
   defineFileWatcher,
   type FileWatcher,
@@ -183,9 +183,11 @@ function track(
  * ended" silently strands whatever was still to come. It did once, on the
  * ledger's say-so; see the second loop of `reconcileSupervisedRuns`.
  */
-function untrack(run: LiveRun): void {
-  run.tail.stop();
+async function untrack(run: LiveRun): Promise<void> {
+  // Out of the live set first, so a second settle of the same run finds it
+  // gone and only one untrack drains it; the drain then reads to the end.
   live.delete(liveKey(run.kind.id, run.runId));
+  await run.tail.stop();
 }
 
 /**
@@ -224,7 +226,7 @@ async function settleRun(
   const run = live.get(liveKey(kind.id, runId));
   // Drain BEFORE the row closes: a UI that stops following a finished run must
   // not stop one pump short of the line that says why it failed.
-  if (run !== undefined) untrack(run);
+  if (run !== undefined) await untrack(run);
   // The marker landed (or the run was written off): a reader of its files
   // re-reads the verdict. Before `finish`, which may be slow or throw.
   announceRunChange(kind.id, runId);
@@ -382,8 +384,10 @@ async function syncWatcher(): Promise<void> {
     return;
   }
   const dir = worktreeArtifacts.runsDir(runtimeNamespace());
-  mkdirSync(dir, { recursive: true });
   watcherStarting = (async () => {
+    // Inside the start, so `watcherStarting` is claimed before the first await:
+    // a concurrent sync sees it and joins rather than starting a second watcher.
+    await mkdir(dir, { recursive: true });
     watcher = await supervisedRunWatcher.start({
       dirs: [dir],
       onChange: (events) =>
@@ -440,7 +444,7 @@ async function onArtifactEvents(
     // already settled. Pumped BEFORE any settle below, so a marker and a final
     // burst of output arriving in the same debounce window are still published
     // in order.
-    live.get(liveKey(parsed.kind.id, parsed.runId))?.tail.pump();
+    await live.get(liveKey(parsed.kind.id, parsed.runId))?.tail.pump();
   }
   for (const { kind, runId } of finished) await settleFromMarker(kind, runId);
 }
@@ -592,13 +596,13 @@ export async function startSupervisedRun(
     // A marker already sitting there means this run id has been used before, and
     // the new run would be read as finished the instant anything reconciled it.
     // Loud at the caller, where the id was minted.
-    if (existsSync(terminalPath)) {
+    if (await exists(terminalPath)) {
       throw new Error(
         `[supervised-run] ${kind.id}: run id ${JSON.stringify(opts.runId)} already ` +
           `has an exit marker at ${terminalPath} — run ids must be unique.`,
       );
     }
-    mkdirSync(worktreeArtifacts.runsDir(worktree), { recursive: true });
+    await mkdir(worktreeArtifacts.runsDir(worktree), { recursive: true });
 
     // Append, not truncate: `"a"` also creates the file, so the transcript exists
     // before the child does and the tail has something to open from the first

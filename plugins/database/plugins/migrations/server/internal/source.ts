@@ -8,8 +8,12 @@ import type { Migration } from "./runner";
  * without a filesystem bundles them as text.
  */
 export interface MigrationSourceImpl {
-  /** Every migration, in timestamp order (`migrationsFrom`). */
-  list(): Migration[];
+  /**
+   * Every migration, in timestamp order (`migrationsFrom`). A host that reads
+   * them off disk answers asynchronously (a backend's thread never waits on
+   * the disk); one that bundles them as text answers at once.
+   */
+  list(): Migration[] | Promise<Migration[]>;
 }
 
 export const MigrationSource = defineHostService<MigrationSourceImpl>(

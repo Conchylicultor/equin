@@ -40,7 +40,9 @@ shed engine's test.
     - `infra/host/duress/shed`
     - `primitives/log-channels`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/latch.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `server/internal/latch.ts` (debt)
+    - `blocking-fs/no-sync-fs` — `server/internal/latch.ts` (debt)
 - Server:
   - Exports (types): `DuressLatch`
   - Exports (values):

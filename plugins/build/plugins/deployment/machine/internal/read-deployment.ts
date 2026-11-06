@@ -49,8 +49,10 @@ async function withAncestry(
 async function readCarriers(): Promise<Deployment> {
   const target = await readTarget();
 
-  const distCommit = getServerCommit();
-  const distGraph = getServerGraphHash();
+  const [distCommit, distGraph] = await Promise.all([
+    getServerCommit(),
+    getServerGraphHash(),
+  ]);
 
   const [server, web] = await Promise.all([
     withAncestry(
@@ -173,8 +175,8 @@ async function deploymentSignature(): Promise<string> {
   return [
     target.resolved ? target.value : `!${target.reason}`,
     pin.resolved ? pin.value : `!${pin.reason}`,
-    getServerCommit() ?? "!no-commit",
-    getServerGraphHash() ?? "!no-graph",
+    (await getServerCommit()) ?? "!no-commit",
+    (await getServerGraphHash()) ?? "!no-graph",
   ].join("\0");
 }
 

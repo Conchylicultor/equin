@@ -16,9 +16,9 @@ export interface CandidateSources {
   /** `rev-parse HEAD` of the checkout staleness is measured against. */
   headSha(): Promise<string>;
   /** Stat-only fingerprint of every bundle fact `resolve` reads. */
-  bundleSignature(pair: CandidatePair): string;
+  bundleSignature(pair: CandidatePair): Promise<string>;
   /** What `ship` would pick — the exact call the CLI makes. */
-  resolve(pair: CandidatePair): BundleResolution;
+  resolve(pair: CandidatePair): Promise<BundleResolution>;
   /** The resolved manifest's provenance against HEAD. */
   compareToHead(
     manifest: Extract<BundleResolution, { ok: true }>["manifest"],
@@ -96,7 +96,7 @@ export function createCandidateObserver(
       const head = await sources.headSha();
       return [
         head,
-        sources.bundleSignature(pairOf(key)),
+        await sources.bundleSignature(pairOf(key)),
         `${boot}.${closes.get(key)?.epoch ?? 0}`,
       ].join("\u0001");
     },
@@ -105,7 +105,7 @@ export function createCandidateObserver(
       // least as new as this instant, which is the direction the client's gate
       // needs (a run that finished before `observedAt` is in `resolution`).
       const observedAt = new Date();
-      const resolution = sources.resolve(pairOf(key));
+      const resolution = await sources.resolve(pairOf(key));
       if (!resolution.ok) {
         // No bundle ⇒ nothing whose source state could be compared. Reported as
         // `unknown` with the true reason rather than as a null field: the

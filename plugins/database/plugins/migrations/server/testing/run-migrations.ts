@@ -8,6 +8,6 @@ import { MigrationSource } from "../internal/source";
  * `bun test` the source is the desktop's (the preload provides the desktop
  * host's services), so this is the committed `data/*.sql`.
  */
-export function runMigrations(db: NodePgDatabase): Promise<void> {
-  return runMigrationList(db, MigrationSource.get().list());
+export async function runMigrations(db: NodePgDatabase): Promise<void> {
+  return runMigrationList(db, await MigrationSource.get().list());
 }

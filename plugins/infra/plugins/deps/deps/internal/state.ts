@@ -1,10 +1,6 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { fstatSync, openSync, readSync } from "node:fs";
-import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { open } from "node:fs/promises";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import { DEP_LOG_TAIL_LINES, type DepState } from "../../core";
 import { isLockHeld } from "./lock";
@@ -31,8 +27,11 @@ export const FailedFileSchema = z.object({
   at: z.string(),
 });
 
-export function readJson<T>(path: string, schema: z.ZodType<T>): T {
-  return schema.parse(JSON.parse(readFileSync(path, "utf8")));
+export async function readJson<T>(
+  path: string,
+  schema: z.ZodType<T>,
+): Promise<T> {
+  return schema.parse(JSON.parse(await readFile(path, "utf8")));
 }
 
 /**
@@ -49,25 +48,28 @@ export function screenLine(line: string): string {
 }
 
 /** The last `lines` lines of a (possibly large) log, reading only its end. */
-export function logTail(path: string, lines = DEP_LOG_TAIL_LINES): string[] {
-  if (!existsSync(path)) return [];
-  const fd = adoptFd(openSync(path, "r"));
+export async function logTail(
+  path: string,
+  lines = DEP_LOG_TAIL_LINES,
+): Promise<string[]> {
+  if (!(await exists(path))) return [];
+  const handle = await open(path, "r");
   try {
-    const size = fstatSync(fd.fd).size;
+    const size = (await handle.stat()).size;
     const length = Math.min(size, 16 * 1024);
     const buf = Buffer.alloc(length);
-    readSync(fd.fd, buf, 0, length, size - length);
+    await handle.read(buf, 0, length, size - length);
     const all = buf.toString("utf8").split("\n").map(screenLine);
     // A cut at the front may split a line; drop that partial one.
     if (length < size) all.shift();
     return all.filter((l) => l.trim() !== "").slice(-lines);
   } finally {
-    fd.close();
+    await handle.close();
   }
 }
 
 /**
- * The state of one `(id, identity)` on disk. Cheap: a few `existsSync`s, small
+ * The state of one `(id, identity)` on disk. Cheap: a few `exists` probes, small
  * JSON reads and one lock probe — safe on a backend's event loop.
  *
  * Precedence, by what each file proves:
@@ -77,14 +79,14 @@ export function logTail(path: string, lines = DEP_LOG_TAIL_LINES): string[] {
  * 4. otherwise absent, including an `installing.json` whose writer died
  *    without releasing — the kernel released the lock, so nothing is running.
  */
-export function readInstallState(
+export async function readInstallState(
   paths: InstallPaths,
-  isIntact: (dir: AppPath) => boolean,
-): DepState {
-  if (existsSync(paths.ready) && isIntact(paths.env)) {
-    const ready = readJson(paths.ready, ReadyFileSchema);
-    const lastUsed = existsSync(paths.lastUsed)
-      ? readFileSync(paths.lastUsed, "utf8").trim()
+  isIntact: (dir: AppPath) => boolean | Promise<boolean>,
+): Promise<DepState> {
+  if ((await exists(paths.ready)) && (await isIntact(paths.env))) {
+    const ready = await readJson(paths.ready, ReadyFileSchema);
+    const lastUsed = (await exists(paths.lastUsed))
+      ? (await readFile(paths.lastUsed, "utf8")).trim()
       : null;
     return {
       kind: "ready",
@@ -93,16 +95,16 @@ export function readInstallState(
       lastUsed: lastUsed === "" ? null : lastUsed,
     };
   }
-  if (isLockHeld(paths.lock)) {
+  if (await isLockHeld(paths.lock)) {
     // The installer writes installing.json right after taking the lock; in
     // the instant between, the lock alone says an install is running.
-    const since = existsSync(paths.installing)
-      ? readJson(paths.installing, InstallingFileSchema).since
+    const since = (await exists(paths.installing))
+      ? (await readJson(paths.installing, InstallingFileSchema)).since
       : new Date().toISOString();
-    return { kind: "installing", since, logTail: logTail(paths.log) };
+    return { kind: "installing", since, logTail: await logTail(paths.log) };
   }
-  if (existsSync(paths.failed)) {
-    const failed = readJson(paths.failed, FailedFileSchema);
+  if (await exists(paths.failed)) {
+    const failed = await readJson(paths.failed, FailedFileSchema);
     return { kind: "failed", message: failed.message, at: failed.at };
   }
   return { kind: "absent" };

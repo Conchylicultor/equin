@@ -49,6 +49,10 @@ ruleTester.run("no-claude-bin-spawn", noClaudeBinSpawn, {
   ],
   invalid: [
     {
+      code: `Bun.spawn([await bundledClaudeBin(), "--version"]);`,
+      errors: [{ messageId: "spawn" }],
+    },
+    {
       code: `spawnCaptured([bundledClaudeBin(), "--print"], opts);`,
       errors: [{ messageId: "spawn" }],
     },

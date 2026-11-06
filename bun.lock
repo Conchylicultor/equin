@@ -4263,6 +4263,10 @@
       "name": "@equin/plugin-infra-host-fs",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/host-fs/plugins/blocking-fs": {
+      "name": "@equin/plugin-infra-host-fs-blocking-fs",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/host-fs/plugins/image": {
       "name": "@equin/plugin-infra-host-fs-image",
       "version": "0.0.1",
@@ -9382,6 +9386,8 @@
     "@equin/plugin-infra-host-duress-shed": ["@equin/plugin-infra-host-duress-shed@workspace:plugins/infra/plugins/host/plugins/duress/plugins/shed"],
 
     "@equin/plugin-infra-host-fs": ["@equin/plugin-infra-host-fs@workspace:plugins/infra/plugins/host-fs"],
+
+    "@equin/plugin-infra-host-fs-blocking-fs": ["@equin/plugin-infra-host-fs-blocking-fs@workspace:plugins/infra/plugins/host-fs/plugins/blocking-fs"],
 
     "@equin/plugin-infra-host-fs-image": ["@equin/plugin-infra-host-fs-image@workspace:plugins/infra/plugins/host-fs/plugins/image"],
 

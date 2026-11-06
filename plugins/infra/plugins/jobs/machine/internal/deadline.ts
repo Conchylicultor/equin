@@ -120,7 +120,7 @@ export function armDeadline(args: ArmDeadlineArgs): () => void {
       // Last: whether the pool can still do its job with the slots that are
       // left. This is the one call in this file that can end the process, and
       // it is deliberately last so the zombie is recorded and reported first.
-      checkSlotFloor();
+      void checkSlotFloor();
     }, ZOMBIE_GRACE_MS);
   }, deadlineMs);
 

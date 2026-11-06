@@ -159,7 +159,7 @@ function harness(opts: { duress?: boolean } = {}) {
       duressChecks++;
       return duress;
     },
-    duressGuard: () => ({ kind: "on" }),
+    duressGuard: async () => ({ kind: "on" }),
     duressReason: () => "cluster-onset: decompressionsPerSec",
     waitForWake: (signal) =>
       new Promise((resolve) => {
@@ -216,31 +216,34 @@ describe("valveGates", () => {
 });
 
 describe("checkValveGuard", () => {
-  const off = () => ({
+  const off = async () => ({
     kind: "off" as const,
     why: "the machine watcher is down",
   });
 
-  test("a gated build with the guard off gets a verdict note", () => {
-    expect(checkValveGuard({ gated: true }, { duressGuard: off })).toBe(
+  test("a gated build with the guard off gets a verdict note", async () => {
+    expect(await checkValveGuard({ gated: true }, { duressGuard: off })).toBe(
       "duress guard off: the machine watcher is down",
     );
   });
 
-  test("the guard on: no note", () => {
+  test("the guard on: no note", async () => {
     expect(
-      checkValveGuard({ gated: true }, { duressGuard: () => ({ kind: "on" }) }),
+      await checkValveGuard(
+        { gated: true },
+        { duressGuard: async () => ({ kind: "on" }) },
+      ),
     ).toBeNull();
   });
 
-  test("an ungated build never reads the status file", () => {
+  test("an ungated build never reads the status file", async () => {
     let reads = 0;
-    const counting = () => {
+    const counting = async () => {
       reads++;
       return off();
     };
     expect(
-      checkValveGuard({ gated: false }, { duressGuard: counting }),
+      await checkValveGuard({ gated: false }, { duressGuard: counting }),
     ).toBeNull();
     expect(reads).toBe(0);
   });

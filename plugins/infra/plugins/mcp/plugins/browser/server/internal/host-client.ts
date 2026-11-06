@@ -1,5 +1,5 @@
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
 import { requestDep } from "@plugins/infra/plugins/deps/server";
@@ -96,10 +96,10 @@ function alive(pid: number): boolean {
 }
 
 /** The machine's agent browser, read from the host's own status file. */
-export function readAgentBrowserStatus(): AgentBrowserStatus {
+export async function readAgentBrowserStatus(): Promise<AgentBrowserStatus> {
   let raw: string;
   try {
-    raw = readFileSync(agentBrowserDir.file(HOST_FILES.status), "utf-8");
+    raw = await readFile(agentBrowserDir.file(HOST_FILES.status), "utf-8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       return { kind: "absent" };
@@ -138,9 +138,9 @@ const waiters = new Set<Waiter>();
 let watcher: FileWatcher | null = null;
 let instance: DaemonInstance | null = null;
 
-function onStatusChange(): void {
+async function onStatusChange(): Promise<void> {
   agentBrowserStatusServed.notify();
-  const status = readAgentBrowserStatus();
+  const status = await readAgentBrowserStatus();
   // A clean exit closes this backend's record of it as a run that ended well;
   // a host is meant to leave when idle.
   if (status.kind === "exited" && instance !== null) {
@@ -166,9 +166,9 @@ export async function startStatusWatcher(): Promise<void> {
   watcher = await agentBrowserStatusWatcher.start({
     // Subscribing to a missing directory fails; it is host-global and tiny.
     dirs: [agentBrowserDir.ensure()],
-    onChange: onStatusChange,
+    onChange: () => runTracked("mcp-browser:status-change", onStatusChange),
   });
-  if (readAgentBrowserStatus().kind === "running") followHost();
+  if ((await readAgentBrowserStatus()).kind === "running") followHost();
 }
 
 export async function stopStatusWatcher(): Promise<void> {
@@ -184,7 +184,7 @@ async function waitForStatus(
   what: string,
 ): Promise<AgentBrowserStatus> {
   await startStatusWatcher();
-  const now = readAgentBrowserStatus();
+  const now = await readAgentBrowserStatus();
   if (until(now)) return now;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let waiter: Waiter | undefined;
@@ -193,11 +193,14 @@ async function waitForStatus(
       waiter = { until, resolve };
       waiters.add(waiter);
       timer = setTimeout(() => {
-        const last = readAgentBrowserStatus();
-        reject(
-          new Error(
-            `[agent-browser] ${what} did not happen within ${timeoutMs}ms (status: ${describe(last)})`,
-          ),
+        readAgentBrowserStatus().then(
+          (last) =>
+            reject(
+              new Error(
+                `[agent-browser] ${what} did not happen within ${timeoutMs}ms (status: ${describe(last)})`,
+              ),
+            ),
+          reject,
         );
       }, timeoutMs);
     });
@@ -235,7 +238,7 @@ export function ensureHost(): Promise<void> {
 }
 
 async function ensureOnce(): Promise<void> {
-  const status = readAgentBrowserStatus();
+  const status = await readAgentBrowserStatus();
   if (status.kind === "running") {
     const { host } = status;
     if (host.protocol === HOST_PROTOCOL && host.codeId === ownCodeId()) {
@@ -390,7 +393,7 @@ export async function callHostTool(
 export async function closeConversationSession(
   conversationId: string,
 ): Promise<boolean> {
-  const status = readAgentBrowserStatus();
+  const status = await readAgentBrowserStatus();
   if (status.kind === "died") {
     const held = status.host.sessions.find(
       (s) => s.conversationId === conversationId,

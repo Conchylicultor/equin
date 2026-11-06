@@ -1,4 +1,4 @@
-import { readChannelJsonAsync } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
+import { readChannelJson } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import {
   MAX_SLOW_OP_MARKERS,
   SlowOpMarkerSchema,
@@ -14,7 +14,7 @@ export async function readSlowOpMarkers(
   windowMs: number,
 ): Promise<SlowOpMarker[]> {
   const cutoff = Date.now() - windowMs;
-  const markers = await readChannelJsonAsync(
+  const markers = await readChannelJson(
     worktree,
     "slow-op-markers",
     MAX_SLOW_OP_MARKERS,

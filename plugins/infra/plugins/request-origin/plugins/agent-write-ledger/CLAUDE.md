@@ -33,9 +33,9 @@ const picksLedger = defineAgentWriteLedger<"picks">({
 });
 
 // In the write path, with `writer = originOf(req)`:
-picksLedger.record(writer, id, { picks: file }, "set:palette"); // BEFORE the write
+await picksLedger.record(writer, id, { picks: file }, "set:palette"); // BEFORE the write
 writeTheFile();
-picksLedger.noteComplete(writer, id);                           // AFTER it landed
+await picksLedger.noteComplete(writer, id);                        // AFTER it landed
 ```
 
 - **Every endpoint that reaches `record` declares `agentReverted: true`**

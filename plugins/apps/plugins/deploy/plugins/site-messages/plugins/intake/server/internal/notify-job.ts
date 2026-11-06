@@ -30,7 +30,7 @@ export const siteMessagesNotifyJob = defineJob({
   maxAttempts: NOTIFY_MAX_ATTEMPTS,
   async run({ input, ctx }) {
     await notifySiteMessage(db, input.messageId, {
-      apiKey: readDeploySecret(RESEND_API_KEY),
+      apiKey: await readDeploySecret(RESEND_API_KEY),
       to: CONTACT_EMAIL,
       send: (apiKey, email) =>
         sendEmail(apiKey, email, {
@@ -64,7 +64,7 @@ export const siteMessagesConfirmJob = defineJob({
   maxAttempts: NOTIFY_MAX_ATTEMPTS,
   async run({ input, ctx }) {
     await confirmSiteMessage(db, input.messageId, {
-      apiKey: readDeploySecret(RESEND_API_KEY),
+      apiKey: await readDeploySecret(RESEND_API_KEY),
       contact: CONTACT_EMAIL,
       send: (apiKey, email) =>
         sendEmail(apiKey, email, {

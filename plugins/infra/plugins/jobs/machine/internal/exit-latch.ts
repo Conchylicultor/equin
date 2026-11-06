@@ -1,7 +1,8 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { writeFileSync } from "node:fs";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { writeFile } from "node:fs/promises";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { jobsStateDir } from "../../data-dirs";
 
 // The anti-loop latch, shared by every deliberate exit of the worker pool: the
@@ -16,6 +17,9 @@ import { jobsStateDir } from "../../data-dirs";
 export const LATCH_WINDOW_MS = 3_600_000;
 export const MAX_TRIPS_PER_WINDOW = 3;
 
+/** Serializes the latch's read-modify-write: two runners can die at once. */
+const latchMutex = createKeyedMutex();
+
 function latchFile(): AppPath {
   return jobsStateDir.file(`${runtimeNamespace()}.json`);
 }
@@ -24,17 +28,24 @@ function latchFile(): AppPath {
  * Record that this worktree is about to exit deliberately, and return how many
  * trips (including this one) fall inside the window.
  *
- * Written BEFORE the exit and synchronously, for the same reason the report is:
- * there is no "after". A failure to read or write is not fatal — the cost is
+ * Written BEFORE the exit — awaited by the caller ahead of its
+ * `process.exit`, for the same reason the report is written first: there is no
+ * "after". Async, never on the thread: when the latch suppresses the exit the
+ * backend stays up, and serves on. One trip at a time in this process, so two
+ * runners dying together cannot lose each other's entry. A failure to read or write is not fatal — the cost is
  * that the budget is re-armed, which risks one extra restart of a backend whose
  * pool is already broken. Losing the exit itself would be worse, so this never
  * throws into the caller.
  */
-export function recordTrip(): number {
+export function recordTrip(): Promise<number> {
+  return latchMutex.run("latch", recordTripNow);
+}
+
+async function recordTripNow(): Promise<number> {
   const now = Date.now();
   let trips: number[] = [];
   try {
-    const raw = readFileSync(latchFile(), "utf8");
+    const raw = await readFile(latchFile(), "utf8");
     const parsed: unknown = JSON.parse(raw);
     if (
       typeof parsed === "object" &&
@@ -59,7 +70,7 @@ export function recordTrip(): number {
   recent.push(now);
   try {
     jobsStateDir.ensure();
-    writeFileSync(latchFile(), JSON.stringify({ trips: recent }));
+    await writeFile(latchFile(), JSON.stringify({ trips: recent }));
     // eslint-disable-next-line promise-safety/no-bare-catch -- every failure mode here (dir creation, disk IO, a kill mid-write) maps to the same handling, and this runs on the way OUT: the caller's next statement is process.exit(1). Rethrowing would replace a deliberate exit with an unhandled rejection and lose the exit itself, which is strictly worse than losing one latch entry — the cost of that loss is bounded at one extra restart of a backend whose pool is already broken. Same crash-path argument as reports/plugins/engine/server/internal/buffer.ts.
   } catch (err) {
     console.warn(`[jobs] exit latch not persisted:`, err);

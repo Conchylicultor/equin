@@ -7,10 +7,10 @@ import type { ThemeSelection } from "./delete-plan";
  * scope with its own document. A scope without one inherits the desktop's
  * choice, so it is covered by the base entry rather than listed.
  */
-export function readThemeSelections(): ThemeSelection[] {
+export async function readThemeSelections(): Promise<ThemeSelection[]> {
   return [
     { themeId: getConfig(themeSelectionConfig).theme },
-    ...getConfigScopeIds(themeSelectionConfig).map((scopeId) => ({
+    ...(await getConfigScopeIds(themeSelectionConfig)).map((scopeId) => ({
       scopeId,
       themeId: getConfig(themeSelectionConfig, scopeId).theme,
     })),

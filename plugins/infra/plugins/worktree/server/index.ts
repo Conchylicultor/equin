@@ -42,13 +42,15 @@ export { isCanonicalWorktreeName } from "./internal/worktree-name";
 export {
   type WorktreeOp,
   type WorktreeOpInfo,
-  type WorktreeOpMarker,
-  markWorktreeOpStart,
   probeWorktreeOp,
   isWorktreeOpActive,
   listWorktreeOps,
   listActiveWorktreeOps,
 } from "./internal/worktree-op";
+export {
+  type WorktreeOpMarker,
+  markWorktreeOpStart,
+} from "./internal/worktree-op-marker";
 export {
   type WorktreeSpec,
   writeWorktreeSpec,
@@ -61,7 +63,6 @@ export {
   probeNamespace,
   namespaceCollision,
   stampCompositionMarker,
-  readCompositionMarker,
   loadCompositionMarker,
   isCompositionMarkerPath,
   hasCompositionMarker,

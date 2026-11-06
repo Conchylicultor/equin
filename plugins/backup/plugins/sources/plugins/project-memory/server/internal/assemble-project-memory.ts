@@ -7,7 +7,7 @@ import type { BackupSourceReport } from "@plugins/backup/core";
 import { projectMemorySourceConfig } from "../../shared/config";
 import {
   scanGlob,
-  existsSync,
+  exists,
   stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 
@@ -26,7 +26,7 @@ export async function assembleProjectMemory(
     };
   }
 
-  if (!existsSync(CLAUDE_PROJECTS_DIR)) {
+  if (!(await exists(CLAUDE_PROJECTS_DIR))) {
     return {
       id: "project-memory",
       name: "Project Memory",
@@ -52,7 +52,7 @@ export async function assembleProjectMemory(
     if (!seen.has(projectName)) {
       seen.add(projectName);
       const memoryDir = joinAppPath(CLAUDE_PROJECTS_DIR, projectName, "memory");
-      if (existsSync(memoryDir)) {
+      if (await exists(memoryDir)) {
         // Use encoded project name to avoid collisions (replace slashes with underscores)
         const encodedName = projectName.replace(/\//g, "_");
         const dest = join(dir, encodedName);

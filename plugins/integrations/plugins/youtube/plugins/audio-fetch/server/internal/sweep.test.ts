@@ -114,9 +114,13 @@ describe("sweepYouTubeAudio on a directory", () => {
   });
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-  function cache(videoId: string, daysAgo: number, bytes: number): void {
+  async function cache(
+    videoId: string,
+    daysAgo: number,
+    bytes: number,
+  ): Promise<void> {
     writeFileSync(join(dir, `${videoId}.webm`), Buffer.alloc(bytes));
-    writeMeta(dir, videoId, {
+    await writeMeta(dir, videoId, {
       file: `${videoId}.webm`,
       format: "webm",
       durationSec: 200,
@@ -130,11 +134,11 @@ describe("sweepYouTubeAudio on a directory", () => {
     utimesSync(join(dir, `${videoId}.json`), at, at);
   }
 
-  test("groups a video's files into one entry and ignores the rest", () => {
-    cache("AAAAAAAAAAA", 1, 100);
+  test("groups a video's files into one entry and ignores the rest", async () => {
+    await cache("AAAAAAAAAAA", 1, 100);
     writeFileSync(join(dir, ".tmp-BBBBBBBBBBB-4242.webm.part"), "x");
     writeFileSync(join(dir, "notes.txt"), "not ours");
-    const entries = listEntries(dir).sort((a, b) =>
+    const entries = (await listEntries(dir)).sort((a, b) =>
       a.videoId.localeCompare(b.videoId),
     );
     expect(entries.map((e) => [e.videoId, e.files.sort(), e.complete])).toEqual(
@@ -146,14 +150,14 @@ describe("sweepYouTubeAudio on a directory", () => {
   });
 
   test("evicts by TTL, then oldest first to the cap, skipping a held lock", async () => {
-    cache("stale000000", 45, 1000);
-    cache("old00000000", 20, 1000);
-    cache("mid00000000", 10, 1000);
-    cache("new00000000", 1, 1000);
-    cache("busy0000000", 50, 1000);
+    await cache("stale000000", 45, 1000);
+    await cache("old00000000", 20, 1000);
+    await cache("mid00000000", 10, 1000);
+    await cache("new00000000", 1, 1000);
+    await cache("busy0000000", 50, 1000);
     writeFileSync(join(dir, ".tmp-dead0000000-99.webm.part"), "x");
 
-    const held = tryLockVideo(dir, "busy0000000");
+    const held = await tryLockVideo(dir, "busy0000000");
     if (held === null) throw new Error("could not take the test's lock");
     try {
       const report = await sweepYouTubeAudio({
@@ -183,9 +187,9 @@ describe("sweepYouTubeAudio on a directory", () => {
   });
 
   test("a hit touches the files, so a read video is not the oldest", async () => {
-    cache("read0000000", 25, 1000);
-    cache("unread00000", 20, 1000);
-    const hit = lookupCached(dir, "read0000000", new Date(NOW));
+    await cache("read0000000", 25, 1000);
+    await cache("unread00000", 20, 1000);
+    const hit = await lookupCached(dir, "read0000000", new Date(NOW));
     expect(hit.kind).toBe("hit");
     await sweepYouTubeAudio({ dir, nowMs: NOW, capBytes: 1500 });
     expect(existsSync(join(dir, "read0000000.webm"))).toBe(true);

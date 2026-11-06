@@ -16,6 +16,13 @@ export default [
       "The probe is spawned as its own child process under a load-bearing lean-closure constraint (runtime builtins + one zero-import file): importing defineFileSink would pull the plugin graph into the heap whose footprint it measures. Its output is bounded the other way: config-gated off by default, run only for controlled investigations.",
   },
   {
+    rule: "blocking-fs/no-sync-fs",
+    paths: ["server/internal/probe/entry.ts"],
+    kind: "sanctioned",
+    reason:
+      "Spawned child process (never the backend): its appendFileSync stalls only the probe, and the sync write is deliberate — it measures paging stalls on its own thread.",
+  },
+  {
     rule: "boundaries/no-platform-api",
     paths: ["server/internal/probe-host.ts", "server/internal/probe/entry.ts"],
     kind: "debt",

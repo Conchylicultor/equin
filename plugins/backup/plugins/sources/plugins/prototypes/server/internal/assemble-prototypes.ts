@@ -5,7 +5,7 @@ import type { BackupSourceReport } from "@plugins/backup/core";
 import { prototypesSourceConfig } from "../../shared/config";
 import {
   scanGlob,
-  existsSync,
+  exists,
   readdir,
   stat,
 } from "@plugins/packages/plugins/timed-fs/core";
@@ -43,7 +43,7 @@ export async function assemblePrototypes(
     return { id: ID, name: NAME, outcome: "skipped", items: [], sizeBytes: 0 };
   }
 
-  if (!existsSync(prototypesDir.path)) {
+  if (!(await exists(prototypesDir.path))) {
     return { id: ID, name: NAME, outcome: "included", items: [], sizeBytes: 0 };
   }
 

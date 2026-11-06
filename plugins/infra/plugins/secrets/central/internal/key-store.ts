@@ -1,8 +1,5 @@
-import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { chmod, mkdir, writeFile } from "node:fs/promises";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { randomBytes } from "node:crypto";
 import { keyPath, secretsDir, storePath } from "./paths";
 import { SecretsKeychainLockedError } from "@plugins/infra/plugins/secrets/core";
@@ -12,6 +9,10 @@ const KEYCHAIN_SERVICE = LEGACY_IDS.keychainService;
 const KEYCHAIN_ACCOUNT = "secrets-aes-256-gcm-v1";
 
 let cached: Buffer | null = null;
+// The first resolution in flight: concurrent first callers share it, so two
+// of them can never both find no key and mint two (the file reads and writes
+// below await the disk).
+let resolving: Promise<Buffer> | null = null;
 // biome-ignore lint/suspicious/noExplicitAny: dynamic import, library may be absent.
 let keychainModule: any | null | undefined;
 let keychainWarned = false;
@@ -51,8 +52,8 @@ function keySource(): "keychain" | "file" {
  * would only make the next write replace every secret with an empty store.
  * Throwing keeps the blob, and the missing key's source, for a human to fix.
  */
-function mintKey(where: string): Buffer {
-  if (existsSync(storePath())) {
+async function mintKey(where: string): Promise<Buffer> {
+  if (await exists(storePath())) {
     throw new SecretsKeychainLockedError(
       `no master key in ${where}, but ${storePath()} exists — it was encrypted with a key this host cannot find; refusing to mint a new one over it`,
     );
@@ -60,10 +61,10 @@ function mintKey(where: string): Buffer {
   return randomBytes(32);
 }
 
-function readKeyFile(): Buffer | null {
+async function readKeyFile(): Promise<Buffer | null> {
   const path = keyPath();
-  if (!existsSync(path)) return null;
-  const buf = readFileSync(path);
+  if (!(await exists(path))) return null;
+  const buf = await readFile(path);
   if (buf.length !== 32) {
     throw new Error(
       `secrets key file ${path} has wrong length (${buf.length} != 32)`,
@@ -72,19 +73,19 @@ function readKeyFile(): Buffer | null {
   return buf;
 }
 
-function readOrCreateKeyFile(): Buffer {
+async function readOrCreateKeyFile(): Promise<Buffer> {
   try {
     // Not `secretsDir.ensure()`: the mode is load-bearing here — this
     // directory holds the master key, so it must be 0700 (owner-only), and
     // `ensure()` creates with the process umask.
-    if (!existsSync(secretsDir.path)) {
-      mkdirSync(secretsDir.path, { mode: 0o700, recursive: true });
+    if (!(await exists(secretsDir.path))) {
+      await mkdir(secretsDir.path, { mode: 0o700, recursive: true });
     }
-    const existing = readKeyFile();
+    const existing = await readKeyFile();
     if (existing) return existing;
-    const fresh = mintKey(keyPath());
-    writeFileSync(keyPath(), fresh, { mode: 0o600 });
-    chmodSync(keyPath(), 0o600);
+    const fresh = await mintKey(keyPath());
+    await writeFile(keyPath(), fresh, { mode: 0o600 });
+    await chmod(keyPath(), 0o600);
     return fresh;
   } catch (err) {
     if (err instanceof SecretsKeychainLockedError) throw err;
@@ -108,9 +109,15 @@ function readOrCreateKeyFile(): Buffer {
  */
 export async function getEncryptionKey(): Promise<Buffer> {
   if (cached) return cached;
+  resolving ??= resolveEncryptionKey().finally(() => {
+    resolving = null;
+  });
+  return resolving;
+}
 
+async function resolveEncryptionKey(): Promise<Buffer> {
   if (keySource() === "file") {
-    cached = readOrCreateKeyFile();
+    cached = await readOrCreateKeyFile();
     return cached;
   }
 
@@ -130,12 +137,12 @@ export async function getEncryptionKey(): Promise<Buffer> {
         return cached;
       }
       // An earlier boot fell back to the file: that key wrote the blob.
-      const fromFile = readKeyFile();
+      const fromFile = await readKeyFile();
       if (fromFile) {
         cached = fromFile;
         return cached;
       }
-      const fresh = mintKey("the OS keychain");
+      const fresh = await mintKey("the OS keychain");
       entry.setPassword(fresh.toString("base64"));
       cached = fresh;
       return cached;
@@ -152,7 +159,7 @@ export async function getEncryptionKey(): Promise<Buffer> {
     }
   }
 
-  cached = readOrCreateKeyFile();
+  cached = await readOrCreateKeyFile();
   return cached;
 }
 

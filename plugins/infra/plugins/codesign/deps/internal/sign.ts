@@ -1,9 +1,9 @@
 import { randomBytes } from "node:crypto";
-import { chmodSync, copyFileSync, renameSync, rmSync } from "node:fs";
+import { chmod, copyFile, rename, rm } from "node:fs/promises";
 import {
-  readdirSync,
-  readFileSync,
-  statSync,
+  readdir,
+  readFile,
+  stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
@@ -108,8 +108,8 @@ export async function signBinary(
 
   const tmp = `${path}.signing-${process.pid}-${randomBytes(4).toString("hex")}`;
   try {
-    copyFileSync(path, tmp);
-    chmodSync(tmp, statSync(path).mode & 0o7777);
+    await copyFile(path, tmp);
+    await chmod(tmp, (await stat(path)).mode & 0o7777);
     if (identity.kind === "configured") {
       await runOk(host, [
         "/usr/bin/codesign",
@@ -140,9 +140,9 @@ export async function signBinary(
         `signed ${path} with ${identity.kind} identity ${identity.sha1} "${identity.label}", but it does not satisfy ${signedByRequirement(opts.identifier, identity.sha1)}`,
       );
     }
-    renameSync(tmp, path);
+    await rename(tmp, path);
   } catch (err) {
-    rmSync(tmp, { force: true });
+    await rm(tmp, { force: true });
     throw err;
   }
   log(
@@ -177,7 +177,7 @@ export async function signBundle(
 ): Promise<Exclude<SignOutcome, { kind: "already-signed" }>> {
   const host = opts.host ?? machineHost();
   const log = opts.log ?? (() => {});
-  const plist = readFileSync(join(bundle, "Contents", "Info.plist"), "utf8");
+  const plist = await readFile(join(bundle, "Contents", "Info.plist"), "utf8");
   const declared = plistString(plist, "CFBundleIdentifier");
   if (declared !== opts.identifier) {
     throw new Error(
@@ -199,7 +199,7 @@ export async function signBundle(
     // nested code itself (short of the deprecated `--deep`): each other
     // executable first, under its own name, then the bundle.
     const macos = join(bundle, "Contents", "MacOS");
-    for (const name of readdirSync(macos).sort()) {
+    for (const name of (await readdir(macos)).sort()) {
       if (name === main) continue;
       await runOk(host, [
         "/usr/bin/codesign",
@@ -260,12 +260,12 @@ export async function codeSignature(
   host: CodesignHost = machineHost(),
 ): Promise<"unsupported" | "no-identity" | "signed" | "unsigned"> {
   if (host.platform !== "darwin") return "unsupported";
-  const configured = readConfiguredValue(host);
+  const configured = await readConfiguredValue(host);
   let sha1: string;
   if (configured !== null) {
     sha1 = (await resolveConfigured(configured, host)).sha1;
   } else {
-    const local = readLocalIdentity(host);
+    const local = await readLocalIdentity(host);
     if (local.kind !== "present") return "no-identity";
     sha1 = local.identity.sha1;
   }

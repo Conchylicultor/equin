@@ -2123,7 +2123,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Test helpers:
                 - Server: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/server/testing`
                   - `buildSnapshot` — Parse a DB-IP `start,end,CC` CSV (no header row) into snapshot bytes.
-                  - `createIpCountryLookup` — A lookup over the snapshot file at `snapshotPath()`, read lazily on the first lookup (one synchronous ~16 MB read) and then held in memory.
+                  - `createIpCountryLookup` — A lookup over the snapshot file at `snapshotPath()`, read lazily on the first lookup (one ~16 MB read, shared by lookups that arrive while it runs) and then held in memory.
                   - Types: `IpCountryLookup`
         - **`composition`** — Composition section of the site page's Settings tab: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.
           - Web:
@@ -14195,6 +14195,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ConfigDescriptor`
       - `ConfigDocRef`
       - `ConfigDocumentFile`
+      - `ConfigFileContent`
       - `ConfigFileRef`
       - `ConfigGitLayerImpl`
       - `ConfigListVisitor`
@@ -14263,6 +14264,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `forkScope`
       - `hasConflict`
       - `hasReviewMarker`
+      - `loadedProxy`
       - `mapConfigLists`
       - `normalizeCollectionItems`
       - `orphanEntrySchema`
@@ -14321,6 +14323,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `diskConfigGitLayer` — The committed config layer a browser host bundles (`config_v2/bundled-layer`, which reads it through vite's `import.meta.glob` — absent under `bun test`), provided from the same files read off disk: for a suite booting a portable graph without the computer.
     - Core: `@plugins/config_v2/core/testing`
       - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
+      - `proxyFiles` — Config files held in a map, each behind a synchronous read / write / exists proxy — what `propagate` and `propagateGitLayerDocument` write through.
   - Plugins:
     - **`browser-store`** (excluded) — The user config layer of a host without the computer (a browser worker host): held in memory (ConfigStore) and written through to the host's declared storage (kept across reloads when it is persistent), each document propagated from the host's committed layer (ConfigGitLayer) on first touch, so it starts as a fresh user's. Never booted by the desktop, whose provider is config_v2#machine.
       - Server:
@@ -22101,11 +22104,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/boot-watchdog`
           - `debug/timeline`
       - Exemptions:
-        - Exempts itself from: `server-core/no-process-crash-listener` — `machine/internal/boot-crash.ts` (sanctioned)
+        - Exempts itself from:
+          - `server-core/no-process-crash-listener` — `machine/internal/boot-crash.ts` (sanctioned)
+          - `blocking-fs/no-sync-fs` — `machine/internal/own-boot-mark.ts` (sanctioned)
       - Machine:
         - Exports (values):
           - `clearBootUnsettled`
           - `markBootUnsettled`
+          - `markOwnBootUnsettled`
           - `readBootUnsettled`
           - `stampBootUnsettledIndexed`
     - **`boot-monitor`** — Boot-monitor web presence: registers the time-to-ready budget config (enabled, readyBudgetMs) for Settings → Config. The minted signals flow through the existing slow-op report kind and the boot trace lane — no new renderer. Time-to-ready boot monitor: a cheap per-worktree scheduled job that, once the server is ready (markServerReady stamped the profiler's timeToReadyMs), mints ONE 'boot' slow-op row (operation server-ready) + coherent trace per boot that took longer than its budget to become ready — evidence-first, deduped per boot epoch — folding in the gateway-observed readiness wait when the gateway POSTed /api/boot/gateway-report. Post-ready warm-ups are not judged here (each has its own budget).
@@ -22576,7 +22582,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/paths.worktreesDir`
           - `network/live.serveValue`
           - `primitives/log-channels.defineLogSink`
-          - `primitives/log-channels/log-files.readChannelJsonAsync`
+          - `primitives/log-channels/log-files.readChannelJson`
         - Exports (types):
           - `HealthSample`
           - `HealthSampleObserver`
@@ -23132,6 +23138,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `detached-work-safety/no-raw-set-interval` — `server/internal/probe/entry.ts` (sanctioned)
           - `sink-safety/no-adhoc-file-sink` — `server/internal/probe/entry.ts` (sanctioned)
+          - `blocking-fs/no-sync-fs` — `server/internal/probe/entry.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/probe-host.ts`, `server/internal/probe/entry.ts` (debt)
           - `user-path/no-unproven-claim` — `server/internal/probe/entry.ts` (sanctioned)
     - **`profiling`** — Gantt chart of build steps and server startup phases.
@@ -24366,7 +24373,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/retention.defineRetention`
           - `network/live/change-feed.defineChangeProducer`
           - `network/live.serveCollection`
-          - `primitives/log-channels/log-files.readChannelJsonAsync`
+          - `primitives/log-channels/log-files.readChannelJson`
           - `primitives/log-channels.defineLogSink`
           - `reports.ReportKind`
         - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
@@ -28528,10 +28535,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/runtime-profiler` (1 debt)
               - `infra/safe-fetch` (1 debt)
               - `infra/spawn` (3 debt)
-              - `infra/spawn/daemon` (1 debt)
+              - `infra/spawn/daemon` (2 debt)
               - `infra/ssh` (2 debt)
               - `infra/stack-sampler` (1 debt)
-              - `infra/worktree` (8 debt)
+              - `infra/worktree` (9 debt)
               - `infra/worktree/reclaim` (2 debt)
               - `integrations/google-maps` (2 debt)
               - `integrations/youtube/audio-fetch` (3 debt)
@@ -28561,7 +28568,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `release` (4 debt)
               - `release/bundles` (3 debt)
               - `release/source-checkout` (1 debt)
-              - `reports/engine` (1 debt)
+              - `reports/engine` (2 debt)
               - `reports/outbox` (2 debt)
               - `review/plugin-changes` (1 debt)
               - `stats/cost` (3 debt)
@@ -30438,7 +30445,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/release`
               - `infra/launcher`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/seed-cache.ts` (debt)
+            - Exempts itself from:
+              - `boundaries/no-platform-api` — `server/internal/seed-cache.ts` (debt)
+              - `blocking-fs/no-sync-fs` — `server/internal/seed-cache.ts` (sanctioned)
           - Server:
             - Exports (values): `seedAssetMirrorCache`
           - Cli:
@@ -32493,7 +32502,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/host/duress/shed`
                   - `primitives/log-channels`
               - Exemptions:
-                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/latch.ts` (debt)
+                - Exempts itself from:
+                  - `boundaries/no-platform-api` — `server/internal/latch.ts` (debt)
+                  - `blocking-fs/no-sync-fs` — `server/internal/latch.ts` (debt)
               - Server:
                 - Exports (types): `DuressLatch`
                 - Exports (values):
@@ -32903,6 +32914,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/archive/locate.ts`, `server/internal/archive/tree.ts`, `server/internal/complete.ts`, `server/internal/entry.ts`, `server/internal/extract.ts`, `server/internal/free-path.ts`, `server/internal/list.ts`, `server/internal/move.ts`, `server/internal/open-file.ts`, `server/internal/open.ts`, `server/internal/path.ts`, `server/internal/peek.ts`, `server/internal/raw.ts`, `server/internal/stat.ts`, `server/internal/text.ts`, `server/internal/volume.ts` (debt)
       - Plugins:
+        - **`blocking-fs`** — No synchronous fs call on a backend's JS thread: the type-aware blocking-fs/no-sync-fs lint refuses node:fs *Sync calls (timed-fs's twins included), Bun.resolveSync and sync glob scans in server/, machine/ and central/ code, so a slow disk can never freeze a backend for seconds; a file that blocks no backend (its own child process, pre-listen boot, a sync exit handler) declares a sanctioned exemption.
+          - Exemptions:
+            - Exempted by:
+              - `debug/boot-events` (0 debt)
+              - `debug/paging-probe` (0 debt)
+              - `infra/asset-mirror/bundle` (0 debt)
+              - `infra/host/duress/latch` (1 debt)
+              - `infra/launcher/login-services` (1 debt)
+              - `infra/spawn/daemon` (1 debt)
+              - `infra/worktree` (0 debt)
+              - `packages/signal-origin` (0 debt)
+              - `reports/engine` (1 debt)
         - **`image`** — Images on the host filesystem: the daily host-fs-image.sweep keeps the resized-copy cache (machine/'s GET resized) within 30 days unused and 1 GB.
           - Server:
             - Contributes: `resource.declare` "host-fs.image-sizes"
@@ -33656,7 +33679,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/gateway-drift`
               - `infra/paths/root-migration`
           - Exemptions:
-            - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/launchd.ts`, `machine/internal/systemd.ts` (sanctioned)
+            - Exempts itself from:
+              - `user-path/no-unproven-claim` — `machine/internal/launchd.ts`, `machine/internal/systemd.ts` (sanctioned)
+              - `blocking-fs/no-sync-fs` — `machine/internal/installed-label.ts` (debt)
           - Machine:
             - Exports (types):
               - `DefineLoginServiceSpec`
@@ -34490,7 +34515,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 66 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 67 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×21
           - `debug` ×20
           - `conversations` ×6
@@ -34501,6 +34526,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×2
           - `auth`
           - `build`
+          - `config_v2`
           - `integrations/google-maps`
           - `network/live/change-feed`
       - Exemptions:
@@ -34727,7 +34753,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from:
               - `daemon/no-raw-worker` — `.` (sanctioned)
-              - `boundaries/no-platform-api` — `server/internal/registry.ts` (debt)
+              - `boundaries/no-platform-api` — `server/internal/registry.ts`, `server/internal/pid-file-sync.ts` (debt)
+              - `blocking-fs/no-sync-fs` — `server/internal/pid-file-sync.ts` (debt)
             - Exempted by: `infra/spawn/daemon` (0 debt)
           - Server:
             - Exports (types):
@@ -34761,6 +34788,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `listDaemons`
               - `liveSupervisedIncarnations`
               - `onDaemonActivity`
+              - `parsePidFile`
               - `pidAlive`
               - `readPidFile`
           - Plugins:
@@ -34988,7 +35016,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `probeNamespace`
           - `probeWorktreeOp`
           - `pruneSpares`
-          - `readCompositionMarker`
           - `removeWorktree`
           - `removeWorktreeSpec`
           - `setupWorktree`
@@ -35014,8 +35041,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `worktree/no-raw-worktree-git` — `.` (sanctioned)
-          - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree-op-marker.ts`, `server/internal/worktree.ts` (debt)
           - `user-path/no-unproven-claim` — `server/internal/worktree.ts` (sanctioned)
+          - `blocking-fs/no-sync-fs` — `server/internal/worktree-op-marker.ts` (sanctioned)
         - Exempted by: `infra/worktree` (0 debt)
       - Core:
         - Exports (types):
@@ -35039,7 +35067,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/worktree.CompositionMarker`
               - `infra/worktree.ensureMainWorktreeRoot`
               - `infra/worktree.hasCompositionMarker`
-              - `infra/worktree.readCompositionMarker`
+              - `infra/worktree.loadCompositionMarker`
               - `infra/worktree.removeWorktreeSpec`
               - `infra/worktree.worktreePathFor`
             - Exports (types): `OwnedNamespace`
@@ -37545,13 +37573,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps/mail/sync`
+          - `config_v2`
           - `conversations`
+          - `conversations/model-provider/catalog`
           - `conversations/runtime-sdk`
           - `conversations/transcript-source`
+          - `debug/sentinel/status-file`
+          - `infra/claude-cli/accounts`
+          - `infra/claude-cli/sign-in`
+          - `infra/deps`
+          - `infra/jobs`
           - `infra/jobs/in-process`
+          - `infra/jobs/supervised-job`
           - `infra/launcher/login-services`
           - `infra/paths/data-files`
           - `infra/paths/data-files/memory`
+          - `infra/request-origin/agent-write-ledger`
       - Core:
         - Exports (types): `KeyedMutex`
         - Exports (values): `createKeyedMutex`
@@ -37634,17 +37671,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `yieldMacrotask`
     - **`owned-fd`** — Owned file descriptors: openOwnedFd / adoptFd return an OwnedFd whose close() closes its descriptor exactly once — a second close throws FdAlreadyClosedError naming where the first happened, instead of closing whatever reused the number. Imports node:fs and the AppPath type only; enforced by the owned-fd/no-raw-fd-close lint (no fs.closeSync / fs.close outside it) and owned-fd/no-raw-spawn-stdio-fd (a spawn's stdio descriptor is an OwnedFd's .fd).
       - Cross-plugin:
-        - Imported by: 33 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
-          - `infra` ×12
+        - Imported by: 28 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
+          - `infra` ×11
           - `framework` ×7
           - `packages` ×4
-          - `apps` ×2
-          - `debug` ×2
+          - `apps/chord/song-index`
           - `conversations/runtime-sdk`
           - `database/migrations`
+          - `debug/browser-recordings/writer`
           - `integrations/youtube/audio-fetch`
-          - `primitives/log-channels/log-files`
-          - `release/source-checkout`
           - `reports/outbox`
       - Exemptions:
         - Exempts itself from:
@@ -37764,6 +37799,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `boundaries/no-platform-api` — `server/internal/signal-origin.fixture.ts`, `server/internal/signal-origin.ts` (debt)
           - `user-path/no-unproven-claim` — `server/internal/signal-origin.fixture.ts` (sanctioned)
+          - `blocking-fs/no-sync-fs` — `server/internal/signal-origin.fixture.ts` (sanctioned)
       - Server:
         - Exports (types): `SignalOriginArmResult`
         - Exports (values):
@@ -38032,6 +38068,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `access`
           - `accessSync`
+          - `exists`
           - `existsSync`
           - `FS_WAIT_FLOOR_MS`
           - `FS_WAIT_LAYERS`
@@ -41845,9 +41882,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses: `plugin-meta/facets.defineFacet`
             - Exports (types):
+              - `DeferredRegisterCall`
               - `ResourceChanges`
               - `ResourceDef`
               - `ResourceFacetData`
+              - `ResourcesRaw`
             - Exports (values):
               - `resourceModeLabel`
               - `resourcesFacetDef`
@@ -47810,7 +47849,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `logsDirFor`
               - `readChannelEntries`
               - `readChannelJson`
-              - `readChannelJsonAsync`
           - Cross-plugin:
             - Imported by:
               - `debug/backend-liveness`
@@ -51840,8 +51878,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `upstream`
       - Exemptions:
         - Exempts itself from:
-          - `sink-safety/no-adhoc-file-sink` — `server/internal/buffer.ts` (sanctioned)
-          - `boundaries/no-platform-api` — `server/internal/buffer.ts` (debt)
+          - `sink-safety/no-adhoc-file-sink` — `server/internal/crash-append.ts` (sanctioned)
+          - `blocking-fs/no-sync-fs` — `server/internal/crash-append.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/buffer.ts`, `server/internal/crash-append.ts` (debt)
     - **`host-check`** — Host-check report kind's Debug → Reports summary view: one line naming the failing host-scoped check and the first line of its message. Filed by main's hourly host audit through the report outbox — no collector here. Host-check report kind: one row per failing host-scoped check (fingerprint = check id), filed through the report outbox by main's hourly checks.host-audit job (`./equin check --scope host --file-reports`) — the only place a host check's verdict is delivered, since no worktree's check pass asserts the shared machine. Renders a task carrying the check's message and hint verbatim. Warning, re-arms every 6 h.
       - Web:
         - Contributes: `Reports.KindView` → `HostCheckSummary`

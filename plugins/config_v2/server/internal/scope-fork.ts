@@ -6,9 +6,10 @@ import {
   getHierarchyPath,
 } from "./resource";
 import {
-  ensureScopeEntry,
   disposeScopeEntry,
   notifyDescriptorScopeChange,
+  syncScopeEntryNow,
+  withDocument,
 } from "./registry";
 import { buildScopeSnapshot } from "./scope-snapshot";
 import { ConfigGitLayer, ConfigStore } from "./host-services";
@@ -40,13 +41,16 @@ async function forkDescriptor(
   };
   const files = documentFiles(doc);
   const store = ConfigStore.get();
-  store.edit(doc, writer, "fork-descriptor-scope", () => {
-    const { snapshot, hash } = buildScopeSnapshot(descriptor, scopeId);
-    store.proxy(files.origin).write(snapshot as JsonValue, hash);
-    store.proxy(files.override).write(snapshot as JsonValue, hash);
+  await withDocument(doc.storePath, scopeId, async () => {
+    await store.edit(doc, writer, "fork-descriptor-scope", async () => {
+      const { snapshot, hash } = buildScopeSnapshot(descriptor, scopeId);
+      await store.write(files.origin, snapshot as JsonValue, hash);
+      await store.write(files.override, snapshot as JsonValue, hash);
+    });
+    // An entry built before the fork (for a scoped write) holds the pre-fork
+    // read: refresh it; otherwise build it.
+    await syncScopeEntryNow(descriptor, scopeId);
   });
-
-  await ensureScopeEntry(descriptor, scopeId);
 }
 
 // Whether a scope's config is backed by a committed git override
@@ -78,20 +82,22 @@ async function removeDescriptor(
   const files = documentFiles(doc);
   const store = ConfigStore.get();
   const gitBacked = gitBacksScope(doc.storePath, scopeId);
-  store.edit(doc, writer, "remove-descriptor-scope", () => {
-    store.remove(files.override);
-    if (gitBacked) return;
-    store.remove(files.origin);
-    // Another descriptor may still have files in the scope: dropScope leaves
-    // a scope that is not empty.
-    store.dropScope(doc.storePath, scopeId);
-  });
+  await withDocument(doc.storePath, scopeId, async () => {
+    await store.edit(doc, writer, "remove-descriptor-scope", async () => {
+      await store.remove(files.override);
+      if (gitBacked) return;
+      await store.remove(files.origin);
+      // Another descriptor may still have files in the scope: dropScope
+      // leaves a scope that is not empty.
+      await store.dropScope(doc.storePath, scopeId);
+    });
 
-  // A git-backed scope rebuilds from origin-only (override now gone) so
-  // getConfig resolves to the committed scope rather than the stale cached
-  // override values; any other scope is gone.
-  disposeScopeEntry(descriptor, scopeId);
-  if (gitBacked) await ensureScopeEntry(descriptor, scopeId);
+    // A git-backed scope rebuilds from origin-only (override now gone) so
+    // getConfig resolves to the committed scope rather than the stale cached
+    // override values; any other scope is gone.
+    disposeScopeEntry(descriptor, scopeId);
+    if (gitBacked) await syncScopeEntryNow(descriptor, scopeId);
+  });
 }
 
 // Look up a descriptor + its hierarchyPath from a storePath, failing loudly when
@@ -122,7 +128,7 @@ export async function forkDescriptorScope(
 ): Promise<void> {
   const { descriptor, hierarchyPath } = resolveDescriptor(storePath);
   await forkDescriptor(descriptor, hierarchyPath, scopeId, opts.writer);
-  notifyDescriptorScopeChange(storePath, scopeId);
+  await notifyDescriptorScopeChange(storePath, scopeId);
 }
 
 // Stop customizing a SINGLE descriptor for an app — the inverse of
@@ -136,7 +142,7 @@ export async function removeDescriptorScope(
 ): Promise<void> {
   const { descriptor, hierarchyPath } = resolveDescriptor(storePath);
   await removeDescriptor(descriptor, hierarchyPath, scopeId, opts.writer);
-  notifyDescriptorScopeChange(storePath, scopeId);
+  await notifyDescriptorScopeChange(storePath, scopeId);
 }
 
 // Fork all `scope: "app"` descriptors into a new scope. Delegates each descriptor
@@ -150,7 +156,7 @@ export async function forkScope(
 ): Promise<void> {
   for (const { descriptor, hierarchyPath } of getScopedDescriptors("app")) {
     await forkDescriptor(descriptor, hierarchyPath, scopeId, opts.writer);
-    notifyDescriptorScopeChange(
+    await notifyDescriptorScopeChange(
       `${hierarchyPath}/${descriptor.name}.jsonc`,
       scopeId,
     );
@@ -166,7 +172,7 @@ export async function deleteScope(
 ): Promise<void> {
   for (const { descriptor, hierarchyPath } of getScopedDescriptors("app")) {
     await removeDescriptor(descriptor, hierarchyPath, scopeId, opts.writer);
-    notifyDescriptorScopeChange(
+    await notifyDescriptorScopeChange(
       `${hierarchyPath}/${descriptor.name}.jsonc`,
       scopeId,
     );

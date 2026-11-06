@@ -1,6 +1,6 @@
 import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { OwnedFd } from "@plugins/packages/plugins/owned-fd/core";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import {
   RECENT_RUNS_MAX,
   type BackgroundRun,
@@ -550,21 +550,27 @@ export type PidFileRead =
   | { kind: "absent" }
   | { kind: "unreadable"; text: string };
 
-export function readPidFile(path: AppPath): PidFileRead {
+/** A pid file's text, read: the pid on its first line, or `unreadable`. */
+export function parsePidFile(raw: string): PidFileRead {
+  const first = raw.split("\n", 1)[0]?.trim() ?? "";
+  const pid = Number.parseInt(first, 10);
+  return Number.isInteger(pid) && pid > 0
+    ? { kind: "pid", pid }
+    : { kind: "unreadable", text: first };
+}
+
+/** Read a pid file without holding the thread on the disk. */
+export async function readPidFile(path: AppPath): Promise<PidFileRead> {
   let raw: string;
   try {
-    raw = readFileSync(path, "utf-8");
+    raw = await readFile(path, "utf-8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       return { kind: "absent" };
     }
     throw err;
   }
-  const first = raw.split("\n", 1)[0]?.trim() ?? "";
-  const pid = Number.parseInt(first, 10);
-  return Number.isInteger(pid) && pid > 0
-    ? { kind: "pid", pid }
-    : { kind: "unreadable", text: first };
+  return parsePidFile(raw);
 }
 
 /** Whether a process exists (EPERM: it does, we just may not signal it). */

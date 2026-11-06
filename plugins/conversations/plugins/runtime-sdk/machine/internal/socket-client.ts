@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { connect } from "node:net";
 import {
   CommandReplySchema,
@@ -77,8 +77,8 @@ function connectFailure(
  * A socket still there is an agent that ended without its exit (a crash) —
  * unknown, so {@link AgentUnresponsiveError}.
  */
-function closedFailure(conversationId: string): Error {
-  return existsSync(agentSocketPath(conversationId))
+async function closedFailure(conversationId: string): Promise<Error> {
+  return (await exists(agentSocketPath(conversationId)))
     ? new AgentUnresponsiveError(
         conversationId,
         "closed the connection before replying",
@@ -147,7 +147,8 @@ function exchange(
       finish(connectFailure(conversationId, err, connected));
     });
     conn.on("close", () => {
-      finish(closedFailure(conversationId));
+      // A failed look at the socket is the failure itself: never lost.
+      void closedFailure(conversationId).then(finish, finish);
     });
   });
 }
@@ -282,7 +283,7 @@ export function subscribeAgent(
     });
     conn.on("close", () => {
       if (open) onClose(broken);
-      else fail(closedFailure(conversationId));
+      else void closedFailure(conversationId).then(fail, fail);
     });
   });
 }

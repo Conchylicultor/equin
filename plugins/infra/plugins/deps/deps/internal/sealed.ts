@@ -2,10 +2,7 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { z } from "zod";
 import {
@@ -51,8 +48,10 @@ export const SealedManifestSchema = z.object({
 });
 export type SealedManifest = z.infer<typeof SealedManifestSchema>;
 
-export function readSealedManifest(path: string): SealedManifest {
-  return SealedManifestSchema.parse(JSON.parse(readFileSync(path, "utf8")));
+export async function readSealedManifest(
+  path: string,
+): Promise<SealedManifest> {
+  return SealedManifestSchema.parse(JSON.parse(await readFile(path, "utf8")));
 }
 
 /** What a root says about `dep` when it is (or is not) a sealed bundle. */
@@ -64,20 +63,20 @@ export type SealedLookup<S extends DepSource> =
   | { kind: "failed"; message: string };
 
 /**
- * `dep` as the sealed bundle at `root` holds it. Cheap (one small JSON read)
- * and synchronous, so safe on an event loop and on every engine entry point.
+ * `dep` as the sealed bundle at `root` holds it. Cheap (one small JSON read),
+ * so safe on an event loop and on every engine entry point.
  *
  * A bundle runs on the platform it was built for; one read on another is a
  * failure, never a payload that would not load.
  */
-export function sealedLookup<S extends DepSource>(
+export async function sealedLookup<S extends DepSource>(
   dep: Dep<S>,
   root: AppPath,
   host: DepTarget = hostTarget(),
-): SealedLookup<S> {
+): Promise<SealedLookup<S>> {
   const path = joinAppPath(root, SEALED_MANIFEST);
-  if (!existsSync(path)) return { kind: "unsealed" };
-  const manifest = readSealedManifest(path);
+  if (!(await exists(path))) return { kind: "unsealed" };
+  const manifest = await readSealedManifest(path);
   const target = manifest.target as DepTarget;
   if (!sameTarget(target, host)) {
     return {
@@ -97,7 +96,7 @@ export function sealedLookup<S extends DepSource>(
     };
   }
   const dir = joinAppPath(root, entry.dir);
-  if (!existsSync(dir) || !(dep.source.isIntact?.(dir) ?? true)) {
+  if (!(await exists(dir)) || !((await dep.source.isIntact?.(dir)) ?? true)) {
     return {
       kind: "failed",
       message: `${dep.id}'s sealed payload is missing or incomplete at ${dir}`,

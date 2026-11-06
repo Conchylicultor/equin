@@ -103,6 +103,7 @@ name their sender.
   - Exempts itself from:
     - `boundaries/no-platform-api` — `server/internal/signal-origin.fixture.ts`, `server/internal/signal-origin.ts` (debt)
     - `user-path/no-unproven-claim` — `server/internal/signal-origin.fixture.ts` (sanctioned)
+    - `blocking-fs/no-sync-fs` — `server/internal/signal-origin.fixture.ts` (sanctioned)
 - Server:
   - Exports (types): `SignalOriginArmResult`
   - Exports (values):

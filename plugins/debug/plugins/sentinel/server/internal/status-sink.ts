@@ -17,13 +17,13 @@ export function createStatusSink(opts: {
   pid?: number;
   claimedAt?: number;
   reportDown: (status: DownStatus) => void;
-}): (status: SentinelStatus) => void {
+}): (status: SentinelStatus) => Promise<void> {
   const write = createStatusWriter(opts.dir, {
     ...(opts.pid === undefined ? {} : { pid: opts.pid }),
     ...(opts.claimedAt === undefined ? {} : { claimedAt: opts.claimedAt }),
   });
   return (status) => {
     if (status.state === "down") opts.reportDown(status);
-    write(status);
+    return write(status);
   };
 }

@@ -99,10 +99,15 @@ const file = (
   f: ConfigFileRef["file"],
   scopeId?: string,
 ): ConfigFileRef => ({ storePath, ...(scopeId ? { scopeId } : {}), file: f });
-const read = (ref: ConfigFileRef) => memory.proxy(ref).read();
+const read = (ref: ConfigFileRef) => memory.read(ref);
+const exists = async (ref: ConfigFileRef) => (await memory.read(ref)) !== null;
 // Write a document file the way the build propagates one.
-function seed(ref: ConfigFileRef, content: JsonValue, hash?: string): void {
-  memory.proxy(ref).write(content, hash ?? computeHash(content));
+function seed(
+  ref: ConfigFileRef,
+  content: JsonValue,
+  hash?: string,
+): Promise<void> {
+  return memory.write(ref, content, hash ?? computeHash(content));
 }
 
 const ALPHA_ORIGIN = { enabled: true, title: "committed" };
@@ -110,10 +115,10 @@ const changes: ConfigDocumentTuple[] = [];
 let offChanges: () => void = () => {};
 
 beforeAll(async () => {
-  seed(file(ALPHA, "origin"), ALPHA_ORIGIN);
-  seed(file(BETA, "origin"), { title: "b" });
+  await seed(file(ALPHA, "origin"), ALPHA_ORIGIN);
+  await seed(file(BETA, "origin"), { title: "b" });
   // A committed scope the build propagated before boot: rehydrated by init.
-  seed(file(BETA, "origin", "app:mail"), { title: "mail" });
+  await seed(file(BETA, "origin", "app:mail"), { title: "mail" });
   collectContributions([
     {
       id: PLUGIN,
@@ -151,9 +156,9 @@ describe("reads", () => {
     }));
 
   test("a committed scope found at init reads its own document", () =>
-    run(() => {
+    run(async () => {
       expect(getConfig(beta, "app:mail")).toEqual({ title: "mail" });
-      expect(getConfigScopeIds(beta)).toEqual(["app:mail"]);
+      expect(await getConfigScopeIds(beta)).toEqual(["app:mail"]);
     }));
 });
 
@@ -162,7 +167,7 @@ describe("writes", () => {
     run(async () => {
       changes.length = 0;
       await setConfig(alpha, "title", "mine", { writer });
-      expect(read(file(ALPHA, "override"))).toEqual({
+      expect(await read(file(ALPHA, "override"))).toEqual({
         content: { enabled: true, title: "mine" },
         hash: computeHash(ALPHA_ORIGIN),
       });
@@ -184,7 +189,7 @@ describe("writes", () => {
   test("a reset leaving nothing the origin does not say removes the override", () =>
     run(async () => {
       await resetConfigByPath(ALPHA, "title", { writer });
-      expect(memory.proxy(file(ALPHA, "override")).exists()).toBe(false);
+      expect(await exists(file(ALPHA, "override"))).toBe(false);
       expect(getConfig(alpha)).toEqual(ALPHA_ORIGIN);
       expect(lastEdits(1)).toEqual(["reset-field:title"]);
     }));
@@ -196,12 +201,12 @@ describe("writes", () => {
         writer,
         scopeId: "app:pages",
       });
-      expect(read(file(ALPHA, "origin", "app:pages"))?.content).toEqual(
+      expect((await read(file(ALPHA, "origin", "app:pages")))?.content).toEqual(
         ALPHA_ORIGIN,
       );
       expect(getConfig(alpha, "app:pages").enabled).toBe(false);
       expect(getConfig(alpha).enabled).toBe(true);
-      expect(getConfigScopeIds(alpha)).toEqual(["app:pages"]);
+      expect(await getConfigScopeIds(alpha)).toEqual(["app:pages"]);
       expect(changes).toContainEqual({ path: ALPHA, scopeId: "app:pages" });
     }));
 });
@@ -209,10 +214,10 @@ describe("writes", () => {
 describe("conflict resolution", () => {
   // A stale override (written against an older origin) plus the merge base
   // propagate captured: the override no longer wins.
-  function conflict(): void {
+  async function conflict(): Promise<void> {
     const ancestor = { enabled: true, title: "old" };
-    seed(file(ALPHA, "ancestor"), ancestor);
-    seed(
+    await seed(file(ALPHA, "ancestor"), ancestor);
+    await seed(
       file(ALPHA, "override"),
       { enabled: false, title: "old" },
       computeHash(ancestor),
@@ -221,65 +226,65 @@ describe("conflict resolution", () => {
 
   test("acknowledge restamps the override and drops the ancestor", () =>
     run(async () => {
-      conflict();
+      await conflict();
       await reloadConfigDocument(ALPHA, "");
       expect(getConfig(alpha)).toEqual(ALPHA_ORIGIN);
-      acknowledgeConflictByPath(ALPHA, { writer });
-      expect(read(file(ALPHA, "override"))?.hash).toBe(
+      await acknowledgeConflictByPath(ALPHA, { writer });
+      expect((await read(file(ALPHA, "override")))?.hash).toBe(
         computeHash(ALPHA_ORIGIN),
       );
-      expect(memory.proxy(file(ALPHA, "ancestor")).exists()).toBe(false);
+      expect(await exists(file(ALPHA, "ancestor"))).toBe(false);
       expect(getConfig(alpha)).toEqual({ enabled: false, title: "old" });
       expect(lastEdits(1)).toEqual(["acknowledge-conflict"]);
     }));
 
   test("merge takes each side's change and resolves when nothing collides", () =>
     run(async () => {
-      conflict();
+      await conflict();
       await reloadConfigDocument(ALPHA, "");
-      const result = mergeConflictByPath(ALPHA, { writer });
+      const result = await mergeConflictByPath(ALPHA, { writer });
       expect(result).toEqual({ resolved: true, conflictKeys: [] });
-      expect(read(file(ALPHA, "override"))).toEqual({
+      expect(await read(file(ALPHA, "override"))).toEqual({
         content: { enabled: false, title: "committed" },
         hash: computeHash(ALPHA_ORIGIN),
       });
-      expect(memory.proxy(file(ALPHA, "ancestor")).exists()).toBe(false);
+      expect(await exists(file(ALPHA, "ancestor"))).toBe(false);
       expect(lastEdits(1)).toEqual(["merge-conflict"]);
     }));
 
   test("delete-override drops the override and the ancestor", () =>
     run(async () => {
-      conflict();
+      await conflict();
       await reloadConfigDocument(ALPHA, "");
-      deleteOverrideByPath(ALPHA, { writer });
-      expect(memory.proxy(file(ALPHA, "override")).exists()).toBe(false);
-      expect(memory.proxy(file(ALPHA, "ancestor")).exists()).toBe(false);
+      await deleteOverrideByPath(ALPHA, { writer });
+      expect(await exists(file(ALPHA, "override"))).toBe(false);
+      expect(await exists(file(ALPHA, "ancestor"))).toBe(false);
       expect(getConfig(alpha)).toEqual(ALPHA_ORIGIN);
       expect(lastEdits(1)).toEqual(["delete-override"]);
     }));
 
   test("a write from what the app shows is refused and leaves the parked override", () =>
     run(async () => {
-      conflict();
+      await conflict();
       await reloadConfigDocument(ALPHA, "");
-      const before = read(file(ALPHA, "override"));
+      const before = await read(file(ALPHA, "override"));
       const editCount = edits.length;
       expect(
         setConfigByPath(ALPHA, "title", "from-screen", { writer }),
       ).rejects.toThrow("has a conflict");
-      expect(read(file(ALPHA, "override"))).toEqual(before);
+      expect(await read(file(ALPHA, "override"))).toEqual(before);
       expect(edits.length).toBe(editCount);
     }));
 
   test("a write from the override edits the parked document and keeps the conflict", () =>
     run(async () => {
-      conflict();
+      await conflict();
       await reloadConfigDocument(ALPHA, "");
       await setConfigByPath(ALPHA, "title", "edited", {
         writer,
         fromOverride: true,
       });
-      expect(read(file(ALPHA, "override"))).toEqual({
+      expect(await read(file(ALPHA, "override"))).toEqual({
         content: { enabled: false, title: "edited" },
         hash: computeHash({ enabled: true, title: "old" }),
       });
@@ -291,24 +296,36 @@ describe("scope fork and removal", () => {
   test("fork writes origin and override from the scope's values; removal drops the scope", () =>
     run(async () => {
       await forkDescriptorScope(ALPHA, "app:docs", { writer });
-      expect(read(file(ALPHA, "origin", "app:docs"))?.content).toEqual(
+      expect((await read(file(ALPHA, "origin", "app:docs")))?.content).toEqual(
         ALPHA_ORIGIN,
       );
-      expect(read(file(ALPHA, "override", "app:docs"))?.content).toEqual(
-        ALPHA_ORIGIN,
-      );
-      expect(getConfigScopeIds(alpha)).toContain("app:docs");
+      expect(
+        (await read(file(ALPHA, "override", "app:docs")))?.content,
+      ).toEqual(ALPHA_ORIGIN);
+      expect(await getConfigScopeIds(alpha)).toContain("app:docs");
 
       await removeDescriptorScope(ALPHA, "app:docs", { writer });
-      expect(memory.proxy(file(ALPHA, "origin", "app:docs")).exists()).toBe(
-        false,
-      );
-      expect(getConfigScopeIds(alpha)).not.toContain("app:docs");
+      expect(await exists(file(ALPHA, "origin", "app:docs"))).toBe(false);
+      expect(await getConfigScopeIds(alpha)).not.toContain("app:docs");
       expect(hasConfigDocument(ALPHA, "app:docs")).toBe(false);
       expect(lastEdits(2)).toEqual([
         "fork-descriptor-scope",
         "remove-descriptor-scope",
       ]);
+    }));
+
+  test("a scoped write queued behind a removal re-forks the scope with a live entry", () =>
+    run(async () => {
+      await forkDescriptorScope(ALPHA, "app:race", { writer });
+      // Both start at once: the write queues on the document lock the removal
+      // holds, so it must find the entry gone and build a fresh one.
+      await Promise.all([
+        removeDescriptorScope(ALPHA, "app:race", { writer }),
+        setConfig(alpha, "title", "after", { writer, scopeId: "app:race" }),
+      ]);
+      expect(hasConfigDocument(ALPHA, "app:race")).toBe(true);
+      expect(getConfig(alpha, "app:race").title).toBe("after");
+      await removeDescriptorScope(ALPHA, "app:race", { writer });
     }));
 
   test("removing a git-backed scope falls back to its committed document", () =>
@@ -321,14 +338,10 @@ describe("scope fork and removal", () => {
       expect(getConfig(beta, "app:mail").title).toBe("runtime");
 
       await removeDescriptorScope(BETA, "app:mail", { writer });
-      expect(memory.proxy(file(BETA, "override", "app:mail")).exists()).toBe(
-        false,
-      );
-      expect(memory.proxy(file(BETA, "origin", "app:mail")).exists()).toBe(
-        true,
-      );
+      expect(await exists(file(BETA, "override", "app:mail"))).toBe(false);
+      expect(await exists(file(BETA, "origin", "app:mail"))).toBe(true);
       expect(getConfig(beta, "app:mail")).toEqual({ title: "mail" });
-      expect(getConfigScopeIds(beta)).toEqual(["app:mail"]);
+      expect(await getConfigScopeIds(beta)).toEqual(["app:mail"]);
     }));
 });
 
@@ -336,7 +349,7 @@ describe("reloadConfigDocument", () => {
   test("a base document rewritten behind the registry is re-read", () =>
     run(async () => {
       changes.length = 0;
-      seed(
+      await seed(
         file(ALPHA, "override"),
         { enabled: true, title: "restored" },
         computeHash(ALPHA_ORIGIN),
@@ -349,10 +362,10 @@ describe("reloadConfigDocument", () => {
   test("a scoped document whose files were removed leaves the registry", () =>
     run(async () => {
       await forkDescriptorScope(ALPHA, "app:tmp", { writer });
-      memory.remove(file(ALPHA, "origin", "app:tmp"));
-      memory.remove(file(ALPHA, "override", "app:tmp"));
+      await memory.remove(file(ALPHA, "origin", "app:tmp"));
+      await memory.remove(file(ALPHA, "override", "app:tmp"));
       await reloadConfigDocument(ALPHA, "app:tmp");
       expect(hasConfigDocument(ALPHA, "app:tmp")).toBe(false);
-      expect(getConfigScopeIds(alpha)).not.toContain("app:tmp");
+      expect(await getConfigScopeIds(alpha)).not.toContain("app:tmp");
     }));
 });

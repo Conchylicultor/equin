@@ -255,7 +255,7 @@ const ForeignKeyRowSchema = z.object({
 export async function readSchemaCatalog(
   source: string,
 ): Promise<SchemaCatalog> {
-  const pool = openShortLivedClient(source);
+  const pool = await openShortLivedClient(source);
   try {
     // Every `relname` is cast to `text`. `relname` is `name`, and `pg` cannot
     // decode `name[]` — see CatalogRowSchema for what that silently produced.

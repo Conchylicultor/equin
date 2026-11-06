@@ -2,8 +2,9 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdirSync, unlinkSync } from "node:fs";
-import { readdirSync } from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, unlink } from "node:fs/promises";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
+import { readdir } from "@plugins/packages/plugins/timed-fs/core";
 import {
   SentinelStatusRecordSchema,
   type SentinelStatus,
@@ -57,10 +58,12 @@ export function isPidAlive(pid: number): boolean {
 }
 
 /** Every host's status file in `dir`, by pid; `[]` when the dir does not exist. */
-function listStatusFiles(dir: AppPath): { name: string; pid: number }[] {
+async function listStatusFiles(
+  dir: AppPath,
+): Promise<{ name: string; pid: number }[]> {
   let names: string[];
   try {
-    names = readdirSync(dir);
+    names = await readdir(dir);
   } catch (err) {
     if (isErrno(err, "ENOENT")) return [];
     throw err;
@@ -72,10 +75,12 @@ function listStatusFiles(dir: AppPath): { name: string; pid: number }[] {
 }
 
 /** The newest-claimed host's record (ties: the higher pid), or why none can be named. */
-function readNewestRecord(dir: AppPath): JsonFileRead<SentinelStatusRecord> {
+async function readNewestRecord(
+  dir: AppPath,
+): Promise<JsonFileRead<SentinelStatusRecord>> {
   let newest: SentinelStatusRecord | null = null;
-  for (const file of listStatusFiles(dir)) {
-    const read = readJsonFile(
+  for (const file of await listStatusFiles(dir)) {
+    const read = await readJsonFile(
       joinAppPath(dir, file.name),
       SentinelStatusRecordSchema,
     );
@@ -99,11 +104,11 @@ function readNewestRecord(dir: AppPath): JsonFileRead<SentinelStatusRecord> {
 }
 
 /** What a backend serves: the newest host's status, and whether it is alive. */
-export function readSentinelWatch(
+export async function readSentinelWatch(
   dir: AppPath,
   alive: (pid: number) => boolean = isPidAlive,
-): SentinelWatch {
-  const read = readNewestRecord(dir);
+): Promise<SentinelWatch> {
+  const read = await readNewestRecord(dir);
   switch (read.kind) {
     case "none":
       return { kind: "none" };
@@ -132,30 +137,34 @@ export function createStatusWriter(
     claimedAt?: number;
     alive?: (pid: number) => boolean;
   } = {},
-): (status: SentinelStatus) => void {
+): (status: SentinelStatus) => Promise<void> {
   const pid = opts.pid ?? process.pid;
   const claimedAt = opts.claimedAt ?? Date.now();
   const alive = opts.alive ?? isPidAlive;
   let reclaimed = false;
-  return (status) => {
-    mkdirSync(dir, { recursive: true });
+  // Writes land in call order, one at a time: they share one temp file, and the
+  // last status written must be the one the rename leaves behind.
+  const mutex = createKeyedMutex();
+  return (status) => mutex.run("status", () => write(status));
+  async function write(status: SentinelStatus): Promise<void> {
+    await mkdir(dir, { recursive: true });
     if (!reclaimed) {
       reclaimed = true;
-      for (const file of listStatusFiles(dir)) {
+      for (const file of await listStatusFiles(dir)) {
         if (file.pid !== pid && !alive(file.pid))
-          unlinkIfPresent(dir, file.name);
+          await unlinkIfPresent(dir, file.name);
       }
       // The pre-2026-10-08 shared file, which no reader consults any more.
-      unlinkIfPresent(dir, "status.json");
+      await unlinkIfPresent(dir, "status.json");
     }
     const record: SentinelStatusRecord = { status, pid, claimedAt };
-    writeJsonAtomic(dir, statusFilename(pid), record, pid);
-  };
+    await writeJsonAtomic(dir, statusFilename(pid), record, pid);
+  }
 }
 
-function unlinkIfPresent(dir: AppPath, name: string): void {
+async function unlinkIfPresent(dir: AppPath, name: string): Promise<void> {
   try {
-    unlinkSync(joinAppPath(dir, name));
+    await unlink(joinAppPath(dir, name));
   } catch (err) {
     if (!isErrno(err, "ENOENT")) throw err;
   }

@@ -166,7 +166,7 @@ measured overhead on a real worktree workload is still an open task.
     - `infra/paths.worktreesDir`
     - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
-    - `primitives/log-channels/log-files.readChannelJsonAsync`
+    - `primitives/log-channels/log-files.readChannelJson`
   - Exports (types):
     - `HealthSample`
     - `HealthSampleObserver`

@@ -66,7 +66,7 @@ export function onSentinelSample(listener: SampleListener): () => void {
   return () => listeners.delete(listener);
 }
 
-export function startSentinelSampler(): void {
+export async function startSentinelSampler(): Promise<void> {
   if (running) return;
   const cfg = getConfig(sentinelConfig);
   // Every supervision transition goes to the host-global status file (the
@@ -79,7 +79,7 @@ export function startSentinelSampler(): void {
   if (!cfg.enabled) {
     // Recorded, so the row says "turned off" rather than a stale status from
     // the last run — or "never ran".
-    onStatus({ state: "disabled", since: Date.now() });
+    await onStatus({ state: "disabled", since: Date.now() });
     return;
   }
   running = true;

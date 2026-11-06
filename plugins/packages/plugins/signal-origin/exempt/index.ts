@@ -17,4 +17,11 @@ export default [
     kind: "sanctioned",
     reason: "A test fixture process; its --out dir is the test's own temp dir.",
   },
+  {
+    rule: "blocking-fs/no-sync-fs",
+    paths: ["server/internal/signal-origin.fixture.ts"],
+    kind: "sanctioned",
+    reason:
+      "A child process the test spawns, never a backend: its sync writes (some inside a signal handler, which must land before the process dies) stall only itself.",
+  },
 ] satisfies Exemptions;

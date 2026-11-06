@@ -67,11 +67,12 @@ import { TOTAL_JOB_SLOTS } from "../../core/hold";
 // holds its lock. Only the two short statements around it are bounded.
 let pool: Pool | null = null;
 
-function lockPool(): Pool {
+async function lockPool(): Promise<Pool> {
   if (!pool) {
-    pool = createDbPool({
+    const connString = await connectionString();
+    pool ??= createDbPool({
       name: "job-lock",
-      connectionString: connectionString(),
+      connectionString: connString,
       max: TOTAL_JOB_SLOTS,
       // Only ever reaps connections sitting IDLE in the pool; a checked-out
       // client holding a lock is not idle and is never touched by this.
@@ -110,7 +111,7 @@ export async function withJobLock<T>(
   onLost: (err: unknown) => void,
   fn: () => Promise<T>,
 ): Promise<T | typeof LOCK_HELD> {
-  const client = await lockPool().connect();
+  const client = await (await lockPool()).connect();
   // Destroy-on-release rather than return-to-pool. A session that is destroyed
   // releases its locks unconditionally, so setting this on every uncertain path is
   // what makes "a lock can never be leaked back into the pool" true by

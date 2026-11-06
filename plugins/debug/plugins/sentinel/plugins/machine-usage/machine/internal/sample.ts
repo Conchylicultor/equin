@@ -21,8 +21,8 @@ import {
 const PS_MS = 5_000;
 
 /** The agent browser host's pid while it runs — its tree is that bucket. */
-function agentBrowserRoot(): number | null {
-  const status = readAgentBrowserStatus();
+async function agentBrowserRoot(): Promise<number | null> {
+  const status = await readAgentBrowserStatus();
   return status.kind === "running" ? status.host.pid : null;
 }
 
@@ -69,7 +69,7 @@ export async function readAttributedProcesses(): Promise<AttributedProcesses> {
   const procs = parsePs(ps.stdout);
   const memBytesOf = readKernelUsage(procs);
   const owner = attributeProcesses(procs, {
-    agentBrowser: agentBrowserRoot(),
+    agentBrowser: await agentBrowserRoot(),
     agentOps: ops.map((o) => o.pid),
   });
   return { procs, owner, memBytesOf };

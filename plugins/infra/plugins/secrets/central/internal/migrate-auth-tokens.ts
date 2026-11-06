@@ -1,8 +1,5 @@
-import { renameSync } from "node:fs";
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { rename } from "node:fs/promises";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { decrypt } from "./crypto";
 import { legacyAuthBlob, legacyAuthKey } from "./paths";
 import { hasLocal, setLocal } from "./store";
@@ -21,7 +18,7 @@ export async function migrateLegacyAuthTokens(): Promise<
 > {
   const blobPath = legacyAuthBlob();
   const keyFilePath = legacyAuthKey();
-  if (!existsSync(blobPath) || !existsSync(keyFilePath)) {
+  if (!(await exists(blobPath)) || !(await exists(keyFilePath))) {
     return "noop";
   }
   if (hasLocal(AUTH_TOKENS_NAMESPACE, AUTH_TOKENS_KEY)) {
@@ -29,13 +26,15 @@ export async function migrateLegacyAuthTokens(): Promise<
     // or roll back if desired.
     return "skipped";
   }
-  const legacyKey = readFileSync(keyFilePath);
+  const legacyKey = await readFile(keyFilePath);
   if (legacyKey.length !== 32) {
     throw new Error(
       `[secrets] legacy auth key has wrong length (${legacyKey.length} != 32); skipping migration`,
     );
   }
-  const plaintext = decrypt(readFileSync(blobPath), legacyKey).toString("utf8");
+  const plaintext = decrypt(await readFile(blobPath), legacyKey).toString(
+    "utf8",
+  );
   const parsed = JSON.parse(plaintext) as {
     version?: unknown;
     providers?: unknown;
@@ -50,8 +49,8 @@ export async function migrateLegacyAuthTokens(): Promise<
   await setLocal(AUTH_TOKENS_NAMESPACE, AUTH_TOKENS_KEY, plaintext);
   const ts = Date.now();
   try {
-    renameSync(blobPath, `${blobPath}.migrated-${ts}`);
-    renameSync(keyFilePath, `${keyFilePath}.migrated-${ts}`);
+    await rename(blobPath, `${blobPath}.migrated-${ts}`);
+    await rename(keyFilePath, `${keyFilePath}.migrated-${ts}`);
     // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.warn(

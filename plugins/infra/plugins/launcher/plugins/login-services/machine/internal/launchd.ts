@@ -143,11 +143,11 @@ function launchdService(id: LoginServiceId): LoginService {
         plistPath(),
         renderLaunchAgentPlist({ ...id, ...job }),
       ),
-    installedJob: () => {
-      const content = readDefinition(plistPath());
+    installedJob: async () => {
+      const content = await readDefinition(plistPath());
       return content === null ? null : parseLaunchAgentPlist(content);
     },
-    remove: async () => removeDefinition(plistPath()),
+    remove: () => removeDefinition(plistPath()),
     load,
     // launchd SIGTERMs it (SIGKILL after the plist's ExitTimeOut). The plist
     // stays, so the next login loads it again.

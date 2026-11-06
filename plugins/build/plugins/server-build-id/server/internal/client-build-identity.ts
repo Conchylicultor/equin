@@ -17,7 +17,7 @@ import { getServerGraphHash } from "./get-server-graph-hash";
 // the dist is already the one built alongside this code.
 export const clientBuildIdentityRegistration: Registration = {
   register() {
-    pinClientBuildIdentity();
+    return pinClientBuildIdentity();
   },
 };
 
@@ -28,7 +28,7 @@ export const clientBuildIdentityRegistration: Registration = {
  * graph read then is the one built alongside the code this process was just
  * judged to run).
  */
-export function pinClientBuildIdentity(): void {
-  const graph = getServerGraphHash();
+export async function pinClientBuildIdentity(): Promise<void> {
+  const graph = await getServerGraphHash();
   setClientBuildIdentity(() => graph);
 }

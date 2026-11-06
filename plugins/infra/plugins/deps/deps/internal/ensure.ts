@@ -1,20 +1,12 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import {
-  mkdirSync,
-  openSync,
-  readSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
-import {
-  existsSync,
-  lstatSync,
-  readdirSync,
-  statSync,
+  exists,
+  lstat,
+  readdir,
+  stat,
 } from "@plugins/packages/plugins/timed-fs/core";
-import { rm } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
@@ -77,7 +69,7 @@ export async function ensureDep<S extends DepSource>(
   const root = opts.root ?? REPO_ROOT;
   // A release bundle: the dependency is sealed in it, or it cannot be had —
   // there is no source, toolchain or network to install it from.
-  const sealed = sealedLookup(dep, root);
+  const sealed = await sealedLookup(dep, root);
   if (sealed.kind === "ready") return sealed.ready;
   if (sealed.kind === "failed") throw new Error(sealed.message);
 
@@ -86,7 +78,7 @@ export async function ensureDep<S extends DepSource>(
     store: opts.store ?? defaultStore(),
     say: opts.log ?? (() => {}),
   });
-  return found(dep, paths, identity);
+  return await found(dep, paths, identity);
 }
 
 /**
@@ -104,7 +96,7 @@ export async function installInCache(
   const { identity, inputs } = await sourceIdentity(source, root);
   const paths = installPaths(store, dep.id, identity);
 
-  if (isInstalled(source, paths)) return { identity, paths };
+  if (await isInstalled(source, paths)) return { identity, paths };
 
   const fd = await waitLock(paths.lock, () =>
     say(
@@ -113,63 +105,70 @@ export async function installInCache(
   );
   try {
     // Whoever held the lock may have just finished this very install.
-    if (!isInstalled(source, paths)) {
+    if (!(await isInstalled(source, paths))) {
       await install({ dep, source, root, paths, identity, inputs, exec, say });
     }
     return { identity, paths };
   } finally {
-    releaseLock(fd);
+    await releaseLock(fd);
   }
 }
 
 /** `ready.json` present, and the payload still whole by the kind's own test. */
-function isInstalled(source: DepSource, paths: InstallPaths): boolean {
-  if (!existsSync(paths.ready)) return false;
-  return source.isIntact?.(paths.env) ?? true;
+async function isInstalled(
+  source: DepSource,
+  paths: InstallPaths,
+): Promise<boolean> {
+  if (!(await exists(paths.ready))) return false;
+  return (await source.isIntact?.(paths.env)) ?? true;
 }
 
-function found<S extends DepSource>(
+async function found<S extends DepSource>(
   dep: Dep<S>,
   paths: InstallPaths,
   identity: string,
-): Ready<S> {
-  writeFileSync(paths.lastUsed, `${new Date().toISOString()}\n`);
+): Promise<Ready<S>> {
+  await writeFile(paths.lastUsed, `${new Date().toISOString()}\n`);
   return mintReady(dep, paths.env, identity);
 }
 
 /** Write a small JSON file so a reader never sees half of it. */
-export function writeJsonAtomic(path: string, value: unknown): void {
-  const tmp = `${path}.tmp-${process.pid}`;
-  writeFileSync(tmp, `${JSON.stringify(value, null, 2)}\n`);
-  renameSync(tmp, path);
+export async function writeJsonAtomic(
+  path: string,
+  value: unknown,
+): Promise<void> {
+  // Unique per call: two writes of one file may now interleave.
+  const tmp = `${path}.tmp-${process.pid}-${randomUUID().slice(0, 8)}`;
+  await writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`);
+  await rename(tmp, path);
 }
 
 /** Total bytes under `dir`, symlinks counted as themselves (never followed). */
-export function dirBytes(dir: string): number {
+export async function dirBytes(dir: string): Promise<number> {
   let total = 0;
   const stack = [dir];
   while (stack.length > 0) {
     const current = stack.pop() as string;
-    for (const entry of readdirSync(current, { withFileTypes: true })) {
+    for (const entry of await readdir(current, { withFileTypes: true })) {
       const path = join(current, entry.name);
       if (entry.isDirectory()) stack.push(path);
-      else total += lstatSync(path).size;
+      else total += (await lstat(path)).size;
     }
   }
   return total;
 }
 
 /** The bytes a log grew by since `from`, as text. */
-function readFrom(path: string, from: number): string {
-  const size = statSync(path).size;
+async function readFrom(path: string, from: number): Promise<string> {
+  const size = (await stat(path)).size;
   if (size <= from) return "";
-  const fd = adoptFd(openSync(path, "r"));
+  const handle = await open(path, "r");
   try {
     const buf = Buffer.alloc(size - from);
-    readSync(fd.fd, buf, 0, buf.length, from);
+    await handle.read(buf, 0, buf.length, from);
     return buf.toString("utf8");
   } finally {
-    fd.close();
+    await handle.close();
   }
 }
 
@@ -184,21 +183,21 @@ async function install(args: {
   say: (line: string) => void;
 }): Promise<void> {
   const { dep, source, root, paths, identity, inputs, exec, say } = args;
-  mkdirSync(paths.root, { recursive: true });
+  await mkdir(paths.root, { recursive: true });
   // A partial payload from an interrupted install, and the last failure, go.
   // A `ready.json` over a payload that is no longer intact goes first, so the
   // identity reads as not installed until this install finishes.
-  rmSync(paths.ready, { force: true });
-  rmSync(paths.env, { recursive: true, force: true });
-  rmSync(paths.failed, { force: true });
+  await rm(paths.ready, { force: true });
+  await rm(paths.env, { recursive: true, force: true });
+  await rm(paths.failed, { force: true });
   // The install log holds one install: truncated here, written only by this
   // install (its header, then each command's output appended by the child's
   // own shell), removed with its identity dir. That is its whole bound.
-  writeFileSync(
+  await writeFile(
     paths.log,
     `installing ${dep.id} (${source.kind}: ${source.label}) at ${identity}\n`,
   );
-  writeJsonAtomic(paths.installing, {
+  await writeJsonAtomic(paths.installing, {
     since: new Date().toISOString(),
     pid: process.pid,
   });
@@ -206,7 +205,7 @@ async function install(args: {
   const log = say;
   const run: InstallContext["run"] = async (argv, runOpts) => {
     say(`$ ${argv.join(" ")}`);
-    const from = statSync(paths.log).size;
+    const from = (await stat(paths.log)).size;
     // The child appends straight to the install log, so `logTail` follows a
     // long install while it runs; `$0` is the log, `$@` the command.
     const result = await spawnCaptured(
@@ -219,14 +218,14 @@ async function install(args: {
       ],
       runOpts,
     );
-    const output = readFrom(paths.log, from);
+    const output = await readFrom(paths.log, from);
     for (const line of output.split("\n").map(screenLine)) {
       if (line !== "" && !line.startsWith("$ ")) say(line);
     }
     if (result.exitCode !== 0) {
       throw new Error(
         `\`${argv.join(" ")}\` failed (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""}):\n` +
-          logTail(paths.log, 30).join("\n"),
+          (await logTail(paths.log, 30)).join("\n"),
       );
     }
   };
@@ -241,7 +240,7 @@ async function install(args: {
     await (source.admission === undefined
       ? exec.admit(installNow)
       : installNow());
-    if (!existsSync(paths.env)) {
+    if (!(await exists(paths.env))) {
       throw new Error(
         `the ${source.kind} installer finished without creating ${paths.env}`,
       );
@@ -249,20 +248,23 @@ async function install(args: {
     const ready: ReadyFile = {
       identity,
       installedAt: new Date().toISOString(),
-      bytes: dirBytes(paths.env),
+      bytes: await dirBytes(paths.env),
       inputs: { ...inputs },
     };
-    writeJsonAtomic(paths.ready, ready);
+    await writeJsonAtomic(paths.ready, ready);
     log(
       `installed ${dep.id} in ${Math.round((Date.now() - started) / 1000)} s (${(ready.bytes / 1e6).toFixed(1)} MB)`,
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    writeJsonAtomic(paths.failed, { message, at: new Date().toISOString() });
+    await writeJsonAtomic(paths.failed, {
+      message,
+      at: new Date().toISOString(),
+    });
     log(`install failed: ${message}`);
     throw err;
   } finally {
-    rmSync(paths.installing, { force: true });
+    await rm(paths.installing, { force: true });
   }
 }
 
@@ -308,7 +310,7 @@ export async function readyNow<S extends DepSource>(
   if (at.kind === "failed") return at.failed;
   if (at.kind === "sealed") return { kind: "ready", ready: at.ready };
   if (at.state.kind !== "ready") return at.state;
-  return { kind: "ready", ready: found(dep, at.paths, at.identity) };
+  return { kind: "ready", ready: await found(dep, at.paths, at.identity) };
 }
 
 /**
@@ -325,7 +327,7 @@ async function locate<S extends DepSource>(
   | { kind: "failed"; failed: Extract<DepState, { kind: "failed" }> }
 > {
   const root = opts.root ?? REPO_ROOT;
-  const sealed = sealedLookup(dep, root);
+  const sealed = await sealedLookup(dep, root);
   if (sealed.kind === "ready") {
     return { kind: "sealed", ready: sealed.ready, bytes: sealed.bytes };
   }
@@ -354,9 +356,9 @@ async function locate<S extends DepSource>(
     };
   }
   const paths = installPaths(store, dep.id, identity);
-  const state = readInstallState(
+  const state = await readInstallState(
     paths,
-    (dir) => dep.source.isIntact?.(dir) ?? true,
+    async (dir) => (await dep.source.isIntact?.(dir)) ?? true,
   );
   return { kind: "located", identity, paths, state };
 }
@@ -374,7 +376,7 @@ export async function removeDep(
   opts: { root?: AppPath; store?: DepStore } = {},
 ): Promise<RemoveOutcome> {
   const root = opts.root ?? REPO_ROOT;
-  if (sealedLookup(dep, root).kind !== "unsealed") {
+  if ((await sealedLookup(dep, root)).kind !== "unsealed") {
     throw new Error(
       `${dep.id}: ${root} is a sealed release bundle; its dependencies are part of it and cannot be removed.`,
     );
@@ -382,18 +384,18 @@ export async function removeDep(
   const store = opts.store ?? defaultStore();
   const { identity } = await currentIdentity(dep, root);
   const paths = installPaths(store, dep.id, identity);
-  if (!existsSync(paths.root)) return { kind: "absent" };
-  const fd = tryLock(paths.lock);
+  if (!(await exists(paths.root))) return { kind: "absent" };
+  const fd = await tryLock(paths.lock);
   if (fd === null) return { kind: "busy" };
   try {
-    const bytes = existsSync(paths.ready)
-      ? readJson(paths.ready, ReadyFileSchema).bytes
+    const bytes = (await exists(paths.ready))
+      ? (await readJson(paths.ready, ReadyFileSchema)).bytes
       : 0;
     // Async: this runs on a backend's event loop (the remove endpoint), and a
     // Python env is tens of thousands of files.
     await rm(paths.root, { recursive: true, force: true });
     return { kind: "removed", bytes };
   } finally {
-    releaseLock(fd);
+    await releaseLock(fd);
   }
 }

@@ -111,26 +111,24 @@ function inside(path: string, root: string): boolean {
 }
 
 /** Every SDK agent process alive on the machine, any namespace, by its pid file. */
-function liveAgents(): LiveAgent[] {
+async function liveAgents(): Promise<LiveAgent[]> {
   const root = sdkAgentPidsDir.path;
   if (!existsSync(root)) return [];
-  return readdirSync(root).flatMap((namespace) => {
+  const live: LiveAgent[] = [];
+  for (const namespace of readdirSync(root)) {
     const dir = joinAppPath(root, namespace);
-    if (!lstatSync(dir).isDirectory()) return [];
-    return readdirSync(dir)
-      .filter((name) => name.endsWith(".pid"))
-      .flatMap((name) => {
-        const read = readPidFile(joinAppPath(dir, name));
-        return read.kind === "pid" && pidAlive(read.pid)
-          ? [
-              {
-                what: `agent ${name.slice(0, -".pid".length)} of ${namespace} (pid ${read.pid})`,
-                pid: read.pid,
-              },
-            ]
-          : [];
-      });
-  });
+    if (!lstatSync(dir).isDirectory()) continue;
+    for (const name of readdirSync(dir)) {
+      if (!name.endsWith(".pid")) continue;
+      const read = await readPidFile(joinAppPath(dir, name));
+      if (read.kind === "pid" && pidAlive(read.pid))
+        live.push({
+          what: `agent ${name.slice(0, -".pid".length)} of ${namespace} (pid ${read.pid})`,
+          pid: read.pid,
+        });
+    }
+  }
+  return live;
 }
 
 async function liveOps(): Promise<LiveWork[]> {
@@ -164,7 +162,7 @@ async function gatherFacts(stopAgents: boolean): Promise<MigrationFacts> {
     ...(layout.kind === "legacy" || layout.kind === "current"
       ? {
           liveWork: await liveOps(),
-          liveAgents: liveAgents(),
+          liveAgents: await liveAgents(),
           staleCheckouts: await staleCheckouts(await getWorktreeRoot()),
         }
       : { liveWork: [], liveAgents: [], staleCheckouts: [] }),
@@ -197,7 +195,7 @@ async function stopByPidFile(
   signal: NodeJS.Signals,
   ms: number,
 ): Promise<void> {
-  const read = readPidFile(pidFile);
+  const read = await readPidFile(pidFile);
   if (read.kind !== "pid") return;
   await stopByPid(`${what} (pid ${read.pid})`, read.pid, signal, ms);
 }
@@ -329,7 +327,7 @@ async function applyStopped(
 
   // Anything that started between the first check and the stop (a gateway
   // relaunching an agent) is caught here, before a byte moves.
-  const late = [...(await liveOps()), ...liveAgents()];
+  const late = [...(await liveOps()), ...(await liveAgents())];
   if (late.length > 0) {
     console.error(
       `Something started while the app was stopping; nothing was moved:\n${late.map((w) => `  - ${w.what}`).join("\n")}`,

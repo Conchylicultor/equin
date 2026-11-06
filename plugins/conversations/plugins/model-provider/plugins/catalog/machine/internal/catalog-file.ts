@@ -1,5 +1,5 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import {
@@ -17,11 +17,11 @@ export type CatalogFileRead =
   | { kind: "ok"; catalog: ModelCatalog }
   | { kind: "invalid"; error: string };
 
-/** Read the catalog file. Synchronous: it is a few KB, and the launch path needs it without an await. */
-export function readCatalogFile(file: AppPath): CatalogFileRead {
+/** Read the catalog file (a few KB). */
+export async function readCatalogFile(file: AppPath): Promise<CatalogFileRead> {
   let text: string;
   try {
-    text = readFileSync(file, "utf8");
+    text = await readFile(file, "utf8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT")
       return { kind: "absent" };
@@ -60,8 +60,8 @@ export class ModelCatalogUnreadableError extends Error {
 }
 
 /** The catalog a file holds: the baseline while there is none, a throw while it is unreadable. */
-export function catalogFromFile(file: AppPath): ModelCatalog {
-  const read = readCatalogFile(file);
+export async function catalogFromFile(file: AppPath): Promise<ModelCatalog> {
+  const read = await readCatalogFile(file);
   switch (read.kind) {
     case "absent":
       return BASELINE_MODELS;

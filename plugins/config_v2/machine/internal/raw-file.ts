@@ -1,4 +1,3 @@
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { relative } from "node:path";
 import { configFileRelPath, configRawFile } from "../../core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
@@ -18,6 +17,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { CONFIG_DIR } from "./config-dir";
 import { userFilePath } from "./file-store";
+import { readRawOrNull } from "./jsonc-proxy";
 
 // The git-layer files of one document. Git-layer files live in the repo, not
 // the per-worktree user dir. A scoped override is expressed in git at
@@ -39,15 +39,6 @@ function gitLayerPaths(
       configFileRelPath({ storePath, file: "origin" }),
     ),
   };
-}
-
-function readRaw(path: AppPath): string | null {
-  try {
-    return readFileSync(path, "utf-8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return null;
-  }
 }
 
 /**
@@ -124,14 +115,21 @@ export const configRawFileServed = serveValue(configRawFile, {
     });
     const origin = userFilePath({ storePath: path, scopeId, file: "origin" });
     const { gitOverridePath, gitOriginPath } = gitLayerPaths(path, scopeId);
+    const [overrideText, originText, gitOverride, gitOrigin] =
+      await Promise.all([
+        readRawOrNull(override),
+        readRawOrNull(origin),
+        readRawOrNull(gitOverridePath),
+        readRawOrNull(gitOriginPath),
+      ]);
     return {
-      override: readRaw(override),
+      override: overrideText,
       overridePath: relative(CONFIG_DIR, override),
-      origin: readRaw(origin),
+      origin: originText,
       originPath: relative(CONFIG_DIR, origin),
-      gitOverride: readRaw(gitOverridePath),
+      gitOverride,
       gitOverridePath: relative(REPO_ROOT, gitOverridePath),
-      gitOrigin: readRaw(gitOriginPath),
+      gitOrigin,
       gitOriginPath: relative(REPO_ROOT, gitOriginPath),
     };
   },

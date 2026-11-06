@@ -125,10 +125,10 @@ function fakeService(
       const changed = next !== definition;
       definition = next;
       writeFileSync(definitionPath, next);
-      return { path: definitionPath, changed };
+      return Promise.resolve({ path: definitionPath, changed });
     },
-    isCurrent: (job) => render(job) === definition,
-    installedJob: () => {
+    isCurrent: (job) => Promise.resolve(render(job) === definition),
+    installedJob: async () => {
       throw new Error("not under test");
     },
     remove: async () => {

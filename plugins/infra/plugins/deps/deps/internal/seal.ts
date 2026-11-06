@@ -2,8 +2,8 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { cpSync, mkdirSync, rmSync } from "node:fs";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { cp, mkdir, rm } from "node:fs/promises";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
@@ -74,7 +74,7 @@ export async function sealDep(
       );
     }
     const reason = `${targeted.reason} (${dep.bundle.optional})`;
-    updateManifest(outDir, target, (m) => {
+    await updateManifest(outDir, target, (m) => {
       delete m.deps[dep.id];
       m.unsealed[dep.id] = reason;
     });
@@ -88,25 +88,25 @@ export async function sealDep(
   });
   const rel = sealedPayloadDir(dep.id);
   const dir = joinAppPath(outDir, rel);
-  rmSync(dir, { recursive: true, force: true });
-  mkdirSync(dirname(dir), { recursive: true });
-  cpSync(paths.env, dir, { recursive: true, verbatimSymlinks: true });
-  const bytes = dirBytes(dir);
-  updateManifest(outDir, target, (m) => {
+  await rm(dir, { recursive: true, force: true });
+  await mkdir(dirname(dir), { recursive: true });
+  await cp(paths.env, dir, { recursive: true, verbatimSymlinks: true });
+  const bytes = await dirBytes(dir);
+  await updateManifest(outDir, target, (m) => {
     m.deps[dep.id] = { kind: targeted.source.kind, identity, dir: rel, bytes };
     delete m.unsealed[dep.id];
   });
   return { kind: "sealed", identity, dir, bytes };
 }
 
-function updateManifest(
+async function updateManifest(
   outDir: AppPath,
   target: DepTarget,
   edit: (m: SealedManifest) => void,
-): void {
+): Promise<void> {
   const path = joinAppPath(outDir, SEALED_MANIFEST);
-  const manifest: SealedManifest = existsSync(path)
-    ? readSealedManifest(path)
+  const manifest: SealedManifest = (await exists(path))
+    ? await readSealedManifest(path)
     : {
         version: 1,
         target: { platform: target.platform, arch: target.arch },
@@ -119,6 +119,6 @@ function updateManifest(
     );
   }
   edit(manifest);
-  mkdirSync(outDir, { recursive: true });
-  writeJsonAtomic(path, manifest);
+  await mkdir(outDir, { recursive: true });
+  await writeJsonAtomic(path, manifest);
 }

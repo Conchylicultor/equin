@@ -8,6 +8,7 @@ export {
   listDaemons,
   liveSupervisedIncarnations,
   onDaemonActivity,
+  parsePidFile,
   pidAlive,
   readPidFile,
 } from "./internal/registry";

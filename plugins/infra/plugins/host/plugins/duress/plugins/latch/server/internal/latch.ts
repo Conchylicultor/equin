@@ -4,7 +4,9 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdirSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
 import {
+  readFile,
   readFileSync,
+  stat,
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { duressLatchDir } from "../../data-dirs";
@@ -162,17 +164,24 @@ export function readDuress(): DuressLatch | null {
  * would wake the reader again to correct it. `null` when there is no latch or
  * its lease lapsed (the sentinel stopped refreshing it).
  */
-export function readFreshDuress(): DuressLatch | null {
+export async function readFreshDuress(): Promise<DuressLatch | null> {
   let mtimeMs: number;
   try {
-    mtimeMs = statSync(latchPath()).mtimeMs;
+    mtimeMs = (await stat(latchPath())).mtimeMs;
   } catch (err) {
     if (isEnoent(err)) return null;
     throw err;
   }
   if (now() - mtimeMs >= FRESHNESS_LEASE_MS) return null;
-  // Cleared between the stat and the read: no latch.
-  return readDuress();
+  let raw: string;
+  try {
+    raw = await readFile(latchPath(), "utf8");
+  } catch (err) {
+    // Cleared between the stat and the read: no latch.
+    if (isEnoent(err)) return null;
+    throw err;
+  }
+  return JSON.parse(raw) as DuressLatch;
 }
 
 /** Point the latch at a temp dir. Pass null to restore the declared dir. */

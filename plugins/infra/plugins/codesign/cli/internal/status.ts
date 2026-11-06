@@ -15,7 +15,7 @@ const run: CliAction<[], object> = async () => {
     console.log(`Nothing is code-signed on ${host.platform}.`);
     return;
   }
-  const configured = readConfiguredValue(host);
+  const configured = await readConfiguredValue(host);
   if (configured !== null) {
     const identity = await resolveConfigured(configured, host);
     const validTo = await configuredValidTo(identity, host);
@@ -24,7 +24,7 @@ const run: CliAction<[], object> = async () => {
     );
     return;
   }
-  const local = readLocalIdentity(host);
+  const local = await readLocalIdentity(host);
   if (local.kind === "absent") {
     console.log(
       "No local identity yet: the next gateway build (`./equin start`) creates one.",

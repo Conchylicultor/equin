@@ -1,7 +1,7 @@
 import type { z } from "zod";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { listWorktreeDirsAsync } from "@plugins/infra/plugins/paths/server";
-import { readChannelJsonAsync } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
+import { readChannelJson } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import { readSlowOpMarkers } from "@plugins/debug/plugins/slow-ops/server";
 import {
   OwnerSampleSchema,
@@ -25,7 +25,7 @@ async function parseSamples<T>(
   cutoff: number,
   sampledAt: (v: T) => number,
 ): Promise<T[]> {
-  const values = await readChannelJsonAsync(
+  const values = await readChannelJson(
     worktree,
     channel,
     MAX_HEALTH_SAMPLES,

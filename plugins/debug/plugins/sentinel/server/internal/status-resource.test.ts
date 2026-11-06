@@ -62,40 +62,42 @@ function record(
 const alive = () => true;
 
 describe("sentinel.vitals value", () => {
-  test("current only when the running watcher's pid wrote the reading", () => {
+  test("current only when the running watcher's pid wrote the reading", async () => {
     const dir = newDir();
-    createStatusWriter(dir, { pid: 100, alive })({
+    await createStatusWriter(dir, { pid: 100, alive })({
       state: "running",
       since: Date.now(),
     });
 
-    writeSentinelVitals(dir, record(100));
-    expect(readVitalsValue(dir, alive)).toMatchObject({
+    await writeSentinelVitals(dir, record(100));
+    expect(await readVitalsValue(dir, alive)).toMatchObject({
       kind: "recorded",
       current: true,
     });
 
     // A hot restart's old worker, or a leftover file from another main.
-    writeSentinelVitals(dir, record(99));
-    expect(readVitalsValue(dir, alive)).toMatchObject({
+    await writeSentinelVitals(dir, record(99));
+    expect(await readVitalsValue(dir, alive)).toMatchObject({
       kind: "recorded",
       current: false,
     });
   });
 
-  test("not current once the watcher's process is gone or it stopped", () => {
+  test("not current once the watcher's process is gone or it stopped", async () => {
     const dir = newDir();
     const write = createStatusWriter(dir, { pid: 100, alive });
-    write({ state: "running", since: Date.now() });
-    writeSentinelVitals(dir, record(100));
-    expect(readVitalsValue(dir, () => false)).toMatchObject({ current: false });
+    await write({ state: "running", since: Date.now() });
+    await writeSentinelVitals(dir, record(100));
+    expect(await readVitalsValue(dir, () => false)).toMatchObject({
+      current: false,
+    });
 
-    write({ state: "stopped", since: Date.now() });
-    expect(readVitalsValue(dir, alive)).toMatchObject({ current: false });
+    await write({ state: "stopped", since: Date.now() });
+    expect(await readVitalsValue(dir, alive)).toMatchObject({ current: false });
   });
 
-  test("passes none through", () => {
-    expect(readVitalsValue(newDir(), alive)).toEqual({ kind: "none" });
+  test("passes none through", async () => {
+    expect(await readVitalsValue(newDir(), alive)).toEqual({ kind: "none" });
   });
 });
 
@@ -129,9 +131,9 @@ describe("the status watcher's routing", () => {
 });
 
 describe("the status value's disk verdict", () => {
-  test("comes from the running watcher's reading only", () => {
+  test("comes from the running watcher's reading only", async () => {
     const dir = newDir();
-    createStatusWriter(dir, { pid: 100, alive })({
+    await createStatusWriter(dir, { pid: 100, alive })({
       state: "running",
       since: Date.now(),
     });
@@ -141,13 +143,13 @@ describe("the status value's disk verdict", () => {
       fillBytesPerSec: 0,
     };
 
-    writeSentinelVitals(dir, record(100, low));
-    expect(diskAlarmFrom(readVitalsValue(dir, alive))).toBe("low");
+    await writeSentinelVitals(dir, record(100, low));
+    expect(diskAlarmFrom(await readVitalsValue(dir, alive))).toBe("low");
 
     // No disk reading this tick, or a reading from a watcher that is not running.
-    writeSentinelVitals(dir, record(100, null));
-    expect(diskAlarmFrom(readVitalsValue(dir, alive))).toBeNull();
-    writeSentinelVitals(dir, record(99, low));
-    expect(diskAlarmFrom(readVitalsValue(dir, alive))).toBeNull();
+    await writeSentinelVitals(dir, record(100, null));
+    expect(diskAlarmFrom(await readVitalsValue(dir, alive))).toBeNull();
+    await writeSentinelVitals(dir, record(99, low));
+    expect(diskAlarmFrom(await readVitalsValue(dir, alive))).toBeNull();
   });
 });

@@ -181,7 +181,7 @@ const check: Check = {
     // Claims: each resolves to exactly one earlier data migration, claimed once.
     // An empty applied set plans the whole history, as a fresh install would.
     try {
-      planSchemaSteps(listMigrationFiles(DATA_DIR), new Set());
+      planSchemaSteps(await listMigrationFiles(DATA_DIR), new Set());
     } catch (e) {
       errors.push((e as Error).message);
     }

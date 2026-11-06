@@ -1,8 +1,5 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { codeSignature } from "@plugins/infra/plugins/codesign/deps";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
 import { isRelease } from "@plugins/infra/plugins/paths/core";
@@ -63,10 +60,10 @@ export async function checkGatewayDrift(): Promise<GatewayDrift> {
       "This machine has no service manager: the gateway is started by hand",
     );
   }
-  const installed = service.installedJob();
+  const installed = await service.installedJob();
   if (installed === null) {
     return notApplicable(
-      existsSync(service.definitionPath())
+      (await exists(service.definitionPath()))
         ? `The gateway's ${service.manager} definition was not written by ./equin start`
         : `The gateway is not registered with ${service.manager} on this machine`,
     );
@@ -148,7 +145,8 @@ async function describeBinary(
   app: MacosAppHost,
 ): Promise<string | null> {
   const now = await readyNow(gatewayBinary, { root: repoRoot });
-  const was = installedIdentity(installedBinary, app) ?? installedBinary;
+  const was =
+    (await installedIdentity(installedBinary, app)) ?? installedBinary;
   switch (now.kind) {
     case "ready": {
       const expected = plannedServiceExecutable(
@@ -177,11 +175,14 @@ async function describeBinary(
  * for its `gateway` component, or the one a deps-cache path names; null when
  * neither says.
  */
-function installedIdentity(path: string, app: MacosAppHost): string | null {
+async function installedIdentity(
+  path: string,
+  app: MacosAppHost,
+): Promise<string | null> {
   const bundle = bundleOfExecutable(app.bundle, path);
   if (bundle !== null) {
     return (
-      installedAppComponents(bundle)?.find(
+      (await installedAppComponents(bundle))?.find(
         (c) => c.name === GATEWAY_APP_COMPONENT.name,
       )?.identity ?? null
     );
@@ -203,11 +204,14 @@ function short(identity: string): string {
  * null when no gateway is running under the pidfile.
  */
 async function runningCommand(): Promise<string | null> {
-  const pid = readPid();
+  const pid = await readPid();
   if (pid === null || !isRunning(pid)) return null;
   const proc = `/proc/${pid}/cmdline`;
-  if (existsSync(proc)) {
-    return readFileSync(proc, "utf-8").replace(/\0$/, "").split("\0").join(" ");
+  if (await exists(proc)) {
+    return (await readFile(proc, "utf-8"))
+      .replace(/\0$/, "")
+      .split("\0")
+      .join(" ");
   }
   const res = await spawnCaptured(
     ["ps", "-ww", "-o", "args=", "-p", `${pid}`],

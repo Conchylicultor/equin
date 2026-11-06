@@ -373,7 +373,7 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
   const staleOrigin = isStaleOrigin({
     source,
     buildId,
-    serverGraph: getServerGraphHash(),
+    serverGraph: await getServerGraphHash(),
   });
   const noise = isNoiseReport(
     noiseInputOf({ source, message: rawMessage ?? "", data, staleOrigin }),

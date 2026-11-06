@@ -10,7 +10,9 @@
     - `framework/cli/release`
     - `infra/launcher`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/seed-cache.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `server/internal/seed-cache.ts` (debt)
+    - `blocking-fs/no-sync-fs` — `server/internal/seed-cache.ts` (sanctioned)
 - Server:
   - Exports (values): `seedAssetMirrorCache`
 - Cli:

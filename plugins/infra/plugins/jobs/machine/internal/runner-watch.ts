@@ -62,12 +62,12 @@ export function watchRunner(opts: {
  *
  * Returns only when the anti-loop latch suppressed the exit.
  */
-export function exitForDeadRunner(
+export async function exitForDeadRunner(
   spec: RunnerSpec,
   carriesCron: boolean,
   reason: string,
-): void {
-  const trips = recordTrip();
+): Promise<void> {
+  const trips = await recordTrip();
   const suppressed = trips > MAX_TRIPS_PER_WINDOW;
   const report: JobRunnerDiedReport = {
     action: suppressed ? "degraded" : "crashed",

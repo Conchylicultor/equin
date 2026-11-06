@@ -1,4 +1,4 @@
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
@@ -55,7 +55,7 @@ export const songIndexLoadJob = defineSupervisedJob({
     const started = Date.now();
     await beginIndexLoad(
       target,
-      existsSync(snapshotPath()) ? "loading" : "downloading",
+      (await exists(snapshotPath())) ? "loading" : "downloading",
     );
     try {
       const path = await ensureSnapshot({

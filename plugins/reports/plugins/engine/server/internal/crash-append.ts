@@ -1,0 +1,70 @@
+import { reportsBufferDir } from "@plugins/reports/data-dirs";
+import type { ReportSource } from "@plugins/reports/core";
+import { appendFileSync } from "node:fs";
+import { bufferFile, type BufferedReport } from "./buffer";
+
+// The crash path's writes: synchronous BY NECESSITY — they run inside an
+// `uncaughtException` handler or just before a deliberate `process.exit`, where
+// the event loop is dying and an async write would never finish. The reads and
+// the flush (buffer.ts) are async.
+
+// The one write. Both public writers below go through it so the file format is
+// described in exactly one place — and so the best-effort catch (we are on a
+// dying event loop; throwing here would replace the report with a worse
+// failure) is stated once rather than copied.
+function appendLine(line: Omit<BufferedReport, "at">): BufferAppend {
+  try {
+    reportsBufferDir.ensure();
+    appendFileSync(
+      bufferFile(),
+      JSON.stringify({ ...line, at: new Date().toISOString() }) + "\n",
+    );
+    return { ok: true };
+  } catch (error) {
+    // Best-effort: we're in a crash path; swallowing is better than throwing.
+    return { ok: false, error };
+  }
+}
+
+/** Whether a buffered line landed. */
+export type BufferAppend = { ok: true } | { ok: false; error: unknown };
+
+export function appendReportSync(
+  source: ReportSource,
+  err: Error,
+): BufferAppend {
+  return appendLine({
+    source,
+    errorType: err.name,
+    message: err.message,
+    stack: err.stack,
+  });
+}
+
+/**
+ * Buffer a TYPED report synchronously — the durable half of
+ * `reportServerFatalSync`.
+ *
+ * Returns once the bytes are handed to `appendFileSync` (or the write failed —
+ * the result says which), so a caller may exit on the next statement. `data`
+ * is NOT validated here: this side owns the buffer, and the kind owns its
+ * payload. A payload the kind's schema rejects fails loudly on the next boot's
+ * flush, where a stack trace can still be read.
+ */
+export function appendFatalReportSync(line: {
+  source: ReportSource;
+  kind: string;
+  message: string;
+  data: Record<string, unknown>;
+}): BufferAppend {
+  return appendLine({
+    source: line.source,
+    kind: line.kind,
+    data: line.data,
+    // Flat crash fields carry the same message so a corrupt/unregistered-kind
+    // line is still readable by a human tailing the file.
+    errorType: line.kind,
+    message: line.message,
+    stack: undefined,
+  });
+}

@@ -1,7 +1,4 @@
-import {
-  readdirSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { readEnvPath } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
@@ -26,13 +23,14 @@ export const MIGRATIONS_DIR: AppPath =
   asAppPath(join(import.meta.dir, "..", "..", "data"));
 
 /** Every migration file in `dir`, in timestamp order (`migrationsFrom`). */
-export function listMigrationFiles(dir: AppPath): Migration[] {
+export async function listMigrationFiles(dir: AppPath): Promise<Migration[]> {
+  const files = (await readdir(dir)).filter(isMigrationFileName);
   return migrationsFrom(
-    readdirSync(dir)
-      .filter(isMigrationFileName)
-      .map((file) => ({
+    await Promise.all(
+      files.map(async (file) => ({
         file,
-        sqlText: readFileSync(joinAppPath(dir, file), "utf8"),
+        sqlText: await readFile(joinAppPath(dir, file), "utf8"),
       })),
+    ),
   );
 }

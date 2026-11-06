@@ -33,39 +33,43 @@ function seed(channel: string, lines: string[]): void {
 }
 
 describe("listChannelsInDir", () => {
-  test("excludes rotated files (`channel.jsonl.N`)", () => {
+  test("excludes rotated files (`channel.jsonl.N`)", async () => {
     // A live file plus two rotations on disk — only the live channel is listed.
     seed("channel.jsonl", [envelope(1)]);
     seed("channel.jsonl.1", [envelope(0)]);
     seed("channel.jsonl.2", [envelope(-1)]);
-    expect(listChannelsInDir(dir)).toEqual(["channel"]);
+    expect(await listChannelsInDir(dir)).toEqual(["channel"]);
   });
 
-  test("returns [] for a missing dir (ENOENT), not an error", () => {
-    expect(listChannelsInDir(joinAppPath(dir, "does-not-exist"))).toEqual([]);
+  test("returns [] for a missing dir (ENOENT), not an error", async () => {
+    expect(await listChannelsInDir(joinAppPath(dir, "does-not-exist"))).toEqual(
+      [],
+    );
   });
 });
 
 describe("readTail", () => {
-  test("returns the last N entries of the live file", () => {
+  test("returns the last N entries of the live file", async () => {
     seed(
       "channel.jsonl",
       Array.from({ length: 10 }, (_, i) => envelope(i)),
     );
-    const entries = readTail(joinAppPath(dir, "channel.jsonl"), 3);
+    const entries = await readTail(joinAppPath(dir, "channel.jsonl"), 3);
     expect(entries?.map((e) => e.line)).toEqual(["line-7", "line-8", "line-9"]);
   });
 
-  test("tolerates a corrupt/partial trailing line", () => {
+  test("tolerates a corrupt/partial trailing line", async () => {
     writeFileSync(
       join(dir, "channel.jsonl"),
       envelope(1) + "\n" + envelope(2) + "\n" + "{not-json" + "\n",
     );
-    const entries = readTail(joinAppPath(dir, "channel.jsonl"), 10);
+    const entries = await readTail(joinAppPath(dir, "channel.jsonl"), 10);
     expect(entries?.map((e) => e.line)).toEqual(["line-1", "line-2"]);
   });
 
-  test("missing file returns null (ENOENT), not an empty success", () => {
-    expect(readTail(joinAppPath(dir, "does-not-exist.jsonl"), 5)).toBeNull();
+  test("missing file returns null (ENOENT), not an empty success", async () => {
+    expect(
+      await readTail(joinAppPath(dir, "does-not-exist.jsonl"), 5),
+    ).toBeNull();
   });
 });

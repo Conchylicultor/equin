@@ -2,11 +2,7 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  existsSync,
-  readdirSync,
-  statSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { exists, readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -60,14 +56,24 @@ export function selectEvictions(
   return out;
 }
 
-function listFiles(dir: AppPath): CacheFile[] {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir, { withFileTypes: true })
-    .filter((d) => d.isFile())
-    .map((d) => {
-      const st = statSync(joinAppPath(dir, d.name));
-      return { name: d.name, bytes: st.size, lastUsedMs: st.mtimeMs };
-    });
+async function listFiles(dir: AppPath): Promise<CacheFile[]> {
+  if (!(await exists(dir))) return [];
+  const entries = (await readdir(dir, { withFileTypes: true })).filter((d) =>
+    d.isFile(),
+  );
+  const listed = await Promise.all(
+    entries.map(async (d): Promise<CacheFile | null> => {
+      try {
+        const st = await stat(joinAppPath(dir, d.name));
+        return { name: d.name, bytes: st.size, lastUsedMs: st.mtimeMs };
+      } catch (err) {
+        // Removed since the listing (another backend's sweep): nothing to weigh.
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+        throw err;
+      }
+    }),
+  );
+  return listed.filter((f): f is CacheFile => f !== null);
 }
 
 export async function sweepResizedImages(args: {
@@ -76,7 +82,7 @@ export async function sweepResizedImages(args: {
   ttlMs?: number;
   capBytes?: number;
 }): Promise<{ removed: number; removedBytes: number; keptBytes: number }> {
-  const files = listFiles(args.dir);
+  const files = await listFiles(args.dir);
   const evictions = selectEvictions(files, {
     nowMs: args.nowMs,
     ttlMs: args.ttlMs ?? SWEEP_TTL_MS,

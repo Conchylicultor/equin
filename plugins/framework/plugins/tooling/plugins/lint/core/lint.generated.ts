@@ -76,6 +76,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/deps/plugins/python", id: "infra.deps.python", loader: () => import("@plugins/infra/plugins/deps/plugins/python/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/rust", id: "infra.deps.rust", loader: () => import("@plugins/infra/plugins/deps/plugins/rust/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/lint"), dependsOn: [] },
+  { pluginPath: "infra/plugins/host-fs/plugins/blocking-fs", id: "infra.host-fs.blocking-fs", loader: () => import("@plugins/infra/plugins/host-fs/plugins/blocking-fs/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/host-fs/plugins/user-path", id: "infra.host-fs.user-path", loader: () => import("@plugins/infra/plugins/host-fs/plugins/user-path/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths/plugins/data-files", id: "infra.paths.data-files", loader: () => import("@plugins/infra/plugins/paths/plugins/data-files/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths/plugins/repo-root", id: "infra.paths.repo-root", loader: () => import("@plugins/infra/plugins/paths/plugins/repo-root/lint"), dependsOn: [] },

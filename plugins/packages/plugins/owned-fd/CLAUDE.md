@@ -64,17 +64,15 @@ double close in our own code loud at its source.
 
 - Description: Owned file descriptors: openOwnedFd / adoptFd return an OwnedFd whose close() closes its descriptor exactly once — a second close throws FdAlreadyClosedError naming where the first happened, instead of closing whatever reused the number. Imports node:fs and the AppPath type only; enforced by the owned-fd/no-raw-fd-close lint (no fs.closeSync / fs.close outside it) and owned-fd/no-raw-spawn-stdio-fd (a spawn's stdio descriptor is an OwnedFd's .fd).
 - Cross-plugin:
-  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×12
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×11
     - `framework` ×7
     - `packages` ×4
-    - `apps` ×2
-    - `debug` ×2
+    - `apps/chord/song-index`
     - `conversations/runtime-sdk`
     - `database/migrations`
+    - `debug/browser-recordings/writer`
     - `integrations/youtube/audio-fetch`
-    - `primitives/log-channels/log-files`
-    - `release/source-checkout`
     - `reports/outbox`
 - Exemptions:
   - Exempts itself from:

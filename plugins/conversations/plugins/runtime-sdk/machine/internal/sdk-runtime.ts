@@ -425,7 +425,7 @@ async function launchAgent(
     ]);
     stopWaiting.abort();
     if (outcome.kind === "exited") {
-      throw new AgentStartError(id, outcome.reason, started.output());
+      throw new AgentStartError(id, outcome.reason, await started.output());
     }
   });
 }
@@ -445,8 +445,11 @@ async function moveOffSpentAccount(id: string): Promise<void> {
   const row = await currentAgentRow(id);
   if (row?.stopError !== USAGE_LIMIT_ERROR || !row.sessionId || row.working)
     return;
-  if (nextLaunchAccount() === row.account) return;
-  const relaunch = continueRelaunchOptions(readAgentOptions(id), row.sessionId);
+  if ((await nextLaunchAccount()) === row.account) return;
+  const relaunch = continueRelaunchOptions(
+    await readAgentOptions(id),
+    row.sessionId,
+  );
   await stopAgent(id);
   await recordLaunchSession(id, relaunch.sessionId);
   await launchAgent(id, relaunch);
@@ -487,7 +490,7 @@ export const sdkRuntime: ConversationRuntime = {
   },
 
   async subscribe(onSignal: (signal: RuntimeSignal) => void) {
-    attachRunningAgents();
+    await attachRunningAgents();
     const stop = await startConsumer(onSignal);
     return () => void stop();
   },
@@ -515,8 +518,8 @@ export const sdkRuntime: ConversationRuntime = {
       cwd,
       launch,
       policy: agentLaunchPolicy({
-        compaction: compactionHookEntry(),
-        stopGate: stopGateHookEntry(),
+        compaction: await compactionHookEntry(),
+        stopGate: await stopGateHookEntry(),
       }),
       model: opts?.model,
       effort: opts?.effort,
@@ -525,7 +528,7 @@ export const sdkRuntime: ConversationRuntime = {
       prompt: opts?.prompt,
       appendSystemPrompt: opts?.appendSystemPrompt,
     });
-    const fresh = !agentEventsExist(id);
+    const fresh = !(await agentEventsExist(id));
     await prepareLaunchRow(id, cwd, !fresh, options.sessionId);
     await launchAgent(id, options);
   },
@@ -561,7 +564,7 @@ export const sdkRuntime: ConversationRuntime = {
         `SDK agent ${id}: cannot take the stopped turn back — no session id yet`,
       );
     }
-    const relaunch = rewindRelaunchOptions(readAgentOptions(id), {
+    const relaunch = rewindRelaunchOptions(await readAgentOptions(id), {
       sessionId: settled.sessionId,
       anchorUuid: settled.rewindAnchorUuid,
       promptUuid: settled.lastPromptUuid,

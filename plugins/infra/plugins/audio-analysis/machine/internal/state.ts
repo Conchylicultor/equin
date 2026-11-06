@@ -1,5 +1,5 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync, readFile } from "@plugins/packages/plugins/timed-fs/core";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 
 import { z } from "zod";
 import {
@@ -89,7 +89,7 @@ export async function readBeatFeatures(
 ): Promise<BeatFeaturesState> {
   const settings = opts.settings ?? configuredAnalysis().settings;
   const paths = featurePaths(cacheRoot(opts.dir), videoId, settings);
-  if (!existsSync(paths.dir)) return { kind: "absent" };
+  if (!(await exists(paths.dir))) return { kind: "absent" };
   const [ready, running, failed] = await Promise.all([
     readIfExists(paths.ready, BeatFeaturesSchema),
     readIfExists(paths.running, RunningFileSchema),
@@ -98,7 +98,7 @@ export async function readBeatFeatures(
   return stateFromFiles({
     ready,
     running,
-    lockHeld: running !== null && isLockHeld(paths.lock),
+    lockHeld: running !== null && (await isLockHeld(paths.lock)),
     failed,
   });
 }

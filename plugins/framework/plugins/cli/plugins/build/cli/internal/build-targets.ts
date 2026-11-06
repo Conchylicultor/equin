@@ -170,7 +170,7 @@ export async function resolveBuildTargets(opts: {
       const collision = namespaceCollision(
         namespace,
         { kind: "composition", id: composition },
-        probeNamespace(mainRoot, namespace, compositionIds),
+        await probeNamespace(mainRoot, namespace, compositionIds),
       );
       if (collision !== null) {
         throw new Error(`composition "${composition}": ${collision}`);

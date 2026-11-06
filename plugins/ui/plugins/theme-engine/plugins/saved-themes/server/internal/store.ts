@@ -198,7 +198,7 @@ export async function deleteTheme(
     .where(eq(_savedThemes.id, id));
   if (!row) throw new HttpError(404, `No saved theme "${id}"`);
 
-  const plan = planDelete(row, readThemeSelections(), opts.reassign);
+  const plan = planDelete(row, await readThemeSelections(), opts.reassign);
   if (plan.kind === "refuse") {
     // HttpError carries text; fetchEndpoint upgrades a JSON error body to an
     // object, so the caller reads `usedBy` off `EndpointError.body` (parse it

@@ -3,11 +3,8 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir } from "node:fs/promises";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { isAbsolute, join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
@@ -160,17 +157,17 @@ export function build(opts: {
       },
 
       async install(ctx) {
-        mkdirSync(ctx.dir, { recursive: true });
+        await mkdir(ctx.dir, { recursive: true });
         const out = join(ctx.dir, output);
         const buildCtx: BuildContext = { ...ctx, output: out, target };
         await run(buildCtx);
-        if (!existsSync(out)) {
+        if (!(await exists(out))) {
           throw new Error(`the build finished without producing ${out}`);
         }
         if (opts.then !== undefined) await opts.then(buildCtx, out);
       },
 
-      isIntact: (dir) => existsSync(join(dir, output)),
+      isIntact: (dir) => exists(join(dir, output)),
 
       forTarget(other) {
         const can = canBuild(other);
@@ -225,7 +222,10 @@ async function hashInputs(
     const matched = result.stdout.split("\0").filter((p) => p !== "");
     // A tracked file deleted in the working tree is listed by --cached; it is
     // not an input any more (the set of names changes, so the identity does).
-    const present = matched.filter((p) => existsSync(join(root, p)));
+    const present: string[] = [];
+    for (const p of matched) {
+      if (await exists(join(root, p))) present.push(p);
+    }
     if (present.length === 0) {
       throw new Error(`build input ${glob} matches no file in ${root}`);
     }
@@ -236,7 +236,7 @@ async function hashInputs(
     hashes.set(
       path,
       createHash("sha256")
-        .update(readFileSync(join(root, path)))
+        .update(await readFile(join(root, path)))
         .digest("hex"),
     );
   }

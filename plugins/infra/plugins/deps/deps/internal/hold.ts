@@ -1,8 +1,5 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import {
-  existsSync,
-  readdirSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { exists, readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type { DepSource, Ready } from "./dep";
 import { defaultStore, installPaths, type DepStore } from "./store";
@@ -20,11 +17,11 @@ const HOLDER = /^[a-z][a-z0-9-]*$/;
  * sweep. A sealed payload (a release bundle's) is part of its bundle and never
  * swept, so holding it does nothing.
  */
-export function holdDep(
+export async function holdDep(
   ready: Ready<DepSource>,
   holder: string,
   opts: { store?: DepStore } = {},
-): void {
+): Promise<void> {
   if (!HOLDER.test(holder)) {
     throw new Error(
       `holdDep: holder ${JSON.stringify(holder)} must match ${HOLDER}`,
@@ -34,17 +31,17 @@ export function holdDep(
   const paths = installPaths(store, ready.dep.id, ready.identity);
   if (paths.env !== ready.dir) return;
   const idDir = join(store.cacheRoot, ready.dep.id);
-  for (const identity of readdirSync(idDir)) {
+  for (const identity of await readdir(idDir)) {
     if (identity === ready.identity) continue;
-    rmSync(join(installPaths(store, ready.dep.id, identity).holds, holder), {
+    await rm(join(installPaths(store, ready.dep.id, identity).holds, holder), {
       force: true,
     });
   }
-  mkdirSync(paths.holds, { recursive: true });
-  writeFileSync(join(paths.holds, holder), `${new Date().toISOString()}\n`);
+  await mkdir(paths.holds, { recursive: true });
+  await writeFile(join(paths.holds, holder), `${new Date().toISOString()}\n`);
 }
 
 /** Whether anything holds this install (see {@link holdDep}). */
-export function isHeld(paths: { holds: string }): boolean {
-  return existsSync(paths.holds) && readdirSync(paths.holds).length > 0;
+export async function isHeld(paths: { holds: string }): Promise<boolean> {
+  return (await exists(paths.holds)) && (await readdir(paths.holds)).length > 0;
 }

@@ -45,7 +45,7 @@ function assertSafeName(name: string): void {
 }
 
 export async function listDatabases(): Promise<string[]> {
-  const rows = await queryRows(getAdminPool(), {
+  const rows = await queryRows(await getAdminPool(), {
     // `datname` is a `name`, not `text`; the cast keeps the column's decoded
     // type the one the schema below declares.
     sql: `SELECT datname::text AS datname FROM pg_database
@@ -58,10 +58,9 @@ export async function listDatabases(): Promise<string[]> {
 
 export async function databaseExists(name: string): Promise<boolean> {
   assertSafeName(name);
-  const result = await getAdminPool().query(
-    "SELECT 1 FROM pg_database WHERE datname = $1",
-    [name],
-  );
+  const result = await (
+    await getAdminPool()
+  ).query("SELECT 1 FROM pg_database WHERE datname = $1", [name]);
   return result.rowCount !== null && result.rowCount > 0;
 }
 
@@ -110,7 +109,7 @@ export async function databaseSizeBytes(name: string): Promise<number> {
   // `pg_database_size` errors on a missing database rather than returning null,
   // which is the right shape: a caller asking the size of something that is not
   // there has a broken assumption, not a zero-byte database.
-  const { bytes } = await queryOne(getAdminPool(), {
+  const { bytes } = await queryOne(await getAdminPool(), {
     sql: "SELECT pg_database_size($1)::bigint::double precision AS bytes",
     params: [name],
     row: z.object({ bytes: z.number() }),
@@ -124,7 +123,7 @@ export async function databaseSizeBytes(name: string): Promise<number> {
 export async function countActiveConnections(name: string): Promise<number> {
   // A bare aggregate always returns exactly one row, so an absent row is a
   // broken assumption rather than "no connections" — `queryOne` says so.
-  const { n } = await queryOne(getAdminPool(), {
+  const { n } = await queryOne(await getAdminPool(), {
     sql: "SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = $1",
     params: [name],
     row: z.object({ n: z.number() }),

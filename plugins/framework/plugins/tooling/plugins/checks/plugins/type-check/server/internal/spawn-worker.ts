@@ -17,7 +17,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { writeFileSync } from "fs";
+import { writeFile } from "node:fs/promises";
 import os from "os";
 import { fileURLToPath } from "url";
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
@@ -300,7 +300,7 @@ async function spawnWorker(opts: {
     asAppPath(os.tmpdir()),
     `type-check-${name}-${process.pid}.json`,
   );
-  writeFileSync(jobPath, JSON.stringify(job));
+  await writeFile(jobPath, JSON.stringify(job));
   const startedAt = performance.now();
   const spawned = await slot.spawn([process.execPath, WORKER, jobPath], {
     cwd: root,

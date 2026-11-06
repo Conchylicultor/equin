@@ -114,7 +114,7 @@ describe("acquireReleaseCheckout", () => {
           { timeoutMs: 60_000 },
         ),
       ).rejects.toBeInstanceOf(Error);
-      expect(isReleaseCheckout(checkout.root)).toBe(true);
+      expect(await isReleaseCheckout(checkout.root)).toBe(true);
     } finally {
       await checkout.dispose();
     }
@@ -207,8 +207,8 @@ describe("dispose", () => {
         /refusing to remove/,
       );
       expect(readFileSync(join(victim, "keep.txt"), "utf8")).toBe("keep");
-      expect(isReleaseCheckout(victim)).toBe(false);
-      expect(isReleaseCheckout(releaseCheckoutsDir.path)).toBe(false);
+      expect(await isReleaseCheckout(victim)).toBe(false);
+      expect(await isReleaseCheckout(releaseCheckoutsDir.path)).toBe(false);
     } finally {
       rmSync(outside, { recursive: true, force: true });
     }

@@ -6,7 +6,7 @@ import type { BackupSourceReport } from "@plugins/backup/core";
 import { claudeSettingsSourceConfig } from "../../shared/config";
 import {
   scanGlob,
-  existsSync,
+  exists,
   stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 
@@ -43,7 +43,7 @@ export async function assembleClaudeSettings(
 
   // settings.json
   const settingsPath = join(CLAUDE_DIR, "settings.json");
-  if (existsSync(settingsPath)) {
+  if (await exists(settingsPath)) {
     const dest = join(dir, "settings.json");
     await cp(settingsPath, dest);
     const s = await stat(dest);
@@ -53,7 +53,7 @@ export async function assembleClaudeSettings(
 
   // history.jsonl
   const historyPath = join(CLAUDE_DIR, "history.jsonl");
-  if (existsSync(historyPath)) {
+  if (await exists(historyPath)) {
     const dest = join(dir, "history.jsonl");
     await cp(historyPath, dest);
     const s = await stat(dest);
@@ -67,7 +67,7 @@ export async function assembleClaudeSettings(
     "plugins",
     "installed_plugins.json",
   );
-  if (existsSync(installedPluginsPath)) {
+  if (await exists(installedPluginsPath)) {
     const dest = join(dir, "installed_plugins.json");
     await cp(installedPluginsPath, dest);
     const s = await stat(dest);
@@ -77,7 +77,7 @@ export async function assembleClaudeSettings(
 
   // tasks/ (recursive dir)
   const tasksDir = join(CLAUDE_DIR, "tasks");
-  if (existsSync(tasksDir)) {
+  if (await exists(tasksDir)) {
     const dest = join(dir, "tasks");
     await cp(tasksDir, dest, { recursive: true });
     const { count, sizeBytes: dirSize } = await countFilesAndSize(dest);
@@ -87,7 +87,7 @@ export async function assembleClaudeSettings(
 
   // teams/ (recursive dir)
   const teamsDir = join(CLAUDE_DIR, "teams");
-  if (existsSync(teamsDir)) {
+  if (await exists(teamsDir)) {
     const dest = join(dir, "teams");
     await cp(teamsDir, dest, { recursive: true });
     const { count, sizeBytes: dirSize } = await countFilesAndSize(dest);

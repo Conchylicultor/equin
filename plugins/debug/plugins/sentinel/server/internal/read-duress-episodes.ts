@@ -23,15 +23,18 @@ const MAX_LINES = 1000;
  * trips (a crash with no clear line — the accepted lapse gap) age out of the
  * window naturally instead of banding every future timeline.
  */
-export function readDuressEpisodes(windowMs: number): DuressEpisodeEvent[] {
+export async function readDuressEpisodes(
+  windowMs: number,
+): Promise<DuressEpisodeEvent[]> {
   const cutoff = Date.now() - windowMs;
   // Envelope-unwrap + safeParse-drop via the log-channels primitive (a missing
   // duress-episodes.jsonl — no episode since the channel shipped — is a
   // legitimately-empty history), then keep transitions inside the window.
-  return readChannelJson(
+  const events = await readChannelJson(
     MAIN_WORKTREE_NAME,
     DURESS_EPISODES_CHANNEL,
     MAX_LINES,
     DuressEpisodeEventSchema,
-  ).filter((e) => e.atMs >= cutoff);
+  );
+  return events.filter((e) => e.atMs >= cutoff);
 }

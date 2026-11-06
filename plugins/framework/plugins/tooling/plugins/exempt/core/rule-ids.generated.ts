@@ -13,6 +13,7 @@ export type ExemptableRuleId =
   | "apps-core/no-raw-history-nav"
   | "aria-safety/no-orphan-composite-role"
   | "bar/no-adhoc-bar"
+  | "blocking-fs/no-sync-fs"
   | "boot:closure-digestable"
   | "boundaries/no-platform-api"
   | "boundaries:machine-portable-declaration"

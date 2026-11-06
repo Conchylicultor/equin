@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import { relative, sep } from "node:path";
 import type { RuntimeSignal } from "@plugins/conversations/server";
 import { recordContextUsage } from "@plugins/conversations/plugins/context-usage/server";
@@ -281,7 +281,7 @@ async function applyNewLines(
     // No row and no events: `create` has not prepared the row yet (it does
     // before the agent starts). Events with no row are an agent this backend
     // cannot apply — say so, rather than skip them forever.
-    if (!agentEventsExist(id)) return;
+    if (!(await agentEventsExist(id))) return;
     progress.stage = "report";
     await recordReport({
       kind: "crash",
@@ -297,7 +297,11 @@ async function applyNewLines(
   // reads what was appended while no backend ran, not every generation of the
   // agent's history (hundreds of MB across the live agents, parsed on every
   // boot).
-  const read = readEventsAfter(path, projection.cursorSeq, eventsPosition);
+  const read = await readEventsAfter(
+    path,
+    projection.cursorSeq,
+    eventsPosition,
+  );
   const { state, effects, gaps, malformed, stalls } = reduceEvents(
     projection,
     read.events,
@@ -563,10 +567,10 @@ function followAgent(id: string): Follow {
   const known = followed.get(id);
   if (known) return known;
   const dir = agentDir(id);
-  mkdirSync(dir, { recursive: true });
   const follow: Follow = {
     launches: 0,
     watch: (closing.get(id) ?? Promise.resolve())
+      .then(() => mkdir(dir, { recursive: true }))
       .then(() =>
         sdkEventsWatcher.start({
           dirs: [dir],
@@ -663,7 +667,7 @@ export async function followLaunch<T>(
 async function syncFollowed(): Promise<void> {
   let running: Set<string>;
   try {
-    running = new Set(liveAgentIds(runtimeNamespace()));
+    running = new Set(await liveAgentIds(runtimeNamespace()));
   } catch (err) {
     // The pid files could not be read: the followed set stays as it is until
     // the next pid-file change or recount.
@@ -722,9 +726,9 @@ export async function startConsumer(
 ): Promise<() => Promise<void>> {
   if (signal) throw new Error("runtime-sdk consumer: already started");
   signal = onSignal;
-  mkdirSync(ownAgentsRoot(), { recursive: true });
+  await mkdir(ownAgentsRoot(), { recursive: true });
   const pidsDir = ownAgentPidsDir();
-  mkdirSync(pidsDir, { recursive: true });
+  await mkdir(pidsDir, { recursive: true });
   // An agent starting or exiting adds or removes its pid file; one killed
   // outright leaves it behind, which the reconciler's recount notices.
   const releasePids = await acquireDirWatch({

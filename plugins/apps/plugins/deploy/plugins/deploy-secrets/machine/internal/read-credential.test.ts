@@ -13,34 +13,34 @@ afterEach(() => {
 afterAll(() => rmSync(tmp, { recursive: true, force: true }));
 
 describe("readCredential", () => {
-  test("no credentials directory (a dev worktree) is unset", () => {
+  test("no credentials directory (a dev worktree) is unset", async () => {
     delete process.env.CREDENTIALS_DIRECTORY;
-    expect(readCredential("RESEND_API_KEY")).toEqual({ kind: "unset" });
+    expect(await readCredential("RESEND_API_KEY")).toEqual({ kind: "unset" });
   });
 
-  test("reads the credential systemd decrypted, byte for byte", () => {
+  test("reads the credential systemd decrypted, byte for byte", async () => {
     process.env.CREDENTIALS_DIRECTORY = tmp;
     writeFileSync(join(tmp, "RESEND_API_KEY"), "re_123");
-    expect(readCredential("RESEND_API_KEY")).toEqual({
+    expect(await readCredential("RESEND_API_KEY")).toEqual({
       kind: "set",
       value: "re_123",
     });
   });
 
-  test("a key the deployment has no credential for is unset", () => {
+  test("a key the deployment has no credential for is unset", async () => {
     process.env.CREDENTIALS_DIRECTORY = tmp;
-    expect(readCredential("OTHER_KEY")).toEqual({ kind: "unset" });
+    expect(await readCredential("OTHER_KEY")).toEqual({ kind: "unset" });
   });
 
-  test("an empty credential is unset, never an empty key", () => {
+  test("an empty credential is unset, never an empty key", async () => {
     process.env.CREDENTIALS_DIRECTORY = tmp;
     writeFileSync(join(tmp, "EMPTY_KEY"), "");
-    expect(readCredential("EMPTY_KEY")).toEqual({ kind: "unset" });
+    expect(await readCredential("EMPTY_KEY")).toEqual({ kind: "unset" });
   });
 
-  test("a credential that exists but cannot be read throws", () => {
+  test("a credential that exists but cannot be read throws", async () => {
     process.env.CREDENTIALS_DIRECTORY = tmp;
     mkdirSync(join(tmp, "A_DIRECTORY"));
-    expect(() => readCredential("A_DIRECTORY")).toThrow();
+    expect(readCredential("A_DIRECTORY")).rejects.toThrow();
   });
 });

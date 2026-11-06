@@ -1,9 +1,9 @@
 import {
-  existsSync,
-  readFileSync,
-  readdirSync,
-  realpathSync,
-  statSync,
+  exists,
+  readFile,
+  readdir,
+  realpath,
+  stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "node:path";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
@@ -38,7 +38,7 @@ import {
  * A *corrupt* RELEASE.json is not in that union — `ReleaseManifestSchema.parse`
  * throws, because a broken artifact is not a refusal a user can act on.
  */
-export function resolveBundle(opts: {
+export async function resolveBundle(opts: {
   /**
    * WHO produced the release being looked for — a backend's own runtime
    * namespace, or, in a CLI, the namespace the invoking checkout owns. Stated by
@@ -48,10 +48,10 @@ export function resolveBundle(opts: {
   composition: string;
   platform: string;
   release?: string;
-}): BundleResolution {
+}): Promise<BundleResolution> {
   const { composition, platform } = opts;
   const { namespace, compDir } = bundleRoot(opts.namespace, composition);
-  if (!existsSync(compDir)) {
+  if (!(await exists(compDir))) {
     return {
       ok: false,
       refusal: {
@@ -67,7 +67,7 @@ export function resolveBundle(opts: {
   let runDir: AppPath;
   if (opts.release !== undefined) {
     runDir = joinAppPath(compDir, opts.release);
-    if (!existsSync(runDir)) {
+    if (!(await exists(runDir))) {
       return {
         ok: false,
         refusal: {
@@ -75,14 +75,14 @@ export function resolveBundle(opts: {
           release: opts.release,
           runDir,
           compDir,
-          available: readdirSync(compDir).filter((d) => !isPointerName(d)),
+          available: (await readdir(compDir)).filter((d) => !isPointerName(d)),
           namespace,
         },
       };
     }
   } else {
     const pointerPath = latestPointerPath(compDir, platform);
-    if (!existsSync(pointerPath)) {
+    if (!(await exists(pointerPath))) {
       return {
         ok: false,
         refusal: {
@@ -94,15 +94,15 @@ export function resolveBundle(opts: {
       };
     }
     // The real path of the pointer symlink under the composition dir.
-    runDir = asAppPath(realpathSync(pointerPath));
+    runDir = asAppPath(await realpath(pointerPath));
   }
 
   const manifestPath = join(runDir, "RELEASE.json");
-  if (!existsSync(manifestPath)) {
+  if (!(await exists(manifestPath))) {
     return { ok: false, refusal: { kind: "no-manifest", runDir } };
   }
   const manifest = ReleaseManifestSchema.parse(
-    JSON.parse(readFileSync(manifestPath, "utf8")),
+    JSON.parse(await readFile(manifestPath, "utf8")),
   );
 
   if (manifest.composition !== composition) {
@@ -151,7 +151,7 @@ export function resolveBundle(opts: {
 
   const binaryName = bundleBinaryName(composition, platform);
   const localPath = joinAppPath(runDir, "dist", binaryName);
-  if (!existsSync(localPath)) {
+  if (!(await exists(localPath))) {
     return { ok: false, refusal: { kind: "not-packed", localPath } };
   }
   return { ok: true, runId, localPath, binaryName, manifest };
@@ -184,21 +184,19 @@ function bundleBinaryName(composition: string, platform: string): string {
  * pointer's run, and that is the only question this answers. DB-free, like
  * everything in this plugin, so a CLI process can import it.
  */
-export function bundleSignature(opts: {
+export async function bundleSignature(opts: {
   namespace: Namespace;
   composition: string;
   platform: string;
-}): string {
+}): Promise<string> {
   const { composition, platform } = opts;
   const { compDir } = bundleRoot(opts.namespace, composition);
-  if (!existsSync(compDir)) return "no-releases";
+  if (!(await exists(compDir))) return "no-releases";
   const pointerPath = latestPointerPath(compDir, platform);
-  if (!existsSync(pointerPath)) return "no-pointer";
-  const runDir = asAppPath(realpathSync(pointerPath));
-  const manifest = statSync(joinAppPath(runDir, "RELEASE.json"), {
-    throwIfNoEntry: false,
-  });
-  const packed = existsSync(
+  if (!(await exists(pointerPath))) return "no-pointer";
+  const runDir = asAppPath(await realpath(pointerPath));
+  const manifest = await statIfPresent(joinAppPath(runDir, "RELEASE.json"));
+  const packed = await exists(
     joinAppPath(runDir, "dist", bundleBinaryName(composition, platform)),
   );
   return [
@@ -208,4 +206,15 @@ export function bundleSignature(opts: {
       : `${manifest.mtimeMs}:${manifest.size}`,
     packed ? "packed" : "not-packed",
   ].join("\0");
+}
+
+/** `stat`, or `undefined` when nothing is there (ENOENT / ENOTDIR) — `statSync`'s `throwIfNoEntry: false`. */
+async function statIfPresent(path: AppPath) {
+  try {
+    return await stat(path);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") return undefined;
+    throw err;
+  }
 }

@@ -1,6 +1,6 @@
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { mkdtempSync, rmSync } from "node:fs";
-import { readdirSync } from "@plugins/packages/plugins/timed-fs/core";
+import { mkdtemp, rm } from "node:fs/promises";
+import { readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { connect } from "node:net";
 import { eq } from "drizzle-orm";
@@ -102,7 +102,7 @@ export async function startPreview(runId: string): Promise<void> {
   const port = await pickFreePort(PREVIEW_PORT_FLOOR);
   const pgPort = await pickFreePort(PREVIEW_PG_PORT_FLOOR);
   const dataRoot = asAppPath(
-    mkdtempSync(join(PREVIEW_TMP_DIR, PREVIEW_DIR_PREFIX)),
+    await mkdtemp(join(PREVIEW_TMP_DIR, PREVIEW_DIR_PREFIX)),
   );
 
   // The composition comes off a DB row, and a preview listens on its own port.
@@ -156,7 +156,7 @@ export async function stopPreview(runId: string): Promise<void> {
     httpPort: entry.port,
     pgPort: entry.pgPort,
   });
-  rmSync(entry.dataRoot, { recursive: true, force: true });
+  await rm(entry.dataRoot, { recursive: true, force: true });
   await entry.daemon.stop();
   previews.delete(runId);
   releaseLog.publish(`Preview ${runId} stopped`);
@@ -181,7 +181,7 @@ export async function reconcileOrphanPreviews(): Promise<void> {
       activeRoots.add(entry.dataRoot);
       continue;
     }
-    rmSync(entry.dataRoot, { recursive: true, force: true });
+    await rm(entry.dataRoot, { recursive: true, force: true });
     await entry.daemon.stop();
     previews.delete(runId);
     changed = true;
@@ -189,7 +189,7 @@ export async function reconcileOrphanPreviews(): Promise<void> {
 
   let dirs: string[];
   try {
-    dirs = readdirSync(PREVIEW_TMP_DIR).filter((n) =>
+    dirs = (await readdir(PREVIEW_TMP_DIR)).filter((n) =>
       n.startsWith(PREVIEW_DIR_PREFIX),
     );
   } catch (err) {
@@ -201,7 +201,7 @@ export async function reconcileOrphanPreviews(): Promise<void> {
     if (activeRoots.has(root)) continue;
     // Ports unknown for an orphan dir — pidfile-based teardown suffices.
     await teardownSelfContainedApp({ root });
-    rmSync(root, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true });
     releaseLog.publish(`Reaped orphan preview stack at ${root}`);
   }
 

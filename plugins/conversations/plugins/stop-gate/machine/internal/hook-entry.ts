@@ -1,4 +1,4 @@
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { stopGateHook, type StopGateHookEntry } from "../../core/hook";
 
@@ -10,8 +10,8 @@ const HOOK_SCRIPT = join(import.meta.dir, "../../bin/stop-gate.ts");
  * The Stop hook entry an agent launch merges into its settings. Throws when
  * the script is missing: a launch must not install a hook that cannot run.
  */
-export function stopGateHookEntry(): StopGateHookEntry {
-  if (!existsSync(HOOK_SCRIPT)) {
+export async function stopGateHookEntry(): Promise<StopGateHookEntry> {
+  if (!(await exists(HOOK_SCRIPT))) {
     throw new Error(`stop-gate script missing at ${HOOK_SCRIPT}`);
   }
   return stopGateHook({ scriptPath: HOOK_SCRIPT });

@@ -1,6 +1,6 @@
 import {
-  existsSync,
-  statSync,
+  exists,
+  stat,
   readdir,
   readFile,
 } from "@plugins/packages/plugins/timed-fs/core";
@@ -109,12 +109,13 @@ export function openGitHistoryStore(
     historyGit(repoOf(id), folderOf(id));
 
   async function ensureHistory(id: string): Promise<EnsureHistoryResult> {
-    if (!isDirectory(folderOf(id))) return { kind: "no-such-prototype" };
-    if (existsSync(repoOf(id))) return { kind: "exists" };
+    if (!(await isDirectory(folderOf(id))))
+      return { kind: "no-such-prototype" };
+    if (await exists(repoOf(id))) return { kind: "exists" };
 
     await mkdir(historyDirAbs(), { recursive: true });
     return withRepoLock(id, async () => {
-      if (existsSync(repoOf(id))) return { kind: "exists" };
+      if (await exists(repoOf(id))) return { kind: "exists" };
       await createRepo(id);
       return { kind: "created" };
     });
@@ -217,7 +218,7 @@ export function openGitHistoryStore(
     sha: string,
     file: string,
   ): Promise<VersionFileRead> {
-    if (!existsSync(repoOf(id))) return { kind: "not-found" };
+    if (!(await exists(repoOf(id)))) return { kind: "not-found" };
     const result = await gitOf(id).probe([
       "cat-file",
       "blob",
@@ -521,6 +522,11 @@ function isErrnoCode(err: unknown, code: string): boolean {
   return err instanceof Error && (err as NodeJS.ErrnoException).code === code;
 }
 
-function isDirectory(path: AppPath): boolean {
-  return statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;
+async function isDirectory(path: AppPath): Promise<boolean> {
+  try {
+    return (await stat(path)).isDirectory();
+  } catch (err) {
+    if (isErrnoCode(err, "ENOENT") || isErrnoCode(err, "ENOTDIR")) return false;
+    throw err;
+  }
 }

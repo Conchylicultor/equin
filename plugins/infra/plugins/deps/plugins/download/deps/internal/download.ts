@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import { createReadStream, mkdirSync, renameSync, rmSync } from "node:fs";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { createReadStream } from "node:fs";
+import { mkdir, rename, rm } from "node:fs/promises";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import {
   type AppPath,
@@ -103,7 +104,7 @@ export function download(opts: {
     },
 
     async install(ctx) {
-      mkdirSync(ctx.dir, { recursive: true });
+      await mkdir(ctx.dir, { recursive: true });
       for (const f of files) {
         const part = join(ctx.dir, `${f.name}.part`);
         await ctx.run(
@@ -125,19 +126,20 @@ export function download(opts: {
         );
         const actual = await sha256OfFile(part);
         if (actual !== f.sha256) {
-          rmSync(part, { force: true });
+          await rm(part, { force: true });
           throw new Error(
             `${f.url} downloaded with sha256 ${actual}, expected the pinned ${f.sha256}`,
           );
         }
-        renameSync(part, join(ctx.dir, f.name));
+        await rename(part, join(ctx.dir, f.name));
         ctx.log(`${f.name}: sha256 matches the pin`);
       }
       if (derive !== undefined) {
         await derive.run(ctx);
-        const missing = derive.outputs.filter(
-          (name) => !existsSync(join(ctx.dir, name)),
-        );
+        const missing: string[] = [];
+        for (const name of derive.outputs) {
+          if (!(await exists(join(ctx.dir, name)))) missing.push(name);
+        }
         if (missing.length > 0) {
           throw new Error(
             `derive v${derive.version} finished without producing ${missing.join(", ")} in ${ctx.dir}`,
@@ -146,7 +148,12 @@ export function download(opts: {
       }
     },
 
-    isIntact: (dir) => outputs.every((name) => existsSync(join(dir, name))),
+    async isIntact(dir) {
+      for (const name of outputs) {
+        if (!(await exists(join(dir, name)))) return false;
+      }
+      return true;
+    },
   };
 }
 

@@ -20,9 +20,9 @@ import {
   isWorktreeOpActive,
   listActiveWorktreeOps,
   listWorktreeOps,
-  markWorktreeOpStart,
   probeWorktreeOp,
 } from "./worktree-op";
+import { markWorktreeOpStart } from "./worktree-op-marker";
 
 // The marker functions resolve their path from the real worktreeDataDir(slug);
 // there is no path injection. So each test uses a throwaway random slug (never
@@ -185,7 +185,7 @@ test("a marker still being written is never probed; an orphaned one is reaped wh
 test("SIGKILL of the holder releases the marker even while its child lives on", async () => {
   await withTempSlug(async (slug) => {
     const ready = join(worktreeDataDir(slug), "ready.json");
-    const modulePath = join(import.meta.dir, "worktree-op.ts");
+    const modulePath = join(import.meta.dir, "worktree-op-marker.ts");
     const script = `
       import { writeFileSync } from "node:fs";
       import { markWorktreeOpStart } from ${JSON.stringify(modulePath)};

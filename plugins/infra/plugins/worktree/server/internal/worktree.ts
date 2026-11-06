@@ -1378,7 +1378,7 @@ export async function setupWorktree(
   const collision = namespaceCollision(
     ns,
     { kind: "checkout", name: id },
-    probeNamespace(repoRoot, ns, compositionIds),
+    await probeNamespace(repoRoot, ns, compositionIds),
   );
   if (collision) {
     throw new Error(`Cannot create worktree "${id}": ${collision}`);

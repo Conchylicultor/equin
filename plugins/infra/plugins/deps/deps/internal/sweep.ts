@@ -1,9 +1,9 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
-  existsSync,
-  readdirSync,
-  readFileSync,
-  statSync,
+  exists,
+  readdir,
+  readFile,
+  stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
@@ -62,23 +62,23 @@ export async function sweepDeps(args: {
     }
   }
 
-  if (!existsSync(store.cacheRoot)) return report;
-  for (const id of readdirSync(store.cacheRoot)) {
+  if (!(await exists(store.cacheRoot))) return report;
+  for (const id of await readdir(store.cacheRoot)) {
     const idDir = join(store.cacheRoot, id);
-    if (!statSync(idDir).isDirectory()) continue;
-    for (const identity of readdirSync(idDir)) {
+    if (!(await stat(idDir)).isDirectory()) continue;
+    for (const identity of await readdir(idDir)) {
       const key = `${id}/${identity}`;
       const paths = installPaths(store, id, identity);
-      if (!statSync(paths.root).isDirectory()) continue;
+      if (!(await stat(paths.root)).isDirectory()) continue;
       if (
         current.has(key) ||
-        isHeld(paths) ||
-        now.getTime() - lastUsedAt(paths) < idleMs
+        (await isHeld(paths)) ||
+        now.getTime() - (await lastUsedAt(paths)) < idleMs
       ) {
         report.kept.push(key);
         continue;
       }
-      const fd = tryLock(paths.lock);
+      const fd = await tryLock(paths.lock);
       if (fd === null) {
         report.kept.push(key);
         continue;
@@ -87,7 +87,7 @@ export async function sweepDeps(args: {
         await rm(paths.root, { recursive: true, force: true });
         report.removed.push(key);
       } finally {
-        releaseLock(fd);
+        await releaseLock(fd);
       }
     }
   }
@@ -95,12 +95,14 @@ export async function sweepDeps(args: {
 }
 
 /** When an install was last used: `last-used`, else the dir's own mtime. */
-function lastUsedAt(paths: ReturnType<typeof installPaths>): number {
-  if (existsSync(paths.lastUsed)) {
-    const at = Date.parse(readFileSync(paths.lastUsed, "utf8").trim());
+async function lastUsedAt(
+  paths: ReturnType<typeof installPaths>,
+): Promise<number> {
+  if (await exists(paths.lastUsed)) {
+    const at = Date.parse((await readFile(paths.lastUsed, "utf8")).trim());
     if (!Number.isNaN(at)) return at;
   }
-  return statSync(paths.root).mtimeMs;
+  return (await stat(paths.root)).mtimeMs;
 }
 
 /**

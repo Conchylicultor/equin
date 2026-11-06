@@ -174,7 +174,7 @@ describe("installServiceExecutable", () => {
       bundled: true,
     });
     expect(readFileSync(exe("gateway"), "utf8")).toBe("1");
-    expect(installedAppComponents(bundle)).toEqual([
+    expect(await installedAppComponents(bundle)).toEqual([
       { name: "gateway", identity: "gw-dep@1", main: false, icon: false },
     ]);
     expect(calls).toEqual(["lock", "sign", `register ${bundle}`]);
@@ -198,7 +198,7 @@ describe("installServiceExecutable", () => {
     expect(plist()).toContain(
       "<key>CFBundleExecutable</key><string>equin-desktop</string>",
     );
-    expect(installedAppComponents(bundle)?.map((c) => c.name)).toEqual([
+    expect((await installedAppComponents(bundle))?.map((c) => c.name)).toEqual([
       "equin-desktop",
       "gateway",
     ]);
@@ -223,7 +223,9 @@ describe("installServiceExecutable", () => {
     await installServiceExecutable(host(), gateway, build("gw", "1"), () => {});
     await installServiceExecutable(host(), gateway, build("gw", "2"), () => {});
     expect(readFileSync(exe("gateway"), "utf8")).toBe("2");
-    expect(installedAppComponents(bundle)?.[0]?.identity).toBe("gw-dep@2");
+    expect((await installedAppComponents(bundle))?.[0]?.identity).toBe(
+      "gw-dep@2",
+    );
   });
 
   test("the swapped-out bundle is kept while a process runs from it, then removed", async () => {

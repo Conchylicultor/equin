@@ -44,10 +44,10 @@ export function isBackedUp(kind: DatabaseKind): boolean {
  * Pure: the marker probe is an argument (`hasCompositionMarker` in production),
  * so the whole decision is testable without a filesystem.
  */
-export function classifyDatabase(
+export async function classifyDatabase(
   name: string,
-  hasMarker: (ns: Namespace) => boolean,
-): DatabaseKind {
+  hasMarker: (ns: Namespace) => Promise<boolean>,
+): Promise<DatabaseKind> {
   if (name === MAIN_WORKTREE_NAME) return "main";
   if (parseTestDbName(name) !== null) return "test";
   if (isForkTempName(name)) return "fork-temp";
@@ -60,6 +60,6 @@ export function classifyDatabase(
   // Past the worktree grammar, a single label can only be a composition on
   // main (the elision rule, `namespaceFor`), and two labels a composition's
   // checkout. The marker is what says a live namespace really is one.
-  if (!hasMarker(ns)) return "orphan";
+  if (!(await hasMarker(ns))) return "orphan";
   return parts.kind === "label" ? "composition" : "worktree";
 }

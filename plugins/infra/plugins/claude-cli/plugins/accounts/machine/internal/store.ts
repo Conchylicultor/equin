@@ -2,8 +2,9 @@ import {
   type AppPath,
   asAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { renameSync, writeFileSync } from "node:fs";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { rename, writeFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import {
   claudeCredentialKind,
   ClaudeAccountsSchema,
@@ -30,10 +31,10 @@ function claudeAccountsPath(): AppPath {
 }
 
 /** The accounts as saved; none added yet → the system account alone. */
-export function readClaudeAccounts(): ClaudeAccounts {
+export async function readClaudeAccounts(): Promise<ClaudeAccounts> {
   let text: string;
   try {
-    text = readFileSync(claudeAccountsPath(), "utf8");
+    text = await readFile(claudeAccountsPath(), "utf8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT")
       return NO_CLAUDE_ACCOUNTS;
@@ -42,13 +43,20 @@ export function readClaudeAccounts(): ClaudeAccounts {
   return ClaudeAccountsSchema.parse(JSON.parse(text));
 }
 
-function writeClaudeAccounts(state: ClaudeAccounts): void {
+async function writeClaudeAccounts(state: ClaudeAccounts): Promise<void> {
   claudeAccountsDir.ensure();
   const path = claudeAccountsPath();
   const tmp = asAppPath(`${path}.${process.pid}.tmp`);
-  writeFileSync(tmp, JSON.stringify(state, null, 2));
-  renameSync(tmp, path);
+  await writeFile(tmp, JSON.stringify(state, null, 2));
+  await rename(tmp, path);
 }
+
+// Every change is read-modify-write of one file: serialized, so two callers
+// (the endpoints, an agent launch switching account) never interleave and lose
+// one another's change.
+const accountsMutex = createKeyedMutex();
+const changeAccounts = <T>(fn: () => Promise<T>): Promise<T> =>
+  accountsMutex.run(ACCOUNTS_FILE, fn);
 
 function assertKnown(state: ClaudeAccounts, id: string): void {
   if (id !== SYSTEM_ACCOUNT_ID && !state.accounts.some((a) => a.id === id))
@@ -67,37 +75,49 @@ export async function addClaudeAccountWithCredential(
   };
   // The credential first: an account in the list always has one.
   await saveClaudeAccountCredential(account.id, credential);
-  const state = readClaudeAccounts();
-  writeClaudeAccounts({ ...state, accounts: [...state.accounts, account] });
+  await changeAccounts(async () => {
+    const state = await readClaudeAccounts();
+    await writeClaudeAccounts({
+      ...state,
+      accounts: [...state.accounts, account],
+    });
+  });
   return account;
 }
 
 export async function removeClaudeAccountById(id: string): Promise<void> {
   if (id === SYSTEM_ACCOUNT_ID)
     throw new Error("The computer's own Claude Code account can't be removed");
-  const state = readClaudeAccounts();
-  assertKnown(state, id);
-  writeClaudeAccounts({
-    ...state,
-    accounts: state.accounts.filter((a) => a.id !== id),
-    active: state.active === id ? SYSTEM_ACCOUNT_ID : state.active,
+  await changeAccounts(async () => {
+    const state = await readClaudeAccounts();
+    assertKnown(state, id);
+    await writeClaudeAccounts({
+      ...state,
+      accounts: state.accounts.filter((a) => a.id !== id),
+      active: state.active === id ? SYSTEM_ACCOUNT_ID : state.active,
+    });
   });
   await deleteClaudeAccountCredential(id);
 }
 
-export function selectClaudeAccountById(id: string): void {
-  const state = readClaudeAccounts();
-  assertKnown(state, id);
-  if (state.active !== id) writeClaudeAccounts({ ...state, active: id });
+export function selectClaudeAccountById(id: string): Promise<void> {
+  return changeAccounts(async () => {
+    const state = await readClaudeAccounts();
+    assertKnown(state, id);
+    if (state.active !== id)
+      await writeClaudeAccounts({ ...state, active: id });
+  });
 }
 
-export function setClaudeAccountsAutoSwitch(enabled: boolean): void {
-  const state = readClaudeAccounts();
-  if (state.autoSwitch !== enabled)
-    writeClaudeAccounts({ ...state, autoSwitch: enabled });
+export function setClaudeAccountsAutoSwitch(enabled: boolean): Promise<void> {
+  return changeAccounts(async () => {
+    const state = await readClaudeAccounts();
+    if (state.autoSwitch !== enabled)
+      await writeClaudeAccounts({ ...state, autoSwitch: enabled });
+  });
 }
 
 /** The ActiveClaudeAccount host service on the desktop: the file's choice, read now. */
 export const activeAccountFromFile: ActiveClaudeAccountImpl = {
-  id: () => readClaudeAccounts().active,
+  id: async () => (await readClaudeAccounts()).active,
 };

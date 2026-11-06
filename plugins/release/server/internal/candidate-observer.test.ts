@@ -42,8 +42,8 @@ function fakeSources() {
   };
   const observer = createCandidateObserver({
     headSha: async () => "head",
-    bundleSignature: () => "bundle",
-    resolve: () => {
+    bundleSignature: async () => "bundle",
+    resolve: async () => {
       state.resolveCalls++;
       return state.resolution;
     },

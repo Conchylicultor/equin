@@ -1,3 +1,4 @@
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { namespaceArgv } from "@plugins/infra/plugins/runtime-identity/core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { pathToFileURL } from "node:url";
@@ -54,7 +55,7 @@ export interface WorkerFrameHandlers {
   onClear: (frame: Extract<WorkerToMainFrame, { type: "clear" }>) => void;
   onLog: (line: string, stream?: "stdout" | "stderr") => void;
   /** Every supervision transition, in order, starting with `starting`. */
-  onStatus: (status: SentinelStatus) => void;
+  onStatus: (status: SentinelStatus) => Promise<void>;
 }
 
 /** What the worker is configured with; `cadenceMs` applies at spawn only. */
@@ -205,7 +206,14 @@ export function startSentinelWorker(opts: SentinelWorkerOptions): void {
       await acked;
       if (ackTimer) clearTimeout(ackTimer);
     },
-    onState: (t) => s.handlers.onStatus(toStatus(t)),
+    // Fire-and-forget by design: the sink orders its own writes, and a failed
+    // write must surface as an unhandled rejection, as the sync throw did.
+    onState: (t) => {
+      // Started now (the handler sees every transition in order), tracked as
+      // detached work until its write lands.
+      const written = s.handlers.onStatus(toStatus(t));
+      void runTracked("sentinel.status-write", () => written);
+    },
     onLog: (line) => s.handlers.onLog(line, "stderr"),
   });
 }

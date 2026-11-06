@@ -7,7 +7,7 @@ import { defineHostService } from "@plugins/framework/plugins/server-core/core";
  */
 export interface ActiveClaudeAccountImpl {
   /** The active account's id (`SYSTEM_ACCOUNT_ID` or a token account's). */
-  id(): string;
+  id(): Promise<string>;
 }
 
 export const ActiveClaudeAccount = defineHostService<ActiveClaudeAccountImpl>(
@@ -15,6 +15,6 @@ export const ActiveClaudeAccount = defineHostService<ActiveClaudeAccountImpl>(
 );
 
 /** The account new sessions run on, read now. */
-export function activeClaudeAccountId(): string {
+export function activeClaudeAccountId(): Promise<string> {
   return ActiveClaudeAccount.get().id();
 }

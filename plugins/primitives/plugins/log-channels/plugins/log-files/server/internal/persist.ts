@@ -3,12 +3,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { z } from "zod";
-import { fstatSync, readSync } from "node:fs";
-import {
-  openOwnedFd,
-  type OwnedFd,
-} from "@plugins/packages/plugins/owned-fd/core";
-import { readdirSync } from "@plugins/packages/plugins/timed-fs/core";
+import { readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { open } from "node:fs/promises";
 import { sanitizeChannel } from "@plugins/infra/plugins/file-sink/core";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
@@ -47,10 +42,10 @@ const READ_TAIL_BYTES = 8 * 1024 * 1024;
 // reading another worktree's files just works — like query_db reaching any
 // worktree DB.
 
-export function listChannelsInDir(dir: AppPath): string[] {
+export async function listChannelsInDir(dir: AppPath): Promise<string[]> {
   let names: string[];
   try {
-    names = readdirSync(dir);
+    names = await readdir(dir);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
@@ -61,7 +56,7 @@ export function listChannelsInDir(dir: AppPath): string[] {
     .map((n) => n.slice(0, -".jsonl".length));
 }
 
-export function listChannels(worktree: string): string[] {
+export function listChannels(worktree: string): Promise<string[]> {
   return listChannelsInDir(logsDirFor(worktree));
 }
 
@@ -73,46 +68,6 @@ function tryParseEntry(
   } catch (err) {
     if (err instanceof SyntaxError) return null;
     throw err;
-  }
-}
-
-// Bounded tail read: pull at most the last READ_TAIL_BYTES off disk via a
-// positioned read, so even a full (≤128 MB) live file is never materialized
-// whole in memory. When we didn't start at offset 0 the first line is (probably)
-// partial — drop it. Rotated history (`channel.jsonl.N`) is intentionally NOT
-// stitched in: `tail` is a recent-lines request and rotated files are cold; the
-// live file's tail is the contract.
-export function readTail(
-  file: AppPath,
-  tail: number,
-): { t: number; stream?: LogStream; line: string }[] | null {
-  let owned: OwnedFd;
-  try {
-    owned = openOwnedFd(file, "r");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
-  }
-  try {
-    const size = fstatSync(owned.fd).size;
-    const start = Math.max(0, size - READ_TAIL_BYTES);
-    const length = size - start;
-    const buf = Buffer.allocUnsafe(length);
-    let offset = 0;
-    while (offset < length) {
-      const read = readSync(
-        owned.fd,
-        buf,
-        offset,
-        length - offset,
-        start + offset,
-      );
-      if (read === 0) break;
-      offset += read;
-    }
-    return parseTail(buf.toString("utf8", 0, offset), start > 0, tail);
-  } finally {
-    owned.close();
   }
 }
 
@@ -137,11 +92,15 @@ function parseTail(
   return entries.slice(-tail);
 }
 
-// `readTail` without blocking the event loop: the same bounded positioned read,
-// through `fs/promises`. For a caller on a hot async path (a live-resource
-// loader re-reading many files), where a sync read would freeze every other
-// loader, socket send and request for its whole duration.
-export async function readTailAsync(
+// Bounded tail read: pull at most the last READ_TAIL_BYTES off disk via a
+// positioned read, so even a full (≤128 MB) live file is never materialized
+// whole in memory. When we didn't start at offset 0 the first line is (probably)
+// partial — drop it. Rotated history (`channel.jsonl.N`) is intentionally NOT
+// stitched in: `tail` is a recent-lines request and rotated files are cold; the
+// live file's tail is the contract. Async, so a slow disk never freezes the
+// backend's thread (4–7 s `openSync` / `readSync` stalls on main when it was
+// sync).
+export async function readTail(
   file: AppPath,
   tail: number,
 ): Promise<{ t: number; stream?: LogStream; line: string }[] | null> {
@@ -178,7 +137,7 @@ export function readChannelEntries(
   worktree: string,
   channel: string,
   tail: number,
-): { t: number; stream?: LogStream; line: string }[] | null {
+): Promise<{ t: number; stream?: LogStream; line: string }[] | null> {
   return readTail(channelFile(worktree, channel), tail);
 }
 
@@ -197,24 +156,14 @@ function channelFile(worktree: string, channel: string): AppPath {
 // that exists but holds no valid lines. Callers that must tell "no channel yet"
 // apart from "channel present but empty" should use `readChannelEntries` directly
 // (it returns `null` for a missing file).
-export function readChannelJson<T>(
-  worktree: string,
-  channel: string,
-  tail: number,
-  schema: z.ZodType<T>,
-): T[] {
-  return parseJsonEntries(readChannelEntries(worktree, channel, tail), schema);
-}
-
-// `readChannelJson` without blocking the event loop (see `readTailAsync`).
-export async function readChannelJsonAsync<T>(
+export async function readChannelJson<T>(
   worktree: string,
   channel: string,
   tail: number,
   schema: z.ZodType<T>,
 ): Promise<T[]> {
   return parseJsonEntries(
-    await readTailAsync(channelFile(worktree, channel), tail),
+    await readChannelEntries(worktree, channel, tail),
     schema,
   );
 }

@@ -2,10 +2,38 @@ import type { ConfigDescriptor } from "./types";
 import type { JsonValue } from "./types";
 import type { FieldsRecord } from "@plugins/fields/core";
 
+/** One config file's parsed content: its document and the `// @hash` it records. */
+export interface ConfigFileContent {
+  content: JsonValue;
+  hash: string | null;
+}
+
 export interface ConfigProxy {
-  read(): { content: JsonValue; hash: string | null } | null;
+  read(): ConfigFileContent | null;
   write(content: JsonValue, hash: string | null): void;
   exists(): boolean;
+}
+
+/**
+ * A file already read (`ConfigStoreImpl.read`), as the tier cascade reads it:
+ * `exists` and `read` answer from the one read, so every question the cascade
+ * asks about the file is answered from the same content. Read-only — a write
+ * goes through the store.
+ */
+export function loadedProxy(data: ConfigFileContent | null): ConfigProxy {
+  return {
+    read() {
+      return data;
+    },
+    write() {
+      throw new Error(
+        "loadedProxy is read-only — write through the config store",
+      );
+    },
+    exists() {
+      return data !== null;
+    },
+  };
 }
 
 // Pure JS hash — not cryptographic, just for config change detection.

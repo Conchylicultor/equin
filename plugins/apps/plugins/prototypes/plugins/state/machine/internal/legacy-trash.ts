@@ -2,12 +2,8 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { renameSync } from "node:fs";
-import {
-  existsSync,
-  readdirSync,
-  statSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { rename } from "node:fs/promises";
+import { exists, readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
@@ -41,17 +37,17 @@ const TRASH_DIR = "_trash";
  */
 export async function adoptLegacyTrash(root: AppPath): Promise<void> {
   const trash = joinAppPath(root, TRASH_DIR);
-  if (!existsSync(trash)) return;
-  for (const entry of readdirSync(trash, { withFileTypes: true })) {
+  if (!(await exists(trash))) return;
+  for (const entry of await readdir(trash, { withFileTypes: true })) {
     if (!entry.isDirectory() || !protoIdKind.is(entry.name)) continue;
     const from = joinAppPath(trash, entry.name);
     const to = joinAppPath(root, entry.name);
-    if (existsSync(to)) {
+    if (await exists(to)) {
       throw new Error(
         `prototype ${entry.name} is both in the old trash (${from}) and live (${to}); move one aside by hand`,
       );
     }
-    const deletedAt = statSync(from).ctime;
+    const deletedAt = (await stat(from)).ctime;
     await db
       .insert(_prototypeState)
       .values({ id: entry.name, deletedAt })
@@ -61,7 +57,7 @@ export async function adoptLegacyTrash(root: AppPath): Promise<void> {
           deletedAt: sql`COALESCE(${_prototypeState.deletedAt}, excluded.deleted_at)`,
         },
       });
-    renameSync(from, to);
+    await rename(from, to);
   }
 }
 

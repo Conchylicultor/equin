@@ -17,8 +17,8 @@ import { mintTestDbName } from "@plugins/database/plugins/db-test-fixture/core/t
 
 const source = mintTestDbName("forkpt_src", process.pid, Date.now());
 const target = mintTestDbName("forkpt_dst", process.pid, Date.now());
-const sourcePool = openShortLivedClient(source);
-const targetPool = openShortLivedClient(target);
+const sourcePool = await openShortLivedClient(source);
+const targetPool = await openShortLivedClient(target);
 const sourceDb = drizzle(sourcePool);
 const targetDb = drizzle(targetPool);
 

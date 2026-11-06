@@ -63,7 +63,7 @@ Pass \`database\` to target a different worktree (e.g. "att-1778089188-7uvf", or
       throw new Error(`Database not found: "${dbName}"`);
     }
 
-    const pool = openShortLivedClient(dbName);
+    const pool = await openShortLivedClient(dbName);
     try {
       const client = await pool.connect();
       try {

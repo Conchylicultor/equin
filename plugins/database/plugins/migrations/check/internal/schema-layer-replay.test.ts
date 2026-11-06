@@ -49,7 +49,7 @@ test("the whole data/ directory plus the real derived layer applies from scratch
 
   const result = await applySchemaLayer(
     t.db,
-    listMigrationFiles(MIGRATIONS_DIR),
+    await listMigrationFiles(MIGRATIONS_DIR),
     inputs,
     {
       commit: true,
@@ -74,10 +74,15 @@ test("the whole data/ directory plus the real derived layer applies from scratch
   // A second boot over the result finds nothing to do: no migration, no
   // rollup definition, and a reconcile that heals nothing.
   expect(
-    await applySchemaLayer(t.db, listMigrationFiles(MIGRATIONS_DIR), inputs, {
-      commit: true,
-      deferContract: false,
-    }),
+    await applySchemaLayer(
+      t.db,
+      await listMigrationFiles(MIGRATIONS_DIR),
+      inputs,
+      {
+        commit: true,
+        deferContract: false,
+      },
+    ),
   ).toEqual({
     pending: 0,
     rollups: inputs.derivedTables

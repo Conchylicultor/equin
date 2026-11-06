@@ -395,17 +395,17 @@ async function runLeg(
 }
 
 /** Say how a leg ended on the `deploy` channel, and answer the sequence. */
-function announceLeg(
+async function announceLeg(
   run: OpenRun,
   leg: DeployLeg,
   legId: string,
   terminal: RunTerminal,
-): LegResult {
+): Promise<LegResult> {
   const ending: VerbEnding = {
     verb: leg,
     exitCode: terminal.exitCode,
     signalCode: terminal.signalCode,
-    lines: readTranscriptTail(legId),
+    lines: await readTranscriptTail(legId),
   };
   if (verbSucceeded(ending)) {
     deployLog.publish(`[done] deploy ${leg} ${run.compositionId}`);
@@ -456,7 +456,7 @@ async function decideBuild(
   composition: string,
   platform: PlatformTag,
 ): Promise<{ build: boolean }> {
-  const existing = resolveBundle({
+  const existing = await resolveBundle({
     namespace: runtimeNamespace(),
     composition,
     platform,
@@ -494,8 +494,11 @@ type PinResult =
     }
   | { readonly ok: false; readonly message: string };
 
-function pinBundle(composition: string, platform: PlatformTag): PinResult {
-  const pinned = resolveBundle({
+async function pinBundle(
+  composition: string,
+  platform: PlatformTag,
+): Promise<PinResult> {
+  const pinned = await resolveBundle({
     namespace: runtimeNamespace(),
     composition,
     platform,

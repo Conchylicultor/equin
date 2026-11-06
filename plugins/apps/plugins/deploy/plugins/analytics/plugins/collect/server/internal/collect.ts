@@ -40,15 +40,18 @@ export interface CollectContext {
  * Which country an IP is in. The route passes the machine's DB-IP lookup
  * (`lookupCountry`); a test passes one over its own snapshot fixture.
  */
-export type CountryLookup = (ip: string) => IpCountryResult;
+export type CountryLookup = (ip: string) => Promise<IpCountryResult>;
 
 /**
  * The stored country for a new visit: the code when the lookup found one,
  * otherwise null — an unlisted address and "no snapshot downloaded yet" both
  * read as `(none)` in the report.
  */
-function countryOf(lookupCountry: CountryLookup, ip: string): string | null {
-  const result = lookupCountry(ip);
+async function countryOf(
+  lookupCountry: CountryLookup,
+  ip: string,
+): Promise<string | null> {
+  const result = await lookupCountry(ip);
   return result.kind === "found" ? result.country : null;
 }
 
@@ -267,7 +270,7 @@ async function openVisit(
       utmCampaign: opts.utm?.campaign ?? null,
       // Looked up once, when the visit opens: a hit joining a live visit keeps
       // its country, like device and entry page. The IP itself is not stored.
-      country: countryOf(opts.lookupCountry, ctx.ip),
+      country: await countryOf(opts.lookupCountry, ctx.ip),
       language: primaryLanguage(ctx.acceptLanguage),
       ...parseUserAgent(ctx.userAgent),
     })

@@ -1,7 +1,4 @@
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { ipCountryCache } from "../../data-dirs";
 import { loadSnapshot, lookupIn, type Snapshot } from "./snapshot";
@@ -21,20 +18,19 @@ export type IpCountryResult =
   | { kind: "unavailable" };
 
 export interface IpCountryLookup {
-  lookup(ip: string): IpCountryResult;
+  lookup(ip: string): Promise<IpCountryResult>;
   /** Drop what is in memory; the next lookup reads the file again. */
   reload(): void;
 }
 
 type Held =
-  | { kind: "unread" }
   | { kind: "missing" }
   | { kind: "loaded"; snapshot: Snapshot }
   | { kind: "broken"; error: unknown };
 
 /**
  * A lookup over the snapshot file at `snapshotPath()`, read lazily on the first
- * lookup (one synchronous ~16 MB read) and then held in memory. A process that
+ * lookup (one ~16 MB read, shared by lookups that arrive while it runs) and then held in memory. A process that
  * never looks anything up never reads it.
  *
  * A snapshot that fails to load is remembered and its error rethrown on every
@@ -44,32 +40,31 @@ type Held =
 export function createIpCountryLookup(
   snapshotPath: () => AppPath,
 ): IpCountryLookup {
-  let held: Held = { kind: "unread" };
-  const read = (): Held => {
+  let held: Promise<Held> | undefined;
+  const read = async (): Promise<Held> => {
     const path = snapshotPath();
-    if (!existsSync(path)) return { kind: "missing" };
+    if (!(await exists(path))) return { kind: "missing" };
     try {
-      return { kind: "loaded", snapshot: loadSnapshot(readFileSync(path)) };
+      return { kind: "loaded", snapshot: loadSnapshot(await readFile(path)) };
     } catch (error) {
       return { kind: "broken", error };
     }
   };
   return {
-    lookup(ip) {
-      if (held.kind === "unread") held = read();
-      switch (held.kind) {
+    async lookup(ip) {
+      held ??= read();
+      const state = await held;
+      switch (state.kind) {
         case "missing":
           return { kind: "unavailable" };
         case "broken":
-          throw held.error;
+          throw state.error;
         case "loaded":
-          return lookupIn(held.snapshot, ip);
-        case "unread":
-          throw new Error("ip-country: snapshot still unread after reading it");
+          return lookupIn(state.snapshot, ip);
       }
     },
     reload() {
-      held = { kind: "unread" };
+      held = undefined;
     },
   };
 }
@@ -82,7 +77,7 @@ export function defaultSnapshotPath(): AppPath {
 const defaultLookup = createIpCountryLookup(defaultSnapshotPath);
 
 /** Which country `ip` is in, from this machine's downloaded DB-IP snapshot. */
-export function lookupCountry(ip: string): IpCountryResult {
+export function lookupCountry(ip: string): Promise<IpCountryResult> {
   return defaultLookup.lookup(ip);
 }
 

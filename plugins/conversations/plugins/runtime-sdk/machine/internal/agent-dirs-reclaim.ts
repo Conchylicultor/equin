@@ -207,7 +207,7 @@ async function removeAgentDir(
   recheck?: Recheck,
 ): Promise<void> {
   const pidFile = joinAppPath(roots.pidsRoot, ns, `${id}.pid`);
-  if (agentMayRun(pidFile)) {
+  if (await agentMayRun(pidFile)) {
     out.live++;
     return;
   }
@@ -241,8 +241,8 @@ async function removeEmptyNamespace(
  * be read (being written as it starts). A pid since reused by another process
  * only keeps the directory until the next pass.
  */
-function agentMayRun(pidFile: AppPath): boolean {
-  const read = readPidFile(pidFile);
+async function agentMayRun(pidFile: AppPath): Promise<boolean> {
+  const read = await readPidFile(pidFile);
   if (read.kind === "absent") return false;
   if (read.kind === "unreadable") return true;
   return pidAlive(read.pid);

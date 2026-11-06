@@ -41,11 +41,12 @@ export type {
   ConfigV2ConflictMap,
   ConfigV2ModifiedCounts,
 } from "./internal/resource";
-export type { ConfigProxy } from "./internal/config-proxy";
+export type { ConfigFileContent, ConfigProxy } from "./internal/config-proxy";
 export {
   computeHash,
   stringifyConfigValue,
   codeConfigProxy,
+  loadedProxy,
   readonlyProxy,
 } from "./internal/config-proxy";
 export {

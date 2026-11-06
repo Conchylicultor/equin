@@ -1,11 +1,13 @@
-import { mkdirSync, renameSync, writeFileSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import {
   worktreeArtifacts,
   worktreesDir,
 } from "@plugins/infra/plugins/paths/server";
+
+/** Per-process staging-name counter: two spec writes in flight never share a temp file. */
+let specSeq = 0;
 
 export interface WorktreeSpec {
   /** Namespace = subdomain = the backend's `--namespace`. Spec dir basename. */
@@ -61,13 +63,13 @@ export interface WorktreeSpec {
  * already composition-filtered; the `server` tree is shared, so the backend is
  * TOLD which registry to load rather than left to find one.
  */
-export function writeWorktreeSpec({
+export async function writeWorktreeSpec({
   name,
   server,
   web,
   command,
   composition,
-}: WorktreeSpec): string {
+}: WorktreeSpec): Promise<string> {
   // The path comes from `paths` (`worktreeArtifacts.spec`), not from a join
   // here: the backend this spec spawns reads the same file back at boot
   // (`server-core/bin/spec-composition.ts`), so the name has more than one
@@ -76,7 +78,7 @@ export function writeWorktreeSpec({
   // namespace by contract, and a malformed one would mint a spec dir the
   // gateway can never route to.
   const path = worktreeArtifacts.spec(asNamespace(name));
-  mkdirSync(dirname(path), { recursive: true });
+  await mkdir(dirname(path), { recursive: true });
   // Build the spec object additively so absent keys are omitted entirely (no
   // `web`/`command` when unset), since the gateway treats a missing `command` as
   // "use the bun bin/index.ts convention".
@@ -94,9 +96,9 @@ export function writeWorktreeSpec({
   // resolve — never observes a truncated/partial spec.json and skips
   // registration. rename(2) within one filesystem is atomic, so every read sees
   // either the old complete file or the new complete file, never a torn write.
-  const tmp = `${path}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(spec, null, 2) + "\n");
-  renameSync(tmp, path);
+  const tmp = `${path}.${process.pid}.${String(++specSeq)}.tmp`;
+  await writeFile(tmp, JSON.stringify(spec, null, 2) + "\n");
+  await rename(tmp, path);
   return path;
 }
 

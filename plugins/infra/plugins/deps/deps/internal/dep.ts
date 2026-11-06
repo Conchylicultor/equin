@@ -82,11 +82,13 @@ export interface DepSource<K extends string = string> {
   /**
    * Whether an installed payload is still whole — for a payload that points
    * outside itself (a venv's `bin/python` is a symlink into uv's managed
-   * Pythons, a reclaimable cache). Cheap and synchronous: it runs on every
-   * `ensureDep` fast path and every state read. An install that is no longer
+   * Pythons, a reclaimable cache). Cheap — it runs on every
+   * `ensureDep` fast path and every state read — and it never blocks the
+   * thread: a probe of the disk is async (a plain answer is fine when it
+   * needs none). An install that is no longer
    * intact reads as `absent` and is installed again. Omitted: always intact.
    */
-  isIntact?(dir: AppPath): boolean;
+  isIntact?(dir: AppPath): boolean | Promise<boolean>;
   /**
    * How the install is admitted to the host. Omitted: under the caller's
    * `exec.admit` (one background unit of `withHostGrant`), so a big install

@@ -1,8 +1,5 @@
-import { renameSync, writeFileSync } from "node:fs";
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { rename, writeFile } from "node:fs/promises";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { createReadStream } from "node:fs";
 import { createGunzip, gunzipSync, gzipSync } from "node:zlib";
 import { JSONParser } from "@streamparser/json";
@@ -65,7 +62,7 @@ export type SnapshotHooks = {
  */
 export async function ensureSnapshot(hooks: SnapshotHooks): Promise<AppPath> {
   const path = snapshotPath();
-  if (existsSync(path)) return path;
+  if (await exists(path)) return path;
 
   songIndexArea.ensure();
   const lock = openOwnedFd(songIndexArea.file("snapshot.lock"), "a");
@@ -75,7 +72,7 @@ export async function ensureSnapshot(hooks: SnapshotHooks): Promise<AppPath> {
       await hooks.onPhase("building-snapshot");
       while (!flockTry(lock.fd)) await Bun.sleep(LOCK_RETRY_MS);
     }
-    if (existsSync(path)) return path;
+    if (await exists(path)) return path;
 
     if ((await readyNow(sheetSageDumps)).kind !== "ready") {
       await hooks.onPhase("downloading");
@@ -157,7 +154,9 @@ export async function buildSnapshot(args: {
   const processed = z
     .record(z.string(), ProcessedSectionSchema)
     .parse(
-      JSON.parse(gunzipSync(readFileSync(args.processedPath)).toString("utf8")),
+      JSON.parse(
+        gunzipSync(await readFile(args.processedPath)).toString("utf8"),
+      ),
     );
   const unpaired = new Set(Object.keys(processed));
   args.log(`processed file: ${unpaired.size} sections`);
@@ -209,8 +208,8 @@ export async function buildSnapshot(args: {
   const gz = gzipSync(`${lines.join("\n")}\n`);
   const tmp = `${args.outPath}.tmp-${process.pid}`;
   songIndexArea.ensure();
-  writeFileSync(tmp, gz);
-  renameSync(tmp, args.outPath);
+  await writeFile(tmp, gz);
+  await rename(tmp, args.outPath);
   const skipped = lines.length - sections;
   return {
     sections,
@@ -285,10 +284,10 @@ export function snapshotLine(
 // ── Reading ──────────────────────────────────────────────────────────────────
 
 /** The file's non-empty lines with their numbers, gunzipped in one go (8.7 MB → 115 MB). */
-function* snapshotTextLines(
+async function* snapshotTextLines(
   path: AppPath,
-): Generator<{ lineNo: number; text: string }> {
-  const text = gunzipSync(readFileSync(path)).toString("utf8");
+): AsyncGenerator<{ lineNo: number; text: string }> {
+  const text = gunzipSync(await readFile(path)).toString("utf8");
   let lineNo = 0;
   for (const line of text.split("\n")) {
     lineNo++;
@@ -315,8 +314,10 @@ function lineError(
  * Every line of a snapshot, parsed. The whole file is small (8.7 MB gzipped),
  * so it is read in one go; a line that does not parse throws naming its number.
  */
-export function* readSnapshot(path: AppPath): Generator<SnapshotLine> {
-  for (const { lineNo, text } of snapshotTextLines(path)) {
+export async function* readSnapshot(
+  path: AppPath,
+): AsyncGenerator<SnapshotLine> {
+  for await (const { lineNo, text } of snapshotTextLines(path)) {
     const parsed = SnapshotLineSchema.safeParse(JSON.parse(text));
     if (!parsed.success)
       throw lineError(path, lineNo, parsed.error, "a snapshot line");
@@ -342,8 +343,10 @@ const SnapshotHeadSchema = z.object({
 export type SnapshotHead = z.infer<typeof SnapshotHeadSchema>;
 
 /** Every line's head, in file order. Agrees with `readSnapshot` line for line. */
-export function* readSnapshotHeads(path: AppPath): Generator<SnapshotHead> {
-  for (const { lineNo, text } of snapshotTextLines(path)) {
+export async function* readSnapshotHeads(
+  path: AppPath,
+): AsyncGenerator<SnapshotHead> {
+  for await (const { lineNo, text } of snapshotTextLines(path)) {
     const parsed = SnapshotHeadSchema.safeParse(JSON.parse(text));
     if (!parsed.success) {
       throw lineError(path, lineNo, parsed.error, "a snapshot line head");

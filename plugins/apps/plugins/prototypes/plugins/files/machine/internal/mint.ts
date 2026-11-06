@@ -2,7 +2,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { replaceElementText } from "@plugins/infra/plugins/html-decode/core";
 import {
   copyTree,
@@ -127,7 +127,7 @@ async function templateDir(): Promise<AppPath> {
     "prototypes",
     TEMPLATE_DIR_NAME,
   );
-  if (!existsSync(dir)) {
+  if (!(await exists(dir))) {
     throw new Error(`no prototype template to copy: ${dir} does not exist`);
   }
   return dir;

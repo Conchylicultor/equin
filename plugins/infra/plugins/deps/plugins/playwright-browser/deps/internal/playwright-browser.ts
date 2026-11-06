@@ -1,5 +1,5 @@
-import { mkdirSync } from "node:fs";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir } from "node:fs/promises";
+import { readFile, realpath } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join, relative, resolve } from "node:path";
 import type {
   Browser,
@@ -54,21 +54,47 @@ interface ResolvedPlaywright {
 }
 
 /**
+ * The real directory of package `name` as module resolution from `from` finds
+ * it: the first `node_modules/<name>/package.json` walking up from `from`,
+ * symlinks resolved (bun's isolated store links each package in, and a
+ * package's own dependencies sit beside its real directory). Async: this runs
+ * on a backend's thread, and `Bun.resolveSync` stats its way up the same chain
+ * synchronously — a 4.4 s stall on main (Bun documents its async
+ * `Bun.resolve` as the same work).
+ */
+async function resolvePackageDir(name: string, from: string): Promise<string> {
+  for (let dir = from; ; dir = dirname(dir)) {
+    try {
+      return dirname(
+        await realpath(join(dir, "node_modules", name, "package.json")),
+      );
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT" && code !== "ENOTDIR") throw err;
+    }
+    if (dirname(dir) === dir)
+      throw new Error(`Cannot find package '${name}' from ${from}`);
+  }
+}
+
+/**
  * Resolve the workspace's own Playwright through the module graph of this
- * plugin in `root` — `Bun.resolveSync`, exactly as `import("playwright")`
- * resolves. Never a package-runner spelling (`bunx`/`npx`): one of those
- * resolves outside the workspace and can fall back to registry `latest`,
- * installing a revision nothing here launches
+ * plugin in `root` — the `node_modules` walk `import("playwright")` does
+ * (`resolvePackageDir`), and `playwright-core`'s `exports` map for its
+ * registry bundle. Never a package-runner spelling (`bunx`/`npx`): one of
+ * those resolves outside the workspace and can fall back to registry
+ * `latest`, installing a revision nothing here launches
  * (`e2e-harness:pinned-playwright-invocation` keeps them out of the tree).
  *
  * Throws when it cannot be resolved: the identity is then underivable and the
  * dependency reads `failed`, never `absent`.
  */
-export function resolvePlaywright(root: string): ResolvedPlaywright {
-  const from = join(root, KIND_REL);
-  const pkgPath = Bun.resolveSync("playwright/package.json", from);
-  const pkgDir = dirname(pkgPath);
-  const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
+export async function resolvePlaywright(
+  root: string,
+): Promise<ResolvedPlaywright> {
+  const pkgDir = await resolvePackageDir("playwright", join(root, KIND_REL));
+  const pkgPath = join(pkgDir, "package.json");
+  const pkg = JSON.parse(await readFile(pkgPath, "utf8")) as {
     bin?: { playwright?: string };
   };
   const bin = pkg.bin?.playwright;
@@ -79,17 +105,25 @@ export function resolvePlaywright(root: string): ResolvedPlaywright {
   }
   // playwright-core is playwright's own nested dependency, so it is resolved
   // from playwright's directory, not from the repo root.
-  const corePkgPath = Bun.resolveSync("playwright-core/package.json", pkgDir);
-  const core = JSON.parse(readFileSync(corePkgPath, "utf8")) as {
+  const coreDir = await resolvePackageDir("playwright-core", pkgDir);
+  const corePkgPath = join(coreDir, "package.json");
+  const core = JSON.parse(await readFile(corePkgPath, "utf8")) as {
     version?: string;
+    exports?: Record<string, unknown>;
   };
   if (!core.version) {
     throw new Error(`${corePkgPath} declares no \`version\`.`);
   }
+  const coreBundle = core.exports?.["./lib/coreBundle"];
+  if (typeof coreBundle !== "string") {
+    throw new Error(
+      `${corePkgPath} exports no \`./lib/coreBundle\` file — cannot ask Playwright's registry for the executables.`,
+    );
+  }
   return {
     cli: join(pkgDir, bin),
     coreVersion: core.version,
-    coreBundle: Bun.resolveSync("playwright-core/lib/coreBundle", pkgDir),
+    coreBundle: join(coreDir, coreBundle),
   };
 }
 
@@ -133,7 +167,7 @@ export function playwrightBrowser(opts: {
     browser,
 
     async identityInputs(root) {
-      const { coreVersion } = resolvePlaywright(root);
+      const { coreVersion } = await resolvePlaywright(root);
       return {
         browser,
         playwrightCore: coreVersion,
@@ -142,8 +176,8 @@ export function playwrightBrowser(opts: {
     },
 
     async install(ctx: InstallContext) {
-      const pw = resolvePlaywright(ctx.root);
-      mkdirSync(ctx.dir, { recursive: true });
+      const pw = await resolvePlaywright(ctx.root);
+      await mkdir(ctx.dir, { recursive: true });
       // The installer's own env, pointed at this install. `process.execPath`
       // + the resolved CLI, never a package runner: see `resolvePlaywright`.
       const env = { ...process.env, PLAYWRIGHT_BROWSERS_PATH: ctx.dir };

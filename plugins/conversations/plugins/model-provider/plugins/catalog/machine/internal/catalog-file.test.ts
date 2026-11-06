@@ -19,17 +19,17 @@ const dir = mkdtempSync(join(tmpdir(), "sg-model-catalog-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 describe("the catalog file", () => {
-  test("absent reads as the baseline", () => {
+  test("absent reads as the baseline", async () => {
     const file = asAppPath(join(dir, "absent", "catalog.json"));
-    expect(readCatalogFile(file)).toEqual({ kind: "absent" });
-    expect(catalogFromFile(file)).toBe(BASELINE_MODELS);
+    expect(await readCatalogFile(file)).toEqual({ kind: "absent" });
+    expect(await catalogFromFile(file)).toBe(BASELINE_MODELS);
   });
 
-  test("an unreadable file throws rather than forgetting what it held", () => {
+  test("an unreadable file throws rather than forgetting what it held", async () => {
     const file = asAppPath(join(dir, "bad.json"));
     writeFileSync(file, '{"versions": "nope"}');
-    expect(readCatalogFile(file).kind).toBe("invalid");
-    expect(() => catalogFromFile(file)).toThrow(ModelCatalogUnreadableError);
+    expect((await readCatalogFile(file)).kind).toBe("invalid");
+    expect(catalogFromFile(file)).rejects.toThrow(ModelCatalogUnreadableError);
   });
 
   test("a written catalog round-trips, into a directory that did not exist", async () => {
@@ -48,6 +48,6 @@ describe("the catalog file", () => {
       cliVersion: "2.2.0",
     };
     await writeCatalogFile(file, catalog);
-    expect(catalogFromFile(file)).toEqual(catalog);
+    expect(await catalogFromFile(file)).toEqual(catalog);
   });
 });

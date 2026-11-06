@@ -1,5 +1,5 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { rmSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { z } from "zod";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
@@ -71,7 +71,7 @@ export async function requestBeatFeatures(
   if (!force && state.kind === "ready") return state;
   if (!force && state.kind === "failed" && state.permanent) return state;
   if (force)
-    rmSync(featurePaths(cacheRoot(opts.dir), id, settings).failed, {
+    await rm(featurePaths(cacheRoot(opts.dir), id, settings).failed, {
       force: true,
     });
   await beatFeaturesJob.enqueue({ videoId: id, force, settings, device });

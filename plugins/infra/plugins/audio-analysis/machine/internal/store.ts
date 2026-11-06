@@ -3,12 +3,12 @@ import {
   asAppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdirSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import {
   openOwnedFd,
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import {
@@ -58,8 +58,8 @@ export function featurePaths(
 // `running.json`, which reads as absent because nobody holds this.
 
 /** Take the lock without waiting: its held descriptor, or `null` when another holds it. */
-export function tryLock(path: AppPath): OwnedFd | null {
-  mkdirSync(asAppPath(dirname(path)), { recursive: true });
+export async function tryLock(path: AppPath): Promise<OwnedFd | null> {
+  await mkdir(asAppPath(dirname(path)), { recursive: true });
   const owned = openOwnedFd(path, "a");
   if (flockTry(owned.fd)) return owned;
   owned.close();
@@ -84,19 +84,19 @@ export async function waitLock(
   path: AppPath,
   onWait: () => void | Promise<void>,
 ): Promise<OwnedFd> {
-  const first = tryLock(path);
+  const first = await tryLock(path);
   if (first !== null) return first;
   await onWait();
   for (;;) {
     await Bun.sleep(LOCK_RETRY_MS);
-    const fd = tryLock(path);
+    const fd = await tryLock(path);
     if (fd !== null) return fd;
   }
 }
 
 /** Whether some process holds the lock now: take it for an instant, release. */
-export function isLockHeld(path: AppPath): boolean {
-  if (!existsSync(path)) return false;
+export async function isLockHeld(path: AppPath): Promise<boolean> {
+  if (!(await exists(path))) return false;
   const fd = openOwnedFd(path, "a");
   try {
     return !flockTry(fd.fd);

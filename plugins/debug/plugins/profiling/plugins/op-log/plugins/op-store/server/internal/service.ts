@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import { basename, dirname } from "node:path";
 import { db } from "@plugins/database/server";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
@@ -84,7 +84,7 @@ export async function startOpStore(): Promise<void> {
   if (watcher) return;
   await passes.run();
   const dir = dirname(OP_LOG_FILE);
-  mkdirSync(dir, { recursive: true });
+  await mkdir(dir, { recursive: true });
   watcher = await opLogWatcher.start({
     dirs: [dir],
     onChange: (events) => {

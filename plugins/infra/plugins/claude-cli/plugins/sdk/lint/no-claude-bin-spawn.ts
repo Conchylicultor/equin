@@ -33,11 +33,12 @@ function calleeName(callee: TSESTree.Expression): string | null {
   return null;
 }
 
-/** `bundledClaudeBin()` (and a member read off it). */
+/** `bundledClaudeBin()` (awaited, and a member read off it). */
 function isBinLookup(node: TSESTree.Node | null | undefined): boolean {
   if (!node) return false;
   if (node.type === "MemberExpression") return isBinLookup(node.object);
   if (node.type === "TSNonNullExpression") return isBinLookup(node.expression);
+  if (node.type === "AwaitExpression") return isBinLookup(node.argument);
   return (
     node.type === "CallExpression" &&
     node.callee.type === "Identifier" &&

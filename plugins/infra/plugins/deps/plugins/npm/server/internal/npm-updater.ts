@@ -3,8 +3,8 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
@@ -100,7 +100,7 @@ const gitEnv = () => ({ ...process.env, GIT_TERMINAL_PROMPT: "0" });
  * throwaway bare repo: one round trip, a few KB.
  */
 async function fetchTagDate(repo: string, tag: string): Promise<string> {
-  const dir = mkdtempSync(join(tmpdir(), "deps-npm-tag-"));
+  const dir = await mkdtemp(join(tmpdir(), "deps-npm-tag-"));
   try {
     const git = async (argv: string[]): Promise<string> => {
       const r = await spawnCaptured(["git", "-C", dir, ...argv], {
@@ -135,7 +135,7 @@ async function fetchTagDate(repo: string, tag: string): Promise<string> {
       throw new Error(`${repo} tag ${tag}: no creation date (got "${date}").`);
     return new Date(t).toISOString();
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    await rm(dir, { recursive: true, force: true });
   }
 }
 
@@ -175,19 +175,19 @@ async function planNow(root: AppPath): Promise<{
 }
 
 /** Rewrite one dependency's spec in every package.json that declares it. */
-function rewriteSpecs(
+async function rewriteSpecs(
   root: AppPath,
   ws: Workspace,
   name: string,
   spec: (old: Workspace["declared"][number]) => string,
-): void {
+): Promise<void> {
   for (const d of ws.declared.filter((x) => x.name === name)) {
     const path = joinAppPath(root, d.manifest);
-    const text = readFileSync(path, "utf8");
+    const text = await readFile(path, "utf8");
     const from = `${JSON.stringify(d.name)}: ${JSON.stringify(d.raw)}`;
     if (!text.includes(from))
       throw new Error(`${d.manifest}: cannot find ${from} to rewrite.`);
-    writeFileSync(
+    await writeFile(
       path,
       text.replaceAll(
         from,
@@ -308,14 +308,16 @@ export const npmUpdater: Updater = {
   // moment, cooldown or not.
   async apply(root, moves, log) {
     const ws = await workspaceAt(root);
-    for (const { name, to } of moves) rewriteSpecs(root, ws, name, () => to);
+    for (const { name, to } of moves) {
+      await rewriteSpecs(root, ws, name, () => to);
+    }
     await bunInstall(root, log);
     const pinned = await workspaceAt(root);
     for (const { name, to } of moves) {
       const original = new Map(
         ws.declared.filter((d) => d.name === name).map((d) => [d.manifest, d]),
       );
-      rewriteSpecs(root, pinned, name, (d) => {
+      await rewriteSpecs(root, pinned, name, (d) => {
         const spec = original.get(d.manifest)?.spec;
         return spec?.kind === "range" ? rangeAt(spec, to) : `^${to}`;
       });

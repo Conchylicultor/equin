@@ -198,18 +198,29 @@ function vitalsRecord(
  * serves. A failed write is logged and never fails the tick: the latch below
  * is what this thread exists for, and the row shows a missing reading as stale.
  */
-function writeVitals(sample: ClusterSample, t: DetectorThresholds): void {
+let vitalsWriting = false;
+
+async function writeVitals(
+  sample: ClusterSample,
+  t: DetectorThresholds,
+): Promise<void> {
+  // One write at a time (they share a temp file): a tick that finds the last
+  // write still in flight skips its reading — the row shows the newer one next.
+  if (vitalsWriting) return;
+  vitalsWriting = true;
   try {
-    writeSentinelVitals(
+    await writeSentinelVitals(
       sentinelStatusDir.path,
       vitalsRecord(sample, t, detector?.tripped ?? false),
     );
   } catch (err) {
     log(`vitals write failed: ${String(err)}`);
+  } finally {
+    vitalsWriting = false;
   }
 }
 
-function processSample(sample: ClusterSample): void {
+async function processSample(sample: ClusterSample): Promise<void> {
   if (!detector || !thresholds) return;
   // Best-effort mirror to main (ring + listeners). postMessage buffers while
   // main is wedged; the sample carries its own `wall`, so late delivery is
@@ -219,7 +230,7 @@ function processSample(sample: ClusterSample): void {
   const t = thresholds;
   applyDetector(detector.feed(sample, t, cadenceMs), sample);
   // After the latch work, so the file's trip state is this tick's outcome.
-  writeVitals(sample, t);
+  await writeVitals(sample, t);
 }
 
 /** The latch lifecycle for one detector outcome: set on trip, clear, or refresh. */
@@ -272,7 +283,7 @@ async function tick(): Promise<void> {
   if (!g) return;
   try {
     const sample = syntheticSample ?? (await g.gather());
-    processSample(sample);
+    await processSample(sample);
   } catch (err) {
     // A failing tick must not kill the interval, but it is never silent.
     log(`tick failed: ${String(err)}`);

@@ -19,7 +19,13 @@ import {
   type ImportedDescriptorResolver,
   type SourceFile,
 } from "@plugins/network/plugins/live/plugins/resource-vocabulary/core";
-import type { ResourceChanges, ResourceDef, ResourceFacetData } from "../core";
+import type {
+  DeferredRegisterCall,
+  ResourceChanges,
+  ResourceDef,
+  ResourceFacetData,
+  ResourcesRaw,
+} from "../core";
 import {
   asAppPath,
   type AppPath,
@@ -35,8 +41,9 @@ import {
 // the key at the register site, as a literal or as `<descriptor>.key`. The key is resolved
 // across files the way the `routes` facet resolves `[endpoint.route]` computed
 // keys: an extract-time
-// `name → descriptor` map, built over the serving plugin's own sources and, for
-// a descriptor imported from another plugin's barrel, over that plugin's.
+// `name → descriptor` map, built over the serving plugin's own sources; a
+// descriptor imported from another plugin's barrel is resolved in `relate`,
+// against that plugin's own map (see `parseResources`).
 //
 // WHICH NAMES COUNT IS NOT DECIDED HERE. This scanner used to keep its own list
 // of three factory names and three marker names, and the eager-tier generator
@@ -284,6 +291,48 @@ function depthAt(masked: string, at: number): number {
   return depth;
 }
 
+/** One register call found in a file, with the file's bindings and its location. */
+interface FoundRegisterCall {
+  marker: string;
+  argsText: string;
+  bindings: FileBindings;
+  where: { file: string; line: number };
+}
+
+/** Every register call in `files`, in file then source order. */
+function* registerCallsIn(files: SourceFile[]): Generator<FoundRegisterCall> {
+  for (const { path, src } of files) {
+    const bindings = parseFileBindings(src);
+    for (const marker of Object.keys(resourceRegisterMarkers)) {
+      if (!src.includes(marker)) continue; // cheap fast-path
+      for (const call of findMarkerCalls(src, marker)) {
+        yield {
+          marker,
+          argsText: call.argsText,
+          bindings,
+          where: { file: path, line: lineAt(src, call.index) },
+        };
+      }
+    }
+  }
+}
+
+/** `defs` minus any key already in `seen` (first one wins), recording the rest. */
+function pushUnseen(
+  out: ResourceDef[],
+  seen: Set<string>,
+  defs: ResourceDef[],
+): void {
+  for (const def of defs) {
+    if (seen.has(def.key)) continue;
+    seen.add(def.key);
+    out.push(def);
+  }
+}
+
+const byKey = (a: ResourceDef, b: ResourceDef): number =>
+  a.key.localeCompare(b.key);
+
 /** Parse every register call in `files` (one runtime), resolving keys via `index`. */
 export function parseRegisterCalls(
   files: SourceFile[],
@@ -292,28 +341,21 @@ export function parseRegisterCalls(
 ): ResourceDef[] {
   const out: ResourceDef[] = [];
   const seen = new Set<string>();
-  for (const { path, src } of files) {
-    const bindings = parseFileBindings(src);
-    for (const marker of Object.keys(resourceRegisterMarkers)) {
-      if (!src.includes(marker)) continue; // cheap fast-path
-      for (const call of findMarkerCalls(src, marker)) {
-        const defs = resolveRegisterCall(
-          marker,
-          call.argsText,
-          bindings,
-          index,
-          { file: path, line: lineAt(src, call.index) },
-          resolveImported,
-        );
-        for (const def of defs) {
-          if (seen.has(def.key)) continue;
-          seen.add(def.key);
-          out.push(def);
-        }
-      }
-    }
+  for (const c of registerCallsIn(files)) {
+    pushUnseen(
+      out,
+      seen,
+      resolveRegisterCall(
+        c.marker,
+        c.argsText,
+        c.bindings,
+        index,
+        c.where,
+        resolveImported,
+      ),
+    );
   }
-  return out.sort((a, b) => a.key.localeCompare(b.key));
+  return out.sort(byKey);
 }
 
 /** Read every file under `dir` as a `SourceFile`. */
@@ -329,66 +371,137 @@ function readPluginSources(dir: AppPath): SourceFile[] {
 }
 
 /**
- * Repo root of an absolute plugin dir — everything before its FIRST `plugins/`
- * segment, which is where a plugin's repo-relative path always starts. `null`
- * when `dir` has none (a test fixture under a temp dir), which disables
- * cross-plugin descriptor resolution rather than guessing at a root.
+ * Extract the server + central resources served by the plugin rooted at
+ * `pluginDir` (`relDir` from the repo root) — reading that plugin's files only.
+ * A resource served from `machine/` counts as a server resource: the desktop
+ * backend boots `server/` and `machine/` as one plugin graph, on one runtime.
+ *
+ * A register call naming a descriptor IMPORTED from another plugin's barrel
+ * (`@plugins/…`) is not resolved here — that would read the other plugin's
+ * files, which this plugin's record is not keyed by. It is recorded in
+ * `raw.imported` with the plugin's own descriptor index in
+ * `raw.descriptors`, and {@link resolveDeferredCalls} (the facet's `relate`)
+ * resolves it against the other plugin's. A descriptor imported by any other
+ * specifier resolves to nothing, and throws here as ever.
  */
-function repoRootOf(dir: string): string | null {
-  const marker = sep + "plugins" + sep;
-  const idx = dir.indexOf(marker);
-  return idx < 0 ? null : dir.slice(0, idx);
-}
-
-/** Extract the server + central resources served by the plugin rooted at `pluginDir`.
- *  A resource served from `machine/` counts as a server resource: the desktop
- *  backend boots `server/` and `machine/` as one plugin graph, on one runtime. */
-export function parseResources(pluginDir: string): ResourceFacetData {
+export function parseResources(
+  pluginDir: string,
+  relDir: string,
+): ResourceFacetData {
   const backendPrefixes = ["server", "machine"].map(
     (folder) => pluginDir + sep + folder + sep,
   );
   const centralPrefix = pluginDir + sep + "central" + sep;
 
   const all = readPluginSources(asAppPath(pluginDir));
-  const serverSources = all.filter((f) =>
-    backendPrefixes.some((prefix) => f.path.startsWith(prefix)),
-  );
-  const centralSources = all.filter((f) => f.path.startsWith(centralPrefix));
-
   const index = buildDescriptorIndex(all, {
     ownerPlugin: isResourceVocabularyOwner(pluginDir),
     lists: true,
   });
 
-  // Cross-plugin descriptors are rare (a handful repo-wide), so the other
-  // plugin's index is built ON DEMAND rather than cached: a module-level cache
-  // would outlive the build-scoped FS snapshot each extraction pass runs under
-  // and could answer a later pass from an older tree.
-  const repoRoot = repoRootOf(pluginDir);
-  const resolveImported: ImportedDescriptorResolver = (
-    specifier,
-    exportedName,
-  ) => {
-    if (repoRoot == null || !specifier.startsWith("@plugins/")) return null;
-    // "@plugins/apps/plugins/mail/plugins/mail-core/core" → that plugin's dir.
-    const withoutRuntime = specifier
-      .replace(/^@plugins\//, "")
-      .replace(/\/[^/]+$/, "");
-    if (withoutRuntime === "") return null;
-    const dir =
-      repoRoot + sep + "plugins" + sep + withoutRuntime.split("/").join(sep);
-    const files = readPluginSources(asAppPath(dir));
-    if (files.length === 0) return null;
-    return (
-      buildDescriptorIndex(files, {
-        ownerPlugin: isResourceVocabularyOwner(dir),
-        lists: true,
-      }).get(exportedName) ?? null
-    );
+  const imported: DeferredRegisterCall[] = [];
+  const runtimeCalls = (
+    runtime: DeferredRegisterCall["runtime"],
+    files: SourceFile[],
+  ): ResourceDef[] => {
+    const out: ResourceDef[] = [];
+    const seen = new Set<string>();
+    for (const c of registerCallsIn(files)) {
+      // Asked only for an identifier the plugin's own index does not declare.
+      const ask = { deferred: false };
+      const defs = resolveRegisterCall(
+        c.marker,
+        c.argsText,
+        c.bindings,
+        index,
+        c.where,
+        (specifier) => {
+          if (!specifier.startsWith("@plugins/")) return null;
+          ask.deferred = true;
+          return []; // resolved in `relate`; serves nothing until then
+        },
+      );
+      if (!ask.deferred) {
+        pushUnseen(out, seen, defs);
+        continue;
+      }
+      imported.push({
+        runtime,
+        marker: c.marker,
+        argsText: c.argsText,
+        file: relDir + c.where.file.slice(pluginDir.length),
+        line: c.where.line,
+        bindings: [...c.bindings].flatMap(
+          ([local, { exported, specifier }]): [string, string, string][] =>
+            specifier?.startsWith("@plugins/")
+              ? [[local, exported, specifier]]
+              : [],
+        ),
+      });
+    }
+    return out.sort(byKey);
   };
 
-  return {
-    server: parseRegisterCalls(serverSources, index, resolveImported),
-    central: parseRegisterCalls(centralSources, index, resolveImported),
+  const data: ResourceFacetData = {
+    server: runtimeCalls(
+      "server",
+      all.filter((f) =>
+        backendPrefixes.some((prefix) => f.path.startsWith(prefix)),
+      ),
+    ),
+    central: runtimeCalls(
+      "central",
+      all.filter((f) => f.path.startsWith(centralPrefix)),
+    ),
   };
+  const raw: ResourcesRaw = {};
+  if (index.size > 0) raw.descriptors = Object.fromEntries(index);
+  if (imported.length > 0) raw.imported = imported;
+  if (raw.descriptors || raw.imported) data.raw = raw;
+  return data;
+}
+
+/**
+ * The `relate` half of {@link parseResources}: resolve every plugin's deferred
+ * register calls against the descriptor index of the plugin each one imports
+ * from (`pluginOf` maps a `@plugins/…/<runtime>` specifier to that plugin's
+ * data, or null when it names none), add what they serve, then clear every
+ * plugin's join inputs. A descriptor the other plugin does not declare THROWS,
+ * naming the call — the same resolve-or-throw `extract` holds.
+ */
+export function resolveDeferredCalls(
+  plugins: readonly ResourceFacetData[],
+  pluginOf: (specifier: string) => ResourceFacetData | null,
+): void {
+  for (const data of plugins) {
+    for (const runtime of ["server", "central"] as const) {
+      const calls = data.raw?.imported?.filter((c) => c.runtime === runtime);
+      if (!calls?.length) continue;
+      const out = data[runtime];
+      const seen = new Set(out.map((d) => d.key));
+      for (const c of calls) {
+        const bindings: FileBindings = new Map(
+          c.bindings.map(([local, exported, specifier]) => [
+            local,
+            { exported, specifier },
+          ]),
+        );
+        pushUnseen(
+          out,
+          seen,
+          resolveRegisterCall(
+            c.marker,
+            c.argsText,
+            bindings,
+            new Map(),
+            { file: c.file, line: c.line },
+            (specifier, exportedName) =>
+              pluginOf(specifier)?.raw?.descriptors?.[exportedName] ?? null,
+          ),
+        );
+      }
+      out.sort(byKey);
+    }
+  }
+  for (const data of plugins) delete data.raw;
 }

@@ -77,7 +77,9 @@ test("keeps current and recently used identities, removes the rest unless locked
     new Date(NOW.getTime() - 90 * DAY).toISOString(),
   );
 
-  const fd = tryLock(installPaths(store, dep.id, "locked0000000000").lock);
+  const fd = await tryLock(
+    installPaths(store, dep.id, "locked0000000000").lock,
+  );
   const report = await sweepDeps({
     store,
     deps: [dep],
@@ -89,7 +91,7 @@ test("keeps current and recently used identities, removes the rest unless locked
     now: NOW,
     idleMs: SWEEP_IDLE_MS,
   });
-  releaseLock(fd!);
+  await releaseLock(fd!);
 
   expect(existsSync(current)).toBe(true);
   expect(existsSync(trial)).toBe(true);

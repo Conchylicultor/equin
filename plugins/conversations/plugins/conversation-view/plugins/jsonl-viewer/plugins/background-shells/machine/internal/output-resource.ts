@@ -39,13 +39,17 @@ export const shellOutputWatcher = defineFileWatcher({
  * transcript chain and the same fold the browser reads — and checks the path's
  * shape before anything opens it. No subscription can point this at a path.
  */
-function outputFileIn(
+async function outputFileIn(
   events: readonly JsonlEvent[],
   shellId: string,
-): string | null {
+): Promise<string | null> {
   const launch = shellLaunchesIn(events).find((l) => l.shellId === shellId);
   if (launch === undefined) return null;
-  assertShellOutputPath(launch.outputFile, shellId, shellOutputPathContext());
+  assertShellOutputPath(
+    launch.outputFile,
+    shellId,
+    await shellOutputPathContext(),
+  );
   return launch.outputFile;
 }
 
@@ -93,7 +97,10 @@ async function resolveTarget(
   if (cached !== undefined) return { kind: "file", path: cached };
   const { shellId } = parseMemoKey(key);
   const files = [...chain];
-  const path = outputFileIn(await readJsonlEventsFromChain(files), shellId);
+  const path = await outputFileIn(
+    await readJsonlEventsFromChain(files),
+    shellId,
+  );
   return path === null
     ? { kind: "unknown", chain: files }
     : { kind: "file", path };

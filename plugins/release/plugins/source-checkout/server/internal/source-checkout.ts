@@ -1,15 +1,10 @@
-import { fstatSync, mkdirSync, unlinkSync } from "node:fs";
 import {
-  existsSync,
-  readdirSync,
-  realpathSync,
-  statSync,
+  exists,
+  readdir,
+  realpath,
+  stat,
 } from "@plugins/packages/plugins/timed-fs/core";
-import { rm } from "node:fs/promises";
-import {
-  openOwnedFd,
-  type OwnedFd,
-} from "@plugins/packages/plugins/owned-fd/core";
+import { mkdir, open, rm, unlink, type FileHandle } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import {
   MAIN_COMPOSITION_ID,
@@ -71,11 +66,12 @@ export interface SweepResult {
  * Compared through `realpath` so a data root reached through a symlink (or
  * macOS's `/tmp` → `/private/tmp`) still matches.
  */
-export function isReleaseCheckout(root: AppPath): boolean {
+export async function isReleaseCheckout(root: AppPath): Promise<boolean> {
   const abs = resolve(root);
   if (basename(abs).endsWith(".lock")) return false;
   return (
-    realOrSelf(asAppPath(dirname(abs))) === realOrSelf(releaseCheckoutsDir.path)
+    (await realOrSelf(asAppPath(dirname(abs)))) ===
+    (await realOrSelf(releaseCheckoutsDir.path))
   );
 }
 
@@ -99,14 +95,14 @@ export async function acquireReleaseCheckout(opts: {
 
   const swept = await sweepLeakedReleaseCheckouts(sourceRoot);
 
-  mkdirSync(releaseCheckoutsDir.path, { recursive: true });
-  if (existsSync(root)) {
+  await mkdir(releaseCheckoutsDir.path, { recursive: true });
+  if (await exists(root)) {
     throw new Error(
       `release checkout ${root} already exists — checkout names are run ids and must be unique`,
     );
   }
   const lockPath = lockPathFor(root);
-  const lock = takeOwnLock(lockPath);
+  const lock = await takeOwnLock(lockPath);
 
   try {
     // `infra/worktree`'s add: no `git worktree add`, which dies beside another
@@ -123,10 +119,10 @@ export async function acquireReleaseCheckout(opts: {
     // too is printed and left to the next release's sweep.
     try {
       await removeCheckoutArtifacts(sourceRoot, root);
-      dropLock(lockPath, lock);
+      await dropLock(lockPath, lock);
     } catch (cleanupErr) {
       flockRelease(lock.fd);
-      lock.close();
+      await lock.close();
       console.warn(
         `  Could not clean up the failed release checkout ${root} (the next release's sweep retries): ${String(cleanupErr)}`,
       );
@@ -149,10 +145,10 @@ export async function acquireReleaseCheckout(opts: {
         // Keep the lock file (the sweep keys on it) but release the lock, so
         // the next release's sweep sees a leaked checkout and retries.
         flockRelease(lock.fd);
-        lock.close();
+        await lock.close();
         throw err;
       }
-      dropLock(lockPath, lock);
+      await dropLock(lockPath, lock);
     },
   };
 }
@@ -168,13 +164,13 @@ export async function sweepLeakedReleaseCheckouts(
 ): Promise<SweepResult> {
   const result: SweepResult = { removed: [], live: [], failed: [] };
   const dir = releaseCheckoutsDir.path;
-  if (!existsSync(dir)) return result;
+  if (!(await exists(dir))) return result;
 
   // An entry is a checkout dir, a lock file, or both. A lock file with no
   // checkout is an acquire that died between taking the lock and `worktree
   // add`, or a dispose that died after removing the tree.
   const names = new Set<string>();
-  for (const entry of readdirSync(dir)) {
+  for (const entry of await readdir(dir)) {
     names.add(
       entry.endsWith(".lock") ? entry.slice(0, -".lock".length) : entry,
     );
@@ -183,7 +179,7 @@ export async function sweepLeakedReleaseCheckouts(
   for (const name of [...names].sort()) {
     const root = joinAppPath(dir, name);
     const lockPath = lockPathFor(root);
-    const lock = tryTakeLock(lockPath);
+    const lock = await tryTakeLock(lockPath);
     if (lock === null) {
       result.live.push(name);
       continue;
@@ -192,11 +188,11 @@ export async function sweepLeakedReleaseCheckouts(
       await removeCheckoutArtifacts(repoRoot, root);
     } catch (err) {
       flockRelease(lock.fd);
-      lock.close();
+      await lock.close();
       result.failed.push({ name, error: String(err) });
       continue;
     }
-    dropLock(lockPath, lock);
+    await dropLock(lockPath, lock);
     result.removed.push(name);
   }
   return result;
@@ -217,9 +213,9 @@ function lockPathFor(root: AppPath): AppPath {
   return asAppPath(`${root}.lock`);
 }
 
-function realOrSelf(path: AppPath): string {
+async function realOrSelf(path: AppPath): Promise<string> {
   try {
-    return realpathSync(path);
+    return await realpath(path);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return resolve(path);
     throw err;
@@ -236,23 +232,23 @@ function realOrSelf(path: AppPath): string {
  * nobody else can see. So a won flock only counts if the path still names the
  * inode we locked; otherwise it is dropped and reported as not taken.
  */
-function tryTakeLock(lockPath: AppPath): OwnedFd | null {
+async function tryTakeLock(lockPath: AppPath): Promise<FileHandle | null> {
   // "a", never "w": opening must not truncate anything a holder wrote.
-  const lock = openOwnedFd(lockPath, "a");
+  const lock = await open(lockPath, "a");
   if (!flockTry(lock.fd)) {
-    lock.close();
+    await lock.close();
     return null;
   }
   let onPath: number | null;
   try {
-    onPath = statSync(lockPath).ino;
+    onPath = (await stat(lockPath)).ino;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     onPath = null;
   }
-  if (onPath !== fstatSync(lock.fd).ino) {
+  if (onPath !== (await lock.stat()).ino) {
     flockRelease(lock.fd);
-    lock.close();
+    await lock.close();
     return null;
   }
   return lock;
@@ -264,9 +260,9 @@ function tryTakeLock(lockPath: AppPath): OwnedFd | null {
  * file in the instant between our open and our flock) — retried a few times,
  * then a loud failure.
  */
-function takeOwnLock(lockPath: AppPath): OwnedFd {
+async function takeOwnLock(lockPath: AppPath): Promise<FileHandle> {
   for (let attempt = 0; attempt < 3; attempt++) {
-    const lock = tryTakeLock(lockPath);
+    const lock = await tryTakeLock(lockPath);
     if (lock !== null) return lock;
   }
   throw new Error(
@@ -276,14 +272,14 @@ function takeOwnLock(lockPath: AppPath): OwnedFd {
 }
 
 /** Unlink the lock file (while still holding it), then release and close. */
-function dropLock(lockPath: AppPath, lock: OwnedFd): void {
+async function dropLock(lockPath: AppPath, lock: FileHandle): Promise<void> {
   try {
-    unlinkSync(lockPath);
+    await unlink(lockPath);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }
   flockRelease(lock.fd);
-  lock.close();
+  await lock.close();
 }
 
 /** The checkout really is at `sha` — the whole point of pinning. */
@@ -326,8 +322,8 @@ async function trustMiseConfig(root: AppPath): Promise<void> {
 }
 
 /** Throws unless `root` is a direct child of the release-checkouts dir. */
-function assertReleaseCheckoutPath(root: AppPath): void {
-  if (!isReleaseCheckout(root)) {
+async function assertReleaseCheckoutPath(root: AppPath): Promise<void> {
+  if (!(await isReleaseCheckout(root))) {
     throw new Error(
       `refusing to remove ${root}: not a direct child of ${releaseCheckoutsDir.path}`,
     );
@@ -347,7 +343,7 @@ export async function removeCheckoutArtifacts(
   repoRoot: string,
   root: AppPath,
 ): Promise<void> {
-  assertReleaseCheckoutPath(root);
+  await assertReleaseCheckoutPath(root);
   const name = basename(root);
 
   // The tree, then the registration its absence leaves stale. Not `git worktree

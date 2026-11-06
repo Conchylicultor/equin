@@ -2,9 +2,8 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { type Dirent, mkdirSync, renameSync, rmSync, writeSync } from "node:fs";
-import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
-import { type FileHandle, open } from "node:fs/promises";
+import type { Dirent } from "node:fs";
+import { type FileHandle, open, rm } from "node:fs/promises";
 import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
 import {
@@ -56,95 +55,21 @@ export interface WorktreeOpInfo {
 // Op markers are keyed by the same slug the spec dir carries, and a slug reaches
 // here from a marker file or a directory listing — so this, the one place a slug
 // becomes a path, is where it is validated back into a namespace.
-function opsDir(slug: string): AppPath {
+export function opsDir(slug: string): AppPath {
   return joinAppPath(worktreeDataDir(asNamespace(slug)), "ops");
 }
 
-function opFile(slug: string, opId: string): AppPath {
+export function opFile(slug: string, opId: string): AppPath {
   return joinAppPath(opsDir(slug), `${opId}.json`);
 }
 
 // A marker in the making: written, locked, then renamed into place. Readers
 // never probe these — a probe landing between the writer's open and its flock
 // would steal the lock and fail the writer's start.
-const TMP_SUFFIX = ".tmp";
+export const TMP_SUFFIX = ".tmp";
 // A temp file older than this was orphaned by a writer that died between
 // create and rename (a microsecond window); only then is it reaped.
 const STALE_TMP_MS = 60_000;
-
-/** The held marker of one running op. */
-export interface WorktreeOpMarker {
-  readonly path: AppPath;
-  /**
-   * Unlink the marker and drop its lock. Call it AFTER the op's terminal event
-   * is in the op log: a reader that sees the marker gone must find the verdict
-   * already written, never an op that looks killed. Idempotent.
-   */
-  release(): void;
-}
-
-/**
- * Publish this process's liveness marker for op `opId` and hold its lock until
- * `release()` (or process death — the kernel releases it either way).
- *
- * Written to a temp file, locked, then renamed into place, so a reader only
- * ever sees a complete file that is already locked. The fd is opened
- * close-on-exec (Bun/libuv open every fd `O_CLOEXEC`), so a child the op spawns
- * does not inherit it: the lock ends with THIS process, however long a child
- * lingers. (The marker test pins that.)
- *
- * `opId` is required: every writer mints one for the op log before it writes
- * its marker, and a marker without it is a live op nobody can look up the
- * outcome of.
- */
-export function markWorktreeOpStart(
-  slug: string,
-  op: WorktreeOp,
-  opId: string,
-): WorktreeOpMarker {
-  const dir = opsDir(slug);
-  mkdirSync(dir, { recursive: true });
-  const path = opFile(slug, opId);
-  const tmp = joinAppPath(
-    opsDir(slug),
-    `${opId}.json.${process.pid}${TMP_SUFFIX}`,
-  );
-  const fd = openOwnedFd(tmp, "w");
-  try {
-    if (!flockTry(fd.fd))
-      throw new Error(
-        `worktree-op: could not lock a marker file this process just created (${tmp})`,
-      );
-    writeSync(
-      fd.fd,
-      JSON.stringify({
-        v: 2,
-        kind: op,
-        opId,
-        pid: process.pid,
-        startedAt: new Date().toISOString(),
-      }),
-    );
-    renameSync(tmp, path);
-  } catch (err) {
-    fd.close();
-    rmSync(tmp, { force: true });
-    throw err;
-  }
-  let released = false;
-  return {
-    path,
-    release: () => {
-      if (released) return;
-      released = true;
-      // Unlink first, then close: a reader that opened the file before the
-      // unlink and takes the lock after the close only reaps an already-gone
-      // path.
-      rmSync(path, { force: true });
-      fd.close();
-    },
-  };
-}
 
 // Signal 0 probes existence without delivering anything. EPERM: alive, but
 // another user's. Only for LEGACY markers — a v2 marker's liveness is its lock.
@@ -235,7 +160,7 @@ async function probeMarker(slug: string, path: AppPath): Promise<Probe> {
     reap = true;
     return { kind: "dead" };
   } finally {
-    if (reap) rmSync(path, { force: true });
+    if (reap) await rm(path, { force: true });
     await handle.close();
   }
 }
@@ -243,7 +168,7 @@ async function probeMarker(slug: string, path: AppPath): Promise<Probe> {
 async function reapIfStaleTmp(path: AppPath): Promise<void> {
   try {
     const s = await stat(path);
-    if (Date.now() - s.mtimeMs > STALE_TMP_MS) rmSync(path, { force: true });
+    if (Date.now() - s.mtimeMs > STALE_TMP_MS) await rm(path, { force: true });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }

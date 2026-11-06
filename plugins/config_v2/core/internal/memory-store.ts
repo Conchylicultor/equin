@@ -92,19 +92,27 @@ export function createMemoryConfigStore(opts?: {
     const doc = opts.propagatedFrom(storePath);
     if (doc !== undefined) propagateGitLayerDocument(storePath, doc, rawProxy);
   };
+  // Every method is async only because the interface is (a file store's are
+  // the disk): the layer itself is memory, answered at once.
   return {
-    proxy(ref) {
+    read(ref) {
       seed(ref.storePath);
-      return rawProxy(ref);
+      return Promise.resolve(rawProxy(ref).read());
+    },
+    write(ref, content, hash) {
+      seed(ref.storePath);
+      rawProxy(ref).write(content, hash);
+      return Promise.resolve();
     },
     remove(ref) {
       seed(ref.storePath);
       docs.delete(keyOf(ref));
+      return Promise.resolve();
     },
     stamp(ref) {
       seed(ref.storePath);
       const doc = docs.get(keyOf(ref));
-      return doc ? `w${doc.version}` : "-";
+      return Promise.resolve(doc ? `w${doc.version}` : "-");
     },
     scopes(storePath) {
       seed(storePath);
@@ -114,11 +122,12 @@ export function createMemoryConfigStore(opts?: {
         const [path, scopeId] = key.split("\0");
         if (scopeId && storePathParts(path!).hier === hier) ids.add(scopeId);
       }
-      return [...ids].sort();
+      return Promise.resolve([...ids].sort());
     },
     dropScope(storePath) {
       seed(storePath);
       // A scope here is its documents: once they are removed it is gone.
+      return Promise.resolve();
     },
     watch(ref) {
       seed(ref.storePath);

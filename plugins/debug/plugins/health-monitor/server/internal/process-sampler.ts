@@ -6,11 +6,8 @@ import {
   runtimeNamespace,
   isMain,
 } from "@plugins/infra/plugins/runtime-identity/core";
-import { writeFileSync } from "node:fs";
-import {
-  readFileSync,
-  statSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { writeFile } from "node:fs/promises";
+import { readFile, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { monitorEventLoopDelay, PerformanceObserver } from "node:perf_hooks";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { procMemory } from "@plugins/framework/plugins/server-core/core";
@@ -122,25 +119,25 @@ function healthFilePath(): AppPath {
 }
 
 // Keep the JSONL bounded without a job: trim to the newest half once it grows
-// past the cap. One sync rewrite per growth cycle; statSync is cheap.
-function rotateIfNeeded(): void {
+// past the cap. One rewrite per growth cycle.
+async function rotateIfNeeded(): Promise<void> {
   const file = healthFilePath();
   let size: number;
   try {
-    size = statSync(file).size;
+    size = (await stat(file)).size;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
     throw err;
   }
   if (size <= MAX_FILE_BYTES) return;
-  const lines = readFileSync(file, "utf8").split("\n").filter(Boolean);
-  writeFileSync(
+  const lines = (await readFile(file, "utf8")).split("\n").filter(Boolean);
+  await writeFile(
     file,
     lines.slice(Math.floor(lines.length / 2)).join("\n") + "\n",
   );
 }
 
-function tick(): void {
+async function tick(): Promise<void> {
   if (!histogram) return;
   const now = Date.now();
   // Machine sleep spanned this window: the histogram accumulated the suspend
@@ -224,9 +221,10 @@ function tick(): void {
   lastHeapUsedBytes = mem.heapUsed;
   lastMonitorOps = meter.count;
   lastMonitorMs = meter.totalMs;
-  rotateIfNeeded();
   channel.publish(JSON.stringify(sample));
   for (const observer of sampleObservers) observer(sample);
+  // Last: the sample is out before the (rare) rotation touches the disk.
+  await rotateIfNeeded();
 }
 
 export function startProcessSampler(): void {

@@ -1,8 +1,8 @@
-import { rmSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import {
-  existsSync,
-  readdirSync,
-  realpathSync,
+  exists,
+  readdir,
+  realpath,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { basename } from "node:path";
 import { isPointerName } from "./pointer";
@@ -56,14 +56,17 @@ function runIdMs(runId: string): number {
  * import it. With `keep = 3` a preview would have to be running against the 4th
  * newest run of the same composition to be hit.
  */
-export function pruneReleaseRunDirs(compDir: AppPath, keep = 3): PruneResult {
-  if (!existsSync(compDir)) return { removed: [], kept: [] };
+export async function pruneReleaseRunDirs(
+  compDir: AppPath,
+  keep = 3,
+): Promise<PruneResult> {
+  if (!(await exists(compDir))) return { removed: [], kept: [] };
 
-  const entries = readdirSync(compDir);
+  const entries = await readdir(compDir);
   const pinned = new Set<string>();
   for (const name of entries.filter(isPointerName)) {
     try {
-      pinned.add(basename(realpathSync(joinAppPath(compDir, name))));
+      pinned.add(basename(await realpath(joinAppPath(compDir, name))));
     } catch (err) {
       // A dangling pointer pins nothing — the run it named is already gone.
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
@@ -81,7 +84,7 @@ export function pruneReleaseRunDirs(compDir: AppPath, keep = 3): PruneResult {
       kept.push(runId);
       continue;
     }
-    rmSync(joinAppPath(compDir, runId), { recursive: true, force: true });
+    await rm(joinAppPath(compDir, runId), { recursive: true, force: true });
     removed.push(runId);
   }
   return { removed, kept };

@@ -43,7 +43,7 @@ const run: CliAction<[string], { server: string; release?: string }> = async (
   // and `resolveBundle` asserts RELEASE.json agrees with it. It returns a
   // verdict rather than exiting, so the same call answers for a UI; the
   // exit is this command's own translation of a refusal.
-  const resolution = resolveBundle({
+  const resolution = await resolveBundle({
     // This checkout's own namespace — the same one a `release` run from here
     // writes under, so the two halves of a hand-run release/ship pair agree.
     namespace: await deployNamespace(),

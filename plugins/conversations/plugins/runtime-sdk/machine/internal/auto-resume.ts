@@ -33,7 +33,7 @@ export const autoResumeJob = defineJob({
     const plan = planAutoResume({
       stopped: await usageLimitStoppedConversations(),
       limit: limitReached(
-        readClaudeUsage().byAccount[nextLaunchAccount()],
+        (await readClaudeUsage()).byAccount[await nextLaunchAccount()],
         now,
       ),
       now,

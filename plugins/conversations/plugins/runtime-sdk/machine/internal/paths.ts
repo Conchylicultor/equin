@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import {
   asAppPath,
   joinAppPath,
@@ -47,14 +47,18 @@ export function agentEventsPath(conversationId: string): AppPath {
 }
 
 /** Whether any generation of the agent's events file (rotated ones included) is on disk. */
-export function agentEventsExist(conversationId: string): boolean {
+export async function agentEventsExist(
+  conversationId: string,
+): Promise<boolean> {
   const path = agentEventsPath(conversationId);
-  return [
+  for (const p of [
     path,
     asAppPath(`${path}.1`),
     asAppPath(`${path}.2`),
     asAppPath(`${path}.3`),
-  ].some((p) => existsSync(p));
+  ])
+    if (await exists(p)) return true;
+  return false;
 }
 
 export function agentOptionsPath(conversationId: string): AppPath {

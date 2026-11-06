@@ -20,12 +20,12 @@ const MAX_LINES = 12_000;
 
 // One backend lane's downsampled heat-strip series (may be empty — a worktree
 // dir without health history is a legitimately-empty lane, not a failure).
-export function readHealthLane(
+export async function readHealthLane(
   worktree: string,
   fromMs: number,
   toMs: number,
-): TimelineHealthPoint[] {
-  const samples = readChannelJson<HealthSample>(
+): Promise<TimelineHealthPoint[]> {
+  const samples = await readChannelJson<HealthSample>(
     worktree,
     "health",
     MAX_LINES,
@@ -38,11 +38,11 @@ export function readHealthLane(
 // The server runs on the host itself (single-instance-per-user), so its cpu
 // count is the honest load-ratio denominator for the downsample's pressure
 // score — the same value the browser reads via navigator.hardwareConcurrency.
-export function readHostLane(
+export async function readHostLane(
   fromMs: number,
   toMs: number,
-): TimelineHealthPoint[] {
-  const samples = readChannelJson<HostSample>(
+): Promise<TimelineHealthPoint[]> {
+  const samples = await readChannelJson<HostSample>(
     MAIN_WORKTREE_NAME,
     "health-host",
     MAX_LINES,

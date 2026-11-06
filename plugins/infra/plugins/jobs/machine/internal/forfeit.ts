@@ -177,10 +177,10 @@ const MIN_USABLE_SLOTS = 2;
  *   pool is degraded, not dead, and exiting would throw away live capacity to
  *   fix a shortage that is not fatal.
  */
-export function checkSlotFloor(): void {
+export async function checkSlotFloor(): Promise<void> {
   const usable = usableSlots(LONGEST_CLASS_RUNNER.id);
   if (usable < MIN_USABLE_SLOTS) {
-    tripFloor(usable);
+    await tripFloor(usable);
     return;
   }
 
@@ -201,8 +201,8 @@ export function checkSlotFloor(): void {
   }
 }
 
-function tripFloor(usable: number): void {
-  const trips = recordTrip();
+async function tripFloor(usable: number): Promise<void> {
+  const trips = await recordTrip();
   const suppressed = trips > MAX_TRIPS_PER_WINDOW;
 
   const report = describe(

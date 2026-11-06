@@ -55,7 +55,7 @@ so dist and marker go with the step that deregisters.
     - `infra/worktree.CompositionMarker`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `infra/worktree.hasCompositionMarker`
-    - `infra/worktree.readCompositionMarker`
+    - `infra/worktree.loadCompositionMarker`
     - `infra/worktree.removeWorktreeSpec`
     - `infra/worktree.worktreePathFor`
   - Exports (types): `OwnedNamespace`

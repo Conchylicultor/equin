@@ -42,7 +42,7 @@ export async function writeWorkspace(
   }
   return writeFiles(runWorkspace(practice), [
     [PRACTICE_FILES.notes, PRACTICE_NOTES],
-    [PRACTICE_FILES.midi, pieceMidiBytes()],
+    [PRACTICE_FILES.midi, await pieceMidiBytes()],
   ]);
 }
 

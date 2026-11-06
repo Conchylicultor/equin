@@ -80,8 +80,8 @@ function putBack(entry: AgentWriteLedgerEntry<Role>): void {
   }
 }
 
-function entriesOf(id: string) {
-  const ledger = listAgentWrites().ledgers.find((l) => l.id === id);
+async function entriesOf(id: string) {
+  const ledger = (await listAgentWrites()).ledgers.find((l) => l.id === id);
   if (!ledger) throw new Error(`ledger ${id} not listed`);
   return ledger.entries;
 }
@@ -95,17 +95,17 @@ async function revertOnly(id: string) {
   };
 }
 
-test("a user or system writer records nothing", () => {
+test("a user or system writer records nothing", async () => {
   const ledger = defineAgentWriteLedger<Role>({
     id: "test-non-agent",
     label: "Non-agent",
     restore: async () => {},
   });
   const paths = pathsFor("non-agent");
-  ledger.record({ kind: "user" }, "k", paths, "op");
-  ledger.record({ kind: "system", reason: "boot" }, "k", paths, "op");
-  ledger.noteComplete({ kind: "user" }, "k");
-  expect(entriesOf("test-non-agent")).toEqual([]);
+  await ledger.record({ kind: "user" }, "k", paths, "op");
+  await ledger.record({ kind: "system", reason: "boot" }, "k", paths, "op");
+  await ledger.noteComplete({ kind: "user" }, "k");
+  expect(await entriesOf("test-non-agent")).toEqual([]);
   expect(
     existsSync(
       join(
@@ -132,20 +132,20 @@ test("before is the first write's pre-state; after follows the last write", asyn
   const paths = pathsFor("first-write");
   writeFileSync(paths.main, "A");
 
-  ledger.record(agent, "doc", paths, "op-1");
+  await ledger.record(agent, "doc", paths, "op-1");
   writeFileSync(paths.main, "B");
   writeFileSync(paths.side, "side-B");
-  ledger.noteComplete(agent, "doc");
+  await ledger.noteComplete(agent, "doc");
 
-  ledger.record(agent, "doc", paths, "op-2");
+  await ledger.record(agent, "doc", paths, "op-2");
   writeFileSync(paths.main, "C");
-  ledger.noteComplete(agent, "doc");
+  await ledger.noteComplete(agent, "doc");
 
-  const [listed] = entriesOf("test-first-write");
+  const [listed] = await entriesOf("test-first-write");
   expect(listed?.key).toBe("doc");
   expect(listed?.source).toBe("e2e:ledger-test");
   expect(listed?.operations).toEqual(["op-1", "op-2"]);
-  expect(listAgentWrites().lastWriteAt).not.toBeNull();
+  expect((await listAgentWrites()).lastWriteAt).not.toBeNull();
 
   // Persisted where the declaration says, one file per ledger per namespace.
   const ledgerFile = join(
@@ -177,7 +177,7 @@ test("before is the first write's pre-state; after follows the last write", asyn
   // The pre-agent state, not the agent's intermediate "B".
   expect(read(paths.main)).toBe("A");
   expect(read(paths.side)).toBeNull();
-  expect(entriesOf("test-first-write")).toEqual([]);
+  expect(await entriesOf("test-first-write")).toEqual([]);
 
   // Idempotent: nothing left to do.
   expect(await revertOnly("test-first-write")).toEqual({
@@ -200,9 +200,9 @@ test("an entry someone wrote on top of is left alone and dropped", async () => {
   const paths = pathsFor("diverged");
   writeFileSync(paths.main, "user-original");
 
-  ledger.record(agent, "doc", paths, "op");
+  await ledger.record(agent, "doc", paths, "op");
   writeFileSync(paths.main, "agent");
-  ledger.noteComplete(agent, "doc");
+  await ledger.noteComplete(agent, "doc");
 
   // The user edits after the agent did.
   writeFileSync(paths.main, "user-later");
@@ -216,7 +216,7 @@ test("an entry someone wrote on top of is left alone and dropped", async () => {
   expect(out.diverged[0]?.detail).toContain("main");
   expect(restores).toBe(0);
   expect(read(paths.main)).toBe("user-later");
-  expect(entriesOf("test-diverged")).toEqual([]);
+  expect(await entriesOf("test-diverged")).toEqual([]);
 });
 
 test("a failed restore stays in the ledger and is retried by the next revert", async () => {
@@ -231,9 +231,9 @@ test("a failed restore stays in the ledger and is retried by the next revert", a
   });
   const paths = pathsFor("failed");
 
-  ledger.record(agent, "doc", paths, "op");
+  await ledger.record(agent, "doc", paths, "op");
   writeFileSync(paths.main, "agent");
-  ledger.noteComplete(agent, "doc");
+  await ledger.noteComplete(agent, "doc");
 
   const first = await revertOnly("test-failed");
   expect(first.failed).toEqual([
@@ -245,7 +245,7 @@ test("a failed restore stays in the ledger and is retried by the next revert", a
     },
   ]);
   expect(first.reverted).toEqual([]);
-  expect(entriesOf("test-failed")).toHaveLength(1);
+  expect(await entriesOf("test-failed")).toHaveLength(1);
   expect(read(paths.main)).toBe("agent");
 
   broken = false;
@@ -253,7 +253,7 @@ test("a failed restore stays in the ledger and is retried by the next revert", a
   expect(second.failed).toEqual([]);
   expect(second.reverted.map((r) => r.key)).toEqual(["doc"]);
   expect(read(paths.main)).toBeNull();
-  expect(entriesOf("test-failed")).toEqual([]);
+  expect(await entriesOf("test-failed")).toEqual([]);
 });
 
 test("one revert covers every registered ledger", async () => {
@@ -271,13 +271,13 @@ test("one revert covers every registered ledger", async () => {
   const pathsTwo = pathsFor("aggregate-two");
   writeFileSync(pathsTwo.side, "two-original");
 
-  one.record(agent, "first", pathsOne, "op");
+  await one.record(agent, "first", pathsOne, "op");
   writeFileSync(pathsOne.main, "agent-one");
-  one.noteComplete(agent, "first");
+  await one.noteComplete(agent, "first");
 
-  two.record(agent, "second", pathsTwo, "op");
+  await two.record(agent, "second", pathsTwo, "op");
   writeFileSync(pathsTwo.side, "agent-two");
-  two.noteComplete(agent, "second");
+  await two.noteComplete(agent, "second");
 
   const out = await revertAgentWritesIn(E2E);
   const mine = out.reverted.filter((r) =>
@@ -320,12 +320,12 @@ test("a revert restores only the sessions it names", async () => {
   const pathsA = pathsFor("scoped-a");
   const pathsB = pathsFor("scoped-b");
 
-  ledger.record(a, "a", pathsA, "op");
+  await ledger.record(a, "a", pathsA, "op");
   writeFileSync(pathsA.main, "agent-a");
-  ledger.noteComplete(a, "a");
-  ledger.record(b, "b", pathsB, "op");
+  await ledger.noteComplete(a, "a");
+  await ledger.record(b, "b", pathsB, "op");
   writeFileSync(pathsB.main, "agent-b");
-  ledger.noteComplete(b, "b");
+  await ledger.noteComplete(b, "b");
 
   // Neither the e2e family nor an exact source that is a prefix of another.
   const e2e = await revertAgentWritesIn(E2E);
@@ -341,7 +341,7 @@ test("a revert restores only the sessions it names", async () => {
   ).toEqual(["a"]);
   expect(read(pathsA.main)).toBeNull();
   expect(read(pathsB.main)).toBe("agent-b");
-  expect(entriesOf("test-scoped").map((e) => e.key)).toEqual(["b"]);
+  expect((await entriesOf("test-scoped")).map((e) => e.key)).toEqual(["b"]);
 });
 
 test("a ledger id is unique and names a file", () => {
@@ -366,7 +366,7 @@ test("a ledger id is unique and names a file", () => {
   ).toThrow(/ledger id must match/);
 });
 
-test("an agent write claiming to be unreverted is refused before it is recorded", () => {
+test("an agent write claiming to be unreverted is refused before it is recorded", async () => {
   const ledger = defineAgentWriteLedger<Role>({
     id: "test-claims-unreverted",
     label: "Claims unreverted",
@@ -377,8 +377,8 @@ test("an agent write claiming to be unreverted is refused before it is recorded"
     source: "mcp-browser:conv-claim",
     claimsUnreverted: true,
   };
-  expect(() =>
+  expect(
     ledger.record(claimed, "k", pathsFor("claims-unreverted"), "op"),
-  ).toThrow(/agentReverted/);
-  expect(entriesOf("test-claims-unreverted")).toEqual([]);
+  ).rejects.toThrow(/agentReverted/);
+  expect(await entriesOf("test-claims-unreverted")).toEqual([]);
 });

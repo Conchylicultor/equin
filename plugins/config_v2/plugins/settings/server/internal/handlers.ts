@@ -59,7 +59,7 @@ export const handleAcknowledgeConflict = implement(
   acknowledgeConflict,
   async ({ body, req }) => {
     try {
-      acknowledgeConflictByPath(body.storePath, {
+      await acknowledgeConflictByPath(body.storePath, {
         writer: originOf(req),
         scopeId: body.scopeId,
       });
@@ -76,7 +76,7 @@ export const handleDeleteOverride = implement(
   deleteOverride,
   async ({ body, req }) => {
     try {
-      deleteOverrideByPath(body.storePath, {
+      await deleteOverrideByPath(body.storePath, {
         writer: originOf(req),
         scopeId: body.scopeId,
       });
@@ -93,7 +93,7 @@ export const handleMergeConflict = implement(
   mergeConflict,
   async ({ body, req }) => {
     try {
-      return mergeConflictByPath(body.storePath, {
+      return await mergeConflictByPath(body.storePath, {
         writer: originOf(req),
         scopeId: body.scopeId,
       });

@@ -1,5 +1,5 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdirSync, renameSync, writeFileSync } from "node:fs";
+import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
@@ -23,7 +23,7 @@ export async function publishDocumentHead(): Promise<void> {
   const publish = createCoalescer({
     run: async () => {
       const rendered = await Promise.all(sources.map((s) => s.render()));
-      writeAtomic(
+      await writeAtomic(
         file,
         JSON.stringify({ v: 1, entries: mergeHeadFragments(rendered) }),
       );
@@ -34,10 +34,11 @@ export async function publishDocumentHead(): Promise<void> {
 }
 
 // Temp file + rename: the gateway reads the file on every shell request and
-// must never see half of one.
-function writeAtomic(file: AppPath, text: string): void {
-  mkdirSync(dirname(file), { recursive: true });
+// must never see half of one. The coalescer runs one publish at a time, so
+// the per-process temp name is never written twice at once.
+async function writeAtomic(file: AppPath, text: string): Promise<void> {
+  await mkdir(dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.tmp`;
-  writeFileSync(tmp, text);
-  renameSync(tmp, file);
+  await writeFile(tmp, text);
+  await rename(tmp, file);
 }

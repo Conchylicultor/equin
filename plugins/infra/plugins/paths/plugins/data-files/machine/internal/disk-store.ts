@@ -3,10 +3,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  existsSync,
-  realpathSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { realpath } from "@plugins/packages/plugins/timed-fs/core";
 import { mkdir, unlink } from "node:fs/promises";
 import { sep } from "node:path";
 import type { FileWatcherDecl } from "@plugins/infra/plugins/file-watcher/server";
@@ -123,9 +120,9 @@ export function createDiskDataFiles(opts: DiskDataFilesOptions): DataFilesImpl {
       async write(path, data, wopts) {
         const ledger = ledgerFor(wopts.writer, path);
         if (ledger === null) return tree.write(path, data, wopts);
-        ledger.record(wopts.writer, path, { file: absOf(path) }, "write");
+        await ledger.record(wopts.writer, path, { file: absOf(path) }, "write");
         await tree.write(path, data, wopts);
-        ledger.noteComplete(wopts.writer, path);
+        await ledger.noteComplete(wopts.writer, path);
       },
       async remove(path, ropts) {
         const st = await tree.stat(path);
@@ -135,9 +132,14 @@ export function createDiskDataFiles(opts: DiskDataFilesOptions): DataFilesImpl {
         }
         const ledger = ledgerFor(ropts.writer, path);
         if (ledger === null) return tree.remove(path, ropts);
-        ledger.record(ropts.writer, path, { file: absOf(path) }, "remove");
+        await ledger.record(
+          ropts.writer,
+          path,
+          { file: absOf(path) },
+          "remove",
+        );
         await tree.remove(path, ropts);
-        ledger.noteComplete(ropts.writer, path);
+        await ledger.noteComplete(ropts.writer, path);
       },
       rename(from, to, wopts) {
         refuseUnledgerable(wopts.writer, "rename", from, to);
@@ -161,8 +163,14 @@ export function createDiskDataFiles(opts: DiskDataFilesOptions): DataFilesImpl {
 }
 
 /** The real path of a directory, or the path itself before it exists. */
-function realDir(dir: AppPath): AppPath {
-  return existsSync(dir) ? asAppPath(realpathSync(dir)) : dir;
+async function realDir(dir: AppPath): Promise<AppPath> {
+  try {
+    return asAppPath(await realpath(dir));
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") return dir;
+    throw err;
+  }
 }
 
 /**
@@ -218,7 +226,7 @@ function rootWatch(spec: FileRootSpec, binding: () => BoundRoot) {
     await mkdir(dir, { recursive: true });
     // FSEvents reports real paths (`/private/var/…` for `/var/…`), and the
     // hub keys its watches by them: follow the real dir.
-    const real = realDir(dir);
+    const real = await realDir(dir);
     const prefixes = [...new Set([dir, real])];
     return startEventualFileWatcher(watcher, {
       dir: real,

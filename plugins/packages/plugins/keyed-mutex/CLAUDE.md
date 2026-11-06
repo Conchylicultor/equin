@@ -35,13 +35,22 @@ keystrokes into one concatenated turn.
 - Cross-plugin:
   - Imported by:
     - `apps/mail/sync`
+    - `config_v2`
     - `conversations`
+    - `conversations/model-provider/catalog`
     - `conversations/runtime-sdk`
     - `conversations/transcript-source`
+    - `debug/sentinel/status-file`
+    - `infra/claude-cli/accounts`
+    - `infra/claude-cli/sign-in`
+    - `infra/deps`
+    - `infra/jobs`
     - `infra/jobs/in-process`
+    - `infra/jobs/supervised-job`
     - `infra/launcher/login-services`
     - `infra/paths/data-files`
     - `infra/paths/data-files/memory`
+    - `infra/request-origin/agent-write-ledger`
 - Core:
   - Exports (types): `KeyedMutex`
   - Exports (values): `createKeyedMutex`

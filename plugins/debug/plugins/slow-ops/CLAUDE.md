@@ -356,7 +356,7 @@ bar).
     - `infra/retention.defineRetention`
     - `network/live/change-feed.defineChangeProducer`
     - `network/live.serveCollection`
-    - `primitives/log-channels/log-files.readChannelJsonAsync`
+    - `primitives/log-channels/log-files.readChannelJson`
     - `primitives/log-channels.defineLogSink`
     - `reports.ReportKind`
   - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`

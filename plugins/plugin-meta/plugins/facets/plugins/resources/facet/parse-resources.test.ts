@@ -6,8 +6,12 @@ import {
   type FileBindings,
   type SourceFile,
 } from "@plugins/network/plugins/live/plugins/resource-vocabulary/core";
-import { parseRegisterCalls, resolveRegisterCall } from "./parse-resources";
-import { resourceModeLabel } from "../core";
+import {
+  parseRegisterCalls,
+  resolveDeferredCalls,
+  resolveRegisterCall,
+} from "./parse-resources";
+import { resourceModeLabel, type ResourceFacetData } from "../core";
 
 const NOTHING_IMPORTED = () => null;
 const file = (
@@ -925,5 +929,67 @@ describe("parseRegisterCalls (end to end over runtime sources)", () => {
       "/repo/plugins/network/plugins/live/plugins/query-resource/server/internal/compile-window.ts",
     );
     expect(parseRegisterCalls([compiler], index, NOTHING_IMPORTED)).toEqual([]);
+  });
+});
+
+describe("resolveDeferredCalls", () => {
+  const owner = (): ResourceFacetData => ({
+    server: [],
+    central: [],
+    raw: {
+      descriptors: {
+        modelCatalog: [
+          { key: "models.catalog", keyed: false, membership: null },
+        ],
+      },
+    },
+  });
+  const server = (exported: string): ResourceFacetData => ({
+    server: [{ key: "a.local", mode: "push" }],
+    central: [],
+    raw: {
+      imported: [
+        {
+          runtime: "server",
+          marker: "serveValue",
+          argsText: `catalog, { source: "external", loader }`,
+          file: "plugins/conversations/plugins/model-provider/plugins/catalog/server/internal/source.ts",
+          line: 3,
+          bindings: [
+            [
+              "catalog",
+              exported,
+              "@plugins/conversations/plugins/model-provider/core",
+            ],
+          ],
+        },
+      ],
+    },
+  });
+
+  it("resolves an imported descriptor against its plugin's index, then clears the join inputs", () => {
+    const a = owner();
+    const b = server("modelCatalog");
+    resolveDeferredCalls([a, b], (spec) =>
+      spec === "@plugins/conversations/plugins/model-provider/core" ? a : null,
+    );
+    expect(b.server).toEqual([
+      { key: "a.local", mode: "push" },
+      { key: "models.catalog", mode: "push", source: "external" },
+    ]);
+    expect(a.raw).toBeUndefined();
+    expect(b.raw).toBeUndefined();
+  });
+
+  it("throws when the other plugin declares no such descriptor", () => {
+    const a = owner();
+    const b = server("missing");
+    expect(() =>
+      resolveDeferredCalls([a, b], (spec) =>
+        spec === "@plugins/conversations/plugins/model-provider/core"
+          ? a
+          : null,
+      ),
+    ).toThrow(/catalog\/server\/internal\/source\.ts:3/);
   });
 });

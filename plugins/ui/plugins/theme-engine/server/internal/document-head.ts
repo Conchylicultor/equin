@@ -45,10 +45,12 @@ async function themesById(): Promise<Map<ThemeId, Theme>> {
 }
 
 async function render(): Promise<HeadFragments> {
-  const scopes = getConfigScopeIds(themeSelectionConfig).map((scopeId) => ({
-    scopeId,
-    themeId: getConfig(themeSelectionConfig, scopeId).theme,
-  }));
+  const scopes = (await getConfigScopeIds(themeSelectionConfig)).map(
+    (scopeId) => ({
+      scopeId,
+      themeId: getConfig(themeSelectionConfig, scopeId).theme,
+    }),
+  );
   const globalMode = parseConfiguredColorMode(
     getConfig(themeSelectionConfig).colorMode,
   );

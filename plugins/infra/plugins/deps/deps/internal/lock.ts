@@ -1,8 +1,8 @@
-import { mkdirSync, openSync } from "node:fs";
-import { adoptFd, type OwnedFd } from "@plugins/packages/plugins/owned-fd/core";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, open, type FileHandle } from "node:fs/promises";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 
 /**
  * The host-wide lock of one `(id, identity)`: a kernel flock on a file, so it
@@ -10,18 +10,35 @@ import { flockTry } from "@plugins/packages/plugins/flock/core";
  * pid is ever consulted.
  */
 
+/**
+ * A held lock: the open file the flock sits on. Its handle owns the
+ * descriptor, so it closes exactly once, through {@link releaseLock}.
+ */
+export type HeldLock = FileHandle;
+
+// A flock is per open file, so this process's own probe (`isLockHeld`), which
+// takes the lock for a moment and releases it across an `await`, is seen by
+// another in-process attempt as a holder: two overlapping state reads would
+// make the second answer "installing", a remove racing a read answer busy.
+// Every momentary take — a probe, and an attempt from open to its verdict — is
+// serialized per lock path, so an in-process attempt never observes a probe.
+// A lock actually TAKEN outlives its section, and is rightly seen as held.
+const attemptMutex = createKeyedMutex();
+
 /** Take the lock without waiting: its held descriptor, or `null` when another holds it. */
-export function tryLock(path: string): OwnedFd | null {
-  mkdirSync(dirname(path), { recursive: true });
-  const owned = adoptFd(openSync(path, "a"));
-  if (flockTry(owned.fd)) return owned;
-  owned.close();
-  return null;
+export async function tryLock(path: string): Promise<HeldLock | null> {
+  await mkdir(dirname(path), { recursive: true });
+  return attemptMutex.run(path, async () => {
+    const handle = await open(path, "a");
+    if (flockTry(handle.fd)) return handle;
+    await handle.close();
+    return null;
+  });
 }
 
-/** Release a lock taken with {@link tryLock} / {@link waitLock}; a second release throws. */
-export function releaseLock(lock: OwnedFd): void {
-  lock.close();
+/** Release a lock taken with {@link tryLock} / {@link waitLock}. */
+export async function releaseLock(lock: HeldLock): Promise<void> {
+  await lock.close();
 }
 
 /** How long to wait between two tries while another process installs. */
@@ -40,13 +57,13 @@ const LOCK_RETRY_MS = 500;
 export async function waitLock(
   path: string,
   onWait: () => void,
-): Promise<OwnedFd> {
-  const first = tryLock(path);
+): Promise<HeldLock> {
+  const first = await tryLock(path);
   if (first !== null) return first;
   onWait();
   for (;;) {
     await Bun.sleep(LOCK_RETRY_MS);
-    const fd = tryLock(path);
+    const fd = await tryLock(path);
     if (fd !== null) return fd;
   }
 }
@@ -56,12 +73,14 @@ export async function waitLock(
  * for the instant of the test and releases it, so a waiter re-trying meanwhile
  * just tries again.
  */
-export function isLockHeld(path: string): boolean {
-  if (!existsSync(path)) return false;
-  const fd = adoptFd(openSync(path, "a"));
-  try {
-    return !flockTry(fd.fd);
-  } finally {
-    fd.close();
-  }
+export async function isLockHeld(path: string): Promise<boolean> {
+  if (!(await exists(path))) return false;
+  return attemptMutex.run(path, async () => {
+    const handle = await open(path, "a");
+    try {
+      return !flockTry(handle.fd);
+    } finally {
+      await handle.close();
+    }
+  });
 }

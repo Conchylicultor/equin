@@ -3,7 +3,7 @@ import {
   sinkHandler,
 } from "@plugins/framework/plugins/server-core/core";
 import type { ServerFatalReport } from "@plugins/framework/plugins/server-core/core";
-import { appendFatalReportSync } from "./buffer";
+import { appendFatalReportSync } from "./crash-append";
 import { reportOutboxFatalSink } from "./outbox-sink";
 import { reportsProducer } from "./producer";
 

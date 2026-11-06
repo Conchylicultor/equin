@@ -105,7 +105,7 @@ const chromium = defineDep({
 
 describe("playwrightBrowser", () => {
   test("the identity is a function of the playwright-core version resolved from the checkout", async () => {
-    expect(resolvePlaywright(root).coreVersion).toBe("1.2.3");
+    expect((await resolvePlaywright(root)).coreVersion).toBe("1.2.3");
     const inputs = await chromium.source.identityInputs(root);
     expect(inputs.playwrightCore).toBe("1.2.3");
     expect(inputs.browser).toBe("chromium");

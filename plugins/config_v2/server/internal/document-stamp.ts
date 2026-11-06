@@ -9,9 +9,14 @@ import { ConfigStore } from "./host-services";
  * refresh found nothing new (a watcher event for the write it already
  * refreshed itself, a touch that rewrote nothing).
  */
-export function documentStamp(
+export async function documentStamp(
   files: Record<ConfigDocumentFile, ConfigFileRef>,
-): string {
+): Promise<string> {
   const store = ConfigStore.get();
-  return `${store.stamp(files.origin)}|${store.stamp(files.override)}|${store.stamp(files.ancestor)}`;
+  const stamps = await Promise.all([
+    store.stamp(files.origin),
+    store.stamp(files.override),
+    store.stamp(files.ancestor),
+  ]);
+  return stamps.join("|");
 }

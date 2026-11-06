@@ -145,7 +145,7 @@ const check: Check = {
       try {
         await dryRunPendingMigrations(
           drizzle(pool),
-          listMigrationFiles(MIGRATIONS_DIR),
+          await listMigrationFiles(MIGRATIONS_DIR),
           declared.inputs,
         );
         return { ok: true };

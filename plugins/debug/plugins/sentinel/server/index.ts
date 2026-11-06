@@ -39,7 +39,7 @@ export default {
   onReady: async () => {
     // The sampler first: the watcher it guards must never wait on (or be
     // skipped by a failure of) the row that reports on it.
-    if (isHostSingleton()) startSentinelSampler();
+    if (isHostSingleton()) await startSentinelSampler();
     await startStatusWatcher();
   },
   onShutdown: async () => {

@@ -50,7 +50,7 @@ export function takeDeferredContract(): string | null {
 // research/2026-10-28-database-deferred-contract-phase.md.
 export async function runDeferredContract(file: string): Promise<void> {
   const driver = DatabaseDriver.get();
-  const migrations = MigrationSource.get().list();
+  const migrations = await MigrationSource.get().list();
   const release = await driver.awaitGenerationsGone(
     generationsKnowing(migrations, file),
   );

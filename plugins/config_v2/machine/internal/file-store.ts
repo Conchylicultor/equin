@@ -1,9 +1,5 @@
-import { rmdirSync, unlinkSync } from "node:fs";
-import {
-  existsSync,
-  readdirSync,
-  statSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { rmdir, unlink } from "node:fs/promises";
+import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import {
   APP_SCOPE_DIR,
   appScopeId,
@@ -30,7 +26,7 @@ import {
 import { CONFIG_DIR } from "./config-dir";
 import { configFilesWatcherArmed, watchFileChange } from "./config-watcher";
 import { configLedgerDocument, configLedgerKey } from "./config-ledger-key";
-import { jsoncConfigProxy, writeRawAtomic } from "./jsonc-proxy";
+import { readConfigFile, writeConfigFile, writeRawAtomic } from "./jsonc-proxy";
 
 /** Where a user-layer file lives on this machine. */
 export function userFilePath(ref: ConfigFileRef): AppPath {
@@ -65,13 +61,25 @@ const configWriteLedger = defineAgentWriteLedger<ConfigDocumentFile>({
   restore: applyRestore,
 });
 
+/** Remove one file; a no-op when it is absent. */
+async function removeIfPresent(path: AppPath): Promise<void> {
+  try {
+    await unlink(path);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
+}
+
 /** Put one captured file back: exact bytes, or gone if it did not exist. */
-function restoreFile(path: AppPath, snapshot: FileSnapshot): void {
+async function restoreFile(
+  path: AppPath,
+  snapshot: FileSnapshot,
+): Promise<void> {
   if (snapshot.present) {
-    writeRawAtomic(path, snapshot.bytes);
+    await writeRawAtomic(path, snapshot.bytes);
     return;
   }
-  if (existsSync(path)) unlinkSync(path);
+  await removeIfPresent(path);
 }
 
 /**
@@ -88,7 +96,10 @@ async function applyRestore(
   const { storePath, scopeId } = configLedgerDocument(entry.key);
   // The same paths `trioPaths` recorded, rebuilt so they stay proven app-owned.
   for (const file of ["origin", "override", "ancestor"] as const) {
-    restoreFile(userFilePath({ storePath, scopeId, file }), entry.before[file]);
+    await restoreFile(
+      userFilePath({ storePath, scopeId, file }),
+      entry.before[file],
+    );
   }
   await reloadConfigDocument(storePath, scopeId);
 }
@@ -96,16 +107,20 @@ async function applyRestore(
 // Identity stamp for one file: "-" when absent, else (inode, mtime-ns, size).
 //
 // `ino` is what makes this airtight rather than merely likely. Every writer in
-// this store goes through jsoncConfigProxy.write, which writes a temp file and
+// this store goes through writeConfigFile, which writes a temp file and
 // renames it into place — so the inode changes on EVERY write, including an
 // acknowledge-conflict restamp that only swaps the 12 hex chars in the `// @hash`
 // header and is therefore byte-length-identical (and can land in the same
 // millisecond) as the file it replaced. mtime-ns + size then cover in-place
 // writes from an external editor.
-function fileStamp(path: AppPath): string {
-  const st = statSync(path, { bigint: true, throwIfNoEntry: false });
-  if (!st) return "-";
-  return `${st.ino}:${st.mtimeNs}:${st.size}`;
+async function fileStamp(path: AppPath): Promise<string> {
+  try {
+    const st = await stat(path, { bigint: true });
+    return `${st.ino}:${st.mtimeNs}:${st.size}`;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return "-";
+    throw err;
+  }
 }
 
 /**
@@ -115,38 +130,45 @@ function fileStamp(path: AppPath): string {
  * ledgered.
  */
 export const fileConfigStore: ConfigStoreImpl = {
-  proxy: (ref) => jsoncConfigProxy(userFilePath(ref)),
-  remove(ref) {
-    const path = userFilePath(ref);
-    if (existsSync(path)) unlinkSync(path);
-  },
+  read: (ref) => readConfigFile(userFilePath(ref)),
+  write: (ref, content, hash) =>
+    writeConfigFile(userFilePath(ref), content, hash),
+  remove: (ref) => removeIfPresent(userFilePath(ref)),
   stamp: (ref) => fileStamp(userFilePath(ref)),
   // Every scope with a directory under the hierarchy's `@app/`. A missing
   // `@app` dir → [].
-  scopes(storePath) {
+  async scopes(storePath) {
     const appDir = joinAppPath(
       CONFIG_DIR,
       storePathParts(storePath).hier,
       APP_SCOPE_DIR,
     );
-    if (!existsSync(appDir)) return [];
-    return readdirSync(appDir, { withFileTypes: true })
+    let entries;
+    try {
+      entries = await readdir(appDir, { withFileTypes: true });
+    } catch (err) {
+      // A missing `@app` dir → [].
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw err;
+    }
+    return entries
       .filter((e) => e.isDirectory())
       .map((e) => appScopeId(e.name));
   },
-  dropScope(storePath, scopeId) {
+  async dropScope(storePath, scopeId) {
     const dir = joinAppPath(
       CONFIG_DIR,
       storePathParts(storePath).hier,
       scopeSegment(scopeId),
     );
-    if (!existsSync(dir)) return;
     try {
-      rmdirSync(dir);
+      await rmdir(dir);
     } catch (err) {
-      // Dir not empty (another descriptor still has files there, or it's being
-      // cleaned by a concurrent op) — leave it. Anything else is unexpected.
-      if ((err as NodeJS.ErrnoException).code !== "ENOTEMPTY") throw err;
+      // Gone already, or not empty (another descriptor still has files there,
+      // or it's being cleaned by a concurrent op) — leave it. Anything else is
+      // unexpected.
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT" && code !== "ENOTEMPTY") throw err;
     }
   },
   watch(doc, onChange) {
@@ -160,13 +182,13 @@ export const fileConfigStore: ConfigStoreImpl = {
     };
   },
   armed: configFilesWatcherArmed,
-  edit(doc, writer, operation, mutate) {
+  async edit(doc, writer, operation, mutate) {
     const key = configLedgerKey(doc.storePath, doc.scopeId ?? "");
     // A no-op for every writer but an agent; call immediately BEFORE the
     // mutation, and refresh "what the agent left" once it has landed.
-    configWriteLedger.record(writer, key, trioPaths(doc), operation);
-    const result = mutate();
-    configWriteLedger.noteComplete(writer, key);
+    await configWriteLedger.record(writer, key, trioPaths(doc), operation);
+    const result = await mutate();
+    await configWriteLedger.noteComplete(writer, key);
     return result;
   },
 };

@@ -58,10 +58,10 @@ export interface BootJournalSummary {
 }
 
 /** Every boot in the worktree's journal, keyed by `processStartedAt`. */
-export function readBootJournals(
+export async function readBootJournals(
   worktree: string,
-): Map<number, BootJournalSummary> {
-  const lines = readChannelJson(
+): Promise<Map<number, BootJournalSummary>> {
+  const lines = await readChannelJson(
     worktree,
     BOOT_JOURNAL_CHANNEL,
     MAX_LINES,

@@ -4,7 +4,7 @@ import { stopGateHookEntry } from "./hook-entry";
 
 describe("stopGateHookEntry", () => {
   test("runs the hook script beside this code, by absolute path", async () => {
-    const entry = stopGateHookEntry();
+    const entry = await stopGateHookEntry();
     const path = /^cd "[^"]+" && bun "(.+)"$/.exec(entry.command)?.[1];
     expect(path).toBeDefined();
     expect(isAbsolute(path!)).toBe(true);

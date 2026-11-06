@@ -105,11 +105,12 @@ let ledgerDetaches: (() => void)[] = [];
 // `QueryDeadlineExceededError` naming this pool instead of pinning a slot.
 let runnerPool: Pool | null = null;
 
-function getRunnerPool(): Pool {
+async function getRunnerPool(): Promise<Pool> {
   if (!runnerPool) {
-    runnerPool = createDbPool({
+    const connString = await connectionString();
+    runnerPool ??= createDbPool({
       name: "jobs-runner",
-      connectionString: connectionString(),
+      connectionString: connString,
       max: TOTAL_JOB_SLOTS + RUNNERS.length,
     });
   }
@@ -125,11 +126,12 @@ function getRunnerPool(): Pool {
 const ENQUEUE_POOL_MAX = 10;
 let enqueuePool: Pool | null = null;
 
-function getEnqueuePool(): Pool {
+async function getEnqueuePool(): Promise<Pool> {
   if (!enqueuePool) {
-    enqueuePool = createDbPool({
+    const connString = await connectionString();
+    enqueuePool ??= createDbPool({
       name: "jobs-enqueue",
-      connectionString: connectionString(),
+      connectionString: connString,
       max: ENQUEUE_POOL_MAX,
     });
   }
@@ -149,9 +151,9 @@ let workerUtilsPromise: Promise<WorkerUtils> | null = null;
 
 export function getWorkerUtils(): Promise<WorkerUtils> {
   if (!workerUtilsPromise) {
-    const building: Promise<WorkerUtils> = makeWorkerUtils({
-      pgPool: getEnqueuePool(),
-    }).then(
+    const building: Promise<WorkerUtils> = getEnqueuePool()
+      .then((pgPool) => makeWorkerUtils({ pgPool }))
+      .then(
       (utils) => utils,
       (err: unknown) => {
         if (workerUtilsPromise === building) workerUtilsPromise = null;
@@ -421,7 +423,7 @@ export async function startWorkers(): Promise<Runner[]> {
   await getWorkerUtils();
   await repointHoldTasks();
 
-  const pgPool = getRunnerPool();
+  const pgPool = await getRunnerPool();
   const started: Runner[] = [];
   for (const spec of RUNNERS) {
     // One handler instance per runner, so every dispatch knows which runner's
@@ -515,7 +517,7 @@ export async function startWorkers(): Promise<Runner[]> {
       isStopping: () => stoppingWorkers,
       onDeath: (reason) => {
         deadRunners.add(runner);
-        exitForDeadRunner(spec, spec.legacy === true, reason);
+        void exitForDeadRunner(spec, spec.legacy === true, reason);
       },
     });
     started.push(runner);

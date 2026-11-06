@@ -1,5 +1,5 @@
 import { copyFile } from "node:fs/promises";
-import { stat, existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { stat, exists } from "@plugins/packages/plugins/timed-fs/core";
 
 import { basename, join } from "node:path";
 import type { BackupSourceReport } from "@plugins/backup/core";
@@ -21,7 +21,7 @@ export async function assembleSongIndexSnapshot(
   dir: string,
 ): Promise<BackupSourceReport> {
   const path = snapshotPath();
-  if (!existsSync(path)) {
+  if (!(await exists(path))) {
     return { id: ID, name: NAME, outcome: "skipped", items: [], sizeBytes: 0 };
   }
   const target = join(dir, basename(path));

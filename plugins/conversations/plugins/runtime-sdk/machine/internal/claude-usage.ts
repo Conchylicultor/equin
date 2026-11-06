@@ -2,11 +2,8 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdirSync, renameSync, writeFileSync } from "node:fs";
-import {
-  readdirSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, rename, writeFile } from "node:fs/promises";
+import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { serveValue } from "@plugins/network/plugins/live/machine";
@@ -21,16 +18,16 @@ import { claudeUsageDir } from "../../data-dirs";
 const USAGE_FILE = /^(.+)\.json$/;
 
 /** Every account's last report: one `<accountId>.json` per account. */
-export function readClaudeUsage(): ClaudeUsageRead {
+export async function readClaudeUsage(): Promise<ClaudeUsageRead> {
   const dir = claudeUsageDir.ensure();
   const byAccount: Record<string, ClaudeUsage> = {};
-  for (const name of readdirSync(dir)) {
+  for (const name of await readdir(dir)) {
     // The rename's temp file is `<file>.<pid>.tmp`.
     const id = USAGE_FILE.exec(name)?.[1];
     if (!id) continue;
     let text: string;
     try {
-      text = readFileSync(joinAppPath(dir, name), "utf8");
+      text = await readFile(joinAppPath(dir, name), "utf8");
     } catch (err) {
       // Replaced between the listing and the read: the watch reads it again.
       if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
@@ -46,11 +43,16 @@ export function readClaudeUsage(): ClaudeUsageRead {
  * sees half of it — what an on-demand read records (the agent writes the same
  * way from its own process, `bin/agent.ts`).
  */
-export function writeClaudeUsageFile(path: AppPath, usage: ClaudeUsage): void {
-  mkdirSync(dirname(path), { recursive: true });
+export async function writeClaudeUsageFile(
+  path: AppPath,
+  usage: ClaudeUsage,
+): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  // One write per account at a time (usage-probe's in-flight dedupe), so the
+  // per-process temp name is never written twice at once.
   const tmp = `${path}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(usage));
-  renameSync(tmp, path);
+  await writeFile(tmp, JSON.stringify(usage));
+  await rename(tmp, path);
 }
 
 /**

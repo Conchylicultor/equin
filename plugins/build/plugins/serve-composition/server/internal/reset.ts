@@ -93,7 +93,7 @@ export async function resetCompositionData(
 
   // Guard 2 — the decisive provenance signal: only a compose-serve namespace
   // carries the composition.json marker.
-  if (!hasCompositionMarker(ns)) {
+  if (!(await hasCompositionMarker(ns))) {
     throw new CompositionResetError(
       `reset "${id}": no composition.json marker — not a served composition`,
     );
@@ -126,7 +126,7 @@ export async function resetCompositionData(
   const collision = namespaceCollision(
     ns,
     { kind: "composition", id },
-    probeNamespace(
+    await probeNamespace(
       await ensureMainWorktreeRoot(),
       ns,
       new Set(values.manifests.map((i) => i.id)),

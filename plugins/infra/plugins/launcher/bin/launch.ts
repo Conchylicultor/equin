@@ -177,7 +177,7 @@ async function main(): Promise<void> {
   // ensureDatabaseConfig sees the file already present and no-ops (a release has
   // no node_modules to probe). The service `start` argv point at the vendored
   // compiled start binaries.
-  writeReleaseDatabaseConfig(
+  await writeReleaseDatabaseConfig(
     {
       pgStartBin: join(bundleRoot, "pg", "pg-start"),
       pgbouncerStartBin: join(bundleRoot, "pgbouncer", "pgbouncer-start"),
@@ -205,7 +205,7 @@ async function main(): Promise<void> {
   // = composition = the backend's runtime namespace, so this lands exactly where
   // config-dir.ts reads (EQUIN_DIR/config/<worktree>). Runs before the
   // gateway spawns the backend, so CONFIG_DIR is current on first read.
-  propagateReleaseConfig({
+  await propagateReleaseConfig({
     bundleRoot: asAppPath(bundleRoot),
     dataDir: asAppPath(readEnv("DIR")!),
     worktreeName: name,

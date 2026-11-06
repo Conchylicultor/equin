@@ -24,7 +24,7 @@ import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
   ensureMainWorktreeRoot,
   hasCompositionMarker,
-  readCompositionMarker,
+  loadCompositionMarker,
   removeWorktreeSpec,
   worktreePathFor,
   type CompositionMarker,
@@ -32,7 +32,7 @@ import {
 import { assertServableCompositionNamespace } from "@plugins/plugin-meta/plugins/composition/core";
 import { listNamedCompositionRegistries } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 
 /** A refused reclaim — a guard rejected the target before anything was touched. */
 export class NamespaceReclaimError extends Error {
@@ -94,13 +94,13 @@ export async function reclaimNamespace(
   // `composition.json` belongs to a git checkout of the same name, and reclaiming
   // it is `reapAttempt`'s job, never this function's. Same guard, same reason, as
   // `resetCompositionData`'s.
-  if (!hasCompositionMarker(ns)) {
+  if (!(await hasCompositionMarker(ns))) {
     throw new NamespaceReclaimError(
       `reclaim "${ns}": no composition marker — the namespace is not a served ` +
         `composition, so it belongs to a git checkout; refusing to touch it.`,
     );
   }
-  const marker = readCompositionMarker(ns);
+  const marker = await loadCompositionMarker(ns);
   if (marker === null) {
     // Guard 1 just saw the marker, so this is a marker removed between the two
     // reads — a concurrent reclaim or an external delete. Refuse rather than
@@ -183,7 +183,7 @@ async function removeFilteredRegistries(
   // decision, not an oversight: `checkout.reason` carries why.
   if (!checkout.known) return;
   // Gone with its registries: nothing to list.
-  if (!existsSync(checkout.root)) return;
+  if (!(await exists(checkout.root))) return;
   // Another checkout than this backend's, so its file set is listed here.
   const repo = await loadRepoFiles(checkout.root);
   for (const { name, file } of await listNamedCompositionRegistries(repo)) {

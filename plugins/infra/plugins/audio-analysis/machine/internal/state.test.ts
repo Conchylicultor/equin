@@ -180,7 +180,7 @@ describe("readBeatFeatures", () => {
   test("an analysis running under other settings does not count", async () => {
     const paths = featurePaths(root, id, full);
     write(paths.running, running);
-    const fd = tryLock(paths.lock);
+    const fd = await tryLock(paths.lock);
     expect(fd).not.toBeNull();
     try {
       expect(await readBeatFeatures(id, { dir: root, settings: fast })).toEqual(
@@ -201,7 +201,7 @@ describe("readBeatFeatures", () => {
   test("running.json with its lock held is running, until released", async () => {
     const paths = featurePaths(root, id, fast);
     write(paths.running, running);
-    const fd = tryLock(paths.lock);
+    const fd = await tryLock(paths.lock);
     expect(fd).not.toBeNull();
     try {
       expect(await readBeatFeatures(id, { dir: root, settings: fast })).toEqual(

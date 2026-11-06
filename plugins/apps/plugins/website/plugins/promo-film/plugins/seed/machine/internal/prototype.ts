@@ -3,10 +3,10 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
-  existsSync,
-  readdirSync,
-  readFileSync,
-  statSync,
+  exists,
+  readdir,
+  readFile,
+  stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
@@ -30,17 +30,17 @@ const FIXTURE_DIR = joinAppPath(
  * repo does not describe.
  */
 export async function ensureFilmPrototype(): Promise<string> {
-  const data = readPrototypeFixtureDir(FIXTURE_DIR);
+  const data = await readPrototypeFixtureDir(FIXTURE_DIR);
   const parsed = parsePrototypeTree(data.tree);
   const absent: string[] = [];
   for (const proto of parsed.prototypes) {
     const newest = proto.versions[proto.versions.length - 1]!;
     const folder = prototypesDir.file(proto.id);
-    if (!existsSync(folder)) {
+    if (!(await exists(folder))) {
       absent.push(proto.id);
       continue;
     }
-    const onDisk = readFolder(folder);
+    const onDisk = await readFolder(folder);
     const want = Object.keys(newest.files).sort();
     const have = Object.keys(onDisk).sort();
     const differs =
@@ -61,10 +61,10 @@ export async function ensureFilmPrototype(): Promise<string> {
 }
 
 /** A prototype folder's files (flat, text), as the fixture describes one. */
-function readFolder(dir: AppPath): Record<string, string> {
+async function readFolder(dir: AppPath): Promise<Record<string, string>> {
   const files: Record<string, string> = {};
-  for (const name of readdirSync(dir))
-    if (statSync(joinAppPath(dir, name)).isFile())
-      files[name] = readFileSync(joinAppPath(dir, name), "utf8");
+  for (const name of await readdir(dir))
+    if ((await stat(joinAppPath(dir, name))).isFile())
+      files[name] = await readFile(joinAppPath(dir, name), "utf8");
   return files;
 }

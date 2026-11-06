@@ -1,4 +1,4 @@
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import {
   asAppPath,
   joinAppPath,
@@ -19,12 +19,12 @@ function credentialsDirectory(): AppPath | undefined {
 }
 
 /** The credential named `key`, as `DeploySecretSourceImpl.read` defines it. */
-export function readCredential(key: string): DeploySecretValue {
+export async function readCredential(key: string): Promise<DeploySecretValue> {
   const dir = credentialsDirectory();
   if (dir === undefined) return { kind: "unset" };
   let value: string;
   try {
-    value = readFileSync(joinAppPath(dir, key), "utf8");
+    value = await readFile(joinAppPath(dir, key), "utf8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       return { kind: "unset" };

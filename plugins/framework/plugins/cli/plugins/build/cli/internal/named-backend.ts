@@ -19,14 +19,14 @@ const GATEWAY_DEFAULT_ENTRY = "bin/index.ts";
  * The clone pins the Bun this build resolved: a backend the gateway restarts
  * later runs the same one, until the next build re-clones it.
  */
-export function namedBackendCommand(
+export async function namedBackendCommand(
   ns: string,
   bun: AppPath | null,
   entry: string,
-): string[] | undefined {
+): Promise<string[] | undefined> {
   const unnamed = entry === GATEWAY_DEFAULT_ENTRY ? undefined : ["bun", entry];
   if (bun === null) return unnamed;
-  const named = cloneNamedBinary({
+  const named = await cloneNamedBinary({
     bin: bun,
     dir: worktreeArtifacts.processNames(asNamespace(ns)),
     name: ns === "central" ? processName("central") : processName("server", ns),

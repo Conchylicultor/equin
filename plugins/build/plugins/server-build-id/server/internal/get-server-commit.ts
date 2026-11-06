@@ -1,5 +1,5 @@
 import { webDistDir } from "@plugins/infra/plugins/paths/server";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 
 // The commit the frontend bundle this backend serves was BUILT FROM, read from
 // `dist/.build-commit` FRESH on every call — same rule, and same reason, as
@@ -12,9 +12,11 @@ import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 // whatever the checkout moved to while the compile ran. That distinction is the
 // whole point: a `git rev-parse HEAD` taken after the compile once made a stale
 // frontend read as current and cost a catch-up build.
-export function getServerCommit(): string | null {
+export async function getServerCommit(): Promise<string | null> {
   try {
-    return readFileSync(`${webDistDir()}/.build-commit`, "utf8").trim() || null;
+    return (
+      (await readFile(`${webDistDir()}/.build-commit`, "utf8")).trim() || null
+    );
     // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- best-effort optional dotfile read; a missing/unreadable .build-commit (before the first build, or a build whose git could not answer) legitimately means "commit unknown" → the caller turns it into an explicit unresolved(reason), never a fake sha
   } catch {
     return null;

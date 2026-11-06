@@ -82,10 +82,10 @@ export const bootWatchdogMonitorJob = defineJob({
     let marks = await readBootUnsettled();
     if (!marks.indexed) {
       for (const wt of listWorktreeDirs()) {
-        if (hasUnsettledBoot(readBootEvents(wt, cfg.lookbackMs)))
-          markBootUnsettled(wt);
+        if (hasUnsettledBoot(await readBootEvents(wt, cfg.lookbackMs)))
+          await markBootUnsettled(wt);
       }
-      stampBootUnsettledIndexed();
+      await stampBootUnsettledIndexed();
       marks = await readBootUnsettled();
     }
     const sweep = new Set([
@@ -96,7 +96,7 @@ export const bootWatchdogMonitorJob = defineJob({
     ]);
 
     for (const wt of sweep) {
-      const events = readBootEvents(wt, cfg.lookbackMs);
+      const events = await readBootEvents(wt, cfg.lookbackMs);
       // Open ⇒ marked, whoever wrote its start line (a backend whose code
       // predates the marks): from here on it is read every tick, idle or not,
       // until it settles. Settled ⇒ the mark is cleared, unless it is newer
@@ -104,14 +104,14 @@ export const bootWatchdogMonitorJob = defineJob({
       // while its boot is open — out of the fleet included (a worktree the
       // gateway drops and re-adds is still read).
       if (hasUnsettledBoot(events)) {
-        if (!marks.worktrees.includes(wt)) markBootUnsettled(wt);
+        if (!marks.worktrees.includes(wt)) await markBootUnsettled(wt);
       } else if (marks.worktrees.includes(wt)) {
         await clearBootUnsettled(wt, settledAtMs(events, cfg.lookbackMs, now));
       }
       if (!fleet.has(wt)) continue; // torn down: never alerted
       // The journal only for a worktree with a never-ready boot to describe
       // (it is ~100 lines a boot).
-      let journals: ReturnType<typeof readBootJournals> | null = null;
+      let journals: Awaited<ReturnType<typeof readBootJournals>> | null = null;
       for (const ev of events) {
         // A boot that exited before ready is a crash, not a wedge: its own
         // report — boot-events files it, error and stack, through the report
@@ -124,7 +124,7 @@ export const bootWatchdogMonitorJob = defineJob({
           cfg.bootReadyBudgetMs,
         );
         if (verdict === null) continue;
-        journals ??= readBootJournals(wt);
+        journals ??= await readBootJournals(wt);
         const journal = journals.get(ev.processStartedAt);
         const data: BootWedgePayload = {
           worktree: wt,

@@ -76,57 +76,57 @@ afterAll(() => {
 });
 
 describe("readBackendP99Rollup", () => {
-  test("fresh health.jsonl tail lands in the rollup; stale mtime drops out", () => {
+  test("fresh health.jsonl tail lands in the rollup; stale mtime drops out", async () => {
     plantChannelLine(FRESH_WT, "health", healthSample(1234));
     const staleFile = plantChannelLine(STALE_WT, "health", healthSample(999));
     // Stale: a backend whose health file went quiet is a stopped backend.
     const old = new Date(Date.now() - 120_000);
     utimesSync(staleFile, old, old);
 
-    const rollup = readBackendP99Rollup();
+    const rollup = await readBackendP99Rollup();
     expect(rollup[FRESH_WT]).toBe(1234);
     expect(rollup[STALE_WT]).toBeUndefined();
   });
 });
 
 describe("readHostCompressor", () => {
-  test("fresh line yields the compressor fields", () => {
+  test("fresh line yields the compressor fields", async () => {
     plantChannelLine(HOST_WT, "health-host", hostSample());
-    expect(readHostCompressor(HOST_WT)).toEqual({
+    expect(await readHostCompressor(HOST_WT)).toEqual({
       decompressionsPerSec: 240_000,
       compressorMb: 30_000,
       freeMemMb: 512,
     });
   });
 
-  test("stale line (host sampler dead > 30s) reads null", () => {
+  test("stale line (host sampler dead > 30s) reads null", async () => {
     plantChannelLine(
       HOST_WT,
       "health-host",
       hostSample({ sampledAt: Date.now() - 60_000 }),
     );
-    expect(readHostCompressor(HOST_WT)).toEqual({
+    expect(await readHostCompressor(HOST_WT)).toEqual({
       decompressionsPerSec: null,
       compressorMb: null,
       freeMemMb: null,
     });
   });
 
-  test("wallJumpMs-stamped line (machine sleep) reads null — no measurement this window", () => {
+  test("wallJumpMs-stamped line (machine sleep) reads null — no measurement this window", async () => {
     plantChannelLine(
       HOST_WT,
       "health-host",
       hostSample({ wallJumpMs: 900_000 }),
     );
-    expect(readHostCompressor(HOST_WT)).toEqual({
+    expect(await readHostCompressor(HOST_WT)).toEqual({
       decompressionsPerSec: null,
       compressorMb: null,
       freeMemMb: null,
     });
   });
 
-  test("missing file / pre-cutover line read null", () => {
-    expect(readHostCompressor(`${runId}-never-existed`)).toEqual({
+  test("missing file / pre-cutover line read null", async () => {
+    expect(await readHostCompressor(`${runId}-never-existed`)).toEqual({
       decompressionsPerSec: null,
       compressorMb: null,
       freeMemMb: null,
@@ -141,7 +141,7 @@ describe("readHostCompressor", () => {
         compressorMb: undefined,
       }),
     );
-    expect(readHostCompressor(HOST_WT)).toEqual({
+    expect(await readHostCompressor(HOST_WT)).toEqual({
       decompressionsPerSec: null,
       compressorMb: null,
       freeMemMb: 512,

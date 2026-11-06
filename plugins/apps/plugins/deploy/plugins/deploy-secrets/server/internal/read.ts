@@ -22,7 +22,7 @@ export interface DeploySecretSourceImpl {
    * exists but cannot be read throws — a broken install, not an unconfigured
    * one.
    */
-  read(key: string): DeploySecretValue;
+  read(key: string): Promise<DeploySecretValue>;
 }
 
 export const DeploySecretSource = defineHostService<DeploySecretSourceImpl>(
@@ -30,11 +30,13 @@ export const DeploySecretSource = defineHostService<DeploySecretSourceImpl>(
 );
 
 /** Read an approved deploy secret by key. */
-export function readDeploySecretKey(key: string): DeploySecretValue {
+export function readDeploySecretKey(key: string): Promise<DeploySecretValue> {
   return DeploySecretSource.get().read(key);
 }
 
 /** Read an approved deploy secret on the box. */
-export function readDeploySecret(secret: DeploySecret): DeploySecretValue {
+export function readDeploySecret(
+  secret: DeploySecret,
+): Promise<DeploySecretValue> {
   return readDeploySecretKey(secret.key);
 }

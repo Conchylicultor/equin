@@ -16,7 +16,7 @@ import {
   compositionsConfig,
   isServableCompositionId,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import { readCompositionMarker } from "@plugins/infra/plugins/worktree/server";
+import { loadCompositionMarker } from "@plugins/infra/plugins/worktree/server";
 import { wantsBuild } from "@plugins/build/plugins/deployment/core";
 import type { BuildAttempt } from "@plugins/build/plugins/deployment/core";
 import { readDeployment } from "@plugins/build/plugins/deployment/machine";
@@ -138,7 +138,7 @@ export async function decideBuilds(now: Date): Promise<BuildDecision> {
     // inert by construction: the main namespace is the namespace this checkout's own
     // build already owns, so a serve build never provisions it.
     if (!isServableCompositionId(item.id)) continue;
-    const marker = readCompositionMarker(namespaceFor(item.id, checkout));
+    const marker = await loadCompositionMarker(namespaceFor(item.id, checkout));
     // Nothing served here, so nothing to rebuild — the never-mint clause
     // `compositionWantsRebuild` states, applied early only to skip a ledger read
     // whose answer could not change the outcome. The predicate still owns the

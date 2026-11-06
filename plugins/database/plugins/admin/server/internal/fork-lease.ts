@@ -30,7 +30,7 @@ const TRY_LOCK = "SELECT pg_try_advisory_lock($1, hashtext($2)) AS ok";
 async function openLease(
   temp: string,
 ): Promise<{ ok: boolean; release: () => Promise<void> }> {
-  const session = createAdminSession("fork-lease");
+  const session = await createAdminSession("fork-lease");
   await session.connect();
   try {
     const { ok } = await queryOne(session, {

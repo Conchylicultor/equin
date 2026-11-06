@@ -57,7 +57,7 @@ export async function produceTimeline(
     // Disk-backed lanes (cheap main-local reads) while the DB fan-out runs.
     for (const worktree of logWorktrees) {
       try {
-        const events = loadBootEvents(worktree, fromMs, toMs);
+        const events = await loadBootEvents(worktree, fromMs, toMs);
         emit({ chunk: { source: "boot", worktree, ok: true, events } });
       } catch (err) {
         // Loud-but-resilient, like the per-DB cells: one unreadable boot.jsonl
@@ -66,13 +66,13 @@ export async function produceTimeline(
           chunk: { source: "boot", worktree, ok: false, error: String(err) },
         });
       }
-      const samples = readHealthLane(worktree, fromMs, toMs);
+      const samples = await readHealthLane(worktree, fromMs, toMs);
       if (samples.length) emit({ health: { worktree, samples } });
     }
     // Host-global duress episodes (one chunk on the host lane, read from
     // main's log dir — the sentinel worker is the latch's sole writer).
     try {
-      const events = loadDuressEpisodes(fromMs, toMs);
+      const events = await loadDuressEpisodes(fromMs, toMs);
       emit({
         chunk: { source: "duress", worktree: HOST_LANE, ok: true, events },
       });
@@ -86,7 +86,7 @@ export async function produceTimeline(
         },
       });
     }
-    const hostSamples = readHostLane(fromMs, toMs);
+    const hostSamples = await readHostLane(fromMs, toMs);
     if (hostSamples.length)
       emit({ health: { worktree: HOST_LANE, samples: hostSamples } });
   } finally {
@@ -101,7 +101,9 @@ export async function produceTimeline(
 
 // Open the per-DB session and pin its statement timeout. Throws on any
 // failure; the caller turns that into one error chunk per source.
-async function openSession(pool: ReturnType<typeof openShortLivedClient>) {
+async function openSession(
+  pool: Awaited<ReturnType<typeof openShortLivedClient>>,
+) {
   const client = await pool.connect();
   try {
     await client.query(`SET statement_timeout = ${STATEMENT_TIMEOUT_MS}`);
@@ -124,7 +126,7 @@ async function emitDbChunks(
     fromMs,
     toMs,
   };
-  const pool = openShortLivedClient(dbName);
+  const pool = await openShortLivedClient(dbName);
   try {
     let client: Awaited<ReturnType<typeof openSession>>;
     try {

@@ -69,7 +69,7 @@ export default {
     // for as long as it lives — taken before the schema layer, so no window
     // exists in which it is migrating yet unseen. Its generation is its latest
     // migration's.
-    const migrations = MigrationSource.get().list();
+    const migrations = await MigrationSource.get().list();
     const latest = migrations.at(-1);
     if (latest !== undefined) {
       await driver.holdSchemaGeneration(schemaGeneration(latest));

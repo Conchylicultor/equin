@@ -1,4 +1,4 @@
-import { rmSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { defineDep } from "@plugins/infra/plugins/deps/deps";
 import { download } from "@plugins/infra/plugins/deps/plugins/download/deps";
@@ -49,7 +49,7 @@ export const rcodesign = defineDep({
           ],
           { cwd: ctx.dir, env: { ...process.env }, timeoutMs: 60_000 },
         );
-        rmSync(join(ctx.dir, `${ARCHIVE}.tar.gz`));
+        await rm(join(ctx.dir, `${ARCHIVE}.tar.gz`));
       },
     },
     admission: {

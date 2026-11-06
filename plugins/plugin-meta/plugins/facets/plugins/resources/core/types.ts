@@ -1,5 +1,8 @@
 import { defineFacet } from "@plugins/plugin-meta/plugins/facets/core";
-import type { ResourceMembership } from "@plugins/network/plugins/live/plugins/resource-vocabulary/core";
+import type {
+  DescriptorInfo,
+  ResourceMembership,
+} from "@plugins/network/plugins/live/plugins/resource-vocabulary/core";
 
 export interface ResourceDef {
   key: string;
@@ -41,6 +44,35 @@ export type ResourceChanges = "notified" | "immutable" | "fixed" | "snapshot";
 export interface ResourceFacetData {
   server: ResourceDef[];
   central: ResourceDef[];
+  /**
+   * Join inputs for `relate`, cleared there (never rendered). A register call
+   * serving a descriptor imported from ANOTHER plugin cannot be resolved in
+   * `extract`: its record is keyed by this plugin's files only, so reading the
+   * other plugin's would make it depend on files its key does not name (the
+   * strict snapshot throws). `extract` records the call unresolved and each
+   * plugin's own descriptor index; `relate`, which sees every plugin's data,
+   * resolves the one against the other — or throws.
+   */
+  raw?: ResourcesRaw;
+}
+
+export interface ResourcesRaw {
+  /** This plugin's descriptor index (declared const name → what it mints), when it declares any. */
+  descriptors?: Record<string, DescriptorInfo[]>;
+  /** Register calls naming a descriptor imported from another plugin's barrel. */
+  imported?: DeferredRegisterCall[];
+}
+
+/** One register call left for `relate`: everything it needs to resolve it, as data. */
+export interface DeferredRegisterCall {
+  runtime: "server" | "central";
+  marker: string;
+  argsText: string;
+  /** Repo-relative file and line, for the error message. */
+  file: string;
+  line: number;
+  /** The file's bindings of the imported descriptor: `[local, exported, specifier]`. */
+  bindings: [local: string, exported: string, specifier: string][];
 }
 
 export const resourcesFacetDef = defineFacet<ResourceFacetData>("resources");

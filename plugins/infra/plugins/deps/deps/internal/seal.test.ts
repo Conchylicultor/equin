@@ -127,7 +127,7 @@ describe("sealDep", () => {
     expect(readFileSync(join(sealed.dir, "payload"), "utf8")).toBe(
       `${FOREIGN.platform}/${FOREIGN.arch}`,
     );
-    const manifest = readSealedManifest(join(bundle, SEALED_MANIFEST));
+    const manifest = await readSealedManifest(join(bundle, SEALED_MANIFEST));
     expect(manifest.target).toEqual({ ...FOREIGN });
     expect(manifest.deps[dep.id]).toEqual({
       kind: "fake",
@@ -183,7 +183,7 @@ describe("sealDep", () => {
       store,
     });
     expect(out.kind).toBe("left-out");
-    const manifest = readSealedManifest(join(bundle, SEALED_MANIFEST));
+    const manifest = await readSealedManifest(join(bundle, SEALED_MANIFEST));
     expect(manifest.unsealed[dep.id]).toContain("the app runs without it");
     expect(calls.install).toHaveLength(0);
   });
@@ -280,7 +280,7 @@ describe("a sealed root", () => {
     });
     // Read on the bundle's own platform — simulated by rewriting the manifest's target.
     const path = join(bundle, SEALED_MANIFEST);
-    const m = readSealedManifest(path);
+    const m = await readSealedManifest(path);
     writeFileSync(path, JSON.stringify({ ...m, target: HOST }));
     const state = await depState(dep, { root: bundle, store });
     expect(state.kind === "failed" && state.message).toContain(
@@ -322,7 +322,7 @@ describe("holdDep", () => {
       updates: { none: "a test fixture" },
     });
     const first = await ensureDep(dep, exec, { root: base, store });
-    holdDep(first, "machine-gateway", { store });
+    await holdDep(first, "machine-gateway", { store });
     box.v = "2";
     const second = await ensureDep(dep, exec, { root: base, store });
 
@@ -339,7 +339,7 @@ describe("holdDep", () => {
     expect(existsSync(first.dir)).toBe(true);
 
     // Holding the new build releases the old one to the sweep.
-    holdDep(second, "machine-gateway", { store });
+    await holdDep(second, "machine-gateway", { store });
     expect((await sweep()).removed).toEqual([`held-dep/${first.identity}`]);
     expect(existsSync(installPaths(store, dep.id, second.identity).root)).toBe(
       true,

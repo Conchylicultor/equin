@@ -1042,7 +1042,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
 
   // A gated build whose machine watcher is not running cannot be held, so it
   // says so now and again in its OK headline — the line an agent reads.
-  const guardNote = checkValveGuard({ gated }, valveDeps);
+  const guardNote = await checkValveGuard({ gated }, valveDeps);
   if (guardNote !== null) softNotes.push(guardNote);
 
   // ── Admission: ONE host CPU grant for the whole build ─────────────────
@@ -1236,13 +1236,13 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         // No `composition`: central is not an app. It is a singleton API
         // runtime with its own registry (`central.generated.ts`), which no
         // composition filters, so there is nothing for one to select.
-        writeWorktreeSpec({
+        await writeWorktreeSpec({
           name: "central",
           server: centralDir,
           // Main's Bun (central runs main's code), never this checkout's.
-          command: namedBackendCommand(
+          command: await namedBackendCommand(
             "central",
-            checkoutBun(mainRoot),
+            await checkoutBun(mainRoot),
             "bin/index.ts",
           ),
         });
@@ -1663,12 +1663,12 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       if (existsSync(join(centralDir, "bin", "index.ts"))) {
         // No `composition` — see the early central write above.
         // Main's Bun (central runs main's code), never this checkout's.
-        const centralCommand = namedBackendCommand(
+        const centralCommand = await namedBackendCommand(
           "central",
-          checkoutBun(mainRoot),
+          await checkoutBun(mainRoot),
           "bin/index.ts",
         );
-        writeWorktreeSpec({
+        await writeWorktreeSpec({
           name: "central",
           server: centralDir,
           command: centralCommand,

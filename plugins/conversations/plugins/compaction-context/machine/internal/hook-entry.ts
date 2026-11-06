@@ -1,4 +1,4 @@
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import {
   compactionContextHook,
@@ -14,8 +14,8 @@ const HOOK_SCRIPT = join(import.meta.dir, "../../bin/compaction-context.ts");
  * settings. Throws when the script is missing: a launch must not install a hook
  * that cannot run.
  */
-export function compactionHookEntry(): CompactionHookEntry {
-  if (!existsSync(HOOK_SCRIPT)) {
+export async function compactionHookEntry(): Promise<CompactionHookEntry> {
+  if (!(await exists(HOOK_SCRIPT))) {
     throw new Error(`compaction-context script missing at ${HOOK_SCRIPT}`);
   }
   return compactionContextHook({ scriptPath: HOOK_SCRIPT });

@@ -115,7 +115,7 @@ export async function handleCrashRecovery(): Promise<Response> {
   // is the scenario, not a lost call: nothing is pending on it at that moment.
   const holder = createDbClient({
     name: "events-test",
-    connectionString: connectionString(),
+    connectionString: await connectionString(),
   });
   let connected = false;
   let killed = false;

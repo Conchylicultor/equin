@@ -75,7 +75,7 @@ export async function backupDatabase(
       name,
     ],
     {
-      env: { ...process.env, ...libpqSubprocessEnv() },
+      env: { ...process.env, ...(await libpqSubprocessEnv()) },
       tier: "background",
       unbounded:
         "supervised backup child: nothing shorter than the dump itself bounds it",
@@ -110,7 +110,7 @@ async function readTableStats(
   name: string,
   excludedTables: readonly string[],
 ): Promise<TableStat[]> {
-  const pool = openShortLivedClient(name);
+  const pool = await openShortLivedClient(name);
   try {
     const rows = await queryRows(pool, {
       // `relname` is a `name`, cast so the column decodes as the `text` the

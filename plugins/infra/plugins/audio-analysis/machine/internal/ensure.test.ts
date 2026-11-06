@@ -71,7 +71,7 @@ describe("ensureBeatFeatures onPhase", () => {
 
   test("a held lock reports waiting, awaited, then the holder's features", async () => {
     mkdirSync(paths().dir, { recursive: true });
-    const held = tryLock(paths().lock);
+    const held = await tryLock(paths().lock);
     if (held === null) throw new Error("could not take the lock");
     const phases: EnsurePhase[] = [];
     const got = await ensureBeatFeatures(videoId, execContextForTests(), {

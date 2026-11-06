@@ -1,4 +1,4 @@
-import { existsSync, stat } from "@plugins/packages/plugins/timed-fs/core";
+import { exists, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { cp } from "node:fs/promises";
 import { join } from "node:path";
 import { getConfig } from "@plugins/config_v2/server";
@@ -25,7 +25,7 @@ export async function assembleSecrets(
   let sizeBytes = 0;
 
   const storePath = secretsDir.file("secrets.json.enc");
-  if (existsSync(storePath)) {
+  if (await exists(storePath)) {
     const dest = join(dir, "secrets.json.enc");
     await cp(storePath, dest);
     const s = await stat(dest);
@@ -34,7 +34,7 @@ export async function assembleSecrets(
   }
 
   const keyPath = secretsDir.file(".key");
-  if (existsSync(keyPath)) {
+  if (await exists(keyPath)) {
     const dest = join(dir, ".key");
     await cp(keyPath, dest);
     const s = await stat(dest);

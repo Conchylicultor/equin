@@ -20,7 +20,7 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 import {
-  readCompositionMarker,
+  loadCompositionMarker,
   type CompositionMarker,
 } from "@plugins/infra/plugins/worktree/server";
 
@@ -64,7 +64,7 @@ export async function listCompositionNamespaces(): Promise<OwnedNamespace[]> {
     const ns = asNamespace(entry.name);
     let marker: CompositionMarker | null;
     try {
-      marker = readCompositionMarker(ns);
+      marker = await loadCompositionMarker(ns);
     } catch (err) {
       throw new Error(
         `namespace "${ns}" carries an unreadable provenance marker: ` +

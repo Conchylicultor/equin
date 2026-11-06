@@ -42,13 +42,15 @@ export function buildScopeSnapshot(
 // Used by setConfig fork-on-write, where the override is then written by the
 // normal setConfig path (reading this origin as its base). forkDescriptor writes
 // both origin AND override and so calls buildScopeSnapshot directly.
-export function writeScopedOriginSnapshot(
+export async function writeScopedOriginSnapshot(
   descriptor: ConfigDescriptor,
   storePath: string,
   scopeId: string,
-): void {
+): Promise<void> {
   const { snapshot, hash } = buildScopeSnapshot(descriptor, scopeId);
-  ConfigStore.get()
-    .proxy({ storePath, scopeId, file: "origin" })
-    .write(snapshot as JsonValue, hash);
+  await ConfigStore.get().write(
+    { storePath, scopeId, file: "origin" },
+    snapshot as JsonValue,
+    hash,
+  );
 }

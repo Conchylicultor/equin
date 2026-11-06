@@ -5,7 +5,7 @@ import type { BackupSourceReport } from "@plugins/backup/core";
 import { attachmentsSourceConfig } from "../../shared/config";
 import {
   scanGlob,
-  existsSync,
+  exists,
   stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 
@@ -37,7 +37,7 @@ export async function assembleAttachments(
     };
   }
 
-  if (!existsSync(attachmentsDir.path)) {
+  if (!(await exists(attachmentsDir.path))) {
     return {
       id: "attachments",
       name: "Attachments",

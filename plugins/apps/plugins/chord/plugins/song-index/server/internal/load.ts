@@ -64,7 +64,7 @@ export async function loadSections(args: {
   // not twice. `readSnapshotHeads` walks the same lines in the same order as
   // `readSnapshot`, so the count is exactly what the pass will step through.
   let total = 0;
-  for (const head of readSnapshotHeads(args.snapshotPath)) {
+  for await (const head of readSnapshotHeads(args.snapshotPath)) {
     if (head.kind === "section" && inScope(head)) total++;
   }
   await args.onProgress(0, total);
@@ -96,7 +96,7 @@ export async function loadSections(args: {
     await args.onProgress(done, total);
   };
 
-  for (const line of readSnapshot(args.snapshotPath)) {
+  for await (const line of readSnapshot(args.snapshotPath)) {
     if (!inScope(line)) continue;
     if (line.kind === "skipped") {
       skips.add(line.reason, line.id, line.detail);

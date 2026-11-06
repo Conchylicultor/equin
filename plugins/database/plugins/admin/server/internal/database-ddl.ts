@@ -37,7 +37,7 @@ export async function runDatabaseDdl(what: string, sql: string): Promise<void> {
   await withQueryDeadline(
     { ms: DATABASE_DDL_QUERY_DEADLINE_MS, reason: what },
     async () => {
-      const client = await getAdminPool().connect();
+      const client = await (await getAdminPool()).connect();
       try {
         await client.query(sql);
       } finally {

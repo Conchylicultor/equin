@@ -136,7 +136,7 @@ async function startAsLoginService(
   const manager = loginService.manager;
   const service = await loginService.state();
   const managedPid = service.kind === "loaded" ? service.pid : null;
-  const pidfilePid = readPid();
+  const pidfilePid = await readPid();
   // A gateway the manager does not own: started by a `start` from before the
   // gateway was a service.
   const legacyPid =
@@ -165,7 +165,7 @@ async function startAsLoginService(
   const prepared = await prepareGateway(opts, app);
   const launch = await adoptGatewayLaunch(prepared, app);
   const spec = gatewayLaunchSpec(launch);
-  const written = loginService.write(gatewayServiceJob(spec));
+  const written = await loginService.write(gatewayServiceJob(spec));
   console.log(
     `Registered ${loginService.id.label} with ${manager} (${written.path})`,
   );
@@ -219,7 +219,9 @@ async function reportStaleGateway(
   app: MacosAppHost,
 ): Promise<void> {
   const { gateway, launch } = await prepareGateway(opts, app);
-  if (loginService.isCurrent(gatewayServiceJob(gatewayLaunchSpec(launch))))
+  if (
+    await loginService.isCurrent(gatewayServiceJob(gatewayLaunchSpec(launch)))
+  )
     return;
   console.log(
     `  Stale:   the gateway's job changed since the running gateway started (main's gateway binary is now ${gateway.dir}, identity ${gateway.identity}). It keeps running the old one; \`./equin start --only ${loginService.id.label} --force\` swaps it (restarts every backend).`,
@@ -294,7 +296,7 @@ function describeStart(
  * run `./equin start` again after one.
  */
 async function startDetached(opts: Opts, app: MacosAppHost): Promise<void> {
-  const existingPid = readPid();
+  const existingPid = await readPid();
   const pidAlive = existingPid !== null && isRunning(existingPid);
 
   if (!pidAlive && (await isGatewayListening(DEV_GATEWAY_PORT))) {
@@ -315,7 +317,7 @@ async function startDetached(opts: Opts, app: MacosAppHost): Promise<void> {
 
   const launch = await adoptGatewayLaunch(await prepareGateway(opts, app), app);
   // `.pid` only, and no `.ref()`: the gateway deliberately outlives `start`.
-  const { pid } = spawnGatewayDaemon(launch);
+  const { pid } = await spawnGatewayDaemon(launch);
 
   // Wait for the gateway to actually serve before claiming success. It exits
   // when a managed service fails to start, so printing unconditionally
@@ -390,8 +392,8 @@ async function adoptGatewayLaunch(
   // path long after main's source moves on: keep the deps sweep off it until
   // the next `start` moves the hold to a newer build. (On macOS the bundle is
   // a copy; the hold only keeps the build it was made from.)
-  holdDep(gateway, "machine-gateway");
-  ensureDatabaseConfig(asAppPath(launch.cwd), console.log);
+  await holdDep(gateway, "machine-gateway");
+  await ensureDatabaseConfig(asAppPath(launch.cwd), console.log);
   console.log(
     launch.bindHost === null
       ? `Binding the gateway to every interface (${envName("LISTEN")}=:${DEV_GATEWAY_PORT})`

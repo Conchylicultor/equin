@@ -34,6 +34,6 @@ export const attemptEndedJob = defineJob({
     if (!event || event.status !== "done" || !isMain()) return;
     const attemptId = await attemptOfConversation(event.conversationId);
     if (await attemptHasOpenConversation(attemptId)) return;
-    stopCheckoutAgents(attemptId);
+    await stopCheckoutAgents(attemptId);
   },
 });

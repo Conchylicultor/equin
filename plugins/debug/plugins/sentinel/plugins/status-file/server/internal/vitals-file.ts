@@ -2,7 +2,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdirSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import {
   SentinelVitalsRecordSchema,
   type SentinelVitalsRecord,
@@ -25,8 +25,13 @@ export type SentinelVitalsRead =
   | { kind: "recorded"; vitals: SentinelVitalsRecord }
   | { kind: "unreadable"; reason: string };
 
-export function readSentinelVitals(dir: AppPath): SentinelVitalsRead {
-  const read = readJsonFile(vitalsFilePath(dir), SentinelVitalsRecordSchema);
+export async function readSentinelVitals(
+  dir: AppPath,
+): Promise<SentinelVitalsRead> {
+  const read = await readJsonFile(
+    vitalsFilePath(dir),
+    SentinelVitalsRecordSchema,
+  );
   switch (read.kind) {
     case "none":
     case "unreadable":
@@ -37,10 +42,10 @@ export function readSentinelVitals(dir: AppPath): SentinelVitalsRead {
 }
 
 /** Write one reading, write-then-rename. Throws on failure — the caller decides. */
-export function writeSentinelVitals(
+export async function writeSentinelVitals(
   dir: AppPath,
   record: SentinelVitalsRecord,
-): void {
-  mkdirSync(dir, { recursive: true });
-  writeJsonAtomic(dir, VITALS_FILENAME, record, record.pid);
+): Promise<void> {
+  await mkdir(dir, { recursive: true });
+  await writeJsonAtomic(dir, VITALS_FILENAME, record, record.pid);
 }

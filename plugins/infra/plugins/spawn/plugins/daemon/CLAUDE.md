@@ -102,7 +102,8 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
 - Exemptions:
   - Exempts itself from:
     - `daemon/no-raw-worker` — `.` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/registry.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/registry.ts`, `server/internal/pid-file-sync.ts` (debt)
+    - `blocking-fs/no-sync-fs` — `server/internal/pid-file-sync.ts` (debt)
   - Exempted by: `infra/spawn/daemon` (0 debt)
 - Server:
   - Exports (types):
@@ -136,6 +137,7 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `listDaemons`
     - `liveSupervisedIncarnations`
     - `onDaemonActivity`
+    - `parsePidFile`
     - `pidAlive`
     - `readPidFile`
 - Sub-plugins:

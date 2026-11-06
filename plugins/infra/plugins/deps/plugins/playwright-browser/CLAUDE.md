@@ -17,8 +17,9 @@ const headed = await launchChromium(ready, { headless: false });  // headed bina
 ```
 
 - **One module graph.** `playwright` (and its nested `playwright-core`) is
-  resolved with `Bun.resolveSync` from THIS plugin's directory in the checkout
-  asked — for the identity, for the installer CLI, and for the registry that
+  resolved by the `node_modules` walk an import does (async — never
+  `Bun.resolveSync`, which held a backend's thread 4.4 s) from THIS plugin's
+  directory in the checkout asked — for the identity, for the installer CLI, and for the registry that
   reports the executables — and `launchChromium` imports `playwright` from here
   too. Installer, identity and launcher cannot disagree about the version.
 - **Never a package runner.** The install spawns `process.execPath <resolved

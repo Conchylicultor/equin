@@ -1,15 +1,6 @@
 import { X509Certificate, randomBytes } from "node:crypto";
-import {
-  chmodSync,
-  mkdirSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { chmod, mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import {
   envName,
@@ -79,16 +70,16 @@ export function configuredIdentityFile(host: CodesignHost): string {
  * The configured identity, if any: the environment variable, else the
  * `identity` file. An empty file is a mistake, not "none" — it throws.
  */
-export function readConfiguredValue(
+export async function readConfiguredValue(
   host: CodesignHost,
-): ConfiguredValue | null {
+): Promise<ConfiguredValue | null> {
   const fromEnv = readEnv("CODESIGN_IDENTITY", host.env)?.trim();
   if (fromEnv !== undefined && fromEnv !== "") {
     return { value: fromEnv, from: envName("CODESIGN_IDENTITY") };
   }
   const file = configuredIdentityFile(host);
-  if (!existsSync(file)) return null;
-  const value = readFileSync(file, "utf8").trim();
+  if (!(await exists(file))) return null;
+  const value = (await readFile(file, "utf8")).trim();
   if (value === "") {
     throw new Error(
       `${file} is empty. Write a certificate SHA-1 or the exact name of a code-signing identity into it, or delete it to sign with this machine's local identity.`,
@@ -180,13 +171,15 @@ export type LocalIdentityState =
   | { readonly kind: "partial"; readonly missing: string };
 
 /** Read the local identity from disk, never creating it. */
-export function readLocalIdentity(host: CodesignHost): LocalIdentityState {
+export async function readLocalIdentity(
+  host: CodesignHost,
+): Promise<LocalIdentityState> {
   const { dir, keyPath, certPath } = localIdentityPaths(host);
-  if (!existsSync(dir)) return { kind: "absent" };
+  if (!(await exists(dir))) return { kind: "absent" };
   for (const path of [keyPath, certPath]) {
-    if (!existsSync(path)) return { kind: "partial", missing: path };
+    if (!(await exists(path))) return { kind: "partial", missing: path };
   }
-  const cert = new X509Certificate(readFileSync(certPath));
+  const cert = new X509Certificate(await readFile(certPath));
   return {
     kind: "present",
     identity: {
@@ -230,22 +223,22 @@ export const RESET_HINT =
 export async function ensureLocalIdentity(
   host: CodesignHost,
 ): Promise<SigningIdentity & { kind: "local" }> {
-  const first = readLocalIdentity(host);
+  const first = await readLocalIdentity(host);
   if (first.kind === "present") return first.identity;
   if (first.kind === "partial") throw partialError(first.missing);
 
-  mkdirSync(host.dir, { recursive: true, mode: 0o700 });
-  chmodSync(host.dir, 0o700);
+  await mkdir(host.dir, { recursive: true, mode: 0o700 });
+  await chmod(host.dir, 0o700);
   return host.withLock(join(host.dir, ".lock"), async () => {
-    const again = readLocalIdentity(host);
+    const again = await readLocalIdentity(host);
     if (again.kind === "present") return again.identity;
     if (again.kind === "partial") throw partialError(again.missing);
 
     const { dir } = localIdentityPaths(host);
     const tmp = `${dir}.tmp-${process.pid}-${randomBytes(4).toString("hex")}`;
-    mkdirSync(tmp, { mode: 0o700 });
+    await mkdir(tmp, { mode: 0o700 });
     try {
-      writeFileSync(join(tmp, "cert.cnf"), CERT_CONFIG);
+      await writeFile(join(tmp, "cert.cnf"), CERT_CONFIG);
       // /usr/bin/openssl: the system's (LibreSSL), never a Homebrew one on PATH.
       await runOk(host, [
         "/usr/bin/openssl",
@@ -263,14 +256,14 @@ export async function ensureLocalIdentity(
         "-out",
         join(tmp, "cert.pem"),
       ]);
-      rmSync(join(tmp, "cert.cnf"));
-      chmodSync(join(tmp, "key.pem"), 0o600);
-      renameSync(tmp, dir);
+      await rm(join(tmp, "cert.cnf"));
+      await chmod(join(tmp, "key.pem"), 0o600);
+      await rename(tmp, dir);
     } catch (err) {
-      rmSync(tmp, { recursive: true, force: true });
+      await rm(tmp, { recursive: true, force: true });
       throw err;
     }
-    const created = readLocalIdentity(host);
+    const created = await readLocalIdentity(host);
     if (created.kind !== "present") {
       throw new Error(
         `created the local code-signing identity in ${dir}, but reading it back gave ${created.kind}`,
@@ -295,7 +288,7 @@ export async function resolveSigningIdentity(
   host: CodesignHost = machineHost(),
 ): Promise<SigningIdentity | null> {
   if (host.platform !== "darwin") return null;
-  const configured = readConfiguredValue(host);
+  const configured = await readConfiguredValue(host);
   if (configured !== null) return resolveConfigured(configured, host);
   return ensureLocalIdentity(host);
 }

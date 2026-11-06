@@ -98,7 +98,7 @@ function fakeHost(over: Partial<CodesignHost> = {}): CodesignHost {
       if (cmd === "/fake/rcodesign") {
         const cert = args[args.indexOf("--pem-file", 2) + 1]!;
         const id = args[args.indexOf("--binary-identifier") + 1]!;
-        const local = readLocalIdentity(host);
+        const local = await readLocalIdentity(host);
         if (local.kind !== "present" || local.identity.certPath !== cert) {
           throw new Error("rcodesign got the wrong cert");
         }
@@ -205,14 +205,14 @@ describe("resolveSigningIdentity", () => {
     const host = fakeHost();
     mkdirSync(host.dir, { recursive: true });
     writeFileSync(join(host.dir, "identity"), "  \n");
-    expect(() => readConfiguredValue(host)).toThrow("is empty");
+    expect(readConfiguredValue(host)).rejects.toThrow("is empty");
     // No local identity was created along the way.
     expect(existsSync(join(host.dir, "local"))).toBe(false);
   });
 
   test("local: created once (0700 dir, 0600 key, 20 years, codeSigning), then read back unchanged", async () => {
     const host = fakeHost();
-    expect(readLocalIdentity(host).kind).toBe("absent");
+    expect((await readLocalIdentity(host)).kind).toBe("absent");
     const first = await ensureLocalIdentity(host);
     expect(first.kind).toBe("local");
     expect(first.label).toBe("equin Local Code Signing");

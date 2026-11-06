@@ -1,4 +1,4 @@
-import { mkdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { bootUnsettledDir } from "../../data-dirs";
 
@@ -11,16 +11,10 @@ import { bootUnsettledDir } from "../../data-dirs";
 
 const INDEXED = ".indexed";
 
-/**
- * Mark `worktree` as holding a boot not yet seen to settle. Synchronous, and
- * written by the serving entry point beside the boot's `start` line, before
- * any plugin import (server-core `bin/index.ts`): a boot killed while
- * importing still leaves its mark. SERVE ONLY, by construction — an `exec`
- * child never reaches ready, and never runs that entry point.
- */
-export function markBootUnsettled(worktree: string): void {
-  mkdirSync(bootUnsettledDir.path, { recursive: true });
-  writeFileSync(bootUnsettledDir.file(worktree), "");
+/** Mark `worktree` as holding a boot not yet seen to settle (the watchdog's, for an open boot it reads; the booting backend's own mark is `markOwnBootUnsettled`). */
+export async function markBootUnsettled(worktree: string): Promise<void> {
+  await mkdir(bootUnsettledDir.path, { recursive: true });
+  await writeFile(bootUnsettledDir.file(worktree), "");
 }
 
 /**
@@ -47,9 +41,9 @@ export async function readBootUnsettled(): Promise<{
 }
 
 /** The marks are complete: every worktree was swept once. */
-export function stampBootUnsettledIndexed(): void {
-  mkdirSync(bootUnsettledDir.path, { recursive: true });
-  writeFileSync(bootUnsettledDir.file(INDEXED), "");
+export async function stampBootUnsettledIndexed(): Promise<void> {
+  await mkdir(bootUnsettledDir.path, { recursive: true });
+  await writeFile(bootUnsettledDir.file(INDEXED), "");
 }
 
 /**
@@ -72,7 +66,7 @@ export async function clearBootUnsettled(
   }
   if (mtimeMs >= settledAtMs) return;
   try {
-    unlinkSync(path);
+    await unlink(path);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }

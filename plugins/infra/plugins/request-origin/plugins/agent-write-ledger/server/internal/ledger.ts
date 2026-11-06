@@ -42,11 +42,9 @@ import {
  * needs one. (The design doc's original objection was to a slot for a single
  * contributor; with a registry, no load order is load-bearing at all.)
  */
-import { mkdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, rename, unlink, writeFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { randomUUID } from "node:crypto";
 import { basename, dirname } from "node:path";
 import { z } from "zod";
@@ -135,7 +133,7 @@ export interface AgentWriteLedger<K extends string> {
     key: string,
     paths: Record<K, AppPath>,
     operation: string,
-  ): void;
+  ): Promise<void>;
   /**
    * Refresh `after` once the write has landed, so the divergence check has the
    * agent's real end state to compare against. Call right AFTER the mutation.
@@ -144,14 +142,14 @@ export interface AgentWriteLedger<K extends string> {
    * missed call is not silent corruption — it makes the next revert see a
    * divergence and skip the entry, which is the safe direction.
    */
-  noteComplete(writer: WriteOrigin, key: string): void;
+  noteComplete(writer: WriteOrigin, key: string): Promise<void>;
 }
 
 /** The type-erased face every registered ledger shows the aggregate routes. */
 interface RegisteredLedger {
   id: string;
   label: string;
-  list(): AgentWriteEntrySummary[];
+  list(): Promise<AgentWriteEntrySummary[]>;
   revert(scope: AgentWritesScope): Promise<AgentWritesRevertOutcome>;
 }
 
@@ -188,21 +186,26 @@ interface LedgerFile<K extends string> {
   entries: Record<string, AgentWriteLedgerEntry<K>>;
 }
 
-function readOrNull(path: AppPath): string | null {
-  return existsSync(path) ? readFileSync(path, "utf-8") : null;
+async function readOrNull(path: AppPath): Promise<string | null> {
+  try {
+    return await readFile(path, "utf-8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
 }
 
-function snapshotFile(path: AppPath): FileSnapshot {
-  const bytes = readOrNull(path);
+async function snapshotFile(path: AppPath): Promise<FileSnapshot> {
+  const bytes = await readOrNull(path);
   return bytes === null ? { present: false } : { present: true, bytes };
 }
 
-function snapshotAll<K extends string>(
+async function snapshotAll<K extends string>(
   paths: Record<K, AppPath>,
-): Record<K, FileSnapshot> {
+): Promise<Record<K, FileSnapshot>> {
   const out = {} as Record<K, FileSnapshot>;
   for (const role of Object.keys(paths) as K[])
-    out[role] = snapshotFile(paths[role]);
+    out[role] = await snapshotFile(paths[role]);
   return out;
 }
 
@@ -240,10 +243,17 @@ export function defineAgentWriteLedger<K extends string>(
 
   let cached: LedgerFile<K> | undefined;
 
-  function load(): LedgerFile<K> {
+  // Every operation on this ledger is a read-modify-write of `cached` and the
+  // file behind it, with awaits in between (the disk reads and the rewrite):
+  // they run one at a time, in arrival order, as they did when each was one
+  // synchronous call.
+  const serial = createKeyedMutex();
+  const exclusive = <T>(fn: () => Promise<T>): Promise<T> => serial.run(id, fn);
+
+  async function load(): Promise<LedgerFile<K>> {
     if (cached) return cached;
     const path = ledgerFile();
-    const raw = readOrNull(path);
+    const raw = await readOrNull(path);
     if (raw === null) {
       cached = { version: 1, entries: {} };
       return cached;
@@ -288,19 +298,19 @@ export function defineAgentWriteLedger<K extends string>(
    * handful — so this is cheaper than an append log plus its compaction, and it
    * can never be left half-parsed by a SIGKILL mid-write.
    */
-  function persist(ledger: LedgerFile<K>): void {
+  async function persist(ledger: LedgerFile<K>): Promise<void> {
     const path = ledgerFile();
     const tmp = joinAppPath(
       appPathParent(path),
       `${basename(path)}.tmp-${randomUUID()}`,
     );
     try {
-      mkdirSync(asAppPath(dirname(path)), { recursive: true });
-      writeFileSync(tmp, JSON.stringify(ledger, null, 2), "utf-8");
-      renameSync(tmp, path);
+      await mkdir(asAppPath(dirname(path)), { recursive: true });
+      await writeFile(tmp, JSON.stringify(ledger, null, 2), "utf-8");
+      await rename(tmp, path);
     } catch (err) {
       try {
-        unlinkSync(tmp);
+        await unlink(tmp);
       } catch (unlinkErr: unknown) {
         if ((unlinkErr as NodeJS.ErrnoException).code !== "ENOENT")
           throw unlinkErr;
@@ -310,7 +320,7 @@ export function defineAgentWriteLedger<K extends string>(
   }
 
   const handle: AgentWriteLedger<K> = {
-    record(writer, key, paths, operation) {
+    async record(writer, key, paths, operation) {
       if (writer.kind !== "agent") return;
       if (writer.claimsUnreverted) {
         // The agent browser's write drain skipped this request on that claim,
@@ -323,43 +333,49 @@ export function defineAgentWriteLedger<K extends string>(
         );
       }
 
-      const ledger = load();
-      const now = new Date().toISOString();
-      const existing = ledger.entries[key];
+      await exclusive(async () => {
+        const ledger = await load();
+        const now = new Date().toISOString();
+        const existing = ledger.entries[key];
 
-      if (existing) {
-        // `before` is untouched (first write wins); `after` is refreshed by
-        // this write's own `noteComplete`, once its bytes exist.
-        existing.operations.push(operation);
-        existing.lastWriteAt = now;
-        persist(ledger);
-        return;
-      }
+        if (existing) {
+          // `before` is untouched (first write wins); `after` is refreshed by
+          // this write's own `noteComplete`, once its bytes exist.
+          existing.operations.push(operation);
+          existing.lastWriteAt = now;
+          await persist(ledger);
+          return;
+        }
 
-      ledger.entries[key] = {
-        ledgerId: id,
-        key,
-        paths,
-        before: snapshotAll(paths),
-        // Filled in properly by `noteComplete`. Until then it equals `before`,
-        // so a process that died between the write and the note makes the next
-        // revert see a divergence and leave the entry alone — the safe way.
-        after: snapshotAll(paths),
-        source: writer.source,
-        operations: [operation],
-        firstWriteAt: now,
-        lastWriteAt: now,
-      };
-      persist(ledger);
+        const before = await snapshotAll(paths);
+        ledger.entries[key] = {
+          ledgerId: id,
+          key,
+          paths,
+          before,
+          // Filled in properly by `noteComplete`. Until then it equals
+          // `before`, so a process that died between the write and the note
+          // makes the next revert see a divergence and leave the entry alone —
+          // the safe way.
+          after: before,
+          source: writer.source,
+          operations: [operation],
+          firstWriteAt: now,
+          lastWriteAt: now,
+        };
+        await persist(ledger);
+      });
     },
 
-    noteComplete(writer, key) {
+    async noteComplete(writer, key) {
       if (writer.kind !== "agent") return;
-      const ledger = load();
-      const entry = ledger.entries[key];
-      if (!entry) return;
-      entry.after = snapshotAll(entry.paths);
-      persist(ledger);
+      await exclusive(async () => {
+        const ledger = await load();
+        const entry = ledger.entries[key];
+        if (!entry) return;
+        entry.after = await snapshotAll(entry.paths);
+        await persist(ledger);
+      });
     },
   };
 
@@ -367,7 +383,8 @@ export function defineAgentWriteLedger<K extends string>(
     id,
     label,
     list() {
-      return Object.values(load().entries).map(
+      return exclusive(async () =>
+        Object.values((await load()).entries).map(
         ({ key, source, operations, firstWriteAt, lastWriteAt }) => ({
           key,
           source,
@@ -375,11 +392,17 @@ export function defineAgentWriteLedger<K extends string>(
           firstWriteAt,
           lastWriteAt,
         }),
+        ),
       );
     },
 
+    // Not one exclusive run: `restore` re-syncs the domain's caches, which may
+    // wait on the domain's own write lock — held by a writer that is itself
+    // waiting to `record` here. So only the ledger reads and the rewrite are
+    // serialized; the entries are deleted off the shared ledger object, as
+    // they always were across the `await restore`.
     async revert(scope) {
-      const ledger = load();
+      const ledger = await exclusive(load);
       const outcome: AgentWritesRevertOutcome = {
         reverted: [],
         diverged: [],
@@ -394,7 +417,7 @@ export function defineAgentWriteLedger<K extends string>(
           // write, someone else owns them now — restoring would destroy their
           // edit. Skip and drop the entry: the agent's change is frozen in,
           // which is correct, because the user demonstrably touched this.
-          const current = snapshotAll(entry.paths);
+          const current = await snapshotAll(entry.paths);
           const moved = (Object.keys(entry.paths) as K[]).filter(
             (role) => !sameSnapshot(current[role], entry.after[role]),
           );
@@ -431,7 +454,7 @@ export function defineAgentWriteLedger<K extends string>(
         }
       }
 
-      persist(ledger);
+      await exclusive(() => persist(ledger));
       return outcome;
     },
   });
@@ -440,14 +463,15 @@ export function defineAgentWriteLedger<K extends string>(
 }
 
 /** Every ledger as the status endpoint reports it. */
-export function listAgentWrites(): AgentWritesStatus {
-  const summaries: AgentWriteLedgerSummary[] = [...ledgers.values()].map(
-    (ledger) => ({
+export async function listAgentWrites(): Promise<AgentWritesStatus> {
+  const summaries: AgentWriteLedgerSummary[] = [];
+  for (const ledger of ledgers.values()) {
+    summaries.push({
       id: ledger.id,
       label: ledger.label,
-      entries: ledger.list(),
-    }),
-  );
+      entries: await ledger.list(),
+    });
+  }
   let lastWriteAt: string | null = null;
   for (const entry of summaries.flatMap((s) => s.entries)) {
     if (lastWriteAt === null || entry.lastWriteAt > lastWriteAt)

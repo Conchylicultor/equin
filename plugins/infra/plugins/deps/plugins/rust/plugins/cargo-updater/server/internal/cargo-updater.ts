@@ -2,7 +2,7 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join } from "node:path";
 import { z } from "zod";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
@@ -268,7 +268,7 @@ async function detectCrate(
   today: string,
 ): Promise<CrateRow[]> {
   const lock = parseCargoLock(
-    readFileSync(joinAppPath(root, crate.dir, "Cargo.lock"), "utf8"),
+    await readFile(joinAppPath(root, crate.dir, "Cargo.lock"), "utf8"),
   );
   const fromCratesIo = new Set(
     lock
@@ -583,7 +583,7 @@ export const cargoUpdater: Updater = {
           throw new Error(`cargo move ${m.name} has no current release`);
         }
         const pkg = moveCrate(m.name);
-        const now = parseCargoLock(readFileSync(lockPath, "utf8"));
+        const now = parseCargoLock(await readFile(lockPath, "utf8"));
         const has = (v: string) =>
           now.some((p) => p.name === pkg && p.version === v);
         if (has(m.to) && !has(m.from)) {
@@ -623,7 +623,7 @@ export const cargoUpdater: Updater = {
             `moving ${pkg} to ${m.to} also moved ${unplanned.map((u) => `${u.pkg} ${u.from} → ${u.to}`).join(", ")} in ${crate.dir}/Cargo.lock, which no planned move names.`,
           );
         }
-        const locked = parseCargoLock(readFileSync(lockPath, "utf8"));
+        const locked = parseCargoLock(await readFile(lockPath, "utf8"));
         if (!locked.some((p) => p.name === pkg && p.version === m.to)) {
           throw new Error(
             `\`cargo update --precise\` did not record ${pkg} ${m.to} in ${crate.dir}/Cargo.lock.`,

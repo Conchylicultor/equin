@@ -111,6 +111,7 @@ its boot journal attribute that.
   - Exports (values):
     - `access`
     - `accessSync`
+    - `exists`
     - `existsSync`
     - `FS_WAIT_FLOOR_MS`
     - `FS_WAIT_LAYERS`

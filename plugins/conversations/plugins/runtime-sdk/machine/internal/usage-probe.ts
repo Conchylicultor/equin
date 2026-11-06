@@ -82,7 +82,7 @@ export function refreshClaudeUsageNow(
       observedAt,
     );
     if (result.kind === "read")
-      writeClaudeUsageFile(claudeUsagePath(accountId), result.usage);
+      await writeClaudeUsageFile(claudeUsagePath(accountId), result.usage);
     return result;
   });
 }
@@ -103,10 +103,10 @@ let unsubscribe: (() => void) | null = null;
 export function startUsageOnProbe(): void {
   unsubscribe ??= onClaudeCodeProbed((status) => {
     if (status.kind !== "ready") return;
-    const accountId = activeClaudeAccountId();
     void runTracked(
       "runtime-sdk.usage-on-probe",
       async () => {
+        const accountId = await activeClaudeAccountId();
         try {
           await refreshClaudeUsageNow(accountId);
         } catch (err) {

@@ -2,11 +2,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  existsSync,
-  readdirSync,
-  statSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { exists, readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { rm } from "node:fs/promises";
 import { metaPath, releaseLockVideo, tryLockVideo } from "./cache";
 
@@ -78,29 +74,29 @@ const ENTRY_FILE =
  * `locks/` dir is not an entry). Each entry's lock is probed: taken for the
  * instant of the test and released.
  */
-export function listEntries(dir: AppPath): CacheEntry[] {
-  if (!existsSync(dir)) return [];
+export async function listEntries(dir: AppPath): Promise<CacheEntry[]> {
+  if (!(await exists(dir))) return [];
   const byId = new Map<string, CacheEntry>();
-  for (const dirent of readdirSync(dir, { withFileTypes: true })) {
+  for (const dirent of await readdir(dir, { withFileTypes: true })) {
     if (!dirent.isFile()) continue;
     const videoId = ENTRY_FILE.exec(dirent.name)?.[1];
     if (videoId === undefined) continue;
-    const stat = statSync(joinAppPath(dir, dirent.name));
+    const st = await stat(joinAppPath(dir, dirent.name));
     const entry = byId.get(videoId) ?? {
       videoId,
       files: [],
       bytes: 0,
       lastUsedMs: 0,
-      complete: existsSync(metaPath(dir, videoId)),
+      complete: await exists(metaPath(dir, videoId)),
       locked: false,
     };
     entry.files.push(dirent.name);
-    entry.bytes += stat.size;
-    entry.lastUsedMs = Math.max(entry.lastUsedMs, stat.mtimeMs);
+    entry.bytes += st.size;
+    entry.lastUsedMs = Math.max(entry.lastUsedMs, st.mtimeMs);
     byId.set(videoId, entry);
   }
   for (const entry of byId.values()) {
-    const fd = tryLockVideo(dir, entry.videoId);
+    const fd = await tryLockVideo(dir, entry.videoId);
     if (fd === null) entry.locked = true;
     else releaseLockVideo(fd);
   }
@@ -124,7 +120,7 @@ export async function sweepYouTubeAudio(args: {
   ttlMs?: number;
   capBytes?: number;
 }): Promise<SweepReport> {
-  const entries = listEntries(args.dir);
+  const entries = await listEntries(args.dir);
   const evictions = selectEvictions(entries, {
     nowMs: args.nowMs,
     ttlMs: args.ttlMs ?? SWEEP_TTL_MS,
@@ -136,7 +132,7 @@ export async function sweepYouTubeAudio(args: {
   for (const eviction of evictions) {
     const entry = byId.get(eviction.videoId);
     if (entry === undefined) throw new Error(`no entry ${eviction.videoId}`);
-    const fd = tryLockVideo(args.dir, entry.videoId);
+    const fd = await tryLockVideo(args.dir, entry.videoId);
     if (fd === null) {
       report.skippedLocked.push(entry.videoId);
       continue;

@@ -1,6 +1,6 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, writeFile } from "node:fs/promises";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import {
   holdDep,
@@ -61,10 +61,10 @@ export async function reconcileLoginService<S extends DepSource>(
 ): Promise<ReconcileOutcome> {
   // Decided before holding or writing anything: following main must never
   // register a service the user did not `start`.
-  if (policy === "follow" && !existsSync(service.definitionPath()))
+  if (policy === "follow" && !(await exists(service.definitionPath())))
     return { kind: "unregistered" };
 
-  holdDep(ready, loginServiceHolder(decl));
+  await holdDep(ready, loginServiceHolder(decl));
   const before = await service.state();
   // Swapped in under a running generation, which keeps its own executable
   // until the reload below (measured: its grants hold meanwhile).
@@ -75,7 +75,7 @@ export async function reconcileLoginService<S extends DepSource>(
     app.log,
   );
   const job = loginServiceJob(decl, ready, executable);
-  const written = service.write(job);
+  const written = await service.write(job);
   const runningPid = before.kind === "loaded" ? before.pid : null;
   // An always-running service runs while it has a pid; a periodic one while
   // the manager holds it (it has a pid only mid-run).
@@ -103,8 +103,8 @@ export async function reconcileLoginService<S extends DepSource>(
   // The manager appends; truncate so the log holds this start's output. Its
   // folder may not exist yet (a declaration's first start), and neither
   // launchd nor systemd creates it — the job would fail to spawn.
-  mkdirSync(asAppPath(dirname(job.stdioLog)), { recursive: true });
-  writeFileSync(job.stdioLog, "");
+  await mkdir(asAppPath(dirname(job.stdioLog)), { recursive: true });
+  await writeFile(job.stdioLog, "");
   const pid = await service.load();
   return {
     kind: "started",

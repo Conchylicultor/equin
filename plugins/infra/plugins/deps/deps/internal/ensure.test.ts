@@ -229,14 +229,14 @@ describe("depState", () => {
       paths.installing,
       JSON.stringify({ since: "2026-09-29T10:00:00.000Z", pid: 1 }),
     );
-    const fd = tryLock(paths.lock);
+    const fd = await tryLock(paths.lock);
     expect(fd).not.toBeNull();
     expect(await depState(dep, { store, root: base })).toEqual({
       kind: "installing",
       since: "2026-09-29T10:00:00.000Z",
       logTail: ["line 1", "line 2"],
     });
-    releaseLock(fd!);
+    await releaseLock(fd!);
     rmSync(paths.root, { recursive: true });
 
     // failed: the install threw, and ensureDep rethrows it.
@@ -303,14 +303,14 @@ describe("readyNow", () => {
       paths.installing,
       JSON.stringify({ since: "2026-09-30T10:00:00.000Z", pid: 1 }),
     );
-    const fd = tryLock(paths.lock);
+    const fd = await tryLock(paths.lock);
     expect(fd).not.toBeNull();
     expect(await readyNow(dep, { store, root: base })).toEqual({
       kind: "installing",
       since: "2026-09-30T10:00:00.000Z",
       logTail: ["downloading"],
     });
-    releaseLock(fd!);
+    await releaseLock(fd!);
     rmSync(paths.root, { recursive: true });
 
     // failed: the last install threw.
@@ -388,11 +388,11 @@ describe("removeDep", () => {
     const ready = await ensureDep(dep, exec, { store, root: base });
     const paths = installPaths(store, dep.id, ready.identity);
 
-    const fd = tryLock(paths.lock);
+    const fd = await tryLock(paths.lock);
     expect(await removeDep(dep, { store, root: base })).toEqual({
       kind: "busy",
     });
-    releaseLock(fd!);
+    await releaseLock(fd!);
 
     const removed = await removeDep(dep, { store, root: base });
     expect(removed.kind).toBe("removed");

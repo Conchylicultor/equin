@@ -3,8 +3,8 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { z } from "zod";
-import { renameSync, writeFileSync } from "node:fs";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { rename, writeFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 
 // The two moves every file in the watcher's directory makes: a whole-file JSON
 // read that says what it found (never a guess), and a write-then-rename so a
@@ -20,13 +20,13 @@ export type JsonFileRead<T> =
   | { kind: "unreadable"; reason: string };
 
 /** Read and parse one JSON file: missing → `none`, bad JSON or shape → `unreadable`. */
-export function readJsonFile<T>(
+export async function readJsonFile<T>(
   path: AppPath,
   schema: z.ZodType<T>,
-): JsonFileRead<T> {
+): Promise<JsonFileRead<T>> {
   let raw: string;
   try {
-    raw = readFileSync(path, "utf8");
+    raw = await readFile(path, "utf8");
   } catch (err) {
     if (isErrno(err, "ENOENT")) return { kind: "none" };
     throw err;
@@ -48,13 +48,13 @@ export function readJsonFile<T>(
 }
 
 /** Write `value` as JSON to `dir/filename` through a pid-named temp file and a rename. */
-export function writeJsonAtomic(
+export async function writeJsonAtomic(
   dir: AppPath,
   filename: string,
   value: unknown,
   pid: number,
-): void {
+): Promise<void> {
   const tmp = joinAppPath(dir, `${filename}.${String(pid)}.tmp`);
-  writeFileSync(tmp, JSON.stringify(value));
-  renameSync(tmp, joinAppPath(dir, filename));
+  await writeFile(tmp, JSON.stringify(value));
+  await rename(tmp, joinAppPath(dir, filename));
 }

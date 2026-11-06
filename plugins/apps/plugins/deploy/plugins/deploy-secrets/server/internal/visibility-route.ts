@@ -9,9 +9,13 @@ import { readDeploySecretKey } from "./read";
  * ship's gate wants: the running app can read it. Never a value.
  */
 export const handleDeploySecretsVisibility = hostOnly(
-  implement(deploySecretsVisibilityEndpoint, ({ query }) => ({
+  implement(deploySecretsVisibilityEndpoint, async ({ query }) => ({
     secrets: Object.fromEntries(
-      query.keys.map((key) => [key, readDeploySecretKey(key).kind]),
+      await Promise.all(
+        query.keys.map(
+          async (key) => [key, (await readDeploySecretKey(key)).kind] as const,
+        ),
+      ),
     ),
   })),
 );

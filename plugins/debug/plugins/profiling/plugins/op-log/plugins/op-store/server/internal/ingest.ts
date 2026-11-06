@@ -2,11 +2,7 @@ import {
   asAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { fstatSync, readSync } from "node:fs";
-import {
-  openOwnedFd,
-  type OwnedFd,
-} from "@plugins/packages/plugins/owned-fd/core";
+import { open, type FileHandle } from "node:fs/promises";
 import type { OpLine } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import {
   planSegments,
@@ -46,21 +42,27 @@ export type DrainResult =
   | { kind: "moved" };
 
 interface OpenFile {
-  fd: OwnedFd;
+  handle: FileHandle;
   stat: FileStat;
 }
 
-function openIfExists(path: AppPath): OpenFile | null {
-  let fd: OwnedFd;
+async function openIfExists(path: AppPath): Promise<OpenFile | null> {
+  let handle: FileHandle;
   try {
-    fd = openOwnedFd(path, "r");
+    handle = await open(path, "r");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
   }
   // The inode of what we HOLD, not of whatever the name points at by now.
-  const st = fstatSync(fd.fd, { bigint: true });
-  return { fd, stat: { inode: st.ino.toString(), size: Number(st.size) } };
+  let st;
+  try {
+    st = await handle.stat({ bigint: true });
+  } catch (err) {
+    await handle.close();
+    throw err;
+  }
+  return { handle, stat: { inode: st.ino.toString(), size: Number(st.size) } };
 }
 
 /** Parse complete lines; a line that is not an op-log record is skipped loudly. */
@@ -101,11 +103,11 @@ interface Chunk {
  * Read `seg` as complete-line chunks. A chunk with no `\n` in it (a line longer
  * than `chunkBytes`) is carried into the next read rather than split.
  */
-function* readSegment(
-  fd: number,
+async function* readSegment(
+  handle: FileHandle,
   seg: Segment,
   chunkBytes: number,
-): Generator<Chunk> {
+): AsyncGenerator<Chunk> {
   let pos = seg.from;
   let carry: Buffer = Buffer.alloc(0);
   let carryStart = pos;
@@ -119,7 +121,7 @@ function* readSegment(
   while (pos < seg.to) {
     const want = Math.min(chunkBytes, seg.to - pos);
     const buf = Buffer.allocUnsafe(want);
-    const n = readSync(fd, buf, 0, want, pos);
+    const { bytesRead: n } = await handle.read(buf, 0, want, pos);
     if (n <= 0) break;
     pos += n;
     let data =
@@ -174,7 +176,9 @@ export async function drainOpLog(opts: DrainOptions): Promise<DrainResult> {
   try {
     for (let i = 0; i <= rotations; i++) {
       opened.push(
-        openIfExists(i === 0 ? opts.path : asAppPath(`${opts.path}.${i}`)),
+        await openIfExists(
+          i === 0 ? opts.path : asAppPath(`${opts.path}.${i}`),
+        ),
       );
     }
     const plan = planSegments(
@@ -191,7 +195,7 @@ export async function drainOpLog(opts: DrainOptions): Promise<DrainResult> {
       const file = opened[seg.slot]!;
       let committedEnd = -1;
       let rest = seg.from;
-      for (const chunk of readSegment(file.fd.fd, seg, chunkBytes)) {
+      for await (const chunk of readSegment(file.handle, seg, chunkBytes)) {
         const next = { inode: seg.inode, offset: chunk.end };
         const r = await commitBatch(opts.db, {
           expected,
@@ -237,6 +241,6 @@ export async function drainOpLog(opts: DrainOptions): Promise<DrainResult> {
     }
     return { kind: "ok", lines, written, gap: plan.gap };
   } finally {
-    for (const o of opened) if (o) o.fd.close();
+    await Promise.all(opened.flatMap((o) => (o ? [o.handle.close()] : [])));
   }
 }

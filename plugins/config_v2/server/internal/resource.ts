@@ -13,6 +13,7 @@ import {
   threeWayMerge,
   readTypedConfigWithLayer,
   scopeAppId,
+  loadedProxy,
 } from "../../core";
 import type {
   ConfigV2Values,
@@ -30,6 +31,7 @@ import { documentStamp } from "./document-stamp";
 import { ConfigGitLayer, ConfigStore } from "./host-services";
 import { hasFieldStorageProvider } from "./field-storage-providers";
 import { computeFieldTiers } from "./field-tiers";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 
 type ConfigGetter = <F extends FieldsRecord>(
   d: ConfigDescriptor<F>,
@@ -45,7 +47,7 @@ let configGetter: ConfigGetter | null = null;
 // In-memory derived state the scopes loader reads so a subscribe /
 // WS-reconnect-replay / boot-snapshot read is a pure memory read (no per-load
 // filesystem walk). The AUTHORITATIVE predicate is still on disk
-// (scopeHasOwnConfig); this cache is recomputed from it via refreshScopeMembers
+// (scopeHasOwnConfigOnDisk); this cache is recomputed from it via refreshScopeMembers
 // ONLY when a config file actually changes (boot, fork, scoped write/delete).
 //
 // Being event-fed, it is only as fresh as the events: a config file that changes
@@ -245,10 +247,10 @@ function conflictFiles(storePath: string, scopeId?: string) {
 // recomputes only the descriptor that actually changed. Reads and parses all
 // three files — go through derivedDescriptorConflict, which skips this when the
 // files are provably unchanged.
-function computeDescriptorConflict(
+async function computeDescriptorConflict(
   storePath: string,
   scopeId?: string,
-): ConfigV2ConflictEntry | null {
+): Promise<ConfigV2ConflictEntry | null> {
   const descriptor = descriptorByPath.get(storePath);
   if (!descriptor) {
     throw new Error(
@@ -258,15 +260,17 @@ function computeDescriptorConflict(
   const files = conflictFiles(storePath, scopeId);
   const store = ConfigStore.get();
 
-  const origin = store.proxy(files.origin);
-  const overwrites = store.proxy(files.override);
+  const [originData, overrideData] = await Promise.all([
+    store.read(files.origin),
+    store.read(files.override),
+  ]);
+  const origin = loadedProxy(originData);
+  const overwrites = loadedProxy(overrideData);
 
   if (hasConflict(origin, overwrites)) {
-    const originData = origin.read();
     const originValues = originData
       ? (originData.content as Record<string, unknown>)
       : (descriptor.defaults as Record<string, unknown>);
-    const overrideData = overwrites.read();
     const overrideValues = overrideData
       ? (overrideData.content as Record<string, unknown>)
       : (descriptor.defaults as Record<string, unknown>);
@@ -277,9 +281,9 @@ function computeDescriptorConflict(
     // fields. A corrupt ancestor fails loud here exactly like a corrupt
     // origin/override above — consistent with how this treats its inputs.
     let trueConflictKeys: string[] | undefined;
-    const ancestor = store.proxy(files.ancestor);
-    if (ancestor.exists()) {
-      const base = ancestor.read()!.content as Record<string, JsonValue>;
+    const ancestor = await store.read(files.ancestor);
+    if (ancestor !== null) {
+      const base = ancestor.content as Record<string, JsonValue>;
       trueConflictKeys = threeWayMerge(
         base,
         overrideValues as Record<string, JsonValue>,
@@ -307,7 +311,6 @@ function computeDescriptorConflict(
       stored && typeof stored === "object" && !Array.isArray(stored)
         ? (stored as Record<string, unknown>)
         : {};
-    const originData = origin.read();
     const originValues = originData
       ? (originData.content as Record<string, unknown>)
       : (descriptor.defaults as Record<string, unknown>);
@@ -337,6 +340,10 @@ interface DerivedTrioState {
 }
 const conflictMemo = new Map<string, DerivedTrioState>();
 
+// Serializes each "last published" push path per descriptor — see
+// refreshScopeMembers.
+const publishLock = createKeyedMutex();
+
 // THE conflict derivation. A descriptor's conflict state is a pure function of
 // its file trio plus the descriptor itself (code — constant for the process), so
 // memoize the expensive part on a fingerprint of that trio taken straight off the
@@ -353,7 +360,7 @@ const conflictMemo = new Map<string, DerivedTrioState>();
 // writer parcel doesn't observe.) With a disk-derived key the worst case of a
 // missed event is a recompute, never a wrong answer.
 //
-// Cost: on the desktop a stamp is a statSync, roughly two orders of magnitude
+// Cost: on the desktop a stamp is a stat, roughly two orders of magnitude
 // cheaper than read + JSONC-parse + hash — a measured ~10ms to sweep every descriptor
 // (~250 of them, ~800 stats) against ~1.2s just to re-read the same file trios.
 // Deliberately NOT infra/corpus-index:
@@ -361,12 +368,18 @@ const conflictMemo = new Map<string, DerivedTrioState>();
 // heavy-read pool — this one indexes a fixed, already-known path trio per
 // descriptor, lives only in this process, and must be cheap enough to run inside
 // a resource loader.
-function derivedTrioState(
+//
+// The stamps are taken BEFORE the files are read, so a write landing in
+// between leaves a memo whose content is newer than its fingerprint — which
+// the next call's fresh fingerprint no longer matches, and recomputes. A memo
+// can be recomputed needlessly, never returned for content it was not
+// computed from.
+async function derivedTrioState(
   storePath: string,
   scopeId?: string,
-): DerivedTrioState {
+): Promise<DerivedTrioState> {
   const files = conflictFiles(storePath, scopeId);
-  const fingerprint = documentStamp(files);
+  const fingerprint = await documentStamp(files);
   const memoKey = `${storePath}|${scopeId ?? ""}`;
 
   const memo = conflictMemo.get(memoKey);
@@ -374,17 +387,17 @@ function derivedTrioState(
 
   const state: DerivedTrioState = {
     fingerprint,
-    entry: computeDescriptorConflict(storePath, scopeId),
+    entry: await computeDescriptorConflict(storePath, scopeId),
   };
   conflictMemo.set(memoKey, state);
   return state;
 }
 
-function derivedDescriptorConflict(
+async function derivedDescriptorConflict(
   storePath: string,
   scopeId?: string,
-): ConfigV2ConflictEntry | null {
-  return derivedTrioState(storePath, scopeId).entry;
+): Promise<ConfigV2ConflictEntry | null> {
+  return (await derivedTrioState(storePath, scopeId)).entry;
 }
 
 // The detail-pane banner. Routed through the same memo as the aggregate below so
@@ -420,15 +433,24 @@ export const configScopesServed = serveValue(configScopes, {
 });
 
 // Recompute one descriptor's scope membership from the AUTHORITATIVE store
-// predicate (scopeHasOwnConfig) and update the in-memory map. Notifies the global
+// predicate (scopeHasOwnConfigOnDisk) and update the in-memory map. Notifies the global
 // scopes resource iff membership changed. Called at boot and at every point a
 // scoped origin/override file appears or disappears — never on a plain read.
-export function refreshScopeMembers(storePath: string): void {
+//
+// Serialized per descriptor (`publishLock`): the "last published" value it
+// diffs against must be updated in the order the derivations read the disk,
+// or an older derivation finishing last would leave it stale and swallow the
+// next real change's notify. The same holds for the two refreshers below.
+export function refreshScopeMembers(storePath: string): Promise<void> {
+  return publishLock.run(`scopes\0${storePath}`, () =>
+    refreshScopeMembersNow(storePath),
+  );
+}
+
+async function refreshScopeMembersNow(storePath: string): Promise<void> {
   const descriptor = descriptorByPath.get(storePath);
   if (!descriptor) return;
-  const ids = ConfigStore.get()
-    .scopes(storePath)
-    .filter((sid) => scopeHasOwnConfig(descriptor, sid));
+  const ids = await ownConfigScopes(descriptor, storePath);
   const prev = scopeMembers.get(storePath) ?? [];
   const changed =
     ids.length !== prev.length || ids.some((id, i) => id !== prev[i]);
@@ -453,14 +475,14 @@ export function refreshScopeMembers(storePath: string): void {
 // (usually absent) @app dir, and an absent file trio computes to null — so
 // listing a scope that has no files for THIS descriptor costs three stats and
 // answers "no conflict".
-function descriptorConflictLocations(
+async function descriptorConflictLocations(
   storePath: string,
-): ConfigV2ConflictLocations | null {
-  const base = derivedDescriptorConflict(storePath) !== null;
+): Promise<ConfigV2ConflictLocations | null> {
+  const base = (await derivedDescriptorConflict(storePath)) !== null;
   const scopeIds: string[] = [];
   if (descriptorByPath.has(storePath)) {
-    for (const sid of ConfigStore.get().scopes(storePath)) {
-      if (derivedDescriptorConflict(storePath, sid) !== null)
+    for (const sid of await ConfigStore.get().scopes(storePath)) {
+      if ((await derivedDescriptorConflict(storePath, sid)) !== null)
         scopeIds.push(sid);
     }
   }
@@ -483,12 +505,14 @@ export const configConflictLocationsServed = serveValue(
   {
     source: "external",
     changes: "notified",
-    loader: whenRegistryReady(() => {
+    loader: whenRegistryReady(async () => {
+      const paths = [...descriptorByPath.keys()];
+      const all = await Promise.all(paths.map(descriptorConflictLocations));
       const out: ConfigV2ConflictMap = {};
-      for (const storePath of descriptorByPath.keys()) {
-        const locations = descriptorConflictLocations(storePath);
+      paths.forEach((storePath, i) => {
+        const locations = all[i];
         if (locations) out[storePath] = locations;
-      }
+      });
       return out;
     }),
   },
@@ -508,9 +532,15 @@ const publishedConflictLocations = new Map<string, string>();
 // load regardless, so failing to call this can delay a push but can never leave a
 // wrong value behind. Also called at boot to seed both the memo and this snapshot
 // (so the first real change doesn't emit a spurious notify).
-export function refreshConflictLocations(storePath: string): void {
+export function refreshConflictLocations(storePath: string): Promise<void> {
+  return publishLock.run(`conflicts\0${storePath}`, () =>
+    refreshConflictLocationsNow(storePath),
+  );
+}
+
+async function refreshConflictLocationsNow(storePath: string): Promise<void> {
   if (!descriptorByPath.has(storePath)) return;
-  const locations = descriptorConflictLocations(storePath);
+  const locations = await descriptorConflictLocations(storePath);
   const next = locations ? JSON.stringify(locations) : "";
   const prev = publishedConflictLocations.get(storePath) ?? "";
   if (next === prev) return;
@@ -532,10 +562,10 @@ export function refreshConflictLocations(storePath: string): void {
 // Returns 0 for an unregistered path rather than throwing the way computeTiers
 // does: this runs inside an aggregate sweep over every descriptor, where one
 // unknown path must not blank the whole nav.
-function computeModifiedCount(storePath: string): number {
+async function computeModifiedCount(storePath: string): Promise<number> {
   if (!descriptorByPath.has(storePath)) return 0;
   let count = 0;
-  for (const tier of Object.values(computeTiers(storePath))) {
+  for (const tier of Object.values(await computeTiers(storePath))) {
     if (tier === "user") count++;
   }
   return count;
@@ -554,12 +584,14 @@ function computeModifiedCount(storePath: string): number {
 export const configModifiedCountsServed = serveValue(configModifiedCounts, {
   source: "external",
   changes: "notified",
-  loader: whenRegistryReady(() => {
+  loader: whenRegistryReady(async () => {
+    const paths = [...descriptorByPath.keys()];
+    const counts = await Promise.all(paths.map(computeModifiedCount));
     const out: ConfigV2ModifiedCounts = {};
-    for (const storePath of descriptorByPath.keys()) {
-      const count = computeModifiedCount(storePath);
+    paths.forEach((storePath, i) => {
+      const count = counts[i]!;
       if (count > 0) out[storePath] = count;
-    }
+    });
     return out;
   }),
 });
@@ -575,10 +607,16 @@ const publishedModifiedCounts = new Map<string, number>();
 // loader re-derives from disk regardless, so failing to call this can delay a
 // badge but can never leave a wrong count behind. Also called at boot to seed the
 // snapshot, so the first real change doesn't emit a spurious notify.
-export function refreshModifiedCount(storePath: string): void {
+export function refreshModifiedCount(storePath: string): Promise<void> {
+  return publishLock.run(`modified\0${storePath}`, () =>
+    refreshModifiedCountNow(storePath),
+  );
+}
+
+async function refreshModifiedCountNow(storePath: string): Promise<void> {
   if (!descriptorByPath.has(storePath)) return;
   const prev = publishedModifiedCounts.get(storePath) ?? 0;
-  const count = computeModifiedCount(storePath);
+  const count = await computeModifiedCount(storePath);
   if (count === prev) return;
   if (count > 0) publishedModifiedCounts.set(storePath, count);
   else publishedModifiedCounts.delete(storePath);
@@ -612,10 +650,13 @@ export function getHierarchyPath(
 // base; an untracked scope resolves base live. Covers both a committed git scope
 // (origin but no user override) and a runtime fork (override) — the single
 // authoritative membership predicate read/write/server-resolve all key off.
-export function scopeHasOwnConfig(
+//
+// Read from the store. The registry's `getConfig` asks the same question of
+// its cache entry (`ownConfig`, read in the same pass as the entry's values).
+export async function scopeHasOwnConfigOnDisk(
   descriptor: ConfigDescriptor,
   scopeId: string,
-): boolean {
+): Promise<boolean> {
   if (!scopeId) return false;
   const hierarchyPath = hierarchyByDescriptor.get(descriptor);
   if (!hierarchyPath) return false;
@@ -624,26 +665,43 @@ export function scopeHasOwnConfig(
     scopeId,
   });
   const store = ConfigStore.get();
-  return (
-    store.proxy(files.override).exists() || store.proxy(files.origin).exists()
+  const [override, origin] = await Promise.all([
+    store.stamp(files.override),
+    store.stamp(files.origin),
+  ]);
+  return override !== "-" || origin !== "-";
+}
+
+/** The scopes under `storePath` with a document of their own for `descriptor`. */
+async function ownConfigScopes(
+  descriptor: ConfigDescriptor,
+  storePath: string,
+): Promise<string[]> {
+  const scopes = await ConfigStore.get().scopes(storePath);
+  const own = await Promise.all(
+    scopes.map((sid) => scopeHasOwnConfigOnDisk(descriptor, sid)),
   );
+  return scopes.filter((_, i) => own[i]);
 }
 
 // Every scope with its OWN document for `descriptor` (a committed git scope, a
 // runtime fork, or a plain scoped write) — read from the store through the same
-// `scopeHasOwnConfig` predicate as the scopes resource, not from its event-fed
+// `scopeHasOwnConfigOnDisk` predicate as the scopes resource, not from its event-fed
 // map, so a server consumer asking "which scopes chose X?" can't see a stale
 // answer. The base scope is not listed; read it with `getConfig(descriptor)`.
-export function getConfigScopeIds(descriptor: ConfigDescriptor): string[] {
+export function getConfigScopeIds(
+  descriptor: ConfigDescriptor,
+): Promise<string[]> {
   const hierarchyPath = hierarchyByDescriptor.get(descriptor);
   if (!hierarchyPath) {
     throw new Error(
       `[config-v2] getConfigScopeIds: descriptor "${descriptor.name}" is not registered.`,
     );
   }
-  return ConfigStore.get()
-    .scopes(`${hierarchyPath}/${descriptor.name}.jsonc`)
-    .filter((sid) => scopeHasOwnConfig(descriptor, sid));
+  return ownConfigScopes(
+    descriptor,
+    `${hierarchyPath}/${descriptor.name}.jsonc`,
+  );
 }
 
 // All registered descriptors tagged with the given scope kind, plus their
@@ -678,7 +736,10 @@ export function setConfigGetter(getter: ConfigGetter): void {
 // Memoized on the same file-trio fingerprint as the conflict entry, and computed
 // lazily inside it, so opening a detail pane costs one read of documents the
 // conflict derivation may already have paid for.
-function computeTiers(path: string, scopeId?: string): ConfigV2Tiers {
+async function computeTiers(
+  path: string,
+  scopeId?: string,
+): Promise<ConfigV2Tiers> {
   const descriptor = descriptorByPath.get(path);
   if (!descriptor) {
     // After readiness, an unregistered path is a genuine bug (unknown descriptor)
@@ -688,14 +749,18 @@ function computeTiers(path: string, scopeId?: string): ConfigV2Tiers {
     );
   }
 
-  const state = derivedTrioState(path, scopeId);
+  const state = await derivedTrioState(path, scopeId);
   if (!state.tiers) {
     const files = conflictFiles(path, scopeId);
     const store = ConfigStore.get();
+    const [origin, override] = await Promise.all([
+      store.read(files.origin),
+      store.read(files.override),
+    ]);
     const resolved = readTypedConfigWithLayer(
       descriptor,
-      store.proxy(files.origin),
-      store.proxy(files.override),
+      loadedProxy(origin),
+      loadedProxy(override),
     );
     state.tiers = computeFieldTiers({
       fields: descriptor.fields,

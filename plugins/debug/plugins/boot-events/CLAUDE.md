@@ -140,11 +140,14 @@ boots from before the marks.
     - `debug/boot-watchdog`
     - `debug/timeline`
 - Exemptions:
-  - Exempts itself from: `server-core/no-process-crash-listener` — `machine/internal/boot-crash.ts` (sanctioned)
+  - Exempts itself from:
+    - `server-core/no-process-crash-listener` — `machine/internal/boot-crash.ts` (sanctioned)
+    - `blocking-fs/no-sync-fs` — `machine/internal/own-boot-mark.ts` (sanctioned)
 - Machine:
   - Exports (values):
     - `clearBootUnsettled`
     - `markBootUnsettled`
+    - `markOwnBootUnsettled`
     - `readBootUnsettled`
     - `stampBootUnsettledIndexed`
 

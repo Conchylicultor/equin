@@ -283,7 +283,7 @@ export const graphileQueue: JobQueueImpl = {
   // covers is a database that never had the schema at all (main's very first
   // boot, a `createTestDb` throwaway) and a graphile version bump that adds
   // migrations.
-  install: () => installQueueSchema(connectionString()),
+  install: async () => installQueueSchema(await connectionString()),
   async start() {
     await startWorkers();
     startStuckLockSweeper();

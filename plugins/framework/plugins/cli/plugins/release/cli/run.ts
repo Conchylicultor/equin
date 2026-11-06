@@ -798,7 +798,7 @@ async function releaseSourceMode(
   root: AppPath,
   provenance: GitProvenance,
 ): Promise<ReleaseSourceMode> {
-  if (isReleaseCheckout(root)) return "inner";
+  if (await isReleaseCheckout(root)) return "inner";
   // Main ALWAYS pins, even when `git status` reads dirty: a status read taken
   // while a push is writing files looks dirty, and building in place there is
   // exactly the torn-tree race pinning exists to close. Main never holds work
@@ -1388,7 +1388,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   // host build and a cross-built candidate of the same composition no
   // longer overwrite each other.
   const compDir = dirname(out);
-  claimLatestPointer(asAppPath(compDir), runId, platform);
+  await claimLatestPointer(asAppPath(compDir), runId, platform);
 
   // A run dir is a whole staged app; `~/.equin/state/releases/` has no
   // other retention. Runs a pointer names are never swept.
@@ -1396,7 +1396,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   // this process runs inside a private checkout whose name is the run id, while
   // the run dirs being pruned are filed under the INVOKING checkout's namespace
   // — which only `out` still carries.
-  const pruned = pruneReleaseRunDirs(asAppPath(compDir));
+  const pruned = await pruneReleaseRunDirs(asAppPath(compDir));
   if (pruned.removed.length > 0) {
     console.log(
       `\n[prune] Removed ${pruned.removed.length} old run dir(s): ${pruned.removed.join(", ")}`,

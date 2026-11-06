@@ -1,5 +1,5 @@
-import { chmodSync, copyFileSync } from "node:fs";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { chmod, copyFile } from "node:fs/promises";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { isAbsolute, join } from "node:path";
 import {
   joinAppPath,
@@ -149,18 +149,18 @@ export function cargoBuild(spec: CargoBuildSpec): CargoSource {
         timeoutMs: BUILD_TIMEOUT_MS,
       });
       const built = join(targetDir, "release", bin);
-      if (!existsSync(built)) {
+      if (!(await exists(built))) {
         throw new Error(
           `cargo build finished without producing ${built} — is \`${bin}\` a binary target of ${crate}/Cargo.toml?`,
         );
       }
       if (assembled === null) {
-        copyFileSync(built, ctx.output);
-        chmodSync(ctx.output, 0o755);
+        await copyFile(built, ctx.output);
+        await chmod(ctx.output, 0o755);
         return;
       }
       await assembled.then(ctx, built);
-      if (!existsSync(join(ctx.dir, binary))) {
+      if (!(await exists(join(ctx.dir, binary)))) {
         throw new Error(
           `cargoBuild ${crate}: \`then\` finished without leaving the binary at env/${binary}`,
         );

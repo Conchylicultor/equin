@@ -6,56 +6,57 @@ const base = { storePath: "a/b/config.jsonc" };
 const scoped = { storePath: "a/b/config.jsonc", scopeId: "app:pages" };
 
 describe("createMemoryConfigStore", () => {
-  test("one file per { storePath, scopeId, file }", () => {
+  test("one file per { storePath, scopeId, file }", async () => {
     const store = createMemoryConfigStore();
-    store.proxy({ ...base, file: "override" }).write({ v: 1 }, "h");
-    expect(store.proxy({ ...base, file: "override" }).read()).toEqual({
+    await store.write({ ...base, file: "override" }, { v: 1 }, "h");
+    expect(await store.read({ ...base, file: "override" })).toEqual({
       content: { v: 1 },
       hash: "h",
     });
-    expect(store.proxy({ ...base, file: "origin" }).exists()).toBe(false);
-    expect(store.proxy({ ...scoped, file: "override" }).exists()).toBe(false);
+    expect(await store.read({ ...base, file: "origin" })).toBeNull();
+    expect(await store.read({ ...scoped, file: "override" })).toBeNull();
     expect(
-      store.proxy({ ...base, scopeId: "", file: "override" }).exists(),
-    ).toBe(true);
+      await store.read({ ...base, scopeId: "", file: "override" }),
+    ).not.toBeNull();
   });
 
-  test("a stamp is '-' when absent and moves on every write", () => {
+  test("a stamp is '-' when absent and moves on every write", async () => {
     const store = createMemoryConfigStore();
     const ref = { ...base, file: "override" } as const;
-    expect(store.stamp(ref)).toBe("-");
-    store.proxy(ref).write({ v: 1 }, "h");
-    const first = store.stamp(ref);
-    store.proxy(ref).write({ v: 1 }, "h");
-    expect(store.stamp(ref)).not.toBe(first);
-    store.remove(ref);
-    expect(store.stamp(ref)).toBe("-");
-    expect(store.proxy(ref).exists()).toBe(false);
+    expect(await store.stamp(ref)).toBe("-");
+    await store.write(ref, { v: 1 }, "h");
+    const first = await store.stamp(ref);
+    await store.write(ref, { v: 1 }, "h");
+    expect(await store.stamp(ref)).not.toBe(first);
+    await store.remove(ref);
+    expect(await store.stamp(ref)).toBe("-");
+    expect(await store.read(ref)).toBeNull();
   });
 
-  test("scopes lists the scopes holding a document under the hierarchy", () => {
+  test("scopes lists the scopes holding a document under the hierarchy", async () => {
     const store = createMemoryConfigStore();
-    store.proxy({ ...scoped, file: "origin" }).write({}, "h");
-    store
-      .proxy({
-        storePath: "a/b/other.jsonc",
-        scopeId: "app:mail",
-        file: "override",
-      })
-      .write({}, "h");
-    store
-      .proxy({
-        storePath: "c/config.jsonc",
-        scopeId: "app:x",
-        file: "override",
-      })
-      .write({}, "h");
-    expect(store.scopes(base.storePath)).toEqual(["app:mail", "app:pages"]);
+    await store.write({ ...scoped, file: "origin" }, {}, "h");
+    await store.write(
+      { storePath: "a/b/other.jsonc", scopeId: "app:mail", file: "override" },
+      {},
+      "h",
+    );
+    await store.write(
+      { storePath: "c/config.jsonc", scopeId: "app:x", file: "override" },
+      {},
+      "h",
+    );
+    expect(await store.scopes(base.storePath)).toEqual([
+      "app:mail",
+      "app:pages",
+    ]);
   });
 
-  test("edit runs the mutation and returns its result", () => {
+  test("edit runs the mutation and returns its result", async () => {
     const store = createMemoryConfigStore();
-    expect(store.edit(base, { kind: "user" }, "op", () => 7)).toBe(7);
+    expect(
+      await store.edit(base, { kind: "user" }, "op", () => Promise.resolve(7)),
+    ).toBe(7);
   });
 });
 

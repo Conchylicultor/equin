@@ -5,15 +5,48 @@ import {
 } from "@plugins/infra/plugins/file-watcher/server";
 import type { ModelCatalog } from "@plugins/conversations/plugins/model-provider/core";
 import { notifyModelCatalogChanged } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { modelCatalogDir } from "../../data-dirs";
-import { catalogFromFile, writeCatalogFile } from "./catalog-file";
+import {
+  ModelCatalogUnreadableError,
+  catalogFromFile,
+  writeCatalogFile,
+} from "./catalog-file";
 
 function catalogFile(): AppPath {
   return modelCatalogDir.file("catalog.json");
 }
 
-/** The last catalog read from disk, or null when the next read must go to the file. */
-let memory: ModelCatalog | null = null;
+/**
+ * The last catalog read from disk (or the error it threw), or null before the
+ * first load. Loaded off the request path — at register, then on every file
+ * change — so the launch path reads it synchronously without touching the disk.
+ */
+let memory:
+  { catalog: ModelCatalog } | { error: ModelCatalogUnreadableError } | null =
+  null;
+
+/** One read at a time, so an older read never lands after a newer one. */
+const reading = createKeyedMutex();
+
+function reload(): Promise<void> {
+  return reading.run("catalog", async () => {
+    try {
+      memory = { catalog: await catalogFromFile(catalogFile()) };
+    } catch (err) {
+      if (!(err instanceof ModelCatalogUnreadableError)) throw err;
+      memory = { error: err };
+    }
+  });
+}
+
+/**
+ * Load the catalog into memory — the plugin's `onReadyBlocking`, which every
+ * boot mode awaits before it serves, so no launch reads it first.
+ */
+export async function loadModelCatalog(): Promise<void> {
+  await reload();
+}
 
 /**
  * The desktop's `ModelCatalogSource`: the host-global `catalog.json` (the
@@ -22,13 +55,16 @@ let memory: ModelCatalog | null = null;
  * a launch never runs against a guess.
  */
 export function readFileCatalog(): ModelCatalog {
-  memory ??= catalogFromFile(catalogFile());
-  return memory;
+  if (memory === null) {
+    throw new Error("the model catalog is read before it was loaded");
+  }
+  if ("error" in memory) throw memory.error;
+  return memory.catalog;
 }
 
-/** Drop the in-memory copy and tell every subscriber to read again. */
-function invalidate(): void {
-  memory = null;
+/** Re-read the file, then tell every subscriber to read again. */
+async function invalidate(): Promise<void> {
+  await reload();
   notifyModelCatalogChanged();
 }
 
@@ -53,10 +89,10 @@ export async function startCatalogWatcher(): Promise<void> {
   watcher = await modelCatalogWatcher.start({
     // Subscribing to a missing directory fails; the dir is host-global and cheap.
     dirs: [modelCatalogDir.ensure()],
-    onChange: invalidate,
+    onChange: () => invalidate(),
   });
   // A rewrite between the first read and the subscription would be missed.
-  invalidate();
+  await invalidate();
 }
 
 export async function stopCatalogWatcher(): Promise<void> {
@@ -74,9 +110,12 @@ export async function updateModelCatalog<R>(
   change: (current: ModelCatalog) => { catalog: ModelCatalog; changes: R },
 ): Promise<R> {
   const file = catalogFile();
-  const { catalog, changes } = change(catalogFromFile(file));
-  await writeCatalogFile(file, catalog);
-  memory = catalog;
+  const changes = await reading.run("catalog", async () => {
+    const result = change(await catalogFromFile(file));
+    await writeCatalogFile(file, result.catalog);
+    memory = { catalog: result.catalog };
+    return result.changes;
+  });
   notifyModelCatalogChanged();
   return changes;
 }

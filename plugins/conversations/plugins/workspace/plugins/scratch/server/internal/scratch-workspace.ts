@@ -1,6 +1,6 @@
 import { endpointPath } from "@plugins/infra/plugins/endpoints/server";
 import { mcpRequest } from "@plugins/infra/plugins/mcp/core";
-import { existsSync, access } from "@plugins/packages/plugins/timed-fs/core";
+import { exists, access } from "@plugins/packages/plugins/timed-fs/core";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
@@ -23,7 +23,9 @@ import { scratchLaunchFragment } from "./launch-fragment";
 export function createScratchWorkspace(deps: {
   assertTrusted: (dir: string) => void;
   /** The checkout the agent's guards run from (see `scratchLaunchFragment`). */
-  guardsRoot: () => string;
+  guardsRoot: string;
+  /** Throws unless the guard scripts under `guardsRoot` are on disk: a launch must not install hooks that cannot run. */
+  assertGuards: () => Promise<void>;
 }): WorkspaceImpl<"scratch"> {
   return {
     kind: "scratch",
@@ -44,6 +46,7 @@ export function createScratchWorkspace(deps: {
       // sits there, `starting`, with nothing reporting why — so refuse here,
       // loudly (the boot step `trustScratchRoot` trusts the scratch root).
       deps.assertTrusted(path);
+      await deps.assertGuards();
       const profile = ScratchProfile.get(spec.profile);
       await mkdir(path, { recursive: true });
       await Bun.write(
@@ -67,7 +70,7 @@ export function createScratchWorkspace(deps: {
           runtimeNamespace(),
           endpointPath(mcpRequest, { conversationId }),
         ),
-        guardsRoot: deps.guardsRoot(),
+        guardsRoot: deps.guardsRoot,
         permissions: profile.permissions,
         sandbox: profile.sandbox,
       });
@@ -89,24 +92,24 @@ export function createScratchWorkspace(deps: {
 }
 
 /**
- * This backend's checkout, once its guard scripts are known to be there: a
- * launch must not install hooks that cannot run (a scratch agent has no other
- * guards).
+ * Checked at prepare, before any launch: this backend's checkout must have its
+ * guard scripts — a launch must not install hooks that cannot run (a scratch
+ * agent has no other guards).
  */
-function launchingCheckoutGuards(): string {
+async function assertCheckoutGuards(): Promise<void> {
   for (const rel of Object.values(GUARD_SCRIPTS)) {
-    if (!existsSync(join(REPO_ROOT, rel))) {
+    if (!(await exists(join(REPO_ROOT, rel)))) {
       throw new Error(
         `scratch launch: guard script missing at ${join(REPO_ROOT, rel)} — refusing to launch an unguarded agent`,
       );
     }
   }
-  return REPO_ROOT;
 }
 
 export const scratchWorkspace = createScratchWorkspace({
   assertTrusted: (dir) => assertDirTrusted(dir),
-  guardsRoot: launchingCheckoutGuards,
+  guardsRoot: REPO_ROOT,
+  assertGuards: assertCheckoutGuards,
 });
 
 /** Whether `path` exists, asked off the event loop (a conversation's stored path may sit anywhere). ENOENT is the only "no". */

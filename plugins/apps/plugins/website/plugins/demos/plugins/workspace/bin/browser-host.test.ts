@@ -558,12 +558,12 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
         mismatched.push(`${storePath}: nothing committed`);
         continue;
       }
-      const origin = store.proxy({ storePath, file: "origin" }).read();
+      const origin = await store.read({ storePath, file: "origin" });
       if (JSON.stringify(origin?.content) !== JSON.stringify(doc.base))
         mismatched.push(`${storePath}: base origin differs`);
       for (const [appId, scoped] of Object.entries(doc.scopes)) {
         const scopeId = appScopeId(appId);
-        const read = store.proxy({ storePath, scopeId, file: "origin" }).read();
+        const read = await store.read({ storePath, scopeId, file: "origin" });
         if (JSON.stringify(read?.content) !== JSON.stringify(scoped))
           mismatched.push(`${storePath} ${scopeId}: scoped origin differs`);
         if (!scopes[storePath]!.includes(scopeId))
@@ -622,8 +622,8 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     expect(after[key]).toBe(!value);
     // Written against the propagated origin: an override in force, no conflict.
     const store = ConfigStore.get();
-    expect(store.proxy({ storePath, file: "override" }).read()?.hash).toBe(
-      store.proxy({ storePath, file: "origin" }).read()?.hash,
+    expect((await store.read({ storePath, file: "override" }))?.hash).toBe(
+      (await store.read({ storePath, file: "origin" }))?.hash,
     );
   });
 

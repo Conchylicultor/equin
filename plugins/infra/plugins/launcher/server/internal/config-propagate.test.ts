@@ -62,7 +62,7 @@ function read(dir: string, rel: string): string | null {
 }
 
 describe("propagateOriginLayer", () => {
-  test("installs the bundle's origins into an empty host dir", () => {
+  test("installs the bundle's origins into an empty host dir", async () => {
     write(
       seed,
       "ui/tokens/color-palette/config.origin.jsonc",
@@ -74,7 +74,7 @@ describe("propagateOriginLayer", () => {
       doc(V1, { preset: "ocean" }),
     );
 
-    const result = propagateOriginLayer(seed, host);
+    const result = await propagateOriginLayer(seed, host);
 
     expect(result).toEqual({ written: 2, removed: 0 });
     expect(read(host, "ui/tokens/color-palette/config.origin.jsonc")).toContain(
@@ -88,7 +88,7 @@ describe("propagateOriginLayer", () => {
     ).toContain('"ocean"');
   });
 
-  test("refreshes an origin a previous bundle installed", () => {
+  test("refreshes an origin a previous bundle installed", async () => {
     // The regression this whole module exists for: the host dir survives a
     // deploy, so a once-only seed serves the FIRST bundle's config forever.
     write(
@@ -102,24 +102,24 @@ describe("propagateOriginLayer", () => {
       doc(V2, { items: ["hero", "fork"] }),
     );
 
-    expect(propagateOriginLayer(seed, host).written).toBe(1);
+    expect((await propagateOriginLayer(seed, host)).written).toBe(1);
     expect(read(host, "apps/website/shell/section.origin.jsonc")).toContain(
       "hero",
     );
   });
 
-  test("is a no-op when the host already matches the bundle", () => {
+  test("is a no-op when the host already matches the bundle", async () => {
     const bytes = doc(V1, { preset: "ocean" });
     write(seed, "ui/tokens/shape/config.origin.jsonc", bytes);
     write(host, "ui/tokens/shape/config.origin.jsonc", bytes);
 
-    expect(propagateOriginLayer(seed, host)).toEqual({
+    expect(await propagateOriginLayer(seed, host)).toEqual({
       written: 0,
       removed: 0,
     });
   });
 
-  test("never touches the user's own override", () => {
+  test("never touches the user's own override", async () => {
     const override = doc(V1, { preset: "mine" });
     write(host, "ui/tokens/shape/config.jsonc", override);
     write(
@@ -133,12 +133,12 @@ describe("propagateOriginLayer", () => {
       doc(V2, { preset: "rounded" }),
     );
 
-    propagateOriginLayer(seed, host);
+    await propagateOriginLayer(seed, host);
 
     expect(read(host, "ui/tokens/shape/config.jsonc")).toBe(override);
   });
 
-  test("snapshots the ancestor when an in-sync override is about to go stale", () => {
+  test("snapshots the ancestor when an in-sync override is about to go stale", async () => {
     const oldOrigin = doc(V1, { preset: "default" });
     write(host, "ui/tokens/shape/config.origin.jsonc", oldOrigin);
     write(host, "ui/tokens/shape/config.jsonc", doc(V1, { preset: "mine" }));
@@ -148,7 +148,7 @@ describe("propagateOriginLayer", () => {
       doc(V2, { preset: "rounded" }),
     );
 
-    propagateOriginLayer(seed, host);
+    await propagateOriginLayer(seed, host);
 
     // The base the override was written against, preserved verbatim so the
     // settings UI can still offer a three-way Merge rather than binary
@@ -156,7 +156,7 @@ describe("propagateOriginLayer", () => {
     expect(read(host, "ui/tokens/shape/config.ancestor.jsonc")).toBe(oldOrigin);
   });
 
-  test("does not re-snapshot an ancestor once the override is already stale", () => {
+  test("does not re-snapshot an ancestor once the override is already stale", async () => {
     const trueBase = doc(V1, { preset: "default" });
     write(host, "ui/tokens/shape/config.ancestor.jsonc", trueBase);
     write(
@@ -171,12 +171,12 @@ describe("propagateOriginLayer", () => {
       doc(V3, { preset: "ocean" }),
     );
 
-    propagateOriginLayer(seed, host);
+    await propagateOriginLayer(seed, host);
 
     expect(read(host, "ui/tokens/shape/config.ancestor.jsonc")).toBe(trueBase);
   });
 
-  test("writes no ancestor when the override is in sync with the new origin", () => {
+  test("writes no ancestor when the override is in sync with the new origin", async () => {
     write(
       host,
       "ui/tokens/shape/config.origin.jsonc",
@@ -191,25 +191,25 @@ describe("propagateOriginLayer", () => {
       doc(V1, { preset: "default", extra: 1 }),
     );
 
-    propagateOriginLayer(seed, host);
+    await propagateOriginLayer(seed, host);
 
     expect(
       existsSync(join(host, "ui/tokens/shape/config.ancestor.jsonc")),
     ).toBe(false);
   });
 
-  test("prunes an origin the bundle no longer ships, and the dir it emptied", () => {
+  test("prunes an origin the bundle no longer ships, and the dir it emptied", async () => {
     write(host, "apps/gone/config.origin.jsonc", doc(V1, { x: 1 }));
     write(seed, "apps/kept/config.origin.jsonc", doc(V1, { x: 1 }));
 
-    expect(propagateOriginLayer(seed, host)).toEqual({
+    expect(await propagateOriginLayer(seed, host)).toEqual({
       written: 1,
       removed: 1,
     });
     expect(existsSync(join(host, "apps/gone"))).toBe(false);
   });
 
-  test("reverts a per-app scope the bundle stopped shipping", () => {
+  test("reverts a per-app scope the bundle stopped shipping", async () => {
     // The mirror image of the staleness bug: a scope deleted from version
     // control has to disappear from the host too, or the deployed app keeps a
     // customization nobody can find in the repo.
@@ -224,12 +224,12 @@ describe("propagateOriginLayer", () => {
       doc(V1, { preset: "default" }),
     );
 
-    propagateOriginLayer(seed, host);
+    await propagateOriginLayer(seed, host);
 
     expect(existsSync(join(host, "ui/tokens/shape/@app"))).toBe(false);
   });
 
-  test("keeps a runtime fork's origin, which no bundle ever ships", () => {
+  test("keeps a runtime fork's origin, which no bundle ever ships", async () => {
     // The app itself wrote this origin when the user first customized the scope
     // through settings. Pruning it as "not shipped" would strand the override
     // beside it — so the sibling override is what marks it as per-user state.
@@ -244,16 +244,16 @@ describe("propagateOriginLayer", () => {
       doc(V1, { preset: "mine" }),
     );
 
-    expect(propagateOriginLayer(seed, host).removed).toBe(0);
+    expect((await propagateOriginLayer(seed, host)).removed).toBe(0);
     expect(
       read(host, "ui/tokens/shape/@app/mail/config.origin.jsonc"),
     ).not.toBeNull();
     expect(read(host, "ui/tokens/shape/@app/mail/config.jsonc")).not.toBeNull();
   });
 
-  test("leaves nothing behind but the files it means to write", () => {
+  test("leaves nothing behind but the files it means to write", async () => {
     write(seed, "a/config.origin.jsonc", doc(V1, { x: 1 }));
-    propagateOriginLayer(seed, host);
+    await propagateOriginLayer(seed, host);
     // No stray `.tmp-<uuid>` from the atomic write.
     expect(readdirSync(join(host, "a"))).toEqual(["config.origin.jsonc"]);
   });

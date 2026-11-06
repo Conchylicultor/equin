@@ -20,16 +20,11 @@ export const handleRemove = implementMachine(removeClaudeAccount, ({ body }) =>
   removeClaudeAccountById(body.id),
 );
 
-export const handleSelect = implementMachine(
-  selectClaudeAccount,
-  ({ body }) => {
-    selectClaudeAccountById(body.id);
-  },
+export const handleSelect = implementMachine(selectClaudeAccount, ({ body }) =>
+  selectClaudeAccountById(body.id),
 );
 
 export const handleAutoSwitch = implementMachine(
   setClaudeAccountAutoSwitch,
-  ({ body }) => {
-    setClaudeAccountsAutoSwitch(body.enabled);
-  },
+  ({ body }) => setClaudeAccountsAutoSwitch(body.enabled),
 );

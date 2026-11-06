@@ -9,7 +9,7 @@ import type {
 import { costHistorySourceConfig } from "../../shared/config";
 import {
   scanGlob,
-  existsSync,
+  exists,
   stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 
@@ -40,7 +40,7 @@ export async function assembleCostHistory(
   // are the in-flight halves of an atomic temp+rename write — backing either up
   // would archive state that is either worthless or torn.
   let shards = 0;
-  if (existsSync(costUsageDir.path)) {
+  if (await exists(costUsageDir.path)) {
     for await (const rel of scanGlob("sessions-*.json", {
       cwd: costUsageDir.path,
       onlyFiles: true,
@@ -64,7 +64,7 @@ export async function assembleCostHistory(
   // pruned, so it is the only surviving record of prices for models LiteLLM has
   // since dropped; without it, old shards can no longer be re-priced.
   const priceTablePath = costUsageDir.file("price-table.json");
-  if (existsSync(priceTablePath)) {
+  if (await exists(priceTablePath)) {
     const dest = join(dir, "price-table.json");
     await cp(priceTablePath, dest);
     sizeBytes += (await stat(dest)).size;

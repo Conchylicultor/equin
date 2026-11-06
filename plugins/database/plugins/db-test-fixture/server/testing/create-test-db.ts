@@ -71,7 +71,7 @@ export async function createTestDb(
     );
   }
 
-  const pool = openShortLivedClient(name);
+  const pool = await openShortLivedClient(name);
   const db = drizzle(pool);
   const connectionString = buildConnectionString(
     readDatabaseConfig().connection,

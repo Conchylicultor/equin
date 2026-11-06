@@ -3,7 +3,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { mkdirSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { getConfig } from "@plugins/config_v2/server";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
@@ -75,13 +75,13 @@ function argvFor(variant: ProbeVariant): string[] {
   ];
 }
 
-export function startPagingProbes(): void {
+export async function startPagingProbes(): Promise<void> {
   if (probes) return;
   // The child probes write their JSONL directly via appendFileSync (no plugin
   // runtime, no Log.channel), which errors on a missing dir. On main the logs
   // dir already exists, but ensure it so a fresh box never spuriously trips the
   // rapid-failure give-up.
-  mkdirSync(logsDir(), { recursive: true });
+  await mkdir(logsDir(), { recursive: true });
   // NOT wrapped in backgroundArgv / darwinbg and NOT demoted: the fair twin is a
   // DEFAULT-QoS process — the symptom under test is that normal, un-demoted apps
   // stay responsive while main freezes. boostQos (when set) is applied by the

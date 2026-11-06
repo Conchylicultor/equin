@@ -10,8 +10,8 @@ import { refreshCheckoutBun } from "@plugins/packages/plugins/process-name/machi
  * record while it is newer than the lock. A filesystem refusing the clone only
  * leaves the name plain: nothing to report on every command.
  */
-export function recordCheckoutBun(): void {
-  refreshCheckoutBun(
+export async function recordCheckoutBun(): Promise<void> {
+  await refreshCheckoutBun(
     asAppPath(process.cwd()),
     asAppPath(process.execPath),
     processNamesDir.file(`bun-${Bun.version}`),

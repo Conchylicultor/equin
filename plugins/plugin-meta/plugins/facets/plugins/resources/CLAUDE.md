@@ -1,8 +1,18 @@
 # resources
 
 Extracts the live-state resources each plugin SERVES from its `server/` and
-`central/` directories. No `relate()` — resources have no cross-plugin
-relationships. Data is `{ server: ResourceDef[], central: ResourceDef[] }`.
+`central/` directories. Data is `{ server: ResourceDef[], central: ResourceDef[] }`.
+
+`extract` reads the plugin's own files only (its result is a plugin record,
+keyed by them — a read outside throws under the strict snapshot). So a register
+call serving a descriptor IMPORTED from another plugin's barrel
+(`serveValue(modelCatalog, …)` with `modelCatalog` from
+`@plugins/conversations/plugins/model-provider/core`) is left unresolved:
+`extract` records it in `raw.imported`, with the plugin's own descriptor index
+in `raw.descriptors`, and `relate` — which sees every plugin's data — resolves
+each against the index of the plugin it imports from, adds what it serves, and clears
+`raw`. A change to the other plugin's descriptor re-extracts that plugin, and
+the next `relate` picks it up.
 
 A resource is declared at a descriptor factory call (`core/`/`shared/`, carrying
 the key, keyed-ness and bounded membership) and served at a register call
@@ -12,7 +22,8 @@ key set `tsc` derives from the live-state / query-resource / network/live
 barrels themselves.
 
 The scan RESOLVES OR THROWS: a descriptor identifier bound in the file but
-matching no descriptor raises, naming file, line and identifier. Only an unbound
+matching no descriptor raises, naming file, line and identifier (in `relate`
+for one imported from another plugin). Only an unbound
 identifier (a function parameter, i.e. a runtime value) is dropped. Silence there
 is what let ~10 plugins' resources go unreported — an unrecognised factory reads
 exactly like a plugin that declares nothing.
@@ -57,9 +68,11 @@ names no bound (`research/2026-10-22-global-live-bounds-independent-of-freshness
 - Core:
   - Uses: `plugin-meta/facets.defineFacet`
   - Exports (types):
+    - `DeferredRegisterCall`
     - `ResourceChanges`
     - `ResourceDef`
     - `ResourceFacetData`
+    - `ResourcesRaw`
   - Exports (values):
     - `resourceModeLabel`
     - `resourcesFacetDef`

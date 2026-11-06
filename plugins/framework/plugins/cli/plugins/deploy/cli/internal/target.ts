@@ -117,7 +117,7 @@ export interface DeployTarget {
 
 /** One short-lived pool against this namespace's DB, released in `finally`. */
 async function withDb<T>(fn: (db: NodePgDatabase) => Promise<T>): Promise<T> {
-  const pool = openShortLivedClient(await deployNamespace());
+  const pool = await openShortLivedClient(await deployNamespace());
   try {
     return await fn(drizzle(pool));
   } finally {

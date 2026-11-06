@@ -3,13 +3,14 @@ import {
   asAppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { chmodSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmod, mkdir, rm, writeFile } from "node:fs/promises";
 import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import {
-  readdirSync,
-  readFileSync,
-  realpathSync,
+  readdir,
+  readFile,
+  realpath,
 } from "@plugins/packages/plugins/timed-fs/core";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { join } from "node:path";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -112,26 +113,26 @@ function isAlive(pid: number): boolean {
  * the data dir, so a live backend's runs are left alone (this one's own ended
  * runs removed their folders already).
  */
-function sweepOrphanedRuns(root: AppPath): void {
-  for (const name of readdirSync(root)) {
+async function sweepOrphanedRuns(root: AppPath): Promise<void> {
+  for (const name of await readdir(root)) {
     const pid = Number(name.split("-", 1)[0]);
     if (Number.isInteger(pid) && pid > 0 && isAlive(pid)) continue;
-    rmSync(joinAppPath(root, name), { recursive: true, force: true });
+    await rm(joinAppPath(root, name), { recursive: true, force: true });
   }
 }
 
 /** The shim Claude Code runs instead of a browser: it records the page, opens nothing. */
-function writeBrowserShim(dir: AppPath): string {
+async function writeBrowserShim(dir: AppPath): Promise<string> {
   const quoted = `'${join(dir, HANDED).replaceAll("'", `'\\''`)}'`;
   const shim = joinAppPath(dir, SHIM);
-  writeFileSync(shim, `#!/bin/sh\nprintf '%s\\n' "$1" >> ${quoted}\n`);
-  chmodSync(shim, 0o700);
+  await writeFile(shim, `#!/bin/sh\nprintf '%s\\n' "$1" >> ${quoted}\n`);
+  await chmod(shim, 0o700);
   return shim;
 }
 
-function readIfThere(path: AppPath): string {
+async function readIfThere(path: AppPath): Promise<string> {
   try {
-    return readFileSync(path, "utf8");
+    return await readFile(path, "utf8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return "";
     throw err;
@@ -139,20 +140,20 @@ function readIfThere(path: AppPath): string {
 }
 
 /** What Claude Code has said so far. */
-function readOutput(run: Run): string {
+async function readOutput(run: Run): Promise<string> {
   return run.screen
     ? run.screen.text()
-    : readIfThere(joinAppPath(run.dir, OUTPUT));
+    : await readIfThere(joinAppPath(run.dir, OUTPUT));
 }
 
 /**
  * Re-read what Claude Code has said so far, and publish it if it moved. A
  * `setup-token` on its retry prompt is stopped: its exit fails the run.
  */
-function readProgress(run: Run): void {
+async function readProgressNow(run: Run): Promise<void> {
   const flow = currentSignInFlow();
   if (running !== run || flow.kind !== "waiting" || flow.id !== run.id) return;
-  const output = readOutput(run);
+  const output = await readOutput(run);
   if (run.screen && run.stuck === null) {
     const screen = readSetupTokenScreen(output);
     if (screen.kind === "stuck") {
@@ -161,21 +162,36 @@ function readProgress(run: Run): void {
       return;
     }
   }
-  const url = parseBrowserUrl(readIfThere(joinAppPath(run.dir, HANDED)));
+  const url = parseBrowserUrl(await readIfThere(joinAppPath(run.dir, HANDED)));
   const manualUrl = parseManualUrl(output);
-  if (url !== flow.url || manualUrl !== flow.manualUrl)
-    publish(run, { ...flow, url, manualUrl });
+  // The files were read asynchronously: publish only if the run is still the
+  // one waiting, on top of the flow as it stands now.
+  const now = currentSignInFlow();
+  if (running !== run || now.kind !== "waiting" || now.id !== run.id) return;
+  if (url !== now.url || manualUrl !== now.manualUrl)
+    publish(run, { ...now, url, manualUrl });
+}
+
+// Reads of one run's progress are serialized, so a slow read never publishes
+// over a newer one.
+const progressMutex = createKeyedMutex();
+
+/** Re-read a run's progress (from a watch or a screen draw: nothing awaits it). */
+function readProgress(run: Run): void {
+  void runTracked("claude-sign-in.read-progress", () =>
+    progressMutex.run(run.id, () => readProgressNow(run)),
+  );
 }
 
 /** `auth login`: plain text into the run's `output` file, the code on stdin. */
-function spawnPlain(
+async function spawnPlain(
   args: string[],
   dir: AppPath,
   env: Record<string, string | undefined>,
-): Child {
+): Promise<Child> {
   const out = openOwnedFd(joinAppPath(dir, OUTPUT), "w", 0o600);
   try {
-    const child = Bun.spawn([bundledClaudeBin(), ...args], {
+    const child = Bun.spawn([await bundledClaudeBin(), ...args], {
       cwd: dir,
       env,
       stdin: "pipe",
@@ -203,15 +219,15 @@ function spawnPlain(
  * keyboard protocol) go unanswered, so it keeps to plain keys and a typed
  * line is the line and Enter.
  */
-function spawnOnScreen(
+async function spawnOnScreen(
   args: string[],
   dir: AppPath,
   env: Record<string, string | undefined>,
   screen: Screen,
   onDrawn: () => void,
-): Child {
+): Promise<Child> {
   const closed = Promise.withResolvers<void>();
-  const child = Bun.spawn([bundledClaudeBin(), ...args], {
+  const child = Bun.spawn([await bundledClaudeBin(), ...args], {
     cwd: dir,
     env,
     terminal: {
@@ -245,7 +261,7 @@ async function endRun(run: Run): Promise<void> {
   const release = run.releaseWatch;
   run.releaseWatch = null;
   if (release) await release();
-  rmSync(run.dir, { recursive: true, force: true });
+  await rm(run.dir, { recursive: true, force: true });
 }
 
 /**
@@ -257,10 +273,10 @@ export async function startSignIn(target: ClaudeSignInTarget): Promise<string> {
   if (running) await endRun(running);
   const id = crypto.randomUUID();
   // The real path of the app's own sign-in dir.
-  const root = asAppPath(realpathSync(claudeSignInDir.ensure()));
-  sweepOrphanedRuns(root);
+  const root = asAppPath(await realpath(claudeSignInDir.ensure()));
+  await sweepOrphanedRuns(root);
   const dir = joinAppPath(root, runDirName(id));
-  mkdirSync(dir, { mode: 0o700 });
+  await mkdir(dir, { mode: 0o700 });
   const run: Run = {
     id,
     target,
@@ -278,30 +294,43 @@ export async function startSignIn(target: ClaudeSignInTarget): Promise<string> {
     scope: "subtree",
     onChange: () => readProgress(run),
   });
-  if (running !== run) {
-    // Cancelled while the watch opened.
-    await endRun(run);
-    return id;
-  }
 
+  // The spawn's inputs are resolved BEFORE the still-running check, so a
+  // cancel or replace meanwhile is seen by it rather than leaving the spawn to
+  // a run already ended.
   const env: Record<string, string | undefined> = {
     // The computer's own login: no added account's credential, nothing
     // inherited from this backend's environment.
     ...(await claudeSessionEnv(SYSTEM_ACCOUNT_ID)),
-    BROWSER: writeBrowserShim(dir),
+    BROWSER: await writeBrowserShim(dir),
   };
   // A new account's token is only printed, never stored: its own config dir
   // keeps the computer's login out of reach.
   if (target.kind === "new-account")
     env.CLAUDE_CONFIG_DIR = join(dir, "config");
 
+  if (running !== run) {
+    // Cancelled or replaced while the watch opened or the inputs resolved.
+    await endRun(run);
+    return id;
+  }
+
   const args = signInArgs(target);
   if (target.kind === "new-account") {
     const screen = createScreen(SCREEN_SIZE);
     run.screen = screen;
-    run.child = spawnOnScreen(args, dir, env, screen, () => readProgress(run));
+    run.child = await spawnOnScreen(args, dir, env, screen, () =>
+      readProgress(run),
+    );
   } else {
-    run.child = spawnPlain(args, dir, env);
+    run.child = await spawnPlain(args, dir, env);
+  }
+  if (running !== run) {
+    // Cancelled or replaced while the spawn resolved the executable: its
+    // `endRun` found no child to stop, so this one is owned by nobody — end
+    // the run again (idempotent), now with the child to kill and close.
+    await endRun(run);
+    return id;
   }
   const child = run.child;
   void runTracked("claude-sign-in.settle", () => settle(run, child));
@@ -316,7 +345,7 @@ async function settle(run: Run, child: Child): Promise<void> {
   if (running !== run) return; // cancelled or replaced: already ended
   await child.outputDone;
   if (running !== run) return;
-  const output = readOutput(run);
+  const output = await readOutput(run);
   const { id, target } = run;
   try {
     if (run.stuck !== null || exitCode !== 0) {

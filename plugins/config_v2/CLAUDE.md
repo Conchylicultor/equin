@@ -139,7 +139,7 @@ A three-way merge needs the **base** — the origin the override was written aga
 
 `threeWayMerge(base, ours, theirs)` (pure, `tier-logic.ts`) returns the merged document plus the truly-conflicting keys. `computeAllConflicts` attaches `trueConflictKeys` to the `kind: "hash"` entry when an ancestor exists; its presence is what makes the UI offer **Merge** (legacy conflicts with no ancestor fall back to binary Keep/Accept). `mergeConflictByPath` bumps the hash and deletes the ancestor when nothing truly conflicts; otherwise it keeps the stale hash so the conflict stays surfaced, and re-running Merge finalizes it. Every terminal resolution (acknowledge-conflict, delete-override) also deletes the ancestor.
 
-**Every config file on disk must carry a `// @hash` header** — the anchor conflict detection compares against; a hashless file is corrupt, not a benign "untracked" override. Enforced by throwing at both boundaries: `jsoncConfigProxy.read()` on a hashless file, and `setConfig` rather than fabricating a hashless override when no origin has been propagated. There is no "null hash wins" fallback.
+**Every config file on disk must carry a `// @hash` header** — the anchor conflict detection compares against; a hashless file is corrupt, not a benign "untracked" override. Enforced by throwing at both boundaries: `readConfigFile` (the file store's `read`) on a hashless file, and `setConfig` rather than fabricating a hashless override when no origin has been propagated. There is no "null hash wins" fallback.
 
 Because the running app resolves to origin during a conflict, the settings editor binds to `conflictEntry.overrideValues` (the user's override document on disk), not to `useConfig` (the resolved value) — otherwise the user could neither see nor fix their pending override.
 
@@ -283,7 +283,7 @@ or touches the body. Consumer: reorder's `reorderDirectiveDescriptor`
 
 **The server half is a registry over two host services; the machine half provides them.**
 `config_v2/server` holds the registry, its live values and the scope routes, and reads no
-file: every document goes through `ConfigStore` (`config-v2.store`, the user layer — `proxy`,
+file: every document goes through `ConfigStore` (`config-v2.store`, the user layer — `read`, `write`,
 `remove`, `stamp`, `scopes`, `dropScope`, `watch`, `armed`, and `edit`, which every write path
 runs its mutation through) and the committed layer, `ConfigGitLayer.document`
 (`config-v2.git-layer`, one storePath's resolved committed document — the registry asks it
@@ -300,7 +300,9 @@ with the document through the registry's `onDocumentChange`. The machine half im
 `config_v2#machine` node its `dependsOn` edge on `config_v2`.
 
 - **`mapConfigLists` (`core/internal/collections.ts`) — THE walk over every `listField` instance in a document**, at any depth (through `itemFields` and `subFields`). A config document is recursive; every consumer that walked it one level deep drifted. Used by `normalizeCollectionItems` (id seeding), the `config-stable-list-ids` check, and `diffNormalForm` (the layer-comparison normal form behind the tiers/modified attribution). It visits a list **before** recursing into its rows, because a row's `auto-` id hashes that row's content — seeding nested ids first would re-mint every enclosing id.
-- **`jsoncConfigProxy`** (`machine/internal/jsonc-proxy.ts`) — synchronous read/write with `// @hash` header tracking: the file store's `proxy`.
+- **`readConfigFile` / `writeConfigFile`** (`machine/internal/jsonc-proxy.ts`) — async read/write with `// @hash` header tracking: the file store's `read` / `write`. The store is asynchronous end to end (a backend's thread never waits on the disk — `blocking-fs/no-sync-fs`); the tier cascade stays synchronous over files already read (`loadedProxy(await store.read(ref))`).
+- **Per-document lock (`withDocument`, `registry.ts`).** Every read-then-write of one document — `setConfig`, reset, the conflict resolvers, fork/unfork, a watcher re-read, `reloadConfigDocument` — runs one at a time per `(storePath, scopeId)`, as the old synchronous store guaranteed by construction: two writers can't both base their write on the same override, and an older re-read can't land after a write's refresh. A locked section calls the unlocked helpers (`refreshEntryNow`, `ensureScopeEntryNow`) — never re-enter the lock.
+- **`getConfig`'s scope membership comes from the cache entry** (`CacheEntry.ownConfig`, read in the same pass as its values), not the disk; the disk predicate (`scopeHasOwnConfigOnDisk`) feeds the scopes map, `getConfigScopeIds` and boot.
 - **`ConfigWatcher`** (`machine/internal/config-watcher.ts`) — `@parcel/watcher` file-change detection on `~/.equin/state/config/`, behind the file store's `watch`. Debounce (100ms) + ceiling (1s); no reconcile timer (the file-watcher engine has none) — the blanket 30s reconcile it once had re-fired every watched path (2 per descriptor) into a full conflicts recompute, an O(N²) idle re-read storm with nothing changed. Callbacks are `() => void`; the registry re-reads through the store on notification.
 
   These events are a **push-latency** mechanism, not a correctness one — an event can be missed (an out-of-band writer parcel doesn't observe, a dropped fsevent, a path no `CacheEntry` registered). **Never treat "no event" as "no change"**: derived state must be founded on the disk, per the fingerprint memo below.
@@ -350,7 +352,7 @@ All of config's live resources are live values (`network/live`), declared with `
 - `configConflict` (`config-v2.conflicts`) and `configTiers` (`config-v2.tiers`), `{ path, scopeId? }`, move in lock-step with the document. Every writer calls ONE fan-out, `notifyDocument(storePath, scopeId)` (`registry.ts`): it derives the tuples a change moved once (a scoped change its own tuple; a base change the base tuple plus every known scope with no config of its own) and notifies all three per-document values for each, then refreshes modified-counts and conflict-locations.
 - `configConflictLocations` and `configModifiedCounts` (param-less) push through `configConflictLocationsServed.notify()` / `configModifiedCountsServed.notify()`. Neither is preloaded. While one is pending the attention dots render nothing, and the config nav renders its loading state until both have landed — its Modified / Conflict fields decide which rows a filtered view (the authored "Conflicts" view) keeps, so rows shown before then would claim "no conflicts".
 
-**`config-v2.conflict-locations` — derived from disk, memoized on a file fingerprint.** Its loader is the authority: it re-derives, for every descriptor, WHICH scopes conflict (base and/or each on-disk app scope) through the *same* `derivedDescriptorConflict` memo the per-descriptor `config-v2.conflicts` resource uses, so the nav ⚠ badge, its tooltip, the scope-tab dots and the detail banner can't disagree. It reports scope ids rather than a boolean on purpose: a badge that only knows "somewhere" sends the user to a detail pane that opens on a clean Base and shows nothing. The memo keys `(storePath, scopeId)` on `(inode, mtime-ns, size)` of the file trio (origin / override / ancestor), so an unchanged descriptor costs 3 `statSync`s, not 3 read+parse+hash. `inode` is what makes it airtight — `jsoncConfigProxy.write` renames a temp file into place, so even a byte-length-identical hash restamp changes it.
+**`config-v2.conflict-locations` — derived from disk, memoized on a file fingerprint.** Its loader is the authority: it re-derives, for every descriptor, WHICH scopes conflict (base and/or each on-disk app scope) through the *same* `derivedDescriptorConflict` memo the per-descriptor `config-v2.conflicts` resource uses, so the nav ⚠ badge, its tooltip, the scope-tab dots and the detail banner can't disagree. It reports scope ids rather than a boolean on purpose: a badge that only knows "somewhere" sends the user to a detail pane that opens on a clean Base and shows nothing. The memo keys `(storePath, scopeId)` on `(inode, mtime-ns, size)` of the file trio (origin / override / ancestor), so an unchanged descriptor costs 3 `stat`s, not 3 read+parse+hash. `inode` is what makes it airtight — `writeConfigFile` renames a temp file into place, so even a byte-length-identical hash restamp changes it.
 
 The memo key comes from **the filesystem, not an event** — deliberately. `refreshConflictLocations` still runs from the watcher path, but only as a *push-latency* optimization (it diffs a "last published" snapshot and notifies on a flip); it is never the value the loader reads, so a missed watcher event can delay a push but can't produce a wrong answer.
 
@@ -509,6 +511,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `ConfigDescriptor`
     - `ConfigDocRef`
     - `ConfigDocumentFile`
+    - `ConfigFileContent`
     - `ConfigFileRef`
     - `ConfigGitLayerImpl`
     - `ConfigListVisitor`
@@ -577,6 +580,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `forkScope`
     - `hasConflict`
     - `hasReviewMarker`
+    - `loadedProxy`
     - `mapConfigLists`
     - `normalizeCollectionItems`
     - `orphanEntrySchema`
@@ -635,6 +639,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `diskConfigGitLayer` — The committed config layer a browser host bundles (`config_v2/bundled-layer`, which reads it through vite's `import.meta.glob` — absent under `bun test`), provided from the same files read off disk: for a suite booting a portable graph without the computer.
   - Core: `@plugins/config_v2/core/testing`
     - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
+    - `proxyFiles` — Config files held in a map, each behind a synchronous read / write / exists proxy — what `propagate` and `propagateGitLayerDocument` write through.
 - Sub-plugins:
   - **`browser-store`** (excluded) — The user config layer of a host without the computer (a browser worker host): held in memory (ConfigStore) and written through to the host's declared storage (kept across reloads when it is…
   - **`bundled-layer`** (excluded) — The committed config layer bundled as text: provides the ConfigGitLayer host service from the repo's config/ inlined at build time, for a host without the repo on disk (a browser worker host). Never…

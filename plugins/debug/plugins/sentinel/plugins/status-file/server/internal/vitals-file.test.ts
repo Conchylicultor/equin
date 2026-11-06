@@ -48,25 +48,25 @@ const RECORD: SentinelVitalsRecord = {
 };
 
 describe("sentinel vitals file", () => {
-  test("a written reading reads back whole, leaving no temp file", () => {
+  test("a written reading reads back whole, leaving no temp file", async () => {
     // A directory that does not exist yet: the writer creates it.
     const dir = joinAppPath(newDir(), "sentinel");
-    writeSentinelVitals(dir, RECORD);
-    expect(readSentinelVitals(dir)).toEqual({
+    await writeSentinelVitals(dir, RECORD);
+    expect(await readSentinelVitals(dir)).toEqual({
       kind: "recorded",
       vitals: RECORD,
     });
     expect(readdirSync(dir)).toEqual(["vitals.json"]);
   });
 
-  test("no file reads as none", () => {
-    expect(readSentinelVitals(newDir())).toEqual({ kind: "none" });
+  test("no file reads as none", async () => {
+    expect(await readSentinelVitals(newDir())).toEqual({ kind: "none" });
   });
 
-  test("garbage and a wrong shape read as unreadable, with the reason", () => {
+  test("garbage and a wrong shape read as unreadable, with the reason", async () => {
     const dir = newDir();
     writeFileSync(vitalsFilePath(dir), "{not json");
-    const garbage = readSentinelVitals(dir);
+    const garbage = await readSentinelVitals(dir);
     expect(garbage.kind).toBe("unreadable");
     expect(garbage.kind === "unreadable" && garbage.reason).toContain(
       "not JSON",
@@ -76,6 +76,6 @@ describe("sentinel vitals file", () => {
       vitalsFilePath(dir),
       JSON.stringify({ ...RECORD, elevated: ["cpuTemperature"] }),
     );
-    expect(readSentinelVitals(dir).kind).toBe("unreadable");
+    expect((await readSentinelVitals(dir)).kind).toBe("unreadable");
   });
 });

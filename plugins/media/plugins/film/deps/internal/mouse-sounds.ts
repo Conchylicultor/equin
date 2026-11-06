@@ -1,4 +1,4 @@
-import { renameSync, rmSync } from "node:fs";
+import { rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import {
   defineDep,
@@ -49,9 +49,9 @@ export const mouseSounds = defineDep({
             env: { ...process.env },
             timeoutMs: 60_000,
           });
-          renameSync(join(ctx.dir, from), join(ctx.dir, to));
+          await rename(join(ctx.dir, from), join(ctx.dir, to));
         }
-        rmSync(join(ctx.dir, ZIP));
+        await rm(join(ctx.dir, ZIP));
       },
     },
     admission: {

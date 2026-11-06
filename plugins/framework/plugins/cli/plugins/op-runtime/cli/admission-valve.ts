@@ -144,7 +144,7 @@ export interface GateLocks {
 export interface ValveDeps {
   isUnderDuress(): boolean;
   /** Whether the machine watcher is running to raise the latch at all. */
-  duressGuard(): DuressGuard;
+  duressGuard(): Promise<DuressGuard>;
   /** Latch trip cause for the hold line, null when unreadable/absent. */
   duressReason(): string | null;
   /**
@@ -346,12 +346,12 @@ export function mustRequeue(
  * auto-build runs exactly while main restarts — when the watcher is stopped on
  * purpose.
  */
-export function checkValveGuard(
+export async function checkValveGuard(
   opts: { gated: boolean },
   deps: Pick<ValveDeps, "duressGuard">,
-): string | null {
+): Promise<string | null> {
   if (!opts.gated) return null;
-  const guard = deps.duressGuard();
+  const guard = await deps.duressGuard();
   if (guard.kind === "on") return null;
   console.log(
     `build admission: duress guard OFF (${guard.why}) — this build will not be held if the machine runs out of memory`,
@@ -370,7 +370,8 @@ export function createValveDeps(): ValveDeps {
   };
   return {
     isUnderDuress,
-    duressGuard: () => duressGuard(readSentinelWatch(sentinelStatusDir.path)),
+    duressGuard: async () =>
+      duressGuard(await readSentinelWatch(sentinelStatusDir.path)),
     duressReason: () => readDuress()?.reason ?? null,
     waitForWake: waitForLatchWake,
     gate: createGateLocks(agentBuildGateDir),

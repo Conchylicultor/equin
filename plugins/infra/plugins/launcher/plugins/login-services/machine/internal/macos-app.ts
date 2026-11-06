@@ -1,18 +1,18 @@
 import { randomBytes } from "node:crypto";
 import {
-  chmodSync,
-  copyFileSync,
-  cpSync,
-  mkdirSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+  chmod,
+  copyFile,
+  cp,
+  mkdir,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import {
-  existsSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
+  exists,
+  readdir,
+  readFile,
+  realpath,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
@@ -189,12 +189,12 @@ export function plannedServiceExecutable(
 }
 
 /** The components the installed bundle records, or null when there is none (or it is not ours). */
-export function installedAppComponents(
+export async function installedAppComponents(
   bundle: AppPath,
-): InstalledComponent[] | null {
+): Promise<InstalledComponent[] | null> {
   const plist = joinAppPath(bundle, "Contents", "Info.plist");
-  if (!existsSync(plist)) return null;
-  return readAppComponents(readFileSync(plist, "utf8"));
+  if (!(await exists(plist))) return null;
+  return readAppComponents(await readFile(plist, "utf8"));
 }
 
 /**
@@ -218,7 +218,7 @@ export async function installServiceExecutable(
   const planned = plannedServiceExecutable(host, component, build);
   if (!planned.bundled) return planned;
   return host.withLock(async () => {
-    const installed = installedAppComponents(host.bundle);
+    const installed = await installedAppComponents(host.bundle);
     const entry: InstalledComponent = {
       name: component.name,
       identity: build.identity,
@@ -245,17 +245,18 @@ export async function installServiceExecutable(
     );
     try {
       // A bundle that is not ours (no record) is rebuilt, never merged into.
-      if (installed !== null) cpSync(host.bundle, staging, { recursive: true });
+      if (installed !== null)
+        await cp(host.bundle, staging, { recursive: true });
       const contents = joinAppPath(staging, "Contents");
-      mkdirSync(joinAppPath(contents, "MacOS"), { recursive: true });
-      mkdirSync(joinAppPath(contents, "Resources"), { recursive: true });
+      await mkdir(joinAppPath(contents, "MacOS"), { recursive: true });
+      await mkdir(joinAppPath(contents, "Resources"), { recursive: true });
       const executable = appExecutablePath(staging, component.name);
-      rmSync(executable, { force: true });
+      await rm(executable, { force: true });
       // A build from the deps cache.
-      copyFileSync(build.file, executable);
-      chmodSync(executable, 0o755);
+      await copyFile(build.file, executable);
+      await chmod(executable, 0o755);
       if (build.icon !== undefined) {
-        copyFileSync(
+        await copyFile(
           build.icon,
           joinAppPath(contents, "Resources", `${ICON_NAME}.icns`),
         );
@@ -264,21 +265,21 @@ export async function installServiceExecutable(
         ...(installed ?? []).filter((c) => c.name !== component.name),
         entry,
       ];
-      writeFileSync(
+      await writeFile(
         joinAppPath(contents, "Info.plist"),
         renderAppInfoPlist(components),
       );
       await host.sign(staging);
-      if (existsSync(host.bundle)) renameSync(host.bundle, old);
+      if (await exists(host.bundle)) await rename(host.bundle, old);
       try {
-        renameSync(staging, host.bundle);
+        await rename(staging, host.bundle);
       } catch (err) {
         // Put the previous bundle back: the services' jobs name its path.
-        if (existsSync(old)) renameSync(old, host.bundle);
+        if (await exists(old)) await rename(old, host.bundle);
         throw err;
       }
     } finally {
-      rmSync(staging, { recursive: true, force: true });
+      await rm(staging, { recursive: true, force: true });
     }
     await host.register(host.bundle);
     log(`Installed ${component.name} (${build.identity}) into ${host.bundle}`);
@@ -298,18 +299,18 @@ async function sweepOldBundles(
 ): Promise<void> {
   const parent = asAppPath(dirname(host.bundle));
   const prefix = `${basename(host.bundle)}.old-`;
-  const old = readdirSync(parent)
+  const old = (await readdir(parent))
     .filter((name) => name.startsWith(prefix))
     .map((name) => joinAppPath(parent, name));
   if (old.length === 0) return;
   const running = await host.executablesInUse();
   for (const dir of old) {
-    const real = `${realpathSync(dir)}/`;
+    const real = `${await realpath(dir)}/`;
     const users = running.filter((path) => path.startsWith(real));
     if (users.length > 0) {
       log(`Kept ${dir}: still running ${users.join(", ")}`);
     } else {
-      rmSync(dir, { recursive: true, force: true });
+      await rm(dir, { recursive: true, force: true });
       log(`Removed ${dir}: nothing runs from it any more`);
     }
   }

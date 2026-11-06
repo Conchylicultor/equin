@@ -1,4 +1,4 @@
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
@@ -86,10 +86,10 @@ function alive(pid: number): boolean {
 }
 
 /** The machine's engine host, read from its own status file. */
-export function readEngineStatus(): EngineStatus {
+export async function readEngineStatus(): Promise<EngineStatus> {
   let raw: string;
   try {
-    raw = readFileSync(browserEngineDir.file(HOST_FILES.status), "utf-8");
+    raw = await readFile(browserEngineDir.file(HOST_FILES.status), "utf-8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       return { kind: "absent" };
@@ -127,8 +127,8 @@ const waiters = new Set<Waiter>();
 let watcher: FileWatcher | null = null;
 let instance: DaemonInstance | null = null;
 
-function onStatusChange(): void {
-  const status = readEngineStatus();
+async function onStatusChange(): Promise<void> {
+  const status = await readEngineStatus();
   // A clean exit closes this backend's record of it as a run that ended well;
   // a host is meant to leave when idle.
   if (status.kind === "exited" && instance !== null) {
@@ -149,7 +149,7 @@ async function startStatusWatcher(): Promise<void> {
   watcher = await engineStatusWatcher.start({
     // Subscribing to a missing directory fails; it is host-global and tiny.
     dirs: [browserEngineDir.ensure()],
-    onChange: onStatusChange,
+    onChange: () => runTracked("browser-engine:status-change", onStatusChange),
   });
 }
 
@@ -166,7 +166,7 @@ async function waitForStatus(
   what: string,
 ): Promise<EngineStatus> {
   await startStatusWatcher();
-  const now = readEngineStatus();
+  const now = await readEngineStatus();
   if (until(now)) return now;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let waiter: Waiter | undefined;
@@ -175,10 +175,14 @@ async function waitForStatus(
       waiter = { until, resolve };
       waiters.add(waiter);
       timer = setTimeout(() => {
-        reject(
-          new Error(
-            `[browser-engine] ${what} did not happen within ${timeoutMs}ms (status: ${describe(readEngineStatus())})`,
-          ),
+        readEngineStatus().then(
+          (last) =>
+            reject(
+              new Error(
+                `[browser-engine] ${what} did not happen within ${timeoutMs}ms (status: ${describe(last)})`,
+              ),
+            ),
+          reject,
         );
       }, timeoutMs);
     });
@@ -225,7 +229,7 @@ export function ensureHost(): Promise<void> {
 }
 
 async function ensureOnce(): Promise<void> {
-  const status = readEngineStatus();
+  const status = await readEngineStatus();
   if (status.kind === "running") {
     const { host } = status;
     const current =

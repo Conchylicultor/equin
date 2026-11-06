@@ -1,5 +1,5 @@
-import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import {
   openOwnedFd,
   type OwnedFd,
@@ -318,7 +318,7 @@ export interface RepoLockDir {
 function slotAccess(slots: DataDir | RepoLockDir): {
   spec: { name: string };
   file(rel: string): AppPath;
-  ensure(): void;
+  ensure(): Promise<void>;
 } {
   if ("kind" in slots && slots.kind === "repo-lock") {
     if (!/^[a-z][a-z0-9-]*$/.test(slots.name)) {
@@ -334,8 +334,8 @@ function slotAccess(slots: DataDir | RepoLockDir): {
     return {
       spec: { name: `${slots.name} (${slots.gitCommonDir})` },
       file: (rel) => joinAppPath(dir, rel),
-      ensure: () => {
-        mkdirSync(dir, { recursive: true });
+      ensure: async () => {
+        await mkdir(dir, { recursive: true });
       },
     };
   }
@@ -345,6 +345,7 @@ function slotAccess(slots: DataDir | RepoLockDir): {
     file: (rel) => dataDir.file(rel),
     ensure: () => {
       dataDir.ensure();
+      return Promise.resolve();
     },
   };
 }
@@ -448,11 +449,12 @@ export function createHostSemaphore(opts: {
   // memo clears on settle so nothing caches a since-resolved state.
   let reconcile: Promise<void> | undefined;
 
-  function readSentinel():
-    { size: number; backgroundLimit: number } | undefined {
+  async function readSentinel(): Promise<
+    { size: number; backgroundLimit: number } | undefined
+  > {
     let raw: string;
     try {
-      raw = readFileSync(sizeFile(), "utf8");
+      raw = await readFile(sizeFile(), "utf8");
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined;
       throw err;
@@ -485,11 +487,11 @@ export function createHostSemaphore(opts: {
   // Always writes the DECLARED identity — the pair this process was built for is the
   // only one it can legitimately claim authorship of. Called only where claiming it is
   // legal: a first touch, or a resize of a pool proven idle. An adoption never writes.
-  function writeSentinelAtomic(): void {
+  async function writeSentinelAtomic(): Promise<void> {
     const path = sizeFile();
     const tmp = `${path}.${process.pid}.tmp`;
-    writeFileSync(tmp, `${declaredSize}:${declaredBackgroundLimit}`);
-    renameSync(tmp, path);
+    await writeFile(tmp, `${declaredSize}:${declaredBackgroundLimit}`);
+    await rename(tmp, path);
     size = declaredSize;
     backgroundLimit = declaredBackgroundLimit;
   }
@@ -513,7 +515,7 @@ export function createHostSemaphore(opts: {
   // caller that joined the same promise, and racing the signal against it instead
   // would abandon a promise whose later failure then has no owner. Neither is a
   // trade worth making here, because a caller parked in the reconcile is holding
-  // NOTHING host-wide — the probe fds are closed inside the synchronous section and
+  // NOTHING host-wide — the probe fds are closed before the reconcile returns and
   // the guard fd is closed before the guard child is spawned — so there is no host
   // resource for a cancellation to hand back. Its only wait is for `.size.lock`,
   // which is held across a handful of filesystem syscalls by a process doing a
@@ -521,8 +523,8 @@ export function createHostSemaphore(opts: {
   // outright if that process dies. `acquireShare` therefore brackets it with
   // `throwIfAborted()` on both sides: an abort that lands during the reconcile
   // stops the call before it starts sweeping for a slot.
-  function ensureSizeIdentity(): Promise<void> {
-    const live = readSentinel();
+  async function ensureSizeIdentity(): Promise<void> {
+    const live = await readSentinel();
     if (
       live !== undefined &&
       live.size === declaredSize &&
@@ -530,7 +532,7 @@ export function createHostSemaphore(opts: {
     ) {
       size = declaredSize;
       backgroundLimit = declaredBackgroundLimit;
-      return Promise.resolve();
+      return;
     }
     if (!reconcile) {
       reconcile = doEnsureSizeIdentity().finally(() => {
@@ -541,7 +543,7 @@ export function createHostSemaphore(opts: {
   }
 
   async function doEnsureSizeIdentity(): Promise<void> {
-    slots.ensure();
+    await slots.ensure();
 
     // Take the size guard. Non-blocking in-process first; if it's contended, another
     // process is mid-initialization — that is a benign flock race, NOT a broken
@@ -565,10 +567,10 @@ export function createHostSemaphore(opts: {
     try {
       // Re-read the sentinel AFTER the guard is genuinely held — the process we
       // queued behind may have just written it.
-      const sentinel = readSentinel();
+      const sentinel = await readSentinel();
       if (sentinel === undefined) {
         // First process to touch this pool — record its size:split identity.
-        writeSentinelAtomic();
+        await writeSentinelAtomic();
       } else if (
         sentinel.size !== declaredSize ||
         sentinel.backgroundLimit !== declaredBackgroundLimit
@@ -623,9 +625,9 @@ export function createHostSemaphore(opts: {
         } else {
           // Pool idle → claim the declared pair, drop the now-extra slot files (only
           // when shrinking `size`), release every probe fd.
-          writeSentinelAtomic();
+          await writeSentinelAtomic();
           for (let i = declaredSize; i < sentinel.size; i++) {
-            rmSync(slotFile(i), { force: true });
+            await rm(slotFile(i), { force: true });
           }
           for (const probe of probeFds) probe.close();
         }
@@ -647,8 +649,10 @@ export function createHostSemaphore(opts: {
   // freezes the loop the way LOCK_EX would. Slots OUTSIDE `order` (e.g. the reserved
   // floor for a background caller) are never opened, so they are structurally
   // unreachable. `limit === 0` locks nothing and returns [].
+  //
+  // Synchronous, so one sweep is never interleaved with another of this process:
+  // the slot directory is ensured once per acquire, ahead of it (`acquireShare`).
   function sweepKeep(limit: number, order: number[]): OwnedFd[] {
-    slots.ensure();
     const kept: OwnedFd[] = [];
     for (const i of order) {
       const slot = openOwnedFd(slotFile(i), "w");
@@ -736,7 +740,7 @@ export function createHostSemaphore(opts: {
   async function holdDemand(
     signal: AbortSignal | undefined,
   ): Promise<() => Promise<void>> {
-    slots.ensure();
+    await slots.ensure();
     const demand = openOwnedFd(demandFile(), "w");
     if (flockTryShared(demand.fd)) {
       return () => {
@@ -750,9 +754,9 @@ export function createHostSemaphore(opts: {
   }
 
   // Is any `normal` acquire of this pool waiting right now? A non-blocking
-  // exclusive try that releases immediately.
+  // exclusive try that releases immediately. The slot directory is ensured once
+  // per acquire, ahead of it (`acquireShare`).
   function demandPresent(): boolean {
-    slots.ensure();
     const probe = openOwnedFd(demandFile(), "w");
     try {
       return !flockTry(probe.fd);
@@ -866,6 +870,9 @@ export function createHostSemaphore(opts: {
     const priority: Priority = hooks?.priority ?? "normal";
     const t0 = performance.now();
     await ensureSizeIdentity();
+    // The slot directory every sweep and demand probe below opens files in —
+    // ensured here, once, so those stay synchronous.
+    await slots.ensure();
     // The reconcile itself is deliberately not cancellable (see its docblock) —
     // it holds nothing host-wide. Re-check on the way out so an abort that landed
     // during it stops here, before we start sweeping for a slot.

@@ -1,15 +1,13 @@
+import { relative, sep } from "node:path";
 import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  readdirSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import {
+  parsePidFile,
   pidAlive,
-  readPidFile,
 } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import {
   asNamespace,
@@ -17,6 +15,7 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import {
   agentPidFileAccount,
   sdkAgentProcesses,
@@ -28,50 +27,58 @@ import { agentPidsRoot } from "./paths";
 
 const PID_SUFFIX = ".pid";
 
-function entries(dir: AppPath): string[] {
+/** An agent as its pid file names it: its pid, then its Claude account. */
+interface PidFileAgent {
+  id: string;
+  pid: number;
+  /** `null` from an agent started before pid files named their account. */
+  account: string | null;
+}
+
+async function entries(dir: AppPath): Promise<string[]> {
   try {
-    return readdirSync(dir);
+    return await readdir(dir);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
   }
 }
 
-/** `namespace`'s agents whose pid file names a live pid. */
-function liveAgents(
-  namespace: string,
-): { id: string; pid: number; path: AppPath }[] {
-  const dir = joinAppPath(agentPidsRoot(), namespace);
-  return entries(dir)
-    .filter((name) => name.endsWith(PID_SUFFIX))
-    .flatMap((name) => {
-      const path = joinAppPath(dir, name);
-      const read = readPidFile(path);
-      return read.kind === "pid" && pidAlive(read.pid)
-        ? [{ id: name.slice(0, -PID_SUFFIX.length), pid: read.pid, path }]
-        : [];
-    });
-}
-
 /**
- * The Claude account a live agent's pid file names — `null` from an agent
- * started before pid files named it, or one that exited since its liveness
- * was read (its file is gone: the next recount drops it).
+ * `namespace`'s agents whose pid file names a pid — read once each, pid and
+ * account from the same text. Liveness is NOT read here: a pid is checked
+ * alive (a signal-0 syscall, no disk) by whoever uses the answer, so a held
+ * answer never vouches for an agent that died since.
  */
-function agentAccount(pidFile: AppPath): string | null {
-  let text: string;
-  try {
-    text = readFileSync(pidFile, "utf8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
+async function pidFileAgents(namespace: string): Promise<PidFileAgent[]> {
+  const dir = joinAppPath(agentPidsRoot(), namespace);
+  const agents: PidFileAgent[] = [];
+  for (const name of await entries(dir)) {
+    if (!name.endsWith(PID_SUFFIX)) continue;
+    let text: string;
+    try {
+      text = await readFile(joinAppPath(dir, name), "utf8");
+    } catch (err) {
+      // Exited between the listing and the read: its file is gone.
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
+      throw err;
+    }
+    const read = parsePidFile(text);
+    if (read.kind !== "pid") continue;
+    agents.push({
+      id: name.slice(0, -PID_SUFFIX.length),
+      pid: read.pid,
+      account: agentPidFileAccount(text),
+    });
   }
-  return agentPidFileAccount(text);
+  return agents;
 }
 
 /** The conversation ids of `namespace`'s agents whose pid file names a live pid. */
-export function liveAgentIds(namespace: string): string[] {
-  return liveAgents(namespace).map((a) => a.id);
+export async function liveAgentIds(namespace: string): Promise<string[]> {
+  return (await pidFileAgents(namespace))
+    .filter((a) => pidAlive(a.pid))
+    .map((a) => a.id);
 }
 
 /**
@@ -84,7 +91,7 @@ export function liveAgentIds(namespace: string): string[] {
 export async function runningAgentIds(
   ids?: readonly string[],
 ): Promise<string[]> {
-  const running = liveAgentIds(runtimeNamespace());
+  const running = await liveAgentIds(runtimeNamespace());
   const wanted = ids ? new Set(ids) : null;
   return sdkConversationIdsOf(
     wanted ? running.filter((id) => wanted.has(id)) : running,
@@ -104,15 +111,16 @@ function servedFrom(namespace: string, checkout: string): boolean {
  * it writes its `exited` event and removes its pid file, so that backend, when
  * it next runs, reads an agent that exited.
  */
-export function stopCheckoutAgents(checkout: string): void {
+export async function stopCheckoutAgents(checkout: string): Promise<void> {
   if (servedFrom(runtimeNamespace(), checkout)) {
     throw new Error(
       `refusing to stop the agents of ${checkout}: this backend is served from it`,
     );
   }
-  for (const namespace of entries(agentPidsRoot())) {
+  for (const namespace of await entries(agentPidsRoot())) {
     if (!servedFrom(namespace, checkout)) continue;
-    for (const { pid } of liveAgents(namespace)) {
+    for (const { pid } of await pidFileAgents(namespace)) {
+      if (!pidAlive(pid)) continue;
       try {
         process.kill(pid, "SIGTERM");
       } catch (err) {
@@ -123,20 +131,78 @@ export function stopCheckoutAgents(checkout: string): void {
   }
 }
 
-function countAgents(): AgentProcesses {
+/**
+ * Every namespace's agents as their pid files last read, kept while the value
+ * is watched: a pid-file change re-reads only the namespace it happened in
+ * (`dirty`), so a recount is O(changed namespaces) of disk, never one
+ * `readdir` + a read per agent across every namespace on the machine (~113
+ * dirs: 2+ s of blocked thread per change, in every backend, when it was
+ * read whole and synchronously).
+ */
+const byNamespace = new Map<string, PidFileAgent[]>();
+/** What the next count must re-read: some namespaces, or everything. */
+let dirty: Set<string> | "all" = "all";
+/** One count at a time, so an older read never lands after a newer one. */
+const counting = createKeyedMutex();
+
+function markDirty(namespace: string | "all"): void {
+  if (namespace === "all") dirty = "all";
+  else if (dirty !== "all") dirty.add(namespace);
+}
+
+/** The namespace a changed path under the pid-files root belongs to. */
+function namespaceOfChange(root: string, path: string): string | "all" {
+  const rel = relative(root, path);
+  const first = rel.split(sep)[0] ?? "";
+  // The root itself (or something outside it): nothing names one namespace.
+  return first === "" || first === ".." ? "all" : first;
+}
+
+async function refresh(): Promise<void> {
+  const pending = dirty;
+  dirty = new Set();
+  try {
+    await reread(pending);
+  } catch (err) {
+    // What it did not finish is unknown: the next count reads everything.
+    markDirty("all");
+    throw err;
+  }
+}
+
+async function reread(pending: Set<string> | "all"): Promise<void> {
+  if (pending === "all") {
+    const fresh = new Map<string, PidFileAgent[]>();
+    for (const namespace of await entries(agentPidsRoot()))
+      fresh.set(namespace, await pidFileAgents(namespace));
+    byNamespace.clear();
+    for (const [namespace, agents] of fresh) byNamespace.set(namespace, agents);
+    return;
+  }
+  for (const namespace of pending) {
+    const agents = await pidFileAgents(namespace);
+    if (agents.length > 0) byNamespace.set(namespace, agents);
+    else byNamespace.delete(namespace);
+  }
+}
+
+async function countAgents(): Promise<AgentProcesses> {
+  // Not watched (a one-off read): nothing keeps the held reads current.
+  if (notifiers.size === 0) dirty = "all";
+  await counting.run("count", refresh);
   const here = runtimeNamespace();
   const elsewhere: AgentProcesses["elsewhere"] = [];
   const byAccount: AgentProcesses["byAccount"] = {};
   let own = 0;
-  for (const namespace of entries(agentPidsRoot()).sort()) {
-    const agents = liveAgents(namespace);
+  for (const namespace of [...byNamespace.keys()].sort()) {
+    // An agent killed outright leaves its pid file: liveness is read now.
+    const agents = byNamespace.get(namespace)!.filter((a) => pidAlive(a.pid));
     const running = agents.length;
     if (namespace === here) own = running;
     else if (running > 0) elsewhere.push({ namespace, running });
-    for (const agent of agents) {
-      const account = agentAccount(agent.path);
-      if (account !== null) byAccount[account] = (byAccount[account] ?? 0) + 1;
-    }
+    for (const agent of agents)
+      if (agent.account !== null)
+        byAccount[agent.account] = (byAccount[agent.account] ?? 0) + 1;
   }
   return { here: own, elsewhere, byAccount };
 }
@@ -177,13 +243,23 @@ export const agentProcessesServed = serveValue(sdkAgentProcesses, {
   loader: countAgents,
   whileSubscribed: async (_params, notify) => {
     notifiers.add(notify);
+    const root = sdkAgentPidsDir.ensure();
     const release = await acquireDirWatch({
-      dir: sdkAgentPidsDir.ensure(),
+      dir: root,
       scope: "subtree",
-      onChange: () => notify(),
+      onChange: (events) => {
+        for (const e of events) markDirty(namespaceOfChange(root, e.path));
+        notify();
+      },
+      // Events may have been dropped: anything may have changed unheard.
+      onLost: () => {
+        markDirty("all");
+        notify();
+      },
     });
     // A pid file written between the first count and the watch opening
-    // produced no event; one recount closes that gap.
+    // produced no event; one full recount closes that gap.
+    markDirty("all");
     notify();
     return () => {
       notifiers.delete(notify);

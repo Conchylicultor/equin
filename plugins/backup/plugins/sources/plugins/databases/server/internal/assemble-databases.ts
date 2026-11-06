@@ -48,10 +48,12 @@ export async function assembleDatabases(
   // Read once, before any dump: it throws in a process that never collected
   // contributions, which must fail the source rather than dump everything.
   const exclusions = backupExclusions();
-  const classified = (await listDatabases()).map((name) => ({
-    name,
-    kind: classifyDatabase(name, hasCompositionMarker),
-  }));
+  const classified = await Promise.all(
+    (await listDatabases()).map(async (name) => ({
+      name,
+      kind: await classifyDatabase(name, hasCompositionMarker),
+    })),
+  );
   const targetDbs = classified
     .filter((d) => isBackedUp(d.kind))
     .map((d) => d.name);

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 
@@ -29,8 +29,8 @@ const FILE = join(
 );
 
 /** The committed MIDI, checked against its pinned hash (a swapped file is a loud seed failure). */
-export function pieceMidiBytes(): Uint8Array {
-  const bytes = new Uint8Array(readFileSync(FILE));
+export async function pieceMidiBytes(): Promise<Uint8Array> {
+  const bytes = new Uint8Array(await readFile(FILE));
   const hash = createHash("sha256").update(bytes).digest("hex");
   if (hash !== PIECE.sha256)
     throw new Error(

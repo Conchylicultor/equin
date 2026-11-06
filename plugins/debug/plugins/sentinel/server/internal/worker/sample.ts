@@ -4,8 +4,8 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
-import { statfsSync } from "node:fs";
-import { statSync } from "@plugins/packages/plugins/timed-fs/core";
+import { statfs } from "node:fs/promises";
+import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { cpus, loadavg } from "node:os";
 import {
   HOME_DIR,
@@ -104,20 +104,20 @@ async function countBuilds(log: Logger): Promise<number | null> {
 // Latest event-loop p99 per live backend, from each worktree's health.jsonl
 // tail line — the health-monitor disk-scan idiom, restricted to files with a
 // fresh mtime so stopped backends drop out of the rollup.
-export function readBackendP99Rollup(): Record<string, number> {
+export async function readBackendP99Rollup(): Promise<Record<string, number>> {
   const rollup: Record<string, number> = {};
   const names = listWorktreeDirs();
   const now = Date.now();
   for (const name of names) {
     const file = joinAppPath(worktreesDir(), name, "logs", "health.jsonl");
     try {
-      if (now - statSync(file).mtimeMs > ROLLUP_STALE_MS) continue;
+      if (now - (await stat(file)).mtimeMs > ROLLUP_STALE_MS) continue;
     } catch (err) {
       // No health file — not a running backend. Anything else is a real error.
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       continue;
     }
-    const entries = readChannelEntries(name, "health", 1);
+    const entries = await readChannelEntries(name, "health", 1);
     const line = entries?.at(-1)?.line;
     if (!line) continue;
     let parsed: unknown;
@@ -154,8 +154,10 @@ const NULL_HOST_READING: HostCompressorReading = {
  * host data is host-global, written by the main backend only — callers pass
  * MAIN_WORKTREE_NAME (tests point it at a throwaway worktree).
  */
-export function readHostCompressor(worktree: string): HostCompressorReading {
-  const entries = readChannelEntries(worktree, "health-host", 1);
+export async function readHostCompressor(
+  worktree: string,
+): Promise<HostCompressorReading> {
+  const entries = await readChannelEntries(worktree, "health-host", 1);
   const line = entries?.at(-1)?.line;
   if (!line) return NULL_HOST_READING;
   let parsed: unknown;
@@ -186,14 +188,14 @@ export function readHostCompressor(worktree: string): HostCompressorReading {
  * rate over `window`. Null — and a log line — when the statfs fails; the
  * window is left as it was, so one failed read does not restart the rate.
  */
-export function readDisk(
+export async function readDisk(
   window: FreeSpacePoint[],
   log: Logger,
   path: AppPath = asAppPath(HOME_DIR),
-): DiskReading | null {
-  let fs: ReturnType<typeof statfsSync>;
+): Promise<DiskReading | null> {
+  let fs: Awaited<ReturnType<typeof statfs>>;
   try {
-    fs = statfsSync(path);
+    fs = await statfs(path);
     // eslint-disable-next-line promise-safety/no-absorbed-failure -- null IS the discriminated "disk unreadable this tick" state: disk is nullable in the sample and vitals schemas and the failure is logged to the sentinel channel; a statfs hiccup must not lose the tick's other vitals
   } catch (err) {
     log(`disk statfs failed: ${String(err)}`);
@@ -257,9 +259,9 @@ export function createSampleGatherer(
         countBuilds(log),
       ]);
       if (tickCount % ROLLUP_EVERY_N_TICKS === 1)
-        lastRollup = readBackendP99Rollup();
-      const host = readHostCompressor(MAIN_WORKTREE_NAME);
-      const disk = readDisk(freeSpace, log);
+        lastRollup = await readBackendP99Rollup();
+      const host = await readHostCompressor(MAIN_WORKTREE_NAME);
+      const disk = await readDisk(freeSpace, log);
 
       return {
         wall: Date.now(),

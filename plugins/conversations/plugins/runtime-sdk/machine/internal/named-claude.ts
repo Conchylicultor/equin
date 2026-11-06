@@ -42,7 +42,7 @@ export async function namedClaudeBin(opts: {
   const name = opts.previous
     ? basename(opts.previous)
     : linkName(await conversationDisplayTitle(id), id);
-  const named = cloneNamedBinary({ bin: opts.claudeBin, dir, name });
+  const named = await cloneNamedBinary({ bin: opts.claudeBin, dir, name });
   if (named.kind === "cloned") return named.path;
   await recordReport({
     kind: "crash",

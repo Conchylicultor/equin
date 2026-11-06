@@ -1,4 +1,4 @@
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import type { Pool } from "pg";
 import {
   createDbClient,
@@ -21,10 +21,10 @@ interface ConnConfig {
   user: string;
 }
 
-function readConn(): ConnConfig {
+async function readConn(): Promise<ConnConfig> {
   const configPath = DATABASE_CONFIG_PATH;
   try {
-    const raw = JSON.parse(readFileSync(configPath, "utf-8"));
+    const raw = JSON.parse(await readFile(configPath, "utf-8"));
     return {
       host: process.env.PGHOST ?? raw.connection?.host ?? "localhost",
       port: Number(process.env.PGPORT ?? raw.connection?.port ?? 5432),
@@ -59,9 +59,17 @@ function buildConnString(conn: ConnConfig, database: string): string {
 // and connect to the wrong Postgres. In a normal backend the gateway writes
 // database.json before spawning us, so first use is always after the file
 // exists — identical behavior, just deferred.
-let cachedConn: ConnConfig | null = null;
-function getConn(): ConnConfig {
-  if (!cachedConn) cachedConn = readConn();
+// The read is async (a backend's thread never waits on the disk); concurrent
+// first callers share one read, and a failed read is not cached.
+let cachedConn: Promise<ConnConfig> | null = null;
+function getConn(): Promise<ConnConfig> {
+  if (!cachedConn) {
+    const read = readConn();
+    cachedConn = read;
+    read.catch(() => {
+      if (cachedConn === read) cachedConn = null;
+    });
+  }
   return cachedConn;
 }
 
@@ -73,8 +81,8 @@ function getConn(): ConnConfig {
 // uncalled, so the module stays import-safe and `getAdminPool()` is reachable in
 // a process with no namespace at all; calling this one there fails loud via
 // `runtimeNamespace()` rather than returning a silent undefined.
-export function connectionString(): string {
-  return buildConnString(getConn(), runtimeNamespace());
+export async function connectionString(): Promise<string> {
+  return buildConnString(await getConn(), runtimeNamespace());
 }
 
 // Both pools below are built by `createDbPool`, so opening a connection and
@@ -84,11 +92,13 @@ export function connectionString(): string {
 // through `runDatabaseDdl` (./database-ddl) under its own bound and reason.
 let adminPool: Pool | null = null;
 
-export function getAdminPool(): Pool {
+export async function getAdminPool(): Promise<Pool> {
   if (!adminPool) {
-    adminPool = createDbPool({
+    const conn = await getConn();
+    // Another caller may have built it while the config was read.
+    adminPool ??= createDbPool({
       name: "admin",
-      connectionString: buildConnString(getConn(), "postgres"),
+      connectionString: buildConnString(conn, "postgres"),
       max: 1,
       idleTimeoutMillis: 20_000,
     });
@@ -118,10 +128,10 @@ export async function closeAdminPool(): Promise<void> {
 
 // An idle client's connection error (the socket dropping between one query and
 // `end()`) is handled by `createDbPool` itself, as on every pool.
-export function openShortLivedClient(dbName: string): Pool {
+export async function openShortLivedClient(dbName: string): Promise<Pool> {
   return createDbPool({
     name: "admin-short-lived",
-    connectionString: buildConnString(getConn(), dbName),
+    connectionString: buildConnString(await getConn(), dbName),
     max: 1,
     idleTimeoutMillis: 1_000,
   });
@@ -132,10 +142,13 @@ export function openShortLivedClient(dbName: string): Pool {
 // must still reach the cluster while NEW connections stall. A lost connection
 // (a deadline, the server closing it) leaves the pool, and the next use opens
 // another. Does not keep the process alive.
-export function openHeldClient(name: "lock-watch", dbName: string): Pool {
+export async function openHeldClient(
+  name: "lock-watch",
+  dbName: string,
+): Promise<Pool> {
   return createDbPool({
     name,
-    connectionString: buildConnString(getConn(), dbName),
+    connectionString: buildConnString(await getConn(), dbName),
     max: 1,
     idleTimeoutMillis: 0,
     allowExitOnIdle: true,
@@ -145,17 +158,17 @@ export function openHeldClient(name: "lock-watch", dbName: string): Pool {
 // A standalone session on the `postgres` system DB, direct (never pgbouncer),
 // for a session-held advisory lock: every process that takes or tests the lock
 // meets on the same database, since advisory locks are per-database.
-export function createAdminSession(
+export async function createAdminSession(
   name: "fork-lease",
-): ReturnType<typeof createDbClient> {
+): Promise<ReturnType<typeof createDbClient>> {
   return createDbClient({
     name,
-    connectionString: buildConnString(getConn(), "postgres"),
+    connectionString: buildConnString(await getConn(), "postgres"),
   });
 }
 
-export function libpqSubprocessEnv(): Record<string, string> {
-  const conn = getConn();
+export async function libpqSubprocessEnv(): Promise<Record<string, string>> {
+  const conn = await getConn();
   return {
     PGHOST: conn.host,
     PGPORT: String(conn.port),

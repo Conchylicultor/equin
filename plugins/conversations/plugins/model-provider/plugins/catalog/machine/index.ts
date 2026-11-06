@@ -7,6 +7,7 @@ import {
 import { modelsDiscoverJob } from "./internal/discover-job";
 import { modelUnrecognizedKind } from "./internal/report-kinds";
 import {
+  loadModelCatalog,
   modelCatalogWatcher,
   readFileCatalog,
   startCatalogWatcher,
@@ -21,6 +22,7 @@ export default {
     ModelCatalogSource.provide({ read: readFileCatalog }),
     modelUnrecognizedKind,
   ],
+  onReadyBlocking: loadModelCatalog,
   onReady: async () => {
     await startCatalogWatcher();
     startCliVersionTrigger();

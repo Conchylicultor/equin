@@ -2,7 +2,7 @@ import {
   type AppPath,
   asAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import { ensureDep } from "@plugins/infra/plugins/deps/deps";
@@ -70,10 +70,10 @@ export interface EnsureBeatFeaturesOptions {
   dir?: AppPath;
 }
 
-function writeJsonAtomic(path: AppPath, value: unknown): void {
+async function writeJsonAtomic(path: AppPath, value: unknown): Promise<void> {
   const tmp = asAppPath(`${path}.tmp-${process.pid}`);
-  writeFileSync(tmp, `${JSON.stringify(value)}\n`);
-  renameSync(tmp, path);
+  await writeFile(tmp, `${JSON.stringify(value)}\n`);
+  await rename(tmp, path);
 }
 
 async function readReady(paths: FeaturePaths): Promise<BeatFeatures | null> {
@@ -126,7 +126,7 @@ export async function ensureBeatFeatures(
     if (hit !== null) return hit;
   }
 
-  mkdirSync(paths.dir, { recursive: true });
+  await mkdir(paths.dir, { recursive: true });
   const fd = await waitLock(paths.lock, async () => {
     say(`another process is analysing ${id}; waiting for it`);
     await opts.onPhase?.("waiting");
@@ -152,11 +152,11 @@ async function analyse(
   say: (line: string) => void,
   onPhase: EnsureBeatFeaturesOptions["onPhase"],
 ): Promise<BeatFeatures> {
-  rmSync(paths.failed, { force: true });
+  await rm(paths.failed, { force: true });
   const since = new Date().toISOString();
   const phase = async (p: AnalysisPhase) => {
     const running: RunningFile = { since, phase: p, pid: process.pid };
-    writeJsonAtomic(paths.running, running);
+    await writeJsonAtomic(paths.running, running);
     await onPhase?.(p);
   };
   const tmp = asAppPath(`${paths.ready}.tmp-${process.pid}`);
@@ -196,7 +196,7 @@ async function analyse(
       );
     }
     // Pretty-printing is left out on purpose: ≈100 KB per song as written.
-    renameSync(tmp, paths.ready);
+    await rename(tmp, paths.ready);
     say(
       `${id}: ${summary.beats} beats, median ${summary.medianBpm.toFixed(1)} BPM, analysed in ${summary.seconds.toFixed(1)} s (${settingsKey(settings)}, ${summary.device})`,
     );
@@ -207,10 +207,10 @@ async function analyse(
       at: new Date().toISOString(),
       permanent: isNonRetryableError(err),
     };
-    writeJsonAtomic(paths.failed, failed);
+    await writeJsonAtomic(paths.failed, failed);
     throw err;
   } finally {
-    rmSync(tmp, { force: true });
-    rmSync(paths.running, { force: true });
+    await rm(tmp, { force: true });
+    await rm(paths.running, { force: true });
   }
 }

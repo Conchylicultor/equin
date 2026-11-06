@@ -2,11 +2,8 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdirSync, renameSync, utimesSync, writeFileSync } from "node:fs";
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, rename, utimes, writeFile } from "node:fs/promises";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import { z } from "zod";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
@@ -49,38 +46,41 @@ export type CacheLookup =
  * The cached audio of `videoId`, if both files are there. A hit touches both,
  * so the sweep's "last used" is the last read, not the download.
  */
-export function lookupCached(
+export async function lookupCached(
   dir: AppPath,
   videoId: string,
   now = new Date(),
-): CacheLookup {
+): Promise<CacheLookup> {
   const path = metaPath(dir, videoId);
-  if (!existsSync(path)) return { kind: "miss" };
-  const meta = AudioMetaSchema.parse(JSON.parse(readFileSync(path, "utf8")));
+  if (!(await exists(path))) return { kind: "miss" };
+  const meta = AudioMetaSchema.parse(JSON.parse(await readFile(path, "utf8")));
   const audioPath = joinAppPath(dir, meta.file);
   // Metadata without its audio (removed by hand): download it again.
-  if (!existsSync(audioPath)) return { kind: "miss" };
-  utimesSync(audioPath, now, now);
-  utimesSync(path, now, now);
+  if (!(await exists(audioPath))) return { kind: "miss" };
+  await utimes(audioPath, now, now);
+  await utimes(path, now, now);
   return { kind: "hit", audioPath, meta };
 }
 
 /** Write the metadata temp-then-rename: a reader sees the whole file or none. */
-export function writeMeta(
+export async function writeMeta(
   dir: AppPath,
   videoId: string,
   meta: AudioMeta,
-): void {
+): Promise<void> {
   const path = metaPath(dir, videoId);
   const tmp = `${path}.tmp-${process.pid}`;
-  writeFileSync(tmp, JSON.stringify(AudioMetaSchema.parse(meta)));
-  renameSync(tmp, path);
+  await writeFile(tmp, JSON.stringify(AudioMetaSchema.parse(meta)));
+  await rename(tmp, path);
 }
 
 /** Take a video's host flock without waiting: its held descriptor, or `null` when another holds it. */
-export function tryLockVideo(dir: AppPath, videoId: string): OwnedFd | null {
+export async function tryLockVideo(
+  dir: AppPath,
+  videoId: string,
+): Promise<OwnedFd | null> {
   const path = lockPath(dir, videoId);
-  mkdirSync(dirname(path), { recursive: true });
+  await mkdir(dirname(path), { recursive: true });
   const lock = openOwnedFd(path, "a");
   if (flockTry(lock.fd)) return lock;
   lock.close();
@@ -100,12 +100,12 @@ export async function waitLockVideo(
   videoId: string,
   onWait: () => void,
 ): Promise<OwnedFd> {
-  const first = tryLockVideo(dir, videoId);
+  const first = await tryLockVideo(dir, videoId);
   if (first !== null) return first;
   onWait();
   for (;;) {
     await Bun.sleep(LOCK_RETRY_MS);
-    const fd = tryLockVideo(dir, videoId);
+    const fd = await tryLockVideo(dir, videoId);
     if (fd !== null) return fd;
   }
 }

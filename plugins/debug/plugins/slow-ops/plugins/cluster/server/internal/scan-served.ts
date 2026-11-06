@@ -46,7 +46,7 @@ const SELECT_SLOW_OPS = `
 const COUNT_SLOW_OPS = `SELECT count(*)::int AS n FROM slow_ops`;
 
 async function fetchWorktree(name: string): Promise<ClusterWorktree> {
-  const pool = openShortLivedClient(name);
+  const pool = await openShortLivedClient(name);
   try {
     const [ops, { n }] = await Promise.all([
       queryRows(pool, {

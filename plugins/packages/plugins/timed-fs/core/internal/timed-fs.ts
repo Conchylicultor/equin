@@ -252,6 +252,23 @@ export const readlink: typeof fsp.readlink = timedAsync(
   fsp.readlink,
 );
 
+/**
+ * Whether `path` exists — `existsSync`'s async twin, timed as the `access` it
+ * is. Only "not there" (ENOENT, ENOTDIR) is a `false`: any other failure (a
+ * permission refusal, a stalled volume) throws, where `existsSync` would
+ * answer `false` for it.
+ */
+export async function exists(path: fs.PathLike): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") return false;
+    throw err;
+  }
+}
+
 export const readFileSync: typeof fs.readFileSync = timedSync(
   S.readFileSync,
   "readFileSync",

@@ -137,6 +137,7 @@ type and the read schema cannot drift.
   - Exempts itself from:
     - `detached-work-safety/no-raw-set-interval` — `server/internal/probe/entry.ts` (sanctioned)
     - `sink-safety/no-adhoc-file-sink` — `server/internal/probe/entry.ts` (sanctioned)
+    - `blocking-fs/no-sync-fs` — `server/internal/probe/entry.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/probe-host.ts`, `server/internal/probe/entry.ts` (debt)
     - `user-path/no-unproven-claim` — `server/internal/probe/entry.ts` (sanctioned)
 

@@ -1,4 +1,4 @@
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import {
   rcodesign,
   type RcodesignTool,
@@ -52,7 +52,7 @@ export async function followMain(): Promise<void> {
     // Opt-in: only what a `start` registered follows main. Checked again
     // inside the reconcile, which owns the rule; here it spares an identity
     // hash for every service nobody started.
-    if (!existsSync(service.definitionPath())) continue;
+    if (!(await exists(service.definitionPath()))) continue;
     await followOne(service, decl);
   }
 }

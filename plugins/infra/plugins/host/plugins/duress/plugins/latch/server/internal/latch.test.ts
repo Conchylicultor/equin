@@ -166,21 +166,21 @@ describe("memo TTL", () => {
 });
 
 describe("readFreshDuress", () => {
-  test("null with no latch, the payload while fresh, null once lapsed", () => {
-    expect(readFreshDuress()).toBeNull();
+  test("null with no latch, the payload while fresh, null once lapsed", async () => {
+    expect(await readFreshDuress()).toBeNull();
     setDuress("load");
-    expect(readFreshDuress()?.reason).toBe("load");
+    expect((await readFreshDuress())?.reason).toBe("load");
     backdateLatch(FRESHNESS_LEASE_MS + 1_000);
-    expect(readFreshDuress()).toBeNull();
+    expect(await readFreshDuress()).toBeNull();
   });
 
-  test("sees a latch set after isUnderDuress memoized 'no'", () => {
+  test("sees a latch set after isUnderDuress memoized 'no'", async () => {
     expect(isUnderDuress()).toBe(false);
     // Another process sets it: this process's memo is not invalidated.
     writeFileSync(
       latchFile(),
       JSON.stringify({ setAt: Date.now(), reason: "elsewhere" }),
     );
-    expect(readFreshDuress()?.reason).toBe("elsewhere");
+    expect((await readFreshDuress())?.reason).toBe("elsewhere");
   });
 });

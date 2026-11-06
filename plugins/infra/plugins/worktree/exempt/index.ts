@@ -18,6 +18,7 @@ export default [
       "server/internal/spare.ts",
       "server/internal/spec.ts",
       "server/internal/worktree-op.ts",
+      "server/internal/worktree-op-marker.ts",
       "server/internal/worktree.ts",
     ],
     kind: "debt",
@@ -30,5 +31,12 @@ export default [
     kind: "sanctioned",
     reason:
       "The main worktree — git's first `worktree list` entry, the checkout the app runs from (ensureMainWorktreeRoot). Every other listed path stays a plain string: git lists worktrees wherever their owner put them.",
+  },
+  {
+    rule: "blocking-fs/no-sync-fs",
+    paths: ["server/internal/worktree-op-marker.ts"],
+    kind: "sanctioned",
+    reason:
+      "The op marker's writer, called only by the op's own CLI process (./equin build / push / a direct op, and the op-status synthetic script) — never by a backend — and its release() runs in that process's process.on(\"exit\") handler, which cannot await. The readers a backend calls (worktree-op.ts) are async.",
   },
 ] satisfies Exemptions;

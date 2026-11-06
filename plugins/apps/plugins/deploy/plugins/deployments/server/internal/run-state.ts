@@ -536,8 +536,13 @@ async function listUnfinished(): Promise<readonly UnfinishedRun[]> {
         isNotNull(_deployRuns.legRunId),
       ),
     );
-  return rows.flatMap((row) =>
-    row.legRunId !== null && legStarted(row.legRunId)
+  const started = await Promise.all(
+    rows.map(
+      async (row) => row.legRunId !== null && (await legStarted(row.legRunId)),
+    ),
+  );
+  return rows.flatMap((row, i) =>
+    row.legRunId !== null && started[i]
       ? [{ runId: row.legRunId, pid: row.pid }]
       : [],
   );
@@ -602,7 +607,7 @@ async function closeDeployRow(
     verb: parsed.leg,
     exitCode: terminal.exitCode,
     signalCode: terminal.signalCode,
-    lines: readTranscriptTail(legId),
+    lines: await readTranscriptTail(legId),
   };
   const ok = verbSucceeded(ending);
   const verb = DeployRunSchema.shape.verb.parse(row.verb);
@@ -709,7 +714,7 @@ export async function reconcileDeployLiveView(): Promise<void> {
   for (const row of rows) {
     // Per row: a corrupt one costs its own entry, not every other run's.
     try {
-      await publishLiveRun(row.id, phaseOfOpenRow(row.legRunId));
+      await publishLiveRun(row.id, await phaseOfOpenRow(row.legRunId));
     } catch (err) {
       reportServerError({
         message:
@@ -760,7 +765,7 @@ async function seedNewestRuns(): Promise<void> {
     // an open one's, the leg its row names.
     const phase =
       row.finishedAt === null
-        ? phaseOfOpenRow(row.legRunId)
+        ? await phaseOfOpenRow(row.legRunId)
         : (row.phaseFailed ?? "ship");
     const run = liveRunOf(row, phase);
     runs.set(run.deploymentId, run);
@@ -770,10 +775,10 @@ async function seedNewestRuns(): Promise<void> {
 }
 
 /** Which phase an open row is in, from the leg it names and whether it ran. */
-function phaseOfOpenRow(legId: string | null): DeployPhase {
+async function phaseOfOpenRow(legId: string | null): Promise<DeployPhase> {
   if (legId === null) return "converge";
   const parsed = parseLegRunId(legId);
   if (parsed === null) return "converge";
-  if (parsed.leg === "ship" && !legStarted(legId)) return "build";
+  if (parsed.leg === "ship" && !(await legStarted(legId))) return "build";
   return parsed.leg;
 }

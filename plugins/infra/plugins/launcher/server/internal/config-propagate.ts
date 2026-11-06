@@ -1,14 +1,8 @@
+import { mkdir, rename, rmdir, unlink, writeFile } from "node:fs/promises";
 import {
-  mkdirSync,
-  renameSync,
-  rmdirSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
-import {
-  existsSync,
-  readFileSync,
-  readdirSync,
+  exists,
+  readFile,
+  readdir,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { randomUUID } from "node:crypto";
 import { basename, dirname } from "node:path";
@@ -58,24 +52,27 @@ const ANCESTOR_SUFFIX = ".ancestor.jsonc";
  * Refusing to boot a deployed app over a corrupt USER file would trade a
  * cosmetic loss for a downed site.
  */
-function hashHeaderOf(filePath: AppPath): string | null {
-  if (!existsSync(filePath)) return null;
-  return HASH_HEADER_RE.exec(readFileSync(filePath, "utf-8"))?.[1] ?? null;
+async function hashHeaderOf(filePath: AppPath): Promise<string | null> {
+  if (!(await exists(filePath))) return null;
+  return HASH_HEADER_RE.exec(await readFile(filePath, "utf-8"))?.[1] ?? null;
 }
 
 /** Replace `filePath`'s bytes atomically, creating its directory. */
-function writeFileAtomic(filePath: AppPath, bytes: string): void {
+async function writeFileAtomic(
+  filePath: AppPath,
+  bytes: string,
+): Promise<void> {
   const tmp = joinAppPath(
     appPathParent(filePath),
     `${basename(filePath)}.tmp-${randomUUID()}`,
   );
-  mkdirSync(asAppPath(dirname(filePath)), { recursive: true });
+  await mkdir(asAppPath(dirname(filePath)), { recursive: true });
   try {
-    writeFileSync(tmp, bytes, "utf-8");
-    renameSync(tmp, filePath);
+    await writeFile(tmp, bytes, "utf-8");
+    await rename(tmp, filePath);
   } catch (err) {
     try {
-      unlinkSync(tmp);
+      await unlink(tmp);
     } catch (unlinkErr: unknown) {
       if ((unlinkErr as NodeJS.ErrnoException).code !== "ENOENT")
         throw unlinkErr;
@@ -85,25 +82,26 @@ function writeFileAtomic(filePath: AppPath, bytes: string): void {
 }
 
 /** Every `*.origin.jsonc` under `dir`, as forward-slash paths relative to it. */
-function listOriginFiles(dir: AppPath, rel = ""): string[] {
+async function listOriginFiles(dir: AppPath, rel = ""): Promise<string[]> {
   const out: string[] = [];
-  for (const entry of readdirSync(joinAppPath(dir, rel), {
+  for (const entry of await readdir(joinAppPath(dir, rel), {
     withFileTypes: true,
   })) {
     const childRel = rel ? `${rel}/${entry.name}` : entry.name;
-    if (entry.isDirectory()) out.push(...listOriginFiles(dir, childRel));
+    if (entry.isDirectory())
+      out.push(...(await listOriginFiles(dir, childRel)));
     else if (entry.name.endsWith(ORIGIN_SUFFIX)) out.push(childRel);
   }
   return out;
 }
 
 /** Drop directories left empty by the prune, deepest first. */
-function removeEmptyDirsUnder(dir: AppPath): void {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+async function removeEmptyDirsUnder(dir: AppPath): Promise<void> {
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const child = joinAppPath(dir, entry.name);
-    removeEmptyDirsUnder(child);
-    if (readdirSync(child).length === 0) rmdirSync(child);
+    await removeEmptyDirsUnder(child);
+    if ((await readdir(child)).length === 0) await rmdir(child);
   }
 }
 
@@ -143,19 +141,19 @@ function removeEmptyDirsUnder(dir: AppPath): void {
  *
  * Returns what it did, for the caller's boot log.
  */
-export function propagateOriginLayer(
+export async function propagateOriginLayer(
   srcDir: AppPath,
   destDir: AppPath,
-): { written: number; removed: number } {
-  const shipped = new Set(listOriginFiles(srcDir));
+): Promise<{ written: number; removed: number }> {
+  const shipped = new Set(await listOriginFiles(srcDir));
   let written = 0;
 
   for (const rel of shipped) {
     const segments = rel.split("/");
     const from = joinAppPath(srcDir, ...segments);
     const to = joinAppPath(destDir, ...segments);
-    const bytes = readFileSync(from, "utf-8");
-    if (existsSync(to) && readFileSync(to, "utf-8") === bytes) continue;
+    const bytes = await readFile(from, "utf-8");
+    if ((await exists(to)) && (await readFile(to, "utf-8")) === bytes) continue;
 
     // Snapshot the merge base BEFORE overwriting, at the same transition
     // `propagate()` captures: the override is still in sync with the origin on
@@ -164,34 +162,34 @@ export function propagateOriginLayer(
     // is there — once the override is stale the hashes differ, so a later boot
     // never clobbers the true base with an intermediate origin.
     const stem = basename(to, ORIGIN_SUFFIX);
-    const overrideHash = hashHeaderOf(
+    const overrideHash = await hashHeaderOf(
       joinAppPath(asAppPath(dirname(to)), `${stem}.jsonc`),
     );
-    const oldOriginHash = hashHeaderOf(to);
+    const oldOriginHash = await hashHeaderOf(to);
     const newHash = HASH_HEADER_RE.exec(bytes)?.[1] ?? null;
     if (
       overrideHash !== null &&
       oldOriginHash === overrideHash &&
       overrideHash !== newHash
     ) {
-      writeFileAtomic(
+      await writeFileAtomic(
         joinAppPath(asAppPath(dirname(to)), `${stem}${ANCESTOR_SUFFIX}`),
-        readFileSync(to, "utf-8"),
+        await readFile(to, "utf-8"),
       );
     }
 
-    writeFileAtomic(to, bytes);
+    await writeFileAtomic(to, bytes);
     written++;
   }
 
   let removed = 0;
-  if (existsSync(destDir)) {
-    for (const rel of listOriginFiles(destDir)) {
+  if (await exists(destDir)) {
+    for (const rel of await listOriginFiles(destDir)) {
       if (shipped.has(rel)) continue;
       const path = joinAppPath(destDir, ...rel.split("/"));
       // A runtime fork keeps its origin — see the note above.
       if (
-        existsSync(
+        await exists(
           joinAppPath(
             asAppPath(dirname(path)),
             `${basename(path, ORIGIN_SUFFIX)}.jsonc`,
@@ -199,10 +197,10 @@ export function propagateOriginLayer(
         )
       )
         continue;
-      unlinkSync(path);
+      await unlink(path);
       removed++;
     }
-    removeEmptyDirsUnder(destDir);
+    await removeEmptyDirsUnder(destDir);
   }
 
   return { written, removed };

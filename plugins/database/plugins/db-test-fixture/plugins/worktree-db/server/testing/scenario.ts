@@ -53,12 +53,12 @@ let installed: Promise<void> | null = null;
  */
 function ensureQueueSchema(): Promise<void> {
   if (installed) return installed;
-  const pending = installQueueSchema(connectionString()).catch(
-    (err: unknown) => {
+  const pending = connectionString()
+    .then((connString) => installQueueSchema(connString))
+    .catch((err: unknown) => {
       installed = null;
       throw err;
-    },
-  );
+    });
   installed = pending;
   return pending;
 }

@@ -7,7 +7,7 @@ import type { BackupSourceReport } from "@plugins/backup/core";
 import { PLATFORM_SOURCE_ID, platformSourceConfig } from "../../shared/config";
 import {
   scanGlob,
-  existsSync,
+  exists,
   stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 
@@ -45,7 +45,7 @@ export async function assemblePlatform(
   // The pre-secrets-store token layout (recursive dir), taken from the `secrets`
   // plugin's own declaration rather than re-derived here.
   const authDir = legacyAuthDir.path;
-  if (existsSync(authDir)) {
+  if (await exists(authDir)) {
     const dest = join(dir, "auth");
     await cp(authDir, dest, { recursive: true });
     const { count, sizeBytes: dirSize } = await countFilesAndSize(dest);
@@ -56,7 +56,7 @@ export async function assemblePlatform(
   // database.json — named through the one path the `database` plugin's core
   // barrel exports, which is derived from its `state/db-config` declaration.
   const databaseJsonPath = DATABASE_CONFIG_PATH;
-  if (existsSync(databaseJsonPath)) {
+  if (await exists(databaseJsonPath)) {
     const dest = join(dir, "database.json");
     await cp(databaseJsonPath, dest);
     const s = await stat(dest);

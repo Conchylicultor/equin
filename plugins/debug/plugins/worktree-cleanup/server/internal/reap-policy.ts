@@ -619,7 +619,7 @@ export async function collectReapable(now: number): Promise<ReapScan> {
       if (!isNamespace(name) || isCanonicalWorktreeName(name)) continue;
       if (targets.has(name) || seenAttemptIds.has(name)) continue;
       const ns = asNamespace(name);
-      if (hasCompositionMarker(ns)) continue;
+      if (await hasCompositionMarker(ns)) continue;
       const owner = readCheckoutOwner(ns);
       if (owner.kind !== "stamped") continue;
       const decision = classifyStampedNamespace(ns, owner, {

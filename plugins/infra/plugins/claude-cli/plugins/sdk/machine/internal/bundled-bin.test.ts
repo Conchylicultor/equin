@@ -20,8 +20,8 @@ describe("bundledClaudePackages", () => {
   });
 });
 
-test("bundledClaudeBin resolves the installed SDK's platform binary", () => {
-  const bin = bundledClaudeBin();
+test("bundledClaudeBin resolves the installed SDK's platform binary", async () => {
+  const bin = await bundledClaudeBin();
   expect(bin).toContain("claude-agent-sdk-");
   expect(existsSync(bin)).toBe(true);
 });

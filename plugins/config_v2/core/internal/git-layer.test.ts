@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { computeHash, readonlyProxy, type ConfigProxy } from "./config-proxy";
+import {
+  computeHash,
+  loadedProxy,
+  readonlyProxy,
+  type ConfigProxy,
+} from "./config-proxy";
 import {
   committedDocument,
   committedFilesFromMap,
@@ -9,17 +14,12 @@ import {
 } from "./git-layer";
 import { createMemoryConfigStore } from "./memory-store";
 import type { JsonValue } from "./types";
+import { proxyFiles } from "../testing";
 
 function file(content: JsonValue, hash: string | null): ConfigProxy {
-  const store = createMemoryConfigStore();
-  const p = store.proxy({ storePath: "x", file: "override" });
-  p.write(content, hash);
-  return p;
+  return loadedProxy({ content, hash });
 }
-const absent: ConfigProxy = createMemoryConfigStore().proxy({
-  storePath: "absent",
-  file: "override",
-});
+const absent: ConfigProxy = loadedProxy(null);
 
 const ORIGIN = { a: 1, b: "x" };
 const origin = file(ORIGIN, computeHash(ORIGIN));
@@ -103,48 +103,44 @@ describe("committedDocument", () => {
 describe("propagateGitLayerDocument", () => {
   const doc = { base: { a: 2, b: "x" }, scopes: { pages: { a: 2, b: "y" } } };
 
-  test("seeds a memory store's origins like a fresh user's", () => {
+  test("seeds a memory store's origins like a fresh user's", async () => {
     const store = createMemoryConfigStore({
       propagatedFrom: (sp) => (sp === "p/config.jsonc" ? doc : undefined),
     });
     expect(
-      store.proxy({ storePath: "p/config.jsonc", file: "origin" }).read(),
+      await store.read({ storePath: "p/config.jsonc", file: "origin" }),
     ).toEqual({ content: doc.base, hash: computeHash(doc.base) });
     expect(
-      store
-        .proxy({
-          storePath: "p/config.jsonc",
-          scopeId: "app:pages",
-          file: "origin",
-        })
-        .read(),
+      await store.read({
+        storePath: "p/config.jsonc",
+        scopeId: "app:pages",
+        file: "origin",
+      }),
     ).toEqual({
       content: doc.scopes.pages,
       hash: computeHash(doc.scopes.pages),
     });
     expect(
-      store.proxy({ storePath: "p/config.jsonc", file: "override" }).exists(),
-    ).toBe(false);
-    expect(store.scopes("p/config.jsonc")).toEqual(["app:pages"]);
+      await store.read({ storePath: "p/config.jsonc", file: "override" }),
+    ).toBeNull();
+    expect(await store.scopes("p/config.jsonc")).toEqual(["app:pages"]);
     expect(
-      store.proxy({ storePath: "r/config.jsonc", file: "origin" }).exists(),
-    ).toBe(false);
+      await store.read({ storePath: "r/config.jsonc", file: "origin" }),
+    ).toBeNull();
   });
 
-  test("seeds once: a write survives later touches", () => {
+  test("seeds once: a write survives later touches", async () => {
     const store = createMemoryConfigStore({ propagatedFrom: () => doc });
     const ref = { storePath: "p/config.jsonc", file: "origin" } as const;
-    store.proxy(ref).write({ a: 3 }, "h");
-    store.stamp(ref);
-    expect(store.proxy(ref).read()?.content).toEqual({ a: 3 });
+    await store.write(ref, { a: 3 }, "h");
+    await store.stamp(ref);
+    expect((await store.read(ref))?.content).toEqual({ a: 3 });
   });
 
   test("reports a user override written against another upstream", () => {
-    const store = createMemoryConfigStore();
+    const proxyOf = proxyFiles();
     const sp = "p/config.jsonc";
-    store.proxy({ storePath: sp, file: "override" }).write({ a: 5 }, "stale");
-    const proxyOf = (ref: Parameters<typeof store.proxy>[0]) =>
-      store.proxy(ref);
+    proxyOf({ storePath: sp, file: "override" }).write({ a: 5 }, "stale");
     expect(propagateGitLayerDocument(sp, doc, proxyOf).conflicts).toEqual([
       { storePath: sp },
     ]);

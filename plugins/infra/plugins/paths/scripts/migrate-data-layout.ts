@@ -429,8 +429,8 @@ function relativeLink(at: string, target: string): string {
  * exactly the moment it matters. The legacy spelling is read from the table
  * rather than typed a second time.
  */
-function liveGatewayPid(): number | null {
-  const fromDeclaration = readPid();
+async function liveGatewayPid(): Promise<number | null> {
+  const fromDeclaration = await readPid();
   if (fromDeclaration !== null) return fromDeclaration;
   const legacy = LEGACY_LAYOUT.find(
     (row) => row.move === "file" && row.to === "locks/gateway",
@@ -442,8 +442,8 @@ function liveGatewayPid(): number | null {
   return Number.isNaN(n) ? null : n;
 }
 
-function refuseIfGatewayAlive(): void {
-  const pid = liveGatewayPid();
+async function refuseIfGatewayAlive(): Promise<void> {
+  const pid = await liveGatewayPid();
   if (pid === null || !isRunning(pid)) return;
   console.error(
     [
@@ -522,7 +522,7 @@ if (!existsSync(ROOT)) {
   process.exit(0);
 }
 
-if (APPLY) refuseIfGatewayAlive();
+if (APPLY) await refuseIfGatewayAlive();
 
 const facts = snapshot();
 

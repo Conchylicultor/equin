@@ -3,9 +3,8 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { existsSync, stat } from "@plugins/packages/plugins/timed-fs/core";
-import { rename, utimes, writeFile } from "node:fs/promises";
+import { exists, stat } from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, rename, utimes, writeFile } from "node:fs/promises";
 import { cpus } from "node:os";
 import sharp from "sharp";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
@@ -47,10 +46,10 @@ function cacheKey(file: Opened, edge: ResizedEdge): string {
     .digest("hex");
 }
 
-function cached(dir: AppPath, key: string): Copy | null {
+async function cached(dir: AppPath, key: string): Promise<Copy | null> {
   for (const type of ["image/jpeg", "image/webp"] as const) {
     const file = joinAppPath(dir, `${key}.${EXT[type]}`);
-    if (existsSync(file)) return { file, type };
+    if (await exists(file)) return { file, type };
   }
   return null;
 }
@@ -88,7 +87,7 @@ async function build(
   edge: ResizedEdge,
   key: string,
 ): Promise<Copy> {
-  const hit = cached(dir, key);
+  const hit = await cached(dir, key);
   if (hit) return hit;
   return builds.run(async () => {
     const bytes = await file.read();
@@ -102,7 +101,7 @@ async function build(
         throw new UndecodableImageError(`${file.path}: ${err.message}`);
       throw err;
     }
-    mkdirSync(dir, { recursive: true });
+    await mkdir(dir, { recursive: true });
     const target = joinAppPath(dir, `${key}.${EXT[out.type]}`);
     const tmp = joinAppPath(dir, `.tmp-${key}-${process.pid}`);
     await writeFile(tmp, out.data);

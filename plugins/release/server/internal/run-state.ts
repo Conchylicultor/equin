@@ -1,5 +1,5 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
@@ -86,10 +86,10 @@ interface ReleaseManifest {
   commitDirty?: boolean;
 }
 
-function readManifest(out: AppPath): ReleaseManifest | null {
+async function readManifest(out: AppPath): Promise<ReleaseManifest | null> {
   try {
     return JSON.parse(
-      readFileSync(join(out, "RELEASE.json"), "utf-8"),
+      await readFile(join(out, "RELEASE.json"), "utf-8"),
     ) as ReleaseManifest;
   } catch (err) {
     if (
@@ -152,7 +152,7 @@ export async function closeReleaseRow(
     row.target,
     releaseId,
   );
-  const manifest = readManifest(out);
+  const manifest = await readManifest(out);
   const ending: ReleaseEnding = {
     exitCode: terminal.exitCode,
     signalCode: terminal.signalCode,

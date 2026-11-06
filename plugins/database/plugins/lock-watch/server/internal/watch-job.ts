@@ -61,7 +61,7 @@ export const lockWatchJob = defineJob({
   schedule: { cron: "* * * * *", perWorktree: true },
   maxAttempts: 1,
   run: async () => {
-    const held = heldSession();
+    const held = await heldSession();
     const rows = await readSessions(held);
     const observedAt = Date.now();
     const observation: LockWatchObservation = {
@@ -116,7 +116,7 @@ export const lockWatchJob = defineJob({
     await probeNewConnection({
       stallMs: CONNECT_STALL_MS,
       connect: async () => {
-        const probe = openShortLivedClient(runtimeNamespace());
+        const probe = await openShortLivedClient(runtimeNamespace());
         try {
           await probe.query("SELECT 1");
         } finally {

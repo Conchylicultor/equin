@@ -1,4 +1,4 @@
-import { rmSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import {
   defineDep,
@@ -49,7 +49,7 @@ export const ffmpeg = defineDep({
             env: { ...process.env },
             timeoutMs: 120_000,
           });
-          rmSync(join(ctx.dir, `${name}.zip`));
+          await rm(join(ctx.dir, `${name}.zip`));
         }
       },
     },

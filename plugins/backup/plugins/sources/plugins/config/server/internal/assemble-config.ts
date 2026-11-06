@@ -5,7 +5,7 @@ import type { BackupSourceReport } from "@plugins/backup/core";
 import { configSourceConfig } from "../../shared/config";
 import {
   scanGlob,
-  existsSync,
+  exists,
   stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 
@@ -39,7 +39,7 @@ export async function assembleConfig(dir: string): Promise<BackupSourceReport> {
   // not one namespace's slice of it.
   const configDir = userConfigDir.path;
 
-  if (!existsSync(configDir)) {
+  if (!(await exists(configDir))) {
     return {
       id: "config",
       name: "Config",

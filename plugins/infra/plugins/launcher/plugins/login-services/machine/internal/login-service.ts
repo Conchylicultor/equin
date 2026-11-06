@@ -35,21 +35,21 @@ export interface LoginService {
    * 0600: a declared environment may carry credentials (the gateway's carries
    * OAuth client secrets).
    */
-  write(job: LoginServiceJob): { path: AppPath; changed: boolean };
+  write(job: LoginServiceJob): Promise<{ path: AppPath; changed: boolean }>;
   /**
    * Whether the written definition is exactly what `write(job)` would write —
    * asked without writing, for a running service whose definition must keep
    * naming what it runs (the gateway's staleness notice). False when there is
    * no definition.
    */
-  isCurrent(job: LoginServiceJob): boolean;
+  isCurrent(job: LoginServiceJob): Promise<boolean>;
   /**
    * The launch the written definition holds (argv and cwd), read back — null
    * when there is no definition or it is not one this service wrote. For a
    * reader that cannot rebuild the whole job (its environment is the
    * starter's) but can compare the launch: the gateway's drift row.
    */
-  installedJob(): InstalledJob | null;
+  installedJob(): Promise<InstalledJob | null>;
   /** Delete the definition, so the service no longer starts by itself. */
   remove(): Promise<boolean>;
   /**

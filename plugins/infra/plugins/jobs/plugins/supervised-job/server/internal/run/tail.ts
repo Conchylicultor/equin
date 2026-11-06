@@ -1,9 +1,6 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { fstatSync, readSync } from "node:fs";
-import {
-  openOwnedFd,
-  type OwnedFd,
-} from "@plugins/packages/plugins/owned-fd/core";
+import { open, type FileHandle } from "node:fs/promises";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 
 /**
  * How many bytes of ONE run's transcript reach the log channel.
@@ -23,7 +20,7 @@ import {
  */
 export const TRANSCRIPT_CEILING_BYTES = 16 * 1024 * 1024;
 
-/** Bytes read per `readSync`, so one pump of a large backlog stays chunked. */
+/** Bytes read per `read`, so one pump of a large backlog stays chunked. */
 const READ_CHUNK_BYTES = 256 * 1024;
 
 /** The one line that tells a reader the rest of this run's output is on disk only. */
@@ -34,15 +31,16 @@ const TRUNCATED_NOTICE =
 export interface TranscriptTail {
   /**
    * Read whatever the child has appended since the last call and publish the
-   * complete lines. Synchronous and cheap when nothing moved (one `fstat`), so
-   * it is safe to call from a watcher callback.
+   * complete lines. Cheap when nothing moved (one `fstat`). Pumps of one tail
+   * run one at a time, in call order, so two never interleave on the offset.
    */
-  pump(): void;
+  pump(): Promise<void>;
   /**
    * Drain the file one last time, flush a trailing partial line, and stop.
    * Idempotent — settling a run and tearing down the watcher both reach it.
+   * Queued behind any pump in flight, so the drain is the last read.
    */
-  stop(): void;
+  stop(): Promise<void>;
 }
 
 /**
@@ -97,6 +95,9 @@ export function createTranscriptTail(opts: {
   // The tail of the file when it does not end in a newline: a line the child is
   // still writing. Held back until its newline arrives, or flushed by `stop()`.
   let partial = "";
+  // One pump (or the final drain) at a time: each reads from `offset` and moves
+  // it, so two in flight would read the same bytes twice.
+  const serial = createKeyedMutex();
 
   /**
    * Publish every COMPLETE line in `text`, holding the rest back.
@@ -113,11 +114,11 @@ export function createTranscriptTail(opts: {
     if (pieces.length > 0) publish(pieces);
   }
 
-  function pump(): void {
+  async function pumpNow(): Promise<void> {
     if (stopped || truncated) return;
-    let fd: OwnedFd;
+    let fd: FileHandle;
     try {
-      fd = openOwnedFd(path, "r");
+      fd = await open(path, "r");
     } catch (err) {
       // The transcript is created before the child is spawned, so ENOENT here
       // means the artifact prune reaped it (a run outlived 50 newer runs of its
@@ -127,7 +128,7 @@ export function createTranscriptTail(opts: {
       throw err;
     }
     try {
-      const size = fstatSync(fd.fd).size;
+      const size = (await fd.stat()).size;
       if (size < offset) {
         // The file got shorter, which an append-only transcript cannot do. A
         // run id was reused, or something truncated the file underneath us.
@@ -142,7 +143,7 @@ export function createTranscriptTail(opts: {
       while (offset < size) {
         const want = Math.min(READ_CHUNK_BYTES, size - offset);
         const buf = Buffer.allocUnsafe(want);
-        const read = readSync(fd.fd, buf, 0, want, offset);
+        const { bytesRead: read } = await fd.read(buf, 0, want, offset);
         if (read <= 0) break;
         offset += read;
         publishedBytes += read;
@@ -158,21 +159,22 @@ export function createTranscriptTail(opts: {
         }
       }
     } finally {
-      fd.close();
+      await fd.close();
     }
   }
 
   return {
-    pump,
-    stop(): void {
-      if (stopped) return;
-      pump();
-      stopped = true;
-      // A child killed mid-line leaves its last line without a newline. Flush
-      // it: the final line of a failing run is usually the one that says why.
-      if (!truncated && partial !== "") publish([partial]);
-      partial = "";
-    },
+    pump: () => serial.run("pump", pumpNow),
+    stop: () =>
+      serial.run("pump", async () => {
+        if (stopped) return;
+        await pumpNow();
+        stopped = true;
+        // A child killed mid-line leaves its last line without a newline. Flush
+        // it: the final line of a failing run is usually the one that says why.
+        if (!truncated && partial !== "") publish([partial]);
+        partial = "";
+      }),
   };
 }
 
@@ -190,27 +192,27 @@ export type TranscriptEnd =
  * the lines a dead child wrote last, which for a crash are the ones that say
  * why. One read of a bounded window, however long the transcript.
  *
- * Never throws: its caller is the ledger's terminal write, which must not be
+ * Never rejects: its caller is the ledger's terminal write, which must not be
  * kept from closing a row by the file beside it, so a failed read is an answer
  * that names the failure.
  */
-export function readTranscriptEnd(
+export async function readTranscriptEnd(
   path: AppPath,
   maxBytes: number,
-): TranscriptEnd {
-  let fd: OwnedFd;
+): Promise<TranscriptEnd> {
+  let fd: FileHandle;
   try {
-    fd = openOwnedFd(path, "r");
+    fd = await open(path, "r");
   } catch (err) {
     const e = err as NodeJS.ErrnoException;
     if (e.code === "ENOENT") return { kind: "missing" };
     return { kind: "unreadable", message: e.message };
   }
   try {
-    const size = fstatSync(fd.fd).size;
+    const size = (await fd.stat()).size;
     const start = Math.max(0, size - maxBytes);
     const buf = Buffer.allocUnsafe(size - start);
-    const read = readSync(fd.fd, buf, 0, buf.length, start);
+    const { bytesRead: read } = await fd.read(buf, 0, buf.length, start);
     let text = buf.subarray(0, read).toString("utf-8").trimEnd();
     // A window opened mid-file starts mid-line (maybe mid-character): drop
     // that fragment so the excerpt opens on a whole line — unless the window
@@ -225,6 +227,6 @@ export function readTranscriptEnd(
       message: err instanceof Error ? err.message : String(err),
     };
   } finally {
-    fd.close();
+    await fd.close();
   }
 }

@@ -134,7 +134,7 @@ export function builtinLedgerFor(
       const unrecorded =
         terminal.exitCode === 0
           ? null
-          : unrecordedFailureMessage(
+          : await unrecordedFailureMessage(
               // This backend's own runs dir: a run's row and its files share
               // a namespace (the table is excluded from forks).
               worktreeArtifacts.runTranscript(
@@ -224,8 +224,13 @@ export const UNRECORDED_FAILURE_EXCERPT_BYTES = 2048;
  * The error of a failed run whose child recorded none, in the child's own
  * words: the end of its transcript, with the path to the whole of it.
  */
-export function unrecordedFailureMessage(transcript: AppPath): string {
-  const end = readTranscriptEnd(transcript, UNRECORDED_FAILURE_EXCERPT_BYTES);
+export async function unrecordedFailureMessage(
+  transcript: AppPath,
+): Promise<string> {
+  const end = await readTranscriptEnd(
+    transcript,
+    UNRECORDED_FAILURE_EXCERPT_BYTES,
+  );
   switch (end.kind) {
     case "text":
       return `recorded no error; its transcript (${transcript}) ends:\n${end.text}`;

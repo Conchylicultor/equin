@@ -119,7 +119,7 @@ export async function forkDatabase(
     );
     const subprocessEnv = {
       ...process.env,
-      ...libpqSubprocessEnv(),
+      ...(await libpqSubprocessEnv()),
       // The dump/restore CLIENTS are darwinbg-demoted below, but the server-side
       // restore runs in a Postgres backend we cannot demote. Disabling parallel
       // maintenance workers keeps each restore's index builds to one backend, so

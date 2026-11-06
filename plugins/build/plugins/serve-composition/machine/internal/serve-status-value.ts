@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { NAMESPACE_LABEL_RE } from "@plugins/infra/plugins/namespace/core";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
@@ -33,7 +33,7 @@ async function watchServeMarker(
   notify: () => void,
 ): Promise<DirWatchRelease> {
   const home = worktreesDir();
-  mkdirSync(home, { recursive: true });
+  await mkdir(home, { recursive: true });
   const ns = await serveNamespaceOf(composition);
   const nsDir = join(home, ns);
   // No trailing re-read: the runtime awaits this start before the tuple's

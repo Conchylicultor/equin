@@ -2,13 +2,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  chmodSync,
-  copyFileSync,
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-} from "node:fs";
+import { chmod, copyFile, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineDep, type Ready } from "@plugins/infra/plugins/deps/deps";
@@ -48,14 +42,14 @@ const ICONSET: ReadonlyArray<readonly [name: string, px: number]> = [
  */
 async function assembleMacos(ctx: BuildContext, built: string): Promise<void> {
   const env = { ...process.env };
-  mkdirSync(ctx.output, { recursive: true });
-  copyFileSync(built, join(ctx.output, BIN));
-  chmodSync(join(ctx.output, BIN), 0o755);
+  await mkdir(ctx.output, { recursive: true });
+  await copyFile(built, join(ctx.output, BIN));
+  await chmod(join(ctx.output, BIN), 0o755);
 
   // The iconset is scratch, outside env/.
-  const scratch = mkdtempSync(join(tmpdir(), "equin-iconset-"));
+  const scratch = await mkdtemp(join(tmpdir(), "equin-iconset-"));
   const iconset = join(scratch, "equin.iconset");
-  mkdirSync(iconset);
+  await mkdir(iconset);
   const source = join(ctx.root, CRATE, "icons", "icon.png");
   for (const [name, px] of ICONSET) {
     await ctx.run(
@@ -75,7 +69,7 @@ async function assembleMacos(ctx: BuildContext, built: string): Promise<void> {
     ["iconutil", "-c", "icns", iconset, "-o", join(ctx.output, ICON)],
     { cwd: ctx.dir, env, timeoutMs: MINUTE },
   );
-  rmSync(scratch, { recursive: true });
+  await rm(scratch, { recursive: true });
 }
 
 /** The app icon of an installed macOS build (see {@link assembleMacos}); null on Linux. */

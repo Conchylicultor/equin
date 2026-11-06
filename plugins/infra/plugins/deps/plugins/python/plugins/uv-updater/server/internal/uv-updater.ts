@@ -2,8 +2,8 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { writeFileSync } from "node:fs";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { writeFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join } from "node:path";
 import { z } from "zod";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
@@ -325,9 +325,8 @@ export const uvUpdater: Updater = {
     for (const project of await uvProjects(root)) {
       const holds = projectHolds(UV_HOLDS, project.label);
       const cpython = newestCpython(downloads, cutoff, holds);
-      const pinned = readFileSync(
-        pythonVersionFile(root, project),
-        "utf8",
+      const pinned = (
+        await readFile(pythonVersionFile(root, project), "utf8")
       ).trim();
       if (cpython !== null && isNewerRelease(cpython, pinned)) {
         out.push({
@@ -402,7 +401,10 @@ export const uvUpdater: Updater = {
       );
       if (interpreter !== undefined) {
         log(`  ${project.dir}/.python-version → ${interpreter.to}`);
-        writeFileSync(pythonVersionFile(root, project), `${interpreter.to}\n`);
+        await writeFile(
+          pythonVersionFile(root, project),
+          `${interpreter.to}\n`,
+        );
       }
       const mine = ours.filter((m) => m !== interpreter);
       if (mine.length === 0) continue;
@@ -413,7 +415,7 @@ export const uvUpdater: Updater = {
       log(`  uv lock ${project.dir} (${mine.map((m) => m.name).join(", ")})`);
       await uvLock(root, project, ["--exclude-newer", cutoff, ...pins]);
       const locked = parseUvLockVersions(
-        readFileSync(joinAppPath(root, project.dir, "uv.lock"), "utf8"),
+        await readFile(joinAppPath(root, project.dir, "uv.lock"), "utf8"),
       );
       for (const m of mine) {
         const pkg = m.name.slice(project.label.length + 1);

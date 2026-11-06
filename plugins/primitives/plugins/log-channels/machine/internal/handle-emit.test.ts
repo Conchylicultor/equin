@@ -89,7 +89,7 @@ describe("POST /api/logs/emit", () => {
     expect(await res.json()).toEqual({ status: "accepted" });
     expect(getChannelIds()).toContain(channel);
     expect(
-      readChannelEntries(worktree, channel, 10)?.map((e) => e.line),
+      (await readChannelEntries(worktree, channel, 10))?.map((e) => e.line),
     ).toEqual(["a", "b", "c"]);
   });
 
@@ -106,7 +106,7 @@ describe("POST /api/logs/emit", () => {
     expect(await res.json()).toEqual({ status: "paused", reason: "duress" });
     // Nothing downstream ran: no channel opened, nothing on disk.
     expect(getChannelIds()).not.toContain(channel);
-    expect(readChannelEntries(worktree, channel, 10)).toBeNull();
+    expect(await readChannelEntries(worktree, channel, 10)).toBeNull();
   });
 
   test("resumes ingesting once the latch clears", async () => {
@@ -121,7 +121,7 @@ describe("POST /api/logs/emit", () => {
       await (await handleEmit(emitRequest(channel, ["x"]), {})).json(),
     ).toEqual({ status: "accepted" });
     expect(
-      readChannelEntries(worktree, channel, 10)?.map((e) => e.line),
+      (await readChannelEntries(worktree, channel, 10))?.map((e) => e.line),
     ).toEqual(["x"]);
   });
 });

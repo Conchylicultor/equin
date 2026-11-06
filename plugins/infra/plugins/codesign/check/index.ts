@@ -52,7 +52,7 @@ const identity: Check = {
   async run() {
     const host = machineHost();
     if (host.platform !== "darwin") return { ok: true };
-    const configured = readConfiguredValue(host);
+    const configured = await readConfiguredValue(host);
     if (configured !== null) {
       const resolved = await resolveConfigured(configured, host).catch(
         (err: unknown) => {
@@ -73,7 +73,7 @@ const identity: Check = {
         "Renew the certificate (Xcode → Settings → Accounts, or developer.apple.com), then rebuild the gateway (`./equin start`).",
       );
     }
-    const local = readLocalIdentity(host);
+    const local = await readLocalIdentity(host);
     if (local.kind === "absent") return { ok: true };
     if (local.kind === "partial") {
       return {

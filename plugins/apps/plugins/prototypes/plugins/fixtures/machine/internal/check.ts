@@ -46,7 +46,7 @@ export function prototypeFixtureThumbnailsCheck(opts: {
     id: opts.id,
     description: `every prototype version of the fixture in ${where} has its thumbnail PNG committed beside it (named by its fingerprint), and no PNG there is unused`,
     async run() {
-      const data = readPrototypeFixtureDir(opts.dir);
+      const data = await readPrototypeFixtureDir(opts.dir);
       const { missing, unused } = auditPrototypeFixtureThumbnails(
         parsePrototypeTree(data.tree),
         data.thumbnails,

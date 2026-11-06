@@ -204,14 +204,14 @@ export async function fetchYouTubeAudio(
   const dir = opts.dir ?? youtubeAudioCacheDir.ensure();
   const say = opts.log ?? (() => {});
 
-  const cached = lookupCached(dir, id);
+  const cached = await lookupCached(dir, id);
   if (cached.kind === "hit") return toAudio(cached.audioPath, cached.meta);
 
   const fd = await waitLockVideo(dir, id, () =>
     say(`another process is downloading ${id}; waiting for it`),
   );
   try {
-    const again = lookupCached(dir, id);
+    const again = await lookupCached(dir, id);
     if (again.kind === "hit") return toAudio(again.audioPath, again.meta);
 
     const ready = await ensureDep(ytDlpDep, exec, { log: say });
@@ -240,7 +240,7 @@ export async function fetchYouTubeAudio(
       ytDlpVersion: out.ytDlpVersion,
       fetchedAt: new Date().toISOString(),
     };
-    writeMeta(dir, id, meta);
+    await writeMeta(dir, id, meta);
     return toAudio(out.file, meta);
   } finally {
     releaseLockVideo(fd);

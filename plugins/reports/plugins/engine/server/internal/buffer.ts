@@ -1,7 +1,7 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { appendFileSync, unlinkSync } from "node:fs";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { unlink } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { reportsBufferDir } from "@plugins/reports/data-dirs";
 import type { ReportSource } from "@plugins/reports/core";
 
@@ -20,69 +20,8 @@ import type { ReportSource } from "@plugins/reports/core";
 // backend) read back as the `crash` kind, so nothing about the existing path
 // changed.
 
-function bufferFile(): AppPath {
+export function bufferFile(): AppPath {
   return reportsBufferDir.file(`${runtimeNamespace()}.jsonl`);
-}
-
-// The one write. Both public writers below go through it so the file format is
-// described in exactly one place — and so the best-effort catch (we are on a
-// dying event loop; throwing here would replace the report with a worse
-// failure) is stated once rather than copied.
-function appendLine(line: Omit<BufferedReport, "at">): BufferAppend {
-  try {
-    reportsBufferDir.ensure();
-    appendFileSync(
-      bufferFile(),
-      JSON.stringify({ ...line, at: new Date().toISOString() }) + "\n",
-    );
-    return { ok: true };
-  } catch (error) {
-    // Best-effort: we're in a crash path; swallowing is better than throwing.
-    return { ok: false, error };
-  }
-}
-
-/** Whether a buffered line landed. */
-export type BufferAppend = { ok: true } | { ok: false; error: unknown };
-
-export function appendReportSync(
-  source: ReportSource,
-  err: Error,
-): BufferAppend {
-  return appendLine({
-    source,
-    errorType: err.name,
-    message: err.message,
-    stack: err.stack,
-  });
-}
-
-/**
- * Buffer a TYPED report synchronously — the durable half of
- * `reportServerFatalSync`.
- *
- * Returns once the bytes are handed to `appendFileSync` (or the write failed —
- * the result says which), so a caller may exit on the next statement. `data`
- * is NOT validated here: this side owns the buffer, and the kind owns its
- * payload. A payload the kind's schema rejects fails loudly on the next boot's
- * flush, where a stack trace can still be read.
- */
-export function appendFatalReportSync(line: {
-  source: ReportSource;
-  kind: string;
-  message: string;
-  data: Record<string, unknown>;
-}): BufferAppend {
-  return appendLine({
-    source: line.source,
-    kind: line.kind,
-    data: line.data,
-    // Flat crash fields carry the same message so a corrupt/unregistered-kind
-    // line is still readable by a human tailing the file.
-    errorType: line.kind,
-    message: line.message,
-    stack: undefined,
-  });
 }
 
 // A buffered report captured synchronously during a dying event loop — a
@@ -109,11 +48,11 @@ export interface BufferedReport {
   at: string;
 }
 
-export function readAndClearBuffer(): BufferedReport[] {
+export async function readAndClearBuffer(): Promise<BufferedReport[]> {
   const file = bufferFile();
   let raw: string;
   try {
-    raw = readFileSync(file, "utf8");
+    raw = await readFile(file, "utf8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return [];
@@ -130,7 +69,7 @@ export function readAndClearBuffer(): BufferedReport[] {
     }
   }
   try {
-    unlinkSync(file);
+    await unlink(file);
     // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {
     // If unlink fails we'll re-process these on the next boot. Duplicate

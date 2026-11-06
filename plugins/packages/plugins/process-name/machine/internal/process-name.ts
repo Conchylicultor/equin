@@ -1,19 +1,18 @@
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
+import { constants, type Stats } from "node:fs";
 import {
-  constants,
-  copyFileSync,
-  mkdirSync,
-  renameSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-  type Stats,
-} from "node:fs";
+  copyFile,
+  mkdir,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import {
-  readdirSync,
-  readlinkSync,
-  realpathSync,
-  statSync,
+  readdir,
+  readlink,
+  realpath,
+  stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 import {
   joinAppPath,
@@ -44,6 +43,17 @@ export type NamedBinary =
   /** The filesystem refused the clone (not APFS, another volume, no permission): run `bin` itself. */
   | { kind: "refused"; code: string };
 
+/**
+ * A staging name no other call in this process holds: the calls are async, so
+ * two clones into one directory (an agent's claude and bun) can be in flight
+ * at once, and a pid alone would hand them the same file.
+ */
+let stagingSeq = 0;
+function stagingSuffix(): string {
+  stagingSeq += 1;
+  return `${String(process.pid)}.${String(stagingSeq)}.tmp`;
+}
+
 /** Clone errors that mean "this filesystem cannot", not a bug here. */
 const REFUSALS = new Set(["EXDEV", "EPERM", "ENOTSUP", "EACCES", "ENOSYS"]);
 
@@ -54,28 +64,28 @@ const REFUSALS = new Set(["EXDEV", "EPERM", "ENOTSUP", "EACCES", "ENOSYS"]);
  * name never finds it missing or half-made, and an upgrade reaches it. A
  * hardlink left by an older build is not a clone, so it is replaced.
  */
-export function cloneNamedBinary(opts: {
+export async function cloneNamedBinary(opts: {
   bin: AppPath;
   dir: AppPath;
   name: string;
-}): NamedBinary {
+}): Promise<NamedBinary> {
   const path = joinAppPath(opts.dir, opts.name);
-  const source = realpathSync(opts.bin);
-  const sourceStat = statSync(source);
-  mkdirSync(opts.dir, { recursive: true });
-  if (isCurrentClone(path, sourceStat)) return { kind: "cloned", path };
-  const staging = joinAppPath(opts.dir, `.${String(process.pid)}.tmp`);
-  rmSync(staging, { force: true });
+  const source = await realpath(opts.bin);
+  const sourceStat = await stat(source);
+  await mkdir(opts.dir, { recursive: true });
+  if (await isCurrentClone(path, sourceStat)) return { kind: "cloned", path };
+  const staging = joinAppPath(opts.dir, `.${stagingSuffix()}`);
+  await rm(staging, { force: true });
   try {
     // The clone keeps the source's mtime (to the nanosecond), which is how
     // `isCurrentClone` — and the `./equin` script — recognise it later.
-    copyFileSync(source, staging, constants.COPYFILE_FICLONE_FORCE);
+    await copyFile(source, staging, constants.COPYFILE_FICLONE_FORCE);
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === undefined || !REFUSALS.has(code)) throw err;
     return { kind: "refused", code };
   }
-  renameSync(staging, path);
+  await rename(staging, path);
   return { kind: "cloned", path };
 }
 
@@ -84,10 +94,10 @@ export function cloneNamedBinary(opts: {
  * (one name — a hardlink is the hazard above, not a clone) with its size and
  * mtime.
  */
-function isCurrentClone(path: AppPath, source: Stats): boolean {
+async function isCurrentClone(path: AppPath, source: Stats): Promise<boolean> {
   let s: Stats;
   try {
-    s = statSync(path);
+    s = await stat(path);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
     throw err;
@@ -122,39 +132,43 @@ export const CHECKOUT_BUN_DIR = "node_modules/.cache/equin-bun";
  * scan on its first exec, and per-checkout names (`equin · <verb> · <checkout>`)
  * made every new worktree pay a dozen. Those older names are removed here.
  */
-export function refreshCheckoutBun(
+export async function refreshCheckoutBun(
   root: AppPath,
   bin: AppPath,
   verbsDir: AppPath,
-): NamedBinary {
-  const trusted = checkoutBun(root) !== null;
+): Promise<NamedBinary> {
+  const trusted = (await checkoutBun(root)) !== null;
   const dir = joinAppPath(root, CHECKOUT_BUN_DIR);
-  const named = cloneNamedBinary({ bin, dir, name: "bun" });
+  const named = await cloneNamedBinary({ bin, dir, name: "bun" });
   if (named.kind !== "cloned") return named;
-  if (!trusted) writeFileSync(joinAppPath(dir, "stamp"), "");
-  mkdirSync(verbsDir, { recursive: true });
-  pointSymlink(dir, "verbs", verbsDir);
+  if (!trusted) await writeFile(joinAppPath(dir, "stamp"), "");
+  await mkdir(verbsDir, { recursive: true });
+  await pointSymlink(dir, "verbs", verbsDir);
   // An older script's per-checkout names. A `<name>.<pid>` is a script's clone
   // in flight to its name: not touched.
-  for (const entry of readdirSync(dir))
+  for (const entry of await readdir(dir))
     if (entry.startsWith(`${PRODUCT_NAME} · `) && !/\.\d+$/.test(entry))
-      rmSync(joinAppPath(dir, entry), { force: true });
+      await rm(joinAppPath(dir, entry), { force: true });
   return named;
 }
 
 /** `dir/name` points at `target`, swapped in with one rename when it does not. */
-function pointSymlink(dir: AppPath, name: string, target: AppPath): void {
+async function pointSymlink(
+  dir: AppPath,
+  name: string,
+  target: AppPath,
+): Promise<void> {
   const link = joinAppPath(dir, name);
   try {
-    if (readlinkSync(link) === target) return;
+    if ((await readlink(link)) === target) return;
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code !== "ENOENT" && code !== "EINVAL") throw err;
   }
-  const staging = joinAppPath(dir, `.${name}.${String(process.pid)}.tmp`);
-  rmSync(staging, { force: true });
-  symlinkSync(target, staging);
-  renameSync(staging, link);
+  const staging = joinAppPath(dir, `.${name}.${stagingSuffix()}`);
+  await rm(staging, { force: true });
+  await symlink(target, staging);
+  await rename(staging, link);
 }
 
 /**
@@ -162,19 +176,19 @@ function pointSymlink(dir: AppPath, name: string, target: AppPath): void {
  * newer), or null — none recorded yet, or the toolchain moved since. The same
  * test the `./equin` script makes.
  */
-export function checkoutBun(root: AppPath): AppPath | null {
+export async function checkoutBun(root: AppPath): Promise<AppPath | null> {
   const dir = joinAppPath(root, CHECKOUT_BUN_DIR);
   const bun = joinAppPath(dir, "bun");
-  if (statIno(bun) === null) return null;
-  return mtimeOf(joinAppPath(dir, "stamp")) >
-    mtimeOf(joinAppPath(root, "mise.lock"))
+  if ((await statIno(bun)) === null) return null;
+  return (await mtimeOf(joinAppPath(dir, "stamp"))) >
+    (await mtimeOf(joinAppPath(root, "mise.lock")))
     ? bun
     : null;
 }
 
-function statIno(path: AppPath): number | null {
+async function statIno(path: AppPath): Promise<number | null> {
   try {
-    return statSync(path).ino;
+    return (await stat(path)).ino;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
@@ -182,9 +196,9 @@ function statIno(path: AppPath): number | null {
 }
 
 /** A missing file is older than everything. */
-function mtimeOf(path: AppPath): number {
+async function mtimeOf(path: AppPath): Promise<number> {
   try {
-    return statSync(path).mtimeMs;
+    return (await stat(path)).mtimeMs;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return -Infinity;
     throw err;

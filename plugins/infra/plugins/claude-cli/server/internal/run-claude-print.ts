@@ -106,7 +106,7 @@ export async function invokeClaude<T>({
     let result: ClaudeTurnResult;
     try {
       result = await runClaudeTurn({
-        env: await claudeSessionEnv(activeClaudeAccountId()),
+        env: await claudeSessionEnv(await activeClaudeAccountId()),
         prompt: input.prompt,
         options: {
           // What `claude --print` loaded: the user's own settings and env

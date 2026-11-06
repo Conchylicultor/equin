@@ -33,7 +33,7 @@ const run: CliAction<[], { disable?: boolean }> = async (opts) => {
 
   // A gateway no service manager owns: a `start` without one, or one from
   // before the gateway was a service.
-  const pid = readPid();
+  const pid = await readPid();
   if (pid !== null && isRunning(pid)) {
     console.log(`Stopping the gateway (PID ${pid})...`);
     await terminateProcess(pid);

@@ -6,7 +6,8 @@ import {
 import type { ProcessCrash } from "@plugins/framework/plugins/server-core/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import type { ReportSource } from "@plugins/reports/core";
-import { appendReportSync, readAndClearBuffer } from "./buffer";
+import { readAndClearBuffer } from "./buffer";
+import { appendReportSync } from "./crash-append";
 import { reportOutboxFatalSink } from "./outbox-sink";
 import { reportsProducer } from "./producer";
 import { recordReport } from "./record-report";
@@ -83,7 +84,7 @@ function fileProcessCrashSync({ event, error }: ProcessCrash): boolean {
 // path. Called once on boot (from the plugin's `onReady`) and after a
 // rejection the serving backend survived.
 export async function flushBufferedReports(): Promise<void> {
-  const reports = readAndClearBuffer();
+  const reports = await readAndClearBuffer();
   for (const c of reports) {
     try {
       // A line that named its own kind carries its own payload; one that did

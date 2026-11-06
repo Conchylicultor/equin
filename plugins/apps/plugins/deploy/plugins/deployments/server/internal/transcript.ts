@@ -1,10 +1,6 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { fstatSync, readSync } from "node:fs";
-import {
-  openOwnedFd,
-  type OwnedFd,
-} from "@plugins/packages/plugins/owned-fd/core";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { open, type FileHandle } from "node:fs/promises";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { DEPLOY_RUN_KIND_ID } from "./kind-id";
 
@@ -44,8 +40,8 @@ const TAIL_BYTES = 256 * 1024;
  * never-started. It is already a failed run either way, and the cost is one
  * slightly-wrong sentence on it.
  */
-export function legStarted(legId: string): boolean {
-  return existsSync(
+export async function legStarted(legId: string): Promise<boolean> {
+  return exists(
     worktreeArtifacts.runTranscript(
       runtimeNamespace(),
       DEPLOY_RUN_KIND_ID,
@@ -69,31 +65,31 @@ export function legStarted(legId: string): boolean {
  * genuinely has nothing to quote — the caller then falls back to the status,
  * which is what it does for a leg that printed nothing at all.
  */
-export function readTranscriptTail(legId: string): string[] {
+export async function readTranscriptTail(legId: string): Promise<string[]> {
   const path = worktreeArtifacts.runTranscript(
     runtimeNamespace(),
     DEPLOY_RUN_KIND_ID,
     legId,
   );
-  let fd: OwnedFd;
+  let fd: FileHandle;
   try {
-    fd = openOwnedFd(path, "r");
+    fd = await open(path, "r");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
   }
   let text: string;
   try {
-    const size = fstatSync(fd.fd).size;
+    const size = (await fd.stat()).size;
     const want = Math.min(TAIL_BYTES, size);
     const buf = Buffer.allocUnsafe(want);
-    const read = readSync(fd.fd, buf, 0, want, size - want);
-    text = buf.subarray(0, Math.max(read, 0)).toString("utf-8");
+    const { bytesRead } = await fd.read(buf, 0, want, size - want);
+    text = buf.subarray(0, Math.max(bytesRead, 0)).toString("utf-8");
     // The first line of a mid-file read is whatever the previous line ended
     // with, so it is dropped rather than quoted as a line of its own.
     if (want < size) text = text.slice(text.indexOf("\n") + 1);
   } finally {
-    fd.close();
+    await fd.close();
   }
   const lines = text.split("\n");
   // A transcript ends in a newline unless the child died mid-line, so the last

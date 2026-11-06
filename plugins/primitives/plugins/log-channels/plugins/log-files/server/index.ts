@@ -6,7 +6,6 @@ export {
   logsDirFor,
   readChannelEntries,
   readChannelJson,
-  readChannelJsonAsync,
 } from "./internal/persist";
 export { clientLogFamily } from "./internal/client-log-family";
 export { channelFileSink, logEnvelope } from "./internal/channel-file";

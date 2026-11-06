@@ -39,11 +39,11 @@ import {
 // died without writing `stopped` reads as not running the next time anything
 // reads the file (a subscribe, a reconnect, any later write).
 
-export function readStatusValue(): SentinelStatusValue {
-  const latch = readFreshDuress();
-  const vitals = readVitalsValue();
+export async function readStatusValue(): Promise<SentinelStatusValue> {
+  const latch = await readFreshDuress();
+  const vitals = await readVitalsValue();
   return {
-    watch: readSentinelWatch(sentinelStatusDir.path),
+    watch: await readSentinelWatch(sentinelStatusDir.path),
     duress:
       latch === null
         ? null
@@ -83,13 +83,13 @@ export const sentinelStatusServed = serveValue(sentinelStatus, {
  * The latest reading, marked `current` only when the status file names its
  * writer as the watcher running now (same pid, still alive).
  */
-export function readVitalsValue(
+export async function readVitalsValue(
   dir: AppPath = sentinelStatusDir.path,
   alive?: (pid: number) => boolean,
-): SentinelVitals {
-  const read = readSentinelVitals(dir);
+): Promise<SentinelVitals> {
+  const read = await readSentinelVitals(dir);
   if (read.kind !== "recorded") return read;
-  const watch = readSentinelWatch(dir, alive);
+  const watch = await readSentinelWatch(dir, alive);
   const current =
     watch.kind === "recorded" &&
     watch.ownerAlive &&
@@ -152,7 +152,7 @@ export async function startStatusWatcher(): Promise<void> {
   const latchDir = duressLatchDir.ensure();
   watcher = await sentinelStatusWatcher.start({
     dirs: [statusDir, latchDir],
-    onChange: (events) => {
+    onChange: async (events) => {
       let status = false;
       let vitals = false;
       for (const event of events) {
@@ -161,7 +161,7 @@ export async function startStatusWatcher(): Promise<void> {
         vitals ||= hit.vitals;
       }
       if (status || vitals) {
-        const facts = vitalsFactsKey(readVitalsValue());
+        const facts = vitalsFactsKey(await readVitalsValue());
         status ||= facts !== lastVitalsFacts;
         lastVitalsFacts = facts;
       }

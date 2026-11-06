@@ -2,11 +2,8 @@ import {
   type AppPath,
   asAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 
 /**
@@ -14,14 +11,14 @@ import { dirname } from "node:path";
  * environment may carry credentials. Both managers share it, so "changed"
  * means the same thing to each.
  */
-export function writeDefinition(
+export async function writeDefinition(
   path: AppPath,
   content: string,
-): { path: AppPath; changed: boolean } {
-  const before = existsSync(path) ? readFileSync(path, "utf-8") : null;
+): Promise<{ path: AppPath; changed: boolean }> {
+  const before = await readDefinition(path);
   if (before === content) return { path, changed: false };
-  mkdirSync(asAppPath(dirname(path)), { recursive: true });
-  writeFileSync(path, content, { mode: 0o600 });
+  await mkdir(asAppPath(dirname(path)), { recursive: true });
+  await writeFile(path, content, { mode: 0o600 });
   return { path, changed: true };
 }
 
@@ -29,18 +26,21 @@ export function writeDefinition(
  * Whether the definition file holds exactly `content` — what
  * {@link writeDefinition} would leave unchanged — without writing anything.
  */
-export function isDefinitionCurrent(path: AppPath, content: string): boolean {
-  return existsSync(path) && readFileSync(path, "utf-8") === content;
+export async function isDefinitionCurrent(
+  path: AppPath,
+  content: string,
+): Promise<boolean> {
+  return (await readDefinition(path)) === content;
 }
 
 /** The definition file's content, or null when there is none. */
-export function readDefinition(path: AppPath): string | null {
-  return existsSync(path) ? readFileSync(path, "utf-8") : null;
+export async function readDefinition(path: AppPath): Promise<string | null> {
+  return (await exists(path)) ? await readFile(path, "utf-8") : null;
 }
 
 /** Delete a job definition file; whether there was one. */
-export function removeDefinition(path: AppPath): boolean {
-  if (!existsSync(path)) return false;
-  rmSync(path);
+export async function removeDefinition(path: AppPath): Promise<boolean> {
+  if (!(await exists(path))) return false;
+  await rm(path);
   return true;
 }

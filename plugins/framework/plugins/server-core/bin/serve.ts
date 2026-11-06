@@ -54,7 +54,7 @@ import {
 } from "@plugins/infra/plugins/runtime-identity/core";
 import { recordFsWaits } from "@plugins/debug/plugins/profiling/plugins/fs-wait/server";
 import { writeBootStartEvent } from "@plugins/debug/plugins/boot-events/server";
-import { markBootUnsettled } from "@plugins/debug/plugins/boot-events/machine";
+import { markOwnBootUnsettled } from "@plugins/debug/plugins/boot-events/machine";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import {
   channelFileSink,
@@ -141,7 +141,7 @@ export async function serve({
   // plugin import: a boot killed while importing still counts as an attempt,
   // and the boot watchdog still reads its worktree (see writeBootStartEvent).
   writeBootStartEvent();
-  markBootUnsettled(runtimeNamespace());
+  markOwnBootUnsettled(runtimeNamespace());
 
   // ── Which app (before the socket binds) ─────────────────────────
   // The entry that imported these registries names one composition; the
