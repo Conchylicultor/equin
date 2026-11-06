@@ -207,10 +207,12 @@ it ends with **Make vN the latest** (confirm, restore, back to live; the store
 saves the current state first, so nothing is lost).
 
 **This variant** (on by default) keeps the versions that can show what the
-frame shows: those whose own page declares every option the frame picked, with
-the picked value among its values (`declaresVariant`, `version-steps.ts` —
-each version carries its own declared options). A version lacking one would
-open at that option's default, a different variant. Offered only while the
+frame shows: every picked option a version's own page declares has the picked
+value among its values (`canShowVariant`, `version-steps.ts` — each version
+carries its own declared options). A version declaring the option without that
+value would open at another one, a different variant. A version without the
+option at all — not yet introduced, or settled and removed since — stays, so
+stepping back to an old version never hides the newer ones. Offered only while the
 frame has a pick: a frame on every default has nothing to filter by.
 
 **The arrows never move**: the label has a floor wide enough for every form,

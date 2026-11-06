@@ -107,18 +107,22 @@ export function stepLabel(step: VersionStep, newestN: number): string {
 
 /**
  * Whether a document declaring `options` can show the variant `picks` names:
- * it declares every picked option, each with the picked value among its
- * values. A pick equal to that document's default counts (it is what the
- * document shows unpicked); a value it does not declare — or an option it
- * lacks — would open at something else. The version list's "This variant".
+ * no picked option it declares opens at another value. A pick equal to that
+ * document's default counts (it is what the document shows unpicked); a value
+ * it does not declare would open at something else, so that document is a
+ * different variant. An option it does not declare at all is no conflict: the
+ * axis did not exist yet, or was settled and removed since — the document
+ * simply has no such choice, and the frame keeps its pick for the versions
+ * that do. (Dropping those would hide every version past the one where an
+ * explored option was settled.) The version list's "This variant".
  */
-export function declaresVariant(
+export function canShowVariant(
   options: readonly PrototypeOption[],
   picks: OptionPicks,
 ): boolean {
   return Object.entries(picks).every(([name, value]) => {
     const option = options.find((o) => o.name === name);
-    if (option === undefined) return false;
+    if (option === undefined) return true;
     return (
       pickedValue(option, resolvePicks([option], { [name]: value })) === value
     );

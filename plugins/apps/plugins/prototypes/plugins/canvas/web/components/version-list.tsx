@@ -38,7 +38,7 @@ import type {
   PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { PrototypeVersionActions } from "../slots";
-import { declaresVariant } from "../internal/version-steps";
+import { canShowVariant } from "../internal/version-steps";
 import { frameChipsTheme, versionRowsTheme } from "../internal/sub-themes";
 import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -147,11 +147,13 @@ const VersionListHeaderContext = createContext<VersionListHeader | null>(null);
  * version, so nothing is highlighted there).
  *
  * **This variant** (on by default, offered only when `picks` holds a pick):
- * keeps the versions whose own page declares every value the frame picked —
- * the versions this frame can step onto and still show the variant it shows.
- * A version that lacks one of them would open it at that option's default (or
- * without the option at all), so it is a different variant. A frame on every
- * default has no variant to filter by: every version shows its defaults.
+ * keeps the versions this frame can step onto and still show the variant it
+ * shows — every picked option a version declares has the picked value among
+ * its values. A version declaring the option without that value would open at
+ * another one, so it is a different variant. A version without the option at
+ * all (added later, or settled and removed since) stays: hiding it would hide
+ * every version past the one where an explored option was settled. A frame on
+ * every default has no variant to filter by: every version shows its defaults.
  */
 export function VersionList({
   history,
@@ -169,7 +171,7 @@ export function VersionList({
   const filterable = picks !== undefined && Object.keys(picks).length > 0;
   const filtering = filterable && variantOnly;
   const rows = filtering
-    ? history.versions.filter((v) => declaresVariant(v.options, picks))
+    ? history.versions.filter((v) => canShowVariant(v.options, picks))
     : history.versions;
   const total = history.versions.length;
   const noun = total === 1 ? "version" : "versions";

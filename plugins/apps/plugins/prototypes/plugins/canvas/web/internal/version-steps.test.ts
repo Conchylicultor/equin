@@ -5,7 +5,7 @@ import type {
   PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
-  declaresVariant,
+  canShowVariant,
   isPastStep,
   versionForStep,
   stepBy,
@@ -117,7 +117,7 @@ describe("versionSteps", () => {
   });
 });
 
-describe("declaresVariant", () => {
+describe("canShowVariant", () => {
   const theme: PrototypeOption = {
     kind: "choice",
     name: "theme",
@@ -141,27 +141,28 @@ describe("declaresVariant", () => {
   };
 
   test("no picks: every document shows the default variant", () => {
-    expect(declaresVariant([], {})).toBe(true);
+    expect(canShowVariant([], {})).toBe(true);
   });
 
   test("every picked value declared", () => {
-    expect(declaresVariant([theme, fill], { theme: "light" })).toBe(true);
-    expect(declaresVariant([accent], { accent: "sage" })).toBe(true);
-    expect(declaresVariant([accent], { accent: "#123456" })).toBe(true);
+    expect(canShowVariant([theme, fill], { theme: "light" })).toBe(true);
+    expect(canShowVariant([accent], { accent: "sage" })).toBe(true);
+    expect(canShowVariant([accent], { accent: "#123456" })).toBe(true);
   });
 
-  test("a picked option the document lacks", () => {
-    expect(declaresVariant([fill], { theme: "light" })).toBe(false);
+  test("a picked option the document lacks is no conflict", () => {
+    expect(canShowVariant([fill], { theme: "light" })).toBe(true);
+    expect(canShowVariant([], { theme: "light", accent: "sage" })).toBe(true);
   });
 
   test("a picked value the document does not declare", () => {
     const twoThemes: PrototypeOption = { ...theme, values: ["dark", "dim"] };
-    expect(declaresVariant([twoThemes], { theme: "light" })).toBe(false);
-    expect(declaresVariant([accent], { accent: "ember" })).toBe(false);
+    expect(canShowVariant([twoThemes], { theme: "light" })).toBe(false);
+    expect(canShowVariant([accent], { accent: "ember" })).toBe(false);
   });
 
   test("a pick equal to the document's own default", () => {
     const lightFirst: PrototypeOption = { ...theme, default: "light" };
-    expect(declaresVariant([lightFirst], { theme: "light" })).toBe(true);
+    expect(canShowVariant([lightFirst], { theme: "light" })).toBe(true);
   });
 });
