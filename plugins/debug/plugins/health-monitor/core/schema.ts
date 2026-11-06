@@ -118,6 +118,14 @@ export const HostSampleSchema = z.object({
   // deltas are averaged over the true elapsed window (which spans the suspend),
   // not the nominal cadence, so a sleep can never fabricate a rate spike.
   wallJumpMs: z.number().optional(),
+  // Share of every core's time spent busy (user + nice + sys + irq) since the
+  // previous tick, 0–100 — the host's actual CPU utilization. The load average
+  // above is NOT that on macOS: it counts every runnable thread, darwinbg-
+  // throttled and page-fault-blocked ones included, so it read 30 on 18 cores
+  // with half the CPU idle (2026-11-06). Oversubscription is busy ≈ 100 with
+  // load ≫ cores; high load with idle CPU is throttling or memory stalls.
+  // Optional: absent on the first tick and on pre-cutover lines.
+  cpuBusyPct: z.number().optional(),
 });
 export type HostSample = z.infer<typeof HostSampleSchema>;
 

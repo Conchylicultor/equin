@@ -1,4 +1,4 @@
-import { freemem, loadavg, totalmem } from "node:os";
+import { cpus, freemem, loadavg, totalmem } from "node:os";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { HostSample } from "../../core";
@@ -56,6 +56,29 @@ async function readVmStat(): Promise<VmStat | null> {
   return parseVmStat(result.stdout);
 }
 
+// Per-core CPU time counters at the previous tick. `os.cpus()` hands back
+// cumulative ms per core; the busy share is the delta over this window. Copied,
+// because Bun reuses the `times` objects between calls.
+type CpuTimes = ReturnType<typeof cpus>[number]["times"];
+let prevCpuTimes: CpuTimes[] | null = null;
+
+/** Busy share of all cores since the previous call (0–100); undefined on the first. */
+function readCpuBusyPct(): number | undefined {
+  const now = cpus().map((c) => ({ ...c.times }));
+  const prevTimes = prevCpuTimes;
+  prevCpuTimes = now;
+  if (prevTimes?.length !== now.length) return undefined;
+  let busy = 0;
+  let total = 0;
+  now.forEach((t, i) => {
+    const p = prevTimes[i]!;
+    const b = t.user - p.user + t.nice - p.nice + t.sys - p.sys + t.irq - p.irq;
+    busy += b;
+    total += b + (t.idle - p.idle);
+  });
+  return total > 0 ? (100 * busy) / total : undefined;
+}
+
 // Host-sample observers — same shape and same rules as `onHealthSample` in
 // process-sampler.ts. Main only, because the host sampler is.
 export type HostSampleObserver = (sample: HostSample) => void;
@@ -110,6 +133,7 @@ async function tick(): Promise<void> {
   // latch-critical thread rather than reading this file — freshness beats dedup
   // there. See worker/sample.ts and both CLAUDE.mds ("Host-metric ownership").
   const la = loadavg();
+  const cpuBusyPct = readCpuBusyPct();
   const sample: HostSample = {
     sampledAt: now,
     freeMemMb: free / 1_048_576,
@@ -124,6 +148,7 @@ async function tick(): Promise<void> {
     decompressionsPerSec,
     compressorMb,
     wallJumpMs,
+    ...(cpuBusyPct === undefined ? {} : { cpuBusyPct }),
   };
   channel.publish(JSON.stringify(sample));
   for (const observer of hostSampleObservers) observer(sample);
@@ -132,6 +157,10 @@ async function tick(): Promise<void> {
 export function startHostSampler(): void {
   if (hostSamplerTimer.running) return;
   lastTickAt = Date.now();
+  // Both counter baselines start over: a restart's first deltas would otherwise
+  // span the stopped gap but be divided by one tick — a fabricated rate spike.
+  prev = null;
+  prevCpuTimes = null;
   hostSamplerTimer.start();
 }
 

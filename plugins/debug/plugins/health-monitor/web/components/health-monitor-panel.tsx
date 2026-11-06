@@ -390,6 +390,16 @@ function HostSection({
             { key: "loadAvg5", label: "5m", color: "var(--warning)" },
           ]}
         />
+        {/* What the CPU actually did — on macOS the load average counts
+            throttled and page-fault-blocked threads too, so it is no measure
+            of CPU saturation on its own. */}
+        <ChartBlock
+          label="CPU busy (%)"
+          data={rows}
+          lines={[
+            { key: "cpuBusyPct", label: "busy %", color: "var(--primary)" },
+          ]}
+        />
         <ChartBlock
           label="Free memory (MB) · swap-out (pages/s)"
           data={rows}
