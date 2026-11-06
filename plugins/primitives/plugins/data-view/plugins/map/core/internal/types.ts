@@ -1,6 +1,7 @@
 import type {
   CameraRest,
   LatLng,
+  LinkedHover,
   MapCrowdRequest,
   MapOverlay,
   MapPadding,
@@ -79,13 +80,14 @@ export interface MapViewOptions<TRow> {
   /** Non-row overlays drawn with the rows' pins (`MapExtraOverlays`). */
   overlays?: MapExtraOverlays;
   /**
-   * A pin to draw hovered though the pointer is not on it — a row's id, or an
-   * extra overlay's: the hover of whatever beside the map stands for it. Wins
-   * over the surface's `hoveredRowId` while non-null.
+   * A linked hover over row pins and extra overlays alike (the map
+   * primitive's `useLinkedHover()`, or one derived from it): its id draws
+   * hovered though the pointer is not on it — a row's key, or an extra
+   * overlay's id: the hover of whatever beside the map stands for it — and
+   * wins over the surface's `rowHover` while non-null; every pin's enter /
+   * leave is reported to it.
    */
-  hoveredId?: string | null;
-  /** The pointer entered (`true`) or left (`false`) a pin — row pins and extra overlays alike. */
-  onHoverChange?: (id: string, hovered: boolean) => void;
+  hover?: LinkedHover;
   /**
    * The camera came to rest: where, the area it shows, and the part of it the
    * chrome leaves uncovered (`CameraRest.visible`, re-reported when

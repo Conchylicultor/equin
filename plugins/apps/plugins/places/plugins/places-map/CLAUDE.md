@@ -31,8 +31,10 @@ Then `PlacesSurface` renders, inside a `relative h-full` box:
   `crowd: { kind: "spots" }` (every place always drawn — no clusters), ranks a
   Want to go place above the rest (`rank`), reports each camera rest
   (`bounds` for the Google search, `visible` for the panel's In view) and
-  carries the panel's `fitRequest`. One `hoveredPlaceId` (`useLinkedHover`,
-  `map`) is shared by the map (`hoveredRowId` / `onRowHoverChange`) and the
+  carries the panel's `fitRequest`. One place hover (`useLinkedHover`,
+  `map` — a store, never screen state: a pin, row or card reads its own part,
+  so gliding over the pins re-renders what they light, never the screen) is
+  shared by the map (the presets DataView's `rowHover`) and the
   panel's list or gallery, so a row and its pin light together — a hovered row
   lifts its pin exactly as the pointer would (drop raised, name shown).
   The former `places.map` id (Map / Gallery / List views) is retired and its
@@ -124,9 +126,10 @@ prototype `proto-1793376812-x39bpd` (`overlay-tpin=ghost`,
 - **Hover.** A row and its pin light together. The panel's rows and the
   ghost pins claim the hover by page BLOCK (`useLinkedHover`) — whether or not
   the place is saved, so a row saved while hovered releases what it claimed;
-  a saved one lifts its row pin (the map's `hoveredRowId` derived from it),
-  one not saved yet its ghost. A saved pin hovered on the map lights its row
-  through `hoveredPlaceId`.
+  a saved one lifts its row pin (the map's `rowHover`, derived from both
+  with `deriveLinkedHover`), one not saved yet its ghost (the map option's
+  `hover`, derived from the Google and page hovers). A saved pin hovered on
+  the map lights its row through the overlay panel's derived `rowHover`.
 - **Drill.** Selecting a place (row or pin) drills its card into the panel
   under "← <page> · k of N": `PlaceCard` for a saved one, else
   `GooglePlaceCard` with the page's note ("On <page> — not in your places",
@@ -464,9 +467,9 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
     - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
     - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-  - Uses: 139 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 141 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×12
-    - `map` ×9
+    - `map` ×11
     - `apps/places/places-core` ×8
     - `conversations/agent-thread` ×8
     - `network/live/live-state` ×7

@@ -1,3 +1,4 @@
+import type { LinkedHover } from "@plugins/map/core";
 import { useCallback, useMemo, type ReactNode } from "react";
 import {
   DataView,
@@ -111,8 +112,8 @@ export interface PlacesPanelProps {
   selectedId: string | null;
   onSelect: (place: Place) => void;
   /** The place hovered here or on the map: its row and its pin light together. */
-  hoveredId: string | null;
-  onHoverChange: (id: string, hovered: boolean) => void;
+  /** The linked place hover (rows and pins, by place id). */
+  hover: LinkedHover;
   /** Frame every place of the preset on the map. */
   onFit: () => void;
   /**
@@ -310,15 +311,7 @@ function PanelRows(
     shown: readonly Place[];
   },
 ): ReactNode {
-  const {
-    tags,
-    layout,
-    shown,
-    selectedId,
-    onSelect,
-    hoveredId,
-    onHoverChange,
-  } = props;
+  const { tags, layout, shown, selectedId, onSelect, hover } = props;
   // The place's glyph is a field of the panel (a visual: the list's lead,
   // which wins over the cover thumbnail the gallery draws).
   const extraFields = useMemo(
@@ -378,8 +371,7 @@ function PanelRows(
       viewOptions={PANEL_VIEW_OPTIONS}
       onRowActivate={onSelect}
       selectedRowId={selectedId ?? undefined}
-      hoveredRowId={hoveredId}
-      onRowHoverChange={onHoverChange}
+      rowHover={hover}
     />
   );
 }

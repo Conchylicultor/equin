@@ -1,3 +1,4 @@
+import type { LinkedHover } from "@plugins/map/core";
 import { createContext, useContext, type ReactNode } from "react";
 import {
   DataView,
@@ -135,8 +136,9 @@ export interface PageOverlayPanelProps {
   overlay: PageOverlayRead;
   tags: readonly PlaceTag[];
   /** The page item hovered here or on the map, by block id. */
-  hoveredBlockId: string | null;
-  onHoverChange: (blockId: string, hovered: boolean) => void;
+  /** The linked page-row hover, by block id (rows, and the pins they stand
+   *  for). */
+  hover: LinkedHover;
   /** The open item's block id (its row selected). */
   selectedBlockId: string | null;
   onSelect: (item: PageOverlayItem) => void;
@@ -274,8 +276,7 @@ function PanelList(
   const {
     overlay,
     tags,
-    hoveredBlockId,
-    onHoverChange,
+    hover,
     selectedBlockId,
     onSelect,
     onSave,
@@ -355,8 +356,7 @@ function PanelList(
               }}
               onRowActivate={onSelect}
               selectedRowId={selectedBlockId ?? undefined}
-              hoveredRowId={hoveredBlockId}
-              onRowHoverChange={onHoverChange}
+              rowHover={hover}
             />
           </PageOverlaySaveContext.Provider>
         )

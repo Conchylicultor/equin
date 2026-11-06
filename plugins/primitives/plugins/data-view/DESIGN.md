@@ -455,7 +455,7 @@ of representative and the count badge.
 - **Why `viewShortcuts` yields to text fields.** On macOS, ⌥digit types a
   character there.
 
-### Row hover: `hoveredRowId` / `onRowHoverChange`
+### Row hover: `rowHover`
 
 Failure mode for a bare "nothing hovered" report: two surfaces report one
 pointer move (leaving a pin, entering a row) in an order nobody controls.

@@ -78,6 +78,8 @@ import {
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
+import { useIsHovered } from "@plugins/map/web";
+import type { LinkedHover } from "@plugins/map/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   activationHref,
@@ -129,16 +131,16 @@ const ROW_HOVERED_CLASS = "bg-hover-fill [--scrim:var(--hover-fill)]";
 
 /** The pointer enter/leave pair reporting a row's hover, or nothing. */
 function hoverProps(
-  onHover: ((id: string, hovered: boolean) => void) | null,
+  hover: LinkedHover | null,
   key: string,
 ): {
   onPointerEnter?: () => void;
   onPointerLeave?: () => void;
 } {
-  if (onHover === null) return {};
+  if (hover === null) return {};
   return {
-    onPointerEnter: () => onHover(key, true),
-    onPointerLeave: () => onHover(key, false),
+    onPointerEnter: () => hover.report(key, true),
+    onPointerLeave: () => hover.report(key, false),
   };
 }
 
@@ -234,9 +236,10 @@ interface ListRowConfig {
   setExpanded: DataViewRenderProps<unknown>["setExpanded"];
   /** Native drop targets (`rowDrop`): `null` when the view takes none. */
   dnd: RowDnd<unknown> | null;
-  /** Reports the row under the pointer (`onRowHoverChange`), stable for the
-   *  view's life; `null` when nobody listens. */
-  onHover: ((id: string, hovered: boolean) => void) | null;
+  /** The surface's linked row hover (`rowHover`): each row reports its
+   *  enter / leave to it and reads whether IT is hovered (`ListEntry`);
+   *  `null` when the surface tracks none. */
+  hover: LinkedHover | null;
 }
 
 /** One row's props: the shared config plus what is this row's own. Each is a
@@ -248,9 +251,6 @@ interface ListEntryProps {
   rowKey: string;
   aggregateCount: number | undefined;
   selected: boolean;
-  /** The row is the surface's hovered row (`hoveredRowId`) — under the
-   *  pointer here, or on another surface showing the same rows. */
-  hovered: boolean;
   hasChildren: boolean;
   /** The row's detail is expanded (always `false` without `detail`). */
   open: boolean;
@@ -280,7 +280,11 @@ const ListEntry = memo(function ListEntry(props: ListEntryProps): ReactNode {
   // The view's presentation (quiet terms, the elided common values): a
   // context, so it changes only when the elision does.
   const presentation = useFieldPresentation();
-  const row = listRowNode(props, presentation);
+  // The row is the surface's hovered row — under the pointer here, or on
+  // another surface showing the same rows. Read here, per row: a hover
+  // re-renders the row it enters and the one it leaves, never the list.
+  const hovered = useIsHovered(props.config.hover, props.rowKey);
+  const row = listRowNode({ ...props, hovered }, presentation);
   const { dnd } = props.config;
   const node =
     dnd && !props.attached ? (
@@ -460,13 +464,9 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     sequence,
   });
 
-  // The hover report, stable whatever the host hands down (a fresh closure
-  // per render would bust the row config, and every row with it).
-  const hoverChange = props.onRowHoverChange;
-  const reportHover = useEventCallback((id: string, hovered: boolean) =>
-    hoverChange?.(id, hovered),
-  );
-  const onHover = hoverChange === undefined ? null : reportHover;
+  // The linked hover: a store the host holds for its life, so the row
+  // config keeps its identity across hovers.
+  const hover = props.rowHover ?? null;
   // The row's terms, split once per schema: the title, the subtitle run and
   // the trailing slots.
   const terms = useMemo(() => {
@@ -558,7 +558,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       revealed,
       setExpanded,
       dnd,
-      onHover,
+      hover,
     };
   }, [
     anyAttached,
@@ -584,7 +584,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     revealed,
     setExpanded,
     dnd,
-    onHover,
+    hover,
   ]);
 
   // The rank-reorder host's item list (id + rank + group); the provider keys
@@ -666,7 +666,6 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         rowKey={entry.key}
         aggregateCount={entry.aggregateCount}
         selected={entry.key === props.selectedRowId}
-        hovered={entry.key === props.hoveredRowId}
         hasChildren={props.hasChildren?.(entry.key) ?? false}
         open={detail ? props.expanded?.[entry.key] === true : false}
         childCount={entry.children?.length ?? 0}
@@ -1229,7 +1228,7 @@ function renderTreeChromeRow(
 // Single source of row markup — shared verbatim by the plain and virtualized
 // branches so the two render identically.
 function listRowNode(
-  props: ListEntryProps,
+  props: ListEntryProps & { hovered: boolean },
   presentation: FieldPresentation,
 ): ReactNode {
   const { config, row, rowKey: key, aggregateCount, open } = props;
@@ -1311,7 +1310,7 @@ function listRowNode(
         props.hovered && !props.selected ? ROW_HOVERED_CLASS : undefined,
         disclosure && TREE_ROW_GROUP,
       )}
-      {...hoverProps(config.onHover, key)}
+      {...hoverProps(config.hover, key)}
       size={config.rowSize}
       // Straight through, `undefined` and all — NEVER `() => activate?.()`.
       // `Row` infers its element from `onClick`, so a closure is never null and

@@ -1,3 +1,4 @@
+import type { LinkedHover } from "@plugins/map/core";
 import { useState, type ReactNode } from "react";
 import {
   useDataViewControls,
@@ -59,8 +60,8 @@ export interface UniversalSearchPanelProps {
   /** Saved places by their Google id: a hit already saved says so. */
   savedByGoogleId: ReadonlyMap<string, Place>;
   /** The Google hit hovered here or on the map (linked both ways). */
-  hoveredGoogleId: string | null;
-  onHoverGoogle: (placeId: string, hovered: boolean) => void;
+  /** The linked Google-result hover, by place id (cards and ghost pins). */
+  googleHover: LinkedHover;
   onOpenPlace: (place: Place) => void;
   /** Open a hit's detail card (one with a position). */
   onOpenHit: (hit: GoogleHit) => void;
@@ -258,8 +259,7 @@ function YourPlaces({
 function GoogleSection({
   google,
   savedByGoogleId,
-  hoveredGoogleId,
-  onHoverGoogle,
+  googleHover,
   onOpenPlace,
   onSave,
   saveNotConfigured,
@@ -340,8 +340,7 @@ function GoogleSection({
                 <GoogleResultCard
                   key={hit.placeId}
                   hit={hit}
-                  highlighted={hit.placeId === hoveredGoogleId}
-                  onHover={onHoverGoogle}
+                  hover={googleHover}
                   saved={saved !== undefined}
                   onSave={() => onSave(hit)}
                   onOpenSaved={() => {

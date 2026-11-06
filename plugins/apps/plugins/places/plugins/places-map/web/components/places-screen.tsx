@@ -26,7 +26,12 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import type { LatLng, MapBounds, MapPin } from "@plugins/map/core";
+import {
+  deriveLinkedHover,
+  type LatLng,
+  type MapBounds,
+  type MapPin,
+} from "@plugins/map/core";
 import { useLinkedHover } from "@plugins/map/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
@@ -337,8 +342,10 @@ function PlacesSurface({
     setFramedPageId(null);
   }
   // One hovered place, lit on both sides: its pin and its row in the panel.
-  const { hoveredId: hoveredPlaceId, onHoverChange: setHoveredPlaceId } =
-    useLinkedHover();
+  // The hovers are stores, never state here: each pin, row and card reads its
+  // own part, so the pointer gliding over the pins re-renders what it lights
+  // and never this screen.
+  const placeHover = useLinkedHover();
   const [sidebarOpen, setSidebarOpen] = useDraft(sidebarOpenStore, true);
   const [panelLayout, setPanelLayout] = useDraft(panelLayoutStore, "list");
   const [panelScope, setPanelScope] = useDraft(panelScopeStore, "in-view");
@@ -355,17 +362,80 @@ function PlacesSurface({
   // map. Keyed by block whether or not the place is saved, so a row saved
   // while hovered releases what it claimed; a saved one lights its row pin
   // (below), one not saved yet its ghost.
-  const { hoveredId: hoveredPageBlock, onHoverChange: setHoveredPageBlock } =
-    useLinkedHover();
-  const hoveredPageItem =
-    hoveredPageBlock === null
-      ? undefined
-      : pageItems.find((i) => i.blockId === hoveredPageBlock);
+  const pageHover = useLinkedHover();
   // One session per search round: an autocomplete answer (the ladder's last
   // rung) and the save it ends in are billed together.
   const [session, setSession] = useState(() => crypto.randomUUID());
-  const { hoveredId: hoveredGoogleId, onHoverChange: setHoveredGoogleId } =
-    useLinkedHover();
+  const googleHover = useLinkedHover();
+  // The presets view's rows (the saved pins): the place hovered, else the
+  // saved place of the page row hovered.
+  const savedRowHover = useMemo(
+    () =>
+      deriveLinkedHover(
+        [placeHover, pageHover],
+        () => {
+          const block = pageHover.get();
+          return (
+            placeHover.get() ??
+            (block === null
+              ? null
+              : (pageItems.find((i) => i.blockId === block)?.saved?.id ?? null))
+          );
+        },
+        placeHover.report,
+      ),
+    [placeHover, pageHover, pageItems],
+  );
+  // The overlay panel's rows: a page place not saved yet by its block, a
+  // saved one through its place.
+  const pageRowHover = useMemo(
+    () =>
+      deriveLinkedHover(
+        [pageHover, placeHover],
+        () => {
+          const place = placeHover.get();
+          return (
+            pageHover.get() ??
+            (place === null
+              ? null
+              : (pageItems.find((i) => i.saved?.id === place)?.blockId ?? null))
+          );
+        },
+        pageHover.report,
+      ),
+    [pageHover, placeHover, pageItems],
+  );
+  // The pins that are no rows: a Google hit's ghost (its card hovered), else
+  // the ghost of the page row hovered when its place is not saved yet; a
+  // ghost's own hover is claimed by its result or its page block.
+  const ghostHover = useMemo(
+    () =>
+      deriveLinkedHover(
+        [googleHover, pageHover],
+        () => {
+          const placeId = googleHover.get();
+          if (placeId !== null) return googlePinId(placeId);
+          const block = pageHover.get();
+          const item =
+            block === null
+              ? undefined
+              : pageItems.find((i) => i.blockId === block);
+          return item !== undefined && item.saved === null
+            ? pageItemPinId(item.blockId)
+            : null;
+        },
+        (id, hovered) => {
+          const blockId = blockIdOfPin(id);
+          if (blockId !== null) {
+            pageHover.report(blockId, hovered);
+            return;
+          }
+          const placeId = googlePlaceIdOfPin(id);
+          if (placeId !== null) googleHover.report(placeId, hovered);
+        },
+      ),
+    [googleHover, pageHover, pageItems],
+  );
   const [saveNotConfigured, setSaveNotConfigured] = useState(false);
   // Ask Sonnet: the question's background run, docked on the right as a
   // thread card the bar's pill shows and hides; its picks are on the map while
@@ -667,21 +737,7 @@ function PlacesSurface({
           items: ghostPins,
           onActivate: activateGhost,
         },
-        hoveredId:
-          hoveredGoogleId !== null
-            ? googlePinId(hoveredGoogleId)
-            : hoveredPageItem !== undefined && hoveredPageItem.saved === null
-              ? pageItemPinId(hoveredPageItem.blockId)
-              : null,
-        onHoverChange: (id, hovered) => {
-          const blockId = blockIdOfPin(id);
-          if (blockId !== null) {
-            setHoveredPageBlock(blockId, hovered);
-            return;
-          }
-          const placeId = googlePlaceIdOfPin(id);
-          if (placeId !== null) setHoveredGoogleId(placeId, hovered);
-        },
+        hover: ghostHover,
         onCameraRest: (rest) => {
           setBounds(rest.bounds);
           setVisible(rest.visible);
@@ -699,10 +755,7 @@ function PlacesSurface({
       pick,
       keepIds,
       ghostPins,
-      hoveredGoogleId,
-      setHoveredGoogleId,
-      hoveredPageItem,
-      setHoveredPageBlock,
+      ghostHover,
       activateGhost,
       fitRequest,
     ],
@@ -854,14 +907,6 @@ function PlacesSurface({
     (selected === undefined
       ? null
       : (pageItems.find((i) => i.saved?.id === selected.id)?.blockId ?? null));
-  // The overlay panel's hovered row: a page place not saved yet by its block,
-  // a saved one through its place.
-  const hoveredPanelBlock =
-    hoveredPageBlock ??
-    (hoveredPlaceId === null
-      ? null
-      : (pageItems.find((i) => i.saved?.id === hoveredPlaceId)?.blockId ??
-        null));
 
   /** Save the detail card's place: it is one of your places now — its own card. */
   const saveDetail = async (d: GoogleDetail): Promise<void> => {
@@ -999,8 +1044,7 @@ function PlacesSurface({
                 query={query}
                 google={google}
                 savedByGoogleId={savedByGoogleId}
-                hoveredGoogleId={hoveredGoogleId}
-                onHoverGoogle={setHoveredGoogleId}
+                googleHover={googleHover}
                 onOpenPlace={openPlace}
                 onOpenHit={(hit) => openHit(hit, null)}
                 onSave={saveCard}
@@ -1044,8 +1088,7 @@ function PlacesSurface({
                   <PageOverlayPanel
                     overlay={overlayRead}
                     tags={tags}
-                    hoveredBlockId={hoveredPanelBlock}
-                    onHoverChange={setHoveredPageBlock}
+                    hover={pageRowHover}
                     selectedBlockId={selectedPageBlock}
                     onSelect={openPageItem}
                     onSave={savePageItem}
@@ -1068,16 +1111,14 @@ function PlacesSurface({
                   onScopeChange={setPanelScope}
                   selectedId={selected?.id ?? null}
                   onSelect={openPlace}
-                  hoveredId={hoveredPlaceId}
-                  onHoverChange={setHoveredPlaceId}
+                    hover={placeHover}
                   onFit={() => setFitRequest((n) => n + 1)}
                   drill={cardOpen ? drilledCard : null}
                   onBack={closeCards}
                 />
                 ),
             })}
-        hoveredRowId={hoveredPlaceId ?? hoveredPageItem?.saved?.id ?? null}
-        onRowHoverChange={setHoveredPlaceId}
+        rowHover={savedRowHover}
         viewOptions={viewOptions}
         onRowActivate={(p) => {
           // Selecting another place swaps the card; it is not a click away.
@@ -1158,8 +1199,7 @@ function PlacesSurface({
               tags={tags}
               bounds={bounds}
               savedByGoogleId={savedByGoogleId}
-              hoveredGoogleId={hoveredGoogleId}
-              onHoverGoogle={setHoveredGoogleId}
+              googleHover={googleHover}
               onSave={saveCard}
               onOpenPick={openPick}
               expanded={expandedIds}

@@ -6549,9 +6549,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 139 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 141 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `primitives/data-view` ×12
-              - `map` ×9
+              - `map` ×11
               - `apps/places/places-core` ×8
               - `conversations/agent-thread` ×8
               - `network/live/live-state` ×7
@@ -24033,6 +24033,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/shape --spacing`
         - Imported by:
+          - `apps/places/places-map`
           - `debug/live-state-churn/emit`
           - `debug/profiling/cold-start`
           - `reports/render-loop`
@@ -35853,6 +35854,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `MapLabel`
       - `MapMarkImage`
       - `MapView`
+      - `useHoveredId`
+      - `useIsHovered`
       - `useLinkedHover`
       - `useMapMarkEnv`
       - `useMapTextStyle`
@@ -35867,6 +35870,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `DropShape`
       - `FlyPath`
       - `LatLng`
+      - `LinkedHover`
       - `LinkedHoverChange`
       - `MapArea`
       - `MapBounds`
@@ -35893,9 +35897,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `cameraFor`
       - `clusterPins`
       - `clusterPinType`
+      - `createLinkedHover`
       - `DEFAULT_CLUSTER_RADIUS_PX`
       - `DEFAULT_SPOT_NEAR_ZOOM`
       - `DEFAULT_SPOT_RADIUS_PX`
+      - `deriveLinkedHover`
       - `dropHeadSvg`
       - `dropTipPx`
       - `escapeSvg`
@@ -35932,6 +35938,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `map/pin-layer`
       - `page/map`
       - `page/place/map-layer`
+      - `primitives/data-view/gallery`
+      - `primitives/data-view/list`
       - `primitives/data-view/map`
   - Plugins:
     - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them once and then only from its Fit control, zooms the vector map on the wheel at the user's Scroll zoom speed setting, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Draws the Live map setup's Map ID preview map. Lazily loaded off the boot wave. Stores the Google map's settings (Scroll zoom speed) so Settings can edit them.
@@ -45999,11 +46007,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-            - Uses: 48 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
+            - Uses: 49 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
               - `primitives/data-view` ×27
               - `primitives/css/ui-kit` ×3
               - `primitives/css/spacing` ×2
               - `primitives/row-actions` ×2
+              - `map.useIsHovered`
               - `primitives/avatar.Avatar`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
@@ -46087,12 +46096,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: 73 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
+            - Uses: 74 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
               - `primitives/data-view` ×48
               - `primitives/rank-reorder` ×3
               - `primitives/tree` ×3
               - `primitives/css/spacing` ×2
               - `primitives/latest-ref` ×2
+              - `map.useIsHovered`
               - `primitives/collapsible.FoldMotion`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
@@ -46129,6 +46139,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `DataViewSlots.View` "Map" → `MapDataView`
             - Uses:
               - `map.MapView`
+              - `map.MapViewProps`
+              - `map.useHoveredId`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/pin.Pin`

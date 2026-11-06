@@ -1,3 +1,4 @@
+import type { LinkedHover } from "@plugins/map/core";
 import type { ReactNode } from "react";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -51,8 +52,8 @@ export interface AskThreadCardProps {
   tags: readonly PlaceTag[];
   bounds: MapBounds | null;
   savedByGoogleId: ReadonlyMap<string, Place>;
-  hoveredGoogleId: string | null;
-  onHoverGoogle: (placeId: string, hovered: boolean) => void;
+  /** The linked Google-result hover, by place id (cards and ghost pins). */
+  googleHover: LinkedHover;
   onSave: (hit: GoogleHit) => Promise<void>;
   /** Open a pick's detail card (a saved one: its place card). */
   onOpenPick: (pick: AskPick) => void;
@@ -197,8 +198,7 @@ function Picks(
 function PickCards({
   picks,
   savedByGoogleId,
-  hoveredGoogleId,
-  onHoverGoogle,
+  googleHover,
   onSave,
   onOpenPick,
 }: AskThreadCardProps & { picks: readonly AskPick[] }): ReactNode {
@@ -211,8 +211,7 @@ function PickCards({
             key={p.hit.placeId}
             hit={p.hit}
             pick={p}
-            highlighted={p.hit.placeId === hoveredGoogleId}
-            onHover={onHoverGoogle}
+            hover={googleHover}
             saved={saved !== undefined}
             onSave={() => onSave(p.hit)}
             onOpenSaved={() => onOpenPick(p)}

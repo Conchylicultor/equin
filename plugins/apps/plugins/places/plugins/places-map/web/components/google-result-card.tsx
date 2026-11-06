@@ -8,6 +8,8 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { useIsHovered } from "@plugins/map/web";
+import type { LinkedHover } from "@plugins/map/core";
 import type { PlaceCandidate } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -41,14 +43,14 @@ export interface GoogleHit {
  * the name, Google's rating · count · price, its type and address, whether it
  * is open now — and Save, which adds it auto-tagged; a place already saved
  * says so and opens it instead. Hovering it lifts its ghost pin on the map,
- * and its pin hovered highlights it (`highlighted`). With `onOpen`, a click
+ * and its pin hovered highlights it (read here from `hover`, so a hover
+ * re-renders the card it changes, never the list). With `onOpen`, a click
  * anywhere else on it opens its detail card (a full-bleed hit button behind
  * the content).
  */
 export function GoogleResultCard({
   hit,
-  highlighted,
-  onHover,
+  hover,
   saved,
   onSave,
   onOpenSaved,
@@ -56,9 +58,9 @@ export function GoogleResultCard({
   onOpen,
 }: {
   hit: GoogleHit;
-  highlighted: boolean;
-  /** The pointer entered (`true`) or left (`false`) the card: a claim or a release. */
-  onHover: (placeId: string, hovered: boolean) => void;
+  /** The linked Google-result hover, by place id: the card reports its
+   *  enter / leave to it (a claim or a release) and reads whether it is lit. */
+  hover: LinkedHover;
   saved: boolean;
   onSave: () => Promise<void>;
   onOpenSaved: () => void;
@@ -73,11 +75,12 @@ export function GoogleResultCard({
   onOpen?: () => void;
 }): ReactNode {
   const { result, visual } = hit;
+  const highlighted = useIsHovered(hover, hit.placeId);
   return (
     <div
       data-google-place-id={hit.placeId}
-      onMouseEnter={() => onHover(hit.placeId, true)}
-      onMouseLeave={() => onHover(hit.placeId, false)}
+      onMouseEnter={() => hover.report(hit.placeId, true)}
+      onMouseLeave={() => hover.report(hit.placeId, false)}
       className={cn(
         "relative rounded-panel-row p-sm transition-colors",
         highlighted && "bg-hover-fill",

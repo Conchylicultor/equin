@@ -39,9 +39,9 @@ One card shape, everywhere — `DataCard`, built at ONE site in `GalleryView`:
     at rest while active (playing).
 - **Badge**: a lead that is no visual (a state's glyph), then an aggregate
   representative's `×N`, pinned top-left of the cover.
-- **Row hover**: a card reports pointer enter/leave to `onRowHoverChange`
-  (`DataCard onHoverChange`), and the `hoveredRowId` card holds the card's
-  own hover paint (`DataCard hovered`) while another surface hovers it (its
+- **Row hover**: a card reports pointer enter/leave to `rowHover`
+  (`DataCard onHoverChange`), and the card it holds (read per card,
+  `useIsHovered`) keeps the card's own hover paint (`DataCard hovered`) while another surface hovers it (its
   map pin).
 - **Selected** is a ring around the cover; **row tone** `"muted"` tones the
   title (`rowToneClass`) and veils the cover at rest (`DataCard dimmed`).
@@ -175,11 +175,12 @@ taking `{song, onOpen}` never trips it.
 - Description: Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.
 - Web:
   - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×27
     - `primitives/css/ui-kit` ×3
     - `primitives/css/spacing` ×2
     - `primitives/row-actions` ×2
+    - `map.useIsHovered`
     - `primitives/avatar.Avatar`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`

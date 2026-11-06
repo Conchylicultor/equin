@@ -447,8 +447,7 @@ function DataViewBodyInner<TRow>(
     rowDrop,
     itemActions,
     creators,
-    hoveredRowId,
-    onRowHoverChange,
+    rowHover,
     storageKey,
     viewModel,
     activeInstance,
@@ -1626,8 +1625,7 @@ function DataViewBodyInner<TRow>(
           // The surface's own declaration, straight off the chrome (the ONE
           // place both hosts set it) — the view child decides what to tighten.
           density: chrome.density,
-          hoveredRowId,
-          onRowHoverChange,
+          rowHover,
         };
 
         // The ONE context every toolbar control and settings contribution reads —

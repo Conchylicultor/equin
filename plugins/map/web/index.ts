@@ -32,7 +32,11 @@ export {
   type MapTextStyle,
 } from "./components/mark-env";
 export type { MapViewProps } from "./components/map-view";
-export { useLinkedHover } from "./internal/use-linked-hover";
+export {
+  useHoveredId,
+  useIsHovered,
+  useLinkedHover,
+} from "./internal/use-linked-hover";
 
 export default {
   description:

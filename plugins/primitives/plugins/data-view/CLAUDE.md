@@ -1121,15 +1121,20 @@ surface lists views itself).
   view's filter over in-memory rows; `undefined` when rows aren't in memory).
 - **`viewShortcuts`** binds ⌥1–⌥9 (`web/internal/use-view-shortcuts.ts`).
 
-### Row hover: `hoveredRowId` / `onRowHoverChange`
+### Row hover: `rowHover`
 
-For the same rows shown twice (list + map).
+For the same rows shown twice (list + map). `rowHover` is the map primitive's
+`LinkedHover` store (`useLinkedHover()`, or one `deriveLinkedHover` reads
+through others), threaded to the views as `DataViewRenderProps.rowHover`.
 
-- Views report enter/leave and paint the `hoveredRowId` row hovered.
-- A report is a **claim or a release**, `onRowHoverChange(id, hovered)` — never a
+- Views report enter/leave through `rowHover.report`, and each ROW reads
+  whether it is hovered where it is drawn (`useIsHovered(rowHover, key)`) — a
+  hover re-renders the row it enters and the one it leaves, never the surface
+  or the view (a `hoveredRowId` value prop re-rendered the whole surface per
+  pin crossed).
+- A report is a **claim or a release**, `report(id, hovered)` — never a
   bare "nothing hovered", since two surfaces report one pointer move in
   uncontrolled order.
-- Hold the state with the map primitive's `useLinkedHover()`.
 
 ### Search with suggestions (`search.suggestions`)
 

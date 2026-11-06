@@ -67,4 +67,10 @@ export {
   type DropIcon,
   type DropShape,
 } from "./drop";
-export { nextLinkedHover, type LinkedHoverChange } from "./linked-hover";
+export {
+  createLinkedHover,
+  deriveLinkedHover,
+  nextLinkedHover,
+  type LinkedHover,
+  type LinkedHoverChange,
+} from "./linked-hover";

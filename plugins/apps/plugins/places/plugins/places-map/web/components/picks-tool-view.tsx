@@ -15,7 +15,13 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { MapPin } from "@plugins/map/core";
-import { MapView, useLinkedHover } from "@plugins/map/web";
+import {
+  MapView,
+  useHoveredId,
+  useIsHovered,
+  useLinkedHover,
+} from "@plugins/map/web";
+import type { LinkedHover } from "@plugins/map/core";
 import type { PlaceCandidate } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import {
   PlacesPicksSchema,
@@ -130,7 +136,8 @@ function LoadedPicks({
 }
 
 function PicksBody({ picks }: { picks: readonly ShownPick[] }) {
-  const { hoveredId: hovered, onHoverChange: setHovered } = useLinkedHover();
+  const hover = useLinkedHover();
+  const hoveredId = useHoveredId(hover);
   const pins = useMemo(
     (): MapPin[] =>
       picks.flatMap((p) =>
@@ -153,12 +160,7 @@ function PicksBody({ picks }: { picks: readonly ShownPick[] }) {
     <Grid minCellWidth="16rem" mode="fit" gap="sm">
       <Stack as="ol" gap="none">
         {picks.map((p) => (
-          <PickRow
-            key={p.placeId}
-            pick={p}
-            highlighted={hovered === `${PIN_PREFIX}${p.placeId}`}
-            onHover={setHovered}
-          />
+          <PickRow key={p.placeId} pick={p} hover={hover} />
         ))}
       </Stack>
       {pins.length === 0 ? null : (
@@ -168,8 +170,8 @@ function PicksBody({ picks }: { picks: readonly ShownPick[] }) {
         >
           <MapView
             overlays={pins}
-            hoveredId={hovered}
-            onHoverChange={setHovered}
+            hoveredId={hoveredId}
+            onHoverChange={hover.report}
             empty={null}
           />
         </Surface>
@@ -178,20 +180,14 @@ function PicksBody({ picks }: { picks: readonly ShownPick[] }) {
   );
 }
 
-function PickRow({
-  pick,
-  highlighted,
-  onHover,
-}: {
-  pick: ShownPick;
-  highlighted: boolean;
-  onHover: (id: string, hovered: boolean) => void;
-}) {
+function PickRow({ pick, hover }: { pick: ShownPick; hover: LinkedHover }) {
   const { candidate } = pick;
+  const id = `${PIN_PREFIX}${pick.placeId}`;
+  const highlighted = useIsHovered(hover, id);
   return (
     <li
-      onMouseEnter={() => onHover(`${PIN_PREFIX}${pick.placeId}`, true)}
-      onMouseLeave={() => onHover(`${PIN_PREFIX}${pick.placeId}`, false)}
+      onMouseEnter={() => hover.report(id, true)}
+      onMouseLeave={() => hover.report(id, false)}
       className={cn(
         "rounded-md px-xs py-2xs transition-colors",
         highlighted && "bg-hover-fill",

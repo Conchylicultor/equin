@@ -15,6 +15,7 @@ import type {
   NotCollectionRow,
   RowFieldState,
 } from "@plugins/network/plugins/live/core";
+import type { LinkedHover } from "@plugins/map/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type {
   ResourceReadiness,
@@ -1548,19 +1549,16 @@ export interface DataViewRenderProps<TRow> {
    */
   density?: DataViewDensity;
   /**
-   * The row the pointer is over — on THIS view or on another surface showing
-   * the same rows (a map pin beside a list), threaded from
-   * `DataViewProps.hoveredRowId`. A view draws that row in its hovered tone.
-   * Absent ⇒ the surface does not track hover.
+   * The linked row hover — the row the pointer is over, on THIS view or on
+   * another surface showing the same rows (a map pin beside a list) —
+   * threaded from `DataViewProps.rowHover`. A view reports each row's
+   * enter / leave through `report` (a leave names the row it leaves, never a
+   * bare "none") and draws a row hovered by reading it where the row is drawn
+   * (`useIsHovered`), never as a value passed down, so a hover re-renders the
+   * rows it changes and nothing else. Absent ⇒ the surface does not track
+   * hover.
    */
-  hoveredRowId?: string | null;
-  /**
-   * The pointer entered (`true`) or left (`false`) the row `id` of this view,
-   * threaded from `DataViewProps.onRowHoverChange`. A leave names the row it
-   * leaves — never a bare "none" — so it cannot erase a hover another surface
-   * claimed in the same pointer move. Absent ⇒ nobody listens.
-   */
-  onRowHoverChange?: (id: string, hovered: boolean) => void;
+  rowHover?: LinkedHover;
 }
 
 /**
@@ -2445,16 +2443,13 @@ export interface DataViewBaseProps<TRow> extends PlacementSpec {
    */
   viewShortcuts?: true;
   /**
-   * The row the pointer is over, controlled — so another surface showing the
-   * same rows (a map pin) and this one highlight together. Threaded to the
-   * views as `DataViewRenderProps.hoveredRowId`.
+   * The row hover, linked with another surface showing the same rows (a map
+   * pin) — the map primitive's `useLinkedHover()` store. Threaded to the
+   * views as `DataViewRenderProps.rowHover`: each reports its rows' enter /
+   * leave to it, and each row reads whether IT is hovered, so a hover never
+   * re-renders the surface.
    */
-  hoveredRowId?: string | null;
-  /**
-   * The pointer entered (`true`) or left (`false`) the row `id` of the active
-   * view: a claim or a release (map's `useLinkedHover` holds the shared state).
-   */
-  onRowHoverChange?: (id: string, hovered: boolean) => void;
+  rowHover?: LinkedHover;
 }
 
 /** {@link DataViewBaseProps.viewEdits}. */

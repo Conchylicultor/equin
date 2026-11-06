@@ -26,13 +26,14 @@ on a full-bleed `<MapView>` (`plugins/map`), clustered by default.
   `onRowOpen` when the row does not activate. `selectedRowId` is the map's
   `activeId` (its pin renders active) and `focusId` (panned into view when
   off-screen).
-- **Row hover.** The surface's `hoveredRowId` render prop is the map's
+- **Row hover.** The id the surface's `rowHover` store holds is the map's
   `hoveredId` (that row's pin lifts as under the pointer) unless the
-  `hoveredId` option is non-null (a proposal's hover wins). A pin's enter /
-  leave is claimed / released through `onRowHoverChange(key, hovered)` as its
-  row's key (an extra overlay, which is no row, claims nothing; a release
-  always passes, a no-op for a row nobody holds) and through the option's
-  `onHoverChange(id, hovered)` as is.
+  `hover` option holds one (a proposal's hover wins) — both read in
+  `HoveredMapView`, under the view, so a hover re-renders the map alone. A
+  pin's enter / leave is claimed / released through `rowHover.report(key,
+  hovered)` as its row's key (an extra overlay, which is no row, claims
+  nothing; a release always passes, a no-op for a row nobody holds) and
+  through the option's `hover.report(id, hovered)` as is.
 - **Kept rows.** The selected row is drawn even when the search or filter
   hides it (its detail is open beside the map — the pin is what it points
   at), and so is every row whose key is in the `keep` option
@@ -94,9 +95,9 @@ which decides which one draws on top).
   not rows (search hits proposed on the map), drawn with the rows' pins; a
   click on one goes to its `onActivate`, never to the row activation. Mark
   them `frame: false` to keep the camera off them (Places' ghost pins).
-- `hoveredId?` / `onHoverChange?` — the map primitive's linked hover, over row
-  pins and extra overlays alike. `hoveredId` wins over the surface's
-  `hoveredRowId` while non-null.
+- `hover?` — a `LinkedHover` store (the map primitive's), over row pins and
+  extra overlays alike: its id wins over the surface's `rowHover` while
+  non-null, and every pin's enter / leave is reported to it.
 - `onCameraRest?` — the map primitive's: where the camera rested, the area it
   shows (`CameraRest.bounds`) and the part `fitPadding` leaves uncovered
   (`CameraRest.visible`, re-reported when the padding changes).
@@ -105,7 +106,7 @@ which decides which one draws on top).
 - `focusIds?` — the map primitive's: when non-empty, the first framing, the
   Fit control and `fitRequest` frame only the pins it names. The ids are the
   ones the map sees: a row pin's id is its row key, an extra overlay's is its
-  own `id` — so a row is named by its key, as in `keep` and `hoveredId`.
+  own `id` — so a row is named by its key, as in `keep` and `hover`.
 
 ```tsx
 <DataView
@@ -132,6 +133,8 @@ map draws every loaded row; it is meant for in-memory or bounded sets.
   - Contributes: `DataViewSlots.View` "Map" → `MapDataView`
   - Uses:
     - `map.MapView`
+    - `map.MapViewProps`
+    - `map.useHoveredId`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/pin.Pin`

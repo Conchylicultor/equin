@@ -12,6 +12,8 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
+import { useIsHovered } from "@plugins/map/web";
+import type { LinkedHover } from "@plugins/map/core";
 import {
   CardMeta,
   CardTokens,
@@ -155,7 +157,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
 
   // Documented cast boundary: creators arrives type-erased via render props.
   const creators = props.creators as CreateOption[] | undefined;
-  const { onRowHoverChange } = props;
+  const hover = props.rowHover;
 
   const totalCount = sections.reduce((sum, s) => sum + s.count.n, 0);
   if (totalCount === 0) {
@@ -194,14 +196,24 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   const gridMin = panel ? PANEL_MIN : cardMin;
 
   // Single source of cell markup — shared by the plain and windowed branches.
-  const renderCell = ({ row, key, aggregateCount }: GalleryCell): ReactNode => {
+  // Each card reads whether IT is hovered (`HoveredCell`): a hover re-renders
+  // the card it enters and the one it leaves, never the grid.
+  const renderCell = (cell: GalleryCell): ReactNode => (
+    <HoveredCell hover={hover} id={cell.key}>
+      {(hovered) => renderCard(cell, hovered)}
+    </HoveredCell>
+  );
+  const renderCard = (
+    { row, key, aggregateCount }: GalleryCell,
+    hovered: boolean,
+  ): ReactNode => {
     const target = { row, hasChildren: props.hasChildren?.(key) ?? false };
     const tone = props.rowTone?.(row);
     const hoverChange =
-      onRowHoverChange === undefined
+      hover === undefined
         ? {}
         : {
-            onHoverChange: (inside: boolean) => onRowHoverChange(key, inside),
+            onHoverChange: (inside: boolean) => hover.report(key, inside),
           };
     if (panel) {
       // The panel's head mark is the lead slot drawn as its cell (a visual
@@ -211,7 +223,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
           rowKey={key}
           selected={key === props.selectedRowId}
           dimmed={tone === "muted"}
-          hovered={key === props.hoveredRowId}
+          hovered={hovered}
           {...hoverChange}
           onActivate={props.rowActivation?.(row)}
           leading={leadingSlot({
@@ -255,7 +267,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
         rowKey={key}
         selected={key === props.selectedRowId}
         dimmed={tone === "muted"}
-        hovered={key === props.hoveredRowId}
+        hovered={hovered}
         {...hoverChange}
         onActivate={props.rowActivation?.(row)}
         cover={coverOf(
@@ -538,4 +550,17 @@ function GalleryGrid({
       ) : null}
     </>
   );
+}
+
+/** One card's hovered state, read where the card is drawn. */
+function HoveredCell({
+  hover,
+  id,
+  children,
+}: {
+  hover: LinkedHover | undefined;
+  id: string;
+  children: (hovered: boolean) => ReactNode;
+}): ReactNode {
+  return children(useIsHovered(hover, id));
 }

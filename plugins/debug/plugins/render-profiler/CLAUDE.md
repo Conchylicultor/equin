@@ -139,6 +139,7 @@ React-internals coupling (fiber `flags` / `memoizedState` / `dependencies` /
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/places/places-map`
     - `debug/live-state-churn/emit`
     - `debug/profiling/cold-start`
     - `reports/render-loop`

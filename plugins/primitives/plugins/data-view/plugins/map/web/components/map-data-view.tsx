@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import { resolveTypeChain } from "@plugins/fields/core";
-import { MapView } from "@plugins/map/web";
+import { MapView, useHoveredId, type MapViewProps } from "@plugins/map/web";
+import type { LinkedHover } from "@plugins/map/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -145,20 +146,20 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
     if (activation !== undefined) runActivation(activation);
     else props.onRowOpen?.(row);
   };
-  // The surface's row hover bridged to the pins: a hovered row lifts its pin,
-  // and a hovered row pin is claimed as that row (an extra overlay is no row,
-  // so it claims nothing; a release always passes — releasing a row nobody
-  // holds is a no-op, and its row may have left the set meanwhile). The
-  // option's own hover (a proposal's) wins while set.
-  const hoveredId = options.hoveredId ?? props.hoveredRowId ?? null;
-  const reportRowHover = props.onRowHoverChange;
-  const reportHover = options.onHoverChange;
+  // The surface's row hover bridged to the pins: a hovered row lifts its pin
+  // (read by `HoveredMapView`, so a hover re-renders the map, not this
+  // view), and a hovered row pin is claimed as that row (an extra overlay is
+  // no row, so it claims nothing; a release always passes — releasing a row
+  // nobody holds is a no-op, and its row may have left the set meanwhile).
+  // The option's own hover (a proposal's) hears every pin, and wins while set.
+  const rowHover = props.rowHover;
+  const optionHover = options.hover;
   const onHoverChange =
-    reportRowHover === undefined && reportHover === undefined
+    rowHover === undefined && optionHover === undefined
       ? undefined
       : (id: string, hovered: boolean) => {
-          reportHover?.(id, hovered);
-          if (!hovered || rowById.has(id)) reportRowHover?.(id, hovered);
+          optionHover?.report(id, hovered);
+          if (!hovered || rowById.has(id)) rowHover?.report(id, hovered);
         };
   const crowd =
     options.crowd === false
@@ -167,7 +168,9 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
 
   return (
     <div className="relative size-full">
-      <MapView
+      <HoveredMapView
+        hover={optionHover}
+        rowHover={rowHover}
         overlays={extra === undefined ? pins : [...pins, ...extra.items]}
         crowd={crowd}
         activeId={selected}
@@ -181,7 +184,6 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
           ? {}
           : { cameraOpen: options.cameraOpen })}
         onActivate={onActivate}
-        hoveredId={hoveredId}
         {...(onHoverChange === undefined ? {} : { onHoverChange })}
         {...(options.onCameraRest === undefined
           ? {}
@@ -212,4 +214,22 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
       ) : null}
     </div>
   );
+}
+
+/**
+ * The map with its hovered pin read from the linked hovers — the option's
+ * while it holds one, else the surface's row — here, below the view, so a
+ * hover re-renders the map alone.
+ */
+function HoveredMapView({
+  hover,
+  rowHover,
+  ...props
+}: Omit<MapViewProps, "hoveredId"> & {
+  hover: LinkedHover | undefined;
+  rowHover: LinkedHover | undefined;
+}): ReactNode {
+  const optionId = useHoveredId(hover);
+  const rowId = useHoveredId(rowHover);
+  return <MapView {...props} hoveredId={optionId ?? rowId} />;
 }
