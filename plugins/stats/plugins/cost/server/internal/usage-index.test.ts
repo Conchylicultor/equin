@@ -488,3 +488,28 @@ test("the transcript fold, fed line by line, matches the whole parse and never m
   expect(fold.partial(state)).toEqual(await parseTranscript(path));
   expect(fold.partial(state).outputTokens).toBe(3778 + 30);
 });
+
+test("the transcript fold's saved state, reloaded from JSON, folds on exactly as the state it saved", async () => {
+  if (transcriptFormat.read.kind !== "lines")
+    throw new Error("the transcript format is read as a line fold");
+  const { fold } = transcriptFormat.read;
+  const body =
+    entry("r1", "m1", "model-flat", "2026-07-01", [100, 8]) +
+    entry("r2", "m2", "model-tiered", "2026-07-02", [300, 30]) +
+    // m1's last block after the checkpoint: tops up the reloaded bucket.
+    entry("r1", "m1", "model-flat", "2026-07-01", [100, 3778]) +
+    // A repeat of m2 after the checkpoint: not counted twice.
+    entry("r2", "m2", "model-tiered", "2026-07-02", [300, 30]);
+  const path = join(projectsRoot, ALPHA, "resume.jsonl");
+  await writeFile(path, body);
+  const lines = body.split("\n").filter((l) => l !== "");
+
+  const before = fold.start(path);
+  for (const l of lines.slice(0, 2)) fold.line(before, l);
+  const resumed = fold.load(JSON.parse(JSON.stringify(fold.save(before))));
+  // The saved value shares nothing the reloaded state folds into.
+  fold.line(before, lines[2]!);
+  for (const l of lines.slice(2)) fold.line(resumed, l);
+
+  expect(fold.partial(resumed)).toEqual(await parseTranscript(path));
+});

@@ -3,7 +3,11 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "boundaries/no-platform-api",
-    paths: ["server/internal/corpus-index.ts", "server/internal/store.ts"],
+    paths: [
+      "server/internal/corpus-index.ts",
+      "server/internal/store.ts",
+      "server/internal/checkpoints.ts",
+    ],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",

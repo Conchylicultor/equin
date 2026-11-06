@@ -56,6 +56,8 @@ const formats: Record<string, CorpusFormat<Count>> = {
       start: () => ({ lines: 0, keys: 0 }),
       line: foldLine,
       partial: (s: Count) => ({ ...s }),
+      save: (s: Count) => ({ ...s }),
+      load: (saved: Count) => ({ ...saved }),
     },
   }),
 };

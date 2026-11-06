@@ -28575,7 +28575,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts` (20 debt)
               - `framework/web-core` (1 debt)
               - `infra/asset-mirror/bundle` (1 debt)
-              - `infra/corpus-index` (2 debt)
+              - `infra/corpus-index` (3 debt)
               - `infra/deps/mise` (2 debt)
               - `infra/deps/npm` (1 debt)
               - `infra/deps/playwright-browser` (1 debt)
@@ -31272,7 +31272,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats/cost`
       - Exemptions:
         - Exempts itself from:
-          - `boundaries/no-platform-api` — `server/internal/corpus-index.ts`, `server/internal/store.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/corpus-index.ts`, `server/internal/store.ts`, `server/internal/checkpoints.ts` (debt)
           - `sink-safety/no-adhoc-file-sink` — `server/internal/store.ts` (sanctioned)
     - **`deps`** — Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request. The daily deps.sweep is its sweep sub-plugin.
       - Web:
@@ -38066,16 +38066,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 33 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×9
           - `network` ×5
           - `database` ×4
           - `framework` ×3
+          - `infra` ×2
           - `page` ×2
           - `plugin-meta` ×2
           - `reports` ×2
           - `debug/queue-health`
-          - `infra/jobs`
           - `map`
           - `menu-bar`
           - `tasks/orchestration/watch`

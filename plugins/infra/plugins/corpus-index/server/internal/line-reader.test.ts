@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import {
   appendFile,
   mkdtemp,
+  readdir,
   rename,
   rm,
   stat,
@@ -11,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { LineFold } from "../../core";
+import { createCheckpointStore, type CheckpointStore } from "./checkpoints";
 import { createLineReader, readFileRange, type FileStamp } from "./line-reader";
 
 // The fold under test records every line it saw, so "read only what was
@@ -27,15 +29,24 @@ const fold: LineFold<unknown, string[]> = {
   },
   line: (s, line) => (s as Seen).lines.push(line),
   partial: (s) => [...(s as Seen).lines],
+  save: (s) => structuredClone(s),
+  load: (saved) => structuredClone(saved),
+};
+
+// No checkpoints: every reader but the checkpoint tests' starts over.
+const noCheckpoints: CheckpointStore = {
+  load: async () => ({ kind: "none" }),
+  writer: null,
 };
 
 let dir: string;
 let file: string;
 let bytesRead: number;
 
-function reader(maxHeld = 8) {
+function reader(maxHeld = 8, checkpoints = noCheckpoints) {
   return createLineReader(fold, {
     maxHeld,
+    checkpoints,
     yieldMacrotask: () => new Promise<void>((r) => setImmediate(r)),
     readRange: async (p, start, end) => {
       const bytes = await readFileRange(p, start, end);
@@ -169,6 +180,7 @@ test("a read that throws leaves no half-folded state behind", async () => {
       maxHeld: 8,
       yieldMacrotask: async () => {},
       readRange: readFileRange,
+      checkpoints: noCheckpoints,
     },
   );
   await writeFile(file, "a\n");
@@ -180,4 +192,72 @@ test("a read that throws leaves no half-folded state behind", async () => {
   expect(r.held()).toBe(0);
   boom = false;
   expect(await r.read(file, await stamp())).toEqual(["a", "b", "bad"]);
+});
+
+// ─── checkpoints: a new process continues where the last one stopped ─────────
+
+/** Past the 1 MiB a reader folds before its first checkpoint. */
+const BIG = `${"x".repeat(1024 * 1024)}\n`;
+
+const store = (persist = true, version = "v1") =>
+  createCheckpointStore(join(dir, "index.json"), version, persist);
+
+test("a new reader continues a file from the checkpoint the last one wrote", async () => {
+  await writeFile(file, `a\n${BIG}b\n`);
+  await reader(8, store()).read(file, await stamp());
+  expect(starts).toBe(1);
+
+  await appendFile(file, "c\n");
+  bytesRead = 0;
+  // A new process: nothing held in memory.
+  const got = await reader(8, store()).read(file, await stamp());
+  expect(got).toEqual(["a", BIG.slice(0, -1), "b", "c"]);
+  expect(starts).toBe(1);
+  // The 2 appended bytes plus the checkpoint's tail checked before them.
+  expect(bytesRead).toBe(2 + 64);
+});
+
+test("a checkpoint that no longer describes the file is not continued", async () => {
+  await writeFile(file, `a\n${BIG}`);
+  await reader(8, store()).read(file, await stamp());
+  // Rewritten in place, longer: the bytes before the checkpoint moved.
+  await writeFile(file, `z\n${"y".repeat(BIG.length - 1)}\nw\n`);
+  const got = await reader(8, store()).read(file, await stamp());
+  expect(got[0]).toBe("z");
+  expect(got).toHaveLength(3);
+  expect(starts).toBe(2);
+});
+
+test("a file folded less than the checkpoint window is folded again by a new reader", async () => {
+  await writeFile(file, "a\nb\n");
+  await reader(8, store()).read(file, await stamp());
+  await reader(8, store()).read(file, await stamp());
+  expect(starts).toBe(2);
+});
+
+test("a backend that does not persist reads checkpoints but never writes one", async () => {
+  await writeFile(file, `a\n${BIG}`);
+  await reader(8, store(false)).read(file, await stamp());
+  expect(await readdir(dir)).toEqual(["t.jsonl"]);
+  // …yet continues from the persisting backend's.
+  await reader(8, store(true)).read(file, await stamp());
+  await appendFile(file, "c\n");
+  await reader(8, store(false)).read(file, await stamp());
+  expect(starts).toBe(2);
+});
+
+test("a forgotten file's checkpoint is gone", async () => {
+  await writeFile(file, `a\n${BIG}`);
+  await reader(8, store()).read(file, await stamp());
+  await reader(8, store()).forget(file);
+  await reader(8, store()).read(file, await stamp());
+  expect(starts).toBe(2);
+});
+
+test("another format digest's checkpoints are never loaded, and are removed by the first write", async () => {
+  await writeFile(file, `a\n${BIG}`);
+  await reader(8, store(true, "v1")).read(file, await stamp());
+  await reader(8, store(true, "v2")).read(file, await stamp());
+  expect(starts).toBe(2);
+  expect(await readdir(join(dir, "index.json.lines"))).toHaveLength(1);
 });

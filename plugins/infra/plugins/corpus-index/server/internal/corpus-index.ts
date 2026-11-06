@@ -18,6 +18,7 @@ import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import type { SourceSet } from "@plugins/packages/plugins/source-digest/core";
 import { sourceDigest } from "@plugins/packages/plugins/source-digest/server";
 import type { CorpusFormat } from "../../core";
+import { createCheckpointStore } from "./checkpoints";
 import { createLineReader, readFileRange, type FileStamp } from "./line-reader";
 import {
   loadCorpusFile,
@@ -179,10 +180,12 @@ export interface CorpusIndex<TPartial> {
   warmup(): Registration;
 }
 
-// How many files a `lines` format holds a fold state for (least recently read
-// evicted): the files being appended to now — main's live transcripts and
-// their sub-agents' — not the corpus. An evicted file's next read folds it
-// from its start, once.
+// How many files a `lines` format holds a fold state for in memory (least
+// recently read evicted): the files being appended to now — main's live
+// transcripts and their sub-agents' — not the corpus (4.7k transcripts on
+// main, whose states held at once would be every message hash ever written).
+// An evicted file's next read continues from its on-disk checkpoint, like a
+// new process's first one: a state's load plus the bytes folded since it.
 const HELD_LINE_STATES = 64;
 
 // Bounded parse concurrency: caps resident memory to ~K files' text at once
@@ -572,18 +575,32 @@ export function createCorpusIndex<TPartial>(
 
   const { match } = spec.format;
   // How a changed file is read: whole, or — for an append-only line format —
-  // from where this process last stopped reading it (`line-reader.ts`).
-  const read: RefreshDeps<TPartial>["read"] =
-    spec.format.read.kind === "file"
-      ? spec.format.read.parse
-      : (() => {
-          const reader = createLineReader(spec.format.read.fold, {
-            maxHeld: HELD_LINE_STATES,
-            yieldMacrotask: env.yieldMacrotask,
-            readRange: env.readRange,
-          });
-          return (path: string, file: FileStamp) => reader.read(path, file);
-        })();
+  // from where it was last read (`line-reader.ts`): this process's held state,
+  // or the file's checkpoint, stamped with the format digest the index was
+  // loaded with (so made on the first pass). `forget` is what a file leaving
+  // the index drops.
+  let reading: {
+    read: RefreshDeps<TPartial>["read"];
+    forget: (path: string) => Promise<void>;
+  } | null = null;
+  function readingFor(version: string): NonNullable<typeof reading> {
+    if (spec.format.read.kind === "file")
+      return { read: spec.format.read.parse, forget: async () => {} };
+    const reader = createLineReader(spec.format.read.fold, {
+      maxHeld: HELD_LINE_STATES,
+      yieldMacrotask: env.yieldMacrotask,
+      readRange: env.readRange,
+      checkpoints: createCheckpointStore(
+        spec.indexPath,
+        version,
+        computePersist(spec.scope, env.isMain()),
+      ),
+    });
+    return {
+      read: (path: string, file: FileStamp) => reader.read(path, file),
+      forget: (path: string) => reader.forget(path),
+    };
+  }
 
   const resolveRoots = (): string[] =>
     typeof spec.roots === "function" ? spec.roots() : spec.roots;
@@ -591,7 +608,7 @@ export function createCorpusIndex<TPartial>(
   const refreshDeps = (roots: string[]): RefreshDeps<TPartial> => ({
     roots,
     match,
-    read,
+    read: reading!.read,
     indexPath: spec.indexPath,
     concurrency,
     persist: computePersist(spec.scope, env.isMain()),
@@ -659,6 +676,7 @@ export function createCorpusIndex<TPartial>(
         ? await refreshCorpusPaths(idx, targeted, refreshDeps(roots))
         : emptyResult();
     const result = mergeResults(walked, rechecked);
+    for (const path of result.removedPaths) await reading!.forget(path);
     for (const root of passed)
       if ((watchEpoch.get(root) ?? 0) === epochs.get(root)) caughtUp.add(root);
     // The advanced cursors, only once the whole pass has landed: the entries
@@ -678,6 +696,7 @@ export function createCorpusIndex<TPartial>(
       spec.indexPath,
       await env.digest(spec.format.code),
     );
+    reading ??= readingFor(index.version);
     // Watched (main's own watch, or the consumer's): only what the watch
     // named, plus any root not caught up. Unwatched: walk everything.
     const watched = consumerWatched || env.isMain();

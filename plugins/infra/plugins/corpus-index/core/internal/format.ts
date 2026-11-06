@@ -15,14 +15,23 @@ import {
  *   `state`, in place.
  * - `partial` — what `state` stands for now, as a SNAPSHOT: the state keeps
  *   folding after it, so the partial must share nothing mutable with it.
+ * - `save` / `load` — `state` as a JSON value and back. The index checkpoints
+ *   a file's state on disk with the byte offset it was folded to, so a new
+ *   process (a backend restart, ~74 a day on main) continues the file from
+ *   there instead of folding it again from its first byte. `load(save(s))`
+ *   must fold on exactly as `s` would. A checkpoint is stamped with the
+ *   format's code digest, so `load` only ever sees what this code's `save`
+ *   wrote.
  *
  * Only newline-terminated lines are folded: a trailing line with no newline
  * yet is being written, and is read once its newline lands.
  */
-export interface LineFold<TState, TPartial> {
+export interface LineFold<TState, TPartial, TSaved = unknown> {
   readonly start: (path: string) => TState;
   readonly line: (state: TState, line: string) => void;
   readonly partial: (state: TState) => TPartial;
+  readonly save: (state: TState) => TSaved;
+  readonly load: (saved: TSaved) => TState;
 }
 
 /**
@@ -76,19 +85,19 @@ export function corpusFormat<TPartial>(
     parse: (path: string) => Promise<TPartial>;
   },
 ): CorpusFormat<TPartial>;
-export function corpusFormat<TState, TPartial>(
+export function corpusFormat<TState, TPartial, TSaved>(
   meta: ImportMeta,
   format: {
     match: (path: string) => boolean;
-    lines: LineFold<TState, TPartial>;
+    lines: LineFold<TState, TPartial, TSaved>;
   },
 ): CorpusFormat<TPartial>;
-export function corpusFormat<TState, TPartial>(
+export function corpusFormat<TState, TPartial, TSaved>(
   meta: ImportMeta,
   format: {
     match: (path: string) => boolean;
     parse?: (path: string) => Promise<TPartial>;
-    lines?: LineFold<TState, TPartial>;
+    lines?: LineFold<TState, TPartial, TSaved>;
   },
 ): CorpusFormat<TPartial> {
   const code = defineSourceSet(`the corpus format declared in ${meta.url}`);
@@ -96,7 +105,10 @@ export function corpusFormat<TState, TPartial>(
   const read: CorpusRead<TPartial> = format.lines
     ? // The one place the fold's state type is erased: the index only ever
       // hands a state back to the fold that started it.
-      { kind: "lines", fold: format.lines as LineFold<unknown, TPartial> }
+      {
+        kind: "lines",
+        fold: format.lines as unknown as LineFold<unknown, TPartial>,
+      }
     : {
         kind: "file",
         // The ONE place the enumerate-only default is applied (the overload

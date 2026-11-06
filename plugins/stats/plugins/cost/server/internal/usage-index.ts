@@ -7,7 +7,9 @@ import {
   emptyUsageBuckets,
   foldUsageEntry,
   priceBucket,
+  resumeUsageBuckets,
   type DayBucket,
+  type SeenEntry,
   type PriceTable,
   type TieredTokens,
   type UsageBuckets,
@@ -124,13 +126,31 @@ interface TranscriptState {
 }
 
 /**
+ * A transcript's fold state as JSON (the index's on-disk checkpoint of it):
+ * the Set and Maps as arrays. ~40 KB for a 106 MB transcript — its bytes are
+ * mostly tool output; the state is one `seen` entry per message.
+ */
+interface SavedTranscriptState extends Omit<
+  TranscriptState,
+  "models" | "fold"
+> {
+  models: string[];
+  buckets: DayBucket[];
+  seen: [string, SeenEntry][];
+}
+
+/**
  * The corpus index's per-file reading, as a fold over a transcript's lines.
  * Token-only, pricing-free, side-effect free. `projectDir`/`sessionId` are
  * derived from the (2-level `<projectDir>/<sessionId>.jsonl`) path so the
  * fold needs only the full path. A function (a fresh object per call) only so
  * it can be declared after `transcriptFormat` above.
  */
-function transcriptFold(): LineFold<TranscriptState, FilePartial> {
+function transcriptFold(): LineFold<
+  TranscriptState,
+  FilePartial,
+  SavedTranscriptState
+> {
   return {
     start: (path) => ({
       sessionId: basename(path, ".jsonl"),
@@ -177,6 +197,19 @@ function transcriptFold(): LineFold<TranscriptState, FilePartial> {
       lastActivity: s.lastActivity,
       modelsUsed: [...s.models],
       dayBuckets: [...s.fold.buckets.values()].map((b) => structuredClone(b)),
+    }),
+    // May share the state's objects: the index serializes it before the
+    // state folds another line.
+    save: ({ models, fold, ...scalars }) => ({
+      ...scalars,
+      models: [...models],
+      buckets: [...fold.buckets.values()],
+      seen: [...fold.seen],
+    }),
+    load: ({ models, buckets, seen, ...scalars }) => ({
+      ...scalars,
+      models: new Set(models),
+      fold: resumeUsageBuckets(buckets, seen),
     }),
   };
 }

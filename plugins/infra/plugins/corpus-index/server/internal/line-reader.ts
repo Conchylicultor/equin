@@ -1,4 +1,5 @@
 import type { LineFold } from "../../core";
+import type { Checkpoint, CheckpointStore } from "./checkpoints";
 
 // ─── What this is ─────────────────────────────────────────────────────────────
 //
@@ -11,9 +12,16 @@ import type { LineFold } from "../../core";
 // A held state is continued only while the file is provably the one it read:
 // the same inode, not shorter than what was folded, and the bytes just before
 // the held offset unchanged. Anything else (a rewrite, a truncation, a file
-// replaced by rename) folds the file again from its first byte. A state no read
-// holds — a process's first read of a file, or one evicted — does the same:
-// the cold read is O(file) once per process, every append after it O(append).
+// replaced by rename) folds the file again from its first byte.
+//
+// A state no read holds — a process's first read of a file, or one evicted —
+// continues from the file's on-disk checkpoint (`checkpoints.ts`), validated
+// the same way: a backend restart costs the bytes appended since the
+// checkpoint, not the file. A checkpoint is written once a read has folded
+// {@link CHECKPOINT_MIN_BYTES} past the last one — and at least
+// {@link CHECKPOINT_RATIO}× the last checkpoint's own size, so writing them
+// costs at most 1/{@link CHECKPOINT_RATIO} of the bytes folded — so what a
+// new process re-folds is bounded by that window.
 
 /** What the index knows of a file as it reads it (from the pass's own stat). */
 export interface FileStamp {
@@ -26,15 +34,27 @@ const CHUNK_BYTES = 4 * 1024 * 1024;
 /** How many bytes before the held offset must be unchanged for the file to continue. */
 const TAIL_BYTES = 64;
 const NEWLINE = 0x0a;
+/** Fold at least this many bytes past a file's last checkpoint before writing the next. */
+const CHECKPOINT_MIN_BYTES = 1024 * 1024;
+/** …and at least this many times the last checkpoint's size. */
+const CHECKPOINT_RATIO = 8;
 const decoder = new TextDecoder();
 
-interface Held {
+/** Where a fold stands in its file: the part a held state and a checkpoint share. */
+interface Position {
   ino: number;
   /** Byte offset of the first line not folded yet — always a line start. */
   offset: number;
   /** The (up to) {@link TAIL_BYTES} bytes ending at `offset`. */
   tail: Uint8Array;
+}
+
+interface Held extends Position {
   state: unknown;
+  /** The offset of the file's last checkpoint (0 when it has none). */
+  savedAt: number;
+  /** That checkpoint's size in bytes. */
+  savedBytes: number;
 }
 
 export interface LineReaderDeps {
@@ -47,11 +67,15 @@ export interface LineReaderDeps {
   yieldMacrotask: () => Promise<void>;
   /** The bytes `[start, end)` of `path` (fewer when the file shrank meanwhile). */
   readRange: (path: string, start: number, end: number) => Promise<Uint8Array>;
+  /** Where fold states outlive the process (`checkpoints.ts`). */
+  checkpoints: CheckpointStore;
 }
 
 export interface LineReader<TPartial> {
   /** `path`'s partial with every complete line up to `file.size` folded. */
   read(path: string, file: FileStamp): Promise<TPartial>;
+  /** `path` left the index: drop its held state and its checkpoint. */
+  forget(path: string): Promise<void>;
   /** How many file states are held (observability / tests). */
   held(): number;
 }
@@ -82,7 +106,7 @@ export function createLineReader<TPartial>(
   /** Whether `held` still describes `path`'s first `held.offset` bytes. */
   async function continues(
     path: string,
-    held: Held,
+    held: Position,
     file: FileStamp,
   ): Promise<boolean> {
     if (held.ino !== file.ino || file.size < held.offset) return false;
@@ -130,6 +154,44 @@ export function createLineReader<TPartial>(
     }
   }
 
+  /** `path`'s checkpoint as a held state, when it still describes the file. */
+  async function restore(
+    path: string,
+    file: FileStamp,
+  ): Promise<Held | undefined> {
+    const stored = await deps.checkpoints.load(path);
+    if (stored.kind === "none") return undefined;
+    const { checkpoint } = stored;
+    if (!(await continues(path, checkpoint, file))) return undefined;
+    return {
+      ino: checkpoint.ino,
+      offset: checkpoint.offset,
+      tail: checkpoint.tail,
+      state: fold.load(checkpoint.state),
+      savedAt: checkpoint.offset,
+      savedBytes: stored.bytes,
+    };
+  }
+
+  /** Checkpoint `held` once it has folded far enough past its last one. */
+  async function checkpoint(path: string, held: Held): Promise<void> {
+    const { writer } = deps.checkpoints;
+    if (writer === null) return;
+    const due = Math.max(
+      CHECKPOINT_MIN_BYTES,
+      CHECKPOINT_RATIO * held.savedBytes,
+    );
+    if (held.offset - held.savedAt < due) return;
+    const saved: Checkpoint = {
+      ino: held.ino,
+      offset: held.offset,
+      tail: held.tail,
+      state: fold.save(held.state),
+    };
+    held.savedBytes = await writer.save(path, saved);
+    held.savedAt = held.offset;
+  }
+
   async function read(path: string, file: FileStamp): Promise<TPartial> {
     let held = states.get(path);
     // Out while it is advanced: a read that throws midway leaves no
@@ -138,13 +200,16 @@ export function createLineReader<TPartial>(
     if (held !== undefined && !(await continues(path, held, file))) {
       held = undefined;
     }
-    held ??= {
+    held ??= (await restore(path, file)) ?? {
       ino: file.ino,
       offset: 0,
       tail: new Uint8Array(0),
       state: fold.start(path),
+      savedAt: 0,
+      savedBytes: 0,
     };
     await advance(path, held, file.size);
+    await checkpoint(path, held);
     states.set(path, held);
     while (states.size > deps.maxHeld) {
       const oldest = states.keys().next();
@@ -154,5 +219,10 @@ export function createLineReader<TPartial>(
     return fold.partial(held.state);
   }
 
-  return { read, held: () => states.size };
+  async function forget(path: string): Promise<void> {
+    states.delete(path);
+    await deps.checkpoints.writer?.remove(path);
+  }
+
+  return { read, forget, held: () => states.size };
 }
