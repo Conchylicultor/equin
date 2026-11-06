@@ -158,7 +158,13 @@ export function useColumnFit<TRow>(
           : next,
       );
     },
-    { deps: [container, grid, mode, hasActionsTrack, columnIds] },
+    // Before paint: a pane narrowing (a preview opening beside a listing)
+    // lays the table out with the columns that fit in the same frame, never
+    // one frame of every column squeezed first.
+    {
+      deps: [container, grid, mode, hasActionsTrack, columnIds],
+      beforePaint: true,
+    },
   );
 
   const shown = useMemo(() => {

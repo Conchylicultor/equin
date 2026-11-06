@@ -11,12 +11,17 @@ idiom, hand-rolled inconsistently across the repo before this primitive.
   Pass a `target` getter to measure a different node than the one the ref is on
   (e.g. `(el) => el.offsetParent`).
 
-- `useResizeObserver(target, onResize, { debounce?, deps? })` → `void`
+- `useResizeObserver(target, onResize, { debounce?, deps?, beforePaint? })` → `void`
   The substrate. `target` is a `RefObject`, an array of refs, or a getter
   (`() => Element | Element[] | null`). Runs `onResize` synchronously on mount
   (and when `deps` change), then on every resize — RAF-debounced unless
   `debounce: false`. `onResize` is stabilised internally, so the observer never
   re-subscribes on closure churn; use `deps` to force a re-measure.
+  `beforePaint: true` is for a size that decides layout (the data table's
+  column fit): each resize runs `onResize` in the observer callback and
+  commits its updates there (`flushSync`), so no frame paints the old layout
+  at the new size — the RAF + scheduled render of the default path paints one
+  or two.
 
 - `useResizeObserverSet(onResize)` → `observe(el) => release`
   One observer over a CHANGING set of elements (the rows a windowed list mounts

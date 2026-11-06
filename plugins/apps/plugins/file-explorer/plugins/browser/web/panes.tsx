@@ -18,10 +18,14 @@ import { useRoutedHistory, type ExplorerNavigator } from "./internal/navigator";
 
 /**
  * `/files` — the home folder. The app's index pane: no URL of its own, so the
- * bare app root opens on home.
+ * bare app root opens on home. Its `;open` keyed param is the file previewed
+ * beside it (`/files;open=notes.md`, written relative to home as in
+ * `/files/at/…`) — a view of this same mounted pane, so opening and closing a
+ * file never remounts the listing (its scroll, expansion and the folder sizes
+ * it already read stay on screen).
  */
 export const filesHomePane = Pane.define({
-  route: defineRoute({ id: "files-home", segment: "" }),
+  route: defineRoute({ id: "files-home", segment: ";open" }),
   app: fileExplorerApp,
   appIndex: true,
   title: "Home",
@@ -145,7 +149,15 @@ export function useOpenInFiles(location: ExplorerLocation): LinkTarget {
 const HOME_LOCATION: ExplorerLocation = { dir: HOME, open: null };
 
 function FilesHome(): ReactNode {
-  const navigator = useFilesNavigator(HOME_LOCATION, null);
+  const { open } = filesHomePane.useParams();
+  const setHomeParams = filesHomePane.useSetParams();
+  const location = useMemo(() => locationOf({ dir: HOME, open }), [open]);
+  // Home's own params are the open file alone: the folder is the pane.
+  const setParams = useCallback(
+    (params: LocationParams) => setHomeParams({ open: params.open }),
+    [setHomeParams],
+  );
+  const navigator = useFilesNavigator(location, setParams);
   return <FileBrowser navigator={navigator} />;
 }
 

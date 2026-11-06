@@ -446,7 +446,7 @@
     },
     {
       "paneId": "files-home",
-      "segment": "",
+      "segment": ";open",
       "appIndex": true,
       "parent": null
     },

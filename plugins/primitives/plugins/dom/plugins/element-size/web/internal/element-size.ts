@@ -5,6 +5,7 @@ import {
   useState,
   type DependencyList,
 } from "react";
+import { flushSync } from "react-dom";
 
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 
@@ -51,13 +52,23 @@ function resolveTargets(target: ResizeTarget): Element[] {
  * sees the latest closure without re-subscribing the observer. Pass `deps` to
  * force a re-measure when caller-side parameters change (the analog of the
  * dependency array on the bespoke effects this replaces).
+ *
+ * `beforePaint: true` — for a size that DECIDES LAYOUT (which columns a table
+ * shows): each resize runs `onResize` inside the observer callback, before
+ * the frame paints, and commits its React updates there (`flushSync`) — so
+ * the frame that resizes the element is the frame that lays it out anew,
+ * never one painting the old layout squeezed into the new size. Implies no
+ * debounce. Keep the layout it changes inside the observed elements (the
+ * browser re-delivers what grows deeper, and reports a loop for what grows
+ * above).
  */
 export function useResizeObserver(
   target: ResizeTarget,
   onResize: () => void,
-  options?: { debounce?: boolean; deps?: DependencyList },
+  options?: { debounce?: boolean; deps?: DependencyList; beforePaint?: true },
 ): void {
-  const debounce = options?.debounce ?? true;
+  const beforePaint = options?.beforePaint === true;
+  const debounce = !beforePaint && (options?.debounce ?? true);
   const deps = options?.deps ?? [];
   const handler = useEventCallback(onResize);
 
@@ -66,12 +77,14 @@ export function useResizeObserver(
     if (elements.length === 0) return;
 
     let rafId: number | null = null;
-    const schedule = debounce
-      ? () => {
-          if (rafId !== null) cancelAnimationFrame(rafId);
-          rafId = requestAnimationFrame(handler);
-        }
-      : handler;
+    const schedule = beforePaint
+      ? () => flushSync(handler)
+      : debounce
+        ? () => {
+            if (rafId !== null) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(handler);
+          }
+        : handler;
 
     const observer = new ResizeObserver(schedule);
     for (const el of elements) observer.observe(el);
@@ -84,7 +97,7 @@ export function useResizeObserver(
     // `handler` is stable; `target` is read at effect time (stable refs, or a
     // getter re-evaluated each run). Re-subscribe only on `debounce`/`deps`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handler, debounce, ...deps]);
+  }, [handler, debounce, beforePaint, ...deps]);
 }
 
 /**
