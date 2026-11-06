@@ -651,6 +651,12 @@ connection and every statement on it gives up after 60 s with no reply, and the
 | `jobs-schema` | `queue-schema.ts` `installQueueSchema` | graphile's migrations + the superseded trigger, under `BOOT_DDL_QUERY_DEADLINE_MS` (15 min) |
 | `job-lock` | `job-lock.ts` `lockPool` | the advisory lock / unlock around each handler |
 
+- **`jobs-runner`, `jobs-enqueue` and `job-lock` keep an idle connection for
+  two cron ticks** (`JOBS_POOL_IDLE_TIMEOUT_MS`, `machine/internal/pool-idle.ts`,
+  derived from `CRON_RESOLUTION_MS`). The queue's work comes once a minute; a
+  shorter idle timeout (pg-pool's 10 s, job-lock's old 30 s) closed every
+  connection between ticks and each tick forked them all again (~140 Postgres
+  processes a minute host-wide, 2026-11-06). Do not shorten it below a tick.
 - **Both worker pools are handed to graphile as `pgPool`.** graphile ends only a
   pool it built itself, so `stopWorkers()` ends both: the enqueue pool after
   `utils.release()`.

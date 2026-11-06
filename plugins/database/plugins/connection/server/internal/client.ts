@@ -678,7 +678,17 @@ export interface CreateDbPoolOptions {
   name: DbPoolName;
   connectionString: string;
   max: number;
-  idleTimeoutMillis?: number;
+  /**
+   * How long a connection may sit idle before the pool closes it (`0`: never).
+   * Required, and chosen from the pool's work pattern: a direct pool's closed
+   * connection is a Postgres process the next use forks again (fork, auth,
+   * catalog warm-up, two log lines). pg-pool's own default (10 s) was what the
+   * jobs pools got by leaving this out, while their work comes once a minute —
+   * so every cron tick reopened every connection the last one used, ~140 new
+   * Postgres processes a minute host-wide (2026-11-06,
+   * `plugins/infra/plugins/jobs/machine/internal/pool-idle.ts`).
+   */
+  idleTimeoutMillis: number;
   allowExitOnIdle?: boolean;
   /** The default per-call bound in place of `QUERY_DEADLINE_MS`. Tests only. */
   deadlineMs?: number;
@@ -707,9 +717,7 @@ export function createDbPool(options: CreateDbPoolOptions): Pool {
     connectionString: options.connectionString,
     application_name: dbApplicationName(options.name, hasRuntimeNamespace()),
     max: options.max,
-    ...(options.idleTimeoutMillis !== undefined
-      ? { idleTimeoutMillis: options.idleTimeoutMillis }
-      : {}),
+    idleTimeoutMillis: options.idleTimeoutMillis,
     ...(options.allowExitOnIdle !== undefined
       ? { allowExitOnIdle: options.allowExitOnIdle }
       : {}),

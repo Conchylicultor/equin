@@ -78,6 +78,8 @@ describe("enqueue through the jobs-enqueue pool", () => {
       name: "jobs-enqueue",
       connectionString: `postgres://${user}@127.0.0.1:${proxy.port}/${dbName}`,
       max: 1,
+      // Ended in the finally below.
+      idleTimeoutMillis: 0,
       deadlineMs: DEADLINE_MS,
     });
     const events: QueryDeadlineEvent[] = [];

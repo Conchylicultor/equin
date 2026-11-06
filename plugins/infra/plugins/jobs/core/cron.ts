@@ -13,6 +13,10 @@
 // unrestricted). That only matters when both day fields are restricted, where
 // cron fires when EITHER matches.
 
+/** The finest step a crontab can name: its first field is the minute, so a
+ *  schedule fires at most once per minute, and a scheduler ticks once a minute. */
+export const CRON_RESOLUTION_MS = 60_000;
+
 const FIELDS = [
   { name: "minute", min: 0, max: 59 },
   { name: "hour", min: 0, max: 23 },

@@ -80,7 +80,13 @@ export async function installQueueSchema(
   // someone else's), so `pool.end()` resolves without closing it — and the
   // install rejects with `QueryDeadlineExceededError` first, so no caller goes
   // on to rename that database believing it idle.
-  const pool = createDbPool({ name: "jobs-schema", connectionString, max: 1 });
+  const pool = createDbPool({
+    name: "jobs-schema",
+    connectionString,
+    max: 1,
+    // Never reaped: the `pool.end()` below closes it once the install is done.
+    idleTimeoutMillis: 0,
+  });
   try {
     // graphile's migrations and the trigger install are boot DDL: on a graphile
     // version bump they take ACCESS EXCLUSIVE locks on the queue tables and can

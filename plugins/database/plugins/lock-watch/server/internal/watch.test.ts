@@ -37,6 +37,8 @@ function pool(): Pool {
     name: "admin-short-lived",
     connectionString: t.connectionString,
     max: 1,
+    // Ended in afterAll.
+    idleTimeoutMillis: 0,
   });
 }
 

@@ -11,9 +11,22 @@ import {
   withQueryDeadline,
 } from "@plugins/database/plugins/connection/server";
 
-const pool = createDbPool({ name: "job-lock", connectionString, max: 4 });
+const pool = createDbPool({
+  name: "job-lock",
+  connectionString,
+  max: 4,
+  idleTimeoutMillis: 120_000,
+});
 const client = createDbClient({ name: "events-test", connectionString });
 ```
+
+**`idleTimeoutMillis` is required** — how long an idle connection stays open
+(`0`: until the pool ends). Pick it from the pool's work pattern: on a direct
+pool every close is a Postgres process the next use forks again. Leaving it out
+used to mean pg-pool's 10 s default; the job queue's pools got that while their
+work comes once a minute, and reopened every connection on every cron tick
+(~140 Postgres processes a minute host-wide, 2026-11-06 — see `infra/jobs`,
+`machine/internal/pool-idle.ts`).
 
 `openListenSession({ name, connectionString, channels, handlers, endFailed })`
 is a LISTEN session on its own `createDbClient` connection: connect, then

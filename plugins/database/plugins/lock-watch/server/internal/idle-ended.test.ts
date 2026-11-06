@@ -77,11 +77,14 @@ beforeAll(async () => {
     name: "app-background",
     connectionString: t.connectionString,
     max: 1,
+    // Both ended in afterAll.
+    idleTimeoutMillis: 0,
   });
   watchPool = createDbPool({
     name: "lock-watch",
     connectionString: t.connectionString,
     max: 1,
+    idleTimeoutMillis: 0,
   });
   await watchPool.query(
     "CREATE TABLE usage_rows (id int PRIMARY KEY, n int NOT NULL)",

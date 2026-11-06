@@ -69,6 +69,7 @@ import { attachSlotLedger, clearSlotLedger } from "./slot-ledger";
 import { exitForDeadRunner, watchRunner } from "./runner-watch";
 import { attachRunStats, clearRunStats, markRunSuspended } from "./run-stats";
 import { jobsLog } from "./jobs-log";
+import { JOBS_POOL_IDLE_TIMEOUT_MS } from "./pool-idle";
 
 // One runner per entry in the ladder (`RUNNERS`), all sharing one pg pool.
 let runners: Runner[] | null = null;
@@ -103,6 +104,9 @@ let ledgerDetaches: (() => void)[] = [];
 // runner issues — job fetch, completion, its LISTEN client's connect — carries
 // the connection plugin's deadline, and a call that gets no reply rejects with
 // `QueryDeadlineExceededError` naming this pool instead of pinning a slot.
+//
+// Its idle connections outlive a cron tick (`JOBS_POOL_IDLE_TIMEOUT_MS`,
+// pool-idle.ts): each tick reuses what the last one opened.
 let runnerPool: Pool | null = null;
 
 async function getRunnerPool(): Promise<Pool> {
@@ -112,6 +116,7 @@ async function getRunnerPool(): Promise<Pool> {
       name: "jobs-runner",
       connectionString: connString,
       max: TOTAL_JOB_SLOTS + RUNNERS.length,
+      idleTimeoutMillis: JOBS_POOL_IDLE_TIMEOUT_MS,
     });
   }
   return runnerPool;
@@ -133,6 +138,7 @@ async function getEnqueuePool(): Promise<Pool> {
       name: "jobs-enqueue",
       connectionString: connString,
       max: ENQUEUE_POOL_MAX,
+      idleTimeoutMillis: JOBS_POOL_IDLE_TIMEOUT_MS,
     });
   }
   return enqueuePool;

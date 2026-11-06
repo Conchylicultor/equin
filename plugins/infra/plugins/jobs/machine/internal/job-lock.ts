@@ -5,6 +5,7 @@ import { createDbPool } from "@plugins/database/plugins/connection/server";
 import { queryOne } from "@plugins/database/plugins/sql-rows/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { TOTAL_JOB_SLOTS } from "../../core/hold";
+import { JOBS_POOL_IDLE_TIMEOUT_MS } from "./pool-idle";
 
 // Exact liveness for a running job, maintained by Postgres itself.
 //
@@ -75,8 +76,9 @@ async function lockPool(): Promise<Pool> {
       connectionString: connString,
       max: TOTAL_JOB_SLOTS,
       // Only ever reaps connections sitting IDLE in the pool; a checked-out
-      // client holding a lock is not idle and is never touched by this.
-      idleTimeoutMillis: 30_000,
+      // client holding a lock is not idle and is never touched by this. Long
+      // enough that the next cron tick's jobs reuse this one's (pool-idle.ts).
+      idleTimeoutMillis: JOBS_POOL_IDLE_TIMEOUT_MS,
       // A pool whose entire purpose is job-scoped leases must never be the reason
       // the process refuses to exit: unref idle clients so shutdown is not held
       // open by a connection nobody is using.
