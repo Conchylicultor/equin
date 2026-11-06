@@ -160,11 +160,32 @@ CPU now recorded in `health-owners` (agent-ops bucket) over a window.
 The owner sampler runs on main only: its first contention window is read
 after this lands.
 
+## Memory owners, re-ranked on the corrected Postgres numbers (task-1793977698)
+
+`health-owners`, main, 15:28–16:39 (140 samples, 30 s apart). Postgres scaled
+by the measured ratio (2.7 / 11.4 GB, same minute):
+
+| owner | median | p90 | max | note |
+| --- | --- | --- | --- | --- |
+| other | 19.1 | 20.8 | 21.3 GB | **a 12 GB `com.apple.Virtualization.VirtualMachine`** (gone by 16:29) — not an equin process |
+| agent ops | 11.5 | 18.8 | 28.0 GB | type-check batch workers 2–7.6 GB, `check` / `build` CLIs ~2.8 GB |
+| agents | 8.5 | 11.5 | 15.2 GB | |
+| Chrome | 8.0 | 8.4 | 8.7 GB | |
+| backends | 5.4 | 6.6 | 8.0 GB | |
+| **Postgres** | **~2.7** | **~3.0** | **~3.4 GB** | was 11.2 / 12.7 / 14.0 GB (Σfootprint) |
+| agent browser | 0.8 | 1.8 | 2.6 GB | |
+
+So among what equin owns: **agent ops first** (and its tail — 28 GB — is the
+type-check workers), then the agents, then the backends; Postgres is last
+but one. Unadmitted `./equin run` scripts (2–4 GB each) did not appear in this
+window. The earlier window's 15–23 GB for agents was not reproduced here (8.5
+median).
+
 ## Follow-ups
 
 - ~~Idle Postgres connections: ~23 per running backend, ~215 idle × ~50–65 MB.~~
-  Investigated: ~2.4 GB real, every holder known; the sampler's Postgres
-  bucket over-states ~4–5× (next task: count shared memory once).
+  Investigated: ~2.4 GB real, every holder known. The sampler's Postgres
+  bucket now counts shared memory once (task-1793977698): 11.4 → 2.7 GB.
 - `./equin run` scripts are unadmitted against memory and CPU.
 - Size `check` / `build` grant `max` from their fan-out, measured from
   `health-owners`' agent-ops bucket during a window.

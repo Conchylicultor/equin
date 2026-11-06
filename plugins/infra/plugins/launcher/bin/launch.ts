@@ -92,6 +92,11 @@ setEnvDefault(
 // it as a standalone bundled .js; point worker-host.ts at it. A forwarded
 // name, so the gateway hands it to the spawned backend, which spawns the worker.
 setEnvDefault("SENTINEL_WORKER_JS", join(bundleRoot, "sentinel", "worker.js"));
+// Same for machine-usage's fork-memory worker (the Postgres memory-map walk).
+setEnvDefault(
+  "FORK_MEMORY_WORKER_JS",
+  join(bundleRoot, "machine-usage", "fork-memory-worker.js"),
+);
 // The raw git-layer config tree is read by the config-v2.raw-file loader
 // (Settings "View raw") and gitBacksScope (per-app un-fork). REPO_ROOT resolves
 // into the compiled binary's virtual FS, so point these at the vendored tree.

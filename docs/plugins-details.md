@@ -24275,6 +24275,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `OwnerSample`
               - `OwnerUsage`
               - `PsProcess`
+              - `SharedForkTree`
               - `TopProcess`
               - `UsageRoots`
             - Exports (values):
@@ -24291,6 +24292,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `OwnerSampleSchema`
               - `OwnerUsageSchema`
               - `parsePs`
+              - `postgresForkTrees`
               - `processLabel`
               - `PS_COLUMNS`
               - `sumByBucket`
@@ -24313,7 +24315,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `timer/no-unlisted-timer` — `machine/internal/owner-sampler.ts` (sanctioned)
           - Machine:
-            - Register: `defineTimer('machine-usage.owner-sampler')`
+            - Register:
+              - `defineTimer('machine-usage.owner-sampler')`
+              - `defineDaemon('machine-usage.fork-memory')`
         - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status files (one per watcher host, the newest claim reported): their schemas, the writer main's watcher host uses, the per-tick vitals file the watcher's worker writes (the latest reading, limits and trip state), the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
           - Cross-plugin:
             - Imported by:
@@ -33650,12 +33654,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 42 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+            - Imported by: 43 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
               - `framework` ×15
               - `infra` ×11
               - `database` ×4
               - `packages` ×4
-              - `debug` ×2
+              - `debug` ×3
               - `auth`
               - `build`
               - `conversations/agent-launch`
@@ -34810,6 +34814,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/runtime-sdk`
               - `debug/paging-probe`
               - `debug/sentinel`
+              - `debug/sentinel/machine-usage`
               - `infra/launcher`
               - `infra/mcp/browser`
               - `infra/paths/root-migration`
@@ -37782,6 +37787,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (values): `parsePartialJson`
     - **`proc-rusage`** — One process's kernel usage record on macOS (proc_pid_rusage, read through bun:ffi): its physical footprint and resident size, and its CPU time — its own and that of every child it reaped, in ns. Says so where it cannot tell.
+      - Cross-plugin:
+        - Imported by: `debug/sentinel/machine-usage`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/proc-rusage.ts` (debt)
       - Core:

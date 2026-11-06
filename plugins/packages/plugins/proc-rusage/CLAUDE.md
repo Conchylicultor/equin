@@ -29,6 +29,8 @@ footprint, `peerProcUsage`), and the machine-usage owner breakdown.
 ## Plugin reference
 
 - Description: One process's kernel usage record on macOS (proc_pid_rusage, read through bun:ffi): its physical footprint and resident size, and its CPU time — its own and that of every child it reaped, in ns. Says so where it cannot tell.
+- Cross-plugin:
+  - Imported by: `debug/sentinel/machine-usage`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/proc-rusage.ts` (debt)
 - Core:

@@ -46,6 +46,8 @@ export const RUNTIME_FORWARDED_ENV = {
     "the vendored @parcel/watcher addon, which `bun --compile` cannot embed (infra/file-watcher shared/engine.ts)",
   SENTINEL_WORKER_JS:
     "the vendored cluster-sentinel worker, which `bun --compile` does not trace (debug/sentinel worker-host.ts)",
+  FORK_MEMORY_WORKER_JS:
+    "the vendored machine-usage fork-memory worker (the Postgres memory-map walk), which `bun --compile` does not trace (debug/sentinel/machine-usage fork-memory/host.ts)",
   REPO_CONFIG_DIR:
     "the vendored git-layer config tree for a compiled backend (paths/core repoConfigDir())",
   WEB_DIST:

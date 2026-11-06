@@ -11,12 +11,14 @@ import {
   attributeProcesses,
   machineUsage,
   parsePs,
+  postgresForkTrees,
   PS_COLUMNS,
   sumByBucket,
   type MachineUsage,
   type MachineUsageBucket,
   type PsProcess,
 } from "../../core";
+import { measureForkTrees } from "./fork-memory/host";
 
 const PS_MS = 5_000;
 
@@ -29,14 +31,18 @@ async function agentBrowserRoot(): Promise<number | null> {
 /**
  * Fills in what the kernel tells about each process beyond `ps`: its CPU time
  * at ns precision and that of the children it reaped (`reapedChildrenMs`),
- * and returns each process's memory — its physical footprint (what Activity
- * Monitor shows; `ps`'s resident size over-counts Bun ~6×), else, for a
- * process the kernel will not report on (another account's, or exited since
- * `ps` listed it), its resident size. This process is read first through the
- * throwing probe, so a broken binding fails the read instead of degrading
- * every process to `ps`'s numbers.
+ * and returns each process's memory. A Postgres process's is its private
+ * memory, the cluster's shared segment charged once to its postmaster
+ * (measured on the fork-memory worker); any other's is its physical footprint
+ * (what Activity Monitor shows; `ps`'s resident size over-counts Bun ~6×),
+ * else, for a process the kernel will not report on (another account's, or
+ * exited since `ps` listed it), its resident size. This process is read first
+ * through the throwing probe, so a broken binding fails the read instead of
+ * degrading every process to `ps`'s numbers.
  */
-function readKernelUsage(procs: PsProcess[]): (p: PsProcess) => number {
+async function readKernelUsage(
+  procs: PsProcess[],
+): Promise<(p: PsProcess) => number> {
   if (procMemory() === null) return (p) => p.rssBytes;
   const memBytes = new Map<number, number>();
   for (const p of procs) {
@@ -46,6 +52,9 @@ function readKernelUsage(procs: PsProcess[]): (p: PsProcess) => number {
     p.cpuTimeMs = read.cpu.ownNs / 1e6;
     p.reapedChildrenMs = read.cpu.reapedChildrenNs / 1e6;
   }
+  // Read after the footprints, so a process the walk measured wins.
+  const forked = await measureForkTrees(postgresForkTrees(procs));
+  for (const [pid, bytes] of forked) memBytes.set(pid, bytes);
   return (p) => memBytes.get(p.pid) ?? p.rssBytes;
 }
 
@@ -67,7 +76,7 @@ export async function readAttributedProcesses(): Promise<AttributedProcesses> {
     listActiveWorktreeOps(),
   ]);
   const procs = parsePs(ps.stdout);
-  const memBytesOf = readKernelUsage(procs);
+  const memBytesOf = await readKernelUsage(procs);
   const owner = attributeProcesses(procs, {
     agentBrowser: await agentBrowserRoot(),
     agentOps: ops.map((o) => o.pid),

@@ -126,13 +126,28 @@ import {
 // The compiled entrypoints live in `../shared/entrypoints` (SERVER_ENTRY,
 // FIXED_ENTRIES), which the `release:fixed-entrypoints-bundle` check reads too.
 
-// The cluster sentinel runs its sampler + duress-latch lifecycle on a Bun
-// Worker. `bun --compile` does not trace/embed a `new Worker(new URL(...))`
-// entry, so we bundle it separately to a standalone `.js` and vendor it on
-// disk; launch.ts points EQUIN_SENTINEL_WORKER_JS at it and worker-host.ts
-// spawns from there (mirrors the vendored parcel-watcher native addon).
-const SENTINEL_WORKER_ENTRY =
-  "plugins/debug/plugins/sentinel/server/internal/worker/entry.ts";
+// The backend's Bun Worker entries. `bun --compile` does not trace/embed a
+// `new Worker(new URL(...))` entry, so each is bundled separately to a
+// standalone `.js` and vendored on disk at `<out>/<file>`; launch.ts points
+// the worker's env key at it and its host spawns from there (mirrors the
+// vendored parcel-watcher native addon).
+const VENDORED_WORKERS = [
+  // The cluster sentinel: sampler + duress-latch lifecycle
+  // (EQUIN_SENTINEL_WORKER_JS, sentinel worker-host.ts).
+  {
+    label: "sentinel worker",
+    entry: "plugins/debug/plugins/sentinel/server/internal/worker/entry.ts",
+    file: "sentinel/worker.js",
+  },
+  // machine-usage's Postgres memory-map walk
+  // (EQUIN_FORK_MEMORY_WORKER_JS, machine-usage fork-memory/host.ts).
+  {
+    label: "fork-memory worker",
+    entry:
+      "plugins/debug/plugins/sentinel/plugins/machine-usage/machine/internal/fork-memory/entry.ts",
+    file: "machine-usage/fork-memory-worker.js",
+  },
+] as const;
 
 // The composition's filtered registries, checked present before compiling: the
 // compiled backend's imports of the committed server and machine registries
@@ -410,30 +425,29 @@ async function compile(opts: {
 }
 
 /**
- * Bundle the sentinel worker entry to a standalone `.js` (bundle mode, NOT
- * `--compile`): its lean closure (the latch leaf, log-channels, embedded-pg
- * constants, the pure detector/gatherers, and `pg`) inlines into one file that
- * the release's compiled backend spawns as a `Worker`. `bun --compile` cannot
- * embed a `new Worker(new URL(...))` entry, so the worker is vendored on disk
- * instead — launch.ts points `EQUIN_SENTINEL_WORKER_JS` at this file.
+ * Bundle one worker entry to a standalone `.js` (bundle mode, NOT
+ * `--compile`): its lean closure inlines into one file that the release's
+ * compiled backend spawns as a `Worker`. `bun --compile` cannot embed a
+ * `new Worker(new URL(...))` entry, so the worker is vendored on disk instead
+ * — launch.ts points the worker's env key at this file.
  */
-async function bundleSentinelWorker(opts: {
+async function bundleWorker(opts: {
   root: AppPath;
+  entry: string;
+  label: string;
   outfile: string;
 }): Promise<void> {
-  const { root, outfile } = opts;
+  const { root, entry, label, outfile } = opts;
   mkdirSync(dirname(outfile), { recursive: true });
   const result = await Bun.build({
-    entrypoints: [join(root, SENTINEL_WORKER_ENTRY)],
+    entrypoints: [join(root, entry)],
     outdir: dirname(outfile),
     naming: basename(outfile),
     target: "bun",
   });
   if (!result.success) {
     for (const log of result.logs) console.error(String(log));
-    throw new Error(
-      `bun build failed for the sentinel worker (${SENTINEL_WORKER_ENTRY})`,
-    );
+    throw new Error(`bun build failed for the ${label} (${entry})`);
   }
 }
 
@@ -1252,14 +1266,18 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
     join(out, "parcel-watcher", "watcher.node"),
   );
 
-  // Sentinel worker: `bun --compile` can't embed the `new Worker(new
-  // URL(...))` entry, so bundle it to a standalone .js the backend spawns
-  // via EQUIN_SENTINEL_WORKER_JS (set by launch.ts).
-  console.log("  • sentinel worker bundle");
-  await bundleSentinelWorker({
-    root,
-    outfile: join(out, "sentinel", "worker.js"),
-  });
+  // Worker entries: `bun --compile` can't embed a `new Worker(new
+  // URL(...))` entry, so bundle each to a standalone .js the backend spawns
+  // via its env key (set by launch.ts).
+  for (const w of VENDORED_WORKERS) {
+    console.log(`  • ${w.label} bundle`);
+    await bundleWorker({
+      root,
+      entry: w.entry,
+      label: w.label,
+      outfile: join(out, w.file),
+    });
+  }
 
   // Migration SQL files: the runner reads them from disk at boot (they are
   // not bundled into the compiled backend). Vendor the data/ tree's `.sql`

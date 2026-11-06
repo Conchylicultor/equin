@@ -27,7 +27,7 @@ import { dlopen, ptr } from "bun:ffi";
 // are those of every child the process reaped — already holding what each
 // child reaped — the only trace a short-lived process leaves once it exited.
 //
-// The four times are in mach absolute-time units, NOT ns: on Apple silicon one
+// The five times are in mach absolute-time units, NOT ns: on Apple silicon one
 // unit is 125/3 ns (`mach_timebase_info`), so they are scaled by the timebase.
 // Checked 2026-11-06: user + system, scaled, equals `ps -o time` to the 10 ms.
 
@@ -36,6 +36,7 @@ const USER_TIME_OFFSET = 16;
 const SYSTEM_TIME_OFFSET = 24;
 const RESIDENT_SIZE_OFFSET = 64;
 const PHYS_FOOTPRINT_OFFSET = 72;
+const PROC_START_ABSTIME_OFFSET = 80;
 const CHILD_USER_TIME_OFFSET = 96;
 const CHILD_SYSTEM_TIME_OFFSET = 104;
 const BUF_BYTES = 192; // ≥ sizeof(rusage_info_v1)=144, padded for forward-compat
@@ -46,6 +47,11 @@ export type ProcRusage =
       memory: { physFootprintBytes: number; residentSizeBytes: number };
       /** CPU time, ns: the process's own (user + system), and its reaped children's. */
       cpu: { ownNs: number; reapedChildrenNs: number };
+      /**
+       * When the process started, ns on the machine's monotonic clock (since
+       * boot): a pid the kernel reused reads a different one.
+       */
+      startedNs: number;
     }
   /** The kernel refused: another account's process, or one gone since. */
   | { kind: "refused" }
@@ -102,5 +108,6 @@ export function readProcRusage(pid: number): ProcRusage {
       reapedChildrenNs:
         ns(CHILD_USER_TIME_OFFSET) + ns(CHILD_SYSTEM_TIME_OFFSET),
     },
+    startedNs: ns(PROC_START_ABSTIME_OFFSET),
   };
 }

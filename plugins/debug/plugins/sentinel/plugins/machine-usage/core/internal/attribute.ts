@@ -146,6 +146,48 @@ export function attributeProcesses(
   return owner;
 }
 
+/** A process tree of forks sharing memory: its root and every process under it. */
+export interface SharedForkTree {
+  root: number;
+  members: number[];
+}
+
+/**
+ * Each Postgres cluster as a fork tree: its postmaster (the `postgres`
+ * executable whose parent is not one) and every backend and auxiliary process
+ * under it. They share the cluster's segment, which each one's physical
+ * footprint counts again; the readers measure these trees with the shared
+ * memory counted once (machine/internal/fork-memory). The only owner measured
+ * to need it: Chrome's and the Bun processes' footprints equal their private
+ * memory.
+ */
+export function postgresForkTrees(
+  procs: readonly PsProcess[],
+): SharedForkTree[] {
+  const byPid = new Map(procs.map((p) => [p.pid, p]));
+  const children = new Map<number, number[]>();
+  for (const p of procs) {
+    const list = children.get(p.ppid);
+    if (list) list.push(p.pid);
+    else children.set(p.ppid, [p.pid]);
+  }
+  const trees: SharedForkTree[] = [];
+  for (const p of procs) {
+    if (executableName(p.args) !== "postgres") continue;
+    const parent = byPid.get(p.ppid);
+    if (parent && executableName(parent.args) === "postgres") continue;
+    const members: number[] = [];
+    const stack = [...(children.get(p.pid) ?? [])];
+    while (stack.length > 0) {
+      const pid = stack.pop()!;
+      members.push(pid);
+      stack.push(...(children.get(pid) ?? []));
+    }
+    trees.push({ root: p.pid, members });
+  }
+  return trees;
+}
+
 /** Each bucket's totals, in `MACHINE_USAGE_BUCKETS` order (an empty one too). */
 export function sumByBucket(
   procs: readonly PsProcess[],

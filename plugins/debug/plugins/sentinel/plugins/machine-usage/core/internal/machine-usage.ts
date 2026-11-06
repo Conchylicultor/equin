@@ -73,6 +73,8 @@ export const MachineUsageGroupSchema = z.object({
   /**
    * Summed physical footprint (what Activity Monitor shows), bytes; a process
    * whose footprint the kernel would not report counts its resident size.
+   * Postgres's is its private memory, the cluster's shared segment counted
+   * once (on its postmaster), not once per backend.
    */
   memBytes: z.number().int().min(0),
 });

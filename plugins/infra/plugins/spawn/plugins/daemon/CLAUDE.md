@@ -101,6 +101,7 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `conversations/runtime-sdk`
     - `debug/paging-probe`
     - `debug/sentinel`
+    - `debug/sentinel/machine-usage`
     - `infra/launcher`
     - `infra/mcp/browser`
     - `infra/paths/root-migration`

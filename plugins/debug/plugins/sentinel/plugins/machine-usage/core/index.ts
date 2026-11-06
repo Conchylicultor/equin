@@ -23,9 +23,14 @@ export type {
 export {
   attributeProcesses,
   parsePs,
+  postgresForkTrees,
   PS_COLUMNS,
   sumByBucket,
 } from "./internal/attribute";
-export type { PsProcess, UsageRoots } from "./internal/attribute";
+export type {
+  PsProcess,
+  SharedForkTree,
+  UsageRoots,
+} from "./internal/attribute";
 export { processLabel, summarizeOwners } from "./internal/owner-sample";
 export type { CpuBaseline } from "./internal/owner-sample";

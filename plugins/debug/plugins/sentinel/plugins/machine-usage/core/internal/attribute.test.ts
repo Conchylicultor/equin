@@ -3,6 +3,7 @@ import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   attributeProcesses,
   parsePs,
+  postgresForkTrees,
   sumByBucket,
   type PsProcess,
 } from "./attribute";
@@ -176,5 +177,29 @@ describe("sumByBucket", () => {
       { bucket: "postgres", processes: 0, cpuPercent: 0, memBytes: 0 },
       { bucket: "other", processes: 1, cpuPercent: 2, memBytes: 1 },
     ]);
+  });
+});
+
+describe("postgresForkTrees", () => {
+  const PG = "/x/native/bin/postgres -D /data -p 5433";
+  it("roots each cluster at its postmaster and takes every process under it", () => {
+    const procs = [
+      proc(1, 0, "launchd"),
+      proc(10, 1, PG),
+      proc(11, 10, "postgres: checkpointer"),
+      proc(12, 10, "postgres: app db [local] idle"),
+      proc(13, 12, "postgres: parallel worker"),
+      proc(20, 1, "/x/bin/pgbouncer cfg"),
+      proc(30, 1, "/bin/zsh"),
+    ];
+    expect(postgresForkTrees(procs)).toEqual([
+      { root: 10, members: expect.arrayContaining([11, 12, 13]) as number[] },
+    ]);
+    expect(postgresForkTrees(procs)[0]!.members).toHaveLength(3);
+  });
+
+  it("does not root a tree at a postgres its own parent is", () => {
+    const procs = [proc(10, 1, PG), proc(11, 10, PG)];
+    expect(postgresForkTrees(procs).map((t) => t.root)).toEqual([10]);
   });
 });

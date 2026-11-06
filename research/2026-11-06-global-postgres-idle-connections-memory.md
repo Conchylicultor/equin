@@ -151,6 +151,41 @@ burst of short-lived job connections.
 - Only the Postgres bucket needs it: Chrome and the Bun processes show no
   over-count.
 
+## 4. The instrument fix — landed (task-1793977698)
+
+The sampler now measures the Postgres tree as described above, on a worker
+thread (`machine-usage/machine/internal/fork-memory/`, documented in that
+plugin's CLAUDE.md). Two refinements over the exact method, both measured:
+
+- **The postmaster is the template.** A backend is a fork, so the ranges it
+  inherited sit at the same addresses. The walk steps over the postmaster's
+  shared-inherited segment (counted once, from the postmaster) and its
+  read-only mappings. 2.2× fewer µs; 99.3 % of private pages kept (40
+  backends: 440 vs 443 MB). Trap found on the way: in the postmaster its own
+  malloc regions read as TRUESHARED (its children share them copy-on-write),
+  so "skip what is shared in the parent" drops ~25 % of the children's
+  private memory; the skip keys on inheritance = SHARE instead, and never on a
+  protection-0 reservation (a child maps into it later).
+- **A backend whose footprint and start did not move is not walked again**
+  (about half change per 30 s).
+- Shared objects counted once: every writable shared-mode region, by VM object
+  id — the segment, the copy-on-write pages children still share with the
+  postmaster, and a DSM segment only backends map.
+
+**Check against Apple's `footprint -p postgres`** (shared pages once): 3,102
+MB vs **3,058 MB** here, same minute.
+
+**Before / after**, 2026-11-06 16:38, same minute:
+
+| | Postgres bucket | top Postgres entries |
+| --- | --- | --- |
+| before (main's sampler, Σfootprint) | **11.4 GB** | backends at ~220–235 MB each |
+| after (this build's Machine watcher card) | **2.7 GB** | postmaster ~260 MB (segment once), backends 5–75 MB |
+
+Every other bucket read the same in both (Chrome 8.0 / 8.1 GB, backends 4.4 /
+4.4 GB). Cost, off the event loop: 1.3 s cold, 0.7 s warm on the worker for
+255–329 processes (load 15–30); the backend's loop only awaits a message.
+
 ## Side findings
 
 - `~/.equin/postgres/postgres.log` is **1.85 GB** and growing: the cluster logs
