@@ -67,8 +67,8 @@ namespaces and URLs, never an app.
   window's one script, on its main frame, defines `window.equinWindow` on
   pages of the window's origin only — `hostInfo()` (`{ version: 1, platform,
   capabilities: { fileDrag } }`) and `startFileDrag(paths)` (`rust/src/file_drag.rs`,
-  macOS: an `NSDraggingSession` of file URLs from under the pointer, each
-  file's own icon; copy-only outside the app, every operation over its own
+  macOS: an `NSDraggingSession` of file URLs from under the pointer, drawn
+  as Finder's list view drags — per file a row of its small icon and name; copy-only outside the app, every operation over its own
   window; refused for a relative or missing path; resolves `"dropped"` /
   `"cancelled"` when the drag ends). Held natively like the panel's: the ACL
   grants `APP_WINDOW_COMMANDS` to window `app` on its origin

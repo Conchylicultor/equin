@@ -66,24 +66,73 @@ mod platform {
     use std::cell::RefCell;
     use std::sync::mpsc;
 
+    use block2::RcBlock;
     use objc2::rc::Retained;
-    use objc2::runtime::{AnyObject, NSObject, NSObjectProtocol, ProtocolObject};
+    use objc2::runtime::{AnyObject, Bool, NSObject, NSObjectProtocol, ProtocolObject};
     use objc2::{define_class, msg_send, DefinedClass, MainThreadMarker, MainThreadOnly};
     use objc2_app_kit::{
-        NSDragOperation, NSDraggingContext, NSDraggingItem, NSDraggingSession, NSDraggingSource, NSEvent,
-        NSEventModifierFlags, NSEventType, NSView, NSWorkspace,
+        NSBezierPath, NSColor, NSDragOperation, NSDraggingContext, NSDraggingItem, NSDraggingSession,
+        NSDraggingSource, NSEvent, NSEventModifierFlags, NSEventType, NSFont, NSFontAttributeName,
+        NSForegroundColorAttributeName, NSImage, NSStringDrawing, NSView, NSWorkspace,
     };
-    use objc2_foundation::{NSArray, NSPoint, NSRect, NSSize, NSString, NSURL};
+    use objc2_foundation::{NSArray, NSDictionary, NSPoint, NSRect, NSSize, NSString, NSURL};
     use objc2_web_kit::WKWebView;
     use tauri::WebviewWindow;
 
     use super::Outcome;
 
-    /// The drag image: each file's own icon, this big (logical px), the next
-    /// ones stacked by `STACK` up to `STACKED` deep.
-    const ICON: f64 = 64.0;
-    const STACK: f64 = 6.0;
-    const STACKED: usize = 4;
+    /// The drag image, as Finder's list view draws one: per file a row of its
+    /// own small icon and its name (logical px), the rows stacked under the
+    /// pointer — the first `ROWS` drawn, the rest carried without a picture
+    /// (AppKit's count badge says how many).
+    const ICON: f64 = 16.0;
+    const ROW: f64 = 22.0;
+    const PAD: f64 = 4.0;
+    const GAP: f64 = 4.0;
+    const FONT: f64 = 13.0;
+    const ROWS: usize = 5;
+    /// A longer name is cut in its middle, as Finder does.
+    const NAME_CHARS: usize = 48;
+
+    /// `name`, at most `NAME_CHARS`, its middle elided.
+    fn short_name(name: &str) -> String {
+        let chars: Vec<char> = name.chars().collect();
+        if chars.len() <= NAME_CHARS {
+            return name.to_string();
+        }
+        let keep = NAME_CHARS - 1;
+        let head: String = chars[..keep / 2].iter().collect();
+        let tail: String = chars[chars.len() - (keep - keep / 2)..].iter().collect();
+        format!("{head}…{tail}")
+    }
+
+    /// One file's drag row: its icon and name over a rounded backing (the
+    /// window's background, so the name reads over any app it crosses).
+    fn row_image(icon: Retained<NSImage>, path: &str) -> Retained<NSImage> {
+        let name = std::path::Path::new(path)
+            .file_name()
+            .map_or_else(|| path.to_string(), |n| n.to_string_lossy().into_owned());
+        let text = NSString::from_str(&short_name(&name));
+        let font = NSFont::systemFontOfSize(FONT);
+        let color = NSColor::labelColor();
+        let keys = [unsafe { NSFontAttributeName }, unsafe { NSForegroundColorAttributeName }];
+        let values: [&AnyObject; 2] = [&font, &color];
+        let attrs = NSDictionary::from_slices(&keys, &values);
+        // SAFETY: the attributes are a font and a colour under their own keys.
+        let text_size = unsafe { text.sizeWithAttributes(Some(&attrs)) };
+        let size = NSSize::new(PAD + ICON + GAP + text_size.width.ceil() + PAD * 2.0, ROW);
+        let draw = RcBlock::new(move |rect: NSRect| -> Bool {
+            let backing = NSColor::windowBackgroundColor().colorWithAlphaComponent(0.85);
+            backing.setFill();
+            NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(rect, 5.0, 5.0).fill();
+            icon.drawInRect(NSRect::new(NSPoint::new(PAD, (ROW - ICON) / 2.0), NSSize::new(ICON, ICON)));
+            let at = NSPoint::new(PAD + ICON + GAP, (ROW - text_size.height) / 2.0);
+            // SAFETY: as above.
+            unsafe { text.drawAtPoint_withAttributes(at, Some(&attrs)) };
+            Bool::YES
+        });
+        NSImage::imageWithSize_flipped_drawingHandler(size, false, &draw)
+    }
 
     pub struct Ivars {
         ended: RefCell<Option<mpsc::Sender<Outcome>>>,
@@ -174,14 +223,21 @@ mod platform {
                 let ns_path = NSString::from_str(path);
                 let url = NSURL::fileURLWithPath(&ns_path);
                 let item = NSDraggingItem::initWithPasteboardWriter(mtm.alloc(), ProtocolObject::from_ref(&*url));
-                let icon = workspace.iconForFile(&ns_path);
-                let offset = STACK * i.min(STACKED - 1) as f64;
-                let frame = NSRect::new(
-                    NSPoint::new(at.x - ICON / 2.0 + offset, at.y - ICON / 2.0 + offset),
-                    NSSize::new(ICON, ICON),
-                );
-                // SAFETY: an NSImage is a valid dragging-frame content.
-                unsafe { item.setDraggingFrame_contents(frame, Some(&*(Retained::as_ptr(&icon) as *const AnyObject))) };
+                // Each row under the last (down the screen, whichever way the
+                // view counts); past `ROWS`, the last row's place, no picture.
+                let shown = i < ROWS;
+                let step = ROW * i.min(ROWS - 1) as f64;
+                let y = if view.isFlipped() { at.y - ROW / 2.0 + step } else { at.y - ROW / 2.0 - step };
+                let origin = NSPoint::new(at.x - PAD - ICON / 2.0, y);
+                if shown {
+                    let image = row_image(workspace.iconForFile(&ns_path), path);
+                    let frame = NSRect::new(origin, image.size());
+                    // SAFETY: an NSImage is a valid dragging-frame content.
+                    unsafe { item.setDraggingFrame_contents(frame, Some(&*(Retained::as_ptr(&image) as *const AnyObject))) };
+                } else {
+                    // SAFETY: no contents is valid.
+                    unsafe { item.setDraggingFrame_contents(NSRect::new(origin, NSSize::new(ROW, ROW)), None) };
+                }
                 item
             })
             .collect();
