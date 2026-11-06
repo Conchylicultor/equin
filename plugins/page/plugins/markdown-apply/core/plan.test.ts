@@ -156,7 +156,10 @@ const codeBlock = defineBlock({
   schema: z.object({
     code: z.string().default(""),
     language: z.string().optional(),
+    view: z.enum(["code", "preview", "split"]).optional(),
   }),
+  // Mirrors `page/code-block`: the split view is how it is SHOWN.
+  displayOnly: ["view"],
   empty: () => ({ code: "" }),
   markdown: {
     fence: {
@@ -424,6 +427,38 @@ describe("identity ⇒ no writes", () => {
       deleted: 0,
       moved: 0,
     });
+  });
+
+  test("display-only data is never written by a re-apply", () => {
+    // Markdown cannot say `view`, so the parse comes back without it — and a
+    // survivor that then wrote the parse would reset how the block is shown on
+    // every apply, however unrelated the edit.
+    const rows = rowsOf([
+      raw("code-block", {
+        code: "graph TD",
+        language: "mermaid",
+        view: "code",
+      }),
+      raw("text", { text: runs("after") }),
+    ]);
+    expect(isEmptyPatch(replan(rows).patch)).toBe(true);
+  });
+
+  test("an edit to a block keeps its display-only data", () => {
+    const rows = rowsOf([
+      raw("code-block", {
+        code: "graph TD",
+        language: "mermaid",
+        view: "code",
+      }),
+    ]);
+    const md = markdownOf(rows).replace("graph TD", "graph LR");
+    const plan = planOf(rows, md);
+    expect(plan.patch.creates).toEqual([]);
+    expect(plan.patch.deleteIds).toEqual([]);
+    expect(plan.patch.updates.map((u) => u.changes.data)).toEqual([
+      { code: "graph LR", language: "mermaid", view: "code" },
+    ]);
   });
 
   test("a COLLAPSED block stays collapsed — `expanded` is never written", () => {

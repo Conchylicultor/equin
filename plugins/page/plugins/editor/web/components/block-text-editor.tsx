@@ -73,6 +73,7 @@ import {
 import type { FlightInput } from "../internal/caret-authority";
 import type { KeystrokeKey } from "../internal/keystroke-intent";
 import { TEXT_VARIANT_CLASS } from "./text-variant-class";
+import { BLOCK_TEXT_THEME } from "../internal/block-text-theme";
 
 /**
  * The Lexical command each buffered {@link KeystrokeKey} replays through, so a
@@ -259,19 +260,7 @@ export function BlockTextEditor({
   const initialConfig = useMemo(
     () => ({
       namespace: `block-text-${block.id}`,
-      theme: {
-        // Inline mark classes — applied by Lexical to formatted TextNodes. These
-        // are plain class strings passed to the framework (not JSX className), so
-        // they map marks → utilities directly.
-        text: {
-          bold: "font-bold",
-          italic: "italic",
-          underline: "underline",
-          strikethrough: "line-through",
-          code: "rounded-md bg-muted px-xs font-mono text-[0.9em]",
-        },
-        link: "text-primary-text underline",
-      },
+      theme: BLOCK_TEXT_THEME,
       // Custom inline nodes (e.g. inline page links) contributed via
       // registerBlockTextExtension, plus LinkNode for inline links. Registered
       // at app bootstrap, so present before any block editor mounts.

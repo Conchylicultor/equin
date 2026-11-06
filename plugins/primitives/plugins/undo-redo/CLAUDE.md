@@ -259,7 +259,6 @@ undoes the title text only — an ordinary autosaved input, never on this stack.
     - `page/page-link`
     - `page/place`
     - `page/prototype`
-    - `page/table`
     - `page/tags`
     - `primitives/text-editor`
 

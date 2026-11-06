@@ -679,6 +679,21 @@ describe("line run", () => {
     );
   });
 
+  test("column widths are display-only: never written, absent on the way back", () => {
+    // `widths` is how the table is SHOWN (`displayOnly`), which markdown cannot
+    // say — so it is stripped before the serializer sees the data, and the
+    // parse is the table without it (an apply carries the stored widths over).
+    const sized = node("table", {
+      align: [null, null],
+      header: [runs("a"), runs("b")],
+      rows: [[runs("1"), runs("2")]],
+      widths: [160, 96],
+    });
+    const md = serialize([sized]);
+    expect(md).toBe("| a | b |\n| --- | --- |\n| 1 | 2 |");
+    expect(parse(md)).toEqual([table(["a", "b"], [["1", "2"]])]);
+  });
+
   test("a pipe inside a cell is escaped, and comes back as a pipe", () => {
     const forest = [table(["a|b"], [["x | y"]])];
     const md = serialize(forest);

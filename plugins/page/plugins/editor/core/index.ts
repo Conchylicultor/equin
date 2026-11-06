@@ -174,8 +174,10 @@ export type { BlockSemantics, BlockSemanticsAttrs } from "./block-semantics";
 
 export {
   blockAuthorOf,
+  carryDisplayOnly,
   conversionPrefixesOf,
   defineBlock,
+  withoutDisplayOnly,
 } from "./define-block";
 export type {
   BlockAudience,

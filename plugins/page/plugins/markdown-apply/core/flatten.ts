@@ -13,6 +13,7 @@
 import {
   PAGE_BLOCK_TYPE,
   plainOf,
+  withoutDisplayOnly,
   type BlockHandle,
   type MarkdownNode,
 } from "@plugins/page/plugins/editor/core";
@@ -177,7 +178,8 @@ export function plainTextOf(
  *   same words ARE the same line as far as an alignment can tell; which of
  *   several such lines is which is then decided by POSITION, which is exactly
  *   what the LCS over these keys answers.
- * - void → `type ␀ stableJson(data)`. A void block's payload is its content.
+ * - void → `type ␀ stableJson(data)`, display-only keys stripped. A void
+ *   block's payload is its content.
  * - a node whose identity is ASSERTED — a sub-page shell, or an identified card
  *   the document addressed by id — → pinned to the row id (see
  *   {@link pinnedRowKey}), never inferred from content.
@@ -187,9 +189,11 @@ export function identityKeyOf(
   data: unknown,
   handle?: BlockHandle<unknown>,
 ): string {
+  // A void block's DISPLAY state (a table's column widths) is not what it says:
+  // markdown never carries it, so a stored row and its parsed line must key alike.
   return handle?.text
     ? `${type}${SEP}${plainOf(handle.text(data))}`
-    : `${type}${SEP}${stableJson(data)}`;
+    : `${type}${SEP}${stableJson(withoutDisplayOnly(handle, data))}`;
 }
 
 /**

@@ -20,7 +20,7 @@ import {
   serializeInlineMarkdown,
   type SoftBreaks,
 } from "./inline-markdown";
-import type { BlockHandle } from "./define-block";
+import { withoutDisplayOnly, type BlockHandle } from "./define-block";
 import type { SerializedBlock } from "./serialized-block";
 
 // ---------------------------------------------------------------------------
@@ -2193,6 +2193,9 @@ export function serializeForestToMarkdown(
       ordinal = n.type === prevType ? ordinal + 1 : 1;
       prevType = n.type;
       const h = byType.get(n.type);
+      // What the block SAYS: its display-only keys never reach a serializer or
+      // a tag attribute (`BlockHandle.displayOnly`).
+      const data = withoutDisplayOnly(h, n.data);
       const serializeCtx: MdSerializeCtx = {
         md,
         mdLine,
@@ -2202,13 +2205,13 @@ export function serializeForestToMarkdown(
         id: n.id,
         annotations: n.annotations,
       };
-      const resolved = h ? serializerFor(h, n.data) : null;
+      const resolved = h ? serializerFor(h, data) : null;
 
       // Flat line(s): the walk owns the children, exactly as it always has.
       if (resolved === null || resolved.kind === "lines") {
         assertNoLineAnnotations(n);
         const line =
-          resolved === null ? "" : resolved.serialize(n.data, serializeCtx);
+          resolved === null ? "" : resolved.serialize(data, serializeCtx);
         const children = renderList(n.children);
         // The pin's spelling, for an EMPTY block only. Whether it is used is the
         // second pass's call (see `pinnedAt`). A handle with no tag keeps the
@@ -2221,7 +2224,7 @@ export function serializeForestToMarkdown(
         // CONSUMES its children.
         const pinTag =
           ctx.emptyBlocks === "pinned" && line.trim() === ""
-            ? h && tagForData(h, n.data)
+            ? h && tagForData(h, data)
             : null;
         segments.push({
           // THE LINE A BLOCK EMITS IS CLAIMED BY THAT BLOCK, OR IT IS ESCAPED —
@@ -2241,7 +2244,7 @@ export function serializeForestToMarkdown(
           head: claimSafeLines(line, h, claimers, ctx.softBreaks === "escaped"),
           pinnedHead: pinTag
             ? [
-                `${openTagPrefix(pinTag.name, tagAttrs(pinTag, n.data, serializeCtx))}/>`,
+                `${openTagPrefix(pinTag.name, tagAttrs(pinTag, data, serializeCtx))}/>`,
               ]
             : null,
           headIsTag: false,
@@ -2252,14 +2255,11 @@ export function serializeForestToMarkdown(
       }
 
       const tag = resolved.tag;
-      const prefix = openTagPrefix(
-        tag.name,
-        tagAttrs(tag, n.data, serializeCtx),
-      );
+      const prefix = openTagPrefix(tag.name, tagAttrs(tag, data, serializeCtx));
       if (tag.body === "text") {
         // The block's OWN text between the tags; children still nest below, as
         // for any text block.
-        const text = md(h!.text!(n.data));
+        const text = md(h!.text!(data));
         segments.push({
           head: text.includes("\n")
             ? [`${prefix}>`, ...indentLines(text.split("\n")), `</${tag.name}>`]

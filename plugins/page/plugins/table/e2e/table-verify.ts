@@ -1,14 +1,16 @@
 // The table block in a real browser: a pasted GFM table becomes ONE table block
-// rendering a real <table>, its source mode edits it as markdown (an invalid
-// source is refused and writes nothing), and the commit is one undo step.
+// rendering a real <table>, edited in place — click a cell and type, Tab between
+// cells, one undo step per cell, the grips' menus.
 //
 // Phases:
 //   1. pasting a GFM table into an empty block renders a <table> with the
 //      pasted header and body cells (and no raw-pipe paragraph);
-//   2. "Edit source" opens the table's GFM in a textarea;
-//   3. an invalid source stays open with an error, the table unchanged;
-//   4. a valid edit commits on mod+Enter and the table shows it;
-//   5. ⌘Z restores the previous cells, ⌘⇧Z re-applies the edit;
+//   2. a click opens the cell in place; Tab writes it and opens the next;
+//      Escape writes and leaves;
+//   3. ⌘Z undoes the last cell's write, ⌘⇧Z re-applies it;
+//   4. Tab out of the last cell appends a row;
+//   5. the row grip's menu deletes a row, the column grip's duplicates a
+//      column (and ⌘Z undoes it);
 //   6. the cells' text selects natively: a drag across cells selects their words
 //      (the surface is otherwise user-select: none), and a drag that leaves the
 //      table for the line above becomes a block range, never a native selection
@@ -90,55 +92,94 @@ await withBrowser(async (h) => {
   );
   await snap(page, out, "pasted");
 
-  // ---- 2: open the source -----------------------------------------------------
-  await table.hover();
-  await page.getByRole("button", { name: "Edit source" }).first().click();
-  const source = page.getByRole("textbox", { name: "Table source" });
-  await source.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
-  const original = await source.inputValue();
-  r.ok(
-    "2: the source is the table's GFM",
-    original.includes("| Fruit | Qty |") && original.includes("| pear | 5 |"),
+  // ---- 2: click a cell and type ----------------------------------------------
+  const editing = page.locator(
+    "[data-block-id] table [contenteditable='true']",
   );
-
-  // ---- 3: an invalid source is refused ----------------------------------------
-  await source.fill("not a table");
+  await table.getByText("pear", { exact: true }).click();
+  await editing.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
+  r.eq(
+    "2a: the clicked cell opens in place",
+    await editing.getAttribute("aria-label"),
+    "Row 2, column 1",
+  );
+  await page.keyboard.press("Meta+a");
+  await page.keyboard.type("plum");
+  // Tab writes the cell and opens the next one.
+  await page.keyboard.press("Tab");
+  await page.waitForTimeout(600);
+  r.eq(
+    "2b: Tab moves to the next cell",
+    await editing.getAttribute("aria-label"),
+    "Row 2, column 2",
+  );
+  await page.keyboard.press("Meta+a");
+  await page.keyboard.type("7");
+  // Escape writes it and leaves the cell, the table selected.
   await page.keyboard.press("Escape");
-  await page
-    .getByRole("alert")
-    .first()
-    .waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
-  r.ok("3a: an invalid source stays open", await source.isVisible());
-  await snap(page, out, "invalid");
-
-  // ---- 4: a valid edit commits --------------------------------------------------
-  await source.fill(original.replace("| pear | 5 |", "| plum | 7 |"));
-  await page.keyboard.press("Meta+Enter");
-  await source.waitFor({ state: "detached", timeout: ELEMENT_TIMEOUT_MS });
-  r.eq("4: the committed edit renders", await tableCells(page), [
+  await editing.waitFor({ state: "detached", timeout: ELEMENT_TIMEOUT_MS });
+  r.eq("2c: the edited cells render", await tableCells(page), [
     ["Fruit", "Qty"],
     ["apple", "3"],
     ["plum", "7"],
   ]);
   await snap(page, out, "edited");
 
-  // ---- 5: one undo step --------------------------------------------------------
+  // ---- 3: one undo step per cell ---------------------------------------------
   await page.keyboard.press("Meta+z");
   await page.waitForTimeout(300);
-  r.eq("5a: ⌘Z restores the previous cells", await tableCells(page), [
+  r.eq("3a: ⌘Z undoes the last cell", await tableCells(page), [
     ["Fruit", "Qty"],
     ["apple", "3"],
-    ["pear", "5"],
+    ["plum", "5"],
   ]);
   await page.keyboard.press("Meta+Shift+z");
   await page.waitForTimeout(300);
-  r.eq("5b: ⌘⇧Z re-applies the edit", await tableCells(page), [
-    ["Fruit", "Qty"],
-    ["apple", "3"],
-    ["plum", "7"],
+  r.eq("3b: ⌘⇧Z re-applies it", (await tableCells(page))[2], ["plum", "7"]);
+
+  // ---- 4: Tab out of the last cell appends a row ----------------------------
+  await table.getByText("7", { exact: true }).click();
+  await editing.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
+  await page.keyboard.press("Tab");
+  await page.keyboard.type("fig");
+  await page.keyboard.press("Escape");
+  await editing.waitFor({ state: "detached", timeout: ELEMENT_TIMEOUT_MS });
+  r.eq("4: a new row holds what was typed", (await tableCells(page))[3], [
+    "fig",
+    "",
   ]);
 
+  // ---- 5: the row grip's menu deletes the row --------------------------------
+  await table.getByText("fig", { exact: true }).hover();
+  await page.getByRole("button", { name: /^Row 3 — drag to move/ }).click();
+  await page
+    .getByLabel("Row actions")
+    .getByRole("button", { name: "Delete row" })
+    .click();
+  await page.waitForTimeout(300);
+  r.eq("5a: the row is gone", (await tableCells(page)).length, 3);
+  await table.getByText("Qty", { exact: true }).hover();
+  await page.getByRole("button", { name: /^Column 2 — drag to move/ }).click();
+  await page
+    .getByLabel("Column actions")
+    .getByRole("button", { name: "Duplicate" })
+    .click();
+  await page.waitForTimeout(300);
+  r.eq("5b: the column is duplicated", (await tableCells(page))[0], [
+    "Fruit",
+    "Qty",
+    "Qty",
+  ]);
+  await page.keyboard.press("Meta+z");
+  await page.waitForTimeout(300);
+  r.eq("5c: ⌘Z undoes it", (await tableCells(page))[0], ["Fruit", "Qty"]);
+  await snap(page, out, "menus");
+
   // ---- 6: the cells' text is selectable ---------------------------------------
+  // Escape out of a cell left the table block-selected; a drag inside a
+  // selected block is a block gesture, so clear it first.
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(200);
   const cellBox = async (text: string) => {
     const box = await table.getByText(text, { exact: true }).boundingBox();
     if (!box) throw new Error(`cell "${text}" has no box`);
@@ -146,16 +187,18 @@ await withBrowser(async (h) => {
   };
   const from = await cellBox("apple");
   const to = await cellBox("7");
-  await page.mouse.move(from.x + 1, from.y + from.height / 2);
+  // Inside the cells: their borders carry the chrome (the row grip on the
+  // table's left edge, a resize handle on each column's right one).
+  await page.mouse.move(from.x + 10, from.y + from.height / 2);
   await page.mouse.down();
-  await page.mouse.move(to.x + to.width - 1, to.y + to.height / 2, {
+  await page.mouse.move(to.x + to.width - 10, to.y + to.height / 2, {
     steps: 8,
   });
   await page.mouse.up();
   const selected = await page.evaluate(() => getSelection()?.toString() ?? "");
   r.ok(
     `6a: a drag across cells selects their text (got ${JSON.stringify(selected)})`,
-    selected.includes("apple") && selected.includes("7"),
+    selected.includes("pple") && selected.includes("7"),
   );
   await snap(page, out, "selected");
 
@@ -164,7 +207,7 @@ await withBrowser(async (h) => {
     .first()
     .boundingBox();
   if (!above) throw new Error('the "above" line has no box');
-  await page.mouse.move(from.x + 1, from.y + from.height / 2);
+  await page.mouse.move(from.x + 10, from.y + from.height / 2);
   await page.mouse.down();
   await page.mouse.move(above.x + 2, above.y + above.height / 2, {
     steps: 8,
@@ -184,6 +227,8 @@ await withBrowser(async (h) => {
 
   // ---- 7: the caret cue surrounds the widened table ---------------------------
   await table.getByText("apple", { exact: true }).click();
+  await page.waitForTimeout(200);
+  await page.keyboard.press("Escape");
   await page.waitForTimeout(200);
   const cue = await table.evaluate((t) => {
     const host = t.closest("[data-caret-host]");
@@ -205,16 +250,15 @@ await withBrowser(async (h) => {
   await snap(page, out, "cue");
 
   // ---- 8: the selection band surrounds a widened table ------------------------
-  await table.hover();
-  await page.getByRole("button", { name: "Edit source" }).first().click();
-  await source.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
   const longCell = "a very long cell that keeps going ".repeat(4).trim();
-  await source.fill(
-    (await source.inputValue()).replace("| plum | 7 |", `| ${longCell} | 7 |`),
-  );
-  await page.keyboard.press("Meta+Enter");
-  await source.waitFor({ state: "detached", timeout: ELEMENT_TIMEOUT_MS });
+  await table.getByText("plum", { exact: true }).click();
+  await editing.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
+  await page.keyboard.press("Meta+a");
+  await page.keyboard.type(longCell);
+  await page.keyboard.press("Escape");
+  await editing.waitFor({ state: "detached", timeout: ELEMENT_TIMEOUT_MS });
 
+  // Escape out of the cell leaves the table block-selected.
   await table.getByText("apple", { exact: true }).click();
   await page.keyboard.press("Escape");
   const band = page.locator("[data-selection-band]");

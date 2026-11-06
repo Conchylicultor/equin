@@ -595,6 +595,37 @@ Not as a `caption` string: `handle.acceptsText` derives from `"text" in schema.s
 and decides the registration arm, the forced text renderer and the merge ladders. A
 caption must be a child text block.
 
+## Display-only data (`BlockHandle.displayOnly`)
+
+> Some of a block's `data` is how it is SHOWN, not what it SAYS — a table's
+> column widths, a code block's split view. Those keys are declared
+> `displayOnly`, and markdown — a projection of what a block says — never
+> carries them.
+
+- **Serialize strips them** before the type's serializer or tag attributes see
+  the data (`withoutDisplayOnly`, in `core/markdown.ts`'s walk), so no spelling
+  can leak one and the lossless-projection property is about the rest.
+- **An apply carries them**: `markdown-apply`'s survivor data puts the stored
+  row's values back (`carryDisplayOnly`) and its identity key ignores them — an
+  agent editing a resized table keeps the widths, an edit elsewhere writes
+  nothing to it.
+- **In-app copy / paste / duplicate keep them** (they carry the raw `data`).
+  Only an external markdown round trip loses them.
+- Each key is optional in the schema (a parsed block never has it), and a
+  consumer must tolerate a stale value: a rewrite can change what it describes
+  (a table's column count) while the carried value stays.
+
+## `RichTextField`: rich text held in `data`
+
+A block's own text lives in its content doc and is edited by the block-text
+pipeline. A `RichText` that is a FIELD of the payload (a table cell) is edited by
+`RichTextField` (`web/components/rich-text-field.tsx`): seeded once from
+`initial`, every change reported through `onChange`, the owner deciding when it
+becomes a row write. Same nodes, theme (`internal/block-text-theme.ts`), format
+toolbar, shortcuts and token paste as a block's text; its own keystroke history
+(`localUndoProps`); no block structure — `onKey` sees every key first, with where
+the caret stands, and takes what it means (leave to the next cell).
+
 ## Caret geometry is stated in LINE BOXES (`internal/caret-geometry.ts`)
 
 "Is the caret on the first/last visual line" and "place the caret at column x" compare
@@ -2130,10 +2161,11 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `Editor.TurnInto` ×2
     - `Editor.BlockMenuItem` ← `page.open-as-page`
   - Contributes: `IdKinds.Kind` "block"
-  - Uses: 97 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 98 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×6
     - `primitives/dom/web-storage` ×5
     - `primitives/text-editor/caret-trigger` ×5
+    - `primitives/undo-redo` ×5
     - `infra/endpoints` ×4
     - `primitives/css/spacing` ×4
     - `primitives/css/ui-kit` ×4
@@ -2141,7 +2173,6 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `primitives/networking` ×4
     - `primitives/persistent-draft` ×4
     - `primitives/slot-render` ×4
-    - `primitives/undo-redo` ×4
     - `network/live/optimistic-mutation` ×3
     - `primitives/css/control-panel` ×3
     - `primitives/css/coords` ×3
@@ -2226,6 +2257,9 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `PageIconProps`
     - `PageOption`
     - `PageOptionsResult`
+    - `RichTextFieldCaret`
+    - `RichTextFieldKey`
+    - `RichTextFieldProps`
     - `SelectionControl`
     - `TextBlockLayoutProps`
     - `UndoConflictReason`
@@ -2267,6 +2301,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `registerBlockPasteHandler`
     - `registerBlockTextExtension`
     - `registerBlockTextExtensionSource`
+    - `RichTextField`
     - `selectableText`
     - `TextBlockLayout`
     - `undoConflictReportSink`
@@ -2283,7 +2318,6 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `useGroupedInsertableBlocks`
     - `useInsertableBlocks`
     - `useIsFramedBlock`
-    - `usePageMarkdownContext`
     - `usePageOptions`
     - `useSelectionControl`
     - `useSetFrameHover`
@@ -2489,6 +2523,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `blockSelectionRoots`
     - `canIndent`
     - `canOutdent`
+    - `carryDisplayOnly`
     - `changedFields`
     - `changedSpanEnd`
     - `childrenOf`
@@ -2594,6 +2629,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `visibleChildRule`
     - `withContainersSelected`
     - `withMintedIds`
+    - `withoutDisplayOnly`
     - `withPageKind`
     - `withPasteIds`
     - `withRuns`

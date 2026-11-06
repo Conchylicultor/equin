@@ -92,6 +92,14 @@ export { BlockTextRenderer } from "./components/block-text-renderer";
 // renderer place it. Removing the export deletes the roll-your-own-text-
 // component affordance outright (prompt was its only external consumer).
 export { TextBlockLayout } from "./components/text-block-layout";
+// Inline rich text held in a block's `data` (a table cell) rather than in its
+// content doc — the page's marks, links and tokens, its own keystroke history.
+export { RichTextField } from "./components/rich-text-field";
+export type {
+  RichTextFieldCaret,
+  RichTextFieldKey,
+  RichTextFieldProps,
+} from "./components/rich-text-field";
 export type { TextBlockLayoutProps } from "./components/text-block-layout";
 export { useBlockEditor, useEditorScope } from "./block-editor-context";
 export type { EditorScope } from "./block-editor-context";
@@ -117,9 +125,6 @@ export type { VoidCaret, VoidCaretOptions } from "./components/void-caret";
 // write is debounced and records nothing, and the void-caret registration is
 // made from inside so a caller cannot forget it.
 export { useBlockPlainText, BlockTextArea } from "./components/block-text-area";
-// The page's own markdown dialect bound to the live registry, for a block that
-// edits its markdown SOURCE in place (the table's source mode).
-export { usePageMarkdownContext } from "./internal/page-markdown-context";
 export type {
   BlockPlainText,
   BlockPlainTextControl,

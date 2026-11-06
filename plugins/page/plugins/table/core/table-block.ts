@@ -29,10 +29,18 @@ const TableAlignSchema = z.enum(["left", "center", "right"]).nullable();
 // text runs held in `data`, not a content doc. Every row and the alignment list
 // are exactly as wide as the header — the `refine` below, since a zod object
 // refinement would turn the schema into a `ZodEffects` with no `.shape`.
+//
+// `widths` is DISPLAY state (`displayOnly`): each column's width in px once the
+// user resized one, absent while the table sizes its columns to their content.
+// Markdown never carries it, so it is NOT held to the header's width: a rewrite
+// that changed the column count (an agent's edit, which carries the stored
+// widths over) leaves a stale list, and the renderer applies widths only while
+// the list matches the columns (`columnWidths`).
 const tableSchema = z.object({
   align: z.array(TableAlignSchema),
   header: z.array(RichTextSchema),
   rows: z.array(z.array(RichTextSchema)),
+  widths: z.array(z.number().int().positive()).optional(),
 });
 
 export type TableData = z.infer<typeof tableSchema>;
@@ -69,9 +77,20 @@ function startsTable(
   );
 }
 
+/**
+ * The column widths the table is drawn at: its stored `widths` while they match
+ * its columns, else `null` — the table sizes its columns to their content.
+ */
+export function columnWidths(data: TableData): readonly number[] | null {
+  return data.widths && data.widths.length === data.header.length
+    ? data.widths
+    : null;
+}
+
 export const tableBlock = defineBlock({
   type: "table",
   schema: tableSchema,
+  displayOnly: ["widths"],
   refine(data, ctx) {
     const width = data.header.length;
     if (width < 1) {

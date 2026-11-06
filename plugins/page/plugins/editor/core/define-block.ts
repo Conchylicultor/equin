@@ -407,6 +407,24 @@ export interface BlockHandle<T> {
    */
   refine?(data: T, ctx: z.RefinementCtx): void;
   /**
+   * The `data` keys that are DISPLAY STATE — how the block is shown (a table's
+   * column widths, a code block's split view), never what it says. Markdown is
+   * a projection of what a block says, so these are the keys it does not carry:
+   *
+   * - **serialize** strips them before the type's own serializer or its tag
+   *   attributes see the data (`core/markdown.ts`), so no spelling can leak one;
+   * - an **apply** that rewrites the block from markdown carries the stored
+   *   row's values over (`page/markdown-apply`'s survivor data), and its
+   *   identity key ignores them — so an agent editing a resized table keeps the
+   *   widths, and an edit elsewhere on the page writes nothing to it.
+   *
+   * In-app copy, paste and duplicate carry the raw `data`, so they keep them.
+   * What loses them is a round trip through markdown OUTSIDE the app — an
+   * external paste — which is the honest cost of a field markdown cannot say.
+   * Each key is optional in the schema, since a parsed block never has it.
+   */
+  displayOnly?: readonly string[];
+  /**
    * Enter-split behavior. By default a block splits into a sibling of the same
    * type. A block with this set instead nests the split-off content as its FIRST
    * CHILD *when it is currently expanded* (a collapsed block still splits into a
@@ -476,6 +494,7 @@ export function defineBlock<
   splitChildWhenExpanded?: { childType: string };
   authorFromData?(data: Partial<z.infer<S>>): BlockAuthor | undefined;
   refine?(data: z.infer<S>, ctx: z.RefinementCtx): void;
+  displayOnly?: readonly (keyof z.infer<S> & string)[];
 }): BlockHandle<z.infer<S>> & TextLens<S> & { anchor: A } {
   // Computed once at definition: text-bearing-ness is a fact of the schema.
   const acceptsText = "text" in opts.schema.shape;
@@ -528,6 +547,7 @@ export function defineBlock<
     splitChildWhenExpanded: opts.splitChildWhenExpanded,
     authorFromData: opts.authorFromData,
     refine: opts.refine,
+    displayOnly: opts.displayOnly,
   };
   // Neither intersection can be proved from the value, and each states a fact
   // already established above. `TextLens<S>`: the runtime `text` presence tracks
@@ -571,4 +591,51 @@ export function blockAuthorOf<T>(
  */
 export function conversionPrefixesOf(h: BlockHandle<unknown>): string[] {
   return [...(h.markdownPrefixes ?? []), ...(h.typingPrefixes ?? [])];
+}
+
+/**
+ * `data` without the type's {@link BlockHandle.displayOnly} keys — what a block
+ * SAYS, the part markdown projects. The same object back when the type declares
+ * none (or the payload is not an object), so the common case allocates nothing.
+ */
+export function withoutDisplayOnly<T>(
+  handle: Pick<BlockHandle<unknown>, "displayOnly"> | undefined,
+  data: T,
+): T {
+  const keys = handle?.displayOnly;
+  if (!keys?.length || data === null || typeof data !== "object") return data;
+  if (!keys.some((k) => k in (data as object))) return data;
+  const out = { ...(data as Record<string, unknown>) };
+  for (const k of keys) delete out[k];
+  return out as T;
+}
+
+/**
+ * `parsed` with the stored row's {@link BlockHandle.displayOnly} values put
+ * back wherever the parse has none — what a block rewritten from markdown keeps
+ * of how it was shown. A key the parse DOES carry wins (it cannot, from our own
+ * serializer, but a caller building data by hand may set one).
+ */
+export function carryDisplayOnly<T>(
+  handle: Pick<BlockHandle<unknown>, "displayOnly"> | undefined,
+  stored: unknown,
+  parsed: T,
+): T {
+  const keys = handle?.displayOnly;
+  if (
+    !keys?.length ||
+    stored === null ||
+    typeof stored !== "object" ||
+    parsed === null ||
+    typeof parsed !== "object"
+  ) {
+    return parsed;
+  }
+  let out: Record<string, unknown> | null = null;
+  for (const k of keys) {
+    if (k in (parsed as object) || !(k in stored)) continue;
+    out ??= { ...(parsed as Record<string, unknown>) };
+    out[k] = (stored as Record<string, unknown>)[k];
+  }
+  return (out ?? parsed) as T;
 }

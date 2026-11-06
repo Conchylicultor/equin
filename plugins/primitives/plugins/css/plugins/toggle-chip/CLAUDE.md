@@ -49,14 +49,14 @@ density (`md` → `control-lg`). A segment's optional `count` draws a filled
     - `ui/tokens/color-palette` ×12
     - `ui/tokens/type-scale` ×6
     - `ui/tokens/shape --spacing`
-  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×20
     - `primitives` ×7
     - `debug` ×5
     - `stats` ×5
     - `fields` ×3
+    - `page` ×3
     - `config_v2` ×2
-    - `page` ×2
     - `ui` ×2
     - `apps-core/surface`
     - `build/serve-composition`

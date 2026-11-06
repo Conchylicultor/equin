@@ -521,8 +521,8 @@ annotation in the key would make every status change look like a new block.
     - `readPageAsMarkdown`
     - `serverMarkdownContext`
 - Core:
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page/editor` ×28
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×30
     - `primitives/rank.Rank`
   - Exports (types):
     - `BoundaryViolation`

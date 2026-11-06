@@ -18,6 +18,7 @@ export const codeBlock = defineBlock({
     // undefined ⇒ split. Ignored for a language with no preview.
     view: z.enum(CODE_BLOCK_VIEWS).optional(),
   }),
+  displayOnly: ["view"],
   label: "Code",
   icon: codeIcon,
   aliases: ["snippet", "syntax", "monospace", "pre"],

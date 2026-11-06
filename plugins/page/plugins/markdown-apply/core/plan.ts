@@ -68,6 +68,7 @@
 
 import {
   PAGE_BLOCK_TYPE,
+  carryDisplayOnly,
   coalesce,
   dataEqual,
   markdownParseTagNames,
@@ -235,16 +236,21 @@ function runsEqual(a: RichText, b: RichText): boolean {
 
 /**
  * The `data` a survivor's update may carry: everything the incoming node says,
+ * plus the stored row's display-only keys (`BlockHandle.displayOnly`),
  * with `text` forced back to the row's CURRENT projection (invariant 1). For a
  * void target type the incoming payload passes through unchanged — including the
  * removal of a `text` key a text→void conversion leaves behind, which that
  * type's strict schema would otherwise reject at the write boundary.
  */
 function survivorData(
-  incoming: unknown,
+  stored: unknown,
+  parsed: unknown,
   handle: BlockHandle<unknown> | undefined,
   currentRuns: RichText,
 ): unknown {
+  // How the block is SHOWN rides over from the stored row: markdown never
+  // carries a display-only key, so the parse cannot mean to clear one.
+  const incoming = carryDisplayOnly(handle, stored, parsed);
   if (!handle?.text) return incoming;
   const base =
     incoming !== null &&
@@ -699,7 +705,7 @@ export function planMarkdownApply<R extends StoredRow>(
     if (row.type !== PAGE_BLOCK_TYPE) {
       const handle = byType.get(entry.type);
       const currentRuns = storedRuns(row.data);
-      const nextData = survivorData(entry.data, handle, currentRuns);
+      const nextData = survivorData(row.data, entry.data, handle, currentRuns);
       if (row.type !== entry.type) changes.type = entry.type;
       if (!dataEqual(row.data, nextData)) changes.data = nextData;
       if (handle?.text) {

@@ -38820,10 +38820,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
         - Contributes: `IdKinds.Kind` "block"
-        - Uses: 97 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 98 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `network/live/live-state` ×6
           - `primitives/dom/web-storage` ×5
           - `primitives/text-editor/caret-trigger` ×5
+          - `primitives/undo-redo` ×5
           - `infra/endpoints` ×4
           - `primitives/css/spacing` ×4
           - `primitives/css/ui-kit` ×4
@@ -38831,7 +38832,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/networking` ×4
           - `primitives/persistent-draft` ×4
           - `primitives/slot-render` ×4
-          - `primitives/undo-redo` ×4
           - `network/live/optimistic-mutation` ×3
           - `primitives/css/control-panel` ×3
           - `primitives/css/coords` ×3
@@ -38916,6 +38916,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageIconProps`
           - `PageOption`
           - `PageOptionsResult`
+          - `RichTextFieldCaret`
+          - `RichTextFieldKey`
+          - `RichTextFieldProps`
           - `SelectionControl`
           - `TextBlockLayoutProps`
           - `UndoConflictReason`
@@ -38957,6 +38960,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `registerBlockPasteHandler`
           - `registerBlockTextExtension`
           - `registerBlockTextExtensionSource`
+          - `RichTextField`
           - `selectableText`
           - `TextBlockLayout`
           - `undoConflictReportSink`
@@ -38973,7 +38977,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useGroupedInsertableBlocks`
           - `useInsertableBlocks`
           - `useIsFramedBlock`
-          - `usePageMarkdownContext`
           - `usePageOptions`
           - `useSelectionControl`
           - `useSetFrameHover`
@@ -39179,6 +39182,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `blockSelectionRoots`
           - `canIndent`
           - `canOutdent`
+          - `carryDisplayOnly`
           - `changedFields`
           - `changedSpanEnd`
           - `childrenOf`
@@ -39284,6 +39288,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `visibleChildRule`
           - `withContainersSelected`
           - `withMintedIds`
+          - `withoutDisplayOnly`
           - `withPageKind`
           - `withPasteIds`
           - `withRuns`
@@ -39931,8 +39936,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readPageAsMarkdown`
           - `serverMarkdownContext`
       - Core:
-        - Uses: 29 symbols — full list in [`plugins/page/plugins/markdown-apply/REFERENCE.md`](../plugins/page/plugins/markdown-apply/REFERENCE.md)
-          - `page/editor` ×28
+        - Uses: 31 symbols — full list in [`plugins/page/plugins/markdown-apply/REFERENCE.md`](../plugins/page/plugins/markdown-apply/REFERENCE.md)
+          - `page/editor` ×30
           - `primitives/rank.Rank`
         - Exports (types):
           - `BoundaryViolation`
@@ -40579,29 +40584,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-medium`
-    - **`table`** — Table block type: a GFM pipe table rendered as a real table, with an in-place markdown source mode for editing it. Table block type: registers its `data` schema (column alignment, header cells, body rows) at the server write boundary.
+    - **`table`** — Table block type: a GFM pipe table edited in place like Notion's — click a cell and type, Tab between cells, grips to move / duplicate / delete rows and columns, insert points, add bars and column resizing (widths are display-only data, never in the markdown). Table block type: registers its `data` schema (column alignment, header cells, body rows) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "table" → `TableBlock`
-        - Uses:
-          - `page/editor.BLOCK_INSET`
-          - `page/editor.BlockRendererProps`
-          - `page/editor.Editor`
-          - `page/editor.selectableText`
-          - `page/editor.useBlockActivate`
-          - `page/editor.usePageMarkdownContext`
-          - `page/editor.WideBlock`
+        - Uses: 26 symbols — full list in [`plugins/page/plugins/table/REFERENCE.md`](../plugins/page/plugins/table/REFERENCE.md)
+          - `page/editor` ×10
+          - `primitives/css/coords` ×4
+          - `primitives/css/control-panel` ×2
+          - `primitives/latest-ref` ×2
           - `page/read-only-view.RunsRenderer`
-          - `primitives/css/pin.Pin`
+          - `primitives/css/center.Center`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Inset`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/text.Text`
           - `primitives/css/text.textVariantClass`
+          - `primitives/css/toggle-chip.SegmentedControl`
           - `primitives/css/ui-kit.cn`
-          - `primitives/hover-reveal.hoverRevealGroup`
-          - `primitives/hover-reveal.hoverRevealTarget`
-          - `primitives/icon-button.IconButton`
-          - `primitives/undo-redo.localUndoProps`
+          - `ui/icons.Icon`
       - Server:
         - Contributes: `page.block-data` "table"
         - Uses: `page/editor.Editor`
@@ -40616,16 +40614,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `TableAlign`
           - `TableData`
-        - Exports (values): `tableBlock`
+        - Exports (values):
+          - `columnWidths`
+          - `tableBlock`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --background`
           - `ui/tokens/color-palette --border`
+          - `ui/tokens/color-palette --foreground`
           - `ui/tokens/color-palette --muted`
-          - `ui/tokens/color-palette --ring`
+          - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
+          - `ui/tokens/shadow --shadow-xs`
           - `ui/tokens/shape --radius`
+          - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-medium`
     - **`tags`** — Page tags, web half: the vocabulary and per-page reads (usePageTags, useListedPageTags off a listed row's exposed `tags`, the editable usePageTagsEditor), the soft TagChip / TagDot, the read-only PageTagChips, and the TagPicker popover (search or create, toggle, and per-tag rename / recolor / delete). Shows a page's tags after its title on every page reference (sub-page rows, link blocks, backlinks), and presents the exposed `tags` field (options read live from the vocabulary) in every list whose rows are blocks. Page tags, server half: the page_tags vocabulary and the page_blocks_ext_tags assignments (one ordered tag-id list per tagged page), both served live; the vocabulary CRUD and per-page PUT endpoints; and the reads/writes other plugins use — loadPageTags (the <page-meta> header), resolveTagNames (name → tag, refusing unknown names unless created explicitly) and writeResolvedPageTags / setPageTags. A page's tags are exposed as the `tags` field of every list whose rows are blocks (LiveColumns.Expose).
       - Web:
@@ -43283,10 +43286,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 132 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 133 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×42
               - `primitives` ×25
-              - `page` ×18
+              - `page` ×19
               - `conversations` ×9
               - `debug` ×6
               - `ui` ×5
@@ -43491,9 +43494,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×9
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
-            - Imported by: 47 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×16
-              - `page` ×5
+              - `page` ×6
               - `primitives` ×4
               - `audience` ×3
               - `config_v2` ×3
@@ -43530,12 +43533,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
               - `apps` ×19
               - `primitives` ×11
               - `debug` ×3
+              - `page` ×3
               - `hints` ×2
-              - `page` ×2
               - `screenshot` ×2
               - `active-data/go`
               - `map`
@@ -43882,10 +43885,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 60 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×18
               - `apps` ×16
-              - `page` ×11
+              - `page` ×10
               - `conversations` ×4
               - `tasks` ×2
               - `apps-core/app-rail`
@@ -44541,14 +44544,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape --spacing`
-            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+            - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
               - `apps` ×20
               - `primitives` ×7
               - `debug` ×5
               - `stats` ×5
               - `fields` ×3
+              - `page` ×3
               - `config_v2` ×2
-              - `page` ×2
               - `ui` ×2
               - `apps-core/surface`
               - `build/serve-composition`
@@ -47105,9 +47108,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+        - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
           - `apps` ×12
-          - `page` ×10
+          - `page` ×9
           - `primitives` ×7
           - `ui` ×4
           - `conversations` ×2
@@ -47131,12 +47134,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 131 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 130 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×46
           - `conversations` ×20
           - `primitives` ×20
-          - `page` ×8
           - `tasks` ×8
+          - `page` ×7
           - `debug` ×5
           - `config_v2` ×4
           - `infra` ×3
@@ -47233,10 +47236,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 80 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×33
           - `apps` ×24
-          - `page` ×4
+          - `page` ×5
           - `conversations` ×3
           - `map` ×2
           - `network` ×2
@@ -50696,7 +50699,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/page-link`
           - `page/place`
           - `page/prototype`
-          - `page/table`
           - `page/tags`
           - `primitives/text-editor`
     - **`usage-rank`** — Frecency usage ranking for any (namespace, key) set: useRecordUsage() returns the recorder that fires one atomic decay-and-increment, useUsageOrder() returns the most-used-first order — one coalesced id-set subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort — and useRecentUsage() lists a namespace's most recently used keys (a bounded window), for a Recent row with no candidate set to rank. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a lookup-only live collection read by id set, and the nightly sweep of keys unused for a year.
@@ -58216,13 +58218,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 48 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 49 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×19
               - `primitives` ×9
               - `ui` ×5
               - `framework` ×3
+              - `page` ×3
               - `apps-core` ×2
-              - `page` ×2
               - `screenshot` ×2
               - `tasks` ×2
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
