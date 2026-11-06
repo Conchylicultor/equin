@@ -294,22 +294,33 @@ the agent-write repair at both ends (the session owns those writes; its close
 reverts them), and allows ONE `session()` — a second context would outlive the
 script, owned by nobody.
 
-## A frame time from an agent's run is mostly waiting
+## An e2e run's browser runs in the foreground
 
-An agent's e2e run inherits darwinbg (the `e2e` host pool is `holder:
-"inherit"`), so its Chromium runs on the efficiency cores, throttled. On a
-loaded host the renderer then waits seconds to be scheduled, and every
-wall-clock measure — long tasks, long animation frames, a CPU profile's self
-time (the sampler charges a descheduled thread to whatever is on its stack) —
-reports that wait as work. /demo measured 36.5 s of > 50 ms tasks in 30 s, of
-which 1.6 s was CPU; in the foreground, 1.2 s
+An agent session is darwinbg as a whole. A Chromium launched from it ran on
+the efficiency cores, throttled; on a loaded host its renderer waited seconds
+to be scheduled, and every wall-clock measure — long tasks, long animation
+frames, a CPU profile's self time (the macOS sampler charges a descheduled
+thread to whatever is on its stack) — reported that wait as work. /demo
+measured 36.5 s of > 50 ms tasks in 30 s, of which 1.6 s was CPU; in the
+foreground, 1.2–1.4 s
 (`research/2026-11-06-apps-demo-main-thread-is-scheduling-starvation.md`).
+
+So `./equin run` spawns an e2e script under `withForegroundPriority` for as
+long as it holds its `e2e` slot (`cli/plugins/run`): the script and the
+Chromium it launches inherit the foreground, as the user's own browser runs,
+and every perf script measures the page with no flag to remember. The `e2e`
+pool bounds what is lifted to two runs host-wide.
+
+`describeRenderEnv` / `renderEnvLines` print the tier READ from the process
+(`scheduling tier foreground`), and flag a `darwinbg` run's frame times as
+scheduler waits — a script run some other way still says so. An `--attach`ed
+run drives the agent browser session's Chromium, whose tier the script cannot
+read: `unknown`.
 
 `e2e/main-thread-trace.ts --path <route>` prints every main-thread task's wall
 time beside its thread CPU time (the Chrome trace's `tdur`), and breaks down
 the tasks that RAN longest by trace event (style recalc, layout, parse, GC)
-and JS call. `--foreground` takes the run out of darwinbg first, as the user's
-own browser runs.
+and JS call — wall far above CPU means the thread waited, not worked.
 
 ## `diffImages` — two captures in, a number and a picture out
 

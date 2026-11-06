@@ -146,7 +146,10 @@ export const e2ePool = defineHostPool({
   id: "e2e",
   size: HOST_POOLS.e2e.size,
   // `inherit`: decided from measured waits, like `browser-fetch` — with two
-  // slots for a 21 s median hold, the queue behind a holder is short.
+  // slots for a 21 s median hold, the queue behind a holder is short. The
+  // script run itself is lifted by its caller (`./equin run` spawns it in the
+  // foreground, so its Chromium measures the page rather than scheduler
+  // waits); the browser MCP host's per-call drives need no lift.
   holder: "inherit",
 });
 

@@ -8,15 +8,21 @@
  * - `withBrowser` runs chrome-headless-shell unless `--headed`, which
  *   rasterizes and composites in software (SwiftShader): paint, raster and
  *   compositing cost nothing like they do on a GPU.
- * - An agent session is launched under `taskpolicy -b` (darwinbg), and the
- *   Chromium it spawns inherits it: E-cores, throttled I/O. Every frame time
- *   is inflated. The tier can only be read by the process itself (see
- *   packages/spawn-priority), so it is INFERRED here from the agent session
- *   that launched the run, and said to be inferred.
+ * - A darwinbg Chromium (E-cores, throttled) waits to be scheduled, and every
+ *   frame time reports the wait as work — on a loaded host ~96 % of it
+ *   (research/2026-11-06-apps-demo-main-thread-is-scheduling-starvation.md).
+ *   `./equin run` spawns an e2e script in the foreground, so this should read
+ *   `foreground`; the tier is READ (a self read, the only trustworthy one —
+ *   packages/spawn-priority) rather than assumed, because a script run some
+ *   other way, or a later change to how runs are admitted, would otherwise
+ *   print starved numbers as real ones. The launched Chromium inherits this
+ *   process's tier at spawn; an `--attach`ed run drives the agent browser
+ *   session's Chromium instead, whose tier this process cannot read.
  */
 
 import type { Page } from "playwright";
-import { flag } from "./args";
+import { readDarwinBackground } from "@plugins/packages/plugins/spawn-priority/core";
+import { arg, flag } from "./args";
 
 export interface RenderEnv {
   headless: boolean;
@@ -26,8 +32,12 @@ export interface RenderEnv {
   devicePixelRatio: number;
   /** Median rAF interval at rest: the display's refresh as the page sees it. */
   frameMs: number;
-  /** Launched from a Claude Code session, which agents run in darwinbg. */
-  agentSession: boolean;
+  /**
+   * The scheduling tier of the Chromium measured: this process's own (read
+   * back), which the browser it launched inherited — or `unknown` for an
+   * `--attach`ed run, whose browser this process did not launch.
+   */
+  tier: "darwinbg" | "foreground" | "unsupported" | "unknown";
 }
 
 export async function describeRenderEnv(page: Page): Promise<RenderEnv> {
@@ -64,20 +74,26 @@ export async function describeRenderEnv(page: Page): Promise<RenderEnv> {
     headless: !flag("headed"),
     ...inPage,
     softwareGpu: /swiftshader|llvmpipe|software/i.test(inPage.gpu),
-    agentSession: process.env.CLAUDECODE === "1",
+    tier:
+      arg("attach") !== undefined ? "unknown" : readDarwinBackground().kind,
   };
 }
 
 /** The env as report lines; the second warns when the numbers are not a real browser's. */
 export function renderEnvLines(env: RenderEnv): string[] {
   const lines = [
-    `[env] ${env.headless ? "headless shell" : "headed"}, gpu "${env.gpu}", dpr ${env.devicePixelRatio}, frame ${env.frameMs.toFixed(1)} ms${env.agentSession ? ", agent session (darwinbg inherited)" : ""}`,
+    `[env] ${env.headless ? "headless shell" : "headed"}, gpu "${env.gpu}", dpr ${env.devicePixelRatio}, frame ${env.frameMs.toFixed(1)} ms, scheduling tier ${env.tier}`,
   ];
   const caveats = [
     ...(env.softwareGpu
       ? ["software GPU (paint/raster/composite unreal)"]
       : []),
-    ...(env.agentSession ? ["demoted CPU (frame times inflated)"] : []),
+    ...(env.tier === "darwinbg"
+      ? ["darwinbg CPU (frame times are mostly scheduler waits)"]
+      : []),
+    ...(env.tier === "unknown"
+      ? ["attached browser of unknown scheduling tier"]
+      : []),
   ];
   if (caveats.length > 0) {
     lines.push(

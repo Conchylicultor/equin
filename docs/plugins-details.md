@@ -38047,6 +38047,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `debug/profiling/cold-start`
+          - `framework/cli/run`
           - `framework/tooling/e2e-harness`
           - `infra/host/host-admission`
           - `infra/spawn`

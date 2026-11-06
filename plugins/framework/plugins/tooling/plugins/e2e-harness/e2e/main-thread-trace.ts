@@ -8,25 +8,22 @@
 //
 // Usage:
 //   ./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/main-thread-trace.ts \
-//     [--path /demo] [--seconds 30] [--tasks 8] [--top 12] [--out /tmp/main-thread-trace] [--foreground]
+//     [--path /demo] [--seconds 30] [--tasks 8] [--top 12] [--out /tmp/main-thread-trace]
 //
-// Wall is not work. An agent's e2e run inherits darwinbg (efficiency cores,
-// throttled), so on a loaded host the renderer waits seconds to be scheduled:
-// /demo measured 124 tasks over 50 ms, 36.5 s wall but 1.6 s CPU (2026-11-06,
-// load 40–90). A long-animation-frame or long-task count taken that way says
-// how starved the browser was, not what the page costs. `--foreground` takes
-// this process — and the Chromium it launches — out of darwinbg first, as the
-// user's own browser runs; compare the CPU column either way.
+// Wall is not work. A darwinbg Chromium (efficiency cores, throttled) waits
+// seconds to be scheduled on a loaded host: /demo measured 124 tasks over
+// 50 ms, 36.5 s wall but 1.6 s CPU (2026-11-06, load 40–90). A
+// long-animation-frame or long-task count taken that way says how starved the
+// browser was, not what the page costs. `./equin run` now spawns every e2e
+// script — and so its Chromium — in the foreground, as the user's own browser
+// runs; the tier is printed first, and the CPU column holds either way.
 //
 // Writes `<out>.json` (load it in Chrome DevTools → Performance).
 
-import { arg, flag, numArg } from "./args";
+import { arg, numArg } from "./args";
 import { pageUrl } from "./target";
 import { withBrowser } from "./browser";
-import {
-  leaveDarwinBackground,
-  readDarwinBackground,
-} from "@plugins/packages/plugins/spawn-priority/core";
+import { readDarwinBackground } from "@plugins/packages/plugins/spawn-priority/core";
 import { writeFileSync } from "node:fs";
 import { z } from "zod";
 
@@ -35,7 +32,6 @@ const taskCount = numArg("tasks", 8);
 const top = numArg("top", 12);
 const url = pageUrl();
 const out = arg("out", "/tmp/main-thread-trace");
-if (flag("foreground")) leaveDarwinBackground();
 console.log(`scheduling tier: ${readDarwinBackground().kind}`);
 
 // A trace event as Chrome emits it — Playwright types the payload as string

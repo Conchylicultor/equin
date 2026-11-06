@@ -11,6 +11,7 @@ import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { MODULE_EXTENSION } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/module-extension/core";
 import { isE2eScriptPath } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
 import { withDirectOp } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
+import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority/core";
 import {
   getWorktreeRoot,
   spawnPassthrough,
@@ -81,12 +82,25 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
   // below, byte-for-byte as before: no grant, no marker, no record — a
   // one-off data script is not an op, and must not queue behind builds to
   // run.
+  //
+  // The script runs in the FOREGROUND tier, and so does the Chromium it
+  // launches (darwinbg is inherited at spawn). An agent session is darwinbg
+  // as a whole; left there, its browser ran on the efficiency cores and every
+  // wall-clock number the run took — long tasks, long animation frames, a
+  // CPU profile's self time — was mostly the renderer waiting to be scheduled:
+  // /demo measured 36.5 s of > 50 ms tasks in 30 s with 1.6 s of CPU, against
+  // 1.2–1.4 s in the foreground
+  // (research/2026-11-06-apps-demo-main-thread-is-scheduling-starvation.md).
+  // Lifting here, at the one place an e2e run is admitted, makes every perf
+  // script measure what the user's browser would, with no flag to forget. The
+  // `e2e` pool bounds what is lifted (two runs host-wide), the same argument
+  // that lets a `cpu` grant holder run in the foreground; this process does
+  // nothing else while it waits on the script.
   if (isE2eScriptPath(rel)) {
     const outcome = await withDirectOp("e2e", { max: 1 }, async (grant) => {
-      const { exitCode, signalCode } = await spawnScript({
-        ...process.env,
-        ...grant.env(),
-      });
+      const { exitCode, signalCode } = await withForegroundPriority(() =>
+        spawnScript({ ...process.env, ...grant.env() }),
+      );
       if (signalCode !== null) {
         console.error(`\n${rel} was killed by ${signalCode}.`);
         return "failed";

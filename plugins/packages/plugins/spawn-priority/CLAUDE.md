@@ -136,6 +136,7 @@ re-exports what server consumers use (same-plugin re-export), and
 - Cross-plugin:
   - Imported by:
     - `debug/profiling/cold-start`
+    - `framework/cli/run`
     - `framework/tooling/e2e-harness`
     - `infra/host/host-admission`
     - `infra/spawn`

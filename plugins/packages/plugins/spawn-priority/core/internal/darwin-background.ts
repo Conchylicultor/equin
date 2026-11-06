@@ -79,9 +79,11 @@ function setDarwinBg(lib: Lib, background: boolean): void {
  * `boostInteractiveQos`: lifting arbitrary agent work out of darwinbg defeats
  * the isolation this plugin exists for. Its callers: host-admission's
  * `withHostGrant`, for a grant's body in either lane — every op queued for the
- * grant waits out its holder, and the grant bounds what is lifted — and the
+ * grant waits out its holder, and the grant bounds what is lifted — the
  * Browser app's engine host, for its whole life (a human watches and types
- * into its pages).
+ * into its pages), and `./equin run` for an e2e script holding its `e2e`
+ * slot (the pool bounds it to two runs; a demoted Chromium's frame times
+ * measure scheduler waits, not the page).
  *
  * It lifts the WHOLE process for as long as `fn` runs, so anything else this
  * process does meanwhile is lifted too. To start one child in the foreground

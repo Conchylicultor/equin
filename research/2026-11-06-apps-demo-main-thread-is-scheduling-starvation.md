@@ -54,12 +54,14 @@ not run, not a thread that worked.
 ## What changed
 
 - `framework/tooling/e2e-harness/e2e/main-thread-trace.ts` — the
-  wall-vs-CPU trace tool (any page: `--path`; `--foreground` lifts the run out
-  of darwinbg first, as the user's browser runs).
+  wall-vs-CPU trace tool (any page: `--path`).
 
 ## Not done here (filed / reported)
 
-- Frame-time numbers from agent e2e runs measure starvation. Either the
-  harness says so (CPU beside wall), or a perf run lifts its browser.
+- ~~Frame-time numbers from agent e2e runs measure starvation.~~ Fixed:
+  `./equin run` now spawns every e2e script in the foreground (its Chromium
+  inherits it), and `renderEnvLines` prints the tier read from the process
+  instead of inferring darwinbg from the session. `--foreground` is gone from
+  `main-thread-trace.ts`.
 - The stall report should say when no frame covers the freeze, i.e. the
   thread was not scheduled (task-1793972180-utmus5's area).
