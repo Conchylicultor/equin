@@ -14,6 +14,7 @@ import {
   REVIEW_MARKER,
   configFileOwner,
   hasReviewMarker,
+  seedConditionHolds,
   withOverrideLegend,
 } from "@plugins/config_v2/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
@@ -118,10 +119,10 @@ function isWorthAuthoring(opts: {
     // object. A non-object means the file on disk is not the artifact we wrote,
     // so the descriptor's predicate would be answering about the wrong thing.
     throw new Error(
-      `seedAuthoredOverrides: config/${opts.originRel} does not parse to a JSON object, so its descriptor's seedWhen() has nothing to read.`,
+      `seedAuthoredOverrides: config/${opts.originRel} does not parse to a JSON object, so its descriptor's seedWhen has nothing to read.`,
     );
   }
-  return seedWhen(opts.originContent);
+  return seedConditionHolds(seedWhen, opts.originContent);
 }
 
 function remarkMarkerLines(
@@ -267,13 +268,6 @@ async function remarkIfStale(opts: {
 export async function applyAuthoredOverrideSeeding(opts: {
   configDir: AppPath;
   descriptorsByOriginRel: Map<string, ConfigDescriptor>;
-  /**
-   * The LIVE descriptor of an origin, for its `seedWhen` predicate — code, which
-   * a descriptor read from the build's evaluated records holds only as a
-   * stand-in. Asked only on the path that would create a file. Absent: the
-   * descriptors above are live already.
-   */
-  liveDescriptor?: (originRel: string) => Promise<ConfigDescriptor>;
 }): Promise<AuthoredOverrideSeedResult> {
   const { configDir } = opts;
   const seeded: string[] = [];
@@ -323,11 +317,7 @@ export async function applyAuthoredOverrideSeeding(opts: {
       : `${owner.name}.jsonc`;
     const basePath = joinAppPath(configDir, baseRel);
     if (!existsSync(basePath)) {
-      const asked =
-        descriptor.requiresAuthoredOverride.seedWhen && opts.liveDescriptor
-          ? await opts.liveDescriptor(originRel)
-          : descriptor;
-      if (isWorthAuthoring({ descriptor: asked, originRel, originContent })) {
+      if (isWorthAuthoring({ descriptor, originRel, originContent })) {
         await writeGenerated({
           file: basePath,
           content: renderHeaderedFile(
@@ -385,25 +375,12 @@ export async function applyAuthoredOverrideSeeding(opts: {
 export async function seedAuthoredOverrides(opts: {
   pass: CodegenPass;
 }): Promise<AuthoredOverrideSeedResult> {
-  let live$: Promise<Map<string, ConfigDescriptor>> | undefined;
   return await applyAuthoredOverrideSeeding({
     // `root`: the checkout root the caller works in.
     configDir: joinAppPath(opts.pass.root, "config"),
     descriptorsByOriginRel: await loadConfigDescriptorsByOriginPath({
       pass: opts.pass,
     }),
-    liveDescriptor: async (originRel) => {
-      const live = (live$ ??= loadConfigDescriptorsByOriginPath({
-        pass: opts.pass,
-        live: true,
-      }));
-      const d = (await live).get(originRel);
-      if (!d)
-        throw new Error(
-          `seedAuthoredOverrides: no live descriptor for config/${originRel}, though the evaluated records hold one.`,
-        );
-      return d;
-    },
   });
 }
 

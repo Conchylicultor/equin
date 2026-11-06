@@ -3,6 +3,7 @@ import type {
   ConfigValues,
   ConfigSource,
   OriginDefaultsFrom,
+  SeedCondition,
 } from "./types";
 import type { DefaultedFields, FieldsRecord } from "@plugins/fields/core";
 import type { ConfigMigration } from "./config-migration";
@@ -18,7 +19,7 @@ interface DefineConfigOpts<F extends FieldsRecord> {
   migrations?: readonly ConfigMigration[];
   requiresAuthoredOverride?: {
     guidance: string[];
-    seedWhen?: (defaults: Record<string, unknown>) => boolean;
+    seedWhen?: SeedCondition;
   };
 }
 
@@ -54,6 +55,15 @@ export function defineConfig<const F extends FieldsRecord>(
   if (new Set(ids).size !== ids.length) {
     throw new Error(
       `defineConfig: "${opts.name ?? "config"}" declares a migration id twice (${ids.join(", ")}).`,
+    );
+  }
+
+  // `seedWhen` is data naming a field: a field the config does not declare
+  // would never seed and never say so.
+  const seedField = opts.requiresAuthoredOverride?.seedWhen?.field;
+  if (seedField !== undefined && !(seedField in opts.fields)) {
+    throw new Error(
+      `defineConfig: "${opts.name ?? "config"}" seeds when "${seedField}" has entries, but declares no such field.`,
     );
   }
 

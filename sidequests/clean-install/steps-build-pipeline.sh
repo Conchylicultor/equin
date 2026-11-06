@@ -213,10 +213,10 @@ bp_worktree bp-w0
 P="$HOME/.equin/worktrees/att-bp-w0/build-profile-*.json"
 bp_build W0-prime "$P" -- ./equin build --skip-checks
 for n in 1 2 3; do bp_build W0-$n "$P" -- ./equin build --skip-checks; done
-bp_build W0-full "$P" -- ./equin build
+[ '"${BUILD_PIPELINE_W0_FULL:-1}"' = 0 ] || bp_build W0-full "$P" -- ./equin build
 '
 }
-step_06_w0_DOC="W0: fresh agent worktree + db fork; the priming build (per-worktree fingerprints empty), 3 unchanged --skip-checks builds, one full build with checks."
+step_06_w0_DOC="W0: fresh agent worktree + db fork; the priming build (per-worktree fingerprints empty), 3 unchanged --skip-checks builds, one full build with checks (BUILD_PIPELINE_W0_FULL=0 skips it: ~19 min of cold type-check)."
 step_06_w0_TAG="harness-only"
 
 step_15_fsu() {

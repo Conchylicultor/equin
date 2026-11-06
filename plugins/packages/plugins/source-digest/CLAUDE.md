@@ -44,6 +44,14 @@ const digest = await sourceDigest([myCode]);
   when it runs; a file edited after its module was imported would be counted
   as code this process runs, so it is read as close to the import as possible,
   and never re-read.
+- **`closureChangedSince` reads only what changed.** The restart-skip
+  judgement walks a backend's whole entry closure on every deploy. Each file's
+  scanned imports are remembered per process under its stat stamp
+  (`ino:size:ctime`, recorded only when the stamp before and after the read
+  agree), so a later walk still visits and stats every file and re-resolves
+  every import, but reads and scans only files whose stamp moved: O(closure)
+  stats, O(changed files) reads. restart-skip walks it once after boot (a
+  warm-up), so the first deploy asks cheaply too.
 - **Keep the included module small.** The digest moves with everything the
   module loads: include the module holding the parse or the compiler, not the
   plugin's server entry, or every unrelated change rebuilds the state.

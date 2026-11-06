@@ -39,7 +39,10 @@ import {
   idealArtifactBuildThreads,
   seedAddressDir,
 } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/cli";
-import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import {
+  installRepoView,
+  openRepoView,
+} from "@plugins/framework/plugins/tooling/core";
 import {
   currentRecordStore,
   installRecordStore,
@@ -442,15 +445,23 @@ export async function prepareCompositionSources(opts: {
       threads: Math.min(idealRecordWorkerThreads(), opts.grant.units),
     })),
   );
-  const repo = await loadRepoSnapshot(root);
+  // The build's ONE view of the checkout (`openRepoView`): this snapshot, kept
+  // up to date by the build's own writes (every writer notes what it wrote),
+  // so no later step lists the tree again. The frontend's own snapshot checks
+  // it at the end (`assertAgrees`): a write that escaped it fails the build.
+  const view = await openRepoView(root);
+  installRepoView(view);
+  const repo = await view.current();
   // The build's codegen pass, handed to stage 2 and the deploy: the trees read
-  // `repo`, and each barrel-evaluation phase re-takes the snapshot when it
+  // `repo`, and each barrel-evaluation phase reads the view as of when it
   // starts, after the previous phase's writes.
-  const pass = writingCodegenPass(repo, () => loadRepoSnapshot(root));
+  const pass = writingCodegenPass(repo, () => view.current());
   endSpan();
 
   endSpan = hooks.span("bunInstall", "build:setup", "bun install");
   const deps = await ensureDeps({ root, log: hooks.log, files: repo.all() });
+  // An install may rewrite the lockfile (bun's own write, not one of ours).
+  if (deps.kind !== "fresh") view.noteWrites([joinAppPath(root, "bun.lock")]);
   hooks.log(
     {
       fresh: "Dependencies already up to date.",
@@ -813,6 +824,19 @@ export async function fastValidationJobs(opts: {
       lines.push({ text, stream: "stdout" });
     const rss = maxRssLine(`tsc ${program.name}`, run.maxRssBytes);
     if (rss) lines.push({ text: rss, stream: "stdout" });
+    // Where the step's wall goes (the parallel stage's longest job on a
+    // no-change build): the host slot queue, the worker process spawn to
+    // reap, and the CPU it burned — the rest is this process reading the tree.
+    lines.push({
+      text:
+        `tsc ${program.name}: step ${Math.round(performance.now() - start)}ms = ` +
+        `slot wait ${Math.round(run.slotWaitMs)}ms + worker ${Math.round(run.wallMs)}ms` +
+        (run.cpuTimeMicros === undefined
+          ? ""
+          : ` (cpu ${Math.round(run.cpuTimeMicros / 1000)}ms)`) +
+        " + the rest",
+      stream: "stdout",
+    });
     return {
       id: `tsc:${program.name}`,
       label: `tsc ${program.name}`,

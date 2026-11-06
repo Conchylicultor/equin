@@ -1,3 +1,4 @@
+import { noteRepoWrites } from "@plugins/framework/plugins/tooling/core";
 import { unlinkSync, rmdirSync } from "fs";
 import {
   existsSync,
@@ -582,8 +583,11 @@ export function pruneOrphanedConfigFiles(opts: {
   // Decide the whole batch before touching the disk.
   if (stranded.length > 0) throw new Error(renderStrandedReport(stranded));
 
-  for (const relPath of prunable)
-    unlinkSync(joinAppPath(opts.configDir, relPath));
+  for (const relPath of prunable) {
+    const file = joinAppPath(opts.configDir, relPath);
+    unlinkSync(file);
+    noteRepoWrites([file]);
+  }
 
   if (prunable.length > 0) removeEmptyDirs(opts.configDir, opts.configDir);
   return prunable;

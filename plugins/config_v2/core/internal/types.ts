@@ -99,6 +99,30 @@ export interface ConfigDescriptor<
     // Gates SEEDING ONLY, never registration: the descriptor stays live, so an
     // override that already exists is never pruned, re-seeded or ignored when
     // the answer later flips to false.
-    seedWhen?: (defaults: Record<string, unknown>) => boolean;
+    //
+    // DATA, not a function: the build reads descriptors from the evaluated
+    // barrel records (no barrel imported when nothing changed), and a function
+    // is not in a record — asking one meant importing every barrel live on
+    // every build.
+    seedWhen?: SeedCondition;
   };
+}
+
+/**
+ * When a missing authored override is worth seeding, as data: the origin's
+ * defaults hold, under `field`, an array of at least `minLength` entries.
+ * Read by {@link seedConditionHolds}.
+ */
+export interface SeedCondition {
+  readonly field: string;
+  readonly minLength: number;
+}
+
+/** Whether `defaults` (an origin's effective defaults) meet `condition`. */
+export function seedConditionHolds(
+  condition: SeedCondition,
+  defaults: Record<string, unknown>,
+): boolean {
+  const value = defaults[condition.field];
+  return Array.isArray(value) && value.length >= condition.minLength;
 }

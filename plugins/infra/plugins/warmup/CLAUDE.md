@@ -52,11 +52,12 @@ like `defineJob`.
     - `WarmupHost`
     - `warmupRunOf`
 - Cross-plugin:
-  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks` ×7
     - `apps` ×6
     - `infra` ×4
     - `conversations` ×2
+    - `build/restart-skip`
     - `debug/config-orphans`
     - `page/links`
     - `plugin-meta/plugin-tree`

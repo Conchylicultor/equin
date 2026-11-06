@@ -4,6 +4,7 @@
 // the same `formatInScope` over the same `formatSource`, so they cannot
 // disagree about what "formatted" means.
 
+import { noteRepoWrites } from "@plugins/framework/plugins/tooling/core";
 import { writeFile } from "fs/promises";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
@@ -192,6 +193,7 @@ export async function formatChangedSources(opts: {
     }
 
     await writeFile(abs, next, "utf8");
+    noteRepoWrites([abs]);
     formatted.push(rel);
     log?.(`format: rewrote ${rel}`);
   }

@@ -17,7 +17,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { rmSync, writeFileSync } from "fs";
+import { rmSync, writeFileSync } from "./noted-fs";
 import { join } from "path";
 import {
   analyzeSnapshotDag,

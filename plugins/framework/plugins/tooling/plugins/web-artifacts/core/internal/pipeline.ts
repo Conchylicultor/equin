@@ -63,7 +63,10 @@ import { openBuildLease, type BuildLease } from "./lease";
 import { ensureBrowserHost } from "./browser-hosts";
 import { ensureHostSnapshot, hostSnapshotLinks } from "./host-snapshots";
 import type { OwnSources } from "./own-files";
-import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import {
+  installedRepoView,
+  loadRepoSnapshot,
+} from "@plugins/framework/plugins/tooling/core";
 import { composedHostsOf } from "./expected";
 import {
   assertPortableArtifacts,
@@ -208,9 +211,14 @@ async function runPipeline(
   // holds — and its content ids: no walk, no stat, no read of an unchanged
   // file (`own-files.ts`).
   const sources: OwnSources = {
-    snapshot: await stage("artifacts:snapshot", "repo snapshot", () =>
-      loadRepoSnapshot(root),
-    ),
+    snapshot: await stage("artifacts:snapshot", "repo snapshot", async () => {
+      const snapshot = await loadRepoSnapshot(root);
+      // Inside a build, this fresh snapshot is also the check of the build's
+      // view (`openRepoView`): every answer codegen read off the view must
+      // still hold, or a record was keyed by bytes a file no longer has.
+      await installedRepoView(root)?.assertAgrees(snapshot);
+      return snapshot;
+    }),
     globs: loadGlobPatternMemo(),
   };
   const plan = await stage(

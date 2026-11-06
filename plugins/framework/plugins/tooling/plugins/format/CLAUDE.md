@@ -198,6 +198,7 @@ idempotent and per-file.
 - Description: The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
 - Core:
   - Uses:
+    - `framework/tooling.noteRepoWrites`
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.joinAppPath`
     - `infra/spawn.spawnCaptured`

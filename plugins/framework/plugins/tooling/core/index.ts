@@ -21,3 +21,11 @@ export {
   repoSnapshotOver,
 } from "./repo-files";
 export { globPaths, pathspecToRegex, pathsUnder } from "./pathspec";
+export {
+  installedRepoView,
+  installRepoView,
+  noteRepoWrites,
+  openRepoView,
+  repoSnapshotNow,
+} from "./repo-view";
+export type { RepoView } from "./repo-view";

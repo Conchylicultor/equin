@@ -130,3 +130,24 @@ test("a closure holding a computed load is unmeasurable", async () => {
   const at = await started();
   expect((await since(at)).kind).toBe("unmeasurable");
 });
+
+test("a later walk reads a rewritten file again: its new imports are followed, not the ones first scanned", async () => {
+  await tree(BASE);
+  const first = await since(await started());
+  expect(first.kind).toBe("unchanged");
+  // b.ts now imports a new module; every other file keeps its stamp.
+  await tree({
+    "b.ts": `import { c } from "./lib";\nimport { d } from "./extra";\nexport const b = (x: unknown) => c(d(x));\n`,
+    "extra.ts": `export const d = (x: unknown) => x;\n`,
+  });
+  const r = await since(await started());
+  expect(r.kind).toBe("unchanged");
+  if (r.kind !== "unchanged") return;
+  expect([...r.files].map((f) => f.slice(dir.length + 1)).sort()).toEqual([
+    "b.ts",
+    "entry.ts",
+    "extra.ts",
+    "lazy.ts",
+    "lib/index.ts",
+  ]);
+});

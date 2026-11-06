@@ -7,7 +7,7 @@ import {
   schemaFilesIn,
 } from "@plugins/database/plugins/migrations/core";
 import {
-  loadRepoSnapshot,
+  repoSnapshotNow,
   type RepoSnapshot,
 } from "@plugins/framework/plugins/tooling/core";
 import {
@@ -71,15 +71,17 @@ export interface DrizzleVerdict {
 }
 
 /**
- * The verdict for the checkout at `root` as it is NOW: a fresh snapshot, so a
- * file the build wrote earlier (a generated module a schema file imports, the
- * journal the bookkeeping just rewrote) is keyed by its current bytes.
+ * The verdict for the checkout at `root` as it is NOW (`repoSnapshotNow`: the
+ * build's view, which every earlier write of the build updated, or a fresh
+ * snapshot), so a file the build wrote earlier (a generated module a schema
+ * file imports, the journal the bookkeeping just rewrote) is keyed by its
+ * current bytes.
  */
 export async function drizzleVerdict(
   root: AppPath,
   store: RecordStore = currentRecordStore(),
 ): Promise<DrizzleVerdict> {
-  const snapshot = await loadRepoSnapshot(root);
+  const snapshot = await repoSnapshotNow(root);
   const key = await drizzleVerdictKey(snapshot, store);
   const hit = store.getMany("verdict", [key.key]).get(key.key) === VERDICT;
   return {

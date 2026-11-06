@@ -55,7 +55,11 @@ import {
   schemaLoadFailures,
   stageDrizzleOut,
 } from "@plugins/database/plugins/migrations/core";
-import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import {
+  installRepoView,
+  loadRepoSnapshot,
+  openRepoView,
+} from "@plugins/framework/plugins/tooling/core";
 import {
   installRecordStore,
   installRecordWorkers,
@@ -180,9 +184,11 @@ const recordWorkers =
     ? createPooledRecordWorkers({ threads: workerThreads })
     : undefined;
 installRecordWorkers(recordWorkers);
-const snapshot = await step("repo snapshot", () => loadRepoSnapshot(root));
-// A writing pass, as the build's: each evaluation phase re-takes the snapshot.
-const pass = writingCodegenPass(snapshot, () => loadRepoSnapshot(root));
+const view = await step("repo snapshot", () => openRepoView(root));
+installRepoView(view);
+const snapshot = await view.current();
+// A writing pass, as the build's: each evaluation phase reads the build's view.
+const pass = writingCodegenPass(snapshot, () => view.current());
 const before = await trackedMtimes();
 const modulesAtStart = moduleCount();
 
@@ -383,6 +389,9 @@ for (const r of rows) {
 console.log(
   `modules at start ${modulesAtStart}, at end ${moduleCount()}; tracked files written: ${touched.length}${touched.length ? "\n  " + touched.slice(0, 30).join("\n  ") : ""}`,
 );
+
+// As the build's frontend does: every answer read off the view still holds.
+await view.assertAgrees(await loadRepoSnapshot(root));
 
 if (jsonOut) {
   writeFileSync(

@@ -5,6 +5,7 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { dirname } from "path";
+import { noteRepoWrites } from "@plugins/framework/plugins/tooling/core";
 import {
   formatIfFormattable,
   type SourceBytes,
@@ -76,4 +77,5 @@ export async function writeGenerated(
   if (next === existing) return;
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, next);
+  noteRepoWrites([file]);
 }

@@ -1,3 +1,4 @@
+import { noteRepoWrites } from "@plugins/framework/plugins/tooling/core";
 import { writeFile } from "fs/promises";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
@@ -53,12 +54,14 @@ export async function syncPluginPackageNames({
       // untracked file, no code) stays R1's to report, never a new member.
       if (!(await hasBarrel(node.dir))) continue;
       await writeFile(file, newPackageJson(packageNameFor(node.path)));
+      noteRepoWrites([file]);
       rewritten.push(relative(root, file));
       continue;
     }
     const next = withPackageName(text, packageNameFor(node.path), file);
     if (next === text) continue;
     await writeFile(file, next);
+    noteRepoWrites([file]);
     rewritten.push(relative(root, file));
   }
   return rewritten.sort();

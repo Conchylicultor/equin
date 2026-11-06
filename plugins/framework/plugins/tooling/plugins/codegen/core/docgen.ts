@@ -1,3 +1,4 @@
+import { noteRepoWrites } from "@plugins/framework/plugins/tooling/core";
 import { unlinkSync } from "fs";
 import {
   existsSync,
@@ -328,13 +329,23 @@ const DETAILS_HEADER =
 export async function renderCompactDoc({
   pass,
 }: GenerateDocsOptions): Promise<string> {
-  return renderCompactDocFromTree(await buildEnrichedTree(pass), pass.root);
+  const tree = await buildEnrichedTree(pass);
+  return renderCompactDocFromTree(
+    tree,
+    pass.root,
+    mainComposition(tree, pass.root),
+  );
 }
 
 export async function renderDetailsDoc({
   pass,
 }: GenerateDocsOptions): Promise<string> {
-  return renderDetailsDocFromTree(await buildEnrichedTree(pass), pass.root);
+  const tree = await buildEnrichedTree(pass);
+  return renderDetailsDocFromTree(
+    tree,
+    pass.root,
+    mainComposition(tree, pass.root),
+  );
 }
 
 function renderPluginClaudeAutogen(
@@ -484,11 +495,11 @@ export async function generatePluginDocs({
   // idiom for generated artifacts, with no per-extension opt-in to forget.
   await writeGenerated({
     file: pluginCompactDocPath(root),
-    content: renderCompactDocFromTree(tree, root),
+    content: renderCompactDocFromTree(tree, root, main),
   });
   await writeGenerated({
     file: pluginDetailsDocPath(root),
-    content: renderDetailsDocFromTree(tree, root),
+    content: renderDetailsDocFromTree(tree, root, main),
   });
 
   for (const info of tree.byDir.values()) {
@@ -508,6 +519,7 @@ export async function generatePluginDocs({
       await writeGenerated({ file: refFile, content: reference });
     } else if (existsSync(refFile)) {
       unlinkSync(refFile);
+      noteRepoWrites([refFile]);
     }
   }
 
@@ -515,6 +527,7 @@ export async function generatePluginDocs({
   if (existsSync(legacy)) {
     try {
       unlinkSync(legacy);
+      noteRepoWrites([legacy]);
       // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       // Best-effort
@@ -522,25 +535,21 @@ export async function generatePluginDocs({
   }
 }
 
-function renderCompactDocFromTree(tree: PluginTree, root: AppPath): string {
-  const body = renderTreeBody(
-    tree.roots,
-    root,
-    "compact",
-    tree.facets,
-    mainComposition(tree, root),
-  );
+function renderCompactDocFromTree(
+  tree: PluginTree,
+  root: AppPath,
+  main: MainComposition,
+): string {
+  const body = renderTreeBody(tree.roots, root, "compact", tree.facets, main);
   return `${COMPACT_HEADER}${BEGIN}\n\n${body}\n${END}\n`;
 }
 
-function renderDetailsDocFromTree(tree: PluginTree, root: AppPath): string {
-  const body = renderTreeBody(
-    tree.roots,
-    root,
-    "detail",
-    tree.facets,
-    mainComposition(tree, root),
-  );
+function renderDetailsDocFromTree(
+  tree: PluginTree,
+  root: AppPath,
+  main: MainComposition,
+): string {
+  const body = renderTreeBody(tree.roots, root, "detail", tree.facets, main);
   return `${DETAILS_HEADER}${BEGIN}\n\n${body}\n${END}\n`;
 }
 

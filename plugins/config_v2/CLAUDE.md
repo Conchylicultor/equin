@@ -229,7 +229,7 @@ defineConfig({
   requiresAuthoredOverride: {
     guidance: ["Arrange \"items\" for how this slot renders", "(sidebar = vertical list, toolbar = horizontal bar)"],
     // Optional. "Is there anything here to author?" — omit to always seed.
-    seedWhen: (defaults) => Array.isArray(defaults.items) && defaults.items.length > 0,
+    seedWhen: { field: "items", minLength: 2 },
   },
   …
 })
@@ -241,7 +241,11 @@ comments — with a one-line `// @review` marker plus the descriptor's `guidance
 after the hash header; and it **re-marks + re-stamps** an existing override whose origin
 hash moved underneath it. The human half is: arrange the values, delete the marker line.
 
-`seedWhen(defaults)` gates **creating** a file, and only that. Some defaults are vacuous —
+`seedWhen` gates **creating** a file, and only that. It is data (`SeedCondition`: the
+origin's `field` holds an array of at least `minLength` entries, read by
+`seedConditionHolds`), never a function: the build reads descriptors from the evaluated
+barrel records, which hold no code — a predicate made every build import every barrel
+live just to ask it. Some defaults are vacuous —
 a render slot with no contributions has no arrangement to make, so `{"items": []}` would
 be a review a human can only rubber-stamp, burying the files where a decision is pending.
 `defaults` is the ORIGIN's effective document (post `OriginDefaultsProvider`), not
@@ -601,6 +605,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `REVIEW_MARKER`
     - `scopeAppId`
     - `scopeSegment`
+    - `seedConditionHolds`
     - `setConfigField`
     - `storePathParts`
     - `stringifyConfigValue`

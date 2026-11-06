@@ -13746,6 +13746,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`restart-skip`** — Restart-skip, central's half: POST /api/restart-skip/central/adopt — main's deploy asks central before restarting it, and central answers adopted only when a process spawned now would run exactly its code (the same judgement as a backend's: same Bun and entry, nothing it loaded or could still load changed since it started).
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
+        - Register: `defineWarmup('restart-skip.closure')`
         - Routes: `POST /api/build/restart-skip/adopt`
       - Central:
         - Uses: `packages/source-digest.closureChangedSince`
@@ -14324,6 +14325,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `REVIEW_MARKER`
       - `scopeAppId`
       - `scopeSegment`
+      - `seedConditionHolds`
       - `setConfigField`
       - `storePathParts`
       - `stringifyConfigValue`
@@ -28425,20 +28427,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GitTreeSnapshot`
           - `RepoFiles`
           - `RepoSnapshot`
+          - `RepoView`
         - Exports (values):
           - `assertRepoPath`
           - `CHECK_SCOPES`
           - `CHECKOUT_SCOPES`
           - `globPaths`
           - `InconclusiveCheckError`
+          - `installedRepoView`
+          - `installRepoView`
           - `listAllRepoMembers`
           - `listRepoMembers`
           - `loadRepoFiles`
           - `loadRepoSnapshot`
+          - `noteRepoWrites`
+          - `openRepoView`
           - `pathspecToRegex`
           - `pathsUnder`
           - `repoFileReader`
           - `repoFilesOver`
+          - `repoSnapshotNow`
           - `repoSnapshotOver`
       - Cross-plugin:
         - Imported by:
@@ -28452,6 +28460,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
           - `framework/tooling/exempt`
+          - `framework/tooling/format`
           - `framework/tooling/web-artifacts`
           - `infra/deps/npm`
           - `infra/worktree/reclaim`
@@ -28462,7 +28471,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `boundaries/no-platform-api` — `core/repo-files.ts` (debt)
-          - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-files.ts` (sanctioned)
+          - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-files.ts`, `core/repo-view.ts` (sanctioned)
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
@@ -28960,9 +28969,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 136 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 138 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×19
-              - `config_v2` ×14
+              - `config_v2` ×15
               - `framework/plugin-id` ×13
               - `network/live/resource-vocabulary` ×10
               - `framework/slot-declaration` ×6
@@ -28987,6 +28996,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
               - `framework/tooling/lint.loadLintContributions`
               - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
+              - `framework/tooling.noteRepoWrites`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `packages/macrotask-yield.yieldMacrotask`
               - `packages/semaphore.createSemaphore`
@@ -29315,6 +29325,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
           - Core:
             - Uses:
+              - `framework/tooling.noteRepoWrites`
               - `infra/host-fs/user-path.AppPath`
               - `infra/host-fs/user-path.joinAppPath`
               - `infra/spawn.spawnCaptured`
@@ -29728,17 +29739,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 37 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 38 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `packages/timed-fs` ×8
               - `framework/plugin-id` ×4
               - `framework/web-core` ×4
               - `infra/host-fs/user-path` ×4
               - `packages/flock` ×4
+              - `framework/tooling` ×2
               - `packages/owned-fd` ×2
               - `plugin-meta/plugin-records` ×2
               - `framework/browser-server/host-storage.decodeHostSnapshot`
               - `framework/product-name.LEGACY_IDS`
-              - `framework/tooling.loadRepoSnapshot`
               - `infra/deps/npm.lockfileNpmResolutions`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `infra/paths.worktreesDir`
@@ -35048,11 +35059,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
           - `tasks` ×7
           - `apps` ×6
           - `infra` ×4
           - `conversations` ×2
+          - `build/restart-skip`
           - `debug/config-orphans`
           - `page/links`
           - `plugin-meta/plugin-tree`
@@ -42885,12 +42897,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
     - **`relocate`** — `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that every build replays onto its namespace's saved user config (folder moved, reorder keys re-rooted, hash chain kept).
       - Core:
-        - Uses: 24 symbols — full list in [`plugins/plugin-meta/plugins/relocate/REFERENCE.md`](../plugins/plugin-meta/plugins/relocate/REFERENCE.md)
+        - Uses: 25 symbols — full list in [`plugins/plugin-meta/plugins/relocate/REFERENCE.md`](../plugins/plugin-meta/plugins/relocate/REFERENCE.md)
           - `config_v2` ×8
           - `config_v2/ledger` ×6
           - `framework/plugin-id` ×3
           - `infra/host-fs/user-path` ×3
           - `packages/timed-fs` ×3
+          - `framework/tooling.noteRepoWrites`
           - `plugin-meta/plugin-refs.scanReorderItemRefs`
         - Exports (types):
           - `AppliedMove`

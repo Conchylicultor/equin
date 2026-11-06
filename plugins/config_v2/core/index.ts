@@ -9,6 +9,7 @@ export type {
   ConfigValues,
   OriginDefaultsFrom,
 } from "./internal/types";
+export { seedConditionHolds } from "./internal/types";
 export {
   configValues,
   configGitValues,

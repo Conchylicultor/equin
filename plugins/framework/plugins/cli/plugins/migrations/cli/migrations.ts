@@ -2,7 +2,8 @@ import {
   asAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { renameSync, rmSync, writeFileSync } from "fs";
+import { renameSync, rmSync, writeFileSync } from "./noted-fs";
+import { noteRepoWrites } from "@plugins/framework/plugins/tooling/core";
 import {
   existsSync,
   readdirSync,
@@ -531,6 +532,9 @@ export async function generateMigration(opts: {
     emitted = stage.moveEmittedInto(migrationsDir).snapshot;
   } finally {
     stage.dispose();
+    // drizzle-kit (a child) wrote the files moved in: the view cannot be
+    // told them one by one, so it asks git about the whole directory.
+    noteRepoWrites([migrationsDir]);
   }
   phaseEnd("drizzleKit", "migrations: drizzle-kit generate");
 

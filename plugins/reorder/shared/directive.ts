@@ -95,8 +95,7 @@ export function reorderDirectiveDescriptor(
       // Reads the ORIGIN's materialized catalog, not `items`' field default —
       // that default is always `[]`; the live catalog is injected at build time
       // (`reorderable-slots-gen.ts`).
-      seedWhen: (defaults) =>
-        Array.isArray(defaults.items) && defaults.items.length > 1,
+      seedWhen: { field: "items", minLength: 2 },
     },
     fields: {
       items: reorderTreeField({ label: "Items" }),

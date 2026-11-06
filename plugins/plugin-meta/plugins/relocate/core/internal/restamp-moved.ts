@@ -20,6 +20,7 @@
 // appeared, a field default that changed, a ledger entry whose old id a later
 // plugin reused — fails the comparison and is left to the usual staleness gates.
 
+import { noteRepoWrites } from "@plugins/framework/plugins/tooling/core";
 import { writeFileSync } from "node:fs";
 import {
   existsSync,
@@ -113,6 +114,7 @@ export function restampMovedOverrides(opts: {
       const text = readFileSync(file, "utf8");
       if (configTextHash(text) !== oldHash) continue;
       writeFileSync(file, withConfigTextHash(text, newHash));
+      noteRepoWrites([file]);
       restamped.push(override);
     }
   }

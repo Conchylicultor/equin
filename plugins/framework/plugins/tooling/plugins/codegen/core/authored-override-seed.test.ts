@@ -14,6 +14,11 @@ import {
 import { tmpdir } from "os";
 import { dirname, join } from "path";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
+
+/** What `requiresAuthoredOverride.seedWhen` holds. */
+type SeedCondition = NonNullable<
+  NonNullable<ConfigDescriptor["requiresAuthoredOverride"]>["seedWhen"]
+>;
 import {
   applyAuthoredOverrideSeeding,
   listReviewMarkedOverrides,
@@ -45,7 +50,7 @@ function read(rel: string): string {
 function descriptor(opts: {
   name: string;
   guidance?: string[];
-  seedWhen?: (defaults: Record<string, unknown>) => boolean;
+  seedWhen?: SeedCondition;
 }): ConfigDescriptor {
   return {
     name: opts.name,
@@ -73,7 +78,7 @@ const ORIGIN = `// @hash ${ORIGIN_HASH}
 function seedOne(opts: {
   originRel: string;
   guidance?: string[];
-  seedWhen?: (defaults: Record<string, unknown>) => boolean;
+  seedWhen?: SeedCondition;
 }): ReturnType<typeof applyAuthoredOverrideSeeding> {
   return applyAuthoredOverrideSeeding({
     configDir,
@@ -90,9 +95,8 @@ function seedOne(opts: {
   });
 }
 
-/** reorder's own predicate: an empty `items` orders nothing. */
-const NON_EMPTY_ITEMS = (defaults: Record<string, unknown>): boolean =>
-  Array.isArray(defaults.items) && defaults.items.length > 0;
+/** An empty `items` orders nothing. */
+const NON_EMPTY_ITEMS: SeedCondition = { field: "items", minLength: 1 };
 
 const EMPTY_ORIGIN = `// @hash cccccccccccc\n{\n  "items": []\n}\n`;
 

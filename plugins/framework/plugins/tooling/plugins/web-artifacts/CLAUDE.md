@@ -316,6 +316,10 @@ Key invariants:
   edited module is ever read. A file outside the snapshot is in no address; the
   inline audit (above) fails a build that bundles one.
   (`research/2026-11-03-global-build-pipeline-step3c-repo-snapshot.md`)
+  Inside a build this fresh snapshot is also the check of the build's repo
+  view (tooling `core`'s `openRepoView`, which codegen read instead of listing
+  the tree again): `assertAgrees` fails the build when any file codegen keyed
+  off the view no longer holds what the view said.
 - **Expected vs deployed cannot drift**: the pipeline and the
   `web-artifacts:map-in-sync` check share the same planning code
   (`core/internal/plan.ts`).
@@ -397,17 +401,17 @@ Key invariants:
 
 - Description: Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
 - Core:
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/timed-fs` ×8
     - `framework/plugin-id` ×4
     - `framework/web-core` ×4
     - `infra/host-fs/user-path` ×4
     - `packages/flock` ×4
+    - `framework/tooling` ×2
     - `packages/owned-fd` ×2
     - `plugin-meta/plugin-records` ×2
     - `framework/browser-server/host-storage.decodeHostSnapshot`
     - `framework/product-name.LEGACY_IDS`
-    - `framework/tooling.loadRepoSnapshot`
     - `infra/deps/npm.lockfileNpmResolutions`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/paths.worktreesDir`

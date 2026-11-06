@@ -494,3 +494,38 @@ export function repoSnapshotOver(
     },
   };
 }
+
+/**
+ * Which of `paths` (repo-relative files) are members of the repo's file set
+ * NOW, by `loadRepoSnapshot`'s rule, each with its blob id — the paths alone
+ * asked of git (`ls-files` over them, then one `hash-object`), so the cost is
+ * the size of `paths`, not of the tree. A path absent from the answer is no
+ * member: gone, or ignored.
+ */
+export async function membersWithBlobs(
+  root: AppPath,
+  paths: readonly string[],
+): Promise<Map<string, string>> {
+  for (const p of paths) assertRepoPath("membersWithBlobs", p, false);
+  const out = new Map<string, string>();
+  if (paths.length === 0) return out;
+  // Literal pathspecs, chunked: a build may hand over thousands.
+  const [present, deleted] = await Promise.all([
+    lsFilesChunked(root, ["--cached", "--others", "--exclude-standard"], paths),
+    lsFilesChunked(root, ["--deleted"], paths),
+  ]);
+  const members = membership(present, deleted);
+  if (members.length === 0) return out;
+  const ids = (
+    await git(root, ["hash-object", "--stdin-paths"], members.join("\n") + "\n")
+  )
+    .split("\n")
+    .filter((l) => l.length > 0);
+  if (ids.length !== members.length) {
+    throw new Error(
+      `git hash-object answered ${ids.length} ids for ${members.length} paths in ${root}`,
+    );
+  }
+  members.forEach((p, i) => out.set(p, ids[i]!));
+  return out;
+}

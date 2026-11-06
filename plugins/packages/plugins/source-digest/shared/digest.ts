@@ -100,17 +100,84 @@ interface Closure {
 }
 
 /**
- * What a closure walk reports, as it reads: every repo file (with the bytes it
- * read), every import that leaves the repo for a package, every builtin. The
- * walk itself — what an edge is, what resolves where, what refuses — is ONE
- * function, so the digest and {@link closureChangedSince} cannot disagree on
- * what a closure holds.
+ * What a closure walk reports, as it goes: every import that leaves the repo
+ * for a package, every builtin. Each repo file is handed to `facts`, which
+ * answers its imports (reading the file, or not); the walk itself — what an
+ * edge is, what resolves where, what refuses — is ONE function, so the digest
+ * and {@link closureChangedSince} cannot disagree on what a closure holds.
  */
 interface ClosureVisitor {
-  file(path: string, bytes: Buffer): Promise<void> | void;
+  /** The imports of the repo file `path` (and whatever the visitor records of it). */
+  facts(path: string): Promise<FileFacts>;
   /** `specifier`, imported by `importer`, resolved to `resolved` under `node_modules`. */
   package(importer: string, specifier: string, resolved: string): Promise<void>;
   builtin(specifier: string): void;
+}
+
+/** What a file's bytes say about its loads: its literal import specifiers (none for a non-module file). */
+interface FileFacts {
+  imports: readonly string[];
+}
+
+/**
+ * A file's facts, read from its bytes. Refuses (throws) a module with a load
+ * the scan cannot see, so the facts of a file are only ever a closure's whole
+ * story of it.
+ */
+function scanFacts(file: string, bytes: Buffer): FileFacts {
+  if (!CODE_FILE.test(file)) return { imports: [] };
+  const transpiler = transpilerFor(file);
+  const text = bytes.toString("utf8");
+  const imports = transpiler.scanImports(text);
+  assertEveryImportSeen(file, transpiler, text, imports);
+  return { imports: imports.map((i) => i.path) };
+}
+
+/**
+ * A file's identity as the kernel stamps it: an inode keeps this stamp exactly
+ * as long as it keeps its bytes — every write, truncate or rename-into-place
+ * moves the change time (or the inode), and nothing in user space sets a change
+ * time back (`closureChangedSince` explains why the judgement rests on it).
+ */
+function stampOf(s: { ino: number; size: number; ctimeMs: number }): string {
+  return `${s.ino}:${s.size}:${s.ctimeMs}`;
+}
+
+/**
+ * Every repo file this process has scanned, by path: its facts and the stamp
+ * its bytes had when they were read. A file whose stamp is unchanged has those
+ * same bytes, so its facts are reused instead of read again — a closure walk
+ * reads only what changed since this process last looked (O(closure) stats,
+ * O(changed files) reads). Never a verdict: every walk still visits, stats and
+ * re-resolves every file, so a new file shadowing an import, a re-pointed
+ * package or a moved file is seen exactly as by a first walk. Bounded by the
+ * repo files a closure of this process reaches.
+ */
+const scanned = new Map<string, { stamp: string; facts: FileFacts }>();
+
+/**
+ * Read `path` and scan it. Its facts are remembered only under a stamp the
+ * file held both before and after the read: a write landing during the read
+ * moves the stamp, and the facts of bytes that may be the old ones are then
+ * not tied to the new stamp. Hands back the bytes and the stat taken AFTER the
+ * read (so a write during the read is seen) for a caller that judges it.
+ */
+async function readFacts(
+  path: string,
+  before?: { ino: number; size: number; ctimeMs: number },
+): Promise<{
+  bytes: Buffer;
+  after: { ctimeMs: number };
+  facts: FileFacts;
+}> {
+  const prior = before ?? (await stat(path));
+  const bytes = await readFile(path);
+  const facts = scanFacts(path, bytes);
+  const after = await stat(path);
+  const stamp = stampOf(after);
+  if (stamp === stampOf(prior)) scanned.set(path, { stamp, facts });
+  else scanned.delete(path);
+  return { bytes, after, facts };
 }
 
 async function walkClosure(
@@ -123,29 +190,23 @@ async function walkClosure(
     const file = queue.pop()!;
     if (seen.has(file)) continue;
     seen.add(file);
-    const bytes = await readFile(file);
-    await visit.file(file, bytes);
-    if (!CODE_FILE.test(file)) continue;
-    const transpiler = transpilerFor(file);
-    const text = bytes.toString("utf8");
-    const imports = transpiler.scanImports(text);
-    assertEveryImportSeen(file, transpiler, text, imports);
-    for (const imp of imports) {
-      if (isBuiltin(imp.path)) {
-        visit.builtin(imp.path);
+    const { imports } = await visit.facts(file);
+    for (const specifier of imports) {
+      if (isBuiltin(specifier)) {
+        visit.builtin(specifier);
         continue;
       }
       let resolved: string;
       try {
-        resolved = Bun.resolveSync(imp.path, dirname(file));
+        resolved = Bun.resolveSync(specifier, dirname(file));
       } catch (err) {
         throw new UnmeasurableClosureError(
-          `[source-digest] cannot resolve "${imp.path}" imported by ${file}`,
+          `[source-digest] cannot resolve "${specifier}" imported by ${file}`,
           { cause: err },
         );
       }
       if (resolved.includes(NODE_MODULES)) {
-        await visit.package(file, imp.path, resolved);
+        await visit.package(file, specifier, resolved);
       } else {
         queue.push(resolved);
       }
@@ -163,8 +224,12 @@ async function closureOf(entries: readonly string[]): Promise<Closure> {
   };
   const packageIds = new Map<string, Promise<string>>();
   await walkClosure(entries, {
-    file(path, bytes) {
+    // The digest hashes every byte, so it always reads; what it scans is
+    // remembered for a later `closureChangedSince` of the same files.
+    async facts(path) {
+      const { bytes, facts } = await readFacts(path);
       closure.files.set(path, sha256(bytes));
+      return facts;
     },
     async package(_importer, _specifier, resolved) {
       closure.packages.add(await packageIdOf(resolved, packageIds));
@@ -199,9 +264,15 @@ class ChangedSince extends Error {
  * as a change, and so does a revert: a file changed and changed back may have
  * been lazily loaded in between, so equal bytes alone vouch for nothing.
  *
- * Read per file: the repo file itself (stat AFTER its bytes are read, so a
- * write during the read is seen). Per package import: the
- * `node_modules/<name>` entry resolution goes through — the first that exists
+ * Read per file: the repo file's stat. Its bytes are read (and stat'd again
+ * AFTER, so a write during the read is seen) only when this process has not
+ * yet scanned the file under its present stamp — a file whose stamp is
+ * unchanged holds the bytes it was scanned with, so a walk after the first
+ * reads only what changed. Every file is still visited and every import
+ * resolved again, so a new file shadowing a resolution counts as it did.
+ *
+ * Per package import: the `node_modules/<name>` entry resolution goes through
+ * — the first that exists
  * walking up from the importer, as a `node_modules` lookup does — by `lstat`,
  * so a re-pointed symlink (a new inode) or a newly created shadowing entry
  * counts, plus the resolved package's `package.json`. A package's own files
@@ -217,6 +288,7 @@ export async function closureChangedSince(
 ): Promise<ClosureSince> {
   const files = new Set<string>();
   const checked = new Set<string>();
+  const moduleDirs = new Map<string, Promise<string | null>>();
   const assertBefore = async (
     path: string,
     read: (p: string) => Promise<{ ctimeMs: number }>,
@@ -228,12 +300,31 @@ export async function closureChangedSince(
   };
   try {
     await walkClosure(entries, {
-      async file(path) {
+      // Stat first: a file changed since the instant fails the walk before
+      // anything is read. One whose stamp is the one its facts were read
+      // under holds those same bytes — its facts are reused, not read again.
+      async facts(path) {
         files.add(path);
-        await assertBefore(path, stat);
+        checked.add(path);
+        const before = await stat(path);
+        if (before.ctimeMs >= sinceMs) {
+          throw new ChangedSince(path, before.ctimeMs);
+        }
+        const known = scanned.get(path);
+        if (known !== undefined && known.stamp === stampOf(before)) {
+          return known.facts;
+        }
+        const { after, facts } = await readFacts(path, before);
+        if (after.ctimeMs >= sinceMs) {
+          throw new ChangedSince(path, after.ctimeMs);
+        }
+        return facts;
       },
       async package(importer, specifier, resolved) {
-        await assertBefore(await nodeModulesEntry(importer, specifier), lstat);
+        await assertBefore(
+          await nodeModulesEntry(importer, specifier, moduleDirs),
+          lstat,
+        );
         await assertBefore(packageJsonOf(resolved), stat);
       },
       builtin() {},
@@ -266,29 +357,45 @@ function packageNameOf(specifier: string): string {
  * resolves through: the first one that exists walking up from the importer's
  * directory. Throws when none does — `Bun.resolveSync` just found one, so the
  * tree moved under the walk.
+ *
+ * `found` is one walk's answers by (directory, name): within one instant a
+ * directory's answer is the same for every importer under it, so a closure's
+ * ~1,400 package imports ask each directory once instead of walking up from
+ * each importer again (~11,000 `lstat`s).
  */
-async function nodeModulesEntry(
+function nodeModulesEntry(
   importer: string,
   specifier: string,
+  found: Map<string, Promise<string | null>>,
 ): Promise<string> {
   const name = packageNameOf(specifier);
-  let dir = dirname(importer);
-  for (;;) {
-    const candidate = join(dir, "node_modules", ...name.split("/"));
-    try {
-      await lstat(candidate);
-      return candidate;
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  const at = (dir: string): Promise<string | null> => {
+    const key = `${dir}\0${name}`;
+    let entry = found.get(key);
+    if (entry === undefined) {
+      entry = (async () => {
+        const candidate = join(dir, "node_modules", ...name.split("/"));
+        try {
+          await lstat(candidate);
+          return candidate;
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+        }
+        const parent = dirname(dir);
+        return parent === dir ? null : at(parent);
+      })();
+      found.set(key, entry);
     }
-    const parent = dirname(dir);
-    if (parent === dir) {
+    return entry;
+  };
+  return at(dirname(importer)).then((entry) => {
+    if (entry === null) {
       throw new UnmeasurableClosureError(
         `[source-digest] no node_modules entry for "${specifier}" above ${importer}`,
       );
     }
-    dir = parent;
-  }
+    return entry;
+  });
 }
 
 /** The `package.json` of the package a resolved `node_modules` file belongs to. */

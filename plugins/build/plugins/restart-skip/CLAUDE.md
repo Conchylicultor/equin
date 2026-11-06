@@ -7,6 +7,7 @@
 - Description: Restart-skip, central's half: POST /api/restart-skip/central/adopt — main's deploy asks central before restarting it, and central answers adopted only when a process spawned now would run exactly its code (the same judgement as a backend's: same Bun and entry, nothing it loaded or could still load changed since it started).
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
+  - Register: `defineWarmup('restart-skip.closure')`
   - Routes: `POST /api/build/restart-skip/adopt`
 - Central:
   - Uses: `packages/source-digest.closureChangedSince`
