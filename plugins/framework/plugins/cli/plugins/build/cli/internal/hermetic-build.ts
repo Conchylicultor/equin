@@ -49,7 +49,7 @@ import { reapLegacyCheckoutDist } from "./legacy-dist-reap";
  *     on every release from main erodes it; dropping it is a net improvement),
  *   - `--no-restart` / `--skip-checks` (nothing to restart; the fast validation
  *     set is unconditional),
- *   - `ensureHooksPath` / `registerMergeDrivers` / `checkBroadcasts` — git-config
+ *   - `ensureRepoGitConfig` / `registerMergeDrivers` / `checkBroadcasts` — git-config
  *     self-heals and an agent-facing message channel, both dev-workstation
  *     concerns nobody watches on a release host,
  *   - Postgres readiness, the worktree DB fork, gateway specs/restarts/health

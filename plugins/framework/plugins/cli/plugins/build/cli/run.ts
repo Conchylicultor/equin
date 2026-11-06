@@ -168,36 +168,47 @@ async function getCurrentBranch(): Promise<string> {
   return result.stdout.trim();
 }
 
-// Self-heal `core.hooksPath`. `.githooks/prepare-commit-msg` is how each
-// commit gets its conversation trailer, which in turn is how the
-// pushes ledger attributes commits back to the originating task;
-// `.githooks/post-rewrite` is what normalizes generated artifacts after a
-// manual rebase. Drift here is silent in both cases — orphaned pushes, or a
-// checkout carrying main's registry — so check on every build and reset to the
-// tracked value.
-async function ensureHooksPath(): Promise<void> {
-  const read = await spawnCaptured(
-    ["git", "config", "--get", "core.hooksPath"],
-    {
+// Repo git config every build self-heals to its tracked value (the repo's own
+// config, which every worktree of the checkout reads). Drift is silent, so
+// check on every build:
+// - `core.hooksPath`: `.githooks/prepare-commit-msg` is how each commit gets
+//   its conversation trailer, which in turn is how the pushes ledger
+//   attributes commits back to the originating task; `.githooks/post-rewrite`
+//   is what normalizes generated artifacts after a manual rebase. Drift
+//   orphans pushes, or leaves a checkout carrying main's registry.
+// - `core.untrackedCache`: the server's own git reads run with
+//   `--no-optional-locks` (never taking a worktree's index.lock), so they
+//   cannot write git's untracked cache — without it every `git status` walks
+//   the whole tree for untracked files (~0.7–3 s here, vs ~0.15 s re-reading
+//   only the directories that changed). On, every index write in a worktree
+//   (an agent's own `git status` / `add` / `commit`) keeps the cache, and the
+//   server's reads use it (the edited-files pass, git-read-cache probes).
+const REPO_GIT_CONFIG: ReadonlyArray<{ key: string; value: string }> = [
+  { key: "core.hooksPath", value: ".githooks" },
+  { key: "core.untrackedCache", value: "true" },
+];
+
+async function ensureRepoGitConfig(): Promise<void> {
+  for (const { key, value } of REPO_GIT_CONFIG) {
+    const read = await spawnCaptured(["git", "config", "--get", key], {
       timeoutMs: GIT_TIMEOUT_MS,
-    },
-  );
-  const current = read.stdout.trim();
-  if (current === ".githooks") return;
-  const write = await spawnCaptured(
-    ["git", "config", "core.hooksPath", ".githooks"],
-    { timeoutMs: GIT_TIMEOUT_MS },
-  );
-  if (write.exitCode !== 0) {
-    if (write.stderr.trim()) console.error(write.stderr.trim());
-    console.error(
-      `Failed to set core.hooksPath=.githooks (was ${current ? `"${current}"` : "unset"}).`,
+    });
+    const current = read.stdout.trim();
+    if (current === value) continue;
+    const write = await spawnCaptured(["git", "config", key, value], {
+      timeoutMs: GIT_TIMEOUT_MS,
+    });
+    if (write.exitCode !== 0) {
+      if (write.stderr.trim()) console.error(write.stderr.trim());
+      console.error(
+        `Failed to set ${key}=${value} (was ${current ? `"${current}"` : "unset"}).`,
+      );
+      process.exit(1);
+    }
+    console.log(
+      `Fixed ${key}: was ${current ? `"${current}"` : "unset"}, now "${value}"`,
     );
-    process.exit(1);
   }
-  console.log(
-    `Fixed core.hooksPath: was ${current ? `"${current}"` : "unset"}, now ".githooks"`,
-  );
 }
 
 // Returns true once the forked DB exists. With atomic-publish forks (temp DB +
@@ -559,11 +570,11 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   markBuildInProgress();
 
   let endSpan = buildProfilerStart(
-    "ensureHooksPath",
+    "ensureRepoGitConfig",
     "build:preflight",
-    "ensureHooksPath",
+    "ensureRepoGitConfig",
   );
-  await ensureHooksPath();
+  await ensureRepoGitConfig();
   endSpan();
 
   endSpan = buildProfilerStart(

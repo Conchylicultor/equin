@@ -1207,6 +1207,12 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
 - **`whileSubscribed(params, notify?) → stop | Promise<stop>`** — start/stop
   as one function, refcounted per tuple; db arm gets `params` only.
 - **`revalidate`** — ETag signature (not on snapshot), e.g. `createSignedMemo`.
+- **`readCost: "memory"`** (external, non-paged) — the loader and
+  `revalidate` answer from memory this process holds (a constant, a memo
+  built once per process): reads skip read admission instead of queueing
+  behind git / file / DB reads. A slow repeat read is reported
+  (resource-runtime, *A memory read takes no slot*). Omit when a read may do
+  I/O.
 - **Refusals.** A loader that can't answer well-formed params (missing file,
   unknown id) throws `v.refuse(code, msg)` (`ResourceRefusal`) with a code the
   `liveValue` declares in `refusals: [...]` (any form).

@@ -680,6 +680,15 @@ All but the version are co-produced by the starter. A push drain mints
   fair share: a slot is held for a whole load. ONE gate on purpose: a read
   yielding its slot to wait gives back its key's share with it, so no
   per-key gate held across a yield can deadlock two keys.
+- **A memory read takes no slot (`readCost: "memory"`).** An entry declaring
+  that its loader and `revalidate` answer from memory this process holds (a
+  constant, or a memo whose one build every reader shares) runs its reads at
+  once, outside the gate — never queued FIFO behind git / fs / DB reads — and
+  captures no watermark (it reads no Postgres). Checked: a read of a WARM
+  tuple (one of its reads already completed) slower than
+  `MEMORY_READ_BUDGET_MS` (250 ms) is reported once per key — reads before
+  that are exempt (the memo's cold build). Default `"io"`.
+  `runtime-read-cost.test.ts`.
 - **A read nobody is owed is dropped at its slot (`ReadAbandoned`).** When its
   slot comes, a subscription's read — and its
   `revalidate` probe — runs only while its tuple is tracked (any socket, a

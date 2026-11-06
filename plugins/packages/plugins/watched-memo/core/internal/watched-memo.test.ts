@@ -1,5 +1,19 @@
-import { describe, expect, test } from "bun:test";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { beforeAll, describe, expect, test } from "bun:test";
+import {
+  createSemaphore,
+  installLeaseContextRuntime,
+  type LeaseScope,
+} from "@plugins/packages/plugins/semaphore/core";
 import { createWatchedMemo } from "./watched-memo";
+
+beforeAll(() => {
+  const als = new AsyncLocalStorage<LeaseScope>();
+  installLeaseContextRuntime({
+    run: (scope, fn) => als.run(scope, fn),
+    current: () => als.getStore(),
+  });
+});
 
 interface Deferred<T> {
   promise: Promise<T>;
@@ -281,6 +295,26 @@ describe("createWatchedMemo — first settles", () => {
     expect(memo.get("k")).rejects.toThrow("broken");
     await settle();
     expect(notified).toBe(0);
+    stop();
+  });
+
+  test("a get waiting on pass 1 holds no yieldable gate slot", async () => {
+    const { w, memo } = world();
+    w.gateNext = true;
+    const stop = await memo.watch("k", () => {});
+    const gate = createSemaphore(1);
+    const got = gate.run(() => memo.get("k"), { yieldable: true });
+    await settle();
+    // Pass 1 is the watch's work: the reader gave its slot back to wait.
+    expect(gate.stats().active).toBe(0);
+    let ranBeside = false;
+    await gate.run(async () => {
+      ranBeside = true;
+    });
+    expect(ranBeside).toBe(true);
+    w.gates[0]!.resolve();
+    expect(await got).toEqual({ content: "c0", dirty: "d0" });
+    expect(gate.stats().active).toBe(0);
     stop();
   });
 

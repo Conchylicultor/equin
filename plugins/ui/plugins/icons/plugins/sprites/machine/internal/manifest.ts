@@ -8,6 +8,7 @@ import { ICON_MANIFEST } from "./icon-manifest.generated";
  */
 export const iconManifestServed = serveValue(iconManifest, {
   source: "external",
+  readCost: "memory",
   changes: {
     fixed: { reason: "the icon manifest compiled into this process" },
   },

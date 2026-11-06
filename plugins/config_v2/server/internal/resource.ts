@@ -144,6 +144,10 @@ function redactSecrets(
 export const configValuesServed = serveValue(configValues, {
   source: "external",
   changes: "notified",
+  // `configGetter` resolves from the store's parsed documents in memory (the
+  // first reads only wait for the registry): no read-admission slot, so a
+  // tab's hundreds of config tuples never queue behind git reads.
+  readCost: "memory",
   loader: whenRegistryReady(({ path, scopeId }) => {
     const descriptor = descriptorByPath.get(path);
     if (!descriptor || !configGetter) {

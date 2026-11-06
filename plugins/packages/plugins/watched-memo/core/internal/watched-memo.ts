@@ -1,6 +1,7 @@
 import { createKeyedCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { createRefcountHub } from "@plugins/packages/plugins/refcount-hub/core";
+import { whileWaiting } from "@plugins/packages/plugins/semaphore/core";
 import {
   chargeWait,
   runTracked,
@@ -257,7 +258,16 @@ export function createWatchedMemo<T, F>(
         return entry.state.value;
       }
       if (entry?.state.kind === "opening") {
-        const outcome = await entry.state.first;
+        // Pass 1 is the watch's work, not this reader's: wait for it holding
+        // no yieldable gate slot (`whileWaiting`), and charge the wait as one.
+        // Holding it, every reader of a just-opened key (a resubscribe herd
+        // after a restart: each open conversation's pages and meta) sat on a
+        // read-admission slot for the whole first git pass, and every
+        // unrelated read queued behind them (2026-11-06: `wait read-admit`
+        // 2–17 s behind edited-files).
+        const t0 = performance.now();
+        const outcome = await whileWaiting(entry.state.first);
+        chargeWait(`memo-opening:${name}`, performance.now() - t0, "join");
         if (outcome.ok) return outcome.value;
       }
       return probe(key);

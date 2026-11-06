@@ -67,6 +67,8 @@ export async function loadRuntimeSymbols({
  */
 export const runtimeSymbolsServed = serveValue(runtimeSymbolsValue, {
   source: "external",
+  // A pick from `runtimeSymbols`' per-style map, built once per process.
+  readCost: "memory",
   changes: {
     immutable: {
       reason:

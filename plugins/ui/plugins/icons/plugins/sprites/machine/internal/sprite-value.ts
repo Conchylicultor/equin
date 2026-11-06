@@ -15,6 +15,9 @@ import { manifestHash, spriteFor } from "./sprites";
  */
 export const iconSpriteServed = serveValue(iconSprite, {
   source: "external",
+  // A slice of `spriteFor`'s per-process memo (one build per sprite group,
+  // shared by every reader): no slot, never queued behind git reads.
+  readCost: "memory",
   changes: {
     immutable: {
       reason: "content-addressed by the manifest hash",

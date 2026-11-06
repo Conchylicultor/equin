@@ -74,6 +74,8 @@ import {
 //                         re-starts it when a change moves that. Both hooks
 //                         may be declared (`bothLifecycles`).
 // - `revalidate`        → passed through.
+// - `readCost`          → passed through (external only): `"memory"` reads
+//                         skip read admission.
 // - `follows`           → `{ followed }` beside the subject in the loader,
 //                         `revalidate`, a paged value's `meta` and
 //                         `whileFollowing.over`, each read fresh in the hook's
@@ -411,6 +413,15 @@ export type ServeValueOptions<
   revalidate?: IsSnapshot<C> extends true
     ? never
     : (params: P, ...ctx: FollowArgs<F>) => Promise<string>;
+  /**
+   * `"memory"` (external only): the loader and `revalidate` answer from
+   * memory this process holds — a constant, or a memo whose one build every
+   * reader shares — so a read takes no read-admission slot and never queues
+   * behind reads doing git / file / database I/O. Omitted: a read takes a
+   * slot. A `"memory"` read that turns out slow is reported (the runtime's
+   * `ResourceDefinition.readCost`). A db value reads Postgres: never memory.
+   */
+  readCost?: Src extends "db" ? never : "memory";
 };
 
 /**
@@ -444,7 +455,7 @@ export type ServePagedValueOptions<
   C,
   F,
   W
-> & { revalidate?: never } & MetaOption<Meta, Q, F>;
+> & { revalidate?: never; readCost?: never } & MetaOption<Meta, Q, F>;
 
 /** `meta` exactly when the declaration has `paged.meta`. */
 type MetaOption<Meta, Q, F> = [Meta] extends [undefined]
@@ -1162,7 +1173,9 @@ function compilePagedOf(
   const freshness =
     changes !== undefined ? { freshness: freshnessOf(changes) } : {};
   refuseServedBound(value.key, opts);
-  const stray = (["revalidate"] as const).filter((f) => opts[f] !== undefined);
+  const stray = (["revalidate", "readCost"] as const).filter(
+    (f) => opts[f] !== undefined,
+  );
   if (stray.length > 0) {
     throw new Error(
       `serveValue("${value.key}"): a paged value takes no \`${stray.join("`, `")}\`.`,
@@ -1475,6 +1488,13 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
   );
   const revalidate = opts.revalidate as
     ((...args: unknown[]) => Promise<string>) | undefined;
+  const readCost = opts.readCost as "memory" | undefined;
+  if (readCost !== undefined && !external) {
+    // Unreachable from typed code (`readCost` is `never` on a db value).
+    throw new Error(
+      `serveValue("${value.key}"): a db value reads Postgres — it takes no \`readCost\`.`,
+    );
+  }
   return {
     options: {
       // Read off the DECLARATION (`liveValue`'s `load`), never a serve option:
@@ -1497,6 +1517,7 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
               params: P,
             ) => Promise<string>,
           }),
+      ...(readCost === undefined ? {} : { readCost }),
       ...lifecycle,
       // A label the runtime's `_debug` payload shows per key (read-set pane).
       ...(changes !== undefined ? { freshness: freshnessOf(changes) } : {}),
@@ -1635,6 +1656,7 @@ export interface AnyServeOptions {
   throttleMs?: number;
   recomputeOn?: readonly unknown[];
   revalidate?: unknown;
+  readCost?: unknown;
   whileSubscribed?: unknown;
   /** A start over the followed rows — only beside `follows` (`followingHook`). */
   whileFollowing?: unknown;

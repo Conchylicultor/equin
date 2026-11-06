@@ -37663,16 +37663,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withJitter`
     - **`semaphore`**
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
           - `infra` ×9
           - `apps` ×6
           - `framework` ×4
           - `debug` ×3
           - `conversations` ×2
           - `database` ×2
+          - `packages` ×2
           - `integrations/youtube/song-videos`
           - `network/live/resource-runtime`
-          - `packages/inflight`
           - `plugin-meta/barrel-import`
       - Core:
         - Exports (types):
@@ -38028,6 +38028,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/coalesce.createKeyedCoalescer`
           - `packages/inflight.createInflight`
           - `packages/refcount-hub.createRefcountHub`
+          - `packages/semaphore.whileWaiting`
         - Exports (types):
           - `WatchedMemo`
           - `WatchedMemoOptions`

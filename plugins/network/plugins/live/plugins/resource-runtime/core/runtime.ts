@@ -307,6 +307,12 @@ type MembershipRecord =
     }
   | { kind: "point"; idsOf: (params: ResourceParams) => readonly string[] };
 
+/**
+ * What one read-path load of a resource costs, for read admission — see
+ * `ResourceDefinition.readCost`.
+ */
+export type ReadCost = "io" | "memory";
+
 /** A resource's declared freshness — see `ResourceDefinition.freshness`. */
 export interface ResourceFreshness {
   kind: "notified" | "immutable" | "fixed" | "snapshot";
@@ -507,6 +513,19 @@ export interface ResourceDefinition<
    * spawn git/fs). Absent ⇒ today's full-loader behavior, unchanged.
    */
   revalidate?: (params: P) => Promise<string>;
+  /**
+   * What one read-path load (and `revalidate` probe) costs, for read
+   * admission (`READ_LOAD_CONCURRENCY`). `"io"` (the default): it may spawn,
+   * read files or query, so it takes a read-admission slot. `"memory"`: it
+   * answers from memory this process holds — a constant, or a memo whose
+   * build every reader shares — so there is nothing per read for the gate to
+   * bound: it takes no slot and never queues behind loads that do I/O (main,
+   * 2026-11-06: `icons.sprite` waited 2.4 s for a slot behind git loaders).
+   * Checked at runtime: a `"memory"` read slower than
+   * `MEMORY_READ_BUDGET_MS` is reported, once per key — the declaration is
+   * wrong, or its memo was cold.
+   */
+  readCost?: ReadCost;
   /**
    * Subscription-authorization seam (deferred; single-instance-per-user). Runs
    * on the subscribe path — before the refcount bump, `onFirstSubscribe`, and
@@ -877,6 +896,8 @@ interface ServerResourceOptionsBase<
   onFollowReached?: ResourceDefinition<T, P>["onFollowReached"];
   /** Conditional-revalidation ETag signature — see `ResourceDefinition.revalidate`. */
   revalidate?: ResourceDefinition<T, P>["revalidate"];
+  /** What one read costs, for read admission — see `ResourceDefinition.readCost`. */
+  readCost?: ReadCost;
   /** Deferred subscription-authorization seam — see `ResourceDefinition.authorize`. */
   authorize?: ResourceDefinition<T, P>["authorize"];
   /** Declared freshness, a `_debug` label — see `ResourceDefinition.freshness`. */
@@ -1005,6 +1026,7 @@ function contractToDefinition<T, P extends ResourceParams>(
       ? { onFollowReached: opts.onFollowReached }
       : {}),
     revalidate: opts.revalidate,
+    ...(opts.readCost !== undefined ? { readCost: opts.readCost } : {}),
     authorize: opts.authorize,
     ...(opts.freshness !== undefined ? { freshness: opts.freshness } : {}),
     validateParams: opts.validateParams ?? contract.validateParams,
@@ -1593,6 +1615,8 @@ interface RegistryEntry {
    * loader exactly as before.
    */
   revalidate?: (params: ResourceParams) => Promise<string>;
+  /** Declared read cost (`ResourceDefinition.readCost`): `"memory"` reads take no read-admission slot. */
+  readCost?: ReadCost;
   /**
    * Deferred subscription-authorization seam (see `ResourceDefinition.authorize`).
    * Undefined ⇒ every subscription to this resource is allowed (the shipped
@@ -2752,6 +2776,18 @@ const READ_LOAD_CONCURRENCY = 6;
 // deadlock two keys' reads waiting on each other's queued flights.
 const READ_KEY_SHARE = 3;
 
+// The longest a `readCost: "memory"` read may take before its declaration is
+// reported as broken (`checkMemoryRead`): far above a memory read (a lookup,
+// a slice of a held list — well under 10 ms), far below any I/O the gate
+// exists to bound under load. A memo's one cold build per process may cross
+// it, which is why a read of a tuple not yet warm is exempt.
+const MEMORY_READ_BUDGET_MS = 250;
+
+// The most tuples one `readCost: "memory"` key remembers as warm
+// (`settleMemoryRead`): a key with many tuples (a picker's symbol batches)
+// starts over past it rather than growing for the life of the process.
+const MEMORY_READ_WARM_MAX = 1024;
+
 /**
  * Who a gated read is for: a tuple's subscription (`sub` — owed only while
  * the tuple is tracked) or an HTTP read (owed until it answers).
@@ -3583,8 +3619,11 @@ export function createResourceRuntime(
   // `config-v2.values` tuple of a post-boot replay paid one). Shipping no
   // watermark is the safe direction — "no causal floor"
   // forbids a denial, never a confirmation by content — and an external is
-  // never L2-persisted, so no floor is lost there.
+  // never L2-persisted, so no floor is lost there. A `readCost: "memory"`
+  // entry reads no Postgres by its declaration: no capture either (it would
+  // be the one round trip of a slotless read).
   function readsDb(entry: RegistryEntry): boolean {
+    if (entry.readCost === "memory") return false;
     return !(
       opts.lastReadSet !== undefined &&
       guardedExternal(entry) &&
@@ -4029,8 +4068,8 @@ export function createResourceRuntime(
       gated
         ? (inFlight) =>
             admitRead(
-              entry.key,
-              gateLabel(entry.key, pk),
+              entry,
+              { pk, probe: false },
               () => {
                 if (readWanted(entry, pk)) return true;
                 // Giving up: no caller arriving from now on may join and
@@ -4066,13 +4105,30 @@ export function createResourceRuntime(
   // key's share (`READ_KEY_SHARE`), yieldable, labelled for `holders` and
   // charged as `read-admit`. `wanted` is asked when the slot comes; a read
   // nobody is owed any more rejects with `ReadAbandoned` instead of running
-  // (see `readWanted`).
+  // (see `readWanted`). A `readCost: "memory"` entry's read runs at once, with
+  // no slot: it has no I/O for the gate to bound, and queueing it FIFO behind
+  // reads that do would make the cheapest read as slow as the slowest. Timed,
+  // so a declaration its reads do not keep is reported (`checkMemoryRead`).
   function admitRead<T>(
-    key: string,
-    label: string,
+    entry: RegistryEntry,
+    read: { pk: string; probe: boolean },
     wanted: () => boolean,
     body: () => Promise<T>,
   ): Promise<T> {
+    const key = entry.key;
+    const label = `${read.probe ? "revalidate " : ""}${gateLabel(key, read.pk)}`;
+    if (entry.readCost === "memory") {
+      if (!wanted()) return Promise.reject(new ReadAbandoned(key));
+      const t0 = performance.now();
+      const tuple = `${read.probe ? "probe" : "load"}\0${read.pk}`;
+      const warm = memoryReadWarm(key, tuple);
+      const settled = () =>
+        settleMemoryRead(key, tuple, warm, label, performance.now() - t0);
+      const run = body();
+      // Observes only — the caller handles the read's own rejection.
+      void run.then(settled, settled);
+      return run;
+    }
     return readLoadGate.run(
       () => {
         if (!wanted()) throw new ReadAbandoned(key);
@@ -4080,6 +4136,47 @@ export function createResourceRuntime(
       },
       { onWait: chargeReadGateWait, yieldable: true, label, class: key },
     );
+  }
+
+  // A `readCost: "memory"` read of a WARM tuple slower than
+  // `MEMORY_READ_BUDGET_MS` breaks its declaration: it did I/O (or waited on
+  // it) without a slot. A tuple — its load and its `revalidate` probe apart —
+  // is warm once one of its reads has completed in this process; a read that
+  // starts before then is exempt, as it may be (or wait on) the one cold
+  // build of the memo the declaration names (a sprite set parsed once, the
+  // config registry coming up). So the check catches a loader that does I/O
+  // on every read, never a memo warming. Reported loudly, once per key per
+  // process: the fix is the declaration (or the memo it claims), never a
+  // bigger budget. Only `"memory"` keys are tracked, a key stops being
+  // tracked once reported, and a key's warm set is bounded (past
+  // `MEMORY_READ_WARM_MAX` it starts over, every tuple cold again).
+  const memoryReadsWarm = new Map<string, Set<string> | null>();
+  function memoryReadWarm(key: string, tuple: string): boolean {
+    return memoryReadsWarm.get(key)?.has(tuple) === true;
+  }
+  function settleMemoryRead(
+    key: string,
+    tuple: string,
+    warm: boolean,
+    label: string,
+    ms: number,
+  ): void {
+    let seen = memoryReadsWarm.get(key);
+    if (seen === null) return;
+    if (warm && ms > MEMORY_READ_BUDGET_MS) {
+      memoryReadsWarm.set(key, null);
+      reportLoaderError(
+        `"${key}" is declared readCost "memory" but a read (${label}) took ${Math.round(ms)}ms`,
+        new Error(
+          `A readCost "memory" read takes no read-admission slot, so it must answer from memory held by this process (budget ${MEMORY_READ_BUDGET_MS}ms). Drop the declaration if its reads do I/O.`,
+        ),
+      );
+      return;
+    }
+    if (seen === undefined || seen.size >= MEMORY_READ_WARM_MAX) {
+      memoryReadsWarm.set(key, (seen = new Set()));
+    }
+    seen.add(tuple);
   }
 
   // Is a read of (entry, pk) still owed to anyone? A subscription is owed
@@ -4152,8 +4249,8 @@ export function createResourceRuntime(
     try {
       const run = () =>
         admitRead(
-          entry.key,
-          `revalidate ${gateLabel(entry.key, pk)}`,
+          entry,
+          { pk, probe: true },
           () => reader !== "sub" || entry.tracked.has(pk),
           () => revalidate(params),
         );
@@ -5257,6 +5354,7 @@ export function createResourceRuntime(
         ((params: ResourceParams) => Promise<FollowReached>) | undefined,
       revalidate: def.revalidate as
         ((params: ResourceParams) => Promise<string>) | undefined,
+      ...(def.readCost !== undefined ? { readCost: def.readCost } : {}),
       authorize: def.authorize as
         ((params: ResourceParams) => boolean | Promise<boolean>) | undefined,
       validateParams: def.validateParams ?? acceptAnyParams,
@@ -5398,6 +5496,7 @@ export function createResourceRuntime(
         onLastUnsubscribe: built.entry.onLastUnsubscribe,
         onFollowReached: built.entry.onFollowReached,
         revalidate: built.entry.revalidate,
+        readCost: built.entry.readCost,
         authorize: built.entry.authorize,
         validateParams: built.entry.validateParams,
       } satisfies Partial<RegistryEntry>);

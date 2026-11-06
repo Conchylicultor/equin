@@ -20,6 +20,8 @@ const RESIDENT: readonly SpriteKey[] = [...DEFAULT_STYLE_KEYS, BRANDS_SPRITE];
  */
 export const residentSpritesServed = serveValue(residentSprites, {
   source: "external",
+  // `spriteFor`'s per-process memo, built once by the boot snapshot.
+  readCost: "memory",
   changes: {
     fixed: {
       reason:
