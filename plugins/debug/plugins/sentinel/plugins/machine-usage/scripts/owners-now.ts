@@ -32,7 +32,7 @@ async function read(baseline: CpuBaseline | null) {
     spawnExpectOk(["ps", "-A", "-o", PS_COLUMNS], { timeoutMs: 5_000 }),
     listActiveWorktreeOps(),
   ]);
-  const browser = readAgentBrowserStatus();
+  const browser = await readAgentBrowserStatus();
   const procs = parsePs(ps.stdout);
   const memBytes = new Map<number, number>();
   for (const p of procs) {
