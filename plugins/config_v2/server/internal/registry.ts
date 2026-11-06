@@ -17,6 +17,7 @@ import {
 import type { Disposable, JsonValue } from "../../core";
 import { BASE_SCOPE, documentFiles } from "./scope-paths";
 import { ConfigStore } from "./host-services";
+import { documentStamp } from "./document-stamp";
 import { ConfigV2 } from "./contribution";
 import {
   configConflictServed,
@@ -44,6 +45,8 @@ interface CacheEntry {
   storePath: string;
   /** The document's files in the user-layer store (`ConfigStore`). */
   files: Record<ConfigDocumentFile, ConfigFileRef>;
+  /** `documentStamp(files)` as of the read `values` came from. */
+  stamp: string;
   disposables: Disposable[];
 }
 
@@ -154,7 +157,17 @@ function readEntryValues(
  * watcher event afterwards is a cheap idempotent re-read.
  */
 function refreshEntry(descriptor: ConfigDescriptor, entry: CacheEntry): void {
+  // Stamped BEFORE the read: a write landing between the two moves the stamp
+  // again, so the next refresh re-reads it. An unchanged trio changed nothing
+  // the document's values, conflicts or tiers are a function of — the watcher
+  // event for a write this process already refreshed, a touch that rewrote
+  // nothing — so it notifies nothing.
+  const stamp = documentStamp(entry.files);
+  if (stamp === entry.stamp) return;
   const freshValues = readEntryValues(descriptor, entry.files);
+  // Only a read that succeeded answers for the stamp: a document that fails
+  // to parse is read (and fails) again on the next refresh.
+  entry.stamp = stamp;
 
   // Provider-backed (e.g. secret) fields are stored outside the JSONC document,
   // so a disk re-read has nothing to say about them — carry the loaded value
@@ -191,6 +204,7 @@ async function buildEntry(
   scopeId: string,
 ): Promise<CacheEntry> {
   const files = documentFiles({ storePath, scopeId });
+  const stamp = documentStamp(files);
   const values = readEntryValues(descriptor, files);
 
   for (const [key, field] of Object.entries(descriptor.fields)) {
@@ -216,6 +230,7 @@ async function buildEntry(
     values,
     storePath,
     files,
+    stamp,
     disposables,
   };
 

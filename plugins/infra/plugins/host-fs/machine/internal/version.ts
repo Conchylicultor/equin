@@ -1,6 +1,7 @@
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join } from "node:path";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import {
   acquireDirWatch,
   type DirWatchRelease,
@@ -56,7 +57,8 @@ export async function hostPathVersion(path: UserPath): Promise<FileVersion> {
  *   reads (bytes, size, modified time) is the target's. A change to the link
  *   itself re-resolves it;
  * - **its entries**, for a folder: what a folder's own stat reports (its
- *   modified time) moves when an entry is created or removed in it.
+ *   modified time) moves when an entry is created, removed or renamed over
+ *   in it — and only then: a write inside an entry is not heard.
  *
  * Every read serving through it (stat, text, bytes, version) is loaded only
  * once its watch is live — the runtime awaits `whileSubscribed` before the
@@ -120,18 +122,44 @@ async function entryKind(path: UserPath): Promise<"folder" | "other" | "gone"> {
   }
 }
 
-/** A children-scope watch of the folder `dir`; a re-arm when it went meanwhile. */
+/**
+ * A children-scope watch of the folder `dir`, heard only when the folder's own
+ * stat moved (`hostPathVersion`: an entry created, removed or renamed over —
+ * whatever the watcher calls the event); a write inside an entry leaves it as
+ * it was, so it is no change of what the folder reads as. A re-arm when the
+ * folder went meanwhile.
+ */
 async function watchEntriesOf(
   acquire: AcquireDirWatch,
   dir: UserPath,
   onChange: () => void,
   rearm: Rearm,
 ): Promise<DirWatchRelease> {
+  // Read before the watch opens: a change after it is heard against it.
+  let last = (await hostPathVersion(dir)).stamp;
+  const heard = async (): Promise<void> => {
+    const { stamp } = await hostPathVersion(dir);
+    if (stamp === last) return;
+    last = stamp;
+    onChange();
+  };
   try {
     return await acquire({
       dir,
       scope: "children",
-      onChange: () => onChange(),
+      // Returned: the watch runs one reaction at a time and folds the
+      // batches landing meanwhile into one trailing call.
+      onChange: () =>
+        heard().then(undefined, (err: unknown) => {
+          // Could not tell: heard, and said so.
+          onChange();
+          const error = err instanceof Error ? err : new Error(String(err));
+          reportServerError({
+            message: `[host-fs] reading the stat of ${dir} after a change failed: ${error.message}`,
+            stack: error.stack,
+            errorType: error.name,
+          });
+        }),
     });
   } catch (err) {
     if (!(await isGone(dir))) throw err;

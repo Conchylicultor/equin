@@ -1,4 +1,7 @@
-import type { ResourceParams } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type {
+  HeldFollows,
+  ResourceParams,
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import type {
   LivePagedValue,
   LiveQueryValue,
@@ -254,11 +257,15 @@ export interface CompiledFollows {
    * Every follow's rows for `subject`, by name: the plain ones in parallel,
    * each dependent one once its dependencies are read. `note` is handed
    * what the dependent follows named (`FollowLoaded`) — the loader's read
-   * passes the runtime's `noteLoaded`.
+   * passes the runtime's `noteLoaded`. `held`: the tracked tuple's held
+   * follows (resource-runtime's `HeldFollows`) — each follow's rows are read
+   * through it, so a follow no change reached since its last read is not
+   * read again; without it (an untracked read) every follow reads fresh.
    */
   read(
     subject: unknown,
     note?: (loaded: FollowLoaded) => void,
+    held?: HeldFollows,
   ): Promise<Readonly<Record<string, readonly unknown[]>>>;
 }
 
@@ -343,7 +350,7 @@ export function followsOf(
       get dependent() {
         return now().dependent;
       },
-      read: (subject, note) => now().read(subject, note),
+      read: (subject, note, held) => now().read(subject, note, held),
     };
     compiled.set(follows, lazy);
     return lazy;
@@ -430,7 +437,7 @@ function compileFollows(
     atBind: false,
     list,
     dependent,
-    async read(subject, note) {
+    async read(subject, note, held) {
       const rows: Record<string, readonly unknown[]> = {};
       const loaded: Record<string, FollowTuple | null> = {};
       const reading = new Map<string, Promise<void>>();
@@ -445,7 +452,7 @@ function compileFollows(
           const answer = f.tupleOf(subject, rows);
           const tuple = answer === null ? null : checkedTuple(key, f, answer);
           if (f.deps !== null) loaded[f.name] = tuple;
-          rows[f.name] = await readFollow(f, tuple);
+          rows[f.name] = await readFollow(f, tuple, held);
         })();
         reading.set(f.name, p);
         return p;
@@ -457,17 +464,24 @@ function compileFollows(
   };
 }
 
-/** One follow's rows for its checked tuple, read fresh — none for a `null` one. */
+/**
+ * One follow's rows for its checked tuple — none for a `null` one: read fresh,
+ * or through the tuple's held follows (`held`), keyed by the follow's name and
+ * the tuple it reads (a dependent follow's tuple moves with its dependencies).
+ */
 async function readFollow(
   f: CompiledFollow,
   tuple: FollowTuple | null,
+  held: HeldFollows | undefined,
 ): Promise<readonly unknown[]> {
   if (tuple === null) return [];
   // An empty id set names no row: nothing to read (`point.encode` refuses it).
   if ("ids" in tuple && tuple.ids.length === 0) return [];
-  return (f.source.read as (t: typeof tuple) => Promise<readonly unknown[]>)(
-    tuple,
-  );
+  const fresh = () =>
+    (f.source.read as (t: typeof tuple) => Promise<readonly unknown[]>)(tuple);
+  return held === undefined
+    ? fresh()
+    : held.read(f.name, JSON.stringify(tuple), fresh);
 }
 
 /** A follow's tuple, checked against its source's form (tsc's overloads, for a cast). */

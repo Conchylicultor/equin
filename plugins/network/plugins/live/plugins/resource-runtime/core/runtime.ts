@@ -495,9 +495,14 @@ export interface ResourceDefinition<
    * follows it. Answers whether it re-pointed (`_debug`'s `followRepoints`
    * counts `"repointed"`); a rejection is reported. Requires follow routes in
    * the entry's reach plan (a throw at registration / bind otherwise — it
-   * would never fire).
+   * would never fire). Handed the tuple's held follows (`HeldFollows`): the
+   * reached follow's read is already dropped, so it reads fresh — and the
+   * load the same change schedules reads what it read.
    */
-  onFollowReached?: (params: P) => Promise<FollowReached>;
+  onFollowReached?: (
+    params: P,
+    follows?: HeldFollows,
+  ) => Promise<FollowReached>;
   /**
    * Conditional-revalidation signature (HTTP-ETag / 304 semantics). Optional and
    * opt-in: when present, a cheap "did anything change?" content signature (an
@@ -510,9 +515,10 @@ export interface ResourceDefinition<
    * value whenever any loader input it cannot cheaply hash might have changed):
    * an occasional needless recompute is fine, serving stale is not. Runs on the
    * read path only, under the same read-admission gate as the loader (it may
-   * spawn git/fs). Absent ⇒ today's full-loader behavior, unchanged.
+   * spawn git/fs). Absent ⇒ today's full-loader behavior, unchanged. A
+   * follower's is handed the tracked tuple's held follows (`HeldFollows`).
    */
-  revalidate?: (params: P) => Promise<string>;
+  revalidate?: (params: P, follows?: HeldFollows) => Promise<string>;
   /**
    * What one read-path load (and `revalidate` probe) costs, for read
    * admission (`READ_LOAD_CONCURRENCY`). `"io"` (the default): it may spawn,
@@ -1365,16 +1371,62 @@ interface RoutingRecord {
   loaded: Map<string, { seq: number; state: unknown }>;
   /** Per pk, the loads in flight: while any is, loaded routes skip their match (see `usesFor`). */
   loading: Map<string, number>;
+  /**
+   * Per TRACKED pk, its held followed rows (`HeldFollows`) — only a plan with
+   * follow routes holds any. A change reaching the tuple through a follow drops
+   * that follow's read (`reachFollows`); evicted with the tuple (N→0).
+   */
+  followHeld: Map<string, FollowHeldState>;
 }
 
-/** What a loader may tell the runtime about its run — only an entry with loaded follow routes is handed one. */
+/**
+ * What a loader may tell the runtime about its run, and what the runtime holds
+ * for it — handed to every load of an entry with follow routes (`Route.via`).
+ */
 export interface LoadRun {
   /**
    * What this load read that decides the tuple's match on its loaded routes
    * (`RouteVia.loaded`): handed back to `usesOf(params, loaded)` once the
-   * load completes, unless a newer-started load already completed.
+   * load completes, unless a newer-started load already completed. A no-op
+   * on an entry with no loaded route.
    */
   noteLoaded(state: unknown): void;
+  /** The tuple's held followed rows (`HeldFollows`) — absent for a tuple nobody tracks. */
+  readonly follows?: HeldFollows;
+}
+
+/**
+ * A TRACKED follower tuple's followed rows, as the runtime holds them: each
+ * follow's last read (by its name and the tuple it read — a dependent follow's
+ * tuple may move), kept until a change reaches the follower tuple THROUGH that
+ * follow's routes (`Route.via` — the very routes that decide whether a write
+ * moves those rows). So a recompute the follow did not cause — the value's own
+ * notify, a change to another table — reads the rows it already has: O(1), no
+ * nested load. A change that reaches the follow drops its rows (and any read in
+ * flight from before it), so the next read is fresh. Held only while the tuple
+ * is tracked (its routing is what invalidates them), and dropped with it (N→0).
+ */
+export interface HeldFollows {
+  /**
+   * The rows of follow `name` read at `tuple` (its canonical JSON): the held
+   * read when it is still current, else `fresh()` — joined by every later read
+   * of the same tuple until a change reaches the follow. A failed read is held
+   * by no one.
+   */
+  read(
+    name: string,
+    tuple: string,
+    fresh: () => Promise<readonly unknown[]>,
+  ): Promise<readonly unknown[]>;
+}
+
+/** One tracked tuple's held follows (`HeldFollows`): per follow, its current read. */
+interface FollowHeldState {
+  /** Per follow name: the tuple it read and the read (resolved or in flight). */
+  readonly reads: Map<
+    string,
+    { tuple: string; rows: Promise<readonly unknown[]> }
+  >;
 }
 
 /** A drift-only routing record's plan (see `RoutingRecord`): it routes nothing. */
@@ -1608,13 +1660,19 @@ interface RegistryEntry {
   onFirstSubscribe?: (params: ResourceParams) => void | Promise<void>;
   onLastUnsubscribe?: (params: ResourceParams) => void;
   /** See `ResourceDefinition.onFollowReached`. */
-  onFollowReached?: (params: ResourceParams) => Promise<FollowReached>;
+  onFollowReached?: (
+    params: ResourceParams,
+    follows?: HeldFollows,
+  ) => Promise<FollowReached>;
   /**
    * Conditional-revalidation ETag signature (see `ResourceDefinition.revalidate`).
    * Undefined ⇒ the resource has not opted in and every read path runs the full
    * loader exactly as before.
    */
-  revalidate?: (params: ResourceParams) => Promise<string>;
+  revalidate?: (
+    params: ResourceParams,
+    follows?: HeldFollows,
+  ) => Promise<string>;
   /** Declared read cost (`ResourceDefinition.readCost`): `"memory"` reads take no read-admission slot. */
   readCost?: ReadCost;
   /**
@@ -3000,6 +3058,11 @@ export function createResourceRuntime(
   // `whileFollowing` start moved to the followed rows a change moved.
   // Monotonic; surfaced in the `_debug` payload.
   const followRepoints = new Map<string, number>();
+  // Per-key follow reads answered from the tuple's held rows (`HeldFollows`)
+  // instead of a nested load, and per-key held reads a routed change dropped
+  // (`reachFollows`). Monotonic; surfaced in the `_debug` payload.
+  const followHeldHits = new Map<string, number>();
+  const followHeldDrops = new Map<string, number>();
   function recordAckOverflow(key: string): void {
     ackOverflows.set(key, (ackOverflows.get(key) ?? 0) + 1);
   }
@@ -3427,12 +3490,22 @@ export function createResourceRuntime(
     entry: RegistryEntry,
     params: ResourceParams,
     ctx?: { affectedIds: readonly string[] },
-    sink?: { raw: unknown },
+    sink?: { raw: unknown; heldFollows?: boolean },
   ): Promise<unknown> {
     const bracket = loadBracket(entry, params);
+    const held = heldFollowsFor(entry, paramsKey(params));
+    const loadRun: LoadRun | undefined =
+      held === undefined
+        ? bracket?.run
+        : { noteLoaded: bracket?.run.noteLoaded ?? (() => {}), follows: held };
     const run = async () => {
-      const raw = await declaredLoad(entry, params, ctx, bracket?.run);
-      if (sink) sink.raw = raw;
+      const raw = await declaredLoad(entry, params, ctx, loadRun);
+      if (sink) {
+        sink.raw = raw;
+        // The value read followed rows it did not read itself: its flight's
+        // watermark cannot vouch for them (`getResourceValue`).
+        if (held?.servedHeld === true) sink.heldFollows = true;
+      }
       return entry.schema.parse(raw);
     };
     let load: Promise<unknown>;
@@ -3458,6 +3531,55 @@ export function createResourceRuntime(
       ? load.then((value) => checkRouteDrift(entry, own)(value))
       : load;
     return bracket === null ? judged : bracket.settle(judged);
+  }
+
+  // The tracked tuple's held follows (`HeldFollows`), one per read (its
+  // `servedHeld` says whether any follow was answered from a read it did not
+  // start), or undefined: the entry has no follow route, nobody tracks the
+  // tuple (nothing would drop a held read — an untracked read reads fresh), or
+  // the entry is L2-persisted (its row's floor is the flight's own watermark,
+  // which held rows read before it cannot honour).
+  function heldFollowsFor(
+    entry: RegistryEntry,
+    pk: string,
+  ): (HeldFollows & { readonly servedHeld: boolean }) | undefined {
+    const routing = entry.routing;
+    if (routing === undefined || routing.via.size === 0) return undefined;
+    if (!entry.tracked.has(pk) || isPersisted(entry)) return undefined;
+    let state = routing.followHeld.get(pk);
+    if (state === undefined) {
+      state = { reads: new Map() };
+      routing.followHeld.set(pk, state);
+    }
+    const own = state;
+    const out = {
+      servedHeld: false,
+      read(
+        name: string,
+        tuple: string,
+        fresh: () => Promise<readonly unknown[]>,
+      ): Promise<readonly unknown[]> {
+        // The span this state was made in ended (N→0): read, hold nothing.
+        if (routing.followHeld.get(pk) !== own) return fresh();
+        const known = own.reads.get(name);
+        if (known !== undefined && known.tuple === tuple) {
+          out.servedHeld = true;
+          followHeldHits.set(
+            entry.key,
+            (followHeldHits.get(entry.key) ?? 0) + 1,
+          );
+          return known.rows;
+        }
+        const rows = fresh();
+        own.reads.set(name, { tuple, rows });
+        // A failed read is held by no one; the caller handles the rejection.
+        void rows.then(undefined, () => {
+          if (own.reads.get(name)?.rows === rows) own.reads.delete(name);
+        });
+        return rows;
+      },
+    };
+    return out;
   }
 
   // A load of an entry with loaded follow routes (`RouteVia.loaded`): the
@@ -3834,6 +3956,7 @@ export function createResourceRuntime(
       loadedRoutes: new Set(),
       loaded: new Map(),
       loading: new Map(),
+      followHeld: new Map(),
     };
   }
 
@@ -4041,12 +4164,19 @@ export function createResourceRuntime(
       // `ackTx: seedAckTx` — the STARTER's seed; joiners adopt it wholesale
       // (like the etag/watermark), so a stamped ackTx always describes the
       // flight that produced the value it rides with.
-      const sink = { raw: undefined as unknown };
+      const sink: { raw: unknown; heldFollows?: boolean } = {
+        raw: undefined,
+      };
+      const value = await timedLoad(entry, params, undefined, sink);
       return {
-        value: await timedLoad(entry, params, undefined, sink),
+        value,
         raw: sink.raw,
         etag: seedEtag,
-        watermark,
+        // A value built on held followed rows (`HeldFollows`) ships no causal
+        // floor: a commit before this capture may have moved them with its
+        // change not routed yet — the safe direction (no floor forbids a
+        // denial, never a confirmation). The routed change recomputes it.
+        watermark: sink.heldFollows === true ? undefined : watermark,
         ackTx: seedAckTx,
       };
     };
@@ -4252,7 +4382,7 @@ export function createResourceRuntime(
           entry,
           { pk, probe: true },
           () => reader !== "sub" || entry.tracked.has(pk),
-          () => revalidate(params),
+          () => revalidate(params, heldFollowsFor(entry, pk)),
         );
       const raw = await (opts.wrapOrigin
         ? opts.wrapOrigin("sub", entry.key, run)
@@ -4281,7 +4411,8 @@ export function createResourceRuntime(
     if (!entry.revalidate) return undefined;
     const revalidate = entry.revalidate;
     try {
-      const run = () => revalidate(params);
+      const run = () =>
+        revalidate(params, heldFollowsFor(entry, paramsKey(params)));
       const raw = await (opts.wrapOrigin
         ? opts.wrapOrigin("push", entry.key, run)
         : run());
@@ -4788,6 +4919,7 @@ export function createResourceRuntime(
       ),
       loaded: new Map(),
       loading: new Map(),
+      followHeld: new Map(),
     };
   }
 
@@ -9698,6 +9830,7 @@ export function createResourceRuntime(
       entry.held.delete(pk);
       entry.routing?.uses.delete(pk);
       entry.routing?.loaded.delete(pk);
+      entry.routing?.followHeld.delete(pk);
       // Bound keyed-snapshot memory to actively-observed pks. Re-subscribe
       // re-hydrates via a full sub-ack and rebuilds the snapshot.
       // M5 exception: a PERSISTED `scopedMembership` (unbounded-window alias)
@@ -9968,6 +10101,8 @@ export function createResourceRuntime(
       notifiedReads: Array<{ relation: string; reason: string }>;
       follows: Array<{ name: string; collection: string }>;
       followRepoints: number;
+      followHeldHits: number;
+      followHeldDrops: number;
       routeDrifted: string[];
       routeDriftSeeded: string[];
       tuples: number;
@@ -10083,6 +10218,10 @@ export function createResourceRuntime(
         // re-pointed its `whileFollowing` start (`onFollowReached`).
         follows: entry.routing ? followsOf(entry.routing) : [],
         followRepoints: followRepoints.get(entry.key) ?? 0,
+        // Follow reads served from the tuple's held rows, and held reads a
+        // change through the follow dropped (`HeldFollows`).
+        followHeldHits: followHeldHits.get(entry.key) ?? 0,
+        followHeldDrops: followHeldDrops.get(entry.key) ?? 0,
         routeDrifted: entry.routing ? [...entry.routing.drifted].sort() : [],
         // D7: persisted reads seeded as drift at boot that no load has
         // confirmed yet (`seedRouteDrift`) — routed FULL, not reported.
@@ -10454,43 +10593,68 @@ export function createResourceRuntime(
     }
   }
 
-  // A change to a followed table, for the entry's follow hook
-  // (`onFollowReached`): each TRACKED tuple a follow route lets it through to
-  // — its gate, the static rows and the tuple's own match — is handed to the
-  // hook, synchronously and outside any flight, whatever the entry's mode.
-  // A tuple whose read-set is unusable, or a followed table the drift guard
-  // failed open (served FULL), is handed over too: a missed re-point would
-  // leave a watch on a stale target, an extra one costs one re-read. The
-  // hook's own work runs in a `bg` origin; a rejection is reported.
+  // A change to a followed table, for each TRACKED tuple a follow route lets
+  // it through to — its gate, the static rows and the tuple's own match:
+  // the follows it reached drop their held reads (`HeldFollows`), so the next
+  // read of them is fresh, and the entry's follow hook (`onFollowReached`) is
+  // handed the tuple, synchronously and outside any flight, whatever the
+  // entry's mode. A tuple whose read-set is unusable, or a followed table the
+  // drift guard failed open (served FULL), counts as reached by every follow
+  // of the table: a missed re-point would leave a watch on a stale target, a
+  // held read kept past its change would serve stale rows — an extra one
+  // costs one re-read. The hook's own work runs in a `bg` origin; a rejection
+  // is reported.
   function reachFollows(
     entry: RegistryEntry,
     routing: RoutingRecord,
     change: TableChange,
   ): void {
+    const vias = routing.via.get(change.table);
+    if (vias === undefined) return;
     const hook = entry.onFollowReached;
-    if (hook === undefined || !routing.via.has(change.table)) return;
+    if (hook === undefined && routing.followHeld.size === 0) return;
     const viaRoutes = (routing.byTable.get(change.table) ?? []).filter(
       (r) => r.via !== undefined,
     );
     const drifted = routing.driftBases.has(change.table);
+    const every = vias.map((v) => v.name);
     for (const [pk, params] of entry.tracked) {
-      let reached = drifted;
-      if (!reached) {
+      const held = routing.followHeld.get(pk);
+      if (hook === undefined && held === undefined) continue;
+      let reached: readonly string[] = every;
+      if (!drifted) {
         try {
           const uses = usesFor(entry, routing, pk, params);
-          reached =
-            uses === null ||
-            routeTuple(change, viaRoutes, uses).kind !== "untouched";
+          if (uses !== null) {
+            reached = every.filter(
+              (name) =>
+                routeTuple(
+                  change,
+                  viaRoutes.filter((r) => r.via!.name === name),
+                  uses,
+                ).kind !== "untouched",
+            );
+          }
         } catch (err) {
           reportLoaderError(
             `follow routing failed for ${entry.key} ${pk} (table "${change.table}")`,
             err,
           );
-          reached = true;
         }
       }
-      if (!reached) continue;
-      const run = () => hook(params);
+      if (reached.length === 0) continue;
+      if (held !== undefined) {
+        for (const name of reached) {
+          if (held.reads.delete(name)) {
+            followHeldDrops.set(
+              entry.key,
+              (followHeldDrops.get(entry.key) ?? 0) + 1,
+            );
+          }
+        }
+      }
+      if (hook === undefined) continue;
+      const run = () => hook(params, heldFollowsFor(entry, pk));
       void (opts.wrapOrigin ? opts.wrapOrigin("bg", entry.key, run) : run())
         .then((outcome) => {
           if (outcome === "repointed") {

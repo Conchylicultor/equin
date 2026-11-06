@@ -41,6 +41,7 @@ export type {
   ReadTags,
   RunCapture,
   FollowReached,
+  HeldFollows,
   LoadRun,
 } from "./runtime";
 export {

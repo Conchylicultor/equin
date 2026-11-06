@@ -54,6 +54,10 @@ export const subagentActivityServed = serveValue(subagentActivity, {
   whileFollowing: {
     over: (followed) => followedTranscriptChain(followed),
     start: ({ id }, { over: chain, notify }) => {
+      // What this room last told the value, as JSON: a signature that moved
+      // (any line appended to any sub-agent's transcript) without moving the
+      // rows changes nothing a card shows, so it notifies nothing.
+      let told: string | undefined;
       const unsub = watchPaths<SubagentActivityRow[]>(
         {
           key: `subagent-activity:${id}`,
@@ -73,8 +77,12 @@ export const subagentActivityServed = serveValue(subagentActivity, {
         },
         ({ value, signature }) => {
           // Prime BEFORE notify: the room holds both halves of the pair, so the
-          // loader the `notify` schedules is a memo hit instead of a second scan.
+          // loader the `notify` schedules is a memo hit instead of a second scan
+          // (primed even when unchanged: a later load probes this signature).
           primeSubagentActivity(id, signature, value);
+          const json = JSON.stringify(value);
+          if (json === told) return;
+          told = json;
           notify();
         },
       );

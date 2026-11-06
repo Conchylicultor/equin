@@ -2,6 +2,7 @@ import type {
   DependsOnEntry,
   ExternalResource,
   ExternalWindowPolicy,
+  HeldFollows,
   KeyedResourceContract,
   KeyedServerResourceOptions,
   LoadRun,
@@ -595,7 +596,10 @@ export interface TupleLifecycle<P extends Record<string, string>> {
   onFirstSubscribe: (params: P) => void | Promise<void>;
   onLastUnsubscribe: (params: P) => void;
   /** Only a follower's: re-point the tuple's start (the runtime's `onFollowReached`). */
-  onFollowReached?: (params: P) => Promise<FollowReached>;
+  onFollowReached?: (
+    params: P,
+    follows?: HeldFollows,
+  ) => Promise<FollowReached>;
 }
 
 /** What a follow re-point did (resource-runtime's `FollowReached`). */
@@ -632,7 +636,7 @@ type FollowReached = "repointed" | "unchanged";
  */
 export function followLifecycle<P extends Record<string, string>, W>(
   start: (params: P, over: W) => StopFn | Promise<StopFn>,
-  read: (params: P) => Promise<W>,
+  read: (params: P, follows?: HeldFollows) => Promise<W>,
 ): Required<TupleLifecycle<P>> {
   interface Tracked {
     stopped: boolean;
@@ -689,7 +693,7 @@ export function followLifecycle<P extends Record<string, string>, W>(
         if (started.ok) started.stop();
       });
     },
-    onFollowReached(params) {
+    onFollowReached(params, follows) {
       const rec = running.get(tupleKey(params));
       if (rec === undefined) return Promise.resolve("unchanged");
       if (rec.queued !== null) {
@@ -704,7 +708,7 @@ export function followLifecycle<P extends Record<string, string>, W>(
         // read, so it queues its own.
         rec.queued = null;
         if (rec.stopped) return "unchanged";
-        const over = await read(params);
+        const over = await read(params, follows);
         const signature = JSON.stringify(over);
         if (rec.stopped || signature === rec.signature) return "unchanged";
         rec.signature = signature;
@@ -796,7 +800,7 @@ function followingHook(
 ):
   | {
       start: (subject: unknown, ctx: unknown) => StopFn | Promise<StopFn>;
-      read: (subject: unknown) => Promise<unknown>;
+      read: (subject: unknown, follows?: HeldFollows) => Promise<unknown>;
     }
   | undefined {
   if (opts.whileFollowing === undefined) return undefined;
@@ -828,7 +832,8 @@ function followingHook(
       subject: unknown,
       ctx: unknown,
     ) => StopFn | Promise<StopFn>,
-    read: async (subject) => over(await follows.read(subject)),
+    read: async (subject, held) =>
+      over(await follows.read(subject, undefined, held)),
   };
 }
 
@@ -888,6 +893,7 @@ function loaderOf<T, P extends Record<string, string>, S>(
     const followed = await follows.read(
       subject,
       run === undefined ? undefined : (loaded) => run.noteLoaded(loaded),
+      run?.follows,
     );
     return hook(subject, { followed }) as Promise<T> | T;
   };
@@ -902,11 +908,13 @@ function withFollowed<P extends Record<string, string>, S>(
   subjects: Subjects<P, S>,
   hook: (...args: unknown[]) => unknown,
   follows: CompiledFollows | null,
-): (params: P) => unknown {
+): (params: P, held?: HeldFollows) => unknown {
   if (follows === null) return (params) => hook(subjects.of(params));
-  return async (params) => {
+  return async (params, held) => {
     const subject = subjects.of(params);
-    return hook(subject, { followed: await follows.read(subject) });
+    return hook(subject, {
+      followed: await follows.read(subject, undefined, held),
+    });
   };
 }
 
@@ -1249,7 +1257,7 @@ function compilePagedOf(
               over,
               notify: () => notifyQuestion(q),
             }),
-          ({ q }) => whileFollowing.read(codec.decodeQuery(q)),
+          ({ q }, held) => whileFollowing.read(codec.decodeQuery(q), held),
         ),
   );
   // A follow route reached a page or meta tuple: the question's start
@@ -1337,13 +1345,17 @@ function compilePagedOf(
         limitOf: (params) => codec.decode(params).range.limit,
         familyOf: (params) => params.q,
       },
-      loader: async (params: LivePagedParams) => {
+      loader: async (
+        params: LivePagedParams,
+        _ctx?: unknown,
+        run?: LoadRun,
+      ) => {
         const { query, range } = codec.decode(params);
         const items =
           follows === null
             ? await loader(query, range)
             : await loader(query, range, {
-                followed: await follows.read(query),
+                followed: await follows.read(query, undefined, run?.follows),
               });
         return pageRowsOf(value, range, items);
       },
@@ -1380,11 +1392,17 @@ function compilePagedOf(
     compiledMeta = {
       options: {
         mode: metaValue.load === "on-demand" ? "invalidate" : "push",
-        loader: async (params: LiveQueryParams) => {
+        loader: async (
+          params: LiveQueryParams,
+          _ctx?: unknown,
+          run?: LoadRun,
+        ) => {
           const query = metaValue.query.decode(params);
           return follows === null
             ? metaLoader(query)
-            : metaLoader(query, { followed: await follows.read(query) });
+            : metaLoader(query, {
+                followed: await follows.read(query, undefined, run?.follows),
+              });
         },
         ...(opts.throttleMs !== undefined
           ? { debounceMs: opts.throttleMs }
@@ -1467,7 +1485,7 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
               subjects.of(params),
               external ? { over, notify: notifyFor(params) } : { over },
             ),
-          (params) => whileFollowing.read(subjects.of(params)),
+          (params, held) => whileFollowing.read(subjects.of(params), held),
         ),
   );
   const lifecycle = paired ?? {};
@@ -1515,6 +1533,7 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
               ? revalidate
               : withFollowed(subjects, revalidate, follows)) as (
               params: P,
+              follows?: HeldFollows,
             ) => Promise<string>,
           }),
       ...(readCost === undefined ? {} : { readCost }),

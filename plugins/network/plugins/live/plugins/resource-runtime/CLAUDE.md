@@ -481,8 +481,29 @@ like any reach route (gate, `rows` ∧ `use.match`, then FULL): no new edge kind
     flight.
   - `mintReachPlan` refuses a follow whose routes disagree on `loaded`.
   - Pinned by `core/runtime-loaded-follows.test.ts`.
+- **Held follows — `HeldFollows`** (`LoadRun.follows`, and the second
+  argument of `revalidate` / `onFollowReached`): a TRACKED follower tuple's
+  followed rows, held per follow name and tuple read (`RoutingRecord.followHeld`).
+  - A read of a follow whose held entry has the same tuple is answered from
+    it (resolved, or joined while in flight) — no nested load. Otherwise it
+    reads fresh and holds the read at once; a failed read is dropped.
+  - `reachFollows` drops, per tracked tuple, the held read of every follow a
+    change reaches through its own routes (same gate / rows / match as the
+    hook; a drifted table, an unusable read-set or a throw drops every follow
+    of the table; a reconnect sweep's `ids: null` reaches all). A read in
+    flight across the drop is never held again.
+  - Only for a tracked tuple of a non-persisted entry (the routes are what
+    invalidate it); evicted at N→0. An untracked read (HTTP, preload,
+    `loadResourceByKey`) reads fresh.
+  - A value built on any held row ships NO watermark (`getResourceValue`):
+    a commit before the capture may have moved the rows with its change not
+    routed yet — no floor is the safe direction; the routed change recomputes.
+    `ackTx` is kept: an ack names transactions whose changes were all routed
+    before the drain.
+  - Pinned by `core/runtime-held-follows.test.ts`.
 - **`_debug`**: `follows: [{ name, collection }]` per key (from the plan's `via`
-  routes) and `followRepoints`.
+  routes), `followRepoints`, `followHeldHits` (follow reads answered from held
+  rows) and `followHeldDrops` (held reads a change dropped).
 - **Messages.** D32 / T15 and the routed `recomputeOn` refusals point to
   `follows`.
 
@@ -918,6 +939,7 @@ Out of reach at this seam (DB-backed harness instead):
     - `HandoffDefinitionAnswer`
     - `HandoffState`
     - `HandoffTuple`
+    - `HeldFollows`
     - `HostMap`
     - `KeyedDiff`
     - `KeyedMembership`

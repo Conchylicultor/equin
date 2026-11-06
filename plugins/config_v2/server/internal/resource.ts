@@ -26,6 +26,7 @@ import type {
 import type { ConfigDescriptor, ConfigValues, JsonValue } from "../../core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { documentFiles } from "./scope-paths";
+import { documentStamp } from "./document-stamp";
 import { ConfigGitLayer, ConfigStore } from "./host-services";
 import { hasFieldStorageProvider } from "./field-storage-providers";
 import { computeFieldTiers } from "./field-tiers";
@@ -365,10 +366,7 @@ function derivedTrioState(
   scopeId?: string,
 ): DerivedTrioState {
   const files = conflictFiles(storePath, scopeId);
-  // The store's stamp moves on every write to a file (on the desktop: its
-  // inode, mtime-ns and size), so an unchanged stamp trio is an unchanged trio.
-  const store = ConfigStore.get();
-  const fingerprint = `${store.stamp(files.origin)}|${store.stamp(files.override)}|${store.stamp(files.ancestor)}`;
+  const fingerprint = documentStamp(files);
   const memoKey = `${storePath}|${scopeId ?? ""}`;
 
   const memo = conflictMemo.get(memoKey);

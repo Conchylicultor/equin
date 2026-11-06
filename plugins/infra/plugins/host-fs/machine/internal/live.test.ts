@@ -13,6 +13,7 @@ import {
   mkdirSync,
   mkdtempSync,
   realpathSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -433,8 +434,21 @@ describe("watchHostPath", () => {
       asUserPath(folder),
       () => folderHeard++,
     );
+    writeFileSync(join(folder, "child.txt"), "c");
     dirs.emit(join(folder, "child.txt"));
+    await settle();
     expect(folderHeard).toBe(1);
+    // A write inside an entry leaves the folder's stat as it was: not heard.
+    writeFileSync(join(folder, "child.txt"), "a longer body");
+    dirs.emit(join(folder, "child.txt"), "update");
+    await settle();
+    expect(folderHeard).toBe(1);
+    // A rename over an entry moves the folder's stat, whatever the event says.
+    writeFileSync(join(folder, "next.tmp"), "n");
+    renameSync(join(folder, "next.tmp"), join(folder, "child.txt"));
+    dirs.emit(join(folder, "child.txt"), "update");
+    await settle();
+    expect(folderHeard).toBe(2);
     stop();
   });
 

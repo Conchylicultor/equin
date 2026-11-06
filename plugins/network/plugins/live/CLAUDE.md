@@ -1150,12 +1150,16 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
     names no contributor (`attachments.by-owner` follows each owner's
     `Attachments.Link` set). Nothing calls `follows` before the bind; the
     value is deferred. Not on a paged value (a throw).
-  - **`followed[name]`** — the tuple's rows (`readonly Row[]`), read FRESH in
-    each hook's call through the collection's own read (resource-runtime's
-    `loadResourceFresh`). Handed to the loader, `revalidate` (its own read: a
-    revalidate-then-load reads twice), `whileFollowing.over`, a paged value's
-    `loader(q, range, { followed })` and `meta(q, { followed })`. An empty id
-    set reads nothing.
+  - **`followed[name]`** — the tuple's rows (`readonly Row[]`), read through
+    the collection's own read (resource-runtime's `loadResourceFresh`) —
+    for a TRACKED tuple through the runtime's held rows (`HeldFollows`): a
+    follow's last read is reused until a change reaches the tuple through
+    that follow's routes, so a recompute the follow did not cause (the
+    value's own notify, another table) reads no followed row again. An
+    untracked read (HTTP, preload) reads fresh. Handed to the loader,
+    `revalidate`, `whileFollowing.over`, a paged value's
+    `loader(q, range, { followed })` and `meta(q, { followed })` — every
+    hook of one tuple shares the held rows. An empty id set reads nothing.
   - **The reach** (`server/internal/serve-value.ts`): query-resource's
     `followRead` copies the collection's plan (gates kept, `full`, tagged `via`
     the follow, matched on the tuple's ids / scope — a re-pointed row reaches
