@@ -33,7 +33,7 @@ const file = await takeHostSnapshot({
     // What the take cost, split: the build log carries it for every take.
     const { stages, slowest } = host.boot;
     console.info(
-      `[lumen snapshot] boot: ${stages.map((s) => `${s.name} ${s.ms} ms`).join(", ")}; slowest: ${slowest.map((s) => `${s.label} ${s.ms} ms`).join(", ")}`,
+      `[workspace demo snapshot] boot: ${stages.map((s) => `${s.name} ${s.ms} ms`).join(", ")}; slowest: ${slowest.map((s) => `${s.label} ${s.ms} ms`).join(", ")}`,
     );
     return host;
   },
