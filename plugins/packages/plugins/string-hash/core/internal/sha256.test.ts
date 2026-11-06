@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { createSha256, sha1Hex, sha256Hex } from "./sha256";
+import {
+  createSha256,
+  portableSha1Hex,
+  portableSha256Hex,
+  sha1Hex,
+  sha256Hex,
+} from "./sha256";
 
 const TEXTS = [
   "",
@@ -9,6 +15,8 @@ const TEXTS = [
   "CREATE OR REPLACE VIEW tasks_v AS SELECT 1",
   "unicode ✓ — é ü 日本語 🎵",
   "x".repeat(10_000),
+  // A lone surrogate: both paths must encode it as U+FFFD, as TextEncoder does.
+  "a\ud800b",
 ];
 
 describe("sha256Hex", () => {
@@ -17,6 +25,15 @@ describe("sha256Hex", () => {
       expect(sha256Hex(text)).toBe(
         createHash("sha256").update(text).digest("hex"),
       );
+    }
+  });
+});
+
+describe("native and portable paths", () => {
+  test("give the same digests (the host picks speed, never the value)", () => {
+    for (const text of TEXTS) {
+      expect(sha256Hex(text)).toBe(portableSha256Hex(text));
+      expect(sha1Hex(text)).toBe(portableSha1Hex(text));
     }
   });
 });

@@ -44,6 +44,7 @@ import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import {
   buildModuleGraph,
   currentRecordStore,
+  NO_OUTSIDE_FILES,
   scanFilesCached,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
@@ -438,7 +439,7 @@ export function serverPortabilityOf(
       const input = {
         snapshot: repo,
         store: currentRecordStore(),
-        readOutside: () => null,
+        readOutside: NO_OUTSIDE_FILES,
       };
       const graph = await buildModuleGraph(input, barrels);
       const closure = graph.bundledClosure(barrels);

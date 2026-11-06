@@ -13,6 +13,7 @@ import {
 import {
   buildModuleGraph,
   currentRecordStore,
+  NO_OUTSIDE_FILES,
   recordKey,
   type RecordStore,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
@@ -102,7 +103,7 @@ export async function drizzleVerdictKey(
       "[migrations] no schema-glob file in the repo snapshot: the verdict would key an empty schema",
     );
   const graph = await buildModuleGraph(
-    { snapshot, store, readOutside: () => null },
+    { snapshot, store, readOutside: NO_OUTSIDE_FILES },
     [...schema, ...VERDICT_CODE],
   );
   const blobOr = (rel: string): string =>

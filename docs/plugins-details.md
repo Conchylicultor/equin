@@ -28475,11 +28475,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
-            - Uses: 25 symbols — full list in [`plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md)
+            - Uses: 26 symbols — full list in [`plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md)
               - `framework/plugin-id` ×6
               - `plugin-meta/parse-utils` ×6
               - `framework/tooling/import-closure` ×4
-              - `plugin-meta/plugin-records` ×3
+              - `plugin-meta/plugin-records` ×4
               - `framework/tooling/boundaries/runtime-exception.parseRuntimeException`
               - `infra/host-fs/user-path.joinAppPath`
               - `infra/spawn.getWorktreeRoot`
@@ -28978,10 +28978,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/timed-fs` ×6
               - `plugin-meta/barrel-import` ×6
               - `plugin-meta/composition` ×6
+              - `plugin-meta/plugin-records` ×6
               - `plugin-meta/closure` ×5
               - `plugin-meta/facets` ×5
               - `plugin-meta/plugin-records/evaluate` ×5
-              - `plugin-meta/plugin-records` ×5
               - `framework/tooling/codegen/composition-registries` ×4
               - `infra/host-fs/user-path` ×3
               - `config_v2/ledger` ×2
@@ -28999,7 +28999,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling.noteRepoWrites`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `packages/macrotask-yield.yieldMacrotask`
-              - `packages/semaphore.createSemaphore`
               - `plugin-meta/facets/contributions.contributionsFacetDef`
               - `plugin-meta/facets/exemptions.exemptionsFacetDef`
               - `plugin-meta/facets/slots.slotsFacetDef`
@@ -29739,15 +29738,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 38 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 39 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `packages/timed-fs` ×8
               - `framework/plugin-id` ×4
               - `framework/web-core` ×4
               - `infra/host-fs/user-path` ×4
               - `packages/flock` ×4
+              - `plugin-meta/plugin-records` ×3
               - `framework/tooling` ×2
               - `packages/owned-fd` ×2
-              - `plugin-meta/plugin-records` ×2
               - `framework/browser-server/host-storage.decodeHostSnapshot`
               - `framework/product-name.LEGACY_IDS`
               - `infra/deps/npm.lockfileNpmResolutions`
@@ -37911,11 +37910,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withJitter`
     - **`semaphore`**
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
           - `infra` ×9
           - `apps` ×6
-          - `framework` ×4
           - `debug` ×3
+          - `framework` ×3
           - `conversations` ×2
           - `database` ×2
           - `packages` ×2
@@ -42429,6 +42428,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `gitBlobId`
           - `installRecordStore`
           - `installRecordWorkers`
+          - `NO_OUTSIDE_FILES`
           - `RECORD_TABLES`
           - `recordKey`
           - `recordWorkerCount`

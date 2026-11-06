@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { buildModuleGraph } from "./module-graph";
+import { buildModuleGraph, NO_OUTSIDE_FILES } from "./module-graph";
 import { gitBlobId } from "./keys";
 import { createMemoryRecordStore, type RecordStore } from "./store";
 
@@ -128,6 +128,58 @@ describe("buildModuleGraph", () => {
     });
     expect(g1.modules.has("x/gen.generated.ts")).toBe(true);
     expect(g2.keyOf("x/a.ts")).not.toBe(g1.keyOf("x/a.ts"));
+  });
+
+  test("calls over one input grow one graph: same keys as one walk, each view its own closure", async () => {
+    const files = {
+      ...base,
+      "x/cyc-a.ts": 'import "./cyc-b";\nimport "@plugins/b/core";',
+      "x/cyc-b.ts": 'import "./cyc-a";',
+      "x/top.ts": 'import "./cyc-a";\nexport const t = () => import("./lazy");',
+      "x/lazy.ts": 'import "@plugins/a/web";',
+    };
+    const all = [`${P}/a/web/index.ts`, "x/top.ts"];
+    const once = await graphOf(files, all);
+
+    const input = {
+      snapshot: snapshotOf(files),
+      store: createMemoryRecordStore(),
+      readOutside: NO_OUTSIDE_FILES,
+    };
+    // Grown leaf-first, so later walks reach modules (and a cycle's members)
+    // keyed by an earlier call.
+    const first = await buildModuleGraph(input, [`${P}/b/core/index.ts`]);
+    const second = await buildModuleGraph(input, ["x/cyc-b.ts"]);
+    const third = await buildModuleGraph(input, all);
+    for (const m of once.modules.keys())
+      expect(third.keyOf(m)).toBe(once.keyOf(m));
+    expect([...third.modules.keys()].sort()).toEqual(
+      [...once.modules.keys()].sort(),
+    );
+    // An earlier view is exactly its own closure, and refuses what is not in it.
+    expect([...first.modules.keys()].sort()).toEqual([
+      `${P}/b/core/index.ts`,
+      `${P}/b/core/internal/b.ts`,
+    ]);
+    expect(() => first.keyOf("x/top.ts")).toThrow(/not in the module graph/);
+    expect(second.keyOf("x/cyc-a.ts")).toBe(once.keyOf("x/cyc-a.ts"));
+  });
+
+  test("a walk that throws leaves the shared graph usable", async () => {
+    const input = {
+      snapshot: snapshotOf(base),
+      store: createMemoryRecordStore(),
+      readOutside: NO_OUTSIDE_FILES,
+    };
+    expect(buildModuleGraph(input, ["x/none.ts"])).rejects.toThrow(
+      /does not exist/,
+    );
+    const g = await buildModuleGraph(input, [`${P}/a/web/index.ts`]);
+    expect(g.keyOf(`${P}/a/web/index.ts`)).toBe(
+      (await graphOf(base, [`${P}/a/web/index.ts`])).keyOf(
+        `${P}/a/web/index.ts`,
+      ),
+    );
   });
 
   test("an unresolved import is part of the key, so the file appearing moves it", async () => {

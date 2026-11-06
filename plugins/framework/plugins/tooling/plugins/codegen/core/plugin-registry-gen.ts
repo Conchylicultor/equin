@@ -5,7 +5,6 @@ import {
 import { COMPOSITION_SPECIFIERS } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
 import { type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
-import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import type { CodegenPass } from "./codegen-pass";
 import { createSourceScans, type SourceScans } from "./browser-host-coverage";
@@ -61,10 +60,6 @@ const HEADER = [
   "// and rebuild — this file regenerates from the filesystem. The",
   "// `plugins-registry-in-sync` check fails on drift.",
 ].join("\n");
-
-// How many plugins' files a scan holds in flight at once. The file set's own
-// reader bounds the opens; this bounds how much text is resident.
-const PLUGIN_SCAN_WIDTH = 16;
 
 // ── Entry collection ───────────────────────────────────────────────
 
@@ -406,23 +401,32 @@ function tsFilesUnder(repo: RepoFiles, base: string): string[] {
   });
 }
 
-// Every import specifier found in a plugin's `<dir>/` tree. `findImports` masks
-// comments/regex/strings and reads each specifier back by offset, so an import
-// written inside a string/comment can't register a phantom dependency edge.
-// Covers both `import … from` and `export … from`.
+// Every import specifier found in each plugin's `<dir>/` tree, by plugin path.
+// `findImports` masks comments/regex/strings and reads each specifier back by
+// offset, so an import written inside a string/comment can't register a
+// phantom dependency edge. Covers both `import … from` and `export … from`.
+// One scan over every plugin's files: each file's answer is a file record, and
+// asking for all of them at once is one store read, not one per plugin.
 async function collectImportSpecifiers(
   repo: RepoFiles,
-  pluginPath: string,
+  pluginPaths: readonly string[],
   dir: string,
-  tick: () => Promise<void>,
-): Promise<Set<string>> {
-  const files = tsFilesUnder(repo, `plugins/${pluginPath}/${dir}`);
-  const specifiers = new Set<string>();
-  for (const found of await scanFiles(repo, files, IMPORT_SPECIFIER_SCAN)) {
-    for (const spec of found) specifiers.add(spec);
+): Promise<Map<string, Set<string>>> {
+  const filesOf = pluginPaths.map((p) =>
+    tsFilesUnder(repo, `plugins/${p}/${dir}`),
+  );
+  const found = await scanFiles(repo, filesOf.flat(), IMPORT_SPECIFIER_SCAN);
+  const tick = timeSlicer();
+  const out = new Map<string, Set<string>>();
+  let at = 0;
+  for (const [i, pluginPath] of pluginPaths.entries()) {
+    const specifiers = out.get(pluginPath) ?? new Set<string>();
+    for (const specs of found.slice(at, (at += filesOf[i]!.length)))
+      for (const spec of specs) specifiers.add(spec);
+    out.set(pluginPath, specifiers);
     await tick();
   }
-  return specifiers;
+  return out;
 }
 
 /** True for npm-style bare specifiers (neither relative/absolute, `@plugins/*`, nor a composition module). */
@@ -448,15 +452,14 @@ export async function collectBareSpecifiers(
 ): Promise<Map<string, string[]>> {
   const repo = await ctx.repo();
   const { allEntries } = await scanDir(ctx, dir);
-  const tick = timeSlicer();
+  const specifiersOf = await collectImportSpecifiers(
+    repo,
+    allEntries.map((e) => e.pluginPath),
+    dir,
+  );
   const out = new Map<string, string[]>();
   for (const e of allEntries) {
-    const specifiers = await collectImportSpecifiers(
-      repo,
-      e.pluginPath,
-      dir,
-      tick,
-    );
+    const specifiers = specifiersOf.get(e.pluginPath)!;
     const bare = [...specifiers].filter(isBareNpmSpecifier).sort();
     if (bare.length > 0) out.set(e.pluginPath, bare);
   }
@@ -481,56 +484,45 @@ async function buildDepsForDir(
     companionPaths.set(pluginPrefix(e), e.pluginPath);
   const companionPathSet = new Set(companionPaths.values());
 
-  const tick = timeSlicer();
-  const gate = createSemaphore(PLUGIN_SCAN_WIDTH);
-  const result = new Map<string, string[]>();
-  await Promise.all(
-    entries.map((e) =>
-      gate.run(async () => {
-        const deps = new Set<string>();
-        if (companionEntries === null) {
-          for (const mod of await collectImportSpecifiers(
-            repo,
-            e.pluginPath,
-            dir,
-            tick,
-          )) {
-            if (!mod.startsWith("@plugins/")) continue;
-            const lastSlash = mod.lastIndexOf("/");
-            if (lastSlash <= 0) continue;
-            const depPath = prefixToPluginPath.get(mod.slice(0, lastSlash));
-            if (depPath && depPath !== e.pluginPath) deps.add(depPath);
-          }
-        } else {
-          // A machine half always runs after its own server half.
-          if (companionPathSet.has(e.pluginPath)) deps.add(e.pluginPath);
-          for (const mod of await collectImportSpecifiers(
-            repo,
-            e.pluginPath,
-            dir,
-            tick,
-          )) {
-            if (!mod.startsWith("@plugins/")) continue;
-            const lastSlash = mod.lastIndexOf("/");
-            if (lastSlash <= 0) continue;
-            const prefix = mod.slice(0, lastSlash);
-            const machinePath =
-              mod.slice(lastSlash + 1) === dir
-                ? prefixToPluginPath.get(prefix)
-                : undefined;
-            if (machinePath !== undefined) {
-              if (machinePath !== e.pluginPath)
-                deps.add(nodeKeyFor(dir, machinePath));
-              continue;
-            }
-            const serverPath = companionPaths.get(prefix);
-            if (serverPath !== undefined) deps.add(serverPath);
-          }
-        }
-        if (deps.size > 0) result.set(e.pluginPath, [...deps].sort());
-      }),
-    ),
+  const specifiersOf = await collectImportSpecifiers(
+    repo,
+    entries.map((e) => e.pluginPath),
+    dir,
   );
+  const result = new Map<string, string[]>();
+  for (const e of entries) {
+    const deps = new Set<string>();
+    if (companionEntries === null) {
+      for (const mod of specifiersOf.get(e.pluginPath)!) {
+        if (!mod.startsWith("@plugins/")) continue;
+        const lastSlash = mod.lastIndexOf("/");
+        if (lastSlash <= 0) continue;
+        const depPath = prefixToPluginPath.get(mod.slice(0, lastSlash));
+        if (depPath && depPath !== e.pluginPath) deps.add(depPath);
+      }
+    } else {
+      // A machine half always runs after its own server half.
+      if (companionPathSet.has(e.pluginPath)) deps.add(e.pluginPath);
+      for (const mod of specifiersOf.get(e.pluginPath)!) {
+        if (!mod.startsWith("@plugins/")) continue;
+        const lastSlash = mod.lastIndexOf("/");
+        if (lastSlash <= 0) continue;
+        const prefix = mod.slice(0, lastSlash);
+        const machinePath =
+          mod.slice(lastSlash + 1) === dir
+            ? prefixToPluginPath.get(prefix)
+            : undefined;
+        if (machinePath !== undefined) {
+          if (machinePath !== e.pluginPath)
+            deps.add(nodeKeyFor(dir, machinePath));
+          continue;
+        }
+        const serverPath = companionPaths.get(prefix);
+        if (serverPath !== undefined) deps.add(serverPath);
+      }
+    }
+    if (deps.size > 0) result.set(e.pluginPath, [...deps].sort());
+  }
   return result;
 }
 

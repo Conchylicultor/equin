@@ -6,6 +6,7 @@ import type {
 import {
   buildModuleGraph,
   currentRecordStore,
+  NO_OUTSIDE_FILES,
   repoModuleOf,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
@@ -35,7 +36,7 @@ const keyWidth: Check = {
         {
           snapshot: repo,
           store: currentRecordStore(),
-          readOutside: () => null,
+          readOutside: NO_OUTSIDE_FILES,
         },
         await facetRecordProducers(repo),
       ),
@@ -71,7 +72,11 @@ const harnessPlumbing: Check = {
     const plumbing = (m: string): boolean =>
       m.startsWith(recordsDir) || m === facetRecordsModule(repo);
     const graph = await buildModuleGraph(
-      { snapshot: repo, store: currentRecordStore(), readOutside: () => null },
+      {
+        snapshot: repo,
+        store: currentRecordStore(),
+        readOutside: NO_OUTSIDE_FILES,
+      },
       [harness],
     );
     // The key's closure: static and dynamic imports alike.

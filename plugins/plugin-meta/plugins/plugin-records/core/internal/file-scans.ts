@@ -4,7 +4,11 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import { recordKey } from "./keys";
 import { currentRecordStore } from "./store";
-import { buildModuleGraph, type ModuleGraphInput } from "./module-graph";
+import {
+  buildModuleGraph,
+  NO_OUTSIDE_FILES,
+  type ModuleGraphInput,
+} from "./module-graph";
 
 /**
  * A per-file scan as FILE RECORDS: what a reader takes out of one file (the
@@ -163,7 +167,11 @@ export function scanRepoFiles<T>(
   scanner: FileScan<T>,
 ): Promise<T[]> {
   return scanFilesCached(
-    { snapshot: repo, store: currentRecordStore(), readOutside: () => null },
+    {
+      snapshot: repo,
+      store: currentRecordStore(),
+      readOutside: NO_OUTSIDE_FILES,
+    },
     files,
     scanner,
   );

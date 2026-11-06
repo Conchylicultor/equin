@@ -40,8 +40,9 @@ import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   buildModuleGraph,
-  currentRecordStore,
   type BundledClosure,
+  currentRecordStore,
+  NO_OUTSIDE_FILES,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   asFsPath,
@@ -823,7 +824,7 @@ async function bundledClosureOf(
       snapshot: repo,
       written,
       store: currentRecordStore(),
-      readOutside: () => null,
+      readOutside: NO_OUTSIDE_FILES,
     },
     entries,
   );

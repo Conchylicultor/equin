@@ -16,8 +16,11 @@ string.
 
 None of those defends against a forged collision; they tell contents apart.
 
-- `sha256Hex(text)` — SHA-256 of the UTF-8 bytes as lowercase hex, synchronous
-  (`@noble/hashes`). Identical to `node:crypto`'s
+- `sha256Hex(text)` — SHA-256 of the UTF-8 bytes as lowercase hex, synchronous:
+  Bun's native `CryptoHasher` where the host has it (~10× faster on short
+  strings — a build hashes ~140k record keys), `@noble/hashes` elsewhere (a
+  browser page has no synchronous digest). The same value either way
+  (`sha256.test.ts` holds the two paths equal); `sha1Hex` likewise. Identical to `node:crypto`'s
   `createHash("sha256").update(text).digest("hex")` (`sha256.test.ts` holds it
   to that), so portable server code that stores a digest — derived-view and
   rollup signatures, query fingerprints — computes the same value on every host

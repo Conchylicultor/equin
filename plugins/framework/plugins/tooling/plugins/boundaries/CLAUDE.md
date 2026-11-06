@@ -183,11 +183,11 @@ takes a `debt` exemption on the check's id.
 
 - Description: Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
 - Core:
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/plugin-id` ×6
     - `plugin-meta/parse-utils` ×6
     - `framework/tooling/import-closure` ×4
-    - `plugin-meta/plugin-records` ×3
+    - `plugin-meta/plugin-records` ×4
     - `framework/tooling/boundaries/runtime-exception.parseRuntimeException`
     - `infra/host-fs/user-path.joinAppPath`
     - `infra/spawn.getWorktreeRoot`

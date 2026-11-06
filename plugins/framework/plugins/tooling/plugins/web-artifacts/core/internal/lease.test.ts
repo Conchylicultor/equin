@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   openSync,
   readdirSync,
+  readFileSync,
   symlinkSync,
   utimesSync,
   writeFileSync,
@@ -121,14 +122,21 @@ describe("build lease", () => {
     const live = joinAppPath(f.layout.leasesDir, "live");
     mkdirSync(live, { recursive: true });
     writeFileSync(joinAppPath(live, "owner.lock"), "");
-    symlinkSync("/x/kept", joinAppPath(live, "0"));
+    writeFileSync(joinAppPath(live, "pins.0"), "/x/kept\n");
+    writeFileSync(joinAppPath(live, "pins.1"), "/x/also\n");
+    // A lease of a build still running the symlink form.
+    symlinkSync("/x/linked", joinAppPath(live, "0"));
     const fd = openSync(joinAppPath(live, "owner.lock"), "r");
     expect(flockTry(fd)).toBe(true); // the owner, alive
     const noLock = joinAppPath(f.layout.leasesDir, "nolock");
     mkdirSync(noLock);
     symlinkSync("/x/gone", joinAppPath(noLock, "0"));
     try {
-      expect([...liveLeaseTargets(f.layout.leasesDir)]).toEqual(["/x/kept"]);
+      expect([...liveLeaseTargets(f.layout.leasesDir)].sort()).toEqual([
+        "/x/also",
+        "/x/kept",
+        "/x/linked",
+      ]);
       expect(existsSync(live)).toBe(true);
       expect(existsSync(noLock)).toBe(false);
     } finally {
@@ -188,10 +196,15 @@ describe("build lease under a contended store lock", () => {
     expect(landed).toBe(targets.length);
     const leaseDirs = readdirSync(f.layout.leasesDir);
     expect(leaseDirs).toHaveLength(1);
-    // One link per path, however the calls were batched.
-    expect(
-      readdirSync(joinAppPath(f.layout.leasesDir, ...leaseDirs)),
-    ).toHaveLength(targets.length + 1);
+    // One line per path, however the calls were batched.
+    const leaseDir = joinAppPath(f.layout.leasesDir, ...leaseDirs);
+    const pinLines = readdirSync(leaseDir)
+      .filter((n) => n.startsWith("pins."))
+      .flatMap((n) =>
+        readFileSync(joinAppPath(leaseDir, n), "utf8").split("\n"),
+      )
+      .filter((l) => l !== "");
+    expect(pinLines.sort()).toEqual([...targets].sort());
     await f.prune();
     for (const t of targets) expect(existsSync(t)).toBe(true);
     await lease.release();

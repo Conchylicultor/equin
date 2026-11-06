@@ -25,7 +25,13 @@ anywhere, and no global fingerprint: a change costs the records it touches.
   against the snapshot give every module's **Merkle key** — its blob plus the
   keys of everything it imports (static and dynamic), cycles collapsed. An
   evaluated record is keyed by it, so it moves exactly when the barrel's
-  loadable code does.
+  loadable code does. **One graph per set**: every `buildModuleGraph` call
+  over the same input (snapshot, store, `written` overlay, `readOutside` — each
+  by identity; pass `NO_OUTSIDE_FILES`, never a fresh `() => null`) grows one
+  shared graph, walking and keying only the modules no earlier call reached,
+  and returns a view of exactly its entries' closure. A build asks ~9 closures
+  of one snapshot; walked separately they visited ~31k modules for ~11k
+  distinct ones (build pipeline step 12).
 - **Evaluation** (the `evaluate` sub-plugin, apart so a producer that only
   makes keys and stores records does not key on barrel-import and
   slot-declaration): a barrel is imported live only
@@ -83,6 +89,11 @@ a pass computes only the records no checkout has made yet.
   2026-11-05: 8.7M rows held 30k distinct values — 99% duplicates, 4.4 GB in
   two days). A key row names its value by the value's sha256, and each
   distinct value is stored once.
+- **A key is read once per process.** A record is a pure function of its
+  key, so the store keeps what it read and never asks SQLite for that key
+  again (a no-change build re-read ~37k keys: the facet records for both
+  trees, two generators' scans of one file set). Writes are not kept past the
+  flush below.
 - **Writes are held back to one transaction.** `putMany` holds its records
   (its own `getMany` answers them at once) and `flush()` commits them all in
   one transaction: one commit per call made a cold codegen's ~3,700 calls cost
@@ -194,6 +205,7 @@ its docblock records — and then lowered as readily as raised.
     - `gitBlobId`
     - `installRecordStore`
     - `installRecordWorkers`
+    - `NO_OUTSIDE_FILES`
     - `RECORD_TABLES`
     - `recordKey`
     - `recordWorkerCount`

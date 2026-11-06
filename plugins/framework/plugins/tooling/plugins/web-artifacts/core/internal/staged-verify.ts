@@ -29,7 +29,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { join, relative } from "node:path";
+import { basename, join, relative } from "node:path";
 import {
   init as esLexerInit,
   parse as esLexerParse,
@@ -116,10 +116,36 @@ export async function scanStagedModules(opts: {
   /** The registry artifact's own module — the importer of every web barrel. */
   let registryFile: string | null = null;
   const artifactsDir = joinAppPath(opts.stagingDir, "artifacts");
-  const realOf = (url: string): string | null => {
-    const abs = joinAppPath(opts.stagingDir, url.slice(1));
-    return existsSync(abs) ? realpathSync(abs) : null;
+
+  // Real paths are resolved per DIRECTORY, never per file or per edge: a dist
+  // stages ~2,400 artifact links and their files, and a `realpath` + `exists`
+  // + `stat` for every file and every import edge was most of this scan
+  // (~0.45 s of 0.6 s on a loaded host; lexing and reading ~0.08 s). A file's
+  // real path is its directory's real path plus its name.
+  const realDirs = new Map<AppPath, AppPath | null>();
+  const realDirOf = (dir: AppPath): AppPath | null => {
+    let r = realDirs.get(dir);
+    if (r === undefined) {
+      r = existsSync(dir) ? asAppPath(realpathSync(dir)) : null;
+      realDirs.set(dir, r);
+    }
+    return r;
   };
+  /** The real path of the staged FILE at `abs`, or null when there is none. */
+  const realFileOf = (abs: AppPath): string | null => {
+    const dir = realDirOf(appPathParent(abs));
+    if (dir === null) return null;
+    const real = joinAppPath(dir, basename(abs));
+    // A scanned module is a file by construction; anything else (a non-JS
+    // asset, a path no scan reached, a file that is itself a link) is asked of
+    // the disk, and resolved whole.
+    if (files.has(real)) return real;
+    return existsSync(real) && statSync(real).isFile()
+      ? realpathSync(real)
+      : null;
+  };
+  const realOf = (url: string): string | null =>
+    realFileOf(joinAppPath(opts.stagingDir, url.slice(1)));
 
   // Pass 1 — read each staged module once: its exports, and its import edges.
   // A worker tree is a dir of links to artifacts (`worker-link.ts`); each is
@@ -149,8 +175,16 @@ export async function scanStagedModules(opts: {
   const scannedDirs = new Set<string>();
   /** A scanned file's dist-relative name, for reports. */
   const distRelOf = new Map<string, string>();
+  /** Every scanned module's imports, resolved once all modules are known. */
+  const scanned: Array<{
+    abs: AppPath;
+    distRel: string;
+    self: StagedFile;
+    isRegistry: boolean;
+    imports: Array<{ spec: string; dynamic: boolean; clause: string }>;
+  }> = [];
   for (const { linkName, linkDir } of roots) {
-    const realDir = realpathSync(linkDir);
+    const realDir = realDirOf(linkDir)!;
     if (scannedDirs.has(realDir)) continue;
     scannedDirs.add(realDir);
     // The registry's dynamic imports are the app's plugin loaders — as
@@ -172,38 +206,53 @@ export async function scanStagedModules(opts: {
       const [imports, exports] = esLexerParse(src, distRel);
       if (isRegistry && dirent.name === "index.js") registryFile ??= distRel;
       const self: StagedFile = { exports: new Set(exports.map((e) => e.n)), opaque: false };
-      const real = realpathSync(abs);
+      const real = joinAppPath(realDirOf(appPathParent(abs))!, dirent.name);
       files.set(real, self);
       distRelOf.set(real, distRel);
-      for (const imp of imports) {
-        const spec = imp.n;
-        if (spec === undefined) continue;
-        const isDynamic = imp.d >= 0;
-        let target: string | null = null;
-        // A module the worker link spells to throw when loaded: nothing to resolve.
-        if (spec.startsWith("data:")) continue;
-        if (spec.startsWith("./") || spec.startsWith("../")) {
-          const targetAbs = asAppPath(join(appPathParent(abs), spec));
-          if (existsSync(targetAbs) && statSync(targetAbs).isFile()) {
-            target = realpathSync(targetAbs);
-          } else {
-            failures.push({ specifier: spec, file: distRel });
-          }
-        } else if (spec in opts.imports) {
-          // Every map URL is an exact file URL under `/artifacts/`.
-          target = realOf(opts.imports[spec]!);
-        } else if (!isDynamic || isRegistry) {
-          failures.push({ specifier: spec, file: distRel });
-        } else if (!isBrowserUnreachableDynamic(spec)) {
-          warnings.push({ specifier: spec, file: distRel });
-        }
-        if (isDynamic) continue; // names aren't statically knowable
-        const clause = parseImportClause(src.slice(imp.ss, imp.s));
-        if (clause.star) self.opaque = true;
-        // An unresolvable specifier is already a failure above: never
-        // double-report it as a link failure too.
-        if (target !== null && !clause.namespace) links.push({ specifier: spec, file: distRel, target, clause });
+      scanned.push({
+        abs,
+        distRel,
+        self,
+        isRegistry,
+        imports: imports.flatMap((imp) =>
+          imp.n === undefined
+            ? []
+            : [
+                {
+                  spec: imp.n,
+                  dynamic: imp.d >= 0,
+                  clause: imp.d >= 0 ? "" : src.slice(imp.ss, imp.s),
+                },
+              ],
+        ),
+      });
+    }
+  }
+
+  // Each edge, in scan order, now that every staged module is known.
+  for (const { abs, distRel, self, isRegistry, imports } of scanned) {
+    for (const { spec, dynamic: isDynamic, clause: clauseText } of imports) {
+      let target: string | null = null;
+      // A module the worker link spells to throw when loaded: nothing to resolve.
+      if (spec.startsWith("data:")) continue;
+      if (spec.startsWith("./") || spec.startsWith("../")) {
+        target = realFileOf(asAppPath(join(appPathParent(abs), spec)));
+        if (target === null) failures.push({ specifier: spec, file: distRel });
+      } else if (spec in opts.imports) {
+        // Every map URL is an exact file URL under `/artifacts/`.
+        target = realOf(opts.imports[spec]!);
+      } else if (!isDynamic || isRegistry) {
+        failures.push({ specifier: spec, file: distRel });
+      } else if (!isBrowserUnreachableDynamic(spec)) {
+        warnings.push({ specifier: spec, file: distRel });
       }
+      if (isDynamic) continue; // names aren't statically knowable
+      const clause = parseImportClause(clauseText);
+      if (clause.star) self.opaque = true;
+      // An unresolvable specifier is already a failure above: never
+      // double-report it as a link failure too.
+      if (target !== null && !clause.namespace)
+        links.push({ specifier: spec, file: distRel, target, clause });
     }
   }
 

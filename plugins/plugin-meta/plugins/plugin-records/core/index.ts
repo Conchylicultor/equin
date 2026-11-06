@@ -18,7 +18,7 @@ export type {
   RecordJobRequest,
   RecordWorkers,
 } from "./internal/workers";
-export { buildModuleGraph } from "./internal/module-graph";
+export { buildModuleGraph, NO_OUTSIDE_FILES } from "./internal/module-graph";
 export type {
   ModuleGraph,
   ModuleGraphInput,

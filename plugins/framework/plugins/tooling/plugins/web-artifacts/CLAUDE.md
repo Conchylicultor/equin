@@ -269,8 +269,10 @@ Key invariants:
   them — minutes in which no dist links them yet. So each pipeline run holds a **build lease**
   (`core/internal/lease.ts`): it PINS every entry (page and worker artifacts,
   registry, browser host, worker links and worker tree, vendor set, package
-  assets, CSS cache dir) — a symlink in its own
-  `~/.equin/cache/web-artifacts/leases/<pid>-<rand>/` — BEFORE it checks the
+  assets, CSS cache dir) — a line of its own lease's pin file
+  (`~/.equin/cache/web-artifacts/leases/<pid>-<rand>/pins`, one append per
+  batch; a symlink per pin cost ~0.6 s of every build to make and remove, and
+  a prune still reads a lease left in that form) — BEFORE it checks the
   entry exists or publishes it, and releases the lease after compose, once the
   staging dist (`web.staging.*`, a root) links everything. Pins take a SHARED
   flock on `store.lock`; `pruneWebArtifactCaches` holds it EXCLUSIVE while it
@@ -401,15 +403,15 @@ Key invariants:
 
 - Description: Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
 - Core:
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/timed-fs` ×8
     - `framework/plugin-id` ×4
     - `framework/web-core` ×4
     - `infra/host-fs/user-path` ×4
     - `packages/flock` ×4
+    - `plugin-meta/plugin-records` ×3
     - `framework/tooling` ×2
     - `packages/owned-fd` ×2
-    - `plugin-meta/plugin-records` ×2
     - `framework/browser-server/host-storage.decodeHostSnapshot`
     - `framework/product-name.LEGACY_IDS`
     - `infra/deps/npm.lockfileNpmResolutions`

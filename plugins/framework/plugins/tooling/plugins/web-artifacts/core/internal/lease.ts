@@ -11,9 +11,12 @@
 //
 // The protocol makes that race impossible rather than unlikely:
 //
-// - A build PINS an entry before it reads or publishes it: a symlink to the
-//   entry's absolute path in its own lease dir (`leases/<id>/`), written under a
-//   SHARED flock on `store.lock`. Only after the pin returns does it check the
+// - A build PINS an entry before it reads or publishes it: the entry's absolute
+//   path, a line of a pin file in its own lease dir (`leases/<id>/pins.<n>`,
+//   one file per batch of pins), written under a SHARED flock on `store.lock`.
+//   A build pins ~2,400 entries in a few batches; a symlink per pin (the first
+//   form) cost 2,400 `symlink`s to make and an `rm -r` of them at release,
+//   ~0.6 s of every build on a loaded host. Only after the pin returns does it check the
 //   entry exists (reuse) or publish it (build).
 // - A prune holds the EXCLUSIVE flock on `store.lock` for its whole run: it reads
 //   its roots (served dists + every live lease) and deletes under that lock.
@@ -37,13 +40,14 @@
 // can take that lock knows the owner is gone and reaps the lease. No pid, no
 // heartbeat, no age heuristic.
 
-import { mkdirSync, rmSync, symlinkSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import {
   openOwnedFd,
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
 import {
   readdirSync,
+  readFileSync,
   readlinkSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import {
@@ -89,6 +93,8 @@ const DEFAULT_LAYOUT: LeaseLayout = {
 };
 
 const OWNER_LOCK = "owner.lock";
+/** A lease's pin files: `pins.<n>`, one per batch, an absolute entry path per line. */
+const PINS_PREFIX = "pins.";
 
 /**
  * Run `fn` holding the store lock (`shared` for a pin, `exclusive` for a
@@ -153,6 +159,7 @@ export function openBuildLease(
     `${process.pid}-${randomBytes(6).toString("hex")}`,
   );
   const pinned = new Set<AppPath>();
+  let batches = 0;
   let ownerFd: OwnedFd | null = null;
 
   const create = (): void => {
@@ -173,11 +180,13 @@ export function openBuildLease(
     run: (paths) =>
       withStoreLock(layout, "shared", () => {
         if (ownerFd === null) create();
-        for (const path of paths) {
-          if (pinned.has(path)) continue;
-          symlinkSync(path, joinAppPath(dir, String(pinned.size)));
-          pinned.add(path);
-        }
+        const fresh = paths.filter((path) => !pinned.has(path));
+        if (fresh.length === 0) return;
+        writeFileSync(
+          joinAppPath(dir, `${PINS_PREFIX}${batches++}`),
+          `${fresh.join("\n")}\n`,
+        );
+        for (const path of fresh) pinned.add(path);
       }),
   });
   let releasing: Promise<void> | null = null;
@@ -235,9 +244,17 @@ export function liveLeaseTargets(leasesDir: AppPath): Set<string> {
     try {
       if (fd !== null && !flockTry(fd.fd)) {
         // Held: the owner is alive, and its pins are roots.
-        for (const link of readdirSync(dir)) {
-          if (link === OWNER_LOCK) continue;
-          targets.add(readlinkSync(joinAppPath(dir, link)));
+        for (const name of readdirSync(dir)) {
+          if (name === OWNER_LOCK) continue;
+          const file = joinAppPath(dir, name);
+          if (name.startsWith(PINS_PREFIX)) {
+            for (const line of readFileSync(file, "utf8").split("\n"))
+              if (line !== "") targets.add(line);
+          } else {
+            // A lease of a build still running the symlink form (one link per
+            // pin): read until every checkout has rebased past it.
+            targets.add(readlinkSync(file));
+          }
         }
         continue;
       }

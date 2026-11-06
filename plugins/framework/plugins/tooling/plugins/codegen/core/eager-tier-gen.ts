@@ -8,7 +8,6 @@ import {
   TESTING_FOLDER,
 } from "@plugins/framework/plugins/plugin-id/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
-import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { writeGenerated } from "./write-generated";
 import { isResourceVocabularyOwner } from "@plugins/network/plugins/live/plugins/resource-vocabulary/core";
 import {
@@ -202,10 +201,6 @@ export function computeEagerTier(input: {
 
 // ── Scanning the file set (the per-file scan: `eager-tier.scan.ts`) ──
 
-// How many plugins' files the scan holds in flight at once. The file set's own
-// reader bounds the opens; this bounds how much text is resident.
-const PLUGIN_SCAN_WIDTH = 16;
-
 // parse-utils' `walkFiles` predicate, over the file set instead of a directory
 // walk: `.ts`/`.tsx` that is not test code (via `isTestCodePath`), skipping
 // `node_modules`, nested `plugins/` (sub-plugins are their own nodes) and
@@ -285,43 +280,39 @@ async function scanEagerTierInputs(
   const watchedSlotHits: WatchedSlotHit[] = [];
   const preloadOwners: PreloadOwner[] = [];
   const tick = timeSlicer();
-  const gate = createSemaphore(PLUGIN_SCAN_WIDTH);
-  await Promise.all(
-    [...ctx.tree.byDir.values()].map((node) =>
-      gate.run(async () => {
-        // One read of the plugin's web/core/shared files serves both scans. The
-        // order is the watched-slot scan's (its first hit names the pin).
-        const files = sourceFilesUnder(repo, node.path, [
-          "web",
-          "core",
-          "shared",
-        ]);
-        // Each file's two answers are a file record: only a file whose blob
-        // changed is read and scanned.
-        const scanned = await scanFiles(repo, files, EAGER_TIER_SCAN);
-        await tick();
-
-        // Watched-slot scan: only app-content web entries can flip from
-        // deferred to eager via a slot (non-app-content is already
-        // structurally eager). The first file with a hit names the pin.
-        if (webSet.has(node.path) && isAppContent(node.path)) {
-          const slot = scanned.find((f) => f.watched !== null)?.watched;
-          if (slot) watchedSlotHits.push({ path: node.path, slot });
-        }
-
-        // preload scan: EVERY plugin node (reachability is checked
-        // against web entries in the pure core, so a descriptor in a
-        // web-entryless plugin throws). The vocabulary's owner declares the
-        // factories, it preloads nothing.
-        const ownerPlugin = isResourceVocabularyOwner(`plugins/${node.path}`);
-        const keys = ownerPlugin ? [] : scanned.flatMap((f) => f.preload);
-        if (keys.length > 0)
-          preloadOwners.push({ path: node.path, keys: keys.sort() });
-      }),
-    ),
+  // One scan over every plugin's web/core/shared files, then split by plugin:
+  // each file's two answers are a file record (only a file whose blob changed
+  // is read), and asking for them in one call is one store read, not one per
+  // plugin (~1,700).
+  const nodes = [...ctx.tree.byDir.values()];
+  const filesOf = nodes.map((node) =>
+    sourceFilesUnder(repo, node.path, ["web", "core", "shared"]),
   );
-  // The scan finishes plugins in whatever order their reads land; the pure core
-  // gets them sorted, as the sequential scan used to hand them over.
+  const scannedAll = await scanFiles(repo, filesOf.flat(), EAGER_TIER_SCAN);
+  let at = 0;
+  for (const [i, node] of nodes.entries()) {
+    // The order is the watched-slot scan's (its first hit names the pin).
+    const scanned = scannedAll.slice(at, (at += filesOf[i]!.length));
+    await tick();
+
+    // Watched-slot scan: only app-content web entries can flip from
+    // deferred to eager via a slot (non-app-content is already
+    // structurally eager). The first file with a hit names the pin.
+    if (webSet.has(node.path) && isAppContent(node.path)) {
+      const slot = scanned.find((f) => f.watched !== null)?.watched;
+      if (slot) watchedSlotHits.push({ path: node.path, slot });
+    }
+
+    // preload scan: EVERY plugin node (reachability is checked
+    // against web entries in the pure core, so a descriptor in a
+    // web-entryless plugin throws). The vocabulary's owner declares the
+    // factories, it preloads nothing.
+    const ownerPlugin = isResourceVocabularyOwner(`plugins/${node.path}`);
+    const keys = ownerPlugin ? [] : scanned.flatMap((f) => f.preload);
+    if (keys.length > 0)
+      preloadOwners.push({ path: node.path, keys: keys.sort() });
+  }
+  // The pure core gets them sorted by path.
   watchedSlotHits.sort((a, b) => a.path.localeCompare(b.path));
   preloadOwners.sort((a, b) => a.path.localeCompare(b.path));
 

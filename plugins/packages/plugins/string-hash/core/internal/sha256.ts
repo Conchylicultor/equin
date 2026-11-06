@@ -2,17 +2,45 @@ import { sha1 } from "@noble/hashes/legacy.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, utf8ToBytes } from "@noble/hashes/utils.js";
 
+/** The synchronous native digest a host may carry (Bun's `CryptoHasher`). */
+interface NativeHasher {
+  update(data: string): NativeHasher;
+  digest(encoding: "hex"): string;
+}
+type NativeHasherConstructor = new (
+  algorithm: "sha256" | "sha1",
+) => NativeHasher;
+
 /**
- * SHA-256 of `text`'s UTF-8 bytes, as lowercase hex — synchronous and in plain
- * JS (`@noble/hashes`), so every host computes it: byte-for-byte the digest
- * `createHash("sha256").update(text).digest("hex")` gives on the Bun server, and
- * the same value in a browser page, where `crypto.subtle.digest` is async only.
+ * The host's native synchronous hasher, when it has one: Bun's. A browser page
+ * has none (`crypto.subtle.digest` is async only), so it takes `@noble/hashes`.
+ * Both digest the same UTF-8 bytes, so the value is the host's choice of
+ * speed, never of result (`sha256.test.ts` holds the two paths equal). The
+ * native one is ~10× faster on the short strings record keys hash — a build
+ * hashes ~140k of them.
+ */
+const nativeHasher: NativeHasherConstructor | undefined = (
+  globalThis as { Bun?: { CryptoHasher?: NativeHasherConstructor } }
+).Bun?.CryptoHasher;
+
+/**
+ * SHA-256 of `text`'s UTF-8 bytes, as lowercase hex — synchronous on every
+ * host: byte-for-byte the digest `createHash("sha256").update(text).digest("hex")`
+ * gives on the Bun server (where it is Bun's native hasher), and the same value
+ * in a browser page (plain JS, `@noble/hashes`).
  *
  * The signatures stored in the DB (derived views, rollups, triggers, query
  * fingerprints) are built on it, so switching a caller from `node:crypto` to
  * this rebuilds nothing.
  */
 export function sha256Hex(text: string): string {
+  return nativeHasher
+    ? new nativeHasher("sha256").update(text).digest("hex")
+    : portableSha256Hex(text);
+}
+
+/** {@link sha256Hex} in plain JS, whatever the host: the browser's path, and the tests' reference. */
+export function portableSha256Hex(text: string): string {
   return bytesToHex(sha256(utf8ToBytes(text)));
 }
 
@@ -50,5 +78,12 @@ export function createSha256(): Sha256Hasher {
  * security: SHA-1 is broken against forged collisions.
  */
 export function sha1Hex(text: string): string {
+  return nativeHasher
+    ? new nativeHasher("sha1").update(text).digest("hex")
+    : portableSha1Hex(text);
+}
+
+/** {@link sha1Hex} in plain JS, whatever the host. */
+export function portableSha1Hex(text: string): string {
   return bytesToHex(sha1(utf8ToBytes(text)));
 }

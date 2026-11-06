@@ -105,19 +105,46 @@ export interface ModuleGraphInput {
    */
   written?: ReadonlyMap<string, string>;
   store: RecordStore;
-  /** A file outside the snapshot (gitignored): its content from disk, or null when absent. */
+  /**
+   * A file outside the snapshot (gitignored): its content, or null when
+   * absent. Calls sharing this function (by identity) share one graph over
+   * the same set: a reader with no file outside the set passes
+   * {@link NO_OUTSIDE_FILES}, not a fresh `() => null`, so they do.
+   */
   readOutside(rel: string): string | null;
 }
+
+/** No file outside the set exists: an import of a gitignored module resolves to nothing. */
+export const NO_OUTSIDE_FILES = (_rel: string): string | null => null;
 
 /**
  * The graph reachable from `entries` (repo-relative), with Merkle keys. Reads
  * a module's source only when its file facts are not in the store.
+ *
+ * ONE GRAPH PER SET. Every call over the same input (snapshot, store, written
+ * overlay and outside reader, each by identity) grows one shared graph: it
+ * walks only the modules no earlier call reached, and keys only those. A
+ * build asks for ~9 closures of one snapshot (facet identities, portability,
+ * each browser host, the drizzle verdict, the host snapshot), which overlap
+ * heavily: walked one by one they visited ~31k modules for ~11k distinct
+ * ones. A module's facts, resolution and key are functions of the set alone,
+ * so who asked first cannot change them; and an earlier module's closure
+ * cannot contain a later one (its walk was complete), so its key never moves
+ * as the graph grows. Each call gets a view of exactly its entries' closure.
  */
 export async function buildModuleGraph(
   input: ModuleGraphInput,
   entries: readonly string[],
 ): Promise<ModuleGraph> {
-  return buildGraph(input, entries, await fileFactsIdentity(input));
+  const state = sharedState(input);
+  const grown = state.growing.then(async () =>
+    growGraph(state, input, entries, await fileFactsIdentity(input)),
+  );
+  // The next growth waits for this one to SETTLE: a failed walk is rolled back
+  // (`growGraph`) and its error is this caller's, delivered by the await below.
+  state.growing = Promise.allSettled([grown]).then(() => undefined);
+  await grown;
+  return viewOf(state, entries);
 }
 
 const factsIdentities = new WeakMap<object, Promise<string>>();
@@ -140,13 +167,14 @@ async function lockBlob(set: RepoFiles | RepoSnapshot): Promise<string> {
 function fileFactsIdentity(input: ModuleGraphInput): Promise<string> {
   let id = factsIdentities.get(input.snapshot);
   if (!id) {
+    const own = newState();
     id = Promise.all([
-      buildGraph(input, [SCAN_MODULE], null),
+      growGraph(own, input, [SCAN_MODULE], null),
       lockBlob(input.snapshot),
-    ]).then(([g, lock]) =>
+    ]).then(([, lock]) =>
       recordKey(
         "file-facts",
-        g.keyOf(SCAN_MODULE),
+        viewOf(own, [SCAN_MODULE]).keyOf(SCAN_MODULE),
         input.store.environment,
         lock,
       ),
@@ -156,14 +184,68 @@ function fileFactsIdentity(input: ModuleGraphInput): Promise<string> {
   return id;
 }
 
-/** The graph; `factsId` keys its file records, or null to read and write none. */
-async function buildGraph(
+/** One growing graph over one input. */
+interface GraphState {
+  modules: Map<string, ModuleNode>;
+  /** Each module's Merkle key: its component's key plus its own path. */
+  keys: Map<string, string>;
+  /** Each module's component key: what an importer's key folds in. */
+  compKeys: Map<string, string>;
+  /** Contents read outside the set, by path (null: absent). */
+  outsideContent: Map<string, string | null>;
+  /** A plain file set's members, read once: its blob id and its scan share it. */
+  memberContent: Map<string, Promise<string | null>>;
+  /** Growth is one call at a time: a call's walk sees every earlier call's modules. */
+  growing: Promise<void>;
+}
+
+function newState(): GraphState {
+  return {
+    modules: new Map(),
+    keys: new Map(),
+    compKeys: new Map(),
+    outsideContent: new Map(),
+    memberContent: new Map(),
+    growing: Promise.resolve(),
+  };
+}
+
+// snapshot → store → readOutside → written overlay (or NO_WRITTEN) → state;
+// weak at every level, so a graph lives exactly as long as its inputs.
+const NO_WRITTEN: object = {};
+const states = new WeakMap<
+  object,
+  WeakMap<object, WeakMap<object, WeakMap<object, GraphState>>>
+>();
+
+function sharedState(input: ModuleGraphInput): GraphState {
+  const level = <K extends object, V>(
+    m: WeakMap<K, V>,
+    k: K,
+    make: () => V,
+  ): V => {
+    let v = m.get(k);
+    if (v === undefined) m.set(k, (v = make()));
+    return v;
+  };
+  const byStore = level(states, input.snapshot, () => new WeakMap());
+  const byOutside = level(byStore, input.store, () => new WeakMap());
+  const byWritten = level(byOutside, input.readOutside, () => new WeakMap());
+  return level(byWritten, input.written ?? NO_WRITTEN, newState);
+}
+
+/**
+ * Grow `state` to cover `entries`' closures; `factsId` keys its file records,
+ * or null to read and write none.
+ */
+async function growGraph(
+  state: GraphState,
   input: ModuleGraphInput,
   entries: readonly string[],
   factsId: string | null,
-): Promise<ModuleGraph> {
+): Promise<void> {
   const { snapshot, store } = input;
-  const outsideContent = new Map<string, string | null>();
+  const { modules, outsideContent, memberContent } = state;
   const contentOutside = (rel: string): string | null => {
     let c = outsideContent.get(rel);
     if (c === undefined) {
@@ -178,8 +260,6 @@ async function buildGraph(
     contentOutside(rel) !== null;
   const hasBlobs =
     typeof (snapshot as Partial<RepoSnapshot>).blobOf === "function";
-  // A plain file set's member, read once: its blob id and its scan share it.
-  const memberContent = new Map<string, Promise<string | null>>();
   const readMember = (rel: string): Promise<string | null> => {
     let c = memberContent.get(rel);
     if (!c) memberContent.set(rel, (c = snapshot.read(rel)));
@@ -218,82 +298,127 @@ async function buildGraph(
     return null;
   };
 
-  const modules = new Map<string, ModuleNode>();
-  let level = [...new Set(entries)];
-  for (const e of level)
-    if (!exists(e))
+  for (const e of entries)
+    if (!modules.has(e) && !exists(e))
       throw new Error(`[plugin-records] entry module ${e} does not exist`);
+  // Only what no earlier call reached is walked: an existing module's deps are
+  // all in the graph already (its walk was complete).
+  let level = [...new Set(entries)].filter((e) => !modules.has(e));
   const queued = new Set(level);
-  while (level.length > 0) {
-    const blobs = await Promise.all(level.map(blobOf));
-    const factKey = (blob: string): string => recordKey(factsId!, blob);
-    const hits = store.getMany(
-      "file",
-      factsId === null
-        ? []
-        : level.flatMap((p, i) =>
-            SCANNED.test(p) ? [factKey(blobs[i]!)] : [],
-          ),
-    );
-    const fresh: [string, string][] = [];
-    const next: string[] = [];
-    await Promise.all(
-      level.map(async (path, i) => {
-        const blob = blobs[i]!;
-        let facts: FileFacts = { imports: [] };
-        if (SCANNED.test(path)) {
-          const k = factsId === null ? null : factKey(blob);
-          const hit = k === null ? undefined : hits.get(k);
-          if (hit !== undefined) facts = JSON.parse(hit) as FileFacts;
-          else {
-            const src =
-              input.written?.get(path) ??
-              (snapshot.has(path)
-                ? await readMember(path)
-                : contentOutside(path));
-            if (src === null)
-              throw new Error(`[plugin-records] cannot read module ${path}`);
-            facts = { imports: scanModuleImports(src, path) };
-            if (k !== null) fresh.push([k, JSON.stringify(facts)]);
-          }
-        }
-        const node: ModuleNode = {
-          path,
-          blob,
-          staticDeps: [],
-          bundledDeps: [],
-          dynamicDeps: [],
-          unresolved: [],
-        };
-        for (const imp of facts.imports) {
-          if (!isInternal(imp.spec)) continue;
-          const target = resolveFrom(path, imp.spec);
-          if (target === null) {
-            node.unresolved.push(imp.spec);
-            continue;
-          }
-          if (imp.dynamic) node.dynamicDeps.push(target);
-          else {
-            node.staticDeps.push(target);
-            if (!imp.unused) node.bundledDeps.push(target);
-          }
-        }
-        modules.set(path, node);
-      }),
-    );
-    if (factsId !== null && fresh.length > 0) store.putMany("file", fresh);
-    for (const path of level) {
-      const node = modules.get(path)!;
-      for (const d of [...node.staticDeps, ...node.dynamicDeps]) {
-        if (queued.has(d)) continue;
-        queued.add(d);
-        next.push(d);
-      }
-    }
-    level = next;
+  const added: string[] = [];
+  try {
+    await walkLevels();
+  } catch (err) {
+    // A walk that throws leaves the graph as it was: no module without a key,
+    // none whose deps were never walked.
+    for (const m of added) modules.delete(m);
+    throw err;
+  }
+  for (const [m, comp] of merkleKeys(modules, added, state.compKeys)) {
+    state.compKeys.set(m, comp);
+    state.keys.set(m, recordKey(comp, m));
   }
 
-  const keys = merkleKeys(modules);
+  async function walkLevels(): Promise<void> {
+    while (level.length > 0) {
+      const blobs = await Promise.all(level.map(blobOf));
+      const factKey = (blob: string): string => recordKey(factsId!, blob);
+      const hits = store.getMany(
+        "file",
+        factsId === null
+          ? []
+          : level.flatMap((p, i) =>
+              SCANNED.test(p) ? [factKey(blobs[i]!)] : [],
+            ),
+      );
+      const fresh: [string, string][] = [];
+      const next: string[] = [];
+      const nodes = await Promise.all(
+        level.map(async (path, i): Promise<ModuleNode> => {
+          const blob = blobs[i]!;
+          let facts: FileFacts = { imports: [] };
+          if (SCANNED.test(path)) {
+            const k = factsId === null ? null : factKey(blob);
+            const hit = k === null ? undefined : hits.get(k);
+            if (hit !== undefined) facts = JSON.parse(hit) as FileFacts;
+            else {
+              const src =
+                input.written?.get(path) ??
+                (snapshot.has(path)
+                  ? await readMember(path)
+                  : contentOutside(path));
+              if (src === null)
+                throw new Error(`[plugin-records] cannot read module ${path}`);
+              facts = { imports: scanModuleImports(src, path) };
+              if (k !== null) fresh.push([k, JSON.stringify(facts)]);
+            }
+          }
+          const node: ModuleNode = {
+            path,
+            blob,
+            staticDeps: [],
+            bundledDeps: [],
+            dynamicDeps: [],
+            unresolved: [],
+          };
+          for (const imp of facts.imports) {
+            if (!isInternal(imp.spec)) continue;
+            const target = resolveFrom(path, imp.spec);
+            if (target === null) {
+              node.unresolved.push(imp.spec);
+              continue;
+            }
+            if (imp.dynamic) node.dynamicDeps.push(target);
+            else {
+              node.staticDeps.push(target);
+              if (!imp.unused) node.bundledDeps.push(target);
+            }
+          }
+          return node;
+        }),
+      );
+      if (factsId !== null && fresh.length > 0) store.putMany("file", fresh);
+      for (const node of nodes) {
+        modules.set(node.path, node);
+        added.push(node.path);
+        for (const d of [...node.staticDeps, ...node.dynamicDeps]) {
+          if (modules.has(d) || queued.has(d)) continue;
+          queued.add(d);
+          next.push(d);
+        }
+      }
+      level = next;
+    }
+  }
+}
+
+/** The graph as one call sees it: exactly the closure of its entries. */
+function viewOf(state: GraphState, entries: readonly string[]): ModuleGraph {
+  const all = state.modules;
+  // Static and dynamic edges: the reach a module's key covers. Breadth-first
+  // from the entries in order, each node's edges in order — the order a single
+  // walk inserted them in, so a reader iterating `modules` (the first
+  // unresolved import named) sees the same order whoever grew the graph.
+  const reach = new Map<string, ModuleNode>();
+  const queue = [...new Set(entries)];
+  for (const p of queue) {
+    const n = all.get(p);
+    if (!n) throw new Error(`[plugin-records] ${p} is not in the module graph`);
+    reach.set(p, n);
+  }
+  for (let i = 0; i < queue.length; i++) {
+    const n = reach.get(queue[i]!)!;
+    for (const d of [...n.staticDeps, ...n.dynamicDeps]) {
+      if (reach.has(d)) continue;
+      const dn = all.get(d);
+      if (!dn)
+        throw new Error(`[plugin-records] ${d} is not in the module graph`);
+      reach.set(d, dn);
+      queue.push(d);
+    }
+  }
+  const modules: ReadonlyMap<string, ModuleNode> = reach;
+  const keys = state.keys;
   const closures = new Map<string, Set<string>>();
   const walk = (from: string[]): Set<string> => {
     const c = new Set<string>();
@@ -312,7 +437,7 @@ async function buildGraph(
   return {
     modules,
     keyOf(path) {
-      const k = keys.get(path);
+      const k = modules.has(path) ? keys.get(path) : undefined;
       if (k === undefined)
         throw new Error(`[plugin-records] ${path} is not in the module graph`);
       return k;
@@ -374,6 +499,9 @@ async function buildGraph(
  */
 function merkleKeys(
   modules: ReadonlyMap<string, ModuleNode>,
+  added: readonly string[],
+  /** The component key of every module keyed before: never revisited. */
+  knownComp: ReadonlyMap<string, string>,
 ): Map<string, string> {
   const index = new Map<string, number>();
   const low = new Map<string, number>();
@@ -386,8 +514,12 @@ function merkleKeys(
     const n = modules.get(p)!;
     return [...n.staticDeps, ...n.dynamicDeps];
   };
+  // A module keyed before is a leaf here: its component is closed (no new
+  // module is in its closure), so it cannot share a cycle with one.
+  const newDepsOf = (p: string): string[] =>
+    depsOf(p).filter((d) => !knownComp.has(d));
 
-  for (const start of [...modules.keys()].sort()) {
+  for (const start of [...added].sort()) {
     if (index.has(start)) continue;
     const work: { node: string; next: number }[] = [{ node: start, next: 0 }];
     index.set(start, counter);
@@ -397,7 +529,7 @@ function merkleKeys(
     onStack.add(start);
     while (work.length > 0) {
       const frame = work[work.length - 1]!;
-      const deps = depsOf(frame.node);
+      const deps = newDepsOf(frame.node);
       if (frame.next < deps.length) {
         const d = deps[frame.next++]!;
         if (!index.has(d)) {
@@ -434,6 +566,7 @@ function merkleKeys(
   // Tarjan emits components in reverse topological order: every component a
   // component imports is already keyed when it is reached.
   const compKeys: string[] = [];
+  /** Each new module's component key. */
   const keys = new Map<string, string>();
   for (const [ci, comp] of comps.entries()) {
     const members = [...comp].sort();
@@ -443,13 +576,17 @@ function merkleKeys(
       const n = modules.get(m)!;
       parts.push(m, n.blob, ...n.unresolved.map((u) => `?${u}`));
       for (const d of depsOf(m)) {
-        const dc = compOf.get(d)!;
-        if (dc !== ci) external.add(compKeys[dc]!);
+        const known = knownComp.get(d);
+        if (known !== undefined) external.add(known);
+        else {
+          const dc = compOf.get(d)!;
+          if (dc !== ci) external.add(compKeys[dc]!);
+        }
       }
     }
     const compKey = recordKey("scc", ...parts, "->", ...[...external].sort());
     compKeys.push(compKey);
-    for (const m of members) keys.set(m, recordKey(compKey, m));
+    for (const m of members) keys.set(m, compKey);
   }
   return keys;
 }

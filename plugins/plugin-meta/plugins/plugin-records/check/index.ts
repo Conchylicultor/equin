@@ -3,7 +3,10 @@ import type {
   CheckContext,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import { currentRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import {
+  currentRecordStore,
+  NO_OUTSIDE_FILES,
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   describeWideKeys,
   keyWidths,
@@ -26,7 +29,7 @@ const check: Check = {
         {
           snapshot: repo,
           store: currentRecordStore(),
-          readOutside: () => null,
+          readOutside: NO_OUTSIDE_FILES,
         },
         scans,
       ),

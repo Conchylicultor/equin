@@ -137,6 +137,21 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
   // What `putMany` has held back, per table, until the next `flush`.
   const pending = new Map<RecordTable, Map<string, string>>();
   let pendingBytes = 0;
+  // Every record this process has read, per table. A record is a pure
+  // function of its key, so a key this process already read is never asked of
+  // SQLite again: a build reads the same facts from several readers (the facet
+  // records for the barrel-free and then the enriched tree, a scan's files
+  // from two generators, each module graph's file facts), and each would
+  // otherwise be another B-tree lookup in a ~1 GB file (~37k repeated keys in
+  // a no-change build). Not a fingerprint — the key IS the value's identity.
+  // Bounded by what one process reads; what it writes is held only until the
+  // flush, as before.
+  const known = new Map<RecordTable, Map<string, string>>();
+  const knownOf = (tbl: RecordTable): Map<string, string> => {
+    let m = known.get(tbl);
+    if (!m) known.set(tbl, (m = new Map()));
+    return m;
+  };
   const flush = (): void => {
     if (pending.size === 0) return;
     db.transaction(() => {
@@ -158,11 +173,13 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
     getMany(table, keys) {
       const tbl = tableId(table);
       const out = new Map<string, string>();
-      // A record put but not yet flushed answers from where it is held.
+      // A record put but not yet flushed answers from where it is held, one
+      // this process already read or wrote from what it knows.
       const held = pending.get(tbl);
+      const seen = knownOf(tbl);
       const unheld: string[] = [];
       for (const k of keys) {
-        const v = held?.get(k);
+        const v = held?.get(k) ?? seen.get(k);
         if (v === undefined) unheld.push(k);
         else out.set(k, v);
       }
@@ -172,7 +189,9 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
         for (const row of RecordRows.parse(
           select(chunk.length).all(tbl, ...chunk),
         )) {
-          out.set(Buffer.from(row.key).toString("hex"), row.value);
+          const key = Buffer.from(row.key).toString("hex");
+          out.set(key, row.value);
+          seen.set(key, row.value);
           if (row.used < day) stale.push(Buffer.from(row.key));
         }
       }

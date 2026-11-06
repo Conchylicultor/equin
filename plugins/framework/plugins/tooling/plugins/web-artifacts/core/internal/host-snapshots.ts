@@ -51,6 +51,7 @@ import { decodeHostSnapshot } from "@plugins/framework/plugins/browser-server/pl
 import {
   buildModuleGraph,
   currentRecordStore,
+  NO_OUTSIDE_FILES,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/core";
 import {
@@ -139,7 +140,11 @@ export async function hostSnapshotDirName(opts: {
   for (const file of repo.under(PATCHES_DIR))
     h.update(`patch\t${file}\t${repo.blobOf(file)}\n`);
   const graph = await buildModuleGraph(
-    { snapshot: repo, store: currentRecordStore(), readOutside: () => null },
+    {
+      snapshot: repo,
+      store: currentRecordStore(),
+      readOutside: NO_OUTSIDE_FILES,
+    },
     [script],
   );
   // An import the graph cannot resolve is a module whose code the key cannot

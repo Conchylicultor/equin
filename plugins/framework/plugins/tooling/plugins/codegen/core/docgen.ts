@@ -26,7 +26,11 @@ import { writeGenerated } from "./write-generated";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { buildEnrichedTree } from "./enriched-tree";
 import { assertNoTestCodeInFacts } from "./doc-facts-guard";
-import { collectTestHelpers, renderTestHelpers } from "./test-helpers-doc";
+import {
+  collectTestHelpers,
+  renderTestHelpers,
+  type TestHelperBarrel,
+} from "./test-helpers-doc";
 import { capDescription, joinDescriptions } from "./description-text";
 import {
   DOC_LIST_MAX,
@@ -204,10 +208,18 @@ export function renderPluginReferenceMd(
 
 type RenderMode = "detail" | "compact";
 
+// A plugin's testing barrels, read once per tree: the compact and detail
+// docs, its CLAUDE.md and every collapsed ancestor's subtree test each ask for
+// them (~4 asks per plugin, each 3 probes of the disk and a parse).
+const testHelpersByNode = new WeakMap<PluginNode, TestHelperBarrel[]>();
+function testHelpersOf(p: PluginNode): TestHelperBarrel[] {
+  let barrels = testHelpersByNode.get(p);
+  if (!barrels) testHelpersByNode.set(p, (barrels = collectTestHelpers(p)));
+  return barrels;
+}
+
 function subtreeHasTestHelpers(p: PluginNode): boolean {
-  return (
-    collectTestHelpers(p).length > 0 || p.children.some(subtreeHasTestHelpers)
-  );
+  return testHelpersOf(p).length > 0 || p.children.some(subtreeHasTestHelpers);
 }
 
 /** Whether the plugin declares exemptions of its own (an `exempt/index.ts` with entries). */
@@ -244,7 +256,7 @@ function renderPluginTreeMd(
   // plugin inside it publishes helpers.
   const thMarker =
     mode === "compact" &&
-    (p.collapsed ? subtreeHasTestHelpers(p) : collectTestHelpers(p).length > 0)
+    (p.collapsed ? subtreeHasTestHelpers(p) : testHelpersOf(p).length > 0)
       ? " [test helpers]"
       : "";
   // Same rule for `[exempt]`: a plugin that exempts itself from a rule.
@@ -279,7 +291,7 @@ function renderPluginTreeMd(
       `[\`${relative(root, pluginReferenceMdPath(p))}\`](${refPath})`,
       lines,
     );
-    lines.push(...renderTestHelpers(collectTestHelpers(p), bodyIndent));
+    lines.push(...renderTestHelpers(testHelpersOf(p), bodyIndent));
   }
 
   if (p.children.length > 0) {
@@ -377,7 +389,7 @@ function renderPluginClaudeAutogen(
     "[REFERENCE.md](./REFERENCE.md)",
     lines,
   );
-  lines.push(...renderTestHelpers(collectTestHelpers(p), ""));
+  lines.push(...renderTestHelpers(testHelpersOf(p), ""));
   if (p.children.length > 0) {
     if (p.collapsed) {
       lines.push("- Sub-plugins:");
