@@ -28487,7 +28487,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling` (1 debt)
               - `framework/tooling/boundaries` (2 debt)
               - `framework/tooling/checks` (11 debt)
-              - `framework/tooling/checks/type-check` (17 debt)
+              - `framework/tooling/checks/type-check` (16 debt)
               - `framework/tooling/codegen` (21 debt)
               - `framework/tooling/codegen/composition-registries` (1 debt)
               - `framework/tooling/collected-dir/discovery` (1 debt)
@@ -28853,7 +28853,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/tooling/checks/type-check/backstop`
               - Exemptions:
                 - Exempts itself from:
-                  - `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
+                  - `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
                   - `user-path/no-unproven-claim` — `shared/worker.ts`, `shared/batch-worker.ts` (sanctioned)
                   - `check-thread-safety/no-blocking-check-work` — `check/import-graph.ts` (debt)
                   - `repo-walk-safety/no-adhoc-repo-listing` — `shared/repo-view.ts` (sanctioned)
@@ -29637,7 +29637,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 34 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 35 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `packages/timed-fs` ×8
               - `framework/plugin-id` ×4
               - `framework/web-core` ×4
@@ -29647,6 +29647,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/browser-server/host-storage.decodeHostSnapshot`
               - `framework/product-name.LEGACY_IDS`
               - `framework/tooling.loadRepoSnapshot`
+              - `infra/deps/npm.lockfileNpmResolutions`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `infra/paths.worktreesDir`
               - `infra/spawn.spawnCaptured`
@@ -31396,6 +31397,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `groupProblems`
               - `installedVersions`
+              - `lockfileNpmResolutions`
               - `newestTag`
               - `planNpm`
               - `policyProblems`
@@ -31405,6 +31407,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `upstreamRows`
               - `workspaceManifests`
               - `wrappersUndeclared`
+          - Cross-plugin:
+            - Imported by:
+              - `framework/tooling/checks/type-check`
+              - `framework/tooling/web-artifacts`
           - Exemptions:
             - Exempts itself from:
               - `boundaries/no-platform-api` — `server/internal/npm-updater.ts` (debt)

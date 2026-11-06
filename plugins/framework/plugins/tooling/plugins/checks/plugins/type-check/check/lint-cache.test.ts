@@ -18,7 +18,7 @@ import { expect, test } from "bun:test";
 import type { ResolvedExemption } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import type { RawLintMessage } from "../core";
 import { hasLintDirective } from "./fingerprint";
-import { lockfileLintDigest } from "../shared/lockfile";
+import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/core";
 import { typeAwareKey, typedGroupFps, type LintGroups } from "./lint-groups";
 import { mergeLintEntry, sameEntry } from "../shared/lint-results";
 import { lintViolationLines } from "./lint-verdict";
@@ -53,18 +53,20 @@ test("a workspace-only lockfile change keeps the lint digest", () => {
     `\n    "@equin/plugin-b": ["@equin/plugin-b@workspace:plugins/b"],\n\n    "eslint"`,
   );
   expect(added).not.toBe(LOCK);
-  expect(lockfileLintDigest(added)).toBe(lockfileLintDigest(LOCK));
+  expect(lockfileNpmResolutions(added)).toBe(lockfileNpmResolutions(LOCK));
 });
 
 test("an npm resolution change moves the lint digest", () => {
   const bumped = LOCK.replace("eslint@9.39.4", "eslint@9.40.0");
-  expect(lockfileLintDigest(bumped)).not.toBe(lockfileLintDigest(LOCK));
+  expect(lockfileNpmResolutions(bumped)).not.toBe(lockfileNpmResolutions(LOCK));
 });
 
 test("an unrecognised lockfile layout hashes the whole file", () => {
   const flat = LOCK.replace(`  "workspaces": {`, `"workspaces": {`);
   const flatAdded = flat.replace("plugin-a@workspace", "plugin-z@workspace");
-  expect(lockfileLintDigest(flatAdded)).not.toBe(lockfileLintDigest(flat));
+  expect(lockfileNpmResolutions(flatAdded)).not.toBe(
+    lockfileNpmResolutions(flat),
+  );
 });
 
 const msg = (ruleId: string | null, line = 1): RawLintMessage => ({

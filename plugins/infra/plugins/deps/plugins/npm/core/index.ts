@@ -4,6 +4,7 @@
 // workspace. Never import it from `web/`.
 
 export { rangeAt } from "./internal/spec";
+export { lockfileNpmResolutions } from "./internal/lockfile-resolutions";
 export type { Workspace } from "./internal/workspace";
 export {
   installedVersions,

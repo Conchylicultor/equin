@@ -5,28 +5,40 @@
 // graph, fills it (a demo's seed) and writes its whole state to the file it is
 // given. The worker imports it as `@browser-host-snapshot/<pluginPath>`, which
 // the worker tree links to the snapshot's store dir: `snapshot.bin` and an
-// `index.js` exporting `{ version, takenAt, url }`.
+// `index.js` exporting `{ version, takenAt, load }`.
 //
-// A stale snapshot has no spelling: its ADDRESS is derived from everything
-// the script's output depends on, so any change to it is a new address, which
-// the build takes:
-//   - every artifact in the worker's closure — the server code the seed's
-//     writes run through, the migrations and the committed config (both
-//     inlined in their artifacts through `import.meta.glob`, so in their
-//     addresses);
-//   - the closure of the host plugin's own `core` artifact (the demo's data
-//     modules), and every file of the host plugin itself (its `bin/` — the seed
-//     and the script —, its `core/`, its `data/`), nested plugins excluded;
-//   - every repo module in the script's own STATIC import closure, by content
-//     (`scriptClosure`): what the Bun-side script loads that no worker
-//     artifact does (its disk readers, a barrel only the seed imports);
-//   - the lockfile (PGlite's version decides the data directory's format), the
-//     Bun version that runs the script, and the builder identity (this code).
+// The address covers what the snapshot's DATA depends on, never the code that
+// wrote it. A snapshot is a database plus store entries, and the worker boots
+// TODAY's code over it — exactly as every persisted database (a desktop's, a
+// browser host's kept storage) is read by code newer than the code that wrote
+// it. What makes that sound is the schema and the format, so those are the
+// address:
+//   - the bundled data the worker inlines: every glob file of the worker
+//     closure's artifacts (the migration history, the committed config) —
+//     what the Bun-side script reads off disk in their place. The worker
+//     refuses a snapshot whose migrations are not its bundle's, so a schema
+//     change must be a new snapshot, and is;
+//   - the seed's own inputs: every file of the host plugin (its seed, its
+//     stories, its `data/`), nested plugins, test code, the plugin's own docs
+//     and generated files (the graph's listing) excluded;
+//   - the format: the npm resolutions (`lockfileNpmResolutions`: PGlite's
+//     version decides the data directory's), the code of the snapshot file's
+//     owner (host-storage's `core/`: the codec the worker decodes it with, the
+//     load that shifts its times), this stage's layout and the module it
+//     writes beside the file.
+// Server code is not in it: an edit to any of the ~300 graph plugins used to
+// re-run the seed (6–48 s on the host) in most builds, for data the edit did
+// not change. Plugin boots stay correct over older data the way they do on
+// every upgrade (definitions — views, triggers — are re-converged at boot by
+// signature; rows written by older code are what any existing database holds).
 // The version the worker compares is the hash of the file's bytes.
+//
+// Recorded measurements and the decision:
+// research/2026-11-06-global-build-pipeline-step8-host-snapshot-and-cold-frontend.md.
 
 import { createHash } from "node:crypto";
 import { rmSync, writeFileSync } from "node:fs";
-import { posix } from "node:path";
+import { relative } from "node:path";
 import {
   existsSync,
   readFileSync,
@@ -38,6 +50,8 @@ import {
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { decodeHostSnapshot } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core";
+import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
+import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/core";
 import {
   artifactDirName,
   artifactStorePath,
@@ -58,8 +72,11 @@ export const HOST_SNAPSHOT_LINK_KIND = "snapshot";
 /** The snapshot file inside its store dir. */
 const SNAPSHOT_FILE = "snapshot.bin";
 
-/** Bumped when what a snapshot dir holds changes shape. */
-const SNAPSHOT_LAYOUT = "1";
+/**
+ * Bumped when what a snapshot dir holds, or how the script is run, changes
+ * shape — the stage's own code is not in the address (see the header).
+ */
+const SNAPSHOT_LAYOUT = "2";
 
 /** How long taking one snapshot may run (a boot of the whole graph plus a seed). */
 const TAKE_TIMEOUT_MS = 10 * 60_000;
@@ -75,34 +92,64 @@ export function hostDeclaresSnapshot(
 }
 
 /**
+ * The plugin whose code reads and writes the snapshot file (its codec, its
+ * load): the file's format, so part of the address.
+ */
+const SNAPSHOT_FORMAT_OWNER =
+  "@plugins/framework/plugins/browser-server/plugins/host-storage/core";
+
+const CODE_FILE_RE = /\.[cm]?[jt]sx?$/;
+
+/**
+ * Whether a file of the host plugin (path relative to it) is seed input: not
+ * test code, not the plugin's own docs at its root, not a generated listing.
+ * Anything else — a `data/` file of any name included — is.
+ */
+function isSeedInput(relInPlugin: string): boolean {
+  const segments = relInPlugin.split("/");
+  const name = segments.at(-1)!;
+  if (CODE_FILE_RE.test(name) && isTestCodePath(segments)) return false;
+  if (segments.length === 1 && name.endsWith(".md")) return false;
+  return !name.endsWith(".generated.ts");
+}
+
+/**
  * The store dir of the snapshot the host at `pluginPath` ships in this tree:
- * its address over everything the snapshot depends on (see the header).
+ * its address over what the snapshot's data depends on (see the header).
  * `closure` is the worker's artifact closure plus the host's own `core`
- * artifact's.
+ * artifact's: only their glob files (the bundled data) are read.
  */
 export async function hostSnapshotDirName(opts: {
   repo: RepoSnapshot;
   pluginPath: string;
   closure: readonly PlannedTarget[];
-  identityHash: string;
 }): Promise<string> {
   const { repo, pluginPath } = opts;
   const dir = `plugins/${pluginPath}`;
   const h = createHash("sha256");
   h.update(`layout\t${SNAPSHOT_LAYOUT}\n`);
-  h.update(`identity\t${opts.identityHash}\n`);
-  h.update(`lock\t${repo.blobOf("bun.lock")}\n`);
-  h.update(`bun\t${Bun.version}\n`);
-  for (const file of await scriptClosure(
-    repo,
-    `${dir}/${HOST_SNAPSHOT_ENTRY_REL}`,
-  ))
-    h.update(`module\t${file}\t${repo.blobOf(file)}\n`);
-  for (const name of [...new Set(opts.closure.map((t) => t.dirName))].sort())
-    h.update(`artifact\t${name}\n`);
+  h.update(`module\t${snapshotModuleSource({ version: "", takenAt: 0 })}\n`);
+  const lock = await repo.read("bun.lock");
+  if (lock === null)
+    throw new Error("host snapshot: the tree has no bun.lock to read");
+  h.update(
+    `npm\t${createHash("sha256").update(lockfileNpmResolutions(lock)).digest("hex")}\n`,
+  );
+  const formatDir = `plugins/${SNAPSHOT_FORMAT_OWNER.slice("@plugins/".length)}`;
+  for (const file of repo.under(formatDir)) {
+    const segments = file.slice(formatDir.length + 1).split("/");
+    if (isTestCodePath(segments)) continue;
+    h.update(`format\t${file}\t${repo.blobOf(file)}\n`);
+  }
+  const bundled = new Set<string>();
+  for (const t of opts.closure)
+    for (const abs of t.globFiles) bundled.add(repoRel(repo, abs));
+  for (const file of [...bundled].sort())
+    h.update(`bundled\t${file}\t${repo.blobOf(file)}\n`);
   for (const file of repo.under(dir)) {
-    if (file.startsWith(`${dir}/plugins/`)) continue;
-    h.update(`file\t${file}\t${repo.blobOf(file)}\n`);
+    const rel = file.slice(dir.length + 1);
+    if (rel.startsWith("plugins/") || !isSeedInput(rel)) continue;
+    h.update(`seed\t${file}\t${repo.blobOf(file)}\n`);
   }
   return artifactDirName(
     slugOf(pluginPath),
@@ -111,87 +158,14 @@ export async function hostSnapshotDirName(opts: {
   );
 }
 
-/** The extensions a specifier may leave off, and the index files of a folder. */
-const RESOLVE_SUFFIXES = [
-  "",
-  ".json",
-  ".ts",
-  ".tsx",
-  ".js",
-  "/index.ts",
-  "/index.tsx",
-  "/index.js",
-];
-
-/**
- * Every repo module `entry` statically loads, itself included — the import
- * statements and re-exports Bun's transpiler finds (type-only imports erased),
- * followed through `@plugins/*` and relative specifiers over this tree's file
- * set. A package or builtin ends the walk (the lockfile and the Bun version
- * are in the address); a dynamic import is not followed (what the host's graph
- * loads that way is its worker's artifacts, already in the address). A repo
- * specifier resolving to no file of the tree throws: an import the address
- * cannot see would make it vouch for code it never read.
- */
-async function scriptClosure(
-  repo: RepoSnapshot,
-  entry: string,
-): Promise<string[]> {
-  // The loader by extension: a `.ts` file's `<T>(x) => …` is JSX to `tsx`.
-  const transpilers = {
-    ts: new Bun.Transpiler({ loader: "ts" }),
-    tsx: new Bun.Transpiler({ loader: "tsx" }),
-    js: new Bun.Transpiler({ loader: "js" }),
-  };
-  const scan = (file: string, text: string) => {
-    const ext = file.endsWith(".tsx")
-      ? "tsx"
-      : file.endsWith(".ts")
-        ? "ts"
-        : "js";
-    try {
-      return transpilers[ext].scanImports(text);
-    } catch (err) {
-      throw new Error(
-        `host snapshot: cannot read the imports of ${file}: ${err instanceof Error ? err.message : String(err)}`,
-        { cause: err },
-      );
-    }
-  };
-  const seen = new Set<string>([entry]);
-  const queue = [entry];
-  const resolveIn = (base: string): string | null => {
-    for (const suffix of RESOLVE_SUFFIXES)
-      if (repo.has(`${base}${suffix}`)) return `${base}${suffix}`;
-    return null;
-  };
-  for (const file of queue) {
-    // A module's own imports; any other file it loads (a JSON) is a leaf,
-    // counted by its content.
-    if (!/\.(?:[cm]?[jt]sx?)$/.test(file)) continue;
-    const text = await repo.read(file);
-    if (text === null)
-      throw new Error(`host snapshot: cannot read ${file} from the tree`);
-    for (const imp of scan(file, text)) {
-      if (imp.kind === "dynamic-import") continue;
-      const spec = imp.path;
-      let base: string;
-      if (spec.startsWith("@plugins/")) base = `plugins/${spec.slice(9)}`;
-      else if (spec.startsWith("."))
-        base = posix.join(posix.dirname(file), spec);
-      else continue;
-      const resolved = resolveIn(base);
-      if (resolved === null)
-        throw new Error(
-          `host snapshot: ${file} imports "${spec}", which resolves to no file of the tree`,
-        );
-      if (!seen.has(resolved)) {
-        seen.add(resolved);
-        queue.push(resolved);
-      }
-    }
-  }
-  return [...seen].sort();
+/** `abs` (a glob file, absolute) as a path of the tree; one outside it throws. */
+function repoRel(repo: RepoSnapshot, abs: string): string {
+  const rel = relative(repo.root, abs);
+  if (rel.startsWith("../") || !repo.has(rel))
+    throw new Error(
+      `host snapshot: bundled file ${abs} is not a file of the tree`,
+    );
+  return rel;
 }
 
 /**
@@ -231,7 +205,6 @@ export async function hostSnapshotLinks(opts: {
   hosts: ReadonlyArray<{ pluginPath: string; entry: PlannedTarget }>;
   targets: readonly PlannedTarget[];
   metaOf: (dirName: string) => ArtifactMeta;
-  identityHash: string;
 }): Promise<HostSnapshotLink[]> {
   const closureOf = (entry: PlannedTarget) =>
     workerClosure({ entry, targets: opts.targets, metaOf: opts.metaOf });
@@ -250,7 +223,6 @@ export async function hostSnapshotLinks(opts: {
           targets: opts.targets,
           closureOf,
         }),
-        identityHash: opts.identityHash,
       }),
     });
   }
@@ -339,4 +311,7 @@ export async function ensureHostSnapshot(opts: {
   opts.log(
     `host snapshot ${opts.pluginPath}: taken in ${Math.round(performance.now() - t0)} ms (${(bytes.byteLength / 1024).toFixed(0)} KB, version ${version.slice(0, 12)}) (${dirName})`,
   );
+  // What the script says about its own take (a host's boot split, …).
+  for (const line of result.stdout.split("\n"))
+    if (line.trim() !== "") opts.log(`  ${line}`);
 }

@@ -69,7 +69,7 @@ import {
   lintDataKey,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { LINT_GROUP_ALL, LINT_GROUP_BASE } from "../core";
-import { lockfileLintDigest } from "../shared/lockfile";
+import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/core";
 import type { TypeAwareGroups } from "../shared/lint-results";
 import type { RepoView } from "../shared/repo-view";
 import { producerSources } from "../shared/tsc-engine";
@@ -316,7 +316,7 @@ export async function computeLintGroups(
   const engineConfig = view.files().filter(isEngineConfigFile);
   const engine = new Set([...engineCode, ...engineConfig]);
   const lock = view.isFile("bun.lock")
-    ? lockfileLintDigest(view.readText("bun.lock"))
+    ? sha256(lockfileNpmResolutions(view.readText("bun.lock")))
     : "";
   const engineFp = sha256(
     `lock:${lock}\ndata:${lintDataKey(view.root)}\n${body(engineCode, code)}\n${body(engineConfig, view)}`,

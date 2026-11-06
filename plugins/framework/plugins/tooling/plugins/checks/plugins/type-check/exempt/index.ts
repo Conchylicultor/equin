@@ -9,7 +9,6 @@ export default [
       "shared/batch-worker.ts",
       "shared/full-check.ts",
       "shared/keys.ts",
-      "shared/lockfile.ts",
       "shared/name-check.ts",
       "shared/name-host.ts",
       "shared/name-records.ts",

@@ -11,7 +11,7 @@ import {
 import { join, relative } from "path";
 import ts from "typescript";
 import { sha256 } from "./keys";
-import { lockfileLintDigest } from "./lockfile";
+import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/core";
 import {
   type AppPath,
   asAppPath,
@@ -34,7 +34,7 @@ export function formatDiagnostic(root: string, d: ts.Diagnostic): string {
  * The ENGINE every key folds in (through the global hash, `./name-run.ts`): what decides a
  * file's diagnostics besides its own text and the declarations it sees. The
  * compiler and its options (paths relative to the root, so every worktree
- * shares one key), the npm resolutions (`lockfileLintDigest`: a contract edge
+ * shares one key), the npm resolutions (`lockfileNpmResolutions`: a contract edge
  * into a dependency is dropped, so a dependency's own types move every key
  * through here), dependency patches, and this engine's own code.
  */
@@ -58,7 +58,7 @@ export function tscEngineFp(
   );
   const lock = join(root, "bun.lock");
   parts.push(
-    `lock ${existsSync(lock) ? lockfileLintDigest(readFileSync(lock, "utf8")) : "-"}`,
+    `lock ${existsSync(lock) ? sha256(lockfileNpmResolutions(readFileSync(lock, "utf8"))) : "-"}`,
   );
   const patches = joinAppPath(root, "patches");
   if (existsSync(patches)) {

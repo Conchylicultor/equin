@@ -24,12 +24,19 @@ if (out === undefined) {
 }
 const file = await takeHostSnapshot({
   migrations: diskMigrationHashes(),
-  boot: () =>
-    bootBrowserHost({
+  boot: async () => {
+    const host = await bootBrowserHost({
       entries: bunHostEntries(),
-      seed: (host) => seed(diskDemoPrototypes(), host),
+      seed: (h) => seed(diskDemoPrototypes(), h),
       onUnmatched: unmatchedApiResponse,
-    }),
+    });
+    // What the take cost, split: the build log carries it for every take.
+    const { stages, slowest } = host.boot;
+    console.info(
+      `[lumen snapshot] boot: ${stages.map((s) => `${s.name} ${s.ms} ms`).join(", ")}; slowest: ${slowest.map((s) => `${s.label} ${s.ms} ms`).join(", ")}`,
+    );
+    return host;
+  },
 });
 writeFileSync(out, file);
 console.info(

@@ -461,8 +461,8 @@ async function runPipeline(
 
   // ── Stage 4a: host snapshots ────────────────────────────────────────
   // Each host that declares a starting snapshot (`bin/browser-host.snapshot.ts`)
-  // gets it taken once per address (`host-snapshots.ts`) — a stale one has no
-  // spelling — and linked into the worker tree below.
+  // gets it taken once per address (`host-snapshots.ts`: keyed on what its
+  // data depends on) and linked into the worker tree below.
   const snapshotLinks = await stage(
     "artifacts:host-snapshots",
     "host snapshots",
@@ -475,7 +475,6 @@ async function runPipeline(
         })),
         targets: allTargets,
         metaOf: (dirName) => buildOut.metas.get(dirName)!,
-        identityHash: plan.identity.identityHash,
       });
       for (const link of links) {
         await ensureHostSnapshot({

@@ -171,7 +171,7 @@ Results are stored per **(file, blob version)** (`shared/lint-results.ts`, `type
 
 - **Rules half** (`check/lint-groups.ts`): one fp per group, each folding in the **engine**:
   - the config builder's RUNTIME import closure (`LINT_CONFIG_SOURCE`; `import type` edges are erased, so not followed), `shared/worker.ts`, root tsconfigs, `package.json`, `patches/**`. Keep the builder's imports to what can change a message — it takes the manifests' file set as data (`lint/core/ide-lint-config.ts` lists it), so the repo-file enumeration and the process plumbing under it stay out (a test holds it there);
-  - the lockfile minus workspace entries (`lockfileLintDigest`);
+  - the lockfile minus workspace entries (`lockfileNpmResolutions`, `infra/deps/npm`);
   - the `@utility` set (`lintDataKey`).
 
   Groups:
@@ -358,7 +358,7 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
     - `framework/tooling/checks/type-check/backstop`
 - Exemptions:
   - Exempts itself from:
-    - `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
     - `user-path/no-unproven-claim` — `shared/worker.ts`, `shared/batch-worker.ts` (sanctioned)
     - `check-thread-safety/no-blocking-check-work` — `check/import-graph.ts` (debt)
     - `repo-walk-safety/no-adhoc-repo-listing` — `shared/repo-view.ts` (sanctioned)

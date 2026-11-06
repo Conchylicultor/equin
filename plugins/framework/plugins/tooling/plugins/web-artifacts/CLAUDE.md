@@ -157,20 +157,27 @@ Key invariants:
   itself (`internal/browser-hosts.ts`, served as `@browser-host/<pluginPath>`)
   is `host.js` plus the frame-serving Service Worker (`frames-sw.js`, a classic
   script bundled whole, keyed by its own recorded inputs).
-- **A browser host's starting snapshot is an artifact with no stale spelling**
+- **A browser host's starting snapshot is an artifact keyed on its data**
   (`internal/host-snapshots.ts`). A host declaring
   `bin/browser-host.snapshot.ts` gets it run once per address in a fresh Bun
   process (stage `artifacts:host-snapshots`), its file published with an
   `index.js` (`{ version, takenAt, load() }`, version = the file's hash) and
   linked into the worker tree as `<plugin-id>.snapshot`, which
   `@browser-host-snapshot/<pluginPath>` resolves to (external to every build,
-  like `@browser-host/*`). Its address covers every artifact of the worker's
-  closure and of the host's own `core`, every file of the host plugin, every
-  repo module of the script's own static import closure (scanned by Bun's
-  transpiler; a repo specifier resolving to nothing throws), the lockfile, the
-  Bun version and the builder identity, so a changed seed, migration or server
-  code is a new address. `map-in-sync` derives the same links
-  (`hostSnapshotLinks`) and reports a snapshot the store lacks as missing.
+  like `@browser-host/*`). Its address covers what the snapshot's DATA depends
+  on, never the code that wrote it: the glob files of the worker closure's
+  artifacts (the migration history and committed config the worker inlines —
+  what the Bun-side script reads off disk), every file of the host plugin
+  (tests, its root docs and `*.generated.ts` aside), the npm resolutions
+  (`lockfileNpmResolutions`, `infra/deps/npm`: PGlite's version decides the
+  data dir's format), host-storage's `core/` (the file's codec and load) and
+  the stage's layout. Today's code boots over an older
+  snapshot as over any stored database (the worker refuses migrations that
+  differ). It used to cover the whole worker closure and the builder identity,
+  so almost any server edit re-took it, 7–48 s per build
+  (`research/2026-11-06-global-build-pipeline-step8-host-snapshot-and-cold-frontend.md`).
+  `map-in-sync` derives the same links (`hostSnapshotLinks`) and reports a
+  snapshot the store lacks as missing.
 - **A browser host's inputs are recorded under the address they hash to.** The
   host artifact's address is the content of every repo file its build loaded
   (vite's module list), their directories' listings, each `import.meta.glob`
@@ -389,7 +396,7 @@ Key invariants:
 
 - Description: Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
 - Core:
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/timed-fs` ×8
     - `framework/plugin-id` ×4
     - `framework/web-core` ×4
@@ -399,6 +406,7 @@ Key invariants:
     - `framework/browser-server/host-storage.decodeHostSnapshot`
     - `framework/product-name.LEGACY_IDS`
     - `framework/tooling.loadRepoSnapshot`
+    - `infra/deps/npm.lockfileNpmResolutions`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/paths.worktreesDir`
     - `infra/spawn.spawnCaptured`

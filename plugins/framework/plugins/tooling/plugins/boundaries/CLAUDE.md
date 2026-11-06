@@ -294,7 +294,7 @@ takes a `debt` exemption on the check's id.
     - `framework/tooling` (1 debt)
     - `framework/tooling/boundaries` (2 debt)
     - `framework/tooling/checks` (11 debt)
-    - `framework/tooling/checks/type-check` (17 debt)
+    - `framework/tooling/checks/type-check` (16 debt)
     - `framework/tooling/codegen` (21 debt)
     - `framework/tooling/codegen/composition-registries` (1 debt)
     - `framework/tooling/collected-dir/discovery` (1 debt)

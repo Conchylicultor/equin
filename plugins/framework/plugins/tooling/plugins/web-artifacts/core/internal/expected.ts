@@ -225,7 +225,6 @@ export async function computeExpectedComposition(opts: {
     })),
     targets: fleet.targets,
     metaOf: (dirName) => fleet.metas.get(dirName)!,
-    identityHash: fleet.identityHash,
   });
   // The tree links each snapshot by name: one the store lacks is a dangling
   // link, not a composition this tree has.

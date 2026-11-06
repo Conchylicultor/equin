@@ -152,6 +152,7 @@ functions in `core/internal/coherence.ts` over `readWorkspace(files)` (a check r
   - Exports (values):
     - `groupProblems`
     - `installedVersions`
+    - `lockfileNpmResolutions`
     - `newestTag`
     - `planNpm`
     - `policyProblems`
@@ -161,6 +162,10 @@ functions in `core/internal/coherence.ts` over `readWorkspace(files)` (a check r
     - `upstreamRows`
     - `workspaceManifests`
     - `wrappersUndeclared`
+- Cross-plugin:
+  - Imported by:
+    - `framework/tooling/checks/type-check`
+    - `framework/tooling/web-artifacts`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `server/internal/npm-updater.ts` (debt)
