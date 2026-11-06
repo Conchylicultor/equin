@@ -29717,13 +29717,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 35 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 37 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `packages/timed-fs` ×8
               - `framework/plugin-id` ×4
               - `framework/web-core` ×4
               - `infra/host-fs/user-path` ×4
               - `packages/flock` ×4
               - `packages/owned-fd` ×2
+              - `plugin-meta/plugin-records` ×2
               - `framework/browser-server/host-storage.decodeHostSnapshot`
               - `framework/product-name.LEGACY_IDS`
               - `framework/tooling.loadRepoSnapshot`
@@ -42404,6 +42405,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/regen-generated`
           - `framework/tooling/boundaries`
           - `framework/tooling/codegen`
+          - `framework/tooling/web-artifacts`
           - `plugin-meta/plugin-records/evaluate`
           - `plugin-meta/plugin-records/key-width`
           - `plugin-meta/plugin-tree/faceted`

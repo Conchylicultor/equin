@@ -222,6 +222,7 @@ its docblock records — and then lowered as readily as raised.
     - `framework/cli/regen-generated`
     - `framework/tooling/boundaries`
     - `framework/tooling/codegen`
+    - `framework/tooling/web-artifacts`
     - `plugin-meta/plugin-records/evaluate`
     - `plugin-meta/plugin-records/key-width`
     - `plugin-meta/plugin-tree/faceted`

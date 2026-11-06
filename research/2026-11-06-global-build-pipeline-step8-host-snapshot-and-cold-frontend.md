@@ -9,6 +9,8 @@ After step 7, the two largest items this track still owns:
 
 ## 1. The host snapshot
 
+> **Superseded (2026-11-06):** keying the snapshot on data only let a changed warm-up ship stale data. Its address now covers every module the take can run again, derived from the script's import graph: `2026-11-06-global-host-snapshot-address-covers-what-runs.md`.
+
 ### Measured (host, 2026-11-06, build profiles since 8fb90a3422)
 * 30 profiled builds ran the `artifacts:host-snapshots` stage. **19 re-took the snapshot, at 7–48 s each** (the host is loaded: 13–48 s is the common range). Main: 2 of 5. Agent worktrees: an edit anywhere in the closure meant a fresh take, each build after each edit (att-…-np2zwl: 3 takes in a row).
 * The store holds **19 lumen snapshots taken in one day**.

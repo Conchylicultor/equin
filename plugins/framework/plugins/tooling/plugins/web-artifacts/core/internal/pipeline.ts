@@ -461,8 +461,8 @@ async function runPipeline(
 
   // ── Stage 4a: host snapshots ────────────────────────────────────────
   // Each host that declares a starting snapshot (`bin/browser-host.snapshot.ts`)
-  // gets it taken once per address (`host-snapshots.ts`: keyed on what its
-  // data depends on) and linked into the worker tree below.
+  // gets it taken once per address (`host-snapshots.ts`: keyed on every
+  // module the take can run and the data it reads) and linked into the worker tree below.
   const snapshotLinks = await stage(
     "artifacts:host-snapshots",
     "host snapshots",

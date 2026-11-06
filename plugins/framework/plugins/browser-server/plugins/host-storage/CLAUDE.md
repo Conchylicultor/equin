@@ -29,10 +29,11 @@ serveBrowserHost({
   directory (PGlite's `dumpDataDir`) and every store's entries in one file,
   taken ONCE by the build (`takeHostSnapshot`, run by the host's
   `bin/browser-host.snapshot.ts` through web-artifacts' `host-snapshots.ts`,
-  whose address covers what the snapshot's data depends on — the bundled
-  migrations and config, the host's own files, the npm resolutions and this
-  plugin's `core/` (the codec and the load) — never
-  the server code that wrote it). A fresh storage
+  whose address covers everything that can change its bytes — every module
+  the take can run, derived from the script's import graph (the whole server
+  graph the seed boots, this plugin's codec included), the bundled migrations
+  and config, the host's own data files, the npm resolutions and the Bun
+  version). A fresh storage
   loads it instead of starting empty (`origin: { kind: "snapshot" }`), and its
   times move to now: the database's timestamp columns are shifted by the
   driver before anything reads them, each store's values by its owner's

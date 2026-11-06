@@ -6,16 +6,25 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { repoSnapshotOver } from "@plugins/framework/plugins/tooling/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { hostSnapshotDirName } from "./host-snapshots";
 import type { PlannedTarget } from "./plan";
 
-// The snapshot's address follows its data — the bundled data the worker
-// inlines, the seed's own files, the npm resolutions — never server code.
+// The snapshot's address covers everything that can change its bytes: every
+// module the take can run (the script's graph, dynamic edges included — the
+// server graph the generated listing loads), the data it reads off disk, the
+// npm resolutions. A module the take cannot load does not move it.
 
 const HOST = "apps/plugins/demo-host";
 const MIGRATION = "plugins/database/plugins/migrations/data/0001_init.sql";
 const CODEC =
   "plugins/framework/plugins/browser-server/plugins/host-storage/core/internal/snapshot.ts";
+// A server module the seed boots, reached only through the generated
+// listing's `import()` — the script never imports it.
+// The module graph keys its file facts by the scan's own code: the tree needs it.
+const SCAN =
+  "plugins/plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts";
+const WARMUP = "plugins/ui/plugins/icons/server/warm-up.ts";
 
 const roots: string[] = [];
 afterAll(() => {
@@ -54,17 +63,28 @@ const LOCK = [
 
 const BASE: Record<string, string> = {
   "bun.lock": LOCK,
-  [`plugins/${HOST}/bin/browser-host.snapshot.ts`]: `import { seed } from "./seed";`,
+  [`plugins/${HOST}/bin/browser-host.snapshot.ts`]: [
+    `import { seed } from "./seed";`,
+    `import { hostEntries } from "./browser-host.generated";`,
+    `import { decode } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core";`,
+  ].join("\n"),
   [`plugins/${HOST}/bin/seed.ts`]: `export const seed = 1;`,
-  [`plugins/${HOST}/bin/browser-host.generated.ts`]: `export const hostEntries = [];`,
+  [`plugins/${HOST}/bin/browser-host.generated.ts`]: `export const hostEntries = [{ loader: () => import("@plugins/ui/plugins/icons/server") }];`,
   [`plugins/${HOST}/bin/seed.test.ts`]: `test("seed", () => {});`,
   [`plugins/${HOST}/CLAUDE.md`]: `# demo host`,
   [`plugins/${HOST}/data/page.md.txt`]: `page`,
+  [`plugins/${HOST}/web/index.ts`]: `export default {};`,
   [`plugins/${HOST}/plugins/child/core/index.ts`]: `export const child = 1;`,
   [MIGRATION]: `-- migration 1`,
+  "plugins/ui/plugins/icons/server/index.ts": `import "./warm-up";\nexport default {};`,
+  [WARMUP]: `export const drawn = 1;`,
   "plugins/tasks/server/index.ts": `export default {};`,
-  [CODEC]: `export const FORMAT = 1;`,
+  "plugins/framework/plugins/browser-server/plugins/host-storage/core/index.ts": `export { decode } from "./internal/snapshot";`,
+  [CODEC]: `export const decode = 1;`,
   [`plugins/${HOST}/data/notes/readme.md`]: `# a prototype's readme`,
+  "patches/pkg@1.0.0.patch": `--- a\n+++ b\n`,
+  [`plugins/${HOST}/data/proto/app.ts`]: `export const proto = 1;`,
+  [SCAN]: readFileSync(join(REPO_ROOT, SCAN), "utf8"),
 };
 
 /** A worker closure of one artifact that inlines the migration history. */
@@ -111,9 +131,48 @@ describe("a host snapshot's address", () => {
   });
 
   test("moves with the snapshot file's codec", async () => {
-    expect(await address(edited(CODEC, `export const FORMAT = 2;`))).not.toBe(
+    expect(await address(edited(CODEC, `export const decode = 2;`))).not.toBe(
       await address(BASE),
     );
+  });
+
+  test("moves with a server module the seed boots but the script does not import", async () => {
+    // The icon warm-up case (task-1793979789-wtzxz9): reached only through
+    // the generated listing's dynamic `import()`.
+    expect(await address(edited(WARMUP, `export const drawn = 2;`))).not.toBe(
+      await address(BASE),
+    );
+  });
+
+  test("moves with any file of data/, a module-looking one included", async () => {
+    expect(
+      await address(
+        edited(`plugins/${HOST}/data/proto/app.ts`, `export const proto = 2;`),
+      ),
+    ).not.toBe(await address(BASE));
+  });
+
+  test("moves with a patch bun applies to an npm package", async () => {
+    expect(
+      await address(edited("patches/pkg@1.0.0.patch", `--- a\n+++ c\n`)),
+    ).not.toBe(await address(BASE));
+  });
+
+  test("refuses a take whose graph imports a module that does not exist", async () => {
+    expect(
+      address(edited(WARMUP, `import "./gone";\nexport const drawn = 1;`)),
+    ).rejects.toThrow(/resolves to no file of the tree/);
+  });
+
+  test("moves with the generated listing (the graph that boots)", async () => {
+    expect(
+      await address(
+        edited(
+          `plugins/${HOST}/bin/browser-host.generated.ts`,
+          `export const hostEntries = [{ loader: () => import("@plugins/ui/plugins/icons/server") }, { loader: () => import("@plugins/tasks/server") }];`,
+        ),
+      ),
+    ).not.toBe(await address(BASE));
   });
 
   test("moves with an npm resolution, not with a workspace entry", async () => {
@@ -134,16 +193,13 @@ describe("a host snapshot's address", () => {
     ).toBe(before);
   });
 
-  test("ignores server code, tests, docs, generated listings and nested plugins", async () => {
+  test("ignores code the take cannot load, tests, docs and nested plugins", async () => {
     const before = await address(BASE);
     for (const [rel, text] of [
       ["plugins/tasks/server/index.ts", `export default { changed: true };`],
+      [`plugins/${HOST}/web/index.ts`, `export default { changed: true };`],
       [`plugins/${HOST}/bin/seed.test.ts`, `test("other", () => {});`],
       [`plugins/${HOST}/CLAUDE.md`, `# edited`],
-      [
-        `plugins/${HOST}/bin/browser-host.generated.ts`,
-        `export const hostEntries = [1];`,
-      ],
       [
         `plugins/${HOST}/plugins/child/core/index.ts`,
         `export const child = 2;`,

@@ -32,11 +32,12 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   new build migrates it. The demo's policy is `whenOutdated: "reset"`: data
   that started from an older snapshot (or from before snapshots) is replaced by
   this build's, and the page says so ("The demo was updated…"). The snapshot's
-  address covers what its DATA depends on: the bundled migrations and config,
-  this plugin's own files (tests, docs and generated listings aside) and the
-  npm resolutions. A changed seed, story, migration or config ships a new one;
-  a server-code edit does not (today's code boots over the snapshot, as over
-  any stored database).
+  address covers everything that can change its bytes: every module the take
+  can run (the script's import graph, dynamic edges included — the whole
+  server graph `browser-host.generated.ts` boots), the bundled migrations and
+  config, this plugin's `data/`, the npm resolutions and the Bun version. Any
+  change to the seed, a story, a migration, the config, or server code the take
+  runs (a warm-up, a job, a fixture writer) ships a new one.
 - **The demo owns its data; the apps own how it is written.** Everything the
   demo shows is here — the stories and agents (`core/internal/stories.ts`),
   Demo's workspace (`core/internal/pages.ts`, a Pages fixture whose prose is

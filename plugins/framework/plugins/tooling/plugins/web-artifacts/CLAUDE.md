@@ -157,25 +157,26 @@ Key invariants:
   itself (`internal/browser-hosts.ts`, served as `@browser-host/<pluginPath>`)
   is `host.js` plus the frame-serving Service Worker (`frames-sw.js`, a classic
   script bundled whole, keyed by its own recorded inputs).
-- **A browser host's starting snapshot is an artifact keyed on its data**
-  (`internal/host-snapshots.ts`). A host declaring
+- **A browser host's starting snapshot is an artifact keyed on everything
+  that can change its bytes** (`internal/host-snapshots.ts`). A host declaring
   `bin/browser-host.snapshot.ts` gets it run once per address in a fresh Bun
   process (stage `artifacts:host-snapshots`), its file published with an
   `index.js` (`{ version, takenAt, load() }`, version = the file's hash) and
   linked into the worker tree as `<plugin-id>.snapshot`, which
   `@browser-host-snapshot/<pluginPath>` resolves to (external to every build,
-  like `@browser-host/*`). Its address covers what the snapshot's DATA depends
-  on, never the code that wrote it: the glob files of the worker closure's
-  artifacts (the migration history and committed config the worker inlines —
-  what the Bun-side script reads off disk), every file of the host plugin
-  (tests, its root docs and `*.generated.ts` aside), the npm resolutions
-  (`lockfileNpmResolutions`, `infra/deps/npm`: PGlite's version decides the
-  data dir's format), host-storage's `core/` (the file's codec and load) and
-  the stage's layout. Today's code boots over an older
-  snapshot as over any stored database (the worker refuses migrations that
-  differ). It used to cover the whole worker closure and the builder identity,
-  so almost any server edit re-took it, 7–48 s per build
-  (`research/2026-11-06-global-build-pipeline-step8-host-snapshot-and-cold-frontend.md`).
+  like `@browser-host/*`). Its address: the script's Merkle key in the
+  plugin-records module graph (`buildModuleGraph`, static AND dynamic edges —
+  so every server module the generated listing's loaders boot, every job,
+  warm-up and fixture writer the seed runs, the disk swaps and host-storage's
+  codec; derived, never listed), the data that code reads off disk (the glob
+  files of the worker closure's artifacts — the migrations and committed
+  config the worker inlines — and every file of the host plugin's `data/`),
+  the npm resolutions (`lockfileNpmResolutions`, `infra/deps/npm`) and the
+  `patches/` applied to them, the Bun version and the stage's layout. An
+  import in the take's graph that resolves to no file throws. A stale snapshot cannot ship: build
+  pipeline step 8 had keyed it on data only, and a changed warm-up shipped
+  stale data (`research/2026-11-06-global-host-snapshot-address-covers-what-runs.md`,
+  with the re-take frequency this costs).
   `map-in-sync` derives the same links (`hostSnapshotLinks`) and reports a
   snapshot the store lacks as missing.
 - **A browser host's inputs are recorded under the address they hash to.** The
@@ -396,13 +397,14 @@ Key invariants:
 
 - Description: Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
 - Core:
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/timed-fs` ×8
     - `framework/plugin-id` ×4
     - `framework/web-core` ×4
     - `infra/host-fs/user-path` ×4
     - `packages/flock` ×4
     - `packages/owned-fd` ×2
+    - `plugin-meta/plugin-records` ×2
     - `framework/browser-server/host-storage.decodeHostSnapshot`
     - `framework/product-name.LEGACY_IDS`
     - `framework/tooling.loadRepoSnapshot`

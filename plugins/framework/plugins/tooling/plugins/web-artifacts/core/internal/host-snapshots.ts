@@ -7,34 +7,32 @@
 // the worker tree links to the snapshot's store dir: `snapshot.bin` and an
 // `index.js` exporting `{ version, takenAt, load }`.
 //
-// The address covers what the snapshot's DATA depends on, never the code that
-// wrote it. A snapshot is a database plus store entries, and the worker boots
-// TODAY's code over it — exactly as every persisted database (a desktop's, a
-// browser host's kept storage) is read by code newer than the code that wrote
-// it. What makes that sound is the schema and the format, so those are the
-// address:
-//   - the bundled data the worker inlines: every glob file of the worker
-//     closure's artifacts (the migration history, the committed config) —
-//     what the Bun-side script reads off disk in their place. The worker
-//     refuses a snapshot whose migrations are not its bundle's, so a schema
-//     change must be a new snapshot, and is;
-//   - the seed's own inputs: every file of the host plugin (its seed, its
-//     stories, its `data/`), nested plugins, test code, the plugin's own docs
-//     and generated files (the graph's listing) excluded;
-//   - the format: the npm resolutions (`lockfileNpmResolutions`: PGlite's
-//     version decides the data directory's), the code of the snapshot file's
-//     owner (host-storage's `core/`: the codec the worker decodes it with, the
-//     load that shifts its times), this stage's layout and the module it
-//     writes beside the file.
-// Server code is not in it: an edit to any of the ~300 graph plugins used to
-// re-run the seed (6–48 s on the host) in most builds, for data the edit did
-// not change. Plugin boots stay correct over older data the way they do on
-// every upgrade (definitions — views, triggers — are re-converged at boot by
-// signature; rows written by older code are what any existing database holds).
+// The address covers everything that can change the snapshot's BYTES — what
+// runs while it is taken, and what that code reads:
+//   - the code: the Merkle key of the snapshot script in the plugin-records
+//     module graph (`buildModuleGraph`, the graph the portability derivation
+//     and the browser-host codegen measure with). It follows static AND
+//     dynamic edges, so it walks the generated listing's
+//     `loader: () => import("@plugins/…/server")` thunks: the whole server
+//     graph the seed boots (every job, warm-up, derived table and fixture
+//     writer), the Bun-side disk swaps, the seed, and host-storage's codec.
+//     Derived, never listed: a module the take can load is in it;
+//   - the data that code reads off disk in place of what the worker inlines:
+//     every glob file of the worker closure's artifacts (the migration
+//     history, the committed config), and the host plugin's own data (every
+//     file of its `data/`, any other non-module file). Portable server code reads no disk (that is what
+//     portability means), so these are all of it;
+//   - what runs the code: the npm resolutions (`lockfileNpmResolutions`:
+//     PGlite, which decides the data directory's format, and every package
+//     the graph runs), the `patches/` bun applies to them (the lockfile names
+//     a patch by path only) and the Bun version;
+//   - this stage's layout and the module it writes beside the file.
 // The version the worker compares is the hash of the file's bytes.
 //
-// Recorded measurements and the decision:
-// research/2026-11-06-global-build-pipeline-step8-host-snapshot-and-cold-frontend.md.
+// History: build pipeline step 8 dropped server code from the address (the
+// snapshot was re-taken in most builds), so a changed warm-up shipped stale
+// data. Decision and measurements:
+// research/2026-11-06-global-host-snapshot-address-covers-what-runs.md.
 
 import { createHash } from "node:crypto";
 import { rmSync, writeFileSync } from "node:fs";
@@ -50,7 +48,10 @@ import {
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { decodeHostSnapshot } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core";
-import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  buildModuleGraph,
+  currentRecordStore,
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/core";
 import {
   artifactDirName,
@@ -91,31 +92,29 @@ export function hostDeclaresSnapshot(
   return repo.has(`plugins/${pluginPath}/${HOST_SNAPSHOT_ENTRY_REL}`);
 }
 
-/**
- * The plugin whose code reads and writes the snapshot file (its codec, its
- * load): the file's format, so part of the address.
- */
-const SNAPSHOT_FORMAT_OWNER =
-  "@plugins/framework/plugins/browser-server/plugins/host-storage/core";
-
 const CODE_FILE_RE = /\.[cm]?[jt]sx?$/;
 
 /**
- * Whether a file of the host plugin (path relative to it) is seed input: not
- * test code, not the plugin's own docs at its root, not a generated listing.
- * Anything else — a `data/` file of any name included — is.
+ * Whether a file of the host plugin (path relative to it) is data the take
+ * reads off disk: every file of its `data/` (read as bytes, whatever its
+ * extension — a prototype's `.ts` included), and elsewhere any file that is
+ * not a module (modules count through the script's graph, by what it loads)
+ * nor the plugin's own docs at its root.
  */
-function isSeedInput(relInPlugin: string): boolean {
+function isSeedData(relInPlugin: string): boolean {
+  if (relInPlugin.startsWith("data/")) return true;
   const segments = relInPlugin.split("/");
   const name = segments.at(-1)!;
-  if (CODE_FILE_RE.test(name) && isTestCodePath(segments)) return false;
-  if (segments.length === 1 && name.endsWith(".md")) return false;
-  return !name.endsWith(".generated.ts");
+  if (CODE_FILE_RE.test(name)) return false;
+  return !(segments.length === 1 && name.endsWith(".md"));
 }
+
+/** Where bun reads `patchedDependencies`' patches: npm code the lockfile names by path only. */
+const PATCHES_DIR = "patches";
 
 /**
  * The store dir of the snapshot the host at `pluginPath` ships in this tree:
- * its address over what the snapshot's data depends on (see the header).
+ * its address over everything that can change its bytes (see the header).
  * `closure` is the worker's artifact closure plus the host's own `core`
  * artifact's: only their glob files (the bundled data) are read.
  */
@@ -126,21 +125,31 @@ export async function hostSnapshotDirName(opts: {
 }): Promise<string> {
   const { repo, pluginPath } = opts;
   const dir = `plugins/${pluginPath}`;
+  const script = `${dir}/${HOST_SNAPSHOT_ENTRY_REL}`;
   const h = createHash("sha256");
   h.update(`layout\t${SNAPSHOT_LAYOUT}\n`);
   h.update(`module\t${snapshotModuleSource({ version: "", takenAt: 0 })}\n`);
+  h.update(`bun\t${Bun.version}\n`);
   const lock = await repo.read("bun.lock");
   if (lock === null)
     throw new Error("host snapshot: the tree has no bun.lock to read");
   h.update(
     `npm\t${createHash("sha256").update(lockfileNpmResolutions(lock)).digest("hex")}\n`,
   );
-  const formatDir = `plugins/${SNAPSHOT_FORMAT_OWNER.slice("@plugins/".length)}`;
-  for (const file of repo.under(formatDir)) {
-    const segments = file.slice(formatDir.length + 1).split("/");
-    if (isTestCodePath(segments)) continue;
-    h.update(`format\t${file}\t${repo.blobOf(file)}\n`);
-  }
+  for (const file of repo.under(PATCHES_DIR))
+    h.update(`patch\t${file}\t${repo.blobOf(file)}\n`);
+  const graph = await buildModuleGraph(
+    { snapshot: repo, store: currentRecordStore(), readOutside: () => null },
+    [script],
+  );
+  // An import the graph cannot resolve is a module whose code the key cannot
+  // see: refuse it rather than vouch for a take that may load it.
+  for (const [path, node] of graph.modules)
+    if (node.unresolved.length > 0)
+      throw new Error(
+        `host snapshot ${pluginPath}: ${path} imports ${node.unresolved.map((u) => JSON.stringify(u)).join(", ")}, which resolves to no file of the tree — the snapshot's address cannot cover the code it loads`,
+      );
+  h.update(`code\t${graph.keyOf(script)}\n`);
   const bundled = new Set<string>();
   for (const t of opts.closure)
     for (const abs of t.globFiles) bundled.add(repoRel(repo, abs));
@@ -148,7 +157,7 @@ export async function hostSnapshotDirName(opts: {
     h.update(`bundled\t${file}\t${repo.blobOf(file)}\n`);
   for (const file of repo.under(dir)) {
     const rel = file.slice(dir.length + 1);
-    if (rel.startsWith("plugins/") || !isSeedInput(rel)) continue;
+    if (rel.startsWith("plugins/") || !isSeedData(rel)) continue;
     h.update(`seed\t${file}\t${repo.blobOf(file)}\n`);
   }
   return artifactDirName(
