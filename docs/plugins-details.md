@@ -12521,6 +12521,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-launcher`
           - `config_v2/git-defaults-preview`
           - `hints/ask`
+          - `primitives/ui-context/element-picker`
           - `shell/global-action-bar`
           - `shell/notifications`
           - `shell/toast`
@@ -50963,13 +50964,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SlotRender.ItemMiddleware`
             - Uses: 33 symbols — full list in [`plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md`](../plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md)
               - `primitives/css/ui-kit` ×5
-              - `primitives/ui-context` ×5
+              - `primitives/ui-context` ×4
               - `primitives/css/coords` ×3
               - `primitives/css/fill` ×2
               - `primitives/css/spacing` ×2
               - `primitives/icon-button` ×2
               - `primitives/shortcuts` ×2
               - `primitives/text-editor/inline-chip` ×2
+              - `audience/developer-mark.ForAudience`
               - `primitives/css/link-chip.LinkChip`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/text.Text`
@@ -50987,6 +50989,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --popover`
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/color-palette --primary-foreground`
               - `ui/tokens/shape --radius`

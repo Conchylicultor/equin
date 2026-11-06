@@ -5,17 +5,42 @@ import {
   placedStyle,
 } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { useEffect, useState } from "react";
-import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
-import { collectLineage } from "@plugins/primitives/plugins/ui-context/web";
+import {
+  uiContextLabel,
+  type UiContextLabel,
+} from "@plugins/primitives/plugins/ui-context/core";
+import { collectMeta } from "@plugins/primitives/plugins/ui-context/web";
+import { ForAudience } from "@plugins/audience/plugins/developer-mark/web";
 import { isModHeld } from "@plugins/primitives/plugins/shortcuts/web";
 import { PickerLayer } from "../internal/layer";
 import { resolveTarget } from "../internal/resolve-target";
 
 interface Highlight {
   rect: DOMRect;
+  /** What the chip will call the element once picked — the same words, so the
+   *  hover previews the pick rather than describing its markup. */
+  label: UiContextLabel;
+  /** The innermost plugin owning the element: shown to a developer only. */
   pluginId?: string;
-  tag: string;
+}
+
+/** The label half of a highlight, read once per hovered element (`collectMeta`
+ *  walks the lineage and the owner chain — a mousemove inside the same element
+ *  only moves the box). */
+interface Described {
+  el: Element;
+  label: UiContextLabel;
+  pluginId?: string;
+}
+
+function describe(el: Element): Described {
+  const meta = collectMeta(el);
+  return { el, label: uiContextLabel(meta), pluginId: meta.pluginId };
 }
 
 export function PickerOverlay({
@@ -34,6 +59,7 @@ export function PickerOverlay({
     // held, so the screen says which of the two a click will do.
     let pointer: { x: number; y: number } | null = null;
     let passThrough = false;
+    let described: Described | null = null;
     const refresh = () => {
       const el =
         pointer && !passThrough ? resolveTarget(pointer.x, pointer.y) : null;
@@ -41,11 +67,11 @@ export function PickerOverlay({
         setHighlight(null);
         return;
       }
-      const nodes = collectLineage(el);
+      if (described?.el !== el) described = describe(el);
       setHighlight({
         rect: el.getBoundingClientRect(),
-        pluginId: nodes[nodes.length - 1]?.pluginId,
-        tag: el.tagName.toLowerCase(),
+        label: described.label,
+        pluginId: described.pluginId,
       });
     };
 
@@ -125,23 +151,42 @@ export function PickerOverlay({
             y={{ start: highlight.rect.top, size: highlight.rect.height }}
             className="bg-primary/10 border-primary border-2"
           />
-          {/* The label is an `Inset`, so the placement arrives as the class +
-              style helpers rather than a wrapper. */}
-          <Inset
-            x="2xs"
-            y="none"
+          {/* What a person calls the element, as its chip will once picked;
+              the owning plugin id beside it is developer text, so only a
+              developer sees it — marked as such. */}
+          <Stack
+            direction="row"
+            gap="2xs"
+            align="center"
             className={cn(
               placedClasses({ decorative: true }),
-              "bg-primary text-primary-foreground rounded-sm text-caption whitespace-nowrap",
+              "text-caption whitespace-nowrap",
             )}
             style={placedStyle(
               { start: highlight.rect.left },
               { start: Math.max(0, highlight.rect.top - 22) },
             )}
           >
-            {highlight.pluginId ? `${highlight.pluginId} · ` : ""}
-            {highlight.tag}
-          </Inset>
+            <Inset
+              x="2xs"
+              y="none"
+              className="bg-primary text-primary-foreground rounded-sm"
+            >
+              {highlight.label.title}
+              {highlight.label.kind ? ` · ${highlight.label.kind}` : ""}
+            </Inset>
+            {highlight.pluginId && (
+              <ForAudience audience="developer" mark="inline">
+                <Inset
+                  x="2xs"
+                  y="none"
+                  className="bg-popover text-muted-foreground rounded-sm border"
+                >
+                  {highlight.pluginId}
+                </Inset>
+              </ForAudience>
+            )}
+          </Stack>
         </>
       )}
     </ViewportOverlay>

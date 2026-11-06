@@ -111,13 +111,14 @@ every build — including a composition this plugin is not in.
     - `SlotRender.ItemMiddleware`
   - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×5
-    - `primitives/ui-context` ×5
+    - `primitives/ui-context` ×4
     - `primitives/css/coords` ×3
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2
     - `primitives/icon-button` ×2
     - `primitives/shortcuts` ×2
     - `primitives/text-editor/inline-chip` ×2
+    - `audience/developer-mark.ForAudience`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
@@ -135,6 +136,7 @@ every build — including a composition this plugin is not in.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --primary-foreground`
     - `ui/tokens/shape --radius`

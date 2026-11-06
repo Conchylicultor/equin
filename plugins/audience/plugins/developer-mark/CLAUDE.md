@@ -29,6 +29,7 @@
     - `apps-core/app-launcher`
     - `config_v2/git-defaults-preview`
     - `hints/ask`
+    - `primitives/ui-context/element-picker`
     - `shell/global-action-bar`
     - `shell/notifications`
     - `shell/toast`
