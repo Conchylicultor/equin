@@ -53,32 +53,44 @@ export function physFootprintBytes(pid?: number): number | null {
 }
 
 /**
- * Another process's memory, read the same way, where refusal is an ANSWER: the
- * kernel will not tell one account about another account's process, and a pid
- * listed a moment ago may have exited since. Distinct from `procMemory`, whose
- * failure on its own process means a broken probe and throws.
+ * CPU time a process has used, ns: its own (user + system), and that of every
+ * child it has reaped (`ri_child_*`, which already holds the grandchildren
+ * each child reaped). The second is the only trace a short-lived process leaves
+ * once it exited — a hook, a `git`, an `rg` — which a `ps` snapshot never sees.
  */
-export type PeerMemory =
-  | { kind: "read"; memory: ProcMemory }
+export interface ProcCpu {
+  ownNs: number;
+  reapedChildrenNs: number;
+}
+
+/**
+ * Another process's memory and CPU, read the same way, where refusal is an
+ * ANSWER: the kernel will not tell one account about another account's
+ * process, and a pid listed a moment ago may have exited since. Distinct from
+ * `procMemory`, whose failure on its own process means a broken probe and
+ * throws.
+ */
+export type PeerUsage =
+  | { kind: "read"; memory: ProcMemory; cpu: ProcCpu }
   /** Not this account's process, or gone since it was listed. */
   | { kind: "unreadable" }
   /** This host has no phys_footprint equivalent (or installed no probe). */
   | { kind: "unsupported" };
 
-export type PeerMemoryProbe = (pid: number) => PeerMemory;
+export type PeerUsageProbe = (pid: number) => PeerUsage;
 
-let peerProbe: PeerMemoryProbe | null = null;
+let peerProbe: PeerUsageProbe | null = null;
 
-/** Install this host's peer memory probe. Once per process, before boot. */
-export function installPeerMemoryProbe(fn: PeerMemoryProbe): void {
+/** Install this host's peer usage probe. Once per process, before boot. */
+export function installPeerUsageProbe(fn: PeerUsageProbe): void {
   if (peerProbe !== null) {
-    throw new Error("[memory-probe] a peer memory probe is already installed.");
+    throw new Error("[memory-probe] a peer usage probe is already installed.");
   }
   peerProbe = fn;
 }
 
-/** Physical memory metrics of another process — see `PeerMemory`. */
-export function peerProcMemory(pid: number): PeerMemory {
+/** Memory and CPU of another process — see `PeerUsage`. */
+export function peerProcUsage(pid: number): PeerUsage {
   return peerProbe === null ? { kind: "unsupported" } : peerProbe(pid);
 }
 

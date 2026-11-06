@@ -35,8 +35,9 @@ conversation reads `working`, the banner reads "Test in progress" — and lands 
 op-log record for the Ops Gantt. The lifecycle is `withDirectOp("test", …)` from
 `op-runtime`, shared with `check` and the e2e branch of `run`.
 
-The grant is the elastic share (a ceiling of `cpuBudget().B`; the acquire hands
-back what it could get) and exactly one runner spends it: `bun test` runs its
+The grant is the elastic share (a ceiling of the run's own fan-out — one unit,
+or one per vitest file, at most `cpuBudget().B`; the acquire hands back what it
+could get) and exactly one runner spends it: `bun test` runs its
 files in one process (`--parallel` is opt-in), so it is vitest's worker pool —
 sized to the core count by default — that gets `--maxWorkers=<units>`. The
 asymmetry is deliberate.

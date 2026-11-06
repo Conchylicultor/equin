@@ -1,7 +1,10 @@
 import { useMemo, type ReactElement } from "react";
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
   Label,
+  Legend,
   Line,
   LineChart,
   ReferenceLine,
@@ -37,8 +40,13 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { loadSeverity } from "@plugins/debug/plugins/slow-ops/core";
+import {
+  MACHINE_USAGE_BUCKET_COLOR,
+  MACHINE_USAGE_BUCKET_LABEL,
+  MACHINE_USAGE_BUCKETS,
+} from "@plugins/debug/plugins/sentinel/plugins/machine-usage/core";
 import { healthMonitorSeries } from "../../shared/resources";
-import type { HealthSeries, HostSample } from "../../core";
+import type { HealthData, HealthSeries, HostSample } from "../../core";
 
 const SAMPLE_BUCKET_MS = 10_000; // align spikes to the 10s sample grid
 
@@ -439,6 +447,112 @@ function HostSection({
   );
 }
 
+type OwnerSamples = HealthData["ownerSamples"];
+
+// One stacked area per owner bucket, in bucket order, so the stack's height is
+// the machine's total and each band says who held it.
+function StackedOwnerChart({ data }: { data: ChartRow[] }): ReactElement {
+  return (
+    <div className="h-44 w-full">
+      <ChartState empty={data.length === 0} emptyText="No samples yet.">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart
+            data={data}
+            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+          >
+            <CartesianGrid {...gridProps} />
+            <XAxis
+              dataKey="sampledAt"
+              type="number"
+              domain={["dataMin", "dataMax"]}
+              {...axisProps}
+              tickFormatter={fmtTime}
+              minTickGap={48}
+            />
+            <YAxis {...axisProps} width={48} tickFormatter={yAxisFormatter} />
+            <Tooltip
+              isAnimationActive={false}
+              contentStyle={tooltipContentStyle}
+              labelStyle={tooltipLabelStyle}
+              cursor={lineCursor}
+              labelFormatter={(v) => fmtTime(Number(v))}
+              formatter={(v) => Number(v).toFixed(1)}
+            />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            {MACHINE_USAGE_BUCKETS.map((bucket) => (
+              <Area
+                key={bucket}
+                type="monotone"
+                dataKey={bucket}
+                name={MACHINE_USAGE_BUCKET_LABEL[bucket]}
+                stackId="owners"
+                stroke={MACHINE_USAGE_BUCKET_COLOR[bucket]}
+                fill={MACHINE_USAGE_BUCKET_COLOR[bucket]}
+                fillOpacity={0.7}
+                strokeWidth={1}
+                dot={false}
+                isAnimationActive={false}
+              />
+            ))}
+          </AreaChart>
+        </ResponsiveContainer>
+      </ChartState>
+    </div>
+  );
+}
+
+// Who used the machine: CPU (cores, every process's CPU-time delta with what
+// it reaped) and memory (GB of physical footprint) per owner, from main's
+// 30 s `health-owners` samples — the "who" beside the Host section's "how
+// much".
+function OwnersSection({
+  samples,
+}: {
+  samples: OwnerSamples;
+}): ReactElement | null {
+  const { cpu, mem } = useMemo(() => {
+    const sorted = [...samples].sort((a, b) => a.sampledAt - b.sampledAt);
+    const row = (
+      s: OwnerSamples[number],
+      value: (o: OwnerSamples[number]["owners"][number]) => number | undefined,
+    ): ChartRow => {
+      const out: ChartRow = { sampledAt: s.sampledAt };
+      for (const o of s.owners) {
+        const v = value(o);
+        if (v !== undefined) out[o.bucket] = v;
+      }
+      return out;
+    };
+    return {
+      // A sampler's first window has no CPU reading: no row, not a zero.
+      cpu: sorted
+        .filter((s) => s.windowMs !== undefined)
+        .map((s) => row(s, (o) => o.cpuCores)),
+      mem: sorted.map((s) => row(s, (o) => o.memMb / 1024)),
+    };
+  }, [samples]);
+  if (samples.length === 0) return null;
+  return (
+    <Stack as="section" gap="sm">
+      <SectionLabel>Who uses the machine</SectionLabel>
+      <Grid cols={2} gap="xl">
+        <Stack gap="xs">
+          <Text variant="caption" tone="muted">
+            CPU by owner (cores)
+          </Text>
+          <StackedOwnerChart data={cpu} />
+        </Stack>
+        <Stack gap="xs">
+          <Text variant="caption" tone="muted">
+            Memory by owner (GB footprint)
+          </Text>
+          <StackedOwnerChart data={mem} />
+        </Stack>
+      </Grid>
+    </Stack>
+  );
+}
+
 export function HealthMonitorPanel(): ReactElement {
   // Pushed by the server after each of its sampler ticks (every 10 s).
   const result = useLive(healthMonitorSeries);
@@ -468,6 +582,7 @@ export function HealthMonitorPanel(): ReactElement {
     <Inset pad="lg">
       <Stack gap="xl">
         <HostSection samples={data.hostSamples} />
+        <OwnersSection samples={data.ownerSamples} />
         <BackendsSection series={data.series} now={data.readAtMs} />
         {data.series.length === 0 ? (
           <Placeholder>

@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import {
   constants,
   copyFileSync,
@@ -18,7 +19,6 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 
 // macOS names a process by the FILE it executed (`p_comm`, what Activity
 // Monitor and `ps -c` show), so every Bun process reads `bun`. `process.title`
@@ -38,29 +38,6 @@ import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 // deleted was killed 7 times in 2,600 runs, a stable clone 0 in 2,300 — and a
 // clone's only name is the one exec'd. A fresh name costs one ~1.1 s scan on
 // its first exec either way, so a current clone is never re-made.
-
-/** Bytes kept of a name — APFS names are at most 255 bytes. */
-const MAX_NAME_BYTES = 200;
-
-/**
- * `equin · <kind> · <id>`, as a file name: no `/`, no control characters,
- * bounded. Kind first, so a list sorted by name groups every build, every
- * agent, every server together.
- */
-export function processName(kind: string, id?: string): string {
-  const parts = [PRODUCT_NAME, kind, ...(id ? [id] : [])].map((p) =>
-    p
-      .replace(/[\u0000-\u001f\u007f/:]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim(),
-  );
-  const name = parts.join(" · ");
-  const bytes = new TextEncoder().encode(name);
-  if (bytes.length <= MAX_NAME_BYTES) return name;
-  return new TextDecoder()
-    .decode(bytes.slice(0, MAX_NAME_BYTES))
-    .replace(/�+$/, "");
-}
 
 export type NamedBinary =
   | { kind: "cloned"; path: AppPath }

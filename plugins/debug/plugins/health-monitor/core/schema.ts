@@ -7,6 +7,7 @@ import {
   cappedList,
   wholeList,
 } from "@plugins/packages/plugins/list-bound/core";
+import { OwnerSampleSchema } from "@plugins/debug/plugins/sentinel/plugins/machine-usage/core";
 
 // Cap on lines read per worktree file (newest kept). At 10s/sample, 1500 lines
 // is ~4h of history — comfortably above the default 2h read window. The cap
@@ -147,6 +148,12 @@ export const HealthDataSchema = z.object({
       "one per worktree backend that sampled in the read window — the backends running in the last 2 h, never every worktree on disk",
   }),
   hostSamples: cappedList(HostSampleSchema, { max: MAX_HEALTH_SAMPLES }),
+  // Where the machine's CPU and memory went, by owner (main's `health-owners`
+  // log, machine-usage's 30 s sampler), without each line's largest-process
+  // list — the charts draw the buckets; the file keeps the names.
+  ownerSamples: cappedList(OwnerSampleSchema.omit({ top: true }), {
+    max: MAX_HEALTH_SAMPLES,
+  }),
   windowMs: z.number(),
   readAtMs: z.number(),
 });

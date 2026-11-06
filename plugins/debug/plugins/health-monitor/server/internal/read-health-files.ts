@@ -4,6 +4,10 @@ import { listWorktreeDirsAsync } from "@plugins/infra/plugins/paths/server";
 import { readChannelJsonAsync } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import { readSlowOpMarkers } from "@plugins/debug/plugins/slow-ops/server";
 import {
+  OwnerSampleSchema,
+  type OwnerSample,
+} from "@plugins/debug/plugins/sentinel/plugins/machine-usage/core";
+import {
   MAX_HEALTH_SAMPLES,
   HealthSampleSchema,
   HostSampleSchema,
@@ -37,6 +41,7 @@ async function parseSamples<T>(
 export async function readHealthSeries(windowMs: number): Promise<{
   series: HealthSeries[];
   hostSamples: HostSample[];
+  ownerSamples: Omit<OwnerSample, "top">[];
 }> {
   const cutoff = Date.now() - windowMs;
 
@@ -63,5 +68,15 @@ export async function readHealthSeries(windowMs: number): Promise<{
     (s) => s.sampledAt,
   );
 
-  return { series, hostSamples };
+  const ownerSamples = (
+    await parseSamples<OwnerSample>(
+      MAIN_WORKTREE_NAME,
+      "health-owners",
+      OwnerSampleSchema,
+      cutoff,
+      (s) => s.sampledAt,
+    )
+  ).map(({ top: _top, ...rest }) => rest);
+
+  return { series, hostSamples, ownerSamples };
 }

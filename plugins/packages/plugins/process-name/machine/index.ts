@@ -4,7 +4,6 @@ export {
   CHECKOUT_BUN_DIR,
   checkoutBun,
   cloneNamedBinary,
-  processName,
   refreshCheckoutBun,
 } from "./internal/process-name";
 export type { NamedBinary } from "./internal/process-name";

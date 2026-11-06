@@ -359,7 +359,6 @@ Gotchas the spike hit:
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
     - `packages/process-name.cloneNamedBinary`
-    - `packages/process-name.processName`
   - Register:
     - `defineFileWatcher('runtime-sdk.events')`
     - `defineDaemon('runtime-sdk.agent')`

@@ -541,13 +541,14 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `MachinePluginDefinition`
     - `MemoryCheckpoint`
     - `MemoryProbe`
-    - `PeerMemory`
-    - `PeerMemoryProbe`
+    - `PeerUsage`
+    - `PeerUsageProbe`
     - `PersistedBase`
     - `PersistedCode`
     - `PersistedValueCheck`
     - `PersistMeta`
     - `PhaseId`
+    - `ProcCpu`
     - `ProcessCrash`
     - `ProcessCrashEvent`
     - `ProcMemory`
@@ -604,7 +605,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `installBootJournal`
     - `installHeapReader`
     - `installMemoryProbe`
-    - `installPeerMemoryProbe`
+    - `installPeerUsageProbe`
     - `installSnapHash`
     - `isProcessCrashHandled`
     - `isServerReady`
@@ -619,7 +620,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `onDeferredResourcesBound`
     - `onResourceDelivery`
     - `onResourcePush`
-    - `peerProcMemory`
+    - `peerProcUsage`
     - `persistedDefinitions`
     - `persistedKeys`
     - `physFootprintBytes`

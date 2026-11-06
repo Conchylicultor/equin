@@ -39,10 +39,8 @@ import { liveAgentIds } from "./agent-processes";
 import { readClaudeUsage } from "./claude-usage";
 import { resolveDisclaimExec } from "./disclaim";
 import { namedClaudeBin } from "./named-claude";
-import {
-  cloneNamedBinary,
-  processName,
-} from "@plugins/packages/plugins/process-name/machine";
+import { cloneNamedBinary } from "@plugins/packages/plugins/process-name/machine";
+import { processName } from "@plugins/packages/plugins/process-name/core";
 import {
   AGENT_SCRIPT,
   agentBinDir,

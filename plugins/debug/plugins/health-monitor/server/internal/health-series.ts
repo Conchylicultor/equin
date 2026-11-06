@@ -14,12 +14,20 @@ const WINDOW_MS = 2 * 60 * 60 * 1000; // 2h
 const READ_FILES = new Set([
   "health.jsonl",
   "health-host.jsonl",
+  "health-owners.jsonl",
   "slow-op-markers.jsonl",
 ]);
 
 async function loadHealthData(): Promise<HealthData> {
-  const { series, hostSamples } = await readHealthSeries(WINDOW_MS);
-  return { series, hostSamples, windowMs: WINDOW_MS, readAtMs: Date.now() };
+  const { series, hostSamples, ownerSamples } =
+    await readHealthSeries(WINDOW_MS);
+  return {
+    series,
+    hostSamples,
+    ownerSamples,
+    windowMs: WINDOW_MS,
+    readAtMs: Date.now(),
+  };
 }
 
 /**
@@ -43,7 +51,7 @@ function movesAnswer(root: string, path: string): boolean {
  * Notified by the files the loader reads, only while a tab is subscribed: one
  * subtree watch of the worktrees root (through the shared dir hub) hears every
  * backend's `health.jsonl` / `slow-op-markers.jsonl` appends, main's
- * `health-host.jsonl`, and a worktree directory created or reaped.
+ * `health-host.jsonl` / `health-owners.jsonl`, and a worktree directory created or reaped.
  *
  * The 2 h window also slides with the clock, but every live backend appends a
  * health sample every 10 s, so the watch fires at least that often while any

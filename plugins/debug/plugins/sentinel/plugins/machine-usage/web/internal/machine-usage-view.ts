@@ -14,7 +14,7 @@ export interface BucketView {
   cpuShare: number;
   /** Share of the machine's memory, 0–1. */
   memShare: number;
-  /** `18%` — of the whole machine, so the four add up to the total. */
+  /** `18%` — of the whole machine, so the buckets add up to the total. */
   cpuText: string;
   /** `7.4 GB` */
   memText: string;

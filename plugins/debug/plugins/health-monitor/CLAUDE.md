@@ -186,6 +186,7 @@ measured overhead on a real worktree workload is still an open task.
   - Resources: `health-monitor.series` (push, notified, whole: one per worktree backend that sampled in the read window — the backends running in the last 2 h, never every worktree on disk, capped: MAX_HEALTH_SAMPLES, capped: MAX_SLOW_OP_MARKERS)
 - Core:
   - Uses:
+    - `debug/sentinel/machine-usage.OwnerSampleSchema`
     - `debug/slow-ops.MAX_SLOW_OP_MARKERS`
     - `debug/slow-ops.SlowOpMarkerSchema`
     - `packages/list-bound.cappedList`

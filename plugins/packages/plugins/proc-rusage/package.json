@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-proc-rusage",
+  "private": true,
+  "version": "0.0.1",
+  "description": "One process's kernel usage record on macOS (proc_pid_rusage, read through bun:ffi): its physical footprint and resident size, and its CPU time — its own and that of every child it reaped, in ns. Says so where it cannot tell."
+}

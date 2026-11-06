@@ -4723,6 +4723,10 @@
       "name": "@equin/plugin-packages-partial-json",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/proc-rusage": {
+      "name": "@equin/plugin-packages-proc-rusage",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/process-name": {
       "name": "@equin/plugin-packages-process-name",
       "version": "0.0.1",
@@ -9586,6 +9590,8 @@
     "@equin/plugin-packages-owned-fd": ["@equin/plugin-packages-owned-fd@workspace:plugins/packages/plugins/owned-fd"],
 
     "@equin/plugin-packages-partial-json": ["@equin/plugin-packages-partial-json@workspace:plugins/packages/plugins/partial-json"],
+
+    "@equin/plugin-packages-proc-rusage": ["@equin/plugin-packages-proc-rusage@workspace:plugins/packages/plugins/proc-rusage"],
 
     "@equin/plugin-packages-process-name": ["@equin/plugin-packages-process-name@workspace:plugins/packages/plugins/process-name"],
 

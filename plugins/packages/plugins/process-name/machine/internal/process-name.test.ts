@@ -22,7 +22,6 @@ import {
   CHECKOUT_BUN_DIR,
   checkoutBun,
   cloneNamedBinary,
-  processName,
   refreshCheckoutBun,
 } from "./process-name";
 
@@ -32,19 +31,6 @@ function fakeBin(dir: string, name = "bun"): AppPath {
   writeFileSync(path, `#!/bin/sh\n# ${name}\n`, { mode: 0o755 });
   return path;
 }
-
-describe("processName", () => {
-  test("kind first, then the id", () => {
-    expect(processName("build", "att-1793455063-w71oiq")).toBe(
-      "equin · build · att-1793455063-w71oiq",
-    );
-    expect(processName("central")).toBe("equin · central");
-  });
-
-  test("a slash or control character never reaches the file name", () => {
-    expect(processName("run", "a/b\nc")).toBe("equin · run · a b c");
-  });
-});
 
 describe("cloneNamedBinary", () => {
   test("the name is a file of its own with the binary's bytes, and a new binary replaces it", () => {

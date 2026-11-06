@@ -20127,7 +20127,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.implementMachine`
           - `network/live.serveValue`
           - `packages/process-name.cloneNamedBinary`
-          - `packages/process-name.processName`
         - Register:
           - `defineFileWatcher('runtime-sdk.events')`
           - `defineDaemon('runtime-sdk.agent')`
@@ -22592,6 +22591,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources: `health-monitor.series` (push, notified, whole: one per worktree backend that sampled in the read window — the backends running in the last 2 h, never every worktree on disk, capped: MAX_HEALTH_SAMPLES, capped: MAX_SLOW_OP_MARKERS)
       - Core:
         - Uses:
+          - `debug/sentinel/machine-usage.OwnerSampleSchema`
           - `debug/slow-ops.MAX_SLOW_OP_MARKERS`
           - `debug/slow-ops.SlowOpMarkerSchema`
           - `packages/list-bound.cappedList`
@@ -24197,7 +24197,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `server/internal/status-resource.ts`, `server/internal/worker-host.ts`, `server/internal/worker/pg.ts`, `server/internal/worker/sample.ts` (debt)
           - `user-path/no-unproven-claim` — `server/internal/worker/sample.ts` (sanctioned)
       - Plugins:
-        - **`machine-usage`** — The Machine watcher card's "Where it goes" block (MachineUsageBreakdown): the machine's CPU and memory as two bars split into your Chrome, agent ops, the agent browser and other, then one line per bucket — read from the sentinel.machine-usage value, sampled when the card opens.
+        - **`machine-usage`** — The Machine watcher card's "Where it goes" block (MachineUsageBreakdown): the machine's CPU and memory as two bars split into your Chrome, agent ops, the agent browser, the agents, the backends, Postgres and other, then one line per bucket — read from the sentinel.machine-usage value, sampled when the card opens.
           - Server:
             - Contributes: `resource.declare` "sentinel.machine-usage"
             - Resources: `sentinel.machine-usage` (push, notified, capped: MACHINE_USAGE_BUCKETS.length)
@@ -24216,35 +24216,57 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `MachineUsageBreakdown`
           - Core:
             - Uses:
+              - `framework/product-name.PRODUCT_NAME`
               - `network/live.liveValue`
               - `packages/list-bound.cappedList`
+              - `packages/process-name.processKindOf`
             - Exports (types):
+              - `CpuBaseline`
               - `MachineUsage`
               - `MachineUsageBucket`
               - `MachineUsageGroup`
+              - `OwnerSample`
+              - `OwnerUsage`
               - `PsProcess`
+              - `TopProcess`
               - `UsageRoots`
             - Exports (values):
               - `attributeProcesses`
+              - `MACHINE_USAGE_BUCKET_COLOR`
               - `MACHINE_USAGE_BUCKET_HINT`
               - `MACHINE_USAGE_BUCKET_LABEL`
               - `MACHINE_USAGE_BUCKETS`
+              - `MACHINE_USAGE_TOP_PROCESSES`
               - `machineUsage`
               - `MachineUsageBucketSchema`
               - `MachineUsageGroupSchema`
               - `MachineUsageSchema`
+              - `OwnerSampleSchema`
+              - `OwnerUsageSchema`
               - `parsePs`
+              - `processLabel`
               - `PS_COLUMNS`
               - `sumByBucket`
+              - `summarizeOwners`
+              - `TopProcessSchema`
           - Cross-plugin:
             - Uses tokens:
+              - `ui/tokens/categorical --categorical-1`
               - `ui/tokens/categorical --categorical-2`
+              - `ui/tokens/categorical --categorical-3`
               - `ui/tokens/categorical --categorical-5`
               - `ui/tokens/categorical --categorical-6`
+              - `ui/tokens/categorical --categorical-8`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --space-md`
               - `ui/tokens/shape --spacing`
-            - Imported by: `debug/sentinel`
+            - Imported by:
+              - `debug/health-monitor`
+              - `debug/sentinel`
+          - Exemptions:
+            - Exempts itself from: `timer/no-unlisted-timer` — `machine/internal/owner-sampler.ts` (sanctioned)
+          - Machine:
+            - Register: `defineTimer('machine-usage.owner-sampler')`
         - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status files (one per watcher host, the newest claim reported): their schemas, the writer main's watcher host uses, the per-tick vitals file the watcher's worker writes (the latest reading, limits and trip state), the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
           - Cross-plugin:
             - Imported by:
@@ -28004,7 +28026,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNSTAMPED_GATEWAY_WARNING`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by: 62 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
+        - Imported by: 63 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
           - `infra` ×14
           - `framework` ×11
           - `apps` ×10
@@ -28016,6 +28038,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages` ×2
           - `page` ×2
           - `auth`
+          - `debug/sentinel/machine-usage`
           - `network/live/resource-protocol`
           - `reports/main-thread-stall`
           - `screenshot`
@@ -28078,13 +28101,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MachinePluginDefinition`
           - `MemoryCheckpoint`
           - `MemoryProbe`
-          - `PeerMemory`
-          - `PeerMemoryProbe`
+          - `PeerUsage`
+          - `PeerUsageProbe`
           - `PersistedBase`
           - `PersistedCode`
           - `PersistedValueCheck`
           - `PersistMeta`
           - `PhaseId`
+          - `ProcCpu`
           - `ProcessCrash`
           - `ProcessCrashEvent`
           - `ProcMemory`
@@ -28141,7 +28165,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installBootJournal`
           - `installHeapReader`
           - `installMemoryProbe`
-          - `installPeerMemoryProbe`
+          - `installPeerUsageProbe`
           - `installSnapHash`
           - `isProcessCrashHandled`
           - `isServerReady`
@@ -28156,7 +28180,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `onDeferredResourcesBound`
           - `onResourceDelivery`
           - `onResourcePush`
-          - `peerProcMemory`
+          - `peerProcUsage`
           - `persistedDefinitions`
           - `persistedKeys`
           - `physFootprintBytes`
@@ -28507,6 +28531,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/flock` (3 debt)
               - `packages/host-semaphore` (1 debt)
               - `packages/owned-fd` (0 debt)
+              - `packages/proc-rusage` (1 debt)
               - `packages/signal-origin` (2 debt)
               - `packages/single-flight` (1 debt)
               - `packages/sleep-clock` (1 debt)
@@ -30691,6 +30716,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/health-monitor`
               - `debug/profiling/op-log/op-store`
               - `debug/queue-health`
+              - `debug/sentinel/machine-usage`
               - `debug/stuck-spans`
               - `infra/jobs`
               - `infra/jobs/supervised-job`
@@ -30702,6 +30728,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/health-monitor` (0 debt)
               - `debug/profiling/op-log/op-store` (0 debt)
               - `debug/queue-health` (0 debt)
+              - `debug/sentinel/machine-usage` (0 debt)
               - `debug/stuck-spans` (0 debt)
               - `infra/jobs` (0 debt)
               - `infra/jobs/supervised-job` (0 debt)
@@ -34363,9 +34390,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 64 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 65 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×15
-          - `debug` ×12
+          - `debug` ×13
           - `conversations` ×8
           - `build` ×7
           - `database` ×4
@@ -37618,10 +37645,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `conversations/conversation-view/jsonl-viewer`
       - Core:
         - Exports (values): `parsePartialJson`
+    - **`proc-rusage`** — One process's kernel usage record on macOS (proc_pid_rusage, read through bun:ffi): its physical footprint and resident size, and its CPU time — its own and that of every child it reaped, in ns. Says so where it cannot tell.
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/proc-rusage.ts` (debt)
+      - Core:
+        - Exports (types): `ProcRusage`
+        - Exports (values): `readProcRusage`
     - **`process-name`** — What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and cloneNamedBinary gives an executable that name as an APFS clone (same signed bytes, no disk cost, a file of its own — never a hardlink, whose many names let macOS's exec scan be handed a deleted one and SIGKILL the process — left alone while current, else swapped in with one rename) — macOS names a process by the file it executed, and process.title changes nothing. Also the checkout's Bun record (refreshCheckoutBun / checkoutBun) the build names backends from, and the checkout's `verbs` link to the machine-wide process-names data dir, where `./equin` runs each CLI verb as `equin · <verb>` — one clone per verb machine-wide, since macOS scans every fresh executable name on its first exec.
+      - Core:
+        - Uses: `framework/product-name.PRODUCT_NAME`
+        - Exports (values):
+          - `processKindOf`
+          - `processName`
       - Cross-plugin:
         - Imported by:
           - `conversations/runtime-sdk`
+          - `debug/sentinel/machine-usage`
           - `framework/cli/bootstrap`
           - `framework/cli/build`
       - Machine:
@@ -37630,7 +37669,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CHECKOUT_BUN_DIR`
           - `checkoutBun`
           - `cloneNamedBinary`
-          - `processName`
           - `refreshCheckoutBun`
     - **`refcount-hub`** — Keyed refcounted subscription hub: createRefcountHub(open) shares ONE underlying subscription per key among every holder — the first acquire opens it (sync or async), each event fans out to every holder, the last release stops it — so N readers of one source cost one watch.
       - Cross-plugin:
@@ -47703,10 +47741,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 68 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×12
+          - `debug` ×10
           - `infra` ×10
-          - `debug` ×9
           - `conversations` ×6
           - `database` ×6
           - `framework` ×5

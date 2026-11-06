@@ -8,7 +8,7 @@ import {
 } from "./attribute";
 
 function proc(pid: number, ppid: number, args: string, cpu = 1): PsProcess {
-  return { pid, ppid, cpu, rssBytes: pid * 1024, args };
+  return { pid, ppid, cpu, rssBytes: pid * 1024, cpuTimeMs: 0, args };
 }
 
 const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
@@ -17,18 +17,36 @@ const CHROME_HELPER =
 const PLAYWRIGHT = "Chromium.app/Contents/MacOS/Chromium --headless";
 
 describe("parsePs", () => {
-  it("reads pid, ppid, cpu, rss (KB) and the full command", () => {
+  it("reads pid, ppid, cpu, rss (KB), cpu time and the full command", () => {
     expect(
-      parsePs("  12     1  3.5  2048 /bin/zsh -l\n\n 13 12 0.0 4 sleep 9\n"),
+      parsePs(
+        "  12     1  3.5  2048   8472:47.11 /bin/zsh -l\n\n 13 12 0.0 4 0:00.25 sleep 9\n 14 1 0.0 4 1-02:00:01.00 x\n",
+      ),
     ).toEqual([
       {
         pid: 12,
         ppid: 1,
         cpu: 3.5,
         rssBytes: 2048 * 1024,
+        cpuTimeMs: (8472 * 60 + 47.11) * 1000,
         args: "/bin/zsh -l",
       },
-      { pid: 13, ppid: 12, cpu: 0, rssBytes: 4096, args: "sleep 9" },
+      {
+        pid: 13,
+        ppid: 12,
+        cpu: 0,
+        rssBytes: 4096,
+        cpuTimeMs: 250,
+        args: "sleep 9",
+      },
+      {
+        pid: 14,
+        ppid: 1,
+        cpu: 0,
+        rssBytes: 4096,
+        cpuTimeMs: (86_400 + 7_201) * 1000,
+        args: "x",
+      },
     ]);
   });
 
@@ -80,6 +98,64 @@ describe("attributeProcesses", () => {
   });
 });
 
+describe("attributeProcesses — named roots", () => {
+  const procs = [
+    proc(1, 0, "/sbin/launchd"),
+    proc(
+      10,
+      1,
+      "/h/u/.equin/state/macos-app/equin.app/Contents/MacOS/gateway -listen x",
+    ),
+    proc(11, 10, "/h/u/.equin/worktrees/main/bin/equin · server · main"),
+    proc(12, 11, "/opt/git/git status"),
+    proc(
+      20,
+      1,
+      "/h/u/.equin/state/sdk-agents/ns/conv-1/bin/equin · agent · conv-1 /repo/agent.ts",
+    ),
+    proc(
+      21,
+      20,
+      "/h/u/.equin/state/sdk-agents/ns/conv-1/bin/equin · conv-1 · Fix it --print",
+    ),
+    proc(22, 21, "/bin/zsh -c rg foo"),
+    proc(
+      23,
+      21,
+      "node_modules/.cache/equin-bun/verbs/equin · build plugins/cli/bin/index.ts build",
+    ),
+    proc(24, 23, "bun vite build"),
+    proc(
+      30,
+      1,
+      "/repo/node_modules/@embedded-postgres/darwin-arm64/native/bin/postgres -D /x",
+    ),
+    proc(31, 30, "postgres: equin main [local] idle"),
+    proc(32, 1, "/opt/bin/pgbouncer /x.ini"),
+  ];
+
+  it("claims backends, agents and Postgres by name; an op inside an agent stays the op's", () => {
+    const owner = attributeProcesses(procs, {
+      agentBrowser: null,
+      agentOps: [23],
+    });
+    expect(Object.fromEntries(owner)).toEqual({
+      1: "other",
+      10: "backends",
+      11: "backends",
+      12: "backends",
+      20: "agents",
+      21: "agents",
+      22: "agents",
+      23: "agent-ops",
+      24: "agent-ops",
+      30: "postgres",
+      31: "postgres",
+      32: "postgres",
+    });
+  });
+});
+
 describe("sumByBucket", () => {
   it("totals every bucket, in display order, empty ones included", () => {
     const procs = [
@@ -95,6 +171,9 @@ describe("sumByBucket", () => {
       { bucket: "chrome", processes: 2, cpuPercent: 40, memBytes: 201 },
       { bucket: "agent-ops", processes: 0, cpuPercent: 0, memBytes: 0 },
       { bucket: "agent-browser", processes: 0, cpuPercent: 0, memBytes: 0 },
+      { bucket: "agents", processes: 0, cpuPercent: 0, memBytes: 0 },
+      { bucket: "backends", processes: 0, cpuPercent: 0, memBytes: 0 },
+      { bucket: "postgres", processes: 0, cpuPercent: 0, memBytes: 0 },
       { bucket: "other", processes: 1, cpuPercent: 2, memBytes: 1 },
     ]);
   });

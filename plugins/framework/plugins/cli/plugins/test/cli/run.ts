@@ -229,8 +229,9 @@ const run: CliAction<[string[]], object> = async (paths) => {
   // e2e branch of `run` — see op-runtime/cli/direct-op.ts; what is this
   // command's own is which runners to spawn and what their exits mean.
   //
-  // The grant is the elastic share (`cpuBudget().B` is a ceiling; the acquire
-  // hands back what it could get, `>= 1`), and it is spent by exactly ONE of
+  // The grant is the elastic share (the run's fan-out, at most `cpuBudget().B`,
+  // is a ceiling; the acquire hands back what it could get, `>= 1`), and it is
+  // spent by exactly ONE of
   // the runners. `bun test` runs its files in one process (`--parallel` is
   // opt-in, so there is nothing to bound); vitest's default `forks` pool is
   // sized to the core count, so `--maxWorkers=<units>` is what makes the
@@ -243,7 +244,12 @@ const run: CliAction<[string[]], object> = async (paths) => {
   const outcome = await withDirectOp(
     "test",
     {
-      max: cpuBudget().B,
+      // The ceiling is the run's own fan-out, never more: bun:test is one
+      // process (one unit), vitest one worker per file at most. Asking for B
+      // regardless let a one-plugin run take every free slot and hold it while
+      // using one core (2026-11-06: one test held all six background slots,
+      // and a 1 s suite queued 4–6 min behind such holders).
+      max: Math.max(1, Math.min(cpuBudget().B, dom.length)),
       flight: testFlight([...found], runnerArgs, treeHash),
     },
     // Every dir a test makes through `os.tmpdir()` lands in this run's own

@@ -2,11 +2,11 @@ import {
   installAsleepClock,
   installHeapReader,
   installMemoryProbe,
-  installPeerMemoryProbe,
+  installPeerUsageProbe,
   installSnapHash,
 } from "@plugins/framework/plugins/server-core/core";
 import { readSleepClock } from "@plugins/packages/plugins/sleep-clock/core";
-import { macPeerProcMemory, macProcMemory } from "./phys-footprint";
+import { macPeerProcUsage, macProcMemory } from "./phys-footprint";
 
 // ── The desktop host's native probes, installed into the portable `core` ─────
 //
@@ -19,7 +19,7 @@ import { macPeerProcMemory, macProcMemory } from "./phys-footprint";
 // can boot without them.
 
 installMemoryProbe(macProcMemory);
-installPeerMemoryProbe(macPeerProcMemory);
+installPeerUsageProbe(macPeerProcUsage);
 installHeapReader(() => process.memoryUsage());
 // Native wyhash on the keyed-delta hot path (the runtime's portable default is
 // plain-JS `hash64`); the length fold kills every different-length collision.

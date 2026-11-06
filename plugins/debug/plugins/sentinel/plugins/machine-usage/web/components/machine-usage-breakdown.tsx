@@ -9,7 +9,11 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { machineUsage, type MachineUsageBucket } from "../../core";
+import {
+  MACHINE_USAGE_BUCKET_COLOR,
+  machineUsage,
+  type MachineUsageBucket,
+} from "../../core";
 import {
   machineUsageView,
   type BucketView,
@@ -21,23 +25,13 @@ import {
 // reading per opening (the value samples on subscribe), mounted only while the
 // card is expanded.
 //
-// Not a DataView: four fixed buckets are a closed set, not domain records, and
+// Not a DataView: seven fixed buckets are a closed set, not domain records, and
 // nothing here is clickable.
 
-/**
- * Each bucket's fill. Theme tokens only: distinct categorical hues, so four
- * buckets side by side in one bar stay tellable apart, picked (and the green
- * deepened) to read as solid fills rather than the palette's paler text-on-dark
- * tones; the rest is a dim neutral, so the named buckets stand out against it.
- */
-const BUCKET_FILL: Record<MachineUsageBucket, CSSProperties> = {
-  chrome: { background: "var(--categorical-6)" },
-  "agent-ops": { background: "var(--categorical-5)" },
-  "agent-browser": {
-    background: "color-mix(in oklch, var(--categorical-2) 90%, black)",
-  },
-  other: { background: "var(--muted-foreground)", opacity: 0.45 },
-};
+/** Each bucket's fill: its shared colour (core). */
+const fillOf = (bucket: MachineUsageBucket): CSSProperties => ({
+  background: MACHINE_USAGE_BUCKET_COLOR[bucket],
+});
 
 /** Fixed columns, so the bars and the numbers line up row to row. */
 const VALUE_COL = cn(rigidClass(), "w-14 text-right tabular-nums");
@@ -66,7 +60,7 @@ function StackedBar({
                 key={b.bucket}
                 className={cn(rigidClass(), "h-full")}
                 style={{
-                  ...BUCKET_FILL[b.bucket],
+                  ...fillOf(b.bucket),
                   width: `${String(share(b) * 100)}%`,
                 }}
               />
@@ -113,7 +107,7 @@ export function MachineUsageBreakdownView({
             <span
               aria-hidden
               className={cn(rigidClass(), "size-2 rounded-xs")}
-              style={BUCKET_FILL[b.bucket]}
+              style={fillOf(b.bucket)}
             />
             <Fill>
               <Text variant="caption" className="truncate">

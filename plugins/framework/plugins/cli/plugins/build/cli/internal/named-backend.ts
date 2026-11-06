@@ -1,10 +1,8 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
-import {
-  cloneNamedBinary,
-  processName,
-} from "@plugins/packages/plugins/process-name/machine";
+import { cloneNamedBinary } from "@plugins/packages/plugins/process-name/machine";
+import { processName } from "@plugins/packages/plugins/process-name/core";
 
 /** The gateway's own spawn convention when a spec has no `command`. */
 const GATEWAY_DEFAULT_ENTRY = "bin/index.ts";

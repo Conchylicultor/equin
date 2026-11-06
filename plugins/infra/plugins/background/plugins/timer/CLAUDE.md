@@ -81,6 +81,7 @@ implementation site.
     - `debug/health-monitor`
     - `debug/profiling/op-log/op-store`
     - `debug/queue-health`
+    - `debug/sentinel/machine-usage`
     - `debug/stuck-spans`
     - `infra/jobs`
     - `infra/jobs/supervised-job`
@@ -92,6 +93,7 @@ implementation site.
     - `debug/health-monitor` (0 debt)
     - `debug/profiling/op-log/op-store` (0 debt)
     - `debug/queue-health` (0 debt)
+    - `debug/sentinel/machine-usage` (0 debt)
     - `debug/stuck-spans` (0 debt)
     - `infra/jobs` (0 debt)
     - `infra/jobs/supervised-job` (0 debt)
