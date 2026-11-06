@@ -8,7 +8,9 @@
 - Web:
   - Uses: `primitives/loading.Loading`
   - Exports (types): `LazyComponentOptions`
-  - Exports (values): `lazyComponent`
+  - Exports (values):
+    - `lazyComponent`
+    - `useLazyReady`
 - Cross-plugin:
   - Imported by:
     - `apps/sonata/notation`

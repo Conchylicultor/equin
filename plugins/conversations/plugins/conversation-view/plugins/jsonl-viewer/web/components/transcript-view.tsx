@@ -15,6 +15,7 @@ import {
 } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { useInView } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useMarkdownLoaded } from "@plugins/primitives/plugins/markdown/web";
 
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -461,6 +462,22 @@ function TranscriptViewInner({
 }
 
 /**
+ * A transcript not drawn yet: the loading line where its rows will be, in the
+ * frame `TranscriptView` fills — what a surface shows while its transcript, or
+ * what draws it, is still loading.
+ */
+export function TranscriptLoading() {
+  return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column (mirrors TranscriptViewInner)
+    <div className="relative min-h-0 flex-1 isolate">
+      <Scroll data-pane-scroll className="h-full">
+        <Loading className="px-md py-sm" />
+      </Scroll>
+    </div>
+  );
+}
+
+/**
  * A Claude transcript, drawn as the conversation draws it.
  *
  * This is the WHOLE rendering of a transcript — the filter set, the sticky
@@ -490,6 +507,11 @@ export function TranscriptView({
     }),
     [props.events, props.firstSeq, props.older, windowed],
   );
+  // The agent's replies are markdown: drawn before its renderer has loaded,
+  // the transcript would open on its prompts and tool cards alone, then grow
+  // by every reply at once and jump to its end. It opens whole, or loading.
+  const markdownLoaded = useMarkdownLoaded();
+  if (!markdownLoaded) return <TranscriptLoading />;
   return (
     // Both scopes are declared HERE, not in `TranscriptViewInner`: a component
     // may not render a Provider and use it in its own body, and the inner view

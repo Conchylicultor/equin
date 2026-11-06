@@ -53,6 +53,7 @@ Design rationale lives in:
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
+    - `primitives/lazy-component.useLazyReady`
     - `primitives/networking.useTransport`
     - `primitives/syntax-highlight.HighlightedCode`
     - `primitives/syntax-highlight/code-preview.useCodePreviewRenderer`
@@ -68,6 +69,7 @@ Design rationale lives in:
     - `MarkdownEnhancerSlot`
     - `nodeToText`
     - `useMarkdownEnhancement`
+    - `useMarkdownLoaded`
 - Cross-plugin:
   - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/density` ×9
@@ -78,6 +80,7 @@ Design rationale lives in:
   - Imported by:
     - `active-data`
     - `active-data/go`
+    - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/compaction`
     - `conversations/conversation-view/jsonl-viewer/event-turn`
     - `conversations/conversation-view/jsonl-viewer/request-shape`

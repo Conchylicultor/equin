@@ -1,7 +1,11 @@
 import { MarkdownEnhancerSlot } from "./internal/markdown";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { Markdown, MarkdownEnhancerSlot } from "./internal/markdown";
+export {
+  Markdown,
+  MarkdownEnhancerSlot,
+  useMarkdownLoaded,
+} from "./internal/markdown";
 export {
   MarkdownEnhancementContext,
   useMarkdownEnhancement,

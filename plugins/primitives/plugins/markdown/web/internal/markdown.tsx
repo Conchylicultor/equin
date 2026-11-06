@@ -1,6 +1,9 @@
 import { useMemo, type ComponentType, type ReactNode } from "react";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
-import { lazyComponent } from "@plugins/primitives/plugins/lazy-component/web";
+import {
+  lazyComponent,
+  useLazyReady,
+} from "@plugins/primitives/plugins/lazy-component/web";
 
 /**
  * The markdown enhancer pipeline. `stage` is a processing position, not a place
@@ -18,16 +21,29 @@ export const MarkdownEnhancerSlot: Slot<{
 
 // The heavy renderer (react-markdown + remark-gfm + the syntax-highlighter base
 // map) is code-split into its own chunk so it never rides the eager plugin-boot
-// wave — it loads on the first markdown render of the session. `fallback: null`
-// because markdown is inline in transcripts: a spinner would be jarring, so it
-// just pops in once the chunk resolves (only the first render suspends).
+// wave. It loads once the page is idle after boot (`preload: "idle"`): markdown
+// is the body of most surfaces (a transcript's replies, a page's text), and one
+// drawn before its chunk lands opens without it and grows when it pops in.
+// `fallback: null` for a render before then — markdown is inline, a spinner per
+// paragraph would be jarring. A surface that must not open on part of its
+// content holds its own loading state until `useMarkdownLoaded()`.
 const MarkdownRenderer = lazyComponent<{ children: string; inline?: boolean }>(
   () =>
     import("./markdown-renderer").then((m) => ({
       default: m.MarkdownRenderer,
     })),
-  { fallback: null },
+  { fallback: null, preload: "idle" },
 );
+
+/**
+ * Whether `Markdown` renders at once — its renderer's chunk has loaded —
+ * starting the load if it has not begun. A surface whose content is mostly
+ * markdown shows its loading state until then, rather than a first paint with
+ * every markdown body missing.
+ */
+export function useMarkdownLoaded(): boolean {
+  return useLazyReady(MarkdownRenderer);
+}
 
 export function Markdown({
   children,

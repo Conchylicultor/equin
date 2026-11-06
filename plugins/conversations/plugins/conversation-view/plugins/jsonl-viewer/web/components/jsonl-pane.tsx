@@ -22,10 +22,9 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ElapsedTime } from "@plugins/primitives/plugins/relative-time/web";
 import { ConversationIdProvider } from "./conversation-id-context";
-import { TranscriptView } from "./transcript-view";
+import { TranscriptLoading, TranscriptView } from "./transcript-view";
 import {
   usePendingTurns,
   useSentTurnFollowKey,
@@ -311,14 +310,7 @@ export function JsonlPane({
           // decide whether the pane is empty, starting or neither. Its failure
           // does not hide the transcript — the inner pane shows it inline.
           resource={pending.status === "loading" ? pending : windowResult}
-          fallback={
-            // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column (mirrors TranscriptView)
-            <div className="relative min-h-0 flex-1 isolate">
-              <Scroll data-pane-scroll className="h-full">
-                <Loading className="px-md py-sm" />
-              </Scroll>
-            </div>
-          }
+          fallback={<TranscriptLoading />}
           errorFallback={(err) => (
             // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column (mirrors TranscriptView)
             <div className="relative min-h-0 flex-1 isolate">

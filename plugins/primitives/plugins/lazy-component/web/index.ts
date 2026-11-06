@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { lazyComponent } from "./internal/lazy-component";
+export { lazyComponent, useLazyReady } from "./internal/lazy-component";
 export type { LazyComponentOptions } from "./internal/lazy-component";
 
 export default {

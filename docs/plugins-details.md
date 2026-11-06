@@ -16446,7 +16446,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 58 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 59 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `network/live/live-state` ×9
               - `conversations/conversation-view/pending-turn` ×6
               - `primitives/dom/auto-scroll` ×5
@@ -16473,6 +16473,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/scroll-reveal.revealElement`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
+              - `primitives/markdown.useMarkdownLoaded`
               - `primitives/overlay/image-viewer.ImageGallery`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/row-actions.rowActionsAnchor`
@@ -47543,7 +47544,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Uses: `primitives/loading.Loading`
         - Exports (types): `LazyComponentOptions`
-        - Exports (values): `lazyComponent`
+        - Exports (values):
+          - `lazyComponent`
+          - `useLazyReady`
       - Cross-plugin:
         - Imported by:
           - `apps/sonata/notation`
@@ -47829,6 +47832,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/lazy-component.lazyComponent`
+          - `primitives/lazy-component.useLazyReady`
           - `primitives/networking.useTransport`
           - `primitives/syntax-highlight.HighlightedCode`
           - `primitives/syntax-highlight/code-preview.useCodePreviewRenderer`
@@ -47844,6 +47848,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MarkdownEnhancerSlot`
           - `nodeToText`
           - `useMarkdownEnhancement`
+          - `useMarkdownLoaded`
       - Cross-plugin:
         - Uses tokens: 22 vars — full list in [`plugins/primitives/plugins/markdown/REFERENCE.md`](../plugins/primitives/plugins/markdown/REFERENCE.md)
           - `ui/tokens/density` ×9
@@ -47854,6 +47859,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `active-data`
           - `active-data/go`
+          - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/compaction`
           - `conversations/conversation-view/jsonl-viewer/event-turn`
           - `conversations/conversation-view/jsonl-viewer/request-shape`

@@ -1,7 +1,9 @@
 import {
   lazy,
   Suspense,
+  useCallback,
   useState,
+  useSyncExternalStore,
   type ComponentType,
   type ReactNode,
 } from "react";
@@ -34,6 +36,18 @@ export interface LazyComponentOptions {
  */
 export const loaders = new Set<() => Promise<unknown>>();
 
+/** Where a lazy component's chunk stands, read by `useLazyReady`. */
+type ChunkState =
+  { kind: "loading" } | { kind: "loaded" } | { kind: "failed"; error: unknown };
+
+interface Chunk {
+  load: () => Promise<unknown>;
+  state: () => ChunkState;
+}
+
+/** Each component `lazyComponent` returned, to its chunk. */
+const chunks = new WeakMap<object, Chunk>();
+
 /**
  * Pairs `React.lazy` with its own `Suspense` boundary so a heavy component can be
  * code-split out of the eager plugin-boot wave (see
@@ -63,11 +77,20 @@ export function lazyComponent<P extends object>(
 ): ComponentType<P> {
   let loading: Promise<{ default: ComponentType<P> }> | undefined;
   let loaded: ComponentType<P> | undefined;
+  let state: ChunkState = { kind: "loading" };
   const load = () =>
-    (loading ??= loader().then((m) => {
-      loaded = m.default;
-      return m;
-    }));
+    (loading ??= loader().then(
+      (m) => {
+        loaded = m.default;
+        state = { kind: "loaded" };
+        return m;
+      },
+      (error: unknown) => {
+        state = { kind: "failed", error };
+        throw error;
+      },
+    ));
+  const readLoaded = () => loaded;
   loaders.add(load);
   if (opts?.preload === "idle") preloadWhenIdle(load);
   const Lazy = lazy(load);
@@ -79,12 +102,16 @@ export function lazyComponent<P extends object>(
     ) : (
       opts.fallback
     );
-  return function LazyBoundary(props: P) {
+  const LazyBoundary = function LazyBoundary(props: P) {
     // An instance mounted after the chunk loaded renders it directly: through
     // `React.lazy` it would still suspend once (lazy learns of a resolved
     // promise a microtask late) and wait out React's 300 ms Suspense reveal
     // throttle. Chosen once per instance, so an instance never switches trees.
-    const [Loaded] = useState(() => loaded);
+    //
+    // `readLoaded`, not an inline `() => loaded`: the React Compiler outlines a
+    // closure it thinks captures nothing to module scope, where the factory's
+    // `loaded` does not exist.
+    const [Loaded] = useState(readLoaded);
     if (Loaded) return <Loaded {...props} />;
     return (
       <Suspense fallback={fallback}>
@@ -92,6 +119,39 @@ export function lazyComponent<P extends object>(
       </Suspense>
     );
   };
+  chunks.set(LazyBoundary, { load, state: () => state });
+  return LazyBoundary;
+}
+
+/**
+ * Whether `component`'s chunk has loaded — starting the load if nothing has
+ * yet, and re-rendering once it lands. For a host whose surface must not
+ * change once shown: it holds its own loading state until the chunk is in, so
+ * the lazy component inside renders at once rather than popping in after a
+ * first paint drawn without it. A failed load throws here, into the host's
+ * error boundary.
+ *
+ * `component` must be one `lazyComponent` returned.
+ */
+export function useLazyReady<P extends object>(
+  component: ComponentType<P>,
+): boolean {
+  const chunk = chunks.get(component);
+  if (chunk === undefined) {
+    throw new Error("useLazyReady: not a component lazyComponent returned");
+  }
+  const subscribe = useCallback(
+    (changed: () => void) => {
+      // Settled either way, the state moved: re-read it (a failure is thrown
+      // from the render below, and reported there).
+      void chunk.load().then(changed, changed);
+      return () => {};
+    },
+    [chunk],
+  );
+  const state = useSyncExternalStore(subscribe, chunk.state);
+  if (state.kind === "failed") throw state.error;
+  return state.kind === "loaded";
 }
 
 /**
