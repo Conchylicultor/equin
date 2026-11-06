@@ -16575,6 +16575,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `conversationEvents`
               - `conversationEventsSignature`
+              - `derivedFromEvents`
               - `serveTranscriptValue`
               - `transcriptMeta`
               - `transcriptRows`
@@ -18456,7 +18457,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Server:
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.conversationEvents`
-                  - `conversations/conversation-view/jsonl-viewer.watchConversationEvents`
+                  - `conversations/conversation-view/jsonl-viewer.derivedFromEvents`
                   - `conversations/transcript-source.followedTranscriptChain`
                   - `conversations/transcript-source.transcriptChainFollows`
                   - `network/live.serveValue`

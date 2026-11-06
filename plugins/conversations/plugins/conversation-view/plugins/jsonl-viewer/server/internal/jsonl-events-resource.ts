@@ -13,6 +13,7 @@ import {
 } from "../../core";
 import {
   conversationEvents,
+  derivedFromEvents,
   watchConversationEvents,
 } from "./conversation-events";
 import { serveTranscriptValue } from "./transcript-value";
@@ -89,40 +90,26 @@ export const jsonlEventsServed = serveValue(jsonlEvents, {
   whileSubscribed: (query, notify) => watchConversationEvents(query.id, notify),
 });
 
-// One tool call by id, from the same events. Events are rebuilt on every
-// change, so an unchanged call is handed back as the object last served —
-// which the runtime sends as nothing; it is pushed only when it changes (its
-// result lands).
-const lastToolCall = new Map<
-  string,
-  { json: string; value: JsonlEvent | null }
->();
-const toolCallKey = (id: string, toolUseId: string) =>
-  `${id}\u0000${toolUseId}`;
+// One tool call by id, from the same events — notified only when the call
+// itself moved (its result lands), not on every line appended after it.
+const toolCall = derivedFromEvents(
+  ({ id, toolUseId }: { id: string; toolUseId: string }) =>
+    `${id}\u0000${toolUseId}`,
+  ({ toolUseId }, events) =>
+    events.find((e) => e.kind === "tool-call" && e.toolUseId === toolUseId) ??
+    null,
+);
 
 export const transcriptToolCallServed = serveValue(transcriptToolCall, {
   source: "external",
   changes: "notified",
   follows: (follow) => transcriptChainFollows(follow),
-  loader: async ({ id, toolUseId }, { followed }) => {
-    const call =
-      (await conversationEvents(id, followedTranscriptChain(followed))).find(
-        (e) => e.kind === "tool-call" && e.toolUseId === toolUseId,
-      ) ?? null;
-    const key = toolCallKey(id, toolUseId);
-    const json = JSON.stringify(call);
-    const previous = lastToolCall.get(key);
-    if (previous?.json === json) return previous.value;
-    lastToolCall.set(key, { json, value: call });
-    return call;
-  },
-  whileSubscribed: (params, notify) => {
-    const stop = watchConversationEvents(params.id, notify);
-    return () => {
-      stop();
-      lastToolCall.delete(toolCallKey(params.id, params.toolUseId));
-    };
-  },
+  loader: async (params, { followed }) =>
+    toolCall.load(
+      params,
+      await conversationEvents(params.id, followedTranscriptChain(followed)),
+    ),
+  whileSubscribed: (params, notify) => toolCall.watch(params, notify),
 });
 
 // Every prompt, with the same ids the pages give it — so the view can draw a

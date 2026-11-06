@@ -19,12 +19,12 @@ import {
 // of them is told, so their recomputes all read the snapshot the watch just
 // read. The memo entry is evicted with the last holder — never by one value
 // leaving while another still reads it.
-const hub = createRefcountHub<void>((conversationId, emit) => {
+const hub = createRefcountHub<readonly JsonlEvent[]>((conversationId, emit) => {
   const unsub = TranscriptSource.get().watch(
     conversationId,
     ({ events, signature }) => {
       primeJsonlEvents(conversationId, signature, events);
-      emit();
+      emit(events);
     },
   );
   return () => {
@@ -44,8 +44,64 @@ export function watchConversationEvents(
   conversationId: string,
   onChange: () => void,
 ): () => void {
-  const hold = hub.acquire(conversationId, onChange);
+  const hold = hub.acquire(conversationId, () => onChange());
   return () => hold.release();
+}
+
+/**
+ * A value derived from a conversation's events, per tuple, notified only when
+ * IT moved — not on every line appended to the transcript.
+ *
+ * Events are rebuilt whole on every change (a later line can rewrite an earlier
+ * event: a tool result, a merged message, a rewind), so nothing cheaper than
+ * the derived value itself says soundly whether it moved. The watch derives it
+ * from the events it just read and compares it with the value last served:
+ * equal, it notifies nothing (no recompute, no no-op push); moved, it notifies
+ * and the loader serves it. `load` hands an equal value back as the object last
+ * served, which the runtime sends as nothing.
+ *
+ * The watch reads the watched chain, the loader the followed one: when they
+ * disagree the watch notifies (the safe direction), and a chain change
+ * recomputes through its follows by itself.
+ */
+export function derivedFromEvents<P extends { id: string }, T>(
+  key: (params: P) => string,
+  derive: (params: P, events: readonly JsonlEvent[]) => T,
+): {
+  /** The value for `params` over `events` — the loader's half. */
+  load: (params: P, events: readonly JsonlEvent[]) => T;
+  /** Watch conversation `params.id`, notifying when the value moved — a `whileSubscribed` body. */
+  watch: (params: P, notify: () => void) => () => void;
+} {
+  const last = new Map<string, { json: string; value: T }>();
+  return {
+    load: (params, events) => {
+      const next = derive(params, events);
+      const json = JSON.stringify(next);
+      const k = key(params);
+      const previous = last.get(k);
+      if (previous?.json === json) return previous.value;
+      last.set(k, { json, value: next });
+      return next;
+    },
+    watch: (params, notify) => {
+      const k = key(params);
+      const hold = hub.acquire(params.id, (events) => {
+        const previous = last.get(k);
+        if (
+          previous !== undefined &&
+          JSON.stringify(derive(params, events)) === previous.json
+        ) {
+          return;
+        }
+        notify();
+      });
+      return () => {
+        hold.release();
+        last.delete(k);
+      };
+    },
+  };
 }
 
 /**

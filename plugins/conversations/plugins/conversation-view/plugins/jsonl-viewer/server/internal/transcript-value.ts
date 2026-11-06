@@ -8,7 +8,7 @@ import {
 import {
   conversationEvents,
   conversationEventsSignature,
-  watchConversationEvents,
+  derivedFromEvents,
 } from "./conversation-events";
 
 /**
@@ -20,9 +20,8 @@ import {
  * conversation, `conversation-events.ts`), once per change. A change that
  * leaves the events unchanged sends nothing: `revalidate` is the events'
  * signature, so the runtime's same-ETag check (D8) skips the recompute — and
- * one that changes the events but leaves the derived value equal hands back
- * the previous object, which the runtime recognises as "the very value every
- * holder holds".
+ * one that changes the events but leaves the derived value equal notifies
+ * nothing at all (`derivedFromEvents`: the watch derives it and compares).
  *
  * The transcript chain's facts are FOLLOWED (`transcriptChainFollows`): a
  * session recorded on this conversation, or its tail moving, recomputes its
@@ -36,29 +35,21 @@ export function serveTranscriptValue<T>(
   value: LiveValue<T, { id: string }>,
   derive: (events: readonly JsonlEvent[]) => T,
 ) {
-  const last = new Map<string, { json: string; value: T }>();
+  const derived = derivedFromEvents(
+    ({ id }: { id: string }) => id,
+    (_params, events) => derive(events),
+  );
   return serveValue(value, {
     source: "external",
     changes: "notified",
     follows: (follow) => transcriptChainFollows(follow),
-    loader: async ({ id }, { followed }) => {
-      const next = derive(
-        await conversationEvents(id, followedTranscriptChain(followed)),
-      );
-      const json = JSON.stringify(next);
-      const previous = last.get(id);
-      if (previous?.json === json) return previous.value;
-      last.set(id, { json, value: next });
-      return next;
-    },
+    loader: async (params, { followed }) =>
+      derived.load(
+        params,
+        await conversationEvents(params.id, followedTranscriptChain(followed)),
+      ),
     revalidate: ({ id }, { followed }) =>
       conversationEventsSignature(id, followedTranscriptChain(followed)),
-    whileSubscribed: ({ id }, notify) => {
-      const stop = watchConversationEvents(id, notify);
-      return () => {
-        stop();
-        last.delete(id);
-      };
-    },
+    whileSubscribed: (params, notify) => derived.watch(params, notify),
   });
 }

@@ -17,7 +17,7 @@ closed under "after" (every event after a loaded one is loaded), so a forward
 scan from a drawn event is complete (AskUserQuestion finding its answer); a
 whole-conversation fact is a small server-derived value instead:
 `serveTranscriptValue(value, derive)` (server) runs `derive` over every event in
-memory once per change and pushes only when the result changed (its
+memory once per change and notifies only when the result changed (its
 `revalidate` is the events' signature);
 `useWholeTranscript(value, derive)` (web) reads it — or derives it locally when
 the view draws a whole transcript (a sub-agent's pane). Owners: the outline's
@@ -35,7 +35,13 @@ memo's input, so its signature fingerprints the chain read) and watches through 
 (`server/internal/conversation-events.ts`): a refcounted hub over ONE
 `TranscriptSource.watch`, whose snapshot primes the shared `createSignedMemo`
 (`jsonl-events-cache.ts`) before anyone is notified, so every recompute reads
-memory. The memo's signature and value come from one authority (the host's
+memory. A value derived per tuple (a fold's prefix, one tool call, a
+whole-transcript value) uses `derivedFromEvents(key, derive)` instead: its watch
+derives the value from the events the hub just read and notifies only when it
+moved from the one last served, so an append that leaves it equal costs no
+recompute and no no-op push. Events are rebuilt whole on every change (a later
+line can rewrite an earlier event), so nothing cheaper than the value itself is
+a sound signal. The memo's signature and value come from one authority (the host's
 `TranscriptSource`), so push vs on-demand stays a delivery choice — see
 `research/2026-07-10-conversations-jsonl-events-shared-authority.md`. The
 desktop host reads only the bytes appended since its last read
@@ -264,6 +270,7 @@ back.
   - Exports (values):
     - `conversationEvents`
     - `conversationEventsSignature`
+    - `derivedFromEvents`
     - `serveTranscriptValue`
     - `transcriptMeta`
     - `transcriptRows`

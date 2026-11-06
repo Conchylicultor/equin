@@ -42,7 +42,7 @@
 - Server:
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.conversationEvents`
-    - `conversations/conversation-view/jsonl-viewer.watchConversationEvents`
+    - `conversations/conversation-view/jsonl-viewer.derivedFromEvents`
     - `conversations/transcript-source.followedTranscriptChain`
     - `conversations/transcript-source.transcriptChainFollows`
     - `network/live.serveValue`

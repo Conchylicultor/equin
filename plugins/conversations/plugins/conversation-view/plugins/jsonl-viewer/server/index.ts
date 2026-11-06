@@ -15,6 +15,7 @@ export { serveTranscriptValue } from "./internal/transcript-value";
 export {
   conversationEvents,
   conversationEventsSignature,
+  derivedFromEvents,
   watchConversationEvents,
 } from "./internal/conversation-events";
 // The rows and meta `jsonl-events` pages a transcript as — for another
