@@ -117,6 +117,15 @@ a `check` op (2.4–2.7 GB each).
   `change-feed` 9 and `lock-watch` 9 (held sessions by design). About 23 per
   running backend, of which a handful work.
 
+> **Correction (task-1793975219):** the Postgres numbers above are wrong by
+> ~4–5×. Per-process footprint charges each backend for the shared segment it
+> touched, and both the bucket and the "~50–65 MB private" read include it.
+> Measured with `footprint`'s private categories and a per-region walk:
+> **~2.2 GB private heap + ~0.2 GB shared once** (avg ~11 MB a session). Idle
+> connections are not the second memory owner, and item 1 below is closed with
+> no change. See
+> [`2026-11-06-global-postgres-idle-connections-memory.md`](2026-11-06-global-postgres-idle-connections-memory.md).
+
 **Decision (measured):** re-sizing the host grant's memory quantum (B = 9)
 would act on the 15–20 % of the footprint that is admitted. The two biggest
 unadmitted consumers are concrete and fixable at their source, so they come
@@ -153,7 +162,9 @@ after this lands.
 
 ## Follow-ups
 
-- Idle Postgres connections: ~23 per running backend, ~215 idle × ~50–65 MB.
+- ~~Idle Postgres connections: ~23 per running backend, ~215 idle × ~50–65 MB.~~
+  Investigated: ~2.4 GB real, every holder known; the sampler's Postgres
+  bucket over-states ~4–5× (next task: count shared memory once).
 - `./equin run` scripts are unadmitted against memory and CPU.
 - Size `check` / `build` grant `max` from their fan-out, measured from
   `health-owners`' agent-ops bucket during a window.
