@@ -10,6 +10,7 @@ import {
   attentionWaitMs,
   criticalWaitMs,
   formatThresholdMs,
+  OK_SUMMARY,
   queueVerdict,
   stuckHoldMs,
   type QueueFacts,
@@ -67,7 +68,7 @@ describe("the ladder", () => {
   test("idle is ok, with no pending change", () => {
     const r = queueVerdict(facts(), CFG, NOW);
     expect(r.verdict.state).toBe("ok");
-    expect(r.verdict.summary).toBe("Idle");
+    expect(r.verdict.summary).toBe(OK_SUMMARY);
     expect(r.nextChangeAt).toBeNull();
     for (const hold of HOLD_CLASSES) expect(r.verdict.cause[hold]).toBe("ok");
   });
@@ -94,7 +95,7 @@ describe("the ladder", () => {
       NOW,
     );
     expect(r.verdict.state).toBe("ok");
-    expect(r.verdict.summary).toBe("2 running · nothing waiting");
+    expect(r.verdict.summary).toBe(OK_SUMMARY);
   });
 
   for (const hold of HOLD_CLASSES) {
@@ -105,7 +106,7 @@ describe("the ladder", () => {
         NOW,
       );
       expect(r.verdict.state).toBe("ok");
-      expect(r.verdict.summary).toBe("1 waiting");
+      expect(r.verdict.summary).toBe(OK_SUMMARY);
       // The next change is the attention line itself.
       expect(r.nextChangeAt).toBe(NOW + 1);
     });
@@ -360,7 +361,7 @@ describe("the summary", () => {
       CFG,
       NOW,
     );
-    expect(r.verdict.summary).toBe("1 running · 3 waiting");
+    expect(r.verdict.summary).toBe(OK_SUMMARY);
   });
 
   test("thresholds are phrased in whole units", () => {

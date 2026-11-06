@@ -68,8 +68,9 @@ Row: `HealthReport.Row({ kind: "status", id: "job-queue", title: "Job queue", or
 
 - **Summary (`useStatus`).** One line, worst cause first, at most two causes joined
   by " · ". Examples:
-  - "3 running · nothing waiting"
-  - "Idle"
+  - "Keeping up" (green: one fixed phrase, never a live count — amended
+    2026-11-06, see the plugin's CLAUDE.md: a count moved the always-on verdict
+    on every job start and finish)
   - "Minutes class full · 2 jobs waiting 10m+"
   - "backup.run stuck 35m+"
   - "worktree.fork-db failed ×3"

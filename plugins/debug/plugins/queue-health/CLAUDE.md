@@ -302,9 +302,9 @@ this plugin's too: it owns the queue thresholds. Design:
   (`assembleVerdict`, the same answer as `pulse.verdict` without the listed
   waiting rows, which move no colour) and its own timer. It is the row's
   `useStatus` read — the one every tab holds whether
-  the report is open or not — so it must stay this small: the runtime pushes a
+  the report is open or not — so it must stay this small and still: the runtime pushes a
   load only when the value changed, and the verdict changes only when the colour
-  or summary does, while the full pulse (running jobs, pickup stats) moves on
+  or a cause does (its green summary carries no count), while the full pulse (running jobs, pickup stats) moves on
   nearly every job start and finish. Before the split, every tab took the ~3 KB
   pulse about once a second on a busy queue to colour one dot.
 - **The verdict holds its database reads** (`machine/internal/verdict-facts.ts`).
@@ -336,7 +336,10 @@ this plugin's too: it owns the queue thresholds. Design:
   at, so dot and bell agree; a forfeited slot is always stuck), and a death within
   `deadJobAttentionMinutes`. Summary: worst cause first, at most two, ages
   phrased by the threshold crossed ("10m+") so the text stays true between
-  pushes.
+  pushes. Green is one fixed phrase (`OK_SUMMARY`, "Keeping up"), never a
+  count: the verdict changes only when its colour or a cause does, so a busy
+  green queue pushes it nothing. The live counts are the open report's — the
+  glance's bars and the detail's running list and "+ N waiting", from the pulse.
 - **Serial-lane rows never colour.** A row queued behind a held `serial` lane
   waits by design; counting it would turn correct serialization into an alarm.
   `queryQueuePulse` excludes them from `waitingForSlot`; the detail lists the

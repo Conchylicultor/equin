@@ -275,7 +275,7 @@ export function queueVerdict(
             .slice(0, SUMMARY_CAUSES)
             .map((c) => c.text)
             .join(" · ")
-        : okSummary(facts),
+        : OK_SUMMARY,
       cause,
     },
     nextChangeAt,
@@ -321,11 +321,11 @@ function deadText(recent: ReadonlyArray<QueueFacts["dead"][number]>): string {
     : `${only.jobName} failed`;
 }
 
-function okSummary(facts: QueueFacts): string {
-  const running = facts.running.length;
-  const waiting = facts.classes.reduce((sum, c) => sum + c.waiting, 0);
-  if (running === 0 && waiting === 0) return "Idle";
-  if (waiting === 0) return `${running} running · nothing waiting`;
-  if (running === 0) return `${waiting} waiting`;
-  return `${running} running · ${waiting} waiting`;
-}
+// The green summary is one fixed phrase, never a count. The verdict is every
+// tab's always-on read, pushed only when it changes: "3 running · 2 waiting"
+// moved on nearly every job start and finish, so a busy green queue still sent
+// every tab a frame a second. Green says what the colour means — nothing
+// waiting past its line, nothing stuck, no recent death — and the live counts
+// are the open report's (the glance's bars, the detail's running list and
+// "+ N waiting"), read from the pulse only it subscribes to.
+export const OK_SUMMARY = "Keeping up";

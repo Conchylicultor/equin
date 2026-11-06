@@ -108,7 +108,7 @@ function pulse(partial: Partial<QueuePulse> = {}): QueuePulse {
     pickupWindowMs: 15 * 60_000,
     verdict: {
       state: "ok",
-      summary: "Idle",
+      summary: "Keeping up",
       cause: Object.fromEntries(HOLD_CLASSES.map((h) => [h, "ok"])) as Record<
         HoldClass,
         QueueTone
@@ -339,7 +339,7 @@ describe("the detail", () => {
         running: [running("a", false), running("b", false)],
         verdict: {
           state: "ok",
-          summary: "2 running · nothing waiting",
+          summary: "Keeping up",
           cause: { instant: "ok", seconds: "ok", minutes: "ok" },
         },
       }),
