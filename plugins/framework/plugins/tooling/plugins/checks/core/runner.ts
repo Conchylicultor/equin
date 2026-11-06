@@ -708,9 +708,13 @@ export async function runChecks(
     ): Promise<ValidateResult> => {
       // Replay a recorded `git grep -l` query against the CURRENT snapshot
       // tree — called by `validate` ONLY when a query's pathspec fingerprint
-      // changed (the cheap in-memory gate runs first). Re-runs the SAME grep
-      // plumbing `readCandidates` used (via the shared `gitGrepList`), over
-      // the fresh tree, so a brand-new matching file is seen (H9).
+      // changed (the cheap in-memory gate runs first), so a brand-new matching
+      // file is seen (H9). Answered by the run's grep index when it selects
+      // over this same tree: the SAME per-blob answers `readCandidates` read,
+      // so only blobs no run on the host has asked about are grepped. A
+      // replay through a raw whole-tree `gitGrepList` re-grepped every blob
+      // for every recorded query whenever any `.ts` changed: ~22 whole-tree
+      // greps (~13 CPU-s) in a build whose checks were all cached.
       //
       // FAIL-OPEN: any error thrown by validate (a grep-replay spawn failure,
       // a malformed snapshot) degrades to a MISS (run the body), never a
@@ -720,13 +724,15 @@ export async function runChecks(
       try {
         verdict = await validate(stored, snap, {
           replayQuery: (q: QueryFact) =>
-            gitGrepList(
-              snap.root,
-              q.grepArg,
-              q.fixed,
-              q.pathspecs,
-              snap.treeHash,
-            ),
+            grep !== null && snap.treeHash === treeHash
+              ? grep.select(q.grepArg, q.fixed, q.pathspecs)
+              : gitGrepList(
+                  snap.root,
+                  q.grepArg,
+                  q.fixed,
+                  q.pathspecs,
+                  snap.treeHash,
+                ),
         });
         // fail-open contract: any validation error (grep replay spawn failure, malformed snapshot) degrades to a cache MISS (the body runs and re-verifies), which can never produce a false HIT; propagating would abort the whole check run
       } catch (err) {

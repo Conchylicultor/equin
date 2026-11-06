@@ -143,7 +143,9 @@ schema drift — main changing `schema.ts` without a migration is one-sided;
 
 `ensureDeps()` owns "this checkout's `node_modules` is correct for its inputs":
 freshness-gated on a `(mtimeMs,size)` signature stamped in
-`node_modules/.equin-deps` (so the common case is ~140 ms and silent),
+`node_modules/.equin-deps` (so the common case is ~0.1 s and silent: the
+walk for its inputs re-lists only directories whose stat stamp moved,
+`plugins/bootstrap/cli/dir-listing.ts`),
 serialized on `.install.lock`, and **loud** — it runs `bun install` with output
 passed through and throws a message naming the phase on failure. Every install
 site routes through it: the `bin/index.ts` bootstrap, `mise.toml`'s setup task,

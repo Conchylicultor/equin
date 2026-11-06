@@ -64,7 +64,7 @@ Measurements: [`research/2026-11-06-infra-parcel-kqueue-fd-leak.md`](../../../..
 
 ## Plugin reference
 
-- Description: @parcel/watcher's native addon built from the repo's patched source (its kqueue backend closes the descriptor of a watched file that is deleted or renamed): the parcel-watcher-addon build dependency, and the step ./equin build runs to copy it into the checkout's @parcel/watcher.
+- Description: @parcel/watcher's native addon built from the repo's patched source (its kqueue backend closes the descriptor of a watched file that is deleted or renamed): the parcel-watcher-addon build dependency, and the step ./equin build runs to copy it into the checkout's @parcel/watcher when the installed bytes differ.
 - Cli:
   - Uses: `infra/jobs/supervised-job.cliExecContext`
   - Exports (values): `linkParcelWatcherAddon`

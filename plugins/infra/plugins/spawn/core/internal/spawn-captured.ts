@@ -147,7 +147,7 @@ export async function spawnCaptured(
       const child = spawnAtTier(opts.tier ?? "inherit", argv, (tiered) =>
         Bun.spawn(tiered, {
           cwd: opts.cwd,
-          env: childEnv(opts.env, lifeline),
+          env: childEnv(opts.env, lifeline, opts.privateIndexWrites),
           stdin: inFd?.fd ?? "ignore",
           stdout: out.fd,
           stderr: err.fd,

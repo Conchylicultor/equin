@@ -29,6 +29,7 @@ async function git(
   root: AppPath,
   args: string[],
   env?: Record<string, string>,
+  opts?: { stdin?: string; privateIndexWrites?: true },
 ): Promise<{ code: number; stdout: string }> {
   // Never the caller's GIT_INDEX_FILE (a hook's, say): the index this hashes
   // from and publishes to is the checkout's own, or the scratch one we pass.
@@ -37,20 +38,92 @@ async function git(
     cwd: root,
     env: env ?? inherited,
     timeoutMs: TREE_HASH_TIMEOUT_MS,
+    ...(opts?.stdin === undefined ? {} : { stdin: opts.stdin }),
+    ...(opts?.privateIndexWrites ? { privateIndexWrites: true } : {}),
   });
   return { code: result.exitCode, stdout: result.stdout.trim() };
 }
 
+// git's untracked cache, asked for on the calls that walk the worktree rather
+// than left to the repo's config: a clone that never ran a build has it unset,
+// and without it every `status` reads every directory of the tree.
+const WITH_UNTRACKED_CACHE = ["-c", "core.untrackedCache=true"];
+
+/**
+ * What `git add -A` would change in the index `env` names, as pathspecs: every
+ * tracked path whose worktree differs (modified, deleted, type-changed, a
+ * conflicted one) and every untracked entry — a file, or a wholly untracked
+ * directory (`dir/`) that the add then walks. Asked of `git status`, which
+ * walks only the directories its untracked cache cannot vouch for, and which —
+ * run with writes allowed on this PRIVATE index — saves its refreshed stats and
+ * that cache into it. Null when status fails: the caller falls back to a plain
+ * `add -A`.
+ */
+async function pendingPaths(
+  root: AppPath,
+  env: Record<string, string | undefined>,
+): Promise<string[] | null> {
+  const status = await spawnCaptured(
+    [
+      "git",
+      ...WITH_UNTRACKED_CACHE,
+      "status",
+      "--porcelain=v2",
+      "-z",
+      "--untracked-files=normal",
+      "--no-renames",
+      "--ignore-submodules=none",
+    ],
+    {
+      cwd: root,
+      env,
+      timeoutMs: TREE_HASH_TIMEOUT_MS,
+      privateIndexWrites: true,
+    },
+  );
+  if (status.exitCode !== 0) return null;
+  const paths: string[] = [];
+  for (const record of status.stdout.split("\0")) {
+    if (record.length === 0) continue;
+    const kind = record[0];
+    if (kind === "?") paths.push(record.slice(2));
+    // `1 XY sub mH mI mW hH hI path`, `u XY sub m1 m2 m3 mW h1 h2 h3 path`.
+    else if (kind === "1") paths.push(fieldsTail(record, 8));
+    else if (kind === "u") paths.push(fieldsTail(record, 10));
+    // `2` cannot appear under --no-renames, `!` without --ignored.
+    else return null;
+  }
+  return paths;
+}
+
+/** The rest of a porcelain record after its first `n` space-separated fields. */
+function fieldsTail(record: string, n: number): string {
+  let at = 0;
+  for (let i = 0; i < n; i++) {
+    at = record.indexOf(" ", at) + 1;
+    if (at === 0) throw new Error(`git status: short record ${record}`);
+  }
+  return record.slice(at);
+}
+
 /**
  * Content hash of the full working tree (tracked + working changes, honoring
- * .gitignore) WITHOUT changing what the user's real index stages. Uses a
- * throwaway index seeded from the real one (for its stat cache), then `add -A`
- * + `write-tree`. Commit-message amends do NOT change this hash (write-tree is
+ * .gitignore) WITHOUT changing what the user's real index stages: the tree
+ * `git add -A` + `write-tree` would write, on a throwaway index seeded from
+ * the real one. Commit-message amends do NOT change this hash (write-tree is
  * content-only), so a `push` after an unchanged `build` produces the same hash.
  *
- * Cost is O(entries the real index cannot vouch for by stat) — files changed
- * since it was written, plus its racily clean ones — never O(tree content),
- * because what the refresh learns is published back (`publishRefreshedIndex`).
+ * Cost follows what changed, not the tree:
+ * - `git status` on the scratch index names what `add -A` would change. Its
+ *   refresh re-reads only the files the stat cache cannot vouch for, and its
+ *   untracked listing reads only the directories git's untracked cache cannot
+ *   (every other one is a stat).
+ * - What status learns (refreshed stats, the untracked cache) is published to
+ *   the real index (`publishRefreshedIndex`), so neither this walk nor any
+ *   later git read in the checkout pays for it again: the build's own
+ *   `git status` (`loadRepoSnapshot`) is the main beneficiary.
+ * - `add -A` is limited to the paths status named (none: no add at all), so
+ *   it walks only those. Its own walk never consults the untracked cache.
  *
  * Fail-open: returns null if git is unavailable or any step fails — callers
  * then run uncached. The cache must never block or break a check run.
@@ -84,25 +157,27 @@ export async function computeTreeHash(root: AppPath): Promise<string | null> {
     sweepDeadScratch(realIndex);
 
     // With no index yet (a fresh `git init`, nothing ever added) there is no
-    // stat cache to inherit, and `add -A` into the empty scratch index below
-    // hashes the same tree: what is on disk, honoring .gitignore. (Seeding
-    // from `HEAD` instead gave nothing — a tree read carries no stat info — and
-    // failed outright on an unborn branch.)
+    // stat cache to inherit, and a plain `add -A` into the empty scratch index
+    // below hashes the same tree: what is on disk, honoring .gitignore.
+    // (Seeding from `HEAD` instead gave nothing — a tree read carries no stat
+    // info — and failed outright on an unborn branch.)
+    let pending: string[] | null = null;
     if (existsSync(realIndex)) {
       const seen = statSync(realIndex, { bigint: true });
       const seed = readFileSync(realIndex);
       copyIndex(seed, seen, tmpIndex);
-      // Errors are benign: `add -A` below re-checks whatever is still dirty.
-      await git(root, ["update-index", "-q", "--refresh"], env);
+      pending = await pendingPaths(root, env);
       const learnedSomething =
         !readFileSync(tmpIndex).equals(seed) ||
         hasRacyEntry(seed, seen.mtimeMs / 1000n, hashBytes);
       if (learnedSomething) {
-        // The refresh learned something: a stat-dirty entry re-stamped (the
-        // bytes changed), or racily clean ones confirmed by content — which
-        // changes no byte, only the index's own mtime, now strictly newer than
-        // them. Hand it to the real index, so neither this walk nor any later
-        // git read pays for it again; hash on a copy.
+        // Status learned something: a stat-dirty entry re-stamped (the bytes
+        // changed), racily clean ones confirmed by content — which changes no
+        // byte, only the index's own mtime, now strictly newer than them — or
+        // directories it listed into the untracked cache. Hand it to the real
+        // index, so neither this walk nor any later git read pays for it
+        // again; hash on a copy. Status never stages: the published index
+        // differs from the real one in caches only.
         const learned = besideIndex(realIndex, `equin-refreshed-${nonce}`);
         scratch.push(learned);
         copyIndex(
@@ -114,7 +189,27 @@ export async function computeTreeHash(root: AppPath): Promise<string | null> {
       }
     }
 
-    if ((await git(root, ["add", "-A"], env)).code !== 0) return null;
+    if (pending === null) {
+      if ((await git(root, ["add", "-A"], env)).code !== 0) return null;
+    } else if (pending.length > 0) {
+      // Literal pathspecs: a path is a name, never a pattern. A path gone
+      // between status and here fails the add ("did not match"): the plain
+      // `add -A` then answers for the tree as it is now.
+      const scoped = await git(
+        root,
+        [
+          "--literal-pathspecs",
+          "add",
+          "-A",
+          "--pathspec-from-file=-",
+          "--pathspec-file-nul",
+        ],
+        env,
+        { stdin: pending.join("\0") },
+      );
+      if (scoped.code !== 0 && (await git(root, ["add", "-A"], env)).code !== 0)
+        return null;
+    }
     const wt = await git(root, ["write-tree"], env);
     if (wt.code !== 0) return null;
     return /^[0-9a-f]{40,64}$/.test(wt.stdout) ? wt.stdout : null;

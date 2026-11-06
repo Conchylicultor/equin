@@ -8,6 +8,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -181,5 +182,96 @@ describe("computeTreeHash", () => {
     expect(await computeTreeHash(root)).toBe(await referenceHash());
     expect(readFileSync(index).equals(before)).toBe(true);
     expect(readFileSync(`${index}.lock`, "utf8")).toBe("held by a writer");
+  });
+
+  test("equals a plain `add -A` through every kind of change", async () => {
+    // Each step's hash is compared with a fresh index's `add -A`: the scoped
+    // add (only the paths status names) must write the same tree.
+    const steps: Array<[string, () => Promise<void> | void]> = [
+      ["nothing changed", () => {}],
+      ["an edit", () => writeFileSync(join(root, "a.txt"), "a edited\n")],
+      ["a new file", () => writeFileSync(join(root, "new.txt"), "new\n")],
+      [
+        "a new nested directory",
+        () => {
+          mkdirSync(join(root, "d/e/f"), { recursive: true });
+          writeFileSync(join(root, "d/e/f/deep.txt"), "deep\n");
+          writeFileSync(join(root, "d/top.txt"), "top\n");
+        },
+      ],
+      ["a deletion", () => rmSync(join(root, "b.txt"))],
+      [
+        "a tracked file replaced by a directory",
+        () => {
+          rmSync(join(root, "c.txt"));
+          mkdirSync(join(root, "c.txt"));
+          writeFileSync(join(root, "c.txt/inside.txt"), "inside\n");
+        },
+      ],
+      [
+        "an ignored file, then the .gitignore edited",
+        () => {
+          writeFileSync(join(root, ".gitignore"), "*.log\n");
+          writeFileSync(join(root, "x.log"), "ignored\n");
+        },
+      ],
+      [
+        ".gitignore no longer ignores it",
+        () => writeFileSync(join(root, ".gitignore"), "\n"),
+      ],
+      [
+        "a name needing quoting",
+        () => writeFileSync(join(root, 'sp ace "q" é*.txt'), "odd\n"),
+      ],
+      [
+        "a nested repository (gitlink)",
+        async () => {
+          mkdirSync(join(root, "nested"));
+          writeFileSync(join(root, "nested/n.txt"), "n\n");
+          const proc = Bun.spawn(
+            [
+              "sh",
+              "-c",
+              "git init -q && git add -A && git -c user.name=t -c user.email=t@t commit -qm n",
+            ],
+            { cwd: join(root, "nested") },
+          );
+          await proc.exited;
+        },
+      ],
+      [
+        "the new directory removed",
+        () => rmSync(join(root, "d"), { recursive: true }),
+      ],
+    ];
+    for (const [name, step] of steps) {
+      await step();
+      const hash = await computeTreeHash(root);
+      expect({ name, hash }).toEqual({ name, hash: await referenceHash() });
+    }
+  });
+
+  test("publishes git's untracked cache to the real index", async () => {
+    mkdirSync(join(root, "sub"));
+    writeFileSync(join(root, "sub/u.txt"), "u\n");
+    await Bun.sleep(1100);
+    await computeTreeHash(root);
+    // The real index now carries an untracked cache another reader can use.
+    const proc = Bun.spawn(
+      ["git", "-c", "core.untrackedCache=true", "status", "--porcelain"],
+      {
+        cwd: root,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: { ...process.env, GIT_TRACE2_PERF: "1", GIT_OPTIONAL_LOCKS: "0" },
+      },
+    );
+    const trace = await new Response(proc.stderr).text();
+    await proc.exited;
+    // Every directory is still stat'ed; without a cache each is also opened
+    // and read (`.`, `sub`). With it, none.
+    const opened = /opendir:(\d+)/.exec(trace);
+    expect(opened).not.toBeNull();
+    expect(Number(opened![1])).toBe(0);
   });
 });

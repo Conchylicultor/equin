@@ -85,6 +85,15 @@ export interface SpawnBaseOptions {
   tier?: SpawnTier;
   /** Redirect stderr into the stdout fd (2>&1). `result.stderr` is then `""`. */
   mergeStderr?: boolean;
+  /**
+   * Let a git child write its index opportunistically (no
+   * `GIT_OPTIONAL_LOCKS=0`). Only for a git child whose `GIT_INDEX_FILE` names
+   * a PRIVATE index the caller owns (a scratch copy): there is no other
+   * process to collide with on its lock, and the write is what the caller is
+   * after — `git status` saving its refreshed stats and untracked cache into
+   * it. Never for a checkout's own index; see `child-env.ts`.
+   */
+  privateIndexWrites?: true;
 }
 
 /**

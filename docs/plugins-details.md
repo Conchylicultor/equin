@@ -32352,7 +32352,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register: `defineBackgroundKind('file-watcher')`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/provider.ts` (debt)
-        - **`parcel-addon`** — @parcel/watcher's native addon built from the repo's patched source (its kqueue backend closes the descriptor of a watched file that is deleted or renamed): the parcel-watcher-addon build dependency, and the step ./equin build runs to copy it into the checkout's @parcel/watcher.
+        - **`parcel-addon`** — @parcel/watcher's native addon built from the repo's patched source (its kqueue backend closes the descriptor of a watched file that is deleted or renamed): the parcel-watcher-addon build dependency, and the step ./equin build runs to copy it into the checkout's @parcel/watcher when the installed bytes differ.
           - Cli:
             - Uses: `infra/jobs/supervised-job.cliExecContext`
             - Exports (values): `linkParcelWatcherAddon`

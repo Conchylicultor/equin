@@ -54,24 +54,43 @@ otherwise name no file and be recorded as not matching, host-wide.
 
 ## `computeTreeHash` costs O(changed files)
 
-It hashes through a scratch index seeded from the checkout's real one, so `add
--A` re-reads only the files the stat cache cannot vouch for. Two things keep
-that set small, and both are load-bearing:
+It hashes through a scratch index seeded from the checkout's real one: `git
+status` on it names what `add -A` would change, and the add is scoped to those
+paths (none changed: no add at all). Three things keep that cheap, and all are
+load-bearing:
 
 - **The seed is found by an absolute path** (`--path-format=absolute`).
   `--git-path index` alone is relative in main but absolute in a linked
   worktree, and joined onto the root it named no file: from the cache's start
   (2026-06-07) to 2026-11-04 every agent worktree hashed from an EMPTY index — the whole tree's content on every
   check run (180 s timeouts under load, so `null` and an uncached run).
-- **What the refresh learns is published back** to the real index
-  (`publishRefreshedIndex`): no git read of ours ever saves its stat refresh
-  (`GIT_OPTIONAL_LOCKS=0`, spawn's child-env), so racily clean entries left by
-  a checkout, a spare claim's switch or a rebase (up to 11,200 of 20,664
-  measured) were otherwise re-read by every run until the next commit. Only
-  when the refresh learned something, compare-and-swap under git's own
-  `index.lock`, held for one stat + one rename. Scratch indexes keep the source
-  index's mtime (`copyIndex`) — a fresh one would trust racily clean stats and
-  hash a stale tree.
+- **What status learns is published back** to the real index
+  (`publishRefreshedIndex`): its refreshed stats AND git's untracked cache.
+  No git read of ours ever saves either (`GIT_OPTIONAL_LOCKS=0`, spawn's
+  child-env), so racily clean entries left by a checkout, a spare claim's
+  switch or a rebase (up to 11,200 of 20,664 measured) were otherwise re-read
+  by every run until the next commit, and every `status` in the checkout read
+  all ~8,700 directories (0.8 s; 0.2 s once the cache is in the index). The
+  scratch `status` is the one git read allowed to write (`privateIndexWrites`
+  — its index is this process's own file). Only when it learned something,
+  compare-and-swap under git's own `index.lock`, held for one stat + one
+  rename. Scratch indexes keep the source index's mtime (`copyIndex`) — a
+  fresh one would trust racily clean stats and hash a stale tree.
+- **`add -A` never walks the whole tree.** Its own walk ignores the untracked
+  cache, so a plain `add -A` read every directory on every run; scoped to the
+  paths status named (literal pathspecs) it reads only those. A scoped add
+  that fails (a path gone in between) falls back to the plain one.
+
+## A replayed grep goes through the grep index
+
+An input-keyed check's read-set replays each recorded `git grep -l` selection
+whose pathspec fingerprint moved (`validate`, `core/read-set.ts`) — for a `*.ts`
+selection, after ANY `.ts` edit, and on every later run until the body runs
+again (a hit does not re-record). The replay asks the run's grep index
+(`runner.ts` `validateStored`), the same per-blob answers the checks select
+through, so only unknown blobs are grepped. Through a raw whole-tree
+`gitGrepList` it re-grepped every blob for every recorded query: ~22 whole-tree
+greps, ~13 CPU-s, in a build whose checks were all cached (2026-11-06).
 
 ## A `scope: "tree"` verdict must not depend on the process that produced it
 

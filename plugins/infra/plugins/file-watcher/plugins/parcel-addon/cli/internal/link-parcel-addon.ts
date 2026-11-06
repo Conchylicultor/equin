@@ -3,6 +3,7 @@ import { builtFile } from "@plugins/infra/plugins/deps/plugins/build/deps";
 import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { copyFile, mkdir, rename } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { constants } from "node:fs";
 import { join } from "node:path";
 import { parcelWatcherAddon, parcelWatcherPackageDir } from "../../deps";
@@ -19,6 +20,11 @@ import { parcelWatcherAddon, parcelWatcherPackageDir } from "../../deps";
  * deps sweep removing an old identity can never leave a checkout loading
  * nothing. Written beside and renamed over, so a backend starting meanwhile
  * loads the old file or the new one, never a torn one.
+ *
+ * Writes nothing when the installed file already holds the built bytes. Not a
+ * shortcut but part of the contract: the backend's keep-running check treats a
+ * loaded module whose change time moved as changed code, so rewriting the same
+ * bytes on every build restarted every backend on every build.
  *
  * Darwin only: the patch fixes the kqueue backend, which the engine uses
  * there. A failed build throws — it is a compile error to fix, and a build
@@ -40,7 +46,21 @@ export async function linkParcelWatcherAddon(opts: {
   );
   await mkdir(releaseDir, { recursive: true });
   const target = join(releaseDir, "watcher.node");
+  const built = builtFile(ready);
+  if (await sameBytes(built, target)) return;
   const staged = `${target}.${process.pid}.tmp`;
-  await copyFile(builtFile(ready), staged, constants.COPYFILE_FICLONE);
+  await copyFile(built, staged, constants.COPYFILE_FICLONE);
   await rename(staged, target);
+}
+
+/** Whether `target` exists and holds exactly `source`'s bytes. */
+async function sameBytes(source: string, target: string): Promise<boolean> {
+  let installed: Buffer;
+  try {
+    installed = await readFile(target);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
+  }
+  return installed.equals(await readFile(source));
 }

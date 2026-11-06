@@ -17,11 +17,14 @@
  * stdout/stderr passed straight through and a failure can never again be
  * invisible.
  *
- * MEASURED COST of the fresh-skip path on this repo: ~140 ms — ~126 ms of it the
- * recursive walk of `plugins/` (4044 dirs, 8379 files), ~1.5 ms the 1003 stats —
- * plus ~15 ms of module import, plus one `git rev-parse` when `root` is
- * defaulted. A 60–160× win over the 10–25 s install it replaces, so the walk is
- * deliberately left correct rather than narrowed to the plugin-tree convention:
+ * MEASURED COST of the fresh-skip path on this repo: the walk of `plugins/` for
+ * the inputs, plus their stats, plus one `git rev-parse` when `root` is
+ * defaulted. A full readdir walk grew with the tree (4,044 dirs at ~126 ms on
+ * 2026-07-30; 8,307 dirs at ~0.5 s, mostly sys, on 2026-11-06), so the walk
+ * keeps each directory's listing under its stat stamp (`./dir-listing.ts`) and
+ * re-reads only the directories that changed: ~40 ms of stats otherwise. The
+ * walk is deliberately left correct rather than narrowed to the plugin-tree
+ * convention:
  * `workspaces: ["plugins/**"]` admits a `package.json` at any depth, and missing
  * one would silently skip a needed install.
  *
@@ -39,19 +42,19 @@
  * context, where the alias does *not* resolve.
  */
 import { createHash } from "node:crypto";
-import { type Dirent, mkdirSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import {
-  readdirSync,
   readFileSync,
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
   getWorktreeRoot,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { acquireCheckoutLock } from "./checkout-lock";
+import { walkFilesWithListing } from "./dir-listing";
 
 /**
  * The freshness stamp, INSIDE `node_modules` on purpose: the stamp can never
@@ -88,6 +91,16 @@ const PROVISION_REGISTRY_REL = join(
   "core",
   "provision.generated.ts",
 );
+
+/**
+ * The workspace roots' directory listing (`./dir-listing.ts`), beside the
+ * stamp inside `node_modules` for the same reason: it cannot outlive what it
+ * describes the inputs of.
+ */
+const LISTING_REL = join("node_modules", ".equin-deps-dirs.json");
+
+/** The only file names `isDepInput` can admit: all the walk records. */
+const INPUT_NAMES = new Set(["package.json", "index.ts"]);
 
 /** Never walked: `node_modules` is the OUTPUT, and `.git` holds no dep inputs. */
 const SKIP_DIRS = new Set(["node_modules", ".git"]);
@@ -291,45 +304,10 @@ function isDepInput(rel: string, walkRoots: readonly string[]): boolean {
 }
 
 /**
- * Collect the workspace-side dep inputs under `dir` by walking it — the
- * listing for a caller that holds no file set.
- *
- * A vanished directory is tolerated (`ENOENT` only): codegen and the `dist.*`
- * swap rename directories under `plugins/` while we walk, and a directory that
- * no longer exists cannot hold a live workspace. Every other fs error propagates.
- */
-function collectWorkspaceInputs(
-  dir: string,
-  root: string,
-  walkRoots: readonly string[],
-  out: Set<string>,
-): void {
-  let entries: Dirent[];
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
-    throw err;
-  }
-  for (const entry of entries) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name)) continue;
-      collectWorkspaceInputs(full, root, walkRoots, out);
-      continue;
-    }
-    // Plain files only — a symlinked dir (`web-core/dist`) is never a dep input,
-    // and not following links is what keeps the walk cycle-free.
-    if (!entry.isFile()) continue;
-    const rel = relative(root, full);
-    if (isDepInput(rel, walkRoots)) out.add(rel);
-  }
-}
-
-/**
  * Every dep input's path, repo-relative: the root manifests, the patches they
  * apply, plus the workspace-side inputs — filtered out of `files` when the caller holds the
- * checkout's set, walked otherwise.
+ * checkout's set, walked otherwise — reading only the directories that changed
+ * since the last walk (`walkFilesWithListing`).
  */
 function listDepInputs(root: string, files?: readonly string[]): string[] {
   const rels = new Set<string>([
@@ -342,9 +320,15 @@ function listDepInputs(root: string, files?: readonly string[]): string[] {
   if (files) {
     for (const rel of files) if (isDepInput(rel, walkRoots)) rels.add(rel);
   } else {
-    for (const walkRoot of walkRoots) {
-      collectWorkspaceInputs(join(root, walkRoot), root, walkRoots, rels);
-    }
+    const walked = walkFilesWithListing(
+      root,
+      walkRoots,
+      SKIP_DIRS,
+      INPUT_NAMES,
+      join(root, LISTING_REL),
+    );
+    for (const rel of walked.files)
+      if (isDepInput(rel, walkRoots)) rels.add(rel);
   }
   return [...rels].sort();
 }
