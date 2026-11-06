@@ -14,6 +14,7 @@ import {
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import {
   NewTabGlyph,
@@ -31,7 +32,11 @@ import {
   PHOTO_WIDTH,
   placePhotoAsset,
 } from "@plugins/apps/plugins/places/plugins/place-details/core";
-import { usePhotoSrc, usePhotoSrcs } from "../internal/photo-src";
+import {
+  useAssetSrcs,
+  type AssetSrc,
+} from "@plugins/infra/plugins/endpoints/web";
+import { usePhotoSrcs } from "../internal/photo-src";
 import { mapsHref, type MapsLinkPlace } from "../internal/maps-links";
 
 const backIcon = symbol("arrow-back");
@@ -42,8 +47,13 @@ export const PLACE_PHOTOS_WIDTH = "760px";
 /** How many thumbnails the card's photo row shows (the last one says "+N"). */
 const THUMB_COUNT = 4;
 
-/** A grid tile's photo is fetched at twice its ~370px column, for hi-dpi. */
-const TILE_FETCH_PX = 800;
+/**
+ * The width the hero strip and the photos grid both fetch a photo at — about
+ * twice the card's width and the grid's ~370px column, for hi-dpi. One width
+ * for both, so a photo the strip already loaded opens in the grid from the
+ * browser's cache instead of a second (billed) fetch.
+ */
+export const PHOTO_FETCH_PX = 720;
 
 /**
  * One photo as the viewer shows it: the largest copy the photo route serves,
@@ -217,8 +227,11 @@ export function PhotosHeader({
  * The place card turned into its photos: every photo Google shares (at most
  * ten) in two columns at its own shape, each credited on hover — the place's
  * own uploads marked Owner — then a last tile to the full album on Google
- * Maps. A photo opens the viewer, stepping through the rest. Fades in while
- * the card widens around it.
+ * Maps. A photo opens the viewer, stepping through the rest. Laid out at
+ * once but held invisible until every photo has loaded (or failed), then
+ * fades in while the card widens around it — never a frame of empty tiles
+ * filling in one by one. While held it is busy (a delayed spinner), so a
+ * slow photo reads as loading.
  */
 export function PhotosGrid({
   photos,
@@ -228,38 +241,79 @@ export function PhotosGrid({
   /** Google's name for it (an author by that name is the place itself) and its link. */
   place: MapsLinkPlace;
 }): ReactNode {
+  const tileSrcs = useAssetSrcs(
+    photos.map((p) => placePhotoAsset(p.name, PHOTO_FETCH_PX)),
+  );
+  const viewerSrcs = useAssetSrcs(
+    photos.map((p) => placePhotoAsset(p.name, viewerWidth(p))),
+  );
+  const [settled, setSettled] = useState<ReadonlySet<string>>(() => new Set());
+  // A photo with no image to load here (not available on this host, or its
+  // address failed) draws its muted tile and holds nothing back.
+  const ready = photos.every(
+    (p, i) =>
+      settled.has(p.name) ||
+      unloadable(tileSrcs[i]) ||
+      unloadable(viewerSrcs[i]),
+  );
+  const settle = (name: string) =>
+    setSettled((s) => (s.has(name) ? s : new Set(s).add(name)));
   return (
     <ImageGallery>
       <ScrollTopOnMount />
-      <div className="animate-in fade-in-0 columns-2 gap-xs p-xs duration-300">
-        {photos.map((p, i) => (
-          <PhotoTile
-            key={p.name}
-            photo={p}
-            n={i}
-            owner={p.authors[0]?.name === place.name}
-          />
-        ))}
-        <a
-          {...newTabAnchorProps(mapsHref(place))}
-          title="Google shares at most ten photos with apps; its Maps page has the full album"
-          className="block break-inside-avoid rounded-md border border-dashed text-muted-foreground hover:border-primary hover:text-primary-text"
+      <div className="relative">
+        {ready ? null : (
+          <Pin to="top" offset="md" layer="float">
+            <Loading variant="spinner" label="Loading photos…" />
+          </Pin>
+        )}
+        <div
+          className={cn(
+            "columns-2 gap-xs p-xs",
+            ready ? "animate-in fade-in-0 duration-300" : "invisible",
+          )}
         >
-          <Center className="aspect-[4/3]">
-            <Stack gap="2xs" align="center">
-              <NewTabGlyph className="size-5" />
-              <Text variant="body" tone="strong">
-                More on Google Maps
-              </Text>
-              <Text variant="caption" tone="muted">
-                The full album
-              </Text>
-            </Stack>
-          </Center>
-        </a>
+          {photos.map((p, i) => (
+            <PhotoTile
+              key={p.name}
+              photo={p}
+              n={i}
+              owner={p.authors[0]?.name === place.name}
+              tileSrc={readySrc(tileSrcs[i])}
+              viewerSrc={readySrc(viewerSrcs[i])}
+              onSettled={() => settle(p.name)}
+            />
+          ))}
+          <a
+            {...newTabAnchorProps(mapsHref(place))}
+            title="Google shares at most ten photos with apps; its Maps page has the full album"
+            className="block break-inside-avoid rounded-md border border-dashed text-muted-foreground hover:border-primary hover:text-primary-text"
+          >
+            <Center className="aspect-[4/3]">
+              <Stack gap="2xs" align="center">
+                <NewTabGlyph className="size-5" />
+                <Text variant="body" tone="strong">
+                  More on Google Maps
+                </Text>
+                <Text variant="caption" tone="muted">
+                  The full album
+                </Text>
+              </Stack>
+            </Center>
+          </a>
+        </div>
       </div>
     </ImageGallery>
   );
+}
+
+/** No image will come of it: not available on this host, or it failed. */
+function unloadable(src: AssetSrc | undefined): boolean {
+  return src?.kind === "unavailable" || src?.kind === "error";
+}
+
+function readySrc(src: AssetSrc | undefined): string | null {
+  return src?.kind === "ready" ? src.src : null;
 }
 
 /** A grid tile's photo, opening the viewer on a click. */
@@ -268,11 +322,13 @@ function PhotoTileImage({
   n,
   src,
   viewerSrc,
+  onSettled,
 }: {
   photo: PlacePhoto;
   n: number;
   src: string;
   viewerSrc: string;
+  onSettled: () => void;
 }): ReactNode {
   const trigger = useImageViewerTrigger<HTMLImageElement>(
     viewerImage(photo, n, viewerSrc),
@@ -282,7 +338,10 @@ function PhotoTileImage({
     <img
       src={src}
       alt={author === undefined ? "" : `Photo by ${author.name}`}
-      loading={n < 4 ? "eager" : "lazy"}
+      // Eager, every one: the grid waits for them all (at most ten).
+      loading="eager"
+      onLoad={onSettled}
+      onError={onSettled}
       className="size-full cursor-zoom-in object-cover"
       {...trigger}
     />
@@ -294,15 +353,19 @@ function PhotoTile({
   photo,
   n,
   owner,
+  tileSrc,
+  viewerSrc,
+  onSettled,
 }: {
   photo: PlacePhoto;
   n: number;
   owner: boolean;
+  /** What the tile and the viewer load, once loadable (null until then). */
+  tileSrc: string | null;
+  viewerSrc: string | null;
+  /** Its image loaded or failed — either way, it no longer holds the grid back. */
+  onSettled: () => void;
 }): ReactNode {
-  const tileSrc = usePhotoSrc(placePhotoAsset(photo.name, TILE_FETCH_PX));
-  const viewerSrc = usePhotoSrc(
-    placePhotoAsset(photo.name, viewerWidth(photo)),
-  );
   const author = photo.authors[0];
   return (
     // The columns' vertical gap: padding, since a column flow has no row gap.
@@ -321,6 +384,7 @@ function PhotoTile({
             n={n}
             src={tileSrc}
             viewerSrc={viewerSrc}
+            onSettled={onSettled}
           />
         )}
         {owner ? (

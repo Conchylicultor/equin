@@ -18,13 +18,11 @@ import type { PlacePhoto } from "@plugins/integrations/plugins/google-maps/plugi
 import { placePhotoAsset } from "@plugins/apps/plugins/places/plugins/place-details/core";
 import { usePhotoSrcs } from "../internal/photo-src";
 import type { PlaceVisual } from "../internal/place-visual";
+import { PHOTO_FETCH_PX } from "./place-photos";
 
 const prevIcon = symbol("chevron-left");
 const nextIcon = symbol("chevron-right");
 const photosIcon = symbol("photo-library");
-
-/** Photos are fetched at twice the card's width, for a sharp hi-dpi strip. */
-const PHOTO_FETCH_PX = 720;
 
 /** What the wash is painted from: a saved place's visual, or a Google hit's. */
 type HeroVisual = Pick<PlaceVisual, "colors" | "mainColor" | "icon">;
