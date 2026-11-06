@@ -13,7 +13,11 @@ export const RENDER_TIMEOUT_MS = 30_000;
 export const MARKER = 'button:has-text("Conversations")';
 
 /** The seeded root pages (`website/demos/workspace`'s `core/internal/pages.ts`). */
-export const ROOT_PAGES = ["Welcome to equin", "My equin", "Ideas"] as const;
+export const ROOT_PAGES = [
+  "Welcome to equin",
+  "Piano practice",
+  "Ideas",
+] as const;
 
 export function embedRoot(page: Page): Locator {
   return page.locator("[data-app-embed]").first();

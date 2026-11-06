@@ -7,11 +7,15 @@ scenario is `workspaceDemo` (`core`) — the app, the
 route it opens at (`/c/conv-demo-practice-timer`) and its browser host
 (`bin/browser-host.ts`): a Web Worker booting the real server code of the
 `agent-manager-demo` composition (`bin/browser-host.composition.ts`) on PGlite, seeded by
-`bin/seed.ts` with one story (an agent that added a practice timer to Sonata,
-waiting for Demo's review; three more at work in the queue, two done) — tasks, categories, attempts,
+`bin/seed.ts` with six agent sessions (one that added a practice timer to Sonata,
+waiting for Demo's review; a prototype ready for review, a design question and a
+roster agent at work in the queue; two pushed) — tasks, categories, attempts,
 conversations, queue ranks, pushes, short titles, tracks, progress, notes, the
 agents roster and their launches, and each conversation's transcript as Claude
-Code JSONL (`core/internal/transcripts.ts`) the real parser reads. The stories
+Code JSONL (`core/internal/transcripts.ts`) the real parser reads: several
+turns, tool calls in the real tools' input and result shapes (`Read` as
+`cat -n`, `./equin` as the CLI prints it), an ending that fits its state, and
+the page-tool calls the seed RAN, with their real results. The stories
 and agents are described once, in `core/internal/stories.ts`. The
 demo owns its scenario, so the demo plugins (`framework/browser-server/demo`)
 never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope>`
@@ -67,9 +71,10 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   rows — no mutation can backdate — queue ranks, pushes, agents, the prompt
   block origin) → the practice-timer agent's page work through the real page tools
   (`page/annotations/agent-access`'s `pageTools.read` / `edit` / `writeNote`,
-  as that conversation — its first read receives My equin's instructions
+  as that conversation — its first read receives Piano practice's instructions
   card; each call's input and exact result go into its
-  transcript, the minted card and page ids read from the edit's own report)
+  transcript, the minted card and page ids read from the edit's own report;
+  the weekly-review agent's read of the Journal, likewise)
   → the user decorating the page the agent minted with an icon (⏳), through
   the page header's own `PATCH` sent to the host's router (`seed`'s `host`
   argument) — an agent's tools cannot set an icon, a person can — → settle →
@@ -81,7 +86,10 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   markdown runs, which nothing names, get fresh ids from the writer.
 - **The user is "Demo"** — the browser host's guest account
   (`infra/host-account/guest`), so Pages reads "Demo's pages". No fictional
-  product: every task, page, prototype and song is about Demo's own equin.
+  product, and no staged story about equin: the pages are what a person
+  keeps (a welcome listing what to try, piano notes, a journal, ideas, a tour
+  of every block), the songs are chord grids that read as songs, and every
+  task is a change Demo asked of their own apps.
 - **Nothing the demo uses goes unanswered, by construction.** The build's
   browser-host coverage guard (codegen's `core/browser-host-coverage.ts`, run
   by `deriveBrowserHostGraph`, so a gap fails `build` and `push`) reads every
@@ -233,6 +241,9 @@ data and seed; no app folder changes:
     - `conversations/agents.agentIdKind`
     - `conversations/agents.agentLaunchIdKind`
     - `conversations/model-provider.ConversationModelSchema`
+    - `infra/namespace.asNamespace`
+    - `infra/namespace.namespaceUrl`
+    - `packages/string-hash.hashHex`
     - `page/editor.blockIdKind`
     - `page/inline-date.dateToken`
     - `page/inline-page-link.pageLinkToken`
@@ -258,6 +269,7 @@ data and seed; no app folder changes:
     - `demoConversationId`
     - `demoPromptOf`
     - `demoPrototypeFixture`
+    - `demoPushSha`
     - `demoStoryByKey`
     - `demoTaskId`
     - `demoTranscriptJsonl`

@@ -8,13 +8,14 @@ import {
 } from "@plugins/conversations/plugins/agents/core";
 import type { ConversationPhase } from "@plugins/conversations/plugins/conversation-progress/core";
 import type { TaskTrack } from "@plugins/tasks/plugins/task-track/core";
+import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 
-// The Agent Manager demo's story: Demo shaping their own equin with agents.
-// Every task is a change to one of Demo's apps. The open conversation is an
-// agent that added a practice timer to Sonata, tested and built it, and is
-// waiting for Demo's review — launched from a prompt on the "My equin" page
-// (`./pages`), where it left its plan. The queue holds three other agents
-// mid-task; the Done list two finished ones.
+// The Agent Manager demo's tasks: changes Demo asked of their own apps. The
+// open conversation is an agent that added a practice timer to Sonata, tested
+// and built it, and is waiting for Demo's review — launched from a prompt on
+// the "Piano practice" page (`./pages`), where it left its plan. The queue
+// holds a prototype ready for review, a design question, and a roster agent
+// at work; the Done list two pushed ones.
 // Every id carries `demo`, so a request that leaked to the real server is
 // findable in its logs. Written into the demo's browser host by its seed
 // (`bin/seed.ts`), each story's transcript by `./transcripts`.
@@ -54,8 +55,6 @@ export interface Story {
   note?: string;
   /** The key of the agent ({@link DEMO_AGENTS}) that launched the task; filed by hand when absent. */
   agent?: string;
-  /** The agent's answer to the prompt, for a story whose transcript is brief; a generic one when absent. */
-  reply?: string;
 }
 
 /** A named agent of the roster (`conversations/agents`), launched by its stories. */
@@ -99,7 +98,7 @@ export const STORIES: readonly Story[] = [
     shortTitle: "Practice timer",
     phase: "implementation",
     note: "Check it only counts while I'm playing, not while a song is just open.",
-    // Launched from the My equin page's prompt block (`./pages`), so filed
+    // Launched from the Piano practice page's prompt block (`./pages`), so filed
     // where a prompt-launched task is.
     category: PAGES_CATEGORY_ID,
     task: "Practice timer in Sonata",
@@ -119,12 +118,10 @@ export const STORIES: readonly Story[] = [
     prompt:
       "I want a small app for our family recipes: a card per recipe, with photos, and a shopping list made from the ones we pick for the week.",
     title: "Prototype a recipe box app",
-    reply:
-      'A new app starts as a prototype, so you can see it before anything is built. I\'m drawing "Recipe box: home" in Prototypes: a grid of recipe cards, with a density and an accent colour to try.',
-    status: "working",
+    status: "waiting",
     model: OPUS,
-    startedAgo: 25 * MIN,
-    updatedAgo: 0.3 * MIN,
+    startedAgo: 70 * MIN,
+    updatedAgo: 6 * MIN,
   },
   {
     key: "weekly-review",
@@ -133,9 +130,8 @@ export const STORIES: readonly Story[] = [
     phase: "research",
     agent: "weekly-review",
     task: "Weekly review: what shipped last week",
+    prompt: "Sum up what my agents shipped last week, on my Journal page.",
     title: "Sum up last week's pushes on the Journal page",
-    reply:
-      "Reading last week's pushes and the conversations behind them, to write a short summary on your Journal page.",
     status: "working",
     model: SONNET,
     startedAgo: 12 * MIN,
@@ -147,9 +143,8 @@ export const STORIES: readonly Story[] = [
     phase: "design",
     category: CONVERSATIONS_CATEGORY_ID,
     task: "Calendar: my tasks on a month view",
+    prompt: "Show my tasks on a month calendar, so I can see what's coming up.",
     title: "Design a month view for tasks",
-    reply:
-      "Before I build it: should a task sit on the day it was filed, or on a due date you set? Tasks have no due date yet, so the second means adding one.",
     status: "waiting",
     model: OPUS,
     startedAgo: 2 * HOUR,
@@ -162,8 +157,6 @@ export const STORIES: readonly Story[] = [
     agent: "small-wishes",
     task: "Pin my favourite songs at the top of Sonata's library",
     title: "Add a pin to Sonata's song cards",
-    reply:
-      "Done: each song card has a pin, and pinned songs sit at the top of the library. Pushed.",
     status: "done",
     model: SONNET,
     startedAgo: 5 * HOUR,
@@ -177,8 +170,6 @@ export const STORIES: readonly Story[] = [
     category: WISHES_CATEGORY_ID,
     task: "A keyboard shortcut to file a wish",
     title: "Open the Wish popover with a shortcut",
-    reply:
-      "Done: ⌘⇧W opens the Wish popover from any app, with the page you are on attached. Pushed.",
     status: "done",
     model: OPUS,
     startedAgo: 26 * HOUR,
@@ -206,5 +197,16 @@ export const agentId = (a: DemoAgent) =>
   agentIdKind.parse(`agent-1760000000-demo${a.n}`);
 export const agentLaunchId = (s: Story) =>
   agentLaunchIdKind.parse(`launch-1760000000-demo${STORIES.indexOf(s) + 1}`);
+/** The story's checkout: named by its attempt id, as every worktree is. */
+/**
+ * The commit a pushed story's work landed as: hex, stable per story, so the
+ * push ledger (`bin/seed.ts`) and the transcripts' git output agree.
+ */
+export const pushSha = (s: Story) =>
+  (hashHex(`demo-push:${s.key}`) + hashHex(`demo-push:${s.key}#2`)).slice(
+    0,
+    40,
+  );
+
 export const worktreePath = (s: Story) =>
-  `/home/demo/equin/.worktrees/${s.key}`;
+  `/home/demo/equin/.claude/worktrees/${attemptId(s)}`;

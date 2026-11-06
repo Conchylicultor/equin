@@ -12,12 +12,12 @@
  *     host page's (mounting the embed alone does not move the keys into it);
  *  1. opens the launcher inside the embed and picks Pages: the embed switches
  *     to Pages (`data-app-embed`, its theme scope), whose sidebar lists the
- *     seeded pages ("Welcome to equin", "My equin", "Ideas");
+ *     seeded pages ("Welcome to equin", "Piano practice", "Ideas");
  *  2. goes back to the Agent Manager through the launcher;
- *  3. opens the practice-timer task's detail, and its Origin chip: the My equin page
+ *  3. opens the practice-timer task's detail, and its Origin chip: the Piano practice page
  *     opens beside it;
  *  4. Expand on that page ("Open in Pages"): the embed switches to Pages on
- *     the My equin page.
+ *     the Piano practice page.
  *
  * And asserts, throughout, that the page itself never moved:
  *
@@ -60,9 +60,9 @@ const SANCTIONED: readonly RegExp[] = [
 ];
 
 /** The seeded pages (`website/demos/workspace`'s `core/internal/pages.ts`). */
-const ROOT_PAGES = ["Welcome to equin", "My equin", "Ideas"] as const;
-const ORIGIN_PAGE = "My equin";
-/** The seeded task launched from My equin's prompt block (`stories.ts`). */
+const ROOT_PAGES = ["Welcome to equin", "Piano practice", "Ideas"] as const;
+const ORIGIN_PAGE = "Piano practice";
+/** The seeded task launched from Piano practice's prompt block (`stories.ts`). */
 const PRACTICE_TIMER_TASK = "Practice timer in Sonata";
 /** How long an app swap or a worker read gets to render. */
 const RENDER_TIMEOUT_MS = 20_000;
@@ -231,7 +231,7 @@ await withBrowser(async (h) => {
   pathStays("back to the Agent Manager");
   await noLeaveToast("back to the Agent Manager");
 
-  // ── 3. the practice-timer task's Origin chip → My equin ─────────────────
+  // ── 3. the practice-timer task's Origin chip → Piano practice ─────────────────
   await embedRoot(page)
     .getByRole("button", { name: "Tasks", exact: true })
     .first()
@@ -250,14 +250,14 @@ await withBrowser(async (h) => {
     .getByRole("button", { name: new RegExp(`^\\s*${ORIGIN_PAGE}\\s*$`) })
     .first();
   await renders(
-    "the task detail's Origin section shows My equin",
+    "the task detail's Origin section shows Piano practice",
     () => origin.count(),
     (n) => n > 0,
   );
   await origin.click();
   const pagePane = embedRoot(page).locator('[data-pane-id="page-detail"]');
   await renders(
-    "the Origin chip opens My equin",
+    "the Origin chip opens Piano practice",
     () => pageTitle(pagePane),
     (title) => title === ORIGIN_PAGE,
   );
@@ -265,7 +265,7 @@ await withBrowser(async (h) => {
   await noLeaveToast("Origin chip");
   await snap(page, OUT, "3-origin");
 
-  // ── 4. Expand → Pages, on My equin ──────────────────────────────────────
+  // ── 4. Expand → Pages, on Piano practice ──────────────────────────────────────
   // By its exact label: a role-name match also took the header's ⋯ (More
   // actions) here, so the click opened the overflow instead.
   const openInPages = pagePane
@@ -273,7 +273,7 @@ await withBrowser(async (h) => {
     .locator('button[aria-label="Open in Pages"]')
     .first();
   if ((await openInPages.count()) === 0) {
-    r.fail("My equin offers Open in Pages", "no such button");
+    r.fail("Piano practice offers Open in Pages", "no such button");
   } else {
     // The header is an overflow bar that re-lays out as the pointer moves over
     // it, so a locator click can land on whatever slid under its aim (the ⋯).
@@ -290,7 +290,7 @@ await withBrowser(async (h) => {
       (id) => id === "pages",
     );
     await renders(
-      "Pages opens on My equin",
+      "Pages opens on Piano practice",
       () => pageTitle(embedRoot(page).locator('[data-pane-id="page-detail"]')),
       (title) => title === ORIGIN_PAGE,
     );

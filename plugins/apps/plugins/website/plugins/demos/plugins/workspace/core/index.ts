@@ -8,6 +8,7 @@ export {
   attemptId as demoAttemptId,
   conversationId as demoConversationId,
   worktreePath as demoWorktreePath,
+  pushSha as demoPushSha,
   promptOf as demoPromptOf,
   storyByKey as demoStoryByKey,
 } from "./internal/stories";

@@ -11314,6 +11314,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/agents.agentIdKind`
                   - `conversations/agents.agentLaunchIdKind`
                   - `conversations/model-provider.ConversationModelSchema`
+                  - `infra/namespace.asNamespace`
+                  - `infra/namespace.namespaceUrl`
+                  - `packages/string-hash.hashHex`
                   - `page/editor.blockIdKind`
                   - `page/inline-date.dateToken`
                   - `page/inline-page-link.pageLinkToken`
@@ -11339,6 +11342,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `demoConversationId`
                   - `demoPromptOf`
                   - `demoPrototypeFixture`
+                  - `demoPushSha`
                   - `demoStoryByKey`
                   - `demoTaskId`
                   - `demoTranscriptJsonl`
@@ -34009,10 +34013,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 68 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 69 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×12
           - `debug` ×11
-          - `apps` ×8
+          - `apps` ×9
           - `conversations` ×7
           - `infra` ×7
           - `build` ×5
@@ -38076,8 +38080,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 34 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
-          - `apps` ×9
+        - Imported by: 35 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+          - `apps` ×10
           - `network` ×5
           - `database` ×4
           - `framework` ×3

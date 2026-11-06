@@ -9,18 +9,18 @@ import type {
 import { DEMO_PINNED_PROTOTYPE } from "./prototypes";
 import { promptOf, storyByKey } from "./stories";
 
-// Demo's workspace, as a pure tree: a welcome page that explains equin in the
-// editor's own blocks, "My equin" (the wishes, the prompt that launched the
-// practice-timer agent, and the spec it reads), a tour of every block type, a
-// journal and an ideas page. A Pages fixture (`apps/pages/fixtures`), written
-// into the browser host by its seed (`bin/seed.ts`) through that app's writer;
-// what the agent then wrote into My equin is not here — the seed RUNS it
-// (`PRACTICE_TIMER_PAGE_WORK`) through the real page tools
-// (`page/annotations/agent-access`'s `pageTools`).
+// Demo's workspace, as a pure tree: a welcome page (what to try in this
+// demo), Piano practice (Demo's notes on the songs they are learning, the
+// prompt that launched the practice-timer agent, and the spec it reads), a
+// tour of every block type, a journal and an ideas page. A Pages fixture
+// (`apps/pages/fixtures`), written into the browser host by its seed
+// (`bin/seed.ts`) through that app's writer; what the agent then wrote into
+// Piano practice is not here — the seed RUNS it (`PRACTICE_TIMER_PAGE_WORK`)
+// through the real page tools (`page/annotations/agent-access`'s `pageTools`).
 //
 // The prose is markdown runs (the dialect `read_page` emits), so a page can
 // hold any block type; the blocks another record names — a page, the prompt a
-// task was launched from, the to-dos naming the stories — carry our own ids.
+// task was launched from — carry our own ids.
 
 /**
  * A seeded block id: stamped and carrying `demo` (`block-1760000000-demoNN`),
@@ -33,8 +33,8 @@ const blockId = (n: number) =>
 /** The seeded pages and the blocks the story names, by role. */
 export const DEMO_PAGE_IDS = {
   welcome: blockId(1),
-  myEquin: blockId(10),
-  /** My equin's prompt block — the practice-timer story's origin. */
+  practice: blockId(10),
+  /** Piano practice's prompt block — the practice-timer story's origin. */
   prompt: blockId(11),
   spec: blockId(20),
   blockTour: blockId(30),
@@ -45,17 +45,6 @@ export const DEMO_PAGE_IDS = {
 const md = (...lines: string[]): PageFixtureNode => ({
   type: "markdown",
   markdown: lines.join("\n"),
-});
-
-const todo = (
-  id: string,
-  storyKey: string,
-  checked = false,
-): PageFixtureNode => ({
-  id,
-  type: "to-do",
-  text: storyByKey(storyKey).task,
-  checked,
 });
 
 const link = (pageId: string) => `<page id="${pageId}"/>`;
@@ -71,80 +60,64 @@ export const DEMO_PAGES: PageTreeFixture = [
     starred: true,
     children: [
       md(
-        "# One app that becomes yours",
-        "equin is **one app you shape yourself**: you say what you want, and agents build it into *your own* copy. This demo is a real equin running in your browser, on Demo's data.",
         '<callout icon="info" color="info">',
-        "  Everything here works: edit this page, file a wish, open another app. **Reset demo** brings everything back.",
+        "  This is equin running in your browser, on Demo's data. Change anything you like: **Reset demo** puts it all back.",
         "</callout>",
-        "## What equin is",
-        "- **Your apps, shaped by you.** Pages, a piano, a task manager: each one changes when you ask.",
-        "- **Agents do the work.** Each wish becomes a task, and an agent takes it in its own copy of the app.",
-        "- **Built from plugins.** Every feature is a plugin, so an agent adds one without breaking the rest.",
-        "## How a wish becomes a feature",
-        "1. Write the wish anywhere: a page, the `Wish` button, the task list.",
-        "1. An agent works on it in its own copy, and shows you a preview.",
-        "1. You review it, ask for changes, or ship it.",
-        "1. It lands in your equin, and the next wish starts from there.",
-        "> What is an agent page?",
-        `  A page an agent wrote for you, beside the prompt you gave it: its plan, what it found, what it did. The practice-timer agent left one on ${pageLinkToken(DEMO_PAGE_IDS.myEquin)}. You can read it, comment in it, or give it an icon.`,
-        "<quote>",
-        "  An app that replaces all the others: shaped for each person, at the boundary of an application and an operating system.",
-        "</quote>",
-        "---",
-        "Where to go next:",
-        `- ${pageLinkToken(DEMO_PAGE_IDS.myEquin)}: Demo's wishes, and the agent that took one.`,
-        `- ${pageLinkToken(DEMO_PAGE_IDS.blockTour)}: every block a page can hold.`,
-        `- ${pageLinkToken(DEMO_PAGE_IDS.journal)}: what changed, week by week.`,
+        "## Things to try",
+        "- [ ] Open the **Agent Manager**: an agent added a practice timer to Sonata and is waiting for review. Read what it did, step by step.",
+        "- [ ] In **Sonata**, play the ii–V–I warm-up the agent tested its timer on.",
+        "- [ ] In **Prototypes**, open the Recipe box and switch its accent colour.",
+        `- [ ] Here in Pages, open ${pageLinkToken(DEMO_PAGE_IDS.practice)}: the prompt that started that agent is on it, with the agent's answer beside it.`,
+        "- [ ] Type `/` on an empty line below to add a block.",
+        "## Demo's pages",
+        `- ${pageLinkToken(DEMO_PAGE_IDS.practice)}: songs, practice log, and the timer request.`,
+        `- ${pageLinkToken(DEMO_PAGE_IDS.blockTour)}: one of every block a page can hold.`,
+        `- ${pageLinkToken(DEMO_PAGE_IDS.journal)} and ${pageLinkToken(DEMO_PAGE_IDS.ideas)}: everyday notes.`,
       ),
     ],
   },
   {
-    id: DEMO_PAGE_IDS.myEquin,
+    id: DEMO_PAGE_IDS.practice,
     type: "page",
-    title: "My equin",
-    icon: EmojiSchema.parse("🧭"),
+    title: "Piano practice",
+    icon: EmojiSchema.parse("🎹"),
     tags: [{ name: "In progress", color: "blue" }],
     children: [
       md(
-        "What I want my equin to do next. Each wish here is a task an agent can take.",
+        `Lessons on Thursdays. Goal: Late night, start to finish, by ${dateToken("2026-12-24")}.`,
         "<instructions>",
         "  Keep plans short: a few lines on this page, the details on your own page.",
         "  Ask me before adding a new app.",
         "</instructions>",
-        "## Wishes",
-      ),
-      todo(blockId(12), "recipes"),
-      todo(blockId(13), "calendar"),
-      todo(blockId(14), "pin-songs", true),
-      todo(blockId(15), "wish-shortcut", true),
-      md(
-        "## Ask an agent",
-        `Write what you want and press Run: an agent takes it, and answers on this page. How the timer should behave: ${pageLinkToken(DEMO_PAGE_IDS.spec)}`,
+        "## Learning now",
+        "| Song | Where I am | Next |",
+        "| --- | --- | --- |",
+        "| ii–V–I warm-up | C, F and Bb | Eb and Ab |",
+        "| Late night | Verse, hands together | Chorus voicings |",
+        "| Rain on the window | Verse, slowly | The (Dm7 E7) bar |",
+        "## Practice log",
+        "- Mon: 20 min, warm-up in C and F.",
+        "- Tue: skipped.",
+        "- Wed: 35 min, Late night verse. The Fmaj7 to G still lands late.",
+        "> Teacher's notes",
+        "  Left hand: shells only (root and seventh) until the changes are automatic.",
+        "  Count out loud in Rain on the window; the bar with two chords rushes.",
+        "## Timer",
+        `I never know how much I actually practise. What I want: ${pageLinkToken(DEMO_PAGE_IDS.spec)}`,
       ),
       {
         id: DEMO_PAGE_IDS.prompt,
         type: "prompt",
         text: promptOf(storyByKey("practice-timer")),
       },
-      md(
-        "## Apps I use",
-        "| App | What for | Last shaped |",
-        "| --- | --- | --- |",
-        "| Agent Manager | The agents working on my wishes | A shortcut to file a wish |",
-        "| Pages | Notes, plans and this page | Covers and page icons |",
-        "| Sonata | Learning piano | Pinned songs |",
-        "| Prototypes | Trying an app before it is built | Recipe box |",
-        `More wishes, not filed yet: ${pageLinkToken(DEMO_PAGE_IDS.ideas)}`,
-      ),
       {
         id: DEMO_PAGE_IDS.spec,
         type: "page",
         title: "Practice timer spec",
-        icon: EmojiSchema.parse("🎹"),
+        icon: EmojiSchema.parse("⏱️"),
         children: [
           md(
-            "What I want from a practice timer in Sonata.",
-            "- Count time only while I play: notes sounding, or the song's playback running.",
+            "- Count time only while a song is playing, not while it is just open.",
             "- Show this week's total next to each song in the library.",
             "- A week starts on Monday.",
             "- Show nothing for a song I haven't practised this week.",
@@ -185,10 +158,11 @@ export const DEMO_PAGES: PageTreeFixture = [
         "  A quote, for words that are someone else's.",
         "</quote>",
         "```ts",
-        "export default {",
-        '  description: "Practice time per song, this week.",',
-        "  contributions: [Library.Column.provide(practiceColumn)],",
-        "} satisfies PluginDefinition;",
+        "export function weekStart(at: Date): Date {",
+        "  const d = new Date(at);",
+        "  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));",
+        "  return d;",
+        "}",
         "```",
         "| Block | Type it as |",
         "| --- | --- |",
@@ -212,12 +186,14 @@ export const DEMO_PAGES: PageTreeFixture = [
     icon: EmojiSchema.parse("📓"),
     children: [
       md(
-        "What changed in my equin, week by week. The Weekly review agent adds a line each Monday.",
-        "### Last week",
-        "- Sonata's song cards got a pin; my favourites sit at the top.",
-        "- ⌘⇧W files a wish from any app.",
-        "### The week before",
-        "- Pages got covers. This journal has none, on purpose.",
+        "### Wednesday",
+        "- Lesson moved to Thursday. Practised the Late night verse instead: better, but the Fmaj7 to G still lands late.",
+        "- Lentil soup for four. Next time, more cumin.",
+        "### Monday",
+        "- Booked Lisbon for March. Started saving places on the map: the tram, a bakery, the tile museum.",
+        "- Twenty minutes of warm-up before work. Worth doing every day.",
+        "### Last Sunday",
+        "- Pancakes, then a long walk. Finally finished the book on Bach.",
       ),
     ],
   },
@@ -228,27 +204,32 @@ export const DEMO_PAGES: PageTreeFixture = [
     icon: EmojiSchema.parse("💭"),
     children: [
       md(
-        "Wishes I have not filed yet.",
-        "- A reading list that reminds me of a book after a month.",
-        "- Sonata: slow a song down without changing its pitch.",
-        `- A photo wall for the family, next to the recipes (${pageLinkToken(DEMO_PAGE_IDS.myEquin)}).`,
+        "Things I might do, someday.",
+        "### Music",
+        "- Slow a song down without changing its pitch.",
+        "- Learn one standard a month, starting with Autumn Leaves.",
+        "### Home",
+        "- Herbs on the kitchen windowsill: basil, mint, chives.",
+        "- A family recipe book: one card per recipe, a shopping list for the week.",
+        "### Reading",
+        "- A list that reminds me of a book a month after I add it.",
       ),
     ],
   },
 ];
 
 /**
- * What the practice-timer agent wrote into My equin, as the markdown it handed
- * the page tools: an `<agent-inline>` card beside the prompt that launched it
- * and an `<agent-page>` holding its plan (`edit_page`), then the card
- * rewritten once the tests passed and the preview was built
+ * What the practice-timer agent wrote into Piano practice, as the markdown it
+ * handed the page tools: an `<agent-inline>` card beside the prompt that
+ * launched it and an `<agent-page>` holding its plan (`edit_page`), then the
+ * card rewritten once the tests passed and the preview was built
  * (`write_agent_note`).
  */
 export const PRACTICE_TIMER_PAGE_WORK = {
   /** The tagless card `edit_page` mints after the prompt line. */
   card: [
     "<agent-inline>",
-    "  Plan: Sonata already counts plays per song (playback-history). I'm adding the time played this week beside it, as a library column. Building it now.",
+    "  Plan: Sonata already counts plays per song. I'm adding the time played this week beside it, as a library column. Working on it.",
     "</agent-inline>",
   ].join("\n"),
   /** The plan page `edit_page` mints beside the card. */
@@ -257,17 +238,20 @@ export const PRACTICE_TIMER_PAGE_WORK = {
   planIcon: EmojiSchema.parse("⏳"),
   plan: [
     '<agent-page title="Practice timer: plan">',
-    "  ## What I'll build",
-    "  - A `practiceThisWeek` field beside Sonata's play count, summed from the time a song's playback runs.",
-    "  - A **This week** column in the library, empty for a song not practised this week.",
-    "  ## As your spec asks",
-    "  - It counts only while playback runs, not while a song is just open.",
+    "  ## Approach",
+    "  - Sonata's `playback-history` already keeps a play count per song. Add `practiceThisWeek` beside it.",
+    "  - Add to it while a song's playback runs; reset when the week changes.",
+    "  - It shows as a **This week** column in the library, like the play count.",
+    "  ## From the spec",
+    "  - Only time spent playing counts, not a song left open.",
     "  - Weeks start on Monday.",
-    "  ## Checks",
-    "  - A test plays a song for 90 s, pauses, then plays 30 s more: the week shows 2 min.",
+    "  - A song with no practice this week shows nothing.",
+    "  ## Tests",
+    "  - Play 90 s, pause 10 min, play 30 s: the week shows 2 min.",
+    "  - Play Sunday night and Monday morning: only Monday counts this week.",
     "</agent-page>",
   ].join("\n"),
   /** The card's whole contents once the work passed (`write_agent_note`). */
   cardDone:
-    "Done: the library shows this week's practice time per song. The 6 tests pass and the preview is built. Waiting for your review.",
+    "Ready for review: the library has a This week column with your practice time per song. Tests pass and the preview is built; details in the plan page.",
 } as const;

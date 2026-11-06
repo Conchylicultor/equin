@@ -25,7 +25,10 @@ import {
 import { promptBlock } from "@plugins/page/plugins/prompt/plugins/link/server";
 import { pageTools } from "@plugins/page/plugins/annotations/plugins/agent-access/server";
 import { writePageTree } from "@plugins/apps/plugins/pages/plugins/fixtures/server";
-import type { PrototypeFixtureData } from "@plugins/apps/plugins/prototypes/plugins/fixtures/core";
+import {
+  parsePrototypeTree,
+  type PrototypeFixtureData,
+} from "@plugins/apps/plugins/prototypes/plugins/fixtures/core";
 import { writePrototypeFixture } from "@plugins/apps/plugins/prototypes/plugins/fixtures/server";
 import { writeSongFixtures } from "@plugins/apps/plugins/sonata/plugins/fixtures/server";
 import { writePlacesFixture } from "@plugins/apps/plugins/places/plugins/fixtures/server";
@@ -55,6 +58,7 @@ import {
   demoTranscriptJsonl,
   demoPrototypeFixture,
   demoWorktreePath,
+  demoPushSha,
   type DemoPageSession,
   type DemoPageToolCall,
 } from "../core";
@@ -75,12 +79,12 @@ import {
  *    in the queue, and, for a finished story, the push that landed it; its
  *    short title, track, progress and note; the roster of agents with the
  *    launch of each story an agent filed; the practice-timer task's origin,
- *    My equin's prompt block;
- * 3. the page work the practice-timer agent did, RUN through the real page
- *    tools ({@link runPracticeTimerPageWork}), then settled; then the user
+ *    Piano practice's prompt block;
+ * 3. the page work the agents did, RUN through the real page tools
+ *    ({@link runPageWork}), then settled; then the user
  *    decorating the page it minted with an icon, through the page header's own
  *    write ({@link decoratePlanPage}) — an agent's tools cannot set one;
- * 4. each conversation's transcript, the practice-timer one recording that run;
+ * 4. each conversation's transcript, recording those runs;
  * 5. the Prototypes gallery, through Prototypes' fixture writer
  *    (`writePrototypeFixture`) from `prototypes` — the committed `../data/`,
  *    inlined into the worker's bundle or read off disk by the boot test — then
@@ -177,7 +181,7 @@ export async function seed(
         id: `push-demo-${story.key}`,
         attemptId,
         conversationId,
-        sha: `demo${story.key}`.padEnd(40, "0").slice(0, 40),
+        sha: demoPushSha(story),
         pushId: `push-demo-${story.key}`,
         message: story.title,
         createdAt: ago(story.endedAgo),
@@ -185,19 +189,21 @@ export async function seed(
   }
   for (const [i, story] of live.entries())
     await upsertRank(demoConversationId(story), ranks[i]!);
-  // The practice-timer task was launched from My equin's prompt block.
+  // The practice-timer task was launched from Piano practice's prompt block.
   await promptBlock.upsert(demoTaskId(PRACTICE_TIMER), {
-    pageId: DEMO_PAGE_IDS.myEquin,
+    pageId: DEMO_PAGE_IDS.practice,
     blockId: DEMO_PAGE_IDS.prompt,
   });
 
-  const session = await runPracticeTimerPageWork();
+  const session = await runPageWork();
   await decoratePlanPage(host, session.planId);
   await settleJobQueue();
   for (const story of DEMO_STORIES)
     await writeTranscript(
       demoConversationId(story),
-      demoTranscriptJsonl(story, now, session),
+      demoTranscriptJsonl(story, now, session, {
+        prototypes: parsePrototypeTree(prototypes.tree),
+      }),
     );
 
   await writePrototypeFixture(demoPrototypeFixture(prototypes));
@@ -209,10 +215,10 @@ export async function seed(
 }
 
 /**
- * What the practice-timer agent did on Demo's workspace, RUN through the page
- * tools' own handlers (`page/annotations/agent-access`'s `pageTools`, what the
- * MCP tools `read_page` / `edit_page` / `write_agent_note` call) as that
- * agent's conversation: read My equin, the page it was launched from (which
+ * What the agents did on Demo's workspace, RUN through the page tools' own
+ * handlers (`page/annotations/agent-access`'s `pageTools`, what the MCP tools
+ * `read_page` / `edit_page` / `write_agent_note` call), each as its own
+ * conversation. The practice-timer agent: read Piano practice, the page it was launched from (which
  * delivers the page's instructions for agents), and the spec it links, mint
  * the plan card and the plan page beside the prompt (`edit_page`), then
  * rewrite the card once the tests passed (`write_agent_note`). Each call's input and exact result are recorded for
@@ -220,26 +226,29 @@ export async function seed(
  * so the transcript cannot drift from the pages it left, and the authorship
  * stamps, redaction and instructions gate are the tools' own.
  */
-async function runPracticeTimerPageWork(): Promise<DemoPageSession> {
+async function runPageWork(): Promise<DemoPageSession> {
   const caller = { conversationId: demoConversationId(PRACTICE_TIMER) };
   const text = (result: { content: [{ text: string }] }) =>
     result.content[0].text;
 
-  const read = async (blockId: string): Promise<DemoPageToolCall> => {
+  const read = async (
+    blockId: string,
+    as = caller,
+  ): Promise<DemoPageToolCall> => {
     const input = { block_id: blockId };
-    return { input, result: text(await pageTools.read(input, caller)) };
+    return { input, result: text(await pageTools.read(input, as)) };
   };
-  const readOrigin = await read(DEMO_PAGE_IDS.myEquin);
+  const readOrigin = await read(DEMO_PAGE_IDS.practice);
   const readSpec = await read(DEMO_PAGE_IDS.spec);
 
-  // edit_page on My equin: the plan card and the plan page, after the
+  // edit_page on Piano practice: the plan card and the plan page, after the
   // prompt's line of the read.
   const promptLine = promptLineOf(
     readOrigin.result,
     demoPromptOf(PRACTICE_TIMER),
   );
   const editInput = {
-    block_id: DEMO_PAGE_IDS.myEquin,
+    block_id: DEMO_PAGE_IDS.practice,
     old_string: promptLine,
     new_string: [
       promptLine,
@@ -269,7 +278,12 @@ async function runPracticeTimerPageWork(): Promise<DemoPageSession> {
     result: text(await pageTools.writeNote(noteInput, caller)),
   };
 
-  return { readOrigin, readSpec, edit, note, cardId, planId };
+  // The weekly-review agent, mid-task: it has read the Journal it writes to.
+  const readJournal = await read(DEMO_PAGE_IDS.journal, {
+    conversationId: demoConversationId(demoStoryByKey("weekly-review")),
+  });
+
+  return { readOrigin, readSpec, edit, note, cardId, planId, readJournal };
 }
 
 /**
@@ -333,7 +347,7 @@ function promptLineOf(read: string, prompt: string): string {
   const lines = read.split("\n").filter((l) => l.includes(prompt));
   if (lines.length !== 1)
     throw new Error(
-      `[demo seed] expected one line of the My equin read to hold the prompt, found ${lines.length}:\n${read}`,
+      `[demo seed] expected one line of the Piano practice read to hold the prompt, found ${lines.length}:\n${read}`,
     );
   return lines[0]!;
 }

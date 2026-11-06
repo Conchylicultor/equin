@@ -266,15 +266,17 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     );
   });
 
-  /** The open conversation's events, oldest first, as the real parser reads its JSONL. */
-  async function openConversationEvents(): Promise<
+  /** A conversation's events (the open one's by default), oldest first, as the real parser reads its JSONL. */
+  async function openConversationEvents(
+    id: string = DEMO_CONVERSATION_ID,
+  ): Promise<
     ({ kind: string; name?: string; text?: string } | ToolCallEvent)[]
   > {
     // One page as large as the ceiling: the whole (short) transcript, newest first.
     const rows = (await loadResourceByKey(
       jsonlEvents.key,
       jsonlEvents.query.encode(
-        { id: DEMO_CONVERSATION_ID },
+        { id },
         { limit: JSONL_EVENTS_MAX, after: null, until: null },
       ),
     )) as { event: { kind: string; name?: string } }[];
@@ -289,22 +291,48 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
   test("the open conversation's transcript parses from its JSONL", async () => {
     const events = await openConversationEvents();
     expect(events[0]?.kind).toBe("user-text");
-    expect(
-      events.filter((e) => e.kind === "tool-call").map((e) => e.name),
-    ).toEqual([
+    const names = events
+      .filter((e) => e.kind === "tool-call")
+      .map((e) => e.name);
+    // It reads the page it was launched from and the spec first, writes its
+    // plan on the page, works in code, and ends rewriting its card.
+    expect(names.slice(0, 2)).toEqual([
       "mcp__equin__read_page",
       "mcp__equin__read_page",
-      "Grep",
-      "Read",
-      "mcp__equin__edit_page",
-      "Edit",
-      "Write",
-      "Write",
-      "Bash",
-      "Bash",
-      "mcp__equin__write_agent_note",
     ]);
+    expect(names).toContain("mcp__equin__edit_page");
+    expect(names).toEqual(
+      expect.arrayContaining(["Grep", "Read", "Edit", "Write", "Bash"]),
+    );
+    expect(names.at(-1)).toBe("mcp__equin__write_agent_note");
     expect(events.at(-1)?.kind).toBe("assistant-text");
+  });
+
+  test("every story's session reads as a real one: several turns, tool calls, an ending for its state", async () => {
+    for (const story of DEMO_STORIES) {
+      const events = await openConversationEvents(`conv-demo-${story.key}`);
+      const calls = events.filter((e) => e.kind === "tool-call");
+      expect(events[0]?.kind).toBe("user-text");
+      expect(calls.length).toBeGreaterThanOrEqual(3);
+      // An agent at work ends on a tool call still running; any other on its answer.
+      expect(events.at(-1)?.kind).toBe(
+        story.status === "working" ? "tool-call" : "assistant-text",
+      );
+    }
+  });
+
+  test("the weekly-review agent's Journal read is the real tool's", async () => {
+    const [readJournal] = (
+      await openConversationEvents("conv-demo-weekly-review")
+    ).filter(
+      (e): e is ToolCallEvent =>
+        e.kind === "tool-call" && (e.name ?? "").endsWith("read_page"),
+    );
+    const reread = await pageTools.read(
+      { block_id: DEMO_PAGE_IDS.journal },
+      { conversationId: "conv-demo-weekly-review" },
+    );
+    expect(readJournal!.result?.content).toBe(reread.content[0].text);
   });
 
   /** Every live page row: id → [parent, page, title]. */
@@ -327,16 +355,21 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
 
   test("Demo's workspace: its pages, their hierarchy, and the page the agent minted", async () => {
     const pages = await livePages();
-    const { welcome, myEquin, spec, blockTour, journal, ideas } = DEMO_PAGE_IDS;
+    const { welcome, practice, spec, blockTour, journal, ideas } =
+      DEMO_PAGE_IDS;
     expect(pages.get(welcome)).toEqual([null, null, "Welcome to equin"]);
-    expect(pages.get(myEquin)).toEqual([null, null, "My equin"]);
+    expect(pages.get(practice)).toEqual([null, null, "Piano practice"]);
     expect(pages.get(blockTour)).toEqual([null, null, "Block tour"]);
     expect(pages.get(journal)).toEqual([null, null, "Journal"]);
     expect(pages.get(ideas)).toEqual([null, null, "Ideas"]);
-    expect(pages.get(spec)).toEqual([myEquin, myEquin, "Practice timer spec"]);
+    expect(pages.get(spec)).toEqual([
+      practice,
+      practice,
+      "Practice timer spec",
+    ]);
     const seeded = new Set<string>([
       welcome,
-      myEquin,
+      practice,
       spec,
       blockTour,
       journal,
@@ -344,7 +377,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     ]);
     const minted = [...pages].filter(([id]) => !seeded.has(id));
     expect(minted.map(([, v]) => v)).toEqual([
-      [myEquin, myEquin, PRACTICE_TIMER_PAGE_WORK.planTitle],
+      [practice, practice, PRACTICE_TIMER_PAGE_WORK.planTitle],
     ]);
   });
 
@@ -406,19 +439,19 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     expect(versions.rows.map((v) => v.entity_id)).toEqual(pages);
   });
 
-  test("the backlinks index holds the inline link from My equin to the spec", async () => {
+  test("the backlinks index holds the inline link from Piano practice to the spec", async () => {
     const edges = await db.execute<{ source: string; target: string }>(
       sql`SELECT source_page_id AS source, target_page_id AS target FROM page_links`,
     );
     expect(edges.rows).toContainEqual({
-      source: DEMO_PAGE_IDS.myEquin,
+      source: DEMO_PAGE_IDS.practice,
       target: DEMO_PAGE_IDS.spec,
     });
   });
 
   test("the pages carry their tags and Welcome its star", async () => {
     expect(
-      (await loadPageTags(DEMO_PAGE_IDS.myEquin)).map((t) => t.name),
+      (await loadPageTags(DEMO_PAGE_IDS.practice)).map((t) => t.name),
     ).toEqual(["In progress"]);
     const starred = await db.execute<{ id: string }>(
       sql`SELECT parent_id AS id FROM page_blocks_ext_starred`,
@@ -426,11 +459,11 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     expect(starred.rows.map((r) => r.id)).toEqual([DEMO_PAGE_IDS.welcome]);
   });
 
-  test("the practice-timer task was launched from My equin's prompt block", async () => {
+  test("the practice-timer task was launched from Piano practice's prompt block", async () => {
     const story = demoStoryByKey("practice-timer");
     expect(story.category).toBe(PAGES_CATEGORY_ID);
     expect(await promptBlock.get(demoTaskId(story))).toMatchObject({
-      pageId: DEMO_PAGE_IDS.myEquin,
+      pageId: DEMO_PAGE_IDS.practice,
       blockId: DEMO_PAGE_IDS.prompt,
     });
     const prompt = await db.execute<{ text: string }>(
@@ -451,13 +484,13 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     expect(readOrigin!.result?.content).toContain(
       demoPromptOf(demoStoryByKey("practice-timer")),
     );
-    // My equin's instructions card reached the agent with its first read.
+    // Piano practice's instructions card reached the agent with its first read.
     expect(readOrigin!.result?.content).toContain("<received-instructions>");
 
     const [edit] = await toolCalls("edit_page");
     const report = parsePageApplyReport(edit!);
     expect(report).not.toBeNull();
-    expect(report!.page_id).toBe(DEMO_PAGE_IDS.myEquin);
+    expect(report!.page_id).toBe(DEMO_PAGE_IDS.practice);
     expect(report!.replaced).toBe(1);
     const pages = await livePages();
     const plan = [...pages].find(
