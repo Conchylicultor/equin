@@ -40,6 +40,7 @@ import {
   type ResourceRuntimeOptions,
 } from "./runtime";
 import type { ValuePatchWireOp } from "@plugins/packages/plugins/value-patch/core";
+import { readAddressedFrame } from "@plugins/primitives/plugins/networking/core";
 
 // Next-macrotask yield: flushes all pending microtasks (the queued flush) AND any
 // loader promises so the WS sends have landed in the log before we assert.
@@ -68,6 +69,12 @@ export function swapTick(next: () => Promise<void>): () => void {
 export interface RecordedFrame {
   seq: number;
   socket: number;
+  /**
+   * The tabs the frame was addressed to (`addressFrames`); `null` (or absent,
+   * on a frame recorded by another harness) for a bare frame — every tab on
+   * the socket.
+   */
+  to?: readonly string[] | null;
   kind: string;
   key?: string;
   id?: number;
@@ -176,6 +183,8 @@ export interface Harness {
     params?: ResourceParams,
     o?: { socket?: number; tabId?: string },
   ) => Promise<void>;
+  /** Send `op:address-frames` (the socket's peer routes addressed frames). */
+  addressFrames: (o?: { socket?: number }) => void;
   /** Send `op:unsub-tab` (best-effort tab departure) and await the next macrotask. */
   unsubTab: (tabId: string, o?: { socket?: number }) => Promise<void>;
   /** Close a socket (runs the runtime's close handler: its subs linger until their tabs replay them). */
@@ -212,13 +221,19 @@ export function createHarness(
     // Fake ServerWebSocket: only `send` is exercised by the runtime's sendJson.
     const ws = {
       send(raw: string) {
-        const msg = JSON.parse(raw) as Record<string, unknown> & {
+        const { to, body } = readAddressedFrame(raw);
+        const msg = JSON.parse(body) as Record<string, unknown> & {
           kind: string;
         };
         if (msg.kind === "ping") return raw.length; // ignore heartbeats
         // Spread verbatim so key presence (etag/value) is faithful for the reval
-        // assertions; only seq/socket are synthesized.
-        frames.push({ seq: seq++, socket: socketIdx, ...msg } as RecordedFrame);
+        // assertions; only seq/socket/to are synthesized.
+        frames.push({
+          seq: seq++,
+          socket: socketIdx,
+          to,
+          ...msg,
+        } as RecordedFrame);
         return raw.length;
       },
       close() {},
@@ -301,6 +316,12 @@ export function createHarness(
         }),
       );
       await tick();
+    },
+    addressFrames(o = {}) {
+      handler.message(
+        wsList[o.socket ?? 0],
+        JSON.stringify({ op: "address-frames" }),
+      );
     },
     async unsubTab(tabId, o = {}) {
       const ws = wsList[o.socket ?? 0];

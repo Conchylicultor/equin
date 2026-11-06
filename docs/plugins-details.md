@@ -37202,11 +37202,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/metrics`
         - **`resource-runtime`**
           - Core:
-            - Uses: 23 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
               - `network/live/resource-protocol` ×15
               - `packages/semaphore` ×2
               - `packages/string-hash` ×2
               - `packages/value-patch` ×2
+              - `primitives/networking` ×2
               - `network/live/canonical-params.canonicalParams`
               - `packages/inflight.createInflight`
             - Exports (types):
@@ -48170,12 +48171,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTransport`
           - `useTransportScoped`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
+        - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
           - `apps` ×11
           - `primitives` ×6
           - `conversations` ×5
+          - `network` ×4
           - `framework` ×3
-          - `network` ×3
           - `auth` ×2
           - `infra` ×2
           - `page` ×2
@@ -48203,10 +48204,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` (0 debt)
       - Core:
         - Exports (types):
+          - `ReadFrame`
           - `WsTestControls`
           - `WsTestEvent`
           - `WsTestHook`
         - Exports (values):
+          - `addressFrame`
+          - `readAddressedFrame`
           - `WS_TEST_HOOK_GLOBAL`
           - `wsTestHook`
       - Test helpers:

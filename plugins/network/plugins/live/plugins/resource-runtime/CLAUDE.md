@@ -240,8 +240,8 @@ so no change lands between check and copy.
   reason in `_debug.deriveFallbacks`.
 - **Trust boundary**: that the slices cover the new range is the client's claim;
   the runtime checks family, quiescence, completeness and fit.
-- The echo matches the client-minted `id` (the shared socket broadcasts every
-  frame), never re-spelled sources.
+- The echo matches the client-minted `id` (a bare frame reaches every tab on
+  the socket), never re-spelled sources.
 - `sub-batch` entries never derive.
 
 Pinned by `runtime-derive.test.ts` (incl. `makeClientView` convergence under random
@@ -723,9 +723,26 @@ All but the version are co-produced by the starter. A push drain mints
     reads join one flight, and each tab used to get its own full copy.
   - `_debug` per key: `subAcksShared`, `subAckChars` (value sub-acks sent),
     `subAckCharsSaved`. Pinned by `runtime-shared-socket.test.ts`.
+  - On an addressed socket a value counts only for the tabs it was addressed
+    to (`shipped.to`).
+- **Addressed frames** (`op: "address-frames"`, sent by every live-state
+  client on every socket open): from then on each frame on the socket is
+  addressed (`primitives/networking`'s `core/addressed-frame.ts`) to the tabs
+  it is for, and the tabs' SharedWorker hands it only to them — a tab never
+  receives, parses and drops another tab's frame (`frameAudience`):
+  - an answer (`sub-ack`, `up-to-date`, `up-to-date-batch`) → its asker, and a
+    whole-value `sub-ack` also → the holders still awaiting their own answer
+    (`SocketSubRecord.awaiting`: a replay herd shares one copy);
+  - any other frame naming a tuple (`update` / `delta` / `patch` /
+    `invalidate` / `ack` / `sub-error`) → every holder (`SocketSubRecord.tabs`),
+    plus a refusal's asker;
+  - bare (every tab): a `ping`, a frame no tab is known for, one an untagged
+    (`""`) holder holds, and every frame on a socket that never asked.
+  - The body is serialized once; only the address differs per socket. Pinned
+    by `runtime-shared-socket.test.ts` (*addressed frames*).
 - The HTTP body is `{ value, version, epoch }`, the version read before the load.
-- **`sub-error` frames carry `params`** (the shared socket broadcasts to every
-  tab).
+- **`sub-error` frames carry `params`** (a bare frame reaches every tab on the
+  socket).
 
 ## The params gate: a contract mismatch is version skew, not a crash
 
@@ -867,11 +884,12 @@ Out of reach at this seam (DB-backed harness instead):
 ## Plugin reference
 
 - Core:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/resource-protocol` ×15
     - `packages/semaphore` ×2
     - `packages/string-hash` ×2
     - `packages/value-patch` ×2
+    - `primitives/networking` ×2
     - `network/live/canonical-params.canonicalParams`
     - `packages/inflight.createInflight`
   - Exports (types):

@@ -1,4 +1,5 @@
 import type { BrowserServer } from "../core";
+import { readAddressedFrame } from "@plugins/primitives/plugins/networking/core";
 import {
   publishWsStatus,
   type Transport,
@@ -50,9 +51,13 @@ function connectedSocket(server: BrowserServer, url: string): TransportSocket {
     deliver(frame) {
       // Arrived when the server handed it over, before the microtask hop.
       const arrivedAt = Date.now();
+      // One tab per socket: every frame is its own, an addressed one (the
+      // runtime names the holders of the sub it carries) included — so the
+      // address is only read off, as the shared socket's worker does.
+      const { body } = readAddressedFrame(frame);
       queueMicrotask(() => {
         if (closed) return;
-        socket.onmessage?.({ data: frame, arrivedAt });
+        socket.onmessage?.({ data: body, arrivedAt });
       });
     },
     // The server went away (disposed): nothing more is sent, the will

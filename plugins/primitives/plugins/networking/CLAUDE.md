@@ -40,6 +40,14 @@ others — there is no leader to lose. Design:
   newer one, while every other deploy keeps all tabs on one socket — a module
   URL (its old dialect) split the socket on every rebuild of live-state. No
   dialect = every tab of this networking build.
+- **Addressed frames reach only their tabs.** `new SharedWebSocket(url,
+  hooks?, { address })` names the tab on the socket (live-state: its holder
+  id). A server frame written `addressFrame(to, body)` (`core/addressed-frame.ts`:
+  `RS addr,addr RS body`, no JSON parse to read) is posted — its body only —
+  to the ports whose address it names; a bare frame to every port. A consumer
+  needs a server that addresses (live-state's runtime does once asked) and a
+  `TransportSocket` that strips the address (`SharedWebSocket`; the browser
+  server's socket reads it off — one tab per socket).
 - **A frame says when it arrived.** The worker stamps each server frame
   (`rx.arrivedAt`, `Date.now()`) as its socket receives it, and the tab hands
   consumers a `SocketMessage` `{ data, arrivedAt }` — so a consumer timing a
@@ -224,12 +232,12 @@ built on them — see
     - `useTransport`
     - `useTransportScoped`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×11
     - `primitives` ×6
     - `conversations` ×5
+    - `network` ×4
     - `framework` ×3
-    - `network` ×3
     - `auth` ×2
     - `infra` ×2
     - `page` ×2
@@ -257,10 +265,13 @@ built on them — see
     - `reports` (0 debt)
 - Core:
   - Exports (types):
+    - `ReadFrame`
     - `WsTestControls`
     - `WsTestEvent`
     - `WsTestHook`
   - Exports (values):
+    - `addressFrame`
+    - `readAddressedFrame`
     - `WS_TEST_HOOK_GLOBAL`
     - `wsTestHook`
 - Test helpers:

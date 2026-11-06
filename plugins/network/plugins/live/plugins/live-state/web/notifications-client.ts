@@ -148,7 +148,8 @@ const REALM_HOLDER_ID = crypto.randomUUID();
 /**
  * The shared socket's options: its dialect is the frame vocabulary's id
  * (`PROTOCOL`, `network/live/resource-protocol`). The server answers one tab's
- * request with frames every tab on the socket receives, and a frame
+ * request with frames every tab holding the tuple receives (every tab on the
+ * socket, from a server that does not address its frames), and a frame
  * vocabulary grows (a derived `sub-ack` carries no value: a bundle that
  * predates it would parse `undefined` as the tuple's value and adopt its
  * version, wedging its own read). So a tab shares its socket only with tabs
@@ -348,9 +349,11 @@ type DerivationFrame = Derivation;
 
 // Every frame the server sends, as the protocol declares it (`ServerFrame`,
 // `network/live/resource-protocol` — each field's meaning is documented there).
-// The shared socket fans every frame out to every tab on it, so this tab reads
-// frames answering other tabs' requests too: every kind below is gated on a
-// live local sub before it touches the cache (`handleServerMessage`).
+// The runtime addresses each frame to the tabs it is for (`address-frames`),
+// but a frame may still reach a tab that does not hold its tuple — one sent
+// bare (a server that predates addressing, a legacy holder), or one in flight
+// across this tab's unsub: every kind below is gated on a live local sub
+// before it touches the cache (`handleServerMessage`).
 type ServerMsg = ServerFrame;
 /** The co-produced push timing an update / delta frame may carry. */
 type FrameTiming = NonNullable<
@@ -768,8 +771,12 @@ export class NotificationsClient {
       hooks?.makeSocket ??
       ((u: string, options: SharedWebSocketOptions) =>
         new SharedWebSocket(u, undefined, options));
-    // Every socket names the frame vocabulary it reads (`SOCKET_OPTIONS`).
-    this.makeSocket = (u) => makeSocket(u, SOCKET_OPTIONS);
+    // Every socket names the frame vocabulary it reads (`SOCKET_OPTIONS`), and
+    // this client's address on it — the holder id the runtime addresses the
+    // frames of its subs to (`address-frames`), so the shared socket's worker
+    // hands this tab only frames for tuples it holds.
+    this.makeSocket = (u) =>
+      makeSocket(u, { ...SOCKET_OPTIONS, address: this.tabId });
     const socketUrl = hooks?.socketUrl ?? ((path: string) => path);
     this.socketUrls = {
       worktree: socketUrl(WS_URLS.worktree),
@@ -909,8 +916,7 @@ export class NotificationsClient {
    * Record a heartbeat's stall report for `kind`: `pushStallMs` (every push
    * stopped) and `stalledResources` (one resource's drain stuck). Notifies
    * channel-status listeners only when either moved, so an idle server's pings
-   * re-render nothing. Every tab records it: the shared socket broadcasts every
-   * frame, pings included, to all tabs.
+   * re-render nothing. Every tab records it: a ping goes out bare, to all tabs.
    */
   private noteServerPushStall(
     kind: SocketKind,
@@ -1981,6 +1987,11 @@ export class NotificationsClient {
     channel.ws.setLastWill(wire({ op: "unsub-tab", tabId: this.tabId }));
     channel.ws.onopen = () => {
       channel.opens++;
+      // Before the replay: its answers are addressed to the tabs holding each
+      // tuple, never fanned out to every tab on the socket. Every tab sends it
+      // (the frame is idempotent); a server that predates it ignores it and
+      // keeps sending bare frames, which still reach every tab.
+      channel.ws.send(wire({ op: "address-frames" }));
       this.replaySubs(channel);
     };
     channel.ws.onmessage = (ev) => {
@@ -2355,7 +2366,7 @@ export class NotificationsClient {
         `sub-error key=${msg.key} params=${pk} reason=${msg.reason}${verdictTag}`,
       );
       // Gate on the local sub entry exactly like every other frame: the shared
-      // socket broadcasts to every tab, and a pre-upgrade server's params-less
+      // socket may carry a bare frame to every tab, and a pre-upgrade server's params-less
       // frame (`msg.params` undefined) won't match a live sub → safe drop. When
       // this tab DOES hold the sub, run the HTTP fallback read — its own
       // outcome sets q.error naturally (500 loader-failed / 404 →
@@ -2384,7 +2395,7 @@ export class NotificationsClient {
       // Standalone mutation-ack frame: version-less and cache-less, so it must
       // be handled BEFORE the version-guard block below (it carries no version
       // to compare). Gated on the local sub entry exactly like `sub-error`
-      // (the shared socket broadcasts every frame to every tab). Notes the acks
+      // (a bare frame reaches every tab on the shared socket). Notes the acks
       // into the module registry — which fires the registry's subscribers after
       // noting — and does NOTHING else: no cache write, no markApplied, no
       // version/epoch adoption.
@@ -2427,9 +2438,11 @@ export class NotificationsClient {
     }
 
     // Every remaining kind (sub-ack/update/delta/invalidate) carries (key,
-    // params) and targets a subscription. The shared socket broadcasts *every*
-    // server frame to *every* tab (see SharedWebSocket) — so this tab also
-    // receives frames for subscriptions only other tabs made. Apply a frame
+    // params) and targets a subscription. A frame addressed to this tab is for
+    // a tuple it held when it was sent, but a bare one (a server that predates
+    // addressing) reaches every tab on the shared socket, and one may cross
+    // this tab's unsub in flight — so this tab may receive frames for
+    // subscriptions it does not hold. Apply a frame
     // only when THIS tab holds a live subscription for it: a present `entry`
     // means observe() ran here, which registered the schema/keyOf the apply*
     // methods rely on. Without this gate a frame for another tab's resource
@@ -2473,7 +2486,7 @@ export class NotificationsClient {
     // actually holds. A value-less `up-to-date` says "what you have is still
     // current" — meaningless, and actively destructive, when we have nothing.
     //
-    // The shared socket broadcasts EVERY frame to EVERY tab, and the gate above
+    // A bare frame (a server that predates addressing) reaches EVERY tab, and the gate above
     // is only "do I hold a sub for this (key, params)", never "was this ack
     // answering MY request". So another tab's replay short-circuit
     // (`up-to-date`/`up-to-date-batch`, the only frames the server answers a

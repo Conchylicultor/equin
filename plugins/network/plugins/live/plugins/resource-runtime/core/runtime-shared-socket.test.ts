@@ -132,3 +132,104 @@ describe("shared socket — one value frame answers every tab on it", () => {
     expect(answer[0]!.version).toBe(update!.version);
   });
 });
+
+// A socket whose peer routes addressed frames (the tabs' SharedWorker, after
+// `op: "address-frames"`) gets each frame addressed to the tabs it is for, so
+// a tab never receives — let alone parses — a frame for another tab's sub.
+describe("addressed frames — each frame reaches only the tabs it is for", () => {
+  const tabsOf = (f: RecordedFrame) =>
+    f.to === null ? null : [...f.to!].sort();
+
+  test("a socket that did not ask gets bare frames", async () => {
+    const { h } = setup();
+    await h.subscribe("big", {}, { tabId: "t1" });
+    expect(h.frames.map((f) => f.to)).toEqual([null]);
+  });
+
+  test("a push reaches every tab holding the tuple, and no other", async () => {
+    const { h, src, resource } = setup();
+    h.runtime.defineExternalResource({
+      key: "other",
+      mode: "push",
+      schema: z.string(),
+      loader: () => Promise.resolve("o"),
+    });
+    h.addressFrames();
+    await h.subscribe("big", {}, { tabId: "t1" });
+    await h.subscribe("big", {}, { tabId: "t2" });
+    await h.subscribe("other", {}, { tabId: "t3" });
+    src.setValue(`${BIG}!`);
+    resource.notify();
+    await tick();
+    await tick();
+    const update = h.frames.find((f) => f.kind === "update")!;
+    expect(tabsOf(update)).toEqual(["t1", "t2"]);
+    const other = h.frames.find((f) => f.key === "other")!;
+    expect(tabsOf(other)).toEqual(["t3"]);
+  });
+
+  test("an answer goes to its asker alone — not to a holder that already has the value", async () => {
+    const { h } = setup();
+    h.addressFrames();
+    await h.subscribe("big", {}, { tabId: "t1" });
+    await h.subscribe("big", {}, { tabId: "t2" });
+    await tick();
+    const acks = valueAcks(h.frames);
+    expect(acks.map((f) => [f.tabId, tabsOf(f)])).toEqual([
+      ["t1", ["t1"]],
+      ["t2", ["t2"]],
+    ]);
+  });
+
+  test("a replay herd shares one value sub-ack: it reaches every tab awaiting its answer, the rest get up-to-date", async () => {
+    const { h, src, loads } = setup();
+    h.addressFrames();
+    src.block();
+    const replays = ["t1", "t2", "t3"].map((tabId) =>
+      h.subscribeBatch([{ key: "big" }], { tabId }),
+    );
+    src.release();
+    await Promise.all(replays);
+    await tick();
+    const acks = valueAcks(h.frames);
+    expect(acks).toHaveLength(1);
+    expect(tabsOf(acks[0]!)).toEqual(["t1", "t2", "t3"]);
+    const shared = h.frames.filter((f) => f.kind === "up-to-date");
+    expect(shared).toHaveLength(2);
+    for (const f of shared) expect(tabsOf(f)).toEqual([f.tabId!]);
+    expect(loads()).toBe(1);
+  });
+
+  test("a value addressed to one tab never answers another's sub as already shipped", async () => {
+    const { h, src } = setup();
+    h.addressFrames();
+    await h.subscribe("big", {}, { tabId: "t1" });
+    // t1's value went to t1 alone; t2 is answered with its own. Then t3
+    // subscribes: no value addressed to it was sent since it registered, so
+    // it is sent its own — never `up-to-date` off a value it never got.
+    src.block();
+    const t2 = h.subscribe("big", {}, { tabId: "t2" });
+    src.release();
+    await t2;
+    await tick();
+    await h.subscribe("big", {}, { tabId: "t3" });
+    await tick();
+    const t3 = h.frames.filter(
+      (f) =>
+        (f.kind === "sub-ack" || f.kind === "up-to-date") && f.tabId === "t3",
+    );
+    expect(t3.map((f) => f.kind)).toEqual(["sub-ack"]);
+    expect(tabsOf(t3[0]!)).toEqual(["t3"]);
+  });
+
+  test("a frame an untagged (legacy) holder holds goes out bare", async () => {
+    const { h, src, resource } = setup();
+    h.addressFrames();
+    await h.subscribe("big", {}); // no tabId
+    src.setValue(`${BIG}?`);
+    resource.notify();
+    await tick();
+    await tick();
+    for (const f of h.frames) expect(f.to).toBeNull();
+  });
+});

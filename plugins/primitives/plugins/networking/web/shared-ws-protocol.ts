@@ -7,7 +7,7 @@
 import type { NetDiagEvent } from "./net-diag-bus";
 import type { WsStatus } from "./ws-status-bus";
 
-export const SHARED_WS_PROTO = 3;
+export const SHARED_WS_PROTO = 4;
 
 /** Tab → worker. */
 export type TabToWorker =
@@ -15,6 +15,9 @@ export type TabToWorker =
    * First message on a port, sent only once the tab holds its liveness lock.
    * `holdConnects`: an e2e test hook asked for a socket that never connects
    * (see `core/ws-test-hook.ts`); false in every real session.
+   * `address`: the port's address (`SharedWebSocketOptions.address`) — an
+   * addressed server frame (`core/addressed-frame.ts`) reaches the port only
+   * when it names it; `null` — the port receives unaddressed frames only.
    */
   | {
       kind: "attach";
@@ -22,6 +25,7 @@ export type TabToWorker =
       portId: string;
       proto: number;
       holdConnects: boolean;
+      address: string | null;
     }
   /** A frame for the server. */
   | { kind: "tx"; data: string }
@@ -44,7 +48,8 @@ export type WorkerToTab =
    */
   | { kind: "status"; status: WsStatus; conn: string | null; ports: number }
   /**
-   * A server frame, fanned out to every port (consumers filter their own).
+   * A server frame: an unaddressed one fanned out to every port, an addressed
+   * one posted — its body only, the address read off — to the ports it names.
    * `arrivedAt`: `Date.now()` when the worker's socket received it — stamped
    * off every tab's main thread, so a tab can tell the wire from its own wait.
    */

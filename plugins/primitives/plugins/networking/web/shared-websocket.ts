@@ -68,6 +68,15 @@ export interface SharedWebSocketOptions {
    * (live-state passes `PROTOCOL`, `network/live/resource-protocol`).
    */
   dialect?: string;
+  /**
+   * This tab's address on the shared socket: a server frame addressed to
+   * other tabs (`core/addressed-frame.ts`) never reaches this one — the worker
+   * reads the address and posts only the body, only to the ports it names. A
+   * consumer whose server addresses its frames (live-state: each to the tabs
+   * holding its subscription) passes the id its frames name it by. Absent:
+   * only unaddressed frames reach the tab.
+   */
+  address?: string;
 }
 
 function defaultMakeSharedWorker(name: string): SharedWorkerLike {
@@ -143,6 +152,7 @@ export class SharedWebSocket {
 
   private readonly absUrl: string;
   private readonly dialect: string | undefined;
+  private readonly address: string | null;
   private readonly makeSharedWorker: MakeSharedWorker;
   private readonly locks: LockManagerLike;
   private readonly lifecycle: PageLifecycleLike | null;
@@ -170,6 +180,7 @@ export class SharedWebSocket {
   ) {
     this.url = typeof url === "string" ? url : url.toString();
     this.dialect = options?.dialect;
+    this.address = options?.address ?? null;
     this.makeSharedWorker = hooks?.makeSharedWorker ?? defaultMakeSharedWorker;
     this.locks = hooks?.locks ?? defaultLocks();
     this.lifecycle =
@@ -289,6 +300,7 @@ export class SharedWebSocket {
             proto: SHARED_WS_PROTO,
             holdConnects:
               this.testHook?.holdFromStart.includes(this.url) ?? false,
+            address: this.address,
           });
           if (this.will !== null) post({ kind: "will", data: this.will });
           session.attached = true;

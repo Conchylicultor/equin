@@ -58,7 +58,12 @@ describe("NotificationsClient — the frame protocol", () => {
     const a = tabClient();
     const b = tabClient();
     await flush();
-    expect(asked).toEqual([{ dialect: PROTOCOL }, { dialect: PROTOCOL }]);
+    // Its address is the client's holder id: the runtime addresses each
+    // tuple's frames to the holders, the worker hands a tab only its own.
+    expect(asked).toEqual([
+      { dialect: PROTOCOL, address: expect.any(String) },
+      { dialect: PROTOCOL, address: expect.any(String) },
+    ]);
     expect(hub.workers.count()).toBe(1);
     expect(hub.server.all()).toHaveLength(1);
 
@@ -71,5 +76,11 @@ describe("NotificationsClient — the frame protocol", () => {
     const subs = sent.filter((m) => m.op === "sub" || m.op === "sub-batch");
     expect(subs.length).toBeGreaterThan(0);
     for (const m of subs) expect(m.protocol).toBe(PROTOCOL);
+    // Every tab asks for addressed frames before its replay.
+    const ops = sent.map((m) => m.op);
+    expect(ops.filter((o) => o === "address-frames")).toHaveLength(2);
+    expect(ops.indexOf("address-frames")).toBeLessThan(
+      ops.indexOf("sub-batch"),
+    );
   });
 });

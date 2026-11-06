@@ -179,9 +179,11 @@ const c = <const K extends string, const F extends WireFields>(
 ) => frame("op", op, fields);
 
 /**
- * Every frame the runtime sends a tab. The shared socket fans each one out to
- * every tab on it, so every tab on one socket must read all of them alike —
- * which is what sharing a `PROTOCOL` means.
+ * Every frame the runtime sends a tab. A frame naming a tuple reaches the tabs
+ * holding it once the socket asked for addressed frames (`address-frames`);
+ * until then — and a frame naming none, always — it reaches every tab on the
+ * socket, so every tab on one socket must read all of them alike — which is
+ * what sharing a `PROTOCOL` means.
  *
  * - `etag` (conditional revalidation): the fresh content signature beside a
  *   full value, for a resource that declares `revalidate`; echoed on the next
@@ -412,6 +414,14 @@ const CLIENT_FRAMES = {
   }),
   /** The tab left: release every sub it holds on this socket. */
   "unsub-tab": c("unsub-tab", { tabId: w.string }),
+  /**
+   * The socket's peer routes addressed frames (a SharedWorker serving several
+   * tabs, `primitives/networking`'s `core/addressed-frame.ts`): from now on
+   * the runtime addresses every frame naming a tuple to the tabs holding it,
+   * so no tab receives a frame answering another's subscription. Sent by
+   * every client on every socket open, before its replay; idempotent.
+   */
+  "address-frames": c("address-frames", {}),
 } as const;
 
 /** The whole vocabulary — what `PROTOCOL` is the hash of. */

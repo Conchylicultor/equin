@@ -2,6 +2,7 @@ import type { z } from "zod";
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { canonicalParams } from "@plugins/network/plugins/live/plugins/canonical-params/core";
+import { addressFrame } from "@plugins/primitives/plugins/networking/core";
 import {
   createSemaphore,
   type SlotHolder,
@@ -1670,15 +1671,31 @@ interface SocketSubRecord {
    */
   ackTabs: Set<string>;
   /**
+   * The holding tabs whose latest sub (or replay entry) for this tuple has
+   * not been answered yet — added on registration, removed when an answer
+   * addressed to the tab goes out (`noteSent`). A whole-value sub-ack answering
+   * one tab is addressed to these too (`frameAudience`): a replay herd's tabs
+   * then share its one copy, and are each answered `up-to-date`
+   * (`alreadyShipped`) instead of sent their own.
+   */
+  awaiting: Set<string>;
+  /**
    * What the socket was last sent of this tuple's value, while it holds it
    * (`noteSent`): `fullAt` — the socket frame number (`SocketState.framesSent`)
    * of the last frame carrying the WHOLE value (a value sub-ack, an `update`) —
    * and `version`, the version of the last frame building on it (the whole
    * value, then every `delta` / `patch`). Absent until one is sent, and
    * cleared by an `invalidate` or a `sub-error` (holders then read over HTTP,
-   * outside this socket's frames). Read by `alreadyShipped`.
+   * outside this socket's frames). `to`: the tabs the whole value was
+   * addressed to (`frameAudience`), `null` for every tab on the socket. Read
+   * by `alreadyShipped`.
    */
-  shipped?: { fullAt: number; version: number; chars: number };
+  shipped?: {
+    fullAt: number;
+    version: number;
+    chars: number;
+    to: ReadonlySet<string> | null;
+  };
 }
 
 interface SocketState {
@@ -1699,6 +1716,13 @@ interface SocketState {
    * (`alreadyShipped`).
    */
   framesSent: number;
+  /**
+   * The socket's peer routes addressed frames (`op: "address-frames"`): from
+   * then on every frame naming a tuple is addressed to the tabs it is for
+   * (`frameWire`), and the peer — the tabs' SharedWorker — hands it only to
+   * them. Absent: every frame goes out bare and reaches every tab.
+   */
+  addressed?: true;
 }
 
 /**
@@ -5677,9 +5701,73 @@ export function createResourceRuntime(
     const state = sockets.get(ws);
     if (state === undefined) return 0; // closed: nothing holds it
     const str = JSON.stringify(obj);
-    deliver(state, str);
-    noteSent(state, obj, null, str.length);
+    const to = audienceOn(state, obj, null);
+    deliver(state, to === null ? str : addressFrame(to, str));
+    noteSent(state, obj, null, str.length, to);
     return str.length;
+  }
+
+  // The tabs a frame is addressed to on this socket, or null — it goes out
+  // bare, to every tab: until its peer routes addressed frames
+  // (`SocketState.addressed`), and whenever `frameAudience` names no tab. The
+  // body is serialized once per frame; only the address differs per socket.
+  function audienceOn(
+    state: SocketState,
+    obj: ServerFrame,
+    pk: string | null,
+  ): ReadonlySet<string> | null {
+    return state.addressed === true ? frameAudience(state, obj, pk) : null;
+  }
+
+  // Which tabs on this socket a frame is for, so none receives, parses and
+  // drops a frame answering another tab's subscription:
+  //
+  // - an answer to one tab's request (`tabId`) — a sub-ack, an `up-to-date`,
+  //   an `up-to-date-batch` — goes to that tab, and a whole-value sub-ack also
+  //   to the holders still awaiting their own answer (`awaiting`: a replay
+  //   herd shares one copy). Every other holder is already at the version it
+  //   carries (it gets every change of the tuple) and would drop it as stale
+  //   or not its own. Who a whole value reached is recorded (`shipped.to`),
+  //   so `alreadyShipped` never answers a tab from a value it never got.
+  // - any other frame naming a tuple goes to every tab holding it
+  //   (`SocketSubRecord.tabs` — exactly the tabs whose client gate applies
+  //   it), plus the asker of a refusal that registered nothing.
+  // - null (every tab) for a ping, a frame no tab is known for, or one an
+  //   untagged (legacy, `""`) holder holds.
+  function frameAudience(
+    state: SocketState,
+    obj: ServerFrame,
+    pk: string | null,
+  ): ReadonlySet<string> | null {
+    if (obj.kind === "ping") return null;
+    const asker =
+      "tabId" in obj && typeof obj.tabId === "string" ? obj.tabId : undefined;
+    const to = new Set<string>();
+    if (asker !== undefined) to.add(asker);
+    const answersAsker =
+      obj.kind === "sub-ack" ||
+      obj.kind === "up-to-date" ||
+      obj.kind === "up-to-date-batch";
+    if (answersAsker && asker !== undefined) {
+      if (obj.kind === "sub-ack" && "value" in obj) {
+        const rec = state.subs.get(obj.key)?.get(pk ?? paramsKey(obj.params));
+        if (rec !== undefined) {
+          for (const tab of rec.awaiting) if (rec.tabs.has(tab)) to.add(tab);
+        }
+      }
+    } else {
+      const addHolders = (key: string, tuplePk: string): void => {
+        const rec = state.subs.get(key)?.get(tuplePk);
+        if (rec !== undefined) for (const tab of rec.tabs) to.add(tab);
+      };
+      if (obj.kind === "up-to-date-batch") {
+        for (const e of obj.entries) addHolders(e.key, paramsKey(e.params));
+      } else {
+        addHolders(obj.key, pk ?? paramsKey(obj.params));
+      }
+    }
+    if (to.size === 0 || to.has("")) return null;
+    return to;
   }
 
   // Keep a socket's record of what it was sent of a tuple's value
@@ -5691,21 +5779,41 @@ export function createResourceRuntime(
     obj: ServerFrame,
     pk: string | null,
     chars: number,
+    to: ReadonlySet<string> | null,
   ): void {
     const position = state.framesSent++;
+    // An answer settles its asker's wait (`SocketSubRecord.awaiting`).
+    if (obj.kind === "up-to-date-batch") {
+      if (obj.tabId !== undefined) {
+        for (const e of obj.entries) {
+          state.subs
+            .get(e.key)
+            ?.get(paramsKey(e.params))
+            ?.awaiting.delete(obj.tabId);
+        }
+      }
+      return;
+    }
     if (!("key" in obj) || !("params" in obj)) return;
     const rec = state.subs
       .get(obj.key)
       ?.get(pk ?? paramsKey(obj.params as ResourceParams));
     if (rec === undefined) return;
+    // Not a `sub-error`: a refused tab still takes the next whole value.
+    if (
+      (obj.kind === "sub-ack" || obj.kind === "up-to-date") &&
+      obj.tabId !== undefined
+    ) {
+      rec.awaiting.delete(obj.tabId);
+    }
     switch (obj.kind) {
       case "sub-ack":
         if ("value" in obj) {
-          rec.shipped = { fullAt: position, version: obj.version, chars };
+          rec.shipped = { fullAt: position, version: obj.version, chars, to };
         }
         return;
       case "update":
-        rec.shipped = { fullAt: position, version: obj.version, chars };
+        rec.shipped = { fullAt: position, version: obj.version, chars, to };
         return;
       case "delta":
       case "patch":
@@ -5724,8 +5832,9 @@ export function createResourceRuntime(
   // Whether a sub that reached this socket at frame position `arrivedAt` is
   // already answered by what the socket was sent since: a frame carrying the
   // tuple's whole value, sent AFTER the sub arrived, and a version at least
-  // `version` (the one this answer would carry). Every tab on a socket gets
-  // every frame (the client's SharedWorker fans each one out), and a tab
+  // `version` (the one this answer would carry). Every tab holding the tuple
+  // gets every frame of it (a bare frame reaches every tab; an addressed one
+  // names every holder — `frameAudience`), and a tab
   // registers its sub — or, replaying, resets its version to -1 — BEFORE
   // sending it, so a frame the server sent after receiving the sub reached
   // that tab while it held the sub, and was applied (nothing it held could be
@@ -5737,16 +5846,19 @@ export function createResourceRuntime(
   // ~7.6 MB per tab, six tabs, ~45 MB through one connection, past Bun's
   // backpressure limit). A frame sent BEFORE the sub arrived may have reached
   // the tab before it registered, so it never answers one.
+  // An addressed value reached only the tabs it named (`shipped.to`).
   function alreadyShipped(
     state: SocketState,
     key: string,
     pk: string,
     arrivedAt: number,
     version: number,
+    tabId: string,
   ): { version: number; chars: number } | null {
     const shipped = state.subs.get(key)?.get(pk)?.shipped;
     if (shipped === undefined) return null;
     if (shipped.fullAt < arrivedAt || shipped.version < version) return null;
+    if (shipped.to !== null && !shipped.to.has(tabId)) return null;
     return shipped;
   }
 
@@ -5768,8 +5880,9 @@ export function createResourceRuntime(
     const str = JSON.stringify(obj);
     const pk = "params" in obj ? paramsKey(obj.params as ResourceParams) : null;
     for (const s of subs) {
-      deliver(s, str);
-      noteSent(s, obj, pk, str.length);
+      const to = audienceOn(s, obj, pk);
+      deliver(s, to === null ? str : addressFrame(to, str));
+      noteSent(s, obj, pk, str.length, to);
     }
     return str.length;
   }
@@ -7913,6 +8026,11 @@ export function createResourceRuntime(
           handleSubAcks(state, m);
           return;
         }
+        case "address-frames":
+          // The peer routes addressed frames (the tabs' SharedWorker): from
+          // now on each frame reaches only the tabs it is for.
+          state.addressed = true;
+          return;
         case "unsub-tab": {
           // Best-effort tab departure (pagehide): release everything this tab
           // holds on this socket. Subs other tabs still hold are untouched.
@@ -8393,10 +8511,16 @@ export function createResourceRuntime(
     let rec = inner.get(pk);
     const alreadyHeldBySocket = rec !== undefined;
     if (!rec) {
-      rec = { params, tabs: new Set<string>(), ackTabs: new Set<string>() };
+      rec = {
+        params,
+        tabs: new Set<string>(),
+        ackTabs: new Set<string>(),
+        awaiting: new Set<string>(),
+      };
       inner.set(pk, rec);
     }
     rec.tabs.add(tabId);
+    rec.awaiting.add(tabId);
     if (acks) rec.ackTabs.add(tabId);
     else rec.ackTabs.delete(tabId);
     if (alreadyHeldBySocket) return { firstGlobal: false };
@@ -8607,8 +8731,6 @@ export function createResourceRuntime(
   ): Promise<void> {
     const { key, params = {}, etag: clientEtag } = m;
     if (!key) return;
-    // Where in this socket's frame stream the sub arrived (`alreadyShipped`).
-    const arrivedAt = state.framesSent;
     const req = subRequestOf(m);
     const build = typeof m.build === "string" ? m.build : undefined;
     const entry = registry.get(key);
@@ -8660,6 +8782,10 @@ export function createResourceRuntime(
       req.tabId ?? "",
       m.acks === true,
     );
+    // Where in this socket's frame stream the sub registered (`alreadyShipped`):
+    // from here on every frame of the tuple is addressed to this tab too — a
+    // frame sent while `authorize` was awaited before it was not.
+    const arrivedAt = state.framesSent;
     // Seeded derivation: answered (or refused) right here, synchronously after
     // the registration — so every change routed from now on reaches this tuple,
     // and none can land between the check and the copy.
@@ -8794,7 +8920,14 @@ export function createResourceRuntime(
     arrivedAt: number,
     version: number,
   ): boolean {
-    const shipped = alreadyShipped(state, key, pk, arrivedAt, version);
+    const shipped = alreadyShipped(
+      state,
+      key,
+      pk,
+      arrivedAt,
+      version,
+      req.tabId ?? "",
+    );
     if (shipped === null) return false;
     sendJson(state.ws, {
       kind: "up-to-date",
@@ -9297,6 +9430,7 @@ export function createResourceRuntime(
     const tabId = typeof m.tabId === "string" ? m.tabId : "";
     if (!rec.tabs.delete(tabId)) return;
     rec.ackTabs.delete(tabId);
+    rec.awaiting.delete(tabId);
     if (rec.tabs.size > 0) return;
     unregisterSubOnSocket(state, key, pk);
   }
@@ -9367,6 +9501,7 @@ export function createResourceRuntime(
         if (retain?.has(`${key}\0${pk}`)) continue;
         if (!rec.tabs.delete(tabId)) continue;
         rec.ackTabs.delete(tabId);
+        rec.awaiting.delete(tabId);
         if (rec.tabs.size > 0) continue;
         inner.delete(pk);
         releaseSubRefcount(key, pk, rec.params);

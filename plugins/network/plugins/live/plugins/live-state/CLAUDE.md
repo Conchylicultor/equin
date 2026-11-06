@@ -200,8 +200,13 @@ version-less `{ kind: "ack" }` frames of no-value-change recomputes.
 
 ## One socket per origin, shared across tabs
 
-The real socket lives in a SharedWorker; every frame is fanned out to **all**
-tabs.
+The real socket lives in a SharedWorker. Each client opens it with its holder
+id as the port's `address` and sends `{op:"address-frames"}` on every open
+(before the replay): the runtime then addresses each frame to the tabs it is for
+(holders of its tuple; an answer to its asker — `resource-runtime/CLAUDE.md`,
+*Addressed frames*) and the worker posts it only to them, so a tab never parses
+or logs a frame for another tab's sub. A server that predates it sends bare
+frames, which still reach **all** tabs — hence the gates below.
 
 - **Apply only for a live local sub.** `handleServerMessage` gates on
   `channel.subs.get(id)` before `applyUpdate`/`applyDelta`/`applyInvalidate`;

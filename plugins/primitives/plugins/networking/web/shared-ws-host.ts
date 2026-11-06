@@ -1,3 +1,4 @@
+import { readFrameAddress } from "./addressed-frame-reader";
 import type { NetDiagEvent } from "./net-diag-bus";
 import {
   SHARED_WS_PROTO,
@@ -25,6 +26,8 @@ export interface SharedWsHost {
 interface PortEntry {
   port: MessagePortLike;
   will: string | null;
+  /** The port's address (`attach.address`): which addressed frames reach it. */
+  address: string | null;
   /** `Date.now()` at attach — how long a released port had lived. */
   attachedAt: number;
 }
@@ -34,8 +37,11 @@ interface PortEntry {
  * (`shared-ws.worker.ts` is the thin entry wiring the real ones).
  *
  * One host = one server URL (the worker's name). It owns the single socket for
- * that URL while at least one tab port is attached, fans every server frame out
- * to every port, and writes every port's frames to the socket. A port leaves by
+ * that URL while at least one tab port is attached, hands every server frame to
+ * the ports it is for — an unaddressed one to every port, an addressed one
+ * (`core/addressed-frame.ts`) to the ports whose address it names, so a tab
+ * never receives a frame answering another tab — and writes every port's
+ * frames to the socket. A port leaves by
  * `detach`, or — when its tab dies without saying so — when the worker is
  * granted the tab's liveness lock; either way its will (if any) goes to the
  * server. The last port leaving closes the socket.
@@ -50,6 +56,20 @@ export function createSharedWsHost(deps: SharedWsHostDeps): SharedWsHost {
   };
   const broadcast = (msg: WorkerToTab): void => {
     for (const { port } of ports.values()) post(port, msg);
+  };
+  // Reading the address is two `indexOf`s: the body is never parsed here.
+  const deliverRx = (data: string): void => {
+    const arrivedAt = Date.now();
+    const { to, body } = readFrameAddress(data);
+    if (to === null) {
+      broadcast({ kind: "rx", data: body, arrivedAt });
+      return;
+    }
+    for (const entry of ports.values()) {
+      if (entry.address !== null && to.includes(entry.address)) {
+        post(entry.port, { kind: "rx", data: body, arrivedAt });
+      }
+    }
   };
   const diag = (event: NetDiagEvent): void => {
     broadcast({ kind: "diag", event });
@@ -115,7 +135,12 @@ export function createSharedWsHost(deps: SharedWsHostDeps): SharedWsHost {
       return null;
     }
     url = msg.url;
-    ports.set(msg.portId, { port, will: null, attachedAt: Date.now() });
+    ports.set(msg.portId, {
+      port,
+      will: null,
+      address: msg.address,
+      attachedAt: Date.now(),
+    });
     // Granted only once the tab's own hold ends: the tab is gone.
     void deps.locks.request(
       portLivenessLockName(msg.portId),
@@ -132,8 +157,7 @@ export function createSharedWsHost(deps: SharedWsHostDeps): SharedWsHost {
         onStatus: () => broadcastStatus(),
         // Stamped here, in the worker: a busy tab delays only its own
         // handler, never this.
-        onMessage: (data) =>
-          broadcast({ kind: "rx", data, arrivedAt: Date.now() }),
+        onMessage: deliverRx,
         onError: () => broadcast({ kind: "ws-error" }),
         onDiag: diag,
       });

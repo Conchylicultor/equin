@@ -23,11 +23,14 @@
 
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import {
+  addressFrame,
+  readAddressedFrame,
   WS_TEST_HOOK_GLOBAL,
   type WsTestEvent,
   type WsTestHook,
 } from "../../core";
 import { SharedWebSocket } from "../shared-websocket";
+import { readFrameAddress } from "../addressed-frame-reader";
 import { CONNECT_DEADLINE_MS } from "../socket-owner";
 import { subscribeNetDiag, type NetDiagEvent } from "../net-diag-bus";
 import { createSharedWsHost } from "../shared-ws-host";
@@ -105,6 +108,60 @@ describe("SharedWebSocket", () => {
     hub.server.all()[0]!.serverSend("frame-1");
     await flush();
     expect(got).toEqual(["a:frame-1", "b:frame-1"]);
+  });
+
+  test("an addressed server frame reaches only the tabs it names, as its body; an unaddressed one every tab", async () => {
+    const hub = createTransportHub();
+    const a = track(
+      new SharedWebSocket(URL_PATH, hub.tab().hooks, { address: "tab-a" }),
+    );
+    const b = track(
+      new SharedWebSocket(URL_PATH, hub.tab().hooks, { address: "tab-b" }),
+    );
+    const anon = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+    await flush();
+    hub.server.all()[0]!.open();
+    await flush();
+
+    const got: string[] = [];
+    a.onmessage = (ev) => got.push(`a:${ev.data}`);
+    b.onmessage = (ev) => got.push(`b:${ev.data}`);
+    anon.onmessage = (ev) => got.push(`anon:${ev.data}`);
+    const socket = hub.server.all()[0]!;
+    socket.serverSend(addressFrame(["tab-a"], "for-a"));
+    socket.serverSend(addressFrame(["tab-a", "tab-b"], "for-both"));
+    socket.serverSend(addressFrame(["tab-gone"], "for-nobody"));
+    socket.serverSend("bare");
+    await flush();
+    expect(got).toEqual([
+      "a:for-a",
+      "a:for-both",
+      "b:for-both",
+      "a:bare",
+      "b:bare",
+      "anon:bare",
+    ]);
+  });
+
+  test("the addressed-frame grammar round-trips, and refuses an address it cannot carry", () => {
+    expect(readAddressedFrame('{"kind":"ping"}')).toEqual({
+      to: null,
+      body: '{"kind":"ping"}',
+    });
+    expect(readAddressedFrame(addressFrame(new Set(["x", "y"]), "{}"))).toEqual(
+      { to: ["x", "y"], body: "{}" },
+    );
+    // The worker's own reader agrees with the grammar's.
+    for (const frame of [
+      '{"kind":"ping"}',
+      addressFrame(["x"], '{"a":1}'),
+      addressFrame(["x", "y", "z"], ""),
+    ]) {
+      expect(readFrameAddress(frame)).toEqual(readAddressedFrame(frame));
+    }
+    expect(() => addressFrame([], "{}")).toThrow(/no address/);
+    expect(() => addressFrame(["a,b"], "{}")).toThrow(/invalid address/);
+    expect(() => addressFrame([""], "{}")).toThrow(/invalid address/);
   });
 
   test("one real socket per URL however many tabs attach; a second URL gets its own worker", async () => {
@@ -367,6 +424,7 @@ describe("SharedWebSocket", () => {
       portId: "p1",
       proto: SHARED_WS_PROTO + 1,
       holdConnects: false,
+      address: null,
     });
     await flush();
     expect(workerPort.closed).toBe(true);
