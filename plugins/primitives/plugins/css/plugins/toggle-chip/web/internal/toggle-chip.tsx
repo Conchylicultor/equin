@@ -194,6 +194,12 @@ export interface SegmentedControlProps<
   className?: string;
   /** The group's accessible name (its visible heading, when it has one). */
   label?: string;
+  /**
+   * Chips that do not fit wrap onto the next line instead of running past the
+   * group's box. Chip variants only: an underline strip is one rule, never
+   * wrapped. Default false (one line).
+   */
+  wrap?: boolean;
 }
 
 /** The count pill a segment carries after its label. */
@@ -279,8 +285,11 @@ export function SegmentedControl<T extends string>({
   variant = "solid",
   className,
   label,
+  wrap = false,
 }: SegmentedControlProps<T>) {
   if (variant === "underline") {
+    if (wrap)
+      throw new Error("SegmentedControl: an underline strip cannot wrap");
     return (
       <div
         role="radiogroup"
@@ -309,7 +318,11 @@ export function SegmentedControl<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn("flex shrink-0 flex-nowrap gap-xs", className)}
+      className={cn(
+        "flex shrink-0 gap-xs",
+        wrap ? "flex-wrap" : "flex-nowrap",
+        className,
+      )}
     >
       {options.map((opt) => (
         <ToggleChip

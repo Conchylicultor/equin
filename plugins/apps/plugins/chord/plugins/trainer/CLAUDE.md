@@ -214,7 +214,7 @@ follows the box's width through a container query). Layout stays with the
 layout primitives: the boxes, ruler ticks, playhead and badges are placed by
 runtime numbers (`placedStyle`, a fraction of the window's beats), rows are
 `Line` + `Fill`, the page's two tracks are the one raw grid (a container query
-at 1000 px, with a named disable).
+at 1200 px — the width at which the song card still fits beside the 400 px panel — with a named disable).
 
 A chord's own colour and numeral are drawn the same wherever they appear, so
 they live with the shared chord box (`music/chord-box`: `<ChordBox>`,

@@ -113,7 +113,7 @@ type RoundSession = {
 
 /**
  * The trainer: the song card with its player, the answer strip, the chord
- * buttons, and the progress panel beside them (below them under 1000px).
+ * buttons, and the progress panel beside them (below them under 1200px).
  * Flow and rules: `research/2026-09-18-apps-chord-trainer-app.md`, "How a
  * round works".
  *
@@ -131,8 +131,8 @@ export function TrainerScreen() {
     // trainer's CSS variables and its container queries.
     <div className="chord-trainer @container">
       <Inset x="lg" t="lg" b="xl" className="mx-auto max-w-[1280px]">
-        {/* eslint-disable-next-line layout/no-adhoc-layout -- the page's two tracks: the main column and the 400px side panel (the Chords section mockup's width), which drops below it when the pane is under 1000px wide. A container-query track template, which no layout primitive expresses. */}
-        <div className="grid items-start gap-lg @[1000px]:grid-cols-[minmax(0,1fr)_400px]">
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- the page's two tracks: the main column and the 400px side panel (the Chords section mockup's width), which drops below it when the pane is under 1200px wide: the song card needs ~750px beside the 400px panel (the player, sound control, Play and Next song take ~600px; the title the rest). A container-query track template, which no layout primitive expresses. */}
+        <div className="grid items-start gap-lg @[1200px]:grid-cols-[minmax(0,1fr)_400px]">
           {matchResource(curriculum, {
             loading: () => <Loading variant="block" />,
             ready: (c) =>

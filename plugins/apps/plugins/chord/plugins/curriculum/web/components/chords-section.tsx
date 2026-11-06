@@ -415,6 +415,7 @@ function PillGroup<T extends string | number>({
       </Text>
       <SegmentedControl<string>
         label={label}
+        wrap
         options={options.map((o) => ({
           id: String(o.id),
           label: o.label,
