@@ -30,8 +30,8 @@ import { conversationSessionsEntityRef } from "../../core";
 //     session that flaps away and back (A→B→A) does not re-append A and make a
 //     consumer read the same transcript file twice.
 //   • (claudeSessionId) serves the reverse lookup — which conversation a
-//     written transcript belongs to (`listConversationsForSessions`, the usage
-//     accumulator's per-write mapping).
+//     written transcript belongs to (the usage accumulator's per-write
+//     mapping, `conversationsFor`).
 const conversationSessions = defineEntity(conversationSessionsEntityRef, {
   primaryKey: "id",
   columns: {

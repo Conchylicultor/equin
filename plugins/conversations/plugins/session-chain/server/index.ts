@@ -7,7 +7,6 @@ export {
   recordSessionId,
   listSessionChain,
   listSharedClaudeSessionIds,
-  listConversationsForSessions,
 } from "./internal/record";
 export type { SessionChainEntry, SharedSessionId } from "./internal/record";
 // The table itself, for a live value's declared reads (a loader that reads the

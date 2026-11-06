@@ -71,6 +71,17 @@ agents without tmux, per-namespace paths, the Claude Code health row:
     file with no row is reported (`SdkEventsWithoutRow`); only "no row, no
     file" (create has not prepared it) is silent. `isOurs` caches only a yes:
     a cached no would skip a conversation forever.
+- **The consumer signals the status reconciler only when the runtime's answer
+  moves** (`machine/internal/runtime-info.ts`): `infoOf` is the one derivation
+  of what `inspect` reports from a projection, and a batch signals only when
+  `reportedStateChanged(before, after)` (any `RuntimeInfo` field, or the agent
+  pid) — a turn starting or ending, background work, a new session, a start or
+  exit. Assistant text and tool lines move the cursor only. What their effects
+  move signals from its own store (turn-ledger's `onStatusEvidence`, the
+  question relay's `requestStatusReconcile`). An inspect that answers
+  `unverified` owes the agent's next batch a signal (`signalNextBatch`), so the
+  mark clears when it catches up, not at the sweep. Before: one reconcile per
+  batch, ~1/s per working agent, almost all no-op plans.
 - **Every agent path is under the launching backend's namespace**
   (`machine/internal/paths.ts`, which reads `runtimeNamespace()` itself): a
   worktree's DB is a fork of main's, and with paths keyed by conversation id

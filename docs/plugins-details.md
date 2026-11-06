@@ -20294,7 +20294,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `_conversationSessions`
           - `conversationSessionsServed`
-          - `listConversationsForSessions`
           - `listSessionChain`
           - `listSharedClaudeSessionIds`
           - `recordSessionId`

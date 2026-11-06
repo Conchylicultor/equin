@@ -2,7 +2,6 @@ import { z } from "zod";
 import type {
   ConversationRuntime,
   OutgoingTurn,
-  RuntimeInfo,
   RuntimeInspection,
   RuntimeSignal,
 } from "@plugins/conversations/server";
@@ -41,6 +40,7 @@ import {
   onEventsAppended,
   ProjectionTimeoutError,
   ProjectionWaitAbortedError,
+  signalNextBatch,
   startConsumer,
   waitForProjection,
 } from "./consumer";
@@ -64,6 +64,7 @@ import {
 import { watchPartialMessage } from "./partial-stream";
 import { startOutcome, type StartOutcome } from "./start-outcome";
 import { createUnresponsiveTracker } from "./unresponsive";
+import { infoOf } from "./runtime-info";
 
 // The sdk runtime: one Agent SDK process per conversation (bin/agent.ts),
 // started detached (agent-process.ts), so it outlives a backend restart.
@@ -160,19 +161,6 @@ async function reportKill(
 
 type AgentRow = NonNullable<Awaited<ReturnType<typeof readAgentRow>>>;
 
-function infoOf(row: AgentRow): RuntimeInfo {
-  return {
-    workingOn: row.working
-      ? "turn"
-      : row.backgroundTasks > 0
-        ? "background"
-        : null,
-    dead: false,
-    claudeSessionId: row.sessionId,
-    statusWrittenAt: row.statusAt,
-  };
-}
-
 /**
  * The live state of each of `ids` that is this DB's sdk conversation — read
  * at the agent's own head, or not at all. The projection is checked against
@@ -201,7 +189,12 @@ async function inspectAgents(
     })),
   );
   for (const { id, inspection } of inspected) {
-    if (inspection) out.set(id, inspection);
+    if (!inspection) continue;
+    out.set(id, inspection);
+    // The consumer signals only a batch that moves the reported state; the
+    // batch that brings this one current must signal anyway, so the
+    // reconciler clears its unverified mark then rather than at the sweep.
+    if (inspection.kind === "unverified") signalNextBatch(id);
   }
   return out;
 }
@@ -487,7 +480,16 @@ export const sdkRuntime: ConversationRuntime = {
     return live;
   },
 
-  inspect: inspectAgents,
+  async inspect(ids) {
+    try {
+      return await inspectAgents(ids);
+    } catch (err) {
+      // The reconciler marks every one of them unverified: their next applied
+      // batch must wake it to clear that, whatever the batch moves.
+      for (const id of ids) signalNextBatch(id);
+      throw err;
+    }
+  },
 
   async subscribe(onSignal: (signal: RuntimeSignal) => void) {
     attachRunningAgents();

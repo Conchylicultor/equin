@@ -56,6 +56,7 @@ import {
   runningAgentIds,
 } from "./agent-processes";
 import { agentReady } from "./partial-stream";
+import { reportedStateChanged } from "./runtime-info";
 import {
   agentDir,
   agentEventsExist,
@@ -120,6 +121,19 @@ type Waiter = {
 const waiters = new Map<string, Set<Waiter>>();
 
 let signal: ((s: RuntimeSignal) => void) | null = null;
+
+/**
+ * Agents whose next applied batch signals the reconciler whatever it moved:
+ * an inspect found the agent ahead of its projection (or not answering), so the
+ * reconciler marked it unverified, and the batch that brings it current is
+ * what clears that.
+ */
+const owedSignals = new Set<string>();
+
+/** Signal the reconciler after `id`'s next applied batch, whatever it moves. */
+export function signalNextBatch(id: string): void {
+  owedSignals.add(id);
+}
 
 /** Mark `id` as this DB's sdk conversation (its `create` just ran here). */
 export function adoptAgent(id: string): void {
@@ -346,7 +360,14 @@ async function catchUp(id: string, progress: CatchUpProgress): Promise<void> {
     read.events.some((e) => e.kind === "agent" && e.payload.event === "ready")
   )
     agentReady(id);
-  signal?.({ conversationIds: [id] });
+  // Only a batch that moves what `inspect` would answer wakes the reconciler
+  // (see `reportedStateChanged`) — or one an inspect is waiting on. The rest
+  // (assistant text, tool calls) advance the cursor and nothing it reads: a
+  // signal per batch re-ran its whole pass for a no-op plan, ~1/s per working
+  // agent (2026-11-06: 3,257 reconciles in 52 min on main, ~7.6 acquires each).
+  const owed = owedSignals.delete(id);
+  if (owed || reportedStateChanged(projection, state))
+    signal?.({ conversationIds: [id] });
   for (const w of [...(waiters.get(id) ?? [])]) {
     if (w.until(state)) w.resolve(state);
   }

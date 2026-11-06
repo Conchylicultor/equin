@@ -1,3 +1,4 @@
+import { basename } from "node:path";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugins/transcript-watcher/server";
@@ -16,6 +17,7 @@ import {
   type FilePricing,
   type FileScan,
   type PricedFile,
+  type UsageTotals,
 } from "./scan";
 import { writeUsage } from "./write";
 import {
@@ -49,30 +51,106 @@ import {
 // what the tokens cost when they were spent, the page re-prices at today's.
 
 /**
- * Bring one conversation's usage up to date (see the header). A conversation
- * that no longer exists is skipped: its session chain outlives it, so a write
- * event can still name it, and its rows went with it (FK CASCADE).
+ * One conversation's usage state as this process last read or wrote it: its
+ * chain's transcript files as last resolved, every file row, and the totals.
  *
- * Not safe to run twice at once for one conversation — go through
- * {@link requestUsageSync}, which serializes per conversation.
+ * Held, not re-read per append: this module is the ONLY writer of
+ * `conversation_usage_files` and of the totals (every path — the live recount,
+ * the backfill, the reprice — goes through {@link requestUsageSync}, serialized
+ * per conversation), so what it wrote is what the DB holds. A live append then
+ * costs the bytes it appended and one write — not a re-read of the
+ * conversation, its chain, its file rows and its totals every time
+ * (2026-11-06: ~8 DB round trips per append, 2,023 syncs in 52 min on main).
  */
-async function syncConversationUsage(conversationId: string): Promise<void> {
+interface UsageState {
+  sessionPaths: string[];
+  files: Map<string, PricedFile>;
+  totals: UsageTotals | undefined;
+}
+
+/**
+ * The live recount's held states (see {@link UsageState}), least recently
+ * synced first. Bounded at {@link HELD_MAX}: the conversations being written
+ * now are a handful, and an evicted one only pays a cold load on its next
+ * write — while a deleted or long-idle one is never reached again (the owner
+ * lookup names existing conversations only) and would otherwise stay for the
+ * process's life.
+ */
+const held = new Map<string, UsageState>();
+const HELD_MAX = 256;
+
+function hold(conversationId: string, state: UsageState): void {
+  held.delete(conversationId);
+  held.set(conversationId, state);
+  for (const oldest of held.keys()) {
+    if (held.size <= HELD_MAX) break;
+    held.delete(oldest);
+  }
+}
+
+/** A transcript file's session id (`<sessionId>.jsonl`). */
+const sessionIdOf = (path: string): string => basename(path, ".jsonl");
+
+/** Read a conversation's state from the DB, or null when it no longer exists. */
+async function loadState(conversationId: string): Promise<UsageState | null> {
   const [exists] = await db
     .select({ id: _conversations.id })
     .from(_conversations)
     .where(eq(_conversations.id, conversationId));
-  if (!exists) return;
+  if (!exists) return null;
+  const [sessionPaths, stored, totals] = await Promise.all([
+    resolveConversationTranscriptPaths(conversationId),
+    db
+      .select()
+      .from(_conversationUsageFiles)
+      .where(eq(_conversationUsageFiles.conversationId, conversationId)),
+    conversationUsage.get(conversationId),
+  ]);
+  return {
+    sessionPaths,
+    files: new Map(stored.map((r) => [r.path, r])),
+    totals,
+  };
+}
 
-  const sessionPaths = await resolveConversationTranscriptPaths(conversationId);
+/**
+ * What a sync was asked for: the session ids whose transcripts were written
+ * (the live recount — the conversation is known to exist, its owner lookup
+ * read it), or `"reload"` (a job: read everything from the DB).
+ */
+type SyncCause = ReadonlySet<string> | "reload";
+
+/**
+ * Bring one conversation's usage up to date (see the header). A conversation
+ * that no longer exists is skipped: its session chain outlives it, so a job
+ * can still name it, and its rows went with it (FK CASCADE).
+ *
+ * Not safe to run twice at once for one conversation — go through
+ * {@link requestUsageSync}, which serializes per conversation.
+ */
+async function syncConversationUsage(
+  conversationId: string,
+  cause: SyncCause,
+): Promise<void> {
+  const kept = cause === "reload" ? undefined : held.get(conversationId);
+  const state = kept ?? (await loadState(conversationId));
+  if (state === null) {
+    held.delete(conversationId);
+    return;
+  }
+  // The chain moves only by adopting a session, whose transcript is then
+  // written: a write naming a session the held paths do not resolve re-reads
+  // it (also a session recorded before its file existed).
+  if (kept !== undefined && cause !== "reload") {
+    const resolved = new Set(state.sessionPaths.map(sessionIdOf));
+    if ([...cause].some((id) => !resolved.has(id)))
+      state.sessionPaths =
+        await resolveConversationTranscriptPaths(conversationId);
+  }
+  const { sessionPaths } = state;
   const agents = await listSubagentEntries(sessionPaths.map(subagentDirOf));
-  const stored = await db
-    .select()
-    .from(_conversationUsageFiles)
-    .where(eq(_conversationUsageFiles.conversationId, conversationId));
-  const storedByPath = new Map<string, PricedFile>(
-    stored.map((r) => [r.path, r]),
-  );
-  const byPath = new Map<string, FileScan>(stored.map((r) => [r.path, r]));
+  const storedByPath = state.files;
+  const byPath = new Map<string, FileScan>(storedByPath);
 
   const changed: FileScan[] = [];
   const advance = async (
@@ -126,42 +204,82 @@ async function syncConversationUsage(conversationId: string): Promise<void> {
     if (changedPaths.has(scan.path) || repriced) toWrite.push(row);
   }
   const totals = totalsOf(rows);
-  const current = await conversationUsage.get(conversationId);
+  const current = state.totals;
   const same =
     current !== undefined &&
     current.costUsd === totals.costUsd &&
     current.tokens === totals.tokens &&
     current.cacheReadTokens === totals.cacheReadTokens &&
     current.agentCount === totals.agentCount;
-  if (toWrite.length === 0 && same) return;
+  if (toWrite.length > 0 || !same) {
+    try {
+      await writeUsage(db, conversationId, toWrite, same ? null : totals);
+    } catch (err) {
+      // Whether it landed is unknown (or the conversation went: an FK
+      // violation): the next pass reads the DB again rather than trust this.
+      held.delete(conversationId);
+      throw err;
+    }
+  }
 
-  await writeUsage(db, conversationId, toWrite, same ? null : totals);
+  // What the DB now holds (only once the write landed: a failed one leaves the
+  // held state as it was, and the next pass recomputes the same rows).
+  for (const row of toWrite) state.files.set(row.path, row);
+  state.totals = totals;
+  // A job's pass keeps the held state current when there is one, and holds
+  // none otherwise: a backfill reaches every conversation once.
+  if (cause !== "reload" || held.has(conversationId))
+    hold(conversationId, state);
 }
 
 // Per-conversation serialization: a sync already running for a conversation
-// absorbs every request that arrives meanwhile into ONE trailing re-run, so a
-// burst of appends (a streaming turn writes a line per content block) costs at
-// most two passes, and two passes never race on the same rows.
-const running = new Map<string, { again: boolean; done: Promise<void> }>();
+// absorbs every request that arrives meanwhile into ONE trailing re-run (their
+// causes merged), so a burst of appends (a streaming turn writes a line per
+// content block) costs at most two passes, and two passes never race on the
+// same rows — nor on the held state.
+interface Running {
+  /** The trailing re-run's cause, merged; null when none is due. */
+  again: { ids: Set<string> } | "reload" | null;
+  done: Promise<void>;
+}
+const running = new Map<string, Running>();
+
+function merge(
+  a: Running["again"],
+  cause: SyncCause,
+): NonNullable<Running["again"]> {
+  if (a === "reload" || cause === "reload") return "reload";
+  return { ids: new Set([...(a?.ids ?? []), ...cause]) };
+}
 
 /**
  * Bring a conversation's usage up to date, coalesced with any sync of it
- * already in flight. Resolves once a pass that started after this call has
- * finished.
+ * already in flight. `writtenSessionIds`: the live recount's — the sessions
+ * whose transcripts (or their sub-agents') were written, of a conversation its
+ * caller just read as existing; omitted, the pass reads everything from the DB.
+ * Resolves once a pass that started after this call has finished.
  */
-export function requestUsageSync(conversationId: string): Promise<void> {
+export function requestUsageSync(
+  conversationId: string,
+  writtenSessionIds?: Iterable<string>,
+): Promise<void> {
+  const cause: SyncCause =
+    writtenSessionIds === undefined ? "reload" : new Set(writtenSessionIds);
   const inFlight = running.get(conversationId);
   if (inFlight) {
-    inFlight.again = true;
+    inFlight.again = merge(inFlight.again, cause);
     return inFlight.done;
   }
-  const entry = { again: false, done: Promise.resolve() };
+  const entry: Running = { again: null, done: Promise.resolve() };
   entry.done = (async () => {
     try {
-      do {
-        entry.again = false;
-        await syncConversationUsage(conversationId);
-      } while (entry.again);
+      let next: SyncCause | null = cause;
+      while (next !== null) {
+        await syncConversationUsage(conversationId, next);
+        const again: Running["again"] = entry.again;
+        entry.again = null;
+        next = again === null || again === "reload" ? again : again.ids;
+      }
     } finally {
       running.delete(conversationId);
     }

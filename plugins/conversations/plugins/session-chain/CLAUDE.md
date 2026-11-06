@@ -108,7 +108,6 @@ first):
   - Exports (values):
     - `_conversationSessions`
     - `conversationSessionsServed`
-    - `listConversationsForSessions`
     - `listSessionChain`
     - `listSharedClaudeSessionIds`
     - `recordSessionId`

@@ -1,34 +1,60 @@
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
+import { union } from "drizzle-orm/pg-core";
 import { db } from "@plugins/database/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { isHostSingleton } from "@plugins/infra/plugins/paths/server";
 import { onTranscriptWritten } from "@plugins/conversations/plugins/transcript-watcher/server";
-import { listConversationsForSessions } from "@plugins/conversations/plugins/session-chain/server";
+import { _conversationSessions } from "@plugins/conversations/plugins/session-chain/server";
 import { onPriceTableUpdated } from "@plugins/stats/plugins/cost/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { requestUsageSync } from "./sync";
 import { usageRepriceJob } from "./jobs";
 
 /**
- * The conversations a batch of written session ids belongs to: every chain
- * that recorded one, plus every conversation whose live tail is one (the chain
- * is an enrichment of that floor, see `resolveConversationTranscriptPaths`).
- * Both lookups are indexed on the session id.
+ * The existing conversations a batch of written session ids belongs to, each
+ * with the ids of the batch that are its own: every chain that recorded one
+ * (joined to its conversation — a chain outlives a deleted one), plus every
+ * conversation whose live tail is one (the chain is an enrichment of that
+ * floor, see `resolveConversationTranscriptPaths`). ONE round trip, both arms
+ * indexed on the session id; it is also the existence check the sync relies on.
  */
-async function conversationsFor(sessionIds: string[]): Promise<Set<string>> {
-  const tails = await db
-    .select({ id: _conversations.id })
+async function conversationsFor(
+  sessionIds: string[],
+): Promise<Map<string, Set<string>>> {
+  const tails = db
+    .select({
+      conversationId: _conversations.id,
+      sessionId: _conversations.claudeSessionId,
+    })
     .from(_conversations)
     .where(inArray(_conversations.claudeSessionId, sessionIds));
-  return new Set([
-    ...(await listConversationsForSessions(sessionIds)),
-    ...tails.map((r) => r.id),
-  ]);
+  const chained = db
+    .select({
+      conversationId: _conversationSessions.conversationId,
+      sessionId: _conversationSessions.claudeSessionId,
+    })
+    .from(_conversationSessions)
+    .innerJoin(
+      _conversations,
+      eq(_conversations.id, _conversationSessions.conversationId),
+    )
+    .where(inArray(_conversationSessions.claudeSessionId, sessionIds));
+  const out = new Map<string, Set<string>>();
+  for (const { conversationId, sessionId } of await union(tails, chained)) {
+    // Never null: both arms match it against `sessionIds`.
+    if (sessionId === null) throw new Error("unreachable: null session id");
+    const ids = out.get(conversationId) ?? new Set<string>();
+    ids.add(sessionId);
+    out.set(conversationId, ids);
+  }
+  return out;
 }
 
 async function syncWritten(sessionIds: string[]): Promise<void> {
-  const ids = await conversationsFor(sessionIds);
-  await Promise.all([...ids].map((id) => requestUsageSync(id)));
+  const owners = await conversationsFor(sessionIds);
+  await Promise.all(
+    [...owners].map(([id, written]) => requestUsageSync(id, written)),
+  );
 }
 
 let stop: (() => void) | null = null;
