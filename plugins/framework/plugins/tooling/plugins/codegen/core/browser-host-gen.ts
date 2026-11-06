@@ -11,7 +11,10 @@
 // - the roots: every plugin of the composition's bundle whose server barrel is
 //   portable (`serverPortabilityOf`: nothing its static closure loads needs
 //   the computer — derived, never declared), plus every portable server
-//   barrel the host's own entry (`bin/browser-host.ts` — its seed) loads;
+//   barrel the host's own entry (`bin/browser-host.ts`) loads, and — when the
+//   host ships a starting snapshot — every one its snapshot script
+//   (`bin/browser-host.snapshot.ts`, the seed run at build time over this same
+//   graph) loads;
 // - the providers: the portable host providers (`EdgeGraph.hostProviders`: a
 //   plugin whose `server/index.ts` provides a host service, which no
 //   composition bundles) that provide a host service the graph declares, added
@@ -89,6 +92,12 @@ export interface BrowserHostDecl {
   declaration: string;
   /** Repo-relative `bin/browser-host.ts` — the worker's entry. */
   entry: string;
+  /**
+   * Repo-relative `bin/browser-host.snapshot.ts` — the script the build takes
+   * the host's starting snapshot with (web-artifacts' `host-snapshots.ts`).
+   * Its server barrels are roots too: it seeds the same graph the worker boots.
+   */
+  snapshotEntry: string;
   /** Repo-relative `bin/browser-host.generated.ts` — the worker's graph. */
   generated: string;
   /** Repo-relative `core/browser-host.generated.ts` — the page's scope (`browserHost`). */
@@ -105,6 +114,7 @@ export function discoverBrowserHosts(repo: RepoFiles): BrowserHostDecl[] {
       pluginPath: m[1]!,
       declaration: path,
       entry: path.replace(/\.composition\.ts$/, ".ts"),
+      snapshotEntry: path.replace(/\.composition\.ts$/, ".snapshot.ts"),
       generated: path.replace(/\.composition\.ts$/, ".generated.ts"),
       scopeGenerated: `plugins/${m[1]!}/core/browser-host.generated.ts`,
     });
@@ -147,6 +157,8 @@ export interface HostGraphInputs {
   label: string;
   /** Repo-relative entry module (`bin/browser-host.ts`). */
   entry: string;
+  /** Repo-relative snapshot script (`bin/browser-host.snapshot.ts`), when the host has one. */
+  snapshotEntry?: string;
   /** The server barrels of the composition's bundle (portable or not). */
   bundleBarrels: readonly string[];
   /** The host providers' server barrels (`hostProviderServerBarrels`). */
@@ -262,8 +274,13 @@ export async function resolveHostGraph(
   for (const barrel of inputs.bundleBarrels) {
     if (portable(barrel)) members.add(barrel);
   }
-  // The entry's own imports (its seed) are roots by rule.
-  await absorb([entry]);
+  // The entry's own imports — and its snapshot script's (its seed) — are
+  // roots by rule.
+  await absorb(
+    inputs.snapshotEntry === undefined
+      ? [entry]
+      : [entry, inputs.snapshotEntry],
+  );
   for (const module of [...reached.keys()].sort()) {
     if (SERVER_BARREL_RE.test(module) && portable(module)) {
       members.add(module);
@@ -462,6 +479,9 @@ async function inferUncached(
   const graph = await resolveHostGraph({
     label,
     entry: host.entry,
+    ...(repo.has(host.snapshotEntry)
+      ? { snapshotEntry: host.snapshotEntry }
+      : {}),
     bundleBarrels: [...resolved.bundle]
       .map(barrelOf)
       .filter((b) => repo.has(b))

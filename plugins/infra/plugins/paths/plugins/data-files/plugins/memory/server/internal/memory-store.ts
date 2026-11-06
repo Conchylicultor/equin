@@ -297,5 +297,13 @@ export function createMemoryDataFiles(opts?: {
 
 /** The store this host boots — one per process, kept in the host's declared storage. */
 export const memoryDataFiles = createMemoryDataFiles({
-  persist: () => hostStorage().store<Node>("data-files"),
+  // A snapshot taken earlier moves each node's times with it.
+  persist: () =>
+    hostStorage().store<Node>("data-files", {
+      shiftTime: (node, ms) => ({
+        ...node,
+        mtimeMs: node.mtimeMs + ms,
+        birthtimeMs: node.birthtimeMs + ms,
+      }),
+    }),
 });

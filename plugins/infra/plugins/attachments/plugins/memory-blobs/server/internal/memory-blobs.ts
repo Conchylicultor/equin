@@ -5,7 +5,9 @@ import type { AttachmentBlobsImpl } from "@plugins/infra/plugins/attachments/ser
 // records). Held in memory and written through to the host's storage
 // (`attachment-blobs`), so a persistent host keeps them across reloads; loaded
 // on first use, never at module evaluation.
-const persisted = () => hostStorage().store<Blob>("attachment-blobs");
+// Bytes hold no instant: a snapshot's shift leaves them as they are.
+const persisted = () =>
+  hostStorage().store<Blob>("attachment-blobs", { shiftTime: (blob) => blob });
 let held: Map<string, Blob> | null = null;
 const blobs = (): Map<string, Blob> => (held ??= new Map(persisted().loaded));
 

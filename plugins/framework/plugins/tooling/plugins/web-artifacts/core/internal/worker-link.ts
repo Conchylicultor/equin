@@ -39,7 +39,11 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, relative, sep } from "node:path";
 import { init as esInit, parse as esParse } from "es-module-lexer/minimal";
-import { isBrowserHostSpecifier } from "../browser-host-specifier";
+import {
+  BROWSER_HOST_SNAPSHOT_SPECIFIER_PREFIX,
+  isBrowserHostSnapshotSpecifier,
+  isBrowserHostSpecifier,
+} from "../browser-host-specifier";
 import { COMPOSITION_SPECIFIERS } from "../composition-modules";
 import {
   isBrowserUnreachableDynamic,
@@ -47,6 +51,7 @@ import {
   WORKER_TREE_PREFIX,
 } from "../constants";
 import { cobuildHostOf } from "../own-roots";
+import { HOST_SNAPSHOT_LINK_KIND } from "./host-snapshots";
 import {
   artifactStorePath,
   artifactTmpDir,
@@ -111,6 +116,10 @@ export function linkSpecifier(opts: {
   const { spec, up } = opts;
   if (spec.startsWith(".") || spec.startsWith("/") || spec.startsWith("data:"))
     return spec;
+  if (isBrowserHostSnapshotSpecifier(spec)) {
+    // The tree links each host's snapshot under this name (`host-snapshots.ts`).
+    return `${up}${workerLinkName(spec.slice(BROWSER_HOST_SNAPSHOT_SPECIFIER_PREFIX.length), HOST_SNAPSHOT_LINK_KIND)}/index.js`;
+  }
   if (isBrowserHostSpecifier(spec)) {
     return throwingModule(
       `${spec}: a browser host's worker does not start a browser host`,
@@ -249,6 +258,8 @@ export function workerTreeOf(opts: {
   linked: ReadonlyArray<{ linkName: string; linkedDirName: string }>;
   vendorSetDir: AppPath;
 }): WorkerTree {
+  // `linkedDirName` is any store entry the link names: a linked artifact copy,
+  // or a host's snapshot dir (`host-snapshots.ts`), which has nothing to link.
   const links: Record<string, AppPath> = {};
   for (const { linkName, linkedDirName } of opts.linked) {
     const target = artifactStorePath(linkedDirName);

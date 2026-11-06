@@ -157,6 +157,20 @@ Key invariants:
   itself (`internal/browser-hosts.ts`, served as `@browser-host/<pluginPath>`)
   is `host.js` plus the frame-serving Service Worker (`frames-sw.js`, a classic
   script bundled whole, keyed by its own recorded inputs).
+- **A browser host's starting snapshot is an artifact with no stale spelling**
+  (`internal/host-snapshots.ts`). A host declaring
+  `bin/browser-host.snapshot.ts` gets it run once per address in a fresh Bun
+  process (stage `artifacts:host-snapshots`), its file published with an
+  `index.js` (`{ version, takenAt, load() }`, version = the file's hash) and
+  linked into the worker tree as `<plugin-id>.snapshot`, which
+  `@browser-host-snapshot/<pluginPath>` resolves to (external to every build,
+  like `@browser-host/*`). Its address covers every artifact of the worker's
+  closure and of the host's own `core`, every file of the host plugin, every
+  repo module of the script's own static import closure (scanned by Bun's
+  transpiler; a repo specifier resolving to nothing throws), the lockfile, the
+  Bun version and the builder identity, so a changed seed, migration or server
+  code is a new address. `map-in-sync` derives the same links
+  (`hostSnapshotLinks`) and reports a snapshot the store lacks as missing.
 - **A browser host's inputs are recorded under the address they hash to.** The
   host artifact's address is the content of every repo file its build loaded
   (vite's module list), their directories' listings, each `import.meta.glob`
@@ -361,17 +375,19 @@ Key invariants:
 
 - Description: Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
 - Core:
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/timed-fs` ×8
     - `framework/plugin-id` ×4
     - `framework/web-core` ×4
     - `infra/host-fs/user-path` ×4
     - `packages/flock` ×4
     - `packages/owned-fd` ×2
+    - `framework/browser-server/host-storage.decodeHostSnapshot`
     - `framework/product-name.LEGACY_IDS`
     - `framework/tooling.loadRepoSnapshot`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/paths.worktreesDir`
+    - `infra/spawn.spawnCaptured`
     - `packages/coalesce.createCoalescer`
     - `packages/semaphore.createSemaphore`
   - Exports (types):
@@ -435,7 +451,7 @@ Key invariants:
     - `framework/tooling/web-artifacts/prune`
 - Exemptions:
   - Exempts itself from:
-    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
+    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/identity.ts`, `core/internal/plan.ts`, `core/internal/vendors.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/vendor-cache.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/global-css.ts`, `core/internal/package-assets.ts`, `core/internal/staged-verify.ts` (sanctioned)

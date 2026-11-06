@@ -117,6 +117,7 @@ function diskStorage(dir: string): HostStorage & { close(): Promise<void> } {
   return {
     kind: "persistent",
     databaseDir: dir,
+    databaseStart: { from: "stored-or-empty" },
     store: () => {
       throw new Error("no host stores in this test");
     },

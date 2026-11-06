@@ -61,6 +61,7 @@ import {
 } from "./global-css";
 import { openBuildLease, type BuildLease } from "./lease";
 import { ensureBrowserHost } from "./browser-hosts";
+import { ensureHostSnapshot, hostSnapshotLinks } from "./host-snapshots";
 import type { OwnSources } from "./own-files";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { composedHostsOf } from "./expected";
@@ -452,6 +453,37 @@ async function runPipeline(
     `css: ${css.cached ? "cache hit" : "compiled"} from ${cssInput.candidates.length} candidates (key ${cssKey.slice(0, 12)})`,
   );
 
+  // ── Stage 4a: host snapshots ────────────────────────────────────────
+  // Each host that declares a starting snapshot (`bin/browser-host.snapshot.ts`)
+  // gets it taken once per address (`host-snapshots.ts`) — a stale one has no
+  // spelling — and linked into the worker tree below.
+  const snapshotLinks = await stage(
+    "artifacts:host-snapshots",
+    "host snapshots",
+    async () => {
+      const links = await hostSnapshotLinks({
+        repo: sources.snapshot,
+        hosts: hosts.map((h) => ({
+          pluginPath: h.plan.pluginPath,
+          entry: h.entry,
+        })),
+        targets: allTargets,
+        metaOf: (dirName) => buildOut.metas.get(dirName)!,
+        identityHash: plan.identity.identityHash,
+      });
+      for (const link of links) {
+        await ensureHostSnapshot({
+          root,
+          pluginPath: link.pluginPath,
+          dirName: link.linkedDirName,
+          log,
+          pin: (paths) => lease.pin(paths),
+        });
+      }
+      return links;
+    },
+  );
+
   // ── Stage 4b: worker trees ──────────────────────────────────────────
   // Each host's closure, linked for the worker (`worker-link.ts`), under ONE
   // tree entry per build: the page maps each host's worker entry into it.
@@ -491,7 +523,7 @@ async function runPipeline(
         ),
       );
       const tree = workerTreeOf({
-        linked: [...linked.values()],
+        linked: [...linked.values(), ...snapshotLinks],
         vendorSetDir: vendorSetPath(vendors.setHash),
       });
       await lease.pin([artifactStorePath(tree.dirName)]);
@@ -509,6 +541,7 @@ async function runPipeline(
     targets: allTargets,
     metas: buildOut.metas,
     vendorSetHash: vendors.setHash,
+    snapshotLinks,
   });
   if (
     workerTree !== null &&

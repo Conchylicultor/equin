@@ -17,12 +17,10 @@
  * own policy.
  *
  * Two substitutions, one per provider whose data is bundled text (a vite
- * `import.meta.glob`, which Bun cannot evaluate): the migration history
- * (`migrations/bundled-source`) and the committed config layer
- * (`config_v2/bundled-layer`) are provided by the same data read off disk.
- * Every other entry is the graph the worker boots. The seed's own bundled
- * input — the demo's prototypes and their thumbnails — is read off disk the
- * same way (`diskDemoPrototypes` below).
+ * `import.meta.glob`, which Bun cannot evaluate): the migration history and the
+ * committed config layer are provided by the same data read off disk, as the
+ * build does when it takes the demo's snapshot (`./bun-host.ts`). Every other
+ * entry is the graph the worker boots.
  *
  * Boots in a FRESH bun process (this file re-run as a child with
  * `DEMO_HOST_BOOT_CHILD` set): a boot collects its own host-service providers
@@ -44,8 +42,8 @@ import { defineMandate } from "@plugins/tasks/plugins/orchestration/plugins/mand
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { declareMemoryHostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing";
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, sep } from "node:path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   jsonlEvents,
   JSONL_EVENTS_MAX,
@@ -56,18 +54,11 @@ import {
   Resource,
   type BrowserHost,
   type ResourceParams,
-  type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
 import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
-import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { injectFrameAgent } from "@plugins/primitives/plugins/embed/plugins/frame/plugins/agent/core";
-import {
-  isMigrationFileName,
-  migrationsFrom,
-  MigrationSource,
-} from "@plugins/database/plugins/migrations/server";
 import {
   appScopeId,
   committedDocument,
@@ -83,7 +74,6 @@ import {
   type ConfigV2ScopesMap,
 } from "@plugins/config_v2/core";
 import {
-  ConfigGitLayer,
   ConfigStore,
   getAllDescriptors,
   setConfigByPath,
@@ -126,7 +116,11 @@ import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/s
 import { hostReads } from "../core/browser-host.generated";
 import { conversationTurns } from "@plugins/conversations/plugins/turn-ledger/core";
 import { DEMO_CONVERSATION_ID } from "../core/internal/scenario";
-import { hostEntries, hostProviders } from "./browser-host.generated";
+import {
+  bunHostEntries,
+  diskConfigFiles,
+  diskDemoPrototypes,
+} from "./bun-host";
 import { seed } from "./seed";
 import {
   DEMO_PINNED_PROTOTYPE,
@@ -134,9 +128,7 @@ import {
 } from "../core/internal/prototypes";
 import {
   parsePrototypeTree,
-  prototypeFixtureDataOf,
   prototypeFixtureVersionFingerprint,
-  type PrototypeFixtureData,
 } from "@plugins/apps/plugins/prototypes/plugins/fixtures/core";
 import {
   createPrototype,
@@ -150,84 +142,7 @@ const TEST_MANDATE = defineMandate({ id: "interactive", label: "Interactive" });
 
 setDefaultTimeout(300_000);
 
-/** The demo's `data/` folder off disk, as the seed reads it (the worker has it inlined). */
-function diskDemoPrototypes(): PrototypeFixtureData {
-  const dir = join(import.meta.dir, "..", "data");
-  const files: Record<string, Uint8Array> = {};
-  for (const rel of readdirSync(dir, { recursive: true }) as string[])
-    if (statSync(join(dir, rel)).isFile())
-      files[rel.split(sep).join("/")] = new Uint8Array(
-        readFileSync(join(dir, rel)),
-      );
-  return prototypeFixtureDataOf(files);
-}
-
-type Entry = (typeof hostEntries)[number];
-
-const MIGRATIONS_DATA = join(PLUGINS_DIR, "database/plugins/migrations/data");
-const diskMigrations: Entry = {
-  pluginPath:
-    "apps/plugins/website/plugins/demos/plugins/lumen/boot-test-migrations",
-  id: "apps.website.demos.lumen.boot-test-migrations",
-  loader: async () => ({
-    default: {
-      contributions: [
-        MigrationSource.provide({
-          list: () =>
-            migrationsFrom(
-              readdirSync(MIGRATIONS_DATA)
-                .filter(isMigrationFileName)
-                .map((file) => ({
-                  file,
-                  sqlText: readFileSync(join(MIGRATIONS_DATA, file), "utf8"),
-                })),
-            ),
-        }),
-      ],
-    } satisfies ServerPluginDefinition,
-  }),
-  dependsOn: ["database/plugins/migrations"],
-  core: null,
-};
-
-/** The repo's `config/`, read off disk: what the bundled layer inlines. */
-function diskConfigFiles(): Map<string, string> {
-  const dir = join(REPO_ROOT, "config");
-  const files = new Map<string, string>();
-  for (const rel of readdirSync(dir, { recursive: true }) as string[]) {
-    if (!rel.endsWith(".jsonc") || !statSync(join(dir, rel)).isFile()) continue;
-    files.set(rel, readFileSync(join(dir, rel), "utf8"));
-  }
-  return files;
-}
 const committedFiles = committedFilesFromMap(diskConfigFiles());
-const diskGitLayer: Entry = {
-  pluginPath:
-    "apps/plugins/website/plugins/demos/plugins/lumen/boot-test-config",
-  id: "apps.website.demos.lumen.boot-test-config",
-  loader: async () => ({
-    default: {
-      contributions: [
-        ConfigGitLayer.provide({
-          document: (storePath) => committedDocument(storePath, committedFiles),
-          watch: () => Promise.resolve(() => {}),
-        }),
-      ],
-    } satisfies ServerPluginDefinition,
-  }),
-  dependsOn: ["config_v2"],
-  core: null,
-};
-
-/**
- * Host service → the disk-backed entry standing in for its bundled provider.
- * Each swapped provider must provide that one service only, or the swap would
- * drop another service with it.
- */
-const SWAPS: Record<string, Entry> = {
-  [MigrationSource.id]: diskMigrations,
-  [ConfigGitLayer.id]: diskGitLayer,
-};
 
 const IN_CHILD = process.env.DEMO_HOST_BOOT_CHILD === "1";
 
@@ -293,20 +208,11 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
   beforeAll(async () => {
     // A browser host keeps its state where its entry point declares; here, in memory.
     declareMemoryHostStorage();
-    const swapped = new Set(
-      Object.keys(SWAPS).map((service) => hostProviders[service]),
-    );
-    expect(swapped.size).toBe(Object.keys(SWAPS).length);
-    for (const [service, provider] of Object.entries(hostProviders)) {
-      if (swapped.has(provider)) expect(Object.keys(SWAPS)).toContain(service);
-    }
-    const graph = hostEntries.filter((e) => !swapped.has(e.pluginPath));
-    expect(graph).toHaveLength(hostEntries.length - swapped.size);
     // The worker's own boot (`./browser-host.ts`): browser mode over a graph
     // portable by construction (derived at build), the resource key set closed.
     host = await bootBrowserHost({
-      entries: [...graph, ...Object.values(SWAPS)],
-      seed: () => seed(diskDemoPrototypes()),
+      entries: bunHostEntries(),
+      seed: (h) => seed(diskDemoPrototypes(), h),
       onUnmatched: unmatchedApiResponse,
     });
   });

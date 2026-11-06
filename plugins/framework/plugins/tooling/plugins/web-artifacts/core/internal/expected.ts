@@ -38,6 +38,7 @@ import {
   vendorSetPath,
   type VendorSetMeta,
 } from "./vendors";
+import { hostSnapshotLinks, type HostSnapshotLink } from "./host-snapshots";
 import {
   workerLinkedDirName,
   workerLinkName,
@@ -62,6 +63,8 @@ export function composedHostsOf(opts: {
   targets: readonly PlannedTarget[];
   metas: ReadonlyMap<string, ArtifactMeta>;
   vendorSetHash: string;
+  /** The hosts' snapshots the tree links (`host-snapshots.ts`'s `hostSnapshotLinks`). */
+  snapshotLinks: readonly HostSnapshotLink[];
 }): ComposedHost[] {
   if (opts.hosts.length === 0) return [];
   const linked = new Map<string, { linkName: string; linkedDirName: string }>();
@@ -78,7 +81,7 @@ export function composedHostsOf(opts: {
     }
   }
   const tree = workerTreeOf({
-    linked: [...linked.values()],
+    linked: [...linked.values(), ...opts.snapshotLinks],
     vendorSetDir: vendorSetPath(opts.vendorSetHash),
   });
   return opts.hosts.map((h) => ({
@@ -108,6 +111,7 @@ export async function planExpectedFleet(opts: {
   metas: Map<string, ArtifactMeta>;
   missing: string[];
   builderSource: string;
+  identityHash: string;
 }> {
   const { root } = opts.repo;
   const pluginsRoot = joinAppPath(root, "plugins");
@@ -180,6 +184,7 @@ export async function planExpectedFleet(opts: {
     metas,
     missing: [...missing].sort(),
     builderSource: plan.identity.sourceDigest,
+    identityHash: plan.identity.identityHash,
   };
 }
 
@@ -212,6 +217,24 @@ export async function computeExpectedComposition(opts: {
     return { kind: "missing-artifacts", missing: [vendorSetDirName(setHash)] };
   }
 
+  const snapshotLinks = await hostSnapshotLinks({
+    repo: opts.repo,
+    hosts: fleet.hosts.map((h) => ({
+      pluginPath: h.plan.pluginPath,
+      entry: h.entry,
+    })),
+    targets: fleet.targets,
+    metaOf: (dirName) => fleet.metas.get(dirName)!,
+    identityHash: fleet.identityHash,
+  });
+  // The tree links each snapshot by name: one the store lacks is a dangling
+  // link, not a composition this tree has.
+  const missingSnapshots = snapshotLinks
+    .filter((l) => !hasArtifact(l.linkedDirName))
+    .map((l) => l.linkedDirName);
+  if (missingSnapshots.length > 0) {
+    return { kind: "missing-artifacts", missing: missingSnapshots };
+  }
   const mapEntries = composeMapEntries({
     targets: fleet.targets,
     registryDirName: fleet.registryDirName,
@@ -221,6 +244,7 @@ export async function computeExpectedComposition(opts: {
       targets: fleet.targets,
       metas: fleet.metas,
       vendorSetHash: vendorMeta.setHash,
+      snapshotLinks,
     }),
   });
   return {

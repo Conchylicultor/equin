@@ -14,12 +14,15 @@ import {
 import { bootBrowserHost } from "@plugins/framework/plugins/server-core/core";
 import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
 import { bundledMigrations } from "@plugins/database/plugins/migrations/plugins/bundled-source/server";
+import lumenSnapshot from "@browser-host-snapshot/apps/plugins/website/plugins/demos/plugins/lumen";
 import { hostEntries } from "./browser-host.generated";
-import { seed } from "./seed";
-import { bundledDemoPrototypes } from "./bundled-prototypes";
 
 /** Where the demo keeps its data: one IndexedDB storage, whatever the build. */
 const DEMO_STORAGE = "demo-lumen";
+
+/** Told to the visitor whose older demo data this build replaced. */
+const DEMO_UPDATED_NOTICE =
+  "The demo was updated, so its data was reset to the new version.";
 
 serveBrowserHost({
   // A worker's global scope: the repo's one lib types `self` as a Window.
@@ -28,18 +31,22 @@ serveBrowserHost({
     kind: "persistent",
     name: DEMO_STORAGE,
     migrations: bundledMigrations().map((m) => m.hash),
+    // The demo's policy: its data is throwaway, so a visitor's data from an
+    // older snapshot is replaced by this build's (and they are told).
+    start: { snapshot: lumenSnapshot, whenOutdated: "reset" },
   },
   async boot(storage) {
     const host = await bootBrowserHost({
       entries: hostEntries,
-      // The demo's policy: its story is written once, into a fresh storage.
-      seed: storage.fresh ? () => seed(bundledDemoPrototypes()) : undefined,
       onUnmatched: unmatchedApiResponse,
     });
     return {
       server: runtimeBrowserServer(host),
       keys: new Set(host.keys),
       boot: host.boot,
+      ...(storage.origin.kind === "snapshot" && storage.origin.replacedOutdated
+        ? { notice: DEMO_UPDATED_NOTICE }
+        : {}),
     };
   },
 });

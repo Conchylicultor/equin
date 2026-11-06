@@ -186,8 +186,8 @@ other doors.
 
 - Description: Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
 - Cross-plugin:
-  - Imported by: 51 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `database` ×13
+  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `database` ×14
     - `apps` ×9
     - `debug` ×6
     - `tasks` ×5

@@ -11,6 +11,8 @@
 // - the holder YIELDS when the claimant knows every migration the holder knows
 //   (same or newer code): it ends serving (its tabs are told to reload and
 //   never write again), closes the storage, releases the lock;
+//   and, when both start from a snapshot, the claimant's is not older than the
+//   holder's;
 // - otherwise the claimant is OLDER code than the data, and the holder REFUSES:
 //   the claimant fails with `StorageNewerThanCodeError`.
 //
@@ -22,7 +24,12 @@
 import { StorageNewerThanCodeError } from "./errors";
 
 type OwnershipMessage =
-  | { t: "claim"; id: string; migrations: string[] }
+  | {
+      t: "claim";
+      id: string;
+      migrations: string[];
+      snapshotTakenAt: number | null;
+    }
   | { t: "refuse"; to: string }
   | { t: "held" };
 
@@ -51,6 +58,8 @@ export interface Ownership {
 export async function acquireOwnership(opts: {
   name: string;
   migrations: readonly string[];
+  /** When the snapshot this code starts a fresh storage from was taken; absent: it has none. */
+  snapshotTakenAt: number | undefined;
   onSuperseded: () => Promise<void>;
 }): Promise<Ownership> {
   const lockName = `equin-host:${opts.name}`;
@@ -61,6 +70,7 @@ export async function acquireOwnership(opts: {
       t: "claim",
       id,
       migrations: [...opts.migrations],
+      snapshotTakenAt: opts.snapshotTakenAt ?? null,
     } satisfies OwnershipMessage);
 
   const refused = new AbortController();
@@ -125,7 +135,14 @@ export async function acquireOwnership(opts: {
   channel.onmessage = (event: MessageEvent<OwnershipMessage>) => {
     const msg = event.data;
     if (msg.t !== "claim" || yielding) return;
-    if (!knowsEveryMigration(msg.migrations, opts.migrations)) {
+    const olderSnapshot =
+      opts.snapshotTakenAt !== undefined &&
+      msg.snapshotTakenAt !== null &&
+      msg.snapshotTakenAt < opts.snapshotTakenAt;
+    if (
+      !knowsEveryMigration(msg.migrations, opts.migrations) ||
+      olderSnapshot
+    ) {
       channel.postMessage({
         t: "refuse",
         to: msg.id,

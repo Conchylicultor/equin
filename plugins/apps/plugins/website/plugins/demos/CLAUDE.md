@@ -3,7 +3,9 @@
 The website's live demos, one plugin each. A demo is real server code booted
 in a Web Worker on PGlite (its `bin/browser-host.ts`, its composition in
 `bin/browser-host.composition.ts` — codegen discovers hosts by that file),
-seeded with the demo's OWN data: its story, its pages, its prototypes.
+starting from the demo's OWN data — its story, its pages, its prototypes —
+seeded once at build time (`bin/browser-host.snapshot.ts`) and shipped as a
+snapshot the worker loads.
 
 - **A demo owns its data; an app owns its fixture format and writer.** The data
   a demo shows lives in the demo (`core/`, `data/`); how that data is written

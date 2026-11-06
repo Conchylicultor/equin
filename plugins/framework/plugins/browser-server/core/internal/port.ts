@@ -73,7 +73,13 @@ type ToHost =
 
 /** Worker → page. */
 type FromHost =
-  | { t: "ready"; keys: string[]; boot: HostBoot; readyAtMs: number }
+  | {
+      t: "ready";
+      keys: string[];
+      boot: HostBoot;
+      readyAtMs: number;
+      notice: string | null;
+    }
   | { t: "failed"; error: string }
   /** The host declined to boot, for a reason the page shows (`HostRefusedError`). */
   | { t: "refused"; message: string }
@@ -155,6 +161,13 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
     if (err instanceof HostRefusedError) return;
     console.error("[browser-server] the host failed to boot:", err);
   });
+  /** The boot settled: an end served from now on did not wait for it. */
+  let bootSettled = false;
+  // Either way: a failed boot is reported above, and to each end below.
+  const settle = (): void => {
+    bootSettled = true;
+  };
+  void booted.then(settle, settle);
 
   /** Every page end being served, and the sockets each opened. */
   const ends = new Map<PortEnd, Map<number, BrowserServerSocket>>();
@@ -182,10 +195,13 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
         throw err;
       });
     });
-    if (announce) void announceTo(post);
+    if (announce) void announceTo(post, !bootSettled);
   }
 
-  async function announceTo(post: (msg: FromHost) => void): Promise<void> {
+  async function announceTo(
+    post: (msg: FromHost) => void,
+    waitedForBoot: boolean,
+  ): Promise<void> {
     let host: HostBooted;
     try {
       host = await booted;
@@ -210,6 +226,9 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
       keys: [...host.keys],
       boot: host.boot,
       readyAtMs: Math.round(performance.now()),
+      // Told to the pages that waited for this boot, not to every page that
+      // connects later.
+      notice: waitedForBoot ? (host.notice ?? null) : null,
     });
   }
 
@@ -361,6 +380,11 @@ export interface HostBoot {
   stages: readonly { name: string; ms: number }[];
   /** Its slowest spans. */
   slowest: readonly { label: string; ms: number }[];
+  /**
+   * Where the data it booted on came from (a storage-backed host says: what
+   * an earlier boot stored, a snapshot, nothing). Absent: the host keeps none.
+   */
+  data?: string;
 }
 
 /** A server booted in the worker: what `serveHost`'s `boot` returns. */
@@ -368,12 +392,19 @@ export interface HostBooted {
   server: BrowserServer;
   keys: ReadonlySet<string>;
   boot: HostBoot;
+  /**
+   * Something the person should be told about this boot (a demo reset to a
+   * newer version), shown by the pages that waited for it.
+   */
+  notice?: string;
 }
 
 /** A booted server across a port, with the keys it serves and how its boot went. */
-export interface PortServer extends HostBooted {
+export interface PortServer extends Omit<HostBooted, "notice"> {
   /** When the worker reported ready: ms after it was created, on its clock. */
   readyAtMs: number;
+  /** What this page should tell the person about the boot it waited for (`HostBooted.notice`). */
+  notice: string | null;
   /** Resolves when the host stops serving (`ended`); never, while it serves. */
   ended: Promise<HostEndReason>;
   /** Ask the host to wipe its data and end (it answers with `ended: "reset"`). */
@@ -516,6 +547,7 @@ export function portBrowserServer(port: PortEnd): Promise<PortServer> {
             keys: new Set(msg.keys),
             boot: msg.boot,
             readyAtMs: msg.readyAtMs,
+            notice: msg.notice,
             ended,
             reset: () => port.postMessage({ t: "reset" } satisfies ToHost),
           });

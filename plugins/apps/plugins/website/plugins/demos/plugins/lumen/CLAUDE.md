@@ -18,13 +18,21 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
 (`agent-manager/demo`). Original design:
 `research/2026-10-15-global-app-embed-and-agent-manager-demo.md` §5.
 
-- **The demo's data is kept in the browser** (`browser-server/host-storage`,
-  storage `demo-lumen`): `bin/browser-host.ts` is `serveBrowserHost` with a
-  persistent storage, and seeds only when it is fresh — after that the data is
-  the visitor's, across reloads and every tab (one SharedWorker per build), and
-  a new build migrates it. "Reset demo" wipes it and the next boot seeds again.
-  A change to the seed reaches a visitor who already has data only after a
-  Reset.
+- **The seed runs once, at build time; the browser loads its snapshot**
+  (`browser-server/host-storage`, storage `demo-lumen`). The build runs
+  `bin/browser-host.snapshot.ts` in a fresh Bun process (web-artifacts'
+  `host-snapshots.ts`): the worker's own graph (`bin/bun-host.ts`: the bundled
+  migrations and config read off disk), filled by the real `bin/seed.ts`,
+  settled, dumped with every host store into one file. `bin/browser-host.ts`
+  imports it as `@browser-host-snapshot/<this plugin>` and passes it as the
+  storage's `start`: a fresh storage (first visit, Reset) loads it, its times
+  shifted to now, and NO seed code runs in the browser. Then the data is the
+  visitor's, across reloads and every tab (one SharedWorker per build), and a
+  new build migrates it. The demo's policy is `whenOutdated: "reset"`: data
+  that started from an older snapshot (or from before snapshots) is replaced by
+  this build's, and the page says so ("The demo was updated…"). The snapshot's
+  address covers the worker's artifacts, this plugin's files and the lockfile,
+  so a changed seed, story, migration or server code always ships a new one.
 - **The demo owns its data; the apps own how it is written.** Everything the
   demo shows is here — the stories and agents (`core/internal/stories.ts`),
   the Lumen workspace (`core/internal/pages.ts`, a Pages fixture), what the
@@ -36,8 +44,10 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   `apps/prototypes/fixtures`' `writePrototypeFixture` and
   `apps/sonata/fixtures`' `writeSongFixtures`. Design:
   `research/2026-10-28-global-per-app-demo-seeds-v2.md`.
-- **The seed writes into a live host** (`bin/seed.ts`). `bootBrowserHost`
-  seeds after the post-ready phases, so triggers, the job queue and the files
+- **The prototypes and the boot test read `data/` off disk** (`bin/bun-host.ts`):
+  the seed runs in Bun only, so nothing inlines the folder into the worker.
+- **The seed writes into a live host** (`bin/seed.ts`, run by the snapshot
+  script). `bootBrowserHost` seeds after the post-ready phases, so triggers, the job queue and the files
   watchers are running: a page write derives its backlinks, search doc and
   history snapshot by itself, a prototype folder is adopted by the watcher.
   The seed never derives by hand — it awaits `settleJobQueue()`
@@ -49,8 +59,10 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   (`page/annotations/agent-access`'s `pageTools.read` / `edit` / `writeNote`,
   as that conversation; each call's input and exact result go into its
   transcript, the minted card and page ids read from the edit's own report)
-  → settle → the transcripts → the prototypes fixture → settle → the songs →
-  settle. (Sonata's MIDI starters are not the demo's: the MIDI source seeds
+  → the user decorating the page the agent minted with an icon (🔦), through
+  the page header's own `PATCH` sent to the host's router (`seed`'s `host`
+  argument) — an agent's tools cannot set an icon, a person can — → settle →
+  the transcripts → the prototypes fixture → settle → the songs → settle. (Sonata's MIDI starters are not the demo's: the MIDI source seeds
   them itself, as on a fresh install.)
 - **Every id carries `demo`** (`conv-demo-…`, `task-demo-…`, `att-demo-…`), so a
   request that leaked past the scope to the real server is findable in its logs.
@@ -104,9 +116,8 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   fixture layout (`apps/prototypes/fixtures`: `prototypes/<id>/` with
   `steps/v<N>.txt` + `steps/v<N>/` for history, `_picks/`, and
   `thumbnails/<fingerprint>.png`); folder ids carry `demo`
-  (`demoPrototypeFixture` asserts it). `bin/bundled-prototypes.ts` inlines the
-  folder into the worker bundle (`import.meta.glob`, text `?raw`, PNGs
-  `?inline`); the boot test reads it off disk. A browser host renders no
+  (`demoPrototypeFixture` asserts it), read off disk by the snapshot script
+  and the boot test (`bin/bun-host.ts`). A browser host renders no
   thumbnail, so the PNGs are rendered ahead of time by the gallery's own
   renderer: after editing a prototype, run `./equin run
   plugins/apps/plugins/prototypes/plugins/fixtures/scripts/render-fixture-thumbnails.ts
@@ -170,10 +181,12 @@ data and seed; no app folder changes:
 - `bin/browser-host.composition.ts` naming its composition (codegen discovers a
   host by this file, and generates `bin/browser-host.generated.ts` and
   `core/browser-host.generated.ts` beside it), `bin/declare-namespace.ts`, and
-  `bin/browser-host.ts` booting `bootBrowserHost({ entries, seed })` — copy
-  this plugin's.
+  `bin/browser-host.ts` serving `bootBrowserHost({ entries })` on a storage
+  that starts from its snapshot — copy this plugin's.
 - `bin/seed.ts` writing its data through the apps' fixture writers, settling
-  the queue between steps.
+  the queue between steps, and `bin/browser-host.snapshot.ts` (+
+  `bin/bun-host.ts`) running it at build time — the build takes the snapshot
+  by that file's presence.
 - `core/` exporting its `DemoScenario` (app, route, `host: browserHost`), which
   `<DemoScope scenario><AppEmbed app route/></DemoScope>` renders.
 - A `bin/browser-host.test.ts` like this one (boot in a fresh process, read the

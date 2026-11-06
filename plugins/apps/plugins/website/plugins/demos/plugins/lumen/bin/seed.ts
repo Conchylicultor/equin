@@ -29,6 +29,13 @@ import type { PrototypeFixtureData } from "@plugins/apps/plugins/prototypes/plug
 import { writePrototypeFixture } from "@plugins/apps/plugins/prototypes/plugins/fixtures/server";
 import { writeSongFixtures } from "@plugins/apps/plugins/sonata/plugins/fixtures/server";
 import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server";
+import { eq } from "drizzle-orm";
+import {
+  readEndpointResponse,
+  sendEndpointRequest,
+} from "@plugins/infra/plugins/endpoints/core";
+import { pageData, updateBlock } from "@plugins/page/plugins/editor/core";
+import { liveBlocks } from "@plugins/page/plugins/editor/server";
 import {
   DARK_MODE_PAGE_WORK,
   DEMO_AGENTS,
@@ -68,7 +75,9 @@ import {
  *    launch of each story an agent filed; the dark-mode task's origin, the
  *    Bugs page's prompt block;
  * 3. the page work the dark-mode agent did, RUN through the real page tools
- *    ({@link runDarkModePageWork}), then settled;
+ *    ({@link runDarkModePageWork}), then settled; then the user decorating the
+ *    page it minted with an icon, through the page header's own write
+ *    ({@link decorateInvestigationPage}) — an agent's tools cannot set one;
  * 4. each conversation's transcript, the dark-mode one recording that run;
  * 5. the Prototypes gallery, through Prototypes' fixture writer
  *    (`writePrototypeFixture`) from `prototypes` — the committed `../data/`,
@@ -79,7 +88,10 @@ import {
  */
 const DARK_MODE = demoStoryByKey("dark-mode");
 
-export async function seed(prototypes: PrototypeFixtureData): Promise<void> {
+export async function seed(
+  prototypes: PrototypeFixtureData,
+  host: { request(req: Request): Promise<Response> },
+): Promise<void> {
   assertStoryCategoriesRegistered();
   await writePageTree(DEMO_PAGES);
   await settleJobQueue();
@@ -175,6 +187,7 @@ export async function seed(prototypes: PrototypeFixtureData): Promise<void> {
   });
 
   const session = await runDarkModePageWork();
+  await decorateInvestigationPage(host, session.investigationId);
   await settleJobQueue();
   for (const story of DEMO_STORIES)
     await writeTranscript(
@@ -244,6 +257,42 @@ async function runDarkModePageWork(): Promise<DemoPageSession> {
   };
 
   return { readOrigin, readSpec, edit, note, cardId, investigationId };
+}
+
+/**
+ * The user, afterwards, picking an icon for the page the agent minted — the
+ * page header's own write (`apps/pages/page-tree`'s `useSavePageData`): the
+ * `PATCH` of the block's data, its current data spread under the new icon,
+ * sent through the host's router as the page would send it. An agent's page
+ * tools cannot set an icon; a person can, on an agent's page too.
+ */
+async function decorateInvestigationPage(
+  host: { request(req: Request): Promise<Response> },
+  pageId: string,
+): Promise<void> {
+  const [row] = await db
+    .select({ data: liveBlocks.data })
+    .from(liveBlocks)
+    .where(eq(liveBlocks.id, pageId))
+    .limit(1);
+  if (row === undefined)
+    throw new Error(
+      `[demo seed] the minted page ${pageId} is not a live block`,
+    );
+  const res = await sendEndpointRequest(
+    (path, init) =>
+      host.request(
+        new Request(new URL(path, "http://demo-seed.invalid"), init),
+      ),
+    updateBlock,
+    { id: pageId },
+    {
+      body: {
+        data: { ...pageData(row), icon: DARK_MODE_PAGE_WORK.investigationIcon },
+      },
+    },
+  );
+  await readEndpointResponse(updateBlock, res);
 }
 
 /** The ids an `edit_page` result reports — loud on a result of another shape. */

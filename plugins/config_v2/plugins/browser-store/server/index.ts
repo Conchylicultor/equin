@@ -12,7 +12,9 @@ export default {
     ConfigStore.provide(
       createMemoryConfigStore({
         propagatedFrom: (storePath) => ConfigGitLayer.get().document(storePath),
-        persist: () => hostStorage().store("config"),
+        // A config document holds no instant: a snapshot's shift leaves it.
+        persist: () =>
+          hostStorage().store("config", { shiftTime: (doc) => doc }),
       }),
     ),
   ],

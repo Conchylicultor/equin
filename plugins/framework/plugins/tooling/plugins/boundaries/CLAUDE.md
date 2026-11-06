@@ -302,7 +302,7 @@ takes a `debt` exemption on the check's id.
     - `framework/tooling/guards` (11 debt)
     - `framework/tooling/import-closure` (1 debt)
     - `framework/tooling/lint` (2 debt)
-    - `framework/tooling/web-artifacts` (19 debt)
+    - `framework/tooling/web-artifacts` (20 debt)
     - `framework/web-core` (1 debt)
     - `infra/asset-mirror/bundle` (1 debt)
     - `infra/corpus-index` (1 debt)

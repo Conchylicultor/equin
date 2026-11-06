@@ -21913,8 +21913,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `toMapper`
     - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
       - Cross-plugin:
-        - Imported by: 51 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
-          - `database` ×13
+        - Imported by: 52 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
+          - `database` ×14
           - `apps` ×9
           - `debug` ×6
           - `tasks` ×5
@@ -27394,7 +27394,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DemoScope`
                   - `useDemoHostControl`
               - Cross-plugin:
-                - Uses tokens: `ui/tokens/density --space-lg`
+                - Uses tokens:
+                  - `ui/tokens/density --space-lg`
+                  - `ui/tokens/density --space-md`
+                  - `ui/tokens/density --space-sm`
                 - Imported by: `apps/demo/shell`
         - **`host-storage`** — Where a browser host keeps its state: in memory (lost with the worker) or persistent (IndexedDB, named), declared once by the worker's entry point before boot (declareHostStorage / hostStorage). Gives PGlite its data dir and each in-memory host store (config, transcripts, attachment bytes, data files) a write-through store loaded at open; owns the lifecycle (fresh → seeded, a dead seed wiped, data written by newer code refused), the one-owner Web Lock with the version handoff between builds, and the wipe behind Reset.
           - Core:
@@ -27406,21 +27409,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/browser-server.serveHost`
             - Exports (types):
               - `BrowserHostStorage`
+              - `DatabaseStart`
+              - `HostSnapshot`
+              - `HostSnapshotRef`
               - `HostStorage`
+              - `HostStorageOrigin`
               - `HostStorageSpec`
+              - `HostStorageStart`
               - `HostStore`
+              - `HostStoreOptions`
               - `OpenedHostStorage`
               - `WorkerScope`
             - Exports (values):
+              - `decodeHostSnapshot`
+              - `encodeHostSnapshot`
               - `hostStorage`
               - `openHostStorage`
               - `serveBrowserHost`
               - `StorageNewerThanCodeError`
+              - `takeHostSnapshot`
           - Cross-plugin:
             - Imported by:
               - `config_v2/browser-store`
               - `conversations/transcript-source/memory`
               - `database/pglite`
+              - `framework/tooling/web-artifacts`
               - `infra/attachments/memory-blobs`
               - `infra/paths/data-files/memory`
           - Test helpers:
@@ -28433,7 +28446,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/guards` (11 debt)
               - `framework/tooling/import-closure` (1 debt)
               - `framework/tooling/lint` (2 debt)
-              - `framework/tooling/web-artifacts` (19 debt)
+              - `framework/tooling/web-artifacts` (20 debt)
               - `framework/web-core` (1 debt)
               - `infra/asset-mirror/bundle` (1 debt)
               - `infra/corpus-index` (1 debt)
@@ -29573,17 +29586,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 32 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 34 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `packages/timed-fs` ×8
               - `framework/plugin-id` ×4
               - `framework/web-core` ×4
               - `infra/host-fs/user-path` ×4
               - `packages/flock` ×4
               - `packages/owned-fd` ×2
+              - `framework/browser-server/host-storage.decodeHostSnapshot`
               - `framework/product-name.LEGACY_IDS`
               - `framework/tooling.loadRepoSnapshot`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `infra/paths.worktreesDir`
+              - `infra/spawn.spawnCaptured`
               - `packages/coalesce.createCoalescer`
               - `packages/semaphore.createSemaphore`
             - Exports (types):
@@ -29647,7 +29662,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts/prune`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
+              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
               - `user-path/no-unproven-claim` — `core/internal/identity.ts`, `core/internal/plan.ts`, `core/internal/vendors.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/vendor-cache.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/global-css.ts`, `core/internal/package-assets.ts`, `core/internal/staged-verify.ts` (sanctioned)
@@ -34595,8 +34610,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 89 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
-          - `framework` ×28
+        - Imported by: 90 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+          - `framework` ×29
           - `infra` ×24
           - `apps` ×9
           - `debug` ×5

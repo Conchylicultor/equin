@@ -11,7 +11,10 @@
 // address hashes. Read that file first — the two must agree or the store serves
 // a bundle built against source its address never saw.
 
-import { isBrowserHostSpecifier } from "./browser-host-specifier";
+import {
+  isBrowserHostSnapshotSpecifier,
+  isBrowserHostSpecifier,
+} from "./browser-host-specifier";
 import { COMPOSITION_SPECIFIERS } from "./composition-modules";
 import { isBareSpecifier, isInlinedPackage } from "./constants";
 import {
@@ -49,7 +52,11 @@ export function makeArtifactExternal(
     // pipeline extracts them into the artifact's injected styles (the entry
     // build's strip plugin nulls the global app.css separately).
     if (id.endsWith(".css")) return false;
-    if (COMPOSITION_SPECIFIERS.has(id) || isBrowserHostSpecifier(id))
+    if (
+      COMPOSITION_SPECIFIERS.has(id) ||
+      isBrowserHostSpecifier(id) ||
+      isBrowserHostSnapshotSpecifier(id)
+    )
       return true;
     if (id.startsWith("@plugins/")) {
       if (ownPrefix !== null && id.startsWith(ownPrefix)) {

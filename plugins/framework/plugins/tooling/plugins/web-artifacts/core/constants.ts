@@ -1,7 +1,10 @@
 // Shared constants of the per-plugin web-artifact engine.
 
 import { LEAF_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
-import { isBrowserHostSpecifier } from "./browser-host-specifier";
+import {
+  isBrowserHostSnapshotSpecifier,
+  isBrowserHostSpecifier,
+} from "./browser-host-specifier";
 import { COMPOSITION_SPECIFIERS } from "./composition-modules";
 import { COBUILT_FOLDERS } from "./own-roots";
 
@@ -118,7 +121,8 @@ export function isBareSpecifier(id: string): boolean {
     !id.startsWith("\0") &&
     !id.startsWith("@plugins/") &&
     !COMPOSITION_SPECIFIERS.has(id) &&
-    !isBrowserHostSpecifier(id)
+    !isBrowserHostSpecifier(id) &&
+    !isBrowserHostSnapshotSpecifier(id)
   );
 }
 

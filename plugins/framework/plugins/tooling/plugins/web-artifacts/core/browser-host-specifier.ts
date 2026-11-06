@@ -16,3 +16,15 @@ export function isBrowserHostSpecifier(id: string): boolean {
  * never name the tree, whose name changes with the worker's code.
  */
 export const BROWSER_HOST_WORKER_SPECIFIER_PREFIX = "@browser-host-worker/";
+
+/**
+ * A browser host's starting snapshot, as its worker imports it
+ * (`@browser-host-snapshot/<pluginPath>`, `internal/host-snapshots.ts`): a
+ * bare specifier external to every artifact build, linked by the worker tree
+ * to the snapshot the build took for that host.
+ */
+export const BROWSER_HOST_SNAPSHOT_SPECIFIER_PREFIX = "@browser-host-snapshot/";
+
+export function isBrowserHostSnapshotSpecifier(id: string): boolean {
+  return id.startsWith(BROWSER_HOST_SNAPSHOT_SPECIFIER_PREFIX);
+}

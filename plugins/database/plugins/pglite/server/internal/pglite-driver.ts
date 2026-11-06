@@ -5,6 +5,9 @@ import {
   type Transaction,
 } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
+import { z } from "zod";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import { sql } from "drizzle-orm";
 import type { DatabaseDriverImpl, Db } from "@plugins/database/server";
 import type { HostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core";
 
@@ -15,10 +18,12 @@ const CHANNEL_RE = /^[a-z_][a-z0-9_]*$/;
 export interface PgliteDriverOptions {
   /**
    * The browser host's storage, read when the database first opens: its
-   * `databaseDir` (in memory, or `idb://…`), and the storage closes the
-   * database with it (flushed before the storage records it booted, closed
-   * before it is wiped or handed to another worker). Absent: in memory, owned
-   * by nobody (a test).
+   * `databaseDir` (in memory, or `idb://…`) and `databaseStart` (a snapshot's
+   * data directory to load, its clock shifted to now in `ready`), and the
+   * storage closes the database with it (flushed before the storage records
+   * it booted, closed before it is wiped or handed to another worker) and can
+   * dump it (a snapshot being taken). Absent: in memory, owned by nobody (a
+   * test).
    */
   storage?: () => HostStorage;
 }
@@ -71,6 +76,52 @@ function scriptQueries<C extends PGlite | Transaction>(client: C): C {
 }
 
 /**
+ * Move every instant the database holds by `ms`: each timestamp column of
+ * each table of the public schema, in one transaction, with triggers off (the
+ * rows did not change — the clock they are read against did; a trigger would
+ * restamp `updated_at` or log the move as a change). What a snapshot taken
+ * earlier needs to read as recent when it is loaded now.
+ */
+async function shiftClock(pglite: PGlite, ms: number): Promise<void> {
+  // Read through drizzle over PGlite, typed as the app's `Db` the way
+  // `db()` hands it out, so the row parser reads it.
+  const columns = await executeRows(
+    drizzle({ client: pglite }) as unknown as Db,
+    {
+      row: z.object({ table_name: z.string(), column_name: z.string() }),
+      query: sql`SELECT c.table_name, c.column_name
+         FROM information_schema.columns c
+         JOIN information_schema.tables t
+           ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+        WHERE c.table_schema = 'public'
+          AND t.table_type = 'BASE TABLE'
+          AND c.data_type IN ('timestamp with time zone', 'timestamp without time zone')
+        ORDER BY c.table_name, c.ordinal_position`,
+      label: "pglite: timestamp columns",
+    },
+  );
+  const byTable = new Map<string, string[]>();
+  for (const { table_name, column_name } of columns) {
+    let cols = byTable.get(table_name);
+    if (cols === undefined) byTable.set(table_name, (cols = []));
+    cols.push(column_name);
+  }
+  const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
+  await pglite.transaction(async (tx) => {
+    await tx.exec("SET LOCAL session_replication_role = replica");
+    for (const [table, cols] of byTable) {
+      await tx.exec(
+        `UPDATE ${quote(table)} SET ${cols
+          .map(
+            (c) => `${quote(c)} = ${quote(c)} + interval '${ms} milliseconds'`,
+          )
+          .join(", ")}`,
+      );
+    }
+  });
+}
+
+/**
  * A `DatabaseDriver` over PGlite — Postgres compiled to WASM, in this process.
  *
  * The drizzle instance is PGlite's own (`drizzle-orm/pglite`); it shares the
@@ -83,17 +134,32 @@ export function createPgliteDriver(
 ): DatabaseDriverImpl {
   let client: PGlite | null = null;
   let db: Db | null = null;
+  /** The clock shift a snapshot loaded at open still owes, done once in `ready`. */
+  let shifting: Promise<void> | null = null;
+  let owedShiftMs = 0;
   const open = (): PGlite => {
     const storage = options.storage?.();
-    if (storage === undefined || storage.kind === "memory") return new PGlite();
+    if (storage === undefined) return new PGlite();
+    const start = storage.databaseStart;
+    const dir = storage.databaseDir;
     // Writes reach IndexedDB after the query, not before it answers: the
     // storage flushes before it records anything as durable.
-    const pglite = new PGlite(storage.databaseDir, { relaxedDurability: true });
+    const load =
+      start.from === "snapshot" ? { loadDataDir: start.dataDir } : {};
+    // In memory, the options are the only argument: `new PGlite(undefined,
+    // options)` reads the `undefined` as its options and drops the second.
+    const pglite =
+      dir === undefined
+        ? new PGlite(load)
+        : new PGlite(dir, { relaxedDurability: true, ...load });
+    if (start.from === "snapshot") owedShiftMs = start.shiftMs;
     // `PGlite.syncToFs()` returns at once under relaxed durability (its sync
     // runs behind the query lock, unawaited), so a flush syncs the filesystem
-    // itself: Emscripten's syncfs, awaited, whatever the flag.
+    // itself: Emscripten's syncfs, awaited, whatever the flag. In memory there
+    // is nothing to flush.
     const flush = async (): Promise<void> => {
       await pglite.waitReady;
+      if (dir === undefined) return;
       if (pglite.fs === undefined) {
         throw new Error(
           "[pglite] a persistent database has no filesystem to flush",
@@ -107,6 +173,10 @@ export function createPgliteDriver(
         await flush();
         await pglite.close();
       },
+      async dump() {
+        await pglite.waitReady;
+        return pglite.dumpDataDir("gzip");
+      },
     });
     return pglite;
   };
@@ -118,6 +188,9 @@ export function createPgliteDriver(
     },
     async ready() {
       await pg().waitReady;
+      // A snapshot's instants move to now before anything reads them.
+      if (owedShiftMs !== 0) shifting ??= shiftClock(pg(), owedShiftMs);
+      await shifting;
     },
     // One connection, nothing else holding locks: boot DDL needs no wider
     // bound than any other query.

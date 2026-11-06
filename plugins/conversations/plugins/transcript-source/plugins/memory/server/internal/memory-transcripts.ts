@@ -19,7 +19,37 @@ interface StoredTranscript {
   jsonl: Uint8Array;
   version: number;
 }
-const persisted = () => hostStorage().store<StoredTranscript>("transcripts");
+const persisted = () =>
+  hostStorage().store<StoredTranscript>("transcripts", {
+    shiftTime: (stored, ms) => ({
+      ...stored,
+      jsonl: shiftLineTimestamps(stored.jsonl, ms),
+    }),
+  });
+
+/**
+ * A transcript loaded from a snapshot taken earlier, every line's `timestamp`
+ * (Claude Code's per-event instant) moved by `ms`. Loud on a line that is not
+ * JSON: a transcript this store wrote is JSONL.
+ */
+function shiftLineTimestamps(jsonl: Uint8Array, ms: number): Uint8Array {
+  const lines = new TextDecoder().decode(jsonl).split("\n");
+  const shifted = lines.map((line) => {
+    if (line.trim() === "") return line;
+    const event = JSON.parse(line) as Record<string, unknown>;
+    if (typeof event.timestamp !== "string") return line;
+    const at = Date.parse(event.timestamp);
+    if (Number.isNaN(at))
+      throw new Error(
+        `[memory-transcripts] a line's timestamp is not an instant: ${event.timestamp}`,
+      );
+    return JSON.stringify({
+      ...event,
+      timestamp: new Date(at + ms).toISOString(),
+    });
+  });
+  return new TextEncoder().encode(shifted.join("\n"));
+}
 let held: Map<string, StoredTranscript> | null = null;
 const transcriptsMap = (): Map<string, StoredTranscript> =>
   (held ??= new Map(persisted().loaded));

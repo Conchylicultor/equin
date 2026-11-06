@@ -145,6 +145,8 @@ export const DARK_MODE_PAGE_WORK = {
   ].join("\n"),
   /** The investigation page `edit_page` mints beside the card. */
   investigationTitle: "Dark mode investigation",
+  /** The icon the user gave the agent's page afterwards (the seed's `decorateInvestigationPage`). */
+  investigationIcon: EmojiSchema.parse("🔦"),
   investigation: [
     '<agent-page title="Dark mode investigation">',
     "  ## Repro",

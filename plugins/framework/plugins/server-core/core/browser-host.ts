@@ -45,10 +45,12 @@ export interface BrowserHostOptions {
    * Fill the freshly booted host, after the post-ready phases (triggers synced,
    * the job queue and watchers running, so every write the seed makes derives
    * what a user's write would) and before anything is served: a demo's seed,
-   * written through the apps' real write paths. Absent: the database starts
-   * empty.
+   * written through the apps' real write paths. `host.request` is the graph's
+   * own router, for a write a user makes through an endpoint (the page
+   * editor's PATCH): the seed sends it the request the page would. Absent: the
+   * database starts empty (or with what the host's storage holds).
    */
-  seed?: () => Promise<void>;
+  seed?: (host: { request(req: Request): Promise<Response> }) => Promise<void>;
   /**
    * The answer to a request no route of the graph matches — pass
    * `infra/endpoints/core`'s `unmatchedApiResponse`, so an endpoint the graph
@@ -82,7 +84,7 @@ export interface BrowserHost {
 export interface BrowserHostBoot {
   /** Graph nodes booted (a plugin's server and machine halves count apart). */
   plugins: number;
-  /** In order: `graph` (load → register → ready barrier, migrations included), `ready` (`onReady` → `onAllReady`), `seed`. */
+  /** In order: `graph` (load → register → ready barrier, migrations included), `ready` (`onReady` → `onAllReady`), `seed` (only when the host was given one). */
   stages: { name: string; ms: number }[];
   /** The slowest plugin hooks of the boot (`register` / `onReadyBlocking` / `onReady` / `onAllReady`), longest first. */
   slowest: { label: string; ms: number }[];
@@ -117,8 +119,6 @@ export async function bootBrowserHost(
   const t1 = performance.now();
   await runPostReadyPhases(ordered);
   const t2 = performance.now();
-  await opts.seed?.();
-  const t3 = performance.now();
 
   const request = createRequestHandler({
     routes: hostHttpRoutes(ordered),
@@ -130,6 +130,10 @@ export async function bootBrowserHost(
     },
     onUnmatched: opts.onUnmatched,
   });
+  // Built before the seed, which may write through it; nothing else reaches
+  // it until this returns.
+  await opts.seed?.({ request });
+  const t3 = performance.now();
   // Not awaited: the host is ready to serve now, and catch-up work runs while
   // it does. The catch is here, not at each entry, so none can forget it: it
   // names the phase and rethrows, so the failure surfaces as the worker's
@@ -149,7 +153,11 @@ export async function bootBrowserHost(
       stages: [
         { name: "graph", ms: Math.round(t1 - t0) },
         { name: "ready", ms: Math.round(t2 - t1) },
-        { name: "seed", ms: Math.round(t3 - t2) },
+        // Only when one ran: a host starting from stored data (or a snapshot)
+        // reports no seed at all.
+        ...(opts.seed === undefined
+          ? []
+          : [{ name: "seed", ms: Math.round(t3 - t2) }]),
       ],
       // Per-plugin spans only (a phase-wide span would repeat its slowest
       // plugin), and none that took no time.

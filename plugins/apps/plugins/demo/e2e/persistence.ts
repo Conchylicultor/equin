@@ -20,7 +20,6 @@
  *   ./equin run plugins/apps/plugins/demo/e2e/persistence.ts [--out /tmp/demo-persistence] [--headed]
  */
 import type { Locator, Page } from "playwright";
-import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import {
   arg,
   boot,
@@ -31,38 +30,25 @@ import {
   withBrowser,
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  createPage,
+  embedRoot,
+  listed,
+  MARKER,
+  openPages,
+  RENDER_TIMEOUT_MS,
+  ROOT_PAGES,
+  settledCount,
+  showsApp,
+  sidebarEntries,
+} from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-persistence";
 
-/** The seeded root pages (`website/demos/lumen`'s `core/internal/pages.ts`). */
-const ROOT_PAGES = ["Lumen", "Ideas"] as const;
 /** A seeded page and the icon the seed gave it. */
 const SEEDED_ICON = { title: "Ideas", emoji: "💭" } as const;
 /** The emoji the visitor picks for the page it created, and its search word. */
 const PICKED = { search: "rocket", emoji: "🚀" } as const;
-/** How long an app swap, a worker read or a host boot gets to render. */
-const RENDER_TIMEOUT_MS = 30_000;
-const MARKER = 'button:has-text("Conversations")';
-
-function embedRoot(page: Page): Locator {
-  return page.locator("[data-app-embed]").first();
-}
-
-/**
- * The Pages sidebar entries titled exactly `title` — after the page's icon,
- * an emoji glyph that is part of the row's text (hidden from assistive tech
- * only).
- */
-function sidebarEntries(page: Page, title: string): Locator {
-  return embedRoot(page)
-    .locator("[data-row-key]")
-    .filter({
-      hasText: new RegExp(
-        `^\\s*(?:\\p{Extended_Pictographic}[\\p{Extended_Pictographic}\\p{Emoji_Modifier}\\uFE0F\\u200D]*\\s*)?${title}\\s*$`,
-        "u",
-      ),
-    });
-}
 
 /** The open page's header icon (the large glyph that opens the picker). */
 function headerIcon(page: Page): Locator {
@@ -101,74 +87,6 @@ async function showsIcon(
   r.ok(name, settled.ok, `header icon: ${JSON.stringify(settled.value)}`);
 }
 
-/** Switch the embed to Pages through its launcher. */
-async function openPages(r: Report, page: Page, step: string): Promise<void> {
-  r.ok(
-    `${step}: the launcher offers Pages`,
-    await pickFromLauncher(embedRoot(page), /^\s*Pages\s*$/),
-  );
-  const settled = await waitFor(
-    () => embedRoot(page).getAttribute("data-app-embed"),
-    (id) => id === "pages",
-    { timeoutMs: RENDER_TIMEOUT_MS },
-  );
-  r.ok(`${step}: the embed shows Pages`, settled.ok, String(settled.value));
-}
-
-/** Create a root page through the sidebar's "New page" and title it `title`. */
-async function createPage(page: Page, title: string): Promise<void> {
-  await embedRoot(page).getByText("New page", { exact: true }).first().click();
-  const detail = embedRoot(page).locator('[data-pane-id="page-detail"]').last();
-  await detail.waitFor({ timeout: RENDER_TIMEOUT_MS });
-  const titleField = detail.locator('input[aria-label="Page title"]').first();
-  await titleField.fill(title);
-  await titleField.press("Enter");
-}
-
-/**
- * Wait until the sidebar lists `title` as `want` says — exactly n times, or
- * `"some"`: at least once (the sidebar shows a page in several sections).
- * Returns how many times it did.
- */
-async function listed(
-  r: Report,
-  page: Page,
-  name: string,
-  title: string,
-  want: number | "some",
-): Promise<number> {
-  const settled = await waitFor(
-    () => sidebarEntries(page, title).count(),
-    (count) => (want === "some" ? count > 0 : count === want),
-    { timeoutMs: RENDER_TIMEOUT_MS },
-  );
-  r.ok(
-    name,
-    settled.ok,
-    `"${title}" listed ${settled.value}× (want ${want}; waited ${settled.waitedMs} ms)`,
-  );
-  return settled.value;
-}
-
-/** Wait until the embed shows `app` — after a Reset, the remounted demo opens on its own app again. */
-async function showsApp(
-  r: Report,
-  page: Page,
-  name: string,
-  app: string,
-): Promise<void> {
-  const settled = await waitFor(
-    // While the host reboots there is no embed at all.
-    async () =>
-      (await embedRoot(page).count()) === 0
-        ? null
-        : embedRoot(page).getAttribute("data-app-embed"),
-    (id) => id === app,
-    { timeoutMs: RENDER_TIMEOUT_MS },
-  );
-  r.ok(name, settled.ok, String(settled.value));
-}
-
 await withBrowser(async (h) => {
   const r = report("demo: the visitor's data is kept in the browser");
   const { page, context } = await h.session();
@@ -180,10 +98,12 @@ await withBrowser(async (h) => {
   await boot(page, pathUrl("/demo"), { marker: MARKER });
   await openPages(r, page, "first boot");
   const seeded = new Map<string, number>();
+  // The baseline is the settled sidebar: its sections load one by one, so
+  // the first count above zero can be short of the whole.
   for (const title of ROOT_PAGES) {
     seeded.set(
       title,
-      await listed(r, page, `the seed lists "${title}"`, title, "some"),
+      await settledCount(r, page, `the seed lists "${title}"`, title),
     );
   }
   await createPage(page, FIRST);

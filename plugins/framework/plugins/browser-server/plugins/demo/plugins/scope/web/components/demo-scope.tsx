@@ -71,7 +71,7 @@ function bootLine(
       : `frames unsupported: ${frames.reason}`;
   return (
     `${scenarioId}: host ready in ${Math.round(waitedMs)} ms ` +
-    `(worker ready at ${readyAtMs} ms: ${stages}; ${boot.plugins} plugins; ${framed}) — slowest: ${slowest}`
+    `(worker ready at ${readyAtMs} ms: ${stages}; ${boot.plugins} plugins; data: ${boot.data ?? "none kept"}; ${framed}) — slowest: ${slowest}`
   );
 }
 
@@ -80,6 +80,8 @@ interface ScopeHost {
   server: BrowserServer;
   frameBase: string | null;
   reset(): void;
+  /** What the host asks this page to tell the person about its boot (`HostBooted.notice`). */
+  notice: string | null;
 }
 
 /** What one start of the scope's host comes to. */
@@ -168,6 +170,7 @@ function startScopeServer(
       server: served,
       frameBase: frames.kind === "serving" ? frames.frameBase : null,
       reset: hosted.reset,
+      notice: hosted.notice,
     });
   })().catch((err: unknown) => {
     if (!ended) report.onFailed(err);
@@ -261,6 +264,9 @@ export function DemoScope({
     };
   }, [scenario, generation]);
   const host = state.kind === "ready" ? state.host : null;
+  // The notice of the boot this page waited for, until the person dismisses it.
+  const [dismissed, setDismissed] = useState<ScopeHost | null>(null);
+  const notice = host !== null && dismissed !== host ? host.notice : null;
   const transport = useMemo(
     () =>
       host === null
@@ -284,6 +290,12 @@ export function DemoScope({
       <TransportProvider transport={transport}>
         <NotificationsProvider>
           <PluginScope composition={scenario.host}>
+            {notice !== null && (
+              <HostNotice
+                message={notice}
+                onDismiss={() => setDismissed(host)}
+              />
+            )}
             {/* What the scope's code hands to page chrome (a toast's body, an
                 imperative dialog) renders here, against the host — never
                 in the page's tree, against the page's server. */}
@@ -292,6 +304,28 @@ export function DemoScope({
         </NotificationsProvider>
       </TransportProvider>
     </DemoHostControlContext.Provider>
+  );
+}
+
+/** What the host asked this page to tell the person (a demo reset to a newer version), dismissible. */
+function HostNotice({
+  message,
+  onDismiss,
+}: {
+  message: string;
+  onDismiss: () => void;
+}): ReactNode {
+  return (
+    <Center className="px-md py-sm" data-host-notice="">
+      <Stack direction="row" gap="sm" align="center">
+        <Text as="p" variant="body" tone="muted" role="status">
+          {message}
+        </Text>
+        <Button variant="ghost" onClick={onDismiss}>
+          Dismiss
+        </Button>
+      </Stack>
+    </Center>
   );
 }
 

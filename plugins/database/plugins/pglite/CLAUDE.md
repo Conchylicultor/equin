@@ -17,6 +17,14 @@ the computer names it to take it back.
   memory (a test). `server/internal/stored-data.test.ts` reopens an on-disk
   database (`nodefs`) and applies the next version's migrations over it — a
   phased group with claimed data — keeping its rows.
+- **A snapshot's database** (`storage.databaseStart: { from: "snapshot",
+  dataDir, shiftMs }`): opened with `loadDataDir`, then — in `ready()`, before
+  anything reads it — every `timestamp` / `timestamptz` column of every public
+  base table is moved by `shiftMs`, in one transaction with
+  `session_replication_role = replica` (no trigger: the rows did not change,
+  the clock did). `dump()` (what the storage adopts) is `dumpDataDir("gzip")`.
+  Pinned by `server/internal/snapshot-load.test.ts`. In memory, PGlite takes
+  its options as its ONLY argument: `new PGlite(undefined, options)` drops them.
 - **Scripts go through `exec`.** node-postgres runs a parameterless query over
   the simple protocol, which accepts several statements (a migration file, a
   view rebuild); PGlite's `query` is extended-protocol, one statement only. The

@@ -4,8 +4,8 @@
 // place: take the pages' ends (a SharedWorker's connections, or a dedicated
 // worker's own port), open and declare the storage, boot on it, record it
 // booted, and wire Reset and the handoff to a newer build. The root keeps only
-// its policy: the storage it asks for and what its boot does on a fresh one
-// (a demo seeds; a local app starts empty).
+// its policy: the storage it asks for — a demo's starts from the snapshot its
+// build took, a local app's empty — and what it tells the person about a boot.
 
 import {
   serveHost,
@@ -14,7 +14,12 @@ import {
   type ServedHost,
 } from "@plugins/framework/plugins/browser-server/core";
 import { declareHostStorage } from "./host-storage";
-import { openHostStorage, type OpenedHostStorage } from "./open";
+import {
+  openHostStorage,
+  type HostStorageOrigin,
+  type HostStorageStart,
+  type OpenedHostStorage,
+} from "./open";
 
 /** The worker's global scope, as much of it as this needs. */
 export interface WorkerScope extends PortEnd {
@@ -27,13 +32,32 @@ export interface WorkerScope extends PortEnd {
 
 export type BrowserHostStorage =
   | { kind: "memory" }
-  | { kind: "persistent"; name: string; migrations: readonly string[] };
+  | {
+      kind: "persistent";
+      name: string;
+      migrations: readonly string[];
+      /** The snapshot a fresh storage starts from (and the app's policy for data from an older one). */
+      start?: HostStorageStart;
+    };
+
+function originLabel(origin: HostStorageOrigin): string {
+  switch (origin.kind) {
+    case "stored":
+      return "stored";
+    case "empty":
+      return "empty";
+    case "snapshot":
+      return origin.replacedOutdated
+        ? "snapshot (replacing data from an older one)"
+        : "snapshot";
+  }
+}
 
 /**
  * Serve the host in this worker: every page end — each connection when it runs
  * as a SharedWorker (`"onconnect" in self`), else the worker's own port — gets
  * the host `boot` returns, booted on the `storage` declared before it runs.
- * `boot` sees whether the storage is fresh (nothing in it yet). A page's Reset
+ * `boot` sees where the storage's data comes from (`origin`). A page's Reset
  * wipes the storage and ends the worker (the pages reconnect to a fresh one);
  * a newer build claiming the storage ends serving here first.
  */
@@ -58,6 +82,7 @@ export function serveBrowserHost(opts: {
       }
     },
     async boot() {
+      const opening = performance.now();
       storage = await openHostStorage(
         opts.storage.kind === "memory"
           ? opts.storage
@@ -67,10 +92,20 @@ export function serveBrowserHost(opts: {
             },
       );
       declareHostStorage(storage);
+      const openedMs = Math.round(performance.now() - opening);
       try {
         const host = await opts.boot(storage);
         await storage.booted();
-        return host;
+        // The boot report says where the data came from, and what opening the
+        // storage cost (a snapshot's load included) before the graph booted.
+        return {
+          ...host,
+          boot: {
+            ...host.boot,
+            stages: [{ name: "storage", ms: openedMs }, ...host.boot.stages],
+            data: originLabel(storage.origin),
+          },
+        };
       } catch (err) {
         // A host that cannot boot holds the storage for nothing: release it,
         // so another tab (or a fixed build) can open it.

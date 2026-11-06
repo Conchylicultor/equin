@@ -8,6 +8,7 @@ export default [
       "core/internal/browser-hosts.ts",
       "core/internal/compose.ts",
       "core/internal/global-css.ts",
+      "core/internal/host-snapshots.ts",
       "core/internal/identity.ts",
       "core/internal/lease.ts",
       "core/internal/own-files.ts",
