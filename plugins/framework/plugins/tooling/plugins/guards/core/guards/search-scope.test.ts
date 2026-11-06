@@ -81,7 +81,9 @@ describe("search-scope guard", () => {
       expect(blocks(`echo x | grep -r foo ~`)).toBe(true);
     });
     test("a temp ROOT itself (only one dir below it is bounded)", () => {
-      expect(blocks(`rg foo ${tmpdir()}`)).toBe(true);
+      // `/tmp`, not `tmpdir()`: a test run hands its runners a per-run TMPDIR
+      // that is itself one dir below a shared parent, hence walkable.
+      expect(blocks(`rg foo /tmp`)).toBe(true);
     });
     test("…while a glob over its entries names one dir below it each", () => {
       expect(blocks(`rg foo ${tmpdir()}/equin-test-*/output.log`)).toBe(false);

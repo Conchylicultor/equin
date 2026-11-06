@@ -107,6 +107,9 @@ export function createContext(
     fatal(reason: string): DenyVerdict {
       return { kind: "deny", reason, fatal: true };
     },
+    warn(reason: string): DenyVerdict {
+      return { kind: "deny", reason, allowOnRepeat: true };
+    },
     inform(context: string): InformVerdict {
       return { kind: "inform", context };
     },

@@ -111,6 +111,11 @@ cache the whole host shares.
   by what it expands to.
 - Opt-in elsewhere: an explicit depth, ≤ 2 for a names-only walk, ≤ 1 for a
   content search. `du -d` bounds what it prints, not what it walks.
+- **A warning, not a wall.** Its denial is `allowOnRepeat`: the first
+  out-of-scope search is refused with the narrowing hints, and the same agent
+  repeating the IDENTICAL call is let through — a deliberate search of
+  `~/.equin/logs` is the agent's call once it has read the cost. The allowlist
+  stays as narrow as it was; only a repeat widens it, one call at a time.
 
 ## Known gaps, on purpose
 
@@ -239,6 +244,16 @@ the agent policy's matcher names (`guards:hook-matcher-covers-guards`).
 in the transcript its payload names). Keep an inform under ~10k characters:
 past that Claude Code shows the agent only a 2 KB preview.
 
+The same store backs **warn once, allow on repeat**: a denial marked
+`allowOnRepeat` (`Denial.allowOnRepeat` in `defineGuard`, `ctx.warn()` raw) is
+recorded per agent per session under `repeatKey` — guard, tool, cwd and the
+whole input but `description` — at the moment it is shown, and the identical
+call from the same agent later passes that guard (every other guard still
+judges it). The runner appends the "repeat it unchanged" line, and
+`defineGuard` drops the "STOP, do not work around" epilogue, which would
+contradict it. Use it for a guard whose concern is cost, not correctness; it
+excludes `fatal`.
+
 ## Measuring, not asserting
 
 `e2e/replay-transcripts.ts` runs the guards over recorded transcripts and reports
@@ -252,7 +267,7 @@ can blind or deafen all of them at once.
 
 - Description: Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
 - Core:
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/timed-fs` ×4
     - `framework/cli/cli-name` ×3
     - `infra/host-fs/user-path` ×3
@@ -266,6 +281,7 @@ can blind or deafen all of them at once.
     - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
     - `framework/tooling/guards/module-extension.MODULE_EXTENSION`
     - `infra/paths/repo-root.REPO_ROOT`
+    - `packages/string-hash.hashHex`
   - Exports (types):
     - `AllowVerdict`
     - `BuiltinTool`

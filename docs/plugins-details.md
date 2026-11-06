@@ -29337,7 +29337,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries/no-platform-api` — `core/internal/changed-files.ts`, `core/internal/format-sources.ts`, `core/internal/format-thread.ts`, `core/internal/format-worker.ts`, `core/internal/prettier.ts` (debt)
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
-            - Uses: 28 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+            - Uses: 29 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
               - `packages/timed-fs` ×4
               - `framework/cli/cli-name` ×3
               - `infra/host-fs/user-path` ×3
@@ -29351,6 +29351,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
               - `framework/tooling/guards/module-extension.MODULE_EXTENSION`
               - `infra/paths/repo-root.REPO_ROOT`
+              - `packages/string-hash.hashHex`
             - Exports (types):
               - `AllowVerdict`
               - `BuiltinTool`
@@ -38066,11 +38067,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 32 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 33 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×9
           - `network` ×5
           - `database` ×4
-          - `framework` ×2
+          - `framework` ×3
           - `page` ×2
           - `plugin-meta` ×2
           - `reports` ×2

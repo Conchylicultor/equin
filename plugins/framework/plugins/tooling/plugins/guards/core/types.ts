@@ -1,5 +1,14 @@
 export type AllowVerdict = { kind: "allow" };
-export type DenyVerdict = { kind: "deny"; reason: string; fatal?: boolean };
+/**
+ * Refuse the call. `fatal` escalates to ending the turn; `allowOnRepeat` softens
+ * it to a warning: the runner lets the IDENTICAL call through the next time the
+ * same agent makes it (`core/informed-once.ts`), so an agent that has read the
+ * cost and still means it can go ahead. The two are opposite ends, never both.
+ */
+export type DenyVerdict = { kind: "deny"; reason: string } & (
+  | { fatal?: boolean; allowOnRepeat?: never }
+  | { allowOnRepeat: true; fatal?: never }
+);
 /**
  * Let the call through, but hand the model a fact it was missing. The arm for a
  * guard that has an *answer* rather than an objection — blocking there would be
@@ -146,6 +155,8 @@ export interface GuardContext {
   allow(): AllowVerdict;
   deny(reason: string): DenyVerdict;
   fatal(reason: string): DenyVerdict;
+  /** A denial the agent may override by repeating the identical call (`DenyVerdict.allowOnRepeat`). */
+  warn(reason: string): DenyVerdict;
   inform(context: string): InformVerdict;
   rewrite(
     patch: Readonly<Record<string, unknown>>,

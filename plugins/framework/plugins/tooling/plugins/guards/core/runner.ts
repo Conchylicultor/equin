@@ -1,5 +1,5 @@
 import { loadGuards } from "./load-guards";
-import { recordInformed, wasInformed } from "./informed-once";
+import { recordInformed, repeatKey, wasInformed } from "./informed-once";
 import { createContext } from "./context";
 import { withRefusalBanner } from "./refusal";
 import { matchesTool, type Guard } from "./types";
@@ -69,6 +69,10 @@ export interface HookOptions {
  */
 export type HookOutput = Record<string, unknown>;
 
+/** Appended to every `allowOnRepeat` denial — here, so no such guard can leave it out. */
+export const REPEAT_TO_PROCEED =
+  "This is a warning, not a hard block. If you have weighed the above and still need exactly this call, repeat it unchanged and it will run. A changed call is judged afresh.";
+
 export async function runHook(
   input: HookInput,
   options: HookOptions,
@@ -117,9 +121,19 @@ export async function runHook(
       continue;
     }
     if (verdict.kind === "deny") {
+      let message = verdict.reason;
+      if (verdict.allowOnRepeat) {
+        // A warning, not a wall: refused the first time so the agent reads the
+        // cost, let through when it repeats the identical call deliberately.
+        // Recorded on the denial itself — that IS the telling.
+        const key = repeatKey(guard.name, tool, cwd, current);
+        if (wasInformed(ctx.sessionId, agent, key)) continue;
+        recordInformed(ctx.sessionId, agent, [key]);
+        message += `\n\n${REPEAT_TO_PROCEED}`;
+      }
       // Every denial leads with what did NOT happen — added here, at the one
       // exit every guard's refusal passes through, so no guard can forget it.
-      const reason = withRefusalBanner(tool, current, verdict.reason);
+      const reason = withRefusalBanner(tool, current, message);
       return {
         ...(verdict.fatal ? { continue: false, stopReason: reason } : {}),
         hookSpecificOutput: {

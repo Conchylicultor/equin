@@ -19,6 +19,7 @@ function deny(walk: Walk, ctx: GuardContext): Denial | null {
   return {
     blocked: `\`${walk.command}\` would walk ${typed} → \`${verdict.root.path}\`: ${verdict.reason}.`,
     why: "A recursive search outside your worktree can reach the whole home directory — ~/.claude/projects (GBs of transcripts), ~/Downloads, ~290 worktrees with node_modules. Every file it touches goes through the kernel file cache all agents and the app share, so one such walk slows the whole host.",
+    allowOnRepeat: true,
     hint: "Search inside your worktree (`rg foo plugins/…`), or name the exact file(s) you mean (`rg foo <dir>/server.jsonl`, `rg foo <dir>/*.log`), or one subdirectory that is bounded — one worktree's data dir, one /tmp dir. To look at a directory's shape, bound the depth: `fd -d 2 . <dir>`, `rg --files --max-depth 2 <dir>`, `ls <dir>`.",
   };
 }

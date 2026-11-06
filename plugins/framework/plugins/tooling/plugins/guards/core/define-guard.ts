@@ -1,6 +1,30 @@
 import type { Guard, GuardContext, ToolMatcher, Verdict } from "./types";
 
-export interface Denial {
+export type Denial = DenialText &
+  (
+    | {
+        /**
+         * Escalate from "this call is denied" to "end the turn" (`continue: false`).
+         * Costs the agent its in-flight context, so reserve it for a guard that has
+         * already denied once and been ignored.
+         */
+        fatal?: boolean;
+        allowOnRepeat?: never;
+      }
+    | {
+        /**
+         * Soften the denial to a warning: the same agent repeating the identical
+         * call is let through (`DenyVerdict.allowOnRepeat`). For a guard whose
+         * concern is cost, not correctness, where a deliberate caller may know
+         * better. Drops the "STOP, do not work around" epilogue, which would
+         * contradict it; the runner appends how to proceed.
+         */
+        allowOnRepeat: true;
+        fatal?: never;
+      }
+  );
+
+interface DenialText {
   /** Short statement of what was blocked */
   blocked: string;
   /** Why this is dangerous (optional background) */
@@ -9,12 +33,6 @@ export interface Denial {
   hint: string;
   /** If true, skip the standard STOP/report epilogue */
   skipEpilogue?: boolean;
-  /**
-   * Escalate from "this call is denied" to "end the turn" (`continue: false`).
-   * Costs the agent its in-flight context, so reserve it for a guard that has
-   * already denied once and been ignored.
-   */
-  fatal?: boolean;
 }
 
 /** Let the call through while handing the model a fact it was missing. */
@@ -53,7 +71,8 @@ function formatDenyMessage(denial: Denial, bypassToken?: string): string {
   let msg = denial.blocked;
   if (denial.why) msg += `\n\n${denial.why}`;
   msg += `\n\n${denial.hint}`;
-  if (!denial.skipEpilogue) msg += `\n\n${formatEpilogue(bypassToken)}`;
+  if (!denial.skipEpilogue && !denial.allowOnRepeat)
+    msg += `\n\n${formatEpilogue(bypassToken)}`;
   return msg;
 }
 
@@ -69,6 +88,7 @@ export function defineGuard<I>(def: GuardDef<I>): Guard<I> {
       if ("inform" in result) return ctx.inform(result.inform);
       if ("rewrite" in result) return ctx.rewrite(result.rewrite, result.note);
       const message = formatDenyMessage(result, def.bypassToken);
+      if (result.allowOnRepeat) return ctx.warn(message);
       return result.fatal ? ctx.fatal(message) : ctx.deny(message);
     },
   };
