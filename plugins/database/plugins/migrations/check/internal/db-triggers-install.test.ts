@@ -152,4 +152,55 @@ describe('commit: "per-table"', () => {
     }
     expect(await triggerNames()).toContain("pt_ab_t_b");
   }, 30_000);
+
+  // Each table re-plans under its lock from that table's catalog alone (a
+  // whole-set read there made the install O(tables²)). The scope names the
+  // relation by schema and name, so a quoted, mixed-case table is still
+  // found — its stale trigger dropped, its current one left alone.
+  test("re-plans each table from its own catalog: a quoted table's triggers are replaced and dropped", async () => {
+    await testDb.db.execute(
+      sql.raw(`CREATE TABLE "T_Mixed" (id text PRIMARY KEY)`),
+    );
+    const fn = {
+      name: "pt_mixed_fn",
+      args: "",
+      ddl: `CREATE OR REPLACE FUNCTION pt_mixed_fn() RETURNS trigger AS $f$ BEGIN RETURN NULL; END; $f$ LANGUAGE plpgsql`,
+    };
+    const trigger = (name: string, table: string) => ({
+      name,
+      table,
+      ddl: `CREATE OR REPLACE TRIGGER ${name} AFTER INSERT ON "${table}" FOR EACH STATEMENT EXECUTE FUNCTION pt_mixed_fn()`,
+    });
+    const both = defineDbTriggers({
+      id: "pt.mixed",
+      functions: [fn],
+      triggers: [
+        trigger("pt_mixed_keep", "T_Mixed"),
+        trigger("pt_mixed_gone", "T_Mixed"),
+        trigger("pt_mixed_a", "t_a"),
+      ],
+    });
+    expect(
+      await installDbTriggers(testDb.db, [both], { commit: "per-table" }),
+    ).toEqual([{ id: "pt.mixed", outcome: "installed" }]);
+    expect(
+      await installDbTriggers(testDb.db, [both], { commit: "per-table" }),
+    ).toEqual([{ id: "pt.mixed", outcome: "unchanged" }]);
+
+    const fewer = defineDbTriggers({
+      id: "pt.mixed",
+      functions: [fn],
+      triggers: [
+        trigger("pt_mixed_keep", "T_Mixed"),
+        trigger("pt_mixed_a", "t_a"),
+      ],
+    });
+    expect(
+      await installDbTriggers(testDb.db, [fewer], { commit: "per-table" }),
+    ).toEqual([{ id: "pt.mixed", outcome: "installed" }]);
+    const names = await triggerNames();
+    expect(names).toContain("pt_mixed_keep");
+    expect(names).toContain("pt_mixed_a");
+    expect(names).not.toContain("pt_mixed_gone");
+  });
 });

@@ -437,27 +437,38 @@ async function listPublicTables(
   return rows.map((r) => r.relname).filter((t) => !exclude.has(t));
 }
 
-const PkColumnRowSchema = z.object({ attname: z.string() });
+const KeyColumnRowSchema = z.object({
+  relname: z.string(),
+  attname: z.string(),
+});
 
-// The single-column primary key of a table, or "" for composite/no PK
-// (→ FULL-for-table). Exactly one row from this query ⇒ single-column PK.
-async function singleColumnPk(
+// Every public table's single-column primary key, in ONE catalog read (a
+// query per table cost a round trip each — ~190 at boot). A table absent
+// from the map has a composite or no PK (→ "" → FULL-for-table).
+async function singleColumnPks(
   db: NodePgDatabase,
-  table: string,
-): Promise<string> {
+): Promise<Map<string, string>> {
   const rows = await executeRows(db, {
     query: drizzleSql.raw(
-      `SELECT a.attname
+      `SELECT c.relname, a.attname
        FROM pg_index i
+       JOIN pg_class c ON c.oid = i.indrelid
+       JOIN pg_namespace n ON n.oid = c.relnamespace
        JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
-       WHERE i.indrelid = format('public.%I', ${quoteLiteral(table)})::regclass
-         AND i.indisprimary`,
+       WHERE n.nspname = 'public' AND i.indisprimary`,
     ),
-    row: PkColumnRowSchema,
-    label: "singleColumnPk",
+    row: KeyColumnRowSchema,
+    label: "singleColumnPks",
   });
-  const row = rows.length === 1 ? rows[0] : undefined;
-  return row ? row.attname : "";
+  const keys = new Map<string, string[]>();
+  for (const r of rows) {
+    keys.set(r.relname, [...(keys.get(r.relname) ?? []), r.attname]);
+  }
+  const pks = new Map<string, string>();
+  for (const [table, [only, ...rest]] of keys) {
+    if (only !== undefined && rest.length === 0) pks.set(table, only);
+  }
+  return pks;
 }
 
 // One table's feed: the three per-op triggers, as the one trigger installer
@@ -518,6 +529,54 @@ export function compileTableTriggerDdl(
 }
 
 const ColumnNameRowSchema = z.object({ attname: z.string() });
+const TableColumnRowSchema = z.object({
+  relname: z.string(),
+  attname: z.string(),
+});
+
+// Every live (non-dropped, user) column of each of `tables`, by name, in ONE
+// catalog read.
+async function tablesColumns(
+  db: NodePgDatabase,
+  tables: readonly string[],
+): Promise<Map<string, string[]>> {
+  const rows = await executeRows(db, {
+    query: drizzleSql`
+      SELECT c.relname, a.attname
+      FROM pg_attribute a
+      JOIN pg_class c ON c.oid = a.attrelid
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public'
+        AND c.relname IN (SELECT jsonb_array_elements_text(${JSON.stringify(tables)}::jsonb))
+        AND a.attnum > 0 AND NOT a.attisdropped
+      ORDER BY c.relname, a.attnum`,
+    row: TableColumnRowSchema,
+    label: "tablesColumns",
+  });
+  const columns = new Map<string, string[]>();
+  for (const r of rows) {
+    const list = columns.get(r.relname) ?? [];
+    list.push(r.attname);
+    columns.set(r.relname, list);
+  }
+  return columns;
+}
+
+// A routed table's columns from `tablesColumns`: a listed table with none
+// read is one dropped since it was listed — a boot that cannot lay out its
+// trigger, loudly.
+function routedColumnsOf(
+  columns: ReadonlyMap<string, readonly string[]>,
+  table: string,
+): readonly string[] {
+  const found = columns.get(table);
+  if (found === undefined) {
+    throw new Error(
+      `[change-feed] routed table "${table}" has no columns in the catalog — it was dropped while the feed was being installed.`,
+    );
+  }
+  return found;
+}
 
 // Every live (non-dropped, user) column of a table, by name.
 async function tableColumns(
@@ -760,9 +819,14 @@ export async function rebuildTriggers(
 
   const tables = await listPublicTables(db, exclude);
   const required = new Map(requirements.map((r) => [r.table, r]));
+  const pks = await singleColumnPks(db);
+  const routedColumns = await tablesColumns(
+    db,
+    tables.filter((t) => required.has(t)),
+  );
   const triggers: TableTrigger[] = [];
   for (const table of tables) {
-    const pkCol = await singleColumnPk(db, table);
+    const pkCol = pks.get(table) ?? "";
     const requirement = required.get(table);
     triggers.push(
       requirement === undefined
@@ -772,7 +836,7 @@ export async function rebuildTriggers(
             pkCol,
             layout: resolveLayout(
               requirement,
-              await tableColumns(db, table),
+              routedColumnsOf(routedColumns, table),
               pkCol,
             ),
           },
