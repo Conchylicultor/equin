@@ -22,9 +22,16 @@ import { agentPolicySettings } from "@plugins/framework/plugins/tooling/plugins/
  * call, so the web shows a held "Should I stay silent?" card the agent never
  * asked. Users drive these agents from the web, not the pane's prompt, so the
  * ghost text the query feeds is never seen anyway.
+ *
+ * `autoMemoryEnabled: false` — the CLI's auto-memory adds a `# Memory` section
+ * to the system prompt and lets the agent read and write per-user notes under
+ * `~/.claude/projects/<cwd>/memory/`. Durable knowledge belongs in the repo
+ * (`CLAUDE.md`, `docs/`) and gotchas in tasks, where every agent and the user
+ * see them — a private note store only hides them.
  */
 export const LAUNCH_CLI_SETTINGS: Record<string, unknown> = {
   promptSuggestionEnabled: false,
+  autoMemoryEnabled: false,
 };
 
 /** A `hooks` settings map: hook event → its matcher groups. */

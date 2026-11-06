@@ -29,6 +29,11 @@ describe("launch settings", () => {
     expect(merged.promptSuggestionEnabled).toBe(false);
   });
 
+  test("disables auto-memory: durable knowledge goes in the repo", () => {
+    const merged = mergeLaunchSettings(LAUNCH_CLI_SETTINGS, { hooks: {} });
+    expect(merged.autoMemoryEnabled).toBe(false);
+  });
+
   test("merges the thinking mode with other fragments in one object", () => {
     const merged = mergeLaunchSettings(resolveEffortSettings("ultracode"), {
       hooks: {},

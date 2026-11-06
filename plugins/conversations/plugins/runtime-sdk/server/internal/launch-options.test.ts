@@ -30,6 +30,7 @@ describe("sdkLaunchOptions", () => {
     expect(o.guardsRoot).toBe("/w");
     expect(o.settings).toEqual({
       promptSuggestionEnabled: false,
+      autoMemoryEnabled: false,
       hooks: base.policy.hooks,
       permissions: { deny: ["EnterWorktree"] },
     });
