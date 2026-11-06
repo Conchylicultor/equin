@@ -440,7 +440,7 @@ export const worktreeArtifacts = {
   documentHead: (name: Namespace): AppPath =>
     joinAppPath(worktreeDataDir(name), "document-head.json"),
   /**
-   * The Bun the gateway starts this namespace's backend with, hardlinked under
+   * The Bun the gateway starts this namespace's backend with, cloned under
    * the process's name (`bin/equin · server · <name>`, packages/process-name) —
    * the spec's `command` points here, so the link lives and goes with it.
    */

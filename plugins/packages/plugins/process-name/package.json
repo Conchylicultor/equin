@@ -2,5 +2,5 @@
   "name": "@equin/plugin-packages-process-name",
   "private": true,
   "version": "0.0.1",
-  "description": "What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and cloneNamedBinary gives an executable that name as an APFS clone (same signed bytes, a file of its own — never a hardlink), since macOS names a process by the file it executed and process.title changes nothing. Also owns the checkout's bun clone (checkoutBun), which `./equin` and the build name CLI ops and backends from."
+  "description": "What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and cloneNamedBinary gives an executable that name as an APFS clone (same signed bytes, a file of its own — never a hardlink), since macOS names a process by the file it executed and process.title changes nothing. Also owns the checkout's bun clone (checkoutBun), which the build names backends from, and the machine-wide process-names data dir where `./equin` runs each CLI verb as `equin · <verb>`."
 }

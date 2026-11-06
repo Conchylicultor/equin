@@ -25,19 +25,33 @@ its first exec, so a current clone is never re-made.
   a clone keeps the mtime) is left alone; otherwise the clone is swapped in with
   one rename, so an old build's hardlink is replaced. `{ kind: "refused" }` when
   the filesystem cannot (not APFS, another volume): run `bin` itself.
-- `refreshCheckoutBun(root, bin)` / `CHECKOUT_BUN_DIR` — the checkout's Bun as a
-  clone plus a stamp, written by the CLI on every run. The `./equin` script
-  reads it to run the CLI as `equin · <verb> · <checkout>` (its own clone of
-  it, made with `cp -c`), trusting it only while the stamp is newer than
-  `mise.lock` (else it runs plain `bun`, and that run refreshes it). Each
-  refresh also re-clones a per-verb name still left a hardlink by an older
-  build — the script cannot see one once `bun` itself is a clone.
+- `refreshCheckoutBun(root, bin, verbsDir)` / `CHECKOUT_BUN_DIR` — the
+  checkout's Bun as a clone plus a stamp, and `verbs`, a symlink to
+  `verbsDir` (the `process-names` data dir's `bun-<version>/`), written by the
+  CLI on every run. The `./equin` script runs the CLI as `verbs/equin · <verb>`
+  (a clone of the checkout's Bun, made with `cp -c`), trusting it only while the
+  stamp is newer than `mise.lock` (else it runs plain `bun`, and that run
+  refreshes it). Each refresh also removes the per-checkout verb names an older
+  script made (`equin · <verb> · <checkout>`).
+
+**Why CLI verbs carry no checkout id.** macOS scans a fresh executable on its
+first exec (syspolicyd: ~1 s, and two full reads of the 88 MB Bun). One name per
+(verb × checkout) made every new worktree pay a dozen such scans: 37 GB of
+syspolicyd reads in one hour on 2026-11-05, 28 % of the host's attributed disk
+reads, and a source of the io-health `rename-stall` finding. So a verb's name is
+made once per machine and Bun version, and every checkout runs it through its
+`verbs` symlink — exec through a symlink is no fresh file (no scan, measured)
+and is still listed under the clone's name. Renaming a scanned clone does NOT
+reliably dodge the scan (rescanned 6 of 8 times, ~0.6 s), nor does moving it to
+another directory or hardlinking it. Per-instance names stay where they are
+worth a scan: backends and agents, long-lived and what a user looks for in
+Activity Monitor and in a permission prompt.
 
 Who names what:
 
 | Process | Name | Where |
 |---|---|---|
-| CLI op | `equin · build · att-…` | the `./equin` script |
+| CLI op | `equin · build` (one machine-wide clone per verb) | the `./equin` script |
 | backend / central | `equin · server · att-…`, `equin · central` | `./equin build`, as the spec's `command` |
 | SDK agent wrapper | `equin · agent · conv-…` | `runtime-sdk`'s `startAgentProcess` |
 | the agent's claude | `equin · conv-… · <title>` | `runtime-sdk`'s `named-claude.ts` (its own scheme: a TCC grant is keyed by it) |
@@ -49,7 +63,7 @@ test worker reads as the `test` op that started it.
 
 ## Plugin reference
 
-- Description: What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and cloneNamedBinary gives an executable that name as an APFS clone (same signed bytes, no disk cost, a file of its own — never a hardlink, whose many names let macOS's exec scan be handed a deleted one and SIGKILL the process — left alone while current, else swapped in with one rename) — macOS names a process by the file it executed, and process.title changes nothing. Also the checkout's Bun record (refreshCheckoutBun / checkoutBun) the `./equin` script and the build name CLI ops and backends from.
+- Description: What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and cloneNamedBinary gives an executable that name as an APFS clone (same signed bytes, no disk cost, a file of its own — never a hardlink, whose many names let macOS's exec scan be handed a deleted one and SIGKILL the process — left alone while current, else swapped in with one rename) — macOS names a process by the file it executed, and process.title changes nothing. Also the checkout's Bun record (refreshCheckoutBun / checkoutBun) the build names backends from, and the checkout's `verbs` link to the machine-wide process-names data dir, where `./equin` runs each CLI verb as `equin · <verb>` — one clone per verb machine-wide, since macOS scans every fresh executable name on its first exec.
 - Cross-plugin:
   - Imported by:
     - `conversations/runtime-sdk`

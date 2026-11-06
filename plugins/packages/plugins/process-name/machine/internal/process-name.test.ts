@@ -5,10 +5,13 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { describe, expect, test } from "bun:test";
 import {
+  existsSync,
   linkSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readlinkSync,
   statSync,
   utimesSync,
   writeFileSync,
@@ -86,12 +89,19 @@ describe("cloneNamedBinary", () => {
   });
 });
 
+/** The machine-wide verbs dir, in its own temp root. */
+function verbsDir(): AppPath {
+  return asAppPath(
+    join(mkdtempSync(join(tmpdir(), "process-name-verbs-")), "bun-1.0.0"),
+  );
+}
+
 describe("checkout bun", () => {
   test("trusted only while its stamp is newer than mise.lock", () => {
     const root = asAppPath(mkdtempSync(join(tmpdir(), "process-name-")));
     const bun = fakeBin(root);
     expect(checkoutBun(root)).toBeNull();
-    const linked = refreshCheckoutBun(root, bun);
+    const linked = refreshCheckoutBun(root, bun, verbsDir());
     expect(linked).toEqual({
       kind: "cloned",
       path: joinAppPath(root, CHECKOUT_BUN_DIR, "bun"),
@@ -105,14 +115,32 @@ describe("checkout bun", () => {
     expect(checkoutBun(root)).toBeNull();
     // …until a run on the locked Bun records it again.
     utimesSync(join(root, "mise.lock"), new Date(0), new Date(0));
-    refreshCheckoutBun(root, fakeBin(root, "newer"));
+    refreshCheckoutBun(root, fakeBin(root, "newer"), verbsDir());
     expect(readFileSync(join(root, CHECKOUT_BUN_DIR, "bun"), "utf8")).toBe(
       readFileSync(join(root, "newer"), "utf8"),
     );
     expect(checkoutBun(root)).toBe(joinAppPath(root, CHECKOUT_BUN_DIR, "bun"));
   });
 
-  test("an older build's hardlinked bun and per-verb names become clones", () => {
+  test("verbs points at the machine-wide dir, followed when it moves", () => {
+    const root = asAppPath(mkdtempSync(join(tmpdir(), "process-name-")));
+    const bun = fakeBin(root);
+    const first = verbsDir();
+    refreshCheckoutBun(root, bun, first);
+    const link = join(root, CHECKOUT_BUN_DIR, "verbs");
+    expect(readlinkSync(link)).toBe(first);
+    expect(statSync(first).isDirectory()).toBe(true);
+    // Unchanged: left alone.
+    const before = lstatSync(link).ino;
+    refreshCheckoutBun(root, bun, first);
+    expect(lstatSync(link).ino).toBe(before);
+    // Another Bun version: repointed.
+    const second = verbsDir();
+    refreshCheckoutBun(root, bun, second);
+    expect(readlinkSync(link)).toBe(second);
+  });
+
+  test("an older build's hardlinked bun becomes a clone; per-checkout verb names go", () => {
     const root = asAppPath(mkdtempSync(join(tmpdir(), "process-name-")));
     const bun = fakeBin(root);
     const dir = join(root, CHECKOUT_BUN_DIR);
@@ -120,12 +148,9 @@ describe("checkout bun", () => {
     linkSync(bun, join(dir, "bun"));
     linkSync(bun, join(dir, "equin · run · att-x"));
     linkSync(bun, join(dir, "equin · test · att-x.4242"));
-    refreshCheckoutBun(root, bun);
+    refreshCheckoutBun(root, bun, verbsDir());
     expect(statSync(join(dir, "bun")).nlink).toBe(1);
-    expect(statSync(join(dir, "equin · run · att-x")).nlink).toBe(1);
-    expect(readFileSync(join(dir, "equin · run · att-x"), "utf8")).toBe(
-      readFileSync(bun, "utf8"),
-    );
+    expect(existsSync(join(dir, "equin · run · att-x"))).toBe(false);
     // A script's clone in flight is its own business.
     expect(statSync(join(dir, "equin · test · att-x.4242")).ino).toBe(
       statSync(bun).ino,

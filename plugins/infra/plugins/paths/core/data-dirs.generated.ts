@@ -64,6 +64,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "integrations/plugins/google-maps", id: "integrations.google-maps", loader: () => import("@plugins/integrations/plugins/google-maps/data-dirs"), dependsOn: [] },
   { pluginPath: "integrations/plugins/youtube/plugins/audio-fetch", id: "integrations.youtube.audio-fetch", loader: () => import("@plugins/integrations/plugins/youtube/plugins/audio-fetch/data-dirs"), dependsOn: [] },
   { pluginPath: "menu-bar", id: "menu-bar", loader: () => import("@plugins/menu-bar/data-dirs"), dependsOn: [] },
+  { pluginPath: "packages/plugins/process-name", id: "packages.process-name", loader: () => import("@plugins/packages/plugins/process-name/data-dirs"), dependsOn: [] },
   { pluginPath: "packages/plugins/signal-origin/plugins/sink", id: "packages.signal-origin.sink", loader: () => import("@plugins/packages/plugins/signal-origin/plugins/sink/data-dirs"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/plugin-records", id: "plugin-meta.plugin-records", loader: () => import("@plugins/plugin-meta/plugins/plugin-records/data-dirs"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/layout-harness", id: "primitives.css.layout-harness", loader: () => import("@plugins/primitives/plugins/css/plugins/layout-harness/data-dirs"), dependsOn: [] },

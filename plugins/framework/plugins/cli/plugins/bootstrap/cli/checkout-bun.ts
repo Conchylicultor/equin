@@ -1,13 +1,19 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { processNamesDir } from "@plugins/packages/plugins/process-name/data-dirs";
 import { refreshCheckoutBun } from "@plugins/packages/plugins/process-name/machine";
 
 /**
  * Record the Bun this CLI runs on as the checkout's, so the next `./equin` runs
- * as `equin · <verb> · <checkout>` in Activity Monitor rather than `bun`
- * (packages/process-name). Call only on the Bun `mise.lock` picks — the script
- * trusts the record while it is newer than the lock. A filesystem refusing the
- * clone only leaves the name plain: nothing to report on every command.
+ * as `equin · <verb>` in Activity Monitor rather than `bun`
+ * (packages/process-name), through the machine-wide clones of this Bun
+ * version. Call only on the Bun `mise.lock` picks — the script trusts the
+ * record while it is newer than the lock. A filesystem refusing the clone only
+ * leaves the name plain: nothing to report on every command.
  */
 export function recordCheckoutBun(): void {
-  refreshCheckoutBun(asAppPath(process.cwd()), asAppPath(process.execPath));
+  refreshCheckoutBun(
+    asAppPath(process.cwd()),
+    asAppPath(process.execPath),
+    processNamesDir.file(`bun-${Bun.version}`),
+  );
 }

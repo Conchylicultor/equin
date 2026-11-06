@@ -4,11 +4,13 @@ import {
   mkdirSync,
   renameSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
   type Stats,
 } from "node:fs";
 import {
   readdirSync,
+  readlinkSync,
   realpathSync,
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
@@ -120,7 +122,8 @@ function isCurrentClone(path: AppPath, source: Stats): boolean {
 
 /**
  * Where a checkout keeps its own Bun as a clone (`bun`) plus a `stamp`, and
- * the names `./equin` runs it under — relative to the checkout root. Under
+ * `verbs` — a symlink to the machine-wide directory of named Buns `./equin`
+ * runs the CLI under (`equin · <verb>`) — relative to the checkout root. Under
  * `node_modules/`, so it is ignored and goes with a dependency wipe. Spelled
  * again in the `./equin` script, which reads it before any TypeScript runs.
  */
@@ -128,28 +131,53 @@ export const CHECKOUT_BUN_DIR = "node_modules/.cache/equin-bun";
 
 /**
  * Record `bin` (the Bun this CLI runs on) as the checkout's Bun, for `./equin`
- * to name the next CLI process from. A shell cannot find the real Bun behind
- * mise's shim without spawning mise, so the CLI — which knows it — leaves it
- * there. Trusted by the script only while `stamp` is newer than `mise.lock`, so
- * a toolchain change is followed: that run goes through the shim, unnamed, and
- * lands here again. A clone, not a link of the real Bun: every checkout's name
- * for that inode would be one more name for syspolicyd to be handed after it
- * is gone (see the top of this file) — and plain `bun` runs it.
+ * to name the next CLI process from, and point the checkout's `verbs` at
+ * `verbsDir` — the machine-wide clones of that Bun, one per verb. A shell
+ * cannot find the real Bun behind mise's shim without spawning mise, nor the
+ * data root, so the CLI — which knows both — leaves them there. Trusted by the
+ * script only while `stamp` is newer than `mise.lock`, so a toolchain change is
+ * followed: that run goes through the shim, unnamed, and lands here again. A
+ * clone, not a link of the real Bun: every checkout's name for that inode would
+ * be one more name for syspolicyd to be handed after it is gone (see the top of
+ * this file) — and plain `bun` runs it.
+ *
+ * The verb names are machine-wide, not per checkout: each fresh name costs a
+ * scan on its first exec, and per-checkout names (`equin · <verb> · <checkout>`)
+ * made every new worktree pay a dozen. Those older names are removed here.
  */
-export function refreshCheckoutBun(root: AppPath, bin: AppPath): NamedBinary {
+export function refreshCheckoutBun(
+  root: AppPath,
+  bin: AppPath,
+  verbsDir: AppPath,
+): NamedBinary {
   const trusted = checkoutBun(root) !== null;
   const dir = joinAppPath(root, CHECKOUT_BUN_DIR);
   const named = cloneNamedBinary({ bin, dir, name: "bun" });
   if (named.kind !== "cloned") return named;
   if (!trusted) writeFileSync(joinAppPath(dir, "stamp"), "");
-  // The script's per-verb names, kept current here too: one an older build
-  // hardlinked has the clone's mtime and is no longer the same file as `bun`,
-  // so the script alone would take it for a current clone and keep running it.
-  // A `<name>.<pid>` is a script's clone in flight to its name: not touched.
+  mkdirSync(verbsDir, { recursive: true });
+  pointSymlink(dir, "verbs", verbsDir);
+  // An older script's per-checkout names. A `<name>.<pid>` is a script's clone
+  // in flight to its name: not touched.
   for (const entry of readdirSync(dir))
     if (entry.startsWith(`${PRODUCT_NAME} · `) && !/\.\d+$/.test(entry))
-      cloneNamedBinary({ bin: named.path, dir, name: entry });
+      rmSync(joinAppPath(dir, entry), { force: true });
   return named;
+}
+
+/** `dir/name` points at `target`, swapped in with one rename when it does not. */
+function pointSymlink(dir: AppPath, name: string, target: AppPath): void {
+  const link = joinAppPath(dir, name);
+  try {
+    if (readlinkSync(link) === target) return;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT" && code !== "EINVAL") throw err;
+  }
+  const staging = joinAppPath(dir, `.${name}.${String(process.pid)}.tmp`);
+  rmSync(staging, { force: true });
+  symlinkSync(target, staging);
+  renameSync(staging, link);
 }
 
 /**

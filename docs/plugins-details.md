@@ -33945,7 +33945,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 125 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 126 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×31
           - `apps` ×19
           - `framework` ×17
@@ -33959,12 +33959,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `code-explorer` ×2
           - `database` ×2
           - `integrations` ×2
+          - `packages` ×2
           - `reports` ×2
           - `stats` ×2
           - `config_v2`
           - `media/film`
           - `menu-bar`
-          - `packages/signal-origin/sink`
           - `review/plugin-changes`
           - `shell/document-head`
           - `tasks`
@@ -37530,7 +37530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `conversations/conversation-view/jsonl-viewer`
       - Core:
         - Exports (values): `parsePartialJson`
-    - **`process-name`** — What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and cloneNamedBinary gives an executable that name as an APFS clone (same signed bytes, no disk cost, a file of its own — never a hardlink, whose many names let macOS's exec scan be handed a deleted one and SIGKILL the process — left alone while current, else swapped in with one rename) — macOS names a process by the file it executed, and process.title changes nothing. Also the checkout's Bun record (refreshCheckoutBun / checkoutBun) the `./equin` script and the build name CLI ops and backends from.
+    - **`process-name`** — What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and cloneNamedBinary gives an executable that name as an APFS clone (same signed bytes, no disk cost, a file of its own — never a hardlink, whose many names let macOS's exec scan be handed a deleted one and SIGKILL the process — left alone while current, else swapped in with one rename) — macOS names a process by the file it executed, and process.title changes nothing. Also the checkout's Bun record (refreshCheckoutBun / checkoutBun) the build names backends from, and the checkout's `verbs` link to the machine-wide process-names data dir, where `./equin` runs each CLI verb as `equin · <verb>` — one clone per verb machine-wide, since macOS scans every fresh executable name on its first exec.
       - Cross-plugin:
         - Imported by:
           - `conversations/runtime-sdk`
