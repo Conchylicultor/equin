@@ -1,5 +1,5 @@
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
-import { basename, dirname } from "node:path";
+import { dirname } from "node:path";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import {
   readJsonlEventsFromChain,
@@ -20,8 +20,8 @@ import { readShellTail } from "./tail-read";
 
 // The shell holds its output file open for its whole run, and macOS FSEvents
 // reports a change only when the writer closes it — so `writesWhileOpen`
-// (kqueue) is what makes the tail move while the command is still running. A
-// `tasks/` dir holds a few hundred entries at most, well under the kqueue bound.
+// (kqueue) is what makes the tail move while the command is still running. It
+// follows the one output file on screen: a descriptor for it and its dir.
 export const shellOutputWatcher = defineFileWatcher({
   name: "background-shells.output",
   description:
@@ -168,15 +168,11 @@ export const shellOutputServed = serveValue(shellOutput, {
         return () => outputMemo.evict(key);
       }
       const outputFile = target.path;
-      const dir = dirname(outputFile);
       roomPaths.set(key, outputFile);
-      const name = basename(outputFile);
       const watcher = await shellOutputWatcher.start({
-        dirs: [dir],
+        files: [outputFile],
         label: `${id} · ${shellId}`,
-        onChange: (events) => {
-          if (events.some((e) => basename(e.path) === name)) notify();
-        },
+        onChange: () => notify(),
       });
       // The watch opens after the reads it was resolved from: a write landing in
       // between (or while a re-start swapped watches) is caught by one recompute

@@ -60,8 +60,8 @@ line boundary inside the window (`truncated: true`). A missing file is `gone`; a
 shell the transcript does not record is `unknown-shell`.
 
 While subscribed, an instance of the `background-shells.output` file watcher
-(`defineFileWatcher`) on the file's `tasks/` directory
-(`writesWhileOpen: true`, 150 ms debounce) notifies on writes to that one file.
+(`defineFileWatcher`, `writesWhileOpen: true`, 150 ms debounce) follows that
+one output file (`start({ files: [outputFile] })`) and notifies on its writes.
 `writesWhileOpen` is required: the shell holds its output file open, and macOS
 FSEvents reports only on close. A resolved path is kept for the room's lifetime
 so the chain is read once per subscription, not once per push. A session

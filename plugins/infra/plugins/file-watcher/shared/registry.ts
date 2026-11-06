@@ -18,29 +18,25 @@ import {
 /** One filesystem change, as the engine delivers it. */
 export type FileChangeEvent = parcel.Event;
 
-/**
- * What an author declares, once, at module scope: the watcher's identity and
- * its static policy — the same for every instance it opens.
- */
-export interface FileWatcherSpec {
+/** What every declaration states, whatever it watches. */
+interface FileWatcherSpecBase {
   /** Stable code name, unique per process (`config_v2.config-files`). */
   name: string;
   /** One present-tense sentence a person reads: what it notices and why. */
   description: string;
-  /** Only report paths with one of these extensions (`[".jsonc"]`). */
-  extensions?: string[];
-  /** Globs / paths parcel ignores. */
-  ignore?: string[];
   /** Batch changes for this long (default 100 ms; 0 = dispatch each event). */
   debounceMs?: number;
   /** Flush a batch at least this often while changes keep coming (default 1 s). */
   ceilingMs?: number;
-  /**
-   * Report every write to a file another process holds open (kqueue on
-   * darwin — one descriptor per file, dirs capped at
-   * `WRITES_WHILE_OPEN_MAX_ENTRIES`). See the engine's `writesWhileOpen`.
-   */
-  writesWhileOpen?: boolean;
+}
+
+/** A declaration whose instances watch directories (`start({ dirs })`). */
+export interface DirWatcherSpec extends FileWatcherSpecBase {
+  /** Only report paths with one of these extensions (`[".jsonc"]`). */
+  extensions?: string[];
+  /** Globs / paths parcel ignores. */
+  ignore?: string[];
+  writesWhileOpen?: false;
   /**
    * How deep each instance hears its dirs: `"subtree"` (default, parcel's
    * recursive watch) or `"children"` (one single-directory `fs.watch` per
@@ -49,10 +45,24 @@ export interface FileWatcherSpec {
   depth?: WatchDepth;
 }
 
-/** Per-instance input to `start()`: what to watch and what to call. */
-export interface FileWatcherStartOptions {
-  /** The directories this instance watches (recursively). */
-  dirs: string[];
+/**
+ * A declaration whose instances follow every write to NAMED files
+ * (`start({ files })`), including writes to a file another process holds open.
+ * kqueue on darwin: one descriptor per named file, so a directory has no
+ * spelling here. See the engine's `FileFollowOptions`.
+ */
+export interface FileFollowerSpec extends FileWatcherSpecBase {
+  writesWhileOpen: true;
+}
+
+/**
+ * What an author declares, once, at module scope: the watcher's identity and
+ * its static policy — the same for every instance it opens.
+ */
+export type FileWatcherSpec = DirWatcherSpec | FileFollowerSpec;
+
+/** Per-instance input to `start()`, whatever it watches. */
+interface StartOptionsBase {
   /**
    * How the catalog names this instance (`conv-123`, a worktree name). Omit
    * for a watcher that only ever has one instance.
@@ -65,16 +75,38 @@ export interface FileWatcherStartOptions {
    */
   onChange: WatchReaction<FileChangeEvent>;
   /**
-   * A dir's native watch errored and may have dropped events: re-derive
-   * what it keeps fresh. The only backstop for a missed event — there is no
+   * A native watch errored and may have dropped events: re-derive what it
+   * keeps fresh. The only backstop for a missed event — there is no
    * reconcile timer. Recorded as a run, coalesced like `onChange`. See the
    * engine's `onLost`.
    */
   onLost?: WatchLost;
 }
 
+/** Per-instance input to a {@link DirWatcherSpec} declaration's `start()`. */
+export interface FileWatcherStartOptions extends StartOptionsBase {
+  /** The directories this instance watches (recursively). */
+  dirs: string[];
+}
+
+/** Per-instance input to a {@link FileFollowerSpec} declaration's `start()`. */
+export interface FileFollowStartOptions extends StartOptionsBase {
+  /**
+   * The files this instance follows (absolute paths; one not there yet is
+   * heard from its creation). What it costs is this list's length.
+   */
+  files: string[];
+}
+
+/** The `start()` options a spec's instances take. */
+export type StartOptionsOf<S extends FileWatcherSpec> =
+  S extends FileFollowerSpec ? FileFollowStartOptions : FileWatcherStartOptions;
+
 /** A declared watcher: mount it in `register: [...]`, then `start()` instances. */
-export interface FileWatcherDecl {
+export interface FileWatcherDecl<
+  O extends FileWatcherStartOptions | FileFollowStartOptions =
+    FileWatcherStartOptions,
+> {
   readonly name: string;
   readonly _kind: "file-watcher";
   readonly _factory: "defineFileWatcher";
@@ -85,7 +117,7 @@ export interface FileWatcherDecl {
    * would watch without appearing in the catalog) or if its runtime says it
    * must not run here (`mainOnly` off main).
    */
-  start(opts: FileWatcherStartOptions): Promise<FileWatcher>;
+  start(opts: O): Promise<FileWatcher>;
 }
 
 /** How a runtime hosts watchers: where they run and who declared them. */
@@ -106,7 +138,8 @@ export interface FileWatcherRuntime {
 /** One open instance, as the catalog shows it. */
 export interface FileWatcherInstanceInfo {
   label: string | null;
-  dirs: string[];
+  /** What it watches: its dirs, or the files it follows. */
+  paths: string[];
   openedAt: Date;
   /**
    * Change batches that landed while a reaction was running and were folded
@@ -184,10 +217,14 @@ function announce(name: string): void {
   for (const l of listeners) l(name);
 }
 
+export function defineFileWatcherIn<S extends FileWatcherSpec>(
+  spec: S,
+  runtime: FileWatcherRuntime,
+): FileWatcherDecl<StartOptionsOf<S>>;
 export function defineFileWatcherIn(
   spec: FileWatcherSpec,
   runtime: FileWatcherRuntime,
-): FileWatcherDecl {
+): FileWatcherDecl<FileWatcherStartOptions | FileFollowStartOptions> {
   if (spec.description.trim() === "") {
     throw new Error(
       `[file-watcher] ${spec.name}: description is required — one sentence saying what it notices and why`,
@@ -230,30 +267,39 @@ export function defineFileWatcherIn(
         );
       }
       const { onChange, onLost } = opts;
-      const engineOpts: FileWatcherOptions = {
-        dirs: opts.dirs,
+      const common = {
         name: spec.name,
-        extensions: spec.extensions,
-        ignore: spec.ignore,
         debounceMs: spec.debounceMs,
         ceilingMs: spec.ceilingMs,
-        writesWhileOpen: spec.writesWhileOpen,
-        depth: spec.depth,
         onLost:
           onLost === undefined
             ? undefined
-            : (dir, error) => dispatch(state, () => onLost(dir, error)),
+            : (dir: string, error: unknown) =>
+                dispatch(state, () => onLost(dir, error)),
         onChange: (events: FileChangeEvent[]) => {
           noteBatch(state, events);
           return dispatch(state, () => onChange(events));
         },
       };
+      const engineOpts: FileWatcherOptions =
+        spec.writesWhileOpen === true
+          ? { ...common, writesWhileOpen: true, files: filesOf(spec, opts) }
+          : {
+              ...common,
+              dirs: dirsOf(spec, opts),
+              extensions: spec.extensions,
+              ignore: spec.ignore,
+              depth: spec.depth,
+            };
       const watcher = await createFileWatcher(engineOpts);
 
       const id = nextInstanceId++;
       const info = {
         label: opts.label ?? null,
-        dirs: [...opts.dirs],
+        paths:
+          engineOpts.writesWhileOpen === true
+            ? [...engineOpts.files]
+            : [...engineOpts.dirs],
         openedAt: new Date(),
       };
       state.instances.set(id, {
@@ -277,6 +323,31 @@ export function defineFileWatcherIn(
       };
     },
   };
+}
+
+/** A follower's files; a `dirs` handed to it is a caller bypassing the types — refused. */
+function filesOf(
+  spec: FileWatcherSpec,
+  opts: FileWatcherStartOptions | FileFollowStartOptions,
+): string[] {
+  if (!("files" in opts)) {
+    throw new Error(
+      `[file-watcher] ${spec.name} follows writes to named files: start it with { files }, never { dirs } (one descriptor per file under a dir)`,
+    );
+  }
+  return opts.files;
+}
+
+function dirsOf(
+  spec: FileWatcherSpec,
+  opts: FileWatcherStartOptions | FileFollowStartOptions,
+): string[] {
+  if (!("dirs" in opts)) {
+    throw new Error(
+      `[file-watcher] ${spec.name} watches dirs: start it with { dirs }`,
+    );
+  }
+  return opts.dirs;
 }
 
 function noteBatch(state: DeclState, events: FileChangeEvent[]): void {
@@ -373,7 +444,10 @@ export function listFileWatchers(): FileWatcherSnapshot[] {
     declaredIn: s.declaredIn,
     scope: s.runtime.scope,
     runsHere: s.runtime.runsHere,
-    backend: watcherBackend(s.spec.writesWhileOpen ?? false, s.spec.depth),
+    backend:
+      s.spec.writesWhileOpen === true
+        ? watcherBackend(true)
+        : watcherBackend(false, s.spec.depth),
     // Spread: a snapshot reads each instance's live fold count now.
     instances: [...s.instances.values()].map((i) => ({ ...i })),
     lastBatch: s.lastBatch,

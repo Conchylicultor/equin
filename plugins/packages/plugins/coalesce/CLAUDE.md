@@ -36,6 +36,7 @@ is bounded by construction.
     - `infra/git/checkout-watch`
     - `infra/git/git-watcher`
     - `infra/host/io-health`
+    - `infra/jobs/supervised-job`
     - `infra/paths/data-files/memory`
     - `packages/watched-memo`
     - `plugin-meta/plugin-tree`

@@ -5,7 +5,6 @@ import type {
 } from "@plugins/infra/plugins/background/plugins/catalog/core";
 import { defineBackgroundKind } from "@plugins/infra/plugins/background/plugins/catalog/server";
 import {
-  WRITES_WHILE_OPEN_MAX_ENTRIES,
   fileWatcherRecentRuns,
   listFileWatchers,
   type FileWatcherSnapshot,
@@ -17,7 +16,7 @@ const WATCHING_FACTS_MAX = 10;
 
 const BACKEND_WORDS: Record<WatcherBackend, string> = {
   "fs-events": "FSEvents",
-  kqueue: `kqueue — 1 FD per file, capped at ${WRITES_WHILE_OPEN_MAX_ENTRIES.toLocaleString("en-US")} entries`,
+  kqueue: "kqueue — 1 FD per followed file (and its dir)",
   inotify: "inotify",
   windows: "ReadDirectoryChangesW",
   "platform-default": "@parcel/watcher's default for this platform",
@@ -44,7 +43,7 @@ function facts(w: FileWatcherSnapshot): BackgroundFact[] {
     { label: "Backend", value: BACKEND_WORDS[w.backend] },
   ];
   for (const i of w.instances.slice(0, WATCHING_FACTS_MAX)) {
-    const dirs = i.dirs.join(", ");
+    const dirs = i.paths.join(", ");
     out.push({
       label: "Watching",
       value: `${i.label === null ? dirs : `${i.label} — ${dirs}`} · since ${clock(i.openedAt, false)}`,

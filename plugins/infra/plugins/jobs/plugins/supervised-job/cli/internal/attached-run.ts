@@ -48,12 +48,10 @@ export async function runAttachedNow(opts: AttachedRun): Promise<number> {
 
   const echo = createEcho(transcript);
   const watcher = await watchForCommand({
-    dirs: [runsDir],
+    files: [transcript],
     writesWhileOpen: true,
     name: "attached-run",
-    onChange: (events) => {
-      if (events.some((e) => e.path === transcript)) echo.pump();
-    },
+    onChange: () => echo.pump(),
   });
 
   let child: { kill: (signal: NodeJS.Signals) => void } | null = null;

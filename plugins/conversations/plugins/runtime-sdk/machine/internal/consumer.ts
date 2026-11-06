@@ -1,5 +1,4 @@
 import { mkdir } from "node:fs/promises";
-import { relative, sep } from "node:path";
 import type { RuntimeSignal } from "@plugins/conversations/server";
 import { recordContextUsage } from "@plugins/conversations/plugins/context-usage/server";
 import {
@@ -30,7 +29,6 @@ import {
   retireQuestion,
 } from "@plugins/conversations/plugins/question-relay/machine";
 import {
-  AGENT_EVENTS_FILE,
   DismissReplySchema,
   USAGE_LIMIT_ERROR,
   type OpenRequest,
@@ -77,29 +75,28 @@ import { z } from "zod";
 // Events → state: tails every SDK agent's events.jsonl from the cursor its
 // conversation row holds, applies the new lines (reducer.ts), runs their side
 // effects (the turn ledger, the question relay) and signals the status
-// reconciler. Push-based end to end: a kqueue watch of each RUNNING agent's own
-// directory (fs.watch never reports appends under bun), one catch-up per
+// reconciler. Push-based end to end: a kqueue follow of each RUNNING agent's
+// events file (fs.watch never reports appends under bun), one catch-up per
 // conversation at a time (a keyed coalescer folds a burst into one trailing
 // run), and in-process waiters for the runtime's own "wait until the agent
 // did X" (stop, ready).
 
 /**
- * The watch of one running agent's directory, `state/sdk-agents/<ns>/<id>/`:
- * an append to its events file wakes that conversation's catch-up. kqueue
- * (`writesWhileOpen`) because FSEvents reports an append to a file still held
- * open only when it closes. kqueue holds one descriptor per entry, so it is
- * opened per running agent (a handful of files; `bin/`'s clones ignored), never
- * over the whole namespace: that tree keeps every agent the namespace ever ran
- * (2026-11-05: 1,059 dirs, 5,016 entries on main — ~4,400 descriptors held, and
- * past the 5,000-entry ceiling every boot threw in onReady:conversations, a
- * crash loop). See {@link followAgent}.
+ * The follow of one running agent's events file,
+ * `state/sdk-agents/<ns>/<id>/events.jsonl`: an append wakes that
+ * conversation's catch-up. `writesWhileOpen` because FSEvents reports an
+ * append to a file still held open only when it closes; kqueue holds one
+ * descriptor per followed file, so a follow names the one file — opened per
+ * running agent, never over the namespace's tree, which keeps every agent it
+ * ever ran (2026-11-05: 1,059 dirs, 5,016 entries on main — ~4,400 descriptors
+ * held by the dir-wide watch, and past the 5,000-entry ceiling every boot threw
+ * in onReady:conversations, a crash loop). See {@link followAgent}.
  */
 export const sdkEventsWatcher = defineFileWatcher({
   name: "runtime-sdk.events",
   description:
     "Notices a running SDK agent appending to its events.jsonl, so this backend applies the new lines to the conversation's status, turns and questions.",
   writesWhileOpen: true,
-  ignore: ["bin"],
   debounceMs: 10,
 });
 
@@ -525,12 +522,6 @@ async function onResolved(q: ResolvedQuestion): Promise<void> {
   await deliver(q.conversationId, row.openRequestId, q.resolution);
 }
 
-/** Whether a watch event of an agent's directory names its events file (a rotated generation included). */
-function isEventsPath(dir: string, path: string): boolean {
-  const name = relative(dir, path);
-  return !name.includes(sep) && name.startsWith(AGENT_EVENTS_FILE);
-}
-
 /** One followed agent: its directory's watch, and the launches pinning it. */
 interface Follow {
   /** Resolves once the watch is open; rejects when it could not be. */
@@ -573,10 +564,11 @@ function followAgent(id: string): Follow {
       .then(() => mkdir(dir, { recursive: true }))
       .then(() =>
         sdkEventsWatcher.start({
-          dirs: [dir],
+          // The live file only: a rotation renames it away and creates a new
+          // one, which the follow hears as that path's delete and create.
+          files: [agentEventsPath(id)],
           label: id,
-          onChange: async (events) => {
-            if (!events.some((e) => isEventsPath(dir, e.path))) return;
+          onChange: async () => {
             // Heard before (and whatever) the catch-up does: a launch probing
             // for a stalled consumer must hear the agent write even when
             // catch-up is wedged.
@@ -705,7 +697,7 @@ async function reportFollowFailure(
   await recordReport({
     kind: "crash",
     source: "server-caught",
-    message: `SDK agent ${id}: its directory ${agentDir(id)} ${what}, so its new events are applied only when something else reads them — ${err instanceof Error ? err.message : String(err)}`,
+    message: `SDK agent ${id}: its events file ${agentEventsPath(id)} ${what}, so its new events are applied only when something else reads them — ${err instanceof Error ? err.message : String(err)}`,
     data: { errorType: "SdkEventsWatchFailed", label: "runtime-sdk.events" },
   });
 }

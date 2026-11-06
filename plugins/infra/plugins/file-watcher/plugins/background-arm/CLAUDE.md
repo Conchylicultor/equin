@@ -32,7 +32,6 @@ catalog's server barrel.
     - `infra/file-watcher.listFileWatchers`
     - `infra/file-watcher.onWatcherActivity`
     - `infra/file-watcher.WatcherBackend`
-    - `infra/file-watcher.WRITES_WHILE_OPEN_MAX_ENTRIES`
   - Register: `defineBackgroundKind('file-watcher')`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/provider.ts` (debt)

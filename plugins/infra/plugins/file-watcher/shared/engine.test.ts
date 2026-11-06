@@ -14,9 +14,10 @@ import {
   createFileWatcher,
   parcelBatchHandler,
   WatchedDirGoneError,
-  WRITES_WHILE_OPEN_MAX_ENTRIES,
   type FileWatcher,
+  type FileWatcherOptions,
 } from "./engine";
+import { followedDirs } from "./follow-files";
 
 let dir: string | null = null;
 let staging: string | null = null;
@@ -35,7 +36,7 @@ afterEach(async () => {
   staging = null;
 });
 
-describe("createFileWatcher: writesWhileOpen", () => {
+describe("createFileWatcher: writesWhileOpen follows named files", () => {
   test("reports appends to a file another process still holds open", async () => {
     // macOS FSEvents (the default backend there) reports this file's change
     // only when the writer closes its descriptor. The writer below keeps it
@@ -45,13 +46,17 @@ describe("createFileWatcher: writesWhileOpen", () => {
     writeFileSync(file, "");
     let events = 0;
     watcher = await createFileWatcher({
-      dirs: [dir],
+      files: [file],
       writesWhileOpen: true,
       debounceMs: 0,
       onChange: (batch) => {
-        events += batch.length;
+        events += batch.filter((e) => e.type === "update").length;
       },
     });
+    // The open hands one `update` for a file already there (a write may have
+    // landed before the follow existed): count from after it.
+    await until(() => events >= 1);
+    events = 0;
     writer = Bun.spawn(
       [
         "/bin/sh",
@@ -71,25 +76,133 @@ describe("createFileWatcher: writesWhileOpen", () => {
     expect(writer.exitCode).toBeNull();
   });
 
-  test("refuses a directory too large for a descriptor per entry", async () => {
-    if (process.platform !== "darwin") return; // the guard binds only on kqueue
-    dir = mkdtempSync(join(tmpdir(), "fw-big-"));
-    for (let i = 0; i <= WRITES_WHILE_OPEN_MAX_ENTRIES; i++) {
-      writeFileSync(join(dir, `f${i}`), "");
+  test("holds a descriptor per named file, not per entry of its dir", async () => {
+    if (process.platform !== "darwin") return; // kqueue's cost model
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-bounded-")));
+    for (let i = 0; i < 300; i++) writeFileSync(join(dir, `other${i}`), "");
+    const file = join(dir, "followed.log");
+    writeFileSync(file, "");
+    const heard: string[] = [];
+    watcher = await createFileWatcher({
+      files: [file],
+      writesWhileOpen: true,
+      debounceMs: 0,
+      onChange: (batch) => void heard.push(...batch.map((e) => e.path)),
+    });
+    // The dir and the one file.
+    expect(descriptorsUnder(dir)).toBe(2);
+    appendFileSync(join(dir, "other1"), "x");
+    appendFileSync(file, "x");
+    await until(() => heard.filter((p) => p === file).length >= 2);
+    expect(heard.filter((p) => p !== file)).toEqual([]);
+    // Deleting what it does not follow costs nothing (parcel's kqueue leaks the
+    // descriptor of a WATCHED file that is deleted; these never had one).
+    for (let i = 0; i < 300; i++) rmSync(join(dir, `other${i}`));
+    await Bun.sleep(200);
+    expect(descriptorsUnder(dir)).toBe(2);
+    await watcher.stop();
+    watcher = null;
+    expect(descriptorsUnder(dir)).toBe(0);
+  });
+
+  test("hears a named file from its creation", async () => {
+    dir = mkdtempSync(join(tmpdir(), "fw-later-"));
+    const file = join(dir, "later.log");
+    const heard: string[] = [];
+    watcher = await createFileWatcher({
+      files: [file],
+      writesWhileOpen: true,
+      debounceMs: 0,
+      onChange: (batch) => void heard.push(...batch.map((e) => `${e.type}`)),
+    });
+    writeFileSync(file, "a\n");
+    await until(() => heard.includes("create"));
+    appendFileSync(file, "b\n");
+    await until(() => heard.includes("update"));
+    expect(heard).toContain("create");
+    expect(heard).toContain("update");
+  });
+
+  test("two follows of one dir share it, and each hears only its files", async () => {
+    // parcel caches a dir's listing per path: a second subscription with a
+    // different ignore fails outright. One subscription per dir carries both.
+    dir = mkdtempSync(join(tmpdir(), "fw-shared-"));
+    const a = join(dir, "a.log");
+    const b = join(dir, "b.log");
+    writeFileSync(a, "");
+    writeFileSync(b, "");
+    const heardA: string[] = [];
+    const heardB: string[] = [];
+    watcher = await createFileWatcher({
+      files: [a],
+      writesWhileOpen: true,
+      debounceMs: 0,
+      onChange: (batch) => void heardA.push(...batch.map((e) => e.path)),
+    });
+    const second = await createFileWatcher({
+      files: [b],
+      writesWhileOpen: true,
+      debounceMs: 0,
+      onChange: (batch) => void heardB.push(...batch.map((e) => e.path)),
+    });
+    try {
+      heardA.length = 0;
+      heardB.length = 0;
+      appendFileSync(a, "x");
+      appendFileSync(b, "y");
+      await until(() => heardA.includes(a) && heardB.includes(b));
+      expect(heardA.every((p) => p === a)).toBe(true);
+      expect(heardB.every((p) => p === b)).toBe(true);
+      expect(heardA).toContain(a);
+      expect(heardB).toContain(b);
+    } finally {
+      await second.stop();
     }
+    // The first still hears after the second left (its subscription re-opened).
+    heardA.length = 0;
+    appendFileSync(a, "z");
+    await until(() => heardA.includes(a));
+    expect(heardA).toContain(a);
+  });
+
+  test("a missing dir rejects the follow and holds nothing", async () => {
+    dir = mkdtempSync(join(tmpdir(), "fw-missing-"));
     let error: unknown = null;
     try {
       watcher = await createFileWatcher({
-        dirs: [dir],
+        files: [join(dir, "nope", "x.log")],
         writesWhileOpen: true,
         onChange: () => {},
       });
     } catch (err) {
       error = err;
     }
-    expect(String(error)).toContain("writesWhileOpen");
+    expect(error).not.toBeNull();
+    expect(followedDirs()).toEqual([]);
+  });
+
+  test("a directory has no spelling", () => {
+    const opts: FileWatcherOptions = {
+      // @ts-expect-error — a writesWhileOpen watch takes files, never dirs
+      dirs: ["/tmp"],
+      writesWhileOpen: true,
+      onChange: () => {},
+    };
+    expect(opts).toBeDefined();
   });
 });
+
+/** How many descriptors this process holds on paths under `root`. */
+function descriptorsUnder(root: string): number {
+  const out = Bun.spawnSync(["lsof", "-p", String(process.pid)], {
+    stdout: "pipe",
+    stderr: "ignore",
+  });
+  return out.stdout
+    .toString()
+    .split("\n")
+    .filter((l) => l.includes(root)).length;
+}
 
 // Test-only bound, not production polling.
 async function until(done: () => boolean): Promise<void> {
@@ -117,13 +230,14 @@ function moveInFolder(root: string, files: Record<string, string>): string {
 }
 
 describe("createFileWatcher: a folder that arrives with entries inside", () => {
-  // kqueue on darwin, inotify on Linux: both watch each directory on its own.
+  // inotify (Linux) watches each directory on its own (`new-dirs.ts`). A dir
+  // watch on darwin is FSEvents, which reports by path and needs none of it.
   test("reports what it held, and hears every later write to it", async () => {
+    if (process.platform !== "linux") return;
     dir = mkdtempSync(join(tmpdir(), "fw-moved-"));
     const heard: string[] = [];
     watcher = await createFileWatcher({
       dirs: [dir],
-      writesWhileOpen: true,
       debounceMs: 0,
       onChange: (batch) => {
         for (const e of batch) heard.push(`${e.type} ${e.path}`);
@@ -153,11 +267,11 @@ describe("createFileWatcher: a folder that arrives with entries inside", () => {
   });
 
   test("leaves out what the watcher ignores", async () => {
+    if (process.platform !== "linux") return;
     dir = mkdtempSync(join(tmpdir(), "fw-moved-ignore-"));
     const heard: string[] = [];
     watcher = await createFileWatcher({
       dirs: [dir],
-      writesWhileOpen: true,
       ignore: ["**/skip/**"],
       debounceMs: 0,
       onChange: (batch) => {
@@ -210,6 +324,52 @@ describe("createFileWatcher: a watched dir that goes", () => {
     } finally {
       await after.stop();
     }
+  });
+});
+
+describe("createFileWatcher: a followed file's dir that goes", () => {
+  test("the follow closes and says so", async () => {
+    // The same poison as a dir watch's: the dir's subscription must close
+    // when the dir goes, whatever its ignore lets through.
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-follow-gone-")));
+    const doomed = join(dir, "doomed");
+    mkdirSync(doomed);
+    const file = join(doomed, "events.jsonl");
+    writeFileSync(file, "");
+    const lost: unknown[] = [];
+    watcher = await createFileWatcher({
+      files: [file],
+      writesWhileOpen: true,
+      debounceMs: 0,
+      onChange: () => {},
+      onLost: (_dir, error) => void lost.push(error),
+    });
+    rmSync(doomed, { recursive: true });
+    await until(() => lost.length > 0);
+    expect(lost[0]).toBeInstanceOf(WatchedDirGoneError);
+    await watcher.stop();
+    watcher = null;
+    expect(followedDirs()).toEqual([]);
+  });
+
+  test("a stopped follow hears nothing more", async () => {
+    dir = mkdtempSync(join(tmpdir(), "fw-stopped-"));
+    const file = join(dir, "a.log");
+    writeFileSync(file, "");
+    let calls = 0;
+    const follow = await createFileWatcher({
+      files: [file],
+      writesWhileOpen: true,
+      debounceMs: 0,
+      onChange: () => {
+        calls += 1;
+      },
+    });
+    await follow.stop();
+    calls = 0;
+    appendFileSync(file, "x");
+    await Bun.sleep(300);
+    expect(calls).toBe(0);
   });
 });
 

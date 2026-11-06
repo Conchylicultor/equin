@@ -16,6 +16,7 @@ import {
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import {
   assertRunId,
   observeRun,
@@ -32,24 +33,23 @@ import { createTranscriptTail, type TranscriptTail } from "./tail";
 import { announceRunChange } from "./observers";
 
 /**
- * The runs-dir watcher: one instance, open only while a run is live (see
- * `syncWatcher`).
+ * The live runs' follow: one instance naming every live run's transcript and
+ * exit marker, open only while a run is live (see `syncWatcher`).
  */
 export const supervisedRunWatcher = defineFileWatcher({
   name: "supervised-job.runs-dir",
   description:
     "While a detached child runs, follows its transcript and exit marker in the runs directory to stream its output live and settle the run the moment it ends.",
-  // A transcript grows continuously, so the debounce is what turns a build's
-  // thousands of writes into a bounded number of pumps. Each pump then reads
-  // everything that accumulated, so nothing is lost by waiting.
-  extensions: [RUN_TRANSCRIPT_SUFFIX, RUN_TERMINAL_SUFFIX],
   // The child writes its transcript through ONE descriptor it holds open for
   // the whole run. macOS FSEvents reports that file's changes only when the
   // descriptor closes — at exit — so without this the tail was pumped once, at
-  // the end, and a live run published nothing until it finished. Its cost (one
-  // descriptor per entry, kqueue on darwin) is bounded here: the runs dir is
-  // flat and capped by `pruneWorktreeRunArtifacts`, and the watcher exists only
-  // while a run is live.
+  // the end, and a live run published nothing until it finished. kqueue holds
+  // one descriptor per followed file, so the follow names the live runs' two
+  // files each — not the runs dir, which keeps 50 runs of every kind
+  // (2026-11-06 on main: 1,137 entries, a descriptor each during every live
+  // run). A transcript grows continuously, so the debounce (default) is what
+  // turns a build's thousands of writes into a bounded number of pumps; each
+  // pump reads everything that accumulated.
   writesWhileOpen: true,
 });
 
@@ -97,10 +97,10 @@ interface LiveRun {
 }
 
 const live = new Map<string, LiveRun>();
-let watcher: FileWatcher | null = null;
-// The in-flight `supervisedRunWatcher.start`, so two concurrent starts share one
-// subscription instead of racing to leave an orphan nothing can stop.
-let watcherStarting: Promise<void> | null = null;
+/** The open follow, and the files it names (sorted, joined) — null while no run is live. */
+let watcher: { files: string; handle: FileWatcher } | null = null;
+/** A sync of {@link watcher} is between its first and last statement. */
+let watcherSyncing = false;
 
 /**
  * The live-set key. `:` separates the halves unambiguously because a kind id is
@@ -356,75 +356,79 @@ async function settleFromMarker(
 }
 
 /**
- * Keep exactly one watcher alive for as long as at least one run is.
- *
- * One subscription for every live run of every kind, over the single directory
- * they all write into — which is why that directory exists (see `runsDirFor`
- * in `paths`). Per-run watchers would multiply the native subscriptions by the
- * number of concurrent runs for no gain, since every event arrives on the same
- * directory anyway.
+ * Keep exactly one follow open for as long as at least one run is, naming
+ * every live run's transcript and exit marker — re-opened when the live set
+ * changes (a run tracked or settled). Syncs run one at a time, a burst folding
+ * into one trailing sync; the call resolves once a sync that started after it
+ * has settled.
  */
-async function syncWatcher(): Promise<void> {
-  if (live.size === 0) {
-    // Let a start already in flight finish before deciding there is nothing to
-    // stop — otherwise the subscription it is about to publish into `watcher`
-    // lands after this branch has read `null` and outlives every run it was
-    // created for, with nothing holding a handle to stop it.
-    await watcherStarting;
-    if (watcher !== null) {
-      const w = watcher;
-      watcher = null;
-      supervisedRunLivenessTimer.stop();
-      await w.stop();
+function syncWatcher(): Promise<void> {
+  return watcherSync.run();
+}
+
+const watcherSync = createCoalescer({
+  run: async () => {
+    watcherSyncing = true;
+    try {
+      await applyWatcher();
+    } finally {
+      watcherSyncing = false;
     }
-    return;
+  },
+});
+
+async function applyWatcher(): Promise<void> {
+  const ns = runtimeNamespace();
+  const files = [...live.values()]
+    .flatMap((r) => [
+      worktreeArtifacts.runTranscript(ns, r.kind.id, r.runId),
+      worktreeArtifacts.runTerminal(ns, r.kind.id, r.runId),
+    ])
+    .sort();
+  const key = files.join("\n");
+  if ((watcher?.files ?? "") === key) return;
+  const previous = watcher;
+  if (files.length > 0) {
+    await mkdir(worktreeArtifacts.runsDir(ns), { recursive: true });
+    // The new follow opens before the old one closes: both name the same dir,
+    // so they share one native subscription and no write goes unheard between.
+    watcher = {
+      files: key,
+      handle: await supervisedRunWatcher.start({
+        files,
+        onChange: (events) =>
+          runTracked("watch:supervised-run", () => onArtifactEvents(events)),
+        onLost: () =>
+          runTracked("watch:supervised-run:lost", () =>
+            reconcileSupervisedRuns(),
+          ),
+      }),
+    };
+    if (previous === null) supervisedRunLivenessTimer.start();
+  } else {
+    watcher = null;
+    supervisedRunLivenessTimer.stop();
   }
-  if (watcher !== null || watcherStarting !== null) {
-    await watcherStarting;
-    return;
-  }
-  const dir = worktreeArtifacts.runsDir(runtimeNamespace());
-  watcherStarting = (async () => {
-    // Inside the start, so `watcherStarting` is claimed before the first await:
-    // a concurrent sync sees it and joins rather than starting a second watcher.
-    await mkdir(dir, { recursive: true });
-    watcher = await supervisedRunWatcher.start({
-      dirs: [dir],
-      onChange: (events) =>
-        runTracked("watch:supervised-run", () => onArtifactEvents(events)),
-      onLost: () =>
-        runTracked("watch:supervised-run:lost", () =>
-          reconcileSupervisedRuns(),
-        ),
-    });
-    supervisedRunLivenessTimer.start();
-  })();
-  try {
-    await watcherStarting;
-  } finally {
-    watcherStarting = null;
-  }
+  await previous?.handle.stop();
 }
 
 /**
- * Delete from the runs dir only while no watcher subscribe is walking it.
+ * Delete from the runs dir only while no follow is (re-)opening.
  *
- * The kqueue backend (`writesWhileOpen`) subscribes by listing the dir and then
- * opening every entry it listed; a file deleted between the two fails the
- * WHOLE subscribe with `error watching <runs>: No such file or directory`. The
+ * Opening the follow lists the runs dir (parcel stats every entry, ignored ones
+ * included), and an entry deleted between the listing and its stat fails the
+ * WHOLE open with `error watching <runs>: No such file or directory`. The
  * prune is the only thing in this process that deletes there, and another
- * kind's run starting at the same instant pruned under a live subscribe
+ * kind's run starting at the same instant pruned under a live open
  * (2026-10-15: backup and worktree-cleanup.reap-stale, both scheduled at
- * 03:00). Not retried after the fact instead: a failed parcel subscribe leaves
- * its half-opened entries — and the cached listing still naming the deleted
- * file — on the shared backend, so the retry would fail the same way.
+ * 03:00). The prune never deletes a followed file (a live run's files are the
+ * newest of its kind), so the follow itself loses nothing to it.
  *
  * `prune` is synchronous, and no `await` separates the loop's exit from it, so
- * no subscribe can start in between. A start that failed is its own caller's
- * error, not this one's — hence `allSettled`.
+ * no sync can start in between.
  */
 async function pruneOutsideWatcherStart(prune: () => void): Promise<void> {
-  while (watcherStarting !== null) await Promise.allSettled([watcherStarting]);
+  while (watcherSyncing) await watcherSync.idle();
   prune();
 }
 

@@ -28574,7 +28574,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/rust/cargo-updater` (1 debt)
               - `infra/events-test` (1 debt)
               - `infra/file-sink` (3 debt)
-              - `infra/file-watcher` (4 debt)
+              - `infra/file-watcher` (5 debt)
               - `infra/file-watcher/background-arm` (1 debt)
               - `infra/git/checkout-watch` (1 debt)
               - `infra/git/remotes` (2 debt)
@@ -32233,7 +32233,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `sink-safety/no-adhoc-file-sink` — `.` (sanctioned)
           - `boundaries/no-platform-api` — `core/internal/file-sink.ts`, `core/internal/history.ts`, `core/internal/read.ts` (debt)
-    - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, kqueue sizing; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
+    - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
       - Cross-plugin:
         - Imported by: 38 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `infra` ×12
@@ -32252,13 +32252,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
           - `watcher-safety/no-raw-fs-watch` — `shared/engine.ts` (sanctioned)
-          - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts`, `shared/journal.ts`, `shared/new-dirs.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts`, `shared/follow-files.ts`, `shared/journal.ts`, `shared/new-dirs.ts` (debt)
       - Server:
         - Exports (types):
           - `DirWatchRelease`
           - `DirWatchRequest`
           - `DirWatchScope`
           - `FileChangeEvent`
+          - `FileFollowStartOptions`
           - `FileWatcher`
           - `FileWatcherBatch`
           - `FileWatcherDecl`
@@ -32283,7 +32284,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `listFileWatchers`
           - `onWatcherActivity`
           - `WatchedDirGoneError`
-          - `WRITES_WHILE_OPEN_MAX_ENTRIES`
         - Register:
           - `defineFileWatcher('file-watcher.dirs')`
           - `defineFileWatcher('file-watcher.dir-entries')`
@@ -32312,7 +32312,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/file-watcher.listFileWatchers`
               - `infra/file-watcher.onWatcherActivity`
               - `infra/file-watcher.WatcherBackend`
-              - `infra/file-watcher.WRITES_WHILE_OPEN_MAX_ENTRIES`
             - Register: `defineBackgroundKind('file-watcher')`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/provider.ts` (debt)
@@ -37528,6 +37527,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/git/checkout-watch`
           - `infra/git/git-watcher`
           - `infra/host/io-health`
+          - `infra/jobs/supervised-job`
           - `infra/paths/data-files/memory`
           - `packages/watched-memo`
           - `plugin-meta/plugin-tree`

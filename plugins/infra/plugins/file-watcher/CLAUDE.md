@@ -3,8 +3,8 @@
 Every in-process file watcher is **declared once** with `defineFileWatcher`
 and opened as instances of that declaration. The engine underneath
 (`shared/engine.ts`) is one `@parcel/watcher` subscription per watched dir, with
-the debounce + ceiling flush and kqueue sizing — and no timer: a missed event
-is reported by the watch itself (`onLost`).
+the debounce + ceiling flush — and no timer: a missed event is reported by the
+watch itself (`onLost`).
 
 ## Declaration vs instance
 
@@ -38,6 +38,50 @@ await w.stop();
 - The registry lives in `shared/registry.ts`. The file-watcher barrels never
   import the catalog's server barrel — they are imported early at boot.
 
+## Writes to a file held open: `writesWhileOpen` follows NAMED files
+
+macOS FSEvents reports a content change when the writer CLOSES the file, so a
+long-lived writer (a detached child's transcript, an agent's `events.jsonl`, a
+background shell's output) is heard only at its exit. A `writesWhileOpen: true`
+declaration hears every write (kqueue on darwin, inotify elsewhere) — and its
+instances take **`start({ files })`, never `{ dirs }`** (a tsc error, and a
+throw for a caller that bypasses the types):
+
+```ts
+export const eventsWatcher = defineFileWatcher({ name, description, writesWhileOpen: true });
+await eventsWatcher.start({ files: [eventsPath], label: id, onChange });
+```
+
+Why files: kqueue holds one descriptor per watched file, so a dir-wide watch
+costs one per entry and grows with the dir. That shape crash-looped main on
+2026-11-05 (the SDK events watch over `state/sdk-agents/<ns>/`: ~4,400
+descriptors, past the old 5,000-entry ceiling's throw) and held one per entry
+of `runs/` (~1,100) during every supervised run. A follow costs what its caller
+enumerated: one descriptor per named file present plus one per directory —
+`extensions`, `ignore` and `depth` have no meaning there and no spelling.
+
+- **A file not there yet** is heard from its creation (the dir's descriptor
+  hears the entry appear); a rename-and-recreate (a sink rotating) is a
+  `delete` + `create` of the path.
+- **One subscription per directory per process** (`shared/follow-files.ts`):
+  parcel caches a dir's listing by path across subscriptions, so two with
+  different ignores on one dir fail outright. Every follow of a dir — any
+  declaration — shares one subscription whose ignore lets through exactly the
+  union of their names, re-opened when that union changes. After every
+  (re)open each follower is handed an `update` for each of its files on disk
+  (nothing was heard while it was closed): a follower reads from its own
+  cursor, so it must treat an update as "look", never as "something was
+  appended".
+- **parcel 2.6.0's kqueue backend leaks the descriptor of a watched file that
+  is deleted or renamed** (it never `close`s it; `unsubscribe` does not either
+  — measured: 70 deletes under a dir-wide watch left 90 descriptors after
+  unsubscribe). Naming files limits it to a followed file going (a rotation),
+  not every entry a prune removes.
+- An open lists the dir (parcel stats every entry, ignored ones included): an
+  entry deleted mid-listing fails the open. A follower that deletes in the
+  same dir holds its deletes outside its opens (`supervised-job`'s
+  `pruneOutsideWatcherStart`).
+
 ## Reactions are coalesced: return the work
 
 A reaction (`onChange`, `onLost` — the `WatchReaction` / `WatchLost`
@@ -64,8 +108,8 @@ The catalog's `Folded` fact counts the batches an instance folded.
 A foreground `./equin` command that waits on the disk (`await`) imports
 `watchForCommand` from `@plugins/infra/plugins/file-watcher/cli`: the same
 engine, no registry (a CLI process has no catalog, and a wait is not background
-activity). It takes the engine's options directly — `dirs` + `onChange`
-required.
+activity). It takes the engine's options directly — `dirs` (or, with
+`writesWhileOpen: true`, `files`) + `onChange` required.
 
 ## Other ways to watch are lint errors
 
@@ -111,7 +155,7 @@ a loss, read from `@parcel/watcher` 2.6.0's source:
 | backend | a dropped event | reported? |
 |---|---|---|
 | FSEvents (macOS) | `MustScanSubDirs` (client / kernel dropped, or coalesced) | **yes** — "Events were dropped by the FSEvents client…" |
-| kqueue (`writesWhileOpen`) | no queue to overflow; a failed watch | yes |
+| kqueue (`writesWhileOpen` follow) | no queue to overflow; a failed watch | yes |
 | Windows | buffer overflow | yes |
 | inotify (Linux) | `IN_Q_OVERFLOW` | **no** — parcel skips it silently |
 
@@ -140,8 +184,8 @@ Plan and measurements:
 
 ## A new folder's entries: heard even when they came first
 
-parcel's kqueue (`writesWhileOpen` on macOS) and inotify (Linux) backends
-watch each directory on its own. They hear a new folder by diffing its
+parcel's inotify (Linux) backend watches each directory on its own (so did
+kqueue, back when a `writesWhileOpen` watch took dirs). They hear a new folder by diffing its
 parent, then watch that folder alone — never what is already inside it. An
 entry written into the folder before parcel's thread got to it (a folder moved
 in whole, or `mkdir` + write while the thread lags) is never watched: no
@@ -150,14 +194,14 @@ in whole, or `mkdir` + write while the thread lags) is never watched: no
 an SDK agent's `events.jsonl`, created 7 s after its folder on a loaded host,
 went unheard by main's consumer (`sdk-consumer-stalled`).
 
-So the engine (`shared/new-dirs.ts`), on those two backends, subscribes parcel
+So the engine (`shared/new-dirs.ts`), on inotify, subscribes parcel
 to every folder a watch reports created — `subscribe` walks what it is given
 and watches every entry — then reports as `create` everything found inside
 (minus `ignore`, read the way parcel reads it). A path may be reported twice;
 consumers key by path. Cost: one more native subscription per folder created
 under the watch, until it is deleted or the watcher stops. FSEvents reports by
 path from one stream and needs none of it. Tests: the moved-in folder cases in
-`shared/engine.test.ts` (they fail without it).
+`shared/engine.test.ts` (Linux only; they fail without it).
 
 ## What changed while nobody watched: the journal
 
@@ -231,7 +275,7 @@ re-created is watched again (a `rescan` on each appearing or going).
 
 ## Plugin reference
 
-- Description: defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, kqueue sizing; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
+- Description: defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
 - Cross-plugin:
   - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×12
@@ -250,13 +294,14 @@ re-created is watched again (a `rescan` on each appearing or going).
   - Exempts itself from:
     - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
     - `watcher-safety/no-raw-fs-watch` — `shared/engine.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts`, `shared/journal.ts`, `shared/new-dirs.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts`, `shared/follow-files.ts`, `shared/journal.ts`, `shared/new-dirs.ts` (debt)
 - Server:
   - Exports (types):
     - `DirWatchRelease`
     - `DirWatchRequest`
     - `DirWatchScope`
     - `FileChangeEvent`
+    - `FileFollowStartOptions`
     - `FileWatcher`
     - `FileWatcherBatch`
     - `FileWatcherDecl`
@@ -281,7 +326,6 @@ re-created is watched again (a `rescan` on each appearing or going).
     - `listFileWatchers`
     - `onWatcherActivity`
     - `WatchedDirGoneError`
-    - `WRITES_WHILE_OPEN_MAX_ENTRIES`
   - Register:
     - `defineFileWatcher('file-watcher.dirs')`
     - `defineFileWatcher('file-watcher.dir-entries')`

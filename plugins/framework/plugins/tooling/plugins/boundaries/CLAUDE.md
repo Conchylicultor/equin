@@ -312,7 +312,7 @@ takes a `debt` exemption on the check's id.
     - `infra/deps/rust/cargo-updater` (1 debt)
     - `infra/events-test` (1 debt)
     - `infra/file-sink` (3 debt)
-    - `infra/file-watcher` (4 debt)
+    - `infra/file-watcher` (5 debt)
     - `infra/file-watcher/background-arm` (1 debt)
     - `infra/git/checkout-watch` (1 debt)
     - `infra/git/remotes` (2 debt)

@@ -31,7 +31,7 @@ export interface AttachedRun {
  *   as the shim's trap records it). A SIGKILL of this process writes none,
  *   which reads as the hard kill it is.
  * - **The echo is a tail of the transcript**, heard through a `writesWhileOpen`
- *   watch of the runs dir (the child holds the file open; FSEvents would report
+ *   follow of the transcript file (the child holds it open; FSEvents would report
  *   it only at close) — the file is the one record, so the terminal shows what
  *   a reader of the run will see, never a second copy that could differ.
  */

@@ -1,10 +1,6 @@
 import type * as parcel from "@parcel/watcher";
 import { type FSWatcher, watch as fsWatch } from "node:fs";
-import {
-  readdir,
-  realpath,
-  stat,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { realpath, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, extname, join } from "node:path";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
@@ -22,6 +18,10 @@ import {
 // functions that close over a `binding` passed in at call time. Safe to import
 // at module top-level (the native `.node` addon is still loaded lazily below).
 import { createWrapper } from "@parcel/watcher/wrapper";
+import { WatchedDirGoneError } from "./dir-gone";
+import { followFiles } from "./follow-files";
+
+export { WatchedDirGoneError } from "./dir-gone";
 
 // `@parcel/watcher` is loaded LAZILY (dynamic import inside createFileWatcher),
 // never at module top-level. It pulls in a native `.node` addon that a static
@@ -108,38 +108,35 @@ export type WatchLost = (
   error: unknown,
 ) => void | Promise<unknown>;
 
-export interface FileWatcherOptions {
-  dirs: string[];
+/** What every watch takes, whatever it watches. */
+interface WatchOptionsBase {
   onChange: WatchReaction<parcel.Event>;
   /**
-   * Called when a watched dir's native watch errored and may have dropped
-   * events (the error is still logged), and — with a {@link WatchedDirGoneError},
-   * once — when a `subtree` watch's dir itself went: its watch is closed then
-   * (see `subscribeRoot`). Not called for a `children` watch: a failing one
-   * already reports its dir gone (see `depth`).
+   * Called when a native watch errored and may have dropped events (the error
+   * is still logged), and — with a {@link WatchedDirGoneError}, once — when a
+   * `subtree` watch's dir (or a followed file's dir) itself went: its watch is
+   * closed then (see `subscribeRoot`). Not called for a `children` watch: a
+   * failing one already reports its dir gone (see `depth`).
    */
   onLost?: WatchLost;
   debounceMs?: number;
   ceilingMs?: number;
+  /**
+   * Label for the `bg` span each dispatch (`onChange` / `onLost`) runs
+   * under, so a watcher callback's synchronous main-thread cost is attributed to
+   * `watch:<name>` in the profiler instead of vanishing. Defaults to the first
+   * watched path's basename.
+   */
+  name?: string;
+}
+
+/** A watch of directories: every change of what they hold. */
+export interface DirWatchOptions extends WatchOptionsBase {
+  dirs: string[];
   extensions?: string[];
   ignore?: string[];
-  /**
-   * Report every write to a file that another process still holds open — not
-   * only the moment it closes it.
-   *
-   * macOS FSEvents, parcel's default backend there, reports a content change
-   * when the writer CLOSES its descriptor, not on each `write(2)`. A long-lived
-   * writer (a detached child whose stdout is a file) therefore produces one
-   * event at open and one at exit, and nothing in between. `true` selects
-   * parcel's kqueue backend on darwin, whose `EVFILT_VNODE` fires per write;
-   * inotify (Linux) already reports every write, so elsewhere it changes nothing.
-   *
-   * The cost is why this is opt-in: kqueue holds one descriptor per file under
-   * each watched dir, for as long as the watcher lives. Only point it at a small
-   * directory with a known bound — {@link WRITES_WHILE_OPEN_MAX_ENTRIES} is
-   * enforced at subscribe time.
-   */
-  writesWhileOpen?: boolean;
+  /** A directory is never followed per write — see {@link FileFollowOptions}. */
+  writesWhileOpen?: false;
   /**
    * How deep each watched dir is heard. `"subtree"` (the default) is
    * parcel's native recursive watch: every path at any depth. `"children"` is
@@ -151,49 +148,35 @@ export interface FileWatcherOptions {
    * resolves, not at it: Bun opens the native watch on its own thread (on
    * macOS, one FSEvents stream shared by every directory watch of the
    * process, restarted from "now" whenever one opens or closes). No `ignore`
-   * and no `writesWhileOpen` beside it (a throw).
+   * beside it (a throw).
    */
   depth?: WatchDepth;
-  /**
-   * Label for the `bg` span each dispatch (`onChange` / `onLost`) runs
-   * under, so a watcher callback's synchronous main-thread cost is attributed to
-   * `watch:<name>` in the profiler instead of vanishing. Defaults to the first
-   * watched dir's basename.
-   */
-  name?: string;
 }
 
 /**
- * The most entries a `writesWhileOpen` dir may hold when the watcher starts.
- * kqueue costs one descriptor per entry, so a watcher pointed at a real tree
- * must fail at the call site rather than exhaust the process's descriptors.
+ * A follow of named files: every write to each of them — including writes to
+ * a file another process still holds open, not only the moment it closes it.
+ *
+ * macOS FSEvents, parcel's default backend there, reports a content change
+ * when the writer CLOSES its descriptor, not on each `write(2)`. A long-lived
+ * writer (a detached child whose stdout is a file) therefore produces one
+ * event at open and one at exit, and nothing in between. A follow uses
+ * parcel's kqueue backend on darwin, whose `EVFILT_VNODE` fires per write;
+ * inotify (Linux) already reports every write.
+ *
+ * kqueue holds one descriptor per file it watches, so a follow takes the
+ * FILES, never a directory: it holds one descriptor per named file plus one
+ * per directory they sit in — the list its caller enumerated, never whatever a
+ * directory has grown to. A file not there yet is heard from its creation.
+ * Every follow of one directory in the process shares one native subscription
+ * (`follow-files.ts`).
  */
-export const WRITES_WHILE_OPEN_MAX_ENTRIES = 5_000;
-
-/**
- * Throw if `dir` holds more than {@link WRITES_WHILE_OPEN_MAX_ENTRIES} entries,
- * counted recursively. Stops walking at the first entry past the ceiling, so a
- * huge tree costs no more than the ceiling to reject.
- */
-async function assertKqueueSized(dir: string): Promise<void> {
-  let count = 0;
-  const stack = [dir];
-  while (stack.length > 0) {
-    const current = stack.pop() as string;
-    for (const entry of await readdir(current, { withFileTypes: true })) {
-      count += 1;
-      if (count > WRITES_WHILE_OPEN_MAX_ENTRIES) {
-        throw new Error(
-          `[file-watcher] writesWhileOpen on ${dir}: more than ` +
-            `${WRITES_WHILE_OPEN_MAX_ENTRIES} entries. The kqueue backend holds ` +
-            `one descriptor per file, so this option is only for small, bounded ` +
-            `directories.`,
-        );
-      }
-      if (entry.isDirectory()) stack.push(join(current, entry.name));
-    }
-  }
+export interface FileFollowOptions extends WatchOptionsBase {
+  files: string[];
+  writesWhileOpen: true;
 }
+
+export type FileWatcherOptions = DirWatchOptions | FileFollowOptions;
 
 export interface FileWatcher {
   stop(): Promise<void>;
@@ -234,25 +217,14 @@ export function watcherBackend(
 export async function createFileWatcher(
   opts: FileWatcherOptions,
 ): Promise<FileWatcher> {
-  const {
-    dirs,
-    onChange,
-    onLost,
-    debounceMs = 100,
-    ceilingMs = 1000,
-    extensions,
-    ignore,
-    writesWhileOpen = false,
-    depth = "subtree",
-    name = basename(dirs[0] ?? "file-watcher"),
-  } = opts;
-  if (depth === "children" && (ignore !== undefined || writesWhileOpen)) {
-    throw new Error(
-      `[file-watcher] ${name}: a children-depth watch takes no ignore and no writesWhileOpen`,
+  const { onChange, onLost, debounceMs = 100, ceilingMs = 1000 } = opts;
+  const name =
+    opts.name ??
+    basename(
+      (opts.writesWhileOpen === true ? opts.files[0] : opts.dirs[0]) ??
+        "file-watcher",
     );
-  }
 
-  const subscriptions: { unsubscribe(): Promise<void> }[] = [];
   let pending: parcel.Event[] = [];
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let ceilingTimer: ReturnType<typeof setTimeout> | null = null;
@@ -308,35 +280,83 @@ export async function createFileWatcher(
     }
   }
 
-  const useKqueue = watcherBackend(writesWhileOpen) === "kqueue";
-  const parcelOptions: ParcelOptions | undefined =
-    ignore || useKqueue
-      ? {
-          ...(ignore ? { ignore } : {}),
-          ...(useKqueue ? { backend: "kqueue" as const } : {}),
-        }
-      : undefined;
-
-  const take = (events: parcel.Event[]): void => {
-    const filtered = extensions
-      ? events.filter((e) => extensions.includes(extname(e.path)))
-      : events;
-    if (filtered.length === 0) return;
-
+  /** Hand events to the reaction: at once, or batched by the debounce. */
+  let stopped = false;
+  const deliver = (events: parcel.Event[]): void => {
+    if (stopped || events.length === 0) return;
     if (debounceMs === 0) {
-      changes.trigger(filtered);
+      changes.trigger(events);
     } else {
-      pending.push(...filtered);
+      pending.push(...events);
       schedule();
     }
   };
-
-  const parcelWatcher = depth === "subtree" ? await getParcelWatcher() : null;
 
   const lost = (dir: string, error: unknown): void => {
     console.error(`[file-watcher] error on ${dir}`, error);
     losses?.trigger(dir, [error]);
   };
+
+  const stopPipeline = (): void => {
+    stopped = true;
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
+    if (ceilingTimer) {
+      clearTimeout(ceilingTimer);
+      ceilingTimer = null;
+    }
+    pending = [];
+  };
+
+  if (opts.writesWhileOpen === true) {
+    const parcelWatcher = await getParcelWatcher();
+    const follow = await followFiles({
+      files: opts.files,
+      take: deliver,
+      lost,
+      subscribe: (dir, { ignore, onEvents, onGone }) =>
+        subscribeRoot(parcelWatcher, dir, {
+          onEvents,
+          options: {
+            ignore: [ignore],
+            ...(watcherBackend(true) === "kqueue"
+              ? { backend: "kqueue" as const }
+              : {}),
+          },
+          onGone: () => onGone(),
+        }),
+    });
+    return {
+      folded: () => changes.stats().folded,
+      async stop(): Promise<void> {
+        stopPipeline();
+        await follow.stop();
+      },
+    };
+  }
+
+  const { dirs, extensions, ignore, depth = "subtree" } = opts;
+  if (depth === "children" && ignore !== undefined) {
+    throw new Error(
+      `[file-watcher] ${name}: a children-depth watch takes no ignore`,
+    );
+  }
+  const subscriptions: { unsubscribe(): Promise<void> }[] = [];
+  const parcelOptions: ParcelOptions | undefined = ignore
+    ? { ignore }
+    : undefined;
+
+  const take = (events: parcel.Event[]): void => {
+    deliver(
+      extensions
+        ? events.filter((e) => extensions.includes(extname(e.path)))
+        : events,
+    );
+  };
+
+  const parcelWatcher = depth === "subtree" ? await getParcelWatcher() : null;
 
   const matchers = new Map(dirs.map((d) => [d, ignoreMatcher(d, ignore)]));
   const ignoredUnder = (root: string): ((path: string) => boolean) => {
@@ -348,9 +368,8 @@ export async function createFileWatcher(
 
   // A backend that watches each directory on its own misses what a new
   // directory already held when it got to it — see `new-dirs.ts`.
-  const backend = watcherBackend(writesWhileOpen, depth);
   const newDirs: NewDirWatches | null =
-    parcelWatcher !== null && (backend === "kqueue" || backend === "inotify")
+    parcelWatcher !== null && watcherBackend(false, depth) === "inotify"
       ? createNewDirWatches({
           subscribe: (root, dir) =>
             parcelWatcher.subscribe(dir, handlerFor(root), {
@@ -375,7 +394,6 @@ export async function createFileWatcher(
   }
 
   for (const dir of dirs) {
-    if (useKqueue) await assertKqueueSized(dir);
     try {
       const sub =
         parcelWatcher === null
@@ -399,33 +417,12 @@ export async function createFileWatcher(
   return {
     folded: () => changes.stats().folded,
     async stop(): Promise<void> {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-        debounceTimer = null;
-      }
-      if (ceilingTimer) {
-        clearTimeout(ceilingTimer);
-        ceilingTimer = null;
-      }
-      pending = [];
+      stopPipeline();
       await newDirs?.stop();
       await Promise.all(subscriptions.map((s) => s.unsubscribe()));
       subscriptions.length = 0;
     },
   };
-}
-
-/**
- * A watched dir itself went — removed, moved away, or replaced by another (its
- * inode changed) — so its watch is closed and hears nothing more of whatever
- * lands at that path. Handed to `onLost`: re-derive (the dir is gone), and open
- * a new watch if the dir comes back.
- */
-export class WatchedDirGoneError extends Error {
-  constructor(readonly dir: string) {
-    super(`[file-watcher] the watched dir ${dir} went; its watch is closed`);
-    this.name = "WatchedDirGoneError";
-  }
 }
 
 /**

@@ -20,6 +20,7 @@ export default [
     paths: [
       "server/internal/dir-hub.ts",
       "shared/engine.ts",
+      "shared/follow-files.ts",
       "shared/journal.ts",
       "shared/new-dirs.ts",
     ],

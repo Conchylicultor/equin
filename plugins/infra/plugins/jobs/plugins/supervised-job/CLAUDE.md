@@ -400,17 +400,19 @@ wrote, so a genuinely orphaned release always got the `-1` sentinel. One path
 means a restart is not a special case — the boot tailer is the same code as the
 spawn-time tailer.
 
-Change detection is `file-watcher` (the repo bans polling). ONE subscription
-serves every live run of every kind, which is why `runs/` is its own directory
-rather than files beside the build artifacts.
+Change detection is `file-watcher` (the repo bans polling). ONE follow serves
+every live run of every kind, which is why `runs/` is its own directory rather
+than files beside the build artifacts.
 
-**The subscription needs `writesWhileOpen: true`.** The child holds its
-transcript descriptor open for the whole run, and macOS FSEvents reports a
-file's content change only when the writer closes it — so on the default backend
-the tail was pumped once, at exit, and every line landed at the end with one
-timestamp. The option switches to kqueue on darwin (one event per write), at one
-descriptor per entry in `runs/` — bounded by the artifact prune, and held only
-while a run is live.
+**The follow needs `writesWhileOpen: true`.** The child holds its transcript
+descriptor open for the whole run, and macOS FSEvents reports a file's content
+change only when the writer closes it — so on the default backend the tail was
+pumped once, at exit, and every line landed at the end with one timestamp. A
+`writesWhileOpen` watch is kqueue on darwin (one event per write) at one
+descriptor per FOLLOWED file, so it names files: every live run's transcript
+and exit marker, re-opened as runs start and settle (`syncWatcher`). It used to
+watch `runs/` whole — one descriptor per artifact there, ~1,100 on main
+(50 runs × 2 files × every kind), during every live run.
 
 **stdout and stderr merge** (same fd). Interleaving order survives, the
 per-line classification does not — two files with two tailers would invert that
@@ -591,9 +593,10 @@ is already restarted by the time it is called.
   `.jsonl` sink.
 - **On disk**: newest 50 run sets per kind per worktree, trimmed when the next
   run of that kind starts. `defineRetention` does not apply — it is a nightly
-  DELETE over a _table_, and these are files. The trim waits out an in-flight watcher
-  subscribe (`pruneOutsideWatcherStart`): kqueue fails the whole subscribe on
-  an entry deleted mid-walk.
+  DELETE over a _table_, and these are files. The trim waits out an in-flight
+  follow (re)open (`pruneOutsideWatcherStart`): an open lists `runs/`, and an
+  entry deleted mid-listing fails it. The trim never deletes a followed file (a
+  live run's files are its kind's newest).
 - **Residual**: one run's transcript file is bounded only by that run. It is a
   kernel fd the child owns; capping it mid-run would race the writer.
 
@@ -610,7 +613,7 @@ child, attached:
   hold its locks, and its orphan guard still reaps it if the caller is SIGKILLed.
 - **The child writes the transcript** through `spawnToFile` (a raw fd, merged
   like `2>&1`); the caller **echoes it** to its own stdout from the file, heard
-  through a `writesWhileOpen` watch of the runs dir — the terminal shows the
+  through a `writesWhileOpen` follow of the transcript — the terminal shows the
   record, never a second copy.
 - **The caller writes the marker** (`writeRunTerminal`, `core/`, checked
   against the parser's own regex): it waits on the child, so it observes what

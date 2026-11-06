@@ -7,19 +7,21 @@ import {
   defineFileWatcherIn,
   type FileWatcherDecl,
   type FileWatcherSpec,
+  type StartOptionsOf,
 } from "../../shared/registry";
 
-export interface ServerFileWatcherSpec extends FileWatcherSpec {
+export type ServerFileWatcherSpec = FileWatcherSpec & {
   /** Opens only on the main backend (its `start()` throws anywhere else). */
   mainOnly?: boolean;
-}
+};
 
 /**
  * Declare an in-process file watcher on a worktree backend — the ONE way to
  * watch files in server code (`@parcel/watcher` and `fs.watch` are lint
  * errors elsewhere). The declaration names the watcher, describes it, and
- * fixes its policy; each `start({ dirs, label?, onChange, onLost? })`
- * opens one instance of it.
+ * fixes its policy; each `start({ dirs, label?, onChange, onLost? })` — or,
+ * for a `writesWhileOpen` declaration, `start({ files, … })` — opens one
+ * instance of it.
  *
  * Every declaration is an entry under File watchers in Debug → Background
  * activity: its open instances and what they watch, its backend, its last
@@ -36,9 +38,9 @@ export interface ServerFileWatcherSpec extends FileWatcherSpec {
  * const w = await configFilesWatcher.start({ dirs: [dir], onChange });
  * ```
  */
-export function defineFileWatcher(
-  spec: ServerFileWatcherSpec,
-): FileWatcherDecl & Registration {
+export function defineFileWatcher<S extends ServerFileWatcherSpec>(
+  spec: S,
+): FileWatcherDecl<StartOptionsOf<S>> & Registration {
   return defineFileWatcherIn(spec, {
     scope: spec.mainOnly === true ? "main" : "every-worktree",
     get runsHere() {

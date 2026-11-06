@@ -2,16 +2,16 @@
  * Who wants to hear that one run's artifacts moved — its transcript grew, or it
  * ended — without opening a watch of its own on the runs directory.
  *
- * The supervisor already follows that directory with ONE `writesWhileOpen`
- * subscription (kqueue on darwin: one descriptor per entry) for every live run,
- * and already knows the two moments a reader of a run's files cares about: the
- * tail published new lines, and the run settled (its marker landed, or it was
- * written off as a hard kill). A reader that opened its own subscription on the
- * same directory would pay a second descriptor per entry and a second
- * recursive listing per reader, and — unlike the supervisor's own — would not
- * be held outside the artifact prune, whose delete mid-subscribe fails the
- * whole subscribe (`pruneOutsideWatcherStart`). So the supervisor hands its
- * moments out instead, and a reader's cost is one entry in a map.
+ * The supervisor already follows every live run's transcript and exit marker
+ * with ONE `writesWhileOpen` follow (kqueue on darwin: one descriptor per
+ * followed file), and already knows the two moments a reader of a run's files
+ * cares about: the tail published new lines, and the run settled (its marker
+ * landed, or it was written off as a hard kill). A reader that opened its own
+ * follow of the same files would re-open the runs dir's shared subscription
+ * on every join and leave — and, unlike the supervisor's own, would not be held
+ * outside the artifact prune, whose delete mid-open fails the whole open
+ * (`pruneOutsideWatcherStart`). So the supervisor hands its moments out
+ * instead, and a reader's cost is one entry in a map.
  *
  * A run this process is not tailing (finished before the listener was added,
  * or never started here) is silent: its transcript and marker no longer change,

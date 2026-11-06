@@ -4,9 +4,10 @@ import { join, matchesGlob, resolve, sep } from "node:path";
 
 // What a backend that watches each directory on its own misses, recovered.
 //
-// parcel's kqueue (macOS `writesWhileOpen`) and inotify (Linux) backends hear a
-// new directory by diffing its parent, then watch that directory alone — never
-// the entries already inside it. Whatever was created in it before parcel's
+// parcel's inotify (Linux) backend hears a new directory by diffing its
+// parent, then watches that directory alone — never the entries already inside
+// it (a `writesWhileOpen` follow on macOS's kqueue names its files and watches
+// no folder below them, so it never meets this). Whatever was created in it before parcel's
 // thread got to the parent's change (a moved-in folder, or `mkdir` + write
 // while the thread lags) is never watched: no `create`, no later write, no
 // error (@parcel/watcher 2.6.0 `KqueueBackend::compareDir`; inotify upstream
