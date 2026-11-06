@@ -66,7 +66,7 @@ takes — `{ onQueued, onWait }` in one call, so a gate cannot show a wait it
 never charges. Consumer: `debug/stuck-spans`, which files a span queued past
 its threshold against the gate and its holders instead of as stuck itself.
 
-### Event-loop stalls (`event-loop`, `noteLoopTurn`)
+### Event-loop stalls (`event-loop`, `noteLoopTurn`, `noteLoopObserved`)
 
 A leaf is timed from issuing the call to the callback that reads its answer, so
 time the thread spent blocked — another op's synchronous work, a GC pause, the
@@ -82,11 +82,23 @@ same 600 ms and finished within a few ms of each other.
 - A plain leaf (`recordSpan` without `latency`) is charged its overlap with the
   registered stalls as the `event-loop` wait, so it is judged on its own time
   (capped at what the caller's own waits left). A latency leaf keeps its `waits | queue | own` layout.
-- **Only registered stalls count — that keeps the culprit charged.** After a
-  block, Bun runs the overdue timer before the socket callbacks queued behind
-  it (measured 5/5), so a victim's answer is read after the probe registered
-  the stall; a call whose own synchronous work (a huge result decode) blocked
-  the loop records in that same macrotask, before anything is registered.
+- **Only registered stalls count — that keeps the culprit charged.** A call
+  whose own synchronous work (a huge result decode) blocked the loop records in
+  that same macrotask, before anything registered the block.
+- **An answer read late registers the stall too (`noteLoopObserved`).** Which
+  runs first after a block — the overdue probe tick or the socket callbacks
+  queued behind it — is the event loop's phase order: on Bun 1.4 the tick wins
+  only when the block ran in a socket callback; in a timer, a microtask of one
+  or a setImmediate, the answers are read first. So the database client
+  (`database/connection`'s `DbClient`) calls `noteLoopObserved()` on every
+  socket chunk, ahead of pg's parser: if the probe is overdue right then, the
+  block `[due, now]` is registered before the statement's span records, and
+  counts as a loop turn. A culprit's first chunk arrives on time (its decode
+  blocks after it), so it is still not charged. The probe's next tick returns
+  the observed stall (joined with any late part of its own), so the stall
+  stacks still attribute it. Before this, main's `agent-processes` loader — a
+  timer-driven drain blocked 2.0–2.4 s in `readdirSync` — had every query in
+  flight filed as a slow `db` op of the block's length, ending at one instant.
 - **The whole overlap is charged**, not just the part after the answer arrived
   (unknowable here): a query genuinely busy in Postgres during a stall is
   under-charged by at most the stall's length — the safe, under-reporting
@@ -489,6 +501,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `installProfilingSuppressionRuntime`
     - `installRootContextRuntime`
     - `installSpanContextRuntime`
+    - `noteLoopObserved`
     - `noteLoopTurn`
     - `onSlowSpan`
     - `onSlowWait`

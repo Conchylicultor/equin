@@ -24,6 +24,7 @@ import {
   installLoaderReadSetSink,
   installProfilingSuppressionRuntime,
   installSpanContextRuntime,
+  noteLoopObserved,
   noteLoopTurn,
   onSlowSpan,
   onSlowWait,
@@ -1893,6 +1894,79 @@ describe("event-loop stalls — a query is not charged the time the loop was blo
     const span = getRuntimeProfile().slowest.db.find((s) => s.label === "q2")!;
     expect(span.waits).toEqual({ "event-loop": 800 });
     expect(span.selfMs).toBe(300);
+  });
+
+  test("a query whose answer is read before the probe ticks is still charged (block ran in a timer)", () => {
+    turn(0);
+    turn(100);
+    // Blocked from 150 to 2500 inside a timer: Bun reads the socket answer at
+    // 2510, before the overdue tick runs at 2520.
+    fakeNow = 2510;
+    noteLoopObserved();
+    recordSpan("db", "upsert stats", 2400);
+    const stall = noteLoopTurn(100, 100);
+    const span = getRuntimeProfile().slowest.db.find(
+      (s) => s.label === "upsert stats",
+    )!;
+    // Window 110..2510 against the stall 200..2510.
+    expect(span.waits).toEqual({ "event-loop": 2310 });
+    expect(span.selfMs).toBe(90);
+    // The tick after returns the block, so its stacks are still attributed.
+    expect(stall).toEqual({ t0: 200, t1: 2510 });
+  });
+
+  test("several answers read late after one block register it once", () => {
+    turn(0);
+    turn(100);
+    fakeNow = 1000;
+    noteLoopObserved();
+    recordSpan("db", "a", 900);
+    fakeNow = 1003;
+    noteLoopObserved();
+    recordSpan("db", "b", 903);
+    const a = getRuntimeProfile().slowest.db.find((s) => s.label === "a")!;
+    const b = getRuntimeProfile().slowest.db.find((s) => s.label === "b")!;
+    expect(a.waits).toEqual({ "event-loop": 800 });
+    expect(b.waits).toEqual({ "event-loop": 800 });
+    fakeNow = 1010;
+    expect(noteLoopTurn(100, 100)).toEqual({ t0: 200, t1: 1000 });
+  });
+
+  test("a query whose own decode blocked after its answer arrived on time keeps its time", () => {
+    turn(0);
+    turn(100);
+    // Its first chunk is read on time at 150; decoding it blocks until 900.
+    fakeNow = 150;
+    noteLoopObserved();
+    fakeNow = 900;
+    recordSpan("db", "select huge", 800);
+    const stall = noteLoopTurn(100, 100);
+    const span = getRuntimeProfile().slowest.db.find(
+      (s) => s.label === "select huge",
+    )!;
+    expect(span.waits).toBeUndefined();
+    expect(span.selfMs).toBe(800);
+    // The probe still registers the block, for every OTHER call in flight.
+    expect(stall).toEqual({ t0: 200, t1: 900 });
+  });
+
+  test("an observed answer and a late tick after it return one joined stall", () => {
+    turn(0);
+    turn(100);
+    fakeNow = 800;
+    noteLoopObserved(); // stall 200..800
+    fakeNow = 1500; // and the loop blocked again: tick due 900, ran 1500
+    expect(noteLoopTurn(100, 100)).toEqual({ t0: 200, t1: 1500 });
+  });
+
+  test("before the probe has ticked, an observed answer registers nothing", () => {
+    fakeNow = 5000;
+    noteLoopObserved();
+    recordSpan("db", "early", 4000);
+    const span = getRuntimeProfile().slowest.db.find(
+      (s) => s.label === "early",
+    )!;
+    expect(span.waits).toBeUndefined();
   });
 
   test("a latency leaf keeps its own layout (never charged)", () => {

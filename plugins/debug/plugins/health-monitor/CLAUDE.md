@@ -52,7 +52,11 @@ A 100 ms timer on every backend calling runtime-profiler's `noteLoopTurn`: a
 tick more than 100 ms late is a registered stall, and the profiler charges it to
 every database call it overlapped as an `event-loop` wait (runtime-profiler's
 "Event-loop stalls"), so a query blocked behind the loop is not filed as a slow
-query. The 10 s sampler says how bad the lag was; the probe says when.
+query. The 10 s sampler says how bad the lag was; the probe says when. A
+database reply read before the overdue tick (Bun reads sockets first when the
+block ran in a timer or a setImmediate) registers the block itself, through
+`noteLoopObserved`; the probe's next tick still returns it, so its stacks are
+attributed below.
 
 ## Stall stacks → the trace store
 

@@ -1247,12 +1247,28 @@ function pushCompleted(
 // more than `toleranceMs` registers `[due, now]` as a stall. A plain leaf
 // recorded later is charged its overlap with the registered stalls as the
 // `event-loop` wait, so it is judged on its own time. Only REGISTERED stalls
-// count, and that is what keeps the culprit charged: a timer due during a
-// block runs before the socket callbacks that queued behind it (measured on
-// Bun: 5/5 blocks, the late tick first), so a victim's answer is read after
-// the probe registered the stall — while a call whose own synchronous work
-// (decoding a huge result) blocked the loop records in that same macrotask,
-// before the probe could register anything. The whole overlap is charged, not
+// count, and that is what keeps the culprit charged: a call whose own
+// synchronous work (decoding a huge result) blocked the loop records in that
+// same macrotask, before anything could register the block.
+//
+// The probe alone cannot register a stall in time for its victims: which runs
+// first after a block — the overdue tick or the socket callbacks queued behind
+// it — is the event loop's phase order, not a guarantee. On Bun 1.4 the tick
+// comes first only when the block ran in a socket callback; when it ran in a
+// timer, a microtask of one, or a setImmediate, the socket answers are read
+// first (measured: every run, each way). So the answer's arrival registers it
+// too: `noteLoopObserved`, called when an I/O answer reaches JS (the database
+// client's socket `data`, ahead of its parser), registers `[due, now]` when
+// the probe is overdue at that instant — the answer sat unread behind a block
+// that ended before its own macrotask began. A culprit's own decode starts
+// after its first chunk was read, which is on time, so it is still not
+// charged. On 2026-11-06 main's `agent-processes` loader (a timer-driven
+// drain) blocked in `readdirSync` for 2.0–2.4 s three times, and every query
+// in flight — job_run_stats upserts, job_steps/job_waits deletes, a
+// `pg_notify` — was filed as a slow `db` op of the block's length, with no
+// event-loop charge, because each one read its answer before the probe ran.
+//
+// The whole overlap is charged, not
 // just the part after the answer arrived (nothing here knows when it did): a
 // query genuinely busy in Postgres during a stall is under-charged by at most
 // the stall's length — the under-reporting direction. Entries are not charged: an entry
@@ -1264,12 +1280,20 @@ function pushCompleted(
 const EVENT_LOOP_LAYER = "event-loop";
 
 // Registered stalls, oldest first. Disjoint and ordered by construction (each
-// starts where the previous probe tick was due, at or after the last one
-// ended), which `loopStallOverlap` relies on to stop early. Bounded: a leaf
-// spanning more stalls than this is undercharged, never overcharged.
+// starts where the previous turn — a probe tick or an observed late answer —
+// was due, at or after the last one ended), which `loopStallOverlap` relies on
+// to stop early. Bounded: a leaf spanning more stalls than this is
+// undercharged, never overcharged.
 const LOOP_STALL_CAP = 64;
 const loopStalls: LoopStall[] = [];
+// The last turn of the loop seen: a probe tick, or an answer read late.
 let lastLoopTurn: number | undefined;
+// The probe's cadence, learned from its own calls: an observed answer is late
+// against the same due time and tolerance as a tick.
+let loopProbe: { periodMs: number; toleranceMs: number } | undefined;
+// Registered by an observed late answer since the last probe tick: the next
+// tick returns it, so the probe's owner still attributes the block.
+let observedStall: LoopStall | null = null;
 
 /** A registered event-loop stall, on the profiler clock (`performance.now()`). */
 export interface LoopStall {
@@ -1283,24 +1307,49 @@ export interface LoopStall {
  * One turn of the event-loop probe, called from a timer due every `periodMs`:
  * a tick later than due by more than `toleranceMs` registers the late part as
  * a stall (see the section comment) and returns it, so the probe's owner can
- * also attribute it (health-monitor's stall stacks). The first call only sets
- * the baseline.
+ * also attribute it (health-monitor's stall stacks). A block an answer's
+ * arrival registered first (`noteLoopObserved`) is returned by the tick after
+ * it, joined with any late part of its own. The first call only sets the
+ * baseline.
  */
 export function noteLoopTurn(
   periodMs: number,
   toleranceMs: number,
 ): LoopStall | null {
+  loopProbe = { periodMs, toleranceMs };
   const t = now();
-  let stall: LoopStall | null = null;
-  if (lastLoopTurn !== undefined) {
-    const due = lastLoopTurn + periodMs;
-    if (t - due > toleranceMs) {
-      stall = { t0: due, t1: t };
-      loopStalls.push(stall);
-      if (loopStalls.length > LOOP_STALL_CAP) loopStalls.shift();
-    }
-  }
+  const late = registerLateTurn(t);
+  const observed = observedStall;
+  observedStall = null;
   lastLoopTurn = t;
+  if (observed && late) return { t0: observed.t0, t1: late.t1 };
+  return late ?? observed;
+}
+
+/**
+ * An I/O answer just reached JS (call it before the answer is parsed): if the
+ * probe is overdue now, the loop was blocked and this answer sat unread behind
+ * it — register the block (see the section comment) as if the probe had
+ * ticked here. One clock read and a compare when on time; a no-op until the
+ * probe's first tick has set its cadence and baseline.
+ */
+export function noteLoopObserved(): void {
+  const t = now();
+  const stall = registerLateTurn(t);
+  if (!stall) return;
+  lastLoopTurn = t;
+  observedStall = observedStall ? { t0: observedStall.t0, t1: t } : stall;
+}
+
+// A turn at `t`: registers `[due, t]` when it is later than the probe's
+// tolerance allows, and returns it.
+function registerLateTurn(t: number): LoopStall | null {
+  if (lastLoopTurn === undefined || loopProbe === undefined) return null;
+  const due = lastLoopTurn + loopProbe.periodMs;
+  if (t - due <= loopProbe.toleranceMs) return null;
+  const stall = { t0: due, t1: t };
+  loopStalls.push(stall);
+  if (loopStalls.length > LOOP_STALL_CAP) loopStalls.shift();
   return stall;
 }
 
@@ -2671,6 +2720,8 @@ export function resetRuntimeProfile(): void {
   flightRingHead = 0;
   loopStalls.length = 0;
   lastLoopTurn = undefined;
+  loopProbe = undefined;
+  observedStall = null;
   laneClaims.clear();
   gateWindows.clear();
   gateMeters.clear();

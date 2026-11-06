@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { Client, Pool, type ClientBase, type ClientConfig } from "pg";
 import {
   currentEntryLabel,
+  noteLoopObserved,
   recordSpan,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { hasRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
@@ -228,6 +229,13 @@ export class DbClient extends Client {
     this.poolName = binding.name;
     this.#pooled = binding.pooled;
     this.#defaultDeadlineMs = binding.deadlineMs ?? QUERY_DEADLINE_MS;
+    // Every chunk the server sends reaches JS here first — registered before
+    // pg's own parser (attached at connect) — so a reply read late, behind a
+    // block of the event loop, registers that block before its statement's
+    // span is recorded: the statement is charged it as an `event-loop` wait,
+    // whichever phase of the loop the block ran in (runtime-profiler, "Event-
+    // loop stalls"). One clock read and a compare per chunk.
+    this.connection.stream.on("data", noteLoopObserved);
   }
 
   /** Set once the server ended this session for idling inside its transaction. */

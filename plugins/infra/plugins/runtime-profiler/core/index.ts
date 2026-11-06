@@ -2,6 +2,7 @@ export {
   recordSpan,
   recordEntrySpan,
   noteLoopTurn,
+  noteLoopObserved,
   chargeWait,
   beginWait,
   gateWaitHooks,
