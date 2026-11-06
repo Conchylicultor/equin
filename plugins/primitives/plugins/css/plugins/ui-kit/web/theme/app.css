@@ -925,16 +925,29 @@
 
 /* A one-line row that clips at its inline end with a fade instead of a hard
  * edge (a card's icon+value token line): the content dissolves over the last
- * `xl` step. A mask, not an overlay, so it fades to whatever is behind — no
- * `--chrome-mask` to match. Clipping itself stays with the box (`<Clip>`). */
+ * `xl` step — ONLY while it really overflows. A mask, not an overlay, so it
+ * fades to whatever is behind — no `--chrome-mask` to match. Clipping itself
+ * stays with the box (`<Clip axis="x">`, a scroll container).
+ *
+ * The overflow gate is pure CSS: the mask is applied by an animation on the
+ * box's OWN inline scroll timeline, and a box with nothing to scroll has an
+ * inactive timeline, so the animation (and the mask) does not apply at all.
+ * Content that fits is drawn whole, its last letters as solid as its first.
+ * Where scroll timelines are unsupported, the line clips hard. */
+@keyframes clip-fade-end-mask {
+  from, to {
+    -webkit-mask-image: linear-gradient(to var(--clip-fade-end-dir), #000 calc(100% - var(--space-xl)), transparent);
+    mask-image: linear-gradient(to var(--clip-fade-end-dir), #000 calc(100% - var(--space-xl)), transparent);
+  }
+}
 @utility clip-fade-end {
   /* twmerge: standalone -- A mask-image on the box itself; no built-in group sets mask-image, so nothing to replace. */
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--space-xl)), transparent);
-  mask-image: linear-gradient(to right, #000 calc(100% - var(--space-xl)), transparent);
+  --clip-fade-end-dir: right;
   &:dir(rtl) {
-    -webkit-mask-image: linear-gradient(to left, #000 calc(100% - var(--space-xl)), transparent);
-    mask-image: linear-gradient(to left, #000 calc(100% - var(--space-xl)), transparent);
+    --clip-fade-end-dir: left;
   }
+  animation: clip-fade-end-mask linear both;
+  animation-timeline: scroll(self inline);
 }
 
 /* A FADING sticky band (`<Sticky mask="fade">`): the band itself stays opaque

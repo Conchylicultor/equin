@@ -45780,10 +45780,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `valuePosition`
           - `visibleSections`
       - Cross-plugin:
-        - Uses tokens: 91 vars — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses tokens: 90 vars — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `ui/tokens/data-view` ×52
-          - `ui/tokens/density` ×14
           - `ui/tokens/color-palette` ×13
+          - `ui/tokens/density` ×13
           - `ui/tokens/type-scale` ×6
           - `ui/tokens/shadow` ×3
           - `ui/tokens/shape` ×3

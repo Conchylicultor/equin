@@ -95,8 +95,8 @@ const SUBTITLE_CLAMP =
  *    `cardExcerptLines` (`CardExcerpt`).
  * 4. **Tokens** — the `trail` slot as icon + value — no icon before a chip —
  *    (numbers in their own
- *    pick), on ONE line that never wraps and fades out at its end, then the
- *    `edge` field at its far end. Each value is drawn in the `token` context
+ *    pick), on ONE line that never wraps and fades out at its end only when
+ *    it overflows, then the `edge` field at its far end, outside the fade. Each value is drawn in the `token` context
  *    (`FieldDef.token` first).
  *
  * Every size is a `tokens/data-view` token (type picks, line boxes, gaps,
@@ -289,8 +289,8 @@ function CardExcerpt({
 
 /**
  * A card's tokens line alone: the `trail` slot as icon + value on ONE line
- * that never wraps and fades out at its end, then the `edge` field at its far
- * end, each value in the `token` context. Nothing when the view places no
+ * that never wraps and fades out at its end only when it overflows, then the
+ * `edge` field at its far end, drawn whole outside the fade, each value in the `token` context. Nothing when the view places no
  * field on either. Drawn by {@link CardMeta} as its third line, or by a card
  * that places it itself (`omitTokens`).
  */
@@ -327,56 +327,59 @@ export function CardTokens({
       part={P.cardToken}
       className={spaced ? "pt-card-tokens" : undefined}
     >
-      <Clip axis="x" className="clip-fade-end">
-        <Line
-          className={cn(
-            "h-card-tokens-line gap-card-token",
-            rolePickClass(P.cardToken.fallback),
-          )}
-          {...dataPart("dv.card-tokens")}
-        >
-          {tokens.map((f) => {
-            // A chip says what it is itself (its colour, its label): the
-            // type's icon before it would only repeat that.
-            const icon =
-              f.icon ?? (isChip(f) ? undefined : resolveIcon(f.type ?? "text"));
-            const numeric = typeof f.value?.(row) === "number";
-            return (
-              <Line
-                key={f.id}
-                className={cn("gap-card-token-icon", rigidClass())}
-                {...dataPart("dv.card-token")}
-              >
-                {icon ? (
-                  <Icon
-                    icon={icon}
-                    className="size-card-token-icon text-card-token-icon-ink"
-                    {...dataPart("dv.card-token-icon")}
-                  />
-                ) : null}
-                <Text
-                  pick={numeric ? P.cardTokenNumeric : P.cardToken}
-                  className="text-card-token-ink"
+      <Line
+        className={cn(
+          "h-card-tokens-line gap-card-token",
+          rolePickClass(P.cardToken.fallback),
+        )}
+        {...dataPart("dv.card-tokens")}
+      >
+        {/* The tokens run takes the room the edge leaves, and fades out at its
+            end only when it overflows (`clip-fade-end`); the edge sits after
+            it, rigid — never under the fade, never cut. */}
+        <Clip axis="x" fill className="clip-fade-end">
+          <Line className="gap-card-token">
+            {tokens.map((f) => {
+              // A chip says what it is itself (its colour, its label): the
+              // type's icon before it would only repeat that.
+              const icon =
+                f.icon ??
+                (isChip(f) ? undefined : resolveIcon(f.type ?? "text"));
+              const numeric = typeof f.value?.(row) === "number";
+              return (
+                <Line
+                  key={f.id}
+                  className={cn("gap-card-token-icon", rigidClass())}
+                  {...dataPart("dv.card-token")}
                 >
-                  {cell(f)}
-                </Text>
-              </Line>
-            );
-          })}
-          {edge ? (
-            <>
-              <Fill />
-              <Text
-                pick={P.cardToken}
-                className={cn("text-card-token-ink", rigidClass())}
-                {...dataPart("dv.card-edge")}
-              >
-                {cell(edge)}
-              </Text>
-            </>
-          ) : null}
-        </Line>
-      </Clip>
+                  {icon ? (
+                    <Icon
+                      icon={icon}
+                      className="size-card-token-icon text-card-token-icon-ink"
+                      {...dataPart("dv.card-token-icon")}
+                    />
+                  ) : null}
+                  <Text
+                    pick={numeric ? P.cardTokenNumeric : P.cardToken}
+                    className="text-card-token-ink"
+                  >
+                    {cell(f)}
+                  </Text>
+                </Line>
+              );
+            })}
+          </Line>
+        </Clip>
+        {edge ? (
+          <Text
+            pick={P.cardToken}
+            className={cn("text-card-token-ink", rigidClass())}
+            {...dataPart("dv.card-edge")}
+          >
+            {cell(edge)}
+          </Text>
+        ) : null}
+      </Line>
     </PickedLine>
   );
 }
