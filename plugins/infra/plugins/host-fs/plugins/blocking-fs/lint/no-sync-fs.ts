@@ -19,6 +19,12 @@ const BUN_TYPES = /\/bun-types\//;
 const TIMED_FS = "plugins/packages/plugins/timed-fs/";
 
 /**
+ * The property names a blocking function is reached by: every one this rule
+ * reports ends in `Sync`, and `realpathSync.native` hangs off one.
+ */
+const BLOCKING_MEMBER = /Sync$|^native$/;
+
+/**
  * no-sync-fs
  *
  * A backend's JS thread never waits on the disk. A synchronous fs call
@@ -64,11 +70,46 @@ export default createRule({
     const checker = services.program.getTypeChecker();
     const toTs = services.esTreeNodeToTSNodeMap;
 
-    /** The blocking call a call expression invokes, if it does. */
+    /**
+     * The blocking call a call expression invokes, if it does: one of the
+     * callee's call signatures is declared as one. The checker is asked the
+     * narrowest question it can answer, because what a rule asks is what the
+     * checker computes and keeps for the life of the program:
+     *
+     * - a call through a property not named like a blocking function
+     *   (`x.map(…)`, `db.select()`) is never asked about — its callee's type
+     *   needs its receiver's, which cascades through every initializer it
+     *   reads;
+     * - otherwise the CALLEE's type, never `getResolvedSignature(call)`, which
+     *   checks the arguments too (overloads, contextually typed callbacks and
+     *   their bodies) and so type-checked every backend file whole.
+     *
+     * A signature's `declaration` survives aliasing and instantiation
+     * (timed-fs's `typeof fs.readdirSync` twins, an import alias), and an
+     * overload set is declared in one file.
+     */
     const blocking = (call: TSESTree.CallExpression): string | undefined => {
-      const decl = checker.getResolvedSignature(
-        toTs.get(call) as ts.CallLikeExpression,
-      )?.declaration;
+      const { callee } = call;
+      if (
+        callee.type === "MemberExpression" &&
+        !callee.computed &&
+        !BLOCKING_MEMBER.test(callee.property.name)
+      )
+        return undefined;
+      // Non-nullable: `m?.readFileSync(p)` on an optional receiver.
+      const type = checker
+        .getTypeAtLocation(toTs.get(callee))
+        .getNonNullableType();
+      for (const sig of type.getCallSignatures()) {
+        const name = blockingDeclaration(sig.declaration);
+        if (name !== undefined) return name;
+      }
+      return undefined;
+    };
+
+    const blockingDeclaration = (
+      decl: ts.Declaration | undefined,
+    ): string | undefined => {
       if (decl === undefined) return undefined;
       const source = decl.getSourceFile().fileName;
       // `realpathSync.native` is `native` inside `namespace realpathSync`:

@@ -97,6 +97,23 @@ an imported declaration changes. Two guards stop that:
 - `rule-kind-safety/type-aware-rule-declared` catches the lazily-reached call
   statically: a file that reads parser services must declare the flag.
 
+### A type-aware rule asks the checker the narrowest question
+
+The checker caches whatever a rule asks, so the rule's question sets the memory and CPU of every program it runs in.
+
+- `checker.getResolvedSignature(call)` resolves overloads by checking the call's arguments, callbacks and their bodies included. Asked of every `CallExpression`, it type-checks the file whole.
+- `getTypeAtLocation(call.callee)` is cheaper but not cheap for a member call: the callee's type needs the receiver's, which cascades through the initializers it reads.
+- So gate syntactically first (a member call whose property name cannot be X's), then ask the callee's type (`getCallSignatures()`, each signature's `declaration` — it survives aliases and `typeof f` twins), and resolve the call only for an answer that needs the overload. `blocking-fs/no-sync-fs` and `user-path/no-sync-fs` follow this pattern.
+
+### Running a rule over the whole repo is `./equin check type-check`
+
+To list where a rule fires (an inventory before migrating call sites), run `./equin check type-check`: every contributed rule over every file, an edited rule re-running only its own group, in programs of at most K sources (the rest served as stored `.d.ts`), each batch a fresh process under a host grant.
+
+- Never hand-build `ts.createProgram` over the tsconfig's files in a script. The repo is one ~19k-file program: ~2 GB of live AST and symbols before a type is asked, several GB of RSS under bun.
+- Rooting it at fewer files does not help: their import closure is most of the repo.
+
+Measurements: research/2026-11-06-global-inventory-script-memory.md.
+
 ## Class rules take the shared walk — they do not copy it
 
 A rule that reads Tailwind class tokens uses the ONE walk in

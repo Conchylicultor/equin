@@ -92,6 +92,17 @@ ruleTester.run("no-sync-fs", rule, {
     invalid(`realpathSync(picked);`, ["user"]),
     invalid(`fs.readdirSync(picked);`, ["user"]),
     invalid(`realpathSync.native(picked);`, ["user"]),
+    // An import alias, and a twin typed as node's function (timed-fs's shape).
+    invalid(
+      `import { readdirSync as listSync } from "node:fs"; listSync(picked);`,
+      ["user"],
+    ),
+    invalid(`declare const twin: typeof fs.readdirSync; twin(picked);`, [
+      "user",
+    ]),
+    invalid(`declare const m: typeof fs | undefined; m?.readdirSync(picked);`, [
+      "user",
+    ]),
     invalid(`for (const f of config.folders) existsSync(f.path);`, ["user"]),
     invalid(`readdirSync(join(picked, "sub"));`, ["user"]),
     invalid(`readdirSync(join(APP_DIR, picked));`, ["user"]),

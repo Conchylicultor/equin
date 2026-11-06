@@ -12,6 +12,9 @@ import {
 
 const createRule = lintRuleCreator(import.meta.url);
 
+/** The property names a `node:fs` `*Sync` function is reached by. */
+const SYNC_MEMBER = /Sync$|^native$/;
+
 /**
  * no-sync-fs
  *
@@ -86,6 +89,26 @@ export default createRule({
     const syncFs = (
       call: TSESTree.CallExpression,
     ): { name: string; paths: Node[] } | undefined => {
+      // Only a call that CAN be a `node:fs` `*Sync` function is resolved —
+      // what a rule asks is what the checker computes and keeps. A call
+      // through a property not so named (`x.map(…)`) is never asked about:
+      // its callee's type needs the receiver's, which cascades through every
+      // initializer it reads. Otherwise the callee's type answers; resolving
+      // the call (for the overload's path parameters) checks its arguments,
+      // callbacks and their bodies included, so it is asked last.
+      const { callee } = call;
+      if (
+        callee.type === "MemberExpression" &&
+        !callee.computed &&
+        !SYNC_MEMBER.test(callee.property.name)
+      )
+        return undefined;
+      // Non-nullable: `m?.readFileSync(p)` on an optional receiver.
+      const signatures = typeOf(callee)
+        .getNonNullableType()
+        .getCallSignatures();
+      if (!signatures.some((s) => declaredIn(s.declaration, FS_MODULE)))
+        return undefined;
       const decl = calleeDeclaration(call);
       if (decl === undefined || !declaredIn(decl, FS_MODULE)) return undefined;
       // The function itself, or the namespace it hangs off:
