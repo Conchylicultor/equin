@@ -16,14 +16,16 @@ import {
   runRecordJobs,
   type RecordStore,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
-import {
-  runWithFsSnapshot,
-  type FsSnapshot,
-} from "@plugins/plugin-meta/plugins/parse-utils/core";
-import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
-import { buildFsSnapshot, pluginFilesManifest } from "./fs-snapshot";
+import { pluginFilesManifest } from "./fs-snapshot";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import {
+  extractFacets,
+  FACET_EXTRACTION_URL,
+  facetJobRequest,
+  relDirOf,
+  type FacetJobReply,
+  type FacetJobRequest,
+} from "./facet-extraction";
 
 /**
  * Facets as PLUGIN RECORDS: each facet's extract of each plugin, stored under
@@ -32,19 +34,13 @@ import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
  * re-extracts the facets of the plugin it touched; a fresh worktree from main
  * finds main's records.
  *
- * The extract of a record that missed runs under a STRICT snapshot of the
- * missed plugins' files: a facet reading a file its record's key does not name
- * throws, so a record can never silently depend on something that will not
- * invalidate it.
+ * This module computes the keys, reads and writes the store and schedules the
+ * missed extractions on workers — none of which can change a record's value,
+ * so its code keys no record. The extraction itself (the strict snapshot, the
+ * job body) is the harness, `facet-extraction.ts`, whose Merkle key is in every
+ * facet record; what decides WHICH plugin is extracted (its dir, id and files)
+ * is in each record's key already.
  */
-
-/**
- * The extraction harness: THIS module, which runs every extraction (the
- * strict snapshot it builds, the job a worker runs). Its Merkle key covers what
- * it imports; what decides WHICH plugin is extracted (its dir, id and files) is
- * in each record's key already, so the tree builder above it is not.
- */
-const HARNESS_URL = import.meta.url;
 
 /**
  * Every module whose Merkle key keys facet records: the extraction harness
@@ -53,7 +49,17 @@ const HARNESS_URL = import.meta.url;
  */
 export async function facetRecordProducers(repo: RepoFiles): Promise<string[]> {
   const sources = await loadFacetSources(await loadFacets());
-  return [repoModuleOf(repo, HARNESS_URL), ...sources.values()];
+  return [facetExtractionHarness(repo), ...sources.values()];
+}
+
+/** This module, repo-relative: the record plumbing the harness must never load. */
+export function facetRecordsModule(repo: RepoFiles): string {
+  return repoModuleOf(repo, import.meta.url);
+}
+
+/** The extraction harness's module, repo-relative: the one producer keyed into every facet record. */
+export function facetExtractionHarness(repo: RepoFiles): string {
+  return repoModuleOf(repo, FACET_EXTRACTION_URL);
 }
 
 export interface FacetRecordsInput {
@@ -73,7 +79,7 @@ async function facetIdentities(
   facets: readonly Facet[],
 ): Promise<Map<string, string>> {
   const sources = await loadFacetSources(facets);
-  const harnessModule = repoModuleOf(input.snapshot, HARNESS_URL);
+  const harnessModule = facetExtractionHarness(input.snapshot);
   const graph = await buildModuleGraph(input, [
     harnessModule,
     ...sources.values(),
@@ -192,27 +198,7 @@ export async function facetRecordTexts(
       .map((f) => f.def.id);
   const chunks = chunksOf(missed);
   const requests = await Promise.all(
-    chunks.map(async (chunk): Promise<FacetJobRequest> => {
-      const fs = await buildFsSnapshot(
-        snapshot,
-        chunk.map((n) => n.dir),
-        { strict: STRICT },
-      );
-      return {
-        root: snapshot.root,
-        files: [...fs.files],
-        dirs: [...fs.dirs].map(([dir, entries]) => [
-          dir,
-          entries.map((e) => [e.name, e.isDirectory()] as const),
-        ]),
-        plugins: chunk.map((node) => ({
-          dir: node.dir,
-          relDir: relDirOf(snapshot, node),
-          id: node.id,
-          facets: wantedOf(node),
-        })),
-      };
-    }),
+    chunks.map((chunk) => facetJobRequest(snapshot, chunk, wantedOf)),
   );
   const replies = await runRecordJobs(extractFacetsJob, requests);
   const fresh: [string, string][] = [];
@@ -257,9 +243,6 @@ export async function extractFacetRecords(
   }
 }
 
-/** What the strict snapshot of a record's extraction covers, for its refusal message. */
-const STRICT = "the files of the plugins whose records are being made";
-
 /**
  * Below this many missed plugins per worker, a worker's start (its JIT, its
  * facet modules) costs more than it saves: a warm build's handful of misses
@@ -290,84 +273,12 @@ function chunksOf(nodes: readonly PluginNode[]): PluginNode[][] {
   return out;
 }
 
-/** One worker's share of the missed extractions: plain data, structured-cloned. */
-interface FacetJobRequest {
-  root: AppPath;
-  /** The strict snapshot of exactly these plugins' files. */
-  files: [string, string][];
-  dirs: [string, (readonly [name: string, isDir: boolean])[]][];
-  plugins: { dir: AppPath; relDir: string; id: string; facets: string[] }[];
-}
-
-/** Per plugin, in request order: each extracted facet's record text. */
-type FacetJobReply = [facetId: string, text: string][][];
-
-let facetsOnce: Promise<Facet[]> | undefined;
-
 /**
- * Extract the missed facets of a run of plugins, then each batch facet over
- * the run — the same calls in a worker as in this process. A batch facet's
- * pass is per plugin (each plugin's result is a function of its own files and
- * the batch's named inputs, which key its record), so splitting the plugins
- * across workers cannot change a record.
+ * The extraction run on a worker: registered by THIS module (a worker imports
+ * it to find the job), its body the harness's.
  */
 const extractFacetsJob = defineRecordJob<FacetJobRequest, FacetJobReply>(
   import.meta.url,
   "extract-facets",
-  async (req) => {
-    const facets = await (facetsOnce ??= loadFacets());
-    const byId = new Map(facets.map((f) => [f.def.id, f]));
-    const fs: FsSnapshot = {
-      files: new Map(req.files),
-      dirs: new Map(
-        req.dirs.map(([dir, entries]) => [
-          dir,
-          entries.map(([name, isDir]) => ({
-            name,
-            isFile: () => !isDir,
-            isDirectory: () => isDir,
-          })),
-        ]),
-      ),
-      strict: STRICT,
-    };
-    const extracted: Map<string, unknown>[] = [];
-    const slice = createTimeSlicer();
-    for (const p of req.plugins) {
-      const data = new Map<string, unknown>();
-      for (const facetId of p.facets) {
-        const f = byId.get(facetId);
-        if (!f) throw new Error(`[plugin-tree] no facet "${facetId}"`);
-        data.set(
-          facetId,
-          runWithFsSnapshot(fs, () =>
-            f.extract({ dir: p.dir, relDir: p.relDir, pluginId: p.id, fs }),
-          ),
-        );
-        await slice();
-      }
-      extracted.push(data);
-    }
-    for (const f of facets) {
-      if (!f.extractBatch) continue;
-      const plugins = req.plugins.flatMap((p, i) => {
-        const data = extracted[i]!.get(f.def.id);
-        return data === undefined ? [] : [{ dir: p.dir, data }];
-      });
-      if (plugins.length > 0)
-        await f.extractBatch.run({ root: req.root, fs, plugins });
-    }
-    return extracted.map((data) =>
-      [...data].map(([facetId, value]) => [facetId, JSON.stringify(value)]),
-    );
-  },
+  extractFacets,
 );
-
-function relDirOf(snapshot: RepoSnapshot, node: PluginNode): string {
-  const root = snapshot.root.endsWith("/")
-    ? snapshot.root
-    : `${snapshot.root}/`;
-  if (!node.dir.startsWith(root))
-    throw new Error(`[plugin-tree] ${node.dir} is not under ${snapshot.root}`);
-  return node.dir.slice(root.length);
-}

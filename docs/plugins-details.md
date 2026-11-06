@@ -42618,7 +42618,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TreeEnrichment`
             - Exports (values):
               - `buildFacetedPluginTree`
+              - `facetExtractionHarness`
               - `facetRecordProducers`
+              - `facetRecordsModule`
               - `openFacetedIndex`
           - Cross-plugin:
             - Imported by:
