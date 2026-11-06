@@ -24,6 +24,44 @@ function ownText(el: Element): string {
   return s.trim();
 }
 
+const RUN_SEPARATOR = " · ";
+
+/** The subtree's text as it reads on screen: text within one inline flow joins
+ * as written, and every box that breaks the flow (a block, a flex item, an
+ * inline-block badge) starts a new run, so `<span>Feel</span><span>Straight</span>`
+ * in a segmented control reads "Feel · Straight" where `textContent` would say
+ * "FeelStraight". A `display: none` subtree is not on screen, so not read. Stops
+ * once it holds more than a label can show. */
+function shownText(el: Element): string {
+  const runs: string[] = [];
+  let length = 0;
+  let run = "";
+  const flush = () => {
+    const t = run.replace(/\s+/g, " ").trim();
+    run = "";
+    if (!t) return;
+    runs.push(t);
+    length += t.length + RUN_SEPARATOR.length;
+  };
+  const walk = (node: Node) => {
+    for (const n of node.childNodes) {
+      if (length > MAX_LABEL) return;
+      if (n.nodeType === Node.TEXT_NODE) run += n.textContent ?? "";
+      else if (n instanceof Element) {
+        const { display } = getComputedStyle(n);
+        if (display === "none") continue;
+        const breaksFlow = display !== "inline" && display !== "contents";
+        if (breaksFlow) flush();
+        walk(n);
+        if (breaksFlow) flush();
+      }
+    }
+  };
+  walk(el);
+  flush();
+  return runs.join(RUN_SEPARATOR);
+}
+
 /** The element's descriptor: tag (+ role, + an input/button `type`) + the best
  * available accessible text. Spelled by the shared core formatter, so the chip
  * can parse it back into a human label — and shared with the page outline and
@@ -35,7 +73,7 @@ export function describeElement(el: Element): string {
     (el as HTMLElement).title ||
     el.getAttribute("placeholder") ||
     ownText(el) ||
-    el.textContent ||
+    shownText(el) ||
     "";
   return formatElementDescriptor({
     tag: el.tagName.toLowerCase(),

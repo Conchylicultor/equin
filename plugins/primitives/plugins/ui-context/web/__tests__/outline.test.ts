@@ -260,3 +260,17 @@ describe("resolveUiContext", () => {
     expect(r.kind).toBe("found");
   });
 });
+
+describe("collectMeta element name", () => {
+  it("separates the children's text as it reads on screen", () => {
+    document.body.innerHTML = `
+      <div role="radiogroup" id="seg"><span style="display:inline-block">Feel</span><span style="display:inline-block">Straight</span></div>
+      <button id="row"><div>1</div><div>Pianos <b>Beaumarchais</b></div><span style="display:none">Hidden</span></button>`;
+    expect(collectMeta(document.getElementById("seg")!).element).toBe(
+      "div[role=radiogroup] — Feel · Straight",
+    );
+    expect(collectMeta(document.getElementById("row")!).element).toBe(
+      "button — 1 · Pianos Beaumarchais",
+    );
+  });
+});
