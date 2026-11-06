@@ -36,6 +36,8 @@ export const savePlace = defineEndpoint({
   response: SavePlaceResultSchema,
   // One Places details call.
   slowThresholdMs: 10_000,
+  // Google's Places API, with the computer's Places key (auth/central).
+  needsMachine: { feature: "Saving a place from Google" },
 });
 
 /** A point on the map: where a custom place's pin goes. */
@@ -110,4 +112,6 @@ export const regeneratePlaceIcon = defineEndpoint({
   response: RegeneratePlaceIconResultSchema,
   // One Haiku call: seconds by design.
   slowThresholdMs: 45_000,
+  // A Haiku call through the computer's Claude CLI.
+  needsMachine: { feature: "Picking a place's icon" },
 });

@@ -40,6 +40,8 @@ export function GrantAccessButton(props: {
   const grantedScopes = foldResource(status, {
     loading: () => null,
     error: () => null,
+    // Granting goes through the computer's central runtime: never here.
+    unavailable: () => null,
     ready: (account) => account?.scopes,
   });
 

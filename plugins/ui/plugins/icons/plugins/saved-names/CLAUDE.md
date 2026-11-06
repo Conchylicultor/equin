@@ -14,6 +14,7 @@
     - `SavedSymbolNameSchema`
 - Cross-plugin:
   - Imported by:
+    - `apps/places/fixtures`
     - `apps/places/places-core`
     - `apps/website/promo-film/seed`
     - `conversations/agents`

@@ -26,11 +26,13 @@ this plugin.
 
 - Description: Sonata Instruments: the full General MIDI melodic set (programs 1-127) backed by smplr's Soundfont, served same-origin via the asset-mirror (offline after first warm-up). Program 0 (acoustic grand) is owned by the dedicated sampled-piano plugin. Registers the gm-soundfont asset mirror so the General MIDI instruments' samples are served same-origin (offline-capable) rather than streamed from the remote gleitz CDN.
 - Web:
-  - Contributes: 127 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 128 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SonataAudio.Instrument` ×127
+    - `ExternalHosts.Declare` "gleitz.github.io"
   - Uses:
     - `apps/sonata/audio/instruments.SonataAudio`
     - `apps/sonata/audio/sample-loader.sharedSampleLoader`
+    - `framework/browser-server.ExternalHosts`
 - Server:
   - Uses: `infra/asset-mirror.defineAssetMirror`
 

@@ -83,7 +83,14 @@ alternatives each fail one way:
 - **Not central.** Central runs main's code, so the feature could not be
   exercised from a branch.
 
-It is served as the `google-maps.browser-config` live value (external source):
+It is served as the `google-maps.browser-config` live value (external source)
+from the host's `MapsBrowserConfigSource` host service (`server/`, portable):
+on the computer `machine/` provides it from this file; a browser host (the
+demo) gets it from `page-config`, which reads the page input the page's chrome
+hands over (`HostInputs.Supply` in `web/`, `framework/browser-server`) — the
+key the real app already sends that page, never read from a server by the
+host's own code and never stored, so never in a build-time snapshot. A page
+that supplies none reads `unset`. On the computer:
 a write through `POST` / `DELETE /api/google-maps/browser-config` (the key;
 deleting it removes the Map ID too) or `/api/google-maps/map-id` (the Map ID,
 refused with 409 while no key is stored) notifies its
@@ -102,7 +109,8 @@ This plugin owns the Google Maps vocabulary so consumers (the `/place` block's
 Google adapter, the live map renderer) go through it and **never** import
 `@plugins/auth/*` directly or name the provider id themselves.
 
-- **`server`** (`@plugins/integrations/plugins/google-maps/server`)
+- **`machine`** (`@plugins/integrations/plugins/google-maps/machine`; the
+  key is in auth/central, so only the desktop calls Google's Places API)
   - `getPlacesClient(): Promise<PlacesClientResult>` — the metered Places
     client: the Places key from the shared auth/central secrets store plus
     `google-maps/usage`'s `placesMeter`, so every call is counted in the usage
@@ -112,7 +120,8 @@ Google adapter, the live map renderer) go through it and **never** import
     other central failure (fail loudly).
 - **`core`** — `mapsBrowserConfig` (the live value), `setMapsBrowserConfig` /
   `clearMapsBrowserConfig` and `setMapsMapId` / `clearMapsMapId` (the
-  endpoints), `BROWSER_KEY_PATTERN`, `MAP_ID_PATTERN`, `BASEMAP_STYLE` /
+  endpoints, `needsMachine`: a host without the computer cannot change the
+  key — its set-up surfaces say so, never a "paste your key" prompt), `BROWSER_KEY_PATTERN`, `MAP_ID_PATTERN`, `BASEMAP_STYLE` /
   `BASEMAP_STYLE_JSON` (the one "hide Google's places" rule).
 - **`web`** (`@plugins/integrations/plugins/google-maps/web`)
   - `useMapsAccess(capability: "places" | "map"): MapsAccess` — reactive
@@ -159,17 +168,20 @@ over:
 
 ## Plugin reference
 
-- Description: Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup — the Google Maps 'Live map' row of Settings → Accounts, rendered inline in its account pane — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the setup's LiveMapSetup.MapIdPreview slot). Google Maps Platform access broker (server): getPlacesClient() hands out the metered Places client (the stored Places API key, read via the shared auth/central store, plus the usage ledger's meter), so consumers never import @plugins/auth and no Places call goes uncounted; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints for the key and the vector map's Map ID.
+- Description: Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup — the Google Maps 'Live map' row of Settings → Accounts, rendered inline in its account pane — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the setup's LiveMapSetup.MapIdPreview slot). Google Maps Platform access broker (server, portable): serves the public browser config (the Maps JavaScript API key and the vector map's Map ID) as the google-maps.browser-config live value, read from the host's MapsBrowserConfigSource — the host-global file on the computer, the page's own config on a browser host.
 - Web:
   - Slots: `LiveMapSetup.MapIdPreview`
   - Slot contributors: `LiveMapSetup.MapIdPreview` ← `map.google`
-  - Contributes: `Auth.Integration` "Live map"
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes:
+    - `HostInputs.Supply` "google-maps.browser-config"
+    - `Auth.Integration` "Live map"
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×10
     - `network/live/live-state` ×5
     - `auth` ×3
-    - `infra/endpoints` ×2
+    - `infra/endpoints` ×3
     - `primitives/css/ui-kit` ×2
+    - `framework/browser-server.HostInputs`
     - `network/live.useLive`
     - `primitives/css/clip.Clip`
     - `primitives/css/spacing.Stack`
@@ -194,18 +206,20 @@ over:
     - `useMapsAccess`
     - `useMapsBrowserConfig`
 - Server:
-  - Contributes: `resource.declare` "google-maps.browser-config"
-  - Uses:
-    - `auth.getTokenFromCentral`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
-    - `infra/file-watcher.defineFileWatcher`
-    - `integrations/google-maps/usage.placesMeter`
-    - `network/live.serveValue`
+  - Contributes:
+    - `resource.declare` "google-maps.browser-config"
+    - `host-service:google-maps.browser-config` "google-maps.browser-config"
+  - Uses: `network/live.serveValue`
+  - Exports (types): `MapsBrowserConfigSourceImpl`
+  - Exports (values):
+    - `mapsBrowserConfigServed`
+    - `MapsBrowserConfigSource`
+  - Resources: `google-maps.browser-config` (push, notified)
+- Machine:
+  - Uses: `infra/endpoints.implementMachine`
   - Exports (types): `PlacesClientResult`
   - Exports (values): `getPlacesClient`
   - Register: `defineFileWatcher('google-maps.browser-config')`
-  - Resources: `google-maps.browser-config` (push, notified)
   - Routes:
     - `POST /api/google-maps/browser-config`
     - `DELETE /api/google-maps/browser-config`
@@ -244,11 +258,11 @@ over:
     - `apps/places/places-core`
     - `apps/places/places-map`
     - `apps/website/promo-film/seed`
+    - `integrations/google-maps/page-config`
     - `map/google`
     - `page/place/google`
-- Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/browser-config-resource.ts`, `server/internal/browser-config-store.ts` (debt)
 - Sub-plugins:
+  - **`page-config`** (excluded) — The Maps browser config of a browser host: provides the MapsBrowserConfigSource host service from the page around the host — the key the real app already sends that page, handed over by the page's…
   - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete, places:searchText (pro, or rich with rating, price and this week's hours; biased to a circle or a box), place details, the…
   - **`usage`** — Registers the Google Maps usage budgets (per-SKU monthly call budgets inside Google's free allowance) for Settings → Config, and reads them against this month's live counts (useMapsBudget).…
 

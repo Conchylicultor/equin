@@ -1,6 +1,12 @@
 import { z } from "zod";
-import { blob, defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import {
+  assetPath,
+  blob,
+  defineEndpoint,
+  type AssetPath,
+} from "@plugins/infra/plugins/endpoints/core";
 import { PHOTO_NAME_PATTERN } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
+import { PLACE_DETAILS_NEEDS_MACHINE } from "./needs-machine";
 
 /** The widths a photo is served at: the card asks for one; the server clamps. */
 export const PHOTO_WIDTH = { min: 200, max: 1600 } as const;
@@ -17,12 +23,12 @@ export const placePhoto = defineEndpoint({
     w: z.coerce.number().int().optional(),
   }),
   response: blob(),
+  needsMachine: PLACE_DETAILS_NEEDS_MACHINE,
 });
 
-/** The `<img src>` of a place photo at `width` CSS pixels' worth of bytes. */
-export function placePhotoUrl(name: string, width: number): string {
-  const q = new URLSearchParams({ name, w: String(Math.round(width)) });
-  return `/api/places/photo?${q}`;
+/** A place photo at `width` CSS pixels' worth of bytes, as an element loads it (`useAssetSrc`). */
+export function placePhotoAsset(name: string, width: number): AssetPath {
+  return assetPath(placePhoto, {}, { name, w: Math.round(width) });
 }
 
 /** A Google place id as the thumbnail route accepts it — also its cache file name. */
@@ -37,9 +43,10 @@ export const placeThumbnail = defineEndpoint({
   route: "GET /api/places/thumbnail",
   query: z.object({ id: z.string().regex(GOOGLE_PLACE_ID_PATTERN) }),
   response: blob(),
+  needsMachine: PLACE_DETAILS_NEEDS_MACHINE,
 });
 
-/** The `<img src>` of a Google place's gallery thumbnail. */
-export function placeThumbnailUrl(googlePlaceId: string): string {
-  return `/api/places/thumbnail?${new URLSearchParams({ id: googlePlaceId })}`;
+/** A Google place's gallery thumbnail, as an element loads it (`useAssetSrc`). */
+export function placeThumbnailAsset(googlePlaceId: string): AssetPath {
+  return assetPath(placeThumbnail, {}, { id: googlePlaceId });
 }

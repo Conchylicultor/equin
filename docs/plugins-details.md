@@ -6201,29 +6201,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --line-height-caption`
     - **`places`** — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
       - Plugins:
-        - **`ask`** — Ask Sonnet in the Places search bar, server half: the Places task category, the places.ask scratch profile (CLAUDE.md = the map's area, its span and the user's clock, and the method: web research first — WebSearch / WebFetch over blogs, guides, Reddit — then each candidate looked up on Maps; no shell, no exit_clean, so the run stays repliable), its places_search_text tool (Google Text Search biased to the launch's map area, on the search bar's downgrade ladder read server-side) and places_show_picks (the thread's result — each pick a why, an about and its sources — refusing any id the run's searches never returned and any pick without an about), and the conversations_ext_places_ask side-table of the Google candidates each run has seen, served lookup-only as places.ask.candidates (what a pick's card is drawn from).
+        - **`ask`** — Ask Sonnet in the Places search bar, server half (portable): the Places task category and the conversations_ext_places_ask side-table of the Google candidates each run has seen, served lookup-only as places.ask.candidates (what a pick's card is drawn from).
           - Server:
             - Contributes:
               - `taskCategory` "places"
               - `resource.declare` "places.ask.candidates:rows"
             - Uses:
-              - `apps/places/places-core.searchPlaces`
-              - `conversations/workspace.defineScratchProfile`
-              - `conversations/workspace.ScratchProfile`
-              - `conversations/workspace.workspaceOfConversation`
-              - `database.db`
               - `infra/entity-extensions.defineExtension`
-              - `infra/mcp.Mcp`
-              - `integrations/google-maps/usage.mapsBudgetNow`
               - `network/live.serveCollection`
               - `tasks/task-category.TaskCategory`
               - `tasks/tasks-core._conversations`
             - DB schema: `plugins/apps/plugins/places/plugins/ask/server/internal/tables.ts`
             - Entity extension of: `tasks/tasks-core` (table `conversations_ext_places_ask`)
+            - Resources: `places.ask.candidates:rows` (keyed, point)
+          - Machine:
+            - Uses: `apps/places/places-core.searchPlaces`
             - Register:
               - `mcpTool('places_search_text')`
               - `mcpTool('places_show_picks')`
-            - Resources: `places.ask.candidates:rows` (keyed, point)
           - Core:
             - Uses:
               - `apps/places/places-core.PlaceBoundsSchema`
@@ -6256,6 +6251,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `searchCountOf`
           - Cross-plugin:
             - Imported by: `apps/places/places-map`
+        - **`fixtures`** — Places fixtures, server half: writePlacesFixture writes a PlacesFixture through the app's real write paths — the starter tag tree a fresh install seeds, the fixture's tags through the tag tree's own endpoints (create path, then colour and icon), each place through insertPlace with its icon given — so no Google call and no model is needed. Derives nothing else.
+          - Server:
+            - Uses:
+              - `apps/places/places-core.insertPlace`
+              - `apps/places/places-core.NewPlace`
+              - `apps/places/places-core.seedStarterPlaceTags`
+            - Exports (values): `writePlacesFixture`
+          - Core:
+            - Exports (types):
+              - `PlaceFixture`
+              - `PlaceFixtureSource`
+              - `PlacesFixture`
+              - `PlaceTagFixture`
+              - `PlaceTagPath`
         - **`mapstr-import`** — `./equin places import-mapstr <export>` — matches a Mapstr export's places to Google places (Text Search, scored by name, distance and area extent; hand decisions via --overrides and the search-place lookup verb) into a reviewable mapstr-matches.json, then with --apply replaces every place and tag with the seed tree and the matched places (Mapstr tags mapped onto seed tags, comments as notes, original save dates), in one transaction.
           - Cli:
             - Uses: `framework/server-core.runExec`
@@ -6295,31 +6304,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placesMapRoute`
           - Cross-plugin:
             - Imported by: `apps/places/places-map`
-        - **`place-details`** — Reads Google's rich details of a saved place (usePlaceDetails) for the place card. Serves Google's rich details of a saved place (photos, opening hours, rating, price level, phone, website, summary) as the places.details value — at the richest tier this month's Google budget allows (with summary → without → photos only, free), one call per place per tier per day, kept in memory, never stored — and proxies its photos (GET /api/places/photo, refused once the Place Photo budget is spent) so the Places key stays on the server; and serves each Google place's gallery thumbnail (its first photo, fetched once and cached on disk; GET /api/places/thumbnail).
+        - **`place-details`** — Reads Google's rich details of a saved place (usePlaceDetails) for the place card.
           - Server:
             - Contributes: `resource.declare` "places.details"
-            - Uses:
-              - `integrations/google-maps.getPlacesClient`
-              - `integrations/google-maps/places-api.placeFirstPhotoName`
-              - `integrations/google-maps/places-api.placePhoto`
-              - `integrations/google-maps/places-api.placeRichDetails`
-              - `integrations/google-maps/usage.mapsBudgetFor`
-              - `integrations/google-maps/usage.mapsBudgetNow`
-              - `integrations/google-maps/usage.mapsBudgetReads`
-              - `network/live.serveValue`
-              - `primitives/log-channels.Log`
             - Resources: `places.details` (invalidate, notified)
-            - Routes:
-              - `GET /api/places/photo`
-              - `GET /api/places/thumbnail`
           - Web:
             - Uses:
               - `network/live.useClockParam`
               - `network/live.useLive`
             - Exports (values): `usePlaceDetails`
+          - Machine:
+            - Uses:
+              - `infra/endpoints.machineHandler`
+              - `integrations/google-maps.getPlacesClient`
+              - `network/live.serveValue`
+            - Routes:
+              - `GET /api/places/photo`
+              - `GET /api/places/thumbnail`
           - Core:
             - Uses:
               - `apps/places/places-core.MapsNotConfiguredSchema`
+              - `infra/endpoints.assetPath`
+              - `infra/endpoints.AssetPath`
               - `infra/endpoints.blob`
               - `infra/endpoints.defineEndpoint`
               - `integrations/google-maps/places-api.PHOTO_NAME_PATTERN`
@@ -6342,14 +6348,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlaceDetailsQuerySchema`
               - `PlaceDetailsResultSchema`
               - `placePhoto`
-              - `placePhotoUrl`
+              - `placePhotoAsset`
               - `placeThumbnail`
-              - `placeThumbnailUrl`
+              - `placeThumbnailAsset`
           - Cross-plugin:
             - Imported by: `apps/places/places-map`
-          - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/thumbnail.ts` (debt)
-        - **`places-core`** — Contract layer for the Places app, web half: the live places and tag-tree hooks, the Google Places search read, and the place mutations (tag writes are the tag-tree engine's, on placeTagTree). Contract layer for the Places app: the places / place_tags entities, the starter tag tree seeded on an empty install, the live places and tags collections, Google Places search and save (auto-tagged from the place's Google types, tagged Want to go), custom places (a named pin with no Google place behind it), the user's own title over Google's name, place CRUD, the tag tree served through the tag-tree engine (a deleted tag's children and places move to its parent; Been / Want to go cannot be deleted), the Haiku job that picks each place's Material Symbols icon, and the monthly job that re-fetches each place's Google details (whether it is still open).
+        - **`places-core`** — Contract layer for the Places app, web half: the live places and tag-tree hooks, the Google Places search read, and the place mutations (tag writes are the tag-tree engine's, on placeTagTree). Contract layer for the Places app, portable half: the places / place_tags entities, the starter tag tree seeded on an empty install, the live places and tags collections, custom places (a named pin with no Google place behind it), the user's own title over Google's name, place CRUD, the tag tree served through the tag-tree engine (a deleted tag's children and places move to its parent; Been / Want to go cannot be deleted), and the job that picks each new place's Material Symbols icon through the host's PlaceIconPicker (Haiku on the computer; none on a browser host, where a pin keeps its tag's icon).
           - Web:
             - Contributes:
               - `IdKinds.Kind` "place"
@@ -6380,19 +6384,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "places.tags.all"
               - `resource.declare` "places.tags.all:rows"
               - `tag-tree.tree` "places"
-            - Uses: 21 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
-              - `integrations/google-maps/places-api` ×3
-              - `tag-tree/engine` ×3
-              - `database` ×2
-              - `infra/endpoints` ×2
-              - `infra/entities` ×2
-              - `infra/jobs` ×2
-              - `network/live` ×2
+              - `host-service:places.icon-picker` "places.icon-picker"
+            - Uses:
+              - `database.db`
+              - `database.DbExecutor`
               - `ids.IdKinds`
-              - `infra/claude-cli.runClaudePrint`
+              - `infra/endpoints.HttpError`
+              - `infra/endpoints.implement`
+              - `infra/entities.defaultNow`
+              - `infra/entities.defineEntity`
+              - `infra/jobs.defineJob`
               - `infra/warmup.defineWarmup`
-              - `integrations/google-maps.getPlacesClient`
-              - `primitives/log-channels.Log`
+              - `network/live.serveCollection`
+              - `tag-tree/engine.defineTagTreeTable`
+              - `tag-tree/engine.serveTagTree`
+              - `tag-tree/engine.TagTrees`
             - DB schema: `plugins/apps/plugins/places/plugins/places-core/server/internal/tables.ts`
             - Exports (types):
               - `ImportedPlace`
@@ -6402,11 +6408,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SeedTagKey`
             - Exports (values):
               - `insertPlace`
+              - `PlaceIconPicker`
               - `replaceAllPlaces`
-              - `searchPlaces`
+              - `seedStarterPlaceTags`
             - Register:
               - `defineJob('places.icon.generate')`
-              - `defineJob('places.refresh-details')`
               - `defineWarmup('places.seed-tags')`
             - Resources:
               - `places.places.all` (keyed)
@@ -6415,10 +6421,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `places.tags.all` (keyed)
               - `places.tags.all:rows` (keyed, point)
             - Routes:
-              - `POST /api/places/places`
               - `POST /api/places/custom-places`
               - `PATCH /api/places/places/:id`
               - `DELETE /api/places/places/:id`
+          - Machine:
+            - Uses:
+              - `infra/endpoints.implementMachine`
+              - `integrations/google-maps.getPlacesClient`
+              - `network/live.serveValue`
+            - Exports (values): `searchPlaces`
+            - Register: `defineJob('places.refresh-details')`
+            - Routes:
+              - `POST /api/places/places`
               - `POST /api/places/places/:id/icon`
           - Core:
             - Uses: 35 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
@@ -6499,15 +6513,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/places/ask`
+              - `apps/places/fixtures`
               - `apps/places/mapstr-import`
               - `apps/places/page-overlay`
               - `apps/places/place-details`
+              - `apps/places/places-core/no-icon-picker`
               - `apps/places/places-map`
               - `apps/places/tag-manager`
               - `apps/website/promo-film/seed`
           - Test helpers:
             - Core: `@plugins/apps/plugins/places/plugins/places-core/core/testing`
               - `testPlace` — A saved place for a test: a Google place named after its Google id, at (0, 0), untagged — `over` sets whatever the test is about.
+          - Plugins:
+            - **`no-icon-picker`** (excluded) — The place icons of a host without a model: provides the PlaceIconPicker host service as nothing to pick with — there is no Claude CLI to ask, so a new place keeps drawing its main tag's icon, the same pin the desktop draws before its pick lands (the browser composition). Never booted by the desktop.
+              - Server:
+                - Contributes: `host-service:places.icon-picker` "places.icon-picker"
+                - Uses: `apps/places/places-core.PlaceIconPicker`
         - **`places-map`** — The Places app's index pane (/places): every saved place on one full-bleed map whose views are filter presets (All places, then the user's own — edits are drafts until saved, ⌥1–9 switch), with its chrome floating on the map — the tag sidebar (the presets with their counts and dirty dots, the tag filter as AND-ed rows of OR-ed tags with the preset's Reset / Save as new / Update, the tag tree with faceted counts; folded, the header alone, titled by a dropdown of the presets), the side panel (the preset's places in view or all, as a list or a gallery, hover-linked with their pins, a selected place's card drilled into it), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked). Its ;page param, /places;page=<pageId>, lays one page's places over the same map, read live (page-overlay): the page's saved places numbered, the rest dimmed, the page's places not saved yet as numbered ghost pins, the camera framed on the page, the map never remounted — and a panel in the side panel's spot listing them in page order (hover-linked with their pins, each place's card drilled in, Save and Save all with one Undo, × back to the plain map).
           - Web:
             - Slots:
@@ -6527,12 +6548,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 135 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 138 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `primitives/data-view` ×12
               - `map` ×9
               - `apps/places/places-core` ×8
               - `conversations/agent-thread` ×8
-              - `network/live/live-state` ×6
+              - `network/live/live-state` ×7
               - `primitives/collapsible` ×6
               - `network/live` ×5
               - `primitives/css/ui-kit` ×4
@@ -6542,6 +6563,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons` ×3
               - `apps/places/page-overlay` ×2
               - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
+              - `infra/endpoints` ×2
               - `integrations/google-maps` ×2
               - `page/place` ×2
               - `primitives/css/clip` ×2
@@ -7703,10 +7725,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shadow --shadow-lg`
             - **`piano`** — Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback. Registers the splendid-grand-piano asset mirror so the acoustic piano's samples are served same-origin (offline-capable) rather than streamed from the remote CDN.
               - Web:
-                - Contributes: `SonataAudio.Instrument` "Acoustic Piano"
+                - Contributes:
+                  - `ExternalHosts.Declare` "smpldsnds.github.io"
+                  - `SonataAudio.Instrument` "Acoustic Piano"
                 - Uses:
                   - `apps/sonata/audio/instruments.SonataAudio`
                   - `apps/sonata/audio/sample-loader.sharedSampleLoader`
+                  - `framework/browser-server.ExternalHosts`
               - Server:
                 - Uses: `infra/asset-mirror.defineAssetMirror`
             - **`sample-loader`** — Sonata audio sample loader: one smplr SampleLoader per AudioContext and sample source, shared by every instrument instance built against it, so N copies of an instrument cost one download and one decode instead of N.
@@ -7719,11 +7744,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `sharedSampleLoader`
             - **`soundfont`** — Sonata Instruments: the full General MIDI melodic set (programs 1-127) backed by smplr's Soundfont, served same-origin via the asset-mirror (offline after first warm-up). Program 0 (acoustic grand) is owned by the dedicated sampled-piano plugin. Registers the gm-soundfont asset mirror so the General MIDI instruments' samples are served same-origin (offline-capable) rather than streamed from the remote gleitz CDN.
               - Web:
-                - Contributes: 127 contributions — full list in [`plugins/apps/plugins/sonata/plugins/audio/plugins/soundfont/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/audio/plugins/soundfont/REFERENCE.md)
+                - Contributes: 128 contributions — full list in [`plugins/apps/plugins/sonata/plugins/audio/plugins/soundfont/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/audio/plugins/soundfont/REFERENCE.md)
                   - `SonataAudio.Instrument` ×127
+                  - `ExternalHosts.Declare` "gleitz.github.io"
                 - Uses:
                   - `apps/sonata/audio/instruments.SonataAudio`
                   - `apps/sonata/audio/sample-loader.sharedSampleLoader`
+                  - `framework/browser-server.ExternalHosts`
               - Server:
                 - Uses: `infra/asset-mirror.defineAssetMirror`
         - **`chord-chart`** — Sonata Display: the chord grid. Lays the song's chords out as bars in rows of four under their section headers, each bar split by beats into chord boxes painted in the root's degree colour (held chords drawn as ties), labelled by the shared chord-label mode, optionally with the songsheet lines sung in each row printed under it (the Lyrics under bars view option), following playback with the active bar washed, the sounding chord ringed and a beat line through the bar. A reading view (no time-axis / pitch-plane capabilities); click a chord to seek. Server registration of the Sonata chord grid config (lyrics under bars).
@@ -11301,6 +11328,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DEMO_AGENTS`
                   - `DEMO_PAGE_IDS`
                   - `DEMO_PAGES`
+                  - `DEMO_PLACES`
                   - `DEMO_SONG_ID`
                   - `DEMO_SONGS`
                   - `DEMO_STORIES`
@@ -11314,11 +11342,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `demoTaskId`
                   - `demoTranscriptJsonl`
                   - `demoWorktreePath`
+                  - `externalHosts`
                   - `PRACTICE_TIMER_PAGE_WORK`
                   - `workspaceDemo`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/shadow --shadow`
-                - Imported by: `apps/demo/shell`
+                - Imported by:
+                  - `apps/demo`
+                  - `apps/demo/shell`
               - Structure:
                 - Non-standard folders: `data/`
         - **`improve`** — The website's Improve button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
@@ -11697,6 +11728,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `apps/prototypes/fixtures.readPrototypeFixtureDir`
                   - `infra/endpoints.implementMachine`
+                  - `integrations/google-maps.getPlacesClient`
                 - Routes: `POST /api/promo-film/seed`
               - Core:
                 - Uses: `infra/endpoints.defineEndpoint`
@@ -12542,11 +12574,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Auth.ScopeRequirement` ← `integrations.gmail`
       - `accountsPane.Actions` ← `primitives.pane`
       - `accountPane.Actions` ← `primitives.pane`
-    - Uses: 45 symbols — full list in [`plugins/auth/REFERENCE.md`](../plugins/auth/REFERENCE.md)
+    - Uses: 46 symbols — full list in [`plugins/auth/REFERENCE.md`](../plugins/auth/REFERENCE.md)
       - `infra/endpoints` ×6
+      - `network/live/live-state` ×6
       - `primitives/pane` ×6
       - `primitives/setup-steps` ×6
-      - `network/live/live-state` ×5
       - `primitives/collapsible` ×4
       - `primitives/css/ui-kit` ×3
       - `primitives/data-view` ×3
@@ -12596,6 +12628,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Central:
     - Uses:
       - `infra/background/timer.defineTimer`
+      - `infra/endpoints.implementCentral`
       - `infra/secrets.getSecret`
       - `infra/secrets.ready`
       - `infra/secrets.SecretsKeychainLockedError`
@@ -27376,20 +27409,38 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
-    - **`browser-server`** — A server that runs in the page's realm or across a worker's port — a third host of the unified live API (core: the BrowserServer interface; runtimeBrowserServer over a resource runtime booted in this realm; serveOverPort / portBrowserServer carrying one across a MessageChannel or a Web Worker). Web: browserServerTransport(server, { telemetry, frameBase }), the Transport a <TransportProvider> points a subtree at — in-memory sockets to its runtime, requests through its router, an inert central socket; attachFrameServing(worker, serviceWorkerUrl) serves the server's frame documents by URL through the host's frame-serving Service Worker (frames-sw.ts), giving the transport its frameBase.
+    - **`browser-server`** — A server that runs in the page's realm or across a worker's port — a third host of the unified live API (core: the BrowserServer interface; runtimeBrowserServer over a resource runtime booted in this realm; serveOverPort / portBrowserServer carrying one across a MessageChannel or a Web Worker). Web: browserServerTransport(server, { telemetry, frameBase }), the Transport a <TransportProvider> points a subtree at — in-memory sockets to its runtime, requests through its router, an inert central socket; attachFrameServing(worker, serviceWorkerUrl) serves the server's frame documents by URL through the host's frame-serving Service Worker (frames-sw.ts), giving the transport its frameBase. HostInputs.Supply: a plugin declares a value of the page's own server the page may hand a browser host (a page input). ExternalHosts.Declare: the third-party hosts a plugin's code loads from in the page, read statically into each browser host's externalHosts.
       - Web:
+        - Slots:
+          - `HostInputs.Supply`
+          - `ExternalHosts.Declare`
+        - Slot contributors:
+          - `HostInputs.Supply` ← `integrations.google-maps`
+          - `ExternalHosts.Declare` ← `apps.sonata.audio.piano`
+          - `ExternalHosts.Declare` ← `apps.sonata.audio.soundfont`
+          - `ExternalHosts.Declare` ← `map.google`
         - Uses:
           - `primitives/networking.publishWsStatus`
           - `primitives/networking.Transport`
           - `primitives/networking.TransportSocket`
-        - Exports (types): `FrameServing`
+        - Exports (types):
+          - `ExternalHostsDeclaration`
+          - `FrameServing`
+          - `HostInputSupply`
         - Exports (values):
           - `attachFrameServing`
           - `browserServerTransport`
+          - `ExternalHosts`
+          - `HostInputs`
       - Cross-plugin:
         - Imported by:
+          - `apps/sonata/audio/piano`
+          - `apps/sonata/audio/soundfont`
           - `framework/browser-server/demo/scope`
           - `framework/browser-server/host-storage`
+          - `integrations/google-maps`
+          - `integrations/google-maps/page-config`
+          - `map/google`
       - Core:
         - Exports (types):
           - `BrowserServer`
@@ -27398,14 +27449,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostBoot`
           - `HostBooted`
           - `HostEndReason`
+          - `PageInput`
+          - `PageInputRead`
+          - `PageInputValue`
           - `PortEnd`
           - `PortServer`
+          - `PortServerOptions`
           - `ServedHost`
           - `ServeHostOptions`
         - Exports (values):
           - `attachPort`
           - `HostEndedError`
           - `HostRefusedError`
+          - `pageInput`
           - `portBrowserServer`
           - `PortHostBootError`
           - `PortHostRefusedError`
@@ -27431,6 +27487,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/browser-server.attachFrameServing`
                   - `framework/browser-server.browserServerTransport`
                   - `framework/browser-server.FrameServing`
+                  - `framework/browser-server.HostInputs`
+                  - `framework/browser-server.HostInputSupply`
+                  - `network/live.useLive`
+                  - `network/live/live-state.foldResource`
                   - `network/live/live-state.NotificationsProvider`
                   - `primitives/css/center.Center`
                   - `primitives/css/spacing.Stack`
@@ -28230,24 +28290,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:
-        - Imported by: 100 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 102 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×24
           - `debug` ×13
           - `conversations` ×10
           - `tasks` ×10
           - `database` ×9
-          - `apps` ×5
+          - `apps` ×6
           - `network` ×5
           - `reports` ×4
           - `page` ×3
           - `primitives` ×3
           - `build` ×2
+          - `integrations` ×2
           - `backup`
           - `config_v2`
           - `fields/server-capabilities`
           - `framework/cli/deploy`
           - `ids`
-          - `integrations/youtube/song-videos`
           - `packages/source-digest`
           - `plugin-meta/plugin-tree`
           - `release`
@@ -28434,7 +28494,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/events/sources/salsanueva` (2 debt)
               - `apps/events/sources/url-extract` (1 debt)
               - `apps/file-explorer/git` (2 debt)
-              - `apps/places/place-details` (1 debt)
               - `apps/sonata/transcription` (5 debt)
               - `auth/apple-signing` (1 debt)
               - `backup` (2 debt)
@@ -28540,7 +28599,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/stack-sampler` (1 debt)
               - `infra/worktree` (9 debt)
               - `infra/worktree/reclaim` (2 debt)
-              - `integrations/google-maps` (2 debt)
               - `integrations/youtube/audio-fetch` (3 debt)
               - `packages/flock` (3 debt)
               - `packages/host-semaphore` (1 debt)
@@ -29859,19 +29917,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 110 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 111 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×20
           - `reports` ×18
           - `apps` ×17
           - `ui` ×6
           - `apps-core` ×5
           - `debug` ×5
+          - `framework` ×4
           - `page` ×4
           - `shell` ×4
           - `config_v2` ×3
           - `conversations` ×3
           - `fields` ×3
-          - `framework` ×3
           - `infra` ×3
           - `hints` ×2
           - `network` ×2
@@ -31596,7 +31654,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `utcDay`
           - Cli:
             - Exports (values): `upgradeThisWorktree`
-    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, unavailable, or fetch-only (served, but no URL reaches it); assetFetchOver hands a library that takes a fetch hook the asset's base and a fetch over the transport; contentUrlOver hands a content frame a ContentPath's URL on the transport's content serving (the content host, off every app origin, for the page's own server; an in-browser server's frame Service Worker, declared safe), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.
+    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, unavailable, or fetch-only (served, but no URL reaches it); assetFetchOver hands a library that takes a fetch hook the asset's base and a fetch over the transport; contentUrlOver hands a content frame a ContentPath's URL on the transport's content serving (the content host, off every app origin, for the page's own server; an in-browser server's frame Service Worker, declared safe), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client. Typed endpoint contract primitive, central half: implementCentral() creates central's handler of an endpoint declared needsMachine — central runs only on the computer, so it serves what a host without one answers not available.
       - Web:
         - Uses:
           - `primitives/networking.fetchWithRetry`
@@ -31691,8 +31749,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 246 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×69
+        - Imported by: 248 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×71
           - `conversations` ×35
           - `infra` ×22
           - `page` ×19
@@ -31753,6 +31811,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `implementMachine`
           - `machineHandler`
+      - Central:
+        - Exports (values): `implementCentral`
       - Test helpers:
         - Web: `@plugins/infra/plugins/endpoints/web/testing`
           - `fakeFetchEndpoint` — A fake `FetchEndpoint` that records each call and answers it with `answer` (default: `undefined`, a void response) — and a transport that hands it to every component under it.
@@ -35160,17 +35220,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `GMAIL_SCOPES`
           - `GOOGLE_PROVIDER_ID`
-    - **`google-maps`** — Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup — the Google Maps 'Live map' row of Settings → Accounts, rendered inline in its account pane — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the setup's LiveMapSetup.MapIdPreview slot). Google Maps Platform access broker (server): getPlacesClient() hands out the metered Places client (the stored Places API key, read via the shared auth/central store, plus the usage ledger's meter), so consumers never import @plugins/auth and no Places call goes uncounted; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints for the key and the vector map's Map ID.
+    - **`google-maps`** — Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup — the Google Maps 'Live map' row of Settings → Accounts, rendered inline in its account pane — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the setup's LiveMapSetup.MapIdPreview slot). Google Maps Platform access broker (server, portable): serves the public browser config (the Maps JavaScript API key and the vector map's Map ID) as the google-maps.browser-config live value, read from the host's MapsBrowserConfigSource — the host-global file on the computer, the page's own config on a browser host.
       - Web:
         - Slots: `LiveMapSetup.MapIdPreview`
         - Slot contributors: `LiveMapSetup.MapIdPreview` ← `map.google`
-        - Contributes: `Auth.Integration` "Live map"
-        - Uses: 29 symbols — full list in [`plugins/integrations/plugins/google-maps/REFERENCE.md`](../plugins/integrations/plugins/google-maps/REFERENCE.md)
+        - Contributes:
+          - `HostInputs.Supply` "google-maps.browser-config"
+          - `Auth.Integration` "Live map"
+        - Uses: 31 symbols — full list in [`plugins/integrations/plugins/google-maps/REFERENCE.md`](../plugins/integrations/plugins/google-maps/REFERENCE.md)
           - `primitives/setup-steps` ×10
           - `network/live/live-state` ×5
           - `auth` ×3
-          - `infra/endpoints` ×2
+          - `infra/endpoints` ×3
           - `primitives/css/ui-kit` ×2
+          - `framework/browser-server.HostInputs`
           - `network/live.useLive`
           - `primitives/css/clip.Clip`
           - `primitives/css/spacing.Stack`
@@ -35195,18 +35258,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useMapsAccess`
           - `useMapsBrowserConfig`
       - Server:
-        - Contributes: `resource.declare` "google-maps.browser-config"
-        - Uses:
-          - `auth.getTokenFromCentral`
-          - `infra/endpoints.HttpError`
-          - `infra/endpoints.implement`
-          - `infra/file-watcher.defineFileWatcher`
-          - `integrations/google-maps/usage.placesMeter`
-          - `network/live.serveValue`
+        - Contributes:
+          - `resource.declare` "google-maps.browser-config"
+          - `host-service:google-maps.browser-config` "google-maps.browser-config"
+        - Uses: `network/live.serveValue`
+        - Exports (types): `MapsBrowserConfigSourceImpl`
+        - Exports (values):
+          - `mapsBrowserConfigServed`
+          - `MapsBrowserConfigSource`
+        - Resources: `google-maps.browser-config` (push, notified)
+      - Machine:
+        - Uses: `infra/endpoints.implementMachine`
         - Exports (types): `PlacesClientResult`
         - Exports (values): `getPlacesClient`
         - Register: `defineFileWatcher('google-maps.browser-config')`
-        - Resources: `google-maps.browser-config` (push, notified)
         - Routes:
           - `POST /api/google-maps/browser-config`
           - `DELETE /api/google-maps/browser-config`
@@ -35245,11 +35310,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/places/places-core`
           - `apps/places/places-map`
           - `apps/website/promo-film/seed`
+          - `integrations/google-maps/page-config`
           - `map/google`
           - `page/place/google`
-      - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/browser-config-resource.ts`, `server/internal/browser-config-store.ts` (debt)
       - Plugins:
+        - **`page-config`** (excluded) — The Maps browser config of a browser host: provides the MapsBrowserConfigSource host service from the page around the host — the key the real app already sends that page, handed over by the page's chrome as a page input (never read from a server by the host's own code, never stored). A page that supplies none reads as unset, so the map shows its set-up state, whose writes need the computer. Never booted by the desktop.
+          - Server:
+            - Contributes: `host-service:google-maps.browser-config` "google-maps.browser-config"
+            - Uses: `integrations/google-maps.MapsBrowserConfigSource`
         - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete, places:searchText (pro, or rich with rating, price and this week's hours; biased to a circle or a box), place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot / PlaceCandidate shapes. Every call takes a PlacesClient — the key and the meter it is counted on, its SKU derived from its field mask (skuFor) — and never touches auth or storage.
           - Core:
             - Uses: `packages/list-bound.wholeList`
@@ -35852,13 +35920,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `ConfigV2.WebRegister` "config"
           - `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
+          - `ExternalHosts.Declare` "maps.googleapis.com, maps.gstatic.com, mapsresources-pa.googleapis.com, fonts.googleapis.com, fonts.gstatic.com"
           - `LiveMapSetup.MapIdPreview` → `MapIdPreview`
-        - Uses: 24 symbols — full list in [`plugins/map/plugins/google/REFERENCE.md`](../plugins/map/plugins/google/REFERENCE.md)
+        - Uses: 25 symbols — full list in [`plugins/map/plugins/google/REFERENCE.md`](../plugins/map/plugins/google/REFERENCE.md)
           - `integrations/google-maps` ×6
           - `map` ×4
           - `map/pin-layer` ×3
           - `config_v2` ×2
           - `primitives/css/spacing` ×2
+          - `framework/browser-server.ExternalHosts`
           - `primitives/css/center.Center`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
@@ -36566,7 +36636,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 337 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 338 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×86
           - `conversations` ×70
           - `debug` ×33
@@ -36593,6 +36663,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `release` ×2
           - `search` ×2
           - `fields/secret/config`
+          - `framework/browser-server/demo/scope`
           - `network/live/optimistic-mutation`
           - `runs`
           - `screenshot`
@@ -40487,7 +40558,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/place/google`
           - `page/place/map-layer`
       - Plugins:
-        - **`google`** — Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, and the 'set up Google Maps' affordance the block renders while no API key is configured. Google Places provider for the /place block: adapts the Places API client (autocomplete + details) onto the place-provider registry, reading the API key through the Google Maps integration. Colours a place by the Table A heading of its type (a vendored copy of Google's place-type table), filing a place-google-unknown-type report when Google returns a type the copy lacks.
+        - **`google`** — Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, and the 'set up Google Maps' affordance the block renders while no API key is configured.
           - Web:
             - Contributes: `Place.Provider` "Google Maps"
             - Uses:
@@ -40496,15 +40567,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/place.Place`
           - Server:
             - Contributes: `report-kind` "place-google-unknown-type"
-            - Uses:
-              - `integrations/google-maps.getPlacesClient`
-              - `integrations/google-maps/places-api.autocomplete`
-              - `integrations/google-maps/places-api.placeDetails`
-              - `page/place.definePlaceProvider`
-              - `reports.ReportKind`
-              - `reports.ReportRow`
-              - `reports/engine.recordReport`
-            - DB schema: `plugins/page/plugins/place/plugins/google/server/internal/table-a.ts`
+          - Machine:
+            - Uses: `integrations/google-maps.getPlacesClient`
             - Register: `definePlaceProvider('google')`
           - Cross-plugin:
             - Imported by: `apps/places/page-overlay`
@@ -53842,6 +53906,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wouldCycle`
       - Cross-plugin:
         - Imported by:
+          - `apps/places/fixtures`
           - `apps/places/places-core`
           - `apps/places/places-map`
           - `apps/places/tag-manager`
@@ -57002,6 +57067,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SavedSymbolNameSchema`
           - Cross-plugin:
             - Imported by:
+              - `apps/places/fixtures`
               - `apps/places/places-core`
               - `apps/website/promo-film/seed`
               - `conversations/agents`

@@ -632,6 +632,23 @@ function IconRow({
   ownIcon: boolean;
 }): ReactNode {
   const regenerate = useRegeneratePlaceIcon();
+  const label = (
+    <Text variant="body">{ownIcon ? "Icon by Haiku" : "No icon yet"}</Text>
+  );
+  // The pick is a Haiku call through the computer's Claude CLI: a host
+  // without one shows why there is no button.
+  if (regenerate.kind === "unavailable") {
+    return (
+      <InfoRow icon={regenerateIcon}>
+        <Stack gap="2xs">
+          {label}
+          <Text variant="caption" tone="muted">
+            {regenerate.message}
+          </Text>
+        </Stack>
+      </InfoRow>
+    );
+  }
   return (
     <InfoRow
       icon={regenerateIcon}
@@ -645,7 +662,7 @@ function IconRow({
         </Button>
       }
     >
-      <Text variant="body">{ownIcon ? "Icon by Haiku" : "No icon yet"}</Text>
+      {label}
     </InfoRow>
   );
 }

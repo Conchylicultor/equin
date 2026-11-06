@@ -310,7 +310,7 @@ function PlacesSurface({
   const { create: createTag } = useTagTreeActions(placeTagTree);
   const { mutateAsync: createCustomPlace } = useCreateCustomPlace();
   const { mutateAsync: updatePlace } = useUpdatePlace();
-  const { mutateAsync: savePlace } = useSavePlace();
+  const saveMutation = useSavePlace();
   const { mutateAsync: deletePlace } = useDeletePlace();
 
   // The search bar: one query for both halves — the view's own search (your
@@ -749,10 +749,15 @@ function PlacesSurface({
   /**
    * Save a Google hit, without a word: resolves the saved place — `fresh`
    * when this save made it, else it was yours already — or null when Maps is
-   * not set up.
+   * not set up, or saving is not available here.
    */
   const savePlaceOf = async (hit: GoogleHit): Promise<SavedHit | null> => {
-    const result = await savePlace({
+    // Saving from Google needs the computer: a host without one says so.
+    if (saveMutation.kind === "unavailable") {
+      showToast({ description: saveMutation.message });
+      return null;
+    }
+    const result = await saveMutation.mutateAsync({
       body: {
         googlePlaceId: hit.placeId,
         // An autocomplete name ends its session with this save.

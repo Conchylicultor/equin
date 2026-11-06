@@ -1,3 +1,4 @@
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { ReactElement } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -17,7 +18,8 @@ import { LIVE_MAP_ACCOUNT_ID } from "../internal/live-map-account";
  * failure with Retry.
  */
 export function MapsMapAccessAction(): ReactElement | null {
-  const { blocker, loading, error, refetch } = useMapsAccess("map");
+  const { blocker, loading, error, refetch, unavailable } =
+    useMapsAccess("map");
   const openPane = useOpenPane();
 
   if (loading) return null;
@@ -29,6 +31,13 @@ export function MapsMapAccessAction(): ReactElement | null {
         error={error}
         refetch={refetch}
       />
+    );
+  // Set up only on the computer: say so where the button would be.
+  if (unavailable !== null)
+    return (
+      <Text variant="caption" tone="muted">
+        {unavailable}
+      </Text>
     );
   if (blocker === null) return null;
 

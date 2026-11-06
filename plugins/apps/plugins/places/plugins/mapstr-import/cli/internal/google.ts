@@ -1,4 +1,4 @@
-import { getPlacesClient } from "@plugins/integrations/plugins/google-maps/server";
+import { getPlacesClient } from "@plugins/integrations/plugins/google-maps/machine";
 import {
   PlacesApiError,
   type PlacesClient,

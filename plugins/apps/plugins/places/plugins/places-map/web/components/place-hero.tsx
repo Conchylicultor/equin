@@ -15,7 +15,8 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { PlacePhoto } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
-import { placePhotoUrl } from "@plugins/apps/plugins/places/plugins/place-details/core";
+import { placePhotoAsset } from "@plugins/apps/plugins/places/plugins/place-details/core";
+import { usePhotoSrcs } from "../internal/photo-src";
 import type { PlaceVisual } from "../internal/place-visual";
 
 const prevIcon = symbol("chevron-left");
@@ -119,6 +120,9 @@ function PhotoStrip({
       scope: "nearest",
     });
   const author = photos[index]?.authors[0];
+  const srcs = usePhotoSrcs(
+    photos.map((p) => placePhotoAsset(p.name, PHOTO_FETCH_PX)),
+  );
   return (
     <div className={cn(hoverRevealGroup, "relative h-52")}>
       <Scroll
@@ -132,10 +136,10 @@ function PhotoStrip({
         }}
       >
         <Line className="h-full">
-          {photos.map((p, i) => (
+          {srcs?.map((src, i) => (
             <img
-              key={p.name}
-              src={placePhotoUrl(p.name, PHOTO_FETCH_PX)}
+              key={photos[i]!.name}
+              src={src}
               alt=""
               loading={i === 0 ? "eager" : "lazy"}
               onClick={onShowAll}

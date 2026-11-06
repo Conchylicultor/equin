@@ -20,7 +20,14 @@ export type {
   HostEndReason,
   PortEnd,
   PortServer,
+  PortServerOptions,
   ServedHost,
   ServeHostOptions,
 } from "./internal/port";
 export { runtimeBrowserServer } from "./internal/runtime-socket";
+export { pageInput } from "./internal/page-inputs";
+export type {
+  PageInput,
+  PageInputRead,
+  PageInputValue,
+} from "./internal/page-inputs";

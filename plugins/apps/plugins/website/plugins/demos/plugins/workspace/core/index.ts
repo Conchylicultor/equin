@@ -24,3 +24,5 @@ export type {
 } from "./internal/transcripts";
 export { demoPrototypeFixture } from "./internal/prototypes";
 export { DEMO_SONGS, DEMO_SONG_ID } from "./internal/songs";
+export { DEMO_PLACES } from "./internal/places";
+export { externalHosts } from "./browser-host.generated";

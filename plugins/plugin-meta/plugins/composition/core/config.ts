@@ -58,10 +58,19 @@ import { SERVE_MODE_OPTIONS } from "./serve-mode";
  *
  * The negatives are adapters INTO another app, which the agent manager does not
  * ship: the song / event-source / prototype chips (Sonata, Events, Prototypes),
- * the place and map page blocks and the data view's map (Google Maps, auth, the
- * map primitive).
+ * and — `PLACES_ADAPTERS`, kept apart so a composition shipping Places takes
+ * the core list without them — the place and map page blocks and the data
+ * view's map (Google Maps, auth, the map primitive).
  */
-const AGENT_MANAGER = {
+const PLACES_ADAPTERS = {
+  entryPoints: [
+    "!page.place.**",
+    "!page.map.**",
+    "!primitives.data-view.map.**",
+  ],
+};
+
+const AGENT_MANAGER_CORE = {
   entryPoints: [
     "apps.agent-manager.**",
     "conversations.**",
@@ -72,15 +81,12 @@ const AGENT_MANAGER = {
     "!active-data.event-source.**",
     "!active-data.prototype.**",
     "page.**",
-    "!page.place.**",
-    "!page.map.**",
     "ui.tokens.rich-text-palette",
     "code-explorer.**",
     "primitives.file-viewer.**",
     "primitives.prompt-editor.**",
     "primitives.syntax-highlight.**",
     "primitives.data-view.**",
-    "!primitives.data-view.map.**",
     "reorder.**",
     "apps-core.**",
     "shell.**",
@@ -91,6 +97,13 @@ const AGENT_MANAGER = {
     "ui.tab-bar.**",
     "ui.tree-disclosure.**",
     "ui.tweakcn.**",
+  ],
+};
+
+const AGENT_MANAGER = {
+  entryPoints: [
+    ...AGENT_MANAGER_CORE.entryPoints,
+    ...PLACES_ADAPTERS.entryPoints,
   ],
 };
 
@@ -319,10 +332,14 @@ export const compositionsConfig = defineConfig({
         // ── Profile: the agent manager as its in-page demo serves it ─────────────
         // What `/demo` renders (the Agent Manager on made-up data, inside
         // `<DemoScope>`) and what its browser host's worker serves: the full
-        // agent manager and the Pages app it reaches into (`extends: [
-        // "agent-manager", "pages"]` — the task detail's Origin, the page
-        // chips, the page artifacts and tool renderers, and the Pages app
-        // itself) MINUS the surfaces that mean nothing without the computer
+        // agent manager — `agent-manager`'s own entries, extends and
+        // selection, but for its adapters into Places (`PLACES_ADAPTERS`):
+        // the demo ships Places, and an inherited negative cannot be
+        // contradicted, so it takes `AGENT_MANAGER_CORE` rather than extending
+        // the row — and the Pages app it reaches into (`extends: [..., "pages"]`
+        // — the task detail's Origin, the page chips, the page artifacts and
+        // tool renderers, and the Pages app itself) MINUS the surfaces that
+        // mean nothing without the computer
         // behind it, plus whole apps that run in the worker (Prototypes, below)
         // — never a hand-picked plugin: a plugin either app gains reaches the
         // demo with no edit here (config.test.ts holds the shape). A profile — a variant of the one
@@ -367,8 +384,8 @@ export const compositionsConfig = defineConfig({
         // agent-manager profile this extends negates them, a negative a
         // positive here may not contradict (composition-closure), and no
         // seeded transcript names a prototype.
-        // Events and Places are not in the bundle at all, so a negative for
-        // them would trim nothing — a dead negative. (`stats` and `stats.cost`
+        // Events is not in the bundle at all, so a negative for it would
+        // trim nothing — a dead negative. (`stats` and `stats.cost`
         // are: `conversations.usage`'s page imports the cost model's core.)
         // Debug cannot leave yet: the
         // bell (`shell.notifications`), build, recover and two debug tools
@@ -389,6 +406,7 @@ export const compositionsConfig = defineConfig({
           // browser-host codegen refuses a row not declared for `browser`.
           hosts: ["browser"],
           entryPoints: [
+            ...AGENT_MANAGER_CORE.entryPoints,
             "!conversations.conversation-view.push-and-exit.**",
             "!tasks.automations.**",
             "!tasks.reports-investigation.**",
@@ -430,6 +448,13 @@ export const compositionsConfig = defineConfig({
             // loads nothing — emoji pictures, WebAudio-synthesized sounds,
             // the browser's own speechSynthesis.
             "apps.keyboard-party.**",
+            // Places, the map of saved places: the map draws through Google
+            // Maps (`map.google`, selected below) with the owner's browser key
+            // the page hands the host (`google-maps/page-config`); searching,
+            // saving, Google's details and photos, the icon pick and Ask need
+            // the computer and say so. The adapters into it (the place and
+            // map blocks, the data view's map) are not negated here.
+            "apps.places.**",
             // The OS menu-bar panel and its sections: a page the native
             // helper opens on the computer, meaningless in a demo.
             "!menu-bar.**",
@@ -437,8 +462,10 @@ export const compositionsConfig = defineConfig({
             "!tasks.menu-bar-task.**",
             "!shell.notifications.native.**",
           ],
-          selectedContributors: [] as string[],
-          extends: ["agent-manager", "pages"],
+          // `agent-manager`'s selection, and Google's map renderer (a
+          // contributor to the map Places draws on).
+          selectedContributors: ["ui.theme-toggle", "map.google"],
+          extends: ["self-improvement", "served-baseline", "pages"],
           excludes: [] as string[],
           serve: "off",
           home: "home",

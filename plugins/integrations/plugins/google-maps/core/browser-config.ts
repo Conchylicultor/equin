@@ -3,6 +3,13 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 
 /**
+ * The browser config is written to the computer's host-global file: a host
+ * without the computer (the browser demo) reads the page's config and cannot
+ * change it.
+ */
+const SETUP_NEEDS_MACHINE = { feature: "Setting up the Google map" };
+
+/**
  * The shape of every Google API key: `AIza` plus 35 URL-safe characters. Checked
  * on write (server) and before enabling Save (web), so a pasted Places key's
  * neighbour — a client id, a secret, a stray space — is refused with a reason
@@ -96,6 +103,7 @@ export const mapsBrowserConfig = liveValue("google-maps.browser-config", {
 export const setMapsBrowserConfig = defineEndpoint({
   route: "POST /api/google-maps/browser-config",
   body: MapsBrowserConfigInputSchema,
+  needsMachine: SETUP_NEEDS_MACHINE,
 });
 
 /**
@@ -115,14 +123,17 @@ export type MapsMapIdInput = z.infer<typeof MapsMapIdInputSchema>;
 export const setMapsMapId = defineEndpoint({
   route: "POST /api/google-maps/map-id",
   body: MapsMapIdInputSchema,
+  needsMachine: SETUP_NEEDS_MACHINE,
 });
 
 /** Remove the Map ID: every map goes back to the raster map. */
 export const clearMapsMapId = defineEndpoint({
   route: "DELETE /api/google-maps/map-id",
+  needsMachine: SETUP_NEEDS_MACHINE,
 });
 
 /** Remove the browser config (key and Map ID), turning every live map back into its setup prompt. */
 export const clearMapsBrowserConfig = defineEndpoint({
   route: "DELETE /api/google-maps/browser-config",
+  needsMachine: SETUP_NEEDS_MACHINE,
 });

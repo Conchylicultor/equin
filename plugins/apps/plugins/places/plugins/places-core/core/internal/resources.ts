@@ -110,4 +110,6 @@ export const placeSearch = liveValue("places.search", {
   schema: PlaceSearchResultSchema,
   query: PlaceSearchQuerySchema,
   load: "on-demand",
+  // Google's Places API, with the computer's Places key (auth/central).
+  needsMachine: { feature: "Searching Google Places" },
 });

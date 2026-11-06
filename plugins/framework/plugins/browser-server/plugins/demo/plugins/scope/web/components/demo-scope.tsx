@@ -15,6 +15,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -23,16 +24,23 @@ import {
   portBrowserServer,
   type BrowserServer,
   type HostEndReason,
+  type PageInputValue,
   type PortEnd,
   type PortServer,
 } from "@plugins/framework/plugins/browser-server/core";
 import {
   attachFrameServing,
   browserServerTransport,
+  HostInputs,
   type FrameServing,
+  type HostInputSupply,
 } from "@plugins/framework/plugins/browser-server/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { DemoScenario } from "@plugins/framework/plugins/browser-server/plugins/demo/core";
-import { NotificationsProvider } from "@plugins/network/plugins/live/plugins/live-state/web";
+import {
+  foldResource,
+  NotificationsProvider,
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { clearStorageScope } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -82,6 +90,10 @@ interface ScopeHost {
   reset(): void;
   /** What the host asks this page to tell the person about its boot (`HostBooted.notice`). */
   notice: string | null;
+  /** Hand the host one page input's value (`PortServer.supply`). */
+  supply(key: string, input: PageInputValue): void;
+  /** Declare page inputs this page supplies (`PortServer.declareInputs`). */
+  declareInputs(keys: readonly string[]): void;
 }
 
 /** What one start of the scope's host comes to. */
@@ -122,6 +134,7 @@ function connectHost(
  */
 function startScopeServer(
   scenario: DemoScenario,
+  inputs: readonly string[],
   report: ScopeStart,
 ): () => void {
   let ended = false;
@@ -137,7 +150,7 @@ function startScopeServer(
     const framing = attachFrameServing(end, mod.serviceWorkerUrl);
     let hosted: PortServer;
     try {
-      hosted = await portBrowserServer(end);
+      hosted = await portBrowserServer(end, { inputs });
     } catch (err) {
       if (err instanceof PortHostRefusedError) {
         // Nothing will be served: the frames attached alongside go too.
@@ -171,6 +184,8 @@ function startScopeServer(
       frameBase: frames.kind === "serving" ? frames.frameBase : null,
       reset: hosted.reset,
       notice: hosted.notice,
+      supply: hosted.supply,
+      declareInputs: hosted.declareInputs,
     });
   })().catch((err: unknown) => {
     if (!ended) report.onFailed(err);
@@ -232,6 +247,18 @@ export function DemoScope({
   // enclosing page's setting (D3: a browser server has nowhere of its own to
   // keep it; `false` would drop it at every emission site).
   const { telemetry } = useTransport();
+  // The page inputs this page can hand the host (`HostInputs.Supply`), read
+  // from the PAGE's registry: values of the page's own server, never read by
+  // the scope's code.
+  const supplies = HostInputs.Supply.useContributions();
+  const inputKeys = supplies.map((s) => s.value.key);
+  // The keys known when a host starts are declared as it connects; a supply
+  // that loads later (a deferred plugin tier) is declared then — never a
+  // reason to restart the host.
+  const inputKeysRef = useRef(inputKeys);
+  useEffect(() => {
+    inputKeysRef.current = inputKeys;
+  });
   const [state, setState] = useState<ScopeState>({ kind: "booting" });
   // Bumped when the host is reset, to start a fresh one.
   const [generation, setGeneration] = useState(0);
@@ -244,7 +271,7 @@ export function DemoScope({
     // resource owned by this mount, so StrictMode's mount → unmount → mount
     // ends the first and keeps the second (an initialiser would start one a
     // discarded render never ends).
-    const stop = startScopeServer(scenario, {
+    const stop = startScopeServer(scenario, inputKeysRef.current, {
       onReady: (host) => setState({ kind: "ready", host }),
       onRefused: (message) => setState({ kind: "stopped", message }),
       onEnded: (why) => {
@@ -264,6 +291,12 @@ export function DemoScope({
     };
   }, [scenario, generation]);
   const host = state.kind === "ready" ? state.host : null;
+  const declaredKeys = inputKeys.join("\n");
+  useEffect(() => {
+    // Additive on the host's side: re-declaring a key is a no-op.
+    if (host !== null && declaredKeys !== "")
+      host.declareInputs(declaredKeys.split("\n"));
+  }, [host, declaredKeys]);
   // The notice of the boot this page waited for, until the person dismisses it.
   const [dismissed, setDismissed] = useState<ScopeHost | null>(null);
   const notice = host !== null && dismissed !== host ? host.notice : null;
@@ -287,6 +320,11 @@ export function DemoScope({
   if (transport === null || control === null) return <Loading />;
   return (
     <DemoHostControlContext.Provider value={control}>
+      {/* Outside the scope's transport: each reads the page's own server. */}
+      {host !== null &&
+        supplies.map((supply) => (
+          <PageInputFeed key={supply.value.key} supply={supply} host={host} />
+        ))}
       <TransportProvider transport={transport}>
         <NotificationsProvider>
           <PluginScope composition={scenario.host}>
@@ -305,6 +343,37 @@ export function DemoScope({
       </TransportProvider>
     </DemoHostControlContext.Provider>
   );
+}
+
+/**
+ * One page input, fed to the host: the page's own read of the value (on the
+ * page's transport — this renders outside the scope), handed over each time
+ * it settles. Renders nothing.
+ */
+function PageInputFeed({
+  supply,
+  host,
+}: {
+  supply: HostInputSupply;
+  host: ScopeHost;
+}): ReactNode {
+  const read = useLive(supply.value);
+  const key = supply.value.key;
+  // What the page knows, once it knows it. A read keeps its identity until
+  // its state changes, so this — and the send below — moves only then.
+  const input = useMemo(
+    () =>
+      foldResource<typeof read, PageInputValue | null>(read, {
+        loading: () => null,
+        error: (error) => ({ kind: "failed", message: error.message }),
+        ready: (value) => ({ kind: "value", value }),
+      }),
+    [read],
+  );
+  useEffect(() => {
+    if (input !== null) host.supply(key, input);
+  }, [host, key, input]);
+  return null;
 }
 
 /** What the host asked this page to tell the person (a demo reset to a newer version), dismissible. */

@@ -15,6 +15,11 @@
 // serving (another worker took its storage over, or the page reset it) tells
 // every end `ended`, after which the page rejects whatever it still waits on.
 
+import {
+  declarePageInputs,
+  receivePageInput,
+  type PageInputValue,
+} from "./page-inputs";
 import type {
   BrowserServer,
   BrowserServerPeer,
@@ -68,6 +73,10 @@ type ToHost =
    * crashed — a MessagePort says nothing when its other side goes away).
    */
   | { t: "hello"; lock: string }
+  /** The page inputs this page supplies (`PortServerOptions.inputs`). */
+  | { t: "inputs"; keys: string[] }
+  /** One page input's value (`PortServer.supply`). */
+  | { t: "input"; key: string; input: PageInputValue }
   /** Wipe the host's data and end it (Reset). */
   | { t: "reset" };
 
@@ -257,6 +266,14 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
       );
       return;
     }
+    if (msg.t === "inputs") {
+      declarePageInputs(msg.keys);
+      return;
+    }
+    if (msg.t === "input") {
+      receivePageInput(msg.key, msg.input);
+      return;
+    }
     if (ended !== null || stopping) return;
     if (msg.t === "reset") {
       if (opts.reset === undefined) {
@@ -409,6 +426,19 @@ export interface PortServer extends Omit<HostBooted, "notice"> {
   ended: Promise<HostEndReason>;
   /** Ask the host to wipe its data and end (it answers with `ended: "reset"`). */
   reset(): void;
+  /** Hand the host the value of one page input this page declared (`inputs`). */
+  supply(key: string, input: PageInputValue): void;
+  /** Declare more page inputs this page supplies (a supply loaded after connect). */
+  declareInputs(keys: readonly string[]): void;
+}
+
+/** What a page tells the host as it connects. */
+export interface PortServerOptions {
+  /**
+   * The page inputs this page will supply (`pageInput`): read as `absent` by
+   * the host only when no connected page declares them.
+   */
+  inputs?: readonly string[];
 }
 
 /**
@@ -484,7 +514,10 @@ export function attachPort(worker: PortEnd, port: MessagePort): void {
  * and tells the host its name (`hello`), so a SharedWorker drops this page's
  * sockets when the tab goes away without saying so.
  */
-export function portBrowserServer(port: PortEnd): Promise<PortServer> {
+export function portBrowserServer(
+  port: PortEnd,
+  { inputs = [] }: PortServerOptions = {},
+): Promise<PortServer> {
   let nextConn = 0;
   const peers = new Map<number, BrowserServerPeer>();
 
@@ -495,6 +528,8 @@ export function portBrowserServer(port: PortEnd): Promise<PortServer> {
     void navigator.locks.request(lock, { mode: "exclusive" }, () => held);
     port.postMessage({ t: "hello", lock } satisfies ToHost);
   }
+  // Before any request: a read of an input is answered knowing who supplies it.
+  port.postMessage({ t: "inputs", keys: [...inputs] } satisfies ToHost);
 
   let endedWith!: (why: HostEndReason) => void;
   const ended = new Promise<HostEndReason>((resolve) => (endedWith = resolve));
@@ -550,6 +585,13 @@ export function portBrowserServer(port: PortEnd): Promise<PortServer> {
             notice: msg.notice,
             ended,
             reset: () => port.postMessage({ t: "reset" } satisfies ToHost),
+            supply: (key, input) =>
+              port.postMessage({ t: "input", key, input } satisfies ToHost),
+            declareInputs: (keys) =>
+              port.postMessage({
+                t: "inputs",
+                keys: [...keys],
+              } satisfies ToHost),
           });
           return;
         case "failed":

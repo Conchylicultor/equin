@@ -52,17 +52,27 @@ export function PasswordSignInForm({
     },
   });
 
+  // Accounts live on the computer's central runtime: a host without one
+  // (the browser demo) cannot sign in here, and says so.
+  if (submit.kind === "unavailable") {
+    return (
+      <Text as="p" variant="caption" tone="muted">
+        {submit.message}
+      </Text>
+    );
+  }
+
   const canSubmit =
     username.trim().length > 0 && password.length > 0 && !submit.isPending;
 
-  function onSubmit(e: FormEvent): void {
+  const onSubmit = (e: FormEvent): void => {
     e.preventDefault();
     if (!canSubmit) return;
     submit.mutate({
       params: { provider: providerId },
       body: { username: username.trim(), password },
     });
-  }
+  };
 
   return (
     <Stack as="form" onSubmit={onSubmit} gap="md">

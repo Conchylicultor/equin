@@ -23,6 +23,7 @@ import {
 import {
   ResourceErrorInline,
   type ResourceResult,
+  type ResourceUnavailable,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
@@ -308,14 +309,22 @@ export function GoogleCredit(): ReactNode {
 
 /**
  * Why Google's details are missing, when they are: the read failed (with
- * Retry), or Google Maps is not set up (with its set-up action). Nothing
- * while loading, ready, or for a place Google no longer knows.
+ * Retry), Google Maps is not set up (with its set-up action), or this host
+ * cannot read them (no computer behind it: the demo). Nothing while loading,
+ * ready, or for a place Google no longer knows.
  */
 export function DetailsNotice({
   details,
 }: {
-  details: ResourceResult<PlaceDetailsResult>;
+  details: ResourceResult<PlaceDetailsResult> | ResourceUnavailable;
 }): ReactNode {
+  if (details.status === "unavailable") {
+    return (
+      <Text variant="caption" tone="muted">
+        {details.message}
+      </Text>
+    );
+  }
   if (details.status === "error") {
     return (
       <ResourceErrorInline

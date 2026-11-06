@@ -4,6 +4,8 @@ import {
   foldResource,
   type ResourceError,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { useMachineAvailability } from "@plugins/infra/plugins/endpoints/web";
+import { setMapsBrowserConfig } from "../../core";
 import { useMapsBrowserConfig } from "./use-maps-browser-config";
 
 /**
@@ -47,6 +49,13 @@ export interface MapsAccess {
   refetch: () => Promise<void>;
   /** The next unmet prerequisite, or null when ready (or still loading, or failed). */
   blocker: MapsAccessBlocker | null;
+  /**
+   * Why this capability cannot be set up from here, when it cannot: its
+   * credential lives on the computer and this host has none (the browser
+   * demo). The surface says so instead of offering a set-up it cannot do.
+   * Null otherwise.
+   */
+  unavailable: string | null;
 }
 
 export function useMapsAccess(capability: MapsAccessCapability): MapsAccess {
@@ -73,27 +82,49 @@ function usePlacesAccess(): MapsAccess {
   const state = useAuthState();
   const read = foldResource<
     typeof state,
-    Pick<MapsAccess, "loading" | "error" | "configured">
+    Pick<MapsAccess, "loading" | "error" | "configured" | "unavailable">
   >(state, {
-    loading: () => ({ loading: true, error: null, configured: false }),
+    loading: () => ({
+      loading: true,
+      error: null,
+      configured: false,
+      unavailable: null,
+    }),
+    // The Places key is in the computer's account store: no host without it
+    // has one, or a way to add one.
+    unavailable: (message) => ({
+      loading: false,
+      error: null,
+      configured: false,
+      unavailable: message,
+    }),
     // A failed read claims nothing: not configured (no Maps call is attempted)
     // and no blocker (the setup affordance would be a guess).
-    error: (error) => ({ loading: false, error, configured: false }),
+    error: (error) => ({
+      loading: false,
+      error,
+      configured: false,
+      unavailable: null,
+    }),
     ready: (data) => ({
       loading: false,
       error: null,
       configured: data.providers[GOOGLE_MAPS_PROVIDER_ID]?.connected ?? false,
+      unavailable: null,
     }),
   });
-  const { loading, error, configured } = read;
+  const { loading, error, configured, unavailable } = read;
   return {
     configured,
     ready: configured,
     loading,
     error,
-    refetch: state.refetch,
+    refetch: state.status === "unavailable" ? noRefetch : state.refetch,
     blocker:
-      !loading && error === null && !configured ? "not-configured" : null,
+      !loading && error === null && unavailable === null && !configured
+        ? "not-configured"
+        : null,
+    unavailable,
   };
 }
 
@@ -103,6 +134,9 @@ function useMapAccess(): MapsAccess {
   // and fails in the renderer's `gm_authFailure` instead.
   const config = useMapsBrowserConfig();
   const configured = config.kind === "set";
+  // A host without the computer draws with the key its page hands it, and
+  // cannot store one: with none, it says so rather than offering a set-up.
+  const writable = useMachineAvailability(setMapsBrowserConfig);
   return {
     configured,
     ready: configured,
@@ -110,6 +144,8 @@ function useMapAccess(): MapsAccess {
     error: config.kind === "error" ? config.error : null,
     refetch: config.kind === "error" ? config.refetch : noRefetch,
     blocker: config.kind === "unset" ? "no-browser-key" : null,
+    unavailable:
+      config.kind === "unset" && !writable.available ? writable.message : null,
   };
 }
 

@@ -117,6 +117,7 @@
     - `wouldCycle`
 - Cross-plugin:
   - Imported by:
+    - `apps/places/fixtures`
     - `apps/places/places-core`
     - `apps/places/places-map`
     - `apps/places/tag-manager`

@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { GeoMap } from "@plugins/map/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
+import { ExternalHosts } from "@plugins/framework/plugins/browser-server/web";
 import { googleMapConfig } from "../shared/config";
 import {
   LiveMapSetup,
@@ -25,6 +26,19 @@ export default {
       // the host never learns that the blocker is a key.
       AccessAction: MapsMapAccessAction,
       useReadiness: useGoogleMapReadiness,
+    }),
+    // Google's Maps JavaScript API loads its script, tiles, fonts and the
+    // vector map's styles from Google, keyed by the page's public browser key.
+    ExternalHosts.Declare({
+      hosts: [
+        "maps.googleapis.com",
+        "maps.gstatic.com",
+        "mapsresources-pa.googleapis.com",
+        "fonts.googleapis.com",
+        "fonts.gstatic.com",
+      ],
+      reason:
+        "Google's Maps JavaScript API: its script, tiles, fonts and map styles.",
     }),
     // The Live map setup's Map ID check draws its preview map here.
     LiveMapSetup.MapIdPreview({ match: "preview", component: MapIdPreview }),

@@ -80,6 +80,10 @@ in-realm `MessageChannel` standing in for the worker).
     - `framework/browser-server.attachFrameServing`
     - `framework/browser-server.browserServerTransport`
     - `framework/browser-server.FrameServing`
+    - `framework/browser-server.HostInputs`
+    - `framework/browser-server.HostInputSupply`
+    - `network/live.useLive`
+    - `network/live/live-state.foldResource`
     - `network/live/live-state.NotificationsProvider`
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`

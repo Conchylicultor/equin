@@ -27,7 +27,7 @@ gardens, which Google files under "Entertainment and Recreation", are `nature`
 
 ## Plugin reference
 
-- Description: Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, and the 'set up Google Maps' affordance the block renders while no API key is configured. Google Places provider for the /place block: adapts the Places API client (autocomplete + details) onto the place-provider registry, reading the API key through the Google Maps integration. Colours a place by the Table A heading of its type (a vendored copy of Google's place-type table), filing a place-google-unknown-type report when Google returns a type the copy lacks.
+- Description: Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, and the 'set up Google Maps' affordance the block renders while no API key is configured.
 - Web:
   - Contributes: `Place.Provider` "Google Maps"
   - Uses:
@@ -36,15 +36,8 @@ gardens, which Google files under "Entertainment and Recreation", are `nature`
     - `page/place.Place`
 - Server:
   - Contributes: `report-kind` "place-google-unknown-type"
-  - Uses:
-    - `integrations/google-maps.getPlacesClient`
-    - `integrations/google-maps/places-api.autocomplete`
-    - `integrations/google-maps/places-api.placeDetails`
-    - `page/place.definePlaceProvider`
-    - `reports.ReportKind`
-    - `reports.ReportRow`
-    - `reports/engine.recordReport`
-  - DB schema: `plugins/page/plugins/place/plugins/google/server/internal/table-a.ts`
+- Machine:
+  - Uses: `integrations/google-maps.getPlacesClient`
   - Register: `definePlaceProvider('google')`
 - Cross-plugin:
   - Imported by: `apps/places/page-overlay`

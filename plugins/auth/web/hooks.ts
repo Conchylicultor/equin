@@ -1,12 +1,18 @@
 import {
   mapResource,
   type ResourceResult,
+  type ResourceUnavailable,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { AuthAccountState, AuthStateValue } from "@plugins/auth/core";
 import { authState } from "@plugins/auth/core";
 
-export function useAuthState(): ResourceResult<AuthStateValue> {
+/**
+ * The shared auth state — `unavailable` on a host without the computer (the
+ * browser demo): accounts live on its central runtime.
+ */
+export function useAuthState():
+  ResourceResult<AuthStateValue> | ResourceUnavailable {
   return useLive(authState);
 }
 
@@ -20,7 +26,7 @@ export function useAuthState(): ResourceResult<AuthStateValue> {
  */
 export function useAccountStatus(
   providerId: string,
-): ResourceResult<AuthAccountState | null> {
+): ResourceResult<AuthAccountState | null> | ResourceUnavailable {
   return mapResource(
     useAuthState(),
     (state) => state.providers[providerId] ?? null,

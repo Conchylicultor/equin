@@ -5,7 +5,7 @@ import {
   setConfig,
   setConfigByPath,
 } from "@plugins/config_v2/server";
-import { getPlacesClient } from "@plugins/integrations/plugins/google-maps/server";
+import { getPlacesClient } from "@plugins/integrations/plugins/google-maps/machine";
 import { placeDetails } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
 import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { experimentalMarksConfig } from "@plugins/framework/plugins/cli/plugins/build/plugins/experimental-marks/core";

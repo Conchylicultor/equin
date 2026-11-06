@@ -37,6 +37,8 @@ export type GoogleSearchState =
       refetch: () => Promise<void>;
     }
   | { kind: "not-configured" }
+  /** Searching Google needs the computer, and this host has none (the demo). */
+  | { kind: "unavailable"; message: string }
   | {
       kind: "answer";
       /** The ladder's rung that answered (`PlaceSearchResult`). */
@@ -123,6 +125,8 @@ export function useGoogleSearch({
 
   return useMemo((): GoogleSearchState => {
     if (!asking) return { kind: "idle" };
+    if (search.status === "unavailable")
+      return { kind: "unavailable", message: search.message };
     if (budget.status === "error")
       return { kind: "error", error: budget.error, refetch: budget.refetch };
     if (search.status === "error" && held === null)

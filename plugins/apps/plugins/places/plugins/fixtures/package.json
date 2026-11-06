@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-places-fixtures",
+  "description": "Places fixtures: typed saved places and tags (PlacesFixture) and their writer through the app's real write paths, for demos and tests.",
+  "private": true,
+  "version": "0.0.1"
+}

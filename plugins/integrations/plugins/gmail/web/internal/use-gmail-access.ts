@@ -58,6 +58,14 @@ export function useGmailAccess(): GmailAccess {
       connected: false,
       scopesGranted: false,
     }),
+    // No account store on this host (no computer, e.g. a browser host): no
+    // account is connected here.
+    unavailable: () => ({
+      loading: false,
+      error: null,
+      connected: false,
+      scopesGranted: false,
+    }),
     ready: (account) => ({
       loading: false,
       error: null,
@@ -86,7 +94,10 @@ export function useGmailAccess(): GmailAccess {
     ready,
     loading,
     error,
-    refetch: status.refetch,
+    refetch: status.status === "unavailable" ? noRefetch : status.refetch,
     blocker,
   };
 }
+
+/** Nothing to retry: there is no account store to read here. */
+async function noRefetch(): Promise<void> {}

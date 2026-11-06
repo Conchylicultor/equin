@@ -792,6 +792,10 @@
       "name": "@equin/plugin-apps-places-ask",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/places/plugins/fixtures": {
+      "name": "@equin/plugin-apps-places-fixtures",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/places/plugins/mapstr-import": {
       "name": "@equin/plugin-apps-places-mapstr-import",
       "version": "0.0.1",
@@ -806,6 +810,10 @@
     },
     "plugins/apps/plugins/places/plugins/places-core": {
       "name": "@equin/plugin-apps-places-places-core",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/places/plugins/places-core/plugins/no-icon-picker": {
+      "name": "@equin/plugin-apps-places-places-core-no-icon-picker",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/places/plugins/places-map": {
@@ -4517,6 +4525,10 @@
       "name": "@equin/plugin-integrations-google-maps",
       "version": "0.0.1",
     },
+    "plugins/integrations/plugins/google-maps/plugins/page-config": {
+      "name": "@equin/plugin-integrations-google-maps-page-config",
+      "version": "0.0.1",
+    },
     "plugins/integrations/plugins/google-maps/plugins/places-api": {
       "name": "@equin/plugin-integrations-google-maps-places-api",
       "version": "0.0.1",
@@ -7713,6 +7725,8 @@
 
     "@equin/plugin-apps-places-ask": ["@equin/plugin-apps-places-ask@workspace:plugins/apps/plugins/places/plugins/ask"],
 
+    "@equin/plugin-apps-places-fixtures": ["@equin/plugin-apps-places-fixtures@workspace:plugins/apps/plugins/places/plugins/fixtures"],
+
     "@equin/plugin-apps-places-mapstr-import": ["@equin/plugin-apps-places-mapstr-import@workspace:plugins/apps/plugins/places/plugins/mapstr-import"],
 
     "@equin/plugin-apps-places-page-overlay": ["@equin/plugin-apps-places-page-overlay@workspace:plugins/apps/plugins/places/plugins/page-overlay"],
@@ -7720,6 +7734,8 @@
     "@equin/plugin-apps-places-place-details": ["@equin/plugin-apps-places-place-details@workspace:plugins/apps/plugins/places/plugins/place-details"],
 
     "@equin/plugin-apps-places-places-core": ["@equin/plugin-apps-places-places-core@workspace:plugins/apps/plugins/places/plugins/places-core"],
+
+    "@equin/plugin-apps-places-places-core-no-icon-picker": ["@equin/plugin-apps-places-places-core-no-icon-picker@workspace:plugins/apps/plugins/places/plugins/places-core/plugins/no-icon-picker"],
 
     "@equin/plugin-apps-places-places-map": ["@equin/plugin-apps-places-places-map@workspace:plugins/apps/plugins/places/plugins/places-map"],
 
@@ -9496,6 +9512,8 @@
     "@equin/plugin-integrations-gmail": ["@equin/plugin-integrations-gmail@workspace:plugins/integrations/plugins/gmail"],
 
     "@equin/plugin-integrations-google-maps": ["@equin/plugin-integrations-google-maps@workspace:plugins/integrations/plugins/google-maps"],
+
+    "@equin/plugin-integrations-google-maps-page-config": ["@equin/plugin-integrations-google-maps-page-config@workspace:plugins/integrations/plugins/google-maps/plugins/page-config"],
 
     "@equin/plugin-integrations-google-maps-places-api": ["@equin/plugin-integrations-google-maps-places-api@workspace:plugins/integrations/plugins/google-maps/plugins/places-api"],
 

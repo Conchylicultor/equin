@@ -28,6 +28,7 @@ import { writePageTree } from "@plugins/apps/plugins/pages/plugins/fixtures/serv
 import type { PrototypeFixtureData } from "@plugins/apps/plugins/prototypes/plugins/fixtures/core";
 import { writePrototypeFixture } from "@plugins/apps/plugins/prototypes/plugins/fixtures/server";
 import { writeSongFixtures } from "@plugins/apps/plugins/sonata/plugins/fixtures/server";
+import { writePlacesFixture } from "@plugins/apps/plugins/places/plugins/fixtures/server";
 import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server";
 import { eq } from "drizzle-orm";
 import {
@@ -41,6 +42,7 @@ import {
   DEMO_AGENTS,
   DEMO_PAGE_IDS,
   DEMO_PAGES,
+  DEMO_PLACES,
   DEMO_SONGS,
   DEMO_STORIES,
   demoAgentId,
@@ -84,7 +86,10 @@ import {
  *    inlined into the worker's bundle or read off disk by the boot test — then
  *    settled;
  * 6. the Sonata library's songs (`../core`'s), through Sonata's fixture writer
- *    (`writeSongFixtures`), beside the MIDI starters the MIDI source seeds.
+ *    (`writeSongFixtures`), beside the MIDI starters the MIDI source seeds;
+ * 7. Demo's Places map (`../core`'s), through Places' fixture writer
+ *    (`writePlacesFixture`): its tags through the tag tree's endpoints on the
+ *    host, its places through the app's one insert, icons given.
  */
 const PRACTICE_TIMER = demoStoryByKey("practice-timer");
 
@@ -198,6 +203,8 @@ export async function seed(
   await writePrototypeFixture(demoPrototypeFixture(prototypes));
   await settleJobQueue();
   await writeSongFixtures(DEMO_SONGS);
+  await settleJobQueue();
+  await writePlacesFixture(DEMO_PLACES, host);
   await settleJobQueue();
 }
 

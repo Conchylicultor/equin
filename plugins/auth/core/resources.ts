@@ -41,6 +41,12 @@ export const AuthStateValueSchema = z.object({
 }) satisfies z.ZodType<AuthStateValue>;
 
 /**
+ * Accounts live on the computer's central runtime: a host without the computer
+ * (the browser demo) has none to read or connect, and says so.
+ */
+export const AUTH_NEEDS_MACHINE = { feature: "Connecting an account" };
+
+/**
  * The shared auth state. `origin: "central"`: auth tokens live on the central
  * runtime, shared across all worktrees, so the browser subscribes via
  * `/ws/central-notifications` and only `network/live/central`'s `serveValue`
@@ -49,4 +55,5 @@ export const AuthStateValueSchema = z.object({
 export const authState = liveValue("auth-state", {
   schema: AuthStateValueSchema,
   origin: "central",
+  needsMachine: AUTH_NEEDS_MACHINE,
 });

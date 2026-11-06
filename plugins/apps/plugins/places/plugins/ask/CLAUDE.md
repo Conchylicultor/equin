@@ -23,29 +23,24 @@ conversation under the `places.ask` scratch profile, shown as an
 
 ## Plugin reference
 
-- Description: Ask Sonnet in the Places search bar, server half: the Places task category, the places.ask scratch profile (CLAUDE.md = the map's area, its span and the user's clock, and the method: web research first — WebSearch / WebFetch over blogs, guides, Reddit — then each candidate looked up on Maps; no shell, no exit_clean, so the run stays repliable), its places_search_text tool (Google Text Search biased to the launch's map area, on the search bar's downgrade ladder read server-side) and places_show_picks (the thread's result — each pick a why, an about and its sources — refusing any id the run's searches never returned and any pick without an about), and the conversations_ext_places_ask side-table of the Google candidates each run has seen, served lookup-only as places.ask.candidates (what a pick's card is drawn from).
+- Description: Ask Sonnet in the Places search bar, server half (portable): the Places task category and the conversations_ext_places_ask side-table of the Google candidates each run has seen, served lookup-only as places.ask.candidates (what a pick's card is drawn from).
 - Server:
   - Contributes:
     - `taskCategory` "places"
     - `resource.declare` "places.ask.candidates:rows"
   - Uses:
-    - `apps/places/places-core.searchPlaces`
-    - `conversations/workspace.defineScratchProfile`
-    - `conversations/workspace.ScratchProfile`
-    - `conversations/workspace.workspaceOfConversation`
-    - `database.db`
     - `infra/entity-extensions.defineExtension`
-    - `infra/mcp.Mcp`
-    - `integrations/google-maps/usage.mapsBudgetNow`
     - `network/live.serveCollection`
     - `tasks/task-category.TaskCategory`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/apps/plugins/places/plugins/ask/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_places_ask`)
+  - Resources: `places.ask.candidates:rows` (keyed, point)
+- Machine:
+  - Uses: `apps/places/places-core.searchPlaces`
   - Register:
     - `mcpTool('places_search_text')`
     - `mcpTool('places_show_picks')`
-  - Resources: `places.ask.candidates:rows` (keyed, point)
 - Core:
   - Uses:
     - `apps/places/places-core.PlaceBoundsSchema`

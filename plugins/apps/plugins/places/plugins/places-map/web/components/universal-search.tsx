@@ -281,6 +281,15 @@ function GoogleSection({
     </Line>
   );
 
+  if (google.kind === "unavailable") {
+    return (
+      <ControlPanel.Section label={label}>
+        <Text variant="caption" tone="muted">
+          {google.message}
+        </Text>
+      </ControlPanel.Section>
+    );
+  }
   if (saveNotConfigured || google.kind === "not-configured") {
     return (
       <ControlPanel.Section label={label}>

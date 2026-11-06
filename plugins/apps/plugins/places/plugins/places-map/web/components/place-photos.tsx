@@ -29,8 +29,9 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { PlacePhoto } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import {
   PHOTO_WIDTH,
-  placePhotoUrl,
+  placePhotoAsset,
 } from "@plugins/apps/plugins/places/plugins/place-details/core";
+import { usePhotoSrc, usePhotoSrcs } from "../internal/photo-src";
 import { mapsHref, type MapsLinkPlace } from "../internal/maps-links";
 
 const backIcon = symbol("arrow-back");
@@ -49,10 +50,14 @@ const TILE_FETCH_PX = 800;
  * with that copy's size (the viewer's fit and zoom read it), credited to its
  * author — Google's terms require it beside the photo.
  */
-function viewerImage(photo: PlacePhoto, n: number): ViewerImage {
-  const width = Math.min(photo.widthPx, PHOTO_WIDTH.max);
+function viewerWidth(photo: PlacePhoto): number {
+  return Math.min(photo.widthPx, PHOTO_WIDTH.max);
+}
+
+function viewerImage(photo: PlacePhoto, n: number, src: string): ViewerImage {
+  const width = viewerWidth(photo);
   return {
-    src: placePhotoUrl(photo.name, width),
+    src,
     name: photo.authors[0]?.name ?? `Photo ${n + 1}`,
     sourceLabel: "Google",
     width,
@@ -76,8 +81,14 @@ export function PhotoThumbs({
 }): ReactNode {
   const [open, setOpen] = useState<number | null>(null);
   const thumbs = useRef<(HTMLElement | null)[]>([]);
-  if (photos.length < 2) return null;
   const shown = photos.slice(1, 1 + THUMB_COUNT);
+  const thumbSrcs = usePhotoSrcs(
+    shown.map((p) => placePhotoAsset(p.name, PHOTO_WIDTH.min)),
+  );
+  const viewerSrcs = usePhotoSrcs(
+    photos.map((p) => placePhotoAsset(p.name, viewerWidth(p))),
+  );
+  if (photos.length < 2) return null;
   const more = photos.length - 1 - shown.length;
   return (
     <Stack gap="xs">
@@ -106,12 +117,14 @@ export function PhotoThumbs({
                 clipClasses({ axis: "both", fill: false }),
               )}
             >
-              <img
-                src={placePhotoUrl(p.name, PHOTO_WIDTH.min)}
-                alt=""
-                loading="lazy"
-                className="size-full object-cover"
-              />
+              {thumbSrcs === null ? null : (
+                <img
+                  src={thumbSrcs[j]}
+                  alt=""
+                  loading="lazy"
+                  className="size-full object-cover"
+                />
+              )}
               {veiled ? (
                 <Center
                   as="span"
@@ -127,9 +140,9 @@ export function PhotoThumbs({
           );
         })}
       </Grid>
-      {open === null ? null : (
+      {open === null || viewerSrcs === null ? null : (
         <ImageViewer
-          images={photos.map(viewerImage)}
+          images={photos.map((p, i) => viewerImage(p, i, viewerSrcs[i]!))}
           index={open}
           onIndexChange={setOpen}
           onClose={() => setOpen(null)}
@@ -249,6 +262,33 @@ export function PhotosGrid({
   );
 }
 
+/** A grid tile's photo, opening the viewer on a click. */
+function PhotoTileImage({
+  photo,
+  n,
+  src,
+  viewerSrc,
+}: {
+  photo: PlacePhoto;
+  n: number;
+  src: string;
+  viewerSrc: string;
+}): ReactNode {
+  const trigger = useImageViewerTrigger<HTMLImageElement>(
+    viewerImage(photo, n, viewerSrc),
+  );
+  const author = photo.authors[0];
+  return (
+    <img
+      src={src}
+      alt={author === undefined ? "" : `Photo by ${author.name}`}
+      loading={n < 4 ? "eager" : "lazy"}
+      className="size-full cursor-zoom-in object-cover"
+      {...trigger}
+    />
+  );
+}
+
 /** One photo of the panel's grid: its own shape, its author on hover. */
 function PhotoTile({
   photo,
@@ -259,8 +299,9 @@ function PhotoTile({
   n: number;
   owner: boolean;
 }): ReactNode {
-  const trigger = useImageViewerTrigger<HTMLImageElement>(
-    viewerImage(photo, n),
+  const tileSrc = usePhotoSrc(placePhotoAsset(photo.name, TILE_FETCH_PX));
+  const viewerSrc = usePhotoSrc(
+    placePhotoAsset(photo.name, viewerWidth(photo)),
   );
   const author = photo.authors[0];
   return (
@@ -274,13 +315,14 @@ function PhotoTile({
         )}
         style={{ aspectRatio: `${photo.widthPx} / ${photo.heightPx}` }}
       >
-        <img
-          src={placePhotoUrl(photo.name, TILE_FETCH_PX)}
-          alt={author === undefined ? "" : `Photo by ${author.name}`}
-          loading={n < 4 ? "eager" : "lazy"}
-          className="size-full cursor-zoom-in object-cover"
-          {...trigger}
-        />
+        {tileSrc === null || viewerSrc === null ? null : (
+          <PhotoTileImage
+            photo={photo}
+            n={n}
+            src={tileSrc}
+            viewerSrc={viewerSrc}
+          />
+        )}
         {owner ? (
           <Pin to="top-right" offset="sm" layer="float">
             <span className="rounded-full bg-white/90 px-xs text-caption text-black">

@@ -23,6 +23,7 @@ import {
 import {
   getEndpointErrorMessage,
   useFetchEndpoint,
+  useMachineAvailability,
 } from "@plugins/infra/plugins/endpoints/web";
 import {
   BASEMAP_STYLE_JSON,
@@ -51,6 +52,16 @@ const LOCAL_REFERRER = "http://*.localhost:9000/*";
  */
 export function LiveMapSetupBody() {
   const config = useMapsBrowserConfig();
+  // The key is written to the computer's host-global file: a host without
+  // the computer (the demo, which draws with its page's key) cannot set it.
+  const writable = useMachineAvailability(setMapsBrowserConfig);
+  if (!writable.available) {
+    return (
+      <Text variant="body" tone="muted">
+        {writable.message}
+      </Text>
+    );
+  }
   if (config.kind === "loading") {
     return <Loading variant="rows" count={4} />;
   }

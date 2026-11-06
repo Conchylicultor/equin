@@ -54,6 +54,10 @@
  *    Playwright's sight, so read through the networking tap — subscribed to
  *    nothing naming the demo's data (every demo id carries `demo`): a scoped
  *    read that rode the page's pipeline would;
+ *  - every request to another origin — the page's own or the worker's — went
+ *    to a host a scoped plugin declares (`externalHosts`, each plugin's
+ *    `ExternalHosts.Declare`: Google's map, the instruments' sample CDNs),
+ *    and none to an undeclared one;
  *  - no request for `/api/…` left for the page's origin during those steps,
  *    except the sanctioned telemetry routes (D3: logs, latency samples, slow
  *    ops, app usage, analytics, crash reports) and the page-wide icon sprites
@@ -73,6 +77,7 @@
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
+import { externalHosts } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
 import { CANVAS_FRAME_ATTR } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 import {
   closeLauncherGrid,
@@ -88,6 +93,7 @@ import {
   pathUrl,
   report,
   snap,
+  tapSharedWorkerRequests,
   waitFor,
   waitForNetworkIdle,
   waitForNotBusy,
@@ -112,6 +118,15 @@ const SANCTIONED: readonly RegExp[] = [
   /^\/api\/icons\/(sprite|symbols)\//,
   /^\/api\/health(\/ready)?$/,
 ];
+
+/**
+ * TEMPORARY, and the only page-server request outside telemetry: the page-wide
+ * icon sheet (`ui/icons/sprites`' host, page chrome at Core.Root) fetches a
+ * saved icon its resident sprites lack — Places' place and tag icons — from
+ * the page's server. Exactly this request; removed by task-1793979789-wtzxz9
+ * (a scope gets its own symbol source). Never widen it.
+ */
+const TEMPORARY_ICON_SYMBOLS_READ = "GET /api/resources/icons.runtime-symbols";
 
 /** The tables a leaked write would land in. */
 const TABLES = [
@@ -357,6 +372,8 @@ async function prerequisites(detail: Locator): Promise<string[]> {
 
 await withBrowser(async (h) => {
   const r = report("demo: nothing in the scope reaches the real server");
+  // Before the page exists: a worker's requests are seen from its attach on.
+  const workerRequests = await tapSharedWorkerRequests(h.browser);
   const { page, captured } = await h.session();
   await tapWorkerResponses(page);
   const socketTap = await tapSharedSocket(page);
@@ -376,11 +393,23 @@ await withBrowser(async (h) => {
   // From here on, every /api request the page itself sends is recorded.
   const leaked: string[] = [];
   const sanctioned: string[] = [];
+  /** Hosts of every request the page sent to another origin. */
+  const offOrigin: string[] = [];
+  const pageOrigin = new URL(page.url()).origin;
   const onRequest = (req: Request): void => {
     const url = new URL(req.url());
+    if (url.protocol !== "http:" && url.protocol !== "https:") return;
+    if (url.origin !== pageOrigin) {
+      offOrigin.push(url.host);
+      return;
+    }
     if (!url.pathname.startsWith("/api/")) return;
     const line = `${req.method()} ${url.pathname}`;
-    if (SANCTIONED.some((re) => re.test(url.pathname))) sanctioned.push(line);
+    if (
+      line === TEMPORARY_ICON_SYMBOLS_READ ||
+      SANCTIONED.some((re) => re.test(url.pathname))
+    )
+      sanctioned.push(line);
     else leaked.push(line);
   };
   page.on("request", onRequest);
@@ -844,7 +873,38 @@ await withBrowser(async (h) => {
       .map((f) => JSON.stringify(f)),
     [],
   );
+  // The one exception to "no request leaves the browser": a third-party host
+  // a scoped plugin declares — never an undeclared one, never the page's own.
+  const declared = new Set(externalHosts.map((x) => x.host));
+  const workerHosts = workerRequests.requests
+    .map((req) => new URL(req.url))
+    .filter(
+      (url) => url.origin !== pageOrigin && url.protocol.startsWith("http"),
+    )
+    .map((url) => url.host);
+  const reached = [...new Set([...offOrigin, ...workerHosts])].sort();
+  r.note(`third-party hosts reached: ${reached.join(", ") || "none"}`);
+  r.eq(
+    "every third-party host reached is declared (ExternalHosts.Declare)",
+    reached.filter((host) => !declared.has(host)),
+    [],
+  );
+  await workerRequests.release();
   r.eq("no page errors", captured.pageErrors, []);
-  r.eq("no console errors", captured.consoleErrors, []);
+  // Google's own console error when it cannot draw the vector map (headless
+  // Chromium has no WebGL for it): it falls back to the raster map. Counted
+  // apart — a real browser draws the vector map.
+  const rasterFallback =
+    /^Attempted to load a Vector Map, but failed\. Falling back to Raster/;
+  const fallback = captured.consoleErrors.filter((e) => rasterFallback.test(e));
+  if (fallback.length > 0)
+    r.note(
+      `Google fell back to the raster map ${fallback.length}× (no WebGL here)`,
+    );
+  r.eq(
+    "no console errors",
+    captured.consoleErrors.filter((e) => !rasterFallback.test(e)),
+    [],
+  );
   await r.finish();
 });

@@ -276,27 +276,41 @@ test("main's entry points stay exactly `**` — the exclusion lives on the base 
 });
 
 test("the demo profile is the agent manager and Pages minus machine-only surfaces, plus whole apps", () => {
-  // `agent-manager-demo` is what the in-page demo's browser host serves: it
-  // takes the full agent manager and the Pages app by `extends`, so a plugin
-  // either app gains reaches the demo with no edit here. Its own entries
-  // SUBTRACT machine-only surfaces, and the only thing they may add is a whole
-  // app (`apps.<app>.**`, e.g. Prototypes over its in-worker data-files root) —
-  // never a hand-picked plugin, which would drift from the app it belongs to —
-  // or keep a leaf under one of its own negatives (a capability id other code
-  // grants, kept while its feature leaves: the engine's opt-out).
-  // It selects nothing. Never served. Its home is the app gallery, as main's
-  // is: the launcher's grid lists every app but the home, so an agent-manager
-  // home would hide the agent manager from the demo's launcher.
+  // `agent-manager-demo` is what the in-page demo's browser host serves: the
+  // full agent manager — `agent-manager`'s own entries, extends and selection,
+  // but for its adapters into Places, since the demo ships Places (an
+  // inherited negative could not be contradicted) — and the Pages app by
+  // `extends`, so a plugin either app gains reaches the demo with no edit
+  // here. Its own entries SUBTRACT machine-only surfaces, and the only thing
+  // they may add is a whole app (`apps.<app>.**`, e.g. Prototypes over its
+  // in-worker data-files root) — never a hand-picked plugin, which would drift
+  // from the app it belongs to — or keep a leaf under one of its own negatives
+  // (a capability id other code grants, kept while its feature leaves: the
+  // engine's opt-out). It selects only what the agent manager does and the
+  // map's Google renderer. Never served. Its home is the app gallery, as
+  // main's is: the launcher's grid lists every app but the home, so an
+  // agent-manager home would hide the agent manager from the demo's launcher.
   const demo = byName("agent-manager-demo");
+  const agentManager = byName("agent-manager");
   expect(demo.category).toBe("profile");
-  expect(demo.extends).toEqual(["agent-manager", "pages"]);
+  expect(demo.extends).toEqual([...agentManager.extends, "pages"]);
   expect(demo.entryPoints).not.toContain("!apps.pages.**");
-  expect(demo.selectedContributors).toEqual([]);
-  expect(demo.entryPoints.some((e) => e.startsWith("!"))).toBe(true);
-  const negatedBranches = demo.entryPoints
+  expect(demo.selectedContributors).toEqual([
+    ...agentManager.selectedContributors,
+    "map.google",
+  ]);
+  // The agent manager's entries, all but its adapters into Places.
+  expect(
+    agentManager.entryPoints.filter((e) => !demo.entryPoints.includes(e)),
+  ).toEqual(["!page.place.**", "!page.map.**", "!primitives.data-view.map.**"]);
+  const own = demo.entryPoints.filter(
+    (e) => !agentManager.entryPoints.includes(e),
+  );
+  expect(own.some((e) => e.startsWith("!"))).toBe(true);
+  const negatedBranches = own
     .filter((e) => e.startsWith("!") && e.endsWith(".**"))
     .map((e) => e.slice(1, -".**".length));
-  for (const e of demo.entryPoints.filter((e) => !e.startsWith("!"))) {
+  for (const e of own.filter((e) => !e.startsWith("!"))) {
     if (/^apps\.[^.]+\.\*\*$/.test(e)) continue;
     expect(negatedBranches.some((b) => e.startsWith(`${b}.`))).toBe(true);
   }

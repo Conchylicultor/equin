@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { AuthIdentitySchema, AuthStateValueSchema } from "./resources";
+import {
+  AUTH_NEEDS_MACHINE,
+  AuthIdentitySchema,
+  AuthStateValueSchema,
+} from "./resources";
 
 export const DisconnectBodySchema = z.object({
   accountId: z.string().optional(),
@@ -64,6 +68,7 @@ export const oauthStart = defineEndpoint({
     origin: z.string(),
     scopes: z.string().optional(),
   }),
+  needsMachine: AUTH_NEEDS_MACHINE,
 });
 
 /**
@@ -81,6 +86,7 @@ export const oauthCallback = defineEndpoint({
 export const disconnect = defineEndpoint({
   route: "POST /api/auth/disconnect/:provider",
   body: DisconnectBodySchema,
+  needsMachine: AUTH_NEEDS_MACHINE,
 });
 
 export const setApiKey = defineEndpoint({
@@ -93,6 +99,7 @@ export const signIn = defineEndpoint({
   route: "POST /api/auth/sign-in/:provider",
   body: SignInBodySchema,
   response: z.object({ ok: z.literal(true), identity: AuthIdentitySchema }),
+  needsMachine: AUTH_NEEDS_MACHINE,
 });
 
 export const getAuthState = defineEndpoint({

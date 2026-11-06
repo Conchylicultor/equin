@@ -4,7 +4,8 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { placeThumbnailUrl } from "@plugins/apps/plugins/places/plugins/place-details/core";
+import { placeThumbnailAsset } from "@plugins/apps/plugins/places/plugins/place-details/core";
+import { usePhotoSrc } from "../internal/photo-src";
 import { useState, type ReactNode } from "react";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -65,7 +66,8 @@ export function PlacePhotoWash({
   iconClassName: ClassName;
   children?: ReactNode;
 }) {
-  // 404 (no photo) or 503 (Maps not set up): the wash is the picture.
+  // 404 (no photo) or 503 (Maps not set up), or no photo here at all (a host
+  // without the computer): the wash is the picture.
   const [noPhoto, setNoPhoto] = useState(false);
   const background = washBackground(visual);
   return (
@@ -77,19 +79,37 @@ export function PlacePhotoWash({
         style={{ color: washInk(visual.mainColor) }}
       />
       {googlePlaceId !== null && !noPhoto ? (
-        <Layer decorative>
-          <img
-            src={placeThumbnailUrl(googlePlaceId)}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="size-full object-cover"
-            onError={() => setNoPhoto(true)}
-          />
-        </Layer>
+        <PlaceThumbnail
+          googlePlaceId={googlePlaceId}
+          onError={() => setNoPhoto(true)}
+        />
       ) : null}
       {children}
     </Center>
+  );
+}
+
+/** Google's first photo of a place, once it is loadable here (else the wash shows). */
+function PlaceThumbnail({
+  googlePlaceId,
+  onError,
+}: {
+  googlePlaceId: string;
+  onError: () => void;
+}) {
+  const src = usePhotoSrc(placeThumbnailAsset(googlePlaceId));
+  if (src === null) return null;
+  return (
+    <Layer decorative>
+      <img
+        src={src}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        className="size-full object-cover"
+        onError={onError}
+      />
+    </Layer>
   );
 }
 

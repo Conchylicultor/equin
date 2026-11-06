@@ -126,11 +126,11 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `Auth.ScopeRequirement` ← `integrations.gmail`
     - `accountsPane.Actions` ← `primitives.pane`
     - `accountPane.Actions` ← `primitives.pane`
-  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints` ×6
+    - `network/live/live-state` ×6
     - `primitives/pane` ×6
     - `primitives/setup-steps` ×6
-    - `network/live/live-state` ×5
     - `primitives/collapsible` ×4
     - `primitives/css/ui-kit` ×3
     - `primitives/data-view` ×3
@@ -180,6 +180,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 - Central:
   - Uses:
     - `infra/background/timer.defineTimer`
+    - `infra/endpoints.implementCentral`
     - `infra/secrets.getSecret`
     - `infra/secrets.ready`
     - `infra/secrets.SecretsKeychainLockedError`

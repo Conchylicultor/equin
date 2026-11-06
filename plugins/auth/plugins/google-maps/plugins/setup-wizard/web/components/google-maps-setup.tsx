@@ -52,6 +52,8 @@ export function GoogleMapsSetup() {
   const connected = foldResource(status, {
     loading: () => false,
     error: () => false,
+    // No account store on this host (no computer): nothing is stored.
+    unavailable: () => false,
     ready: (account) => account?.connected ?? false,
   });
 

@@ -94,6 +94,7 @@ import {
   PRACTICE_TIMER_PAGE_WORK,
   DEMO_AGENTS,
   DEMO_PAGE_IDS,
+  DEMO_PLACES,
   DEMO_SONGS,
   DEMO_STORIES,
   demoAgentId,
@@ -1163,5 +1164,64 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     const res = await request("POST", "/api/sonata/midi-folders/recheck");
     expect(res.status).toBe(409);
     expect(await res.json()).toMatchObject({ reason: "unsupported" });
+  });
+
+  // ── Places: the map's places and tags seeded, Google's half refused ───────
+  test("the map holds the demo's places, on the starter tree plus Demo's tags", async () => {
+    const places = await db.execute<{
+      id: string;
+      name: string;
+      icon: string | null;
+      tags: string[];
+    }>(sql`SELECT id, name, icon, tags FROM places ORDER BY id`);
+    expect(places.rows.map((r) => r.id)).toEqual(
+      DEMO_PLACES.places.map((p) => p.id),
+    );
+    for (const place of DEMO_PLACES.places) {
+      const row = places.rows.find((r) => r.id === place.id)!;
+      expect(row.name).toBe(place.place.name);
+      expect(row.icon).toBe(place.icon);
+      expect(row.tags.length).toBe(place.tags.length);
+    }
+    const tags = await db.execute<{
+      id: string;
+      name: string;
+      parent_id: string | null;
+      color: string | null;
+      role: string | null;
+    }>(sql`SELECT id, name, parent_id, color, role FROM place_tags`);
+    const trips = tags.rows.find((t) => t.name === "Trips")!;
+    expect(trips.color).toBe("#0ea5e9");
+    const lisbon = tags.rows.find((t) => t.name === "Lisbon")!;
+    expect(lisbon.parent_id).toBe(trips.id);
+    // The starter tree is there too, its role tags included.
+    expect(
+      tags.rows
+        .filter((t) => t.role !== null)
+        .map((t) => t.role)
+        .sort(),
+    ).toEqual(["been", "want"]);
+    // Every place is on Demo's trip.
+    expect(places.rows.every((r) => r.tags.includes(lisbon.id))).toBe(true);
+  });
+
+  test("the map's browser key comes from the page: with no page, it reads unset", async () => {
+    expect(await loadResourceByKey("google-maps.browser-config", {})).toEqual({
+      kind: "unset",
+    });
+  });
+
+  test("Google's half of Places needs the computer: declared needsMachine, refused here", async () => {
+    for (const [method, path] of [
+      ["POST", "/api/places/places"],
+      ["POST", "/api/places/places/place-1792900000-demo01/icon"],
+      ["GET", "/api/places/photo?name=places%2Fx%2Fphotos%2Fy"],
+      ["GET", "/api/places/thumbnail?id=ChIJ"],
+      ["POST", "/api/google-maps/browser-config"],
+    ] as const) {
+      const res = await request(method, path);
+      expect(res.status).toBe(409);
+      expect(await res.json()).toMatchObject({ reason: "unsupported" });
+    }
   });
 });

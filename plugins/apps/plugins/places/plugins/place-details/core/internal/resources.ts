@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { PLACE_DETAILS_NEEDS_MACHINE } from "./needs-machine";
 import {
   PlaceRichDetailsSchema,
   RICH_DETAILS_TIERS,
@@ -51,4 +52,5 @@ export const placeDetails = liveValue("places.details", {
   schema: PlaceDetailsResultSchema,
   query: PlaceDetailsQuerySchema,
   load: "on-demand",
+  needsMachine: PLACE_DETAILS_NEEDS_MACHINE,
 });

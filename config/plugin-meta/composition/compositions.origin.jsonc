@@ -1,4 +1,4 @@
-// @hash 7caffe1c2a35
+// @hash 262fb19356bf
 {
   "manifests": [
     {
@@ -66,15 +66,12 @@
         "!active-data.event-source.**",
         "!active-data.prototype.**",
         "page.**",
-        "!page.place.**",
-        "!page.map.**",
         "ui.tokens.rich-text-palette",
         "code-explorer.**",
         "primitives.file-viewer.**",
         "primitives.prompt-editor.**",
         "primitives.syntax-highlight.**",
         "primitives.data-view.**",
-        "!primitives.data-view.map.**",
         "reorder.**",
         "apps-core.**",
         "shell.**",
@@ -84,7 +81,10 @@
         "ui.sidebar-framing.**",
         "ui.tab-bar.**",
         "ui.tree-disclosure.**",
-        "ui.tweakcn.**"
+        "ui.tweakcn.**",
+        "!page.place.**",
+        "!page.map.**",
+        "!primitives.data-view.map.**"
       ],
       "selectedContributors": [
         "ui.theme-toggle"
@@ -114,15 +114,12 @@
         "!active-data.event-source.**",
         "!active-data.prototype.**",
         "page.**",
-        "!page.place.**",
-        "!page.map.**",
         "ui.tokens.rich-text-palette",
         "code-explorer.**",
         "primitives.file-viewer.**",
         "primitives.prompt-editor.**",
         "primitives.syntax-highlight.**",
         "primitives.data-view.**",
-        "!primitives.data-view.map.**",
         "reorder.**",
         "apps-core.**",
         "shell.**",
@@ -132,7 +129,10 @@
         "ui.sidebar-framing.**",
         "ui.tab-bar.**",
         "ui.tree-disclosure.**",
-        "ui.tweakcn.**"
+        "ui.tweakcn.**",
+        "!page.place.**",
+        "!page.map.**",
+        "!primitives.data-view.map.**"
       ],
       "selectedContributors": [
         "ui.theme-toggle"
@@ -152,6 +152,31 @@
         "browser"
       ],
       "entryPoints": [
+        "apps.agent-manager.**",
+        "conversations.**",
+        "tasks.**",
+        "fields.**",
+        "active-data.**",
+        "!active-data.song.**",
+        "!active-data.event-source.**",
+        "!active-data.prototype.**",
+        "page.**",
+        "ui.tokens.rich-text-palette",
+        "code-explorer.**",
+        "primitives.file-viewer.**",
+        "primitives.prompt-editor.**",
+        "primitives.syntax-highlight.**",
+        "primitives.data-view.**",
+        "reorder.**",
+        "apps-core.**",
+        "shell.**",
+        "fullscreen.**",
+        "ui.breadcrumb-separator.**",
+        "ui.segmented-progress-bar.**",
+        "ui.sidebar-framing.**",
+        "ui.tab-bar.**",
+        "ui.tree-disclosure.**",
+        "ui.tweakcn.**",
         "!conversations.conversation-view.push-and-exit.**",
         "!tasks.automations.**",
         "!tasks.reports-investigation.**",
@@ -171,14 +196,19 @@
         "apps.desktop.**",
         "!apps.desktop.wallpaper.openverse.**",
         "apps.keyboard-party.**",
+        "apps.places.**",
         "!menu-bar.**",
         "!conversations.menu-bar-status.**",
         "!tasks.menu-bar-task.**",
         "!shell.notifications.native.**"
       ],
-      "selectedContributors": [],
+      "selectedContributors": [
+        "ui.theme-toggle",
+        "map.google"
+      ],
       "extends": [
-        "agent-manager",
+        "self-improvement",
+        "served-baseline",
         "pages"
       ],
       "excludes": [],

@@ -67,15 +67,21 @@ export const seedPlaceTagsWarmup = defineWarmup({
   description:
     "Creates the starter tag tree (Want to go, Been, Food, Museum, …) when no place tag exists yet.",
   scope: "worktree",
-  run: async () => {
-    await db.transaction(async (tx) => {
-      // Serializes racing seeders: the second waits, then sees the first's rows.
-      await tx.execute(
-        sql`LOCK TABLE ${_placeTags} IN SHARE ROW EXCLUSIVE MODE`,
-      );
-      const [row] = await tx.select({ n: count() }).from(_placeTags);
-      if ((row?.n ?? 0) > 0) return;
-      await tx.insert(_placeTags).values(seedTagTree().rows);
-    });
-  },
+  run: () => seedStarterPlaceTags(),
 });
+
+/**
+ * The starter tag tree, written when no place tag exists yet (what the
+ * warm-up runs, and a fixture writer awaits before it tags anything). The
+ * check and the insert run under a table lock, so two racing callers cannot
+ * seed two trees.
+ */
+export async function seedStarterPlaceTags(): Promise<void> {
+  await db.transaction(async (tx) => {
+    // Serializes racing seeders: the second waits, then sees the first's rows.
+    await tx.execute(sql`LOCK TABLE ${_placeTags} IN SHARE ROW EXCLUSIVE MODE`);
+    const [row] = await tx.select({ n: count() }).from(_placeTags);
+    if ((row?.n ?? 0) > 0) return;
+    await tx.insert(_placeTags).values(seedTagTree().rows);
+  });
+}

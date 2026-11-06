@@ -1,9 +1,5 @@
-import {
-  serveCollection,
-  serveValue,
-} from "@plugins/network/plugins/live/server";
-import { places, placeSearch, placeTags } from "../../core";
-import { searchPlaces } from "./places-repo";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import { places, placeTags } from "../../core";
 import { _places, _placeTags } from "./tables";
 
 // Both collections are their tables whole (`all` sets): every field is a
@@ -14,17 +10,4 @@ export const placesServed = serveCollection(places, { from: _places });
 
 export const placeTagsServed = serveCollection(placeTags, {
   from: _placeTags,
-});
-
-// Each question is one Google search call; nothing upstream signals a change,
-// so the value is on-demand and re-asked only by a new question.
-export const placeSearchServed = serveValue(placeSearch, {
-  source: "external",
-  changes: {
-    fixed: {
-      reason:
-        "a Google Places search answer for one query: a third-party answer with no change signal",
-    },
-  },
-  loader: (query) => searchPlaces(query),
 });

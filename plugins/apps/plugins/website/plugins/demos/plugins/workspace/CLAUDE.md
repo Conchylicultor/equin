@@ -1,7 +1,7 @@
 # workspace
 
 The workspace demo — the website's live demo: the Agent Manager, Pages,
-Prototypes, Sonata and Keyboard Party on Demo's own equin, the story being what equin is for:
+Prototypes, Sonata, Keyboard Party and Places on Demo's own equin, the story being what equin is for:
 a person shaping their apps with agents. Its
 scenario is `workspaceDemo` (`core`) — the app, the
 route it opens at (`/c/conv-demo-practice-timer`) and its browser host
@@ -44,10 +44,14 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   practice-timer agent wrote (`PRACTICE_TIMER_PAGE_WORK`), the transcripts, the
   prototypes (`data/`, a Prototypes fixture) and their tags and pin
   (`core/internal/prototypes.ts`), the Sonata songs (`core/internal/songs.ts`,
-  a Sonata fixture). How each app's data is written is that
+  a Sonata fixture), Demo's Places map — a trip to Lisbon, 15 places on the
+  starter tag tree plus Demo's "Trips › Lisbon" (`core/internal/places.ts`, a
+  Places fixture). How each app's data is written is that
   app's fixture writer: `apps/pages/fixtures`' `writePageTree`,
-  `apps/prototypes/fixtures`' `writePrototypeFixture` and
-  `apps/sonata/fixtures`' `writeSongFixtures`. Design:
+  `apps/prototypes/fixtures`' `writePrototypeFixture`,
+  `apps/sonata/fixtures`' `writeSongFixtures` and `apps/places/fixtures`'
+  `writePlacesFixture` (its tags through the tag tree's endpoints on the
+  seed's `host`). Design:
   `research/2026-10-28-global-per-app-demo-seeds-v2.md`.
 - **The prototypes and the boot test read `data/` off disk** (`bin/bun-host.ts`):
   the seed runs in Bun only, so nothing inlines the folder into the worker.
@@ -93,9 +97,10 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   arrangement, and a `set-field` write round-trips.
 - **The composition is `agent-manager-demo`** (`bin/browser-host.composition.ts`;
   its row in `plugin-meta/composition/core/config.ts`): the real
-  `agent-manager` profile plus the `pages` app (`extends: ["agent-manager",
-  "pages"]` — the Origin section, page chips, page artifacts and tool
-  renderers, and the Pages app itself) minus what means nothing without the
+  `agent-manager` profile's entries, extends and selection — but for its
+  adapters into Places, since the demo ships Places — plus the `pages` app
+  (the Origin section, page chips, page artifacts and tool renderers, and the
+  Pages app itself) minus what means nothing without the
   computer (push-and-exit, the automations, the file explorer), plus Prototypes
   (`apps.prototypes.**`, a positive: its tree is a `data-files` root, memory
   here — `research/2026-10-24-global-data-files-host-service.md`), Home
@@ -113,7 +118,15 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   registers the party's settings, which the worker's config serves at their
   product defaults, and the toy loads nothing — emoji pictures, sounds
   synthesized with WebAudio, the browser's own `speechSynthesis`;
-  `apps/demo`'s `keyboard-party-in-demo.ts`). Sonata's samples load
+  `apps/demo`'s `keyboard-party-in-demo.ts`).
+  Places (`apps.places.**`, with `map.google` selected) draws Google's map
+  with the browser key the page's chrome hands the worker (a page input,
+  `google-maps/page-config`; never in the snapshot); searching, saving,
+  Google's details and photos, the icon pick and Ask need the computer and say
+  so (`research/2026-11-06-global-places-in-browser-demo.md`). The third-party
+  hosts the demo may reach are the scoped plugins' `ExternalHosts.Declare`s
+  (`externalHosts`, exported from `core`), which `apps/demo`'s e2e hold every
+  off-origin request to. Sonata's samples load
   through the worker's asset mirror (`infra/asset-mirror`, portable), fetched
   from the instruments' public CDNs once per browser profile (the mirror's
   cache is the host's `data-files` store, kept in the demo's IndexedDB;
@@ -234,6 +247,7 @@ data and seed; no app folder changes:
     - `DEMO_AGENTS`
     - `DEMO_PAGE_IDS`
     - `DEMO_PAGES`
+    - `DEMO_PLACES`
     - `DEMO_SONG_ID`
     - `DEMO_SONGS`
     - `DEMO_STORIES`
@@ -247,11 +261,14 @@ data and seed; no app folder changes:
     - `demoTaskId`
     - `demoTranscriptJsonl`
     - `demoWorktreePath`
+    - `externalHosts`
     - `PRACTICE_TIMER_PAGE_WORK`
     - `workspaceDemo`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: `apps/demo/shell`
+  - Imported by:
+    - `apps/demo`
+    - `apps/demo/shell`
 - Structure:
   - Non-standard folders: `data/`
 

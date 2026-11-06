@@ -658,24 +658,24 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `validatePersistedValue`
     - `withNotifyBatch`
 - Cross-plugin:
-  - Imported by: 100 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 102 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×24
     - `debug` ×13
     - `conversations` ×10
     - `tasks` ×10
     - `database` ×9
-    - `apps` ×5
+    - `apps` ×6
     - `network` ×5
     - `reports` ×4
     - `page` ×3
     - `primitives` ×3
     - `build` ×2
+    - `integrations` ×2
     - `backup`
     - `config_v2`
     - `fields/server-capabilities`
     - `framework/cli/deploy`
     - `ids`
-    - `integrations/youtube/song-videos`
     - `packages/source-digest`
     - `plugin-meta/plugin-tree`
     - `release`

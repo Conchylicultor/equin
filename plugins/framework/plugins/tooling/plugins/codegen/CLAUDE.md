@@ -105,7 +105,10 @@ The page side comes from the same derivation: `core/browser-host.generated.ts`
 and the worker's `start`), the scope `<PluginScope>` renders the host's subtree
 in. The scope is an upper bound: a page whose own composition lacks a scoped
 plugin renders less, so nothing ties it to the compositions shipping the host.
-It is a registry-phase output (barrel-free, written before any barrel import),
+Beside it: `hostReads` (below) and `externalHosts` — every
+`ExternalHosts.Declare` of the scoped web barrels, one entry per host (host,
+plugin, reason), read as text (`parseExternalHostsDeclarations`; an unreadable
+or malformed host throws). It is a registry-phase output (barrel-free, written before any barrel import),
 which `pre-barrel-manifests-complete` allows a barrel to reach.
 
 ### The coverage guard (`core/browser-host-coverage.ts`)

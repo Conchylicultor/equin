@@ -1780,7 +1780,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValueOn`
     - `sliceRange`
 - Cross-plugin:
-  - Imported by: 337 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 338 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×86
     - `conversations` ×70
     - `debug` ×33
@@ -1807,6 +1807,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `release` ×2
     - `search` ×2
     - `fields/secret/config`
+    - `framework/browser-server/demo/scope`
     - `network/live/optimistic-mutation`
     - `runs`
     - `screenshot`

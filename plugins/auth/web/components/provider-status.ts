@@ -1,5 +1,6 @@
 import {
   mapResource,
+  readyResource,
   type ResourceResult,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { AuthAccountState } from "@plugins/auth/core";
@@ -15,7 +16,12 @@ import type { IntegrationStatus } from "../slots";
 export function useProviderStatus(
   providerId: string,
 ): ResourceResult<IntegrationStatus> {
-  return mapResource(useAuthState(), (state) => {
+  const authState = useAuthState();
+  // A host without the computer has no account store: a settled answer.
+  if (authState.status === "unavailable") {
+    return readyResource({ tone: "muted", label: "Not available here" });
+  }
+  return mapResource(authState, (state) => {
     const status = state.providers[providerId];
     return status
       ? accountStatus(status)

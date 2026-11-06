@@ -58,6 +58,7 @@ import {
   providedServiceNames,
   type HostServiceDecl,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { parseExternalHostsDeclarations } from "./external-hosts";
 import {
   serverPortabilityOf,
   type ServerPortability,
@@ -220,6 +221,42 @@ export interface DerivedBrowserHostGraph extends InferredBrowserHostGraph {
    * the boot test holds the booted graph to it. Sorted by key.
    */
   reads: HostRead[];
+  /**
+   * The third-party hosts the scoped page may reach — each declared by a
+   * scoped web plugin's `ExternalHosts.Declare` — emitted as the page side's
+   * `externalHosts`, which the demo's no-leak e2e holds every off-origin
+   * request to. Sorted by host, then plugin.
+   */
+  externalHosts: HostExternalHost[];
+}
+
+/** One declared third-party host, as the generated `externalHosts` lists it. */
+export interface HostExternalHost {
+  host: string;
+  plugin: string;
+  reason: string;
+}
+
+/** Every `ExternalHosts.Declare` of the scoped web barrels, one entry per host. */
+async function scopedExternalHosts(
+  repo: RepoFiles,
+  webPlugins: readonly PluginId[],
+): Promise<HostExternalHost[]> {
+  const out: HostExternalHost[] = [];
+  for (const id of webPlugins) {
+    const barrel = `plugins/${asFsPath(id)}/web/index.ts`;
+    const text = await repo.read(barrel);
+    if (text === null) throw new Error(`cannot read ${barrel}`);
+    if (!text.includes("ExternalHosts")) continue;
+    for (const decl of parseExternalHostsDeclarations(text)) {
+      for (const host of decl.hosts) {
+        out.push({ host, plugin: id, reason: decl.reason });
+      }
+    }
+  }
+  return out.sort(
+    (a, b) => a.host.localeCompare(b.host) || a.plugin.localeCompare(b.plugin),
+  );
 }
 
 const pluginOfBarrel = (barrel: string): string =>
@@ -420,7 +457,11 @@ async function deriveUncached(
     blockers: async (barrel) =>
       serverBarrelBlockers(await serverPortabilityOf(repo), barrel),
   });
-  return { ...graph, reads };
+  return {
+    ...graph,
+    reads,
+    externalHosts: await scopedExternalHosts(repo, graph.webPlugins),
+  };
 }
 
 /**
@@ -588,9 +629,10 @@ export function renderBrowserHostScope(
     home,
     webPlugins,
     reads,
+    externalHosts,
   }: Pick<
     DerivedBrowserHostGraph,
-    "composition" | "home" | "webPlugins" | "reads"
+    "composition" | "home" | "webPlugins" | "reads" | "externalHosts"
   >,
 ): string {
   return [
@@ -625,6 +667,22 @@ export function renderBrowserHostScope(
     ...reads.map(
       (r) =>
         `  { key: ${JSON.stringify(r.key)}, needsMachine: ${r.needsMachine} },`,
+    ),
+    "];",
+    "",
+    "/**",
+    " * The third-party hosts the scoped page may reach, each declared by the",
+    " * plugin that needs it (`ExternalHosts.Declare`): the one exception to",
+    ' * "no request leaves the browser". The page\'s own server is never one.',
+    " */",
+    "export const externalHosts: readonly {",
+    "  readonly host: string;",
+    "  readonly plugin: string;",
+    "  readonly reason: string;",
+    "}[] = [",
+    ...externalHosts.map(
+      (h) =>
+        `  { host: ${JSON.stringify(h.host)}, plugin: ${JSON.stringify(h.plugin)}, reason: ${JSON.stringify(h.reason)} },`,
     ),
     "];",
     "",
@@ -722,6 +780,7 @@ function ownOutputs(host: BrowserHostDecl): ReadonlyMap<string, string> {
         home: null,
         webPlugins: [],
         reads: [],
+        externalHosts: [],
       }),
     ],
   ]);

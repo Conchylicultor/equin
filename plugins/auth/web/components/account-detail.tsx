@@ -91,6 +91,13 @@ function ProviderAccount({ provider }: { provider: AuthProviderContribution }) {
   let body: ReactNode;
   if (authState.status === "loading") {
     body = <Loading variant="rows" count={3} />;
+  } else if (authState.status === "unavailable") {
+    // Accounts live on the computer's central runtime: none on this host.
+    body = (
+      <Text as="p" variant="body" tone="muted">
+        {authState.message}
+      </Text>
+    );
   } else if (authState.status === "error") {
     body = (
       <ResourceErrorInline

@@ -118,6 +118,36 @@ Tests cannot start a real Web Worker:
   server (or reporting its failure, as a real worker whose graph fails to
   boot). Both ports are `.start()`ed — `addEventListener` alone does not.
 
+## Page inputs — a value the page hands its host (`pageInput`, `HostInputs.Supply`)
+
+A host's own code never reads the page's server. A fact that is the PAGE's —
+the Maps browser key the real app already sends that page — reaches the host
+from the page's chrome instead, declared by the plugin owning the value:
+
+- `web/`'s `HostInputs.Supply({ value: liveValue })` — "a page may hand this
+  value of its own server to a browser host" (`google-maps` supplies
+  `google-maps.browser-config`).
+- `demo/scope`'s `DemoScope` (page chrome, the page's registry and transport)
+  reads every supply with `useLive` and posts it over the port:
+  `portBrowserServer(end, { inputs })` lists the keys at connect (`inputs`
+  frame), `PortServer.supply(key, input)` sends each value (`input` frame,
+  `{ kind: "value" | "failed" }`).
+- In the worker, `core`'s `pageInput(key)` reads it: `absent` when no
+  connected page declares the key, else the newest value (waiting for the
+  first); `watch(changed)` hears each new one. Memory only — never in the
+  host's storage, so never in a build-time snapshot. A host provider serves it
+  (`google-maps/page-config`).
+
+## Third-party hosts — `ExternalHosts.Declare`
+
+`web/`'s `ExternalHosts.Declare({ hosts, reason })`: the hosts a plugin's code
+loads from in the page or the worker (Google's map, the instruments' sample
+CDNs) — the one exception to "no request leaves the browser"; the page's own
+server is never one. Literal hosts, read statically by the browser-host
+codegen (codegen's `parseExternalHostsDeclarations` over the scoped web
+barrels) into each host's `externalHosts` (`core/browser-host.generated.ts`),
+which the demo's no-leak e2e holds every off-origin request to.
+
 ## web/: `browserServerTransport(server)`
 
 A `Transport` (`primitives/networking`). Make ONE per server: the scoped
@@ -195,20 +225,38 @@ reaching the server, detach on unmount).
 
 ## Plugin reference
 
-- Description: A server that runs in the page's realm or across a worker's port — a third host of the unified live API (core: the BrowserServer interface; runtimeBrowserServer over a resource runtime booted in this realm; serveOverPort / portBrowserServer carrying one across a MessageChannel or a Web Worker). Web: browserServerTransport(server, { telemetry, frameBase }), the Transport a <TransportProvider> points a subtree at — in-memory sockets to its runtime, requests through its router, an inert central socket; attachFrameServing(worker, serviceWorkerUrl) serves the server's frame documents by URL through the host's frame-serving Service Worker (frames-sw.ts), giving the transport its frameBase.
+- Description: A server that runs in the page's realm or across a worker's port — a third host of the unified live API (core: the BrowserServer interface; runtimeBrowserServer over a resource runtime booted in this realm; serveOverPort / portBrowserServer carrying one across a MessageChannel or a Web Worker). Web: browserServerTransport(server, { telemetry, frameBase }), the Transport a <TransportProvider> points a subtree at — in-memory sockets to its runtime, requests through its router, an inert central socket; attachFrameServing(worker, serviceWorkerUrl) serves the server's frame documents by URL through the host's frame-serving Service Worker (frames-sw.ts), giving the transport its frameBase. HostInputs.Supply: a plugin declares a value of the page's own server the page may hand a browser host (a page input). ExternalHosts.Declare: the third-party hosts a plugin's code loads from in the page, read statically into each browser host's externalHosts.
 - Web:
+  - Slots:
+    - `HostInputs.Supply`
+    - `ExternalHosts.Declare`
+  - Slot contributors:
+    - `HostInputs.Supply` ← `integrations.google-maps`
+    - `ExternalHosts.Declare` ← `apps.sonata.audio.piano`
+    - `ExternalHosts.Declare` ← `apps.sonata.audio.soundfont`
+    - `ExternalHosts.Declare` ← `map.google`
   - Uses:
     - `primitives/networking.publishWsStatus`
     - `primitives/networking.Transport`
     - `primitives/networking.TransportSocket`
-  - Exports (types): `FrameServing`
+  - Exports (types):
+    - `ExternalHostsDeclaration`
+    - `FrameServing`
+    - `HostInputSupply`
   - Exports (values):
     - `attachFrameServing`
     - `browserServerTransport`
+    - `ExternalHosts`
+    - `HostInputs`
 - Cross-plugin:
   - Imported by:
+    - `apps/sonata/audio/piano`
+    - `apps/sonata/audio/soundfont`
     - `framework/browser-server/demo/scope`
     - `framework/browser-server/host-storage`
+    - `integrations/google-maps`
+    - `integrations/google-maps/page-config`
+    - `map/google`
 - Core:
   - Exports (types):
     - `BrowserServer`
@@ -217,14 +265,19 @@ reaching the server, detach on unmount).
     - `HostBoot`
     - `HostBooted`
     - `HostEndReason`
+    - `PageInput`
+    - `PageInputRead`
+    - `PageInputValue`
     - `PortEnd`
     - `PortServer`
+    - `PortServerOptions`
     - `ServedHost`
     - `ServeHostOptions`
   - Exports (values):
     - `attachPort`
     - `HostEndedError`
     - `HostRefusedError`
+    - `pageInput`
     - `portBrowserServer`
     - `PortHostBootError`
     - `PortHostRefusedError`

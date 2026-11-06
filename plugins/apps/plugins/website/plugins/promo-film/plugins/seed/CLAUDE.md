@@ -68,6 +68,7 @@ seed` → record, and get the same state. Design:
   - Uses:
     - `apps/prototypes/fixtures.readPrototypeFixtureDir`
     - `infra/endpoints.implementMachine`
+    - `integrations/google-maps.getPlacesClient`
   - Routes: `POST /api/promo-film/seed`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
