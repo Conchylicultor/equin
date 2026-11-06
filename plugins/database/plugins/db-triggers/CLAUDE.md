@@ -75,7 +75,15 @@ export const clusterTriggers = defineDbTriggers({
   transaction (same fixed order), then function drops. The install never
   holds two tables' locks, so it cannot be part of a lock cycle at all —
   for a set spanning every table, installed outside the schema layer (the
-  change feed's). `beforeInstall` runs with the functions.
+  change feed's). `beforeInstall` runs with the functions. Each table's
+  transaction re-plans from **that table's triggers only**
+  (`readTableCatalog`): its slice of the plan reads no function row, so the
+  install is O(changed tables), not O(tables × catalog) — re-reading the whole
+  catalog per table was 70 % of a fresh PGlite boot's SQL (step 9,
+  `research/2026-11-06-global-build-pipeline-step9-fresh-boot-and-snapshot-key.md`).
+- **Comments are joined, never called.** The catalog reads join
+  `pg_description`; `obj_description()` is a query per row, and as a filter
+  over `pg_proc` it ran once for each of ~3,000 built-in functions.
 - **Serialized and asserted.** Stale sets are installed under a
   transaction-scoped advisory lock per set (two-int form, in id order), re-planned
   under them; then every set is asserted current, or the install throws — a

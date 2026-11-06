@@ -145,21 +145,25 @@ interface Catalog {
   readonly stampedFunctions: readonly StampedFunctionRow[];
 }
 
-async function readCatalog(
+// Comments are read by JOINING `pg_description`, never with `obj_description()`
+// in a WHERE: that function is a query of its own per row, and the stamped
+// functions' filter ran it over every function in the database (~3,000
+// built-ins) — 70 % of a fresh PGlite boot's SQL when it ran once per table.
+
+/** Every trigger a set may own, on every table — or on `table` alone. */
+async function readTriggers(
   exec: DbTriggerExec,
   sets: readonly DbTriggerSet[],
-): Promise<Catalog> {
+  table: { readonly schema: string; readonly table: string } | null,
+): Promise<TriggerRow[]> {
   const triggerKeys = JSON.stringify(
     sets.flatMap((s) => s.triggers.map(triggerKey)),
   );
   const fnKeys = JSON.stringify(sets.flatMap((s) => s.functions.map(fnKey)));
-  const signatures = JSON.stringify(
-    sets.flatMap((s) => s.functions.map(fnSignature)),
-  );
-  const triggers = await executeRows(exec, {
+  return executeRows(exec, {
     query: sql`
       SELECT n.nspname::text AS schema, c.relname::text AS "table", t.tgname::text AS name,
-             obj_description(t.oid, 'pg_trigger') AS comment,
+             d.description AS comment,
              t.tgenabled = 'O' AS enabled,
              md5(pg_get_triggerdef(t.oid)) AS def,
              pn.nspname::text || '.' || p.proname::text AS fn
@@ -168,8 +172,12 @@ async function readCatalog(
         JOIN pg_namespace n ON n.oid = c.relnamespace
         JOIN pg_proc p ON p.oid = t.tgfoid
         JOIN pg_namespace pn ON pn.oid = p.pronamespace
+        LEFT JOIN pg_description d
+          ON d.objoid = t.oid AND d.classoid = 'pg_trigger'::regclass AND d.objsubid = 0
        WHERE NOT t.tgisinternal
-         AND (starts_with(coalesce(obj_description(t.oid, 'pg_trigger'), ''), ${STAMP_PREFIX})
+         AND (${table === null}::boolean
+              OR t.tgrelid = to_regclass(format('%I.%I', ${table?.schema ?? null}::text, ${table?.table ?? null}::text)))
+         AND (starts_with(coalesce(d.description, ''), ${STAMP_PREFIX})
               OR n.nspname::text || '.' || c.relname::text || '.' || t.tgname::text
                  IN (SELECT jsonb_array_elements_text(${triggerKeys}::jsonb))
               OR pn.nspname::text || '.' || p.proname::text
@@ -177,13 +185,25 @@ async function readCatalog(
     row: TriggerRow,
     label: "db-triggers: triggers",
   });
+}
+
+async function readCatalog(
+  exec: DbTriggerExec,
+  sets: readonly DbTriggerSet[],
+): Promise<Catalog> {
+  const signatures = JSON.stringify(
+    sets.flatMap((s) => s.functions.map(fnSignature)),
+  );
+  const triggers = await readTriggers(exec, sets, null);
   const declared = await executeRows(exec, {
     query: sql`
-      SELECT d.signature, p.oid::text AS oid,
-             obj_description(p.oid, 'pg_proc') AS comment,
+      SELECT s.signature, p.oid::text AS oid,
+             d.description AS comment,
              md5(pg_get_functiondef(p.oid)) AS def
-        FROM jsonb_array_elements_text(${signatures}::jsonb) AS d(signature)
-        LEFT JOIN pg_proc p ON p.oid = to_regprocedure(d.signature)`,
+        FROM jsonb_array_elements_text(${signatures}::jsonb) AS s(signature)
+        LEFT JOIN pg_proc p ON p.oid = to_regprocedure(s.signature)
+        LEFT JOIN pg_description d
+          ON d.objoid = p.oid AND d.classoid = 'pg_proc'::regclass AND d.objsubid = 0`,
     row: DeclaredFunctionRow,
     label: "db-triggers: declared functions",
   });
@@ -191,10 +211,12 @@ async function readCatalog(
     query: sql`
       SELECT p.oid::text AS oid, n.nspname::text AS schema,
              p.oid::regprocedure::text AS regprocedure,
-             obj_description(p.oid, 'pg_proc') AS comment
-        FROM pg_proc p
+             d.description AS comment
+        FROM pg_description d
+        JOIN pg_proc p ON p.oid = d.objoid
         JOIN pg_namespace n ON n.oid = p.pronamespace
-       WHERE starts_with(coalesce(obj_description(p.oid, 'pg_proc'), ''), ${STAMP_PREFIX})`,
+       WHERE d.classoid = 'pg_proc'::regclass AND d.objsubid = 0
+         AND starts_with(d.description, ${STAMP_PREFIX})`,
     row: StampedFunctionRow,
     label: "db-triggers: stamped functions",
   });
@@ -202,6 +224,32 @@ async function readCatalog(
     triggers,
     declaredFunctions: new Map(declared.map((r) => [r.signature, r])),
     stampedFunctions,
+  };
+}
+
+/** A `tableKey` back into its parts (a schema name holds no dot here). */
+function splitTableKey(key: string): { schema: string; table: string } {
+  const dot = key.indexOf(".");
+  return { schema: key.slice(0, dot), table: key.slice(dot + 1) };
+}
+
+/**
+ * What one table's slice of the plan is read from: that table's triggers
+ * only. `tableSlice` keeps nothing of a plan but the table's trigger creates,
+ * restamps and drops, which read no function row (a trigger is owned through
+ * the function NAME it calls, never the function's catalog row) — so the
+ * slice planned over this equals the slice planned over the whole catalog,
+ * at the cost of one table, not of every trigger and function.
+ */
+async function readTableCatalog(
+  exec: DbTriggerExec,
+  sets: readonly DbTriggerSet[],
+  table: string,
+): Promise<Catalog> {
+  return {
+    triggers: await readTriggers(exec, sets, splitTableKey(table)),
+    declaredFunctions: new Map(),
+    stampedFunctions: [],
   };
 }
 
@@ -543,7 +591,8 @@ export interface InstallDbTriggersPerTableOptions extends InstallDbTriggersOptio
 }
 
 // Lock every set `select(plan)` touches (advisory, transaction-scoped, in id
-// order), re-planning under the locks until no new set appears: a racing
+// order), re-planning under the locks (over `read`: the whole catalog, or one
+// table's slice of it) until no new set appears: a racing
 // installer may have done the work — or made another set stale.
 async function lockAndPlan(
   tx: DbTriggerExec,
@@ -551,6 +600,7 @@ async function lockAndPlan(
   sweep: Sweep | undefined,
   first: Plan,
   select: (p: Plan) => Plan,
+  read: (tx: DbTriggerExec) => Promise<Catalog>,
 ): Promise<Plan> {
   const locked = new Set<string>();
   let p = select(first);
@@ -563,7 +613,7 @@ async function lockAndPlan(
       );
       locked.add(id);
     }
-    p = select(plan(await readCatalog(tx, sets), sets, sweep));
+    p = select(plan(await read(tx), sets, sweep));
   }
 }
 
@@ -605,9 +655,11 @@ export async function installDbTriggers(
   const run = async (
     select: (p: Plan) => Plan,
     body: (tx: DbTriggerExec, p: Plan) => Promise<void>,
+    read: (tx: DbTriggerExec) => Promise<Catalog> = (tx) =>
+      readCatalog(tx, sets),
   ) => {
     await db.transaction(async (tx) => {
-      const p = await lockAndPlan(tx, sets, sweep, first, select);
+      const p = await lockAndPlan(tx, sets, sweep, first, select, read);
       await body(tx, p);
       for (const id of touched(p)) done.add(id);
     });
@@ -631,6 +683,7 @@ export async function installDbTriggers(
         await run(
           (p) => tableSlice(p, table),
           (tx, p) => applyTable(tx, table, p, order),
+          (tx) => readTableCatalog(tx, sets, table),
         );
       }
       await run(dropSlice, (tx, p) => applyFunctionDrops(tx, p));
