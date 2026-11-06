@@ -13,7 +13,11 @@ import type {
   QueueClassPulse,
 } from "@plugins/infra/plugins/jobs/machine";
 import { QueuePulseSchema } from "../../core/pulse";
-import { assemblePulse, type PulseReads } from "./assemble-pulse";
+import {
+  assemblePulse,
+  assembleVerdict,
+  type PulseReads,
+} from "./assemble-pulse";
 
 // The joins the loader cannot get wrong silently: which runner's slots count
 // against which class's bar, how forfeits and the ledger combine, and what is
@@ -228,5 +232,44 @@ describe("the payload", () => {
     expect(() =>
       assemblePulse(reads({ classes: dbClasses().slice(1) }), CFG, NOW),
     ).toThrow(/no row for class/);
+  });
+});
+
+describe("assembleVerdict", () => {
+  // The dot's verdict is loaded without the listed waiting rows; it must be the
+  // verdict the full pulse carries, whatever the queue looks like.
+  test("gives the pulse's verdict, from the verdict's reads alone", () => {
+    const wide = RUNNERS.at(-1)!.id;
+    const cases: PulseReads[] = [
+      reads(),
+      reads({ slots: [slot(wide), slot(wide)] }),
+      reads({
+        classes: dbClasses({
+          instant: { waitingForSlot: 3, oldestWaitingRunAt: NOW - 600_000 },
+        }),
+        oldestWaiting: [
+          {
+            jobId: "1",
+            jobName: "a",
+            hold: "instant",
+            runAt: NOW - 600_000,
+            attempts: 0,
+          },
+        ],
+      }),
+      reads({
+        slots: [slot(wide, { lockedAt: NOW - deadlineMsFor("instant") })],
+      }),
+      reads({
+        dead: [
+          { jobName: "x", count: 2, lastDiedAt: NOW - 60_000, lastError: "e" },
+        ],
+      }),
+    ];
+    for (const r of cases) {
+      expect(assembleVerdict(r, CFG, NOW).verdict).toEqual(
+        assemblePulse(r, CFG, NOW).pulse.verdict,
+      );
+    }
   });
 });

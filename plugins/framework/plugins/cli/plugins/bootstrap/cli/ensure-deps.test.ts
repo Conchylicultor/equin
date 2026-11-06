@@ -58,9 +58,9 @@ function touch(path: string, body: string): void {
 }
 
 /**
- * A minimal checkout: the root workspace manifest, a lockfile, two member
- * workspaces, and the generated provision registry — one of every kind of dep
- * input the signature covers.
+ * A minimal checkout: the root workspace manifest, a lockfile, a patch it
+ * applies, two member workspaces, and the generated provision registry — one of
+ * every kind of dep input the signature covers.
  *
  * The workspace glob is `packages/**`, deliberately NOT the real repo's
  * `plugins/**`, for two reasons. It proves `workspaceWalkRoots` genuinely DERIVES
@@ -75,7 +75,14 @@ function makeFixture(): string {
   fixtures.push(dir);
   const pin = (rel: string, body: string) =>
     writeAt(join(dir, rel), body, PINNED_MTIME);
-  pin("package.json", JSON.stringify({ workspaces: ["packages/**"] }));
+  pin(
+    "package.json",
+    JSON.stringify({
+      workspaces: ["packages/**"],
+      patchedDependencies: { "left-pad@1.0.0": "patches/left-pad@1.0.0.patch" },
+    }),
+  );
+  pin("patches/left-pad@1.0.0.patch", "--- a/index.js\n+++ b/index.js\n");
   pin("bun.lock", "lockfile-v0\n");
   pin("packages/alpha/package.json", '{"name":"alpha"}');
   pin("packages/beta/package.json", '{"name":"beta"}');
@@ -268,6 +275,15 @@ const mutations: [name: string, mutate: (dir: string) => void][] = [
       ),
   ],
   ["touching bun.lock", (dir) => touch(join(dir, "bun.lock"), "lockfile-v1\n")],
+  [
+    // `bun.lock` names a patch by path, so editing one moves nothing else.
+    "editing a patched dependency's patch",
+    (dir) =>
+      touch(
+        join(dir, "patches/left-pad@1.0.0.patch"),
+        "--- a/index.js\n+++ b/index.js\n@@ -1 +1 @@\n",
+      ),
+  ],
   [
     "adding a workspace package.json",
     (dir) =>

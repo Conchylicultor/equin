@@ -48,7 +48,11 @@ export {
   onQueueActivity,
   PICKUP_WINDOW_MS,
 } from "./internal/slot-ledger";
-export type { OccupiedSlot, PickupStats } from "./internal/slot-ledger";
+export type {
+  OccupiedSlot,
+  PickupStats,
+  QueueActivity,
+} from "./internal/slot-ledger";
 
 export default {
   description:

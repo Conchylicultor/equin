@@ -11,7 +11,7 @@ index 9be05a0..8a687f4 100644
              }
              throw (lastError ??
 diff --git a/dist/sql/completeJobs.js b/dist/sql/completeJobs.js
-index d8f277f..a5d5d69 100644
+index d8f277f..d31d441 100644
 --- a/dist/sql/completeJobs.js
 +++ b/dist/sql/completeJobs.js
 @@ -1,5 +1,14 @@
@@ -29,8 +29,21 @@ index d8f277f..a5d5d69 100644
      const { escapedWorkerSchema, workerSchema, resolvedPreset: { worker: { preparedStatements }, }, } = compiledSharedOptions;
      const jobIdsWithoutQueue = [];
      const jobIdsWithQueue = [];
+@@ -61,5 +70,11 @@ where id = n`,
+             }));
+         }
+     }
++    // equin patch: announce each outcome once it is in the database. graphile
++    // emits `job:complete` before this write lands, so a reader that must see
++    // the row gone (or its serial lane released) listens here instead.
++    for (const job of jobs) {
++        compiledSharedOptions.events.emit("equin:outcomeWritten", { job, failed: false });
++    }
+ }
+ //# sourceMappingURL=completeJobs.js.map
+\ No newline at end of file
 diff --git a/dist/sql/failJobs.js b/dist/sql/failJobs.js
-index 45b180e..696a8f1 100644
+index 45b180e..38bc483 100644
 --- a/dist/sql/failJobs.js
 +++ b/dist/sql/failJobs.js
 @@ -1,4 +1,11 @@
@@ -45,3 +58,15 @@ index 45b180e..696a8f1 100644
      const { escapedWorkerSchema, workerSchema, resolvedPreset: { worker: { preparedStatements }, }, } = compiledSharedOptions;
      const specsWithQueues = [];
      const specsWithoutQueues = [];
+@@ -63,6 +70,11 @@ where id = (el->>'jobId')::bigint and locked_by = $1::text;`,
+             name: !preparedStatements ? undefined : `fail_job/${workerSchema}`,
+         }));
+     }
++    // equin patch: announce each outcome once it is in the database, as
++    // batchCompleteJobs does — the row is unlocked for its retry, or dead.
++    for (const { job } of specs) {
++        compiledSharedOptions.events.emit("equin:outcomeWritten", { job, failed: true });
++    }
+ }
+ export async function failJobs(compiledSharedOptions, withPgClient, poolId, jobs, message) {
+     const { escapedWorkerSchema, workerSchema, resolvedPreset: { worker: { preparedStatements }, }, } = compiledSharedOptions;

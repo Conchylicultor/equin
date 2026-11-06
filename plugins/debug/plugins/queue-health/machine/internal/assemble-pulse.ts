@@ -19,6 +19,7 @@ import {
   waitTone,
   type QueuePulse,
   type QueueVerdictConfig,
+  type QueueVerdictResult,
 } from "../../core";
 
 // Pure assembly of the Job queue pulse from what the loader read: the slot
@@ -28,14 +29,19 @@ import {
 // testable without a database. Type-only imports from the jobs server barrel,
 // so importing this file loads nothing but the class table.
 
-/** Everything the loader read, in one snapshot. */
-export interface PulseReads {
+/** What the verdict alone is built from: the slot ledger and forfeits
+ * (memory), the per-class aggregate and the recent deaths (database). */
+export interface VerdictReads {
   slots: readonly OccupiedSlot[];
   forfeits: readonly ForfeitedSlot[];
-  pickup: Readonly<Record<HoldClass, PickupStats>>;
   classes: readonly DbClassPulse[];
-  oldestWaiting: readonly WaitingJobStat[];
   dead: readonly DeadJobGroupStat[];
+}
+
+/** Everything the pulse loader read, in one snapshot. */
+export interface PulseReads extends VerdictReads {
+  pickup: Readonly<Record<HoldClass, PickupStats>>;
+  oldestWaiting: readonly WaitingJobStat[];
   pickupWindowMs: number;
 }
 
@@ -45,71 +51,39 @@ export interface AssembledPulse {
   nextChangeAt: number | null;
 }
 
+/**
+ * The verdict alone, from what it reads — the same answer `assemblePulse`
+ * gives (`pulse.verdict`), without the listed waiting rows: they move no colour
+ * of their own (the class's oldest does), only how the detail marks each one.
+ * So `nextChangeAt` here has no instant for those marks either.
+ */
+export function assembleVerdict(
+  reads: VerdictReads,
+  cfg: QueueVerdictConfig,
+  now: number,
+): QueueVerdictResult {
+  return queueVerdict(
+    {
+      classes: slotClasses(reads),
+      running: runningJobs(reads, cfg, now),
+      waiting: [],
+      dead: reads.dead,
+    },
+    cfg,
+    now,
+  );
+}
+
 export function assemblePulse(
   reads: PulseReads,
   cfg: QueueVerdictConfig,
   now: number,
 ): AssembledPulse {
-  const forfeitedIds = new Set(reads.forfeits.map((f) => f.jobId));
-
-  const classes = HOLD_CLASSES.map((hold) => {
-    const db = reads.classes.find((c) => c.hold === hold);
-    if (!db) {
-      throw new Error(
-        `[queue-health] queryQueuePulse returned no row for class "${hold}" (it zero-fills every class)`,
-      );
-    }
-    // Per-class REACH: every slot on a runner that serves this class, whatever
-    // class of job it is running now. A `wide` slot running an instant job is a
-    // slot a minutes job cannot have, so it counts as busy for all three.
-    const runners = new Set(
-      RUNNERS.filter((r) => r.serves.includes(hold)).map((r) => r.id),
-    );
-    // Union by job id: a forfeited slot is normally still in the ledger (its
-    // zombie never completed), but one whose worker died (`worker:fatalError`)
-    // has left it — and is still a slot written off.
-    const held = new Set<string>();
-    for (const s of reads.slots) if (runners.has(s.runnerId)) held.add(s.jobId);
-    let forfeited = 0;
-    for (const f of reads.forfeits) {
-      if (!runners.has(f.runnerId)) continue;
-      forfeited++;
-      held.add(f.jobId);
-    }
-    const reachable = reachableSlots(hold);
-    return {
-      hold,
-      reachable,
-      usable: reachable - forfeited,
-      busy: held.size,
-      forfeited,
-      waiting: db.waitingForSlot,
-      oldestWaitingRunAt: db.oldestWaitingRunAt,
-      behindLanes: db.behindLanes,
-      pickup: { ...reads.pickup[hold] },
-      nextDueAt: db.nextDueAt,
-      lockedCount: db.lockedCount,
-    };
-  });
-
-  const running = [...reads.slots]
-    .sort((a, b) => a.lockedAt - b.lockedAt)
-    .map((s) => {
-      const forfeited = forfeitedIds.has(s.jobId);
-      return {
-        jobId: s.jobId,
-        jobName: s.jobName,
-        hold: s.hold,
-        runnerId: s.runnerId,
-        lockedAt: s.lockedAt,
-        forfeited,
-        stuck: isStuck(
-          { hold: s.hold, lockedAt: s.lockedAt, forfeited },
-          cfg.slotHogDeadlineFraction,
-          now,
-        ),
-      };
-    });
+  const classes = slotClasses(reads).map((c) => ({
+    ...c,
+    pickup: { ...reads.pickup[c.hold] },
+  }));
+  const running = runningJobs(reads, cfg, now);
 
   const { verdict, nextChangeAt } = queueVerdict(
     {
@@ -162,4 +136,74 @@ export function assemblePulse(
     },
     nextChangeAt,
   };
+}
+
+// Each class joined with the slots that can serve it.
+function slotClasses(reads: VerdictReads) {
+  return HOLD_CLASSES.map((hold) => {
+    const db = reads.classes.find((c) => c.hold === hold);
+    if (!db) {
+      throw new Error(
+        `[queue-health] queryQueuePulse returned no row for class "${hold}" (it zero-fills every class)`,
+      );
+    }
+    // Per-class REACH: every slot on a runner that serves this class, whatever
+    // class of job it is running now. A `wide` slot running an instant job is a
+    // slot a minutes job cannot have, so it counts as busy for all three.
+    const runners = new Set(
+      RUNNERS.filter((r) => r.serves.includes(hold)).map((r) => r.id),
+    );
+    // Union by job id: a forfeited slot is normally still in the ledger (its
+    // zombie never completed), but one whose worker died (`worker:fatalError`)
+    // has left it — and is still a slot written off.
+    const held = new Set<string>();
+    for (const s of reads.slots) if (runners.has(s.runnerId)) held.add(s.jobId);
+    let forfeited = 0;
+    for (const f of reads.forfeits) {
+      if (!runners.has(f.runnerId)) continue;
+      forfeited++;
+      held.add(f.jobId);
+    }
+    const reachable = reachableSlots(hold);
+    return {
+      hold,
+      reachable,
+      usable: reachable - forfeited,
+      busy: held.size,
+      forfeited,
+      waiting: db.waitingForSlot,
+      oldestWaitingRunAt: db.oldestWaitingRunAt,
+      behindLanes: db.behindLanes,
+      nextDueAt: db.nextDueAt,
+      lockedCount: db.lockedCount,
+    };
+  });
+}
+
+// Every slot holding a job, longest-held first, marked stuck by the verdict's
+// own line.
+function runningJobs(
+  reads: VerdictReads,
+  cfg: QueueVerdictConfig,
+  now: number,
+) {
+  const forfeitedIds = new Set(reads.forfeits.map((f) => f.jobId));
+  return [...reads.slots]
+    .sort((a, b) => a.lockedAt - b.lockedAt)
+    .map((s) => {
+      const forfeited = forfeitedIds.has(s.jobId);
+      return {
+        jobId: s.jobId,
+        jobName: s.jobName,
+        hold: s.hold,
+        runnerId: s.runnerId,
+        lockedAt: s.lockedAt,
+        forfeited,
+        stuck: isStuck(
+          { hold: s.hold, lockedAt: s.lockedAt, forfeited },
+          cfg.slotHogDeadlineFraction,
+          now,
+        ),
+      };
+    });
 }

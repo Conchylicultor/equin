@@ -6,7 +6,7 @@ import { DEAD_JOBS_ARCHIVE_CAP } from "../../core/resources";
 import { deadJobPredicate, jobNameExpr, queueJobsFrom } from "./introspection";
 import { defineJob, type EnqueueTx } from "../../server/internal/registry";
 import { ownedWorkflowRunIds } from "../../server/internal/run-identity";
-import { emitQueueActivity } from "./slot-ledger";
+import { ANY_QUEUE_CHANGE, emitQueueActivity } from "./slot-ledger";
 import { deleteWorkflowLogs } from "../../server/internal/workflow-log";
 
 const PurgedRowSchema = z.object({
@@ -95,7 +95,7 @@ export async function reconcileDeadJobs(
   // dead_jobs is public (the change feed moves the dead-jobs collection on the
   // insert/delete above), but the purge from graphile_worker._private_jobs is
   // outside the feed and sends no notification → announce it.
-  emitQueueActivity();
+  emitQueueActivity(ANY_QUEUE_CHANGE);
 }
 
 // Scheduled dead-job GC. `perWorktree: true` is REQUIRED here and is the inverse

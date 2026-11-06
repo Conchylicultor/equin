@@ -11,7 +11,8 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { run, type Runner } from "graphile-worker";
+import { EventEmitter } from "node:events";
+import { run, type Runner, type WorkerEvents } from "graphile-worker";
 import pg, { Client, Pool } from "pg";
 import {
   createTestDb,
@@ -70,6 +71,7 @@ async function withRunner<T>(
   pool: Pool,
   task: (runner: Runner) => Promise<T>,
   taskList: Record<string, () => Promise<void> | void>,
+  events?: WorkerEvents,
 ): Promise<T> {
   const runner = await run(
     {
@@ -77,6 +79,7 @@ async function withRunner<T>(
       concurrency: 4,
       noHandleSignals: true,
       taskList,
+      events,
       preset: { worker: { completeJobBatchDelay: 0, failJobBatchDelay: 0 } },
     },
     undefined,
@@ -150,6 +153,54 @@ describe("graphile completion patch", () => {
           await gate;
         },
       },
+    );
+  }, 30_000);
+
+  // `job:complete` fires before the outcome is written; the patch's
+  // `equin:outcomeWritten` fires after, which is what the slot ledger announces
+  // database-visible activity on. Read the row the instant the event fires.
+  test("equin:outcomeWritten fires once the outcome is in the database", async () => {
+    const { pool } = faultyPool(0);
+    const events: WorkerEvents = new EventEmitter();
+    const seen: Promise<{ failed: boolean; row: unknown }>[] = [];
+    (events as unknown as EventEmitter).on(
+      "equin:outcomeWritten",
+      ({ job, failed }: { job: { id: string }; failed: boolean }) => {
+        seen.push(
+          admin
+            .query<{ locked_at: Date | null; last_error: string | null }>(
+              `SELECT locked_at, last_error FROM graphile_worker._private_jobs WHERE id = $1`,
+              [job.id],
+            )
+            .then(({ rows }) => ({ failed, row: rows[0] ?? null })),
+        );
+      },
+    );
+    await withRunner(
+      pool,
+      async (runner) => {
+        await runner.addJob("patch_ok", {});
+        await runner.addJob("patch_fail", {}, { maxAttempts: 1 });
+        for (let i = 0; i < 500 && seen.length < 2; i++) {
+          await new Promise((r) => setTimeout(r, 10));
+        }
+        const results = await Promise.all(seen);
+        expect(results.find((r) => !r.failed)).toEqual({
+          failed: false,
+          row: null,
+        });
+        expect(results.find((r) => r.failed)).toEqual({
+          failed: true,
+          row: { locked_at: null, last_error: "boom" },
+        });
+      },
+      {
+        patch_ok: () => undefined,
+        patch_fail: () => {
+          throw new Error("boom");
+        },
+      },
+      events,
     );
   }, 30_000);
 });

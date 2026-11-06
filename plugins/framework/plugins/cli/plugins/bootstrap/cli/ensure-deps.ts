@@ -245,6 +245,36 @@ function workspaceWalkRoots(root: string): string[] {
 }
 
 /**
+ * The patch files the root `package.json` applies (`patchedDependencies`),
+ * repo-relative. A dep input like the manifests: bun re-applies a patch only on
+ * install, and `bun.lock` names a patch by PATH, not content — so a commit that
+ * edits only a patch moves no other input, and without this every checkout
+ * (main's auto-build included) would keep running the old patched package with
+ * nothing saying so.
+ */
+function patchFiles(root: string): string[] {
+  const pkgPath = join(root, "package.json");
+  const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
+    patchedDependencies?: unknown;
+  };
+  const patches = pkg.patchedDependencies;
+  if (patches === undefined) return [];
+  if (typeof patches !== "object" || patches === null) {
+    throw new Error(
+      `${PRODUCT_NAME}: ${pkgPath} has a non-object "patchedDependencies"`,
+    );
+  }
+  return Object.entries(patches).map(([dep, rel]) => {
+    if (typeof rel !== "string") {
+      throw new Error(
+        `${PRODUCT_NAME}: ${pkgPath} "patchedDependencies" entry ${dep} is not a path: ${String(rel)}`,
+      );
+    }
+    return rel;
+  });
+}
+
+/**
  * Whether `rel` (repo-relative, `/`-separated) is a workspace-side dep input:
  * a `package.json` or a `provision/index.ts` under a workspace root, outside
  * `node_modules` and `.git`. The ONE rule both listings below apply.
@@ -297,8 +327,8 @@ function collectWorkspaceInputs(
 }
 
 /**
- * Every dep input's path, repo-relative: the root manifests plus the
- * workspace-side inputs — filtered out of `files` when the caller holds the
+ * Every dep input's path, repo-relative: the root manifests, the patches they
+ * apply, plus the workspace-side inputs — filtered out of `files` when the caller holds the
  * checkout's set, walked otherwise.
  */
 function listDepInputs(root: string, files?: readonly string[]): string[] {
@@ -306,6 +336,7 @@ function listDepInputs(root: string, files?: readonly string[]): string[] {
     "bun.lock",
     "package.json",
     PROVISION_REGISTRY_REL,
+    ...patchFiles(root),
   ]);
   const walkRoots = workspaceWalkRoots(root);
   if (files) {

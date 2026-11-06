@@ -2,10 +2,12 @@
  * The slot ledger, driven by a fake graphile emitter — no database, no runner.
  *
  * What it pins: a slot enters on `job:start` and leaves ONLY on graphile's own
- * `job:complete` / `worker:fatalError` (the events that fire after the outcome
- * is written); busy slots are attributed to the runner whose emitter heard
- * them; `jobs:insert` is announced by the one runner told to listen; and the
- * pickup ring keeps a bounded, windowed sample with nearest-rank percentiles.
+ * `job:complete` / `worker:fatalError` (the slot's own last act); busy slots
+ * are attributed to the runner whose emitter heard them; `jobs:insert` is
+ * announced by the one runner told to listen; each announcement says which
+ * database reads it may have moved, a finished run's only once the patch's
+ * `equin:outcomeWritten` says its outcome is written; and the pickup ring keeps
+ * a bounded, windowed sample with nearest-rank percentiles.
  *
  * Run: `./equin test plugins/infra/plugins/jobs`
  */
@@ -21,6 +23,7 @@ import type {
 import { setServerErrorHandler } from "@plugins/framework/plugins/server-core/core/testing";
 import { LEGACY_JOB_TASK, taskFor } from "../../core/hold";
 import {
+  ANY_QUEUE_CHANGE,
   PICKUP_SAMPLE_CAP,
   PICKUP_WINDOW_MS,
   attachSlotLedger,
@@ -29,6 +32,7 @@ import {
   getOccupiedSlots,
   getPickupStats,
   onQueueActivity,
+  type QueueActivity,
 } from "./slot-ledger";
 
 const T0 = Date.UTC(2026, 8, 11, 12, 0, 0);
@@ -79,6 +83,9 @@ function runner(
         job,
         error: null,
       });
+    },
+    written(job: Job, failed: boolean) {
+      events.emit("equin:outcomeWritten" as never, { job, failed } as never);
     },
     fatal(workerId: string) {
       events.emit("worker:fatalError", {
@@ -235,12 +242,41 @@ describe("activity", () => {
     expect(n).toBe(1);
   });
 
+  test("each event says which database reads it may have moved", () => {
+    const floor = attach("floor", { listenInserts: true });
+    const seen: QueueActivity[] = [];
+    const off = onQueueActivity((a) => seen.push(a));
+    const job = fakeJob({ id: "1" });
+    const laned = fakeJob({ id: "2", queueId: 7 });
+    floor.start("w1", job); // a waiting row was picked up
+    floor.complete("w1", job); // the slot freed; the row not yet written
+    floor.written(job, false); // a plain success: the locked row went
+    floor.written(laned, false); // its lane released the rows behind it
+    floor.written(job, true); // unlocked: a retry, or dead
+    floor.notify("jobs:insert");
+    floor.start("w2", fakeJob({ id: "3" }));
+    floor.fatal("w2"); // the row stays locked until the sweeper's reclaim
+    off();
+    const none = { unheldRows: false, deaths: false };
+    const unheld = { unheldRows: true, deaths: false };
+    expect(seen).toEqual([
+      unheld,
+      none,
+      none,
+      unheld,
+      ANY_QUEUE_CHANGE,
+      unheld,
+      unheld,
+      none,
+    ]);
+  });
+
   test("unsubscribe stops delivery", () => {
     let n = 0;
     const off = onQueueActivity(() => n++);
-    emitQueueActivity();
+    emitQueueActivity(ANY_QUEUE_CHANGE);
     off();
-    emitQueueActivity();
+    emitQueueActivity(ANY_QUEUE_CHANGE);
     expect(n).toBe(1);
   });
 

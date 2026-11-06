@@ -33338,6 +33338,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `JobRunStats`
           - `OccupiedSlot`
           - `PickupStats`
+          - `QueueActivity`
           - `QueueBacklogStat`
           - `QueueClassBacklogStat`
           - `QueueClassPulse`

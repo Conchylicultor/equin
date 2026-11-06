@@ -21,7 +21,11 @@ import { dyingRunIds, unmarkRunDying } from "./dying-runs";
 import { announceRunDead } from "../../server/internal/run-death";
 import { reconcileDeadJobs } from "./dead-job-gc";
 import { graphileJobReads } from "./jobs-list";
-import { emitQueueActivity, onQueueActivity } from "./slot-ledger";
+import {
+  ANY_QUEUE_CHANGE,
+  emitQueueActivity,
+  onQueueActivity,
+} from "./slot-ledger";
 import {
   startStuckLockSweeper,
   stopStuckLockSweeper,
@@ -170,7 +174,7 @@ async function cancelUnstarted(
       sql`DELETE FROM graphile_worker._private_jobs WHERE key LIKE ${`${match.keyPrefix}%`} AND locked_at IS NULL`,
     );
   }
-  emitQueueActivity();
+  emitQueueActivity(ANY_QUEUE_CHANGE);
 }
 
 /** `keysInFlight`: a keyed row still within its attempts, or locked (graphile
@@ -258,7 +262,7 @@ export const graphileQueue: JobQueueImpl = {
     // graphile_worker is outside the public-schema change-feed, and a
     // reschedule sends no `jobs:insert` → announce it (the `jobs` collection
     // and every other queue reader listen on this one signal).
-    emitQueueActivity();
+    emitQueueActivity(ANY_QUEUE_CHANGE);
   },
   async cancel(jobId) {
     const utils = await getWorkerUtils();
@@ -267,7 +271,7 @@ export const graphileQueue: JobQueueImpl = {
     const removed = await utils.completeJobs([jobId]);
     // graphile_worker is outside the public-schema change-feed, and a delete
     // sends no notification → announce it.
-    emitQueueActivity();
+    emitQueueActivity(ANY_QUEUE_CHANGE);
     for (const row of removed) {
       await announceRunDead(row.payload as JobTaskPayload, {
         cause: "cancelled",

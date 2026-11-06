@@ -19,8 +19,10 @@ import {
   queuePulse,
   queueVerdictValue,
   type QueuePulse,
+  type QueueVerdict,
 } from "../../core";
-import { assemblePulse } from "./assemble-pulse";
+import { assemblePulse, assembleVerdict } from "./assemble-pulse";
+import { createVerdictFacts } from "./verdict-facts";
 
 // The health report's Job queue row, as two live values: the verdict every
 // tab holds (the dot), and the full pulse the open report reads.
@@ -42,6 +44,15 @@ import { assemblePulse } from "./assemble-pulse";
 //
 // `throttleMs`: a burst of activity (a fan-out enqueue, a queue draining) costs
 // one load per second.
+//
+// The two loads differ in what they read. The pulse re-runs its three queries
+// on every load: it is subscribed only while the report is open, and most of
+// what it shows (locked counts, the listed waiting rows) moves on every start
+// and finish. The verdict — every tab's, always — needs two of them, and holds
+// their answers between loads (`verdict-facts.ts`): each activity says which
+// database reads it may have moved (`QueueActivity`), so a successful finish
+// re-reads nothing, a pickup or an insert the per-class aggregate alone, and
+// only a failure the deaths. The slot ledger is memory, read on every load.
 //
 // The loader reads the database only through the jobs plugin's introspection
 // API. Its one public read, the `dead_jobs` archive, is declared in `reads`;
@@ -67,9 +78,24 @@ function clearChangeTimer(sub: Subscription): void {
   sub.timer = undefined;
 }
 
+// The verdict's held database reads. Tracked only while the verdict is
+// subscribed; the pulse's loads refresh them, so an open report pays for them
+// once, not twice. Expired by queue activity alone: the change feed's
+// `dead_jobs` changes come from the dead-job GC, which announces activity too.
+const verdictFacts = createVerdictFacts({
+  classes: () => queryQueuePulse(),
+  dead: () =>
+    queryRecentDeadJobs({
+      since: Date.now() - PULSE_DEAD_WINDOW_MS,
+      limit: PULSE_DEAD_LIMIT,
+    }),
+  onActivity: onQueueActivity,
+});
+
 // One timer per value, re-armed by every load. Armed only while someone is
 // subscribed: a load with no subscriber (an HTTP read) must not leave a timer
-// behind.
+// behind. Its firing is a change no event announced — a scheduled row became
+// due — so it also expires the verdict's held reads.
 function armChangeTimer(sub: Subscription, at: number | null): void {
   clearChangeTimer(sub);
   const notify = sub.notify;
@@ -77,28 +103,33 @@ function armChangeTimer(sub: Subscription, at: number | null): void {
   const delay = Math.min(Math.max(0, at - Date.now()), MAX_TIMEOUT_MS);
   sub.timer = setTimeout(() => {
     sub.timer = undefined;
+    verdictFacts.invalidateAll();
     notify();
   }, delay);
 }
 
-function whileSubscribedTo(sub: Subscription) {
+// `track` keeps the verdict's held reads current while it is subscribed. Its
+// activity listener is added before `notify`'s, so a held read has already
+// expired when the load an activity triggers runs.
+function whileSubscribedTo(sub: Subscription, track?: () => () => void) {
   return (_params: unknown, notify: () => void) => {
     sub.notify = notify;
+    const untrack = track?.();
     const stopActivity = onQueueActivity(notify);
     return () => {
       sub.notify = undefined;
       stopActivity();
+      untrack?.();
       clearChangeTimer(sub);
     };
   };
 }
 
 async function loadQueuePulse(sub: Subscription): Promise<QueuePulse> {
-  const since = Date.now() - PULSE_DEAD_WINDOW_MS;
   const [classes, oldestWaiting, dead] = await Promise.all([
-    queryQueuePulse(),
+    verdictFacts.classes.refresh(),
     queryOldestWaiting(PULSE_WAITING_LIMIT),
-    queryRecentDeadJobs({ since, limit: PULSE_DEAD_LIMIT }),
+    verdictFacts.dead.refresh(),
   ]);
   // Memory reads AFTER the queries: a job that started while they ran is then
   // in the ledger but not in the locked count, which `orphanLocked` clamps —
@@ -143,15 +174,36 @@ export const queuePulseServed = serveValue(queuePulse, {
   whileSubscribed: whileSubscribedTo(pulseSub),
 });
 
-// The verdict alone: every tab's always-on subscription (the dot). Same reads
-// and timer as the pulse, but a load whose verdict did not change pushes
-// nothing — the runtime compares it against the value its holders hold — so a
-// busy queue that stays green costs its tabs no frames at all.
+async function loadQueueVerdict(sub: Subscription): Promise<QueueVerdict> {
+  const [classes, dead] = await Promise.all([
+    verdictFacts.classes.read(),
+    verdictFacts.dead.read(),
+  ]);
+  // Memory after the database, as in the pulse.
+  const now = Date.now();
+  const { verdict, nextChangeAt } = assembleVerdict(
+    {
+      slots: getOccupiedSlots(),
+      forfeits: getForfeitedSlots(),
+      classes,
+      dead,
+    },
+    getConfig(queueHealthConfig),
+    now,
+  );
+  armChangeTimer(sub, nextChangeAt);
+  return verdict;
+}
+
+// The verdict alone: every tab's always-on subscription (the dot). Its own
+// loader over held reads (above), its own timer. A load whose verdict did not
+// change pushes nothing — the runtime compares it against the value its
+// holders hold.
 export const queueVerdictServed = serveValue(queueVerdictValue, {
   source: "external",
   changes: "notified",
   reads: DEAD_JOBS_READ,
-  loader: async () => (await loadQueuePulse(verdictSub)).verdict,
+  loader: () => loadQueueVerdict(verdictSub),
   throttleMs: 1000,
-  whileSubscribed: whileSubscribedTo(verdictSub),
+  whileSubscribed: whileSubscribedTo(verdictSub, () => verdictFacts.track()),
 });

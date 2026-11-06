@@ -555,8 +555,18 @@ notification: retry, cancel, `abortDurableRun`, the resume timeout delete, the
 stuck-lock reclaim and dead-job GC. The `jobs` collection re-reads on it,
 throttled to one re-read per second per tuple, instead of polling (below), and
 listens only while a tab holds a tuple of it. **A new raw write to graphile's tables
-must call `emitQueueActivity()`**, or every queue reader goes stale until the
-next unrelated event.
+must call `emitQueueActivity(ANY_QUEUE_CHANGE)`** (or narrower flags it can
+prove), or every queue reader goes stale until the next unrelated event.
+
+Each call carries a `QueueActivity` — `{ unheldRows, deaths }` — saying which
+database reads it may have moved, so a reader holding a read
+(`debug/queue-health`'s verdict) re-runs only what moved: `job:start` →
+`unheldRows`; `job:complete` → neither (the ledger alone changed); a fatal
+worker → neither (its row stays locked until the sweeper's reclaim). A finished
+run's database change is announced on **`equin:outcomeWritten`**, an event our
+graphile patch emits once the completion DELETE / failure UPDATE has landed
+(`job:complete` fires before it): success → `unheldRows` only if the row held
+a serial lane; failure → both.
 
 **The live queue is an external window collection.** `jobs`
 (`core/resources.ts`, key `jobs`) lists the host queue's rows — Debug → Queue's
@@ -880,6 +890,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `JobRunStats`
     - `OccupiedSlot`
     - `PickupStats`
+    - `QueueActivity`
     - `QueueBacklogStat`
     - `QueueClassBacklogStat`
     - `QueueClassPulse`

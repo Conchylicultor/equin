@@ -298,15 +298,31 @@ this plugin's too: it owns the queue thresholds. Design:
   `queryRecentDeadJobs` over 24 h). Every array in the schema is `.max()`-bounded.
   Not boot-critical. The joins live in the pure `assemble-pulse.ts`.
 - **`queue-health.verdict`** — `queueVerdictValue`, the verdict alone (state,
-  summary, per-class cause), served by `queueVerdictServed` from the same loader
-  and timer. It is the row's `useStatus` read — the one every tab holds whether
+  summary, per-class cause), served by `queueVerdictServed` with its own loader
+  (`assembleVerdict`, the same answer as `pulse.verdict` without the listed
+  waiting rows, which move no colour) and its own timer. It is the row's
+  `useStatus` read — the one every tab holds whether
   the report is open or not — so it must stay this small: the runtime pushes a
   load only when the value changed, and the verdict changes only when the colour
   or summary does, while the full pulse (running jobs, pickup stats) moves on
   nearly every job start and finish. Before the split, every tab took the ~3 KB
   pulse about once a second on a busy queue to colour one dot.
-- **No poll.** Notified by `onQueueActivity` (start / complete / insert / the jobs
-  plugin's own mutations), throttled to one load per second (`throttleMs: 1000`),
+- **The verdict holds its database reads** (`machine/internal/verdict-facts.ts`).
+  It needs two of the pulse's three queries — the per-class aggregate and the
+  recent deaths — and keeps their answers between loads while it is subscribed.
+  Each `onQueueActivity` call carries a `QueueActivity` saying which database
+  reads it may have moved: a successful finish (the row was locked, so no
+  waiting row and no death changed) re-reads nothing, a pickup or an insert
+  the aggregate alone, a failure both; the jobs plugin's own mutations say
+  both. A finished run's flags come from `equin:outcomeWritten`, which our
+  graphile patch emits once the outcome is IN the database — `job:complete`
+  fires before the write lands, and a read in that gap would hold the old
+  answer until the next such change. The change timer expires both (a
+  scheduled row becoming due is no event). The pulse's loads refresh the held
+  answers, so an open report runs each query once, not twice. The slot ledger
+  is memory and is read on every load.
+- **No poll.** Notified by `onQueueActivity` (start / complete / outcome written
+  / insert / the jobs plugin's own mutations), throttled to one load per second (`throttleMs: 1000`),
   plus ONE timer armed at the verdict's `nextChangeAt`. A wedged queue emits no
   events, so without the timer it would stay green forever; the timer fires at the
   instant the answer changes, not to check whether it did. Both run only while a

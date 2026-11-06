@@ -1,3 +1,4 @@
+import type { EventEmitter } from "node:events";
 import type { Job, WorkerEventMap, WorkerEvents } from "graphile-worker";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { HOLD_CLASSES, holdForTask, type HoldClass } from "../../core/hold";
@@ -74,6 +75,16 @@ export const PICKUP_SAMPLE_CAP = 1024;
 // The notification graphile's `add_job` sends on commit.
 const INSERT_CHANNEL = "jobs:insert";
 
+// Emitted by our graphile patch (`patches/graphile-worker@0.18.0.patch`) once a
+// run's outcome is IN the database — the completion DELETE, or the failure
+// UPDATE that unlocks the row. `job:complete` fires before that write lands, so
+// activity a database read must see is announced here, not there.
+const OUTCOME_WRITTEN = "equin:outcomeWritten";
+interface OutcomeWritten {
+  job: Job;
+  failed: boolean;
+}
+
 const slots = new Map<string, OccupiedSlot>();
 
 interface PickupSample {
@@ -88,7 +99,35 @@ const pickupSamples = new Map<HoldClass, PickupSample[]>(
   HOLD_CLASSES.map((hold) => [hold, []]),
 );
 
-const activityListeners = new Set<() => void>();
+/**
+ * What one piece of queue activity may have moved in the DATABASE's view of
+ * the queue — which of the introspection reads a listener must re-run to see
+ * it. The slot ledger itself (memory) is always current when a listener runs.
+ *
+ * Two flags rather than an event name, so a reader decides from facts about
+ * its reads, not from a list of event kinds it would have to keep in step with
+ * this file.
+ */
+export interface QueueActivity {
+  /** A row no slot holds may have appeared, left, or changed eligibility (a
+   * pickup, an insert, a retry's unlock, a serial lane released): the
+   * waiting / behind-lane / next-due figures of `queryQueuePulse` and the rows
+   * of `queryOldestWaiting` may differ. NOT `lockedCount`, which moves on
+   * every start and finish. */
+  unheldRows: boolean;
+  /** A run may have died, or a dead row moved or left: `queryRecentDeadJobs`
+   * may differ. */
+  deaths: boolean;
+}
+
+/** Activity that may have moved anything — every mutation outside the ledger's
+ * own events (cancel, retry, GC, the stuck-lock reclaim, durable teardown). */
+export const ANY_QUEUE_CHANGE: QueueActivity = {
+  unheldRows: true,
+  deaths: true,
+};
+
+const activityListeners = new Set<(activity: QueueActivity) => void>();
 
 /** Every slot holding a job right now, across every runner of this backend. */
 export function getOccupiedSlots(): OccupiedSlot[] {
@@ -130,13 +169,15 @@ function summarize(delays: number[]): PickupStats {
 /**
  * Be told when the queue may have changed: a job started or finished in this
  * backend, a row was inserted, or one of this plugin's own mutations touched
- * graphile's tables. It carries no payload — a listener re-reads what it needs.
- * Returns the unsubscribe.
+ * graphile's tables. The {@link QueueActivity} says which database reads may
+ * have moved; a listener re-reads what it needs. Returns the unsubscribe.
  *
  * Listeners run synchronously inside graphile's event emission, so they must be
  * cheap (a resource `notify()` is the intended shape).
  */
-export function onQueueActivity(listener: () => void): () => void {
+export function onQueueActivity(
+  listener: (activity: QueueActivity) => void,
+): () => void {
   activityListeners.add(listener);
   return () => {
     activityListeners.delete(listener);
@@ -154,9 +195,9 @@ export function onQueueActivity(listener: () => void): () => void {
  * worker holding a job it never runs, from `job:complete` it would take the
  * worker down. One broken listener must not cost a worker slot.
  */
-export function emitQueueActivity(): void {
+export function emitQueueActivity(activity: QueueActivity): void {
   for (const listener of [...activityListeners]) {
-    guarded("queue activity listener", listener);
+    guarded("queue activity listener", () => listener(activity));
   }
 }
 
@@ -199,11 +240,24 @@ export function attachSlotLedger(
         recordPickup(hold, lockedAt - runAt);
       }
     });
-    emitQueueActivity();
+    // A slot took a row: it stopped waiting (or stopped being scheduled).
+    emitQueueActivity({ unheldRows: true, deaths: false });
   };
+  // The slot is free now; the row's outcome is written a moment later
+  // (`onOutcomeWritten`), so this announces the ledger's change alone.
   const onComplete = ({ worker }: WorkerEventMap["job:complete"]): void => {
     slots.delete(worker.workerId);
-    emitQueueActivity();
+    emitQueueActivity({ unheldRows: false, deaths: false });
+  };
+  // A successful run's row is deleted while still locked, so no unheld row
+  // moves — unless it held a serial lane, whose release turns the rows behind
+  // it into rows waiting for a slot. A failed run's row is unlocked: back in
+  // the queue for its retry, or dead.
+  const onOutcomeWritten = ({ job, failed }: OutcomeWritten): void => {
+    emitQueueActivity({
+      unheldRows: failed || job.job_queue_id !== null,
+      deaths: failed,
+    });
   };
   // The worker failed to write the job's outcome back and is releasing itself
   // ("committing seppuku"). It will never emit `job:complete`, so this is the
@@ -211,22 +265,30 @@ export function attachSlotLedger(
   // reclaims it — visible to `queryQueuePulse()` as locked but absent here.
   const onFatal = ({ worker }: WorkerEventMap["worker:fatalError"]): void => {
     slots.delete(worker.workerId);
-    emitQueueActivity();
+    // Its row stays locked until the sweeper reclaims it, which announces
+    // that itself.
+    emitQueueActivity({ unheldRows: false, deaths: false });
   };
   const onNotification = ({
     message,
   }: WorkerEventMap["pool:listen:notification"]): void => {
-    if (message.channel === INSERT_CHANNEL) emitQueueActivity();
+    if (message.channel === INSERT_CHANNEL) {
+      emitQueueActivity({ unheldRows: true, deaths: false });
+    }
   };
 
   events.on("job:start", onStart);
   events.on("job:complete", onComplete);
+  // Not in graphile's typed event map: the patch adds it.
+  const untyped = events as unknown as EventEmitter;
+  untyped.on(OUTCOME_WRITTEN, onOutcomeWritten);
   events.on("worker:fatalError", onFatal);
   if (opts.listenInserts) events.on("pool:listen:notification", onNotification);
 
   return () => {
     events.off("job:start", onStart);
     events.off("job:complete", onComplete);
+    untyped.off(OUTCOME_WRITTEN, onOutcomeWritten);
     events.off("worker:fatalError", onFatal);
     if (opts.listenInserts) {
       events.off("pool:listen:notification", onNotification);

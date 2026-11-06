@@ -16,7 +16,7 @@ import {
 } from "../../server/internal/run-identity";
 import { announceRunDead } from "../../server/internal/run-death";
 import { pruneDyingRuns } from "./dying-runs";
-import { emitQueueActivity } from "./slot-ledger";
+import { ANY_QUEUE_CHANGE, emitQueueActivity } from "./slot-ledger";
 import { discardWorkflowLogs } from "../../server/internal/workflow-log";
 
 // Recovery floor for jobs that were mid-execution when their worker died
@@ -334,7 +334,7 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
   // something moved: the sweeper ticks every minute and an empty sweep changed
   // nothing a reader could see.
   if (dropped.length > 0 || reclaimed.length > 0 || reclaimedQueues.length > 0)
-    emitQueueActivity();
+    emitQueueActivity(ANY_QUEUE_CHANGE);
 
   await pruneDyingRuns(database);
 }
