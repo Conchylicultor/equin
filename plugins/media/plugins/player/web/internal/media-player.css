@@ -557,7 +557,8 @@ html[data-pip] .mp-fs {
   height: 36px;
   margin-left: 3px;
 }
-.mp:not([data-paused]) .mp-big-play {
+.mp:not([data-paused]) .mp-big-play,
+.mp:not([data-unplayed]) .mp-big-play {
   opacity: 0;
   pointer-events: none;
 }

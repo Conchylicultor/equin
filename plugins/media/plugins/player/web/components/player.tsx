@@ -237,7 +237,7 @@ export function Player({
   const settingsOpen = settings !== null;
   const volumeOpen = volumeAt !== null;
   const { idle, wake, rest } = useIdle(
-    media.paused || settingsOpen || volumeOpen || seeking,
+    settingsOpen || volumeOpen || seeking,
     kind === "video",
   );
 
@@ -493,6 +493,9 @@ export function Player({
       // Scrubbing pauses the media, but the player is not paused: no big
       // play button over the frame being scrubbed to.
       data-paused={(media.paused && !seeking) || undefined}
+      // Never played yet: the big play button is the poster's call to start;
+      // once it has played, a pause leaves the picture clear.
+      data-unplayed={!played || undefined}
       data-playing={!media.paused || undefined}
       data-idle={idle || undefined}
       data-settings-open={settingsOpen || undefined}
@@ -503,9 +506,7 @@ export function Player({
         className,
       )}
       onPointerMove={wake}
-      onPointerLeave={() => {
-        if (!media.paused && !settingsOpen) rest();
-      }}
+      onPointerLeave={rest}
       onKeyDown={onKeyDown}
     >
       <PortalHost>
@@ -628,7 +629,7 @@ function CenterFlash({ flash }: { flash: Flash | null }) {
   );
 }
 
-/** The big centre play button, while paused. */
+/** The big centre play button, until the first play. */
 function BigPlay({ onPlay }: { onPlay(): void }) {
   return (
     <button

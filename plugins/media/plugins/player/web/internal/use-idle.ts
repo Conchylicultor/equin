@@ -16,7 +16,7 @@ export interface Idle {
 
 /**
  * The controls' idle fade: they go after `IDLE_MS` of a resting pointer, but
- * never while `keepUp` — paused, a panel open, the seek bar dragged — and
+ * never while `keepUp` — a panel open, the seek bar dragged — and
  * never when `enabled` is false (an audio bar has no picture to clear).
  *
  * The quiet spell is a one-shot timer re-armed by every wake, not a poll: the

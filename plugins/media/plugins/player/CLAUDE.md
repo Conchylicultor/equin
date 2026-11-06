@@ -24,9 +24,9 @@ measure for measure, animations included. Plan:
 
 - **Video**: the picture, and over it a **floating glass pill** — play ·
   volume · current time · seek bar · time left (click: the total) · settings ·
-  full screen. The controls fade after 2 s while playing and the pointer
-  rests (never while paused, a panel is open or the seek bar is dragged; the
-  cursor hides with them). A big play button while paused, and a **centre
+  full screen. The controls fade after 2 s once the pointer rests, playing
+  or paused (never while a panel is open or the seek bar is dragged; the
+  cursor hides with them). A big play button until the first play, and a **centre
   flash** for what a key or click just did (play, pause, skip, volume, speed,
   loop).
 - **Audio**: the same pill as a static bar in the flow — no idle fade, no

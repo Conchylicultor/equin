@@ -62,6 +62,15 @@ describe("play / pause", () => {
     expect(video.paused).toBe(true);
   });
 
+  it("the big play button shows until the first play, not on a later pause", () => {
+    const { root } = setup();
+    expect(root.hasAttribute("data-unplayed")).toBe(true);
+    fireEvent.click(button(root, "Play"));
+    fireEvent.click(button(root, "Pause"));
+    expect(root.hasAttribute("data-paused")).toBe(true);
+    expect(root.hasAttribute("data-unplayed")).toBe(false);
+  });
+
   it("Space toggles once from outside the player", () => {
     const { getByTestId, key } = setup();
     key(getByTestId("outside"), " ");
@@ -273,14 +282,20 @@ describe("idle", () => {
     expect(root.hasAttribute("data-idle")).toBe(false);
   });
 
-  it("never while paused", () => {
+  it("fade while paused too", () => {
     vi.useFakeTimers();
     const { root } = setup();
     fireEvent.pointerMove(root);
     act(() => {
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(2100);
     });
-    expect(root.hasAttribute("data-idle")).toBe(false);
+    expect(root.hasAttribute("data-idle")).toBe(true);
+  });
+
+  it("leaving the player while paused fades at once", () => {
+    const { root } = setup();
+    fireEvent.pointerLeave(root);
+    expect(root.hasAttribute("data-idle")).toBe(true);
   });
 
   it("never while the settings are open", () => {
