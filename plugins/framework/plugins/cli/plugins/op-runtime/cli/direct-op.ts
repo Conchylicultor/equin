@@ -43,7 +43,8 @@ import { publishLane } from "./lane";
 import { opPriority } from "./priority";
 
 // The lifecycle of a DIRECT op — one whose only entry ticket is the host CPU
-// grant: `check`, `test`, and an `e2e` script run. Before this file the whole
+// grant: `check`, `test`, and an `e2e` script run — plus the one op recorded
+// with NO grant, a plain script run (`script`; see `OP_POOL`). Before this file the whole
 // sequence lived inline in the check command, and `test` / `e2e` needed the
 // identical sequence: identity, the broadcast banner, the interrupted
 // predecessor, the lane, the per-op liveness marker,
@@ -128,6 +129,7 @@ export interface DirectOpOptions<K extends OpKind = OpKind> {
    * acquire is elastic — it hands back the slots it could get, `>= 1` — so this
    * is a ceiling, not a demand: `cpuBudget().B` for work that fans out (a check
    * pass, a vitest worker pool), `1` for a single process driving a browser.
+   * Unread by an unadmitted kind (`OP_POOL`), which acquires nothing.
    */
   max: number;
   /**
@@ -174,8 +176,35 @@ type GrantAcquire = <T>(
  */
 type GrantPool = "cpu" | "e2e";
 
-function poolFor(kind: OpKind): GrantPool {
-  return kind === "e2e" ? "e2e" : "cpu";
+/**
+ * Which pool each kind's grant comes from, or `null` for a kind that is
+ * RECORDED but not ADMITTED: a plain `./equin run` script (`script`) writes its
+ * marker and op-log record — so the Ops views show it and the machine-usage
+ * sampler charges its process tree to `agent ops` — but never waits on or holds
+ * a slot. A one-off script must not queue behind builds, and its weight is not
+ * known before it runs. A `Record` over every kind, so a new kind states its
+ * admission rather than inheriting one.
+ */
+const OP_POOL = {
+  build: "cpu",
+  push: "cpu",
+  check: "cpu",
+  test: "cpu",
+  e2e: "e2e",
+  script: null,
+} as const satisfies Record<OpKind, GrantPool | null>;
+
+/**
+ * What a direct op's body is handed: the grant it runs under, or `null` for an
+ * unadmitted kind — it holds no slots, so there is nothing to spend and nothing
+ * to hand a child (a `./equin check` it spawns acquires its own grant).
+ */
+export type OpGrant<K extends OpKind> = (typeof OP_POOL)[K] extends null
+  ? null
+  : Grant;
+
+function poolFor(kind: OpKind): GrantPool | null {
+  return OP_POOL[kind];
 }
 
 /**
@@ -328,7 +357,10 @@ const realDeps: DirectOpDeps = {
 export async function withDirectOp<K extends OpKind>(
   kind: K,
   opts: DirectOpOptions<K>,
-  body: (grant: Grant, ctx: DirectOpContext<K>) => Promise<OutcomeByKind[K]>,
+  body: (
+    grant: OpGrant<K>,
+    ctx: DirectOpContext<K>,
+  ) => Promise<OutcomeByKind[K]>,
   deps: DirectOpDeps = realDeps,
 ): Promise<OutcomeByKind[K]> {
   // NESTING, resolved before anything acts on it. A parent op hands this child
@@ -402,22 +434,24 @@ export async function withDirectOp<K extends OpKind>(
   };
 
   try {
-    const runUnder = async (grant: Grant): Promise<OutcomeByKind[K]> => {
-      // The grant is now held. The host grant IS a direct op's entry ticket: it
-      // does no further waiting after this point.
+    const pool = poolFor(kind);
+    const runUnder = async (grant: Grant | null): Promise<OutcomeByKind[K]> => {
+      // The grant is now held (or, for an unadmitted kind, there is none to
+      // wait for). The host grant IS a direct op's entry ticket: it does no
+      // further waiting after this point.
       profiler?.markGranted();
-      const outcome = await body(grant, ctx);
+      // `grant` is null exactly when `pool` is, which is what `OpGrant<K>`
+      // spells; tsc cannot follow that through the generic.
+      const outcome = await body(grant as OpGrant<K>, ctx);
       profiler?.complete(outcome);
       return outcome;
     };
-    const pool = poolFor(kind);
-    const acquire = pool === "e2e" ? deps.withE2eGrant : deps.withHostGrant;
     // `grantHooks()` is what makes this queue visible as a `host-grant` wait
     // in the op log — the wait that made a direct check an invisible
     // contender. The two lines are the same wait made visible to whoever ran
     // the command: before them a run queued for 30 min printed nothing, so an
     // agent could not tell a queue from a hang.
-    const grantHooks = (): GrantHooks => {
+    const grantHooks = (pool: GrantPool): GrantHooks => {
       const recorded = profiler?.grantHooks();
       let waited = false;
       return {
@@ -438,18 +472,21 @@ export async function withDirectOp<K extends OpKind>(
         },
       };
     };
-    const run = async (): Promise<OutcomeByKind[K]> =>
-      inherited
-        ? await runUnder(inherited)
-        : await acquire(
-            {
-              lane,
-              priority: await deps.priority(kind, isInteractiveOrigin),
-              max: opts.max,
-              hooks: grantHooks(),
-            },
-            runUnder,
-          );
+    const run = async (): Promise<OutcomeByKind[K]> => {
+      // Recorded, not admitted: no slot to wait for, none to hold.
+      if (pool === null) return await runUnder(null);
+      if (inherited) return await runUnder(inherited);
+      const acquire = pool === "e2e" ? deps.withE2eGrant : deps.withHostGrant;
+      return await acquire(
+        {
+          lane,
+          priority: await deps.priority(kind, isInteractiveOrigin),
+          max: opts.max,
+          hooks: grantHooks(pool),
+        },
+        runUnder,
+      );
+    };
     const { flight } = opts;
     if (!flight) return await run();
 

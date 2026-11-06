@@ -23609,8 +23609,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `waitLabel`
                   - `waitPlacement`
               - Cross-plugin:
-                - Uses tokens: 23 vars — full list in [`plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/REFERENCE.md)
-                  - `ui/tokens/categorical` ×8
+                - Uses tokens: 24 vars — full list in [`plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/REFERENCE.md)
+                  - `ui/tokens/categorical` ×9
                   - `ui/tokens/color-palette` ×7
                   - `ui/tokens/type-scale` ×3
                   - `ui/tokens/density` ×2
@@ -27839,7 +27839,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`normalize-generated`** — `./equin normalize-generated` — re-derive the generated artifacts a merge driver auto-resolved during a merge or rebase and amend the head commit; the `post-rewrite` git hook's entry point.
           - Cli:
             - Uses: `framework/cli/git-artifacts.normalizeGeneratedArtifacts`
-        - **`op-runtime`** — Shared machinery of the op commands (build / check / test / push / run <e2e>): broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output, and the direct-op lifecycle (withDirectOp).
+        - **`op-runtime`** — Shared machinery of the op commands (build / check / test / push / run): broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output, and the direct-op lifecycle (withDirectOp).
           - Core:
             - Uses:
               - `infra/paths.worktreeArtifacts`

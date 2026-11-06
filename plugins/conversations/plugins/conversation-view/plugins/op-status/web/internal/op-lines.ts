@@ -38,8 +38,8 @@ export function opSlugOf(row: OpRow): string {
 
 // Which op a worktree shows when it somehow has several in flight: a push
 // (global-lock-contended, highest stakes) outranks a check, which outranks a
-// build; a test or an e2e run contends for the host grant only and yields the
-// display slot. `Record<OpKind, …>` keeps it complete: a kind without a rank is
+// build; a test, an e2e run or a script contends for the host grant only and
+// yields the display slot. `Record<OpKind, …>` keeps it complete: a kind without a rank is
 // a type error.
 const OP_RANK: Record<OpKind, number> = {
   push: 4,
@@ -47,6 +47,7 @@ const OP_RANK: Record<OpKind, number> = {
   build: 2,
   test: 1,
   e2e: 1,
+  script: 1,
 };
 
 /** The worktree's in-flight ops, the one it shows first (by `OP_RANK`, then oldest). */

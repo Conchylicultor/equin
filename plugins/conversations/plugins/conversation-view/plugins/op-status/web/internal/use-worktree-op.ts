@@ -11,6 +11,7 @@ import {
   opsInFlight,
   type OpRow,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
+import { OP_KINDS } from "@plugins/infra/plugins/worktree/core";
 import { opsOfSlug, slugOf } from "./op-lines";
 
 /**
@@ -19,10 +20,22 @@ import { opsOfSlug, slugOf } from "./op-lines";
  * so it paints settled). Callers filter by slug on the client. The ops are
  * this machine's (`needsMachine`): under a host without the computer the read
  * is `unavailable` — its own arm, never an empty "nothing in flight".
+ *
+ * Only the kinds that read as their conversation working
+ * (`OP_KINDS[kind].readsAsWorking`): a plain script run is an op in the op log
+ * and the Ops views, but a watcher left running must not hold its
+ * conversation's banner and chip on "working" for as long as it lives.
  */
 export function useOpsInFlight():
   ResourceResult<OpRow[]> | ResourceUnavailable {
-  return useLive(opsInFlight);
+  const ops = useLive(opsInFlight);
+  return useMemo(
+    () =>
+      mapResource(ops, (rows) =>
+        rows.filter((r) => OP_KINDS[r.kind].readsAsWorking),
+      ),
+    [ops],
+  );
 }
 
 /**

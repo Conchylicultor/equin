@@ -1,6 +1,7 @@
-// The closed set of ops a worktree runs that take a host CPU grant, keep the
-// conversation reading as "working" through a live marker, and land a durable
-// op-log record: build, push, check, test, e2e.
+// The closed set of ops a worktree runs that hold a live marker and land a
+// durable op-log record: build, push, check, test, e2e, script. Every kind but
+// `script` also takes a host grant (op-runtime's `OP_POOL`) and reads as the
+// conversation working (`readsAsWorking` below).
 //
 // Declared ONCE, as data, here in the worktree plugin's web-safe core — the
 // marker primitive (`worktree/server`) is where the vocabulary originates, and
@@ -22,14 +23,28 @@ export interface OpKindMeta {
   label: string;
   /** The busy verb on a compact row: "Building". */
   progressive: string;
+  /**
+   * Whether an in-flight op of this kind stands for its conversation's pending
+   * WORK — the op-status banner above the prompt, the sidebar chip, and what a
+   * bare `./equin await` (no kinds named) waits on. False for a
+   * plain script run: it can be a watcher or a dev server that never ends, and
+   * a conversation must not read "working" for as long as one lives. It is
+   * still an op everywhere else (the op log, the Ops views, machine-usage).
+   */
+  readsAsWorking: boolean;
 }
 
 export const OP_KINDS = {
-  build: { label: "Build", progressive: "Building" },
-  push: { label: "Push", progressive: "Pushing" },
-  check: { label: "Check", progressive: "Checking" },
-  test: { label: "Test", progressive: "Testing" },
-  e2e: { label: "E2E", progressive: "Running e2e" },
+  build: { label: "Build", progressive: "Building", readsAsWorking: true },
+  push: { label: "Push", progressive: "Pushing", readsAsWorking: true },
+  check: { label: "Check", progressive: "Checking", readsAsWorking: true },
+  test: { label: "Test", progressive: "Testing", readsAsWorking: true },
+  e2e: { label: "E2E", progressive: "Running e2e", readsAsWorking: true },
+  script: {
+    label: "Script",
+    progressive: "Running a script",
+    readsAsWorking: false,
+  },
 } as const satisfies Record<string, OpKindMeta>;
 
 export type OpKind = keyof typeof OP_KINDS;

@@ -16,6 +16,7 @@ import {
   testFailureLines,
 } from "@plugins/framework/plugins/cli/plugins/test/core";
 import {
+  OP_KINDS,
   OP_KIND_IDS,
   isOpKind,
   type OpKind,
@@ -175,7 +176,12 @@ const run: CliAction<[string[]], { maxWait?: string; arm?: string }> = async (
   // run an op can still be watched rather than throwing on subscribe.
   mkdirSync(opsDir, { recursive: true });
 
-  const matches = (op: OpKind) => wanted.size === 0 || wanted.has(op);
+  // No kinds named = every op that stands for this checkout's pending work
+  // (`readsAsWorking`). A plain script run is left out: it may be a watcher or
+  // a dev server that never ends, and a bare `await` meant for a build would
+  // wait on it to the cap instead. Naming `script` still waits on one.
+  const matches = (op: OpKind) =>
+    wanted.size === 0 ? OP_KINDS[op].readsAsWorking : wanted.has(op);
 
   // ── arm ──────────────────────────────────────────────────────────────────
   // Capture (kind, opId, pid) now. Everything after this decides about THESE

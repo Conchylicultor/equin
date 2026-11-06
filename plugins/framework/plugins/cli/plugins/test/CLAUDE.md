@@ -33,7 +33,7 @@ Like a direct `./equin check`, a test run takes a host CPU grant (its queue
 time visible as a `host-grant` wait), plants the worktree op marker — the
 conversation reads `working`, the banner reads "Test in progress" — and lands an
 op-log record for the Ops Gantt. The lifecycle is `withDirectOp("test", …)` from
-`op-runtime`, shared with `check` and the e2e branch of `run`.
+`op-runtime`, shared with `check` and `run`.
 
 The grant is the elastic share (a ceiling of the run's own fan-out — one unit,
 or one per vitest file, at most `cpuBudget().B`; the acquire hands back what it

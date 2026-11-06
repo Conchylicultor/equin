@@ -40,7 +40,7 @@ export default defineCliCommand<[string[]], { maxWait?: string; arm?: string }>(
     arguments: [
       {
         name: "[ops...]",
-        description: `Op kinds to wait for — any of ${OP_KIND_IDS.join(" | ")}; default: every op running in this checkout`,
+        description: `Op kinds to wait for — any of ${OP_KIND_IDS.join(" | ")}; default: every op running in this checkout but a plain script run`,
       },
     ],
     options: [

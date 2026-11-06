@@ -157,6 +157,7 @@ export interface OutcomeByKind {
   check: "success" | "failed" | "error";
   test: "success" | "failed" | "error";
   e2e: "success" | "failed" | "error";
+  script: "success" | "failed" | "error";
 }
 
 /** Any outcome a writer may stamp on a terminal record. */

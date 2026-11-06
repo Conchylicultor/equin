@@ -65,25 +65,24 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
   // `stdin: "inherit"` because the child must be indistinguishable from the
   // script the caller would have run by hand; the default `"ignore"` would be a
   // behavior change hiding in a fd, invisible until a script prompts.
-  const spawnScript = (env?: Record<string, string | undefined>) =>
-    spawnPassthrough([process.execPath, abs, ...args], {
-      cwd: root,
-      stdin: "inherit",
-      ...(env ? { env } : {}),
-    });
-
-  // An e2e script — one under a plugin's `e2e/` dir, the convention the
-  // harness owns — is an OP: it drives the deployed app with a browser, so it
-  // takes a host CPU grant like a direct check (one unit: one script, one
-  // Chromium, no fan-out), plants the worktree op marker (the conversation
-  // reads "working", the banner "E2E in progress") and lands an op-log record.
-  // The lifecycle is shared with `check` and `test`, see
-  // op-runtime/cli/direct-op.ts. EVERY OTHER SCRIPT takes the plain path
-  // below, byte-for-byte as before: no grant, no marker, no record — a
-  // one-off data script is not an op, and must not queue behind builds to
-  // run.
   //
-  // The script runs in the FOREGROUND tier, and so does the Chromium it
+  // EVERY script is an op: it plants the worktree op marker and lands an
+  // op-log record, so the Ops views show it and the machine-usage sampler
+  // charges its process tree to `agent ops`. The lifecycle is shared with
+  // `check` and `test`, see op-runtime/cli/direct-op.ts.
+  //
+  // Only an e2e script — one under a plugin's `e2e/` dir, the convention the
+  // harness owns — is ADMITTED: it drives the deployed app with a browser, so
+  // it takes one slot of the `e2e` pool. Any other script is kind `script`,
+  // recorded but never admitted: no slot to wait for or hold — a one-off data
+  // script must not queue behind builds — and no grant handed down, so a
+  // `./equin check` it spawns acquires its own; it stays in the session's
+  // (darwinbg) tier. Recorded because unrecorded they were invisible: on
+  // 2026-11-06 four agent-run `blocking-fs/scripts/inventory.ts` held ~11 GB
+  // with nothing naming them
+  // (research/2026-11-06-global-host-pressure-by-owner.md).
+  //
+  // An e2e script runs in the FOREGROUND tier, and so does the Chromium it
   // launches (darwinbg is inherited at spawn). An agent session is darwinbg
   // as a whole; left there, its browser ran on the efficiency cores and every
   // wall-clock number the run took — long tasks, long animation frames, a
@@ -95,40 +94,39 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
   // script measure what the user's browser would, with no flag to forget. The
   // `e2e` pool bounds what is lifted (two runs host-wide), the same argument
   // that lets a `cpu` grant holder run in the foreground; this process does
-  // nothing else while it waits on the script.
-  if (isE2eScriptPath(rel)) {
-    const outcome = await withDirectOp("e2e", { max: 1 }, async (grant) => {
-      const { exitCode, signalCode } = await withForegroundPriority(() =>
-        spawnScript({ ...process.env, ...grant.env() }),
-      );
-      if (signalCode !== null) {
-        console.error(`\n${rel} was killed by ${signalCode}.`);
-        return "failed";
-      }
-      // Preserve the script's own code (the harness exits 2 for a usage
-      // refusal, 1 for failed checks); the exit below reads it back.
-      if (exitCode !== 0) {
-        process.exitCode = exitCode;
-        return "failed";
-      }
-      return "success";
-    });
-    if (outcome !== "success") process.exit(process.exitCode ?? 1);
-    return;
-  }
-
-  const { exitCode, signalCode } = await spawnScript();
-
-  // A signalled child can still report exit 0. Reporting that as success is the
-  // absorbed failure this repo bans — the script did not finish, it was killed.
-  if (signalCode !== null) {
-    console.error(`\n${rel} was killed by ${signalCode}.`);
-    process.exit(1);
-  }
-  // The exit code is the script's answer; this command is a wrapper, not a
-  // verdict of its own. `process.exit` rather than `process.exitCode` so a
-  // non-zero cannot be overwritten by anything that runs after us.
-  if (exitCode !== 0) process.exit(exitCode);
+  // nothing else while it waits on the script. An unadmitted script has no
+  // bound, so it is not lifted.
+  const kind = isE2eScriptPath(rel) ? "e2e" : "script";
+  const outcome = await withDirectOp(kind, { max: 1 }, async (grant) => {
+    const spawnScript = () =>
+      spawnPassthrough([process.execPath, abs, ...args], {
+        cwd: root,
+        stdin: "inherit",
+        env: { ...process.env, ...(grant === null ? {} : grant.env()) },
+      });
+    const { exitCode, signalCode } =
+      grant === null
+        ? await spawnScript()
+        : await withForegroundPriority(spawnScript);
+    // A signalled child can still report exit 0. Reporting that as success is
+    // the absorbed failure this repo bans — the script did not finish, it was
+    // killed.
+    if (signalCode !== null) {
+      console.error(`\n${rel} was killed by ${signalCode}.`);
+      return "failed";
+    }
+    // The exit code is the script's answer (the e2e harness exits 2 for a usage
+    // refusal, 1 for failed checks); this command is a wrapper, not a verdict
+    // of its own. The exit below reads it back.
+    if (exitCode !== 0) {
+      process.exitCode = exitCode;
+      return "failed";
+    }
+    return "success";
+  });
+  // `process.exit` rather than `process.exitCode` alone so a non-zero cannot
+  // be overwritten by anything that runs after us.
+  if (outcome !== "success") process.exit(process.exitCode ?? 1);
 };
 
 export default run;

@@ -18,6 +18,7 @@ const checklistIcon = symbol("checklist");
 const hourglassEmptyIcon = symbol("hourglass-empty");
 const openInBrowserIcon = symbol("open-in-browser");
 const scienceIcon = symbol("science");
+const terminalIcon = symbol("terminal");
 const uploadIcon = symbol("upload");
 
 // One icon per kind. Icons are React components, so they cannot live beside the
@@ -30,6 +31,7 @@ const OP_ICON: Record<OpKind, IconRef> = {
   check: scienceIcon,
   test: checklistIcon,
   e2e: openInBrowserIcon,
+  script: terminalIcon,
 };
 
 // The banner's state line, ticking. Mounted only while the tooltip is open, so

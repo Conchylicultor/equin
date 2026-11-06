@@ -159,10 +159,11 @@ const TYPE_FILL: Record<OpKind, string> = {
   // a wait — so a check takes the one strongly-saturated cool hue neither the
   // other kinds nor any wait uses.
   check: "bg-categorical-5",
-  // The two ops that only ever contend for the host grant: the next two unused
-  // categorical hues (3/4/8/9 are the waits).
+  // The ops that only ever contend for the host grant: the next unused
+  // categorical hues (1 and 3/4/8/9 are the waits).
   test: "bg-categorical-6",
   e2e: "bg-categorical-7",
+  script: "bg-categorical-10",
 };
 
 // A warm severity ramp: benign self-inflicted queueing (amber → orange), then

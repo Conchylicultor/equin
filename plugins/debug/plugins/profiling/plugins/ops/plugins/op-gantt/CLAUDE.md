@@ -123,8 +123,8 @@ kind dispatch.
     - `waitLabel`
     - `waitPlacement`
 - Cross-plugin:
-  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/categorical` ×8
+  - Uses tokens: 24 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/categorical` ×9
     - `ui/tokens/color-palette` ×7
     - `ui/tokens/type-scale` ×3
     - `ui/tokens/density` ×2

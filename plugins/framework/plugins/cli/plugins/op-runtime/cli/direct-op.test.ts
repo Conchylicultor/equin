@@ -222,6 +222,41 @@ describe("withDirectOp — top-level path", () => {
     expect(h.events.some((e) => e.startsWith("acquire:"))).toBe(false);
   });
 
+  test("a script op is recorded but never admitted: no grant, marker and log intact", async () => {
+    const h = makeHarness();
+    const outcome = await withDirectOp(
+      "script",
+      { max: 1 },
+      async (grant) => {
+        expect(grant).toBeNull();
+        return "success";
+      },
+      h.deps,
+    );
+    expect(outcome).toBe("success");
+    expect(h.events.some((e) => e.startsWith("acquire"))).toBe(false);
+    expect(h.events).toContain("marker:script:publish");
+    expect(h.events).toContain("marker:script:release");
+    const completed = terminalOf(h.records);
+    expect(completed?.kind).toBe("script");
+    expect(completed?.outcome).toBe("success");
+    expect(completed?.waits).toEqual([]);
+  });
+
+  test("a nested script op hands its body no grant either", async () => {
+    const h = makeHarness({ inherited: fakeGrant(3, "background") });
+    await withDirectOp(
+      "script",
+      { max: 1 },
+      async (grant) => {
+        expect(grant).toBeNull();
+        return "success";
+      },
+      h.deps,
+    );
+    expect(h.events.some((e) => e.startsWith("marker:"))).toBe(false);
+  });
+
   test("a sidequest checkout acquires at its priority", async () => {
     const h = makeHarness({ priority: "low" });
     await withDirectOp("check", { max: 2 }, async () => "success", h.deps);

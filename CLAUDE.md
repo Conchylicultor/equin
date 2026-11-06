@@ -195,7 +195,7 @@ Flags: `--path <route>`, `--viewport 1280x900`, `--wait <ms>`, `--color-scheme d
 
 `--width` must be a canvas size preset (omit for the mock's declared viewport); variants are captured at their defaults unless `--options` picks one.
 
-**Repeatable flows**: a standalone script at `plugins/<path>/e2e/<name>.ts` in the plugin it verifies — never `*.test.ts` (the test runner would pick it up). Manual only. Running an `e2e/` script is an op (host CPU grant, "E2E in progress" banner); other `./equin run` scripts are not. `--headed` to watch.
+**Repeatable flows**: a standalone script at `plugins/<path>/e2e/<name>.ts` in the plugin it verifies — never `*.test.ts` (the test runner would pick it up). Manual only. Running an `e2e/` script is an op (host grant, "E2E in progress" banner); any other `./equin run` script is recorded as a `script` op (op log, Ops views) but takes no grant and no banner. `--headed` to watch.
 
 - Shared helpers (argv, target, `withBrowser`, `report()`): `@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e` — extend it, don't hand-roll. Domain flows go in the owning plugin's `e2e/index.ts`.
 - `e2e` imports only other plugins' `core` and `e2e` barrels — it drives the deployed app, not the code under test.

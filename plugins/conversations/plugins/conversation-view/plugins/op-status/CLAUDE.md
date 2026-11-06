@@ -1,7 +1,8 @@
 # op-status
 
 Surfaces the worktree's in-flight long-running operation (build / push / check /
-test / e2e) in two places:
+test / e2e — every kind whose `OP_KINDS[kind].readsAsWorking`; a plain `script`
+run is not shown, a watcher must not read as "working" forever) in two places:
 
 - a **banner** above the prompt input, and
 - a compact **sidebar row chip** (one icon per kind, an hourglass while parked

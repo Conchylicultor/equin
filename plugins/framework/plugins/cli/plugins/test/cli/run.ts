@@ -225,8 +225,8 @@ const run: CliAction<[string[]], object> = async (paths) => {
   // A test run is an OP, like a direct check: it takes a host CPU grant (its
   // queue time visible as a `host-grant` wait), plants the worktree op marker
   // (the conversation reads "working", the banner reads "Test in progress")
-  // and lands an op-log record. The lifecycle is shared with `check` and the
-  // e2e branch of `run` — see op-runtime/cli/direct-op.ts; what is this
+  // and lands an op-log record. The lifecycle is shared with `check` and
+  // `run` — see op-runtime/cli/direct-op.ts; what is this
   // command's own is which runners to spawn and what their exits mean.
   //
   // The grant is the elastic share (the run's fan-out, at most `cpuBudget().B`,

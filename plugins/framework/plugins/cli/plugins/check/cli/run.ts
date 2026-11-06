@@ -395,8 +395,7 @@ const run: CliAction<
   // Everything from here on — the broadcast banner, this worktree's identity,
   // the interrupted-predecessor warning, the lane, the op marker, the op-log
   // record, the signal handlers and the host grant (or the parent's inherited
-  // one) — is the direct-op lifecycle, shared with `test` and the e2e branch of
-  // `run`. See op-runtime/cli/direct-op.ts. What is left here is what only a
+  // one) — is the direct-op lifecycle, shared with `test` and `run`. See op-runtime/cli/direct-op.ts. What is left here is what only a
   // check knows: how to run the checks, and what their verdict means.
   //
   // A nested check adopts its parent's id (`--run-id`, validated above), so

@@ -1,6 +1,6 @@
 /**
  * The machinery an OP command runs on — the shared half of `build`, `check`,
- * `test`, `push` and the e2e branch of `run`: broadcasts, the deploy receipt,
+ * `test`, `push` and `run`: broadcasts, the deploy receipt,
  * fatal-signal exits, signal-origin attribution, lane classification, the op
  * profiler and durable progress log, the duress admission valve, the
  * nested-check subprocess, build output rendering, crash recording, and the

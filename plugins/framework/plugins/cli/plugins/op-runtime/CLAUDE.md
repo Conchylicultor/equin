@@ -1,7 +1,7 @@
 # op-runtime
 
 The machinery an **op command** runs on — the shared half of `build`, `check`,
-`test`, `push`, and the e2e branch of `run`.
+`test`, `push`, and `run`.
 
 Broadcasts, the deploy receipt, fatal-signal exits, signal-origin attribution,
 lane classification, the op profiler and its durable progress log, the duress
@@ -10,8 +10,11 @@ recording — and the whole lifecycle of a **direct op**.
 
 ## `withDirectOp` — one lifecycle for the ops whose only ticket is the host grant
 
-`check`, `test` and an `e2e` script run (`./equin run plugins/…/e2e/x.ts`)
-are the same op shape: nothing to lock but the host CPU grant. Before
+`check`, `test` and a script run (`./equin run <script>`; kind `e2e` for an
+`e2e/` script, `script` for any other) are the same op shape: nothing to lock but the host CPU grant.
+`script` is the one kind RECORDED but not ADMITTED (`OP_POOL` maps it to no
+pool): marker and op-log record, no grant — its body is handed `null`
+(`OpGrant<K>`), so it has no slots to spend and none to pass down. Before
 `direct-op.ts` the check command hand-rolled the sequence — identity, the
 broadcast banner, the interrupted-predecessor warning, the lane, the per-op
 liveness marker (a flocked `ops/<opId>.json`, published before `requested` and
@@ -160,7 +163,7 @@ the shared Playwright harness.
 
 ## Plugin reference
 
-- Description: Shared machinery of the op commands (build / check / test / push / run <e2e>): broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output, and the direct-op lifecycle (withDirectOp).
+- Description: Shared machinery of the op commands (build / check / test / push / run): broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output, and the direct-op lifecycle (withDirectOp).
 - Core:
   - Uses:
     - `infra/paths.worktreeArtifacts`
