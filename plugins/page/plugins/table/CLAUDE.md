@@ -31,16 +31,43 @@ replaces a stale list with the drawn widths.
 - **Keys** (`onKey`, given where the field's caret stands): Tab / Shift+Tab walk
   the cells (Tab on the last appends a row); Enter moves down (appending from
   the last row); ↑/↓ cross rows from a first/last line; ←/→ cross cells at a
-  text edge; Escape writes the cell and selects the table (selection mode, as
-  Escape does in a text block). Not taken: Shift+Enter (the field's soft
-  break), ↑/↓ past the table (the caret host's — the next block). Enter on the
-  selected table opens its first cell.
-- **Clicking in does not change the table's look**: an open cell holds the
-  caret (`useInnerCaret`), so the editor's block-level caret cue (the tint)
-  steps aside — only the cell's own ring shows. The tint is back when the
-  table itself holds the caret (arrowed onto from the block above).
+  text edge; Shift+arrows past a text edge select cells; Escape writes the
+  cell and selects it (a second Escape selects the table, as in a text
+  block). Not taken: Shift+Enter (the field's soft break), ↑/↓ past the table
+  (the caret host's — the next block). Enter on the selected table opens its
+  first cell.
+- **Clicking in does not change the table's look**: an open cell or a cell
+  selection holds the caret (`useInnerCaret`), so the editor's block-level
+  caret cue (the tint) steps aside — only the cell's own ring, or the
+  selection's box, shows. The tint is back when the table itself holds the
+  caret (arrowed onto from the block above, or selected by a second Escape).
 - **Row 0 is the header** on every grid axis (`web/internal/table-ops.ts`, pure
   and tested): it is never deleted, duplicated, moved, or moved above.
+
+## Selecting cells
+
+A rectangle of cells (`range`: an anchor and a focus cell,
+`web/internal/cell-range.ts`) — never held at once with an open cell.
+
+- **Made by**: a drag that crosses into another cell (until then the press is
+  the browser's, selecting the cell's words; at the crossing the native
+  selection is dropped and the table turns `select-none`), Shift+click,
+  Shift+arrows out of a cell's text edge, Escape in a cell. Drawn as one box
+  in the theme's `--text-selection` colour, placed from the geometry.
+- **The keyboard is on the grid's host** (`tabIndex={-1}`, keys taken only when
+  they land on the host itself): arrows move, Shift+arrows grow, Tab walks,
+  ⌘A takes every cell, Backspace / Delete clear (one write), Enter opens the
+  focus cell, a printable key opens it with that character as its text (a
+  draft, so typing on is one write), Escape selects the table. Focus leaving
+  the table drops the selection.
+- **Clipboard** (`web/internal/cell-clipboard.ts`): a copy writes our own
+  `CELLS_MIME` (the runs exactly), an HTML `<table>` (spreadsheets, rich
+  editors; marks and links) and tab-separated text (quoted where a cell holds a
+  tab, break or quote). A paste reads the richest flavour; it lands at the
+  range's top-left corner and grows the table to fit, or — one cell — fills the
+  range (`pasteCells`). Pasted into an OPEN cell, a grid (ours, an HTML table,
+  or text with a tab) spreads across the table from that cell; other text stays
+  the field's.
 
 ## Chrome (`web/components/table-chrome.tsx`)
 
@@ -141,6 +168,7 @@ editor's line-claim escape, not this file's.
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --text-selection`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shadow --shadow-xs`

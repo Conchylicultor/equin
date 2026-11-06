@@ -74,7 +74,7 @@ export const IDLE_CHROME: ChromeState = {
 };
 
 /** A new column's width in a table whose columns have fixed widths. */
-const NEW_COLUMN_WIDTH = 140;
+export const NEW_COLUMN_WIDTH = 140;
 /** The narrowest a column may be dragged or fitted to; and the widest a fit makes it. */
 const MIN_COLUMN_WIDTH = 64;
 const MAX_FIT_WIDTH = 560;

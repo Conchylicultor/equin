@@ -40640,6 +40640,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --foreground`
           - `ui/tokens/color-palette --muted`
           - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/color-palette --text-selection`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shadow --shadow-xs`

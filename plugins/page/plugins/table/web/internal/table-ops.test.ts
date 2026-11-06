@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import type { RichText } from "@plugins/page/plugins/editor/core";
 import { tableBlock, type TableData } from "../../core";
 import {
+  cellsIn,
+  clearCells,
   clearColumn,
   clearRow,
   deleteColumn,
@@ -12,6 +14,7 @@ import {
   insertRow,
   moveColumn,
   moveRow,
+  pasteCells,
   resizeColumn,
   setAlign,
   setCell,
@@ -151,5 +154,97 @@ describe("resizeColumn", () => {
 
   test("the drawn widths must cover every column", () => {
     expect(() => resizeColumn(t([["a", "b"]]), 0, 10, [1])).toThrow();
+  });
+});
+
+describe("cell ranges", () => {
+  const g = t([
+    ["a", "b", "c"],
+    ["d", "e", "f"],
+    ["g", "h", "i"],
+  ]);
+  const b = (r0: number, r1: number, c0: number, c1: number) => ({
+    r0,
+    r1,
+    c0,
+    c1,
+  });
+
+  test("cellsIn reads a rectangle, the header included", () => {
+    expect(
+      cellsIn(g, b(0, 1, 1, 2)).map((row) => row.map((c) => c[0]?.text)),
+    ).toEqual([
+      ["b", "c"],
+      ["e", "f"],
+    ]);
+  });
+
+  test("clearCells empties exactly the rectangle", () => {
+    expect(cells(valid(clearCells(g, b(1, 2, 0, 1))))).toEqual([
+      ["a", "b", "c"],
+      ["", "", "f"],
+      ["", "", "i"],
+    ]);
+  });
+
+  test("a pasted block lands at the top-left corner", () => {
+    const { data, bounds } = pasteCells(
+      g,
+      b(1, 1, 1, 1),
+      [
+        [r("1"), r("2")],
+        [r("3"), r("4")],
+      ],
+      140,
+    );
+    expect(cells(valid(data))).toEqual([
+      ["a", "b", "c"],
+      ["d", "1", "2"],
+      ["g", "3", "4"],
+    ]);
+    expect(bounds).toEqual(b(1, 2, 1, 2));
+  });
+
+  test("one pasted cell fills the whole range", () => {
+    const { data, bounds } = pasteCells(g, b(0, 1, 0, 1), [[r("x")]], 140);
+    expect(cells(valid(data))).toEqual([
+      ["x", "x", "c"],
+      ["x", "x", "f"],
+      ["g", "h", "i"],
+    ]);
+    expect(bounds).toEqual(b(0, 1, 0, 1));
+  });
+
+  test("a paste past the edge grows rows and columns, widths in step", () => {
+    const fixed = t(
+      [
+        ["a", "b"],
+        ["c", "d"],
+      ],
+      [100, 120],
+    );
+    const { data, bounds } = pasteCells(
+      fixed,
+      b(1, 1, 1, 1),
+      [
+        [r("1"), r("2")],
+        [r("3"), r("4")],
+      ],
+      140,
+    );
+    expect(cells(valid(data))).toEqual([
+      ["a", "b", ""],
+      ["c", "1", "2"],
+      ["", "3", "4"],
+    ]);
+    expect(data.widths).toEqual([100, 120, 140]);
+    expect(data.align).toEqual([null, null, null]);
+    expect(bounds).toEqual(b(1, 2, 1, 2));
+  });
+
+  test("ragged pasted rows are refused", () => {
+    expect(() =>
+      pasteCells(g, b(0, 0, 0, 0), [[r("1"), r("2")], [r("3")]], 140),
+    ).toThrow();
   });
 });

@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   useEventCallback,
@@ -21,7 +23,28 @@ import {
 } from "@plugins/page/plugins/editor/web";
 import { dataEqual, type RichText } from "@plugins/page/plugins/editor/core";
 import { columnWidths, tableBlock, type TableData } from "../../core";
-import { insertRow, rowAt, rowCount, setCell } from "../internal/table-ops";
+import {
+  cellsIn,
+  clearCells,
+  insertRow,
+  pasteCells,
+  rowAt,
+  rowCount,
+  setCell,
+} from "../internal/table-ops";
+import {
+  boundsOf,
+  cellRange,
+  clampRange,
+  isArrowKey,
+  sameCell,
+  stepCell,
+  wholeTable,
+  type Cell,
+  type CellBounds,
+  type CellRange,
+} from "../internal/cell-range";
+import { isCellGrid, readCells, writeCells } from "../internal/cell-clipboard";
 import {
   insertPointNear,
   measureTable,
@@ -36,7 +59,12 @@ import {
   cellClass,
   tableSizing,
 } from "./table-cells";
-import { IDLE_CHROME, TableChrome, type ChromeState } from "./table-chrome";
+import {
+  IDLE_CHROME,
+  NEW_COLUMN_WIDTH,
+  TableChrome,
+  type ChromeState,
+} from "./table-chrome";
 
 /**
  * The cell being edited, where its caret lands when it opens, and the text it
@@ -82,10 +110,24 @@ interface Draft {
  * Tab / Shift+Tab walk the cells (Tab on the last appends a row), Enter moves
  * down (appending from the last row), ↑/↓ cross rows from a cell's first/last
  * line and ←/→ cross cells at a text edge; Escape writes the cell and selects
- * the table. What the grid does not take stays the field's (typing, marks,
- * Shift+Enter's soft break) — or, for ↑/↓ past the table's edge, the caret
- * host's: it moves the caret to the next block. Enter on the selected table
- * opens its first cell.
+ * it (a second Escape selects the table). What the grid does not take stays
+ * the field's (typing, marks, Shift+Enter's soft break) — or, for ↑/↓ past the
+ * table's edge, the caret host's: it moves the caret to the next block. Enter
+ * on the selected table opens its first cell.
+ *
+ * ## Selecting cells
+ *
+ * A rectangle of cells (`range`) is selected by a drag that crosses into
+ * another cell (the words it had selected natively are dropped), Shift+click,
+ * Shift+arrows out of a cell's text edge, or Escape in a cell; it is never
+ * held at once with an open cell. While it is, the keyboard is on the grid's
+ * host: arrows move it, Shift+arrows grow it, Tab walks it, ⌘A takes every
+ * cell, Backspace / Delete clear it (one write), Enter or typing opens its
+ * focus cell (typing replaces the text), Escape selects the table. ⌘C / ⌘X /
+ * ⌘V copy, cut and paste it — as cells, HTML and tab-separated text
+ * (`cell-clipboard.ts`), so a range goes to and from another table or a
+ * spreadsheet; a paste grows the table to fit. A grid pasted into an open cell
+ * spreads across the table from it.
  *
  * ## Chrome
  *
@@ -101,6 +143,12 @@ export function TableBlock({ block, editor }: BlockRendererProps) {
   const tableRef = useRef<HTMLTableElement>(null);
   const [geometry, setGeometry] = useState<TableGeometry | null>(null);
   const [chrome, setChrome] = useState<ChromeState>(IDLE_CHROME);
+  // The selected cells — never held at once with an open cell (`active`).
+  const [range, setRange] = useState<CellRange | null>(null);
+  // A drag is selecting cells: the table takes no native text selection.
+  const [selectingCells, setSelectingCells] = useState(false);
+  // The click that ends a cell-selecting drag (or a Shift+click) opens no cell.
+  const swallowClick = useRef(false);
   // Widths drawn while a resize is in progress — written once, on release.
   const [previewWidths, setPreviewWidths] = useState<readonly number[] | null>(
     null,
@@ -109,6 +157,8 @@ export function TableBlock({ block, editor }: BlockRendererProps) {
   const selection = useSelectionControl();
   const rows = rowCount(data);
   const cols = data.header.length;
+  // A write can shrink the table under the selection.
+  const shown = range && clampRange(range, rows, cols);
 
   // Every change goes through here: the draft folded in, then `change`, against
   // the current data — and nothing written when nothing changed.
@@ -135,11 +185,41 @@ export function TableBlock({ block, editor }: BlockRendererProps) {
       c: number,
       caret: RichTextFieldCaret,
       change?: (d: TableData) => TableData,
+      seed?: RichText,
     ) => {
       const next = write(change);
-      setActive({ r, c, caret, initial: rowAt(next, r)[c]! });
+      setRange(null);
+      // A `seed` replaces the cell's text, as typing over a selected cell does
+      // — a draft until the cell is left, so typing on is one write.
+      if (seed) draft.current = { r, c, runs: seed };
+      setActive({ r, c, caret, initial: seed ?? rowAt(next, r)[c]! });
     },
   );
+
+  // Select cells: the open cell written and closed, the keyboard on the grid.
+  const selectCells = useEventCallback((next: CellRange) => {
+    write();
+    setActive(null);
+    setRange(next);
+    hostRef.current?.focus({ preventScroll: true });
+    // The closed field's caret would otherwise linger in its cell, and a copy
+    // targets the selection's node rather than the focused grid.
+    getSelection()?.removeAllRanges();
+  });
+
+  // Paste a grid onto `b` (one write), then select what it covers.
+  const pasteInto = (b: CellBounds, cells: RichText[][]) => {
+    let landed = b;
+    write((d) => {
+      const out = pasteCells(d, b, cells, NEW_COLUMN_WIDTH);
+      landed = out.bounds;
+      return out.data;
+    });
+    selectCells({
+      anchor: { r: landed.r0, c: landed.c0 },
+      focus: { r: landed.r1, c: landed.c1 },
+    });
+  };
 
   // A block leaving the page mid-edit still writes what was typed.
   useEffect(
@@ -150,9 +230,9 @@ export function TableBlock({ block, editor }: BlockRendererProps) {
   );
 
   useBlockActivate(active ? null : () => open(0, 0, "end"));
-  // An open cell draws its own ring; the table itself looks the same whether
-  // or not you are typing in it (no block-level tint on every click).
-  useInnerCaret(active !== null);
+  // An open cell draws its own ring, a cell selection its own box; the table
+  // itself looks the same whether or not you are in it (no block-level tint).
+  useInnerCaret(active !== null || shown !== null);
 
   const measure = useEventCallback((): TableGeometry | null => {
     const host = hostRef.current;
@@ -168,6 +248,7 @@ export function TableBlock({ block, editor }: BlockRendererProps) {
   const [pointerIn, setPointerIn] = useState(false);
   const chromeLive =
     pointerIn ||
+    shown !== null ||
     chrome.menu !== null ||
     chrome.drag !== null ||
     chrome.resizing !== null;
@@ -182,11 +263,24 @@ export function TableBlock({ block, editor }: BlockRendererProps) {
     const flat = r * cols + c;
     const at = (i: number) => [Math.floor(i / cols), i % cols] as const;
     if (k.key === "Escape") {
-      // Out of the cell, the table selected — what Escape does in a text
-      // block (its keyboard plugin enters selection mode the same way).
-      write();
-      setActive(null);
-      selection?.enterSelectionMode(block.id);
+      // Out of the cell, the cell selected — a second Escape selects the
+      // table, as Escape does in a text block.
+      selectCells(cellRange({ r, c }));
+      return true;
+    }
+    if (k.shift && !k.mod && !k.alt && isArrowKey(k.key)) {
+      // Past the text's edge, Shift+arrow selects cells: this one and the next.
+      const atEdge = {
+        ArrowLeft: k.atStart,
+        ArrowRight: k.atEnd,
+        ArrowUp: k.onTopLine,
+        ArrowDown: k.onBottomLine,
+      }[k.key];
+      if (!atEdge) return false;
+      selectCells({
+        anchor: { r, c },
+        focus: stepCell({ r, c }, k.key, rows, cols),
+      });
       return true;
     }
     if (k.key === "Tab" && !k.mod && !k.alt) {
@@ -234,6 +328,162 @@ export function TableBlock({ block, editor }: BlockRendererProps) {
     return false;
   };
 
+  // The cell under a viewport point, or `null` off the table.
+  const cellAt = (x: number, y: number): Cell | null => {
+    const g = measure();
+    const host = hostRef.current;
+    if (!g || !host) return null;
+    const origin = host.getBoundingClientRect();
+    const px = x - origin.left;
+    const py = y - origin.top;
+    const { table } = g;
+    if (
+      px < table.left ||
+      px > table.left + table.width ||
+      py < table.top ||
+      py > table.top + table.height
+    ) {
+      return null;
+    }
+    return { r: spanAt(g.rows, py), c: spanAt(g.cols, px) };
+  };
+
+  // A press on a cell: Shift extends the selection to it; a drag that crosses
+  // into another cell selects the rectangle between them — until then it is
+  // the browser's, selecting the cell's words.
+  const onCellPointerDown = (at: Cell) => (e: React.PointerEvent) => {
+    swallowClick.current = false;
+    if (e.button !== 0) return;
+    let anchor = at;
+    let selecting = false;
+    if (e.shiftKey) {
+      anchor = shown?.anchor ?? (active ? { r: active.r, c: active.c } : at);
+      selecting = true;
+      swallowClick.current = true;
+      selectCells({ anchor, focus: at });
+    }
+    const move = (ev: PointerEvent) => {
+      const to = cellAt(ev.clientX, ev.clientY);
+      if (!to) return;
+      if (!selecting) {
+        if (sameCell(to, anchor)) return;
+        selecting = true;
+        // Committed before the browser's next move extends its selection.
+        flushSync(() => setSelectingCells(true));
+        selectCells({ anchor, focus: to });
+      }
+      getSelection()?.removeAllRanges();
+      setRange((s) =>
+        s && sameCell(s.anchor, anchor) && sameCell(s.focus, to)
+          ? s
+          : { anchor, focus: to },
+      );
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      setSelectingCells(false);
+      if (selecting) swallowClick.current = true;
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
+
+  // The keyboard while cells are selected — only keys that land on the grid's
+  // host itself (an open cell's keys are the field's, through `onKey`).
+  const onGridKey = (e: React.KeyboardEvent) => {
+    if (e.target !== e.currentTarget || !shown) return;
+    const mod = e.metaKey || e.ctrlKey;
+    const { anchor, focus } = shown;
+    const take = () => e.preventDefault();
+    if (e.key === "Escape") {
+      take();
+      setRange(null);
+      selection?.enterSelectionMode(block.id);
+      return;
+    }
+    if (isArrowKey(e.key) && !mod && !e.altKey) {
+      take();
+      const to = stepCell(focus, e.key, rows, cols);
+      setRange(e.shiftKey ? { anchor, focus: to } : cellRange(to));
+      return;
+    }
+    if (e.key === "Tab" && !mod && !e.altKey) {
+      take();
+      const flat = focus.r * cols + focus.c + (e.shiftKey ? -1 : 1);
+      const i = Math.min(rows * cols - 1, Math.max(0, flat));
+      setRange(cellRange({ r: Math.floor(i / cols), c: i % cols }));
+      return;
+    }
+    if (e.key === "Enter" && !mod && !e.altKey && !e.shiftKey) {
+      take();
+      open(focus.r, focus.c, "end");
+      return;
+    }
+    if ((e.key === "Backspace" || e.key === "Delete") && !mod && !e.altKey) {
+      take();
+      write((d) => clearCells(d, boundsOf(shown)));
+      return;
+    }
+    if (mod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "a") {
+      take();
+      setRange(wholeTable(rows, cols));
+      return;
+    }
+    // A printable key types over the focus cell (a composition starts with
+    // the next one: its first key carries no character).
+    if (!mod && !e.altKey && e.key.length === 1) {
+      take();
+      open(focus.r, focus.c, "end", undefined, [{ text: e.key }]);
+    }
+  };
+
+  // The clipboard is the grid's while it holds focus — asked of the document,
+  // not of the event's target, which is wherever a stale DOM selection sits.
+  const gridOwnsClipboard = (e: React.ClipboardEvent) =>
+    shown !== null && document.activeElement === e.currentTarget;
+  const onGridCopy = (e: React.ClipboardEvent) => {
+    if (!gridOwnsClipboard(e) || !shown) return;
+    e.preventDefault();
+    writeCells(e.clipboardData, cellsIn(data, boundsOf(shown)));
+  };
+  const onGridCut = (e: React.ClipboardEvent) => {
+    if (!gridOwnsClipboard(e) || !shown) return;
+    e.preventDefault();
+    const b = boundsOf(shown);
+    writeCells(e.clipboardData, cellsIn(data, b));
+    write((d) => clearCells(d, b));
+  };
+  // Captured, ahead of the open cell's editor: a grid pasted into a cell
+  // spreads across the table rather than landing in the cell as text.
+  const onGridPasteCapture = (e: React.ClipboardEvent) => {
+    const host = e.currentTarget;
+    if (gridOwnsClipboard(e) && shown) {
+      e.preventDefault();
+      e.stopPropagation();
+      const pasted = readCells(e.clipboardData);
+      if (pasted) pasteInto(boundsOf(shown), pasted.cells);
+      return;
+    }
+    if (!active || !(e.target instanceof Node) || !host.contains(e.target)) {
+      return;
+    }
+    const pasted = readCells(e.clipboardData);
+    if (!pasted || !isCellGrid(pasted, e.clipboardData)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    pasteInto(boundsOf(cellRange({ r: active.r, c: active.c })), pasted.cells);
+  };
+  // Focus leaving the table drops the selection (not focus moving into a cell).
+  const onGridBlur = (e: React.FocusEvent) => {
+    if (e.target !== e.currentTarget) return;
+    const to = e.relatedTarget;
+    if (to instanceof Node && e.currentTarget.contains(to)) return;
+    setRange(null);
+  };
+
   const onFieldBlur = (e: React.FocusEvent<HTMLDivElement>) => {
     write();
     const to = e.relatedTarget;
@@ -272,13 +522,26 @@ export function TableBlock({ block, editor }: BlockRendererProps) {
       }}
     >
       <WideBlock>
-        <div ref={hostRef} className="relative">
+        <div
+          ref={hostRef}
+          // Focusable so the keyboard and clipboard reach the grid while cells
+          // are selected (no cell's editor is open then).
+          tabIndex={-1}
+          aria-label="Table"
+          className="relative outline-none"
+          onKeyDown={onGridKey}
+          onCopy={onGridCopy}
+          onCut={onGridCut}
+          onPasteCapture={onGridPasteCapture}
+          onBlur={onGridBlur}
+        >
           <Scroll axis="x" onScroll={() => measure()}>
             <table
               {...selectableText}
               ref={tableRef}
               className={cn(
                 "border-collapse",
+                (shown !== null || selectingCells) && "select-none",
                 sizing.className,
                 textVariantClass("body"),
               )}
@@ -309,7 +572,17 @@ export function TableBlock({ block, editor }: BlockRendererProps) {
                             inBand && "bg-foreground/5",
                           )}
                           style={alignStyle(data.align[c])}
+                          onPointerDown={onCellPointerDown({ r, c })}
+                          onMouseDown={(e) => {
+                            // Shift+click extends the cell selection, not a
+                            // native one.
+                            if (e.shiftKey) e.preventDefault();
+                          }}
                           onClick={(e) => {
+                            if (swallowClick.current) {
+                              swallowClick.current = false;
+                              return;
+                            }
                             if (isActive) return;
                             // A drag across cells selected their words (the
                             // table is selectable text): that was a selection,
@@ -346,6 +619,9 @@ export function TableBlock({ block, editor }: BlockRendererProps) {
               </tbody>
             </table>
           </Scroll>
+          {geometry && shown ? (
+            <RangeBox geometry={geometry} bounds={boundsOf(shown)} />
+          ) : null}
           {geometry && chromeLive ? (
             <TableChrome
               data={data}
@@ -362,6 +638,39 @@ export function TableBlock({ block, editor }: BlockRendererProps) {
         </div>
       </WideBlock>
     </Inset>
+  );
+}
+
+/** The selected cells' box: the text-selection colour over them. */
+function RangeBox({
+  geometry: g,
+  bounds: b,
+}: {
+  geometry: TableGeometry;
+  bounds: CellBounds;
+}) {
+  const left = g.cols[b.c0]?.start;
+  const right = g.cols[b.c1]?.end;
+  const top = g.rows[b.r0]?.start;
+  const bottom = g.rows[b.r1]?.end;
+  // A range wider than what is drawn yet (the write that grew the table
+  // renders before it is measured) waits for the next measurement.
+  if (
+    left === undefined ||
+    right === undefined ||
+    top === undefined ||
+    bottom === undefined
+  ) {
+    return null;
+  }
+  return (
+    <Placed
+      decorative
+      data-cell-range=""
+      x={{ start: left, size: right - left }}
+      y={{ start: top, size: bottom - top }}
+      style={{ backgroundColor: "var(--text-selection)" }}
+    />
   );
 }
 

@@ -6,15 +6,18 @@
 //   1. pasting a GFM table into an empty block renders a <table> with the
 //      pasted header and body cells (and no raw-pipe paragraph);
 //   2. a click opens the cell in place; Tab writes it and opens the next;
-//      Escape writes and leaves;
+//      Escape writes and leaves, the cell selected;
 //   3. ⌘Z undoes the last cell's write, ⌘⇧Z re-applies it;
 //   4. Tab out of the last cell appends a row;
 //   5. the row grip's menu deletes a row, the column grip's duplicates a
 //      column (and ⌘Z undoes it);
-//   6. the cells' text selects natively: a drag across cells selects their words
-//      (the surface is otherwise user-select: none), and a drag that leaves the
-//      table for the line above becomes a block range, never a native selection
-//      running across the page;
+//   6. selecting cells: a drag across cells selects the rectangle (no native
+//      text selection), ⌘C copies it as tab-separated text, Backspace clears it
+//      (one undo step), a spreadsheet grid pasted into an open cell spreads
+//      across the table and grows it, Escape in a cell selects it and
+//      Shift+→ grows the selection, typing over a selected cell replaces its
+//      text — and a drag that leaves the table for the line above becomes a
+//      block range, never a native selection running across the page;
 //   7. the caret cue is painted on the table's widened box, not on the
 //      column-wide host around it;
 //   8. a table WIDER than the column, block-selected, gets a selection band
@@ -115,7 +118,7 @@ await withBrowser(async (h) => {
   );
   await page.keyboard.press("Meta+a");
   await page.keyboard.type("7");
-  // Escape writes it and leaves the cell, the table selected.
+  // Escape writes it and leaves the cell, the cell selected.
   await page.keyboard.press("Escape");
   await editing.waitFor({ state: "detached", timeout: ELEMENT_TIMEOUT_MS });
   r.eq("2c: the edited cells render", await tableCells(page), [
@@ -175,11 +178,12 @@ await withBrowser(async (h) => {
   r.eq("5c: ⌘Z undoes it", (await tableCells(page))[0], ["Fruit", "Qty"]);
   await snap(page, out, "menus");
 
-  // ---- 6: the cells' text is selectable ---------------------------------------
-  // Escape out of a cell left the table block-selected; a drag inside a
-  // selected block is a block gesture, so clear it first.
-  await page.keyboard.press("Escape");
+  // ---- 6: selecting cells ------------------------------------------------------
+  // The caret on the line above first: a drag inside a block-SELECTED table
+  // would be a block gesture.
+  await page.getByText("above", { exact: true }).first().click();
   await page.waitForTimeout(200);
+  const rangeBox = page.locator("[data-block-id] [data-cell-range]");
   const cellBox = async (text: string) => {
     const box = await table.getByText(text, { exact: true }).boundingBox();
     if (!box) throw new Error(`cell "${text}" has no box`);
@@ -196,11 +200,77 @@ await withBrowser(async (h) => {
   });
   await page.mouse.up();
   const selected = await page.evaluate(() => getSelection()?.toString() ?? "");
-  r.ok(
-    `6a: a drag across cells selects their text (got ${JSON.stringify(selected)})`,
-    selected.includes("pple") && selected.includes("7"),
-  );
+  r.eq("6a: a drag across cells leaves no native selection", selected, "");
+  r.eq("6b: … it selects the cells", await rangeBox.count(), 1);
   await snap(page, out, "selected");
+  await page.keyboard.press("Meta+c");
+  r.eq(
+    "6c: ⌘C copies the cells as tab-separated text",
+    await page.evaluate(() => navigator.clipboard.readText()),
+    "apple\t3\nplum\t7",
+  );
+  await page.keyboard.press("Backspace");
+  await page.waitForTimeout(300);
+  r.eq("6d: Backspace clears the selected cells", await tableCells(page), [
+    ["Fruit", "Qty"],
+    ["", ""],
+    ["", ""],
+  ]);
+  await page.keyboard.press("Meta+z");
+  await page.waitForTimeout(300);
+  r.eq("6e: ⌘Z restores them in one step", (await tableCells(page))[2], [
+    "plum",
+    "7",
+  ]);
+
+  await page.evaluate(() =>
+    navigator.clipboard.writeText("x\ty\tz\r\nw\tv\tu\r\n"),
+  );
+  await table.getByText("apple", { exact: true }).click();
+  await editing.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
+  await page.keyboard.press("Meta+v");
+  await page.waitForTimeout(300);
+  r.eq("6f: a pasted grid spreads from the open cell", await tableCells(page), [
+    ["Fruit", "Qty", ""],
+    ["x", "y", "z"],
+    ["w", "v", "u"],
+  ]);
+  r.eq("6g: … and selects what it covers", await rangeBox.count(), 1);
+  await snap(page, out, "pasted-grid");
+  await page.keyboard.press("Meta+z");
+  await page.waitForTimeout(300);
+  r.eq("6h: ⌘Z undoes the paste in one step", await tableCells(page), [
+    ["Fruit", "Qty"],
+    ["apple", "3"],
+    ["plum", "7"],
+  ]);
+
+  await table.getByText("apple", { exact: true }).click();
+  await editing.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
+  await page.keyboard.press("Escape");
+  await editing.waitFor({ state: "detached", timeout: ELEMENT_TIMEOUT_MS });
+  r.eq("6i: Escape in a cell selects it", await rangeBox.count(), 1);
+  await page.keyboard.press("Shift+ArrowRight");
+  await page.keyboard.press("Meta+c");
+  r.eq(
+    "6j: Shift+→ grows the selection",
+    await page.evaluate(() => navigator.clipboard.readText()),
+    "apple\t3",
+  );
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.type("kiwi", { delay: 50 });
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(300);
+  r.eq(
+    "6k: typing over a selected cell replaces it",
+    (await tableCells(page))[1],
+    ["kiwi", "3"],
+  );
+  await page.keyboard.press("Meta+z");
+  await page.waitForTimeout(300);
+  r.eq("6l: ⌘Z restores it", (await tableCells(page))[1], ["apple", "3"]);
+  await page.getByText("above", { exact: true }).first().click();
+  await page.waitForTimeout(200);
 
   const above = await page
     .getByText("above", { exact: true })
@@ -215,19 +285,21 @@ await withBrowser(async (h) => {
   const nativeOut = await page.evaluate(() => getSelection()?.toString() ?? "");
   await page.mouse.up();
   r.eq(
-    "6b: dragging out of the table leaves no native selection",
+    "6m: dragging out of the table leaves no native selection",
     nativeOut,
     "",
   );
   r.ok(
-    "6c: … it selects the blocks instead",
+    "6n: … it selects the blocks instead",
     (await page.locator("[data-selection-band]").count()) > 0,
   );
   await page.keyboard.press("Escape");
 
   // ---- 7: the caret cue surrounds the widened table ---------------------------
+  // Escape twice: the cell selected, then the table.
   await table.getByText("apple", { exact: true }).click();
   await page.waitForTimeout(200);
+  await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   await page.waitForTimeout(200);
   const cue = await table.evaluate((t) => {
@@ -258,8 +330,9 @@ await withBrowser(async (h) => {
   await page.keyboard.press("Escape");
   await editing.waitFor({ state: "detached", timeout: ELEMENT_TIMEOUT_MS });
 
-  // Escape out of the cell leaves the table block-selected.
+  // Escape twice out of the cell leaves the table block-selected.
   await table.getByText("apple", { exact: true }).click();
+  await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   const band = page.locator("[data-selection-band]");
   await band.first().waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });

@@ -1,5 +1,6 @@
 import type { RichText } from "@plugins/page/plugins/editor/core";
 import type { TableAlign, TableData } from "../../core";
+import type { CellBounds } from "./cell-range";
 
 // The table's edits, as pure functions of its data. Rows are addressed on ONE
 // axis with the header included — row 0 is the header, row k ≥ 1 is
@@ -68,6 +69,77 @@ export function setCell(
       i === r ? row.map((cell, j) => (j === c ? runs : cell)) : row,
     ),
   );
+}
+
+/** The cells of rows `r0..r1` × columns `c0..c1`, row by row. */
+export function cellsIn(d: TableData, b: CellBounds): RichText[][] {
+  return grid(d)
+    .slice(b.r0, b.r1 + 1)
+    .map((row) => row.slice(b.c0, b.c1 + 1));
+}
+
+/** Empty every cell of rows `r0..r1` × columns `c0..c1`. */
+export function clearCells(d: TableData, b: CellBounds): TableData {
+  return withGrid(
+    d,
+    grid(d).map((row, i) =>
+      i < b.r0 || i > b.r1
+        ? row
+        : row.map((cell, j) => (j < b.c0 || j > b.c1 ? cell : [])),
+    ),
+  );
+}
+
+/**
+ * Paste a rectangle of cells (`cells`, rows of equal width) onto the range `b`,
+ * as a spreadsheet does: ONE cell fills every cell of the range; anything
+ * larger lands with its top-left corner on the range's, the table growing rows
+ * and columns (`width` px each, when its widths are fixed) to hold it. Returns
+ * the data and the cells the paste covers, which become the selection.
+ */
+export function pasteCells(
+  d: TableData,
+  b: CellBounds,
+  cells: readonly (readonly RichText[])[],
+  width: number,
+): { data: TableData; bounds: CellBounds } {
+  const height = cells.length;
+  const across = cells[0]?.length ?? 0;
+  if (height === 0 || across === 0) return { data: d, bounds: b };
+  if (cells.some((row) => row.length !== across)) {
+    throw new Error("pasteCells: the pasted rows are not all as wide");
+  }
+  const fill = height === 1 && across === 1;
+  const bounds: CellBounds = fill
+    ? b
+    : {
+        r0: b.r0,
+        r1: b.r0 + height - 1,
+        c0: b.c0,
+        c1: b.c0 + across - 1,
+      };
+  let out = d;
+  while (rowCount(out) <= bounds.r1) out = insertRow(out, rowCount(out));
+  while (out.header.length <= bounds.c1) {
+    out = insertColumn(out, out.header.length, width);
+  }
+  return {
+    data: withGrid(
+      out,
+      grid(out).map((row, i) =>
+        i < bounds.r0 || i > bounds.r1
+          ? row
+          : row.map((cell, j) =>
+              j < bounds.c0 || j > bounds.c1
+                ? cell
+                : fill
+                  ? cells[0]![0]!
+                  : cells[i - bounds.r0]![j - bounds.c0]!,
+            ),
+      ),
+    ),
+    bounds,
+  };
 }
 
 /** Insert an empty row at gap `at` of the grid (1 ≤ at: never above the header). */
