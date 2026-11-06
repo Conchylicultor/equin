@@ -6399,6 +6399,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tag-tree/engine.defineTagTreeTable`
               - `tag-tree/engine.serveTagTree`
               - `tag-tree/engine.TagTrees`
+              - `ui/icons/saved-sources.defineSavedIconSource`
             - DB schema: `plugins/apps/plugins/places/plugins/places-core/server/internal/tables.ts`
             - Exports (types):
               - `ImportedPlace`
@@ -27503,6 +27504,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/networking.TransportProvider`
                   - `primitives/networking.useTransport`
                   - `primitives/scope/render-origin.RenderOrigin`
+                  - `ui/icons/sprites.ScopeIconSymbols`
                 - Exports (types): `DemoHostControl`
                 - Exports (values):
                   - `DemoScope`
@@ -27550,6 +27552,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts`
               - `infra/attachments/memory-blobs`
               - `infra/paths/data-files/memory`
+              - `ui/icons/sprites/bundled-symbols`
           - Test helpers:
             - Core: `@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing`
               - `declareMemoryHostStorage` — Declare that this process's browser host keeps its state in memory — what a test that boots a browser graph (PGlite and the in-memory host stores) declares before `bootBrowserHost`, as a host's entry point declares its storage.
@@ -28291,7 +28294,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:
-        - Imported by: 102 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 103 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×24
           - `debug` ×13
           - `conversations` ×10
@@ -28304,6 +28307,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives` ×3
           - `build` ×2
           - `integrations` ×2
+          - `ui` ×2
           - `backup`
           - `config_v2`
           - `fields/server-capabilities`
@@ -28314,7 +28318,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `release`
           - `shell/document-head`
           - `tag-tree/engine`
-          - `ui/theme-engine`
       - Exemptions:
         - Exempts itself from:
           - `detached-work-safety/no-raw-set-interval` — `bin/serve.ts` (sanctioned)
@@ -35000,7 +35003,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
-        - Imported by: 24 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
+        - Imported by: 25 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
           - `tasks` ×7
           - `apps` ×6
           - `infra` ×4
@@ -35010,6 +35013,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-tree`
           - `reports/engine`
           - `stats/cost`
+          - `ui/icons/sprites/bundled-symbols`
       - Plugins:
         - **`background-arm`** — Warm-ups in the Background activity catalog: registers the `warmup` background kind — every declared warm-up under After boot, its scope from the warm-up's (host → main only, worktree → every worktree), and its one run in this process (duration, error, or skipped off main) — and pushes the catalog as each warm-up starts and settles. Corpus indexes appear through the warm-up they declare.
           - Server:
@@ -38043,7 +38047,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 32 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×9
           - `network` ×5
           - `database` ×4
@@ -38056,6 +38060,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `map`
           - `menu-bar`
           - `tasks/orchestration/watch`
+          - `ui/icons/sprites`
       - Core:
         - Exports (types): `Sha256Hasher`
         - Exports (values):
@@ -53816,6 +53821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.Entity`
           - `infra/entities.EntityMetaBase`
           - `primitives/rank.rankAdjacentTo`
+          - `ui/icons/saved-sources.defineSavedIconSource`
         - DB schema: `plugins/tag-tree/plugins/engine/server/internal/table.ts`
         - Exports (types):
           - `ServedTagTree`
@@ -56807,7 +56813,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --muted-foreground`
-    - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
+    - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion. Reads glyphs out of the installed Iconify JSON (the pure drawing — resolveIcon, resolveSymbol, buildSymbol — is core's): symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Web:
         - Slots:
           - `Icons.Root`
@@ -56832,8 +56838,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `IconProps`
           - `IconSource`
           - `RuntimeSymbolEntry`
+          - `RuntimeSymbolStore`
         - Exports (values):
-          - `hasRuntimeSymbol`
+          - `createScopedRuntimeSymbols`
           - `Icon`
           - `iconFamilyGapReportSink`
           - `IconFamilyPreview`
@@ -56841,10 +56848,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Icons`
           - `IconScopeProvider`
           - `IconSpriteSheet`
-          - `installRuntimeSymbolLoader`
-          - `provideRuntimeSymbols`
+          - `pageRuntimeSymbols`
           - `provideSprite`
           - `resolveIconSource`
+          - `RuntimeSymbolScope`
+          - `RuntimeSymbolSheet`
           - `useIconFamilies`
           - `useIconMarkup`
           - `useIconStyle`
@@ -56854,7 +56862,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 542 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 543 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×154
           - `conversations` ×82
           - `page` ×52
@@ -56864,7 +56872,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×23
           - `plugin-meta` ×16
           - `active-data` ×11
-          - `ui` ×9
+          - `ui` ×10
           - `infra` ×8
           - `apps-core` ×7
           - `auth` ×6
@@ -56897,13 +56905,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - Exempted by: `ui/icons` (0 debt)
       - Server:
-        - Exports (types):
-          - `IconBody`
-          - `SymbolSets`
         - Exports (values):
           - `readSetiSet`
-          - `resolveIcon`
-          - `resolveSymbol`
           - `SETI_SET`
           - `symbolBody`
       - Core:
@@ -56911,6 +56914,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrandName`
           - `BrandRef`
           - `CustomRef`
+          - `IconBody`
           - `IconFamily`
           - `IconFamilyCoverage`
           - `IconFamilyId`
@@ -56928,11 +56932,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SavedSymbolName`
           - `SetiName`
           - `SetiRef`
+          - `SpriteEntry`
           - `SpriteIconFamily`
           - `SpriteKey`
           - `StyleKey`
           - `SymbolName`
           - `SymbolRef`
+          - `SymbolSets`
         - Exports (values):
           - `ACTIVE_FORM_VERSION`
           - `ACTIVE_ID_TOKEN`
@@ -56940,6 +56946,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `brand`
           - `brandId`
           - `BRANDS_SPRITE`
+          - `buildSymbol`
           - `coveredStyles`
           - `DEFAULT_ICON_STYLE`
           - `DEFAULT_STYLE_KEYS`
@@ -56972,6 +56979,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `paintedBox`
           - `parseStyleKey`
           - `placeActiveIds`
+          - `resolveIcon`
+          - `resolveSymbol`
           - `resolveSymbolStyle`
           - `runtimeSymbol`
           - `runtimeSymbolId`
@@ -56981,6 +56990,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `styleKeyOf`
           - `symbol`
           - `symbolId`
+          - `wrapSprite`
       - Shared:
         - Exports (values):
           - `buildSetiSet`
@@ -57085,12 +57095,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`saved-sources`** — The saved-icon source registry: defineSavedIconSource registers a place that stores user-picked icons (its tables, its names, a watch for a non-DB store), and savedIconSources lists them for the sprites plugin's resident icons.saved-sprites value. Pure and portable, so a plugin whose server half runs in the browser host can register its source without reaching the sprites builder.
           - Cross-plugin:
             - Imported by:
+              - `apps/places/places-core`
               - `conversations/agents`
               - `conversations/conversation-category`
               - `conversations/conversation-preprompt`
               - `conversations/preprompts`
               - `page/callout`
               - `primitives/data-view`
+              - `tag-tree/engine`
               - `ui/icons/sprites`
           - Server:
             - Exports (types): `SavedIconSource`
@@ -57098,18 +57110,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineSavedIconSource`
               - `savedIconSources`
               - `savedIconSourcesCode`
-        - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks.
+        - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks, and the page's saved-icon symbols. ScopeIconSymbols gives a plugin scope (a demo) saved icons of its own, read from the scope's server and drawn in a sheet inside it. Saved (user-picked) icons as runtime symbols, on every host: the resident icons.saved-sprites value draws every name a saved-icon source (ui/icons/saved-sources) reports in the default style, and the on-demand icons.runtime-symbols value serves any saved names in any style, immutable (content-addressed by symbolsHash). Both draw through the host's RuntimeSymbolDrawer — the icon sets installed on the computer (this plugin's machine half), or a set bundled with the page (plugins/bundled-symbols, a browser host) — so a demo's icons come from its own server.
           - Web:
             - Contributes: `Icons.Root` → `IconSpriteHost`
             - Uses:
               - `network/live.useLive`
+              - `ui/icons.createScopedRuntimeSymbols`
               - `ui/icons.Icons`
               - `ui/icons.IconSpriteSheet`
-              - `ui/icons.installRuntimeSymbolLoader`
-              - `ui/icons.provideRuntimeSymbols`
+              - `ui/icons.pageRuntimeSymbols`
               - `ui/icons.provideSprite`
+              - `ui/icons.RuntimeSymbolScope`
+              - `ui/icons.RuntimeSymbolSheet`
+              - `ui/icons.RuntimeSymbolStore`
               - `ui/icons.useWantedSprites`
               - `ui/icons.useWantedStyleKeys`
+            - Exports (values): `ScopeIconSymbols`
           - Server:
             - Contributes:
               - `resource.declare` "icons.manifest"
@@ -57118,6 +57134,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "icons.saved-sprites"
               - `resource.declare` "icons.sprite"
               - `resource.declare` "icons.sprites"
+              - `host-service:icons.runtime-symbol-drawer` "icons.runtime-symbol-drawer"
+            - Uses:
+              - `network/live.serveValue`
+              - `ui/icons/saved-sources.savedIconSources`
+              - `ui/icons/saved-sources.savedIconSourcesCode`
+            - Exports (types): `RuntimeSymbolDrawerImpl`
+            - Exports (values):
+              - `drawRuntimeSymbol`
+              - `RUNTIME_SYMBOL_BUILD_VERSION`
+              - `RuntimeSymbolDrawer`
+              - `savedIconNames`
             - Resources:
               - `icons.manifest` (push, fixed, whole: the symbol names the build scanned from the code — fixed for the process, and the Icons pane lists them all)
               - `icons.runtime-symbols` (invalidate, immutable)
@@ -57146,7 +57173,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `savedIconSprites`
               - `SavedIconSpritesSchema`
           - Cross-plugin:
-            - Imported by: `debug/icons`
+            - Imported by:
+              - `debug/icons`
+              - `framework/browser-server/demo/scope`
+              - `ui/icons/sprites/bundled-symbols`
+          - Plugins:
+            - **`bundled-symbols`** (excluded) — The saved-icon drawings of a host without the computer's icon sets (the browser composition): provides the RuntimeSymbolDrawer from the Material Symbols set bundled with the worker (weight 400, every shape and fill; a light style draws its 400 drawing), loaded lazily and only on a miss. Its warm-up draws every saved name in every style and keeps those drawings in the host's storage (a picker's are held in memory only), so a build-time snapshot ships the demo's icons drawn and a visitor never loads the set for them. Never booted by the desktop.
+              - Server:
+                - Contributes: `host-service:icons.runtime-symbol-drawer` "icons.runtime-symbol-drawer"
+                - Uses:
+                  - `infra/warmup.defineWarmup`
+                  - `ui/icons/sprites.drawRuntimeSymbol`
+                  - `ui/icons/sprites.RuntimeSymbolDrawer`
+                  - `ui/icons/sprites.RuntimeSymbolDrawerImpl`
+                  - `ui/icons/sprites.savedIconNames`
+                - Register: `defineWarmup('icons.bundled-symbols.draw-saved')`
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Web:
         - Slots: `SegmentedProgressBarSlots.Variant`

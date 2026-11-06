@@ -1,11 +1,23 @@
-import { serveValue } from "@plugins/network/plugins/live/machine";
-import { DEFAULT_STYLE_KEYS } from "@plugins/ui/plugins/icons/core";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import {
+  DEFAULT_STYLE_KEYS,
+  type SavedSymbolName,
+} from "@plugins/ui/plugins/icons/core";
 import { savedIconSprites, savedIconsChanged } from "../../core";
-import { runtimeSymbols, symbolsHash } from "./runtime-symbols";
+import { runtimeSymbols, symbolsHash } from "./drawer";
 import {
   savedIconSources,
   savedIconSourcesCode,
 } from "@plugins/ui/plugins/icons/plugins/saved-sources/server";
+
+/** Every saved name some saved-icon source holds right now, sorted, once each. */
+export async function savedIconNames(): Promise<readonly SavedSymbolName[]> {
+  const names = new Set<SavedSymbolName>();
+  for (const source of savedIconSources()) {
+    for (const name of await source.names()) names.add(name);
+  }
+  return [...names].sort();
+}
 
 let changes = 0;
 
@@ -40,14 +52,10 @@ export const savedIconSpritesServed = serveValue(savedIconSprites, {
   }),
   recomputeOn: [savedIconsChangedServed],
   loader: async () => {
-    const names = new Set<string>();
-    for (const source of savedIconSources()) {
-      for (const name of await source.names()) names.add(name);
-    }
-    const sorted = [...names].sort();
+    const sorted = await savedIconNames();
     return {
-      symbolsHash,
-      names: sorted,
+      symbolsHash: symbolsHash(),
+      names: [...sorted],
       sprites: Object.fromEntries(
         await Promise.all(
           DEFAULT_STYLE_KEYS.map(

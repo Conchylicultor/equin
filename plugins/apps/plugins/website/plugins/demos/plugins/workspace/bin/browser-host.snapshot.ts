@@ -8,7 +8,10 @@
 // in a visitor's browser.
 import "./declare-namespace"; // MUST stay first: see the file.
 import { writeFileSync } from "node:fs";
-import { takeHostSnapshot } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core";
+import {
+  decodeHostSnapshot,
+  takeHostSnapshot,
+} from "@plugins/framework/plugins/browser-server/plugins/host-storage/core";
 import { bootBrowserHost } from "@plugins/framework/plugins/server-core/core";
 import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
 import {
@@ -39,8 +42,14 @@ const file = await takeHostSnapshot({
   },
 });
 writeFileSync(out, file);
+// What each host store ships with (the transcripts, the config, the saved
+// icons the warm-ups drew…): a store missing here is one a first visit fills
+// in the visitor's browser instead.
+const stores = Object.entries(decodeHostSnapshot(file).stores)
+  .map(([name, entries]) => `${name} ${entries.length}`)
+  .join(", ");
 console.info(
-  `[workspace demo snapshot] wrote ${out} (${(file.byteLength / 1024).toFixed(0)} KB)`,
+  `[workspace demo snapshot] wrote ${out} (${(file.byteLength / 1024).toFixed(0)} KB; stores: ${stores})`,
 );
 // The booted host's watchers and job timers keep the event loop alive: this
 // process exists to write the file, and is done.

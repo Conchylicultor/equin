@@ -5,10 +5,13 @@ import {
   wholeRecord,
 } from "@plugins/packages/plugins/list-bound/core";
 
-// The sprites are built from the icon sets installed on the computer (and the
-// manifest compiled into the desktop's backend), so every declaration here
-// needs it: a host without the computer answers them unavailable. The page's
-// sprites come from the page's own server (`web/internal/sprite-host.tsx`).
+// The manifest's sprites are built from the icon sets installed on the
+// computer (and the manifest compiled into the desktop's backend), so their
+// declarations need it: a host without the computer answers them unavailable.
+// The page's come from the page's own server (`web/internal/sprite-host.tsx`).
+// The SAVED-icon values below are portable: a host draws them through its
+// `RuntimeSymbolDrawer` (the installed sets on the computer, a bundled set on
+// a browser host), and every scope reads them from its own server.
 const SPRITES = { feature: "Icon sprites" } as const;
 
 export const IconSpritesSchema = z.object({
@@ -65,8 +68,9 @@ export const iconSprite = liveValue("icons.sprite", {
 
 export const SavedIconSpritesSchema = z.object({
   /**
-   * What a runtime symbol's answer is a function of: the installed Material
-   * Symbols sets, the saved-name list and the symbol build's version. Every
+   * What a runtime symbol's answer is a function of: the serving host's
+   * drawer (the Material Symbols set it draws from), the saved-name list and
+   * the symbol build's version. Every
    * {@link runtimeSymbolsValue} tuple carries it.
    */
   symbolsHash: z.string(),
@@ -96,7 +100,6 @@ export type SavedIconSprites = z.infer<typeof SavedIconSpritesSchema>;
 export const savedIconSprites = liveValue("icons.saved-sprites", {
   schema: SavedIconSpritesSchema,
   preload: "boot-and-keep",
-  needsMachine: SPRITES,
 });
 
 /**
@@ -106,7 +109,6 @@ export const savedIconSprites = liveValue("icons.saved-sprites", {
  */
 export const savedIconsChanged = liveValue("icons.saved-icons-changed", {
   schema: z.number(),
-  needsMachine: SPRITES,
 });
 
 /**
@@ -137,7 +139,6 @@ export const runtimeSymbolsValue = liveValue("icons.runtime-symbols", {
   params: ["hash", "key", "names"],
   load: "on-demand",
   refusals: ["unknown-key", "stale-symbols", "invalid-names", "unknown-name"],
-  needsMachine: SPRITES,
 });
 
 const IconManifestSchema = z.object({

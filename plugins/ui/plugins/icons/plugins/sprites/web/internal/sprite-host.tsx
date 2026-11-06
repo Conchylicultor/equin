@@ -4,6 +4,7 @@ import {
   useMemo,
   useState,
   useSyncExternalStore,
+  type ReactNode,
 } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
@@ -12,12 +13,15 @@ import {
   type SpriteKey,
 } from "@plugins/ui/plugins/icons/core";
 import {
+  createScopedRuntimeSymbols,
   IconSpriteSheet,
-  installRuntimeSymbolLoader,
-  provideRuntimeSymbols,
+  pageRuntimeSymbols,
   provideSprite,
+  RuntimeSymbolScope,
+  RuntimeSymbolSheet,
   useWantedSprites,
   useWantedStyleKeys,
+  type RuntimeSymbolStore,
 } from "@plugins/ui/plugins/icons/web";
 import {
   iconSprite,
@@ -44,8 +48,8 @@ export function IconSpriteHost() {
   const saved = useLive(savedIconSprites);
   // A failed read renders the empty sheet too (icons draw as empty boxes);
   // live-state's resource-error sink reports the failure. So does a page with
-  // no computer behind it (`unavailable`): the sprites are built from the icon
-  // sets installed on the computer, so it has none to draw.
+  // no computer behind it (`unavailable`): the manifest's sprites are built
+  // from the icon sets installed on the computer, so it has none to draw.
   if (
     resident.status === "loading" ||
     resident.status === "error" ||
@@ -53,26 +57,23 @@ export function IconSpriteHost() {
   ) {
     return <IconSpriteSheet />;
   }
-  if (
-    saved.status === "loading" ||
-    saved.status === "error" ||
-    saved.status === "unavailable"
-  ) {
+  if (saved.status === "loading" || saved.status === "error") {
     return <IconSpriteSheet />;
   }
   return <LoadedSprites resident={resident.data} saved={saved.data} />;
 }
 
 /**
- * Holds the resident saved-icon symbols and installs the runtime-symbol loader:
- * every name `<Icon>` wants in a style no chunk holds is batched (one batch per
- * style key per frame), read as one `icons.runtime-symbols` tuple per batch
- * while it is in flight, and appended to the sheet. A refused batch is thrown
- * into this contribution's error boundary; any other failure is reported by
- * live-state's resource-error sink and leaves that batch's icons on their
- * fallback, like a failed sprite.
+ * Holds the resident saved-icon symbols in `store` and installs its
+ * runtime-symbol loader: every name `<Icon>` wants in a style no chunk holds
+ * is batched (one batch per style key per frame), read as one
+ * `icons.runtime-symbols` tuple per batch while it is in flight — from the
+ * server of the subtree this renders in — and handed to the store. A refused
+ * batch is thrown into the caller's error boundary; any other failure is
+ * reported by live-state's resource-error sink and leaves that batch's icons
+ * on their fallback, like a failed sprite.
  */
-function useSavedSymbols(saved: SavedIconSprites) {
+function useSavedSymbols(saved: SavedIconSprites, store: RuntimeSymbolStore) {
   useLayoutEffect(() => {
     for (const [key, markup] of Object.entries(saved.sprites)) {
       const styleKey = spriteKey(key);
@@ -82,18 +83,18 @@ function useSavedSymbols(saved: SavedIconSprites) {
           `[icons] the saved-icon sprites hold no "${styleKey}" sprite`,
         );
       }
-      provideRuntimeSymbols(
+      store.provide(
         `saved-${styleKey}`,
         markup,
         saved.names.map((name) => ({ styleKey, name })),
       );
     }
-  }, [saved]);
+  }, [saved, store]);
 
   const [loader] = useState(() =>
     createRuntimeSymbolLoader((flush) => void requestAnimationFrame(flush)),
   );
-  useEffect(() => installRuntimeSymbolLoader(loader.request), [loader]);
+  useEffect(() => store.installLoader(loader.request), [loader, store]);
 
   const batches = useSyncExternalStore(loader.subscribe, loader.batches);
   const reads = useLive(
@@ -104,9 +105,6 @@ function useSavedSymbols(saved: SavedIconSprites) {
       names: b.names.join(","),
     })),
   );
-  // Only reached once the saved sprites loaded (the computer is behind the
-  // page) — a broken assumption if not, said.
-  if ("status" in reads) throw new Error(reads.message);
   // One result per batch, in order.
   const landed = batches.map((batch, i) => ({ batch, read: reads[i] }));
   for (const { read } of landed) {
@@ -118,7 +116,7 @@ function useSavedSymbols(saved: SavedIconSprites) {
   useLayoutEffect(() => {
     for (const { batch, read } of landed) {
       if (read?.status !== "ready") continue;
-      provideRuntimeSymbols(
+      store.provide(
         batch.chunkId,
         read.data,
         batch.names.map((name) => ({ styleKey: batch.styleKey, name })),
@@ -148,7 +146,7 @@ function LoadedSprites({
 }) {
   const wantedStyles = useWantedStyleKeys();
   const wantedSprites = useWantedSprites();
-  useSavedSymbols(saved);
+  useSavedSymbols(saved, pageRuntimeSymbols);
 
   // A layout effect: the store update re-renders the sheet (and every icon
   // waiting on a sprite) before the browser paints.
@@ -192,4 +190,55 @@ function LoadedSprites({
   });
 
   return <IconSpriteSheet />;
+}
+
+/**
+ * Gives a plugin scope saved icons of its own: a runtime-symbol store bound to
+ * the scope (`RuntimeSymbolScope`), filled from the server the scope reads —
+ * its resident `icons.saved-sprites` and every `icons.runtime-symbols` batch
+ * its icons want — and drawn in a sheet of its own inside the scope. Mount it
+ * INSIDE the scope's `<PluginScope>` and transport (`DemoScope` does): a saved
+ * icon in a scope with no store of its own throws, it never reaches the
+ * page's store and so the page's server.
+ */
+export function ScopeIconSymbols({
+  children,
+}: {
+  children: ReactNode;
+}): ReactNode {
+  const [store] = useState(createScopedRuntimeSymbols);
+  return (
+    <RuntimeSymbolScope store={store}>
+      <ScopeSavedSymbols store={store} />
+      {children}
+    </RuntimeSymbolScope>
+  );
+}
+
+/**
+ * The scope's resident saved symbols and loader, once its server answered
+ * them. Until then (or on a failed read, which live-state's resource-error
+ * sink reports) its saved icons are empty boxes at their final size, as the
+ * page's are before its sheet loads.
+ */
+function ScopeSavedSymbols({ store }: { store: RuntimeSymbolStore }) {
+  const saved = useLive(savedIconSprites);
+  switch (saved.status) {
+    case "loading":
+    case "error":
+      return <RuntimeSymbolSheet store={store} />;
+    case "ready":
+      return <LoadedScopeSymbols saved={saved.data} store={store} />;
+  }
+}
+
+function LoadedScopeSymbols({
+  saved,
+  store,
+}: {
+  saved: SavedIconSprites;
+  store: RuntimeSymbolStore;
+}) {
+  useSavedSymbols(saved, store);
+  return <RuntimeSymbolSheet store={store} />;
 }

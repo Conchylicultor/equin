@@ -21,7 +21,7 @@ import { Icon } from "../internal/icon";
 import { IconFamilyPreview, IconScopeProvider } from "../internal/icon-scope";
 import { usePublishIconStyle } from "../internal/style-store";
 import { provideSprite } from "../internal/sprite-store";
-import { provideRuntimeSymbols } from "../internal/runtime-symbol-store";
+import { pageRuntimeSymbols } from "../internal/runtime-symbol-store";
 
 /**
  * Coverage: where a family's drawing of a name comes from (resolveIconSource),
@@ -168,7 +168,7 @@ describe("<Icon> in a strict scope", () => {
     act(() => provideIconFamilies([strictFam, fallbackFam]));
     act(() => provideSprite("seti", "<svg></svg>"));
     act(() =>
-      provideRuntimeSymbols("cov-runtime", "<svg></svg>", [
+      pageRuntimeSymbols.provide("cov-runtime", "<svg></svg>", [
         { styleKey: "default-outline-400", name: "home" },
       ]),
     );

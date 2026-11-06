@@ -1,5 +1,5 @@
 import type { IconifyJSON } from "@iconify/types";
-import type { SymbolSets } from "@plugins/ui/plugins/icons/server";
+import type { SymbolSets } from "@plugins/ui/plugins/icons/core";
 import { ICON_SETS, type IconSetSource } from "./icon-sets";
 
 /**

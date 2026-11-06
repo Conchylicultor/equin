@@ -7,7 +7,6 @@ import {
   familyGapId,
   familyGlyphId,
   familyGlyphOf,
-  runtimeSymbolId,
   setiId,
   styleKeyOf,
   symbolId,
@@ -20,7 +19,7 @@ import {
   type SymbolName,
 } from "../../core";
 import { hasSprite } from "./sprite-store";
-import { hasRuntimeSymbol } from "./runtime-symbol-store";
+import type { RuntimeSymbolStore } from "./runtime-symbol-store";
 import { iconFamily } from "./family-store";
 
 /** Where a drawn symbol's markup lives. */
@@ -185,6 +184,7 @@ export function resolveIconDrawing(
   icon: IconRef,
   style: IconStyle,
   active: boolean,
+  runtime: RuntimeSymbolStore,
 ): {
   drawing: Drawing | null;
   wants: readonly DrawingWant[];
@@ -213,12 +213,12 @@ export function resolveIconDrawing(
           : [{ kind: "sprite", key: SETI_SPRITE }],
       };
     case "runtime-symbol": {
-      const wants: DrawingWant[] = hasRuntimeSymbol(key, icon.name)
+      const wants: DrawingWant[] = runtime.hasSymbol(key, icon.name)
         ? []
         : [{ kind: "runtime", styleKey: key, name: icon.name }];
-      const drawn = hasRuntimeSymbol(key, icon.name)
+      const drawn = runtime.hasSymbol(key, icon.name)
         ? key
-        : hasRuntimeSymbol(defaultKey, icon.name)
+        : runtime.hasSymbol(defaultKey, icon.name)
           ? defaultKey
           : null;
       return {
@@ -226,7 +226,7 @@ export function resolveIconDrawing(
           drawn === null
             ? null
             : {
-                id: runtimeSymbolId(drawn, icon.name),
+                id: runtime.symbolId(drawn, icon.name),
                 source: { kind: "runtime" },
               },
         wants,

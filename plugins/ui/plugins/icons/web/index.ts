@@ -15,7 +15,7 @@ export {
   useWantedStyleKeys,
 } from "./internal/style-store";
 export { provideSprite, useWantedSprites } from "./internal/sprite-store";
-export { IconSpriteSheet } from "./internal/sprite-sheet";
+export { IconSpriteSheet, RuntimeSymbolSheet } from "./internal/sprite-sheet";
 export { Icons } from "./slots";
 export type { IconFamilyContribution } from "./slots";
 export { useIconFamilies } from "./internal/family-store";
@@ -27,11 +27,14 @@ export type { IconFamilyGap } from "./internal/family-gap";
 export { useIconMarkup } from "./internal/icon-markup";
 export type { IconMarkup, IconMarkupReader } from "./internal/icon-markup";
 export {
-  hasRuntimeSymbol,
-  installRuntimeSymbolLoader,
-  provideRuntimeSymbols,
+  createScopedRuntimeSymbols,
+  pageRuntimeSymbols,
+  RuntimeSymbolScope,
 } from "./internal/runtime-symbol-store";
-export type { RuntimeSymbolEntry } from "./internal/runtime-symbol-store";
+export type {
+  RuntimeSymbolEntry,
+  RuntimeSymbolStore,
+} from "./internal/runtime-symbol-store";
 
 export default {
   description:

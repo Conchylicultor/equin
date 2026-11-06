@@ -10,6 +10,7 @@ import {
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 import type { EntityTable } from "@plugins/infra/plugins/entities/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { defineTagTreeIconSource } from "./saved-icons";
 import type {
   AnyTagTreeEntityRef,
   ExtraKeyOf,
@@ -62,7 +63,7 @@ export function singleTagCarrier(
 
 /** The base columns the engine reads and writes by name. */
 type TagTreeColumns = {
-  readonly [K in "id" | "name" | "parentId" | "rank"]: AnyPgColumn;
+  readonly [K in "id" | "name" | "parentId" | "rank" | "icon"]: AnyPgColumn;
 };
 
 /** A tree's table as the engine takes it: one `defineTagTreeTable` built. */
@@ -115,6 +116,7 @@ export function serveTagTree<R extends AnyTagTreeEntityRef, Row extends TagRow>(
   }
   const rowSchema = fieldsToZodObject(tree.entity.fields);
   const refuse = opts.refuseDelete;
+  defineTagTreeIconSource(tree.id, opts.table);
   return Object.freeze({
     tree: { id: tree.id, entity: tree.entity },
     store: Object.freeze({

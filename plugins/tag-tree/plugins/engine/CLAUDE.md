@@ -24,6 +24,7 @@
     - `infra/entities.Entity`
     - `infra/entities.EntityMetaBase`
     - `primitives/rank.rankAdjacentTo`
+    - `ui/icons/saved-sources.defineSavedIconSource`
   - DB schema: `plugins/tag-tree/plugins/engine/server/internal/table.ts`
   - Exports (types):
     - `ServedTagTree`

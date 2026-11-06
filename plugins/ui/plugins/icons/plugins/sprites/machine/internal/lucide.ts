@@ -1,4 +1,4 @@
-import type { IconBody } from "@plugins/ui/plugins/icons/server";
+import type { IconBody } from "@plugins/ui/plugins/icons/core";
 
 /**
  * How a Lucide glyph is tuned to sit beside the app's text, baked into the

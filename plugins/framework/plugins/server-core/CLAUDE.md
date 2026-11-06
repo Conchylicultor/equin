@@ -283,7 +283,8 @@ two and no row lists them. Today's services: `database.driver`,
 `attachments.blobs`, `tasks-core.push-ledger`,
 `conversations.transcript-source`, `model-provider.catalog-source`,
 `task-title.generator`, `config-v2.store`, `config-v2.git-layer`,
-`host-account.source`, `warmup.host`, `secrets.store` (each declared
+`host-account.source`, `warmup.host`, `secrets.store`,
+`icons.runtime-symbol-drawer` (each declared
 `export const X = defineHostService<…>("<id>")`).
 
 - **A host provider is one file.** A fixed answer for a host without the
@@ -658,7 +659,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `validatePersistedValue`
     - `withNotifyBatch`
 - Cross-plugin:
-  - Imported by: 102 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 103 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×24
     - `debug` ×13
     - `conversations` ×10
@@ -671,6 +672,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `primitives` ×3
     - `build` ×2
     - `integrations` ×2
+    - `ui` ×2
     - `backup`
     - `config_v2`
     - `fields/server-capabilities`
@@ -681,7 +683,6 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `release`
     - `shell/document-head`
     - `tag-tree/engine`
-    - `ui/theme-engine`
 - Exemptions:
   - Exempts itself from:
     - `detached-work-safety/no-raw-set-interval` — `bin/serve.ts` (sanctioned)

@@ -54,6 +54,7 @@ import {
 } from "@plugins/primitives/plugins/networking/web";
 import { PluginScope } from "@plugins/framework/plugins/web-sdk/core";
 import { RenderOrigin } from "@plugins/primitives/plugins/scope/plugins/render-origin/web";
+import { ScopeIconSymbols } from "@plugins/ui/plugins/icons/plugins/sprites/web";
 
 // ── The host ───────────────────────────────────────────────────────────
 
@@ -334,10 +335,15 @@ export function DemoScope({
                 onDismiss={() => setDismissed(host)}
               />
             )}
-            {/* What the scope's code hands to page chrome (a toast's body, an
-                imperative dialog) renders here, against the host — never
-                in the page's tree, against the page's server. */}
-            <RenderOrigin>{children}</RenderOrigin>
+            {/* The scope's saved icons are drawn from the host — never
+                asked of the page's sprite host, which reads the page's
+                server. */}
+            <ScopeIconSymbols>
+              {/* What the scope's code hands to page chrome (a toast's body,
+                  an imperative dialog) renders here, against the host —
+                  never in the page's tree, against the page's server. */}
+              <RenderOrigin>{children}</RenderOrigin>
+            </ScopeIconSymbols>
           </PluginScope>
         </NotificationsProvider>
       </TransportProvider>

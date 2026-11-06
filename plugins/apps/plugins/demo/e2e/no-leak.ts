@@ -60,8 +60,8 @@
  *    and none to an undeclared one;
  *  - no request for `/api/…` left for the page's origin during those steps,
  *    except the sanctioned telemetry routes (D3: logs, latency samples, slow
- *    ops, app usage, analytics, crash reports) and the page-wide icon sprites
- *    — every other call went to the worker, which the page sees as a
+ *    ops, app usage, analytics, crash reports) — every other call, the
+ *    demo's saved icons included, went to the worker, which the page sees as a
  *    `postMessage`, not as a request;
  *  - the composer shows "not available" and the send did nothing;
  *  - this deploy's database gained no row in tasks, task_dependencies,
@@ -106,7 +106,8 @@ const OUT = arg("out") ?? "/tmp/demo-no-leak";
 /**
  * The page-origin `/api` routes a demo may still call (D3, the
  * `networking/no-page-transport` sanctioned importers): telemetry belongs to
- * the page, and the icon sprites are page-wide.
+ * the page. Nothing else — a scope's icons included: its saved icons come
+ * from its own server (`ScopeIconSymbols`).
  */
 const SANCTIONED: readonly RegExp[] = [
   /^\/api\/logs\/emit$/,
@@ -115,18 +116,8 @@ const SANCTIONED: readonly RegExp[] = [
   /^\/api\/app-usage\/flush$/,
   /^\/api\/analytics\/collect$/,
   /^\/api\/reports$/,
-  /^\/api\/icons\/(sprite|symbols)\//,
   /^\/api\/health(\/ready)?$/,
 ];
-
-/**
- * TEMPORARY, and the only page-server request outside telemetry: the page-wide
- * icon sheet (`ui/icons/sprites`' host, page chrome at Core.Root) fetches a
- * saved icon its resident sprites lack — Places' place and tag icons — from
- * the page's server. Exactly this request; removed by task-1793979789-wtzxz9
- * (a scope gets its own symbol source). Never widen it.
- */
-const TEMPORARY_ICON_SYMBOLS_READ = "GET /api/resources/icons.runtime-symbols";
 
 /** The tables a leaked write would land in. */
 const TABLES = [
@@ -405,11 +396,7 @@ await withBrowser(async (h) => {
     }
     if (!url.pathname.startsWith("/api/")) return;
     const line = `${req.method()} ${url.pathname}`;
-    if (
-      line === TEMPORARY_ICON_SYMBOLS_READ ||
-      SANCTIONED.some((re) => re.test(url.pathname))
-    )
-      sanctioned.push(line);
+    if (SANCTIONED.some((re) => re.test(url.pathname))) sanctioned.push(line);
     else leaked.push(line);
   };
   page.on("request", onRequest);

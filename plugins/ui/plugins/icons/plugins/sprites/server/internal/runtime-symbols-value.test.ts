@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { MAX_RUNTIME_SYMBOLS_PER_READ } from "../../core";
-import { symbolsHash } from "./runtime-symbols";
+import { symbolsHash } from "./drawer";
 import { loadRuntimeSymbols } from "./runtime-symbols-value";
 
 const K = "default-outline-400";
@@ -14,11 +14,11 @@ describe("icons.runtime-symbols", () => {
 
   it("refuses an unknown style key or name", async () => {
     expect(
-      loadRuntimeSymbols({ hash: symbolsHash, key: "nope", names: "home" }),
+      loadRuntimeSymbols({ hash: symbolsHash(), key: "nope", names: "home" }),
     ).rejects.toMatchObject({ code: "unknown-key" });
     expect(
       loadRuntimeSymbols({
-        hash: symbolsHash,
+        hash: symbolsHash(),
         key: K,
         names: "home,not_a_symbol",
       }),
@@ -36,14 +36,14 @@ describe("icons.runtime-symbols", () => {
       ).join(","),
     ]) {
       expect(
-        loadRuntimeSymbols({ hash: symbolsHash, key: K, names }),
+        loadRuntimeSymbols({ hash: symbolsHash(), key: K, names }),
       ).rejects.toMatchObject({ code: "invalid-names" });
     }
   });
 
   it("serves one runtime <symbol> per name in the style", async () => {
     const svg = await loadRuntimeSymbols({
-      hash: symbolsHash,
+      hash: symbolsHash(),
       key: "rounded-filled-300",
       names: "home,smart-toy",
     });

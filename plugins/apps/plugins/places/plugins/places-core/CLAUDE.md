@@ -100,6 +100,7 @@ its own.
     - `tag-tree/engine.defineTagTreeTable`
     - `tag-tree/engine.serveTagTree`
     - `tag-tree/engine.TagTrees`
+    - `ui/icons/saved-sources.defineSavedIconSource`
   - DB schema: `plugins/apps/plugins/places/plugins/places-core/server/internal/tables.ts`
   - Exports (types):
     - `ImportedPlace`

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { LUCIDE_MAP, lucideNameOf } from "@plugins/ui/plugins/icons/core";
-import { resolveIcon } from "@plugins/ui/plugins/icons/server";
+import { resolveIcon } from "@plugins/ui/plugins/icons/core";
 import { tuneLucideBody } from "./lucide";
 import { PACKAGE, readSet } from "./symbol-sets";
 

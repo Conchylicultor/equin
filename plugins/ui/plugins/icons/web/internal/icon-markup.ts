@@ -5,8 +5,9 @@ import {
 } from "../../core";
 import { spriteMarkup, useSprites } from "./sprite-store";
 import {
-  runtimeSymbolChunks,
   useRuntimeSymbolChunks,
+  useRuntimeSymbolStore,
+  type RuntimeSymbolStore,
 } from "./runtime-symbol-store";
 import { resolveIconDrawing, type DrawingSource } from "./icon-drawing";
 import { iconFamily, useIconFamilies } from "./family-store";
@@ -70,6 +71,7 @@ function markupOfFamily(family: InlineIconFamily): string {
 function symbolMarkup(
   id: string,
   source: DrawingSource,
+  runtime: RuntimeSymbolStore,
 ): IconMarkup | undefined {
   if (source.kind === "family" || source.kind === "gap") {
     const family = iconFamily(source.family);
@@ -81,7 +83,7 @@ function symbolMarkup(
     const markup = spriteMarkup(source.key);
     return markup === undefined ? undefined : indexSymbols(markup).get(id);
   }
-  for (const [, markup] of runtimeSymbolChunks()) {
+  for (const [, markup] of runtime.chunks()) {
     const hit = indexSymbols(markup).get(id);
     if (hit !== undefined) return hit;
   }
@@ -100,13 +102,14 @@ export function useIconMarkup(): IconMarkupReader {
   const style = useIconStyle();
   // A preview shows gaps on purpose: only an app drawing one is reported.
   const previewing = useIconFamilyPreview() !== undefined;
+  const runtime = useRuntimeSymbolStore();
   // Subscriptions only: the reader reads the stores themselves.
   useSprites();
-  useRuntimeSymbolChunks();
+  useRuntimeSymbolChunks(runtime);
   useIconFamilies();
   return (icon, { active }) => {
-    const { drawing, wants } = resolveIconDrawing(icon, style, active);
-    for (const w of wants) queueMicrotask(() => askFor(w));
+    const { drawing, wants } = resolveIconDrawing(icon, style, active, runtime);
+    for (const w of wants) queueMicrotask(() => askFor(w, runtime));
     if (drawing === null) return { kind: "pending" };
     const { source } = drawing;
     if (source.kind === "gap" && !previewing) {
@@ -114,7 +117,7 @@ export function useIconMarkup(): IconMarkupReader {
         reportIconFamilyGap({ family: source.family, name: source.name }),
       );
     }
-    const markup = symbolMarkup(drawing.id, drawing.source);
+    const markup = symbolMarkup(drawing.id, drawing.source, runtime);
     if (markup === undefined) {
       // The resolver said this sprite holds the symbol: a sprite without it
       // is a manifest out of step with the code naming the icon.

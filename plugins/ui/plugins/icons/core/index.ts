@@ -77,3 +77,10 @@ export {
   placeActiveIds,
 } from "./active-form";
 export type { IconMotion } from "./icon-motion";
+export {
+  buildSymbol,
+  resolveIcon,
+  resolveSymbol,
+  wrapSprite,
+} from "./glyph-markup";
+export type { IconBody, SpriteEntry, SymbolSets } from "./glyph-markup";

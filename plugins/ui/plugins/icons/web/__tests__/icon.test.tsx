@@ -16,7 +16,7 @@ import { Icon } from "../internal/icon";
 import { IconScopeProvider } from "../internal/icon-scope";
 import { usePublishIconStyle } from "../internal/style-store";
 import { provideSprite, useWantedSprites } from "../internal/sprite-store";
-import { provideRuntimeSymbols } from "../internal/runtime-symbol-store";
+import { pageRuntimeSymbols } from "../internal/runtime-symbol-store";
 
 /**
  * Which sprite symbol `<Icon>` points at: its scope's style (else the root's,
@@ -157,7 +157,7 @@ describe("<Icon> on a runtime (saved) symbol", () => {
 
   it("draws the default style's symbol while the wanted style's loads, then the wanted one", () => {
     act(() =>
-      provideRuntimeSymbols("test-default", "<svg></svg>", [
+      pageRuntimeSymbols.provide("test-default", "<svg></svg>", [
         { styleKey: "default-outline-400", name: "home" },
       ]),
     );
@@ -172,7 +172,7 @@ describe("<Icon> on a runtime (saved) symbol", () => {
     const { container } = render(<Themed />);
     expect(hrefOf(container)).toBe("#msr-default-outline-400-home");
     act(() =>
-      provideRuntimeSymbols("test-rounded", "<svg></svg>", [
+      pageRuntimeSymbols.provide("test-rounded", "<svg></svg>", [
         { styleKey: "rounded-filled-300", name: "home" },
       ]),
     );

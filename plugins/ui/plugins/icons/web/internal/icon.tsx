@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -17,8 +18,8 @@ import { useIconFamilyPreview, useIconScope } from "./icon-scope";
 import { useScopeIconStyle } from "./style-store";
 import { subscribeSprites, wantSprite } from "./sprite-store";
 import {
-  subscribeRuntimeSymbols,
-  wantRuntimeSymbol,
+  useRuntimeSymbolStore,
+  type RuntimeSymbolStore,
 } from "./runtime-symbol-store";
 import {
   resolveIconDrawing,
@@ -59,10 +60,16 @@ export function useIconStyle(): IconStyle {
   );
 }
 
-/** Subscribe to every icon store: a sprite, a runtime-symbol chunk or the families landing. */
-export function subscribeIconStores(listener: () => void): () => void {
+/**
+ * Subscribe to every icon store an icon drawing from `runtime` reads: a
+ * sprite, one of its runtime-symbol chunks or the families landing.
+ */
+function subscribeIconStores(
+  runtime: RuntimeSymbolStore,
+  listener: () => void,
+): () => void {
   const offSprites = subscribeSprites(listener);
-  const offRuntime = subscribeRuntimeSymbols(listener);
+  const offRuntime = runtime.subscribe(listener);
   const offFamilies = subscribeFamilies(listener);
   return () => {
     offSprites();
@@ -71,10 +78,20 @@ export function subscribeIconStores(listener: () => void): () => void {
   };
 }
 
-/** Hand one want to its loader. */
-export function askFor(want: DrawingWant): void {
+/** `subscribeIconStores` over the caller's runtime-symbol store, stable while it is. */
+export function useSubscribeIconStores(
+  runtime: RuntimeSymbolStore,
+): (listener: () => void) => () => void {
+  return useCallback(
+    (listener: () => void) => subscribeIconStores(runtime, listener),
+    [runtime],
+  );
+}
+
+/** Hand one want to its loader: a sprite's to the page's, a saved icon's to its store's. */
+export function askFor(want: DrawingWant, runtime: RuntimeSymbolStore): void {
   if (want.kind === "sprite") wantSprite(want.key);
-  else wantRuntimeSymbol(want.styleKey, want.name);
+  else runtime.want(want.styleKey, want.name);
 }
 
 function wantsKey(wants: readonly DrawingWant[]): string {
@@ -148,7 +165,8 @@ function inlineGlyphMarkup(source: DrawingSource | undefined): string | null {
  * An ANIMATED family glyph (moving parts, `data-motion`) is drawn inline rather
  * than through `<use>`, so a motion region's CSS can play it on hover.
  *
- * A runtime (saved) symbol draws from the runtime symbol store the same way:
+ * A runtime (saved) symbol draws from its runtime symbol store the same way —
+ * the page's, or inside a plugin scope that scope's own (`useRuntimeSymbolStore`):
  * its style's symbol once held, the default style's while that one loads, and
  * — only for a name no chunk holds in either — an empty box at its final size
  * (a loading state) until the fetch lands.
@@ -157,22 +175,25 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
   const style = useIconStyle();
   // A preview shows gaps on purpose: only an app drawing one is reported.
   const previewing = useIconFamilyPreview() !== undefined;
+  const runtime = useRuntimeSymbolStore();
+  const subscribe = useSubscribeIconStores(runtime);
+  const resolve = () => resolveIconDrawing(icon, style, active, runtime);
   // Plain strings out of the store: an icon re-renders only when what it
   // draws, or what it waits for, changes.
   const id = useSyncExternalStore(
-    subscribeIconStores,
-    () => resolveIconDrawing(icon, style, active).drawing?.id ?? null,
+    subscribe,
+    () => resolve().drawing?.id ?? null,
   );
-  const wanted = useSyncExternalStore(subscribeIconStores, () =>
-    wantsKey(resolveIconDrawing(icon, style, active).wants),
+  const wanted = useSyncExternalStore(subscribe, () =>
+    wantsKey(resolve().wants),
   );
-  const inline = useSyncExternalStore(subscribeIconStores, () =>
-    inlineGlyphMarkup(resolveIconDrawing(icon, style, active).drawing?.source),
+  const inline = useSyncExternalStore(subscribe, () =>
+    inlineGlyphMarkup(resolve().drawing?.source),
   );
   // An id no other icon has, for an inline active form's masks.
   const maskIds = `icon-${useId().replace(/[^\w-]/g, "")}`;
-  const gapFamily = useSyncExternalStore(subscribeIconStores, () => {
-    const source = resolveIconDrawing(icon, style, active).drawing?.source;
+  const gapFamily = useSyncExternalStore(subscribe, () => {
+    const source = resolve().drawing?.source;
     return source?.kind === "gap" ? source.family : null;
   });
   useEffect(() => {
@@ -181,9 +202,10 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
   }, [gapFamily, icon, previewing]);
   useEffect(() => {
     if (wanted === "") return;
-    for (const w of resolveIconDrawing(icon, style, active).wants) askFor(w);
+    for (const w of resolveIconDrawing(icon, style, active, runtime).wants)
+      askFor(w, runtime);
     // `wanted` is the trigger; the rest is what it was computed from.
-  }, [wanted, icon, style, active]);
+  }, [wanted, icon, style, active, runtime]);
   const named =
     title !== undefined ||
     rest["aria-label"] !== undefined ||

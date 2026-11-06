@@ -95,6 +95,7 @@ in-realm `MessageChannel` standing in for the worker).
     - `primitives/networking.TransportProvider`
     - `primitives/networking.useTransport`
     - `primitives/scope/render-origin.RenderOrigin`
+    - `ui/icons/sprites.ScopeIconSymbols`
   - Exports (types): `DemoHostControl`
   - Exports (values):
     - `DemoScope`

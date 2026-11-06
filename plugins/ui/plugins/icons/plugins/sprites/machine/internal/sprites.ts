@@ -14,16 +14,13 @@ import {
   lucideId,
   placeActiveIds,
   lucideNameOf,
+  resolveSymbol,
   setiId,
   symbolId,
   type SpriteKey,
-} from "@plugins/ui/plugins/icons/core";
-import {
-  SETI_SET,
-  readSetiSet,
-  resolveSymbol,
   type SymbolSets,
-} from "@plugins/ui/plugins/icons/server";
+} from "@plugins/ui/plugins/icons/core";
+import { SETI_SET, readSetiSet } from "@plugins/ui/plugins/icons/server";
 import { buildSprite } from "./build-sprite";
 import { ICON_MANIFEST } from "./icon-manifest.generated";
 import { LUCIDE_TUNING_VERSION, tuneLucideBody } from "./lucide";

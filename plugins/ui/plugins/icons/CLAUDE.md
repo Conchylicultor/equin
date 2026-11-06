@@ -346,18 +346,31 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
 
 - `runtimeSymbol` is its own constructor (not `symbol`), outside
   `icons/literal-icon-name` by construction.
-- `<Icon>` asks the **runtime symbol store** (`web/internal/runtime-symbol-store.ts`)
-  for (style key, name). Chunks of `<symbol id="msr-<styleKey>-<name>">` are
-  appended to the sheet (their own id prefix, so a name also in the manifest
-  never yields two elements with one id).
+- `<Icon>` asks its **runtime symbol store** (`web/internal/runtime-symbol-store.ts`,
+  `useRuntimeSymbolStore`) for (style key, name). Chunks of
+  `<symbol id="msr-<styleKey>-<name>">` are appended to the sheet (their own
+  id prefix, so a name also in the manifest never yields two elements with
+  one id).
+- **One store per server, never shared across a scope.** Outside every
+  `PluginScope` the store is the page's (`pageRuntimeSymbols`, filled from the
+  page's server). Inside one it is the store mounted IN that scope
+  (`RuntimeSymbolScope`, by the sprites plugin's `ScopeIconSymbols`, which
+  `DemoScope` mounts), filled from the scope's own server; its ids carry a
+  per-store prefix (`rs<n>-msr-…`) and it has its own sheet. A saved icon in
+  a scope that mounted no store throws, naming the scope — it never falls
+  through to the page's store, whose loader reads the page's server.
+- **Every host serves them:** the saved-icon values are portable, drawn through
+  the host's `RuntimeSymbolDrawer` (the computer's installed sets; a browser
+  host's bundled set — see `plugins/sprites`).
 - **Resident at boot:** `icons.saved-sprites` (sprites plugin, `boot-and-keep`)
   carries the default style's drawing of every name a saved-icon source
   reports. A source is `defineSavedIconSource({ id, tables, names, watch? })`
   (`plugins/saved-sources` server barrel — portable, so a browser-hosted server
   half can register one; the sprites plugin knows no source): DB-backed ones read
   through `db` and list their `tables` (the value's declared reads) so changes recompute the value (agents, callout
-  blocks, preprompt launch snapshots), config ones pass `tables: []` and `watch`
-  (conversation-category, preprompts).
+  blocks, preprompt launch snapshots, every tag tree's tags — `serveTagTree`
+  registers one per tree — and Places' places), config ones pass `tables: []`
+  and `watch` (conversation-category, preprompts).
 - **On demand:** a name/style no chunk holds is a want; the sprites plugin's
   loader batches every want of a frame into one `icons.runtime-symbols` live
   value tuple `{ hash, key, names }` per style (`names` sorted, at most 200, so
@@ -382,8 +395,12 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   import from here closes a cycle once the ui-kit draws `<Icon>`. Hence the
   leaf + publish/scope-context split above.
 - The sprite values (resident and on-demand) live in the `sprites` sub-plugin, not in
-  this plugin's `server/`, for the same reason: `core/` stays import-free so
-  every runtime (and every `core/` file of every plugin) can name an icon.
+  this plugin's `server/`, for the same reason: `core/` stays import-free of
+  other plugins so every runtime (and every `core/` file of every plugin) can
+  name an icon. The pure drawing (`resolveIcon`, `resolveSymbol`,
+  `buildSymbol`, `wrapSprite`, `core/glyph-markup.ts`) is core's, so a
+  portable server barrel can draw; `server/` keeps the fs readers
+  (`symbolBody`, the Seti set).
 - The manifest is not in `core/` (see "The rules"), and the weight token is
   `iconStroke`, not `iconWeight` (a `-weight` var is a type metric).
 - Lucide (plan `research/2026-10-06-apps-files-match-prototype.md` §1): the
@@ -398,7 +415,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
 
 ## Plugin reference
 
-- Description: Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
+- Description: Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion. Reads glyphs out of the installed Iconify JSON (the pure drawing — resolveIcon, resolveSymbol, buildSymbol — is core's): symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
 - Web:
   - Slots:
     - `Icons.Root`
@@ -423,8 +440,9 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `IconProps`
     - `IconSource`
     - `RuntimeSymbolEntry`
+    - `RuntimeSymbolStore`
   - Exports (values):
-    - `hasRuntimeSymbol`
+    - `createScopedRuntimeSymbols`
     - `Icon`
     - `iconFamilyGapReportSink`
     - `IconFamilyPreview`
@@ -432,10 +450,11 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `Icons`
     - `IconScopeProvider`
     - `IconSpriteSheet`
-    - `installRuntimeSymbolLoader`
-    - `provideRuntimeSymbols`
+    - `pageRuntimeSymbols`
     - `provideSprite`
     - `resolveIconSource`
+    - `RuntimeSymbolScope`
+    - `RuntimeSymbolSheet`
     - `useIconFamilies`
     - `useIconMarkup`
     - `useIconStyle`
@@ -445,7 +464,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `useWantedStyleKeys`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 542 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 543 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×154
     - `conversations` ×82
     - `page` ×52
@@ -455,7 +474,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `tasks` ×23
     - `plugin-meta` ×16
     - `active-data` ×11
-    - `ui` ×9
+    - `ui` ×10
     - `infra` ×8
     - `apps-core` ×7
     - `auth` ×6
@@ -488,13 +507,8 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
   - Exempted by: `ui/icons` (0 debt)
 - Server:
-  - Exports (types):
-    - `IconBody`
-    - `SymbolSets`
   - Exports (values):
     - `readSetiSet`
-    - `resolveIcon`
-    - `resolveSymbol`
     - `SETI_SET`
     - `symbolBody`
 - Core:
@@ -502,6 +516,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `BrandName`
     - `BrandRef`
     - `CustomRef`
+    - `IconBody`
     - `IconFamily`
     - `IconFamilyCoverage`
     - `IconFamilyId`
@@ -519,11 +534,13 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `SavedSymbolName`
     - `SetiName`
     - `SetiRef`
+    - `SpriteEntry`
     - `SpriteIconFamily`
     - `SpriteKey`
     - `StyleKey`
     - `SymbolName`
     - `SymbolRef`
+    - `SymbolSets`
   - Exports (values):
     - `ACTIVE_FORM_VERSION`
     - `ACTIVE_ID_TOKEN`
@@ -531,6 +548,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `brand`
     - `brandId`
     - `BRANDS_SPRITE`
+    - `buildSymbol`
     - `coveredStyles`
     - `DEFAULT_ICON_STYLE`
     - `DEFAULT_STYLE_KEYS`
@@ -563,6 +581,8 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `paintedBox`
     - `parseStyleKey`
     - `placeActiveIds`
+    - `resolveIcon`
+    - `resolveSymbol`
     - `resolveSymbolStyle`
     - `runtimeSymbol`
     - `runtimeSymbolId`
@@ -572,6 +592,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `styleKeyOf`
     - `symbol`
     - `symbolId`
+    - `wrapSprite`
 - Shared:
   - Exports (values):
     - `buildSetiSet`
@@ -589,6 +610,6 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - **`icon-sets`** — The installed @iconify-json sets, host-side: read one (readIconSet), their versions, and the SymbolName / BrandName / LucideName unions and the saved-names runtime list derived from them — rendered…
   - **`saved-names`** — The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it.
   - **`saved-sources`** — The saved-icon source registry: defineSavedIconSource registers a place that stores user-picked icons (its tables, its names, a watch for a non-DB store), and savedIconSources lists them for the…
-  - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks.
+  - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks, and…
 
 <!-- AUTOGENERATED:END -->

@@ -130,6 +130,7 @@ serveBrowserHost({
     - `framework/tooling/web-artifacts`
     - `infra/attachments/memory-blobs`
     - `infra/paths/data-files/memory`
+    - `ui/icons/sprites/bundled-symbols`
 - Test helpers:
   - Core: `@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing`
     - `declareMemoryHostStorage` — Declare that this process's browser host keeps its state in memory — what a test that boots a browser graph (PGlite and the in-memory host stores) declares before `bootBrowserHost`, as a host's entry point declares its storage.

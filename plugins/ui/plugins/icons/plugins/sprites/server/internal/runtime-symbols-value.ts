@@ -1,8 +1,8 @@
-import { serveValue } from "@plugins/network/plugins/live/machine";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import { isStyleKey } from "@plugins/ui/plugins/icons/core";
 import { isSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { MAX_RUNTIME_SYMBOLS_PER_READ, runtimeSymbolsValue } from "../../core";
-import { runtimeSymbols, symbolsHash } from "./runtime-symbols";
+import { runtimeSymbols, symbolsHash } from "./drawer";
 
 /**
  * Saved (runtime) symbols in one style, for `<Icon>` on a name the resident
@@ -26,10 +26,10 @@ export async function loadRuntimeSymbols({
       `No style key is named "${key}"`,
     );
   }
-  if (hash !== symbolsHash) {
+  if (hash !== symbolsHash()) {
     throw runtimeSymbolsValue.refuse(
       "stale-symbols",
-      `Symbols version ${hash} is not this server's (${symbolsHash}); reload the page`,
+      `Symbols version ${hash} is not this server's (${symbolsHash()}); reload the page`,
     );
   }
   const names = raw === "" ? [] : raw.split(",");
@@ -54,20 +54,20 @@ export async function loadRuntimeSymbols({
       `Unknown symbol name(s): ${unknown.join(", ")}`,
     );
   }
-  return await runtimeSymbols(key, names);
+  return await runtimeSymbols(key, names.filter(isSavedSymbolName));
 }
 
 /**
  * External and `immutable`: this process answers only its own sets hash, and
- * a tuple's symbols are a pure function of those sets (`runtimeSymbols` keeps
- * each style's map once built). Its ETag is the tuple itself while `hash` is
+ * a tuple's symbols are a pure function of the drawer's sets. Its ETag is the tuple itself while `hash` is
  * this process's — so a tab replaying it after a restart that kept the sets
  * is answered `up-to-date` instead of re-sent — and a value no stored ETag
  * can equal otherwise (that tuple is refused `stale-symbols`).
  */
 export const runtimeSymbolsServed = serveValue(runtimeSymbolsValue, {
   source: "external",
-  // A pick from `runtimeSymbols`' per-style map, built once per process.
+  // A pick from the drawer's memo (per style on the desktop; the host's
+  // store, else the bundled set, on a browser host).
   readCost: "memory",
   changes: {
     immutable: {
@@ -77,9 +77,9 @@ export const runtimeSymbolsServed = serveValue(runtimeSymbolsValue, {
   },
   revalidate: ({ hash, key, names }) =>
     Promise.resolve(
-      hash === symbolsHash
+      hash === symbolsHash()
         ? `${hash}/${key}/${names}`
-        : `stale-symbols/${symbolsHash}`,
+        : `stale-symbols/${symbolsHash()}`,
     ),
   loader: loadRuntimeSymbols,
 });

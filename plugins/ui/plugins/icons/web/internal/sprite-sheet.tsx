@@ -1,5 +1,9 @@
 import { useSprites } from "./sprite-store";
-import { useRuntimeSymbolChunks } from "./runtime-symbol-store";
+import {
+  pageRuntimeSymbols,
+  useRuntimeSymbolChunks,
+  type RuntimeSymbolStore,
+} from "./runtime-symbol-store";
 import { SHEET_STYLE } from "./sheet-style";
 
 /**
@@ -16,7 +20,6 @@ import { SHEET_STYLE } from "./sheet-style";
  */
 export function IconSpriteSheet() {
   const sprites = useSprites();
-  const runtime = useRuntimeSymbolChunks();
   return (
     <div aria-hidden style={SHEET_STYLE} data-icon-sprites="">
       {sprites.map(([key, markup]) => (
@@ -28,6 +31,29 @@ export function IconSpriteSheet() {
           dangerouslySetInnerHTML={{ __html: markup }}
         />
       ))}
+      <RuntimeSymbolChunks store={pageRuntimeSymbols} />
+    </div>
+  );
+}
+
+/**
+ * A plugin scope's saved-icon symbols, inline and zero-size like the page's
+ * sheet: rendered inside the scope by whoever gives it its store (the sprites
+ * plugin's `ScopeIconSymbols`). Its ids carry the store's prefix, so it never
+ * repeats one of the page's sheet.
+ */
+export function RuntimeSymbolSheet({ store }: { store: RuntimeSymbolStore }) {
+  return (
+    <div aria-hidden style={SHEET_STYLE} data-runtime-symbol-sheet="">
+      <RuntimeSymbolChunks store={store} />
+    </div>
+  );
+}
+
+function RuntimeSymbolChunks({ store }: { store: RuntimeSymbolStore }) {
+  const runtime = useRuntimeSymbolChunks(store);
+  return (
+    <>
       {runtime.map(([chunkId, markup]) => (
         <div
           key={chunkId}
@@ -37,6 +63,6 @@ export function IconSpriteSheet() {
           dangerouslySetInnerHTML={{ __html: markup }}
         />
       ))}
-    </div>
+    </>
   );
 }

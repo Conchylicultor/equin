@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { IdKinds } from "@plugins/ids/server";
+import "./internal/saved-icons";
 import {
   serveTagTree,
   TagTrees,

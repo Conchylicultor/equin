@@ -7,7 +7,8 @@
  *  1. opens the launcher inside the embed and picks Places: the embed switches
  *     to Places, whose header counts the demo's 15 places and whose tag
  *     sidebar holds Demo's own "Lisbon" tag (`website/demos/workspace`'s
- *     `core/internal/places.ts`), read from the worker;
+ *     `core/internal/places.ts`), read from the worker; the place and tag
+ *     icons are the demo's own saved icons, in its own sheet;
  *  2. draws the map: when this instance has a Maps browser key, Google's map
  *     draws in the embed (its script and tiles loaded from Google, with the
  *     key the page's chrome handed the worker — the demo's code never reads
@@ -15,6 +16,9 @@
  *     up is not available here;
  *  3. opens a place's card ("Castelo de São Jorge"): Google's details and the
  *     icon pick say "not available", never a set-up prompt;
+ *  3b. opens Manage tags and the Lisbon tag's icon picker: its grid draws
+ *     from the demo's own icon sheet (the worker's bundled set), and the
+ *     picked icon draws on the tag;
  *  4. types in the search bar: the Google half says searching is not
  *     available;
  *  5. switches the embed to the Desktop, opens Places as a window from the
@@ -22,7 +26,7 @@
  *
  * And asserts, throughout, that nothing left the scope — the list `no-leak.ts`
  * checks against (D3): no `/api/…` request for the page's origin but the
- * sanctioned telemetry routes, no page socket, no page or console error — and
+ * sanctioned telemetry routes (the icons included — no exception), no page socket, no page or console error — and
  * that every request to another origin, the page's or the worker's, goes to a
  * host a scoped plugin declares (`externalHosts`, `ExternalHosts.Declare`).
  *
@@ -55,18 +59,8 @@ const SANCTIONED: readonly RegExp[] = [
   /^\/api\/app-usage\/flush$/,
   /^\/api\/analytics\/collect$/,
   /^\/api\/reports$/,
-  /^\/api\/icons\/(sprite|symbols)\//,
   /^\/api\/health(\/ready)?$/,
 ];
-
-/**
- * TEMPORARY, and the only page-server request outside telemetry: the page-wide
- * icon sheet (`ui/icons/sprites`' host, page chrome at Core.Root) fetches a
- * saved icon its resident sprites lack — Places' place and tag icons — from
- * the page's server. Exactly this request; removed by task-1793979789-wtzxz9
- * (a scope gets its own symbol source). Never widen it.
- */
-const TEMPORARY_ICON_SYMBOLS_READ = "GET /api/resources/icons.runtime-symbols";
 
 /** The demo's places (`core/internal/places.ts`). */
 const PLACE_COUNT = 15;
@@ -124,7 +118,6 @@ await withBrowser(async (h) => {
     }
     if (!url.pathname.startsWith("/api/")) return;
     const line = `${req.method()} ${url.pathname}`;
-    if (line === TEMPORARY_ICON_SYMBOLS_READ) return;
     if (!SANCTIONED.some((re) => re.test(url.pathname))) leaked.push(line);
   };
   page.on("request", onRequest);
@@ -170,6 +163,24 @@ await withBrowser(async (h) => {
     (n) => n > 0,
   );
   r.eq("the page URL stays /demo", new URL(page.url()).pathname, "/demo");
+
+  // ── 1b. saved icons: the demo's own, drawn from the worker ──────────────
+  // A place's icon (Demo's castle) and a tag's are saved icons: the scope's
+  // own sheet holds them (resident: the worker's saved-icon sources report
+  // them), and no icon in the embed draws from the page's sheet.
+  await renders(
+    "the demo's own icon sheet holds a place's icon (castle)",
+    () =>
+      page
+        .locator("[data-runtime-symbol-sheet] symbol[id$='-400-castle']")
+        .count(),
+    (n) => n > 0,
+  );
+  r.eq(
+    "no saved icon in the embed draws from the page's sheet",
+    await embedRoot(page).locator("use[href^='#msr-']").count(),
+    0,
+  );
 
   // ── 2. the map: Google's, with the key the page handed over ─────────────
   const map = await renders(
@@ -224,6 +235,37 @@ await withBrowser(async (h) => {
     0,
   );
   await snap(page, OUT, "2-card");
+  await page.keyboard.press("Escape");
+
+  // ── 3b. a tag's icon: the picker draws from the worker, and a pick sticks ─
+  await embedRoot(page)
+    .getByRole("button", { name: "Manage tags", exact: true })
+    .click();
+  await embedRoot(page)
+    .getByRole("button", { name: "Icon of Lisbon", exact: true })
+    .click();
+  // The picker is a popover, portalled out of the embed (still in the scope).
+  const grid = await renders(
+    "the icon picker's grid draws its icons from the demo's own sheet",
+    () => page.locator("button[aria-pressed] use[href^='#rs']").count(),
+    (n) => n > 20,
+  );
+  r.note(`picker cells drawn: ${grid.value ?? 0}`);
+  await page.getByPlaceholder("Search icons…").fill("sailing");
+  await page
+    .getByRole("button", { name: /^sailing$/i })
+    .first()
+    .click();
+  await renders(
+    "the picked icon draws on the tag, from the demo's own sheet",
+    () =>
+      embedRoot(page)
+        .getByRole("button", { name: "Icon of Lisbon", exact: true })
+        .locator("use[href*='msr-'][href$='-sailing']")
+        .count(),
+    (n) => n > 0,
+  );
+  await snap(page, OUT, "2b-tag-icon");
   await page.keyboard.press("Escape");
 
   // ── 4. search: Google's half is not available ───────────────────────────
