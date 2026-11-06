@@ -21,4 +21,6 @@ export {
 } from "./serve-mode";
 export type { ServeMode, ServeModeOption } from "./serve-mode";
 export { resolveCompositionHome } from "./home";
+export { resolveCompositionUnlisted } from "./unlisted";
 export type { CompositionHome, CompositionHomeError } from "./home";
+export type { CompositionUnlisted } from "./unlisted";

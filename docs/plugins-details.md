@@ -17163,10 +17163,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `Pane.Register` "shell-output"
                   - `TaskNotification.Open` "background-shell"
-                - Uses: 30 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/REFERENCE.md)
+                - Uses: 31 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/REFERENCE.md)
                   - `primitives/pane` ×4
                   - `network/live/live-state` ×3
-                  - `network/live` ×2
+                  - `network/live` ×3
                   - `primitives/css/spacing` ×2
                   - `primitives/dom/auto-scroll` ×2
                   - `primitives/relative-time` ×2
@@ -17387,21 +17387,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations.useConversationById`
                   - `conversations/conversation-view.conversationPane`
                   - `conversations/conversation-view/code/file-pane.filePeekPane`
-                  - `network/live.rowOrStale`
+                  - `network/live.RowView`
                   - `primitives/copy-to-clipboard.CopyButton`
                   - `primitives/css/inline.Inline`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.SingleLineProvider`
                   - `primitives/link-gesture.activationProps`
+                  - `primitives/loading.Loading`
                   - `primitives/pane.useOpenPane`
                 - Exports (values):
                   - `FilePath`
                   - `toRelativePath`
               - Cross-plugin:
                 - Uses tokens:
+                  - `ui/tokens/color-palette --destructive`
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/font-family --font-mono`
+                  - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-scale`
                   - `ui/tokens/type-scale --font-size-2xs`
                   - `ui/tokens/type-scale --line-height-2xs`
@@ -17589,12 +17592,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `subagent-transcript` (keyed, window, notified, whole: one sub-agent's typed prompts — its launch prompt and each message sent to it, a handful)
                   - `subagent-transcript:meta` (push, notified, whole: one sub-agent's typed prompts — its launch prompt and each message sent to it, a handful)
               - Web:
-                - Uses: 29 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md)
+                - Uses: 30 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md)
                   - `network/live/live-state` ×5
                   - `conversations/conversation-view/jsonl-viewer` ×4
+                  - `network/live` ×3
                   - `primitives/relative-time` ×3
                   - `conversations` ×2
-                  - `network/live` ×2
                   - `primitives/css/spacing` ×2
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                   - `primitives/css/badge.Badge`
@@ -18202,7 +18205,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
-                      - `network/live.rowOrStale`
+                      - `network/live.RowView`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/line.Line`
                       - `primitives/css/text.Text`
@@ -28957,7 +28960,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 135 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 136 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×19
               - `config_v2` ×14
               - `framework/plugin-id` ×13
@@ -28965,8 +28968,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/slot-declaration` ×6
               - `packages/timed-fs` ×6
               - `plugin-meta/barrel-import` ×6
+              - `plugin-meta/composition` ×6
               - `plugin-meta/closure` ×5
-              - `plugin-meta/composition` ×5
               - `plugin-meta/facets` ×5
               - `plugin-meta/plugin-records/evaluate` ×5
               - `plugin-meta/plugin-records` ×5
@@ -41403,6 +41406,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CompositionHome`
           - `CompositionHomeError`
           - `CompositionManifestItem`
+          - `CompositionUnlisted`
           - `ServeMode`
           - `ServeModeOption`
         - Exports (values):
@@ -41419,6 +41423,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `manifestItemToManifest`
           - `RESERVED_COMPOSITION_NAMESPACES`
           - `resolveCompositionHome`
+          - `resolveCompositionUnlisted`
           - `SERVE_MODE_OPTIONS`
           - `SERVE_MODES`
           - `serveModeLabel`
@@ -47854,10 +47859,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 225 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 226 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×68
+          - `conversations` ×23
           - `ui` ×23
-          - `conversations` ×22
           - `debug` ×19
           - `primitives` ×19
           - `tasks` ×14
@@ -58716,9 +58721,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 390 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 391 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×83
               - `apps` ×82
-              - `conversations` ×82
               - `primitives` ×60
               - `page` ×35
               - `debug` ×26

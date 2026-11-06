@@ -179,6 +179,17 @@ export const compositionsConfig = defineConfig({
         // resolved value into the composition's web registry. Engine-opaque —
         // `manifestItemToManifest` DROPS it.
         home: textField({ label: "Home app" }),
+        // WHICH bundled apps its launchers do not offer: `defineApp` ids. An
+        // app reaches a bundle when the composition asks for it, or when
+        // something it asks for imports the app's shell — the second kind
+        // still owns its URL and panes (they open from what imports them),
+        // but listing it would offer an app the composition never meant to
+        // show. `composition-closure` (via `resolveCompositionUnlisted`)
+        // rejects an id that is no app, not in the bundle, or the `home`;
+        // codegen bakes the resolved list into the composition's identity,
+        // which every launcher reads. Engine-opaque — `manifestItemToManifest`
+        // DROPS it.
+        unlisted: stringListField({ label: "Unlisted apps" }),
       },
       default: [
         // ── The main app ────────────────────────────────────────────────────────
@@ -221,6 +232,7 @@ export const compositionsConfig = defineConfig({
           serve: "off",
           // Main lands on the app gallery.
           home: "home",
+          unlisted: [] as string[],
         },
 
         // ── The showcase film's instance ────────────────────────────────────────
@@ -244,6 +256,7 @@ export const compositionsConfig = defineConfig({
           excludes: [] as string[],
           serve: "manual",
           home: "home",
+          unlisted: [] as string[],
         },
 
         // ── The global exclusions ───────────────────────────────────────────────
@@ -296,6 +309,7 @@ export const compositionsConfig = defineConfig({
           excludes: [] as string[],
           serve: "off",
           home: "",
+          unlisted: [] as string[],
         },
 
         // ── Profiles: the agent-manager worked example (full vs. lean) ──────────
@@ -315,6 +329,7 @@ export const compositionsConfig = defineConfig({
           excludes: [] as string[],
           serve: "off",
           home: "agent-manager",
+          unlisted: [] as string[],
         },
         {
           id: "agent-manager-lean",
@@ -327,6 +342,7 @@ export const compositionsConfig = defineConfig({
           excludes: [] as string[],
           serve: "off",
           home: "agent-manager",
+          unlisted: [] as string[],
         },
 
         // ── Profile: the agent manager as its in-page demo serves it ─────────────
@@ -359,9 +375,7 @@ export const compositionsConfig = defineConfig({
         //   (defineAutomation, the warm-ups, the config watch) needs the
         //   computer — so a demo has no automation to show (each automation,
         //   and the outcome-report card, named too: a pattern positive the
-        //   profile extends would otherwise keep them);
-        // - the file explorer (`apps.file-explorer.**`, and the conversation's
-        //   Explorer tab that embeds it): browses a checkout on disk.
+        //   profile extends would otherwise keep them).
         //
         // Home joins it (`apps.home.**`) and is its home: the app launcher's
         // click and its "All apps" lead to the composition's home app and
@@ -418,7 +432,14 @@ export const compositionsConfig = defineConfig({
             // capability ids they define stay.
             "conversations.conversation-view.push-and-exit.capabilities",
             "tasks.outcome-report.capability",
-            "!apps.file-explorer.**",
+            // The file explorer is NOT negated, though it browses the disk:
+            // the file-peek pane every transcript path opens (the Read /
+            // Write / Edit cards, file links, compaction, attachments)
+            // imports Files' browser and folder panes, so negating it would
+            // cascade every one of those renderers out of the demo and leave
+            // their cards as the generic tool card, with no path. Only what
+            // the pane imports joins; reading a checkout file says "not
+            // available".
             // The agent's git worktree (DB fork, checkout): the computer's.
             "!conversations.workspace.worktree.**",
             // The get_timeline tool call's renderer: it draws this host's
@@ -458,6 +479,10 @@ export const compositionsConfig = defineConfig({
             // The OS menu-bar panel and its sections: a page the native
             // helper opens on the computer, meaningless in a demo.
             "!menu-bar.**",
+            // Kept under that negative: the installed-window bridge Files'
+            // browser drags files out through. It answers null in a browser
+            // tab, and negating it cascades the file-peek pane out with Files.
+            "menu-bar.app-window",
             "!conversations.menu-bar-status.**",
             "!tasks.menu-bar-task.**",
             "!shell.notifications.native.**",
@@ -469,6 +494,11 @@ export const compositionsConfig = defineConfig({
           excludes: [] as string[],
           serve: "off",
           home: "home",
+          // Files comes in only because the file-peek pane every transcript
+          // path opens imports its panes; on its own it browses the
+          // computer's disk, which says "not available" here — so the
+          // launcher does not offer it.
+          unlisted: ["file-explorer"],
         },
 
         // ── Apps: lean baseline (entry only) for every other top-level app ──────
@@ -590,6 +620,7 @@ export const compositionsConfig = defineConfig({
           excludes: [] as string[],
           serve: "off",
           home: "",
+          unlisted: [] as string[],
         },
         subsystem("page-editor", { entryPoints: ["page.**"] }),
         subsystem("fields", { entryPoints: ["fields.**"] }),
@@ -771,6 +802,7 @@ function app(
     serve: "off",
     // An app row's name IS its `defineApp` id — the app it ships is its home.
     home: name,
+    unlisted: [] as string[],
   };
 }
 
@@ -787,6 +819,7 @@ function subsystem(name: string, opts: { entryPoints: string[] }) {
     excludes: [] as string[],
     serve: "off",
     home: "",
+    unlisted: [] as string[],
   };
 }
 
@@ -803,5 +836,6 @@ function pack(name: string, opts: { selectedContributors: string[] }) {
     excludes: [] as string[],
     serve: "off",
     home: "",
+    unlisted: [] as string[],
   };
 }

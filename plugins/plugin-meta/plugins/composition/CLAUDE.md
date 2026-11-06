@@ -229,6 +229,21 @@ which `App.tsx` hands to `PluginProvider` and apps-core reads via
 Engine-opaque: `manifestItemToManifest` drops it. Studio edits it in the
 composition detail pane's Home app section (`useManifestActions().setHome`).
 
+## `unlisted` — apps a composition bundles but does not offer
+
+`unlisted` is a list of `defineApp` ids its launchers leave out
+(`apps-core`'s `isListedApp`, read through `useAppListing`). An app reaches a
+bundle because the composition asks for it, or because something it asks for
+imports the app's shell: `agent-manager-demo` holds Files only because the
+file-peek pane every transcript path opens imports Files' panes, and Files
+itself only says "not available" in the demo, so it unlists `file-explorer`.
+The app still owns its URL and panes. `resolveCompositionUnlisted`
+(`core/unlisted.ts`) is the one verdict: `composition-closure` and codegen both
+reject an id that is no app, outside the bundle, or the `home`. Codegen bakes
+the list into the composition identity (`{ id, home, unlisted }`, only spelled
+when non-empty) of every registry and browser-host scope. Engine-opaque:
+`manifestItemToManifest` drops it.
+
 ## Studio data: server + web runtimes
 
 Beyond the registry, this plugin ships the **Studio closure data**:
@@ -401,6 +416,7 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `CompositionHome`
     - `CompositionHomeError`
     - `CompositionManifestItem`
+    - `CompositionUnlisted`
     - `ServeMode`
     - `ServeModeOption`
   - Exports (values):
@@ -417,6 +433,7 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `manifestItemToManifest`
     - `RESERVED_COMPOSITION_NAMESPACES`
     - `resolveCompositionHome`
+    - `resolveCompositionUnlisted`
     - `SERVE_MODE_OPTIONS`
     - `SERVE_MODES`
     - `serveModeLabel`

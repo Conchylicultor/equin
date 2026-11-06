@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { useAudience } from "@plugins/audience/web";
-import type { Audience } from "@plugins/audience/core";
+import { useComposition } from "@plugins/framework/plugins/web-sdk/core";
 import {
   mapResource,
   type ResourceResult,
@@ -10,18 +11,26 @@ import { isListedApp } from "./resolve-app";
 /** Whether a launcher offers an app — {@link isListedApp} for this user. */
 export type AppListing = (entry: { app: AppRef }) => boolean;
 
-// One stable predicate per audience, so a memo keyed on it holds while the
-// audience does.
-const LISTINGS: Record<Audience, AppListing> = {
-  user: (entry) => isListedApp(entry, "user"),
-  developer: (entry) => isListedApp(entry, "developer"),
-};
+const NONE: readonly string[] = [];
 
 /**
  * Which apps the launchers offer this user, live: {@link isListedApp} bound to
- * the user's audience (Developer mode). Loading until the audience is known —
- * a launcher renders its loading state rather than guess which apps exist.
+ * the user's audience (Developer mode) and the deployed composition's unlisted
+ * apps. Loading until the audience is known — a launcher renders its loading
+ * state rather than guess which apps exist.
  */
 export function useAppListing(): ResourceResult<AppListing> {
-  return mapResource(useAudience(), (audience) => LISTINGS[audience]);
+  const unlisted = useComposition().unlisted ?? NONE;
+  const audience = useAudience();
+  // One stable predicate per (audience, composition), so a memo keyed on it
+  // holds while both do.
+  const listings = useMemo(
+    () => ({
+      user: (entry: { app: AppRef }) => isListedApp(entry, "user", unlisted),
+      developer: (entry: { app: AppRef }) =>
+        isListedApp(entry, "developer", unlisted),
+    }),
+    [unlisted],
+  );
+  return mapResource(audience, (a) => listings[a]);
 }

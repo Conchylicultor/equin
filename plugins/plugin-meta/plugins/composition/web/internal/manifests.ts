@@ -170,6 +170,7 @@ export function useManifestActions(): ManifestActions {
           // No home until one is picked in Studio — `composition-closure` refuses
           // a bundle with apps but no home, so the gap is loud, not load order.
           home: "",
+          unlisted: [],
           ...fields,
         };
         next = [...items, newItem];

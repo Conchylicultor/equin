@@ -26,6 +26,7 @@ import {
   isServed,
   manifestItemToManifest,
   resolveCompositionHome,
+  resolveCompositionUnlisted,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { companionsVisible } from "./companions-visible";
@@ -534,6 +535,12 @@ const check: Check = {
       const homeHint =
         "Set the composition's `home` to the `defineApp` id of the app that owns `/` (plugins/plugin-meta/plugins/composition/core/config.ts, or the Studio compositions pane).";
       if (item.entryPoints.length === 0) {
+        if (item.unlisted.length > 0) {
+          return fail(
+            `composition "${item.name}" has no entry points (a pack) but declares \`unlisted\``,
+            "A pack has no launcher of its own — clear its `unlisted`.",
+          );
+        }
         if (item.home !== "") {
           return fail(
             `composition "${item.name}" has no entry points (a pack) but declares \`home: "${item.home}"\``,
@@ -560,6 +567,19 @@ const check: Check = {
       });
       if (home.kind === "error") {
         return fail(`composition "${item.name}" ${home.message}`, homeHint);
+      }
+      // Same `resolveCompositionUnlisted` verdict codegen bakes beside `home`.
+      const unlisted = resolveCompositionUnlisted({
+        apps: declaredApps,
+        bundle,
+        unlisted: item.unlisted,
+        home: item.home,
+      });
+      if (unlisted.kind === "error") {
+        return fail(
+          `composition "${item.name}" ${unlisted.message}`,
+          "Name in `unlisted` only bundled apps other than the `home` (plugins/plugin-meta/plugins/composition/core/config.ts).",
+        );
       }
     }
 

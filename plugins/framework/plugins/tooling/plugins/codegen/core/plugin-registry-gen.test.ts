@@ -160,7 +160,7 @@ function bundleFixture(): {
     // it is on the ctx so every consumer shares one classify pass.
     graph: classifyEdges(tree),
     mainBundle: new Set(nodes.map((n) => n.id)),
-    main: { id: MAIN_COMPOSITION_ID, home: "alpha" },
+    main: { id: MAIN_COMPOSITION_ID, home: "alpha", unlisted: [] },
     repo: () => Promise.resolve(repo),
     dirScans: new Map(),
     browserHostGraphs: new Map(),
@@ -200,7 +200,7 @@ test("a composition registry names its composition; a checkout one names none", 
     ctx,
     def,
     bundle: ctx.mainBundle,
-    composition: { id: "website", home: "website" },
+    composition: { id: "website", home: "website", unlisted: [] },
   });
   expect(rendered).toContain(
     'export const composition: CompositionIdentity = { id: "website", home: "website" };',
@@ -212,6 +212,15 @@ test("a composition registry names its composition; a checkout one names none", 
     composition: ctx.main,
   });
   expect(checkout).not.toContain("export const composition");
+  const unlisting = await renderCollectedDirRegistry({
+    ctx,
+    def,
+    bundle: ctx.mainBundle,
+    composition: { id: "demo", home: "home", unlisted: ["file-explorer"] },
+  });
+  expect(unlisting).toContain(
+    'export const composition: CompositionIdentity = { id: "demo", home: "home", unlisted: ["file-explorer"] };',
+  );
 });
 
 test("the committed bundle is main's closure for a composition dir, every plugin for a checkout dir", () => {
@@ -299,7 +308,7 @@ function machineFixture(): {
     tree,
     graph: classifyEdges(tree),
     mainBundle: new Set(nodes.map((n) => n.id)),
-    main: { id: MAIN_COMPOSITION_ID, home: null },
+    main: { id: MAIN_COMPOSITION_ID, home: null, unlisted: [] },
     repo: () => Promise.resolve(repo),
     dirScans: new Map(),
     browserHostGraphs: new Map(),

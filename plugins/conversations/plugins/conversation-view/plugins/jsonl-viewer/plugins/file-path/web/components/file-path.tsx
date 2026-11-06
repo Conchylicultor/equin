@@ -1,4 +1,5 @@
-import { rowOrStale } from "@plugins/network/plugins/live/web";
+import { RowView } from "@plugins/network/plugins/live/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -22,19 +23,50 @@ interface FilePathProps {
   filePath: string;
 }
 
+// Every arm of the conversation read draws something: a path chip never
+// collapses to nothing (which reads as "this call named no file").
 export function FilePath({ filePath }: FilePathProps) {
   const { convId } = conversationPane.useParams();
-  const conversation = rowOrStale(useConversationById(convId));
+  const conversation = useConversationById(convId);
+
+  // A tool input without its path is malformed, and says so.
+  if (!filePath) {
+    return (
+      <Text className="font-mono text-2xs text-destructive">no file path</Text>
+    );
+  }
+
+  return (
+    <RowView
+      row={conversation}
+      subject="the conversation"
+      fallback={<Loading variant="block" className="h-3 w-32" />}
+      missing={
+        <Text className="font-mono text-2xs text-destructive" title={filePath}>
+          {filePath} (conversation not found)
+        </Text>
+      }
+    >
+      {(row) => (
+        <WorktreeFilePath filePath={filePath} attemptId={row.attemptId} />
+      )}
+    </RowView>
+  );
+}
+
+function WorktreeFilePath({
+  filePath,
+  attemptId,
+}: {
+  filePath: string;
+  attemptId: string;
+}) {
   const openPane = useOpenPane();
-
-  if (!conversation) return null;
-  if (!filePath) return null;
-
-  const relativePath = toRelativePath(filePath, conversation.attemptId);
+  const relativePath = toRelativePath(filePath, attemptId);
 
   const fileTarget = openPane.to(
     filePeekPane,
-    { worktree: conversation.attemptId, filePath },
+    { worktree: attemptId, filePath },
     { mode: "push" },
   );
 
@@ -46,6 +78,7 @@ export function FilePath({ filePath }: FilePathProps) {
           side="start"
           {...activationProps(fileTarget, { isolate: true })}
           title={relativePath}
+          data-file-path={relativePath}
           className="max-w-full font-mono text-2xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
         >
           {relativePath}

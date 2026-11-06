@@ -20,7 +20,7 @@ Expanded: syntax-highlighted code block with line numbers derived from the `cat 
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
-    - `network/live.rowOrStale`
+    - `network/live.RowView`
     - `primitives/css/badge.Badge`
     - `primitives/css/line.Line`
     - `primitives/css/text.Text`

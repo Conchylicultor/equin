@@ -10,21 +10,24 @@
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/code/file-pane.filePeekPane`
-    - `network/live.rowOrStale`
+    - `network/live.RowView`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/inline.Inline`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/link-gesture.activationProps`
+    - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
   - Exports (values):
     - `FilePath`
     - `toRelativePath`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-2xs`
     - `ui/tokens/type-scale --line-height-2xs`

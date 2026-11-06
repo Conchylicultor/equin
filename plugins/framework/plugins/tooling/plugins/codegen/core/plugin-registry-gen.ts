@@ -22,6 +22,7 @@ import {
 import {
   assertCompositionName,
   resolveCompositionHome,
+  resolveCompositionUnlisted,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import {
@@ -224,6 +225,13 @@ async function buildContext(
         tree,
         main.bundle,
         MAIN_COMPOSITION_ID,
+        main.home,
+      ),
+      unlisted: resolveRegistryUnlisted(
+        tree,
+        main.bundle,
+        MAIN_COMPOSITION_ID,
+        main.unlisted,
         main.home,
       ),
     },
@@ -615,6 +623,8 @@ export interface RegistryComposition {
   id: string;
   /** The app owning bare `/` — a `defineApp` id; null when the bundle holds no app. */
   home: string | null;
+  /** The bundled apps its launchers do not offer — `defineApp` ids, sorted. */
+  unlisted: readonly string[];
 }
 
 // The apps a tree declares, per tree. `readDeclaredApps` reads every plugin's
@@ -661,6 +671,34 @@ export function resolveRegistryHome(
   return r.kind === "app" ? r.appId : null;
 }
 
+/**
+ * A composition's manifest `unlisted`, resolved against its bundle — THROWS on
+ * an id that is no app, not bundled, or the home, as {@link resolveRegistryHome}
+ * does. `composition-closure` reports the same `resolveCompositionUnlisted`
+ * verdict.
+ */
+export function resolveRegistryUnlisted(
+  tree: PluginTree,
+  bundle: ReadonlySet<string>,
+  name: string,
+  unlisted: readonly string[],
+  home: string,
+): string[] {
+  const r = resolveCompositionUnlisted({
+    apps: declaredAppsOf(tree),
+    bundle,
+    unlisted,
+    home,
+  });
+  if (r.kind === "error") {
+    throw new Error(
+      `Composition "${name}" ${r.message} ` +
+        `(plugins/plugin-meta/plugins/composition/core/config.ts).`,
+    );
+  }
+  return r.appIds;
+}
+
 function renderRegistry(
   dir: string,
   entries: CollectedRawEntry[],
@@ -704,10 +742,14 @@ function renderRegistry(
     lines.push("export interface CompositionIdentity {");
     lines.push("  id: string;");
     lines.push("  home: string | null;");
+    // Only a composition unlisting an app spells the field (absent = none), so
+    // a registry whose launchers offer every app reads as it always did.
+    const unlisted = composition.unlisted.length > 0;
+    if (unlisted) lines.push("  unlisted: readonly string[];");
     lines.push("}");
     lines.push("");
     lines.push(
-      `export const composition: CompositionIdentity = { id: ${JSON.stringify(composition.id)}, home: ${JSON.stringify(composition.home)} };`,
+      `export const composition: CompositionIdentity = { id: ${JSON.stringify(composition.id)}, home: ${JSON.stringify(composition.home)}${unlisted ? `, unlisted: ${JSON.stringify(composition.unlisted)}` : ""} };`,
     );
   }
   lines.push("");
@@ -766,6 +808,8 @@ export async function generateCompositionRegistry(opts: {
   name: string;
   /** The manifest's declared `home`, resolved against `bundle` (throws when invalid). */
   home: string;
+  /** The manifest's declared `unlisted`, resolved against `bundle` (throws when invalid). */
+  unlisted: readonly string[];
   // The pass's context (`buildRegistryGenContext`, memoized per pass), so one
   // build shares ONE tree walk across several compositions' registries.
   ctx: RegistryGenContext;
@@ -784,6 +828,13 @@ export async function generateCompositionRegistry(opts: {
   const composition: RegistryComposition = {
     id: opts.name,
     home: resolveRegistryHome(ctx.tree, opts.bundle, opts.name, opts.home),
+    unlisted: resolveRegistryUnlisted(
+      ctx.tree,
+      opts.bundle,
+      opts.name,
+      opts.unlisted,
+      opts.home,
+    ),
   };
   const defs = await discoverCollectedDirsIn(await ctx.repo());
   for (const def of defs) {

@@ -1,4 +1,8 @@
-import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
+import {
+  useLive,
+  mapRow,
+  type LiveRowResult,
+} from "@plugins/network/plugins/live/web";
 import {
   combineResources,
   type ResourceResult,
@@ -8,6 +12,7 @@ import type {
   ResourceUnavailable,
 } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { useConversationById } from "@plugins/conversations/web";
+import type { ConversationEntry } from "@plugins/conversations/core";
 import {
   conversationShellFacts,
   shellOutput,
@@ -46,19 +51,19 @@ export function useConversationShells(
 ): ConversationShells {
   const params = conversationId === null ? null : { id: conversationId };
   const facts = useLive(conversationShellFacts, params);
-  const conversation = rowOrStale(useConversationById(conversationId));
+  const status = conversationStatusOf(useConversationById(conversationId));
 
   // Gate FIRST, derive after — nothing below may run on a half-arrived read.
-  const reads = combineResources({ events: facts });
+  const reads = combineResources({ events: facts, status });
   if (reads.status === "error") {
     return { kind: "failed", error: reads.error, refetch: reads.refetch };
   }
-  if (reads.status === "loading" || conversation === undefined) {
+  if (reads.status === "loading") {
     return { kind: "pending" };
   }
   return {
     kind: "known",
-    shells: shellsFromFacts(reads.data.events, conversation.status),
+    shells: shellsFromFacts(reads.data.events, reads.data.status),
   };
 }
 
@@ -76,4 +81,15 @@ export function useShellOutput(
     shellOutput,
     conversationId === null ? null : { id: conversationId, shellId },
   );
+}
+
+/**
+ * The conversation's status as the fold reads it: a deleted conversation (no
+ * row) runs no process, so it reads as gone. A failed read fails the set,
+ * with Retry, as a failed transcript read does — never a stand-in status.
+ */
+function conversationStatusOf(
+  row: LiveRowResult<ConversationEntry>,
+): ResourceResult<ConversationEntry["status"]> {
+  return mapRow(row, (r) => r?.status ?? "gone");
 }

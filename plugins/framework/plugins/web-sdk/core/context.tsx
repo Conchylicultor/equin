@@ -110,6 +110,12 @@ export interface CompositionIdentity {
    * its bundle; null when the bundle holds no app.
    */
   home: string | null;
+  /**
+   * The bundled apps its launchers do not offer (`defineApp` ids) — apps the
+   * composition holds only because something it asked for imports them.
+   * Absent = none.
+   */
+  unlisted?: readonly string[];
 }
 
 const CompositionContext = createContext<CompositionIdentity | null>(null);
@@ -213,7 +219,8 @@ export type ScopedComposition = CompositionIdentity & {
 /**
  * Renders `children` as if the page had been deployed as `composition`: every
  * slot read inside sees only the contributions of `composition.plugins` (except
- * `pageWide` slots), `useComposition()` answers `composition`'s id and home, and
+ * `pageWide` slots), `useComposition()` answers `composition`'s id, home and
+ * unlisted apps, and
  * `usePluginScopeId()` answers its id (what scopes the subtree's browser
  * storage).
  *
@@ -236,12 +243,15 @@ export function PluginScope({
   if (!parent) {
     throw new Error("PluginScope must be rendered within PluginProvider");
   }
-  const { id, home, plugins } = composition;
+  const { id, home, unlisted, plugins } = composition;
   const reader = useMemo(
     () => scopedReader(parent, new Set(plugins)),
     [parent, plugins],
   );
-  const identity = useMemo(() => ({ id, home }), [id, home]);
+  const identity = useMemo(
+    () => (unlisted === undefined ? { id, home } : { id, home, unlisted }),
+    [id, home, unlisted],
+  );
   return (
     <PluginRegistryContext.Provider value={reader}>
       <CompositionContext.Provider value={identity}>

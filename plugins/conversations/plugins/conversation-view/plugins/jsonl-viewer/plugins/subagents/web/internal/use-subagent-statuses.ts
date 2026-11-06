@@ -1,7 +1,15 @@
-import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
-import { combineResources } from "@plugins/network/plugins/live/plugins/live-state/web";
+import {
+  useLive,
+  mapRow,
+  type LiveRowResult,
+} from "@plugins/network/plugins/live/web";
+import {
+  combineResources,
+  type ResourceResult,
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { useConversationById } from "@plugins/conversations/web";
+import type { ConversationEntry } from "@plugins/conversations/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import {
   agentCallForSubagent,
@@ -175,7 +183,7 @@ export function useConversationSubagents(
     conversationParentFacts,
     activity.status === "unavailable" ? null : params,
   );
-  const conversation = rowOrStale(useConversationById(conversationId));
+  const status = conversationStatusOf(useConversationById(conversationId));
 
   // Gate FIRST, derive after — nothing below may run on a half-arrived read.
   // The parent transcript is where a BACKGROUND sub-agent's completion lives,
@@ -186,11 +194,11 @@ export function useConversationSubagents(
   if (activity.status === "unavailable") {
     return { kind: "unavailable", message: activity.message };
   }
-  const reads = combineResources({ activity, facts });
+  const reads = combineResources({ activity, facts, status });
   if (reads.status === "error") {
     return { kind: "failed", error: reads.error, refetch: reads.refetch };
   }
-  if (reads.status === "loading" || conversation === undefined) {
+  if (reads.status === "loading") {
     return { kind: "pending" };
   }
 
@@ -204,7 +212,7 @@ export function useConversationSubagents(
   const workflowCalls = reads.data.facts.workflowCalls.filter(
     (e): e is ToolCallEvent => e.kind === "tool-call",
   );
-  const conversationStatus = conversation.status;
+  const conversationStatus = reads.data.status;
   // A resumed sub-agent's later notifications carry the resuming
   // `SendMessage`'s tool-use id, so they join by its own id; and any completion
   // older than its newest resume ended an earlier turn.
@@ -335,4 +343,15 @@ export function useConversationSubagents(
       };
     },
   };
+}
+
+/**
+ * The conversation's status as the fold reads it: a deleted conversation (no
+ * row) runs no process, so it reads as gone. A failed read fails the set,
+ * with Retry, as a failed transcript read does — never a stand-in status.
+ */
+function conversationStatusOf(
+  row: LiveRowResult<ConversationEntry>,
+): ResourceResult<ConversationEntry["status"]> {
+  return mapRow(row, (r) => r?.status ?? "gone");
 }

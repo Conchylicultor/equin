@@ -69,6 +69,8 @@ export interface MainComposition {
   negated: Set<PluginId>;
   /** The row's declared `home` (unresolved — `resolveRegistryHome` validates it). */
   home: string;
+  /** The row's declared `unlisted` (unresolved — `resolveRegistryUnlisted` validates it). */
+  unlisted: readonly string[];
 }
 
 /**
@@ -125,6 +127,7 @@ export function resolveMainComposition(
     bundle: resolved.bundle,
     negated: resolved.negatedTargets,
     home: mainItem.home,
+    unlisted: mainItem.unlisted,
   };
 }
 

@@ -96,10 +96,10 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
   - Contributes:
     - `Pane.Register` "shell-output"
     - `TaskNotification.Open` "background-shell"
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×4
     - `network/live/live-state` ×3
-    - `network/live` ×2
+    - `network/live` ×3
     - `primitives/css/spacing` ×2
     - `primitives/dom/auto-scroll` ×2
     - `primitives/relative-time` ×2

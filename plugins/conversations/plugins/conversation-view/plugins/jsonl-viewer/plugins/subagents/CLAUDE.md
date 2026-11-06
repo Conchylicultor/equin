@@ -457,12 +457,12 @@ downstream can widen the set, because nothing downstream resolves one.
     - `subagent-transcript` (keyed, window, notified, whole: one sub-agent's typed prompts — its launch prompt and each message sent to it, a handful)
     - `subagent-transcript:meta` (push, notified, whole: one sub-agent's typed prompts — its launch prompt and each message sent to it, a handful)
 - Web:
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×5
     - `conversations/conversation-view/jsonl-viewer` ×4
+    - `network/live` ×3
     - `primitives/relative-time` ×3
     - `conversations` ×2
-    - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/badge.Badge`

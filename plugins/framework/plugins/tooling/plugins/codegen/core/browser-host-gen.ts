@@ -72,6 +72,7 @@ import { hostProviderServerBarrels } from "./host-services";
 import { readCompositionManifestsFromDisk } from "./main-bundle";
 import {
   resolveRegistryHome,
+  resolveRegistryUnlisted,
   scanCollectedDir,
   type BrowserHostGraphMemo,
   type RegistryGenContext,
@@ -202,6 +203,8 @@ export interface InferredBrowserHostGraph extends BrowserHostGraph {
   bundle: ReadonlySet<PluginId>;
   /** The composition's resolved home app (`defineApp` id); null when it bundles no app. */
   home: string | null;
+  /** The bundled apps its launchers do not offer (`defineApp` ids), sorted. */
+  unlisted: readonly string[];
   /** The bundle's plugins that have a `web/index.ts`, by dot id, sorted. */
   webPlugins: PluginId[];
   /**
@@ -544,6 +547,13 @@ async function inferUncached(
     composition,
     bundle: resolved.bundle,
     home: resolveRegistryHome(ctx.tree, resolved.bundle, composition, row.home),
+    unlisted: resolveRegistryUnlisted(
+      ctx.tree,
+      resolved.bundle,
+      composition,
+      row.unlisted,
+      row.home,
+    ),
     webPlugins,
     available: resolved.available,
   };
@@ -627,12 +637,18 @@ export function renderBrowserHostScope(
   {
     composition,
     home,
+    unlisted,
     webPlugins,
     reads,
     externalHosts,
   }: Pick<
     DerivedBrowserHostGraph,
-    "composition" | "home" | "webPlugins" | "reads" | "externalHosts"
+    | "composition"
+    | "home"
+    | "unlisted"
+    | "webPlugins"
+    | "reads"
+    | "externalHosts"
   >,
 ): string {
   return [
@@ -649,6 +665,9 @@ export function renderBrowserHostScope(
     "export const browserHost = {",
     `  id: ${JSON.stringify(composition)},`,
     `  home: ${JSON.stringify(home)},`,
+    ...(unlisted.length > 0
+      ? [`  unlisted: ${JSON.stringify(unlisted)},`]
+      : []),
     "  plugins: [",
     ...webPlugins.map((id) => `    ${JSON.stringify(id)},`),
     "  ],",
@@ -778,6 +797,7 @@ function ownOutputs(host: BrowserHostDecl): ReadonlyMap<string, string> {
       renderBrowserHostScope(host, {
         composition: "",
         home: null,
+        unlisted: [],
         webPlugins: [],
         reads: [],
         externalHosts: [],

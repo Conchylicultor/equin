@@ -1,4 +1,4 @@
-import { rowOrStale } from "@plugins/network/plugins/live/web";
+import { RowView } from "@plugins/network/plugins/live/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
@@ -55,9 +55,9 @@ export function ReadToolView({ event }: ToolRendererProps) {
     limit,
   } = (event.input ?? {}) as Partial<ReadInput>;
   const { convId } = conversationPane.useParams();
-  const conversation = rowOrStale(useConversationById(convId));
-
-  if (!conversation) return null;
+  // Only the picture needs the conversation (its worktree): the card itself
+  // draws from the event, so it never vanishes while that read is pending.
+  const conversation = useConversationById(convId);
 
   const aside = (
     <Line as="span" className="gap-sm">
@@ -77,12 +77,24 @@ export function ReadToolView({ event }: ToolRendererProps) {
               {event.result.content}
             </Text>
           ) : isImagePath(file_path) ? (
-            <ReadImageView
-              worktree={conversation.attemptId}
-              worktreePath={conversation.worktreePath}
-              filePath={file_path}
-              size={event.result.imageSize}
-            />
+            <RowView
+              row={conversation}
+              subject="the conversation"
+              missing={
+                <Text as="p" variant="caption" className="text-destructive">
+                  Conversation not found: cannot locate {file_path}
+                </Text>
+              }
+            >
+              {(row) => (
+                <ReadImageView
+                  worktree={row.attemptId}
+                  worktreePath={row.worktreePath}
+                  filePath={file_path}
+                  size={event.result?.imageSize}
+                />
+              )}
+            </RowView>
           ) : (
             <CatNListing content={event.result.content} filePath={file_path} />
           )}

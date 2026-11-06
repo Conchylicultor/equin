@@ -41,6 +41,7 @@ const fixedEntrypointsBundleCheck: Check = {
           contents: renderEmptyCollectedDirRegistry(def.dir, {
             id: "release-check-empty",
             home: null,
+              unlisted: [],
           }),
         },
         ],

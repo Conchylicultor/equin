@@ -1,4 +1,4 @@
-// @hash 262fb19356bf
+// @hash a4c02bdd996c
 {
   "manifests": [
     {
@@ -15,7 +15,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": "home"
+      "home": "home",
+      "unlisted": []
     },
     {
       "id": "promo-film",
@@ -31,7 +32,8 @@
       "extends": [],
       "excludes": [],
       "serve": "manual",
-      "home": "home"
+      "home": "home",
+      "unlisted": []
     },
     {
       "id": "base-exclusions",
@@ -47,7 +49,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "agent-manager",
@@ -95,7 +98,8 @@
       ],
       "excludes": [],
       "serve": "off",
-      "home": "agent-manager"
+      "home": "agent-manager",
+      "unlisted": []
     },
     {
       "id": "agent-manager-lean",
@@ -142,7 +146,8 @@
       ],
       "excludes": [],
       "serve": "off",
-      "home": "agent-manager"
+      "home": "agent-manager",
+      "unlisted": []
     },
     {
       "id": "agent-manager-demo",
@@ -184,7 +189,6 @@
         "!tasks.outcome-report.**",
         "conversations.conversation-view.push-and-exit.capabilities",
         "tasks.outcome-report.capability",
-        "!apps.file-explorer.**",
         "!conversations.workspace.worktree.**",
         "!conversations.conversation-view.jsonl-viewer.tool-call.timeline.**",
         "apps.home.**",
@@ -198,6 +202,7 @@
         "apps.keyboard-party.**",
         "apps.places.**",
         "!menu-bar.**",
+        "menu-bar.app-window",
         "!conversations.menu-bar-status.**",
         "!tasks.menu-bar-task.**",
         "!shell.notifications.native.**"
@@ -213,7 +218,10 @@
       ],
       "excludes": [],
       "serve": "off",
-      "home": "home"
+      "home": "home",
+      "unlisted": [
+        "file-explorer"
+      ]
     },
     {
       "id": "home",
@@ -231,7 +239,8 @@
       ],
       "excludes": [],
       "serve": "off",
-      "home": "home"
+      "home": "home",
+      "unlisted": []
     },
     {
       "id": "pages",
@@ -249,7 +258,8 @@
       ],
       "excludes": [],
       "serve": "off",
-      "home": "pages"
+      "home": "pages",
+      "unlisted": []
     },
     {
       "id": "settings",
@@ -267,7 +277,8 @@
       ],
       "excludes": [],
       "serve": "off",
-      "home": "settings"
+      "home": "settings",
+      "unlisted": []
     },
     {
       "id": "studio",
@@ -285,7 +296,8 @@
       ],
       "excludes": [],
       "serve": "off",
-      "home": "studio"
+      "home": "studio",
+      "unlisted": []
     },
     {
       "id": "sonata",
@@ -308,7 +320,8 @@
         "auth"
       ],
       "serve": "off",
-      "home": "sonata"
+      "home": "sonata",
+      "unlisted": []
     },
     {
       "id": "debug",
@@ -326,7 +339,8 @@
       ],
       "excludes": [],
       "serve": "off",
-      "home": "debug"
+      "home": "debug",
+      "unlisted": []
     },
     {
       "id": "deploy",
@@ -344,7 +358,8 @@
       ],
       "excludes": [],
       "serve": "off",
-      "home": "deploy"
+      "home": "deploy",
+      "unlisted": []
     },
     {
       "id": "file-explorer",
@@ -362,7 +377,8 @@
       ],
       "excludes": [],
       "serve": "off",
-      "home": "file-explorer"
+      "home": "file-explorer",
+      "unlisted": []
     },
     {
       "id": "website",
@@ -385,7 +401,8 @@
         "auth"
       ],
       "serve": "off",
-      "home": "website"
+      "home": "website",
+      "unlisted": []
     },
     {
       "id": "data",
@@ -401,7 +418,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "jobs-events",
@@ -419,7 +437,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "live-state",
@@ -436,7 +455,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "auth",
@@ -452,7 +472,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "search",
@@ -468,7 +489,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "history",
@@ -484,7 +506,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "conversations",
@@ -500,7 +523,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "tasks-domain",
@@ -516,7 +540,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "agent-runtime",
@@ -538,7 +563,8 @@
       ],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "page-editor",
@@ -554,7 +580,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "fields",
@@ -570,7 +597,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "design-system",
@@ -586,7 +614,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "mcp",
@@ -602,7 +631,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "served-baseline",
@@ -622,7 +652,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "reporters",
@@ -654,7 +685,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "diagnostics",
@@ -672,7 +704,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "root-features",
@@ -689,7 +722,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "self-improvement",
@@ -711,7 +745,8 @@
       ],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "theming",
@@ -729,7 +764,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     },
     {
       "id": "app-chrome",
@@ -752,7 +788,8 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
-      "home": ""
+      "home": "",
+      "unlisted": []
     }
   ]
 }

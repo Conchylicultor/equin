@@ -20,16 +20,22 @@ export function isTabApp(
  * and launcher grids. An app declaring `defineApp({ listed: false })` is opened
  * at its URL by something outside equin (the menu-bar panel) and is never
  * picked from inside it; one declaring `audience: "developer"` is offered only
- * in Developer mode. Either way it still owns its URL, its tab and its
- * `app:<id>` scope. The one predicate every launcher filters on — read it
- * through {@link useAppListing}, which supplies the user's audience.
+ * in Developer mode; one the deployed composition names in its `unlisted`
+ * (`useComposition()`) came in only because something it asked for imports it,
+ * and is offered by no launcher of that composition. Either way it still owns
+ * its URL, its tab and its `app:<id>` scope. The one predicate every launcher
+ * filters on — read it through {@link useAppListing}, which supplies the
+ * user's audience and the composition's unlisted apps.
  */
 export function isListedApp(
   entry: { app: AppRef },
   audience: Audience,
+  unlisted: readonly string[],
 ): boolean {
   return (
-    entry.app.listed !== false && reachesAudience(entry.app.audience, audience)
+    entry.app.listed !== false &&
+    reachesAudience(entry.app.audience, audience) &&
+    !unlisted.includes(entry.app.id)
   );
 }
 
