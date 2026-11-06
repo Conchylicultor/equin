@@ -287,6 +287,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `conversations/conversation-view/jsonl-viewer/outline`
     - `layouts/miller`
     - `page/editor`
+    - `primitives/css/motion`
     - `primitives/data-view`
     - `primitives/dom/scroll-reveal`
     - `primitives/log-channels`

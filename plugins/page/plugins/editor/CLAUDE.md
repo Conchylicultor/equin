@@ -887,6 +887,22 @@ Only the box knows its `max-content` width, so it measures and reports the overh
 (`components/row-overhang.tsx`, `useReportRowOverhang` — `WideBlock` does). No
 overhang, no change; rounding stays at the run's ends.
 
+## A block another writer adds eases in
+
+> A row that another writer (an agent, another tab) adds while the page is open
+> eases in (`<Arrival>`, `primitives/css/motion`: slot opens, row fades) so a live
+> write reads as one build, not a series of jolts. Nothing else animates.
+
+- **Who decides**: `arrivedRemotely(block)` on the context, read at the row
+  cell's mount — in server truth now, in no push this editor already rendered,
+  under a page whose rows had already landed (`SettledBlockStore.livePages`).
+- **Excluded by construction**: own creates (they reach `data` through the
+  overlay before server truth), the first load, an inline sub-page whose feed
+  lands later (not yet in `livePages`), a row revealed by a fold (seen in an
+  earlier push), memory mode (`livePages` empty).
+- The `Arrival` wrapper sits inside `RowCell` around the row only; feet after
+  it glide down, and frames spanning the grid lines follow the row's height.
+
 ## The block list is a document, not a listbox
 
 > The container is a **named group of editable blocks**
@@ -2172,7 +2188,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `Editor.TurnInto` ×2
     - `Editor.BlockMenuItem` ← `page.open-as-page`
   - Contributes: `IdKinds.Kind` "block"
-  - Uses: 100 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 101 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×6
     - `primitives/dom/web-storage` ×5
     - `primitives/text-editor/caret-trigger` ×5
@@ -2199,6 +2215,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
+    - `primitives/css/motion.Arrival`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`

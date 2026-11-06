@@ -16443,7 +16443,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 57 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 58 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `network/live/live-state` ×9
               - `conversations/conversation-view/pending-turn` ×6
               - `primitives/dom/auto-scroll` ×5
@@ -16459,6 +16459,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/fill.Fill`
               - `primitives/css/grow.growClass`
               - `primitives/css/line.Line`
+              - `primitives/css/motion.Arrival`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
@@ -38909,7 +38910,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
         - Contributes: `IdKinds.Kind` "block"
-        - Uses: 100 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 101 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `network/live/live-state` ×6
           - `primitives/dom/web-storage` ×5
           - `primitives/text-editor/caret-trigger` ×5
@@ -38936,6 +38937,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/inline.Inline`
+          - `primitives/css/motion.Arrival`
           - `primitives/css/overlay.Overlay`
           - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
@@ -43925,13 +43927,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/slow-ops/cluster`
               - `debug/timeline`
               - `integrations/google-maps/usage`
-        - **`motion`** — How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, prefersReducedMotion — plus the no-unanimated-surface-exit lint rule.
+        - **`motion`** — How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in) — plus the no-unanimated-surface-exit lint rule.
           - Web:
-            - Uses: `primitives/dom/element-size.useResizeObserver`
+            - Uses:
+              - `primitives/dom/auto-scroll.FOLLOW_MOTION_ATTR`
+              - `primitives/dom/element-size.useResizeObserver`
             - Exports (types):
+              - `ArrivalProps`
               - `PresenceChild`
               - `PresenceProps`
             - Exports (values):
+              - `Arrival`
               - `prefersReducedMotion`
               - `Presence`
               - `useSizeMotion`
@@ -43941,9 +43947,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/launcher`
               - `apps/places/places-map`
               - `apps/sonata/library`
+              - `conversations/conversation-view/jsonl-viewer`
               - `hints/ask`
               - `layouts/miller`
               - `map`
+              - `page/editor`
               - `page/place`
               - `primitives/collapsible`
               - `primitives/collapsible-wrap`
@@ -46345,6 +46353,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer/outline`
               - `layouts/miller`
               - `page/editor`
+              - `primitives/css/motion`
               - `primitives/data-view`
               - `primitives/dom/scroll-reveal`
               - `primitives/log-channels`

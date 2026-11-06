@@ -174,7 +174,7 @@ back.
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×9
     - `conversations/conversation-view/pending-turn` ×6
     - `primitives/dom/auto-scroll` ×5
@@ -190,6 +190,7 @@ back.
     - `primitives/css/fill.Fill`
     - `primitives/css/grow.growClass`
     - `primitives/css/line.Line`
+    - `primitives/css/motion.Arrival`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

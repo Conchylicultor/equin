@@ -20,6 +20,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { useChromePointerSensor } from "@plugins/primitives/plugins/sortable-list/web";
+import { Arrival } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -270,6 +271,7 @@ function isInsideEditingHost(target: EventTarget | null): boolean {
 function RowCell({
   blockId,
   row,
+  arrived,
   frames,
   feet,
   onOverhang,
@@ -277,6 +279,10 @@ function RowCell({
 }: {
   blockId: string;
   row: number;
+  /** Another writer added this block while the page was open
+   * (`arrivedRemotely`): it eases in rather than landing in one frame. Read
+   * at mount only. The feet after it glide down with the opening. */
+  arrived: boolean;
   frames: readonly string[];
   /** The container feet ending on this row, innermost first. Usually empty. */
   feet: readonly FootSeat[];
@@ -293,9 +299,11 @@ function RowCell({
       style={{ gridRow: row + 1 }}
       onPointerEnter={() => setFrameHover(frames)}
     >
-      <RowOverhangProvider blockId={blockId} onOverhang={onOverhang}>
-        {children}
-      </RowOverhangProvider>
+      <Arrival arrived={arrived}>
+        <RowOverhangProvider blockId={blockId} onOverhang={onOverhang}>
+          {children}
+        </RowOverhangProvider>
+      </Arrival>
       {feet.map((seat) => (
         <FrameFoot key={`foot:${seat.block.id}`} seat={seat} />
       ))}
@@ -678,6 +686,7 @@ function SelectionLayer({
     textReadsOf,
     deleteSpan,
     replaceSpan,
+    arrivedRemotely,
   } = useBlockEditor();
   const { selectedIds } = useMultiSelect();
   // The editor's own transport: a pasted / dropped file uploads to the host
@@ -2555,6 +2564,7 @@ function SelectionLayer({
                     key={f.block.id}
                     blockId={f.block.id}
                     row={i}
+                    arrived={arrivedRemotely(f.block)}
                     frames={frameIdsByRow[i]!}
                     feet={feetByRow[i]!}
                     onOverhang={reportRowOverhang}

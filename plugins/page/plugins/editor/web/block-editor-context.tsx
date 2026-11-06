@@ -101,6 +101,7 @@ import {
   intentContextOf,
 } from "./internal/keystroke-intent";
 import {
+  NO_LIVE_PAGES,
   useMemoryBlockStore,
   type BelowFailure,
   type BlockStore,
@@ -433,6 +434,19 @@ interface BlockEditorContextValue {
    * changes with {@link serverIds}, so a consumer re-renders on every push.
    */
   rowTruthOf: (id: string) => RowTruth;
+  /**
+   * Whether `block` was written by ANOTHER writer while this editor was open
+   * (an agent writing into the page, another tab): it is in server truth now,
+   * was in none of the pushes this editor already rendered, and its page's rows
+   * had already landed (`SettledBlockStore.livePages`). This client's own
+   * creates are excluded by construction — they reach the rows through the
+   * overlay before server truth — and so are the first load, a page loading
+   * under an inline expansion, and a row revealed by expanding a fold (seen
+   * in an earlier push). Meaningful at the row's MOUNT, in render: the pushes
+   * it compares against are recorded after each commit. The block list eases
+   * such a row in (`<Arrival>`).
+   */
+  arrivedRemotely: (block: Block) => boolean;
   /**
    * Rows below which content is still loading — an expanded nested page whose
    * own rows have not landed (see `SettledBlockStore.loadingBelow`). The row
@@ -1089,6 +1103,9 @@ export function BlockEditorProviderInner({
   // asks about ids that were present in an EARLIER push, which this effect has
   // already recorded.
   const everServerIdsRef = useRef(new Set<string>());
+  // The store's `livePages` as of the last recorded push — beside
+  // `everServerIds`, it is what `arrivedRemotely` compares a new row against.
+  const livePagesSeenRef = useRef<ReadonlySet<string>>(NO_LIVE_PAGES);
   // The SAME transition, as a promise: a text replay onto a row that was just
   // re-created optimistically (undo of a delete) must not doc-init a row the
   // server may not have yet, so it waits — push-based, off this effect — for
@@ -1106,6 +1123,7 @@ export function BlockEditorProviderInner({
   useEffect(() => {
     const ever = everServerIdsRef.current;
     for (const id of serverIds) ever.add(id);
+    livePagesSeenRef.current = store.livePages;
     const waiters = rowWaitersRef.current;
     for (const [id, list] of waiters) {
       if (serverIds.has(id)) {
@@ -1121,7 +1139,7 @@ export function BlockEditorProviderInner({
           );
       }
     }
-  }, [serverIds, store.data, liveRowsRef]);
+  }, [serverIds, store.data, store.livePages, liveRowsRef]);
   useEffect(() => {
     const waiters = rowWaitersRef.current;
     return () => {
@@ -1155,6 +1173,14 @@ export function BlockEditorProviderInner({
       if (serverIds.has(id)) return "present";
       return everServerIdsRef.current.has(id) ? "removed" : "unseen";
     },
+    [serverIds],
+  );
+  const arrivedRemotely = useCallback(
+    (block: Block): boolean =>
+      serverIds.has(block.id) &&
+      !everServerIdsRef.current.has(block.id) &&
+      block.pageId !== null &&
+      livePagesSeenRef.current.has(block.pageId),
     [serverIds],
   );
 
@@ -3208,6 +3234,7 @@ export function BlockEditorProviderInner({
       blocks: store.data,
       serverIds,
       rowTruthOf,
+      arrivedRemotely,
       loadingBelow: store.loadingBelow,
       failedBelow: store.failedBelow,
       enabledBlockTypes,
@@ -3260,6 +3287,7 @@ export function BlockEditorProviderInner({
       store.data,
       serverIds,
       rowTruthOf,
+      arrivedRemotely,
       store.loadingBelow,
       store.failedBelow,
       enabledBlockTypes,

@@ -133,6 +133,7 @@ function settled(rows: Block[]): BlockStore {
     serverData: rows,
     loadingBelow: NOTHING_LOADING,
     failedBelow: NOTHING_FAILED,
+    livePages: new Set(rows.map((r) => r.pageId).filter((p) => p !== null)),
     dispatch: vi.fn(),
   };
 }

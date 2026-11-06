@@ -103,6 +103,16 @@ export interface SettledBlockStore {
    */
   failedBelow: ReadonlyMap<string, BelowFailure>;
   /**
+   * Pages whose rows are fed LIVE by server truth and have landed: the page
+   * itself on the server path, every settled mounted page in the composite,
+   * none in memory. A row that first enters `serverData` under one of these
+   * pages after it landed was written by ANOTHER writer (an agent, another
+   * tab) — this client's own creates reach `data` first, through the overlay —
+   * which is what the editor eases in. Rows of a page that lands later (an
+   * inline sub-page expanding) are a load, not an arrival.
+   */
+  livePages: ReadonlySet<string>;
+  /**
    * Apply a structural op / undo-redo patch through the overlay pipeline.
    * `onRejected` runs if the server PERMANENTLY rejects the write (the
    * prediction has then already left the overlay, and the user has been told)
@@ -112,6 +122,9 @@ export interface SettledBlockStore {
    */
   dispatch: (v: BlockOverlayOp, onRejected?: () => void) => void;
 }
+
+/** The empty `livePages`, shared (the memory store has no live feed). */
+export const NO_LIVE_PAGES: ReadonlySet<string> = new Set();
 
 /** The still-loading arm, shared: it carries nothing, so one object serves every store. */
 export const PENDING_BLOCK_STORE: PendingBlockStore = {
@@ -148,6 +161,7 @@ export function useServerBlockStore(pageId: string): BlockStore {
     (): { where: LiveWhereOf<typeof pageBlocks> } => ({ where: { pageId } }),
     [pageId],
   );
+  const livePages = useMemo(() => new Set([pageId]), [pageId]);
   // The reducer's type facts, minted from the block-handle registry. The SERVER
   // mints the same context from its own registry through the same
   // `blockOpContextOf` and passes it to the same `applyBlockOp`; if the two ever
@@ -226,13 +240,14 @@ export function useServerBlockStore(pageId: string): BlockStore {
       serverData,
       loadingBelow: NOTHING_LOADING,
       failedBelow: NOTHING_FAILED,
+      livePages,
       // The hook's dispatch returns the minted op id; the seam's is fire-and-forget.
       dispatch: (v, onRejected) => {
         if (onRejected) rejectHandlersRef.current.set(v, onRejected);
         dispatch(v);
       },
     };
-  }, [optimistic]);
+  }, [optimistic, livePages]);
 }
 
 // ---------------------------------------------------------------------------
@@ -284,6 +299,8 @@ export function useMemoryBlockStore({
       serverData: rows,
       loadingBelow: NOTHING_LOADING,
       failedBelow: NOTHING_FAILED,
+      // No other writer can reach an in-memory document.
+      livePages: NO_LIVE_PAGES,
       dispatch,
     }),
     [rows, dispatch],

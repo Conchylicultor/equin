@@ -246,6 +246,17 @@ export function CompositeServerProviderHost({
     return failed.size === 0 ? NOTHING_FAILED : failed;
   }, [basePageId, feeds, mounts]);
 
+  // The mounted pages whose rows have landed — the ones a row can ARRIVE under
+  // (`SettledBlockStore.livePages`). A child whose feed lands later is a load.
+  const livePages = useMemo(() => {
+    const live = new Set<string>();
+    for (const pageId of mounts.keys()) {
+      const feed = feeds.get(pageId);
+      if (feed && !feed.pending) live.add(pageId);
+    }
+    return live;
+  }, [feeds, mounts]);
+
   // The BASE feed alone decides whether the editor has a document at all — and
   // its failed first load is the editor's failure. (A failed CHILD feed
   // renders under its anchor — `failedBelow`.)
@@ -451,9 +462,18 @@ export function CompositeServerProviderHost({
         serverData,
         loadingBelow,
         failedBelow,
+        livePages,
         dispatch,
       },
-    [basePending, data, serverData, loadingBelow, failedBelow, dispatch],
+    [
+      basePending,
+      data,
+      serverData,
+      loadingBelow,
+      failedBelow,
+      livePages,
+      dispatch,
+    ],
   );
 
   return (

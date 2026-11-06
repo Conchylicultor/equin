@@ -34,7 +34,7 @@ import { useVisibleEvents } from "../use-visible-events";
 import { useContextRuns } from "../use-context-runs";
 import type { ContextFoldPhase } from "../context-runs";
 import { ContextFold } from "./context-fold";
-import { RowEnter } from "./row-enter";
+import { Arrival } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { JsonlViewer } from "../slots";
 import {
   eventKey,
@@ -115,7 +115,7 @@ function EventSections({
     if (item.kind === "fold") {
       const first = events[item.members[0]!]!;
       return (
-        <RowEnter
+        <Arrival
           key={`fold:${idOf(first, item.members[0]!)}`}
           arrived={arrived(first)}
         >
@@ -125,18 +125,18 @@ function EventSections({
               members={membersOf(item.members)}
             />
           </div>
-        </RowEnter>
+        </Arrival>
       );
     }
     const event = events[item.index]!;
     return (
-      <RowEnter key={idOf(event, item.index)} arrived={arrived(event)}>
+      <Arrival key={idOf(event, item.index)} arrived={arrived(event)}>
         <EventRow
           event={event}
           index={item.index}
           hosted={item.hosted && membersOf(item.hosted)}
         />
-      </RowEnter>
+      </Arrival>
     );
   };
 
@@ -158,9 +158,9 @@ function EventSections({
           return (
             <Stack key={opening.id} gap="sm">
               <StickyUserHeader>
-                <RowEnter key={opening.id} arrived={false}>
+                <Arrival key={opening.id} arrived={false}>
                   <EventRow event={opening.event} beforeWindow />
-                </RowEnter>
+                </Arrival>
               </StickyUserHeader>
               {Array.from({ length: section.end }, (_, j) => renderItem(j))}
             </Stack>
