@@ -17,6 +17,9 @@ const STEP_GROUPS: Record<string, StepGroup> = {
   "push-branch": "push",
   "ff-merge": "push",
   "push-main": "push",
+  // The land phase's start-up, which installs the rebased lockfile; pushes
+  // before the land phase (2026-11-06) recorded the install as "bun-install".
+  "land-boot": "other",
   "bun-install": "other",
   normalize: "other",
 };

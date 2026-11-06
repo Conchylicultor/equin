@@ -21,9 +21,9 @@ web bundle could not import the name from there.
     - `CLI_NAMES`
     - `isCliName`
 - Cross-plugin:
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×6
     - `infra` ×6
-    - `framework` ×5
     - `build` ×2
     - `debug` ×2
     - `plugin-meta` ×2

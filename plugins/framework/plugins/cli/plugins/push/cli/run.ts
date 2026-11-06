@@ -13,10 +13,8 @@ import {
   installFatalSignalExit,
   opPriority,
   reportInterruptedPredecessor,
-  runCheckSubprocess,
   signalOriginTap,
 } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
-import { ensureDeps } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 import { normalizeGeneratedArtifacts } from "@plugins/framework/plugins/cli/plugins/git-artifacts/cli";
 import {
   createOpProfiler,
@@ -32,183 +30,36 @@ import {
   type Grant,
   type Priority,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
-import {
-  listWorktreeEntries,
-  markWorktreeOpStart,
-} from "@plugins/infra/plugins/worktree/server";
-import {
-  spawnCaptured,
-  spawnPassthrough,
-} from "@plugins/infra/plugins/spawn/core";
+import { markWorktreeOpStart } from "@plugins/infra/plugins/worktree/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   describeAutoIdentity,
   describePublishTarget,
   ensureCommitIdentity,
-  recordPushRejection,
   resolvePublishTarget,
 } from "@plugins/infra/plugins/git/plugins/remotes/core";
 import { withTreeWrite } from "@plugins/infra/plugins/git/plugins/tree-lock/core";
 import {
   actAsCheckoutNamespace,
   checkoutRef,
+  worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
   resolvePushAttribution,
   trailerAmendCommand,
   trailerArgs,
 } from "./attribution";
-
-// One bound for both capture helpers below, because every command they run is
-// LOCAL git: `rev-parse`, `status`, and the rebase. Nothing
-// that talks to the network goes through them — `git fetch` / `git push` run
-// through `exec` (spawnPassthrough) so the user sees the transfer progress —
-// so no value here has to leave room for a slow remote.
-//
-// Five minutes is sized to the rebase, the longest of the three: it replays this
-// branch's commits and amends a trailer onto each. The others are metadata
-// reads that finish in milliseconds. Being one generous number rather than three
-// tuned ones is deliberate — the helpers exist so call sites don't think about
-// spawning, and every one of them is consumed by `process.exit(1)`, where a
-// false positive costs the user a re-run of a push that was working.
-const GIT_TIMEOUT_MS = 300_000;
-
-// Exits-by-default spawn: a non-zero exit prints the command + captured
-// stderr and exits(1) like `exec`, so a caller can never read a failed git
-// call's empty stdout as real data (e.g. a failed `git status` absorbed as a
-// "clean tree" and pushed over uncommitted changes). Returns trimmed stdout.
-// For the sites that genuinely branch on the exit code, use `runAllowFail`.
-async function run(cmd: string[], cwd?: string): Promise<string> {
-  const result = await spawnCaptured(cmd, { cwd, timeoutMs: GIT_TIMEOUT_MS });
-  if (result.exitCode !== 0) {
-    console.error(`Command failed (exit ${result.exitCode}): ${cmd.join(" ")}`);
-    if (result.stderr.trim()) console.error(result.stderr.trim());
-    process.exit(1);
-  }
-  return result.stdout.trim();
-}
-
-// Old behavior — returns both stdout and exitCode without throwing. Only for
-// the sites that branch on the exit code themselves (a git command whose
-// non-zero exit is an expected, handled outcome, e.g. a conflicting rebase).
-// stderr now prints once after exit (it used to stream via "inherit").
-async function runAllowFail(
-  cmd: string[],
-  cwd?: string,
-  env?: Record<string, string | undefined>,
-): Promise<{ stdout: string; exitCode: number }> {
-  const result = await spawnCaptured(cmd, {
-    cwd,
-    env,
-    timeoutMs: GIT_TIMEOUT_MS,
-  });
-  if (result.stderr) process.stderr.write(result.stderr);
-  return { stdout: result.stdout.trim(), exitCode: result.exitCode };
-}
-
-async function exec(
-  cmd: string[],
-  cwd?: string,
-  env?: Record<string, string | undefined>,
-): Promise<void> {
-  const { exitCode } = await spawnPassthrough(cmd, { cwd, env });
-  if (exitCode !== 0) {
-    process.exit(1);
-  }
-}
-
-// `exec` for the two commands that WRITE to the remote.
-//
-// A plain `exec` would exit(1) here, which is right — the push failed — but it
-// would throw away the one thing the failure teaches: a checkout that used to
-// be allowed to publish may not be any more (a revoked collaborator, a repo
-// that changed hands, a fork the user re-pointed origin at). So the refusal is
-// treated as evidence: re-probe the remote and RECORD what it says, which is
-// newer than anything the cache holds. The next push then runs in local mode
-// instead of failing the same way forever.
-//
-// Still passthrough, so the user reads git's own error before any of this.
-async function execPublish(
-  cmd: string[],
-  cwd: string | undefined,
-  root: string,
-): Promise<void> {
-  const { exitCode } = await spawnPassthrough(cmd, { cwd });
-  if (exitCode === 0) return;
-  await explainPushRejection(root);
-}
-
-async function explainPushRejection(root: string): Promise<never> {
-  console.error("");
-  console.error(
-    "The remote rejected that push — asking it whether this checkout may publish at all...",
-  );
-  const reprobed = await recordPushRejection(root);
-  if (reprobed.kind === "local") {
-    console.error(describePublishTarget(reprobed));
-    console.error("Re-run ./equin push to land the work on local main.");
-  } else {
-    // The probe and reality disagree: the remote accepts a write probe but
-    // refused this push. That is a fact about THIS push — a protected branch,
-    // a server hook, a branch someone else moved — not about access, so
-    // nothing is recorded and git's own error above is the whole story.
-    console.error(
-      `${reprobed.remote} still accepts a write probe, so this was about the push itself ` +
-        `(a protected branch, a server-side hook, or a branch that moved), not about access.`,
-    );
-  }
-  process.exit(1);
-}
-
-// Publishes `branch` as the remote's main, BEFORE local main moves.
-//
-// The push mutex serializes the pushes on this machine, not every writer of
-// the remote: a commit made on GitHub's web editor (or from another clone) can
-// land on the remote main between this push's fetch and its final write. When
-// local main was fast-forwarded first and the remote write then refused, local
-// main was left holding a commit the remote never got — diverged from it, so
-// every worktree branched from it inherited the commit as its own and the next
-// push failed at its `--ff-only` pull. Writing the remote first makes the
-// remote's own non-fast-forward refusal the atomic gate: lose the race and
-// local main is untouched, so a re-run fetches the new commit and rebases
-// onto it like any other.
-async function publishMain(
-  remote: string,
-  branch: string,
-  root: string,
-): Promise<void> {
-  const { exitCode } = await spawnPassthrough([
-    "git",
-    "push",
-    remote,
-    `${branch}:refs/heads/main`,
-  ]);
-  if (exitCode === 0) return;
-
-  // A refusal is either the race above or a question of access. Fetch and
-  // ask which: a remote main that is no longer below the branch moved.
-  await exec(["git", "fetch", remote, "main"]);
-  const cmd = ["git", "merge-base", "--is-ancestor", `${remote}/main`, branch];
-  const ancestry = await spawnCaptured(cmd, { timeoutMs: GIT_TIMEOUT_MS });
-  if (ancestry.exitCode === 1) {
-    console.error(
-      [
-        ``,
-        `${remote}/main moved while this push ran — someone else landed a commit on it.`,
-        `Local main was NOT touched, and nothing of this push reached ${remote}/main.`,
-        `Re-run ./equin push: it fetches the new commit and rebases onto it.`,
-      ].join("\n"),
-    );
-    process.exit(1);
-  }
-  if (ancestry.exitCode !== 0) {
-    console.error(
-      `Command failed (exit ${ancestry.exitCode}): ${cmd.join(" ")}`,
-    );
-    if (ancestry.stderr.trim()) console.error(ancestry.stderr.trim());
-    process.exit(1);
-  }
-  await explainPushRejection(root);
-}
+import {
+  exec,
+  getMainWorktree,
+  getWorktreeRoot,
+  GIT_TIMEOUT_MS,
+  run,
+  runAllowFail,
+} from "./git";
+import { runLandPhase, takeLandPayload } from "./handoff";
+import { landPush } from "./land";
 
 // The three facts that decide HOW this branch is made to land on main.
 interface LandingShape {
@@ -251,101 +102,13 @@ async function readLandingShape(): Promise<LandingShape> {
 
 // Env for THIS push's own rebases. The `post-rewrite` hook normalizes generated
 // artifacts after any other rebase; push suppresses it because it owns the
-// ordering itself — it installs the rebased lockfile FIRST, then normalizes, so
-// the regen runs against node_modules that match the tree it is regenerating.
+// ordering itself — its land phase installs the rebased lockfile FIRST (in its
+// own bootstrap), then normalizes, so the regen runs against node_modules that
+// match the tree it is regenerating.
 const rebaseEnv = (): Record<string, string | undefined> => ({
   ...process.env,
   ...envEntries({ SKIP_POST_REWRITE: "1" }),
 });
-
-// Install the lockfile the rebase just brought in — main may have added
-// dependencies this worktree has never installed.
-//
-// Routed through `ensureDeps` rather than a bare `bun install --frozen-lockfile`,
-// which is what this used to be. That call had three defects, all of which
-// `ensureDeps` already answers and none of which are push-specific:
-//
-//   • UNSERIALIZED — it took no `.install.lock`, so it could run concurrently
-//     with any other CLI-mediated install in this checkout, which is exactly the
-//     `clonefileat` race bun 1.3.13 has no mutex for.
-//   • UNSTAMPED — it left `node_modules/.equin-deps` describing the
-//     PRE-rebase inputs, so the very next CLI process saw stale inputs and
-//     reinstalled everything. In this flow that next process is the checks
-//     subprocess, four lines below: every push whose rebase touched the lockfile
-//     paid for two full installs back-to-back, the second one while holding the
-//     host-wide push mutex.
-//   • UNATTRIBUTED — a failure exited 1 through the generic `exec` path with no
-//     statement of which phase died.
-//
-// `--frozen-lockfile` is preserved via the option: the tree is mid-push, and a
-// re-resolved `bun.lock` would dirty the very commit about to fast-forward onto
-// main. The freshness gate is sound here for the same reason it is everywhere —
-// `bun.lock` and every `package.json` are signature inputs, so a rebase that
-// moved any of them installs, and one that moved none has nothing to install.
-async function installRebasedDeps(root: string): Promise<void> {
-  try {
-    await ensureDeps({ root, frozenLockfile: true });
-  } catch (err) {
-    // The message is written to be the whole story (which phase, likely cause,
-    // what to do); a stack would name this bootstrap rather than the problem.
-    console.error(err instanceof Error ? err.message : String(err));
-    process.exit(1);
-  }
-}
-
-// Run the rebased-tree checks under the push's own grant — the one
-// `withPushLock` holds for the whole critical section (see there), handed to the
-// child via `grant.env()`. Taking the grant as a parameter rather than acquiring
-// one here is what keeps "the checks run under an interactive grant" true by
-// construction: there is no call that runs them without it.
-//
-// The spawn itself is `../check-subprocess.ts` — read its docblock for why a
-// check pass is a separate process at all and why the selection is expressed as
-// a flag rather than an id list. `--scope tree` narrows the pass to the push
-// payload (see `Check.scope`): deploy-scoped checks verify the local gitignored
-// dist that `build` produces, which never lands on main and which this push's
-// own rebase moves the tree past by construction, so a push could only ever
-// report the artifact as stale for having done its job. The eslint check always
-// considers the full lintable set; its per-file closure cache decides what
-// actually re-lints, so there is no lint scope env to thread through.
-async function runRebasedChecks(
-  root: string,
-  grant: Grant,
-  profiler: OpProfiler<"push">,
-): Promise<boolean> {
-  profiler.stepStart("checks");
-  console.log("Running checks...");
-  const result = await runCheckSubprocess({
-    root,
-    grant,
-    select: { scope: "tree" },
-    output: "inherit",
-  });
-  profiler.stepEnd("checks");
-  return result.ok;
-}
-
-async function getWorktreeRoot(): Promise<AppPath> {
-  const stdout = await run(["git", "rev-parse", "--show-toplevel"]);
-  if (!stdout) {
-    console.error("Not in a git repository");
-    process.exit(1);
-  }
-  return asAppPath(stdout);
-}
-
-// Read from the worktree plugin's admin-file listing, never `git worktree list`:
-// that dies ("failed to read .git/worktrees/<other>/commondir") beside any
-// concurrent `git worktree add` half-way through writing its entry.
-async function getMainWorktree(root: AppPath): Promise<AppPath> {
-  // The main worktree is always listed first.
-  const [main] = await listWorktreeEntries(root);
-  if (!main) {
-    console.error("Could not determine main worktree");
-    process.exit(1);
-  }
-  return asAppPath(main.path);
-}
 
 const nulList = (out: string): string[] => out.split("\0").filter(Boolean);
 
@@ -505,8 +268,9 @@ async function pushLockFor(
 // **The critical section is ONE interactive host grant.** Every queued push
 // waits on whoever holds the mutex, so the holder is human-blocking for its
 // whole hold — not only while its checks run. The grant is taken as the first
-// thing inside the mutex and `fn` receives it: the rebase, the install, the
-// normalize, the checks and the merge all run under it, so they are admitted
+// thing inside the mutex and `fn` receives it: the rebase, then the land phase
+// (install, normalize, checks, merge — a child handed the grant) all run under
+// it, so they are admitted
 // CPU and — the interactive lane's other half (`withHostGrant`) — run in the
 // foreground instead of at the agent session's inherited darwinbg tier. Taken
 // only around the checks, everything else in the hold ran on the E-cores beside
@@ -552,10 +316,40 @@ async function withPushLock<T>(
   );
 }
 
+// After the rebase, the driver's only work: run the land phase on the rebased
+// code inside this mutex and grant, record what it reports, and end the op the
+// way it ended. A failed phase printed its own story; this exits with its code.
+async function handOff(
+  root: AppPath,
+  opSlug: Namespace,
+  pushId: string,
+  mode: "worktree" | "from-main",
+  grant: Grant,
+  profiler: OpProfiler<"push">,
+): Promise<void> {
+  const result = await runLandPhase({
+    root,
+    pushId,
+    mode,
+    reportPath: worktreeArtifacts.pushLand(opSlug, pushId),
+    grant,
+    profiler,
+  });
+  if (result.kind === "success") return;
+  profiler.complete(result.kind);
+  profiler.write();
+  process.exit(result.exitCode);
+}
+
 const pushAction: CliAction<
   [],
   { message?: string; fromMain?: boolean; unattributed?: string }
 > = async (opts) => {
+  // This process is the land phase of a push its parent drives: the steps
+  // after that push's rebase, on the rebased code (./handoff.ts).
+  const landing = takeLandPayload();
+  if (landing !== undefined) return landPush(landing);
+
   const branch = await getCurrentBranch();
   const onMain = branch === "main";
 
@@ -793,45 +587,8 @@ const pushAction: CliAction<
             profiler.stepEnd("rebase");
           }
 
-          const fromMainRoot = await getWorktreeRoot();
-
-          profiler.stepStart("bun-install");
-          await installRebasedDeps(fromMainRoot);
-          profiler.stepEnd("bun-install");
-
-          // Forced for the same reason as the worktree path's 3c below:
-          // this is a post-rebase repair whose result is what the checks
-          // read, so it must not be skippable by a marker that never
-          // arrived.
-          profiler.stepStart("normalize");
-          await normalizeGeneratedArtifacts(fromMainRoot, {
-            pushId,
-            force: true,
-          });
-          profiler.stepEnd("normalize");
-
-          const ok = await runRebasedChecks(fromMainRoot, grant, profiler);
-          if (!ok) {
-            console.error(
-              "Checks failed after rebase. Fix the issue and re-run ./equin push " +
-                "(your commit is still on HEAD; use `git reset --soft HEAD~1` to unstage it if needed).\n\n" +
-                "If the failure is unrelated to your commits (e.g. a pre-existing issue on main), " +
-                "try rebasing onto the latest main (`git fetch origin main && git rebase origin/main`) and re-running — the issue may already be fixed upstream.\n\n" +
-                "If you cannot fix the failing check(s): STOP, report the failure to the user, and wait for instructions. " +
-                "Do NOT work around check failures — not by disabling checks, editing check code, " +
-                "expanding skip lists, committing via raw git, or any other means.",
-            );
-            profiler.complete("failed_checks");
-            profiler.write();
-            process.exit(1);
-          }
-
-          if (publish.kind === "publish") {
-            profiler.stepStart("push-main");
-            console.log("Pushing main...");
-            await execPublish(["git", "push"], undefined, fromMainRoot);
-            profiler.stepEnd("push-main");
-          }
+          // The rest — normalize, checks, push — runs on the rebased code.
+          await handOff(mainRoot, opSlug, pushId, "from-main", grant, profiler);
         },
         onLockRequested,
         onLockAcquired,
@@ -843,11 +600,6 @@ const pushAction: CliAction<
     }
     profiler.complete("success");
     profiler.write();
-    console.log(
-      publish.kind === "publish"
-        ? "Done. Pushed directly from main."
-        : "Done. Committed directly on local main. Nothing was pushed.",
-    );
     return;
   }
 
@@ -1015,108 +767,11 @@ const pushAction: CliAction<
           }
         }
 
-        // 3b. Ensure node_modules matches the rebased lockfile — main may
-        //     have added dependencies the worktree hasn't installed yet.
-        profiler.stepStart("bun-install");
-        await installRebasedDeps(await getWorktreeRoot());
-        profiler.stepEnd("bun-install");
-
-        // 3c. Post-rebase normalize: regenerate auto-generated artifacts
-        //     (docs, drizzle migrations) from the rebased source tree and
-        //     amend the head commit. The merge drivers in .gitattributes
-        //     accepted the upstream side during the rebase; this step makes
-        //     the final commit canonical. Aborts on hand-edited migrations
-        //     or on real conflict markers in CLAUDE.md prose.
-        //
-        //     `force` — regenerate whether or not a merge marker reached
-        //     us. A missing marker is supposed to mean "the drivers never
-        //     fired", but it is equally what a marker written where nobody
-        //     reads it looks like, and the two cost wildly different
-        //     amounts to confuse: the commit that lands on main is checked
-        //     four lines below, and for a branch that edits a doc GENERATOR
-        //     the upstream side the drivers took is wrong for the sources
-        //     git just merged. Push already runs for minutes, so it buys
-        //     the certainty; the `post-rewrite` hook, which fires after
-        //     every rebase anyone does, stays marker-gated.
-        profiler.stepStart("normalize");
-        await normalizeGeneratedArtifacts(await getWorktreeRoot(), {
-          pushId,
-          force: true,
-        });
-        profiler.stepEnd("normalize");
-
-        // 4. Run checks on the rebased tree — this is exactly what will land on
-        //    main, and the pass is scoped to exactly that (`--scope tree`).
-        //    Deploy-scoped checks verify the local gitignored dist/artifact
-        //    store, which never lands on main and which the rebase above
-        //    invalidates by construction; `build` and main's post-push
-        //    auto-build assert those for real.
-        //    Spawned as a subprocess so the check code comes from the rebased
-        //    tree, not the (potentially stale) module cache of this process.
-        const root = await getWorktreeRoot();
-        const ok = await runRebasedChecks(root, grant, profiler);
-        if (!ok) {
-          console.error(
-            `Checks failed after rebasing ${branch} onto main. ` +
-              `Fix the issue and re-run ./equin push ` +
-              `(your commits are on ${branch}; use \`git reset --soft HEAD~1\` to unstage the last one if needed).\n\n` +
-              `If the failure is unrelated to your commits (e.g. a pre-existing issue on main), ` +
-              `try rebasing onto the latest main (\`git fetch origin main && git rebase origin/main\`) and re-running — the issue may already be fixed upstream.\n\n` +
-              `If you cannot fix the failing check(s): STOP, report the failure to the user, and wait for instructions. ` +
-              `Do NOT work around check failures — not by disabling checks, editing check code, ` +
-              `expanding skip lists, committing via raw git, or any other means.`,
-          );
-          profiler.complete("failed_checks");
-          profiler.write();
-          process.exit(1);
-        }
-
-        // 5. Push the branch (force since rebase rewrites history — safe for
-        //    single-owner worktree branches). Skipped in local mode: the branch
-        //    has nowhere to go, and step 6 below is what the work is for.
-        if (publish.kind === "publish") {
-          profiler.stepStart("push-branch");
-          console.log(`Pushing branch ${branch}...`);
-          await execPublish(
-            ["git", "push", "--force-with-lease", "-u", publish.remote, branch],
-            undefined,
-            root,
-          );
-          profiler.stepEnd("push-branch");
-        }
-
-        // 6. Publish the branch as the remote's main — BEFORE local main
-        //    moves (publishMain says why). Skipped in local mode, where
-        //    local main is the trunk and step 7 is the whole landing.
-        if (publish.kind === "publish") {
-          profiler.stepStart("push-main");
-          console.log("Pushing main...");
-          await publishMain(publish.remote, branch, root);
-          profiler.stepEnd("push-main");
-        }
-
-        // 7. Fast-forward local main (guaranteed to succeed — we hold the
-        //    lock, so no other push can have advanced it since our rebase).
-        //    The last step: main's own auto-build takes it from there.
-        profiler.stepStart("ff-merge");
-        console.log(`Merging ${branch} into main...`);
-        //    Under main's tree write lock (`infra/git/tree-lock`): the merge
-        //    rewrites main's files one by one, and every supervised child on
-        //    main boots its plugin graph out of this tree — one loading mid-merge
-        //    reads two commits at once (2026-11-05: `worktree.prepare` and
-        //    `database.fork` died on an export the half-written tree lacked).
-        //    Remote main already moved (step 6), so a failure here leaves local
-        //    main behind it — say so, with the one command that finishes it.
-        await withTreeWrite(mainWorktree, () =>
-          exec(["git", "merge", "--ff-only", branch], mainWorktree),
-        ).catch((err: unknown) => {
-          throw new Error(
-            `${branch} is pushed${publish.kind === "publish" ? " and remote main already points at it" : ""}, ` +
-              `but local main was not fast-forwarded. Finish it: git -C ${mainWorktree} merge --ff-only ${branch}`,
-            { cause: err },
-          );
-        });
-        profiler.stepEnd("ff-merge");
+        // 4–7. Everything after the rebase — install, normalize, checks,
+        //      push the branch, push main, fast-forward local main — runs on
+        //      the REBASED code, as the land phase (`./land.ts`), inside this
+        //      mutex and grant. See `./handoff.ts`.
+        await handOff(root0, opSlug, pushId, "worktree", grant, profiler);
       },
       onLockRequested,
       onLockAcquired,
@@ -1129,11 +784,6 @@ const pushAction: CliAction<
 
   profiler.complete("success");
   profiler.write();
-  console.log(
-    publish.kind === "publish"
-      ? `Done. ${branch} merged into main and pushed.`
-      : `Done. ${branch} merged into local main. Nothing was pushed.`,
-  );
 };
 
 // Named `pushAction` rather than `run`, which this file already uses for its

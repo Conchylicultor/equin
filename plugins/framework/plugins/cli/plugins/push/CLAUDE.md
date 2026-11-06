@@ -63,7 +63,7 @@ mutex the order is load-bearing:
    and put the branch in landable shape
    — three arms, decided by `main..HEAD`:
    - **contains main** → *no rebase at all*; only the tip is amended with the
-     trailer. The rebase exists only to make step 7's ff-merge possible, already
+     trailer. The rebase exists only to make step 8's ff-merge possible, already
      true here, and it would **rewrite the merged-in upstream commits**: measured,
      upstream's own sha stopped being an ancestor of main, so the next
      `upstream merge` based below them and re-presented merged changes as
@@ -71,10 +71,13 @@ mutex the order is load-bearing:
    - **merge commits, but main moved past** → refuse, and say to `git merge main`
      in the worktree. Never fall through to the flattening rebase.
    - **otherwise** → `git rebase main --exec <stamp>`, unchanged.
-4. `ensureDeps({ frozenLockfile: true })` — install what the rebase brought in
-5. `normalizeGeneratedArtifacts(…, { force: true })` — re-derive and amend
-6. `check --scope tree` in a subprocess, handed the section's grant (below)
-7. push the branch, then push it as the remote's `main` (both publish mode
+4. **hand off to the land phase** — steps 5–8 run in a child on the REBASED
+   code (below), inside this mutex and grant
+5. install what the rebase brought in — the land phase's own bootstrap
+   (`ensureDeps`, frozen through `EQUIN_FROZEN_LOCKFILE`), before its code loads
+6. `normalizeGeneratedArtifacts(…, { force: true })` — re-derive and amend
+7. `check --scope tree` in a subprocess, handed the section's grant (below)
+8. push the branch, then push it as the remote's `main` (both publish mode
    only), then ff local `main` — **remote first**. The mutex serializes this
    machine's pushes, not every writer of the remote (a GitHub web edit, another
    clone). With local `main` advanced first, a remote that moved in between
@@ -84,7 +87,7 @@ mutex the order is load-bearing:
    gate; `publishMain` tells that race (local `main` untouched, re-run) from an
    access refusal (re-probe, as above).
 
-**Steps 3–7 run under ONE interactive CPU grant**, taken by `withPushLock` as
+**Steps 3–8 run under ONE interactive CPU grant**, taken by `withPushLock` as
 the first thing inside the mutex and passed to its body (and from there to the
 check subprocess). Every queued push waits on the holder for its whole hold, so
 the whole hold is human-blocking: the interactive lane runs it in the foreground
@@ -93,9 +96,44 @@ install and normalize ran at the agent session's inherited darwinbg tier —
 normalize, ~13 s of work, took a median 109 s on the E-cores
 ([`research/2026-10-15-global-push-lock-holder-foreground.md`](../../../../../../research/2026-10-15-global-push-lock-holder-foreground.md)).
 
-4 before 5 on purpose: the regen must run against a `node_modules` matching the
+5 before 6 on purpose: the regen must run against a `node_modules` matching the
 tree it regenerates. Push's own rebases set `SKIP_POST_REWRITE_ENV` so the
 `post-rewrite` hook does not normalize underneath it — push owns this ordering.
+
+## The land phase: after the rebase, the rebased code runs
+
+The rebase moves the checkout the push process was started from, so from then on
+that process is OLDER than its tree. Left running it mixes versions: its children
+run the new tree, it keeps the old one in memory, yet it still reads the tree by
+path (a script it spawns, a lazy import) and leans on on-disk layout (its own
+executable). On 2026-11-06 a rebase brought in a change that deleted the running
+push's executable name, and the push died at its last step after remote main had
+moved ([`research/2026-11-06-cli-push-post-rebase-handoff.md`](../../../../../../research/2026-11-06-cli-push-post-rebase-handoff.md)).
+
+So `cli/run.ts` (the **driver**) does nothing after the rebase but run the
+**land phase** and record it: `./equin push` again, through the script (never
+`process.execPath`), with the hand-off in `EQUIN_PUSH_LAND`. That child
+(`cli/land.ts`) runs steps 5–8 on the rebased code. Always — not only when the
+rebase touched the push's own code: 35–57 % of main's commits do, so a gate
+would fire on nearly every push and buy nothing.
+
+- **The lock never moves.** The driver keeps holding the mutex and the grant and
+  the land phase runs inside that hold, the grant handed down by env like the
+  checks' (`grant.env()` → `inheritedGrant()`). Releasing the mutex to re-run the
+  push was measured out: 31 % of pushes have another land while they queue, so a
+  restart would rebase again. The child dies with the driver (orphan guard).
+- **It is nested.** No op record, no worktree-op marker, no mutex request: the
+  driver owns all three. The op log has one writer per op, so the land phase
+  writes its steps and outcome to a report file
+  (`worktreeArtifacts.pushLand`), which the driver copies onto the op (plus a
+  `land-boot` step: the child's start-up and install).
+- **`cli/handoff.ts` is the whole contract between two versions** — the
+  driver's (before the rebase) and the land phase's (after it): the env
+  payload, the report, and the grant env. Every shape carries `v`; change one
+  and bump `v`, reading the previous one until no older checkout is left.
+- **State is re-derived, not handed over**: the land phase reads branch, root,
+  main's worktree and the publish target from git; only the push id, the mode
+  and the report path cross.
 
 ## `--from-main`
 
@@ -142,7 +180,6 @@ queues behind the mutex it was holding.
 - Description: `./equin push` — the one path work reaches main: commit, rebase onto main, re-normalize generated artifacts, run the tree-scoped checks, fast-forward and push, all under the host-wide push mutex.
 - Cli:
   - Uses:
-    - `framework/cli/bootstrap.ensureDeps`
     - `framework/cli/git-artifacts.normalizeGeneratedArtifacts`
     - `framework/cli/op-runtime.checkBroadcasts`
     - `framework/cli/op-runtime.installFatalSignalExit`

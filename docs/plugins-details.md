@@ -27552,7 +27552,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `framework/cli/build`
               - `framework/cli/install`
-              - `framework/cli/push`
           - Exemptions:
             - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `cli/ensure-deps.ts` (sanctioned)
           - Cli:
@@ -27650,9 +27649,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CLI_NAMES`
               - `isCliName`
           - Cross-plugin:
-            - Imported by: 22 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
+            - Imported by: 23 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
+              - `framework` ×6
               - `infra` ×6
-              - `framework` ×5
               - `build` ×2
               - `debug` ×2
               - `plugin-meta` ×2
@@ -27828,7 +27827,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`push`** — `./equin push` — the one path work reaches main: commit, rebase onto main, re-normalize generated artifacts, run the tree-scoped checks, fast-forward and push, all under the host-wide push mutex.
           - Cli:
             - Uses:
-              - `framework/cli/bootstrap.ensureDeps`
               - `framework/cli/git-artifacts.normalizeGeneratedArtifacts`
               - `framework/cli/op-runtime.checkBroadcasts`
               - `framework/cli/op-runtime.installFatalSignalExit`
@@ -28004,10 +28002,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNSTAMPED_GATEWAY_WARNING`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by: 61 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
+        - Imported by: 62 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
           - `infra` ×14
+          - `framework` ×11
           - `apps` ×10
-          - `framework` ×10
           - `conversations` ×4
           - `database` ×4
           - `primitives` ×4

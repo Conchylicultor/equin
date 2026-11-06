@@ -478,6 +478,14 @@ export const worktreeArtifacts = {
    */
   testStatus: (name: Namespace, opId: string): AppPath =>
     joinAppPath(worktreeDataDir(name), `test-status-${opId}.json`),
+  /**
+   * What one push's land phase reports back to the push that spawned it — the
+   * steps it ran and its outcome. `push-land-<pushId>.json`, written by the land
+   * phase as each step ends, read and deleted by the push once the phase exits
+   * (cli/push handoff.ts).
+   */
+  pushLand: (name: Namespace, pushId: string): AppPath =>
+    joinAppPath(worktreeDataDir(name), `push-land-${pushId}.json`),
   /** One runner's JUnit report for one test run. `test-<opId>-<runner>.xml`. */
   testReport: (name: Namespace, opId: string, runner: string): AppPath =>
     joinAppPath(worktreeDataDir(name), `test-${opId}-${runner}.xml`),
