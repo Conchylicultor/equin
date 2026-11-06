@@ -13,6 +13,7 @@ import {
   WideBlock,
   selectableText,
   useBlockActivate,
+  useInnerCaret,
   useSelectionControl,
   type BlockRendererProps,
   type RichTextFieldCaret,
@@ -149,6 +150,9 @@ export function TableBlock({ block, editor }: BlockRendererProps) {
   );
 
   useBlockActivate(active ? null : () => open(0, 0, "end"));
+  // An open cell draws its own ring; the table itself looks the same whether
+  // or not you are typing in it (no block-level tint on every click).
+  useInnerCaret(active !== null);
 
   const measure = useEventCallback((): TableGeometry | null => {
     const host = hostRef.current;

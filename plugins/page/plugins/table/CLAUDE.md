@@ -35,6 +35,10 @@ replaces a stale list with the drawn widths.
   Escape does in a text block). Not taken: Shift+Enter (the field's soft
   break), ↑/↓ past the table (the caret host's — the next block). Enter on the
   selected table opens its first cell.
+- **Clicking in does not change the table's look**: an open cell holds the
+  caret (`useInnerCaret`), so the editor's block-level caret cue (the tint)
+  steps aside — only the cell's own ring shows. The tint is back when the
+  table itself holds the caret (arrowed onto from the block above).
 - **Row 0 is the header** on every grid axis (`web/internal/table-ops.ts`, pure
   and tested): it is never deleted, duplicated, moved, or moved above.
 
@@ -100,8 +104,8 @@ editor's line-claim escape, not this file's.
 - Description: Table block type: a GFM pipe table edited in place like Notion's — click a cell and type, Tab between cells, grips to move / duplicate / delete rows and columns, insert points, add bars and column resizing (widths are display-only data, never in the markdown). Table block type: registers its `data` schema (column alignment, header cells, body rows) at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "table" → `TableBlock`
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page/editor` ×10
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×11
     - `primitives/css/coords` ×4
     - `primitives/css/control-panel` ×2
     - `primitives/latest-ref` ×2

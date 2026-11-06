@@ -117,6 +117,7 @@ export {
   useVoidCaret,
   useCaretEscape,
   useBlockActivate,
+  useInnerCaret,
 } from "./components/void-caret";
 export type { VoidCaret, VoidCaretOptions } from "./components/void-caret";
 // The ONE plain-text editing surface a page block may own. A block that holds

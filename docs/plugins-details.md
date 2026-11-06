@@ -38975,6 +38975,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useFrameGeometry`
           - `useFrameHovered`
           - `useGroupedInsertableBlocks`
+          - `useInnerCaret`
           - `useInsertableBlocks`
           - `useIsFramedBlock`
           - `usePageOptions`
@@ -40587,8 +40588,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`table`** — Table block type: a GFM pipe table edited in place like Notion's — click a cell and type, Tab between cells, grips to move / duplicate / delete rows and columns, insert points, add bars and column resizing (widths are display-only data, never in the markdown). Table block type: registers its `data` schema (column alignment, header cells, body rows) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "table" → `TableBlock`
-        - Uses: 26 symbols — full list in [`plugins/page/plugins/table/REFERENCE.md`](../plugins/page/plugins/table/REFERENCE.md)
-          - `page/editor` ×10
+        - Uses: 27 symbols — full list in [`plugins/page/plugins/table/REFERENCE.md`](../plugins/page/plugins/table/REFERENCE.md)
+          - `page/editor` ×11
           - `primitives/css/coords` ×4
           - `primitives/css/control-panel` ×2
           - `primitives/latest-ref` ×2

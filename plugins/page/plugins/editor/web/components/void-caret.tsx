@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -224,7 +225,18 @@ export function useBlockActivate(
  */
 type ClaimCaretCue = () => () => void;
 
-const CaretCueContext = createContext<ClaimCaretCue | null>(null);
+interface CaretCue {
+  claim: ClaimCaretCue;
+  /** The caret is in a field inside the block (`useInnerCaret`): no cue. */
+  inner: boolean;
+}
+
+const CaretCueContext = createContext<CaretCue | null>(null);
+
+/** Declare that the caret is in a field inside the block. Returns the release. */
+type HoldInnerCaret = () => () => void;
+
+const InnerCaretContext = createContext<HoldInnerCaret | null>(null);
 
 /**
  * The caret cue, painted on a claiming box instead of the host: the same two
@@ -246,9 +258,26 @@ const CLAIMED_CUE =
  * (a read-only surface, a `caret: "renderer"` block), where there is no cue.
  */
 export function useCaretCueTarget(): string | undefined {
-  const claim = useContext(CaretCueContext);
+  const cue = useContext(CaretCueContext);
+  const claim = cue?.claim;
   useEffect(() => claim?.(), [claim]);
-  return claim ? CLAIMED_CUE : undefined;
+  if (!cue) return undefined;
+  return cue.inner ? undefined : CLAIMED_CUE;
+}
+
+/**
+ * Declare that the caret is in a field INSIDE the block — a table's open cell —
+ * while `inside` is true. The block-level cue (the tint and ring that say "the
+ * caret is on this block") then steps aside: the field draws where the caret is
+ * itself, and tinting the whole block on every click into it changes how the
+ * block looks merely because it is being edited. The cue comes back once the
+ * caret is the block's again (Escape out of the cell).
+ *
+ * Outside a {@link BlockCaretHost} this is a no-op, as `useBlockActivate` is.
+ */
+export function useInnerCaret(inside: boolean): void {
+  const hold = useContext(InnerCaretContext);
+  useEffect(() => (inside ? hold?.() : undefined), [hold, inside]);
 }
 
 export interface BlockCaretHostProps {
@@ -366,6 +395,17 @@ export function BlockCaretHost({
     setCueClaims((n) => n + 1);
     return () => setCueClaims((n) => n - 1);
   }, []);
+  // How many fields inside hold the caret (`useInnerCaret`) — no cue while any do.
+  const [innerCarets, setInnerCarets] = useState(0);
+  const holdInnerCaret = useCallback<HoldInnerCaret>(() => {
+    setInnerCarets((n) => n + 1);
+    return () => setInnerCarets((n) => n - 1);
+  }, []);
+  const inner = innerCarets > 0;
+  const cue = useMemo<CaretCue>(
+    () => ({ claim: claimCue, inner }),
+    [claimCue, inner],
+  );
 
   // Stable for the lifetime of the host — `no-unstable-context-value`, and more
   // to the point a fresh identity would re-run every consumer's effect.
@@ -483,7 +523,8 @@ export function BlockCaretHost({
 
   return (
     <BlockActivateContext.Provider value={register}>
-      <CaretCueContext.Provider value={claimCue}>
+      <InnerCaretContext.Provider value={holdInnerCaret}>
+        <CaretCueContext.Provider value={cue}>
       <div
         ref={ref}
         tabIndex={0}
@@ -500,7 +541,7 @@ export function BlockCaretHost({
           // `useCaretCueTarget`); `group/caret-host` is what the claimer reads.
         className={cn(
             "group/caret-host cursor-default",
-            cueClaims > 0
+              cueClaims > 0 || inner
               ? "outline-none"
               : cn("focus-ring rounded-md", isFocused && "bg-accent"),
         )}
@@ -508,6 +549,7 @@ export function BlockCaretHost({
         {children}
       </div>
       </CaretCueContext.Provider>
+      </InnerCaretContext.Provider>
     </BlockActivateContext.Provider>
   );
 }

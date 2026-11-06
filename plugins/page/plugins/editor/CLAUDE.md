@@ -580,6 +580,11 @@ the widened table and its tint cover only part of it. A claiming box paints the
 same two conditions read off the host's named group (`group/caret-host`:
 `:focus-visible`, `aria-current`); the host paints nothing while claimed.
 
+**A field inside that holds the caret silences the cue** (`useInnerCaret(inside)`):
+a table's open cell draws its own ring, so the block is not tinted while you type
+in it — clicking into a block must not change how the whole block looks. Neither
+the host nor a claiming box paints while any field holds it.
+
 ### The host adds no padding, and it counts as row background
 
 It sits at `C` (a decoration); blocks keep their own `<Inset x={BLOCK_INSET}>`. It
@@ -2316,6 +2321,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `useFrameGeometry`
     - `useFrameHovered`
     - `useGroupedInsertableBlocks`
+    - `useInnerCaret`
     - `useInsertableBlocks`
     - `useIsFramedBlock`
     - `usePageOptions`
