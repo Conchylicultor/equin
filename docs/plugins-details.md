@@ -6548,7 +6548,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 138 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 139 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `primitives/data-view` ×12
               - `map` ×9
               - `apps/places/places-core` ×8
@@ -6558,12 +6558,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live` ×5
               - `primitives/css/ui-kit` ×4
               - `primitives/overlay/image-viewer` ×4
+              - `infra/endpoints` ×3
               - `primitives/hover-reveal` ×3
               - `primitives/link-gesture/new-tab` ×3
               - `ui/icons` ×3
               - `apps/places/page-overlay` ×2
               - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
-              - `infra/endpoints` ×2
               - `integrations/google-maps` ×2
               - `page/place` ×2
               - `primitives/css/clip` ×2
