@@ -68,6 +68,7 @@ the durable emit that follows.
     - `build/deployment`
     - `conversations/conversation-view/commits-graph`
     - `infra/launcher/gateway-drift`
+    - `infra/launcher/login-services`
     - `plugin-meta/plugin-health`
     - `release`
     - `review/plugin-changes`

@@ -37,8 +37,9 @@ const followLog = defineLogSink({
  * dependency main's checkout now builds — so a push changing a service's
  * binary reaches it without anyone running `./equin start`. Names no service.
  *
- * No watcher: main's checkout moves only on a push, and every push restarts
- * main's backend (its auto-build), which runs this. A dependency not built at
+ * Run on main's boot and on every advance of main (`followMainReaction`):
+ * main's build keeps its backend when the server code is unchanged, so a boot
+ * alone misses a push changing only a service's sources. A dependency not built at
  * main's identity yet is requested through `deps` (built off the boot path, in
  * the `deps.install` job) and reconciled when that settles; the old service
  * keeps running meanwhile.

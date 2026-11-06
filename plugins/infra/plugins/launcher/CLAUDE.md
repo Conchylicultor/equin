@@ -45,7 +45,8 @@ outside the manager, and builds its launch from flags — so `start` drives it
 explicitly, through the same `LoginService`.
 
 Every declared service a `start` registered **follows main by itself**: main's
-boot reconciles it against main's build of its dependency (see the sub-plugin's
+backend reconciles it against main's build of its dependency, at boot and on
+every advance of main (see the sub-plugin's
 `CLAUDE.md`). The gateway does not — restarting it restarts every backend — but
 a plain `start` reports it stale (`LoginService.isCurrent`) with the command
 that swaps it: `./equin start --only <gateway-label> --force`.

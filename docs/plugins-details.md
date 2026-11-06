@@ -32247,6 +32247,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/deployment`
               - `conversations/conversation-view/commits-graph`
               - `infra/launcher/gateway-drift`
+              - `infra/launcher/login-services`
               - `plugin-meta/plugin-health`
               - `release`
               - `review/plugin-changes`
@@ -33548,7 +33549,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `SERVICE_LOG_FD_FLAG`
               - `serviceLogTarget`
-        - **`login-services`** — Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent on macOS (graphical → LimitLoadToSessionType=Aqua) or a systemd user unit on Linux (graphical → graphical-session.target, no lingering); defineLoginService and the collected login-services/ registry, so ./equin start / stop bring every declared service up and down without naming one. On main's boot, every declared service a start registered follows main: reloaded when main's build of its dependency changed its job (rewritten only, when stopped), the dependency requested through deps first when it is not built yet. On macOS every service (the gateway too) runs from ONE app bundle, equin.app (bundle id dev.equin, signed with the machine's identity, at a stable path under state/macos-app): installServiceExecutable copies a component's build in and swaps the re-signed bundle in whole, so every permission prompt, System Settings row and tccutil reset names one app, equin.
+        - **`login-services`** — Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent on macOS (graphical → LimitLoadToSessionType=Aqua) or a systemd user unit on Linux (graphical → graphical-session.target, no lingering); defineLoginService and the collected login-services/ registry, so ./equin start / stop bring every declared service up and down without naming one. On main's boot and on every advance of main (a git-watcher ref reaction — main's build may keep its backend), every declared service a start registered follows main: reloaded when main's build of its dependency changed its job (rewritten only, when stopped), the dependency requested through deps first when it is not built yet. On macOS every service (the gateway too) runs from ONE app bundle, equin.app (bundle id dev.equin, signed with the machine's identity, at a stable path under state/macos-app): installServiceExecutable copies a component's build in and swaps the re-signed bundle in whole, so every permission prompt, System Settings row and tccutil reset names one app, equin.
           - Core:
             - Uses:
               - `framework/tooling/collected-dir.defineCollectedDir`
@@ -33606,6 +33607,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plannedServiceExecutable`
               - `reconcileLoginService`
               - `terminateProcess`
+            - Register: `defineRefReaction('login-services.follow-main (refs/heads/main)')`
         - **`runtime-env`** — What environment the runtime tree starts from: the declared allowlist the launcher spawns the gateway with and the gateway forwards to its children (pickRuntimeEnv / runtimeEnvNames / pickHostEnv), and the runtime's PATH with mise's shims first (runtimePath / runtimeShimsDir). A core-only leaf, so a tool runner needing the runtime PATH never bundles the launcher's release boot.
           - Core:
             - Uses:

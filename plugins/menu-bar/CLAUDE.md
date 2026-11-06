@@ -212,8 +212,9 @@ as `tray` — on macOS from the equin app bundle, as its main executable
 every login service runs from, `infra/launcher/login-services`), on Linux the
 bare build — its stdio in
 `logs/menu-bar/helper-stdio.log`. Once a `./equin start` has registered it, the
-tray follows main by itself: main's boot (after a push changing `rust/`)
-requests the helper build and reloads the tray onto it
+tray follows main by itself: main's backend (on the advance of a push
+changing `rust/`, whether or not its build restarts the backend) requests the
+helper build and reloads the tray onto it
 (`infra/launcher/login-services`, which names no service). `./equin start
 --only dev.equin.menu-bar --force` restarts the tray alone.
 
