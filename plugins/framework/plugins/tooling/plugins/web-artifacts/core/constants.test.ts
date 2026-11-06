@@ -13,7 +13,7 @@ describe("isWorkerChunkPath", () => {
   test("a module of a worker tree (a browser host's worker)", () => {
     expect(
       isWorkerChunkPath(
-        "/artifacts/worker-tree.acf276983f235246/apps.website.demos.lumen.bin/index.js",
+        "/artifacts/worker-tree.acf276983f235246/apps.website.demos.workspace.bin/index.js",
       ),
     ).toBe(true);
   });

@@ -9,7 +9,7 @@
  *
  *  1. opens Prototypes through the embed's launcher: the gallery lists the
  *     three seeded prototypes, each card's real thumbnail loaded;
- *  2. opens the Lumen board's canvas: frame A's document is served under the
+ *  2. opens the Recipe box's canvas: frame A's document is served under the
  *     frames scope, its computed style comes from its own `styles.css`, and the
  *     SVG its CSS `url()` names loads relative to it; the user's seeded pick
  *     (accent teal) is painted;
@@ -77,8 +77,8 @@ const SANCTIONED: readonly RegExp[] = [
   /^\/api\/health(\/ready)?$/,
 ];
 
-/** The seeded prototypes (`website/demos/lumen`'s `data/prototypes/`). */
-const LUMEN = { id: "proto-1792900000-demo01", title: "Lumen — notes board" };
+/** The seeded prototypes (`website/demos/workspace`'s `data/prototypes/`). */
+const RECIPE_BOX = { id: "proto-1792900000-demo01", title: "Recipe box: home" };
 const COMPOSER = "Task composer — quick filing";
 const QUEUE = {
   id: "proto-1792900120-demo03",
@@ -213,7 +213,7 @@ await withBrowser(async (h) => {
     () => embedRoot(page).getAttribute("data-app-embed"),
     (id) => id === "prototypes",
   );
-  for (const title of [LUMEN.title, COMPOSER, QUEUE.title])
+  for (const title of [RECIPE_BOX.title, COMPOSER, QUEUE.title])
     await renders(
       `the gallery shows "${title}" with its real thumbnail`,
       () => thumbnailLoaded(page, title),
@@ -221,8 +221,8 @@ await withBrowser(async (h) => {
     );
   await snap(page, OUT, "1-gallery");
 
-  // ── 2. the Lumen board's canvas ─────────────────────────────────────────
-  await galleryCard(page, LUMEN.title).click();
+  // ── 2. the Recipe box's canvas ─────────────────────────────────────────
+  await galleryCard(page, RECIPE_BOX.title).click();
   await renders(
     "the canvas opens on frame A",
     () =>
@@ -234,7 +234,7 @@ await withBrowser(async (h) => {
   await renders(
     "frame A's document is served under the host's frames scope",
     () => frameSrc(page, "A"),
-    (src) => FRAME_SRC_RE.test(src) && src.includes(LUMEN.id),
+    (src) => FRAME_SRC_RE.test(src) && src.includes(RECIPE_BOX.id),
   );
   const looks = await renders(
     "frame A's computed style comes from its styles.css, and the CSS url() SVG loads",
@@ -244,7 +244,7 @@ await withBrowser(async (h) => {
     },
     (l) =>
       l !== null &&
-      l.title === LUMEN.title &&
+      l.title === RECIPE_BOX.title &&
       l.boardDisplay === "grid" &&
       l.bodyBackground.includes("leaf.svg") &&
       l.svgLoads,
@@ -321,12 +321,12 @@ await withBrowser(async (h) => {
   await pickFromLauncher(embedRoot(page), /Prototypes/);
   await renders(
     "the restored prototype's thumbnail is a cache hit",
-    () => thumbnailLoaded(page, LUMEN.title),
+    () => thumbnailLoaded(page, RECIPE_BOX.title),
     (loaded) => loaded,
   );
   r.eq(
     "…not the unavailable marker",
-    await galleryCard(page, LUMEN.title)
+    await galleryCard(page, RECIPE_BOX.title)
       .getByText("Preview unavailable")
       .count(),
     0,

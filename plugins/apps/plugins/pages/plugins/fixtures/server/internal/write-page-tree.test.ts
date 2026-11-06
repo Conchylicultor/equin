@@ -55,6 +55,8 @@ const CONSUMERS = [
   "page/plugins/inline-page-link",
   "page/plugins/text",
   "page/plugins/to-do",
+  "page/plugins/heading/plugins/heading-2",
+  "page/plugins/bulleted-list",
   "apps/plugins/pages/plugins/content-search",
   "apps/plugins/pages/plugins/history",
 ];
@@ -108,7 +110,8 @@ const LINKING_BLOCK = id(21);
 /**
  * HOME "Atlas" (tagged, starred)
  * ├── text, to-do
- * └── SPEC "Atlas spec" — text
+ * └── SPEC "Atlas spec" (gradient cover) — text, a markdown run (heading,
+ *     bullets, one nested and bold), text
  * NOTES "Notes"
  * └── text linking SPEC inline
  */
@@ -127,8 +130,18 @@ const TREE: PageTreeFixture = [
         id: SPEC,
         type: "page",
         title: "Atlas spec",
+        cover: { type: "gradient", preset: "ocean" },
         children: [
           { id: id(11), type: "text", text: "Projections are cylindrical." },
+          {
+            type: "markdown",
+            markdown: [
+              "## Projections",
+              "- Mercator",
+              "  - **Web** Mercator",
+            ].join("\n"),
+          },
+          { id: id(12), type: "text", text: "Distortion grows at the poles." },
         ],
       },
     ],
@@ -177,6 +190,36 @@ describe.if(IN_CHILD)("writePageTree on a portable host", () => {
       { id: SPEC, parent_id: HOME, title: "Atlas spec", icon: null },
       { id: NOTES, parent_id: null, title: "Notes", icon: null },
     ]);
+  });
+
+  test("a markdown run lands as parsed blocks, in place, under the caller's own", async () => {
+    const rows = await db.execute<{
+      id: string;
+      parent_id: string;
+      type: string;
+      data: { text?: { text: string; marks?: string[] }[] };
+    }>(
+      sql`SELECT id, parent_id, type, data FROM page_blocks
+          WHERE page_id = ${SPEC} AND deleted_at IS NULL ORDER BY parent_id, rank`,
+    );
+    const top = rows.rows.filter((r) => r.parent_id === SPEC);
+    expect(top.map((r) => r.type)).toEqual([
+      "text",
+      "heading-2",
+      "bulleted-list",
+      "text",
+    ]);
+    expect([top[0]!.id, top[3]!.id]).toEqual([id(11), id(12)]);
+    const nested = rows.rows.filter((r) => r.parent_id === top[2]!.id);
+    expect(nested.map((r) => r.type)).toEqual(["bulleted-list"]);
+    expect(nested[0]!.data.text).toEqual([
+      { text: "Web", marks: ["bold"] },
+      { text: " Mercator" },
+    ]);
+    const cover = await db.execute<{ cover: unknown }>(
+      sql`SELECT data->'cover' AS cover FROM page_blocks WHERE id = ${SPEC}`,
+    );
+    expect(cover.rows[0]?.cover).toEqual({ type: "gradient", preset: "ocean" });
   });
 
   test("the inline page link derived its backlinks edge", async () => {

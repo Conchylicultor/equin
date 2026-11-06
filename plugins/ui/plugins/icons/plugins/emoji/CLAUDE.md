@@ -77,7 +77,7 @@ An emoji as a stored value, and the picker that picks one — the sibling of
     - `apps/pages/content-search`
     - `apps/pages/history`
     - `apps/pages/page-tree`
-    - `apps/website/demos/lumen`
+    - `apps/website/demos/workspace`
     - `page/editor`
     - `page/links`
     - `page/read-only-view`

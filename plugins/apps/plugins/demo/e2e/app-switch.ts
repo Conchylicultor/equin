@@ -12,12 +12,12 @@
  *     host page's (mounting the embed alone does not move the keys into it);
  *  1. opens the launcher inside the embed and picks Pages: the embed switches
  *     to Pages (`data-app-embed`, its theme scope), whose sidebar lists the
- *     seeded pages ("Lumen", "Ideas");
+ *     seeded pages ("Welcome to equin", "My equin", "Ideas");
  *  2. goes back to the Agent Manager through the launcher;
- *  3. opens the dark-mode task's detail, and its Origin chip: the Bugs page
+ *  3. opens the practice-timer task's detail, and its Origin chip: the My equin page
  *     opens beside it;
  *  4. Expand on that page ("Open in Pages"): the embed switches to Pages on
- *     the Bugs page.
+ *     the My equin page.
  *
  * And asserts, throughout, that the page itself never moved:
  *
@@ -59,11 +59,11 @@ const SANCTIONED: readonly RegExp[] = [
   /^\/api\/health(\/ready)?$/,
 ];
 
-/** The seeded pages (`website/demos/lumen`'s `core/internal/pages.ts`). */
-const ROOT_PAGES = ["Lumen", "Ideas"] as const;
-const BUGS_PAGE = "Bugs";
-/** The seeded task launched from the Bugs page's prompt block (`stories.ts`). */
-const DARK_MODE_TASK = "Dark mode resets after a reload";
+/** The seeded pages (`website/demos/workspace`'s `core/internal/pages.ts`). */
+const ROOT_PAGES = ["Welcome to equin", "My equin", "Ideas"] as const;
+const ORIGIN_PAGE = "My equin";
+/** The seeded task launched from My equin's prompt block (`stories.ts`). */
+const PRACTICE_TIMER_TASK = "Practice timer in Sonata";
 /** How long an app swap or a worker read gets to render. */
 const RENDER_TIMEOUT_MS = 20_000;
 const LEAVE_TOAST = "Opens outside this embed";
@@ -231,7 +231,7 @@ await withBrowser(async (h) => {
   pathStays("back to the Agent Manager");
   await noLeaveToast("back to the Agent Manager");
 
-  // ── 3. the dark-mode task's Origin chip → the Bugs page ─────────────────
+  // ── 3. the practice-timer task's Origin chip → My equin ─────────────────
   await embedRoot(page)
     .getByRole("button", { name: "Tasks", exact: true })
     .first()
@@ -240,32 +240,32 @@ await withBrowser(async (h) => {
   await tree.waitFor({ timeout: RENDER_TIMEOUT_MS });
   const taskRow = tree
     .getByRole("row")
-    .filter({ hasText: DARK_MODE_TASK })
+    .filter({ hasText: PRACTICE_TIMER_TASK })
     .first();
   await taskRow.waitFor({ timeout: RENDER_TIMEOUT_MS });
   await taskRow.getByRole("gridcell").first().click();
   const detail = embedRoot(page).locator('[data-pane-id="task-detail"]');
   await detail.waitFor({ timeout: RENDER_TIMEOUT_MS });
   const origin = detail
-    .getByRole("button", { name: new RegExp(`^\\s*${BUGS_PAGE}\\s*$`) })
+    .getByRole("button", { name: new RegExp(`^\\s*${ORIGIN_PAGE}\\s*$`) })
     .first();
   await renders(
-    "the task detail's Origin section shows the Bugs page",
+    "the task detail's Origin section shows My equin",
     () => origin.count(),
     (n) => n > 0,
   );
   await origin.click();
   const pagePane = embedRoot(page).locator('[data-pane-id="page-detail"]');
   await renders(
-    "the Origin chip opens the Bugs page",
+    "the Origin chip opens My equin",
     () => pageTitle(pagePane),
-    (title) => title === BUGS_PAGE,
+    (title) => title === ORIGIN_PAGE,
   );
   pathStays("Origin chip");
   await noLeaveToast("Origin chip");
   await snap(page, OUT, "3-origin");
 
-  // ── 4. Expand → Pages, on the Bugs page ─────────────────────────────────
+  // ── 4. Expand → Pages, on My equin ──────────────────────────────────────
   // By its exact label: a role-name match also took the header's ⋯ (More
   // actions) here, so the click opened the overflow instead.
   const openInPages = pagePane
@@ -273,7 +273,7 @@ await withBrowser(async (h) => {
     .locator('button[aria-label="Open in Pages"]')
     .first();
   if ((await openInPages.count()) === 0) {
-    r.fail("the Bugs page offers Open in Pages", "no such button");
+    r.fail("My equin offers Open in Pages", "no such button");
   } else {
     // The header is an overflow bar that re-lays out as the pointer moves over
     // it, so a locator click can land on whatever slid under its aim (the ⋯).
@@ -290,9 +290,9 @@ await withBrowser(async (h) => {
       (id) => id === "pages",
     );
     await renders(
-      "Pages opens on the Bugs page",
+      "Pages opens on My equin",
       () => pageTitle(embedRoot(page).locator('[data-pane-id="page-detail"]')),
-      (title) => title === BUGS_PAGE,
+      (title) => title === ORIGIN_PAGE,
     );
     pathStays("Open in Pages");
     await noLeaveToast("Open in Pages");

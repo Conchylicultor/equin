@@ -80,7 +80,7 @@ cannot paint itself outside Lexical is a tsc error.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
-    - `apps/website/demos/lumen`
+    - `apps/website/demos/workspace`
     - `apps/website/promo-film/seed`
     - `page/editor`
 

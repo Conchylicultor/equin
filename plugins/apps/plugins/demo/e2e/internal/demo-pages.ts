@@ -12,8 +12,8 @@ export const RENDER_TIMEOUT_MS = 30_000;
 /** A control the Agent Manager shows once the demo has booted. */
 export const MARKER = 'button:has-text("Conversations")';
 
-/** The seeded root pages (`website/demos/lumen`'s `core/internal/pages.ts`). */
-export const ROOT_PAGES = ["Lumen", "Ideas"] as const;
+/** The seeded root pages (`website/demos/workspace`'s `core/internal/pages.ts`). */
+export const ROOT_PAGES = ["Welcome to equin", "My equin", "Ideas"] as const;
 
 export function embedRoot(page: Page): Locator {
   return page.locator("[data-app-embed]").first();
@@ -148,8 +148,8 @@ export async function showsApp(
 
 // ── The demo's stored data (`framework/browser-server/host-storage`) ────────
 
-/** The demo's storage name (`website/demos/lumen`'s `bin/browser-host.ts`). */
-const DEMO_STORAGE = "demo-lumen";
+/** The demo's storage name (`website/demos/workspace`'s `bin/browser-host.ts`). */
+const DEMO_STORAGE = "demo-workspace";
 
 /**
  * Wait until no worker holds the demo's storage: its owner's Web Lock

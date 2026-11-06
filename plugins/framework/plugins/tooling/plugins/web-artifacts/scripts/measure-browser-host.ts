@@ -16,7 +16,7 @@ import { isBrowserHostSpecifier } from "../core/browser-host-specifier";
 const root = REPO_ROOT;
 const entry = join(
   root,
-  "plugins/apps/plugins/website/plugins/demos/plugins/lumen/bin/browser-host.ts",
+  "plugins/apps/plugins/website/plugins/demos/plugins/workspace/bin/browser-host.ts",
 );
 const minify = process.argv.includes("--minify");
 const jsonAt = process.argv.indexOf("--json");

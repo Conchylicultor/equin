@@ -9,7 +9,7 @@ in browser storage" (under the track "apps running in the browser").
 serveBrowserHost({
   scope: self as unknown as WorkerScope,
   storage: {
-    kind: "persistent", name: "demo-lumen", migrations: bundledMigrations().map((m) => m.hash),
+    kind: "persistent", name: "demo-workspace", migrations: bundledMigrations().map((m) => m.hash),
     start: { snapshot, whenOutdated: "reset" }, // `snapshot` from `@browser-host-snapshot/<host>`
   },
   async boot(storage) {

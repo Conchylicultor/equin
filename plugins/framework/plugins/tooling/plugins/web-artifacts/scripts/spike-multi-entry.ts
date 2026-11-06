@@ -17,7 +17,7 @@ const n = nAt > 0 ? Number(process.argv[nAt + 1]) : 40;
 const generated = readFileSync(
   join(
     root,
-    "plugins/apps/plugins/website/plugins/demos/plugins/lumen/bin/browser-host.generated.ts",
+    "plugins/apps/plugins/website/plugins/demos/plugins/workspace/bin/browser-host.generated.ts",
   ),
   "utf8",
 );

@@ -80,7 +80,7 @@ export type HostStorageSpec =
   | { kind: "memory" }
   | {
       kind: "persistent";
-      /** Names the storage: one per app the browser keeps (`demo-lumen`). */
+      /** Names the storage: one per app the browser keeps (`demo-workspace`). */
       name: string;
       /** Every migration hash this code's bundle carries. */
       migrations: readonly string[];

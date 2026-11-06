@@ -10,7 +10,7 @@ import {
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { AppEmbed } from "@plugins/apps-core/plugins/app-embed/web";
-import { lumenDemo } from "@plugins/apps/plugins/website/plugins/demos/plugins/lumen/core";
+import { workspaceDemo } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
 import { useIsPhone } from "../hooks/use-is-phone";
 
 const PHONE_NOTICE = "Apps are only available on desktop, not mobile.";
@@ -44,7 +44,7 @@ export function DemoLayout() {
   }
   return (
     <Stack gap="none" className="relative h-full bg-background">
-      <DemoScope scenario={lumenDemo}>
+      <DemoScope scenario={workspaceDemo}>
         <Bar>
           <Text as="p" variant="label" tone="muted">
             {CAPTION}
@@ -55,7 +55,7 @@ export function DemoLayout() {
         <div className="flex min-h-0 flex-1 flex-col p-lg">
           {/* eslint-disable-next-line layout/no-adhoc-layout -- the demo's frame: the embedded app fills it */}
           <div className="min-h-0 flex-1 overflow-hidden rounded-lg border">
-            <AppEmbed app={lumenDemo.app} route={lumenDemo.route} />
+            <AppEmbed app={workspaceDemo.app} route={workspaceDemo.route} />
           </div>
         </div>
       </DemoScope>

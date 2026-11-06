@@ -63,7 +63,7 @@
     - `ui/tokens/color-palette --muted-foreground`
   - Imported by:
     - `apps/home/tour`
-    - `apps/website/demos/lumen`
+    - `apps/website/demos/workspace`
     - `apps/website/promo-film/seed`
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `hints/ask`

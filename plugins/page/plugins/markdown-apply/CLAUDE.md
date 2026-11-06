@@ -557,6 +557,7 @@ annotation in the key would make every status change look like a new block.
     - `touchedBlocks`
 - Cross-plugin:
   - Imported by:
+    - `apps/pages/fixtures`
     - `page/annotations/agent-access`
     - `page/annotations/instructions`
     - `page/annotations/todo/task-link`

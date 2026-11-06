@@ -9,7 +9,7 @@
  *     window, and the shelf appears — while the page around it stays as it
  *     was (no window outside the embed, the page URL still `/demo`);
  *  2. opens Pages from the shelf: a second window, beside the Agent Manager's,
- *     showing the demo's workspace ("Lumen");
+ *     showing the demo's workspace ("Welcome to equin");
  *  3. takes a window full screen from its titlebar's Full screen
  *     control (as on the real desktop): the windows give way to that one tab,
  *     filling the embed box — the embed is its tab set's viewport — and the
@@ -240,7 +240,8 @@ await withBrowser(async (h) => {
   );
   await renders(
     "the Pages window shows the demo's workspace",
-    () => embedRoot(page).getByText("Lumen", { exact: true }).count(),
+    () =>
+      embedRoot(page).getByText("Welcome to equin", { exact: true }).count(),
     (n) => n > 0,
   );
   r.eq("the page URL stays /demo", new URL(page.url()).pathname, "/demo");

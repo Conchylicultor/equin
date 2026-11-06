@@ -76,7 +76,7 @@ export class PromoFilmSeedRefused extends Error {
  * 1. the wiki (Pages' fixture writer);
  * 2. the workspace folder the practice conversation worked in (its files);
  * 3. the task list: each run's task, attempt and conversation (backdated —
- *    no mutation can backdate, so those two are rows, as the Lumen demo writes
+ *    no mutation can backdate, so those two are rows, as the workspace demo writes
  *    them), its short title, category, progress, queue rank and, once landed,
  *    its push; then the backlog;
  * 4. the practice conversation's read of the Piano page, RUN through the real

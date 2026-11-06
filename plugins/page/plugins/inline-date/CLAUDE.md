@@ -44,6 +44,7 @@
   - Exports (types): `DateMentionFields`
   - Exports (values):
     - `dateMentionNode`
+    - `dateToken`
     - `MENTION_TOKEN_PATTERN`
     - `REMINDER_TOKEN_PATTERN`
     - `scanReminderTokens`
@@ -53,6 +54,7 @@
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/shape --spacing`
+  - Imported by: `apps/website/demos/workspace`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
 

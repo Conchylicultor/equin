@@ -129,7 +129,7 @@ whoever spawned it, and read back through `runtimeNamespace()`
   composition it serves. Its worker entry (`bin/browser-host.ts`) imports a
   `declare-namespace` module as its literal first statement (before its seed
   statically loads portable server barrels), e.g.
-  `website/demos/lumen/bin/declare-namespace.ts`. Not `bootBrowserHost`'s job:
+  `website/demos/workspace/bin/declare-namespace.ts`. Not `bootBrowserHost`'s job:
   a suite booting a host in Bun already runs as its checkout (the test preload).
 
 It used to ride in a worktree environment variable, inherited by every
@@ -294,7 +294,7 @@ two and no row lists them. Today's services: `database.driver`,
     description: "The account of a host without the computer: …",
     contributions: [
       HostAccountSource.provide({
-        read: () => Promise.resolve({ username: "demo", fullName: "Alex Morgan" }),
+        read: () => Promise.resolve({ username: "demo", fullName: "Demo" }),
       }),
     ],
   } satisfies ServerPluginDefinition;

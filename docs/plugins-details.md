@@ -5710,14 +5710,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/editor.applyPageBlockPatch`
               - `page/editor.Block`
               - `page/editor.PAGE_BLOCK_TYPE`
+              - `page/markdown-apply.serverMarkdownContext`
               - `page/tags.resolveTagNames`
               - `page/tags.writeResolvedPageTags`
             - Exports (values): `writePageTree`
           - Core:
-            - Uses: `page/editor.PAGE_BLOCK_TYPE`
+            - Uses:
+              - `page/editor.PAGE_BLOCK_TYPE`
+              - `page/editor.PageCover`
             - Exports (types):
               - `PageFixture`
               - `PageFixtureBlock`
+              - `PageFixtureMarkdown`
               - `PageFixtureNode`
               - `PageTreeFixture`
             - Exports (values): `fixturePages`
@@ -11271,15 +11275,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`demos`** — The website's live demos, one plugin each: a demo owns its story and its data (pages, prototypes, agent runs) and writes them into its own browser host through each app's fixture writer.
           - Plugins:
-            - **`lumen`** — The Lumen demo — the website's live demo of the Agent Manager, Pages and Prototypes on one made-up story (core: lumenDemo — the app, the route /c/conv-demo-dark-mode and its browser host: real server code in a Web Worker on PGlite, seeded with the demo's own data through each app's fixture writer — a queue of agents, one conversation fixing a bug, the Lumen pages and prototypes, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
+            - **`workspace`** — The workspace demo — the website's live demo of the Agent Manager, Pages, Prototypes and Sonata on Demo's own equin (core: workspaceDemo — the app, the route /c/conv-demo-practice-timer and its browser host: real server code in a Web Worker on PGlite, starting from a build-time snapshot of the demo's own data written through each app's fixture writer — agents at work on Demo's wishes, one waiting for review after adding a practice timer to Sonata, pages showing every block type, prototypes and songs, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
               - Core:
                 - Uses:
-                  - `build.BUILD_CATEGORY_ID`
                   - `conversations.CONVERSATIONS_CATEGORY_ID`
                   - `conversations/agents.agentIdKind`
                   - `conversations/agents.agentLaunchIdKind`
                   - `conversations/model-provider.ConversationModelSchema`
                   - `page/editor.blockIdKind`
+                  - `page/inline-date.dateToken`
                   - `page/inline-page-link.pageLinkToken`
                   - `page/prompt/link.PAGES_CATEGORY_ID`
                   - `ui/icons/emoji.EmojiSchema`
@@ -11290,7 +11294,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DemoPageToolCall`
                   - `DemoStory`
                 - Exports (values):
-                  - `DARK_MODE_PAGE_WORK`
                   - `DEMO_AGENTS`
                   - `DEMO_PAGE_IDS`
                   - `DEMO_PAGES`
@@ -11307,7 +11310,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `demoTaskId`
                   - `demoTranscriptJsonl`
                   - `demoWorktreePath`
-                  - `lumenDemo`
+                  - `PRACTICE_TIMER_PAGE_WORK`
+                  - `workspaceDemo`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/shadow --shadow`
                 - Imported by: `apps/demo/shell`
@@ -13388,7 +13392,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/type-scale --font-weight-semibold`
     - Imported by:
       - `active-data/build-run`
-      - `apps/website/demos/lumen`
       - `build/build-commits`
       - `build/build-fix`
       - `build/build-info`
@@ -15216,7 +15219,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-semibold`
           - `ui/tokens/type-scale --line-height-body`
           - `ui/tokens/type-scale --line-height-title`
-        - Imported by: `apps/website/demos/lumen`
+        - Imported by: `apps/website/demos/workspace`
     - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar; and how the conversations entity's fields present in every conversation list (the optimistic status cell, the model filter's live catalog options). Serves the two conversation-list collections — `conversations.all` (system conversations hidden by a default scope) and `conversations.history` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
       - Web:
         - Slots: `allConversationsPane.Actions`
@@ -32710,7 +32713,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/sources/midi/folders`
           - `infra/host-account/guest`
       - Plugins:
-        - **`guest`** (excluded) — The account of a host without the computer: provides the HostAccountSource host service as a fixed guest account (login `demo`, full name Alex Morgan), so a surface that greets the user — the Pages brand — renders as it does on the desktop (the browser composition, the portable boot test). Never booted by the desktop.
+        - **`guest`** (excluded) — The account of a host without the computer: provides the HostAccountSource host service as a fixed guest account (login `demo`, full name Demo), so a surface that greets the user — the Pages brand — renders as it does on the desktop (the browser composition, the portable boot test). Never booted by the desktop.
           - Server:
             - Contributes: `host-service:host-account.source` "host-account.source"
             - Uses: `infra/host-account.HostAccountSource`
@@ -39790,6 +39793,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `DateMentionFields`
         - Exports (values):
           - `dateMentionNode`
+          - `dateToken`
           - `MENTION_TOKEN_PATTERN`
           - `REMINDER_TOKEN_PATTERN`
           - `scanReminderTokens`
@@ -39799,6 +39803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --border`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/shape --spacing`
+        - Imported by: `apps/website/demos/workspace`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - **`inline-page-link`** — Inline page links: type [[ in any text block (or paste a bare block id) to drop a clickable page reference — a pasted id into an empty block turns it into a link-to-page block; stored as a [[page:<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[page:<pageId>]]` page links embedded in any block's text.
@@ -39838,7 +39843,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
-          - `apps/website/demos/lumen`
+          - `apps/website/demos/workspace`
           - `apps/website/promo-film/seed`
           - `page/editor`
     - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource, and the boot backfill (a warm-up enqueuing a job that reindexes every live page's outgoing links, off the serving-critical boot path).
@@ -40060,6 +40065,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `touchedBlocks`
       - Cross-plugin:
         - Imported by:
+          - `apps/pages/fixtures`
           - `page/annotations/agent-access`
           - `page/annotations/instructions`
           - `page/annotations/todo/task-link`
@@ -40498,7 +40504,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/pages/prompt-origin`
-              - `apps/website/demos/lumen`
+              - `apps/website/demos/workspace`
               - `page/annotations/todo/task-link`
               - `page/prompt/block`
           - Core:
@@ -56810,7 +56816,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/content-search`
               - `apps/pages/history`
               - `apps/pages/page-tree`
-              - `apps/website/demos/lumen`
+              - `apps/website/demos/workspace`
               - `page/editor`
               - `page/links`
               - `page/read-only-view`
@@ -58902,7 +58908,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/color-palette --muted-foreground`
     - Imported by:
       - `apps/home/tour`
-      - `apps/website/demos/lumen`
+      - `apps/website/demos/workspace`
       - `apps/website/promo-film/seed`
       - `conversations/conversation-view/jsonl-viewer/investigate-event`
       - `hints/ask`

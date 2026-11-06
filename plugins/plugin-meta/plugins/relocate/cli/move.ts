@@ -186,10 +186,9 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
   const to = parseOrRefuse(toArg);
   const move: Move = { from, to };
 
-  const gitDir = join(
-    root,
-    (await git(root, ["rev-parse", "--git-dir"])).trim(),
-  );
+  // Absolute: in a linked worktree `--git-dir` is already an absolute path,
+  // which `join(root, …)` would graft under the checkout.
+  const gitDir = (await git(root, ["rev-parse", "--absolute-git-dir"])).trim();
   const verdict = judgeDirt({
     dirty: parsePorcelainZ(
       await git(root, [

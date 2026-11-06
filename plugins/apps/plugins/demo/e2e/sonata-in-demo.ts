@@ -5,8 +5,8 @@
  * In `/demo`, it:
  *
  *  1. opens the launcher inside the embed and picks Sonata: the embed switches
- *     to Sonata, whose library lists the demo's songs ("Lumen theme", "Night
- *     mode") and the MIDI starters a fresh install has ("Für Elise"), with
+ *     to Sonata, whose library lists the demo's songs ("ii–V–I warm-up", "My
+ *     first waltz") and the MIDI starters a fresh install has ("Für Elise"), with
  *     the starters' covers drawn by the worker (loaded through the transport
  *     as blob URLs, never from the page's origin);
  *  2. opens "Für Elise" and plays two notes on its keyboard: the first the
@@ -69,8 +69,8 @@ const SANCTIONED: readonly RegExp[] = [
   /^\/api\/health(\/ready)?$/,
 ];
 
-/** The demo's songs (`website/demos/lumen`'s `core/internal/songs.ts`) and a MIDI starter. */
-const DEMO_SONGS = ["Lumen theme", "Night mode"] as const;
+/** The demo's songs (`website/demos/workspace`'s `core/internal/songs.ts`) and a MIDI starter. */
+const DEMO_SONGS = ["ii–V–I warm-up", "My first waltz"] as const;
 const STARTER = "Für Elise";
 /** Middle C and the E above it. */
 const KEYS = [60, 64] as const;

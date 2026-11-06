@@ -33,7 +33,7 @@ import {
 
 setDefaultTimeout(300_000);
 
-const DEMO = "apps/plugins/website/plugins/demos/plugins/lumen";
+const DEMO = "apps/plugins/website/plugins/demos/plugins/workspace";
 
 describe("deriveBrowserHostGraph over the repo", () => {
   test("reproduces the committed demo graph, one provider per service", async () => {

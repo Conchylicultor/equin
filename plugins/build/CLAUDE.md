@@ -38,7 +38,7 @@ barrel's one export). The claim-time settle of a dead in-flight holder is
 
 `build.history` scopes to `runtimeNamespace()` at module eval, which a browser
 host answers too: its worker entry declares its composition as its namespace
-(`website/demos/lumen/bin/declare-namespace.ts`).
+(`website/demos/workspace/bin/declare-namespace.ts`).
 
 ## The composition arm of the same loop
 
@@ -398,7 +398,6 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `active-data/build-run`
-    - `apps/website/demos/lumen`
     - `build/build-commits`
     - `build/build-fix`
     - `build/build-info`

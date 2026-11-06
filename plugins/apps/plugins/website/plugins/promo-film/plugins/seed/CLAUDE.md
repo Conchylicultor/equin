@@ -22,15 +22,15 @@ seed` → record, and get the same state. Design:
   (`build/serve-composition`'s `resetServedComposition`: its guards, DB dropped
   and created empty, config re-propagated, backend restarted), then POSTs the
   seed. Every run starts from empty, so run N is run 1.
-- **The demo owns its data, the apps own how it is written** (Lumen's recipe,
-  `apps/website/demos/lumen`). The story is `machine/internal/story/`; each
+- **The demo owns its data, the apps own how it is written** (the workspace demo's recipe,
+  `apps/website/demos/workspace`). The story is `machine/internal/story/`; each
   step goes through the app's writer — `writePageTree` (Pages),
   `replaceAllPlaces` (Places: real Google places saved by id, their details
   fetched first as the importer does — so the app shows Google's own photos;
   icons given so no Haiku pick runs; the host's Places key is required),
   `writeDeployFixture` (`apps/deploy/fixtures`), `writePrototypeFixture`
   (Prototypes) — or the rows its own mutations write (tasks, attempts and
-  conversations backdated as rows, as Lumen does).
+  conversations backdated as rows, as the workspace demo does).
 - **The conversation is an ordinary one**: `waiting`, never ended or
   hibernated, its transcript a Claude Code session file under the projects
   dir its attempt's worktree names (`claudeTranscriptPath(worktree, session)`,

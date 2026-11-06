@@ -3,7 +3,7 @@
 Sonata's fixture format and its writer: "some songs", in Sonata's own terms,
 written through each source's real write path — for a demo's seed or a test.
 The format is the app's; the data is never here (a demo owns its own songs —
-e.g. `apps/website/demos/lumen`). Same shape as `apps/pages/fixtures`.
+e.g. `apps/website/demos/workspace`). Same shape as `apps/pages/fixtures`.
 
 - **`core`: `SongFixture`** — one arm per source a fixture can author. Today a
   chord grid: caller-chosen `id` (a `song-…` id, parsed on write), `title`,
