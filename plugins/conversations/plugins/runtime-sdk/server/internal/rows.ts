@@ -119,12 +119,15 @@ export interface AgentRow extends AgentProjection {
   eventsPosition: ReadPosition | null;
 }
 
-/** The agent's row, or null before its first `create`. */
+/**
+ * The agent's row read from the DB, or null before its first `create`. Only
+ * the machine's row lease (`machine/internal/agent-row-lease.ts`) calls it: it
+ * is the row's one writer and holds the current row, so any other read goes
+ * through it.
+ */
 export async function readAgentRow(id: string): Promise<AgentRow | null> {
   const row = await sdkAgents.get(id);
-  if (!row) return null;
-  const { conversationId: _id, createdAt: _c, updatedAt: _u, ...rest } = row;
-  return rest;
+  return row ? agentRowOf(row) : null;
 }
 
 /** Many agents' rows at once, keyed by conversation id. */
@@ -137,60 +140,47 @@ export async function readAgentRows(
     .select()
     .from(sdkAgents.table)
     .where(inArray(sdkAgents.table.conversationId, [...ids]));
-  for (const row of rows) {
-    const { conversationId, createdAt: _c, updatedAt: _u, ...rest } = row;
-    out.set(conversationId, rest);
-  }
+  for (const row of rows) out.set(row.conversationId, agentRowOf(row));
   return out;
 }
 
+type StoredRow = NonNullable<Awaited<ReturnType<typeof sdkAgents.get>>>;
+
+function agentRowOf(row: StoredRow): AgentRow {
+  const { conversationId: _id, createdAt: _c, updatedAt: _u, ...rest } = row;
+  return rest;
+}
+
 /**
- * The row a `create` starts from: the existing one with its workspace path
- * (the cursor and projection carry on — a restarted agent continues its
- * predecessor's numbering), or a fresh one. `eventsExist: false` — the agent's
- * directory has no event file at all (reclaimed, or never written) — resets
- * the cursor, since the agent will number from 1 again. Either way the row
- * names the session the launch runs under (`AgentLaunchOptions.sessionId`), so
- * the conversation has its transcript from launch on.
+ * Write `patch` to the agent's row and answer the row as written — null when
+ * there is none (its conversation was deleted). One statement, so a batch's
+ * projection, cursor and read position land together and a restart reads on
+ * from exactly the line after the cursor.
  */
-export async function prepareAgentRow(
+export async function updateAgentRow(
+  id: string,
+  patch: Partial<AgentRow>,
+): Promise<AgentRow | null> {
+  const row = await sdkAgents.update(id, patch);
+  return row ? agentRowOf(row) : null;
+}
+
+/**
+ * A fresh row: the empty projection, the cursor at 0, no read position — what
+ * an agent whose events file is gone starts from (it numbers from 1 again).
+ */
+export async function resetAgentRow(
   id: string,
   worktreePath: string,
-  eventsExist: boolean,
   sessionId: string,
-): Promise<void> {
-  const existing = await readAgentRow(id);
-  if (existing && eventsExist) {
-    await sdkAgents.update(id, { worktreePath, sessionId });
-    return;
-  }
-  await sdkAgents.upsert(id, {
+): Promise<AgentRow> {
+  const row = await sdkAgents.upsert(id, {
     ...EMPTY_PROJECTION,
     eventsPosition: null,
     sessionId,
     worktreePath,
   });
-}
-
-/** A relaunch under another session (a rewind of the session's first turn). */
-export async function recordLaunchSession(
-  id: string,
-  sessionId: string,
-): Promise<void> {
-  await sdkAgents.update(id, { sessionId });
-}
-
-/**
- * Write the projection after a batch of lines, cursor and the read position
- * after its last line included, in one statement — so a restart reads on from
- * exactly the line after the cursor.
- */
-export async function writeProjection(
-  id: string,
-  state: AgentProjection,
-  eventsPosition: ReadPosition | null,
-): Promise<void> {
-  await sdkAgents.update(id, { ...state, eventsPosition });
+  return agentRowOf(row);
 }
 
 /** The attempt conversation `id` belongs to. Throws for an unknown conversation. */

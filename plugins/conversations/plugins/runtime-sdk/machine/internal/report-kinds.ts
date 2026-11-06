@@ -75,7 +75,7 @@ export const sdkConsumerStalledKind = ReportKind({
 
 const CatchUpOverdueSchema = z.object({
   conversationId: z.string(),
-  /** The step the run was in when the deadline passed (`read-row`, `effect:<kind>`, …). */
+  /** The step the run was in when the deadline passed (`lease`, `effect:<kind>`, …). */
   stage: z.string(),
   elapsedMs: z.number(),
 });

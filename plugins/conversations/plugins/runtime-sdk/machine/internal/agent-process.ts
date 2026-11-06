@@ -34,7 +34,7 @@ import {
   type AgentLaunchIntent,
   type AgentLaunchOptions,
 } from "../../core";
-import { readAgentRow } from "../../server/internal/rows";
+import { currentAgentRow } from "./agent-row-lease";
 import { liveAgentIds } from "./agent-processes";
 import { readClaudeUsage } from "./claude-usage";
 import { resolveDisclaimExec } from "./disclaim";
@@ -151,7 +151,7 @@ export function readAgentOptions(id: string): AgentLaunchOptions {
  * a launch without one is a broken caller, not a fresh agent.
  */
 async function appliedSeq(id: string): Promise<number> {
-  const row = await readAgentRow(id);
+  const row = await currentAgentRow(id);
   if (!row) {
     throw new Error(
       `SDK agent ${id}: launched without a conversations_ext_sdk_agent row, so its events would have no cursor to continue from`,

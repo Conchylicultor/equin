@@ -24,22 +24,17 @@ import {
   rewindRelaunchOptions,
   sdkLaunchOptions,
 } from "../../server/internal/launch-options";
-import {
-  prepareAgentRow,
-  readAgentRow,
-  readAgentRows,
-  recordLaunchSession,
-} from "../../server/internal/rows";
+import { currentAgentRow, currentAgentRows } from "./agent-row-lease";
 import { runningAgentIds } from "./agent-processes";
 import {
-  adoptAgent,
   followLaunch,
   catchUpNow,
   catchUpWithin,
-  forgetPosition,
   onEventsAppended,
+  prepareLaunchRow,
   ProjectionTimeoutError,
   ProjectionWaitAbortedError,
+  recordLaunchSession,
   signalNextBatch,
   startConsumer,
   waitForProjection,
@@ -159,7 +154,7 @@ async function reportKill(
   });
 }
 
-type AgentRow = NonNullable<Awaited<ReturnType<typeof readAgentRow>>>;
+type AgentRow = NonNullable<Awaited<ReturnType<typeof currentAgentRow>>>;
 
 /**
  * The live state of each of `ids` that is this DB's sdk conversation — read
@@ -181,7 +176,7 @@ async function inspectAgents(
     mine.map(async (id) => ({ id, hello: await probeHello(id) })),
   );
   for (const { id, hello } of hellos) await noteUnresponsive(id, hello);
-  const rows = await readAgentRows(mine);
+  const rows = await currentAgentRows(mine);
   const inspected = await Promise.all(
     hellos.map(async ({ id, hello }) => ({
       id,
@@ -257,7 +252,7 @@ async function inspectAgent(
   });
   if ((await catchUpWithin(id, INSPECT_CATCH_UP_MS)) === "overdue")
     return behind(row.cursorSeq);
-  const caughtUp = await readAgentRow(id);
+  const caughtUp = await currentAgentRow(id);
   if (!caughtUp) return null;
   return caughtUp.cursorSeq >= hello.seq
     ? { kind: "live", info: infoOf(caughtUp) }
@@ -347,7 +342,7 @@ async function waitForStart(
     if (!(err instanceof AgentNotRunningError)) throw err;
     agentSeq = null;
   }
-  const cursorSeq = (await readAgentRow(id))?.cursorSeq ?? 0;
+  const cursorSeq = (await currentAgentRow(id))?.cursorSeq ?? 0;
   const outcome = startOutcome({ applied, agentSeq, cursorSeq });
   if (outcome.kind === "consumer-behind") {
     await recordReport({
@@ -447,7 +442,7 @@ async function launchAgent(
  */
 async function moveOffSpentAccount(id: string): Promise<void> {
   await catchUpNow(id);
-  const row = await readAgentRow(id);
+  const row = await currentAgentRow(id);
   if (row?.stopError !== USAGE_LIMIT_ERROR || !row.sessionId || row.working)
     return;
   if (nextLaunchAccount() === row.account) return;
@@ -531,9 +526,7 @@ export const sdkRuntime: ConversationRuntime = {
       appendSystemPrompt: opts?.appendSystemPrompt,
     });
     const fresh = !agentEventsExist(id);
-    await prepareAgentRow(id, cwd, !fresh, options.sessionId);
-    if (fresh) forgetPosition(id);
-    adoptAgent(id);
+    await prepareLaunchRow(id, cwd, !fresh, options.sessionId);
     await launchAgent(id, options);
   },
 
@@ -549,7 +542,7 @@ export const sdkRuntime: ConversationRuntime = {
 
   async stop(id: string) {
     await catchUpNow(id);
-    const before = await readAgentRow(id);
+    const before = await currentAgentRow(id);
     if (!before?.working) return { returnedPromptUuid: null };
     const interruptedAt = before.cursorSeq;
     await commandAgent(id, { type: "interrupt" }, UnknownReplySchema);

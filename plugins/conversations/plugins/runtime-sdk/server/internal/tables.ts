@@ -12,10 +12,11 @@ import { ReadPositionSchema } from "./read-position";
 // The `conversations_ext_sdk_agent` row: what this backend applied of one SDK
 // agent's events.jsonl (the cursor) and the projection it keeps of them
 // (reducer.ts's `AgentProjection`), plus where the agent runs and where in its
-// events file the cursor was read up to (`eventsPosition`). Written by the
-// consumer in ONE upsert per batch of lines, so the cursor never moves past a
-// line whose projection was not written, and the position never disagrees with
-// the cursor. Server-only: the status reconciler
+// events file the cursor was read up to (`eventsPosition`). Written only under
+// the agent's row lease (machine/internal/agent-row-lease.ts) — the consumer in
+// ONE update per batch of lines, so the cursor never moves past a line whose
+// projection was not written, and the position never disagrees with the
+// cursor; a launch preparing the row or naming its session. Server-only: the status reconciler
 // reads it through the runtime's `inspect`, the web through the conversation
 // row it updates.
 const sdkAgentShape = defineExtensionShape({

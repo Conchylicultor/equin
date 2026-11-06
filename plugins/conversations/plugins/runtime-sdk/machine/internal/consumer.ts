@@ -43,9 +43,12 @@ import {
 import {
   isSdkConversation,
   liveSdkConversationIds,
-  readAgentRow,
-  writeProjection,
 } from "../../server/internal/rows";
+import {
+  currentAgentRow,
+  leaseAgentRow,
+  type AgentRowLease,
+} from "./agent-row-lease";
 import { requestAutoResume } from "./auto-resume";
 import { readEventsAfter } from "./event-reader";
 import type { ReadPosition } from "../../server/internal/read-position";
@@ -101,12 +104,6 @@ export const sdkEventsWatcher = defineFileWatcher({
 });
 
 /**
- * Where each agent's file was last read up to by THIS process. A restart starts
- * from the position stored with the cursor (`eventsPosition`).
- */
-const positions = new Map<string, ReadPosition | null>();
-
-/**
  * Conversation ids known to be this DB's sdk rows. Only a yes is kept: a cached
  * no would skip that conversation's events forever, silently — the same shape
  * as the 2026-10-25 stall — and asking again is one indexed lookup per watched
@@ -133,11 +130,6 @@ const owedSignals = new Set<string>();
 /** Signal the reconciler after `id`'s next applied batch, whatever it moves. */
 export function signalNextBatch(id: string): void {
   owedSignals.add(id);
-}
-
-/** Mark `id` as this DB's sdk conversation (its `create` just ran here). */
-export function adoptAgent(id: string): void {
-  ours.add(id);
 }
 
 async function isOurs(id: string): Promise<boolean> {
@@ -194,7 +186,7 @@ export async function waitForProjection(
   signal?.addEventListener("abort", onAbort);
   try {
     // Registered before the read, so a catch-up landing in between wakes it.
-    const current = await readAgentRow(id);
+    const current = await currentAgentRow(id);
     if (current && until(current)) return current;
     // Lines may already be on disk that no watch event announced yet.
     catchUps.trigger(id);
@@ -211,7 +203,7 @@ const catchUps = createKeyedCoalescer<string>({
   run: (id) => watchedCatchUp(id),
 });
 
-// A catch-up reads a row, runs a few idempotent effects and writes the row:
+// A catch-up runs a few idempotent effects and writes the row:
 // milliseconds, a few seconds on a loaded host. Far past that, it is parked on
 // something that will not settle — and since catch-ups run one at a time per
 // conversation, every later event of that conversation waits behind it.
@@ -261,10 +253,30 @@ async function watchedCatchUp(id: string): Promise<void> {
   }
 }
 
-/** Apply every line of `id`'s events file past its cursor. */
-async function catchUp(id: string, progress: CatchUpProgress): Promise<void> {
-  progress.stage = "read-row";
-  const row = await readAgentRow(id);
+/**
+ * Apply every line of `id`'s events file past its cursor — under the row's
+ * lease, so it starts from the row as last written (no read per batch) and no
+ * launch write lands between its read and its write.
+ */
+function catchUp(id: string, progress: CatchUpProgress): Promise<void> {
+  progress.stage = "lease";
+  return leaseAgentRow(id, async (lease) => {
+    try {
+      await applyNewLines(id, lease, progress);
+    } finally {
+      // An agent no longer followed writes nothing more: its row is read
+      // again by whatever catches it up next.
+      if (!followed.has(id)) lease.release();
+    }
+  });
+}
+
+async function applyNewLines(
+  id: string,
+  lease: AgentRowLease,
+  progress: CatchUpProgress,
+): Promise<void> {
+  const row = lease.row;
   if (!row) {
     // No row and no events: `create` has not prepared the row yet (it does
     // before the agent starts). Events with no row are an agent this backend
@@ -281,12 +293,11 @@ async function catchUp(id: string, progress: CatchUpProgress): Promise<void> {
   }
   const path = agentEventsPath(id);
   const { worktreePath: _path, eventsPosition, ...projection } = row;
-  // Where this process last stopped, else — the first catch-up since a
-  // restart — the position stored with the cursor: a restart reads what was
-  // appended while no backend ran, not every generation of the agent's
-  // history (hundreds of MB across the live agents, parsed on every boot).
-  const from = positions.has(id) ? (positions.get(id) ?? null) : eventsPosition;
-  const read = readEventsAfter(path, projection.cursorSeq, from);
+  // Read on from where the cursor's line ends — also after a restart, which
+  // reads what was appended while no backend ran, not every generation of the
+  // agent's history (hundreds of MB across the live agents, parsed on every
+  // boot).
+  const read = readEventsAfter(path, projection.cursorSeq, eventsPosition);
   const { state, effects, gaps, malformed, stalls } = reduceEvents(
     projection,
     read.events,
@@ -344,7 +355,7 @@ async function catchUp(id: string, progress: CatchUpProgress): Promise<void> {
     state.cursorSeq !== row.cursorSeq ||
     !samePosition(read.position, eventsPosition)
   )
-    await writeProjection(id, state, read.position);
+    await lease.update({ ...state, eventsPosition: read.position });
   // A usage limit stopped it (written first: the job reads the row).
   if (
     state.stopError === USAGE_LIMIT_ERROR &&
@@ -353,7 +364,6 @@ async function catchUp(id: string, progress: CatchUpProgress): Promise<void> {
   )
     await requestAutoResume();
   progress.stage = "signal";
-  positions.set(id, read.position);
   if (read.events.length === 0) return;
   // A (re)started agent takes `subscribe` now: a watched partial reconnects.
   if (
@@ -506,7 +516,7 @@ async function deliver(
 /** The web answered (or released) a question this backend's agent holds. */
 async function onResolved(q: ResolvedQuestion): Promise<void> {
   if (!(await isOurs(q.conversationId))) return;
-  const row = await readAgentRow(q.conversationId);
+  const row = await currentAgentRow(q.conversationId);
   if (!row || row.openToolUseId !== q.toolUseId || !row.openRequestId) return;
   await deliver(q.conversationId, row.openRequestId, q.resolution);
 }
@@ -825,7 +835,39 @@ export function onEventsAppended(id: string, hear: () => void): () => void {
   };
 }
 
-/** The agent starts its event file over: read it from the start next time. */
-export function forgetPosition(id: string): void {
-  positions.delete(id);
+/**
+ * Prepare the row a launch of `id` starts from, under the row's lease: the
+ * existing row with the launch's workspace path and session (the cursor and
+ * projection carry on — a restarted agent continues its predecessor's
+ * numbering), or — `eventsExist: false`, the agent's directory has no event
+ * file at all (reclaimed, or never written) — a fresh one, since the agent
+ * will number from 1 again. Either way the row names the session the launch
+ * runs under (`AgentLaunchOptions.sessionId`), so the conversation has its
+ * transcript from launch on. Marks the conversation as this DB's.
+ */
+export async function prepareLaunchRow(
+  id: string,
+  worktreePath: string,
+  eventsExist: boolean,
+  sessionId: string,
+): Promise<void> {
+  await leaseAgentRow(id, async (lease) => {
+    if (lease.row && eventsExist)
+      await lease.update({ worktreePath, sessionId });
+    else await lease.reset(worktreePath, sessionId);
+  });
+  ours.add(id);
+}
+
+/** A relaunch under another session (a rewind of the session's first turn). */
+export async function recordLaunchSession(
+  id: string,
+  sessionId: string,
+): Promise<void> {
+  await leaseAgentRow(id, async (lease) => {
+    if (!(await lease.update({ sessionId })))
+      throw new Error(
+        `SDK agent ${id}: a relaunch found no conversations_ext_sdk_agent row to record its session on`,
+      );
+  });
 }

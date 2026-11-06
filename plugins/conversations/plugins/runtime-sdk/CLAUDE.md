@@ -66,11 +66,24 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   - Catch-up (`consumer.ts`): each run is `runTracked("runtime-sdk:catch-up")`
     and watched by a one-shot deadline (`packages/deadline`, 30 s); past it,
     one `sdk-catch-up-overdue` report per run names the step it is parked in
-    (`read-row`, `report`, `effect:<kind>`, `write-projection`, `signal`). No
+    (`lease`, `report`, `effect:<kind>`, `write-projection`, `signal`). No
     cancellation — the run keeps the coalescer slot until it settles. An events
     file with no row is reported (`SdkEventsWithoutRow`); only "no row, no
     file" (create has not prepared it) is silent. `isOurs` caches only a yes:
     a cached no would skip a conversation forever.
+- **One writer per agent row** (`machine/internal/agent-row-lease.ts`). Every
+  write of `conversations_ext_sdk_agent` — a catch-up's projection, a launch
+  preparing the row (`prepareLaunchRow`), a relaunch naming its session
+  (`recordLaunchSession`) — runs under the agent's lease (a keyed mutex), which
+  holds the row as last written. A catch-up starts from the held row: a batch
+  costs its one update, a batch with nothing new no query at all (before: a
+  re-read per batch: 2,411 of the 4,534 acquires of 2,348
+  catch-ups on main, 2026-11-06 — and a catch-up that read
+  just ahead of a relaunch wrote the old `sessionId` back over it). Other
+  reads take `currentAgentRow` (held, else read after the writes in flight).
+  Only writers hold; a catch-up of an agent no longer followed releases it.
+  Sound because one backend per DB serves the runtime and nothing else writes
+  the table.
 - **The consumer signals the status reconciler only when the runtime's answer
   moves** (`machine/internal/runtime-info.ts`): `infoOf` is the one derivation
   of what `inspect` reports from a projection, and a batch signals only when
