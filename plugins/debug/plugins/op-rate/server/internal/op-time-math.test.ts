@@ -1,5 +1,10 @@
 import { expect, test, describe } from "bun:test";
-import { windowDelta, computeRollup } from "./op-time-math";
+import {
+  windowDelta,
+  computeRollup,
+  gateTrips,
+  type GateBaseline,
+} from "./op-time-math";
 
 describe("windowDelta", () => {
   test("first observation seeds (returns null, fires nothing)", () => {
@@ -64,5 +69,56 @@ describe("computeRollup", () => {
 
   test("empty deltas never trip", () => {
     expect(computeRollup([], 0, 4)).toBeNull();
+  });
+});
+
+describe("gateTrips", () => {
+  const read = (layer: string, count: number, totalMs: number) => ({
+    layer,
+    count,
+    totalMs,
+  });
+
+  test("a gate seen for the first time seeds and trips nothing", () => {
+    const baseline: GateBaseline = new Map();
+    expect(
+      gateTrips([read("read-admit", 900, 500_000)], baseline, 60_000),
+    ).toEqual([]);
+    expect(baseline.get("read-admit")).toEqual({
+      count: 900,
+      totalMs: 500_000,
+    });
+  });
+
+  test("trips a gate whose waiters waited past the budget this window, and only that one", () => {
+    const baseline: GateBaseline = new Map([
+      ["read-admit", { count: 100, totalMs: 10_000 }],
+      ["db-acquire", { count: 5000, totalMs: 2_000 }],
+    ]);
+    const trips = gateTrips(
+      [read("read-admit", 400, 85_000), read("db-acquire", 9000, 4_000)],
+      baseline,
+      60_000,
+    );
+    expect(trips).toEqual([
+      { layer: "read-admit", msDelta: 75_000, waitsDelta: 300 },
+    ]);
+    // The baseline holds this tick's readings for the next.
+    expect(baseline.get("db-acquire")).toEqual({ count: 9000, totalMs: 4_000 });
+  });
+
+  test("at the budget exactly is not a trip; a reset takes the whole reading", () => {
+    const baseline: GateBaseline = new Map([
+      ["g", { count: 10, totalMs: 1_000 }],
+    ]);
+    expect(gateTrips([read("g", 20, 61_000)], baseline, 60_000)).toEqual([]);
+    // Profile reset: the cumulative reading fell — the whole of it is the window.
+    expect(gateTrips([read("g", 3, 70_000)], baseline, 60_000)).toEqual([]);
+    const after: GateBaseline = new Map([
+      ["g", { count: 10, totalMs: 90_000 }],
+    ]);
+    expect(gateTrips([read("g", 3, 70_000)], after, 60_000)).toEqual([
+      { layer: "g", msDelta: 70_000, waitsDelta: 3 },
+    ]);
   });
 });

@@ -3,7 +3,7 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { TraceChip } from "@plugins/debug/plugins/trace/plugins/engine/web";
 import { StuckSpanPayloadSchema } from "../../core";
-import { describeChain, formatAge } from "../../shared/message";
+import { describeChain, stuckSpanSummaryLead } from "../../shared/message";
 
 // One-line span-stuck summary for the Debug → Reports list, e.g.
 // "[stuck] still running after 3 min: flush flushNotifies → push
@@ -20,10 +20,7 @@ export function SpanStuckSummary({ report }: { report: Report }) {
   return (
     <Inline gap="xs">
       <Badge variant="destructive">stuck</Badge>
-      <span>
-        {d.runs !== undefined && d.runs > 1 ? `${d.runs} runs ` : ""}still
-        running after {formatAge(d.ageMs)}:
-      </span>
+      <span>{stuckSpanSummaryLead(d)}</span>
       <Badge mono>{describeChain(d)}</Badge>
       {traceId !== null && <TraceChip traceId={traceId} />}
     </Inline>

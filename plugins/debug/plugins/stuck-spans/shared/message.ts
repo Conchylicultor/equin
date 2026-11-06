@@ -39,3 +39,12 @@ export function stuckSpanMessage(
     : `An operation has been running for ${formatAge(d.ageMs)} and has not ` +
         `finished: ${describeChain(d)}`;
 }
+
+// The Debug → Reports summary's lead-in, before the chain: "still running after
+// 3 min:", or "121 runs still running after 1 min:" for a grouped finding.
+export function stuckSpanSummaryLead(
+  d: Pick<StuckSpanPayload, "ageMs" | "runs">,
+): string {
+  const runs = d.runs ?? 1;
+  return `${runs > 1 ? `${runs} runs ` : ""}still running after ${formatAge(d.ageMs)}:`;
+}

@@ -51,3 +51,45 @@ export function computeRollup(
     .slice(0, 10);
   return { sumDeltaMs, rollupBudgetMs, topLabels };
 }
+
+// One gate's cumulative wait meter, as the profiler reports it (`GateMeter`).
+export interface GateReading {
+  layer: string;
+  count: number;
+  totalMs: number;
+}
+
+// The previous tick's reading of every gate, by layer.
+export type GateBaseline = Map<string, { count: number; totalMs: number }>;
+
+export interface GateTrip {
+  layer: string;
+  /** ms waited on the gate this window, summed across waiters. */
+  msDelta: number;
+  /** Waits charged on the gate this window. */
+  waitsDelta: number;
+}
+
+// The gates whose waiters waited more than `budgetMs` in total this window,
+// diffing each reading against `baseline` (updated in place, so it holds this
+// tick's readings for the next). Same rules as `windowDelta`: a gate seen for
+// the first time seeds and trips nothing; a reset takes the whole reading.
+export function gateTrips(
+  readings: readonly GateReading[],
+  baseline: GateBaseline,
+  budgetMs: number,
+): GateTrip[] {
+  const trips: GateTrip[] = [];
+  for (const g of readings) {
+    const prev = baseline.get(g.layer);
+    baseline.set(g.layer, { count: g.count, totalMs: g.totalMs });
+    const msDelta = windowDelta(prev?.totalMs, g.totalMs);
+    if (msDelta === null || msDelta <= budgetMs) continue;
+    trips.push({
+      layer: g.layer,
+      msDelta,
+      waitsDelta: windowDelta(prev?.count, g.count) ?? 0,
+    });
+  }
+  return trips;
+}

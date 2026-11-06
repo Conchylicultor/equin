@@ -12,7 +12,13 @@ import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { opRateConfig } from "../../core";
-import { windowDelta, computeRollup, type LabelDelta } from "./op-time-math";
+import {
+  windowDelta,
+  computeRollup,
+  gateTrips,
+  type GateBaseline,
+  type LabelDelta,
+} from "./op-time-math";
 
 type Thresholds = ConfigValues<(typeof opRateConfig)["fields"]>;
 
@@ -56,8 +62,7 @@ const lastWallMs = new Map<string, number>();
 // gate's congestion over the window, against the gate (with its holders),
 // instead of as N innocent waiters. (slow-ops' `wait <layer>` is the other
 // view: one wait, or a minute's residue, past its bar.)
-const lastGateMs = new Map<string, number>();
-const lastGateCount = new Map<string, number>();
+const lastGates: GateBaseline = new Map();
 
 // Drop-count log for over-cap ops (one line per tick when the cap trips).
 const opRateLog = Log.channel("op-rate");
@@ -179,22 +184,16 @@ export const opRateMonitorJob = defineJob({
     }
 
     // --- gate waits: each gate's metered wait time, judged as the gate's ---
-    for (const g of gates) {
-      const prevMs = lastGateMs.get(g.layer);
-      lastGateMs.set(g.layer, g.totalMs);
-      const prevCount = lastGateCount.get(g.layer);
-      lastGateCount.set(g.layer, g.count);
-      const msDelta = windowDelta(prevMs, g.totalMs);
-      if (msDelta === null || msDelta <= cfg.waitMsPerWindow) continue;
+    const holdersOf = new Map(gates.map((g) => [g.layer, g.holders ?? []]));
+    for (const t of gateTrips(gates, lastGates, cfg.waitMsPerWindow))
       perOp.push({
         type: "gate-wait",
-        layer: g.layer,
-        delta: msDelta,
-        waitsDelta: windowDelta(prevCount, g.count) ?? 0,
+        layer: t.layer,
+        delta: t.msDelta,
+        waitsDelta: t.waitsDelta,
         budgetMs: cfg.waitMsPerWindow,
-        holders: g.holders ?? [],
+        holders: holdersOf.get(t.layer) ?? [],
       });
-    }
 
     // Cap the COMBINED per-op ranking (op-rate + op-time) at top-N per tick,
     // ranked by delta desc, to bound report creation. Log (don't silently drop)

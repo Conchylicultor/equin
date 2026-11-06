@@ -10,6 +10,7 @@ import {
 import { afterAll, expect, test } from "bun:test";
 import { z } from "zod";
 import {
+  defineExternalResource,
   defineResource,
   loadResourceByKey,
   setRelationBases,
@@ -21,6 +22,7 @@ import {
 import { mintReachPlan } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import "./install";
 import {
+  getRuntimeProfile,
   recordEntrySpan,
   recordReadTables,
   resetRuntimeProfile,
@@ -116,3 +118,28 @@ for (const [label, profiling, setting] of [
     });
   });
 }
+
+// The flush a notify schedules is its own root — a lane — never a child of
+// whoever notified: a `whileSubscribed` watcher's callback runs in the
+// long-closed `sub start:<key>` span it was opened from, and its flushes were
+// parented there (1330 of 2962 on main, 2026-11-06).
+test("a flush scheduled from inside an entry is recorded as a root, not as that entry's child", async () => {
+  const r = defineExternalResource({
+    key: "install-test-flush-root",
+    mode: "push",
+    schema: z.number(),
+    validateParams: () => {},
+    loader: async () => 1,
+  });
+  resetRuntimeProfile();
+  await recordEntrySpan("sub", "install-test-notifier", async () => {
+    r.notify();
+    await Promise.resolve();
+  });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const flush = getRuntimeProfile().aggregates.flush.find(
+    (a) => a.label === "flushNotifies",
+  );
+  expect(flush?.count).toBeGreaterThan(0);
+  expect(flush!.byParent).toEqual([]);
+});

@@ -53,7 +53,7 @@ congestion reported once, against what held it. A per-op report carries
     contributors by ms delta. No single op to point at, so no trace.
 
 The delta/rollup arithmetic is extracted into the pure, unit-tested
-`server/internal/op-time-math.ts` (`windowDelta`, `computeRollup`); the job owns
+`server/internal/op-time-math.ts` (`windowDelta`, `computeRollup`, `gateTrips`); the job owns
 only the module-level baseline maps and report emission.
 
 ### Windowing & counter-reset handling
