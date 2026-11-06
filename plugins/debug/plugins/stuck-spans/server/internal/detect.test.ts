@@ -6,7 +6,9 @@ import {
 import {
   createStuckSpanWatcher,
   findStuckSpans,
+  groupByGate,
   groupByOperation,
+  type QueuedFinding,
   type OpenSpan,
   type StuckSpanFinding,
 } from "./detect";
@@ -314,6 +316,8 @@ describe("groupByOperation", () => {
       ageMs,
       thresholdMs: 90_000,
       ancestors: [],
+      cause: "own-work" as const,
+      ownMs: ageMs,
     });
     // Oldest first, as findStuckSpans sorts them.
     const groups = groupByOperation([
@@ -325,6 +329,146 @@ describe("groupByOperation", () => {
     expect(groups.map((g) => [g.lead.id, g.lead.label, g.runs])).toEqual([
       [1, "reports.list:rows", 3],
       [2, "host-fs.peek", 1],
+    ]);
+  });
+});
+
+describe("a span queued on a gate is not stuck in its own work", () => {
+  const queuedSub = (
+    id: number,
+    label: string,
+    waitedMs: number,
+    parentId: number | null = null,
+  ): OpenSpan => ({
+    id,
+    parentId,
+    kind: "sub",
+    label,
+    ageMs: waitedMs + SEC,
+    waitMs: 0,
+    pendingWaitMs: waitedMs,
+    waiting: [{ layer: "read-admit", kind: "queue", waitedMs }],
+  });
+
+  test("a waiter past its threshold is filed against the gate, never as own work", () => {
+    const [f] = findStuckSpans([queuedSub(1, "reports.list:rows", SUB)]);
+    expect(f).toMatchObject({
+      id: 1,
+      cause: "queued",
+      layer: "read-admit",
+      waitKind: "queue",
+      waitedMs: SUB,
+    });
+  });
+
+  test("a span that waited most of its life and runs now is judged on its own time", () => {
+    // Open 2 thresholds, all but 10 s of it queued (ended) — not stuck.
+    expect(
+      findStuckSpans([
+        {
+          id: 1,
+          parentId: null,
+          kind: "loader",
+          label: "tasks",
+          ageMs: 2 * LOADER,
+          waitMs: 2 * LOADER - 10 * SEC,
+        },
+      ]),
+    ).toEqual([]);
+  });
+
+  test("an ancestor covered by its child's wait in progress is not stuck either", () => {
+    // The flush has been open past its threshold, all of it while its sub
+    // waits — and the sub has not waited long enough to be filed yet.
+    const young = SUB - 10 * SEC;
+    expect(
+      findStuckSpans([
+        {
+          id: 1,
+          parentId: null,
+          kind: "flush",
+          label: "flushNotifies",
+          ageMs: FLUSH + SEC,
+          waitMs: 0,
+          pendingWaitMs: FLUSH,
+        },
+        queuedSub(2, "reports.list:rows", young, 1),
+      ]),
+    ).toEqual([]);
+  });
+
+  test("a queued waiter hides its ancestors, like any deepest finding", () => {
+    const found = findStuckSpans([
+      {
+        id: 1,
+        parentId: null,
+        kind: "flush",
+        label: "flushNotifies",
+        ageMs: 3 * FLUSH,
+        waitMs: 0,
+        pendingWaitMs: SUB,
+      },
+      queuedSub(2, "reports.list:rows", SUB, 1),
+    ]);
+    expect(found.map((f) => [f.id, f.cause])).toEqual([[2, "queued"]]);
+  });
+
+  test("a run is handed over once per cause: queued, then stuck in its own load", () => {
+    let span: OpenSpan = queuedSub(5, "host-fs.peek", SUB);
+    const watcher = createStuckSpanWatcher({
+      readOpen: () => [span],
+      onStuck: () => {},
+    });
+    expect(watcher.tick().map((f) => f.cause)).toEqual(["queued"]);
+    expect(watcher.tick()).toEqual([]);
+    // Admitted after SUB of waiting, then a further SUB of its own work.
+    span = {
+      id: 5,
+      parentId: null,
+      kind: "sub",
+      label: "host-fs.peek",
+      ageMs: 2 * SUB,
+      waitMs: SUB,
+    };
+    expect(watcher.tick().map((f) => f.cause)).toEqual(["own-work"]);
+    expect(watcher.tick()).toEqual([]);
+    expect(watcher.rememberedCount()).toBe(1);
+  });
+});
+
+describe("groupByGate", () => {
+  test("every waiter on one gate is one finding: led by the longest, counted per operation", () => {
+    const q = (id: number, label: string, waitedMs: number): QueuedFinding => ({
+      id,
+      kind: "sub",
+      label,
+      ageMs: waitedMs,
+      thresholdMs: SUB,
+      ancestors: [],
+      cause: "queued",
+      layer: "read-admit",
+      waitKind: "queue",
+      waitedMs,
+    });
+    const groups = groupByGate([
+      q(1, "host-fs.peek", 100 * SEC),
+      q(2, "reports.list:rows", 120 * SEC),
+      q(3, "reports.list:rows", 95 * SEC),
+      { ...q(4, "tasks", 91 * SEC), layer: "background-acquire" },
+    ]);
+    expect(
+      groups.map((g) => [g.lead.layer, g.lead.id, g.runs, g.waiters]),
+    ).toEqual([
+      [
+        "read-admit",
+        2,
+        3,
+        [
+          { kind: "sub", label: "reports.list:rows", runs: 2 },
+          { kind: "sub", label: "host-fs.peek", runs: 1 },
+        ],
+      ],
+      ["background-acquire", 4, 1, [{ kind: "sub", label: "tasks", runs: 1 }]],
     ]);
   });
 });

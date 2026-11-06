@@ -3,11 +3,16 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { TraceChip } from "@plugins/debug/plugins/trace/plugins/engine/web";
 import { StuckSpanPayloadSchema } from "../../core";
-import { describeChain, stuckSpanSummaryLead } from "../../shared/message";
+import {
+  describeChain,
+  describeHolders,
+  stuckSpanSummaryLead,
+} from "../../shared/message";
 
 // One-line span-stuck summary for the Debug → Reports list, e.g.
 // "[stuck] still running after 3 min: flush flushNotifies → push
-// conversations-gone:count", plus a View-trace chip onto everything that was in
+// conversations-gone:count" — or, for a gate not admitting its waiters, "121
+// waiting on read-admit for 1 min, held by: host-fs.peek … (1 min)" — plus a View-trace chip onto everything that was in
 // flight when it was detected. The destructive chip is what separates it at a
 // glance from a slow-op row: that one finished slowly, this one had not
 // finished at all.
@@ -21,7 +26,7 @@ export function SpanStuckSummary({ report }: { report: Report }) {
     <Inline gap="xs">
       <Badge variant="destructive">stuck</Badge>
       <span>{stuckSpanSummaryLead(d)}</span>
-      <Badge mono>{describeChain(d)}</Badge>
+      <Badge mono>{d.gate ? describeHolders(d.gate) : describeChain(d)}</Badge>
       {traceId !== null && <TraceChip traceId={traceId} />}
     </Inline>
   );

@@ -27,6 +27,7 @@ import {
   runTracked,
   recordSpan,
   chargeWait,
+  beginWait,
   runInRootContext,
   getRuntimeProfile,
   registerGateGauge,
@@ -155,6 +156,7 @@ setProfilerHooks({
     opts?: ProfilerLeafOptions,
   ): void => recordSpan(kind as SpanKind, label, durationMs, detail, opts),
   chargeWait,
+  beginWait,
   runInRootContext,
   registerGateGauge: (layer: string, read: () => unknown): void =>
     registerGateGauge(layer, read as () => GateGauge),

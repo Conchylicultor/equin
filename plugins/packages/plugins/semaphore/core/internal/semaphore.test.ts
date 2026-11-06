@@ -500,3 +500,47 @@ describe("createSemaphore", () => {
     await Promise.all(runs);
   });
 });
+
+describe("onQueued", () => {
+  test("announces only a caller that queues, and ends it at admission before onWait", async () => {
+    const sem = createSemaphore(1);
+    const events: string[] = [];
+    let release!: () => void;
+    const held = new Promise<void>((r) => {
+      release = r;
+    });
+    const observe = (name: string) => ({
+      onQueued: () => {
+        events.push(`${name} queued`);
+        return () => events.push(`${name} admitted`);
+      },
+      onWait: () => events.push(`${name} waited`),
+    });
+
+    const first = sem.run(() => held, observe("a"));
+    const second = sem.run(async () => {
+      events.push("b runs");
+    }, observe("b"));
+    await tick();
+    // `a` found room: it never queued. `b` queued at its call.
+    expect(events.sort()).toEqual(["a waited", "b queued"]);
+
+    events.length = 0;
+    release();
+    await Promise.all([first, second]);
+    expect(events).toEqual(["b admitted", "b waited", "b runs"]);
+  });
+
+  test("an acquire lease announces its queueing the same way", async () => {
+    const sem = createSemaphore(1);
+    const releaseA = await sem.acquire();
+    let ended = 0;
+    const pending = sem.acquire({ onQueued: () => () => ended++ });
+    await tick();
+    expect(ended).toBe(0);
+    releaseA();
+    const releaseB = await pending;
+    expect(ended).toBe(1);
+    releaseB();
+  });
+});

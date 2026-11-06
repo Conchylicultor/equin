@@ -17,6 +17,54 @@ const StuckAncestorSchema = z.object({
 });
 export type StuckAncestor = z.infer<typeof StuckAncestorSchema>;
 
+// A caller holding the gate's capacity when the watchdog looked, as the gate
+// names it (runtime-profiler's `GateHolder`).
+const GateHolderSchema = z.object({
+  label: z.string(),
+  heldMs: z.number(),
+});
+
+// The runs of one operation queued on the gate.
+const GateWaiterSchema = z.object({
+  kind: z.string(),
+  label: z.string(),
+  runs: z.number().int().min(1),
+});
+
+// Set when the finding is a GATE that does not admit its waiters, not an
+// operation stuck in its own work. Every run found queued on the gate on one
+// tick is one report about the gate (fingerprint `span-stuck:gate:<layer>`):
+// the waiters waited for its holders, so the holders are what is named.
+const StuckGateSchema = z.object({
+  // The gate's layer, in the runtime profiler's wait vocabulary (`read-admit`,
+  // `background-acquire`, …).
+  layer: z.string(),
+  // What the lead waiter waited for (runtime-profiler's `WaitKind`): `queue`
+  // — capacity on the gate. A plain string: persisted data.
+  waitKind: z.string(),
+  // How long the longest waiter had been queued — a lower bound, filed once.
+  waitedMs: z.number(),
+  // The gate's occupancy when the watchdog looked, or null for a gate that
+  // registers no gauge.
+  occupancy: z
+    .object({
+      active: z.number(),
+      queued: z.number(),
+      max: z.number(),
+    })
+    .nullable(),
+  // Who held it, longest first, at most `GATE_HOLDERS_MAX`. Empty when the
+  // gate names none (its callers carry no label) or nothing held it.
+  holders: z.array(GateHolderSchema),
+  // The operations queued, most runs first, at most `GATE_WAITERS_MAX`.
+  waiters: z.array(GateWaiterSchema),
+});
+export type StuckGate = z.infer<typeof StuckGateSchema>;
+
+// The most holders / waiting operations a gate report lists.
+export const GATE_HOLDERS_MAX = 8;
+export const GATE_WAITERS_MAX = 10;
+
 // The jsonb payload of a `span-stuck` report: one operation that was still
 // running past its kind's threshold when the watchdog looked.
 //
@@ -45,6 +93,11 @@ export const StuckSpanPayloadSchema = z.object({
   // ending at its immediate parent. Empty for a top-level span, and cut short
   // where a parent had already closed.
   ancestors: z.array(StuckAncestorSchema),
+  // Present when the finding is a gate not admitting its waiters (`spanId` /
+  // `kind` / `label` / `ancestors` then describe the longest waiter, `runs`
+  // counts every waiter): see `StuckGateSchema`. Absent: the span is stuck in
+  // its own work — and on every row filed before gate waits were told apart.
+  gate: StuckGateSchema.optional(),
   // The coherent-instant trace of everything in flight at detection (Debug →
   // Slow Events), or null when the trace engine did not admit one (disabled,
   // or the same trigger inside its cooldown). A state, never a missing field.

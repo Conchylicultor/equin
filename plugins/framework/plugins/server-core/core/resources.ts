@@ -30,6 +30,7 @@ import {
   recordEntrySpan,
   recordSpan,
   chargeWait,
+  beginWait,
   getRuntimeProfile,
   registerGateGauge,
   runInRootContext,
@@ -567,6 +568,9 @@ const runtime = createResourceRuntime({
   // the DB background query gate's `background-acquire`), so a saturated read cap is visible in
   // get_runtime_profile as a `read-admit` wait rather than hidden queue time.
   onReadGateWait: (ms) => chargeWait("read-admit", ms, "queue"),
+  // ...and shown while it is still in progress, so an open `sub` queued on the
+  // gate reads as queued, not as busy with its own work (debug/stuck-spans).
+  onReadGateQueued: () => beginWait("read-admit", "queue"),
   // Read-path single-flight coalescing wait (mirrors read-admit): the time a
   // JOINING caller spent awaiting another caller's in-flight loader for the
   // same (key, params), charged to the joiner's own enclosing entry.

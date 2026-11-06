@@ -11,6 +11,7 @@ import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   recordSpan,
   chargeWait,
+  gateWaitHooks,
   currentCallerKind,
   currentEntryLabel,
   currentOriginClass,
@@ -450,7 +451,7 @@ export function installQueryWrapper(pool: Pool, background: Pool): void {
     // has no ambient entry and stays UNGATED, so boot can never deadlock on a gate.
     if (inBackground) {
       return backgroundQueryGate.run(runRetrying, {
-        onWait: (waitMs) => chargeWait("background-acquire", waitMs, "queue"),
+        ...gateWaitHooks("background-acquire"),
       });
     }
     return runRetrying();
@@ -508,10 +509,9 @@ export function installQueryWrapper(pool: Pool, background: Pool): void {
     }
 
     return (async (): Promise<PoolClient> => {
-      const releaseSlot = await backgroundTxGate.acquire({
-        onWait: (waitMs) =>
-          chargeWait("background-tx-acquire", waitMs, "queue"),
-      });
+      const releaseSlot = await backgroundTxGate.acquire(
+        gateWaitHooks("background-tx-acquire"),
+      );
       let client: PoolClient;
       try {
         client = await backgroundConnect();

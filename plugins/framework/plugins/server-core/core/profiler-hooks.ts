@@ -86,6 +86,8 @@ export interface ProfilerHooks {
     opts?: ProfilerLeafOptions,
   ): void;
   chargeWait(layer: string, ms: number, kind: "queue" | "join"): void;
+  /** A wait that just started, shown until the returned end is called (the profiler's `beginWait`). */
+  beginWait(layer: string, kind: "queue" | "join"): () => void;
   getRuntimeProfile(): RuntimeProfileView;
   registerGateGauge(layer: string, read: () => unknown): void;
   /** Run `fn` outside every entry, lane and suppression scope (the profiler's `runInRootContext`). */
@@ -148,6 +150,18 @@ export function chargeWait(
   kind: "queue" | "join",
 ): void {
   hooks?.chargeWait(layer, ms, kind);
+}
+
+const NO_WAIT_END = (): void => {};
+
+/**
+ * Show a wait while it is still in progress; call the returned function when
+ * it ends (it charges nothing — `chargeWait` at the end still does). See
+ * runtime-profiler's `beginWait`: a wait charged only at its end makes the
+ * waiter look busy with its own work until then.
+ */
+export function beginWait(layer: string, kind: "queue" | "join"): () => void {
+  return hooks ? hooks.beginWait(layer, kind) : NO_WAIT_END;
 }
 
 export function getRuntimeProfile(): RuntimeProfileView {

@@ -23,6 +23,14 @@ belongs to the layer that knows the ceiling (the grant clamps a spend to the uni
 it holds). Everything is byte-identical to an unweighted gate when every caller
 weighs 1.
 
+`opts.onQueued()` is called synchronously, in the caller's context, the moment
+a caller has to QUEUE (never when admitted at once — and again for a yieldable
+slot's take-back that queues); the function it returns is called at admission,
+just before `onWait`. `onWait` reports a wait once it is over; `onQueued` lets
+the owner show it while it lasts (runtime-profiler's `beginWait`, wired with
+`gateWaitHooks(layer)`), so a caller queued for minutes is not mistaken for
+one busy with its own work.
+
 There is ONE spelling of the options — no positional `onWait` overload — so a
 weight and a wait hook can never be two different-looking calls.
 

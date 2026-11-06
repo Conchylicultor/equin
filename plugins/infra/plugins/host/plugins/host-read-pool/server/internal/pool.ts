@@ -4,6 +4,7 @@ import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/c
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   chargeWait,
+  gateWaitHooks,
   registerGateGauge,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -111,26 +112,22 @@ export function withHeavyReadSlot<T>(
   // loader's span reads as wait-vs-work directly (e.g. edited-files 4032ms = lock
   // 3500 / git diff 532) instead of one opaque number. Context-less callers fall
   // back to a standalone span inside chargeWait.
-  return perWorktreeGate().run(
-    () => {
-      // The local gate has granted. It could not observe an abort while we were
-      // queued on it (see the docblock), so this is the first place we can: stop
-      // here rather than take a host-wide slot on behalf of a caller that has
-      // already been given up on. The local slot is released by the `run` this
-      // throws out of.
-      signal?.throwIfAborted();
-      // The callback runs only once the host slot is held. `defineHostPool`
-      // auto-registers the true host-wide occupancy gauge, so there is no local
-      // held-count to bracket here; we only mark this async context as holding a
-      // slot so a reentrant acquire runs its body directly (the fast path above).
-      return pool.run(() => holdingSlot.run(true, fn), {
-        signal,
-        onAcquired: (waitMs) =>
-          chargeWait("heavy-read-acquire", waitMs, "queue"),
-      });
-    },
-    { onWait: (waitMs) => chargeWait("heavy-read-local", waitMs, "queue") },
-  );
+  return perWorktreeGate().run(() => {
+    // The local gate has granted. It could not observe an abort while we were
+    // queued on it (see the docblock), so this is the first place we can: stop
+    // here rather than take a host-wide slot on behalf of a caller that has
+    // already been given up on. The local slot is released by the `run` this
+    // throws out of.
+    signal?.throwIfAborted();
+    // The callback runs only once the host slot is held. `defineHostPool`
+    // auto-registers the true host-wide occupancy gauge, so there is no local
+    // held-count to bracket here; we only mark this async context as holding a
+    // slot so a reentrant acquire runs its body directly (the fast path above).
+    return pool.run(() => holdingSlot.run(true, fn), {
+      signal,
+      onAcquired: (waitMs) => chargeWait("heavy-read-acquire", waitMs, "queue"),
+    });
+  }, gateWaitHooks("heavy-read-local"));
 }
 
 // The host-wide heavy-read gate's slot count (`floor(cpus/4)`). Exposed so callers

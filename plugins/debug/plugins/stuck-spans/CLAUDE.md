@@ -22,27 +22,42 @@ a promise a bug never settles. Those stay stuck until the backend restarts.
 open entry spans (`captureFlightWindow`, the whole open set, no completed ring)
 and hands them to the detector (`server/internal/detect.ts`):
 
-1. A span is a **candidate** when its kind is watched and it has been open at
-   least its kind's threshold (`server/internal/policy.ts`).
+1. A span is a **candidate** when its kind is watched and either
+   - **own work** — its age less every wait in its subtree (the ended ones,
+     `waitMs`, and the ones still in progress, `pendingWaitMs`) reaches its
+     kind's threshold (`server/internal/policy.ts`); or
+   - **queued** — a wait it is the innermost entry of has lasted its kind's
+     threshold and is still in progress (`FlightSpan.waiting`).
+
+   A gate charges a wait only when it ENDS, so before the profiler showed
+   in-progress waits (`beginWait`, announced by `packages/semaphore`'s
+   `onQueued`) a span queued 90 s looked like a span busy 90 s: on main
+   (2026-11-04) `sub reports.list:rows` was filed 387 times and
+   `sub host-fs.peek` 314, each run as stuck itself, while the read gate
+   they waited on — and what held it — went unnamed.
 2. **Only the deepest candidate of a chain is reported.** An entry waits on its
    children, so when a `push` is stuck the `flush` above it is stuck because of
    it. One report naming the push, with the flush in its ancestor chain, says
    everything. If the child later finishes and the parent is still stuck, the
    parent becomes the deepest candidate and gets its own report. A *young*
    child does not hide a stuck parent — only a stuck one does.
-3. **Once per span run.** The watchdog remembers which span ids it already
-   reported and never reports one twice. After every tick it forgets the ids
+3. **Once per span run and cause.** The watchdog remembers which span ids it
+   already reported, for which cause, and never reports one twice for the
+   same cause (a sub queued, then admitted and stuck in its own load, is two
+   findings). After every tick it forgets the ids
    that are no longer open, so the remembered set can never outgrow the open
    registry. Span ids are never reused, so forgetting cannot cause a re-report.
 
 For a tick that found new stuck spans, it captures **one** trace (everything in
 flight at that instant — every span found that tick is stuck at the same
 instant, so N captures would be N copies of one picture) and files one
-`span-stuck` report per **operation** (`kind` + `label`), all linked to that
-trace: the runs of one operation found on one tick are one finding, `runs` of
-them, described by the oldest. On main (2026-11-04) `sub reports.list:rows`
-was filed 387 times, many runs per tick — every run queued behind the same
-blocked read gate, one cause.
+`span-stuck` report per **operation** (`kind` + `label`) stuck in its own
+work — the runs of one operation found on one tick are one finding, `runs` of
+them, described by the oldest — and one per **gate** whose waiters were found
+queued (`groupByGate`): every waiter of a gate waits for the same holders, so
+the report is about the gate, naming its holders and occupancy as its gauge
+reads them that tick (`readGateGauges`), and the waiting operations counted.
+All linked to that trace.
 
 The detector takes its open-span source and its sink as arguments, so the tests
 (`detect.test.ts`) drive it with a fake flight window and a fake clock.
@@ -72,7 +87,11 @@ properties of the detector, as in `debug/queue-health`.
 
 - **Fingerprint** `span-stuck:<kind>:<label>`, so repeated stalls of the same
   operation collapse onto one row whose count is the number of ticks that found
-  it newly stuck.
+  it newly stuck; a gate finding is `span-stuck:gate:<layer>`, one row per
+  gate whatever waits on it.
+- **Gate message:** `81 operations have been queued on the read-admit gate for
+  up to 1 min without being admitted; it is held by host-fs.peek {…} (1 min).
+  Waiting: sub reports.list:rows ×80, sub host-fs.peek`.
 - **Message:** `An operation has been running for 3 min and has not finished:
   flush flushNotifies → push conversations-gone:count` — open ancestors
   outermost first, then the stuck span. The age is the age *when detected*; a
@@ -81,7 +100,10 @@ properties of the detector, as in `debug/queue-health`.
   (how many runs of the operation the tick found, the others described by the
   oldest; absent = 1), `ancestors`
   (`{id, kind, label, ageMs}`, outermost first, cut short where a parent had
-  closed), `traceId` (null when the trace engine did not admit a capture).
+  closed), `traceId` (null when the trace engine did not admit a capture),
+  and `gate` on a gate finding (`layer`, `waitKind`, `waitedMs`, `occupancy`
+  or null, `holders` ≤ 8, `waiters` ≤ 10 — the span fields then describe the
+  longest waiter and `runs` counts every waiter).
 - **`duressExempt: true`.** A hang and a host duress episode are often the same
   event, and duress is when the reports funnel sheds. Exempting is safe on
   volume because each span run is reported once.
@@ -126,6 +148,16 @@ run no `onReady`, so no watchdog.
 
 ## Known limits
 
+- **Only gates that announce their waits are told apart.** A wait shows while
+  in progress only when its gate calls `beginWait` — every
+  `packages/semaphore` gate wired through `gateWaitHooks` (read-admit,
+  background-acquire / -tx-acquire, heavy-read-local, browser-fetch-local,
+  endpoint-concurrency). A wait on a host-wide flock pool
+  (`heavy-read-acquire`, …), the pg pool's own `db-acquire`, or a join
+  (`read-coalesce`, an `inflight` joiner) still reads as the waiter's own
+  time until it ends. A join's run is itself an open span, reported as the
+  deepest candidate when it is the stuck one.
+
 - **A stuck flush also freezes its own alert in open tabs.** The report row is
   written, but the bell and the Reports list reach tabs through live-state,
   which is the thing that is stuck. The "live updates stalled" health row
@@ -164,8 +196,11 @@ run no `onReady`, so no watchdog.
 - Core:
   - Exports (types):
     - `StuckAncestor`
+    - `StuckGate`
     - `StuckSpanPayload`
   - Exports (values):
+    - `GATE_HOLDERS_MAX`
+    - `GATE_WAITERS_MAX`
     - `SPAN_STUCK_KIND`
     - `StuckSpanPayloadSchema`
 

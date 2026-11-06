@@ -51,6 +51,21 @@ idempotent under re-covering, which is what makes each level's `waits` self-cont
 Closed ancestors are never mutated (a detached child finishing late cannot corrupt a
 recorded span).
 
+### Waits in progress (`beginWait`, `gateWaitHooks`)
+
+A charge lands at the wait's END, so an entry queued on a gate for minutes
+reads, until it is admitted, as minutes of its own work. `beginWait(layer,
+kind)` announces a wait as it STARTS — registered on the innermost open entry
+(its owner) and every open ancestor, removed by the returned `end()` — and
+charges nothing (the end's `chargeWait` still does). `captureFlightWindow`
+gives each open span `pendingWaitMs` (what its subtree's in-progress waits
+add to its wait union, through a copy of the track — exact unless an ended
+wait overlaps them, then under) and `waiting` (the waits it owns, oldest
+first). `gateWaitHooks(layer, kind?)` is the pair a `packages/semaphore` gate
+takes — `{ onQueued, onWait }` in one call, so a gate cannot show a wait it
+never charges. Consumer: `debug/stuck-spans`, which files a span queued past
+its threshold against the gate and its holders instead of as stuck itself.
+
 ### Event-loop stalls (`event-loop`, `noteLoopTurn`)
 
 A leaf is timed from issuing the call to the callback that reads its answer, so
@@ -439,6 +454,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `GateGauge`
     - `GateHolder`
     - `GateMeter`
+    - `InProgressWait`
     - `LoopStall`
     - `OriginClass`
     - `ParentBreakdown`
@@ -458,11 +474,13 @@ remaining allocations are one flat band array per completed entry span, and what
   - Exports (values):
     - `__contribute`
     - `__pushBand`
+    - `beginWait`
     - `captureFlightWindow`
     - `chargeWait`
     - `currentCallerKind`
     - `currentEntryLabel`
     - `currentOriginClass`
+    - `gateWaitHooks`
     - `getRuntimeProfile`
     - `getSelfMeter`
     - `installBackgroundLaneRuntime`

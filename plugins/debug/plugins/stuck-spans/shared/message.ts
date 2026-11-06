@@ -1,4 +1,4 @@
-import type { StuckSpanPayload } from "../core";
+import type { StuckGate, StuckSpanPayload } from "../core";
 
 // Plugin-private wording shared by the server (the report's one-line message and
 // its task) and the web (the Debug → Reports summary), so the three say the
@@ -28,11 +28,42 @@ export function describeChain(
     .join(" → ");
 }
 
+// "host-fs.peek {"path":"/tmp"} (1 min), reports.list (12 s)": who held the
+// gate, longest first, or a plain statement when it names nobody.
+export function describeHolders(gate: Pick<StuckGate, "holders">): string {
+  if (gate.holders.length === 0) return "no named holder";
+  return gate.holders
+    .map((h) => `${h.label} (${formatAge(h.heldMs)})`)
+    .join(", ");
+}
+
+// "sub reports.list:rows ×80, sub host-fs.peek ×41": the operations queued.
+export function describeWaiters(gate: Pick<StuckGate, "waiters">): string {
+  return gate.waiters
+    .map((w) => `${w.kind} ${w.label}${w.runs > 1 ? ` ×${w.runs}` : ""}`)
+    .join(", ");
+}
+
+// A gate finding's message: the gate, how long its waiters waited, who held
+// it — the waiters are named after it, as what the gate holds up.
+function gateMessage(gate: StuckGate, runs: number): string {
+  const who = runs > 1 ? `${runs} operations have` : "An operation has";
+  return (
+    `${who} been queued on the ${gate.layer} gate for up to ` +
+    `${formatAge(gate.waitedMs)} without being admitted; it is held by ` +
+    `${describeHolders(gate)}. Waiting: ${describeWaiters(gate)}`
+  );
+}
+
 // The report's one-line message.
 export function stuckSpanMessage(
-  d: Pick<StuckSpanPayload, "kind" | "label" | "ageMs" | "ancestors" | "runs">,
+  d: Pick<
+    StuckSpanPayload,
+    "kind" | "label" | "ageMs" | "ancestors" | "runs" | "gate"
+  >,
 ): string {
   const runs = d.runs ?? 1;
+  if (d.gate) return gateMessage(d.gate, runs);
   return runs > 1
     ? `${runs} runs of an operation have been running for up to ` +
         `${formatAge(d.ageMs)} and have not finished: ${describeChain(d)}`
@@ -41,10 +72,16 @@ export function stuckSpanMessage(
 }
 
 // The Debug → Reports summary's lead-in, before the chain: "still running after
-// 3 min:", or "121 runs still running after 1 min:" for a grouped finding.
+// 3 min:", or "121 runs still running after 1 min:" for a grouped finding; for
+// a gate, "121 waiting on read-admit for 1 min, held by:" before its holders.
 export function stuckSpanSummaryLead(
-  d: Pick<StuckSpanPayload, "ageMs" | "runs">,
+  d: Pick<StuckSpanPayload, "ageMs" | "runs" | "gate">,
 ): string {
   const runs = d.runs ?? 1;
+  if (d.gate)
+    return (
+      `${runs > 1 ? `${runs} waiting` : "1 waiting"} on ${d.gate.layer} ` +
+      `for ${formatAge(d.gate.waitedMs)}, held by:`
+    );
   return `${runs > 1 ? `${runs} runs ` : ""}still running after ${formatAge(d.ageMs)}:`;
 }

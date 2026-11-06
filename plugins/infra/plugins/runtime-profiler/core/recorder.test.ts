@@ -12,8 +12,10 @@ import {
   __contribute,
   __pushBand,
   WAIT_BAND_CAP,
+  beginWait,
   captureFlightWindow,
   chargeWait,
+  gateWaitHooks,
   currentOriginClass,
   getRuntimeProfile,
   getSelfMeter,
@@ -1902,5 +1904,72 @@ describe("event-loop stalls — a query is not charged the time the loop was blo
       (s) => s.label === "deliver:x",
     )!;
     expect(span.waits).toBeUndefined();
+  });
+});
+
+describe("waits in progress (beginWait)", () => {
+  // A wait is charged only when it ends, so an open span queued on a gate
+  // looked busy with its own work until then — which is what the stuck-span
+  // watchdog read as "stuck" (debug/stuck-spans).
+  test("an open span shows the wait it is queued on, and its ancestors the cover", async () => {
+    const admitted = deferred();
+    let mid!: FlightWindow;
+    let after!: FlightWindow;
+    await recordEntrySpan("flush", "f", async () => {
+      fakeNow = 10;
+      await recordEntrySpan("sub", "s", async () => {
+        fakeNow = 20;
+        const hooks = gateWaitHooks("read-admit");
+        const end = hooks.onQueued(); // queued at 20
+        fakeNow = 100;
+        mid = captureFlightWindow({ windowStartMs: 0 });
+        end();
+        hooks.onWait(80); // admitted at 100 → charged [20, 100]
+        after = captureFlightWindow({ windowStartMs: 0 });
+        admitted.resolve();
+      });
+    });
+    await admitted.promise;
+
+    const sub = mid.open.find((x) => x.label === "s")!;
+    expect(sub.ageMs).toBe(90);
+    expect(sub.waitMs).toBe(0); // not charged yet
+    expect(sub.pendingWaitMs).toBe(80);
+    expect(sub.waiting).toEqual([
+      { layer: "read-admit", kind: "queue", waitedMs: 80 },
+    ]);
+    // The flush is covered by its child's wait, but is not the one waiting.
+    const flush = mid.open.find((x) => x.label === "f")!;
+    expect(flush.pendingWaitMs).toBe(80);
+    expect(flush.waiting).toBeUndefined();
+
+    // Once admitted, the wait is charged and no longer in progress.
+    const subAfter = after.open.find((x) => x.label === "s")!;
+    expect(subAfter.waitMs).toBe(80);
+    expect(subAfter.pendingWaitMs).toBeUndefined();
+    expect(subAfter.waiting).toBeUndefined();
+  });
+
+  test("an in-progress wait is not counted twice over an ended one", async () => {
+    let mid!: FlightWindow;
+    await recordEntrySpan("sub", "s", async () => {
+      fakeNow = 50;
+      chargeWait("read-admit", 50, "queue"); // [0, 50]
+      const end = beginWait("background-acquire", "queue"); // from 50
+      fakeNow = 70;
+      mid = captureFlightWindow({ windowStartMs: 0 });
+      end();
+    });
+    const sub = mid.open.find((x) => x.label === "s")!;
+    expect(sub.waitMs).toBe(50);
+    expect(sub.pendingWaitMs).toBe(20);
+    expect(sub.ageMs - sub.waitMs - sub.pendingWaitMs!).toBe(0);
+  });
+
+  test("context-less, or ended twice, is a no-op", () => {
+    const end = beginWait("read-admit", "queue");
+    end();
+    end();
+    expect(captureFlightWindow({ windowStartMs: 0 }).open).toEqual([]);
   });
 });

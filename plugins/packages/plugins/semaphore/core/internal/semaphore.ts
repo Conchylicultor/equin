@@ -32,6 +32,17 @@ export interface SlotOptions {
    */
   onWait?: (waitMs: number) => void;
   /**
+   * Called synchronously, in the caller's context, the moment the caller has
+   * to QUEUE (no room right now — never when it is admitted at once); the
+   * function it returns is called the moment it is admitted, just before
+   * `onWait`. `onWait` reports a wait only once it is over, so a caller queued
+   * for minutes looks, until then, like a caller busy with its own work; this
+   * lets a gate owner show the wait while it is still in progress (the runtime
+   * profiler's `beginWait`). A yieldable slot's take-back that queues is a wait
+   * of its own and is announced the same way.
+   */
+  onQueued?: () => () => void;
+  /**
    * `run` only: the slot is given back while the body merely WAITS on work
    * another caller is doing (`whileWaiting` — an `inflight` join is one), and
    * taken back ahead of every queued newcomer when the wait ends, so a gate full
@@ -195,6 +206,7 @@ export function createSemaphore(
   function acquireSlot(
     weight: number,
     cls: string | undefined,
+    onQueued: SlotOptions["onQueued"],
     front = false,
   ): Promise<void> {
     // "No eligible waiter ahead" is the strict-FIFO rule, and it is what stops
@@ -215,8 +227,16 @@ export function createSemaphore(
     // `front`: a yielded slot coming back. Its body was admitted before every
     // caller now queued, so it resumes ahead of them — yielding while waiting
     // never costs the waiter its place.
+    // Announced before the waiter can be admitted, so its end always follows.
+    const admitted = onQueued?.();
     return new Promise<void>((resolve) => {
-      const waiter = { weight, cls, admit: resolve };
+      const admit = admitted
+        ? () => {
+            admitted();
+            resolve();
+          }
+        : resolve;
+      const waiter = { weight, cls, admit };
       if (front) waiters.unshift(waiter);
       else waiters.push(waiter);
     });
@@ -256,9 +276,10 @@ export function createSemaphore(
     cls: string | undefined,
     onWait?: (waitMs: number) => void,
     label?: string,
+    onQueued?: SlotOptions["onQueued"],
   ): Promise<() => void> {
     const t0 = onWait ? performance.now() : 0;
-    await acquireSlot(weight, cls);
+    await acquireSlot(weight, cls, onQueued);
     onWait?.(performance.now() - t0);
     // Recorded after `onWait`, so a waiter's own report never lists itself.
     const holder =
@@ -287,6 +308,7 @@ export function createSemaphore(
     weight: number,
     cls: string | undefined,
     onWait: ((waitMs: number) => void) | undefined,
+    onQueued: SlotOptions["onQueued"],
     holder: { label: string; since: number } | undefined,
   ): YieldableLease & { end(): void } {
     let held = true;
@@ -311,7 +333,7 @@ export function createSemaphore(
         if (waits > 0 || ended || held) return Promise.resolve();
         reclaiming ??= (async () => {
           const t0 = performance.now();
-          await acquireSlot(weight, cls, true);
+          await acquireSlot(weight, cls, onQueued, true);
           onWait?.(performance.now() - t0);
           reclaiming = undefined;
           held = true;
@@ -335,7 +357,13 @@ export function createSemaphore(
   // the call site as a throw rather than as a rejected promise nobody may be
   // awaiting yet.
   function acquire(opts?: SlotOptions): Promise<() => void> {
-    return lease(weightOf(opts), classOf(opts), opts?.onWait, opts?.label);
+    return lease(
+      weightOf(opts),
+      classOf(opts),
+      opts?.onWait,
+      opts?.label,
+      opts?.onQueued,
+    );
   }
 
   return {
@@ -348,14 +376,20 @@ export function createSemaphore(
           // Taken here rather than through `lease`: the slot's one owner is
           // `held` (its give-backs and `end()`), and so is the holder record.
           const t0 = performance.now();
-          await acquireSlot(weight, cls);
+          await acquireSlot(weight, cls, opts.onQueued);
           opts.onWait?.(performance.now() - t0);
           const holder =
             opts.label === undefined
               ? undefined
               : { label: opts.label, since: performance.now() };
           if (holder) holding.add(holder);
-          const held = yieldableLease(weight, cls, opts.onWait, holder);
+          const held = yieldableLease(
+            weight,
+            cls,
+            opts.onWait,
+            opts.onQueued,
+            holder,
+          );
           try {
             return await runInLeaseScope(held, fn);
           } finally {
@@ -363,7 +397,13 @@ export function createSemaphore(
           }
         })();
       }
-      const pending = lease(weight, cls, opts?.onWait, opts?.label);
+      const pending = lease(
+        weight,
+        cls,
+        opts?.onWait,
+        opts?.label,
+        opts?.onQueued,
+      );
       return (async () => {
         const release = await pending;
         try {

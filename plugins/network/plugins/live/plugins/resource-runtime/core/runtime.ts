@@ -2029,6 +2029,15 @@ export interface ResourceRuntimeOptions {
    * central / before-injection: omitted (no-op). */
   onReadGateWait?: (waitMs: number) => void;
   /**
+   * Announce a read that has to QUEUE at the read-admission gate, the moment
+   * it starts waiting; the returned function is called when it is admitted
+   * (`packages/semaphore`'s `onQueued`). `onReadGateWait` reports a wait only
+   * once it is over, so until then a queued read looks busy with its own work.
+   * server: `beginWait("read-admit")` — the stuck-span watchdog then files a
+   * read queued past its threshold against the gate and its holders, not as
+   * the reader stuck itself; central / before-injection: omitted (no-op). */
+  onReadGateQueued?: () => () => void;
+  /**
    * Report queue-wait at the read-path single-flight coalescer (see
    * `getResourceValue`). Fired once per JOINING full load — a caller that found
    * an existing in-flight loader promise for the same (key, params) — with the
@@ -4264,7 +4273,13 @@ export function createResourceRuntime(
         if (!wanted()) throw new ReadAbandoned(key);
         return body();
       },
-      { onWait: chargeReadGateWait, yieldable: true, label, class: key },
+      {
+        onWait: chargeReadGateWait,
+        onQueued: opts.onReadGateQueued,
+        yieldable: true,
+        label,
+        class: key,
+      },
     );
   }
 

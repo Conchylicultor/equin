@@ -5,9 +5,15 @@ import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/co
 import {
   SPAN_STUCK_KIND,
   StuckSpanPayloadSchema,
+  type StuckGate,
   type StuckSpanPayload,
 } from "../../core";
-import { describeChain, formatAge } from "../../shared/message";
+import {
+  describeChain,
+  describeHolders,
+  describeWaiters,
+  formatAge,
+} from "../../shared/message";
 
 // Re-alert the bell at most once per 10 minutes for the same operation. Each
 // stuck RUN files once, so a new bell for the same operation means a new run got
@@ -39,8 +45,11 @@ const INCIDENT_DOC =
 export const spanStuckKind = ReportKind({
   kind: SPAN_STUCK_KIND,
   schema: StuckSpanPayloadSchema,
+  // A gate finding is about the gate, whatever waits on it: one row per gate.
   fingerprint: (d: StuckSpanPayload) =>
-    `${SPAN_STUCK_KIND}:${d.kind}:${d.label}`,
+    d.gate
+      ? `${SPAN_STUCK_KIND}:gate:${d.gate.layer}`
+      : `${SPAN_STUCK_KIND}:${d.kind}:${d.label}`,
   // A hang and a host duress episode are often the same event — and duress is
   // exactly when the reports funnel sheds, so without this flag the alarm for
   // the hang could be buffered or dropped by the hang. Exempting it is safe on
@@ -56,12 +65,67 @@ export const spanStuckKind = ReportKind({
   },
   renderTask: (row: ReportRow) => {
     const d = StuckSpanPayloadSchema.parse(row.data);
+    if (d.gate)
+      return {
+        title: `[stuck] the ${d.gate.layer} gate admitted nothing for ${formatAge(d.gate.waitedMs)}`,
+        description: renderGateDescription(row, d, d.gate),
+      };
     return {
       title: `[stuck] ${d.kind} ${d.label} did not finish after ${formatAge(d.ageMs)}`,
       description: renderDescription(row, d),
     };
   },
 });
+
+function renderGateDescription(
+  row: ReportRow,
+  d: StuckSpanPayload,
+  gate: StuckGate,
+): string {
+  const runs = d.runs ?? 1;
+  const lines: string[] = [];
+  lines.push(
+    `${runs > 1 ? `**${runs} operations** were` : "An operation was"} queued ` +
+      `on the \`${gate.layer}\` gate for up to **${formatAge(gate.waitedMs)}** ` +
+      `without being admitted when the stuck-span watchdog looked (threshold ` +
+      `${formatAge(d.thresholdMs)}). They are not stuck in their own work: ` +
+      `they wait for the gate's capacity, which its holders keep.`,
+  );
+  lines.push("");
+  lines.push(`**Held by:** ${describeHolders(gate)}`);
+  if (gate.occupancy !== null) {
+    const o = gate.occupancy;
+    lines.push(
+      `**Occupancy:** ${o.active} of ${o.max} held, ${o.queued} queued.`,
+    );
+  }
+  lines.push(`**Waiting:** ${describeWaiters(gate)}`);
+  lines.push(
+    `**Longest waiter:** \`${describeChain(d)}\` (open ${formatAge(d.ageMs)})`,
+  );
+  lines.push("");
+  lines.push(
+    "**What to do:** start from the holders — the cause is what keeps them " +
+      "on the gate this long. A holder stuck in its own work usually has its " +
+      "own `span-stuck` report (open the trace's spans lane on it); a gate " +
+      "full of holders that each finish slowly is a load the gate is too " +
+      "small or too shared for. Never fix this by widening the gate before " +
+      "the holders are explained.",
+  );
+  if (d.traceId !== null) {
+    lines.push("");
+    lines.push(
+      `**Trace:** everything in flight when this was detected is at ` +
+        `\`${traceDetailRoute.link(debugApp, { id: d.traceId })}\` (Debug → Slow Events).`,
+    );
+  }
+  lines.push("");
+  lines.push(`**Occurrences (ticks that found new waiters):** ${row.count}`);
+  lines.push(`**Worktree:** ${row.worktree}`);
+  lines.push(`**First seen:** ${row.firstSeenAt.toISOString()}`);
+  lines.push(`**Last seen:** ${row.lastSeenAt.toISOString()}`);
+  return lines.join("\n");
+}
 
 function renderDescription(row: ReportRow, d: StuckSpanPayload): string {
   const lines: string[] = [];
@@ -75,9 +139,8 @@ function renderDescription(row: ReportRow, d: StuckSpanPayload): string {
     lines.push("");
     lines.push(
       `**${d.runs} runs** of this operation were found stuck at the same instant ` +
-        `(the age and chain above are the oldest's). Many runs of one operation ` +
-        `stuck together usually share one cause — a gate or lock they all queue ` +
-        `on: look at the trace's gate lane for what holds it.`,
+        `(the age and chain above are the oldest's), each busy in its own work ` +
+        `— runs queued on a gate are filed against the gate instead.`,
     );
   }
   lines.push("");

@@ -541,6 +541,15 @@ function nearestOpen(ctx: EntryContext | undefined): EntryContext | undefined {
   return a;
 }
 
+/** One wait in progress (`beginWait`), until its end charges it. */
+interface PendingWait {
+  layer: string;
+  kind: WaitKind;
+  startMs: number;
+  /** The innermost entry that waits — the one it is charged to as its own. */
+  owner: EntryContext;
+}
+
 /**
  * The mutable ambient entry context: the innermost enclosing entry's identity
  * plus its live parent chain and interval-union accumulators. A gate charges
@@ -595,6 +604,13 @@ export interface EntryContext {
   childUnion: Track;
   /** Union of gate waits ∪ claims → `excludedMs`. */
   excludedUnion: Track;
+  /**
+   * Waits still IN PROGRESS in this entry's subtree (`beginWait`): registered
+   * on the waiting entry and every open ancestor, removed when the wait ends.
+   * A wait is charged only at its end, so without this an entry queued for
+   * minutes reads, until then, as minutes of its own work. Lazily created.
+   */
+  pendingWaits?: Set<PendingWait>;
   /**
    * Per `queue` layer: the unfiled queue waits charged while this entry was
    * the innermost open one, plus the unfiled residue of entries that closed
@@ -1373,6 +1389,27 @@ export interface FlightSpan {
    * whose position was dropped to the band budget. Absent on a pre-band trace.
    */
   waitBands?: WaitBand[];
+  /**
+   * Open spans only: the part of its lifetime covered by waits still in
+   * progress anywhere in its subtree (`beginWait`), on top of `waitMs` (which
+   * counts only waits that have ended). So `ageMs − waitMs − pendingWaitMs` is
+   * what it has spent on anything but waiting so far. Absent when nothing in
+   * its subtree is waiting.
+   */
+  pendingWaitMs?: number;
+  /**
+   * Open spans only: the waits in progress that this span is the innermost
+   * entry of — what it is queued on right now, oldest first. Absent when none.
+   */
+  waiting?: InProgressWait[];
+}
+
+/** A wait in progress on an open span (`FlightSpan.waiting`). */
+export interface InProgressWait {
+  layer: string;
+  kind: WaitKind;
+  /** How long it has waited so far (ms). */
+  waitedMs: number;
 }
 
 export interface FlightWindow {
@@ -1465,6 +1502,7 @@ export function captureFlightWindow(opts: {
       selfMs: Math.max(0, ageMs - ctx.busyUnion.unionMs),
       waits,
       waitBands,
+      ...pendingOf(ctx, atMs),
     });
   }
 
@@ -1503,6 +1541,38 @@ export function captureFlightWindow(opts: {
   }
 
   return { atMs, open, completed };
+}
+
+// The waits in progress of one open context, as of `atMs`. `pendingWaitMs` is
+// what the in-progress intervals — all ending now — would add to its wait
+// union: one interval `[earliest start, now]` contributed to a COPY of the
+// track (the live one is charged only when each wait ends). Exact when no
+// ended wait overlaps the in-progress ones; otherwise it undercounts, never
+// overcounts, as everywhere in the decomposition.
+function pendingOf(
+  ctx: EntryContext,
+  atMs: number,
+): Pick<FlightSpan, "pendingWaitMs" | "waiting"> {
+  if (!ctx.pendingWaits || ctx.pendingWaits.size === 0) return {};
+  let earliest = atMs;
+  const waiting: InProgressWait[] = [];
+  for (const w of ctx.pendingWaits) {
+    if (w.startMs < earliest) earliest = w.startMs;
+    if (w.owner === ctx)
+      waiting.push({
+        layer: w.layer,
+        kind: w.kind,
+        waitedMs: atMs - w.startMs,
+      });
+  }
+  waiting.sort((a, b) => b.waitedMs - a.waitedMs);
+  const pendingWaitMs = contribute(
+    { unionMs: ctx.waitUnion.unionMs, prevEnd: ctx.waitUnion.prevEnd },
+    earliest,
+    atMs,
+    ctx.startMs,
+  );
+  return waiting.length > 0 ? { pendingWaitMs, waiting } : { pendingWaitMs };
 }
 
 /**
@@ -2163,6 +2233,58 @@ export function chargeWait(layer: string, ms: number, kind: WaitKind): void {
       pushBand(bands, layer, end - covered, end, WAIT_BAND_CAP);
     }
   }
+}
+
+const NO_WAIT_END = (): void => {};
+
+/**
+ * Announce a wait that has just STARTED, so it shows while still in progress
+ * (`FlightSpan.waiting` / `pendingWaitMs`); call the returned function when it
+ * ends. It charges nothing — the gate's `chargeWait` at the end still does —
+ * so a gate wires both, and `gateWaitHooks` is the one way to.
+ *
+ * Why: a wait is charged at its END (slot acquisition), so until then an open
+ * entry queued on a gate is indistinguishable from one busy with its own work
+ * — a stuck-span watchdog reading the open set would name every waiter as
+ * stuck, and never the gate (debug/stuck-spans).
+ *
+ * Registered on the innermost open entry (its owner) and every open ancestor,
+ * like a charge. No entry, suppression or the kill-switch: nothing to show.
+ */
+export function beginWait(layer: string, kind: WaitKind): () => void {
+  if (profilingDisabled()) return NO_WAIT_END;
+  if (suppressionRuntime.suppressed()) return NO_WAIT_END;
+  const owner = nearestOpen(contextRuntime.current());
+  if (!owner) return NO_WAIT_END;
+  const wait: PendingWait = { layer, kind, startMs: now(), owner };
+  const held: EntryContext[] = [];
+  for (let a: EntryContext | undefined = owner; a; a = a.parent) {
+    if (a.closed) continue;
+    (a.pendingWaits ??= new Set()).add(wait);
+    held.push(a);
+  }
+  let ended = false;
+  return () => {
+    if (ended) return;
+    ended = true;
+    for (const a of held) a.pendingWaits!.delete(wait);
+  };
+}
+
+/**
+ * The two observers a concurrency gate (`packages/semaphore`'s `SlotOptions`)
+ * takes for one layer: `onQueued` shows the wait while it lasts
+ * (`beginWait`), `onWait` charges it when it ends (`chargeWait`). One call, so
+ * a gate cannot show a wait it never charges or charge one it never showed.
+ */
+export function gateWaitHooks(
+  layer: string,
+  kind: WaitKind = "queue",
+): { onQueued: () => () => void; onWait: (ms: number) => void } {
+  return {
+    onQueued: () => beginWait(layer, kind),
+    onWait: (ms) => chargeWait(layer, ms, kind),
+  };
 }
 
 /**

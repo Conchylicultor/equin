@@ -24651,8 +24651,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types):
           - `StuckAncestor`
+          - `StuckGate`
           - `StuckSpanPayload`
         - Exports (values):
+          - `GATE_HOLDERS_MAX`
+          - `GATE_WAITERS_MAX`
           - `SPAN_STUCK_KIND`
           - `StuckSpanPayloadSchema`
     - **`timeline`** — Timeline tab for the Slow Events pane: the unified cross-worktree wall-clock Gantt — per-worktree lanes of traces / slow-ops / reports / builds / boots with health heat strips and cross-worktree incident bands, read live from the debug.timeline.scan value as the fan-out resolves. Cross-worktree unified timeline: fans out over every live worktree DB fork (traces, slow-op samples, reports, builds) plus the per-worktree disk logs (boot events, health series), normalizes everything to wall-clock TimelineEvents, and serves it as the debug.timeline.scan live value — one scan per window, pushed as each cell resolves.
@@ -31706,6 +31709,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/request-origin.UNREVERTED_WRITE_HEADER`
           - `infra/runtime-identity.isMain`
           - `infra/runtime-profiler.chargeWait`
+          - `infra/runtime-profiler.gateWaitHooks`
           - `infra/runtime-profiler.recordEntrySpan`
           - `packages/inflight.createInflight`
           - `packages/semaphore.createSemaphore`
@@ -34533,6 +34537,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GateGauge`
           - `GateHolder`
           - `GateMeter`
+          - `InProgressWait`
           - `LoopStall`
           - `OriginClass`
           - `ParentBreakdown`
@@ -34552,11 +34557,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `__contribute`
           - `__pushBand`
+          - `beginWait`
           - `captureFlightWindow`
           - `chargeWait`
           - `currentCallerKind`
           - `currentEntryLabel`
           - `currentOriginClass`
+          - `gateWaitHooks`
           - `getRuntimeProfile`
           - `getSelfMeter`
           - `installBackgroundLaneRuntime`

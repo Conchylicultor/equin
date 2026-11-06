@@ -1,6 +1,7 @@
 import {
   recordEntrySpan,
   chargeWait,
+  gateWaitHooks,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
@@ -160,10 +161,7 @@ export function endpointHandler<
               });
             const gated = gate
               ? () =>
-                  gate.run(runHandler, {
-                    onWait: (ms) =>
-                      chargeWait("endpoint-concurrency", ms, "queue"),
-                  })
+                  gate.run(runHandler, gateWaitHooks("endpoint-concurrency"))
               : runHandler;
             return dedupe
               ? dedupe.run(dedupeKey(req), gated, {

@@ -3,6 +3,7 @@ import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/c
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   chargeWait,
+  gateWaitHooks,
   registerGateGauge,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 
@@ -61,7 +62,7 @@ export function withBrowserSlot<T>(fn: () => Promise<T>): Promise<T> {
         onAcquired: (waitMs) =>
           chargeWait("browser-fetch-acquire", waitMs, "queue"),
       }),
-    { onWait: (waitMs) => chargeWait("browser-fetch-local", waitMs, "queue") },
+    gateWaitHooks("browser-fetch-local"),
   );
 }
 

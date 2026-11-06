@@ -1,13 +1,24 @@
-import { captureFlightWindow } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  captureFlightWindow,
+  readGateGauges,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import type { ReportSource } from "@plugins/reports/core";
-import { SPAN_STUCK_KIND, type StuckSpanPayload } from "../../core";
+import {
+  GATE_HOLDERS_MAX,
+  GATE_WAITERS_MAX,
+  SPAN_STUCK_KIND,
+  type StuckSpanPayload,
+} from "../../core";
 import { stuckSpanMessage } from "../../shared/message";
 import {
   createStuckSpanWatcher,
+  groupByGate,
   groupByOperation,
+  type OwnWorkFinding,
+  type QueuedFinding,
   type StuckSpanFinding,
 } from "./detect";
 
@@ -86,7 +97,8 @@ export function stopStuckSpanWatchdog(): void {
   watcher.reset();
 }
 
-// Evidence first, then one report per newly stuck OPERATION.
+// Evidence first, then one report per newly stuck OPERATION, and one per GATE
+// whose waiters were found queued past their threshold.
 //
 // ONE trace per tick, shared by every report of that tick: a trace is a capture
 // of everything in flight at one instant, and all the spans found stuck on a
@@ -109,36 +121,77 @@ function fileStuckSpans(findings: readonly StuckSpanFinding[]): void {
         kind: f.kind,
         label: f.label,
         ageMs: f.ageMs,
+        cause: f.cause,
+        ...(f.cause === "queued" && { layer: f.layer, waitedMs: f.waitedMs }),
         ancestors: f.ancestors.map((a) => a.id),
       })),
     },
   });
+  const traceId = trace ? trace.id : null;
 
-  for (const { lead: f, runs } of groupByOperation(findings)) {
-    const data: StuckSpanPayload = {
-      spanId: f.id,
-      kind: f.kind,
-      label: f.label,
-      ageMs: Math.round(f.ageMs),
-      thresholdMs: f.thresholdMs,
+  const ownWork: OwnWorkFinding[] = [];
+  const queued: QueuedFinding[] = [];
+  for (const f of findings) {
+    if (f.cause === "queued") queued.push(f);
+    else ownWork.push(f);
+  }
+
+  for (const { lead: f, runs } of groupByOperation(ownWork))
+    file({ ...basePayload(f, traceId), ...(runs > 1 && { runs }) });
+
+  if (queued.length === 0) return;
+  // Read once for the tick, as the waiters stand: who holds each gate now.
+  const gauges = readGateGauges();
+  for (const { lead: f, runs, waiters } of groupByGate(queued)) {
+    const gauge = gauges[f.layer];
+    file({
+      ...basePayload(f, traceId),
       ...(runs > 1 && { runs }),
-      ancestors: f.ancestors.map((a) => ({
-        id: a.id,
-        kind: a.kind,
-        label: a.label,
-        ageMs: Math.round(a.ageMs),
-      })),
-      traceId: trace ? trace.id : null,
-    };
-    // Fire-and-forget: recordReport runs its own writes in the background lane
-    // with profiling suppressed. The span is already remembered, so a write that
-    // fails (or hangs, if the database is what is stuck) is not retried — the
-    // failure surfaces as an unhandled rejection report instead.
-    void recordReport({
-      kind: SPAN_STUCK_KIND,
-      source: SOURCE,
-      data,
-      message: stuckSpanMessage(data),
+      gate: {
+        layer: f.layer,
+        waitKind: f.waitKind,
+        waitedMs: Math.round(f.waitedMs),
+        occupancy: gauge
+          ? { active: gauge.active, queued: gauge.queued, max: gauge.max }
+          : null,
+        holders: (gauge?.holders ?? [])
+          .slice(0, GATE_HOLDERS_MAX)
+          .map((h) => ({ label: h.label, heldMs: Math.round(h.heldMs) })),
+        waiters: waiters.slice(0, GATE_WAITERS_MAX),
+      },
     });
   }
+}
+
+function basePayload(
+  f: StuckSpanFinding,
+  traceId: string | null,
+): StuckSpanPayload {
+  return {
+    spanId: f.id,
+    kind: f.kind,
+    label: f.label,
+    ageMs: Math.round(f.ageMs),
+    thresholdMs: f.thresholdMs,
+    ancestors: f.ancestors.map((a) => ({
+      id: a.id,
+      kind: a.kind,
+      label: a.label,
+      ageMs: Math.round(a.ageMs),
+    })),
+    traceId,
+  };
+}
+
+// Fire-and-forget: recordReport runs its own writes in the background lane
+// with profiling suppressed. The span is already remembered, so a write that
+// fails (or hangs, if the database is what is stuck) is not retried — the
+// failure surfaces as an unhandled rejection report instead.
+function file(data: StuckSpanPayload): void {
+  void recordReport({
+    kind: SPAN_STUCK_KIND,
+    source: SOURCE,
+    data,
+    message: stuckSpanMessage(data),
+  });
 }
