@@ -1,5 +1,37 @@
 # render-loop
 
+## What a report says, and what it cannot
+
+The DOM tells WHERE writes land, not WHO causes them. Two React 19 artefacts
+make a component's re-render look like a write with no writer: every commit
+of an `<input>` re-assigns its `name` (`noop-attr` on `name`, value `""`), and
+every commit of a `<textarea>` with `defaultValue` re-assigns it (its text
+node replaced, a childList record). So a `noop-attr name` on an input means
+"the component rendering this input re-renders N times a second".
+
+To name the cause, the detector borrows `debug/render-profiler` once a loop
+passes every gate: it watches React's commits for `RENDER_LOOP.ATTRIBUTE_MS`
+before filing, and the report carries `reactCommitsPerSec` and `initiators`
+(the component whose own state / store / context changed, and which hooks).
+Only components re-rendering at `ATTRIBUTE_MIN_COMMITS_PER_SEC` or more are
+named (the app's background commits are not a loop's cause); an empty
+`initiators` means no React re-render drives the writes — an imperative loop. Compositions without the profiler file without attribution.
+
+## Animation hosts
+
+An intended imperative animation (a rAF loop drawing an SVG scene) writes
+thousands of attributes a second while the user is idle, which is exactly a
+loop's shape. Its host declares itself with `ANIMATION_HOST` (core:
+`<div {...ANIMATION_HOST} />`): records on its descendants that React does
+not own are skipped. React-owned nodes inside the host are still watched, so
+a real re-render loop there still fires — declare the host on the element the
+imperative code fills, never on a React subtree.
+
+Every node's classification (skipped, or its culprit meta) is computed on its
+first record and cached in a WeakMap: the observer's per-record cost is O(1)
+for a node it has seen, which is what keeps an animation from making the
+detector itself a frame cost (it was 91 ms in one frame of the demo).
+
 ## Attributing a loop to a culprit
 
 `web/internal/culprit-signature.ts` reads the composition lineage via
@@ -38,9 +70,14 @@ does not own.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
+  - Imported by: `apps/website/pages/vision`
 - Core:
-  - Exports (types): `RenderLoopPayload`
+  - Exports (types):
+    - `RenderLoopInitiator`
+    - `RenderLoopPayload`
   - Exports (values):
+    - `ANIMATION_HOST`
+    - `ANIMATION_HOST_ATTR`
     - `RENDER_LOOP`
     - `renderLoopFingerprint`
     - `RenderLoopPayloadSchema`

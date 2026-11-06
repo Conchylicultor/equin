@@ -37,14 +37,41 @@
  * high-rate loop can't burst redundant reports before the async hash resolves).
  * Idle per-signature counters and per-root windows are GC'd.
  *
+ * **Animation hosts** — an element declared with `ANIMATION_HOST` (core) is
+ * drawn by an imperative animation: writes to its descendants that React does
+ * not own are its frames, not a loop, and are skipped. React-owned nodes inside
+ * it are still watched, so a real re-render loop there still fires.
+ *
+ * **Attribution** — once a loop passes every gate, the React commit profiler
+ * (`debug/render-profiler`, when the composition has it) watches for
+ * RENDER_LOOP.ATTRIBUTE_MS before the report is filed, so the report names the
+ * component and hook starting each re-render, or shows that no React commit
+ * drives the writes (an imperative loop). DOM evidence alone cannot: React 19
+ * re-assigns an `<input>`'s `name` and a `<textarea>`'s `defaultValue` on every
+ * commit of the element, so a "no-op attribute write" with no writer in our
+ * code is simply that element's component re-rendering.
+ *
+ * Per-record cost is O(1) after a node's first record: a node's classification
+ * (skipped, or its culprit meta) is computed once and kept in a WeakMap, so an
+ * animation writing thousands of attributes a second does not make the observer
+ * re-walk the ancestors on every write.
+ *
  * The detector writes no DOM of its own (a report is a network POST), so it can
  * never feed its own loop.
  */
 
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { report } from "@plugins/reports/web";
-import { RENDER_LOOP, renderLoopFingerprint } from "../../core";
-import type { RenderLoopPayload } from "../../core";
+import {
+  RENDER_PROFILER_GLOBAL,
+  type RenderProfilerWindow,
+} from "@plugins/debug/plugins/render-profiler/core";
+import {
+  ANIMATION_HOST_ATTR,
+  RENDER_LOOP,
+  renderLoopFingerprint,
+} from "../../core";
+import type { RenderLoopInitiator, RenderLoopPayload } from "../../core";
 import { AggregateWindow } from "./aggregate-thrash";
 import { culpritMeta, type CulpritMeta } from "./culprit-signature";
 
@@ -90,6 +117,60 @@ interface SignatureState {
   lastNearMissLogAt: number | null;
 }
 
+/** What a mutated node is to the detector, computed once per node. */
+type NodeClass = { tracked: false } | { tracked: true; meta: CulpritMeta };
+const SKIPPED: NodeClass = { tracked: false };
+
+/** What the commit profiler saw while a loop ran, attached to its report. */
+interface Attribution {
+  reactCommitsPerSec: number;
+  initiators: RenderLoopInitiator[];
+}
+
+/** Whether React rendered this element (it carries React's fiber key). */
+function isReactOwned(el: Element): boolean {
+  return Object.keys(el).some((k) => k.startsWith("__reactFiber$"));
+}
+
+/**
+ * Watch React's commits for RENDER_LOOP.ATTRIBUTE_MS and name what started
+ * them. `null` when there is nothing to ask: no profiler in this composition,
+ * its commit bridge missing, or a session someone else is running (never
+ * stopped from here).
+ */
+async function attributeCommits(): Promise<Attribution | null> {
+  const api = (window as RenderProfilerWindow)[RENDER_PROFILER_GLOBAL];
+  if (api === undefined || api.isRunning()) return null;
+  api.start({ maxDurationMs: RENDER_LOOP.ATTRIBUTE_MS * 2 });
+  await new Promise((done) => setTimeout(done, RENDER_LOOP.ATTRIBUTE_MS));
+  api.stop();
+  const report = api.getReport();
+  if (report.bridgeMissing === true) return null;
+  return {
+    reactCommitsPerSec: Math.round(report.commitsPerSec * 10) / 10,
+    initiators: report.initiators
+      .filter((i) => i.ratePerSec >= RENDER_LOOP.ATTRIBUTE_MIN_COMMITS_PER_SEC)
+      .slice(0, RENDER_LOOP.ATTRIBUTE_TOP)
+      .map((i) => ({
+        component: i.componentName,
+        ancestors: i.ancestorPath.slice(-3),
+        hooks: i.changedHooks
+          .filter((h) => h.changed)
+          .map((h) => `${h.kind}#${h.index}`),
+        commitsPerSec: Math.round(i.ratePerSec * 10) / 10,
+      })),
+  };
+}
+
+/** The report message's tail naming what drives the loop, when attributed. */
+function attributionSuffix(a: Attribution | null): string {
+  if (a === null) return "";
+  const top = a.initiators[0];
+  if (top === undefined) return " — no React re-render (imperative DOM writes)";
+  const hooks = top.hooks.length > 0 ? ` (${top.hooks.join(", ")})` : "";
+  return ` — re-rendered by ${top.component}${hooks}`;
+}
+
 /** Per-aggregate-root cascade window + gating streak state (aggregate tier). */
 interface AggregateState {
   root: string;
@@ -109,22 +190,55 @@ export function installRenderLoopDetector(): () => void {
   // this session. Checked/added in evaluate() before the async fire() so a
   // high-rate loop can't burst redundant reports on the detection frame.
   const firedGuards = new Set<string>();
+  // Each mutated node's classification, computed on its first record.
+  const nodeClasses = new WeakMap<Element, NodeClass>();
+  // One profiling window at a time, shared by every loop firing during it.
+  let attribution: Promise<Attribution | null> | null = null;
   let lastInteractionAt = performance.now();
 
   function markInteraction(): void {
     lastInteractionAt = performance.now();
   }
 
-  /** Skip mutations inside benign DOM-emitting chrome (incl. our own absence). */
-  function isExcluded(node: Node): boolean {
-    const el: Element | null =
-      node instanceof Element ? node : node.parentElement;
-    if (!el) return true;
-    return (
+  /**
+   * Skip mutations inside benign DOM-emitting chrome, and an animation host's
+   * frames (its descendants React does not own).
+   */
+  function isExcluded(el: Element): boolean {
+    if (
       el.closest("[data-sonner-toaster]") != null ||
       el.closest("[data-sonner-toast]") != null ||
       el.closest("[data-element-picker]") != null
-    );
+    ) {
+      return true;
+    }
+    const host = el.closest(`[${ANIMATION_HOST_ATTR}]`);
+    return host !== null && host !== el && !isReactOwned(el);
+  }
+
+  /** A record target's classification, cached per element. */
+  function classify(node: Node): NodeClass {
+    const el: Element | null =
+      node instanceof Element ? node : node.parentElement;
+    // Detached by the time its record is read (written, then removed in the
+    // same task): it cannot be a loop's culprit, and no ancestor says where it was.
+    if (!el?.isConnected) return SKIPPED;
+    let cls = nodeClasses.get(el);
+    if (cls === undefined) {
+      cls = isExcluded(el) ? SKIPPED : { tracked: true, meta: culpritMeta(el) };
+      nodeClasses.set(el, cls);
+    }
+    return cls;
+  }
+
+  /** The current profiling window's result, opening one when none is open. */
+  function attribute(): Promise<Attribution | null> {
+    if (attribution === null) {
+      attribution = attributeCommits().finally(() => {
+        attribution = null;
+      });
+    }
+    return attribution;
   }
 
   /** True for animation-driven style writes that are legitimately fast (4a excl). */
@@ -372,23 +486,28 @@ export function installRenderLoopDetector(): () => void {
   ): Promise<void> {
     const sampleValues =
       state.sampleValues.size > 0 ? Array.from(state.sampleValues) : undefined;
+    const meta = state.meta;
+    const tagMultiset = state.tagMultiset;
+    const attributed = await attribute();
     const data: RenderLoopPayload = {
-      signature: state.meta.signature,
-      pluginId: state.meta.pluginId ?? null,
-      slotId: state.meta.slotId ?? null,
-      contributionId: state.meta.contributionId ?? null,
-      source: state.meta.source ?? null,
-      owner: state.meta.owner ?? null,
-      paneId: state.meta.paneId ?? null,
-      selector: state.meta.selector ?? null,
-      mutationClass: state.mutationClass,
-      attrName: state.attrName ?? null,
+      signature: meta.signature,
+      pluginId: meta.pluginId ?? null,
+      slotId: meta.slotId ?? null,
+      contributionId: meta.contributionId ?? null,
+      source: meta.source ?? null,
+      owner: meta.owner ?? null,
+      paneId: meta.paneId ?? null,
+      selector: meta.selector ?? null,
+      mutationClass: base.mutationClass,
+      attrName: base.attrName ?? null,
       ratePerSec: base.ratePerSec,
       sustainedMs: base.sustainedMs,
       sampleValues: sampleValues ?? null,
-      tagMultiset: state.tagMultiset ?? null,
+      tagMultiset: tagMultiset ?? null,
       visibilityState: base.visibilityState,
       msSinceInteraction: base.msSinceInteraction,
+      reactCommitsPerSec: attributed?.reactCommitsPerSec ?? null,
+      initiators: attributed?.initiators ?? null,
     };
 
     // The synchronous guard in evaluate() already ensured this is the only fire
@@ -397,7 +516,7 @@ export function installRenderLoopDetector(): () => void {
     // dedup, so the values line up).
     const fingerprint = await renderLoopFingerprint(data);
 
-    const message = `Render loop: ${state.mutationClass} @ ${base.ratePerSec}/s — ${state.meta.signature}`;
+    const message = `Render loop: ${base.mutationClass} @ ${base.ratePerSec}/s — ${meta.signature}${attributionSuffix(attributed)}`;
     clientLog(CHANNEL, JSON.stringify({ kind: "fire", fingerprint, ...base }));
 
     void report({
@@ -497,6 +616,12 @@ export function installRenderLoopDetector(): () => void {
       distinctLeaves: number;
     },
   ): Promise<void> {
+    // Sampled at detection, before the attribution window moves the window on.
+    const sampleLeaves = agg.window.sampleLeaves(
+      now,
+      RENDER_LOOP.AGG_SAMPLE_LEAVES,
+    );
+    const attributed = await attribute();
     // The aggregate root is a coarse container — all per-node marker fields are
     // null (pluginId/source/owner/etc. vary across the subtree by design).
     const data: RenderLoopPayload = {
@@ -515,16 +640,18 @@ export function installRenderLoopDetector(): () => void {
       sampleValues: null,
       tagMultiset: null,
       distinctLeaves: base.distinctLeaves,
-      sampleLeaves: agg.window.sampleLeaves(now, RENDER_LOOP.AGG_SAMPLE_LEAVES),
+      sampleLeaves,
       visibilityState: base.visibilityState,
       msSinceInteraction: base.msSinceInteraction,
+      reactCommitsPerSec: attributed?.reactCommitsPerSec ?? null,
+      initiators: attributed?.initiators ?? null,
     };
 
     // Hashed fingerprint is computed here purely for the log line (the server
     // dedups with the same algorithm + inputs, so the values line up).
     const fingerprint = await renderLoopFingerprint(data);
 
-    const message = `Render loop (cascade): subtree-cascade @ ${base.ratePerSec}/s across ${base.distinctLeaves} nodes — ${agg.root}`;
+    const message = `Render loop (cascade): subtree-cascade @ ${base.ratePerSec}/s across ${base.distinctLeaves} nodes — ${agg.root}${attributionSuffix(attributed)}`;
     clientLog(CHANNEL, JSON.stringify({ kind: "fire", fingerprint, ...base }));
 
     void report({
@@ -540,7 +667,8 @@ export function installRenderLoopDetector(): () => void {
   function onMutations(records: MutationRecord[]): void {
     const now = performance.now();
     for (const record of records) {
-      if (isExcluded(record.target)) continue;
+      const cls = classify(record.target);
+      if (!cls.tracked) continue;
       if (
         record.type === "attributes" &&
         isAnimationAttr(record.attributeName, record.target)
@@ -548,13 +676,13 @@ export function installRenderLoopDetector(): () => void {
         continue;
       }
 
-      const meta = culpritMeta(record.target);
+      const meta = cls.meta;
       const attrName =
         record.type === "attributes"
           ? record.attributeName ?? undefined
           : undefined;
       const state = stateFor(meta, attrName);
-      // Refresh the meta on each hit so a rebuilt node keeps the latest selector.
+      // The latest node's meta: a rebuilt node is a new element, classified anew.
       state.meta = meta;
       state.events.push(now);
       state.lastEventAt = now;

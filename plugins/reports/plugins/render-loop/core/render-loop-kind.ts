@@ -57,7 +57,41 @@ export const RENDER_LOOP = {
   AGG_MAX_TRACKED_LEAVES: 256,
   // Number of sample leaf signatures (hottest first) attached to a cascade report.
   AGG_SAMPLE_LEAVES: 6,
+  // --- Attribution ---
+  // Before a loop is filed, the React commit profiler (debug/render-profiler)
+  // watches this long, so the report names the component and hook that start
+  // each re-render — or says that no React commit drives the writes at all.
+  ATTRIBUTE_MS: 1500,
+  // Initiating components attached to a report (most commits first).
+  ATTRIBUTE_TOP: 3,
+  // A component counts as driving the loop only at this many commits/sec or
+  // more (the rebuild floor): the app's background commits (a status probe,
+  // a toast) are far below it and must not be named as a loop's cause.
+  ATTRIBUTE_MIN_COMMITS_PER_SEC: 3,
 } as const;
+
+/**
+ * Declares an element whose subtree an imperative animation draws (a rAF loop
+ * writing an SVG scene, a canvas overlay's DOM): its descendants' writes are
+ * the animation's frames, not a render loop, so the detector does not count
+ * them. React-rendered descendants are still watched — only nodes React does
+ * not own are skipped — so a real re-render loop inside the host still fires.
+ * Spread on the host element: `<div {...ANIMATION_HOST} />`.
+ */
+export const ANIMATION_HOST_ATTR = "data-animation-host";
+export const ANIMATION_HOST = { [ANIMATION_HOST_ATTR]: "" } as const;
+
+/** One React component found starting the re-renders behind a loop. */
+export const RenderLoopInitiatorSchema = z.object({
+  /** The component whose own state/store/context changed. */
+  component: z.string(),
+  /** Its nearest named ancestors, outermost first. */
+  ancestors: z.array(z.string()),
+  /** The hooks that changed, as `<kind>#<index>` (e.g. `external-store#7`). */
+  hooks: z.array(z.string()),
+  commitsPerSec: z.number(),
+});
+export type RenderLoopInitiator = z.infer<typeof RenderLoopInitiatorSchema>;
 
 // The render-loop report payload, stored in the generic `data` jsonb column and
 // validated on ingest by the render-loop ReportKind. Captures the stable culprit
@@ -90,6 +124,12 @@ export const RenderLoopPayloadSchema = z.object({
   sampleLeaves: z.array(z.string()).nullable().optional(),
   visibilityState: z.string(),
   msSinceInteraction: z.number(),
+  // Attribution (RENDER_LOOP.ATTRIBUTE_MS of React commit profiling before the
+  // report is filed) — absent on older rows and when no profiler is installed.
+  // An empty `initiators` means no component re-rendered at a loop's rate:
+  // the writes are not React's — an imperative loop.
+  reactCommitsPerSec: z.number().nullable().optional(),
+  initiators: z.array(RenderLoopInitiatorSchema).nullable().optional(),
 });
 export type RenderLoopPayload = z.infer<typeof RenderLoopPayloadSchema>;
 

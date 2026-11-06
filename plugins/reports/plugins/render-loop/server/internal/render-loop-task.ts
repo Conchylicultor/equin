@@ -84,6 +84,7 @@ function renderDescription(row: ReportRow): string {
     lines.push(`- **Sample nodes:** ${sample}`);
   }
   lines.push(`- **Rate:** ~${Math.round(data.ratePerSec)} mutations/sec`);
+  lines.push(...attributionLines(data));
   lines.push(`- **Sustained:** ${Math.round(data.sustainedMs)}ms`);
   lines.push(`- **Visibility:** ${data.visibilityState}`);
   lines.push(`- **Idle for:** ${Math.round(data.msSinceInteraction)}ms before firing`);
@@ -103,6 +104,34 @@ function renderDescription(row: ReportRow): string {
   return lines.join("\n");
 }
 
+/**
+ * What the React commit profiler saw while the loop ran (the detector watches
+ * React's commits before it files). Absent on older rows and on compositions
+ * without debug/render-profiler.
+ */
+function attributionLines(data: RenderLoopPayload): string[] {
+  if (data.reactCommitsPerSec == null) {
+    return [
+      "- **React commits:** not measured (no commit profiler in this composition, or a profiling session was already running) — run `debug/render-profiler`'s `e2e/render-profile.ts` on the URL",
+    ];
+  }
+  if (data.initiators == null || data.initiators.length === 0) {
+    return [
+      `- **React commits:** ~${data.reactCommitsPerSec}/sec, none from a component re-rendering at a loop's rate — the writes come from imperative code (a rAF loop, a third-party library), not a React re-render. If the subtree is an intended animation, declare its host with \`ANIMATION_HOST\` (render-loop core).`,
+    ];
+  }
+  const lines = [`- **React commits:** ~${data.reactCommitsPerSec}/sec`];
+  for (const i of data.initiators) {
+    const hooks = i.hooks.length > 0 ? ` — changed ${i.hooks.join(", ")}` : "";
+    const path =
+      i.ancestors.length > 0 ? ` (in ${i.ancestors.join(" › ")})` : "";
+    lines.push(
+      `- **Re-rendered by:** \`${i.component}\`${path}${hooks}, ~${i.commitsPerSec}/sec`,
+    );
+  }
+  return lines;
+}
+
 /** Per-mutation-class remediation guidance for the "How to fix" section. */
 function fixAdvice(data: RenderLoopPayload): string {
   switch (data.mutationClass) {
@@ -112,6 +141,9 @@ function fixAdvice(data: RenderLoopPayload): string {
       return `A whole subtree under the named aggregate root (pane/plugin) is re-rendering across many nodes on a per-frame/idle cascade — no single node is hot, but together they thrash continuously while idle. This is almost always an unstable value/object/callback recreated on every render high in the subtree (so every descendant re-renders), or a per-frame state/store update at the root. Find the component owning the aggregate root above, memoize/stabilize the props and context value it passes down (\`useMemo\`/\`useCallback\`/stable refs), and confirm the root itself isn't re-rendering while idle (e.g. a subscription firing every frame). The **Sample nodes** above point at the hottest descendants.`;
     case "noop-attr":
     case "oscillating-attr":
+      if (data.attrName === "name" || data.attrName === "type") {
+        return `React 19 re-assigns an \`<input>\`'s \`${data.attrName}\` on every commit of the element (even unchanged), so these writes mean the component rendering this input re-renders continuously — no code of ours writes the attribute. Find what re-renders it (**Re-rendered by** above, or \`debug/render-profiler\`) and stop the update at its source.`;
+      }
       return `An attribute is being rewritten to the same (or a small cycling set of) value(s) every frame with no visible effect. Find the effect/render at the source/owner above that writes this attribute and gate it on an actual value change (skip the write when the new value equals the current one), or move it out of the per-frame path. A monotonic progress bar/timer is exempt by design — this fired because the value **oscillates/repeats**, which is wasted work.`;
   }
 }

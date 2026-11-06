@@ -141,6 +141,7 @@ React-internals coupling (fiber `flags` / `memoizedState` / `dependencies` /
   - Imported by:
     - `debug/live-state-churn/emit`
     - `debug/profiling/cold-start`
+    - `reports/render-loop`
 - Core:
   - Exports (types):
     - `CommitSample`

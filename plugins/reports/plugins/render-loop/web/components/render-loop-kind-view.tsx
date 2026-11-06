@@ -23,6 +23,13 @@ export function RenderLoopKindView({ report }: { report: Report }) {
       <span className="text-muted-foreground tabular-nums">
         ~{Math.round(d.ratePerSec)}/s for {Math.round(d.sustainedMs / 1000)}s
       </span>
+      {d.initiators?.length === 0 ? (
+        <span className="text-muted-foreground">no React re-render</span>
+      ) : d.initiators?.[0] ? (
+        <span className="truncate text-muted-foreground">
+          by {d.initiators[0].component}
+        </span>
+      ) : null}
     </Inline>
   );
 }

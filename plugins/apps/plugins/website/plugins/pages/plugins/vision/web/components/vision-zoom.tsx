@@ -2,6 +2,7 @@ import { memo, useId, useLayoutEffect, useRef } from "react";
 import { observeSectionReach } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { findScrollParent } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { ANIMATION_HOST } from "@plugins/reports/plugins/render-loop/core";
 import { LADDER } from "../internal/ladder";
 import {
   mountLadderScroll,
@@ -89,7 +90,9 @@ const LadderMarkup = memo(function LadderMarkup() {
           </div>
         </div>
       </div>
-      <div className="vs-stage" aria-hidden="true" />
+      {/* The zoom draws the stage on its own rAF loop: an animation host, so
+          the render-loop detector reads its frames as frames, not a loop. */}
+      <div className="vs-stage" aria-hidden="true" {...ANIMATION_HOST} />
       <div className="vs-track">
         {LADDER.map((l) => (
           <section key={l.key} className="vs-step" id={`layer-${l.key}`}>

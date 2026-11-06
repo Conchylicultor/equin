@@ -312,6 +312,7 @@ export const browserHost = {
     "debug.profiling.op-log.op-store",
     "debug.profiling.ops",
     "debug.profiling.ops.op-gantt",
+    "debug.render-profiler",
     "debug.reports",
     "fields",
     "fields.avatar",

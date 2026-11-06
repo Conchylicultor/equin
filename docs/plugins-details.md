@@ -23988,6 +23988,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `debug/live-state-churn/emit`
           - `debug/profiling/cold-start`
+          - `reports/render-loop`
       - Core:
         - Exports (types):
           - `CommitSample`
@@ -29126,7 +29127,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 186 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 187 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×54
               - `primitives` ×28
               - `conversations` ×26
@@ -29136,6 +29137,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×5
               - `active-data` ×3
               - `config_v2` ×3
+              - `reports` ×3
               - `shell` ×3
               - `ui` ×3
               - `framework` ×2
@@ -29143,7 +29145,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra` ×2
               - `network` ×2
               - `plugin-meta` ×2
-              - `reports` ×2
               - `build`
               - `database/admin`
               - `map/google`
@@ -52062,9 +52063,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
+        - Imported by: `apps/website/pages/vision`
       - Core:
-        - Exports (types): `RenderLoopPayload`
+        - Exports (types):
+          - `RenderLoopInitiator`
+          - `RenderLoopPayload`
         - Exports (values):
+          - `ANIMATION_HOST`
+          - `ANIMATION_HOST_ATTR`
           - `RENDER_LOOP`
           - `renderLoopFingerprint`
           - `RenderLoopPayloadSchema`
