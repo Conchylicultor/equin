@@ -29887,8 +29887,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 49 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×48
+        - Slot contributors: 50 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×49
           - `Core.Boot` ← `network.live.boot-snapshot`
       - Core:
         - Uses:
@@ -29952,8 +29952,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 111 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `primitives` ×20
+        - Imported by: 112 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `primitives` ×21
           - `reports` ×18
           - `apps` ×17
           - `ui` ×6
@@ -44947,8 +44947,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review`
               - `shell/notifications`
               - `tasks/task-triage`
-        - **`ui-kit`** — Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context.
+        - **`ui-kit`** — Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context, and the page's input modality (pointer / keyboard) the focus-ring utilities read.
           - Web:
+            - Contributes: `Core.Root` → `InputModalityTracker`
             - Uses:
               - `primitives/css/rail.useRailGuard`
               - `primitives/dom/element-size.useResizeObserver`

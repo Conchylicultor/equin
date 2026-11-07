@@ -1,4 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { Core } from "@plugins/framework/plugins/web-sdk/core";
+import { InputModalityTracker } from "./theme/input-modality";
 
 export { cn } from "./lib/utils";
 
@@ -171,6 +173,6 @@ export { usePinOnClick } from "./components/ui/use-pin-on-click";
 
 export default {
   description:
-    "Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context.",
-  contributions: [],
+    "Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context, and the page's input modality (pointer / keyboard) the focus-ring utilities read.",
+  contributions: [Core.Root({ component: InputModalityTracker })],
 } satisfies PluginDefinition;

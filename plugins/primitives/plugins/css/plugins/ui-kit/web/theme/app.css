@@ -327,18 +327,20 @@
  * for wrappers that ring when a child is focused). The border is NEVER flipped
  * to the ring hue: doing so doubled the stroke under saturated theme `--ring`
  * values. Keep the resting `border-*` class on the control; the ring alone
- * signals focus. */
+ * signals focus. No ring while the page is in pointer modality
+ * (`theme/input-modality.tsx`): focus a closing popup hands back to its
+ * clicked trigger after Escape is `:focus-visible` to Chrome, not to the user. */
 @utility focus-ring {
   /* twmerge: standalone -- Additive box-shadow/outline; no single-value built-in group to conflict with. */
   @apply outline-none;
-  &:focus-visible {
+  &:focus-visible:not(:where([data-input-modality="pointer"] *)) {
     @apply ring-3 ring-ring/50;
   }
 }
 
 @utility focus-ring-within {
   /* twmerge: standalone -- Additive box-shadow/outline; no single-value built-in group to conflict with. */
-  &:has(:focus-visible) {
+  &:has(:focus-visible):not(:where([data-input-modality="pointer"] *)) {
     @apply ring-3 ring-ring/50;
   }
 }
@@ -382,7 +384,7 @@
  * the indicator, so the UA outline would be the second one. */
 @utility focus-ring-from {
   /* twmerge: standalone -- Additive box-shadow/outline; no single-value built-in group to conflict with. */
-  &:has(> [data-focus-ring]:focus-visible) {
+  &:has(> [data-focus-ring]:focus-visible):not(:where([data-input-modality="pointer"] *)) {
     @apply ring-3 ring-ring/50;
   }
 }
