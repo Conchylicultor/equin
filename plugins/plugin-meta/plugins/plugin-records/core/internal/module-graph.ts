@@ -2,6 +2,7 @@ import type {
   RepoFiles,
   RepoSnapshot,
 } from "@plugins/framework/plugins/tooling/core";
+import { groupedByOwner, readGrouped } from "./grouped";
 import { gitBlobId, recordKey } from "./keys";
 import type { RecordStore } from "./store";
 import { relDirname, relJoin } from "./rel-path";
@@ -323,13 +324,20 @@ async function growGraph(
     while (level.length > 0) {
       const blobs = await Promise.all(level.map(blobOf));
       const factKey = (blob: string): string => recordKey(factsId!, blob);
-      const hits = store.getMany(
-        "file",
+      // Read a plugin at a time: a level's modules of one plugin are one
+      // group record (the walk is deterministic for a snapshot and its
+      // entries, so a no-change build finds the same groups).
+      const scanned =
         factsId === null
           ? []
-          : level.flatMap((p, i) =>
-              SCANNED.test(p) ? [factKey(blobs[i]!)] : [],
-            ),
+          : level.flatMap((p, i) => (SCANNED.test(p) ? [i] : []));
+      const hits = readGrouped(
+        store,
+        "file",
+        groupedByOwner(
+          scanned.map((i) => level[i]!),
+          scanned.map((i) => factKey(blobs[i]!)),
+        ),
       );
       const fresh: [string, string][] = [];
       const next: string[] = [];

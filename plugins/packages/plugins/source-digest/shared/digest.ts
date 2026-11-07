@@ -180,39 +180,59 @@ async function readFacts(
   return { bytes, after, facts };
 }
 
+/**
+ * How many files a walk asks about at once. Awaited one at a time, a warm
+ * walk of a backend's closure (5,371 files) spent 128 ms on stats that cost
+ * 14 ms 64 at a time — and yielded 5,371 times on the serving thread, so
+ * every unrelated task the backend ran in between landed inside the walk
+ * (the adopt answer was 0.15 or 0.6 s by luck). The stats themselves are the
+ * floor; only a change signal removes them.
+ */
+const WALK_BATCH = 64;
+
 async function walkClosure(
   entries: readonly string[],
   visit: ClosureVisitor,
 ): Promise<void> {
-  const seen = new Set<string>();
-  const queue = [...entries];
-  while (queue.length > 0) {
-    const file = queue.pop()!;
-    if (seen.has(file)) continue;
-    seen.add(file);
-    const { imports } = await visit.facts(file);
-    for (const specifier of imports) {
-      if (isBuiltin(specifier)) {
-        visit.builtin(specifier);
-        continue;
-      }
-      let resolved: string;
-      try {
-        resolved = Bun.resolveSync(specifier, dirname(file));
-      } catch (err) {
-        throw new UnmeasurableClosureError(
-          `[source-digest] cannot resolve "${specifier}" imported by ${file}`,
-          { cause: err },
-        );
-      }
-      if (resolved.includes(NODE_MODULES)) {
-        await visit.package(file, specifier, resolved);
-      } else {
-        queue.push(resolved);
-      }
+  const seen = new Set<string>(entries);
+  // Breadth-first, a batch of one level at a time: each file's facts, then
+  // its edges. Every file is still visited once and every import resolved.
+  let level = [...seen];
+  while (level.length > 0) {
+    const next: string[] = [];
+    for (let i = 0; i < level.length; i += WALK_BATCH) {
+      const batch = level.slice(i, i + WALK_BATCH);
+      const facts = await Promise.all(batch.map((file) => visit.facts(file)));
+      // Asked once the batch resolved, so a refusal leaves none unawaited.
+      const packages: [string, string, string][] = [];
+      batch.forEach((file, j) => {
+        for (const specifier of facts[j]!.imports) {
+          if (isBuiltin(specifier)) {
+            visit.builtin(specifier);
+            continue;
+          }
+          let resolved: string;
+          try {
+            resolved = Bun.resolveSync(specifier, dirname(file));
+          } catch (err) {
+            throw new UnmeasurableClosureError(
+              `[source-digest] cannot resolve "${specifier}" imported by ${file}`,
+              { cause: err },
+            );
+          }
+          if (resolved.includes(NODE_MODULES)) {
+            packages.push([file, specifier, resolved]);
+          } else if (!seen.has(resolved)) {
+            seen.add(resolved);
+            next.push(resolved);
+          }
+        }
+      });
+      await Promise.all(packages.map((p) => visit.package(...p)));
+      // One batch at a time on the serving thread: let timers and I/O run.
+      await yieldMacrotask();
     }
-    // One file at a time on the serving thread: let timers and I/O run.
-    await yieldMacrotask();
+    level = next;
   }
 }
 

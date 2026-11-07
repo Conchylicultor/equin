@@ -94,6 +94,17 @@ a pass computes only the records no checkout has made yet.
   again (a no-change build re-read ~37k keys: the facet records for both
   trees, two generators' scans of one file set). Writes are not kept past the
   flush below.
+- **Records are read a plugin at a time.** `readGrouped` stores a GROUP of
+  records (one plugin's facet records, the file records of one plugin's files
+  in a scan or a module-graph level) as one more record, in the `group`
+  table, keyed by the member keys alone — a pure function of its key like any
+  record, so never stale: a changed member is a new member key, so a new
+  group key, and only that plugin's group misses. A missing group is read
+  member by member and written once every member exists. A lookup is two
+  random B-tree probes (~20 µs); a no-change build asked ~83k of them,
+  0.43 s of SQLite (build pipeline step 13), now ~0.15–0.2 s: module
+  records group by plugin too; evaluated records (one per barrel) stay per
+  key.
 - **Writes are held back to one transaction.** `putMany` holds its records
   (its own `getMany` answers them at once) and `flush()` commits them all in
   one transaction: one commit per call made a cold codegen's ~3,700 calls cost
@@ -203,9 +214,11 @@ its docblock records — and then lowered as readily as raised.
     - `currentRecordStore`
     - `defineRecordJob`
     - `gitBlobId`
+    - `groupedByOwner`
     - `installRecordStore`
     - `installRecordWorkers`
     - `NO_OUTSIDE_FILES`
+    - `readGrouped`
     - `RECORD_TABLES`
     - `recordKey`
     - `recordWorkerCount`

@@ -2,6 +2,7 @@ import type {
   RepoFiles,
   RepoSnapshot,
 } from "@plugins/framework/plugins/tooling/core";
+import { groupedByOwner, readGrouped } from "./grouped";
 import { recordKey } from "./keys";
 import { currentRecordStore } from "./store";
 import {
@@ -140,7 +141,7 @@ export async function scanFilesCached<T>(
   const keys = files.map((rel) =>
     recordKey(identity, ...params, rel, repo.blobOf(rel)),
   );
-  const hits = input.store.getMany("file", keys);
+  const hits = readGrouped(input.store, "file", groupedByOwner(files, keys));
   const fresh: [string, string][] = [];
   const out = await Promise.all(
     files.map(async (rel, i) => {

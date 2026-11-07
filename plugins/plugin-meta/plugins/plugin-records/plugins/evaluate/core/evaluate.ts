@@ -18,6 +18,8 @@ import {
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import {
   buildModuleGraph,
+  groupedByOwner,
+  readGrouped,
   recordKey,
   type ModuleGraph,
   type ModuleGraphInput,
@@ -203,7 +205,13 @@ export async function evaluateBarrels(
 
   const loaded = graph.staticClosureOf(barrels.map((b) => b.path));
   const moduleRecords = new Map<string, ModuleRecord>();
-  for (const [k, v] of store.getMany("module", [...loaded].map(moduleKeyOf)))
+  // A plugin's module records at a time (`readGrouped`): ~10k keys asked one
+  // by one were most of an evaluation's store time.
+  for (const [k, v] of readGrouped(
+    store,
+    "module",
+    groupedByOwner([...loaded], [...loaded].map(moduleKeyOf)),
+  ))
     moduleRecords.set(k, JSON.parse(v) as ModuleRecord);
 
   // A barrel misses when its record does, or when a module it loads has no

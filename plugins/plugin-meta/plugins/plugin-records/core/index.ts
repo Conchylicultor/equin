@@ -6,6 +6,7 @@ export {
 } from "./internal/store";
 export type { RecordStore, RecordTable } from "./internal/store";
 export { gitBlobId, recordKey } from "./internal/keys";
+export { groupedByOwner, readGrouped } from "./internal/grouped";
 export {
   defineRecordJob,
   installRecordWorkers,

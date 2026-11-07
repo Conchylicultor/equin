@@ -51,7 +51,12 @@ const digest = await sourceDigest([myCode]);
   agree), so a later walk still visits and stats every file and re-resolves
   every import, but reads and scans only files whose stamp moved: O(closure)
   stats, O(changed files) reads. restart-skip walks it once after boot (a
-  warm-up), so the first deploy asks cheaply too.
+  warm-up), so the first deploy asks cheaply too. The walk goes a level at a
+  time, 64 files at once with one yield per batch: one file at a time, a warm
+  walk of a backend (5,371 files) spent 128 ms on stats that cost 14 ms
+  batched and yielded 5,371 times, letting unrelated backend work land inside
+  it (build pipeline step 13: 0.33 → 0.12 s). The stats are the floor; only a
+  change signal removes them.
 - **Keep the included module small.** The digest moves with everything the
   module loads: include the module holding the parse or the compiler, not the
   plugin's server entry, or every unrelated change rebuilds the state.

@@ -10,6 +10,7 @@ import {
 import {
   buildModuleGraph,
   defineRecordJob,
+  readGrouped,
   recordKey,
   recordWorkerCount,
   repoModuleOf,
@@ -183,9 +184,13 @@ export async function facetRecordTexts(
   keyed: ReadonlyMap<PluginNode, ReadonlyMap<string, string>>,
 ): Promise<Map<string, string>> {
   const { snapshot, store } = input;
-  const wanted: string[] = [];
-  for (const perFacet of keyed.values()) wanted.push(...perFacet.values());
-  const texts = store.getMany("facet", wanted);
+  // One group per plugin: a no-change build asks the store ~1.7k keys, not
+  // one per (plugin, facet) (~18.7k).
+  const texts = readGrouped(
+    store,
+    "facet",
+    [...keyed.values()].map((perFacet) => [...perFacet.values()]),
+  );
 
   // Nodes with at least one missed facet: the only plugins whose files are read.
   const missed = [...keyed.keys()].filter((n) =>

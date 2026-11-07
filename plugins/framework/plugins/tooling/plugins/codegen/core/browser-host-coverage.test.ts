@@ -14,6 +14,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   createSourceScans,
   resolveHostConfigCoverage,
@@ -32,9 +33,15 @@ const pj = (rel: string): string => `plugins/${rel}`;
 /** A fixture repo over `files` (repo-relative path → source). */
 function repoOf(files: Record<string, string>): SourceScans["repo"] {
   const paths = Object.keys(files).sort();
+  // No blob ids: every file is scanned, as from a check pass's file set.
   return {
+    root: asAppPath("/fixture"),
+    all: () => paths,
     has: (p) => p in files,
     under: (dir) => paths.filter((p) => p.startsWith(`${dir}/`)),
+    glob: () => {
+      throw new Error("the coverage scan globs nothing");
+    },
     read: async (p) => files[p] ?? null,
   };
 }

@@ -23,6 +23,9 @@ export const RECORD_TABLES = [
   // A tool's answer that only one outcome is ever stored for (drizzle-kit's
   // "no schema change"), keyed by everything the tool reads.
   "verdict",
+  // The values of a set of records of one table, keyed by their keys alone
+  // (`readGrouped`): one lookup for a plugin's records instead of one each.
+  "group",
 ] as const;
 export type RecordTable = (typeof RECORD_TABLES)[number];
 

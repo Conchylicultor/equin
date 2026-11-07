@@ -27,3 +27,15 @@ export function relJoin(dir: string, spec: string): string | null {
   }
   return out.length === 0 ? null : out.join("/");
 }
+
+/**
+ * The plugin a repo path belongs to (`plugins/a/plugins/b`), or its top
+ * directory outside `plugins/`: the unit records are read in (`readGrouped`).
+ */
+export function relOwner(rel: string): string {
+  const segs = rel.split("/");
+  if (segs[0] !== "plugins" || segs.length < 3) return segs[0]!;
+  let end = 2;
+  while (segs[end] === "plugins" && end + 2 < segs.length) end += 2;
+  return segs.slice(0, end).join("/");
+}

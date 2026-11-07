@@ -28969,16 +28969,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 138 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 140 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×19
               - `config_v2` ×15
               - `framework/plugin-id` ×13
-              - `network/live/resource-vocabulary` ×10
+              - `network/live/resource-vocabulary` ×11
+              - `plugin-meta/plugin-records` ×7
               - `framework/slot-declaration` ×6
               - `packages/timed-fs` ×6
               - `plugin-meta/barrel-import` ×6
               - `plugin-meta/composition` ×6
-              - `plugin-meta/plugin-records` ×6
               - `plugin-meta/closure` ×5
               - `plugin-meta/facets` ×5
               - `plugin-meta/plugin-records/evaluate` ×5
@@ -29170,7 +29170,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from:
               - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
-              - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.ts` (sanctioned)
+              - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.scan.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
           - Plugins:
             - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, and every per-name registry and backend entry on disk — without the build pipeline, so a serving backend (worktree reclaim) can list them.
@@ -42426,9 +42426,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `currentRecordStore`
           - `defineRecordJob`
           - `gitBlobId`
+          - `groupedByOwner`
           - `installRecordStore`
           - `installRecordWorkers`
           - `NO_OUTSIDE_FILES`
+          - `readGrouped`
           - `RECORD_TABLES`
           - `recordKey`
           - `recordWorkerCount`
@@ -42482,8 +42484,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/barrel-import.importBarrel`
               - `plugin-meta/barrel-import.registerBarrelStubs`
               - `plugin-meta/plugin-records.buildModuleGraph`
+              - `plugin-meta/plugin-records.groupedByOwner`
               - `plugin-meta/plugin-records.ModuleGraph`
               - `plugin-meta/plugin-records.ModuleGraphInput`
+              - `plugin-meta/plugin-records.readGrouped`
               - `plugin-meta/plugin-records.recordKey`
             - Exports (types):
               - `BarrelRef`
@@ -42653,8 +42657,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and the faceted index a backend keeps in a worker thread (FacetedTreeSource's desktop provider): built once, then refreshed by the watcher's paths — only the plugins owning them re-keyed, only moved records extracted, relate only when a record text changed.
           - Core:
-            - Uses: 42 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
-              - `plugin-meta/plugin-records` ×9
+            - Uses: 43 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
+              - `plugin-meta/plugin-records` ×10
               - `plugin-meta/plugin-tree` ×9
               - `framework/tooling` ×6
               - `plugin-meta/facets` ×4
