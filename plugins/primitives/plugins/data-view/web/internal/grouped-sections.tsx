@@ -165,7 +165,11 @@ export function GroupedSections({
                   )}
                 </NestedSectionIndent>
               </StickyStackItem>
-              <CollapsibleContent {...dataPart("dv.group")}>
+              {/* `isolate`: the body seals whatever stacking its rows open (a
+                  card's cover pins, a row's actions — `raised`, like the
+                  headers) so none of it paints over a pinned header as it
+                  scrolls under it. */}
+              <CollapsibleContent className="isolate" {...dataPart("dv.group")}>
                 {ownBody && (
                   <NestedSectionIndent depth={depth}>
                     {children(section)}

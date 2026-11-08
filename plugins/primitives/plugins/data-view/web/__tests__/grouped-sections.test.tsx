@@ -33,6 +33,17 @@ function renderSections(
   );
 }
 
+describe("GroupedSections — stacking", () => {
+  it("seals each body's stacking, so a row's raised overlay never paints over a pinned header", () => {
+    renderSections();
+    const bodies = document.querySelectorAll('[data-part="dv.group"]');
+    expect(bodies).toHaveLength(2);
+    for (const body of bodies) {
+      expect(body.getAttribute("class")).toContain("isolate");
+    }
+  });
+});
+
 describe("GroupedSections — group header", () => {
   it("one run: label, count beside it, the rule, then the chevron", () => {
     renderSections();
