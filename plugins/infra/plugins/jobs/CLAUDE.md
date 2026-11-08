@@ -949,6 +949,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `jobs:no-raw-addjob:task-literal` — `core/hold.ts`, `check/index.ts` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `boundaries/no-platform-api` — `server/internal/queue-schema.ts`, `server/internal/superseded-trigger.ts` (debt)
+    - `sql-writes:fit:schema` — `machine/internal/dead-job-gc.ts`, `machine/internal/graphile-queue.ts`, `machine/internal/introspection.ts`, `machine/internal/stuck-lock-sweeper.ts`, `machine/internal/worker.ts` (sanctioned)
 - Machine:
   - Exports (types):
     - `BacklogJobStat`

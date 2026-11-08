@@ -22,6 +22,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "conversations/plugins/model-provider", id: "conversations.model-provider", loader: () => import("@plugins/conversations/plugins/model-provider/check"), dependsOn: [] },
   { pluginPath: "database/plugins/derived-updated-at", id: "database.derived-updated-at", loader: () => import("@plugins/database/plugins/derived-updated-at/check"), dependsOn: ["database/plugins/migrations"] },
   { pluginPath: "database/plugins/migrations", id: "database.migrations", loader: () => import("@plugins/database/plugins/migrations/check"), dependsOn: ["database/plugins/derived-updated-at", "framework/plugins/server-core", "framework/plugins/tooling/plugins/codegen", "infra/plugins/namespace", "infra/plugins/paths"] },
+  { pluginPath: "database/plugins/sql-writes", id: "database.sql-writes", loader: () => import("@plugins/database/plugins/sql-writes/check"), dependsOn: ["database/plugins/derived-updated-at", "database/plugins/migrations"] },
   { pluginPath: "debug/plugins/profiling/plugins/boot", id: "debug.profiling.boot", loader: () => import("@plugins/debug/plugins/profiling/plugins/boot/check"), dependsOn: [] },
   { pluginPath: "debug/plugins/sentinel", id: "debug.sentinel", loader: () => import("@plugins/debug/plugins/sentinel/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli", id: "framework.cli", loader: () => import("@plugins/framework/plugins/cli/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },

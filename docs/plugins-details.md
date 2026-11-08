@@ -1074,6 +1074,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/song-index.countTokenSets`
               - `apps/chord/song-index.loadReadyIndexIdentity`
               - `database.db`
+              - `database/derived-updated-at.derivedUpdatedAt`
               - `database/derived-updated-at.deriveUpdatedAt`
               - `database/sql-column.parsedJson`
               - `database/sql-column.parsedText`
@@ -1412,6 +1413,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database.db`
               - `database/admin.ExcludeFromBackup`
               - `database/admin.ExcludeFromFork`
+              - `database/derived-updated-at.derivedUpdatedAt`
               - `database/derived-updated-at.deriveUpdatedAt`
               - `database/sql-column.parsedJson`
               - `database/sql-column.parsedText`
@@ -16257,6 +16259,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries/no-platform-api` — `server/internal/compute-edited-files.ts`, `server/internal/edited-files-signature.ts` (debt)
               - `no-raw-websocket` — `e2e/edited-files-cost.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/edited-files-signature.ts` (sanctioned)
+              - `sql-writes:fit:schema` — `e2e/edited-files-cost.ts` (sanctioned)
           - Plugins:
             - **`file-pane`** — Hosts the file-peek pane: a checkout file opened from a conversation (chat file links, review, commits), shown through primitives/file-viewer with the conversation's edited-file status as context.
               - Web:
@@ -19722,6 +19725,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `ids.kind` "cgrp"
             - Uses:
               - `database.db`
+              - `database/derived-updated-at.derivedUpdatedAt`
               - `database/derived-updated-at.deriveUpdatedAt`
               - `ids.idColumn`
               - `ids.IdKinds`
@@ -21260,6 +21264,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exempts itself from:
       - `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
       - `blocking-fs/no-sync-fs` — `machine/internal/pg-driver.ts` (debt)
+      - `sql-writes:fit:dynamic` — `plugins/pglite/server/internal/pglite-driver.ts` (sanctioned)
   - Test helpers:
     - Server: `@plugins/database/server/testing`
       - `snapshotWatermark`
@@ -21518,6 +21523,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor`
           - `page/links`
           - `tasks/tasks-core`
+      - Exemptions:
+        - Exempts itself from: `sql-writes:fit:dynamic` — `core/internal/define-rollup.ts`, `server/internal/rebuild.ts` (sanctioned)
       - Test helpers:
         - Server: `@plugins/database/plugins/derived-tables/server/testing`
           - `installRollups` — Install `rollups` onto a throwaway test database (`createTestDb`) whose source tables exist, and reconcile them — the SAME code path the boot schema layer runs (prepare the tables, install the trigger sets, reconcile), so the DDL and the reconcile under test are byte-identical to what a backend installs.
@@ -21528,18 +21535,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - DB schema: `plugins/database/plugins/derived-updated-at/server/internal/from-table.ts`
         - Exports (types):
           - `DerivedUpdatedAtSpec`
+          - `RowWithUpdatedAt`
           - `TableTouchedBy`
           - `TableWithUpdatedAt`
           - `TouchRule`
         - Exports (values):
           - `compileFromTable`
+          - `derivedUpdatedAt`
           - `deriveUpdatedAt`
+          - `insertWithUpdatedAt`
           - `registerDerivedUpdatedAt`
           - `registeredDerivedUpdatedAt`
       - Cross-plugin:
         - Imported by:
           - `apps/chord/curriculum`
           - `apps/chord/song-index`
+          - `apps/website/promo-film/seed`
           - `conversations/conversations-view/grouped`
           - `database`
           - `debug/profiling/op-log/op-store`
@@ -22148,6 +22159,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `renderSqlValue`
           - `runtimeTypeOf`
           - `SqlRowError`
+    - **`sql-writes`** — Every hand-written SQL write (INSERT / UPDATE / DELETE / MERGE, in CTEs too) parsed with Postgres's own grammar (libpg_query) and checked against the schema the code declares — drizzle tables with their derived updated_at and generated columns, plus hand-written DDL: known tables and columns, required columns inserted, no write to a derived column (check sql-writes:fit).
 
 - **`debug`** — Debug tools umbrella plugin.
   - Cross-plugin:
@@ -23674,6 +23686,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `resource.declare` "op-store.in-flight.all:rows"
                 - Uses:
                   - `database.db`
+                  - `database/derived-updated-at.derivedUpdatedAt`
                   - `database/derived-updated-at.deriveUpdatedAt`
                   - `debug/profiling/op-log.appendOpLog`
                   - `debug/profiling/op-log.OP_LOG_FILE`
@@ -32252,6 +32265,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations` ×10
           - `page` ×3
           - `plugin-meta/plugin-health`
+      - Exemptions:
+        - Exempts itself from: `sql-writes:fit:dynamic` — `server/internal/define-extension.ts` (sanctioned)
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger(). Contributes a BackgroundTriggerSource so the Background activity catalog names the events that start each job.
       - Server:
         - Contributes:
@@ -32472,6 +32487,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `endpoints:no-raw-json-handlers` — `server/internal`, `machine/internal` (sanctioned)
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `boundaries/no-platform-api` — `server/internal/serial-queue.ts` (debt)
+          - `sql-writes:fit:schema` — `machine/internal/crash-recovery.ts`, `machine/internal/queue-lock-no-steal.ts`, `machine/internal/superseded.ts` (sanctioned)
       - Shared:
         - Exports (types):
           - `DeleteTargetingBody`
@@ -33727,6 +33743,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `jobs:no-raw-addjob:task-literal` — `core/hold.ts`, `check/index.ts` (sanctioned)
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `boundaries/no-platform-api` — `server/internal/queue-schema.ts`, `server/internal/superseded-trigger.ts` (debt)
+          - `sql-writes:fit:schema` — `machine/internal/dead-job-gc.ts`, `machine/internal/graphile-queue.ts`, `machine/internal/introspection.ts`, `machine/internal/stuck-lock-sweeper.ts`, `machine/internal/worker.ts` (sanctioned)
       - Machine:
         - Exports (types):
           - `BacklogJobStat`
@@ -34825,6 +34842,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `user-path/no-unproven-claim` — `core/internal/repo-root.ts` (sanctioned)
         - **`root-migration`** — `./equin data-dir migrate`: moves an install's data root from the legacy home dir to ~/.equin (and its local backups beside it) in one run, with every other process of the app stopped — rewrites every stored copy of the old path (each database in the cluster, the files under the root, Claude Code's transcript dirs), drops the cache entries that hold it, removes the legacy name once a scan finds none left and no checkout of the repo still runs code from before the move (otherwise keeps it as a link and names those checkouts), and relabels the gateway's login service dev.equin.gateway. A dry run by default; --apply executes.
+          - Exemptions:
+            - Exempts itself from: `sql-writes:fit:dynamic` — `cli/databases.ts` (sanctioned)
     - **`request-origin`** — Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
       - Core:
         - Uses: `framework/product-name.LEGACY_IDS`
@@ -58513,6 +58532,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2.setConfig`
               - `database.currentTxId`
               - `database.db`
+              - `database/derived-updated-at.derivedUpdatedAt`
               - `database/derived-updated-at.deriveUpdatedAt`
               - `database/sql-column.parsedJson`
               - `database/sql-column.parsedText`
