@@ -1,15 +1,20 @@
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import { compositeKey } from "@plugins/network/plugins/live/plugins/query-resource/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
 import { pagesEntityRef } from "@plugins/page/plugins/block-entity/core";
 import { BacklinkRowSchema } from "./schemas";
 
 // The pages that link TO `pageId`, ordered by title — one value per target
-// page, pushed whole whenever any table its loader read changes (the change
-// feed; no explicit notify). A value rather than a collection: its rows are a
-// join (`page_links` ⨝ the live `page` blocks, projecting the source page's
-// title and icon out of its `data` JSON), not the rows of one table, and the
-// edge table's key is the composite (source, target) pair.
+// page, computed from the rows it FOLLOWS (network/live's `follows`, served in
+// `../server/internal/resources.ts`): the target's first edges
+// (`pageBacklinkEdges`), the blocks they name, those pages' ancestors and the
+// referents of the chips in the linking text — so a write reaches a tuple
+// only when it touches a row that tuple read. A value rather than a
+// collection: its rows are a join of those, not the rows of one table.
 export const pageBacklinks = liveValue("page-backlinks", {
   schema: wholeList(BacklinkRowSchema, {
     reason:
@@ -46,4 +51,40 @@ export const pageLinkTargets = liveCollection("page-links.targets", {
   // Its wire rows stay `{ id, linksTo }`: no exposure of a page folds in.
   baseExposures: false,
   id: "id",
+});
+
+// The `page_links` edge table, by reference: its fields, what the server
+// builds the table from (`defineEntity`, `../server/internal/tables.ts`) and
+// what a collection over it carries. `first`: whether the edge's block is the
+// source page's FIRST linking block into that target, in document order.
+export const pageLinksEntityRef = entityRef("page_links", {
+  sourcePageId: textField(),
+  targetPageId: textField(),
+  sourceBlockId: textField(),
+  first: boolField(),
+});
+
+// The FIRST edge of each source page into one target page — a scoped `all`
+// set by `targetPageId`, a FOLLOW target of `pageBacklinks` (no surface reads
+// it over the wire): per linking page, the block its snippet is read from.
+// Served over `page_links` with `first` as the base membership, so an edge
+// of a second linking block — and every write to another target's edges —
+// reaches no follower; the first block moving is one exit and one entrant.
+// Keyed by the table's composite primary key.
+export const pageBacklinkEdges = liveCollection("page-links.first-edges", {
+  from: pageLinksEntityRef,
+  carry: { pick: ["sourcePageId", "targetPageId", "sourceBlockId"] },
+  baseExposures: false,
+  id: compositeKey(["sourcePageId", "targetPageId", "sourceBlockId"]),
+  all: {
+    by: ["targetPageId"],
+    orderBy: [
+      ["sourcePageId", "asc"],
+      ["sourceBlockId", "asc"],
+    ],
+    unbounded: {
+      reason:
+        "the pages linking to one page, one edge each — as many as link there",
+    },
+  },
 });

@@ -25,6 +25,17 @@ export async function resolveConversationReferent(
     .where(eq(_conversations.id, id))
     .limit(1);
   if (!row) return { found: false };
+  return { found: true, title: conversationReferentTitle(row) };
+}
+
+/**
+ * The one reading of what a conversation chip is called — its own title, else
+ * its task's — shared by `resolve` and the live read (`./referent-rows.ts`).
+ */
+export function conversationReferentTitle(row: {
+  readonly title: string | null;
+  readonly taskTitle: string;
+}): string {
   const own = row.title?.trim();
-  return { found: true, title: own ? own : row.taskTitle };
+  return own ? own : row.taskTitle;
 }

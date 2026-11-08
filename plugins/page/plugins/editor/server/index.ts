@@ -16,6 +16,7 @@ import { handleSetPageKind } from "./internal/handle-set-page-kind";
 import { handleApplyBlockOp } from "./internal/handle-apply-block-op";
 import { handlePatchBlocks } from "./internal/handle-patch-blocks";
 import {
+  blockContentsServed,
   blockLocationsServed,
   pagesTreeServed,
   pageBlocksServed,
@@ -107,7 +108,7 @@ export { renamePage } from "./internal/rename-page";
 export { setPageIcon } from "./internal/set-page-icon";
 // When a page was last edited (its row and its live content) — the value behind
 // the page-detail "Edited" label, for a server reader stating the same time.
-export { readPageEditedAt } from "./internal/resources";
+export { blockContentsServed, readPageEditedAt } from "./internal/resources";
 export type {
   BlockTextWriter,
   PageContentSnapshot,
@@ -171,6 +172,7 @@ export default {
     IdKinds.Kind({ kind: blockIdKind }),
     ...pagesTreeServed.declare,
     ...blockLocationsServed.declare,
+    ...blockContentsServed.declare,
     ...pageBlocksServed.declare,
     // The page rows' materialized joins: the per-page content edit time
     // `pagesTree`'s `editedAt` reads, and the tree's `$childCount`.

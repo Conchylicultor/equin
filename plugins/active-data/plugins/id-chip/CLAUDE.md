@@ -64,6 +64,7 @@ derives from the kind; nothing here names a family.
     - `ids.IdKinds`
     - `ids.IdReferent`
     - `page/editor.Editor`
+    - `primitives/text-editor/inline-chip.InlineTokenLiveRead`
     - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
   - Exports (values): `idChipServer`
 - Core:

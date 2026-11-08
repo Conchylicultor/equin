@@ -1,36 +1,67 @@
 # links
 
-## Backlinks are a value per target page
+## Backlinks are a value per target page, computed from what it follows
 
 `pageBacklinks` (`core/resources.ts`) is a `liveValue` with `params: ["pageId"]`,
-served on the db arm with `unbounded: { reason }`. Not a `liveCollection`: its
-rows are a join (`page_links` ⨝ the live `page` blocks, title and icon projected
-out of `data`), and the edge table's key is the composite (source, target,
-block) triple. Nothing notifies it — the loader's read-set recomputes it on any
-edge write or source-page edit.
+served on the db arm (`server/internal/resources.ts`). Not a `liveCollection`:
+its rows are a join of a few followed reads, not the rows of one table.
+
+It declares NO whole-table read. Everything it reads is a FOLLOW
+(network/live's `follows`, built at the bind with `followsAtBind`), so a
+write reaches a tuple only when it touches a row that tuple read, and the
+loader makes no query of its own (the drift guard holds it to that):
+
+- `edges` — the target's FIRST edges, one per linking page
+  (`pageBacklinkEdges`, `page-links.first-edges`: a scoped `all` by
+  `targetPageId` over `page_links`, `first` as the base membership);
+- `target` — the target page's own row (the title a snippet splits around);
+- `sources` — each linking page's row (title, icon) and its first linking
+  block (the snippet's text), by id;
+- `up:1` … `up:8` — the ancestor pages above the linking pages, one dependent
+  follow per level (`BACKLINK_PATH_LEVELS`: a walk of unknown depth has no
+  spelling as follows; a path deeper than that starts with `…`, and the list
+  truncates paths from their lead anyway);
+- `referent:<i>` — the rows the chips in the linking text name, one follow per
+  chip family (inline-chip's `inlineTokenReferentFollows`), none when the text
+  holds no chip of that family.
+
+Every block read goes through the editor's `blockContents`
+(`page.block-contents`, lookup-only `{ id, pageId, type, data }`, matched by
+id). So typing in any block a tuple does not name — the ~1s `data.text`
+projection — reaches no tuple; typing in a linking block recomputes it (its
+snippet may move); a rename of a linking page, an ancestor or a chip's
+referent recomputes exactly the tuples naming it; a write to another target's
+edges, or a second linking block's, reaches nothing. Before (2026-11-08) the
+value read `page_links`, `page_blocks` and every chip family's tables whole:
+each keystroke anywhere — and every task / conversation write — recomputed
+every subscribed tuple and pushed the same bytes (~1.3 no-op pushes/s on main
+while typing). `e2e/backlinks-typing-reach.ts` measures it on a build.
 
 ## An edge names the block that links
 
 `page_links` is one row per (source page, target page, **linking block**):
 `reindexPage` records which block each extraction came from, so the same page
-linking from three paragraphs is three rows. The backlinks loader folds them
-back to one row per source page — its FIRST linking block in document order
-(`inDocumentOrder`; a page's block forest is read only when it links from more
-than one block) — and `pageLinkTargets` (one row per page, read by id)
-aggregates the DISTINCT target pages of its edges.
+linking from three paragraphs is three rows, and it marks the FIRST of them in
+document order (`first`, computed from the page's forest the reindexer reads
+anyway — `inDocumentOrder`; written only when which block comes first moves).
+The backlinks value follows only the `first` edges, so it never reads a source
+page's forest; `pageLinkTargets` (one row per page, read by id) aggregates the
+DISTINCT target pages of all edges. `page_links` is an entity
+(`defineEntity(pageLinksEntityRef)`), so a collection can be served from it.
 
 That block is what the row's **snippet** is read from: its plain text
 (`textOf`), with every inline token a chip family resolves shown as its title
-(`inlineTokensAsText`, `text-editor/inline-chip`), split around the target's
-title and trimmed to ~80 characters (`server/internal/snippet.ts`). `null` when
-the block IS the link — a page-link block has no text — so the row is its title
-line alone. The extractor API knows nothing of snippets: whatever extractor
-matched a block, the snippet is derived from the block's text.
+(`inlineTokensAsLiveText`, `text-editor/inline-chip`, from the followed
+referent rows), split around the target's title and trimmed to ~80 characters
+(`server/internal/snippet.ts`). `null` when the block IS the link — a
+page-link block has no text — so the row is its title line alone. The
+extractor API knows nothing of snippets: whatever extractor matched a block,
+the snippet is derived from the block's text.
 
 Each row also carries its source page's `path` — the ancestor pages' titles,
-root first, walked up the `pageId` relation one batched query per tree level —
-so the list can say where the linking page sits without its web half reading
-the whole page tree (`pagesTree`).
+root first, read off the `up:<n>` follows — so the list can say where the
+linking page sits without its web half reading the whole page tree
+(`pagesTree`).
 
 ## The page-pair graph, read by id (`pageLinkTargets`)
 
@@ -80,7 +111,8 @@ restore hook; only a purge's FK cascade removes edges). `reindexPage` keeps an
 edge to a trashed target (`existingPageIds`, the editor's trash-aware
 existence read) and does nothing for a trashed source (its content is frozen
 with it). Liveness is the READERS' filter, through the editor's one
-live-page predicate: the backlinks reads join the source to `liveBlocks`, and
+live-page predicate: the backlinks value reads its source through
+`blockContents` (live blocks only — a trashed source reads not found), and
 `pageLinkTargets` nests `pageLive` (a rollup of `livePageSql`) on the target.
 So a restore brings every edge back at once, with no reindex — the sidebar's
 alias to B, A's backlink on B's page — and a trashed B leaves no dangling

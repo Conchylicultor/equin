@@ -1,10 +1,10 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { PageLinks } from "@plugins/page/plugins/links/server";
-import { _blocks, Editor } from "@plugins/page/plugins/editor/server";
+import { Editor } from "@plugins/page/plugins/editor/server";
 import { InlineTokenReferentSource } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
 import { PAGE_LINK_TOKEN_PATTERN, pageLinkInlineNode } from "../core";
 import { extractInlinePageLinks } from "./internal/extract-inline-links";
-import { resolvePageLinkReferent } from "./internal/referent";
+import { pageLinkLiveRead, resolvePageLinkReferent } from "./internal/referent";
 
 export default {
   description:
@@ -39,7 +39,7 @@ export default {
     InlineTokenReferentSource({
       kind: "page",
       pattern: PAGE_LINK_TOKEN_PATTERN,
-      tables: [_blocks],
+      live: pageLinkLiveRead,
       resolve: resolvePageLinkReferent,
     }),
   ],

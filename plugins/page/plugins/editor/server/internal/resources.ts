@@ -8,6 +8,7 @@ import {
 import { Rank, withRank } from "@plugins/primitives/plugins/rank/core";
 import { PAGE_BLOCK_TYPE } from "../../core";
 import {
+  blockContents,
   blockLocations,
   pagesTree,
   pageBlocks,
@@ -148,6 +149,17 @@ export async function readPageEditedAt(
 // found. The point route reads only the projected columns and `deleted_at`, so
 // a content write (the ~1s typing projection) refills nothing.
 export const blockLocationsServed = serveCollection(blockLocations, {
+  from: _blocks,
+  where: isNull(_blocks.deletedAt),
+});
+
+// A live block's content by id (`blockContents`, lookup-only `:rows`, a
+// follow target): `id` / `pageId` / `type` / `data` bound to `page_blocks` by
+// name, the live-block predicate as the base membership. The point route
+// reads only these columns and `deleted_at`, matched on the id, so a write to
+// a block no follower names — the typing projection of another block —
+// reaches no follower.
+export const blockContentsServed = serveCollection(blockContents, {
   from: _blocks,
   where: isNull(_blocks.deletedAt),
 });

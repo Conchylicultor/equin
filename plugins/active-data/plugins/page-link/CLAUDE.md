@@ -64,7 +64,6 @@ read-surface chip for a bare id written anywhere active-data renders.
   - Uses:
     - `active-data/id-chip.idChipServer`
     - `database.db`
-    - `page/editor._blocks`
     - `page/editor.liveBlocks`
 - Core:
   - Exports (values): `BLOCK_CHIP_SURFACES`

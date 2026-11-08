@@ -1,8 +1,14 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { PAGE_BLOCK_TYPE, pageData } from "@plugins/page/plugins/editor/core";
-import { liveBlocks } from "@plugins/page/plugins/editor/server";
-import type { InlineTokenReferent } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
+import {
+  blockContentsServed,
+  liveBlocks,
+} from "@plugins/page/plugins/editor/server";
+import {
+  followedReferent,
+  type InlineTokenReferent,
+} from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
 import { scanPageLinkTokens } from "../../core";
 
 /** A page with no title of its own still has to be called something. */
@@ -24,5 +30,21 @@ export async function resolvePageLinkReferent(
     .where(and(eq(liveBlocks.id, pageId), eq(liveBlocks.type, PAGE_BLOCK_TYPE)))
     .limit(1);
   if (!row) return { found: false };
+  return pageReferentOf(row);
+}
+
+/** What a live page row is called — the one reading `resolve` and the live read share. */
+function pageReferentOf(row: { readonly data: unknown }): InlineTokenReferent {
   return { found: true, title: pageData(row).title || UNTITLED };
 }
+
+/**
+ * A live value's read of a `[[page:<id>]]` token: the linked page's row,
+ * followed by id through the editor's `blockContents` — a block that is not
+ * a page is not found, as `resolve` reads it.
+ */
+export const pageLinkLiveRead = followedReferent(blockContentsServed, {
+  idOf: (token) => scanPageLinkTokens(token)[0] ?? null,
+  referentOf: (row) =>
+    row.type === PAGE_BLOCK_TYPE ? pageReferentOf(row) : { found: false },
+});

@@ -1,238 +1,224 @@
-import { asc, eq, inArray, sql } from "drizzle-orm";
-import { db } from "@plugins/database/server";
-import {
-  nullable,
-  parsed,
-} from "@plugins/database/plugins/sql-projection/server";
+import { eq } from "drizzle-orm";
 import {
   serveCollection,
   serveValue,
+  type FollowBuilder,
 } from "@plugins/network/plugins/live/server";
-import { EmojiSchema } from "@plugins/ui/plugins/icons/plugins/emoji/core";
-import { _blocks, liveBlocks } from "@plugins/page/plugins/editor/server";
+import { followsAtBind, type Follow } from "@plugins/network/plugins/live/core";
+import { blockContentsServed } from "@plugins/page/plugins/editor/server";
 import {
-  inDocumentOrder,
+  PAGE_BLOCK_TYPE,
   pageData,
   textOf,
-  type BlockNode,
+  type BlockContentsRow,
 } from "@plugins/page/plugins/editor/core";
 import {
-  inlineTokenReferentTables,
-  inlineTokensAsText,
+  inlineTokenReferentFollows,
+  inlineTokensAsLiveText,
 } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
-import { pageBacklinks, pageLinkTargets } from "../../core";
+import { pageBacklinkEdges, pageBacklinks, pageLinkTargets } from "../../core";
 import type { BacklinkRow } from "../../core";
 import { linkTargetRowsServeOptions } from "./link-target-rows";
 import { deriveSnippet } from "./snippet";
-import { _pageLinks } from "./tables";
+import { _pageLinks, pageLinksEntity } from "./tables";
 
-// `data->>'title'` / `data->>'icon'`: the source page's title and icon (an
-// emoji) live in the `type="page"` block's `data` JSON.
-//
-// Both carry the decoder their declared type comes from, so the projection is
-// `BacklinkRow` by construction rather than by a cast — `->` hands back whatever
-// JSON the block's `data` happens to hold, which is exactly the value worth
-// parsing rather than asserting. `orderBy` reuses the same expression object;
-// the decoder rides along and is simply never invoked there.
-const titleExpr = sql`${liveBlocks.data} ->> 'title'`.mapWith(String);
-const iconExpr = sql`${liveBlocks.data} ->> 'icon'`.mapWith(
-  nullable(parsed(EmojiSchema, "backlinks.icon")),
-);
-
-// The source pages that link TO `pageId`, ordered by title, each with the
-// snippet of its first linking block in document order. A db-arm value: the
-// declared reads (`page_links`, `page_blocks`, and the tables the snippets'
-// chip titles come from) route
-// every edge write — the reindexer's insert/delete, an FK cascade — every
-// source page's trash or restore, and every source page's title / icon / text edit
-// — or a rename of a task, song, … a snippet's chip shows —
-// recomputes the subscribed tuples; push drops a byte-identical result.
-export const pageBacklinksServed = serveValue(pageBacklinks, {
-  source: "db",
-  // A thunk: chip families contribute their referent tables as the plugin tiers
-  // load, after this value is declared.
-  reads: () => ({
-    tables: [...new Set([_pageLinks, _blocks, ...inlineTokenReferentTables()])],
-    reason:
-      "the backlinks of one page join every edge and every source page's title, icon and text, and each snippet shows the titles its chips resolve to (tasks, songs, pages, …) — the referents are found by parsing the snippet text, so no written row names the tuples it reaches: whole-table by nature",
-  }),
-  loader: async ({ pageId }) => {
-    const edges = await db
-      .select({
-        id: liveBlocks.id,
-        title: titleExpr,
-        icon: iconExpr,
-        sourceBlockId: _pageLinks.sourceBlockId,
-      })
-      .from(_pageLinks)
-      // A trashed source page keeps its edges (they are its content, restored
-      // with it): the LIVE join is what hides them meanwhile.
-      .innerJoin(liveBlocks, eq(_pageLinks.sourcePageId, liveBlocks.id))
-      .where(eq(_pageLinks.targetPageId, pageId))
-      // The id breaks a title tie (every "Untitled" source): push compares
-      // bytes, so two recomputes over the same rows must not come back in two
-      // orders.
-      .orderBy(asc(titleExpr), asc(liveBlocks.id));
-    if (edges.length === 0) return [];
-
-    const [target] = await db
-      .select({ data: liveBlocks.data })
-      .from(liveBlocks)
-      .where(eq(liveBlocks.id, pageId))
-      .limit(1);
-    const targetTitle = target ? pageData(target).title || UNTITLED : null;
-
-    const firstBlock = await firstLinkingBlocks(edges);
-    const paths = await ancestorTitles(edges.map((e) => e.id));
-
-    const rows: BacklinkRow[] = [];
-    const seen = new Set<string>();
-    for (const edge of edges) {
-      if (seen.has(edge.id)) continue;
-      seen.add(edge.id);
-      const block = firstBlock.get(edge.id);
-      rows.push({
-        id: edge.id,
-        title: edge.title,
-        icon: edge.icon,
-        path: paths.get(edge.id) ?? [],
-        snippet:
-          block === undefined || targetTitle === null
-            ? null
-            : deriveSnippet(
-                await inlineTokensAsText(textOf(block)),
-                targetTitle,
-              ),
-      });
-    }
-    return rows;
-  },
+// The target's FIRST edges — one per linking page (`pageBacklinkEdges`, a
+// scoped `all` by `targetPageId`): `page_links` with `first` as the base
+// membership, so a second linking block's edge, or another target's, reaches
+// no follower.
+export const pageBacklinkEdgesServed = serveCollection(pageBacklinkEdges, {
+  from: pageLinksEntity,
+  where: eq(_pageLinks.first, true),
 });
+
+/**
+ * How many ancestor levels a backlink's `path` follows above its source page —
+ * each level one dependent follow (a follow's tuple is computed from the
+ * rows of the follows before it, so a walk of unknown depth has no spelling;
+ * a bounded chain does). Past it the path starts with {@link PATH_CUT}: the
+ * list shows the path truncated from its lead anyway, nearest parent last.
+ */
+export const BACKLINK_PATH_LEVELS = 8;
+
+/** The lead of a path cut at {@link BACKLINK_PATH_LEVELS}. */
+const PATH_CUT = "…";
 
 /** A page with no title of its own still has to be called something — the
  *  same fallback the page-link referent resolves a token to. */
 const UNTITLED = "Untitled";
 
-/**
- * Per source page, its FIRST live linking block in document order. A page
- * that links from one block (the usual case) needs no ordering; only a page
- * linking from several has its block forest read, so `inDocumentOrder` can
- * rank them — a block's `rank` is comparable only among its siblings.
- */
-async function firstLinkingBlocks(
-  edges: readonly { id: string; sourceBlockId: string }[],
-): Promise<Map<string, BlockNode>> {
-  const blocks = await db
-    .select(nodeColumns)
-    .from(liveBlocks)
-    .where(
-      inArray(liveBlocks.id, [...new Set(edges.map((e) => e.sourceBlockId))]),
-    );
-  const byPage = new Map<string, BlockNode[]>();
-  for (const b of blocks.map(toNode)) {
-    if (b.pageId === null) continue;
-    const list = byPage.get(b.pageId);
-    if (list) list.push(b);
-    else byPage.set(b.pageId, [b]);
-  }
-
-  const first = new Map<string, BlockNode>();
-  const ambiguous: string[] = [];
-  for (const [page, linking] of byPage) {
-    if (linking.length === 1) first.set(page, linking[0]!);
-    else ambiguous.push(page);
-  }
-  if (ambiguous.length > 0) {
-    const forest = (
-      await db
-        .select(nodeColumns)
-        .from(liveBlocks)
-        .where(inArray(liveBlocks.pageId, ambiguous))
-    ).map(toNode);
-    for (const page of ambiguous) {
-      const linking = byPage.get(page)!;
-      const [id] = inDocumentOrder(
-        forest.filter((b) => b.pageId === page),
-        linking.map((b) => b.id),
-      );
-      const block = linking.find((b) => b.id === id);
-      if (block) first.set(page, block);
-    }
-  }
-  return first;
-}
-
-/**
- * Per page id, its ancestor pages' titles, root first — walked up the
- * denormalized `pageId` (nearest PAGE ancestor) relation one level per query,
- * batched across every page asked about, so the cost is the tree's depth, not
- * the number of rows. `pageId`, not `parentId`: a sub-page's direct parent may
- * be a content block. A chain stops at a missing (trashed) ancestor and guards
- * against cycles.
- */
-async function ancestorTitles(
-  pageIds: readonly string[],
-): Promise<Map<string, string[]>> {
-  const parentOf = new Map<string, string | null>();
-  const titleOf = new Map<string, string>();
-  let frontier = [...new Set(pageIds)];
-  while (frontier.length > 0) {
-    const rows = await db
-      .select({
-        id: liveBlocks.id,
-        pageId: liveBlocks.pageId,
-        title: titleExpr,
-      })
-      .from(liveBlocks)
-      .where(inArray(liveBlocks.id, frontier));
-    const next: string[] = [];
-    for (const row of rows) {
-      parentOf.set(row.id, row.pageId);
-      titleOf.set(row.id, row.title || UNTITLED);
-      if (row.pageId !== null && !parentOf.has(row.pageId)) {
-        next.push(row.pageId);
-      }
-    }
-    // Ids asked for but not found are settled as chain ends.
-    for (const id of frontier) if (!parentOf.has(id)) parentOf.set(id, null);
-    frontier = [...new Set(next)];
-  }
-
-  const paths = new Map<string, string[]>();
-  for (const id of new Set(pageIds)) {
-    const path: string[] = [];
-    const seen = new Set([id]);
-    let cur = parentOf.get(id) ?? null;
-    while (cur !== null && !seen.has(cur) && titleOf.has(cur)) {
-      seen.add(cur);
-      path.unshift(titleOf.get(cur)!);
-      cur = parentOf.get(cur) ?? null;
-    }
-    paths.set(id, path);
-  }
-  return paths;
-}
-
-const nodeColumns = {
-  id: liveBlocks.id,
-  pageId: liveBlocks.pageId,
-  parentId: liveBlocks.parentId,
-  type: liveBlocks.type,
-  data: liveBlocks.data,
-  rank: liveBlocks.rank,
-  expanded: liveBlocks.expanded,
+type Subject = { pageId: string };
+type Level = `up:${number}`;
+type BacklinkFollows = {
+  readonly edges: Follow<{
+    readonly sourcePageId: string;
+    readonly sourceBlockId: string;
+  }>;
+  readonly target: Follow<BlockContentsRow>;
+  readonly sources: Follow<BlockContentsRow>;
+} & { readonly [L in Level]: Follow<BlockContentsRow> } & {
+  readonly [R in `referent:${number}`]: Follow<{ readonly id: string }>;
 };
 
-function toNode(row: {
-  id: string;
-  pageId: string | null;
-  parentId: string | null;
-  type: string;
-  data: unknown;
-  rank: unknown;
-  expanded: boolean;
-}): BlockNode {
-  return { ...row, rank: String(row.rank) };
+const levelFollow = (i: number): Level => `up:${i}`;
+
+/** `{ ids }` of a set, or `null` (the follow reads nothing) when it is empty. */
+function idsOf(ids: Iterable<string | null>): { ids: string[] } | null {
+  const set = new Set<string>();
+  for (const id of ids) if (id !== null) set.add(id);
+  return set.size === 0 ? null : { ids: [...set] };
+}
+
+/** The parent pages of the PAGE rows among `rows` — the next level up. */
+function parentsOf(rows: readonly BlockContentsRow[]) {
+  return idsOf(
+    rows.filter((r) => r.type === PAGE_BLOCK_TYPE).map((r) => r.pageId),
+  );
+}
+
+// What one target's backlinks read, every read by id or by its own scope:
+//
+// - `edges` — its first edges (one per linking page);
+// - `target` — its own row (the title a snippet is split around);
+// - `sources` — each linking page's row (title, icon) and its first linking
+//   block (the snippet's text);
+// - `up:1` … `up:N` — the ancestor pages above the linking pages, a level per
+//   follow (the `path`);
+// - `referent:<i>` — the rows the chips in the linking blocks' text name
+//   (inline-chip's `inlineTokenReferentFollows`, one per chip family, none
+//   when the text holds no such chip).
+//
+// Built at the bind (`followsAtBind`): the chip families contribute their
+// referent reads as the plugin tiers load, after this value is declared.
+function backlinkFollows(follow: FollowBuilder<Subject>): BacklinkFollows {
+  const edges = follow(pageBacklinkEdgesServed, ({ pageId }) => ({
+    where: { targetPageId: pageId },
+  }));
+  const target = follow(blockContentsServed, ({ pageId }) => ({
+    ids: [pageId],
+  }));
+  const sources = follow.from({ edges }, blockContentsServed, (_s, rows) =>
+    idsOf(rows.edges.flatMap((e) => [e.sourcePageId, e.sourceBlockId])),
+  );
+  const levels: Record<Level, Follow<BlockContentsRow>> = {};
+  let below: Follow<BlockContentsRow> = sources;
+  for (let i = 1; i <= BACKLINK_PATH_LEVELS; i++) {
+    below = levels[levelFollow(i)] = follow.from(
+      { below },
+      blockContentsServed,
+      (_s, rows) => parentsOf(rows.below),
+    );
+  }
+  return {
+    edges,
+    target,
+    sources,
+    ...levels,
+    ...inlineTokenReferentFollows(follow, { sources }, (rows) =>
+      (rows.sources as readonly BlockContentsRow[])
+        .filter((r) => r.type !== PAGE_BLOCK_TYPE)
+        .map((r) => textOf(r)),
+    ),
+  };
+}
+
+// The source pages that link TO `pageId`, ordered by title (then id: push
+// compares bytes, so a tie — every "Untitled" source — must come back in one
+// order), each with its place in the page tree and the snippet of its first
+// linking block in document order.
+//
+// Computed from what it follows alone — the loader makes no query of its own
+// (the drift guard holds it to that) — so a write reaches a tuple only when it
+// touches a row the tuple read: an edge into this page, the page itself, a
+// linking page, its first linking block, an ancestor, or a referent a snippet
+// names. Typing in any other block — the ~1s `data.text` projection — reaches
+// none; typing in the linking block recomputes it (the snippet may move).
+//
+// A trashed source page keeps its edges (they are its content, restored with
+// it): `blockContents` reads it not found meanwhile, which hides its row.
+export const pageBacklinksServed = serveValue(pageBacklinks, {
+  source: "db",
+  follows: followsAtBind<Subject, BacklinkFollows>(backlinkFollows),
+  loader: async (_params, { followed }) => {
+    if (followed.edges.length === 0) return [];
+    const byId = new Map<string, BlockContentsRow>();
+    for (const row of followed.sources) byId.set(row.id, row);
+    const ancestors = new Map<string, BlockContentsRow>();
+    for (let i = 1; i <= BACKLINK_PATH_LEVELS; i++) {
+      const level = followed[levelFollow(i)];
+      if (level === undefined) {
+        throw new Error(
+          `page-backlinks: the follow "${levelFollow(i)}" was not built.`,
+        );
+      }
+      for (const row of level) ancestors.set(row.id, row);
+    }
+
+    const [target] = followed.target;
+    const targetTitle =
+      target !== undefined && target.type === PAGE_BLOCK_TYPE
+        ? pageData(target).title || UNTITLED
+        : null;
+
+    const rows: BacklinkRow[] = [];
+    for (const edge of followed.edges) {
+      const page = byId.get(edge.sourcePageId);
+      if (page === undefined || page.type !== PAGE_BLOCK_TYPE) continue;
+      const { title, icon } = pageData(page);
+      const block = byId.get(edge.sourceBlockId);
+      rows.push({
+        id: page.id,
+        title,
+        icon,
+        path: pathOf(page, ancestors),
+        snippet:
+          block === undefined || targetTitle === null
+            ? null
+            : deriveSnippet(
+                await inlineTokensAsLiveText(textOf(block), followed),
+                targetTitle,
+              ),
+      });
+    }
+    return rows.sort((a, b) =>
+      a.title !== b.title
+        ? a.title < b.title
+          ? -1
+          : 1
+        : a.id < b.id
+          ? -1
+          : a.id > b.id
+            ? 1
+            : 0,
+    );
+  },
+});
+
+/**
+ * A page's ancestor pages' titles, root first — up its `pageId` (nearest PAGE
+ * ancestor) chain through the followed levels. A chain stops at a missing
+ * (trashed) ancestor and guards against cycles; one still going past the
+ * last followed level starts with {@link PATH_CUT}.
+ */
+function pathOf(
+  page: BlockContentsRow,
+  ancestors: ReadonlyMap<string, BlockContentsRow>,
+): string[] {
+  const path: string[] = [];
+  const seen = new Set([page.id]);
+  let cur = page.pageId;
+  for (let level = 1; cur !== null && !seen.has(cur); level++) {
+    if (level > BACKLINK_PATH_LEVELS) {
+      path.unshift(PATH_CUT);
+      break;
+    }
+    const row = ancestors.get(cur);
+    if (row === undefined) break;
+    seen.add(cur);
+    path.unshift(pageData(row).title || UNTITLED);
+    cur = row.pageId;
+  }
+  return path;
 }
 
 // A live page with the pages it links to, by id — a lookup-only `:rows` over

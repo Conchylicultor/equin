@@ -220,3 +220,20 @@ export const blockLocations = liveCollection("page.block-locations", {
 });
 export const BlockLocationSchema = blockLocations.row;
 export type BlockLocation = z.infer<typeof BlockLocationSchema>;
+
+// A live block's content, by id — lookup-only, a FOLLOW target (network/live's
+// `follows`), read over the wire by no surface: a value computed from a few
+// blocks' payloads (the backlinks of a page: its source pages' titles and
+// icons, their ancestors, the linking blocks' text) follows exactly the
+// blocks it names, so a write to any OTHER block — the ~1s `data.text` typing
+// projection of the block being typed in — reaches no follower, and a write
+// to a followed block's other columns (its `rank`, a fold) none either.
+// Served over the `page_blocks` table with the live-block predicate as its
+// base membership: a trashed block reads not found.
+export const blockContents = liveCollection("page.block-contents", {
+  from: pagesEntityRef,
+  carry: { pick: ["id", "pageId", "type", "data"] },
+  baseExposures: false,
+  id: "id",
+});
+export type BlockContentsRow = z.infer<typeof blockContents.row>;

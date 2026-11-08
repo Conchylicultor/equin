@@ -51,10 +51,12 @@ cannot paint itself outside Lexical is a tsc error.
     - `primitives.text-editor.inline-chip.referent` "\[\[(?:page:([^[\]\n]+)|(block-\d+-[a-z0-9]+))\]\]"
   - Uses:
     - `database.db`
-    - `page/editor._blocks`
+    - `page/editor.blockContentsServed`
     - `page/editor.Editor`
     - `page/editor.liveBlocks`
     - `page/links.PageLinks`
+    - `primitives/text-editor/inline-chip.followedReferent`
+    - `primitives/text-editor/inline-chip.InlineTokenReferent`
     - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
 - Web:
   - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)

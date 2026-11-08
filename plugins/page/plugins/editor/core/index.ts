@@ -22,8 +22,14 @@ export {
   pageBlocks,
   blockLocations,
   BlockLocationSchema,
+  blockContents,
 } from "./resources";
-export type { BlockLocation, PagesTreeFields, PagesTreeRow } from "./resources";
+export type {
+  BlockContentsRow,
+  BlockLocation,
+  PagesTreeFields,
+  PagesTreeRow,
+} from "./resources";
 
 export {
   listPages,

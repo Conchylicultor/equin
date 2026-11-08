@@ -11,6 +11,7 @@ import {
   pageLinksBackfillWarmup,
 } from "./internal/backfill-job";
 import {
+  pageBacklinkEdgesServed,
   pageBacklinksServed,
   pageLinkTargetsServed,
 } from "./internal/resources";
@@ -30,6 +31,7 @@ export default {
   // warm-up.
   register: [reindexLinksJob, backfillPageLinksJob, pageLinksBackfillWarmup],
   contributions: [
+    ...pageBacklinkEdgesServed.declare,
     ...pageBacklinksServed.declare,
     ...pageLinkTargetsServed.declare,
     // Each page's outgoing link targets, materialized (`page_link_targets`).

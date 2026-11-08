@@ -10,8 +10,13 @@ export default {
   contributions: [
     ...idChipServer({
       kind: protoIdKind,
-      // Prototypes live on disk (the host-global prototypes dir), not in Postgres.
-      tables: [],
+      // Prototypes live on disk (the host-global prototypes dir), not in
+      // Postgres: a live value reads the title at load, and no change routes.
+      live: {
+        kind: "untracked",
+        reason:
+          "a prototype's title is its index.html on disk, outside the change feed",
+      },
       surfaces: PROTOTYPE_CHIP_SURFACES,
       resolve: readPrototypeTitle,
     }),
