@@ -8,6 +8,7 @@ import {
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { agentScratchDir } from "@plugins/infra/plugins/launcher/plugins/agent-scratch/core";
 
 // What environment does an agent's shell start from? Every app-launched agent
 // is an sdk agent process the runtime starts detached, and its CLI and every
@@ -57,6 +58,10 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
  * - `EQUIN_WORKSPACE_ROOT` — the workspace the agent runs in, the
  *   boundary the write guards allow (any workspace kind, so a scratch dir is
  *   bounded too).
+ * - `EQUIN_SCRATCH` — the session's private scratch directory
+ *   (`agentScratchDir(conversationId)`), so a scratch file it names — a push
+ *   message, a log — is never another session's file of the same name. The
+ *   `shared-tmp` guard refuses fixed names in `/tmp` and points here.
  */
 export const AGENT_SESSION_DELIVERED_ENV: readonly string[] = [
   envName("CONVERSATION_ID"),
@@ -65,6 +70,7 @@ export const AGENT_SESSION_DELIVERED_ENV: readonly string[] = [
   "CLAUDE_CODE_DISABLE_AGENT_VIEW",
   envName("GUARDS_ROOT"),
   envName("WORKSPACE_ROOT"),
+  envName("SCRATCH"),
 ];
 
 /** The values one agent session is launched with, by full variable name. */
@@ -98,6 +104,7 @@ export function agentSessionEnv(
       PARENT_HOST: namespaceLabel(runtimeNamespace()),
       GUARDS_ROOT: roots.guardsRoot,
       WORKSPACE_ROOT: roots.workspaceRoot,
+      SCRATCH: agentScratchDir(conversationId),
     }),
     CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
   };

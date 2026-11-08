@@ -117,6 +117,33 @@ cache the whole host shares.
   `~/.equin/logs` is the agent's call once it has read the cost. The allowlist
   stays as narrow as it was; only a repeat widens it, one call at a time.
 
+## A scratch file is the session's own
+
+`shared-tmp` (Bash, Write, Edit, NotebookEdit) refuses a WRITE of a fixed name
+in a temp directory every session shares (`/tmp`, `/var/tmp`, their
+`/private` spellings). A fixed name there is one file for every agent that
+types it: on 2026-11-08 an agent wrote its push message to `/tmp/msg.txt`,
+another session rewrote it before `push -m "$(cat /tmp/msg.txt)"` read it, and
+the commit carried the other task's message. Over the 4 days before, 225 of
+546 sessions used fixed `/tmp/<name>`s and 62 names were used by two or more.
+
+So every session has a private directory (`infra/launcher/agent-scratch`):
+`/tmp/equin-scratch/<conversation id>`, created by the launcher and delivered
+as `$EQUIN_SCRATCH`; a session no app launched gets
+`/tmp/equin-scratch/<Claude session id>`, named in the denial (`ctx.scratch`).
+Claude Code's own per-session dir (`/tmp/claude-<uid>/<slug>/<session id>/`,
+its task outputs and scratchpad) counts as the session's too. A `mktemp` name
+passes — it is held in a variable, and unique.
+
+A write is a redirection, a modelled writer's target (`writeTargets`), a
+`cd`/`pushd` into a shared temp dir, or an absolute temp path handed to a
+command the argv grammar does not model (`--out /tmp/shot`, `-o`, `git bundle
+create`). Reads stay free (`cat`, `tail`, `cp /tmp/a .`): a log a person put
+there, a task's output file. Not `allowOnRepeat` — the concern is correctness.
+Subagents share the parent's directory (same session, the parent names their
+files), and a fixed path built from a variable (`"$D/msg.txt"`) is not
+resolved.
+
 ## Known gaps, on purpose
 
 - **`search-scope` stops accidents, not intent.** A root built from a variable
@@ -277,7 +304,7 @@ can blind or deafen all of them at once.
 
 - Description: Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
 - Core:
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/paths` ×4
     - `packages/timed-fs` ×4
     - `framework/cli/cli-name` ×3
@@ -285,6 +312,7 @@ can blind or deafen all of them at once.
     - `framework/cli/foreground-handoff` ×2
     - `framework/tooling/collected-dir` ×2
     - `framework/tooling/guards/refusal-format` ×2
+    - `infra/launcher/agent-scratch` ×2
     - `infra/launcher/env-names` ×2
     - `infra/namespace` ×2
     - `packages/owned-fd` ×2

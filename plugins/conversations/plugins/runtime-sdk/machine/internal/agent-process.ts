@@ -8,6 +8,7 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { userInfo } from "node:os";
+import { agentScratchDir } from "@plugins/infra/plugins/launcher/plugins/agent-scratch/core";
 import {
   agentSessionEnv,
   agentSessionLaunch,
@@ -196,6 +197,9 @@ export async function startAgentProcess(
     });
   }
   await mkdir(agentDir(id), { recursive: true });
+  // The session's EQUIN_SCRATCH (agentSessionEnv), there before its first
+  // command. Under /tmp, so the OS reclaims it once the conversation is idle.
+  await mkdir(agentScratchDir(id), { recursive: true, mode: 0o700 });
   const claudeBin = await bundledClaudeBin();
   const disclaimExec = await resolveDisclaimExec(id);
   const namedClaude = await namedClaudeBin({

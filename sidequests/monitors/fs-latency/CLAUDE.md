@@ -13,7 +13,7 @@ What stays here are two on-demand tools, below: `census.py` and
 ## Who is churning, without root
 
 ```sh
-/usr/bin/python3 -I "$MAIN"/sidequests/monitors/fs-latency/census.py --seconds 300 [--out /tmp/census.json]
+/usr/bin/python3 -I "$MAIN"/sidequests/monitors/fs-latency/census.py --seconds 300 [--out "$EQUIN_SCRATCH/census.json"]
 ```
 
 On demand, not a launchd job. Once a second it reads every process's

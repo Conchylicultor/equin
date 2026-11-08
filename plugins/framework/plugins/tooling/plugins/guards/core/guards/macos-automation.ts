@@ -1,6 +1,7 @@
 import { defineGuard } from "../define-guard";
 import { parseShell, type ShellCall } from "../parse-shell";
 import type { BashInput } from "../types";
+import { innerScript, MAX_INNER_DEPTH } from "../inner-script";
 
 /**
  * Commands that raise a macOS privacy (TCC) prompt on the user's screen —
@@ -24,12 +25,6 @@ export const MACOS_TCC_COMMANDS: readonly string[] = [
 
 const PREFIXES = MACOS_TCC_COMMANDS.map((p) => p.split(" "));
 
-const SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh"]);
-/** A shell flag cluster holding `-c` (`-c`, `-lc`, `-ec`, …). */
-const SCRIPT_FLAG = /^-[a-z]*c[a-z]*$/;
-/** `bash -c "bash -c '…'"` nests; past this it is not an accident. */
-const MAX_DEPTH = 3;
-
 function matches(call: ShellCall): string | undefined {
   const prefix = PREFIXES.find(
     ([name, ...lead]) =>
@@ -38,23 +33,11 @@ function matches(call: ShellCall): string | undefined {
   return prefix?.join(" ");
 }
 
-/**
- * The script a call hands another shell to run: `bash -c "<str>"` or
- * `eval <args…>`. `parseShell` deliberately leaves these strings opaque (it is
- * shared by every Bash guard), so this guard re-parses them itself.
- */
-function innerScript(call: ShellCall): string | undefined {
-  if (call.name === "eval") return call.args.join(" ");
-  if (!SHELLS.has(call.name)) return undefined;
-  const flag = call.args.findIndex((a) => SCRIPT_FLAG.test(a));
-  return flag === -1 ? undefined : call.args[flag + 1];
-}
-
 function findAutomation(cmd: string, depth = 0): string | undefined {
   for (const call of parseShell(cmd).calls) {
     const hit = matches(call);
     if (hit) return hit;
-    const inner = depth < MAX_DEPTH ? innerScript(call) : undefined;
+    const inner = depth < MAX_INNER_DEPTH ? innerScript(call) : undefined;
     const nested =
       inner === undefined ? undefined : findAutomation(inner, depth + 1);
     if (nested) return nested;

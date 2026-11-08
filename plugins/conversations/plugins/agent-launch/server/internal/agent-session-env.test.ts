@@ -68,6 +68,7 @@ describe("agentSessionLaunch", () => {
       PARENT_HOST: "att-test-w6l1",
       GUARDS_ROOT: "/fixture/repo",
       WORKSPACE_ROOT: "/fixture/workspaces/att-test-w6l1",
+      SCRATCH: "/tmp/equin-scratch/conv-test",
     }),
     CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
   };

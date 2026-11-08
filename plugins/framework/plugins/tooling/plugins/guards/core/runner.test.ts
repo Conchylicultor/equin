@@ -36,7 +36,7 @@ function bash(
       session_id: session,
       ...(agent_id ? { agent_id, agent_type: "general-purpose" } : {}),
     },
-    { writableDataDirs: [], workspaceRoot: WORK },
+    { writableDataDirs: [], workspaceRoot: WORK, scratchDir: null },
   );
 }
 

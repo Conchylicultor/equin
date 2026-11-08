@@ -113,8 +113,8 @@ tail of a replaced file (512 KB) and the detector drops ticks it has seen, so
 its one-hour window is intact. Archives are kept 90 days — **except one that
 starts before 2026-11-04T20:05Z**, the incident history every io-health
 threshold was chosen from (`CALIBRATION_END_ISO`), which is kept for good.
-Replay an archive with `gunzip -c <archive> > /tmp/x.jsonl` and the parent's
-`replay-monitor-log.ts --log /tmp/x.jsonl`.
+Replay an archive with `gunzip -c <archive> > "$EQUIN_SCRATCH/x.jsonl"` and the parent's
+`replay-monitor-log.ts --log "$EQUIN_SCRATCH/x.jsonl"`.
 
 ## Read it
 

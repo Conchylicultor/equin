@@ -29632,7 +29632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `blocking-fs/sync-named` — `core/internal/changed-files.ts` (sanctioned)
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
-            - Uses: 30 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+            - Uses: 32 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
               - `infra/paths` ×4
               - `packages/timed-fs` ×4
               - `framework/cli/cli-name` ×3
@@ -29640,6 +29640,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/foreground-handoff` ×2
               - `framework/tooling/collected-dir` ×2
               - `framework/tooling/guards/refusal-format` ×2
+              - `infra/launcher/agent-scratch` ×2
               - `infra/launcher/env-names` ×2
               - `infra/namespace` ×2
               - `packages/owned-fd` ×2
@@ -34059,6 +34060,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `check-thread-safety/no-blocking-check-work` — `check/internal/strip-comments.ts` (debt)
           - `blocking-fs/no-sync-fs` — `server/internal/boot.ts` (sanctioned)
       - Plugins:
+        - **`agent-scratch`** — Where an agent session keeps its scratch files: agentScratchDir(owner) — one private directory per session (/tmp/equin-scratch/<conversation or Claude session id>), delivered to an app-launched agent's shell as EQUIN_SCRATCH — and foreignTempPath(path), which says whether an absolute path names a fixed file in a temp directory every session shares (/tmp, /var/tmp) outside that session's own. A leaf with no imports, so the guard (before anything is installed) and the agent launcher read the same rule.
+          - Cross-plugin:
+            - Imported by:
+              - `conversations/agent-launch`
+              - `conversations/runtime-sdk`
+              - `framework/tooling/guards`
+          - Core:
+            - Exports (types): `OwnTemp`
+            - Exports (values):
+              - `agentScratchDir`
+              - `foreignTempPath`
+              - `SCRATCH_ROOT`
+              - `SHARED_TEMP_ROOTS`
         - **`env-names`** — The app's own environment variables, declared by key (forwarded to the runtime tree or withheld from it, with why), and the one way to read and write them: readEnv / envEntries / setEnv / setEnvDefault / unsetEnv, each key named EQUIN_<key>. A leaf importing only framework/product-name, so every runtime and the lowest-level packages can import it.
           - Core:
             - Uses:

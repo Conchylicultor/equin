@@ -43,6 +43,7 @@ import { mainWritesGuard } from "../core/guards/main-writes";
 import { migrationsGuard } from "../core/guards/migrations";
 import { postgresGuard } from "../core/guards/postgres";
 import { rgReplaceGuard } from "../core/guards/rg-replace";
+import { sharedTmpGuard } from "../core/guards/shared-tmp";
 import type { Guard } from "../core/types";
 
 /**
@@ -91,6 +92,7 @@ const PURE_GUARDS: Guard<unknown>[] = [
   postgresGuard,
   macosAutomationGuard,
   backgroundOpsGuard,
+  sharedTmpGuard,
 ] as Guard<unknown>[];
 
 const SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh"]);

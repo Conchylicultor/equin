@@ -7,7 +7,7 @@ server was stopped (idle sweep), split into where the time goes. Plan:
 ```bash
 ./equin build      # the script drives the deploy this checkout published
 ./equin run plugins/debug/plugins/profiling/plugins/cold-start/e2e/cold-start.ts \
-  [--iterations 5] [--path /agents] [--busy N] [--out /tmp/cold-start.json] [--timeout 120000] [--code-cache] [--cpu-profile] [--react-profile]
+  [--iterations 5] [--path /agents] [--busy N] [--out "$EQUIN_SCRATCH/cold-start.json"] [--timeout 120000] [--code-cache] [--cpu-profile] [--react-profile]
 ```
 
 - `--busy N` spawns N CPU-spinning children at background priority

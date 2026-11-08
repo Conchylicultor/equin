@@ -69,9 +69,9 @@ was read.
 ## Verify
 
 ```sh
-cp ~/.equin/logs/monitors/fs-latency.jsonl /tmp/fs-latency.jsonl   # or gunzip -c an archive (monitor/CLAUDE.md)
+cp ~/.equin/logs/monitors/fs-latency.jsonl "$EQUIN_SCRATCH/fs-latency.jsonl"   # or gunzip -c an archive (monitor/CLAUDE.md)
 ./equin run plugins/infra/plugins/host/plugins/io-health/scripts/replay-monitor-log.ts \
-  --log /tmp/fs-latency.jsonl --fixed-at 2026-11-04T16:23
+  --log "$EQUIN_SCRATCH/fs-latency.jsonl" --fixed-at 2026-11-04T16:23
 ```
 
 On the 2026-11-03 15:07 → 11-04 20:05 history: device-latency and

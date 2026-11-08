@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-launcher-agent-scratch",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Where an agent session keeps its scratch files: agentScratchDir(owner) — one private directory per session (/tmp/equin-scratch/<conversation or Claude session id>), delivered to an app-launched agent's shell as EQUIN_SCRATCH — and foreignTempPath(path), which says whether an absolute path names a fixed file in a temp directory every session shares (/tmp, /var/tmp) outside that session's own. A leaf with no imports, so the guard (before anything is installed) and the agent launcher read the same rule."
+}

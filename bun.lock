@@ -4399,6 +4399,10 @@
     "plugins/infra/plugins/launcher": {
       "name": "@equin/plugin-infra-launcher",
     },
+    "plugins/infra/plugins/launcher/plugins/agent-scratch": {
+      "name": "@equin/plugin-infra-launcher-agent-scratch",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/launcher/plugins/env-names": {
       "name": "@equin/plugin-infra-launcher-env-names",
       "version": "0.0.1",
@@ -9526,6 +9530,8 @@
     "@equin/plugin-infra-jobs-supervised-job": ["@equin/plugin-infra-jobs-supervised-job@workspace:plugins/infra/plugins/jobs/plugins/supervised-job"],
 
     "@equin/plugin-infra-launcher": ["@equin/plugin-infra-launcher@workspace:plugins/infra/plugins/launcher"],
+
+    "@equin/plugin-infra-launcher-agent-scratch": ["@equin/plugin-infra-launcher-agent-scratch@workspace:plugins/infra/plugins/launcher/plugins/agent-scratch"],
 
     "@equin/plugin-infra-launcher-env-names": ["@equin/plugin-infra-launcher-env-names@workspace:plugins/infra/plugins/launcher/plugins/env-names"],
 

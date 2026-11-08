@@ -179,9 +179,9 @@ For a checkout cloned from someone else's repo, that repo is **upstream** (read-
 **Snapshot / verify behavior** (click, confirm state) with [`screenshot.ts`](plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts) — prints the resolved deploy and the matched button's state, writes `-before.png` / `-after.png`:
 
 ```bash
-./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out /tmp/shot
+./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out "$EQUIN_SCRATCH/shot"
 ./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
-  --path /agents/c/<id> --click "Artifacts" --out /tmp/artifacts
+  --path /agents/c/<id> --click "Artifacts" --out "$EQUIN_SCRATCH/artifacts"
 ```
 
 **One component on its own** (an exhibit — `plugins/plugin-meta/plugins/exhibits`): `./equin run plugins/plugin-meta/plugins/exhibits/e2e/exhibit-shot.ts --id <group/name> [--width <px>] [--theme <app-id>|chrome]`. With `browser_*`: `/debug/exhibit-stage/<group>/<name>;width=<px>?embed=1` is the component alone (viewport = width); `/debug/exhibit/<group>/<name>` shows every width.
@@ -192,7 +192,7 @@ Flags: `--path <route>`, `--viewport 1280x900`, `--wait <ms>`, `--color-scheme d
 
 ```bash
 ./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
-  --name <proto-id> [--width 1280] [--options <name>=<value>,…] [--out /tmp/compare] [--fail-above 5]
+  --name <proto-id> [--width 1280] [--options <name>=<value>,…] [--out "$EQUIN_SCRATCH/compare"] [--fail-above 5]
 ```
 
 `--width` must be a canvas size preset (omit for the mock's declared viewport); variants are captured at their defaults unless `--options` picks one.
@@ -225,6 +225,7 @@ Independent projects that live in `sidequests/`, not directly related to equin. 
 - Always edit files in your worktree, not the main branch.
 - **No unbounded `find`** — it has crashed macOS (65k DIR FDs via the bfs shim). Use `rg --files -g '<glob>'` or `fd '<regex>'`; `find` only with `-maxdepth` / `-prune`.
 - **`rg` is already recursive — never pass `-r`** (it means `--replace`, and the `rg-replace` guard blocks it).
+- **Scratch files go in `$EQUIN_SCRATCH`** (your session's own dir), or a `mktemp` name — never a fixed `/tmp/<name>`, which every session shares (a push once landed another task's commit message from `/tmp/msg.txt`). The `shared-tmp` guard refuses such writes. A commit message needs no file: `-m "$(cat <<'EOF' … EOF)"`.
 - **Run scripts with `./equin run <file>.ts`, never bare `bun <file>.ts`** — bare `bun` resolves dependencies by walking UP, so a worktree without `node_modules` runs against main's (or a mid-install npm state). `./equin run` installs this worktree's lock first. The `bun-script` guard blocks the bare form (machine-launched scripts importing no npm package stay bare).
 - **STOP on unexpected failures; never improvise around them.** Surface it and ask — don't route around (e.g. curl after a failed MCP call). A loud failure is debuggable; a workaround on a broken assumption is not.
 - **Subagents: always pass `model: "sonnet"`** to `Agent`. Opus only for load-bearing, complex implementation; research, lookup, synthesis and reporting are Sonnet work.

@@ -151,6 +151,13 @@ export interface GuardContext {
    * command lets what the command leaves behind be shown under that call.
    */
   toolUseId: string | null;
+  /**
+   * This session's private scratch directory (`agentScratchDir`) — the one
+   * place in a shared temp root its fixed names are its own. `delivered` says
+   * whether the shell has it as `$EQUIN_SCRATCH` (an app launch) or only the
+   * guard knows it (a session no app launched, keyed by its Claude session id).
+   */
+  scratch: { dir: string; delivered: boolean };
   hasBypass(token: string): boolean;
   allow(): AllowVerdict;
   deny(reason: string): DenyVerdict;

@@ -83,7 +83,7 @@ the other:
 ```bash
 ./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
   --name proto-1786877040-3k6f [--width 1440] [--options theme=launch,palette=azure] \
-  [--out /tmp/mist] [--fail-above 5]
+  [--out "$EQUIN_SCRATCH/mist"] [--fail-above 5]
 ```
 
 It opens the prototype's canvas on the deploy this checkout built, adds the

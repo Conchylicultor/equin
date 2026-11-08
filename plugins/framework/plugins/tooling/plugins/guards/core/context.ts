@@ -3,6 +3,7 @@ import { adoptFd, type OwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import { agentScratchDir } from "@plugins/infra/plugins/launcher/plugins/agent-scratch/core";
 import { classifyRepo } from "./git-target";
 import { worktreeContextOf } from "./worktree-root";
 import type {
@@ -49,6 +50,13 @@ function mainCheckoutOf(checkout: string): string {
   return worktreeContextOf(checkout)?.repoRoot ?? checkout;
 }
 
+/**
+ * A Claude session id as one path segment. A payload with an odd one still
+ * gets a context — every guard runs on it — and a scratch dir that is merely
+ * not unique, rather than a throw.
+ */
+const SESSION_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+
 export function createContext(
   cwd: string,
   sessionId = "unknown",
@@ -70,6 +78,8 @@ export function createContext(
   toolUseId: string | null = null,
   /** The launch-named workspace root — see `GuardContext.workRoot`. */
   workspaceRoot: string | null = null,
+  /** The launch-delivered `EQUIN_SCRATCH` — see `GuardContext.scratch`. */
+  scratchDir: string | null = null,
 ): GuardContext {
   const workRoot = workspaceRoot ?? worktreeContextOf(cwd)?.worktreeRoot ?? cwd;
   return {
@@ -82,6 +92,15 @@ export function createContext(
     writableDataDirs,
     agent,
     toolUseId,
+    scratch:
+      scratchDir === null
+        ? {
+            dir: agentScratchDir(
+              SESSION_SEGMENT.test(sessionId) ? sessionId : "unknown",
+            ),
+            delivered: false,
+          }
+        : { dir: scratchDir, delivered: true },
     readTranscript(): TranscriptRead {
       if (!transcriptPath)
         return {

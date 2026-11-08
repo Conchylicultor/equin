@@ -39,6 +39,7 @@ export async function guardHook(raw: string): Promise<string> {
     writableDataDirs: [prototypesDir.path],
     // Set by an app launch for every workspace kind; absent in a human session.
     workspaceRoot: readEnv("WORKSPACE_ROOT") || null,
+    scratchDir: readEnv("SCRATCH") || null,
   });
   return output === null ? "" : JSON.stringify(output);
 }

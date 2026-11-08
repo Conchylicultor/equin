@@ -60,6 +60,11 @@ export interface HookOptions {
    * session no app launched — see `GuardContext.workRoot`.
    */
   workspaceRoot: string | null;
+  /**
+   * The scratch directory the launch named (`EQUIN_SCRATCH`), `null` in a
+   * session no app launched — see `GuardContext.scratch`.
+   */
+  scratchDir: string | null;
 }
 
 /**
@@ -90,6 +95,7 @@ export async function runHook(
       : { id: input.agent_id, type: input.agent_type ?? "unknown" },
     input.tool_use_id ?? null,
     options.workspaceRoot,
+    options.scratchDir,
   );
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
 

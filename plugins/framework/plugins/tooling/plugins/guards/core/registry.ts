@@ -19,6 +19,7 @@ import { pipefailGuard } from "./guards/pipefail";
 import { pollLoopGuard } from "./guards/poll-loop";
 import { postgresGuard } from "./guards/postgres";
 import { rgReplaceGuard } from "./guards/rg-replace";
+import { sharedTmpGuard } from "./guards/shared-tmp";
 import {
   globScopeGuard,
   grepScopeGuard,
@@ -57,6 +58,7 @@ export const GUARDS: Guard<any>[] = [
   claudeMdHint,
   // Bash + file writes
   noMemoryGuard,
+  sharedTmpGuard,
   // Search tools
   grepScopeGuard,
   globScopeGuard,

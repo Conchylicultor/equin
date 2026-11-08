@@ -93,6 +93,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "the checkout one agent's policy hooks run their guards from (guards/agent-policy); delivered into that agent's own process environment by the agent launcher",
   WORKSPACE_ROOT:
     "the workspace one agent runs in, its write guards' boundary (guards/agent-policy); delivered into that agent's own process environment by the agent launcher",
+  SCRATCH:
+    "one agent session's private scratch directory (/tmp/equin-scratch/<conversation id>, launcher/agent-scratch), so a fixed scratch name is that session's alone; delivered into that agent's own process environment by the agent launcher, and read by its guard hook",
   PARENT_LIFELINE:
     "the lock file one spawn holds for the child it starts, set by infra/spawn for that child only (packages/flock lifeline.ts)",
   HOST_GRANT:
