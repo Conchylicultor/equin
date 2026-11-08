@@ -30,8 +30,11 @@ that tip's body was never committed, when the new file's statements are the
 deleted files' statements) — and
 `phaseGeneratedMigrations` writes the header. A reset that regenerates nothing
 asks `resetAdoption` for the published run carrying the deleted delta and writes
-an adoption file naming it. See `database/migrations/CLAUDE.md`
-→ **Supersession**.
+an adoption file naming it. What the reset deletes includes HEAD's own schema
+migrations that an earlier, interrupted reset already removed from the tree
+(`strandedResetMigrations`); when there are any, every generate runs as a reset,
+so a failed normalize can no longer strand a database. See
+`database/migrations/CLAUDE.md` → **Supersession**.
 
 Before drizzle-kit runs, `joinSnapshotTips` (`snapshot-join.ts`, merging with
 the pure 3-way merge and `foldMergeParents` of the migrations core) joins a snapshot DAG with several published tips —

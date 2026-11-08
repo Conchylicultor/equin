@@ -30,6 +30,7 @@ import {
   resetAdoption as adoption,
   resetLineage as lineageOf,
   type ResetPrior,
+  strandedResetMigrations,
 } from "./reset-lineage";
 
 const NULL_ID = "00000000-0000-0000-0000-000000000000";
@@ -314,7 +315,8 @@ describe("reset adoption", () => {
 // state a stash re-applied over a rebase leaves — the stash's generated-file
 // handling keeps main's `schema.snapshot.json` — with main's own newer
 // migration forming the Y-fork the reset exists to undo.
-describe("reset of an uncommitted branch migration whose body is nowhere", () => {
+// Git fixtures run with no user or system config.
+function isolateGitConfig(): void {
   const GIT_ENV = ["GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM"] as const;
   const saved = new Map<string, string | undefined>();
   beforeAll(() => {
@@ -328,32 +330,37 @@ describe("reset of an uncommitted branch migration whose body is nowhere", () =>
       else process.env[k] = v;
     }
   });
+}
 
-  const MAIN_BASE = "20260101_000000_0a0a0a0a__base";
-  const MAIN_NEXT = "20261029_140956_148fdb0b__main_adds_u";
-  const OURS = "20261028_121343_0a785f55__add_c1";
-  const OUR_DDL = 'ALTER TABLE "t" ADD COLUMN "c1" text;';
+const MAIN_BASE = "20260101_000000_0a0a0a0a__base";
+const MAIN_NEXT = "20261029_140956_148fdb0b__main_adds_u";
+const OURS = "20261028_121343_0a785f55__add_c1";
+const OUR_DDL = 'ALTER TABLE "t" ADD COLUMN "c1" text;';
 
-  const git = async (...args: string[]) =>
-    (
-      await spawnExpectOk(
-        ["git", "-c", "user.name=t", "-c", "user.email=t@t", ...args],
-        { cwd: dir, timeoutMs: 60_000 },
-      )
-    ).stdout;
-  const headed = (id: string, prev: string, expand: string) =>
-    renderSnapshotHeader({ id, parents: [prev] }) +
-    renderPhasedMigration({
-      expand,
-      contract: "",
-      claims: [],
-      supersedes: null,
-    });
-  const tipFile = (body: Snapshot) =>
-    writeFileSync(
-      join(dir, "meta", SCHEMA_SNAPSHOT_FILE),
-      JSON.stringify(body),
-    );
+const git = async (...args: string[]) =>
+  (
+    await spawnExpectOk(
+      ["git", "-c", "user.name=t", "-c", "user.email=t@t", ...args],
+      { cwd: dir, timeoutMs: 60_000 },
+    )
+  ).stdout;
+const headed = (
+  id: string,
+  prev: string,
+  expand: string,
+  supersedes: Parameters<typeof renderPhasedMigration>[0]["supersedes"] = null,
+) =>
+  renderSnapshotHeader({ id, parents: [prev] }) +
+  renderPhasedMigration({ expand, contract: "", claims: [], supersedes });
+const tipFile = (body: Snapshot) =>
+  writeFileSync(join(dir, "meta", SCHEMA_SNAPSHOT_FILE), JSON.stringify(body));
+const commitAll = async (message: string) => {
+  await git("add", "-A");
+  await git("commit", "-q", "-m", message);
+};
+
+describe("reset of an uncommitted branch migration whose body is nowhere", () => {
+  isolateGitConfig();
 
   // main: base (A) → main_adds_u (E), both committed with their tip file;
   // the branch: add_c1 (B, parent A), uncommitted, tip file still main's E.
@@ -418,5 +425,103 @@ describe("reset of an uncommitted branch migration whose body is nowhere", () =>
       kind: "none",
       reason: expect.stringContaining("never committed"),
     });
+  });
+});
+
+// The 2026-11-08 incident (att-1794151096): the branch's add_c1 was committed
+// with its body; the rebase onto main — which had added main_adds_u meanwhile —
+// kept main's tip file (the merge driver), and push's normalize reset deleted
+// add_c1, then failed before regenerating. The deletion was all that was left.
+describe("an interrupted reset: HEAD's own migration gone from the tree", () => {
+  isolateGitConfig();
+
+  async function interrupted(): Promise<Set<string>> {
+    await git("init", "-q", "-b", "main", dir);
+    writeFileSync(
+      join(dir, `${MAIN_BASE}.sql`),
+      headed(A, NULL_SNAPSHOT_ID, 'ALTER TABLE "t" ADD COLUMN "id" text;'),
+    );
+    tipFile(snapshotBody(A, NULL_SNAPSHOT_ID, { t: [] }));
+    await commitAll("base");
+    writeFileSync(join(dir, `${OURS}.sql`), headed(B, A, OUR_DDL));
+    tipFile(snapshotBody(B, A, { t: ["c1"] }));
+    await commitAll("ours");
+    writeFileSync(
+      join(dir, `${MAIN_NEXT}.sql`),
+      headed(E, A, 'ALTER TABLE "u" ADD COLUMN "id" text;'),
+    );
+    tipFile(snapshotBody(E, A, { t: [], u: [] }));
+    await commitAll("rebased onto main: the tip file is main's");
+    // The interrupted reset: add_c1 deleted, main's tip in place.
+    rmSync(join(dir, `${OURS}.sql`));
+    return new Set([`${MAIN_BASE}.sql`, `${MAIN_NEXT}.sql`]);
+  }
+
+  test("the deleted migration is stranded, and the regenerated one supersedes it", async () => {
+    const published = await interrupted();
+    const stranded = await strandedResetMigrations(dir, dir, published);
+    expect(stranded.map((s) => s.file)).toEqual([`${OURS}.sql`]);
+    const prior = await readPrior(dir, published, bodies, stranded);
+    expect(prior.deleted.map((d) => d.hash)).toEqual(["0a785f55"]);
+    // Its body is read from the commit that added it, not stood in for.
+    expect(prior.schema).toMatchObject({ kind: "known", baseId: A });
+    const lineage = await resetLineage(
+      dir,
+      prior,
+      snapshotBody(D, E, { t: ["c1"], u: [] }),
+      OUR_DDL,
+    );
+    expect(lineage).toEqual({
+      kind: "supersedes",
+      supersedes: { direct: ["0a785f55"], inherited: [] },
+    });
+  });
+
+  test("nothing is stranded once a file in the tree supersedes it", async () => {
+    const published = await interrupted();
+    writeFileSync(
+      join(dir, "20261029_150000_12345678__merged.sql"),
+      headed(D, E, OUR_DDL, { direct: ["0a785f55"], inherited: [] }),
+    );
+    expect(await strandedResetMigrations(dir, dir, published)).toEqual([]);
+  });
+
+  test("a data migration HEAD commits is never stranded", async () => {
+    const published = await interrupted();
+    writeFileSync(join(dir, `${OURS}.sql`), headed(B, A, OUR_DDL));
+    writeFileSync(
+      join(dir, "20261028_130000_0b0b0b0b__backfill.sql"),
+      "UPDATE t SET c1 = 'x';\n",
+    );
+    await commitAll("with a backfill");
+    rmSync(join(dir, `${OURS}.sql`));
+    rmSync(join(dir, "20261028_130000_0b0b0b0b__backfill.sql"));
+    const stranded = await strandedResetMigrations(dir, dir, published);
+    expect(stranded.map((s) => s.file)).toEqual([`${OURS}.sql`]);
+  });
+
+  // A finished reset that could not prove a header: its output is on disk,
+  // and resetting again on every build would re-stamp its hash each time.
+  test("nothing is stranded while the tree holds a branch schema migration", async () => {
+    const published = await interrupted();
+    writeFileSync(
+      join(dir, "20261029_150000_12345678__merged.sql"),
+      headed(D, E, OUR_DDL),
+    );
+    expect(await strandedResetMigrations(dir, dir, published)).toEqual([]);
+  });
+
+  test("a stranded migration's create-vs-rename answers come back from HEAD", async () => {
+    const published = await interrupted();
+    const sidecar = '{"version":1,"answers":[]}\n';
+    writeFileSync(join(dir, `${OURS}.sql`), headed(B, A, OUR_DDL));
+    writeFileSync(join(dir, "meta", `_${OURS}_answers.json`), sidecar);
+    await commitAll("ours, answered");
+    rmSync(join(dir, `${OURS}.sql`));
+    rmSync(join(dir, "meta", `_${OURS}_answers.json`));
+    const stranded = await strandedResetMigrations(dir, dir, published);
+    expect(stranded).toEqual([
+      { file: `${OURS}.sql`, sql: expect.any(String), answers: sidecar },
+    ]);
   });
 });

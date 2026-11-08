@@ -15,8 +15,8 @@
  * surfaces no other plugin's names.
  */
 
+export { answersSidecarName } from "./answers-sidecar";
 export {
-  answersSidecarName,
   generateMigration,
   journalEntriesForSqlFiles,
   parseMigrationAnswers,

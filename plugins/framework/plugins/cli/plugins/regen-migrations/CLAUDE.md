@@ -27,7 +27,9 @@ the worktree that built those migrations adopts the merged file on its next
 boot instead of re-running its DDL. When the reset regenerates nothing because
 main already carries the delta under its own migrations, it writes an adoption
 file naming them instead. When neither can be proved, the command warns that
-such a database needs `./equin db fork --replace`. See
+such a database needs `./equin db fork --replace`. A regen that fails after
+its reset (a schema file that does not load) loses nothing: the next generate
+finds HEAD's deleted migrations and finishes the reset. See
 `database/migrations/CLAUDE.md` → **Supersession**.
 
 Two refusals come before the regeneration, both because "reset and regenerate"

@@ -34,12 +34,24 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
  * the deleted migrations' own DDL (`kind: "ddl"`). The regenerated migration
  * supersedes them when it runs exactly their statements, in order, phase for
  * phase: a database that applied them then holds what it would run.
+ *
+ * What a reset replaces is read from HEAD as well as from the tree
+ * (`strandedResetMigrations`). The reset deletes first and generates after, and
+ * a run that dies in between — push's normalize failing a schema-load probe
+ * (2026-11-08) — leaves the deletion behind with nothing recording it: the next
+ * generate saw no branch-local migration, emitted the same DDL under a new
+ * hash with no header, and the worktree's database could no longer boot. A
+ * branch-local schema migration HEAD commits, gone from the tree and
+ * superseded by no file there, is such a deletion; every generate finishes it
+ * as a reset, so the lineage survives however the earlier run ended.
  */
 import {
   readdirSync,
   readFileSync,
 } from "@plugins/packages/plugins/timed-fs/core";
-import { join } from "path";
+import { join, relative } from "path";
+import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
+import { answersSidecarName } from "./answers-sidecar";
 import {
   analyzeSnapshotDag,
   classifyStatement,
@@ -55,6 +67,7 @@ import {
 } from "@plugins/database/plugins/migrations/core";
 import {
   parseMigration,
+  snapshotLineage,
   type Supersession,
 } from "@plugins/database/plugins/migrations/plugins/phases/core";
 
@@ -95,28 +108,141 @@ export interface ResetPrior {
 }
 
 /**
+ * A branch-local schema migration HEAD commits that the working tree no longer
+ * has: the deletion of a reset that did not finish (see the module doc). `sql`
+ * is its committed content; `answers` its committed create-vs-rename sidecar
+ * (`meta/_<tag>_answers.json`), which the same reset deleted, or null.
+ */
+export interface StrandedMigration {
+  file: string;
+  sql: string;
+  answers: string | null;
+}
+
+// Wedge-breaker for the local git reads below: far above what either takes.
+const GIT_TIMEOUT_MS = 120_000;
+
+/**
+ * The reset an earlier run left half-done in `migrationsDir` (the data dir of
+ * the checkout at `root`): HEAD's branch-local (not `published`) schema
+ * migrations — a snapshot header — whose hash is in no file of the tree and in
+ * no `supersedes` lineage of one, in a tree holding NO branch-local schema
+ * migration. That last condition is what an unfinished reset leaves (it
+ * deleted them all and wrote nothing); a tree with one holds a finished reset's
+ * output — with or without a header — or new work, and re-resetting it on
+ * every build would re-stamp its hash each time. Empty on a tree in shape.
+ */
+export async function strandedResetMigrations(
+  root: string,
+  migrationsDir: string,
+  published: ReadonlySet<string>,
+): Promise<StrandedMigration[]> {
+  const onDisk = readdirSync(migrationsDir).filter(
+    (f) => NEW_FORMAT.test(f) && !published.has(f),
+  );
+  const contents = new Map(
+    onDisk.map((f) => [f, readFileSync(join(migrationsDir, f), "utf8")]),
+  );
+  if ([...contents.values()].some((sql) => snapshotLineage(sql) !== null))
+    return [];
+
+  const git = async (args: string[]) =>
+    (
+      await spawnExpectOk(["git", ...args], {
+        cwd: root,
+        timeoutMs: GIT_TIMEOUT_MS,
+      })
+    ).stdout;
+  const rel = relative(root, migrationsDir);
+  const prefix = rel === "" ? "" : `${rel}/`;
+  const diskHashes = new Set(onDisk.map((f) => NEW_FORMAT.exec(f)![3]!));
+  const committed = new Set(
+    (
+      await git([
+        "ls-tree",
+        "-r",
+        "-z",
+        "--name-only",
+        "HEAD",
+        "--",
+        prefix || ".",
+      ])
+    )
+      .split("\0")
+      .filter((p) => p !== "")
+      .map((p) => p.slice(prefix.length)),
+  );
+  const missing = [...committed].filter((f) => {
+    const m = NEW_FORMAT.exec(f);
+    return m !== null && !published.has(f) && !diskHashes.has(m[3]!);
+  });
+  if (missing.length === 0) return [];
+
+  // Every hash a file in the tree already replaces (an adoption file's
+  // lineage), inherited edges included.
+  const superseded = new Set<string>();
+  for (const sql of contents.values()) {
+    const parsed = parseMigration(sql);
+    if (parsed.kind !== "phased" || parsed.supersedes === null) continue;
+    for (const h of parsed.supersedes.direct) superseded.add(h);
+    for (const e of parsed.supersedes.inherited) {
+      superseded.add(e.hash);
+      for (const h of e.replaced) superseded.add(h);
+    }
+  }
+  const stranded: StrandedMigration[] = [];
+  for (const file of missing.sort()) {
+    if (superseded.has(NEW_FORMAT.exec(file)![3]!)) continue;
+    const sql = await git(["show", `HEAD:${prefix}${file}`]);
+    // A data migration (no header) is never deleted by a reset.
+    if (snapshotLineage(sql) === null) continue;
+    const sidecar = `meta/${answersSidecarName(file.slice(0, -".sql".length))}`;
+    const answers = committed.has(sidecar)
+      ? await git(["show", `HEAD:${prefix}${sidecar}`])
+      : null;
+    stranded.push({ file, sql, answers });
+  }
+  return stranded;
+}
+
+/**
  * Read what a reset of `migrationsDir` will delete: every branch-local (not
  * `published`) schema migration — a NEW_FORMAT node of the snapshot DAG, the
- * same set `resetBranchLocalMigrations` removes — with its hash, its own
- * lineage, and the schema the set ends at (its tip's body, from `bodies`).
- * Call BEFORE the reset.
+ * same set `resetBranchLocalMigrations` removes — plus the `stranded` ones an
+ * earlier reset already deleted, each with its hash, its own lineage, and the
+ * schema the set ends at (its tip's body, from `bodies`). Call BEFORE the
+ * reset.
  */
 export async function readResetPrior(
   migrationsDir: string,
   published: ReadonlySet<string>,
   bodies: SnapshotBodies,
+  stranded: readonly StrandedMigration[] = [],
 ): Promise<ResetPrior> {
   const deleted: DeletedMigration[] = [];
   const own = new Map<string, SnapshotNode>();
   let mergeNode: string | null = null;
-  const nodes = (await readSnapshotNodes(asAppPath(migrationsDir))).sort(
-    (a, b) => a.file.localeCompare(b.file),
-  );
+  const strandedSql = new Map(stranded.map((s) => [s.file, s.sql]));
+  const strandedNodes: SnapshotNode[] = stranded.map(({ file, sql }) => {
+    const l = snapshotLineage(sql)!;
+    return {
+      file,
+      id: l.id,
+      prevId: l.parents[l.parents.length - 1]!,
+      mergeParents: l.parents.length > 1 ? l.parents : null,
+      lineage: "header",
+    };
+  });
+  const nodes = [
+    ...(await readSnapshotNodes(asAppPath(migrationsDir))),
+    ...strandedNodes,
+  ].sort((a, b) => a.file.localeCompare(b.file));
   for (const n of nodes) {
     const m = NEW_FORMAT.exec(n.file);
     if (!m || published.has(n.file)) continue;
     const parsed = parseMigration(
-      readFileSync(join(migrationsDir, n.file), "utf8"),
+      strandedSql.get(n.file) ??
+        readFileSync(join(migrationsDir, n.file), "utf8"),
     );
     own.set(n.id, n);
     if (n.mergeParents !== null) mergeNode = n.file;
@@ -164,7 +290,11 @@ export async function readResetPrior(
   }
   let tip: Snapshot;
   try {
-    tip = (await bodies.body(tips[0]!)) as Snapshot;
+    // A stranded tip is in no file of the tree: hand its node over.
+    tip = (await bodies.body(
+      tips[0]!,
+      strandedNodes.find((n) => n.id === tips[0]),
+    )) as Snapshot;
   } catch (err) {
     if (!(err instanceof MissingSnapshotBodyError)) throw err;
     const reason = `the deleted tip's snapshot (${err.id}, ${err.file}) is in neither the working tree nor git — it was never committed`;

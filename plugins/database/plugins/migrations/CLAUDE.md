@@ -360,6 +360,23 @@ statements, an unphased deleted file — gets no header and the usual re-fork
 warning; a reset that regenerates nothing cannot prove an adoption without the
 body and says so. Every other missing body stays a loud throw.
 
+**A reset that dies halfway keeps its lineage.** A reset deletes first and
+generates after, so a run that fails in between — push's normalize, on a schema
+file that does not load (2026-11-08) — leaves the deletion in the tree with
+nothing recording it. A plain build then saw no branch-local migration and
+emitted the same DDL under a new hash with no header, and the worktree's
+database could not boot over it. So what a reset replaces is read from **HEAD**
+too (`strandedResetMigrations`, `reset-lineage.ts`): a branch-local schema
+migration HEAD commits, gone from the tree, superseded by no file there, in a
+tree that holds no branch-local schema migration at all, is an unfinished
+reset's deletion, and **every** generate — plain build included — finishes it
+as a reset (prints `finishing an interrupted reset`): its hash joins the
+deleted set, its body comes from git (`snapshotBodies` is handed the node the
+tree no longer has), its answers sidecar from HEAD, and the published tip is
+restored. A finished reset strands nothing, header or not: its output is a
+branch-local schema migration on disk (re-resetting it each build would
+re-stamp its hash every time).
+
 **A reset that regenerates nothing** — the branch's delta already landed on main
 through someone else's published migration, under another hash — writes an
 **adoption file** instead (`…__adopt_published.sql`, no snapshot header,

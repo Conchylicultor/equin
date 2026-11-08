@@ -79,10 +79,14 @@ export type SnapshotBody = Record<string, unknown>;
 
 /** Resolves snapshot bodies by id; one instance per generate run (it caches). */
 export interface SnapshotBodies {
-  /** The exact text of snapshot `id` (byte-identical to what was committed). */
-  text(id: string): Promise<string>;
+  /**
+   * The exact text of snapshot `id` (byte-identical to what was committed).
+   * `node`: its DAG node, when the caller holds one the tree no longer does —
+   * a migration an interrupted reset deleted, read back from HEAD.
+   */
+  text(id: string, node?: SnapshotNode): Promise<string>;
   /** Snapshot `id`, parsed. */
-  body(id: string): Promise<SnapshotBody>;
+  body(id: string, node?: SnapshotNode): Promise<SnapshotBody>;
   /** Hand the resolver a body it will answer `id` with from now on. */
   remember(id: string, text: string): void;
 }
@@ -244,7 +248,9 @@ export function snapshotBodies(root: string, dataDir: AppPath): SnapshotBodies {
     }
   };
 
-  const text = async (id: string): Promise<string> => {
+  const text = async (id: string, known?: SnapshotNode): Promise<string> => {
+    if (known !== undefined && known.id !== id)
+      throw new Error(`text(${id}) was handed the node of ${known.id}`);
     const cached = cache.get(id);
     if (cached !== undefined) return cached;
 
@@ -257,7 +263,8 @@ export function snapshotBodies(root: string, dataDir: AppPath): SnapshotBodies {
       }
     }
     // Read fresh each miss: the generator adds and deletes nodes as it runs.
-    const node = (await readSnapshotNodes(dataDir)).find((n) => n.id === id);
+    const node =
+      known ?? (await readSnapshotNodes(dataDir)).find((n) => n.id === id);
     if (node === undefined)
       throw new Error(`snapshot ${id} is not a node of the snapshot DAG`);
     const legacyPath = joinAppPath(
@@ -280,8 +287,8 @@ export function snapshotBodies(root: string, dataDir: AppPath): SnapshotBodies {
 
   return {
     text,
-    async body(id) {
-      return JSON.parse(await text(id)) as SnapshotBody;
+    async body(id, node) {
+      return JSON.parse(await text(id, node)) as SnapshotBody;
     },
     remember(id, t) {
       if (headId(t, `the snapshot handed for ${id}`) !== id)

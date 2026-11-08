@@ -74,12 +74,18 @@ import {
 } from "./snapshot-join";
 import {
   readResetPrior,
+  strandedResetMigrations,
   resetAdoption,
   resetLineage,
   type ResetPrior,
 } from "./reset-lineage";
 import { dropLegacyEntries, settleSnapshotFiles } from "./snapshot-files";
 import { drizzleVerdict } from "./drizzle-verdict";
+import {
+  ANSWERS_PREFIX,
+  ANSWERS_SUFFIX,
+  answersSidecarName,
+} from "./answers-sidecar";
 
 // The interactive drizzle-kit runner (the CLI's one sanctioned streaming-stdio
 // child) and its prompt model live in ./migrations-interactive.ts; re-exported
@@ -160,28 +166,6 @@ interface AnswersSidecar {
 }
 
 /**
- * The `meta/` filename holding migration `<tag>`'s answers.
- *
- * **The leading underscore is load-bearing.** drizzle-kit's `prepareOutFolder`
- * runs its pg-schema snapshot validator over every `meta/*.json` whose name does
- * NOT start with `_`, and a sidecar is not a snapshot — so an unprefixed one
- * makes drizzle print "data is malformed", exit 0, and generate nothing. That
- * blocks every subsequent build in the repo, permanently, from the first
- * answered prompt onward. `_journal.json` sits in that directory unmolested for
- * exactly this reason.
- *
- * The name is derived HERE, in one function, rather than interpolated at each of
- * the four call sites (writer, reader, two cleanup paths): a prefix that only
- * three of them apply is the same outage arriving later and harder to see.
- */
-const ANSWERS_PREFIX = "_";
-const ANSWERS_SUFFIX = "_answers.json";
-
-export function answersSidecarName(tag: string): string {
-  return `${ANSWERS_PREFIX}${tag}${ANSWERS_SUFFIX}`;
-}
-
-/**
  * Read every branch-local `meta/_*_answers.json` sidecar (those whose migration
  * `.sql` is not in `published` — see `publishedMigrationBasenames`) and merge their entries into one keyed
  * map. Main's accumulated sidecars are ignored, so a re-emitted prompt is only
@@ -191,19 +175,23 @@ export function answersSidecarName(tag: string): string {
 export function readBranchLocalAnswers(
   migrationsDir: AppPath,
   published: ReadonlySet<string>,
+  committed: readonly string[] = [],
 ): Map<string, MigrationAnswer> {
   const map = new Map<string, MigrationAnswer>();
   const metaDir = join(migrationsDir, "meta");
-  if (!existsSync(metaDir)) return map;
-
-  for (const f of readdirSync(metaDir)) {
+  const raws: string[] = [];
+  for (const f of existsSync(metaDir) ? readdirSync(metaDir) : []) {
     if (!f.startsWith(ANSWERS_PREFIX) || !f.endsWith(ANSWERS_SUFFIX)) continue;
     // A sidecar _<tag>_answers.json maps to migration <tag>.sql; skip sidecars
     // whose migration is published (their answers are immutable history).
     const tag = f.slice(ANSWERS_PREFIX.length, -ANSWERS_SUFFIX.length);
     const sqlBasename = `${tag}.sql`;
     if (published.has(sqlBasename)) continue;
-    const raw = readFileSync(join(metaDir, f), "utf8");
+    raws.push(readFileSync(join(metaDir, f), "utf8"));
+  }
+  // An interrupted reset deleted these from the tree; HEAD still has them.
+  raws.push(...committed);
+  for (const raw of raws) {
     const parsed = JSON.parse(raw) as AnswersSidecar;
     for (const entry of parsed.answers) {
       map.set(
@@ -371,21 +359,50 @@ export async function generateMigration(opts: {
   // before a join overwrites the tip) stays answerable after it.
   const bodies = snapshotBodies(root, migrationsDir);
 
-  // Regen mode (resetMigration with no positional answers) replays the persisted
+  // A reset an earlier run left half-done: HEAD's own schema migrations gone
+  // from the tree with nothing superseding them (push's normalize deleted them,
+  // then failed before regenerating). This run finishes it as a reset, so the
+  // migration it generates can still say what it replaces — a plain generate
+  // would emit the same DDL under a new hash, which the database that applied
+  // the deleted files cannot boot over.
+  const stranded = await strandedResetMigrations(
+    root,
+    migrationsDir,
+    published,
+  );
+  const reset = resetMigration === true || stranded.length > 0;
+  if (stranded.length > 0 && resetMigration !== true)
+    console.log(
+      `  finishing an interrupted reset: ${stranded.map((s) => s.file).join(", ")} ` +
+        "(committed at HEAD, gone from the tree, superseded by no file) — generating as --reset-migration",
+    );
+
+  // Regen mode (a reset with no positional answers) replays the persisted
   // create-vs-rename decisions. Read the branch-local sidecars NOW — before the
   // reset below deletes them — so a re-emitted prompt resolves by entity identity.
   const keyedAnswers =
-    resetMigration && !migrationAnswers
-      ? readBranchLocalAnswers(migrationsDir, published)
+    reset && !migrationAnswers
+      ? readBranchLocalAnswers(
+          migrationsDir,
+          published,
+          stranded.flatMap((s) => (s.answers === null ? [] : [s.answers])),
+        )
       : undefined;
 
   // What the reset deletes, read before it does: the regenerated migration
   // names those hashes (`supersedes`) when it provably carries the same schema,
   // so a database that applied them adopts it instead of re-running its DDL.
   let resetPrior: ResetPrior | null = null;
-  if (resetMigration) {
-    resetPrior = await readResetPrior(migrationsDir, published, bodies);
-    await resetBranchLocalMigrations(root, migrationsDir, published);
+  if (reset) {
+    resetPrior = await readResetPrior(
+      migrationsDir,
+      published,
+      bodies,
+      stranded,
+    );
+    await resetBranchLocalMigrations(root, migrationsDir, published, {
+      resuming: stranded.length > 0,
+    });
   }
 
   // Self-heal the filename-hash == content-hash invariant for branch-local data
@@ -877,7 +894,9 @@ function rehashBranchLocalDataMigrations(
 
 /**
  * Delete schema migration files that exist in the working tree but are not
- * published (`publishedMigrationBasenames`). Used by `--reset-migration`
+ * published (`publishedMigrationBasenames`). `resuming`: an earlier reset
+ * already deleted some (`strandedResetMigrations`), so the tip is restored
+ * even when nothing is left to delete. Used by `--reset-migration`
  * to recover from a snapshot-chain Y-fork after rebasing onto main: the
  * branch-local migration is dropped so drizzle-kit can re-emit a fresh one
  * against the rebased tip.
@@ -902,6 +921,7 @@ async function resetBranchLocalMigrations(
   root: AppPath,
   migrationsDir: AppPath,
   published: ReadonlySet<string>,
+  opts: { resuming: boolean },
 ): Promise<void> {
   const metaDir = join(migrationsDir, "meta");
   const schema = schemaMigrationFiles(migrationsDir);
@@ -934,7 +954,9 @@ async function resetBranchLocalMigrations(
     removed.filter((f) => f.endsWith(".sql")).map((f) => f.slice(0, -4)),
   );
 
-  if (removed.length === 0) {
+  // Finishing an interrupted reset: its files are already gone, but the run
+  // that deleted them may have died before putting the published tip back.
+  if (removed.length === 0 && !opts.resuming) {
     console.log(
       "(--reset-migration: no branch-local migrations found, nothing to reset)",
     );
