@@ -76,7 +76,7 @@ before it) beside the total, worded by `formatReportActivity`
   - Slot contributors: 38 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Reports.KindView` ×38
   - Contributes:
-    - `IdKinds.Kind` "report"
+    - `IdKinds.Kind` "report|crash"
     - `ConfigV2.WebRegister` "reports"
   - Uses:
     - `config_v2.ConfigV2`
@@ -92,7 +92,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `Reports`
 - Server:
   - Contributes:
-    - `ids.kind` "report"
+    - `ids.kind` "report|crash"
     - `resource.declare` "reports.list"
     - `resource.declare` "reports.list:groups"
     - `resource.declare` "reports.list:rows"
@@ -162,6 +162,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `ReportSource`
   - Exports (values):
     - `CLIENT_REPORT_SOURCES`
+    - `fixedByClaim`
     - `FIXES_REPORT_TRAILER`
     - `fixStandingOf`
     - `formatRecentCount`
@@ -172,6 +173,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `regresses`
     - `REPORT_FIX_STATE_LABELS`
     - `REPORT_FIX_STATES`
+    - `REPORT_FIXED_BY_TRAILER`
     - `REPORT_HOURLY_MAX`
     - `REPORT_RECENT_MAX`
     - `reportActivity`

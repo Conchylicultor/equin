@@ -349,6 +349,7 @@ const pushAction: CliAction<
     fromMain?: boolean;
     unattributed?: string;
     fixesReport?: string[];
+    reportFixedBy?: string[];
   }
 > = async (opts) => {
   // This process is the land phase of a push its parent drives: the steps
@@ -395,20 +396,20 @@ const pushAction: CliAction<
     console.error(attribution.message);
     process.exit(1);
   }
-  // The reports this push fixes (`--fixes-report`), checked against main's
-  // reports before anything is written; one more trailer on every commit.
+  // The reports this push fixes (`--fixes-report`), or an earlier commit on
+  // main fixed (`--report-fixed-by`), checked against main's reports before
+  // anything is written; more trailers on every commit.
   const fixed = await resolveFixedReports({
     ids: opts.fixesReport ?? [],
+    fixedBy: opts.reportFixedBy ?? [],
     message: opts.message,
+    repoRoot: root0,
   });
   if (!fixed.ok) {
     console.error(fixed.message);
     process.exit(1);
   }
-  const landingTrailers =
-    fixed.trailer === null
-      ? attribution.trailers
-      : [...attribution.trailers, fixed.trailer];
+  const landingTrailers = [...attribution.trailers, ...fixed.trailers];
 
   // May this checkout publish at all? Asked ONCE, here — before the push
   // mutex, so a cold-cache probe's round trip is not paid while holding a

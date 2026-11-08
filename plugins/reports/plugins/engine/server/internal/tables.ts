@@ -25,8 +25,10 @@ export const _reportsReconciled = pgTable("reports_reconciled", {
 
 // The fix ledger: one row per fix of a report — a push to main whose commits
 // name it (`Fixes-report: <id>`, written by `./equin push --fixes-report`),
-// keyed by the newest of those commits. Every column is a fact, stamped once:
-// when the commit reached main, when main first ran code containing it, and
+// keyed by the newest of those commits — or an earlier commit a later push
+// claims fixed it (`Report-fixed-by: <id>@<sha>`, `--report-fixed-by`), keyed
+// by that commit. Every column is a fact, stamped once: when the claim reached
+// main, when main first ran code containing it, and
 // the first occurrence from code containing it (its commit; null when that
 // code could not name one). A report's `fix_state` is derived from its newest
 // row (`fix-ledger.ts`), so fixing a report again starts a new row and the

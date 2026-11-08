@@ -181,6 +181,21 @@ from forks; `server/internal/fix-ledger.ts`):
   `-m` is refused). `ingestFixClaims` reads them (`fix-trailers.ts`, one claim
   per report and push, keyed by the push's newest commit) on every advance of
   main (ref reaction) and at boot.
+  A fix that landed WITHOUT naming its report (history cannot be rewritten) is
+  claimed later by a push of its own: `./equin push --report-fixed-by
+  <id>@<sha>` stamps `Report-fixed-by: <id>@<full sha>` (the sha must already
+  be on main). The fix is THAT commit — deployed and regressed are judged on
+  it exactly as above — and the claim lands when its push does. Chosen over
+  git notes: a claim commit rides the one path that reaches main (validated,
+  reviewed, append-only, read by the same `git log` and ref reaction), where a
+  notes ref is mutable, pushed and fetched separately, and watched by nothing.
+  A new claim is first judged against the occurrences the report already
+  recorded (`recent`): one from code containing the fix regresses it at once,
+  so a wrong retroactive claim is loud, never a quiet "fixed".
+  An occurrence recorded without a commit is no evidence here (the next one,
+  once the fix is live, is — `regresses`). Push refuses a retroactive claim
+  for a report that already has a fix: the newest claim is the standing one,
+  and an older commit must not stand in for the fix in force.
 - **Deployed** — main's backend pin AND its served bundle's `.build-commit`
   contain the commit (`stampDeployedFixes`, at `onAllReady` — a deploy restarts
   main — and on a restart-skip adoption). So "fixed" never precedes the code

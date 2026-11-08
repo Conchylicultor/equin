@@ -34,7 +34,9 @@ export {
 export type { ReportBody, ReportInput } from "./report-body";
 export {
   FIXES_REPORT_TRAILER,
+  REPORT_FIXED_BY_TRAILER,
   REPORT_FIX_STATES,
+  fixedByClaim,
   REPORT_FIX_STATE_LABELS,
   fixStandingOf,
   regresses,

@@ -52184,7 +52184,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slot contributors: 38 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `Reports.KindView` ×38
     - Contributes:
-      - `IdKinds.Kind` "report"
+      - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
     - Uses:
       - `config_v2.ConfigV2`
@@ -52200,7 +52200,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Reports`
   - Server:
     - Contributes:
-      - `ids.kind` "report"
+      - `ids.kind` "report|crash"
       - `resource.declare` "reports.list"
       - `resource.declare` "reports.list:groups"
       - `resource.declare` "reports.list:rows"
@@ -52270,6 +52270,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReportSource`
     - Exports (values):
       - `CLIENT_REPORT_SOURCES`
+      - `fixedByClaim`
       - `FIXES_REPORT_TRAILER`
       - `fixStandingOf`
       - `formatRecentCount`
@@ -52280,6 +52281,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `regresses`
       - `REPORT_FIX_STATE_LABELS`
       - `REPORT_FIX_STATES`
+      - `REPORT_FIXED_BY_TRAILER`
       - `REPORT_HOURLY_MAX`
       - `REPORT_RECENT_MAX`
       - `reportActivity`

@@ -17,6 +17,7 @@ export default defineCliCommand<
     fromMain?: boolean;
     unattributed?: string;
     fixesReport?: string[];
+    reportFixedBy?: string[];
   }
 >({
   name: "push",
@@ -33,6 +34,12 @@ export default defineCliCommand<
         "The report(s) this push fixes (report-…, one of main's — Debug → Reports). Stamps a Fixes-report trailer; " +
         "main records the fix when the push lands, marks it Fixed once main runs it, and Regressed if it fires again from code that has it. " +
         "The only way to name a fix: a Fixes-report: line in -m is refused.",
+    },
+    {
+      flags: "--report-fixed-by <id@sha...>",
+      description:
+        "Claim that an EARLIER commit on main fixed a report it did not name (<report-id>@<sha>, the sha on main). Stamps a Report-fixed-by trailer; " +
+        "the ledger judges that commit exactly like a --fixes-report one: Fixed once main runs it, Regressed if the report fired — or fires — from code that has it.",
     },
     {
       flags: "--from-main",

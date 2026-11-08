@@ -112,7 +112,8 @@ export async function ingestFixClaims(): Promise<void> {
   const since =
     newest === null ? null : new Date(newest.getTime() - 24 * 3600 * 1000);
   const claims = await readFixClaims(REPO_ROOT, since);
-  if ((await recordFixClaims(claims)) > 0) await stampDeployedFixes();
+  if ((await recordFixClaims(claims, REPO_ROOT)) > 0)
+    await stampDeployedFixes();
 }
 
 /**
@@ -121,9 +122,15 @@ export async function ingestFixClaims(): Promise<void> {
  * report this database does not hold is a broken assumption — push validates
  * the id against main's reports — so it is filed as a server error, not
  * dropped in silence, and the rest still land.
+ *
+ * A new claim is first judged against the occurrences the report already
+ * recorded (`recordedRegression`): a fix claimed for a commit main has run for
+ * a while — a `Report-fixed-by` claim — may already have been seen to fail,
+ * and is regressed at once rather than marked fixed.
  */
 export async function recordFixClaims(
   claims: readonly FixClaim[],
+  repoRoot: string,
   conn: NodePgDatabase = db,
 ): Promise<number> {
   if (claims.length === 0) return 0;
@@ -143,21 +150,67 @@ export async function recordFixClaims(
   for (const c of claims) {
     if (known.has(c.reportId)) continue;
     reportServerError({
-      message: `[reports] commit ${c.commit.slice(0, 12)} on main names report ${c.reportId} (Fixes-report), which main's database does not hold`,
+      message: `[reports] commit ${(c.claimedBy ?? c.commit).slice(0, 12)} on main names report ${c.reportId} (${c.claimedBy === undefined ? "Fixes-report" : "Report-fixed-by"}), which main's database does not hold`,
       errorType: "UnknownFixedReport",
     });
   }
-  const landed = claims.filter((c) => known.has(c.reportId));
+  const landed = claims
+    .filter((c) => known.has(c.reportId))
+    .map(({ reportId, commit, landedAt }) => ({ reportId, commit, landedAt }));
   if (landed.length === 0) return 0;
   const inserted = await conn
     .insert(_reportFixes)
     .values(landed)
     .onConflictDoNothing()
-    .returning({ reportId: _reportFixes.reportId });
-  for (const id of new Set(inserted.map((r) => r.reportId))) {
-    await deriveReportFixState(id, conn);
+    .returning({
+      reportId: _reportFixes.reportId,
+      commit: _reportFixes.commit,
+    });
+  for (const fix of inserted) {
+    const seen = await recordedRegression(fix, repoRoot, conn);
+    if (seen === null) await deriveReportFixState(fix.reportId, conn);
+    else
+      await stampRegression(
+        fix.reportId,
+        fix.commit,
+        seen.commit,
+        seen.at,
+        conn,
+      );
   }
   return inserted.length;
+}
+
+/**
+ * The earliest occurrence report `fix.reportId` already recorded (its
+ * `recent`, newest first) from code containing `fix.commit`, or null when
+ * none did. Only an occurrence that names its commit is evidence here: the fix
+ * is not live yet, so unknown code most likely predates it (`regresses`).
+ */
+async function recordedRegression(
+  fix: { reportId: ReportId; commit: string },
+  repoRoot: string,
+  conn: NodePgDatabase,
+): Promise<{ commit: string; at: Date } | null> {
+  const [row] = await conn
+    .select({ recent: _reports.recent })
+    .from(_reports)
+    .where(eq(_reports.id, fix.reportId));
+  let earliest: { commit: string; at: Date } | null = null;
+  const verdicts = new Map<string, boolean>();
+  for (const o of row?.recent ?? []) {
+    if (o.commit === null) continue;
+    let contains = verdicts.get(o.commit);
+    if (contains === undefined) {
+      contains =
+        (await containsCommit(o.commit, fix.commit, repoRoot)) === true;
+      verdicts.set(o.commit, contains);
+    }
+    if (contains && (earliest === null || o.at < earliest.at.getTime())) {
+      earliest = { commit: o.commit, at: new Date(o.at) };
+    }
+  }
+  return earliest;
 }
 
 /**
