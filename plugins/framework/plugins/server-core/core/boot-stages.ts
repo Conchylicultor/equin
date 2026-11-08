@@ -206,7 +206,11 @@ export async function bootPluginGraph(
 // (concurrent WITHIN a wave, serialized only across edges) guarantees a
 // plugin's imports are fully evaluated before it is imported. See
 // `computeLoadWaves` for the invariant and cycle handling.
-async function loadServerPlugins(
+//
+// Exported for one other caller, `../cli/load-declared-graph.ts`: a CLI that
+// reads what the graph DECLARES (its definitions' contributions) without
+// booting it — no collect, no `register`, no barrier, no database.
+export async function loadServerPlugins(
   entries: ServerRegistryEntry[],
 ): Promise<LoadedServerPlugin[]> {
   // The graph is keyed by NODE: a plugin's server half is its `pluginPath`, its

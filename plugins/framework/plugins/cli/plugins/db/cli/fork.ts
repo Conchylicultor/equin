@@ -1,4 +1,7 @@
-import { basename } from "node:path";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
+import { z } from "zod";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
   databaseExists,
@@ -7,75 +10,84 @@ import {
   forkDatabase,
 } from "@plugins/database/plugins/admin/server";
 import type { ForkExclusions } from "@plugins/database/plugins/admin/server";
-import { getForkExclusions } from "@plugins/database/plugins/fork/core";
-import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
-  asNamespace,
-  namespaceUrl,
-  MAIN_WORKTREE_NAME,
-} from "@plugins/infra/plugins/namespace/core";
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
+import { checkoutNamespace } from "@plugins/infra/plugins/paths/core";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // What a fork must not copy is DECLARED by the plugins that own the tables
-// (`ExcludeFromFork` / `ExcludeSchemaDataFromFork`), and those declarations are
-// collected at server boot. A CLI process never boots the server, and it cannot
-// load the plugin registry to collect them either — that imports
-// `@plugins/database/server`, whose worktree pool is scoped to a RUNTIME
-// namespace, which a CLI process does not have.
+// (`ExcludeFromFork` / `ExcludeSchemaDataFromFork`): static data on their
+// server definitions, so a function of THIS checkout's code. We read it off the
+// code itself: a child process (`./internal/declared-exclusions-probe.ts`)
+// loads the plugin graph this checkout's backend would boot
+// (`loadDeclaredGraph`, server-core/cli) and stops before anything touches a
+// database. A child, because loading the graph declares a runtime namespace,
+// which this process must not have (see the probe's header).
 //
-// So we ask a backend that HAS booted. Candidates in order:
+// It used to ask a RUNNING backend over HTTP (this checkout's, else main's),
+// which made the recovery path depend on the thing it recovers from:
+// `--replace` exists for a worktree DB that cannot boot, and on 2026-11-08 it
+// could not run while main's backend was crash-looping and then down.
 //
-//   1. This checkout's own backend, when one is up. The exclusion set is a
-//      function of the CODE — a checkout that adds or removes a declaration has
-//      a different set — so the backend running this checkout is the only one
-//      guaranteed to answer for it.
-//   2. Main. A worktree freshly made with `git worktree add` has no database and
-//      therefore no backend of its own, which is the whole reason this command
-//      exists; main is the one backend we can count on. Its answer can be stale
-//      if this checkout changed the declarations, which is why it is the
-//      fallback and not the first choice.
-//
-// If neither answers we FAIL rather than fork with an empty exclusion set: that
-// would silently produce a ~2 GB database full of main's traces and
-// notifications and look like it worked.
-async function fetchForkExclusions(worktree: string): Promise<ForkExclusions> {
-  const candidates = [asNamespace(worktree), MAIN_WORKTREE_NAME].filter(
-    (ns, i, all) => all.indexOf(ns) === i,
-  );
-  const failures: string[] = [];
-  for (const ns of candidates) {
-    const origin = namespaceUrl(ns);
-    try {
-      return await callEndpoint(getForkExclusions, {}, { origin });
-    } catch (err) {
-      failures.push(
-        `${origin} → ${err instanceof Error ? err.message : String(err)}`,
+// A missing input is still loud, never an empty set: a module that fails to
+// load fails the probe, `forkExclusionsFrom` throws when the graph declares no
+// exclusion at all, and an answer that does not parse is refused — forking
+// with none would copy ~2 GB of main's traces and notifications and look like
+// it worked.
+const PROBE = join(import.meta.dir, "internal/declared-exclusions-probe.ts");
+
+const ForkExclusionsSchema = z.object({
+  tables: z.array(z.string()),
+  schemas: z.array(z.object({ schema: z.string(), keep: z.array(z.string()) })),
+});
+
+async function declaredForkExclusions(root: AppPath): Promise<ForkExclusions> {
+  const namespace = await checkoutNamespace(root);
+  const dir = mkdtempSync(join(tmpdir(), "equin-fork-exclusions-"));
+  try {
+    const out = join(dir, "exclusions.json");
+    const probe = await spawnCaptured(
+      [process.execPath, PROBE, "--namespace", namespace, "--out", out],
+      {
+        cwd: root,
+        unbounded:
+          "a CLI a human watches: it loads this checkout's plugin graph, as " +
+          "long as a backend's load waves take, and has no shorter deadline to borrow",
+      },
+    );
+    if (probe.exitCode !== 0) {
+      throw new Error(
+        `Could not read the fork exclusions this checkout declares: loading ` +
+          `its plugin graph (as "${namespace}") exited ${probe.exitCode}:\n` +
+          `${probe.stderr.slice(-4000)}\nNothing was dropped or forked.`,
       );
     }
+    return ForkExclusionsSchema.parse(JSON.parse(readFileSync(out, "utf8")));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
-  throw new Error(
-    `Could not read the fork exclusion set from any running backend:\n  ${failures.join(
-      "\n  ",
-    )}\nStart equin and retry — forking without the exclusions would copy ` +
-      `every observability and mail table (~2 GB of traces, messages and notifications).`,
-  );
 }
 
 const run: CliAction<[string | undefined], { replace?: boolean }> = async (
   target,
   opts,
 ) => {
-  const worktree = basename(await getWorktreeRoot());
+  const root = await getWorktreeRoot();
+  const worktree = basename(root);
   const name = target ?? worktree;
   if (opts.replace === true && name === MAIN_WORKTREE_NAME) {
     throw new Error(
       `--replace drops the target first; "${name}" is main's database and is never replaced.`,
     );
   }
-  // Read the exclusions BEFORE dropping anything: if no backend answers, the
-  // command fails with the existing database still in place.
-  const exclusions = await fetchForkExclusions(worktree);
+  // Read the exclusions BEFORE dropping anything: if the graph cannot be read,
+  // the command fails with the existing database still in place.
+  const exclusions = await declaredForkExclusions(root);
   if (opts.replace === true && (await databaseExists(name))) {
     console.log(
       `Dropping "${name}" (--replace): every row only it has is lost...`,

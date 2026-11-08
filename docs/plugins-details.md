@@ -21304,6 +21304,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ExcludeSchemaDataFromFork`
           - `forkDatabase`
           - `forkExclusions`
+          - `forkExclusionsFrom`
           - `ForkPlanError`
           - `forkTempPrefix`
           - `getAdminPool`
@@ -21655,7 +21656,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/admin.isForkTempName`
           - `database/admin.listDatabases`
           - `database/admin.reclaimForkTemp`
-          - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
           - `infra/jobs.NonRetryableError`
           - `infra/jobs/supervised-job.defineSupervisedJob`
@@ -21666,16 +21666,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register:
           - `defineSupervisedJob('database.fork')`
           - `defineJob('database.fork-temp-sweep')`
-        - Routes: `GET /api/db/fork-exclusions`
-      - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
-        - Exports (values):
-          - `forkExclusionsSchema`
-          - `getForkExclusions`
       - Cross-plugin:
-        - Imported by:
-          - `conversations/workspace/worktree`
-          - `framework/cli/db`
+        - Imported by: `conversations/workspace/worktree`
     - **`fork-point`** — Reads when this database was forked from another (databaseForkedAt): the instant the fork stamped on it, or null for a database never forked.
       - Server:
         - Uses: `database.db`
@@ -28012,6 +28004,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `release`
               - `upstream`
         - **`db`** — `./equin db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
+          - Cli:
+            - Uses: `framework/server-core.loadDeclaredGraph`
         - **`deploy`** — `./equin deploy converge|ship` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall) and ship release bundles to it behind a health gate.
         - **`doctor`** — The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain) in one run, with its fix, and advises on Claude Code (installed and signed in) without failing on it. Run as `mise run doctor` and at the end of every `mise install`; assertPrerequisites() runs it as the first step of `start` and `build`.
           - Cross-plugin:
@@ -28553,7 +28547,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:
-        - Imported by: 106 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 107 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×26
           - `debug` ×13
           - `conversations` ×10
@@ -28565,12 +28559,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×3
           - `primitives` ×3
           - `build` ×2
+          - `framework` ×2
           - `integrations` ×2
           - `ui` ×2
           - `backup`
           - `config_v2`
           - `fields/server-capabilities`
-          - `framework/cli/deploy`
           - `ids`
           - `packages/source-digest`
           - `plugin-meta/plugin-tree`
@@ -28586,7 +28580,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/boot-events` (0 debt)
           - `framework/server-core` (0 debt)
       - Cli:
-        - Exports (values): `runExec`
+        - Exports (values):
+          - `loadDeclaredGraph`
+          - `runExec`
       - Test helpers:
         - Core: `@plugins/framework/plugins/server-core/core/testing`
           - `bootPluginGraph` — Load the plugin graph, run `register`, collect contributions, run the `onReadyBlocking` barrier.
@@ -32046,7 +32042,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 248 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 246 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×35
           - `infra` ×22
@@ -32057,8 +32053,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×6
           - `ui` ×6
           - `auth` ×5
-          - `framework` ×4
           - `build` ×3
+          - `framework` ×3
           - `network` ×3
           - `active-data` ×2
           - `apps-core` ×2
@@ -32069,7 +32065,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `screenshot` ×2
           - `tag-tree` ×2
           - `backup`
-          - `database/fork`
           - `hints`
           - `menu-bar`
           - `release`
@@ -34532,10 +34527,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 126 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 127 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×31
           - `apps` ×20
-          - `framework` ×17
+          - `framework` ×18
           - `debug` ×13
           - `conversations` ×7
           - `build` ×5
@@ -34917,7 +34912,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 66 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 67 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×16
           - `debug` ×13
           - `conversations` ×8
@@ -34926,10 +34921,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×4
           - `apps` ×3
           - `backup` ×2
+          - `framework` ×2
           - `release` ×2
           - `reports` ×2
           - `config_v2`
-          - `framework/server-core`
           - `plugin-meta/barrel-import`
           - `primitives/log-channels/log-files`
           - `shell/document-head`
@@ -38587,9 +38582,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `blocking-fs/sync-named` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call past FS_WAIT_FLOOR_MS handed to onSlowFsCall subscribers as a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 159 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 160 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×46
-          - `framework` ×23
+          - `framework` ×24
           - `apps` ×15
           - `debug` ×14
           - `backup` ×12

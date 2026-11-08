@@ -1,5 +1,8 @@
 import type { PgTable } from "drizzle-orm/pg-core";
-import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
+import {
+  defineServerContribution,
+  type ServerContribution,
+} from "@plugins/framework/plugins/server-core/core";
 import { tableLabel } from "./table-label";
 
 // A plugin opts ITS OWN table's ROWS out of the worktree DB fork by adding
@@ -111,11 +114,8 @@ export interface ForkSchemaExclusion {
 /**
  * What `forkDatabase` must be told not to copy — the DECLARED set, verbatim.
  *
- * Pure data on purpose. It crosses HTTP for the `./equin db fork` path
- * (`database/fork`'s `GET /api/db/fork-exclusions` → the `cli/db` plugin's
- * `cli/fork.ts`),
- * so nothing here may be a function. Turning it into `pg_dump` flags is a
- * separate step that needs the source database — see ./fork-plan.
+ * Pure data on purpose: turning it into `pg_dump` flags is a separate step
+ * that needs the source database — see ./fork-plan.
  */
 export interface ForkExclusions {
   /** Table names in the app schema (`public`) whose rows are dropped. */
@@ -124,19 +124,45 @@ export interface ForkExclusions {
   readonly schemas: readonly ForkSchemaExclusion[];
 }
 
-// The declared exclusion set.
+// The declared exclusion set, read two ways off one derivation:
 //
-// THROWS on an empty set. A process that never booted (a CLI, a script) already
-// throws inside `getContributions()`; this guards the remaining case, a booted
-// graph that declares no exclusion at all. Silently returning "exclude nothing"
-// would produce a full ~2 GB fork that looks like it worked. The declarations in
-// this repo guarantee a non-empty set in any booted backend.
+//   - `forkExclusions()` — in a BOOTED backend (the fork job), from the
+//     contributions collected at boot;
+//   - `forkExclusionsFrom(plugins)` — anywhere else (`./equin db fork`), from
+//     loaded plugin definitions (`loadDeclaredGraph`, server-core/cli), so it
+//     needs no running backend.
+//
+// Both THROW on an empty set. Silently returning "exclude nothing" would
+// produce a full ~2 GB fork that looks like it worked; the declarations in
+// this repo guarantee a non-empty set in any complete graph, so an empty one
+// means the wrong (or no) graph was read. (`getContributions()` itself already
+// throws in a process that never collected.)
 export function forkExclusions(): ForkExclusions {
-  const tables = ExcludeFromFork.getContributions();
-  const schemas = ExcludeSchemaDataFromFork.getContributions();
+  return toForkExclusions(
+    ExcludeFromFork.getContributions(),
+    ExcludeSchemaDataFromFork.getContributions(),
+    "forkExclusions()",
+  );
+}
+
+export function forkExclusionsFrom(
+  plugins: readonly { contributions?: readonly ServerContribution[] }[],
+): ForkExclusions {
+  return toForkExclusions(
+    ExcludeFromFork.from(plugins),
+    ExcludeSchemaDataFromFork.from(plugins),
+    `forkExclusionsFrom(${plugins.length} plugins)`,
+  );
+}
+
+function toForkExclusions(
+  tables: readonly { table: PgTable | string }[],
+  schemas: readonly { schema: string; keep: readonly string[] }[],
+  reader: string,
+): ForkExclusions {
   if (tables.length === 0 && schemas.length === 0) {
     throw new Error(
-      "forkExclusions(): no fork exclusions are registered by any loaded plugin.",
+      `${reader}: no fork exclusions are declared by any loaded plugin.`,
     );
   }
   return {

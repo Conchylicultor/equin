@@ -104,9 +104,11 @@ Two more things that look wrong but are load-bearing:
   parameter** instead of reading the registry. `getContributions()` answers `[]`
   in any process that never booted the server, so a registry read here would let
   `./equin db fork` silently produce a full ~2 GB copy that looks fine.
-  `forkExclusions()` throws on empty for the same reason; the CLI reads the set
-  from a running backend over `GET /api/db/fork-exclusions`, which is why
-  `ForkExclusions` is pure data and the flag-building lives in `fork-plan`.
+  `forkExclusions()` (a booted backend) and `forkExclusionsFrom(plugins)`
+  (loaded definitions — what `./equin db fork` reads, in a probe child that
+  loads the plugin graph with no backend running) throw on empty for the same
+  reason. The probe hands the set back as JSON, which is why `ForkExclusions`
+  is pure data and the flag-building lives in `fork-plan`.
 
 ## Connections and long statements
 
@@ -233,6 +235,7 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `ExcludeSchemaDataFromFork`
     - `forkDatabase`
     - `forkExclusions`
+    - `forkExclusionsFrom`
     - `ForkPlanError`
     - `forkTempPrefix`
     - `getAdminPool`
