@@ -50,6 +50,6 @@ export async function loadDeclaredGraph(
       await import("../bin/active-runtime");
     return await loadServerPlugins([...serverEntries, ...machineEntries]);
   } finally {
-    treeRead.releaseSync();
+    treeRead.releaseNow();
   }
 }
