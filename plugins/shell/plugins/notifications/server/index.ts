@@ -13,6 +13,8 @@ import {
   dismissNotification,
 } from "../shared/endpoints";
 import { IdKinds } from "@plugins/ids/server";
+import { DbTrigger } from "@plugins/database/plugins/db-triggers/server";
+import { notificationStablePositionTriggers } from "./internal/stable-position-trigger";
 import { notificationIdKind } from "../core";
 
 export { _notifications } from "./internal/tables";
@@ -25,6 +27,7 @@ export default {
     "Persistent bell-button notifications backed by the DB (the fork exclusion of its table is the machine half's).",
   contributions: [
     IdKinds.Kind({ kind: notificationIdKind }),
+    DbTrigger(notificationStablePositionTriggers),
     ...notificationsServed.declare,
     ...notificationsUnreadServed.declare,
   ],

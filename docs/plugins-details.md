@@ -21333,6 +21333,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/migrations`
           - `infra/jobs`
           - `network/live/change-feed`
+          - `shell/notifications`
           - `tasks/tasks-core`
     - **`derived-tables`** — Trigger-maintained materialized rollup tables as data: defineRollup generates a rollup's table, a maintain function and triggers per source (diffing the columns it reads, advisory-locked per key) and a diff-first reconcile; each rollup's functions and triggers a db-triggers set (rollup.<table>) the one trigger installer installs; the boot schema layer prepares the tables, installs every trigger set at once, reconciles, and reports what each reconcile healed (reconciledRollups). rollupSources() maps each rollup to the tables whose writes move it.
       - Server:
@@ -53338,6 +53339,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `ids.kind` "notif"
+          - `db-trigger` "notifications.stable-position"
           - `resource.declare` "notifications"
           - `resource.declare` "notifications.unread"
           - `resource.declare` "notifications:groups"
@@ -53345,6 +53347,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fork-data-exclusion` "notifications"
         - Uses:
           - `database.db`
+          - `database/db-triggers.DbTrigger`
+          - `database/db-triggers.defineDbTriggers`
           - `ids.IdKinds`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
@@ -53354,7 +53358,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveCollection`
           - `network/live.serveValue`
           - `network/live/filter.filterSql`
-        - DB schema: `plugins/shell/plugins/notifications/server/internal/tables.ts`
+        - DB schema:
+          - `plugins/shell/plugins/notifications/server/internal/stable-position-trigger.ts`
+          - `plugins/shell/plugins/notifications/server/internal/tables.ts`
         - Exports (types): `RecordNotificationInput`
         - Exports (values):
           - `_notifications`

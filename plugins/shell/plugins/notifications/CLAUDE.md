@@ -1,5 +1,15 @@
 # notifications
 
+## Rules: never dismissed for you, never moved
+
+- **Only the user dismisses.** No TTL, sweep or fix dismisses a row; the cleanup
+  job only deletes rows the user dismissed.
+- **A row never moves.** Its place is `created_at`; moving it hides what was
+  below. Its state may change, its place not — the DB refuses a `created_at`
+  update (`stable-position-trigger.ts`).
+- **A recurrence that deserves a new alert is a new row** on top; the earlier
+  one stays as it is (`writeNotification`'s `resurfaceAfterMs`).
+
 ## One notification, two surfaces
 
 A notification is **icon · one-line headline · line 2 · at most one action**
@@ -251,6 +261,7 @@ DataView (`web/components/notifications-view.tsx`):
 - Server:
   - Contributes:
     - `ids.kind` "notif"
+    - `db-trigger` "notifications.stable-position"
     - `resource.declare` "notifications"
     - `resource.declare` "notifications.unread"
     - `resource.declare` "notifications:groups"
@@ -258,6 +269,8 @@ DataView (`web/components/notifications-view.tsx`):
     - `fork-data-exclusion` "notifications"
   - Uses:
     - `database.db`
+    - `database/db-triggers.DbTrigger`
+    - `database/db-triggers.defineDbTriggers`
     - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
@@ -267,7 +280,9 @@ DataView (`web/components/notifications-view.tsx`):
     - `network/live.serveCollection`
     - `network/live.serveValue`
     - `network/live/filter.filterSql`
-  - DB schema: `plugins/shell/plugins/notifications/server/internal/tables.ts`
+  - DB schema:
+    - `plugins/shell/plugins/notifications/server/internal/stable-position-trigger.ts`
+    - `plugins/shell/plugins/notifications/server/internal/tables.ts`
   - Exports (types): `RecordNotificationInput`
   - Exports (values):
     - `_notifications`

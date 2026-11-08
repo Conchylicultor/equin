@@ -491,21 +491,21 @@ function ringBell(bell: Bell, incident: IncidentBell | null): void {
         "] "
       : "";
   const desc = `${stalePrefix}${incidentPrefix}${row.message}`;
-  // The bell notification is always keyed by the stable report id — exactly one
-  // row per fingerprint, which updates in place. That dedup key is what keeps
-  // the bell at one row per distinct problem instead of one per
-  // (report × time-bucket), which previously grew the undismissed set without
-  // bound. See
+  // The bell notification is keyed by the stable report id — one row per
+  // fingerprint per EPISODE, updated in place (count, lastSeenAt) while the
+  // problem keeps firing. That dedup key is what keeps the bell at one row per
+  // distinct problem instead of one per (report × time-bucket). See
   // research/perfs/archive/2026-06-29-notifications-unbounded-resource-root-cause.md.
   //
-  // The re-arm policy is the re-surface WINDOW, a separate axis from that key:
-  // once the row has been quiet for the window it comes back as a fresh unread
-  // alert (read/dismissed cleared, floated to the top), while every occurrence
-  // inside the window only bumps its count. The window is never zero and never
-  // infinite — it is RENOTIFY_FLOOR_MS, which a kind may raise but not lower
-  // and not remove. So a crash you dismissed rings again the next time it
-  // fires at least 10 minutes later, and a slow op that keeps tripping rings
-  // at most that often.
+  // The re-alert policy is the WINDOW, a separate axis from that key: a
+  // recurrence after the row went quiet for the window, or after the user
+  // dismissed it and it surfaced longer ago than that, files a NEW unread row on
+  // top; the earlier row stays where it was, as it was (a notification is never
+  // moved or un-dismissed — `shell/notifications`). The window is never zero and
+  // never infinite — it is RENOTIFY_FLOOR_MS, which a kind may raise but not
+  // lower and not remove. So a crash you dismissed rings again the next time it
+  // fires at least 10 minutes later, and a slow op that keeps tripping stays
+  // one row whose count grows.
   const resurfaceAfterMs = Math.max(
     RENOTIFY_FLOOR_MS,
     spec.meta.notifCooldownMs ?? 0,

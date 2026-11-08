@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { and, eq, lt, or, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import { _notifications } from "./tables";
@@ -60,24 +60,28 @@ export interface NotificationWrite {
    * display fields (title/description/variant/linkTo/metadata/muted/category/subject/detail/action/icon) in place
    * rather than inserting a new row — so a deduped notification always reflects
    * its latest state (e.g. a crash whose noise classification flipped between
-   * occurrences). The row's identity, creation time, and read/dismissed state
-   * are preserved, so dedup alone collapses recurrences into one row; whether
-   * that row re-alerts is the separate `resurfaceAfterMs` axis below.
+   * occurrences). The row's identity, position (`createdAt`) and read/dismissed
+   * state are never touched by a dedup hit; whether a recurrence becomes a NEW
+   * row is the separate `resurfaceAfterMs` axis below.
    * Null/undefined means "no dedup" — Postgres
    * treats NULLs as non-conflicting, so a normal insert always happens.
    *
-   * Every dedup hit (regardless of re-surface policy) bumps the row's `count`
+   * Every dedup hit that does not open a new episode bumps the row's `count`
    * and `lastSeenAt`, so a collapsed notification still reads as "happened N
    * times, last seen <ago>".
    */
   dedupeKey?: string | null;
   /**
-   * Re-arm policy for a recurring deduped notification. When set, a dedup hit on
-   * a row that last surfaced more than `resurfaceAfterMs` ago re-surfaces it —
-   * resets `read`/`dismissed` to false and bumps `createdAt` to now, so it floats
-   * back to the top of the bell as a fresh unread alert. A hit inside that window
-   * only coalesces (count/lastSeenAt bump, no re-alert). Requires `dedupeKey` to
-   * have any effect.
+   * Re-alert policy for a recurring deduped notification. A recurrence that
+   * opens a new EPISODE files a new row, at the top of the bell, unread: the
+   * key's current row went quiet (`lastSeenAt`) for longer than
+   * `resurfaceAfterMs`, or the user dismissed it and it last surfaced
+   * (`createdAt`) longer ago than that. The earlier row releases the key and
+   * stays exactly where it is, with its own read/dismissed state and count —
+   * a notification is never moved and never un-dismissed (moving a row is
+   * dismissing what was below it; the DB refuses a `created_at` change). Any
+   * other hit only coalesces into the current row (count/lastSeenAt bump).
+   * Requires `dedupeKey` to have any effect.
    *
    * Optional here, and omitting it really does mean "never resurface" — which is
    * right only for the callers that dedupe on a key unique per event
@@ -123,9 +127,9 @@ export async function recordNotification(
   return writeNotification(input, conn);
 }
 
-// db-parametrized for the same reason upsertReport is: the re-surface semantics
-// live in the ON CONFLICT SQL, so the DB-backed suite drives THIS function
-// against a throwaway Postgres rather than restating its CASE expressions.
+// db-parametrized for the same reason upsertReport is: the re-alert semantics
+// live in SQL (the key release and the ON CONFLICT), so the DB-backed suite
+// drives THIS function against a throwaway Postgres rather than restating them.
 // Production callers pass nothing and get the app pool.
 export async function writeNotification(
   input: NotificationWrite,
@@ -134,15 +138,42 @@ export async function writeNotification(
   const id = input.id ?? notificationIdKind.mint();
   const dedupKey = input.dedupeKey ?? null;
   const now = new Date();
-  // Re-surface gate: a dedup hit re-alerts only once its row has been quiet (not
-  // re-surfaced) for longer than the policy window. `createdAt` doubles as the
-  // "last surfaced at" marker (it's bumped to now on every re-surface), so the
-  // window check is `createdAt < now - resurfaceAfterMs`. Without a policy the
-  // CASE collapses to "keep current value" — i.e. never resurface.
-  const resurfaced =
-    input.resurfaceAfterMs != null
-      ? sql`(${_notifications.createdAt} < ${new Date(now.getTime() - input.resurfaceAfterMs)})`
-      : sql`false`;
+  const resurfaceAfterMs = input.resurfaceAfterMs;
+  if (dedupKey === null || resurfaceAfterMs === undefined) {
+    return insertOrCoalesce(conn, id, dedupKey, now, input);
+  }
+  // A new episode: the key's current row releases the key (and keeps its
+  // place, its state and its count), so the insert below files a new row. Two
+  // plain writes, no transaction needed: a concurrent writer finds the key
+  // already released, releases nothing, and coalesces into the new row through
+  // ON CONFLICT; an insert that fails after the release leaves the old row
+  // keyless, and the next occurrence files the new row.
+  const cutoff = new Date(now.getTime() - resurfaceAfterMs);
+  await conn
+    .update(_notifications)
+    .set({ dedupKey: null })
+    .where(
+      and(
+        eq(_notifications.dedupKey, dedupKey),
+        or(
+          lt(_notifications.lastSeenAt, cutoff),
+          and(
+            eq(_notifications.dismissed, true),
+            lt(_notifications.createdAt, cutoff),
+          ),
+        ),
+      ),
+    );
+  return insertOrCoalesce(conn, id, dedupKey, now, input);
+}
+
+async function insertOrCoalesce(
+  conn: NodePgDatabase,
+  id: NotificationId,
+  dedupKey: string | null,
+  now: Date,
+  input: NotificationWrite,
+): Promise<string> {
   const inserted = await conn
     .insert(_notifications)
     .values({
@@ -167,9 +198,8 @@ export async function writeNotification(
     // a colliding dedupeKey refreshes the existing row's display fields in place
     // (notably re-syncing `muted` to the producer's current classification) so a
     // deduped notification never drifts from its source, and always bumps
-    // count/lastSeenAt. read/dismissed/createdAt re-surface only when the
-    // resurface gate fires (recurring metric kinds); otherwise they're preserved
-    // so identity-dedup recurrences collapse into one row without re-alerting.
+    // count/lastSeenAt. Its position (createdAt) and read/dismissed state are
+    // the user's view of it and never change here.
     .onConflictDoUpdate({
       target: _notifications.dedupKey,
       set: {
@@ -188,9 +218,6 @@ export async function writeNotification(
         icon: input.icon ?? null,
         count: sql`${_notifications.count} + 1`,
         lastSeenAt: now,
-        read: sql`CASE WHEN ${resurfaced} THEN false ELSE ${_notifications.read} END`,
-        dismissed: sql`CASE WHEN ${resurfaced} THEN false ELSE ${_notifications.dismissed} END`,
-        createdAt: sql`CASE WHEN ${resurfaced} THEN ${now} ELSE ${_notifications.createdAt} END`,
       },
     })
     .returning({ id: _notifications.id });
