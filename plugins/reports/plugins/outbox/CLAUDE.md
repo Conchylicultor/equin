@@ -29,6 +29,10 @@ await fileReportFromProcess({ kind, message, data, code? });
   machine writes into it too — `upstream`'s migration-journey e2e runs
   `./equin check` in a temp clone — and the drain must know whose code an
   entry names.
+- **Stamps its commit** (`writer.commit`): the caller's when it names one (an
+  exec child's pin, which `recordReport` stamped), else its checkout's HEAD
+  (`headCommitOf`; null when git cannot say). The drain passes it to
+  `recordReport` — a fixed report's regression is judged on it.
 - Node-only and DB-free, so the check runner (`core → core`) can import it.
 - `kind` should be a `ReportKind` registered on main, and `data` must pass that
   kind's schema — both are checked at the drain, not here.

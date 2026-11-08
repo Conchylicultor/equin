@@ -181,6 +181,7 @@ const note = (over: Partial<Notification> = {}): Notification => ({
   $columns: {},
   lastSeenAt: new Date("2026-10-25T10:00:00Z"),
   createdAt: new Date("2026-10-25T10:00:00Z"),
+  state: null,
   ...over,
 });
 

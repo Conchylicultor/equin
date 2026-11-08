@@ -8,6 +8,7 @@ import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   fileReportFromProcess,
   fileReportFromProcessSync,
+  headCommitOf,
   repositoryOf,
 } from "../../core";
 
@@ -27,6 +28,8 @@ export const outboxWriter = sinkHandler(reportOutboxSink, () => (input) => {
         kind: input.kind,
         message: input.message ?? "",
         data: input.data,
+        // recordReport stamped this process's pin (or the caller's commit).
+        commit: input.commit ?? null,
       });
     } finally {
       inFlight.delete(write);
@@ -45,6 +48,10 @@ export async function settleOutboxWrites(): Promise<void> {
 // once in `onReadyBlocking` (`resolveWriterRepo`), before any registered work
 // runs.
 let writerRepo: string | undefined;
+// This checkout's HEAD, for the synchronous writer's `writer.commit` — read
+// beside `writerRepo`, for the same reason. Null until then, and when git
+// cannot name it.
+let writerCommit: string | null = null;
 
 /**
  * Resolve the repository the synchronous writer stamps. Throws like the
@@ -54,6 +61,7 @@ let writerRepo: string | undefined;
  */
 export async function resolveWriterRepo(): Promise<void> {
   writerRepo = await repositoryOf(REPO_ROOT);
+  writerCommit = await headCommitOf(REPO_ROOT);
 }
 
 /**
@@ -68,6 +76,6 @@ export const outboxFatalWriter = sinkHandler(
   () => (report) =>
     fileReportFromProcessSync(
       { kind: report.kind, message: report.message, data: report.data ?? {} },
-      { repo: writerRepo },
+      { repo: writerRepo, commit: writerCommit },
     ).outcome === "written",
 );

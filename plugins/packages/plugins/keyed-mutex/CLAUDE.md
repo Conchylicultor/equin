@@ -52,6 +52,7 @@ keystrokes into one concatenated turn.
     - `infra/paths/data-files`
     - `infra/paths/data-files/memory`
     - `infra/request-origin/agent-write-ledger`
+    - `reports/engine`
 - Core:
   - Exports (types): `KeyedMutex`
   - Exports (values): `createKeyedMutex`

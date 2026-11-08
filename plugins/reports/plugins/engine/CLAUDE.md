@@ -4,8 +4,8 @@ The reports ENGINE: everything that writes the `reports` table, and the
 process crash capture that feeds it — `recordReport` (and its debounced
 variant), the HTTP routes (`POST /api/reports`, `POST /api/reports/:id/investigate`),
 the process-crash handler and the on-disk crash buffer, the change producer, the noise
-backfill, retention, investigation and the uninvestigated reads, and the fork
-exclusion.
+backfill, retention, investigation and the worklist reads, the fix ledger,
+and the fork exclusion.
 
 Its parent (`reports`) is the PORTABLE half — the table, `reports.list`, the
 `ReportKind` / `ReportNoiseRule` slots, the fan-out config and the contracts
@@ -168,6 +168,41 @@ and stops. Only a changed digest re-runs the O(reports) pass (every row
 re-judged, every linked notification's `muted` synced). Keep a rule's module
 and `noise-input.ts` importing nothing but types — whatever they load counts.
 
+## Fixed, and whether it held: the fix ledger
+
+A report's fix is DERIVED, never set by hand (plan:
+`research/2026-11-08-reports-fix-state-and-regressions.md`). Three facts, each
+stamped by the code that observes it, in `report_fixes` (main's only, excluded
+from forks; `server/internal/fix-ledger.ts`):
+
+- **Landed** — a commit on main names the report: `./equin push
+  --fixes-report <id>` stamps `Fixes-report: <id>[, <id>…]` on every commit of
+  the push (validated against main's reports by `cli/`; a `Fixes-report:` line in
+  `-m` is refused). `ingestFixClaims` reads them (`fix-trailers.ts`, one claim
+  per report and push, keyed by the push's newest commit) on every advance of
+  main (ref reaction) and at boot.
+- **Deployed** — main's backend pin AND its served bundle's `.build-commit`
+  contain the commit (`stampDeployedFixes`, at `onAllReady` — a deploy restarts
+  main — and on a restart-skip adoption). So "fixed" never precedes the code
+  shipping.
+- **Regressed** — an occurrence whose code contains the fix
+  (`fix-regression.ts`, judged off the write path for a pending or fixed row
+  only, memoized per commit pair), or whose code cannot name its commit once
+  the fix is live. The first such occurrence wins.
+
+`fixStandingOf` (`reports/core/fix-state.ts`) turns the newest row into
+`open | pending | fixed | regressed`; `deriveReportFixState` is the ONE writer
+of `fix_state` / `fix_commit` / `fix_state_at`. Every occurrence carries the
+commit its code ran (`recent[].commit`, `last_commit`): this backend's pin
+(`server-build-id`'s `serverPinCommit`) unless the report names its own — a
+tab's bundle commit, an outbox entry's writer.
+
+On a change of state the report's notifications say so in place
+(`restateByMetadata`, the `state` line: fix on its way / fixed by / came back
+after); a regression rings a NEW error row on top (`bellKeyOf`), and unlinks the
+old investigation task so the report is back on the worklist
+(`reportWorklist`: no task, not noise, open or regressed).
+
 ## Filing from a process with no server
 
 `recordReport` runs inside a backend. A process with no server — a
@@ -186,16 +221,22 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Server:
   - Contributes:
     - `change-producer` "reports"
+    - `fork-data-exclusion` "report_fixes"
     - `fork-data-exclusion` "reports"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×8
-    - `shell/notifications` ×3
+    - `shell/notifications` ×4
+    - `build/server-build-id` ×3
     - `infra/host/duress/shed` ×2
-    - `build/server-build-id.getServerGraphHash`
+    - `primitives/commit-list` ×2
+    - `build/restart-skip/hooks.RestartSkip`
     - `config_v2.getConfig`
     - `database/admin.ExcludeFromFork`
     - `database.db`
+    - `ids.idRef`
     - `infra/endpoints.implement`
+    - `infra/git/git-watcher.defineRefReaction`
     - `infra/retention.defineRetention`
     - `infra/warmup.defineWarmup`
     - `network/live/change-feed.defineChangeProducer`
@@ -217,22 +258,24 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `renderReportTask`
     - `reportOutboxFatalSink`
     - `reportOutboxSink`
+    - `reportWorklist`
+    - `reportWorklistCounts`
     - `restateReportOccurrence`
-    - `uninvestigatedReportCounts`
-    - `uninvestigatedReports`
   - Register:
     - `defineWarmup('reports.backfill-noise')`
     - `defineJob('retention.reports')`
+    - `defineRefReaction('reports.fix-claims (refs/heads/main)')`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
 - Cross-plugin:
-  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×11
     - `conversations` ×4
     - `database` ×3
     - `infra` ×3
     - `reports` ×3
     - `backup`
+    - `framework/cli/push`
     - `page/place/google`
     - `stats/cost`
     - `tasks/reports-investigation`
@@ -242,5 +285,10 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `sink-safety/no-adhoc-file-sink` — `server/internal/crash-append.ts` (sanctioned)
     - `blocking-fs/no-sync-fs` — `server/internal/crash-append.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/buffer.ts`, `server/internal/crash-append.ts` (debt)
+- Cli:
+  - Exports (types): `FixedReports`
+  - Exports (values):
+    - `fixesReportTrailer`
+    - `resolveFixedReports`
 
 <!-- AUTOGENERATED:END -->

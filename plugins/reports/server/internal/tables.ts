@@ -29,6 +29,7 @@ const reportsEntity = defineEntity(reportsEntityRef, {
     rateLimited: { default: false },
     noise: { default: false },
     staleOrigin: { default: false },
+    fixState: { default: "open" },
     firstSeenAt: { default: defaultNow() },
     lastSeenAt: { default: defaultNow() },
     createdAt: { default: defaultNow() },
@@ -46,12 +47,16 @@ const reportsEntity = defineEntity(reportsEntityRef, {
       noise: true,
       staleOrigin: true,
       taskId: true,
+      fixState: true,
+      fixCommit: true,
+      fixStateAt: true,
       id: false,
       fingerprint: false,
       worktree: false,
       source: false,
       lastClientId: false,
       lastBuildId: false,
+      lastCommit: false,
       recent: false,
       hourly: false,
       firstSeenAt: false,
@@ -68,6 +73,8 @@ const reportsEntity = defineEntity(reportsEntityRef, {
     // The Reports DataView's default order (last seen, newest first) with the
     // PK tiebreaker the `reports.list` window appends — see core/resources.ts.
     index("reports_last_seen_idx").on(t.lastSeenAt, t.id),
+    // The Reports views and the supervisors' worklist filter on it.
+    index("reports_fix_state_idx").on(t.fixState),
   ],
 });
 

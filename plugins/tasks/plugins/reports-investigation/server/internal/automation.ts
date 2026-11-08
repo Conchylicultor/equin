@@ -16,7 +16,7 @@ import { sinkHandler } from "@plugins/framework/plugins/server-core/core";
 import {
   linkReportsToTask,
   renderReportTask,
-  uninvestigatedReports,
+  reportWorklist,
 } from "@plugins/reports/plugins/engine/server";
 import {
   reportInvestigationsConfig,
@@ -122,7 +122,7 @@ export const reportInvestigationsAutomation = defineAutomation({
     { name: "kinds", description: "The report kinds in the batch" },
   ],
   detect: async ({ config }) => {
-    const rows = await uninvestigatedReports({
+    const rows = await reportWorklist({
       kinds: kindsInScope(config),
       minCount: config.minCount,
       limit: MAX_REPORTS_PER_TASK,

@@ -49,6 +49,20 @@ const FIELDS: FieldDef<ReportOccurrence>[] = [
     ),
     width: "11rem",
   },
+  {
+    id: "commit",
+    label: "Commit",
+    type: "text",
+    // The code that raised it — whether it contains the report's fix decides
+    // a regression. Blank when it could not name its commit.
+    value: (o) => o.commit ?? "",
+    cell: (o) => (
+      <Text variant="caption" tone="muted" className="font-mono">
+        {o.commit?.slice(0, 9) ?? ""}
+      </Text>
+    ),
+    width: "6rem",
+  },
 ];
 
 /**

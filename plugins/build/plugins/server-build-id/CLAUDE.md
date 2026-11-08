@@ -40,15 +40,20 @@ So it is read once at boot. See `resource-protocol` / `resource-runtime`.
 
 ## Plugin reference
 
-- Description: Served-bundle pin leaf: reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts), re-read when the backend adopts a deploy instead of restarting (restart-skip). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
+- Description: Served-bundle and server pin leaf: the commit this backend process was materialized from (serverPin — HEAD sampled at module eval, sealed by build/deployment at onAllReady, unresolved on a mixed boot), and reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts), re-read when the backend adopts a deploy instead of restarting (restart-skip). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
 - Server:
   - Contributes: `restart-skip.adopted` "the web graph live-resource contract verdicts are judged against"
   - Uses:
     - `build/restart-skip/hooks.RestartSkip`
+    - `infra/paths.GIT`
     - `infra/paths.webDistDir`
   - Exports (values):
+    - `adoptServerPin`
     - `getServerCommit`
     - `getServerGraphHash`
+    - `sealServerPin`
+    - `serverPin`
+    - `serverPinCommit`
 - Cross-plugin:
   - Imported by:
     - `build/deployment`

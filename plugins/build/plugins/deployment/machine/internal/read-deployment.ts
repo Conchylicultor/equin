@@ -11,6 +11,7 @@ import { chainTo, isAncestor, readTarget } from "./git-chain";
 import {
   getServerCommit,
   getServerGraphHash,
+  serverPin,
 } from "@plugins/build/plugins/server-build-id/server";
 import {
   convergenceOf,
@@ -20,7 +21,6 @@ import {
   type Deployment,
   type DeploymentState,
 } from "../../core";
-import { serverPin } from "./server-pin";
 
 /** Attach the ancestry fact to a carrier whose pin has just been read. */
 async function withAncestry(

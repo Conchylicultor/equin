@@ -29,6 +29,11 @@ export const ReportBodySchema = z.object({
   // Stamped by web/report.ts, not by the caller.
   clientId: z.string().nullable().optional(),
   buildId: z.string().nullable().optional(),
+  // The commit the reporting code ran: the bundle's build commit for a tab
+  // (stamped by web/report.ts), the backend's pin for an in-process report
+  // (stamped by recordReport), the writer's HEAD for an outbox entry. What a
+  // regression of a fixed report is judged on.
+  commit: z.string().nullable().optional(),
 });
 export type ReportBody = z.infer<typeof ReportBodySchema>;
 

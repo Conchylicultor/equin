@@ -251,7 +251,6 @@ convergence mechanisms all missing it) and the design.
     - `deploymentServed`
     - `readDeployment`
     - `readDeploymentState`
-    - `serverPin`
 - Core:
   - Uses:
     - `network/live.liveValue`

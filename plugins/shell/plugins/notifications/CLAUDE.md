@@ -9,6 +9,12 @@
   update (`stable-position-trigger.ts`).
 - **A recurrence that deserves a new alert is a new row** on top; the earlier
   one stays as it is (`writeNotification`'s `resurfaceAfterMs`).
+- **What changes in place is the row's `state`** — where its problem now
+  stands (`pending` / `resolved` / `recurred`, the producer's words), set on
+  every row about one subject by `restateByMetadata(key, value, state)`. A
+  resolved row settles (check glyph); one that recurred reads red. A report's
+  regression is a new row (the reports engine's own key), never the old one
+  moved.
 
 ## One notification, two surfaces
 
@@ -24,6 +30,8 @@ A notification is **icon · one-line headline · line 2 · at most one action**
   error), drawn only for a reader in Developer mode, beside the
   `DeveloperMark`.
 - `action` — `{ kind, payload }`, resolved through the action registry below.
+- `state` — `{ tone, text }`, where the problem now stands (a report's fix):
+  one line under line 2, the tone's glyph and tint. Changes in place.
 - `category` — `conversations | updates | automations | reports | other`
   (`NOTIFICATION_CATEGORIES`, a closed list in `core/`; default `other`). The
   bell's chips.
@@ -287,6 +295,7 @@ DataView (`web/components/notifications-view.tsx`):
   - Exports (values):
     - `_notifications`
     - `recordNotification`
+    - `restateByMetadata`
     - `restateNotification`
     - `setMutedByMetadata`
   - Register: `defineJob('notifications.ttl-cleanup')`
@@ -325,9 +334,11 @@ DataView (`web/components/notifications-view.tsx`):
     - `NotificationAction`
     - `NotificationCategory`
     - `NotificationId`
+    - `NotificationState`
   - Exports (values):
     - `NOTIFICATION_CATEGORIES`
     - `NOTIFICATION_CATEGORY_LABELS`
+    - `NOTIFICATION_STATE_TONES`
     - `NOTIFICATION_VARIANTS`
     - `NotificationActionSchema`
     - `notificationFields`
@@ -335,6 +346,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `notificationIdKind`
     - `notificationsEntityRef`
     - `notificationsRoute`
+    - `NotificationStateSchema`
 - Cross-plugin:
   - Uses tokens: 30 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×13

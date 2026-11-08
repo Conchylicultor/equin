@@ -10,6 +10,7 @@ import {
   type NotificationAction,
   type NotificationCategory,
   type NotificationId,
+  type NotificationState,
 } from "../../core";
 
 // Every column a notification write can set, with no rule tying `variant` to
@@ -43,6 +44,13 @@ export interface NotificationWrite {
    * variant's or the category's.
    */
   icon?: SymbolRef | null;
+  /**
+   * Where its problem now stands (resolved, on its way, came back) — one line
+   * on the row. A dedup hit rewrites it like every display field, so a
+   * producer passes its current state on every write; a change between
+   * writes goes through `restateByMetadata`.
+   */
+  state?: NotificationState | null;
   /**
    * Quiet notification: keeps its variant color but is dimmed in the bell list,
    * excluded from the unread badge, and never pops a toast. Defaults to false.
@@ -192,6 +200,7 @@ async function insertOrCoalesce(
       detail: input.detail ?? null,
       action: input.action ?? null,
       icon: input.icon ?? null,
+      state: input.state ?? null,
       dedupKey,
     })
     // null never conflicts, so a plain insert happens when no dedupeKey is set;
@@ -216,6 +225,7 @@ async function insertOrCoalesce(
         detail: input.detail ?? null,
         action: input.action ?? null,
         icon: input.icon ?? null,
+        state: input.state ?? null,
         count: sql`${_notifications.count} + 1`,
         lastSeenAt: now,
       },

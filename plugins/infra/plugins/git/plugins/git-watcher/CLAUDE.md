@@ -71,6 +71,7 @@ the durable emit that follows.
     - `infra/launcher/login-services`
     - `plugin-meta/plugin-health`
     - `release`
+    - `reports/engine`
     - `review/plugin-changes`
     - `stats/commits`
     - `tasks/attempt-work`

@@ -109,7 +109,7 @@ reading as stale, the job should resolve the row when the count reaches zero.
     - `reports.ReportKind`
     - `reports/engine.linkReportsToTask`
     - `reports/engine.recordReport`
-    - `reports/engine.uninvestigatedReports`
+    - `reports/engine.reportWorklist`
     - `tasks/automations.automationConfigRegistration`
     - `tasks/automations.defineAutomation`
     - `tasks/task-category.TaskCategory`

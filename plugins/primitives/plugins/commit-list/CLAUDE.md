@@ -34,6 +34,7 @@
     - `NameStatusRecord`
     - `RawNumstatRecord`
   - Exports (values):
+    - `containsCommit`
     - `GitError`
     - `LOG_FORMAT`
     - `parseDiffNameStatusZ`
@@ -71,6 +72,7 @@
     - `conversations/conversation-view/commits-graph`
     - `infra/git/checkout-watch`
     - `infra/git/git-watcher`
+    - `reports/engine`
     - `review/plugin-changes`
     - `tasks/attempt-work`
     - `tasks/task-triage`

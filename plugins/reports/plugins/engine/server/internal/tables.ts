@@ -1,4 +1,13 @@
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  index,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
+import { idRef } from "@plugins/ids/server";
+import { reportIdKind } from "@plugins/reports/core";
+import { _reports } from "@plugins/reports/server";
 
 // Which code the stored classification of `reports` was last reconciled
 // against: one row per reconcile (`name`), holding the source digest of the
@@ -13,3 +22,30 @@ export const _reportsReconciled = pgTable("reports_reconciled", {
     .defaultNow()
     .notNull(),
 });
+
+// The fix ledger: one row per fix of a report — a push to main whose commits
+// name it (`Fixes-report: <id>`, written by `./equin push --fixes-report`),
+// keyed by the newest of those commits. Every column is a fact, stamped once:
+// when the commit reached main, when main first ran code containing it, and
+// the first occurrence from code containing it (its commit; null when that
+// code could not name one). A report's `fix_state` is derived from its newest
+// row (`fix-ledger.ts`), so fixing a report again starts a new row and the
+// history stays. Main's only: it is main's history it records.
+export const _reportFixes = pgTable(
+  "report_fixes",
+  {
+    // A report deleted by retention takes its fixes with it.
+    reportId: idRef(reportIdKind, "report_id", () => _reports.id, {
+      onDelete: "cascade",
+    }).notNull(),
+    commit: text("commit").notNull(),
+    landedAt: timestamp("landed_at", { withTimezone: true }).notNull(),
+    deployedAt: timestamp("deployed_at", { withTimezone: true }),
+    regressedAt: timestamp("regressed_at", { withTimezone: true }),
+    regressedCommit: text("regressed_commit"),
+  },
+  (t) => [
+    primaryKey({ columns: [t.reportId, t.commit] }),
+    index("report_fixes_landed_idx").on(t.landedAt),
+  ],
+);

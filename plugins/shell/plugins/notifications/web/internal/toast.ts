@@ -90,6 +90,8 @@ export function useToast(): Toast {
         detail: args.detail ?? null,
         action: args.action ?? null,
         icon: args.icon ?? null,
+        // A toast raised in the page reports an event, not a standing problem.
+        state: null,
         linkTo: args.linkTo ?? null,
         metadata,
         count: 1,

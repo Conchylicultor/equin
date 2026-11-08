@@ -46,3 +46,25 @@ export async function mergeBaseWithMain(
       : `git merge-base exited ${result.exitCode}: ${result.stderr.trim() || mergeBase}`,
   };
 }
+
+/**
+ * `git rev-parse HEAD` in `repoRoot`: the commit a process filing from that
+ * checkout runs — an outbox entry's `writer.commit`. Null when git cannot name
+ * it (no checkout, a failed spawn): the entry then says its code is unknown,
+ * which is a verdict input of its own (a fixed report's regression), never a
+ * guess.
+ */
+export async function headCommitOf(repoRoot: string): Promise<string | null> {
+  let result;
+  try {
+    result = await spawnCaptured(["git", "rev-parse", "HEAD"], {
+      cwd: repoRoot,
+      timeoutMs: MERGE_BASE_TIMEOUT_MS,
+    });
+    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- a spawn that cannot start (no git, a vanished cwd) is the same "cannot name the commit" as a non-zero exit: null is the declared "unknown code" state an entry carries (a dev bundle and a mixed boot say the same), read by the drain as exactly that, never as a commit
+  } catch {
+    return null;
+  }
+  const sha = result.stdout.trim();
+  return result.exitCode === 0 && /^[0-9a-f]{40,64}$/.test(sha) ? sha : null;
+}

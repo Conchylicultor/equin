@@ -2,7 +2,6 @@ import {
   RelativeTime,
   useNow,
 } from "@plugins/primitives/plugins/relative-time/web";
-import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { TabOriginBadge } from "@plugins/apps-core/plugins/tab-origin/web";
 import { useStaleFrontend } from "@plugins/build/web";
@@ -15,12 +14,17 @@ import {
 import type { Report } from "@plugins/reports/core";
 import { Reports } from "@plugins/reports/web";
 import {
-  DataView,
+  DataViewSwitcher,
   defineDataView,
   fieldOverrides,
   liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
+import type {
+  DataViewSourceProps,
+  FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
+import { ReportsSources, type ReportsHostProps } from "../slots";
+import { FixStateBadge } from "./fix-state-badge";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 // It IS `reportsList`'s column scope (asserted at mount): the surface whose
@@ -40,27 +44,67 @@ const reportsSource = liveDataSource(reportsList, {
   facets: ["kind", "source"],
 });
 
-export function ReportsView({
-  selectedId,
-  linkTo,
-}: {
-  selectedId?: string;
-  /** Where a row goes: a link, so middle- / ⌘-click open it in a browser tab. */
-  linkTo: (id: string) => LinkTarget;
-}) {
+export function ReportsView(hostProps: ReportsHostProps) {
   return (
-    <DataView<Report>
-      overrides={overrides}
-      extraFields={extraFields}
-      views={["table", "list"]}
+    <DataViewSwitcher
+      storageKey={REPORTS_VIEW}
+      sources={ReportsSources}
+      hostProps={hostProps}
       defaultView="table"
-      selectedRowId={selectedId}
-      rowActivation={(r) => linkTo(r.id)}
-      emptyState={<>No reports recorded yet.</>}
-      source={reportsSource}
     />
   );
 }
+
+type ReportsScope = ReturnType<typeof reportsSource.scoped>;
+
+// One source per slice of the same reports, by where they stand against their
+// fix. Each is the live source scoped server-side, so its counts, groups and
+// search are the slice's own.
+const SCOPES = {
+  // What a supervisor works from: no fix named yet, or one that did not hold.
+  worklist: reportsSource.scoped({
+    where: { fixState: { in: ["open", "regressed"] }, noise: false },
+  }),
+  regressed: reportsSource.scoped({ where: { fixState: "regressed" } }),
+  pending: reportsSource.scoped({ where: { fixState: "pending" } }),
+  fixed: reportsSource.scoped({ where: { fixState: "fixed" } }),
+} satisfies Record<string, ReportsScope>;
+
+const EMPTY = {
+  worklist: "Nothing to fix: every report is fixed, on its way, or noise.",
+  regressed: "No regressions: every fix that went live has held.",
+  pending: "No fix on its way.",
+  fixed: "No report fixed yet. A push names its fix with --fixes-report.",
+  all: "No reports recorded yet.",
+} as const;
+
+function sourceComponent(
+  scope: ReportsScope | typeof reportsSource,
+  emptyState: string,
+) {
+  return function ReportsSource({
+    hostProps,
+    render,
+  }: DataViewSourceProps<ReportsHostProps>) {
+    return render<Report>({
+      source: scope,
+      overrides,
+      extraFields,
+      selectedRowId: hostProps.selectedId,
+      rowActivation: (r) => hostProps.linkTo(r.id),
+      emptyState: <>{emptyState}</>,
+    });
+  };
+}
+
+export const WorklistSource = sourceComponent(SCOPES.worklist, EMPTY.worklist);
+export const RegressedSource = sourceComponent(
+  SCOPES.regressed,
+  EMPTY.regressed,
+);
+export const PendingSource = sourceComponent(SCOPES.pending, EMPTY.pending);
+export const FixedSource = sourceComponent(SCOPES.fixed, EMPTY.fixed);
+export const AllReportsSource = sourceComponent(reportsSource, EMPTY.all);
 
 // How the derived fields present here. `kind` and `source` declare no
 // `options` — their option lists are the source's facets. `message` and
@@ -108,6 +152,10 @@ const overrides = fieldOverrides(reportsList, {
       </span>
     ),
     width: "7rem",
+  },
+  fixState: {
+    cell: (r) => <FixStateBadge report={r} />,
+    width: "9rem",
   },
   message: { visible: false },
   fingerprint: { visible: false },

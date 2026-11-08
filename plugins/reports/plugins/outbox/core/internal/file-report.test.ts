@@ -101,7 +101,7 @@ describe("fileReportFromProcessSync", () => {
   test("the entry is in place when it returns, stamped with the given repo", async () => {
     const result = fileReportFromProcessSync(
       { kind: "fatal-kind", message: "exiting", data: { why: "x" } },
-      { dir: asAppPath(dir), repo: "/repos/one", now: 99 },
+      { dir: asAppPath(dir), repo: "/repos/one", commit: null, now: 99 },
     );
     expect(result.outcome).toBe("written");
     const names = await readdir(dir);
@@ -123,7 +123,7 @@ describe("fileReportFromProcessSync", () => {
   test("an unknown repo leaves the stamp out", async () => {
     fileReportFromProcessSync(
       { kind: "k", message: "m", data: {} },
-      { dir: asAppPath(dir), repo: undefined },
+      { dir: asAppPath(dir), repo: undefined, commit: null },
     );
     const [name = ""] = await readdir(dir);
     const entry = OutboxEntrySchema.parse(
@@ -141,14 +141,14 @@ describe("fileReportFromProcessSync", () => {
     expect(
       fileReportFromProcessSync(
         { kind: "k", message: "m", data: {} },
-        { dir: asAppPath(dir), repo: undefined },
+        { dir: asAppPath(dir), repo: undefined, commit: null },
       ),
     ).toEqual({ outcome: "refused", pending: OUTBOX_MAX_PENDING });
     const file = join(dir, "0-1-abc.json");
     expect(
       fileReportFromProcessSync(
         { kind: "k", message: "m", data: {} },
-        { dir: asAppPath(join(file, "outbox")), repo: undefined },
+        { dir: asAppPath(join(file, "outbox")), repo: undefined, commit: null },
       ).outcome,
     ).toBe("failed");
   });

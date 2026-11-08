@@ -39,6 +39,8 @@ async function productionDeps(): Promise<DrainDeps> {
         message: entry.message,
         data: entry.data,
         occurredAt: entry.occurredAt,
+        // The writer's code, never main's own (an absent field: unknown).
+        commit: entry.writer.commit ?? null,
       });
     },
     recordFailure: async (error) => {

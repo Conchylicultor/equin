@@ -75,6 +75,28 @@ export const NotificationIconSchema: z.ZodType<SymbolRef> = z.custom<SymbolRef>(
 );
 
 /**
+ * Where the problem a notification is about now stands, said on the row
+ * itself — a state that may change while the row keeps its place
+ * (`restateByMetadata`): its resolution is on its way (`pending`), it was
+ * resolved (`resolved` — the row settles), or it came back after being
+ * resolved (`recurred`). The producer words it (`text`); the view draws the
+ * tone's glyph and tint.
+ */
+export const NOTIFICATION_STATE_TONES = [
+  "pending",
+  "resolved",
+  "recurred",
+] as const;
+export interface NotificationState {
+  tone: (typeof NOTIFICATION_STATE_TONES)[number];
+  text: string;
+}
+export const NotificationStateSchema: z.ZodType<NotificationState> = z.object({
+  tone: z.enum(NOTIFICATION_STATE_TONES),
+  text: z.string().min(1),
+});
+
+/**
  * A notification's fields, in column order — the `notifications` table is
  * built from them (`server/internal/tables.ts`), plus `dedupKey`, its server
  * field (never on the wire).
@@ -127,6 +149,13 @@ export const notificationFields = {
     jsonField({
       schema: NotificationActionSchema,
       default: { kind: "open", payload: {} },
+    }),
+  ),
+  /** Where its problem now stands — see {@link NotificationStateSchema}. */
+  state: nullable(
+    jsonField<NotificationState>({
+      schema: NotificationStateSchema,
+      default: { tone: "pending", text: "pending" },
     }),
   ),
   /** What it is about, in the user's words — the bell's chips. */

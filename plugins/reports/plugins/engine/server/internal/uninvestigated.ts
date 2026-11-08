@@ -8,14 +8,21 @@ import {
   reportIdKind,
 } from "@plugins/reports/core";
 
-// Not yet investigated: no task linked, and not classified as noise.
-const uninvestigated = and(isNull(_reports.taskId), eq(_reports.noise, false));
+// The worklist: what nobody is on — no task linked, not noise — among the
+// reports that need a fix: open (no fix named yet) or regressed (the fix did
+// not hold; its regression unlinked the old task, so it comes back here). A
+// pending or fixed report is someone's fix, on its way or live.
+const worklist = and(
+  isNull(_reports.taskId),
+  eq(_reports.noise, false),
+  inArray(_reports.fixState, ["open", "regressed"]),
+);
 
 /**
- * How many uninvestigated reports of each kind have occurred at least
+ * How many worklist reports of each kind have occurred at least
  * `minCount` times — one GROUP BY, bounded by the registered kinds.
  */
-export async function uninvestigatedReportCounts(
+export async function reportWorklistCounts(
   minCount: number,
 ): Promise<{ kind: string; reports: number }[]> {
   return db
@@ -24,15 +31,15 @@ export async function uninvestigatedReportCounts(
       reports: count(),
     })
     .from(_reports)
-    .where(and(uninvestigated, gte(_reports.count, minCount)))
+    .where(and(worklist, gte(_reports.count, minCount)))
     .groupBy(_reports.kind);
 }
 
 /**
- * The uninvestigated reports of `kinds` that occurred at least `minCount`
+ * The worklist reports of `kinds` that occurred at least `minCount`
  * times, oldest first, at most `limit`.
  */
-export async function uninvestigatedReports(args: {
+export async function reportWorklist(args: {
   kinds: readonly string[];
   minCount: number;
   limit: number;
@@ -43,7 +50,7 @@ export async function uninvestigatedReports(args: {
     .from(_reports)
     .where(
       and(
-        uninvestigated,
+        worklist,
         gte(_reports.count, args.minCount),
         inArray(_reports.kind, [...args.kinds]),
       ),

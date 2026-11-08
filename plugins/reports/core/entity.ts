@@ -9,10 +9,14 @@ import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { identifierField } from "@plugins/fields/plugins/identifier/plugins/config/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
 import { idKindField } from "@plugins/ids/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { reportIdKind } from "./id-kind";
+import { REPORT_FIX_STATES, REPORT_FIX_STATE_LABELS } from "./fix-state";
 
 /** How many occurrences a report keeps in {@link reportFields}' `recent`. */
 // Small on purpose: `reports.list` carries it on every row of its window.
@@ -30,6 +34,13 @@ export const ReportOccurrenceSchema = z.object({
   clientId: z.string().nullable(),
   url: z.string().nullable(),
   buildId: z.string().nullable(),
+  /**
+   * The commit the code that raised it ran (the backend's pin, the bundle's
+   * build commit, a CLI's HEAD); null when it cannot be named (a mixed boot, a
+   * dev bundle, an occurrence recorded before the field existed). What a
+   * regression is judged on: does it descend from the fix?
+   */
+  commit: z.string().nullable().default(null),
 });
 export type ReportOccurrence = z.infer<typeof ReportOccurrenceSchema>;
 
@@ -113,6 +124,8 @@ export const reportFields = {
    */
   lastClientId: nullable(textField()),
   lastBuildId: nullable(textField()),
+  /** The newest occurrence's `commit` (see {@link ReportOccurrenceSchema}). */
+  lastCommit: nullable(textField({ label: "Commit" })),
   /**
    * The newest {@link REPORT_RECENT_MAX} occurrences, newest first — so a
    * repeat no longer erases what the one before it said (its duration, its
@@ -133,6 +146,28 @@ export const reportFields = {
    * just surfaces as `needsTask` on the next report.
    */
   taskId: nullable(textField()),
+  /**
+   * Where the report stands against its fix (`core/fix-state.ts`): DERIVED
+   * from the fix ledger (`report_fixes`) by the engine's one writer of it,
+   * never set by a caller. `fixCommit` is the latest fix's commit, and
+   * `fixStateAt` when the state began (landed / deployed / regressed).
+   */
+  fixState: enumTextField(REPORT_FIX_STATES, {
+    label: "Status",
+    default: "open",
+    ordered: true,
+    options: {
+      open: { label: REPORT_FIX_STATE_LABELS.open },
+      pending: { label: REPORT_FIX_STATE_LABELS.pending, variant: "info" },
+      fixed: { label: REPORT_FIX_STATE_LABELS.fixed, variant: "success" },
+      regressed: {
+        label: REPORT_FIX_STATE_LABELS.regressed,
+        variant: "destructive",
+      },
+    },
+  }),
+  fixCommit: nullable(textField({ label: "Fix" })),
+  fixStateAt: nullable(dateField({ label: "Status since" })),
   firstSeenAt: dateField({ label: "First seen" }),
   lastSeenAt: dateField({ label: "When" }),
   createdAt: dateField({ label: "Created" }),

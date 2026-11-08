@@ -1,7 +1,10 @@
 import type { MachinePluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { deploymentServed } from "./internal/deployment-resource";
 import { chainFromServed } from "./internal/chain-from-resource";
-import { adoptServerPin, sealServerPin } from "./internal/server-pin";
+import {
+  adoptServerPin,
+  sealServerPin,
+} from "@plugins/build/plugins/server-build-id/server";
 import { RestartSkip } from "@plugins/build/plugins/restart-skip/plugins/hooks/server";
 
 export {
@@ -9,7 +12,6 @@ export {
   readDeploymentState,
 } from "./internal/read-deployment";
 export { deploymentServed } from "./internal/deployment-resource";
-export { serverPin } from "./internal/server-pin";
 
 export default {
   description:

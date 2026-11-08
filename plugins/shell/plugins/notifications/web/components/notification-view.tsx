@@ -40,7 +40,11 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { Notification } from "../../shared/resources";
-import type { NotificationAction, NotificationCategory } from "../../core";
+import type {
+  NotificationAction,
+  NotificationCategory,
+  NotificationState,
+} from "../../core";
 import {
   Notifications,
   resolveActionKind,
@@ -65,6 +69,7 @@ export type NotificationContent = Pick<
   | "detail"
   | "action"
   | "icon"
+  | "state"
   | "linkTo"
   | "metadata"
   | "count"
@@ -79,13 +84,32 @@ const CATEGORY_ICON: Record<NotificationCategory, IconRef> = {
 };
 const errorIcon = symbol("error");
 const warningIcon = symbol("warning");
+const resolvedIcon = symbol("check-circle");
+
+/** Each state tone's own glyph and tint, on its state line. */
+const STATE_TONE: Record<
+  NotificationState["tone"],
+  { icon: IconRef; className: string }
+> = {
+  pending: { icon: symbol("schedule"), className: "text-muted-foreground" },
+  resolved: { icon: symbol("check"), className: "text-success" },
+  recurred: { icon: symbol("replay"), className: "text-destructive" },
+};
 
 /**
- * The glyph: the event's own (`icon`, set by its producer), else a failure's
- * (error / warning), else the category's. An error or warning is tinted red /
- * amber whichever glyph it draws; everything else is faint.
+ * The glyph: a resolved problem's check (the row settles, whatever it was),
+ * one that came back's error; else the event's own (`icon`, set by its
+ * producer), else a failure's (error / warning), else the category's. An
+ * error or warning is tinted red / amber whichever glyph it draws; everything
+ * else is faint.
  */
 function glyph(n: NotificationContent): { icon: IconRef; className: string } {
+  if (n.state?.tone === "resolved") {
+    return { icon: resolvedIcon, className: "text-success" };
+  }
+  if (n.state?.tone === "recurred") {
+    return { icon: errorIcon, className: "text-destructive" };
+  }
   if (n.variant === "error") {
     return { icon: n.icon ?? errorIcon, className: "text-destructive" };
   }
@@ -361,6 +385,19 @@ export function NotificationView(props: ViewProps): ReactElement {
 
 const closeIcon = symbol("close");
 
+/** Where the notification's problem now stands: the tone's glyph and its words. */
+function StateLine({ state }: { state: NotificationState }): ReactElement {
+  const tone = STATE_TONE[state.tone];
+  return (
+    <Line className={cn("gap-xs", tone.className)}>
+      <Icon icon={tone.icon} className="icon-auto" />
+      <Text variant="caption" className="truncate">
+        {state.text}
+      </Text>
+    </Line>
+  );
+}
+
 /**
  * One small faint line under line 2: the recurrence count, the kind (a
  * developer row), which tab raised it — `·`-separated, absent when empty.
@@ -512,6 +549,7 @@ function NotificationLayout({
             </Line>
           )
         )}
+        {n.state !== null && <StateLine state={n.state} />}
         <MetaLine parts={meta} />
         {developer && n.detail !== null && (
           <Line className="gap-xs">

@@ -1,7 +1,16 @@
 // @hash 6ec84829688d
+// One view bar over the same reports, sliced by where each stands against its
+// fix (`reports/core/fix-state.ts`): the Worklist first — open ∪ regressed,
+// noise excluded, what a supervisor works from — then Regressed, Fix pending,
+// Fixed, and every report (All, and its Feed). Every view binds to a source
+// (`debug/reports/web/slots.ts`); newest occurrence first throughout.
 {
   "views": [
-    { "id": "all",  "name": "All", "icon": "table-rows",  "view": { "type": "table", "sort": { "fieldId": "lastSeenAt", "direction": "desc" } } },
-    { "id": "feed", "name": "Feed", "icon": "forum", "view": { "type": "list",  "sort": { "fieldId": "lastSeenAt", "direction": "desc" } } }
+    { "id": "worklist", "name": "Worklist", "icon": "pending-actions", "source": "worklist", "view": { "type": "table", "sort": { "fieldId": "lastSeenAt", "direction": "desc" } } },
+    { "id": "regressed", "name": "Regressed", "icon": "replay", "source": "regressed", "view": { "type": "table", "sort": { "fieldId": "lastSeenAt", "direction": "desc" } } },
+    { "id": "pending", "name": "Fix pending", "icon": "schedule", "source": "pending", "view": { "type": "table", "sort": { "fieldId": "lastSeenAt", "direction": "desc" } } },
+    { "id": "fixed", "name": "Fixed", "icon": "check-circle", "source": "fixed", "view": { "type": "table", "sort": { "fieldId": "lastSeenAt", "direction": "desc" } } },
+    { "id": "all",  "name": "All", "icon": "table-rows", "source": "all", "view": { "type": "table", "sort": { "fieldId": "lastSeenAt", "direction": "desc" } } },
+    { "id": "feed", "name": "Feed", "icon": "forum", "source": "all", "view": { "type": "list",  "sort": { "fieldId": "lastSeenAt", "direction": "desc" } } }
   ]
 }

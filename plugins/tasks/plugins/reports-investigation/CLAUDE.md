@@ -78,8 +78,8 @@ each kind's bell variant), `minCount` (occurrences, default 3) and
     - `reports.ReportRow`
     - `reports/engine.linkReportsToTask`
     - `reports/engine.renderReportTask`
-    - `reports/engine.uninvestigatedReportCounts`
-    - `reports/engine.uninvestigatedReports`
+    - `reports/engine.reportWorklist`
+    - `reports/engine.reportWorklistCounts`
     - `tasks/automations.automationConfigRegistration`
     - `tasks/automations.defineAutomation`
     - `tasks/task-category.setTaskCategory`

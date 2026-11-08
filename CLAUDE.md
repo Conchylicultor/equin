@@ -147,6 +147,8 @@ Notable built-ins: `migrations-in-sync` (schema changes without a committed migr
 6. Push main
 7. Main auto-builds on the `refs/heads/main` advance — never build/redeploy main yourself, and don't report it as a caveat.
 
+A push that fixes a report names it: `--fixes-report <report-id>` (repeatable; one of main's reports). Main records the fix when it lands, marks it Fixed once it runs it, and Regressed if it fires again from code that has it (`plugins/reports/plugins/engine` § the fix ledger).
+
 > **CRITICAL — NEVER push or commit on your own initiative.** No raw `git commit` / `git push`. "push", "publish", "ship" all mean `./equin push`.
 
 Steps 3, 4, 6 (the only network git) run only when this checkout can write to its remote (probed once, cached in `.git/config`; `plugins/infra/plugins/git/plugins/remotes`). Without write access the work lands on local `main`, which main's auto-build watches.

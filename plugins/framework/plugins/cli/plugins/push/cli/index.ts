@@ -12,7 +12,12 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  */
 export default defineCliCommand<
   [],
-  { message?: string; fromMain?: boolean; unattributed?: string }
+  {
+    message?: string;
+    fromMain?: boolean;
+    unattributed?: string;
+    fixesReport?: string[];
+  }
 >({
   name: "push",
   description: "Commit (if -m provided), merge into main, and push",
@@ -21,6 +26,13 @@ export default defineCliCommand<
       flags: "-m, --message <msg>",
       description:
         "Commit message — stages and commits all changes before pushing",
+    },
+    {
+      flags: "--fixes-report <id...>",
+      description:
+        "The report(s) this push fixes (report-…, one of main's — Debug → Reports). Stamps a Fixes-report trailer; " +
+        "main records the fix when the push lands, marks it Fixed once main runs it, and Regressed if it fires again from code that has it. " +
+        "The only way to name a fix: a Fixes-report: line in -m is refused.",
     },
     {
       flags: "--from-main",

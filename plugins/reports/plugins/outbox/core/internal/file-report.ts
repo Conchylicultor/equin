@@ -13,6 +13,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { reportOutboxDir } from "../../data-dirs";
+import { headCommitOf } from "./merge-base";
 import {
   OutboxEntrySchema,
   isOutboxEntryName,
@@ -72,7 +73,16 @@ export async function fileReportFromProcess(
     const refused = refusal(report, dir, await readdir(dir));
     if (refused) return refused;
     const now = opts.now ?? Date.now();
-    const entry = outboxEntry(report, now, await repositoryOf(REPO_ROOT));
+    const commit =
+      report.commit !== undefined
+        ? report.commit
+        : await headCommitOf(REPO_ROOT);
+    const entry = outboxEntry(
+      report,
+      now,
+      await repositoryOf(REPO_ROOT),
+      commit,
+    );
     const name = newOutboxEntryName(now, process.pid);
     const temp = join(dir, outboxTempName(name));
     const path = join(dir, name);
@@ -96,7 +106,13 @@ export async function fileReportFromProcess(
  */
 export function fileReportFromProcessSync(
   report: ProcessReport,
-  opts: { repo: string | undefined; dir?: AppPath; now?: number },
+  opts: {
+    repo: string | undefined;
+    /** The caller's commit, resolved ahead for the same reason as `repo`. */
+    commit: string | null;
+    dir?: AppPath;
+    now?: number;
+  },
 ): FileReportOutcome {
   const dir = opts.dir ?? reportOutboxDir.path;
   try {
@@ -104,7 +120,12 @@ export function fileReportFromProcessSync(
     const refused = refusal(report, dir, readdirSync(dir));
     if (refused) return refused;
     const now = opts.now ?? Date.now();
-    const entry = outboxEntry(report, now, opts.repo);
+    const entry = outboxEntry(
+      report,
+      now,
+      opts.repo,
+      report.commit !== undefined ? report.commit : opts.commit,
+    );
     const name = newOutboxEntryName(now, process.pid);
     const temp = joinAppPath(dir, outboxTempName(name));
     const path = joinAppPath(dir, name);
@@ -140,6 +161,7 @@ function outboxEntry(
   report: ProcessReport,
   now: number,
   repo: string | undefined,
+  commit: string | null,
 ): OutboxEntry {
   return OutboxEntrySchema.parse({
     version: 1,
@@ -148,7 +170,7 @@ function outboxEntry(
     data: report.data,
     code: report.code,
     occurredAt: now,
-    writer: { pid: process.pid, checkout: basename(REPO_ROOT), repo },
+    writer: { pid: process.pid, checkout: basename(REPO_ROOT), repo, commit },
   });
 }
 

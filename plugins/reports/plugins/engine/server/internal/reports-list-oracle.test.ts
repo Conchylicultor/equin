@@ -346,6 +346,7 @@ describe("reports.list fed by the reports producer — differential oracle", () 
         staleOrigin: false,
         clientId: null,
         buildId: null,
+        commit: null,
         // Occasionally an out-of-order (replayed) occurrence.
         occurredAt: new Date(T0 + (clock - (rand() < 0.2 ? 7 : 0)) * 1000),
       };

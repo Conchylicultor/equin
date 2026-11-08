@@ -25,6 +25,7 @@ import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-
 import { ReportInvestigate } from "./report-investigate";
 import { reportDetailPane } from "../panes";
 import { ReportOccurrences } from "./report-occurrences";
+import { FixStateBadge } from "./fix-state-badge";
 
 export function ReportDetail() {
   const { reportId } = reportDetailPane.useParams();
@@ -92,6 +93,22 @@ export function ReportDetail() {
               {report.userAgent && (
                 <Field label="User agent" value={report.userAgent} />
               )}
+              {report.fixCommit !== null && (
+                <Field label="Fix" value={report.fixCommit} mono />
+              )}
+              {report.fixStateAt !== null && (
+                <TimeField
+                  label={STATE_SINCE[report.fixState]}
+                  date={report.fixStateAt}
+                />
+              )}
+              {report.lastCommit !== null && (
+                <Field
+                  label="Latest occurrence ran"
+                  value={report.lastCommit}
+                  mono
+                />
+              )}
               <TimeField label="First seen" date={report.firstSeenAt} />
               <TimeField label="Last seen" date={report.lastSeenAt} />
             </Stack>
@@ -132,6 +149,14 @@ export function ReportDetail() {
   );
 }
 
+// What the status timestamp is, per state (open has none).
+const STATE_SINCE: Record<Report["fixState"], string> = {
+  open: "Status since",
+  pending: "Fix landed on main",
+  fixed: "Fix went live",
+  regressed: "Regressed",
+};
+
 function HeaderBadges({
   report: c,
   serverGraph,
@@ -149,6 +174,7 @@ function HeaderBadges({
       <Badge variant="muted" className="font-mono">
         {c.source}
       </Badge>
+      <FixStateBadge report={c} />
       {c.noise && <Badge variant="warning">noise</Badge>}
       {c.rateLimited && <Badge variant="destructive">rate-limited</Badge>}
       <TabOriginBadge stamp={{ clientId: c.lastClientId, url: c.url }} />

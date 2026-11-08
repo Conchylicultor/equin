@@ -20,6 +20,7 @@ describe("reports.list fields", () => {
       "lastSeenAt",
       "message",
       "fingerprint",
+      "fixState",
     ]);
   });
 
@@ -34,6 +35,7 @@ describe("reports.list fields", () => {
         "lastSeenAt",
         "message",
         "fingerprint",
+        "fixState",
       ].sort(),
     );
   });
@@ -44,6 +46,7 @@ describe("reports.list fields", () => {
       "source",
       "count",
       "lastSeenAt",
+      "fixState",
     ]);
   });
 });

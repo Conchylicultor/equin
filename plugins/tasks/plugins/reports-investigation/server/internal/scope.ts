@@ -1,6 +1,6 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { _reports, ReportKind } from "@plugins/reports/server";
-import { uninvestigatedReportCounts } from "@plugins/reports/plugins/engine/server";
+import { reportWorklistCounts } from "@plugins/reports/plugins/engine/server";
 import { reportInvestigationsScope } from "../../shared/live";
 
 // The loader reads `reports` (the task link and noise flag that mark one
@@ -20,10 +20,7 @@ export const reportInvestigationsScopeServed = serveValue(
     throttleMs: 1000,
     loader: async ({ minCount }) => {
       const counts = new Map(
-        (await uninvestigatedReportCounts(minCount)).map((c) => [
-          c.kind,
-          c.reports,
-        ]),
+        (await reportWorklistCounts(minCount)).map((c) => [c.kind, c.reports]),
       );
       return {
         kinds: ReportKind.getContributions()

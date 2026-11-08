@@ -4,6 +4,7 @@ export { LOG_FORMAT, parseGitLog } from "./internal/parse-git-log";
 export {
   GitError,
   WorktreeGoneError,
+  containsCommit,
   runGit,
   tryRunGit,
 } from "./internal/run-git";

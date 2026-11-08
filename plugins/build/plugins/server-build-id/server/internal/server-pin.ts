@@ -83,3 +83,11 @@ export function adoptServerPin(commit: string): void {
 export function serverPin(): Resolvable<string> {
   return pin;
 }
+
+/**
+ * The pin as an occurrence stamps it (`reports`' `commit`): the commit, or
+ * null when this process cannot name one (no checkout, a mixed boot).
+ */
+export function serverPinCommit(): string | null {
+  return pin.resolved ? pin.value : null;
+}

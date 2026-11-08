@@ -63,6 +63,7 @@ const values = (
   staleOrigin: false,
   clientId: null,
   buildId: null,
+  commit: null,
   occurredAt: T1,
   ...over,
 });

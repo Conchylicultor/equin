@@ -163,3 +163,25 @@ export async function runGit(
   }
   return result.stdout;
 }
+
+/**
+ * Does `target` contain `commit` — is `commit` an ancestor of it, or it?
+ * `merge-base --is-ancestor` answers by exit code (0 yes, 1 no); any other
+ * exit means git cannot place one of the two in `cwd` (typically 128: not an
+ * object of this checkout), which is its own answer — `"unplaceable"` — never
+ * a silent `false`. A timeout or a vanished checkout throws (`tryRunGit`).
+ */
+export async function containsCommit(
+  target: string,
+  commit: string,
+  cwd: string,
+): Promise<boolean | "unplaceable"> {
+  if (target === commit) return true;
+  const result = await tryRunGit(
+    ["merge-base", "--is-ancestor", commit, target],
+    cwd,
+  );
+  if (result.ok) return true;
+  if (result.exitCode === 1) return false;
+  return "unplaceable";
+}

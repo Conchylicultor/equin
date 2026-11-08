@@ -59,6 +59,7 @@ import {
   runAllowFail,
 } from "./git";
 import { runLandPhase, takeLandPayload } from "./handoff";
+import { resolveFixedReports } from "@plugins/reports/plugins/engine/cli";
 import { landPush } from "./land";
 
 // The three facts that decide HOW this branch is made to land on main.
@@ -343,7 +344,12 @@ async function handOff(
 
 const pushAction: CliAction<
   [],
-  { message?: string; fromMain?: boolean; unattributed?: string }
+  {
+    message?: string;
+    fromMain?: boolean;
+    unattributed?: string;
+    fixesReport?: string[];
+  }
 > = async (opts) => {
   // This process is the land phase of a push its parent drives: the steps
   // after that push's rebase, on the rebased code (./handoff.ts).
@@ -389,7 +395,20 @@ const pushAction: CliAction<
     console.error(attribution.message);
     process.exit(1);
   }
-  const landingTrailers = attribution.trailers;
+  // The reports this push fixes (`--fixes-report`), checked against main's
+  // reports before anything is written; one more trailer on every commit.
+  const fixed = await resolveFixedReports({
+    ids: opts.fixesReport ?? [],
+    message: opts.message,
+  });
+  if (!fixed.ok) {
+    console.error(fixed.message);
+    process.exit(1);
+  }
+  const landingTrailers =
+    fixed.trailer === null
+      ? attribution.trailers
+      : [...attribution.trailers, fixed.trailer];
 
   // May this checkout publish at all? Asked ONCE, here — before the push
   // mutex, so a cold-cache probe's round trip is not paid while holding a

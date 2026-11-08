@@ -10,7 +10,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
 import {
   linkReportsToTask,
-  uninvestigatedReports,
+  reportWorklist,
 } from "@plugins/reports/plugins/engine/server";
 import { fetchUpstreamStatus } from "@plugins/upstream/core";
 import { upstreamMergeConfig, UPSTREAM_MERGE_ID } from "../../shared/config";
@@ -82,7 +82,7 @@ export const upstreamMergeAutomation = defineAutomation({
       variables: upstreamMergeVariables(status),
       sourceKeys: [],
       onFiled: async (taskId) => {
-        const reports = await uninvestigatedReports({
+        const reports = await reportWorklist({
           kinds: [UPSTREAM_UPDATES_KIND],
           minCount: 1,
           limit: 1,

@@ -8,6 +8,10 @@ import { submitReport } from "@plugins/reports/core";
 // hand-map (which previously silently dropped new fields like clientId/buildId).
 // Invalid sources are rejected by the schema's z.enum at the validation layer
 // (clean 400), so no manual source check is needed here.
+//
+// A posted report ran the TAB's code, never this backend's: a body without a
+// commit (a tab older than the field, a dev bundle) cannot name one, so it is
+// null — left undefined, recordReport would stamp the server's own pin.
 export const handleReport = implement(submitReport, async ({ body }) =>
-  recordReport(body),
+  recordReport({ ...body, commit: body.commit ?? null }),
 );

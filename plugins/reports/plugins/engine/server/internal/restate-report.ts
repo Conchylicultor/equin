@@ -9,7 +9,9 @@ import { restateNotification } from "@plugins/shell/plugins/notifications/server
 import { _reports, ReportKind } from "@plugins/reports/server";
 import { reportIdKind } from "@plugins/reports/core";
 import { reportsProducer } from "./producer";
-import { bellDescription, clamp, MESSAGE_MAX } from "./record-report";
+import { clamp, MESSAGE_MAX } from "./record-report";
+import { bellDescription } from "./bell";
+import { bellKeyOf } from "./fix-notice";
 
 /** One occurrence of a report, told again now that more is known about it. */
 export interface RestateOccurrence {
@@ -79,12 +81,13 @@ export async function restateReportOccurrence(
     return { outcome: "aged-out" };
   }
   if (newest) {
-    // The bell holding this report's key says what the row says now; the
-    // same stale-tab marker `recordReport` gives it.
+    // The bell holding this report's key (its regression's, once regressed:
+    // `bellKeyOf`) says what the row says now; the same stale-tab marker
+    // `recordReport` gives it.
     const stalePrefix = row.staleOrigin ? "[Stale tab] " : "";
     await runInBackgroundLane(() =>
       runWithoutProfiling(() =>
-        restateNotification(row.id, {
+        restateNotification(bellKeyOf(row), {
           description: bellDescription(`${stalePrefix}${row.message}`),
         }),
       ),

@@ -130,7 +130,7 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `namespaceUrl`
     - `resolveNamespaceAlias`
 - Cross-plugin:
-  - Imported by: 69 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×12
     - `debug` ×11
     - `apps` ×9
@@ -143,9 +143,9 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `backup` ×2
     - `database` ×2
     - `release` ×2
+    - `reports` ×2
     - `auth`
     - `menu-bar`
-    - `reports/live-state-stale-drop`
 - Exemptions:
   - Exempts itself from:
     - `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)

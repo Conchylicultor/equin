@@ -9,13 +9,14 @@ import {
   runInBackgroundLane,
   runWithoutProfiling,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { getServerGraphHash } from "@plugins/build/plugins/server-build-id/server";
+import {
+  getServerGraphHash,
+  serverPinCommit,
+} from "@plugins/build/plugins/server-build-id/server";
 import {
   createShedBuffer,
   type ShedSummary,
 } from "@plugins/infra/plugins/host/plugins/duress/plugins/shed/server";
-import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
-import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { reportsProducer } from "./producer";
 import { reportOutboxSink } from "./outbox-sink";
 import { bumpWindowAndCheck } from "./velocity";
@@ -25,20 +26,14 @@ import {
   _reports,
   ReportKind,
   reportRecordedSignal,
-  type ReportKindSpec,
 } from "@plugins/reports/server";
 import { pickIncidentBell } from "./incident";
 import { createFanOutGate, type StormSummary } from "./fan-out";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-
-// An informational report's glyph; an error / warning draws its variant's.
-const infoReportIcon = symbol("info");
+import { ringBell, type Bell } from "./bell";
+import { fixedReportOccurrenceSink } from "./occurrence-sink";
 import {
-  reportDetailRoute,
   REPORT_HOURLY_MAX,
   REPORT_RECENT_MAX,
-  formatReportActivity,
-  reportActivity,
   reportHourOf,
   isStaleOrigin,
   reportIdKind,
@@ -133,15 +128,6 @@ const reportShed = createShedBuffer<{
   },
 });
 
-// Floor on the bell's re-alert window, and the reason a kind cannot opt out of
-// re-alerting. A report IS a problem, and a problem that recurs after you
-// dismissed it is news — so "never tell me again" is never the right answer,
-// and there is deliberately no spelling for it. `meta.notifCooldownMs` is
-// therefore only ever a RAISE above this floor (the engine takes the max),
-// exactly the shape `meta.fanOutPerWindow` already has: a kind may ask for a
-// LONGER quiet window, never for silence.
-const RENOTIFY_FLOOR_MS = 10 * 60 * 1000;
-
 // The kind of the fan-out rollup. Naming it here is the engine's one naming of
 // a kind string, the precedent `duress-shed` above already sets: the engine
 // files the accounting, and the kind that OWNS the payload schema, the
@@ -201,6 +187,7 @@ const fanOut = createFanOutGate({
 export async function recordReport(
   input: ReportInput,
 ): Promise<RecordReportResult> {
+  stampCommit(input);
   if (!reportsProducer.writesHere()) return toOutbox(input);
   const filed = await fileReport(input);
   if (filed.bell) ringBell(filed.bell, null);
@@ -219,6 +206,7 @@ export async function recordReport(
 export async function recordReportIncident(
   inputs: readonly ReportInput[],
 ): Promise<RecordReportResult[]> {
+  for (const input of inputs) stampCommit(input);
   // Sequential: the order is the caller's significance order, and the fan-out
   // budget is spent in it.
   if (!reportsProducer.writesHere()) {
@@ -249,6 +237,15 @@ export async function recordReportIncident(
   return filed.map((f) => f.result);
 }
 
+// The commit the reporting code ran, for an in-process report that does not
+// name one: this process's own pin (null when it cannot say — a mixed boot).
+// A report from elsewhere names its own (a tab's bundle commit, an outbox
+// entry's writer — null included), so only `undefined` is filled; stamped
+// before the outbox hand-off too, so an exec child's report carries ITS pin.
+function stampCommit(input: ReportInput): void {
+  if (input.commit === undefined) input.commit = serverPinCommit();
+}
+
 // Only a serving host writes `reports` (the producer's A13): anywhere else —
 // an exec child, whose sink handlers attach in every boot mode, or a CLI — the
 // report goes to the outbox (`./outbox-sink`), which main drains and records
@@ -259,31 +256,11 @@ function toOutbox(input: ReportInput): RecordReportResult {
   return { outcome: "outbox" };
 }
 
-// What ringing a recorded row's bell needs — everything the notification reads.
-interface Bell {
-  spec: ReportKindSpec;
-  row: typeof _reports.$inferSelect;
-  fingerprint: string;
-  staleOrigin: boolean;
-  clientId: string | null;
-  url: string | null;
-  buildId: string | null;
-}
-
 // One report through the row path: its result, and the bell it would ring
 // (null when it rings none — shed, collapsed or rate-limited).
 interface FiledReport {
   result: RecordReportResult;
   bell: Bell | null;
-}
-
-// The incident a bell rings for, when it stands for more than its own row.
-interface IncidentBell {
-  /** Reports filed with it that this one notification stands for. */
-  related: number;
-  /** How many of the incident's ringing reports were never seen before. */
-  fresh: number;
-  reportIds: string[];
 }
 
 async function fileReport(input: ReportInput): Promise<FiledReport> {
@@ -295,6 +272,7 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
     userAgent,
     clientId,
     buildId,
+    commit,
   } = input;
 
   // Stamp the true event instant BEFORE the shed gate below: a report buffered
@@ -419,6 +397,7 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
         staleOrigin,
         clientId: clientId ?? null,
         buildId: buildId ?? null,
+        commit: commit ?? null,
         occurredAt,
       });
     }),
@@ -435,6 +414,20 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
 
   if (row.taskId === null && !row.noise) {
     reportRecordedSignal.emit({ reportId: row.id });
+  }
+  // A report with a live or pending fix: does this occurrence's code contain
+  // it? Judged off the recording path (a git read), and only for these rows.
+  if (
+    (row.fixState === "pending" || row.fixState === "fixed") &&
+    row.fixCommit !== null
+  ) {
+    fixedReportOccurrenceSink.emit({
+      reportId: row.id,
+      fixCommit: row.fixCommit,
+      deployed: row.fixState === "fixed",
+      commit: commit ?? null,
+      at: occurredAt,
+    });
   }
 
   // Gate on the per-call `limited`, NOT the persisted `row.rateLimited`. The
@@ -479,99 +472,6 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
   };
 }
 
-// Write a recorded row's bell notification — for itself alone, or for the
-// incident it leads.
-function ringBell(bell: Bell, incident: IncidentBell | null): void {
-  const { spec, row, staleOrigin, clientId, url, buildId } = bell;
-  const fp = bell.fingerprint;
-  // Mirror a "[Stale tab]" marker into the bell so the notification itself reads
-  // as benign version-skew at a glance.
-  const stalePrefix = staleOrigin ? "[Stale tab] " : "";
-  // An incident's count leads, so the 140-char clamp below never cuts it.
-  const incidentPrefix =
-    incident && incident.related > 0
-      ? `[+${incident.related} related` +
-        (incident.fresh > 0 ? `, ${incident.fresh} new` : "") +
-        "] "
-      : "";
-  const desc = `${stalePrefix}${incidentPrefix}${row.message}`;
-  // The bell notification is keyed by the stable report id — one row per
-  // fingerprint per EPISODE, updated in place (count, lastSeenAt) while the
-  // problem keeps firing. That dedup key is what keeps the bell at one row per
-  // distinct problem instead of one per (report × time-bucket). See
-  // research/perfs/archive/2026-06-29-notifications-unbounded-resource-root-cause.md.
-  //
-  // The re-alert policy is the WINDOW, a separate axis from that key: a
-  // recurrence after the row went quiet for the window, or after the user
-  // dismissed it and it surfaced longer ago than that, files a NEW unread row on
-  // top; the earlier row stays where it was, as it was (a notification is never
-  // moved or un-dismissed — `shell/notifications`). The window is never zero and
-  // never infinite — it is RENOTIFY_FLOOR_MS, which a kind may raise but not
-  // lower and not remove. So a crash you dismissed rings again the next time it
-  // fires at least 10 minutes later, and a slow op that keeps tripping stays
-  // one row whose count grows.
-  const resurfaceAfterMs = Math.max(
-    RENOTIFY_FLOOR_MS,
-    spec.meta.notifCooldownMs ?? 0,
-  );
-  // The bell write is observability output on the same report path as the
-  // `_reports` upsert above — suppress its profiling for the same reasons: its
-  // INSERT must never be attributed to whichever loader's ambient context
-  // triggered this report (fabricating a `notifications` read-set edge), and a
-  // slow notification INSERT must never re-enter the slow-op → report →
-  // notification self-feedback loop. The suppression ALS binds the whole detached
-  // async chain (AsyncLocalStorage semantics); `void` keeps it fire-and-forget.
-  // The background-lane declaration wraps it for the same reason as the `_reports`
-  // upsert above — nobody is waiting on this bell write, so it must never take a
-  // connection reserved for someone who is
-  // (research/2026-07-09-global-interactive-lane-origin-based-db-gating.md).
-  void runInBackgroundLane(() =>
-    runWithoutProfiling(() =>
-      recordNotification({
-        type: "report",
-        category: "reports",
-        icon: spec.meta.variant === "info" ? infoReportIcon : null,
-        title: staleOrigin ? `${spec.meta.notif} (stale tab)` : spec.meta.notif,
-        description: bellDescription(desc),
-        variant: spec.meta.variant,
-        // What the report itself is doing, as of this ring: its last 24 h
-        // beside its lifetime total. The meta line's ×N is THIS
-        // notification's recurrences (since it was filed), never the report's
-        // lifetime — so neither number passes for the other.
-        detail: formatReportActivity(reportActivity(row, Date.now())),
-        muted: row.noise,
-        // equin's own telemetry: a user not in Developer mode never sees it.
-        audience: "developer",
-        dedupeKey: row.id,
-        resurfaceAfterMs,
-        // Deep-link to the report's detail sidepane in Debug → Reports, never a task.
-        // Investigation tasks are filed on demand from that pane.
-        linkTo: reportDetailRoute.link(debugApp, { reportId: row.id }),
-        // Fix: the report's investigate launch (debug/reports' `fix-report`).
-        action: { kind: "fix-report", payload: { reportId: row.id } },
-        metadata: {
-          reportId: row.id,
-          source: row.source,
-          fingerprint: fp,
-          clientId,
-          // The raising page, so the bell can name the tab (its app) beside
-          // whether it is still open.
-          clientUrl: url,
-          buildId,
-          // Every report the incident filed, this one included.
-          ...(incident && { incidentReportIds: incident.reportIds }),
-        },
-      }),
-    ),
-  );
-}
-
-// The bell's one-line description, clamped — shared with a restated report's
-// (`./restate-report`), so the two can never be cut differently.
-export function bellDescription(desc: string): string {
-  return desc.length > 140 ? `${desc.slice(0, 137)}...` : desc;
-}
-
 // The validated, clamped, fingerprinted values recordReport computes before
 // the durable write — everything the upsert needs and nothing it re-derives.
 export interface ReportUpsertValues {
@@ -590,6 +490,8 @@ export interface ReportUpsertValues {
   staleOrigin: boolean;
   clientId: string | null;
   buildId: string | null;
+  /** The commit the reporting code ran; null when it could not name one. */
+  commit: string | null;
   // The event's true instant — under duress-shed replay this is EARLIER than
   // now (the in-freeze trip time carried through the buffer).
   occurredAt: Date;
@@ -644,6 +546,7 @@ function buildUpsert(
     clientId: v.clientId,
     url: v.url,
     buildId: v.buildId,
+    commit: v.commit,
   };
   const recent = sql`(
     select coalesce(jsonb_agg(o order by (o->>'at')::bigint desc), '[]'::jsonb)
@@ -701,6 +604,7 @@ function buildUpsert(
       staleOrigin: v.staleOrigin,
       lastClientId: v.clientId,
       lastBuildId: v.buildId,
+      lastCommit: v.commit,
       firstSeenAt: occurredAt,
       lastSeenAt: occurredAt,
     })
@@ -724,6 +628,7 @@ function buildUpsert(
         staleOrigin: sql`case when ${isNewest} then ${v.staleOrigin} else ${t.staleOrigin} end`,
         lastClientId: sql`case when ${isNewest} then ${v.clientId} else ${t.lastClientId} end`,
         lastBuildId: sql`case when ${isNewest} then ${v.buildId} else ${t.lastBuildId} end`,
+        lastCommit: sql`case when ${isNewest} then ${v.commit} else ${t.lastCommit} end`,
       },
     });
 }

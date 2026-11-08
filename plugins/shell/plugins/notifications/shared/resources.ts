@@ -54,6 +54,7 @@ export const notifications = liveCollection("notifications", {
       "detail",
       "action",
       "icon",
+      "state",
       "metadata",
       "count",
       "lastSeenAt",

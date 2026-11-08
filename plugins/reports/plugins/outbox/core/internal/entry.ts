@@ -51,6 +51,17 @@ export const OutboxEntrySchema = z.object({
      * Absent only on entries from writers older than the field.
      */
     repo: z.string().min(1).optional(),
+    /**
+     * The commit the writer's code ran (its checkout's HEAD, or an exec
+     * child's pin) — what a fixed report's regression is judged on. Null when
+     * it could not name one; absent on entries from writers older than the
+     * field (read as null).
+     */
+    commit: z
+      .string()
+      .regex(/^[0-9a-f]{40,64}$/, "a full git object id")
+      .nullable()
+      .optional(),
   }),
 });
 export type OutboxEntry = z.infer<typeof OutboxEntrySchema>;
@@ -61,6 +72,12 @@ export interface ProcessReport {
   message: string;
   data: Record<string, unknown>;
   code?: OutboxCode;
+  /**
+   * The commit the code filing it ran, when the caller knows it (an exec
+   * child's pin; null: it cannot name one). Omitted, the writer reads its
+   * checkout's HEAD.
+   */
+  commit?: string | null;
 }
 
 /**

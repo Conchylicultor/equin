@@ -16,12 +16,20 @@ import {
   processCrashHandler,
 } from "./internal/process-hooks";
 import { fatalReportHandler, serverReportHandler } from "./internal/fatal";
+import { RestartSkip } from "@plugins/build/plugins/restart-skip/plugins/hooks/server";
+import { _reportFixes } from "./internal/tables";
+import {
+  fixClaimsReaction,
+  ingestFixClaims,
+  stampDeployedFixes,
+} from "./internal/fix-ledger";
+import { regressionJudge } from "./internal/fix-regression";
 
 export {
   linkReportsToTask,
   renderReportTask,
-  uninvestigatedReportCounts,
-  uninvestigatedReports,
+  reportWorklist,
+  reportWorklistCounts,
 } from "./internal/uninvestigated";
 export { recordReport, recordReportIncident } from "./internal/record-report";
 export { restateReportOccurrence } from "./internal/restate-report";
@@ -68,8 +76,20 @@ export default {
       reason:
         "Host-local crash history; inherited rows surface main's failures in a fresh worktree and link to tasks it cannot resolve.",
     }),
+    // Main's fixes of main's reports — meaningless beside a fork's own.
+    ExcludeFromFork({
+      table: _reportFixes,
+      reason:
+        "Fixes of main's reports, recorded from main's history and main's deploys; a fork holds none of those reports.",
+    }),
+    // A deploy adopted without a restart runs the new commit too: the fixes
+    // it contains are live (`stampDeployedFixes`).
+    RestartSkip.Adopted({
+      what: "the report fixes the adopted commit contains (deployed)",
+      adopt: stampDeployedFixes,
+    }),
   ],
-  register: [backfillNoiseWarmup, reportsRetention],
+  register: [backfillNoiseWarmup, reportsRetention, fixClaimsReaction],
   // Every caught server error becomes a crash report. A `sinkHandlers` entry,
   // so it is attached in every boot mode (an exec child's errors are filed
   // too), and what was reported before it attached is replayed.
@@ -97,6 +117,9 @@ export default {
     // catch — server-core installs them at each process entry point, so an
     // exec child's crash is filed too (./internal/process-hooks.ts).
     processCrashHandler,
+    // Whether an occurrence of a report with a live or pending fix regresses
+    // it (./internal/fix-regression.ts).
+    regressionJudge,
   ],
   onReady: async () => {
     // Drain the on-disk crash buffer from the previous boot (crashes, and fatal
@@ -111,5 +134,14 @@ export default {
     // `bin/index.ts`), so every ReportKind contribution is in the registry by
     // the time this flush reads the file.
     await flushBufferedReports();
+  },
+  // Main's fix ledger, at every boot (main only): the claims main's history
+  // gained while no backend watched it, then the fixes this freshly started
+  // backend runs — a deploy restarts main, so this is where a fix goes live.
+  // `onAllReady`: the backend serves by then; the ledger reads git and the
+  // database, and nothing waits on it.
+  onAllReady: async () => {
+    await ingestFixClaims();
+    await stampDeployedFixes();
   },
 } satisfies ServerPluginDefinition;

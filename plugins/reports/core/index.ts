@@ -32,5 +32,17 @@ export {
 // routes. Declared here, not in a plugin-private shared/, because the engine
 // that serves them is a child plugin (`reports/plugins/engine`).
 export type { ReportBody, ReportInput } from "./report-body";
+export {
+  FIXES_REPORT_TRAILER,
+  REPORT_FIX_STATES,
+  REPORT_FIX_STATE_LABELS,
+  fixStandingOf,
+  regresses,
+} from "./fix-state";
+export type {
+  ReportFixFacts,
+  ReportFixStanding,
+  ReportFixState,
+} from "./fix-state";
 export { submitReport, investigateReport } from "./endpoints";
 export type { ReportResult } from "./endpoints";

@@ -5,7 +5,7 @@ export {
   repositoryOf,
 } from "./internal/file-report";
 export type { FileReportOutcome } from "./internal/file-report";
-export { mergeBaseWithMain } from "./internal/merge-base";
+export { headCommitOf, mergeBaseWithMain } from "./internal/merge-base";
 export type { MergeBaseResult } from "./internal/merge-base";
 export {
   OutboxCodeSchema,

@@ -5,6 +5,7 @@ import {
   type Resolvable,
 } from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
+  containsCommit,
   LOG_FORMAT,
   parseGitLog,
   runGit,
@@ -68,12 +69,8 @@ export async function isAncestor(
 ): Promise<Resolvable<boolean>> {
   // Free answer, and it saves a subprocess on the common converged path.
   if (sameCommit(commit, target)) return resolved(true);
-  const result = await tryRunGit(
-    ["merge-base", "--is-ancestor", commit, target],
-    REPO_ROOT,
-  );
-  if (result.ok) return resolved(true);
-  if (result.exitCode === 1) return resolved(false);
+  const contains = await containsCommit(target, commit, REPO_ROOT);
+  if (contains !== "unplaceable") return resolved(contains);
   return unresolved(`git cannot place ${commit.slice(0, 9)} in this checkout`);
 }
 

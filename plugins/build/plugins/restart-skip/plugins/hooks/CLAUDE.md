@@ -11,6 +11,7 @@
     - `build/restart-skip`
     - `build/server-build-id`
     - `database/migrations`
+    - `reports/engine`
 - Server:
   - Exports (types): `AdoptHook`
   - Exports (values): `RestartSkip`

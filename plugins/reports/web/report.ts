@@ -8,11 +8,14 @@ export type { ReportResult };
 // The caller-supplied portion of a report: the browser picks the kind, the
 // source (client-reportable only — enforced by ReportBodySchema's enum), the
 // generic summary, and the kind's `data` payload; report() stamps
-// clientId/buildId itself. `clientId` defaults to this tab; a report filed ON
+// clientId/buildId/commit itself. `clientId` defaults to this tab; a report filed ON
 // BEHALF of another tab (a main-thread stall a live tab files for the tab that
 // froze) names that tab instead, so its origin reads as the page it is about.
 // `url` defaults to this page's.
-export type ClientReportBody = Omit<ReportBody, "clientId" | "buildId"> & {
+export type ClientReportBody = Omit<
+  ReportBody,
+  "clientId" | "buildId" | "commit"
+> & {
   clientId?: string;
 };
 
@@ -59,6 +62,10 @@ export async function report(
       // changed nothing used to make every in-flight tab look outdated. The wire
       // field keeps its `buildId` name; what fills it is what changed.
       buildId: import.meta.env.VITE_BUILD_GRAPH ?? null,
+      // The commit the bundle was built from — what a fixed report's
+      // regression is judged on. "" (unresolvable at build) and a dev server's
+      // undefined both mean "cannot name it".
+      commit: import.meta.env.VITE_BUILD_COMMIT || null,
     };
     return await fetchEndpoint(
       submitReport,
