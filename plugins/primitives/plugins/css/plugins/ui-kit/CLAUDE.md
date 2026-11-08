@@ -507,6 +507,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `DropdownMenuTrigger`
     - `iconSizeFor`
     - `Input`
+    - `isPointerModality`
     - `MENU_LABEL`
     - `MENU_LABEL_PAINT`
     - `MENU_ROW`

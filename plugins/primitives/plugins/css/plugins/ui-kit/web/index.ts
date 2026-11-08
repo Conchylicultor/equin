@@ -4,6 +4,8 @@ import { InputModalityTracker } from "./theme/input-modality";
 
 export { cn } from "./lib/utils";
 
+export { isPointerModality } from "./theme/input-modality";
+
 export { SURFACE_LEVELS, type SurfaceLevel } from "./theme/surface";
 
 export {

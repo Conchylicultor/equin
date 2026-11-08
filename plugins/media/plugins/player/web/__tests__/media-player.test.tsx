@@ -89,6 +89,28 @@ describe("play / pause", () => {
     expect(media.play).toHaveBeenCalledTimes(1);
   });
 
+  it("Space on a button focused by a click plays / pauses (and does not press it)", () => {
+    const { root } = setup();
+    const full = button(root, "Full screen");
+    full.focus();
+    document.documentElement.dataset.inputModality = "pointer";
+    try {
+      const down = new KeyboardEvent("keydown", {
+        key: " ",
+        bubbles: true,
+        cancelable: true,
+      });
+      act(() => {
+        full.dispatchEvent(down);
+      });
+      expect(media.play).toHaveBeenCalledTimes(1);
+      // Cancelled, so the browser never activates the focused button.
+      expect(down.defaultPrevented).toBe(true);
+    } finally {
+      delete document.documentElement.dataset.inputModality;
+    }
+  });
+
   it("K toggles; arrows skip 5 s; digits jump", () => {
     const { root, video, key } = setup();
     key(root, "k");

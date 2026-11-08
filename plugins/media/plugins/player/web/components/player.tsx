@@ -14,6 +14,7 @@ import {
 import {
   SURFACE_LEVELS,
   cn,
+  isPointerModality,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
@@ -127,7 +128,11 @@ function spaceIsFor(root: HTMLElement | null, e: KeyboardEvent): boolean {
   return pick === root;
 }
 
-/** Space on one of the player's own buttons is that button's (it activates on Space). */
+/**
+ * Space on one of the player's own buttons the user navigated to by keyboard
+ * is that button's (it activates on Space). A button merely focused by a
+ * click — Full screen, say — does not keep Space: it plays / pauses.
+ */
 function spaceOnOwnButton(root: HTMLElement | null, e: KeyboardEvent): boolean {
   const target = e.target instanceof Element ? e.target : null;
   const button = target?.closest("button, [role=button], [role=switch]");
@@ -135,7 +140,8 @@ function spaceOnOwnButton(root: HTMLElement | null, e: KeyboardEvent): boolean {
     root !== null &&
     button !== null &&
     button !== undefined &&
-    root.contains(button)
+    root.contains(button) &&
+    !isPointerModality(root.ownerDocument)
   );
 }
 

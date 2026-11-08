@@ -16,7 +16,7 @@ export function InputModalityTracker() {
   useEffect(() => {
     const root = document.documentElement;
     const onPointer = () => {
-      root.dataset.inputModality = "pointer";
+      root.dataset.inputModality = POINTER;
     };
     const onKey = (e: KeyboardEvent) => {
       if (NAVIGATION_KEYS.has(e.key)) delete root.dataset.inputModality;
@@ -44,3 +44,14 @@ const NAVIGATION_KEYS = new Set([
   "PageUp",
   "PageDown",
 ]);
+
+const POINTER = "pointer";
+
+/**
+ * Whether the user last drove `doc` with the pointer (as stamped by
+ * `InputModalityTracker`) — e.g. a button focused by a click, which a key
+ * should not treat as one the user navigated to.
+ */
+export function isPointerModality(doc: Document): boolean {
+  return doc.documentElement.dataset.inputModality === POINTER;
+}

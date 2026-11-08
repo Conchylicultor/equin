@@ -55,8 +55,10 @@ a page with a video block keeps its own arrows and letters. The focused seek
 bar takes a slider's keys (← → ↑ ↓ 5 s, Page Up/Down a tenth, Home/End), and
 the volume capsule — drawn outside the pill so its blur sees the picture —
 sits right after the speaker in the tab order and closes when focus leaves
-both. Space on one of the player's own focused buttons is
-that button's (it activates on Space itself), so it never toggles twice.
+both. Space on one of the player's own buttons the user reached by keyboard is
+that button's (it activates on Space itself), so it never toggles twice; on
+a button merely focused by a click (Full screen, say — ui-kit's
+`isPointerModality`) Space still plays / pauses.
 Focus rings show only after keyboard input (`:focus-visible`).
 
 ## Theming
@@ -110,8 +112,8 @@ so a size or glass option later is one set switched as a whole.
     - `ThemeEngine.FixedTheme` "Media player controls"
     - `ThemeEngine.SubTheme` "Media player settings panel"
     - `ThemeEngine.SubTheme` "Media player volume"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×5
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×6
     - `primitives/shortcuts` ×3
     - `primitives/latest-ref` ×2
     - `primitives/css/slider.Slider`
