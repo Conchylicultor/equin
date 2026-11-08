@@ -79,9 +79,13 @@ describe("galleryFields — the card's lines", () => {
   it("title, the problems mark, the blurb subtitle, edited + versions tokens", () => {
     // The record recipe places by kind: the primary is the title, prose is
     // line 2, an instant the edge, a quantity trails; the problems count is
-    // pinned after the title.
+    // pinned after the title, and the blurb to line 2 (not the gallery's
+    // excerpt).
     expect(visible.find((f) => f.primary)?.id).toBe("title");
-    expect(GALLERY_PLACE).toEqual({ problems: "afterTitle" });
+    expect(GALLERY_PLACE).toEqual({
+      problems: "afterTitle",
+      blurb: "line2",
+    });
     expect(field("problems").type).toBe("number");
     expect(field("blurb").type).toBe("multiline-text");
     expect(field("modifiedAt").type).toBe("date");

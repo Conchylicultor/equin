@@ -49,9 +49,15 @@ export function joinGalleryRows(
 /**
  * Where the gallery pins its fields, over the record recipe's: the problems
  * count is a row-state mark on the title line, not a property (the problems
- * themselves are listed in the detail pane, where there is room to read them).
+ * themselves are listed in the detail pane, where there is room to read them);
+ * the blurb is the card's two-line subtitle, as the gallery mock draws it
+ * (`.info .d`) — not the recipe's `excerpt` paragraph (3 lines, a rule down
+ * its start edge), which a gallery view would otherwise give prose.
  */
-export const GALLERY_PLACE = { problems: "afterTitle" } as const;
+export const GALLERY_PLACE = {
+  problems: "afterTitle",
+  blurb: "line2",
+} as const;
 
 /**
  * The gallery's fields, over the prototypes' tag tree (the Tag field's
