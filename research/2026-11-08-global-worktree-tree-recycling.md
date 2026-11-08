@@ -56,15 +56,19 @@ checkout is ~3 days behind `main`:
 Tree at main − 76 h, renamed (as the pool does), with an edited tracked file, an
 untracked file, ignored output and a `node_modules`. Counted as entries written
 or deleted (ctime / listing); an FSEvents client was also run, but under a burst
-fseventsd coalesces (one re-link reported 1 event for 12.4k changed entries), so
-its counts are a lower bound only.
+fseventsd coalesces, so its counts are a lower bound only.
 
 | step, per checkout | before | after |
 | --- | --- | --- |
 | write the tracked tree | 23,165 files, 5.1 s | 2,771 files, 1.1 s (+ clean 0.5 s) |
 | delete it at reap | ~23.2k files (`rm -rf`, 19.6 s) | 0 (kept; deleted only at the 3-day expiry) |
-| dependency re-link onto an adopted store | 12.4k entries | 12.4k entries (unchanged) |
-| **total** | **~58.8k** | **~16–18k** (−70 %) |
+| dependency re-link onto an adopted store | ~0.7–0.8k entries | ~0.7–0.8k entries (unchanged) |
+| **total** | **~47k** | **~4–6k** (−90 %) |
+
+Corrected 11-08 (research/2026-11-08-global-dependency-relink-cost.md): this
+row first read 12.4k entries, which no re-measurement reproduces — two real
+adopted installs on main changed 665 entries each, and the scratch replay
+800 (5 new packages). The totals are recomputed from it.
 
 `git status --porcelain --ignored` empty afterwards. A rename probe in another
 dir during reset + clean: max 0.9 ms (0.3 ms idle) — no rename-lock hold (a
@@ -106,12 +110,14 @@ events. None waiting: every file is written, as before (`TreeStart.empty`).
 
 ## Not changed
 
-- **The dependency re-link (12.4k entries per checkout)** — bun re-links every
-  store entry's own dependency links onto an adopted store. Keeping the recycled
-  tree's `node_modules` whole makes the same frozen install change 0 entries
-  (measured), but bun never prunes a top-level entry the lock dropped
-  (dep-store-pool.ts), so a removed dependency would stay resolvable. Needs a
-  prune of dropped links first; follow-up task.
+- **The dependency re-link (~0.8k entries per checkout, ~1.2k with the
+  `git clean` of the old links)** — bun writes only the top-level and
+  workspace links plus what the lock changed; it does not rewrite the store's
+  own links (re-measured, research/2026-11-08-global-dependency-relink-cost.md).
+  Keeping the recycled tree's `node_modules` whole would save ~1k of it, but bun
+  never prunes a top-level entry the lock dropped (dep-store-pool.ts), so it
+  needs a prune of dropped links first. Not done: the tracked-tree diff is the
+  larger cost.
 - **fseventsd CPU after** — the pool fills only as the reaper takes 72 h-old
   checkouts after main deploys this; measure the `tree recycled` share in
   `worktree-prepare` / `worktree-spare-refill` and fseventsd CPU in
