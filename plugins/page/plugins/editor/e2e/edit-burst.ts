@@ -68,12 +68,14 @@ try {
   const end = new Date().toISOString();
   const after = await jobRuns();
 
-  const [{ emits }] = await deployDb.query<{ emits: number }>(
+  const [counted] = await deployDb.query<{ emits: number }>(
     `SELECT count(*)::int AS emits FROM event_emissions
       WHERE event_name = 'page.blocksChanged'
         AND emitted_at BETWEEN $1 AND $2`,
     [start, end],
   );
+  if (counted === undefined) throw new Error("count(*) returned no row");
+  const { emits } = counted;
   const deltas = [...after]
     .map(([job, runs]) => [job, runs - (before.get(job) ?? 0)] as const)
     .filter(([, d]) => d > 0)

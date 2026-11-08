@@ -88,6 +88,12 @@ deliveries). Per edit: **6 runs → 1**; per settled burst: 6 runs (the targets)
 the outbox run needs a post-commit, durable outbox outside graphile — filed as a follow-up,
 not done here.
 
+**Resolved (task-1794156285-35nlin): the premise was wrong.** The page editor's emits are not
+transactional at all — they run after the write commits, passing the write's executor, which
+defaults to `db`; emit() deferred on any `tx`. It now defers only when the handle is an open
+transaction (`defersToOutbox` / `isOpenTransaction`, `infra/events`), so these emits enqueue
+their subscribers inline: `events.dispatch` 21 → 0 for the same burst, 36 → 16 page-caused runs.
+
 ## Files
 
 - `plugins/infra/plugins/jobs/server/internal/registry.ts` — `Dedup` settle arm, enqueue passes
