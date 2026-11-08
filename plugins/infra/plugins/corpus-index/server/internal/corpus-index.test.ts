@@ -20,6 +20,7 @@ import {
   type CorpusIndexEnv,
   type CorpusIndexSpec,
   type CorpusJournal,
+  type CorpusWatch,
   type RefreshDeps,
 } from "./corpus-index";
 import { loadCorpusFile, type CorpusFile } from "./store";
@@ -253,12 +254,18 @@ function spec({
   };
 }
 
+// A watch that has always handed everything over and never lost an event.
+const quietWatch: CorpusWatch = {
+  drained: async () => {},
+  losses: () => 0,
+};
+
 function env(overrides: Partial<CorpusIndexEnv> = {}): CorpusIndexEnv {
   return {
     isMain: () => true,
     withSlot: (fn) => fn(),
     yieldMacrotask: () => new Promise<void>((r) => setImmediate(r)),
-    startFileWatcher: async () => {},
+    startFileWatcher: async () => quietWatch,
     watcherRegistration: { register: () => {} },
     // No journal by default: every full pass walks, as on a host without one.
     journal: {
@@ -479,6 +486,7 @@ test("onChange fires after a refresh that moved a file, never on an empty one; w
       isMain: () => true,
       startFileWatcher: async ({ onChange }) => {
         watcherOnChange = onChange;
+        return quietWatch;
       },
     }),
   );
@@ -560,6 +568,7 @@ test("on main a watcher batch re-checks only what it named; a dropped-events rep
       startFileWatcher: async (opts) => {
         onChange = opts.onChange;
         onLost = opts.onLost;
+        return quietWatch;
       },
     }),
   );
@@ -614,8 +623,10 @@ function fakeJournal(answer: () => string[] | "unknown"): CorpusJournal & {
   return j;
 }
 
+// What a new process loads: the snapshot with its log replayed (cursors move
+// by a log line).
 async function savedIndex(): Promise<CorpusFile<string>> {
-  return JSON.parse(await readFile(indexPath, "utf8")) as CorpusFile<string>;
+  return await loadCorpusFile<string>(indexPath, VERSION);
 }
 
 test("a full walk saves one journal cursor per root with its result", async () => {
@@ -811,7 +822,7 @@ test("consumer-watched: a pass re-checks only what the consumer named, on any ba
   expect(journal.replayed).toEqual([]);
 
   // The watch re-opened: caught up from the journal again, not walked.
-  idx.markWatchOpened(corpusRoot);
+  idx.markWatchOpened(corpusRoot, quietWatch);
   await idx.ensureFresh();
   expect(journal.replayed).toEqual([corpusRoot]);
   expect(idx.entries().has(unnamed)).toBe(false);
@@ -825,7 +836,7 @@ test("consumer-watched: a pass re-checks only what the consumer named, on any ba
 test("markChanged / markWatchOpened refuse an index its own watch keeps fresh", () => {
   const idx = createCorpusIndex(spec(), env());
   expect(() => idx.markChanged([corpusRoot])).toThrow();
-  expect(() => idx.markWatchOpened(corpusRoot)).toThrow();
+  expect(() => idx.markWatchOpened(corpusRoot, quietWatch)).toThrow();
 });
 
 test("a watch reopened while a pass runs leaves its root to be caught up again", async () => {
@@ -844,11 +855,193 @@ test("a watch reopened while a pass runs leaves its root to be caught up again",
     spec({ scope: "host", watchedBy: "consumer" }),
     env({ journal, isMain: () => false }),
   );
-  reopen = () => idx.markWatchOpened(corpusRoot);
+  reopen = () => idx.markWatchOpened(corpusRoot, quietWatch);
   await idx.ensureFresh();
   await idx.ensureFresh();
   expect(journal.replayed).toEqual([corpusRoot, corpusRoot]);
   // Caught up by the second pass, which no reopen interrupted.
   await idx.ensureFresh();
   expect(journal.replayed).toEqual([corpusRoot, corpusRoot]);
+});
+
+// ─── checkpoint: a live watch moves the saved cursors ─────────────────────────
+
+/** A consumer's watch whose drain is observable and whose losses the test sets. */
+function testWatch(): CorpusWatch & { drains: number; lost: number } {
+  const w = {
+    drains: 0,
+    lost: 0,
+    drained: async () => {
+      w.drains++;
+    },
+    losses: () => w.lost,
+  };
+  return w;
+}
+
+async function savedCursor(): Promise<string | undefined> {
+  return (await savedIndex()).cursors?.find((c) => c.root === corpusRoot)
+    ?.eventId;
+}
+
+test("checkpoint: a candidate taken by one checkpoint is saved by the next", async () => {
+  const journal = perRootJournal(() => []);
+  const idx = createCorpusIndex(
+    spec({ scope: "host", watchedBy: "consumer" }),
+    env({ journal }),
+  );
+  const watch = testWatch();
+  idx.markWatchOpened(corpusRoot, watch);
+  await idx.ensureFresh(); // the walk (no cursor saved yet): cursor 1
+  expect(await savedCursor()).toBe("1");
+
+  const first = await idx.checkpoint();
+  expect(first).toEqual({
+    kind: "checkpointed",
+    advanced: [],
+    candidates: [corpusRoot],
+  });
+  expect(watch.drains).toBe(1);
+  expect(await savedCursor()).toBe("1"); // a candidate (2) is not saved yet
+
+  // A change the watch heard meanwhile: the checkpoint re-checks it and logs
+  // its entry before the cursor that vouches for it.
+  const heard = join(corpusRoot, "a", "heard.txt");
+  await writeFile(heard, "heard");
+  idx.markChanged([heard]);
+  const second = await idx.checkpoint();
+  expect(second).toEqual({
+    kind: "checkpointed",
+    advanced: [corpusRoot],
+    candidates: [corpusRoot],
+  });
+  const saved = await savedIndex();
+  expect(saved.cursors?.[0]?.eventId).toBe("2");
+  expect(saved.files[heard]?.partial).toBe("heard");
+
+  // The next process replays from cursor 2, not from its boot's cursor 1.
+  const replayedFrom: string[] = [];
+  const replay = journal.changesSince;
+  journal.changesSince = async (cursor) => {
+    replayedFrom.push(cursor.eventId);
+    return await replay(cursor);
+  };
+  const next = createCorpusIndex(
+    spec({ scope: "host", watchedBy: "consumer" }),
+    env({ journal }),
+  );
+  next.markWatchOpened(corpusRoot, testWatch());
+  await next.ensureFresh();
+  expect(replayedFrom).toEqual(["2"]);
+});
+
+test("checkpoint: a loss, a reopen or a pending walk keeps the old cursor", async () => {
+  const journal = perRootJournal(() => []);
+  const idx = createCorpusIndex(
+    spec({ scope: "host", watchedBy: "consumer" }),
+    env({ journal }),
+  );
+  const watch = testWatch();
+  idx.markWatchOpened(corpusRoot, watch);
+  await idx.ensureFresh(); // cursor 1
+  await idx.checkpoint(); // candidate 2
+
+  // The watch dropped events after the candidate: not saved, and none taken
+  // until a walk has repaired the loss.
+  watch.lost = 1;
+  expect(await idx.checkpoint()).toEqual({
+    kind: "skipped",
+    reason: "a walk or a catch-up is due: its own pass saves the cursors",
+  });
+  expect(await savedCursor()).toBe("1");
+  idx.markDirty();
+  expect((await idx.checkpoint()).kind).toBe("skipped"); // the walk is owed
+  await idx.ensureFresh(); // the walk: cursor 3, the loss repaired
+  expect(await savedCursor()).toBe("3");
+  expect(await idx.checkpoint()).toEqual({
+    kind: "checkpointed",
+    advanced: [],
+    candidates: [corpusRoot],
+  }); // candidate 4
+
+  // The watch reopened after the candidate: not caught up ⇒ skipped.
+  idx.markWatchOpened(corpusRoot, testWatch());
+  expect((await idx.checkpoint()).kind).toBe("skipped");
+  await idx.ensureFresh(); // the catch-up: cursor 5
+  expect(await savedCursor()).toBe("5");
+  await idx.checkpoint(); // candidate 6
+  await idx.checkpoint();
+  expect(await savedCursor()).toBe("6");
+});
+
+test("checkpoint: skipped where the index is not persisted or not loaded", async () => {
+  const offMain = createCorpusIndex(
+    spec({ scope: "host", watchedBy: "consumer" }),
+    env({ isMain: () => false, journal: perRootJournal(() => []) }),
+  );
+  await offMain.ensureFresh();
+  expect(await offMain.checkpoint()).toEqual({
+    kind: "skipped",
+    reason: "this backend does not persist the index",
+  });
+  const cold = createCorpusIndex(spec(), env());
+  expect(await cold.checkpoint()).toEqual({
+    kind: "skipped",
+    reason: "not loaded in this process yet",
+  });
+});
+
+test("checkpoint: the index's own watch vouches for every root", async () => {
+  const journal = perRootJournal(() => []);
+  const watch = testWatch();
+  const idx = createCorpusIndex(
+    spec(),
+    env({ journal, startFileWatcher: async () => watch }),
+  );
+  // Before the watch opens nothing vouches.
+  await idx.ensureFresh(); // cursor 1
+  expect((await idx.checkpoint()).kind).toBe("skipped");
+  await idx.startWatcher();
+  idx.markDirty();
+  await idx.ensureFresh(); // the walk with the watch open: cursor 2
+  await idx.checkpoint(); // candidate 3
+  expect((await idx.checkpoint()).kind).toBe("checkpointed");
+  expect(await savedCursor()).toBe("3");
+});
+
+test("checkpoint: a path named while a pass runs is re-checked before the cursor is saved", async () => {
+  const journal = perRootJournal(() => []);
+  const slow = join(corpusRoot, "a", "slow.txt");
+  let release = (): void => {};
+  const gate = new Promise<void>((r) => (release = r));
+  const idx = createCorpusIndex(
+    spec({
+      scope: "host",
+      watchedBy: "consumer",
+      parse: async (p) => {
+        if (p === slow) await gate;
+        return await readFile(p, "utf8");
+      },
+    }),
+    env({ journal }),
+  );
+  idx.markWatchOpened(corpusRoot, quietWatch);
+  await idx.ensureFresh(); // cursor 1
+  await idx.checkpoint(); // candidate 2
+
+  // A pass is under way (held on `slow`) when the watch names `late`.
+  await writeFile(slow, "slow");
+  idx.markChanged([slow]);
+  const running = idx.ensureFresh();
+  const late = join(corpusRoot, "a", "late.txt");
+  await writeFile(late, "late");
+  idx.markChanged([late]);
+  const checkpoint = idx.checkpoint();
+  release();
+  await running;
+  expect((await checkpoint).kind).toBe("checkpointed");
+  const saved = await savedIndex();
+  expect(saved.cursors?.[0]?.eventId).toBe("2");
+  // The cursor that vouches for `late` is saved only with its entry.
+  expect(saved.files[late]?.partial).toBe("late");
 });

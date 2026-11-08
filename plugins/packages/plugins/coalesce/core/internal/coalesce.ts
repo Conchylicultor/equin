@@ -23,6 +23,13 @@ export interface KeyedCoalescer<K, E> {
   run(key: K, items?: readonly E[]): Promise<void>;
   /** Resolves once `key` has nothing running or pending. */
   idle(key: K): Promise<void>;
+  /**
+   * Resolves once every run of `key` running or pending at the call has
+   * settled (fulfilled or failed — a failure stays loud where it always was).
+   * Unlike {@link idle}, a trigger landing after the call is not waited for,
+   * so it resolves under a steady stream of triggers too.
+   */
+  settled(key: K): Promise<void>;
   stats(): CoalescerStats;
 }
 
@@ -33,6 +40,8 @@ export interface Coalescer<E> {
   run(items?: readonly E[]): Promise<void>;
   /** Resolves once nothing is running or pending. */
   idle(): Promise<void>;
+  /** See {@link KeyedCoalescer.settled}. */
+  settled(): Promise<void>;
   stats(): CoalescerStats;
 }
 
@@ -45,10 +54,14 @@ interface Waiter {
 interface Generation<E> {
   items: E[];
   waiters: Waiter[];
+  /** `settled()` callers: resolved when this run settles, whatever its outcome. */
+  settledWaiters: (() => void)[];
 }
 
 interface Slot<E> {
   running: boolean;
+  /** The run in flight (`null` while none is). */
+  current: Generation<E> | null;
   pending: Generation<E> | null;
   idleWaiters: (() => void)[];
 }
@@ -79,12 +92,12 @@ export function createKeyedCoalescer<K, E = never>(opts: {
     stats.triggers += 1;
     let slot = slots.get(key);
     if (slot === undefined) {
-      slot = { running: false, pending: null, idleWaiters: [] };
+      slot = { running: false, current: null, pending: null, idleWaiters: [] };
       slots.set(key, slot);
     }
     let gen = slot.pending;
     if (gen === null) {
-      gen = { items: [], waiters: [] };
+      gen = { items: [], waiters: [], settledWaiters: [] };
       slot.pending = gen;
     } else {
       stats.folded += 1;
@@ -104,6 +117,7 @@ export function createKeyedCoalescer<K, E = never>(opts: {
     }
     slot.pending = null;
     slot.running = true;
+    slot.current = gen;
     stats.runs += 1;
     // `unknown`: a `void`-typed callback may return anything (`arr.push`'s
     // count), so only a thenable is async work.
@@ -133,7 +147,9 @@ export function createKeyedCoalescer<K, E = never>(opts: {
     outcome: { failed: false } | { failed: true; error: unknown },
   ): void {
     slot.running = false;
+    slot.current = null;
     start(key);
+    for (const resolve of gen.settledWaiters) resolve();
     if (!outcome.failed) {
       for (const w of gen.waiters) w.resolve();
       return;
@@ -162,6 +178,14 @@ export function createKeyedCoalescer<K, E = never>(opts: {
       if (slot === undefined) return Promise.resolve();
       return new Promise<void>((resolve) => slot.idleWaiters.push(resolve));
     },
+    settled(key) {
+      // The pending run starts after the running one settles, so it is the
+      // last of the two to settle.
+      const slot = slots.get(key);
+      const last = slot?.pending ?? slot?.current ?? null;
+      if (last === null) return Promise.resolve();
+      return new Promise<void>((resolve) => last.settledWaiters.push(resolve));
+    },
     stats: () => ({ ...stats }),
   };
 }
@@ -185,6 +209,7 @@ export function createCoalescer<E = never>(opts: {
     trigger: (items) => keyed.trigger(null, items),
     run: (items) => keyed.run(null, items),
     idle: () => keyed.idle(null),
+    settled: () => keyed.settled(null),
     stats: () => keyed.stats(),
   };
 }

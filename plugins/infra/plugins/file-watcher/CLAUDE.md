@@ -116,6 +116,13 @@ rejects it. Work keyed INSIDE one batch (one run per room) triggers a
 
 The catalog's `Folded` fact counts the batches an instance folded.
 
+**`drained()` / `losses()`** — what a consumer that remembers "the watch has
+told me everything up to here" asks (corpus-index's cursor checkpoint).
+`drained()` resolves once every event the instance had received when called
+has been handed to `onChange` by a run that settled (a batch in its debounce
+window is handed over at once); `losses()` counts the loss reports it received,
+at arrival — equal readings bracket a stretch with nothing dropped.
+
 ## In a CLI command: `watchForCommand`
 
 A foreground `./equin` command that waits on the disk (`await`) imports

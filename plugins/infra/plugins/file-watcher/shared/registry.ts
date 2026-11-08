@@ -312,6 +312,8 @@ export function defineFileWatcherIn(
       let stopped = false;
       return {
         folded: () => watcher.folded(),
+        drained: () => watcher.drained(),
+        losses: () => watcher.losses(),
         async stop() {
           if (!stopped) {
             stopped = true;

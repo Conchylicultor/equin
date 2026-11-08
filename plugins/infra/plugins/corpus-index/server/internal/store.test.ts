@@ -12,6 +12,7 @@ import { join } from "node:path";
 import {
   loadCorpusFile,
   recordCorpusChanges,
+  recordCorpusCursors,
   saveCorpusSnapshot,
   type CorpusFile,
 } from "./store";
@@ -156,4 +157,39 @@ test("a log cut mid-record is never appended to: the next save starts a clean on
     ).sort(),
   ).toEqual(["/a", "/b", "/big", "/d"]);
   expect(await logs()).toHaveLength(0);
+});
+
+test("moving the cursors appends one log line; a load replays them over the snapshot's", async () => {
+  const cursor = (root: string, eventId: string) => ({
+    root,
+    dev: 1,
+    ino: 2,
+    eventId,
+    takenAt: 3,
+    snapshot: `${eventId}\n4`,
+  });
+  const index: CorpusFile<string> = {
+    version: VERSION,
+    files: { "/a": entry("a"), "/big": entry("x".repeat(4096)) },
+    cursors: [cursor("/r", "10")],
+  };
+  await saveCorpusSnapshot(indexPath, index);
+  const snapshotBefore = await readFile(indexPath, "utf8");
+
+  index.files["/b"] = entry("b");
+  await recordCorpusChanges(indexPath, index, ["/b"], []);
+  index.cursors = [cursor("/r", "20")];
+  await recordCorpusCursors(indexPath, index);
+
+  expect(await readFile(indexPath, "utf8")).toBe(snapshotBefore);
+  const loaded = await loadCorpusFile<string>(indexPath, VERSION);
+  expect(loaded.cursors).toEqual([cursor("/r", "20")]);
+  expect(loaded.files["/b"]).toEqual(entry("b"));
+
+  // No cursors any more: logged as such, and a load has none.
+  delete loaded.cursors;
+  await recordCorpusCursors(indexPath, loaded);
+  expect(
+    (await loadCorpusFile<string>(indexPath, VERSION)).cursors,
+  ).toBeUndefined();
 });

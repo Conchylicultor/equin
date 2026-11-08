@@ -80,7 +80,10 @@ function boot() {
       isMain: () => true,
       withSlot: (fn) => fn(),
       yieldMacrotask: () => new Promise<void>((r) => setImmediate(r)),
-      startFileWatcher: async () => {},
+      startFileWatcher: async () => ({
+        drained: async () => {},
+        losses: () => 0,
+      }),
       watcherRegistration: { register: () => {} },
       journal: {
         cursor: async () => ({ kind: "unsupported", reason: "bench" }),

@@ -103,16 +103,14 @@ async function reconfigure(opts: { reconcile: boolean }): Promise<void> {
     }
     for (const dir of dirs) {
       if (watchedDirs().includes(dir)) continue;
-      addWatch(
-        dir,
-        await midiFoldersWatcher.start({
-          dirs: [dir],
-          onChange: (events) =>
-            runTracked("midi-folders:change", () => onChange(events)),
-          onLost: () => lostReconciles.trigger(),
-        }),
-      );
-      markMidiFolderWatched(dir);
+      const watch = await midiFoldersWatcher.start({
+        dirs: [dir],
+        onChange: (events) =>
+          runTracked("midi-folders:change", () => onChange(events)),
+        onLost: () => lostReconciles.trigger(),
+      });
+      addWatch(dir, watch);
+      markMidiFolderWatched(dir, watch);
     }
     if (opts.reconcile) await reconcile();
   });

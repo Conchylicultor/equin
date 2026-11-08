@@ -312,6 +312,7 @@ describe("createFileWatcher: a watched dir that goes", () => {
     await until(() => lost.length > 0);
     expect(lost).toHaveLength(1);
     expect(lost[0]).toBeInstanceOf(WatchedDirGoneError);
+    expect(watcher.losses()).toBe(1);
 
     const heard: string[] = [];
     const after = await createFileWatcher({
@@ -418,6 +419,54 @@ describe("createFileWatcher: depth children", () => {
       { type: "delete", path: watched },
     ]);
   });
+});
+
+describe("createFileWatcher: drained()", () => {
+  test("hands a batch still in its debounce window over now, and waits for its run", async () => {
+    // A followed file (kqueue on darwin): its open hands an `update` for the
+    // file at once, which then sits in the debounce window.
+    dir = mkdtempSync(join(tmpdir(), "fw-drained-"));
+    const file = join(dir, "f.log");
+    writeFileSync(file, "");
+    const heard: string[] = [];
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    let runs = 0;
+    watcher = await createFileWatcher({
+      files: [file],
+      writesWhileOpen: true,
+      // A window far longer than the test: only drained() hands it over.
+      debounceMs: 60_000,
+      ceilingMs: 60_000,
+      onChange: async (batch) => {
+        heard.push(...batch.map((e) => e.path));
+        runs += 1;
+        await held;
+      },
+    });
+    expect(watcher.losses()).toBe(0);
+    // However long the open's event takes to reach the engine, the drained()
+    // after it hands it to onChange at once.
+    let last = { done: false, promise: Promise.resolve() };
+    for (let i = 0; i < 250 && heard.length === 0; i++) {
+      const call = { done: false, promise: Promise.resolve() };
+      call.promise = watcher.drained().then(() => {
+        call.done = true;
+      });
+      last = call;
+      await Bun.sleep(20);
+    }
+    expect(heard.map((p) => realpathSync(p))).toEqual([realpathSync(file)]);
+    // The call that handed it over waits for its run, which has not settled.
+    await Bun.sleep(50);
+    expect(last.done).toBe(false);
+    release();
+    await last.promise;
+    expect(runs).toBe(1);
+    // Nothing received since: at once.
+    await watcher.drained();
+    expect(runs).toBe(1);
+  }, 15_000);
 });
 
 describe("createFileWatcher: a followed file's dir that goes", () => {

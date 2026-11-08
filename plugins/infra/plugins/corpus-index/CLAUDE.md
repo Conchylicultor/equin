@@ -75,10 +75,12 @@ const index = defineCorpusIndex({
   on disk is a snapshot plus an append-only log of the entries changed since
   (`<indexPath>.<generation>.log`); a pass appends the entries it moved, where
   it used to rewrite the whole document (3.7 MB of JSON per transcript append
-  on main). The log is folded into a new snapshot once it outgrows it, and
-  whenever the journal cursors move (they live in the snapshot only, saved
-  after the whole pass has landed). Each snapshot names its log's generation,
-  so a log left by a crash is never replayed over a newer snapshot.
+  on main). The journal cursors move by a log line too (`{ c: [...] }`,
+  appended after the entries they vouch for, once the whole pass has landed),
+  so a checkpoint every few minutes costs a line, not a 3.7 MB rewrite. The
+  log is folded into a new snapshot once it outgrows it. Each snapshot names
+  its log's generation, so a log left by a crash is never replayed over a
+  newer snapshot.
 
 - `ensureFresh()` — lazy `(mtimeMs,size)` stat-diff. **Call on every read**: it is
   the correctness fallback that makes warmup deferral safe (a cold request just
@@ -119,9 +121,32 @@ const index = defineCorpusIndex({
   walked — a folder that read `checking` at one boot no longer costs a walk at
   the next. A caught-up root walks only when a walk is asked for
   (`markDirty`, a lost-events report). A watcher batch's pass never advances
-  a cursor (events still in a debounce window at a crash would be skipped). A
-  backend that does not persist (a `host` index off main) replays main's
-  saved cursors.
+  a cursor (events still in a debounce window at a crash would be skipped);
+  the checkpoint below does. A backend that does not persist (a `host` index
+  off main) replays main's saved cursors.
+- **A live watch moves the cursors: `checkpoint()`** (the
+  `corpus-index.checkpoint` job, every 5 min on main, over every index the
+  process defined). **A replay costs the changes of the whole volume since
+  its cursor, not those under the root**: FSEvents' history is volume-wide and
+  filtered by path as it is read — ~0.15 µs per event id, ~300k events a
+  minute on this machine (`file-watcher/scripts/bench-journal-replay.ts`:
+  60M ids back → 9.4 s, naming 0 paths). With cursors moved only by a boot's
+  pass, every boot replayed the journal since the previous one: the MIDI
+  folders' two roots 24–44 s and the transcripts 16 s after a quiet
+  half-day (2026-11-08). Now the replay covers at most two checkpoint
+  periods plus the downtime. Two-phase, so a cursor is never saved ahead of
+  the stored entries: a checkpoint takes a candidate cursor per root it can
+  vouch for (caught up, its watch open, every loss the watch reported
+  repaired by a walk or replay); the next one saves it once the watch has
+  `drained()` (everything it received handed to its reaction — so every
+  change before the candidate, a period old, was named to the index), a pass
+  has re-checked those paths and logged their entries, and the watch neither
+  reopened nor lost events since. It never does work owed to someone else: a
+  walk due or a root not caught up ⇒ it skips (that pass saves its own
+  cursors, and its delta reaches whoever asked). A crash anywhere leaves an
+  older cursor: a longer replay, never a skipped change. Only a persisting
+  backend checkpoints; the job runs on main, so a `worktree`-scoped index
+  (none today) would still replay from its boot.
   This is why the format's code stamps the index: a walk used to repair a
   changed `match` / `parse` on the next boot; a journal catch-up re-checks only
   paths that moved, so files that newly match would stay missing until a walk.
@@ -145,20 +170,21 @@ index). It declares `watchedBy: "consumer"` and feeds its watch to the index:
 
 - `markChanged(paths)` — each batch's paths. The next `ensureFresh()` re-checks
   only those, on every backend (an unwatched index off main walks every time).
-- `markWatchOpened(root)` — a root's watch just (re)opened: whatever moved
-  under it before went unheard, so the next pass catches it up from the
+- `markWatchOpened(root, watch)` — a root's watch just (re)opened: whatever
+  moved under it before went unheard, so the next pass catches it up from the
   journal. Open the watch BEFORE the root enters `roots`, so no stretch of it
-  is caught up that nothing was listening to.
+  is caught up that nothing was listening to. `watch` is the opened
+  `FileWatcher` (its `drained` / `losses`, what `checkpoint()` asks it).
 - `markDirty()` — only for the watch's dropped-events report (`onLost`).
 
 ```ts
 const index = defineCorpusIndex({ /* …, */ watchedBy: "consumer" });
-myWatcher.start({
+const watch = await myWatcher.start({
   dirs: [dir],
   onChange: (events) => index.markChanged(events.map((e) => e.path)),
   onLost: () => { index.markDirty(); void index.ensureFresh(); },
 });
-index.markWatchOpened(dir);
+index.markWatchOpened(dir, watch);
 ```
 
 ### Enumerate-only (no `parse`)
@@ -188,23 +214,28 @@ format-digest mismatch → rebuild.
 
 ## Plugin reference
 
-- Description: Fingerprint-keyed incremental file index: defineCorpusIndex enumerates files under roots matching a predicate, re-parses only those whose (mtimeMs,size) changed through a bounded heavy-read-gated pipeline, drops vanished entries, and persists atomically (host scope ⇒ main-only). ensureFresh is the lazy on-read correctness fallback; startWatcher is main-only push freshness.
+- Description: Fingerprint-keyed incremental file index: defineCorpusIndex enumerates files under roots matching a predicate, re-parses only those whose (mtimeMs,size) changed through a bounded heavy-read-gated pipeline, drops vanished entries, and persists atomically (host scope ⇒ main-only). ensureFresh is the lazy on-read correctness fallback; startWatcher is main-only push freshness. The corpus-index.checkpoint job (every 5 min, main) saves each watched root's journal cursor up to where its live watch vouches, so a boot's catch-up replays only what no watch heard.
 - Server:
   - Uses:
     - `infra/file-watcher.defineFileWatcher`
+    - `infra/file-watcher.FileWatcher`
     - `infra/file-watcher.journalChangesSince`
     - `infra/file-watcher.journalCursor`
     - `infra/file-watcher.JournalCursor`
     - `infra/file-watcher.JournalCursorResult`
     - `infra/file-watcher.JournalReplay`
     - `infra/host/host-read-pool.withHeavyReadSlot`
+    - `infra/jobs.defineJob`
     - `infra/warmup.defineWarmup`
     - `packages/source-digest.sourceDigest`
   - Exports (types):
+    - `CheckpointOutcome`
     - `CorpusDelta`
     - `CorpusIndex`
     - `CorpusIndexSpec`
+    - `CorpusWatch`
   - Exports (values): `defineCorpusIndex`
+  - Register: `defineJob('corpus-index.checkpoint')`
 - Core:
   - Uses:
     - `packages/source-digest.defineSourceSet`

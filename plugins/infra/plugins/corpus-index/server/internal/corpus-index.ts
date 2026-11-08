@@ -8,6 +8,7 @@ import {
   defineFileWatcher,
   journalChangesSince,
   journalCursor,
+  type FileWatcher,
   type JournalCursor,
   type JournalCursorResult,
   type JournalReplay,
@@ -23,7 +24,7 @@ import { createLineReader, readFileRange, type FileStamp } from "./line-reader";
 import {
   loadCorpusFile,
   recordCorpusChanges,
-  saveCorpusSnapshot,
+  recordCorpusCursors,
   type CorpusFile,
 } from "./store";
 
@@ -107,6 +108,8 @@ export interface CorpusDelta {
 }
 
 export interface CorpusIndex<TPartial> {
+  /** The spec's `name`. */
+  readonly name: string;
   /**
    * Lazy `(mtimeMs,size)` stat-diff refresh — THE correctness fallback. Call on
    * every read: it makes warmup deferral safe (a cold first request just pays
@@ -135,9 +138,17 @@ export interface CorpusIndex<TPartial> {
    * For an index declared `watchedBy: "consumer"` (throws otherwise): the
    * consumer's watch of `root` just opened — whatever moved under it before
    * went unheard, so the next {@link ensureFresh} catches that root up from
-   * the journal (walking it when the journal cannot vouch).
+   * the journal (walking it when the journal cannot vouch). `watch` is that
+   * watch: {@link checkpoint} asks it whether it has handed everything over.
    */
-  markWatchOpened(root: string): void;
+  markWatchOpened(root: string, watch: CorpusWatch): void;
+  /**
+   * Move each watched root's saved journal cursor up to where the live watch
+   * vouches for it, so the next process's catch-up replays only what no watch
+   * heard (see {@link CheckpointOutcome}). Run by the `corpus-index.checkpoint`
+   * job for every index this process defined.
+   */
+  checkpoint(): Promise<CheckpointOutcome>;
   /**
    * Main-only push freshness via `@parcel/watcher`: a change batch marks the
    * paths it named stale and re-checks THOSE in the background (never a full
@@ -179,6 +190,27 @@ export interface CorpusIndex<TPartial> {
    */
   warmup(): Registration;
 }
+
+/**
+ * What {@link CorpusIndex.checkpoint} asks of the watch that keeps a root
+ * fresh: file-watcher's `FileWatcher.drained` / `losses`.
+ */
+export type CorpusWatch = Pick<FileWatcher, "drained" | "losses">;
+
+/**
+ * What one checkpoint did. `skipped` is not a failure: the index has nothing
+ * a checkpoint may vouch for yet (not loaded, not persisted here, a root not
+ * caught up or a walk owed — whose pass saves its own cursors).
+ */
+export type CheckpointOutcome =
+  | { kind: "skipped"; reason: string }
+  | {
+      kind: "checkpointed";
+      /** The roots whose saved cursor moved up. */
+      advanced: string[];
+      /** The roots a cursor was taken for, to be saved at the next checkpoint. */
+      candidates: string[];
+    };
 
 // How many files a `lines` format holds a fold state for in memory (least
 // recently read evicted): the files being appended to now — main's live
@@ -466,7 +498,7 @@ export interface CorpusIndexEnv {
     onChange: (paths: readonly string[]) => Promise<unknown>;
     /** The watch reported dropped events (the only backstop); coalesced likewise. */
     onLost: () => Promise<unknown>;
-  }) => Promise<void>;
+  }) => Promise<CorpusWatch>;
   /** The declaration `startFileWatcher` opens (surfaced as `CorpusIndex.watcher`). */
   watcherRegistration: Registration;
   /** The file-system journal (file-watcher's `journalCursor` / `journalChangesSince`). */
@@ -564,6 +596,32 @@ export function createCorpusIndex<TPartial>(
   const caughtUp = new Set<string>();
   // How many times the consumer's watch of each root (re)opened.
   const watchEpoch = new Map<string, number>();
+  // The watch keeping each root fresh: the consumer's, per root
+  // (`markWatchOpened`), or the index's own over every root (`startWatcher`).
+  const consumerWatches = new Map<string, CorpusWatch>();
+  // The index's own watch, and the roots it was opened on (a root joining
+  // the set later is not under it).
+  let ownWatch: { watch: CorpusWatch; roots: string[] } | null = null;
+  const watchOf = (root: string): CorpusWatch | undefined => {
+    if (consumerWatched) return consumerWatches.get(root);
+    return ownWatch?.roots.includes(root) === true ? ownWatch.watch : undefined;
+  };
+  // Every watch-named path counts one mark; `absorbedThrough` is the count a
+  // pass that has COMPLETED had taken in when it started — so a checkpoint
+  // knows when every path named before some moment has been re-checked (a
+  // pass already running when it was named has not).
+  let markSeq = 0;
+  let absorbedThrough = 0;
+  // Per root, the watch's loss count as the last pass that walked or replayed
+  // it began: that pass re-established everything a loss before it could have
+  // dropped. A root whose watch has lost more since is not vouched for.
+  const repairedLosses = new Map<string, number>();
+  // The cursors the last checkpoint took, one per root it could vouch for
+  // then — saved by the NEXT checkpoint (see `checkpoint`).
+  const candidates = new Map<
+    string,
+    { cursor: JournalCursor; epoch: number; losses: number }
+  >();
   // Who hears the corpus change, so a clean index may skip the pass: the
   // index's own watch (main) or the consumer's, which reports through
   // `markChanged` on every backend. Off both, every refresh walks.
@@ -646,6 +704,8 @@ export function createCorpusIndex<TPartial>(
     for (const root of roots) {
       const caught = caughtUp.has(root);
       if (caught && work !== "all") continue;
+      const watch = watchOf(root);
+      if (watch !== undefined) repairedLosses.set(root, watch.losses());
       // Only a persisting backend saves cursors; the others read the saved
       // ones. Taken BEFORE this root's replay or walk, so a change landing
       // during it is replayed again next time.
@@ -662,9 +722,6 @@ export function createCorpusIndex<TPartial>(
       }
       passed.push(root);
     }
-    const next = persist
-      ? [...saved.filter((c) => !passed.includes(c.root)), ...taken]
-      : saved;
     const walked =
       walk.length > 0
         ? await refreshCorpus(idx, refreshDeps(walk))
@@ -681,14 +738,127 @@ export function createCorpusIndex<TPartial>(
       if ((watchEpoch.get(root) ?? 0) === epochs.get(root)) caughtUp.add(root);
     // The advanced cursors, only once the whole pass has landed: the entries
     // it moved are already in the log, and a cursor saved before them could
-    // vouch for a change the stored entries do not hold yet. Cursors live in
-    // the snapshot alone, so moving them writes one.
-    if (persist && JSON.stringify(next) !== JSON.stringify(saved)) {
+    // vouch for a change the stored entries do not hold yet. The other roots
+    // keep the cursors saved NOW (a checkpoint may have moved one meanwhile).
+    const current = idx.cursors ?? [];
+    const next = persist
+      ? [...current.filter((c) => !passed.includes(c.root)), ...taken]
+      : current;
+    if (persist && JSON.stringify(next) !== JSON.stringify(current)) {
       if (next.length === 0) delete idx.cursors;
       else idx.cursors = next;
-      await saveCorpusSnapshot(spec.indexPath, idx);
+      await recordCorpusCursors(spec.indexPath, idx);
     }
     return result;
+  }
+
+  /**
+   * Bring each watched root's saved cursor up to where the watch vouches for
+   * it. Without this a cursor moved only when a pass walked or replayed its
+   * root — once per process, at boot — so the next boot replayed the journal
+   * from the previous boot. A replay costs the changes of the whole VOLUME
+   * since its cursor, not those under the root (FSEvents' history is
+   * volume-wide, filtered by path as it is read: ~0.15 µs per event, and
+   * this machine writes ~300k events a minute) — 24–44 s for the MIDI
+   * folders' two roots and 16 s for the transcripts after a quiet half-day.
+   *
+   * Two-phase, so a cursor is never saved ahead of what the stored entries
+   * hold. A checkpoint TAKES a candidate cursor for each root it can vouch
+   * for (caught up, watched, every loss its watch reported repaired by a
+   * walk or replay). The next checkpoint SAVES it, once (1) the watch has
+   * handed over everything it received (`drained`) — so every change from
+   * before the candidate was named to the index, given that FSEvents
+   * delivers within milliseconds and the candidate is a checkpoint period
+   * old; (2) a pass has re-checked those named paths and logged their
+   * entries; (3) the root's watch neither reopened nor lost events since the
+   * candidate. A crash at any point leaves an older cursor: a longer replay,
+   * never a skipped change.
+   *
+   * It does no work owed to anyone else: with a walk due (`markDirty`, a
+   * lost-events report) or a root not yet caught up it skips — the pass that
+   * does that work saves its own cursors, and its delta goes to the consumer
+   * that asked for it. The pass it does run re-checks only what the watch
+   * named, which the consumer already reacted to as it heard it.
+   */
+  async function checkpoint(): Promise<CheckpointOutcome> {
+    if (!computePersist(spec.scope, env.isMain()))
+      return {
+        kind: "skipped",
+        reason: "this backend does not persist the index",
+      };
+    if (index === null)
+      return { kind: "skipped", reason: "not loaded in this process yet" };
+    const roots = resolveRoots();
+    for (const watch of new Set(roots.map(watchOf)))
+      if (watch !== undefined) await watch.drained();
+    const vouchable = (root: string): CorpusWatch | undefined => {
+      const watch = watchOf(root);
+      if (watch === undefined || !caughtUp.has(root)) return undefined;
+      return repairedLosses.get(root) === watch.losses() ? watch : undefined;
+    };
+    const owed = (): boolean =>
+      stale === "all" || !roots.every((r) => vouchable(r) !== undefined);
+    const skipped: CheckpointOutcome = {
+      kind: "skipped",
+      reason: "a walk or a catch-up is due: its own pass saves the cursors",
+    };
+    if (owed()) {
+      candidates.clear();
+      return skipped;
+    }
+    // Every path the drained watches named re-checked by a pass that started
+    // after it was named — not one joined mid-way, which left it in `stale`.
+    const named = markSeq;
+    while (absorbedThrough < named) {
+      await ensureFresh();
+      if (owed()) {
+        candidates.clear();
+        return skipped;
+      }
+    }
+    const idx = index;
+    const saved = idx.cursors ?? [];
+    const next = [...saved];
+    const advanced: string[] = [];
+    for (const root of roots) {
+      const candidate = candidates.get(root);
+      const watch = vouchable(root);
+      if (
+        candidate === undefined ||
+        watch === undefined ||
+        candidate.epoch !== (watchEpoch.get(root) ?? 0) ||
+        candidate.losses !== watch.losses()
+      )
+        continue;
+      const i = next.findIndex((c) => c.root === root);
+      // Never backwards: a pass since may have saved a later one.
+      if (
+        i >= 0 &&
+        BigInt(next[i]!.eventId) >= BigInt(candidate.cursor.eventId)
+      )
+        continue;
+      if (i >= 0) next[i] = candidate.cursor;
+      else next.push(candidate.cursor);
+      advanced.push(root);
+    }
+    if (advanced.length > 0) {
+      idx.cursors = next;
+      await recordCorpusCursors(spec.indexPath, idx);
+    }
+    candidates.clear();
+    for (const root of roots) {
+      const watch = vouchable(root);
+      if (watch === undefined) continue;
+      const epoch = watchEpoch.get(root) ?? 0;
+      const losses = watch.losses();
+      const cursor = await takeCursor(root, env.journal);
+      if (cursor !== undefined) candidates.set(root, { cursor, epoch, losses });
+    }
+    return {
+      kind: "checkpointed",
+      advanced,
+      candidates: [...candidates.keys()],
+    };
   }
 
   async function ensureFresh(): Promise<CorpusDelta> {
@@ -709,6 +879,8 @@ export function createCorpusIndex<TPartial>(
       stale.size === 0 &&
       resolveRoots().every((r) => caughtUp.has(r))
     ) {
+      // Every mark so far was taken in by a pass that completed.
+      absorbedThrough = markSeq;
       return { addedPaths: [], modifiedPaths: [], removedPaths: [] };
     }
     // Single-flight: a concurrent second caller joins THIS promise and so
@@ -722,6 +894,7 @@ export function createCorpusIndex<TPartial>(
       // re-checks rather than trusting this pass. A failed pass re-walks all.
       const work = watched ? stale : "all";
       stale = new Set();
+      const takenThrough = markSeq;
       try {
         // A watcher batch names what moved: re-check those paths alone. A
         // full walk is O(corpus) — ~1.2k dirs and ~4k stats for the transcript
@@ -732,6 +905,7 @@ export function createCorpusIndex<TPartial>(
           roots,
           work,
         );
+        absorbedThrough = Math.max(absorbedThrough, takenThrough);
         if (
           addedPaths.length + modifiedPaths.length + removedPaths.length >
           0
@@ -756,6 +930,7 @@ export function createCorpusIndex<TPartial>(
 
   /** A watch batch: remember what it named, unless a full walk is due anyway. */
   function markPathsStale(paths: Iterable<string>): void {
+    markSeq += 1;
     if (stale === "all") return;
     for (const p of paths) stale.add(p);
   }
@@ -769,12 +944,13 @@ export function createCorpusIndex<TPartial>(
     markPathsStale(paths);
   }
 
-  function markWatchOpened(root: string): void {
+  function markWatchOpened(root: string, watch: CorpusWatch): void {
     if (!consumerWatched) {
       throw new Error(
         `corpus index "${spec.name}": markWatchOpened() is for an index declared watchedBy: "consumer"`,
       );
     }
+    consumerWatches.set(root, watch);
     caughtUp.delete(root);
     watchEpoch.set(root, (watchEpoch.get(root) ?? 0) + 1);
   }
@@ -801,8 +977,9 @@ export function createCorpusIndex<TPartial>(
     }
     if (watcherStarted || !env.isMain()) return;
     watcherStarted = true;
-    await env.startFileWatcher({
-      dirs: resolveRoots(),
+    const dirs = resolveRoots();
+    const watch = await env.startFileWatcher({
+      dirs,
       onChange: (paths) => {
         // A corpus change: mark the paths it named stale and warm them now, so
         // the next request finds nothing (or little) to do. Returned to the
@@ -817,6 +994,7 @@ export function createCorpusIndex<TPartial>(
         return runTracked("corpus-index:ensure-fresh", () => ensureFresh());
       },
     });
+    ownWatch = { watch, roots: dirs };
     watchArmed = true;
   }
 
@@ -843,11 +1021,13 @@ export function createCorpusIndex<TPartial>(
   }
 
   return {
+    name: spec.name,
     ensureFresh,
     entries,
     markDirty,
     markChanged,
     markWatchOpened,
+    checkpoint,
     startWatcher,
     watching: () => watchArmed,
     onChange,
@@ -885,7 +1065,7 @@ export function defineCorpusIndex<TPartial>(
     description: corpusWatcherDescription(spec.description),
     mainOnly: true,
   });
-  return createCorpusIndex(spec, {
+  const index = createCorpusIndex(spec, {
     isMain,
     journal: { cursor: journalCursor, changesSince: journalChangesSince },
     withSlot: withHeavyReadSlot,
@@ -894,13 +1074,29 @@ export function defineCorpusIndex<TPartial>(
     readRange: readFileRange,
     watcherRegistration: watcher,
     startFileWatcher: async ({ dirs, onChange, onLost }) => {
-      // Process-lifetime watcher — the handle is intentionally discarded (the
-      // original stats/cost watcher was likewise fire-and-forget, main-only).
-      await watcher.start({
+      // Process-lifetime watcher, never stopped; the index keeps the handle
+      // only to ask it what it has handed over (`checkpoint`).
+      return await watcher.start({
         dirs,
         onChange: (events) => onChange(events.map((e) => e.path)),
         onLost: () => onLost(),
       });
     },
   });
+  definedIndexes.push(index);
+  return index;
+}
+
+// Every index this process defined, for the checkpoint job. Bounded by the
+// declared set (module-scope declarations).
+const definedIndexes: CorpusIndex<unknown>[] = [];
+
+/** Checkpoint every corpus index this process defined (the checkpoint job). */
+export async function checkpointCorpusIndexes(): Promise<
+  { name: string; outcome: CheckpointOutcome }[]
+> {
+  const out: { name: string; outcome: CheckpointOutcome }[] = [];
+  for (const index of definedIndexes)
+    out.push({ name: index.name, outcome: await index.checkpoint() });
+  return out;
 }

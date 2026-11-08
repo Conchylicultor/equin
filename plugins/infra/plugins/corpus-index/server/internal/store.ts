@@ -10,9 +10,9 @@ import type { JournalCursor } from "@plugins/infra/plugins/file-watcher/server";
 // (`<indexPath>.<generation>.log`, one JSON line per changed path). A change
 // appends its entries to the log — O(changed entries) — where it used to
 // rewrite the whole document: 3.7 MB of JSON per transcript append on main
-// (~10 ms each, ~2k appends an hour). The log is folded into a new snapshot
-// once it outgrows it (amortized O(1) per entry) and whenever the journal
-// cursors move (they live in the snapshot only).
+// (~10 ms each, ~2k appends an hour). The journal cursors are logged the same
+// way (one line holding them all), after the entries they vouch for. The log
+// is folded into a new snapshot once it outgrows it (amortized O(1) per line).
 //
 // The snapshot names the generation of its log, and each snapshot starts a new
 // one: a log left behind by a crash between a snapshot and its log's removal
@@ -36,16 +36,19 @@ export interface CorpusFile<TPartial> {
    * (or journal catch-up) whose result `files` holds: replaying the journal
    * from them names everything that may have moved since. Saved in the same
    * document as `files`, so the two cannot disagree. Absent ⇒ the next boot
-   * walks.
+   * walks. Moved by a log line (`recordCorpusCursors`), appended after the
+   * entries' lines, so a replay never holds a cursor ahead of its entries.
    */
   cursors?: JournalCursor[];
   /** The generation of the log replayed over this snapshot (absent ⇒ none). */
   log?: string;
 }
 
-/** One log line: a path's new entry, or its removal. */
+/** One log line: a path's new entry, its removal, or the cursors now (`[]`: none). */
 type LogRecord<TPartial> =
-  { p: string; e: CorpusEntry<TPartial> } | { p: string; gone: true };
+  | { p: string; e: CorpusEntry<TPartial> }
+  | { p: string; gone: true }
+  | { c: JournalCursor[] };
 
 /** Where an index loaded or saved by this process stands with its log. */
 interface LogState {
@@ -85,9 +88,10 @@ async function readOptional(path: string): Promise<string | null> {
  * corrupt log, which the caller treats like a corrupt snapshot.
  */
 function replayLog<TPartial>(
-  files: Record<string, CorpusEntry<TPartial>>,
+  index: CorpusFile<TPartial>,
   raw: string,
 ): boolean {
+  const { files } = index;
   const end = raw.lastIndexOf("\n");
   if (end < 0) return true;
   for (const line of raw.slice(0, end).split("\n")) {
@@ -100,8 +104,14 @@ function replayLog<TPartial>(
       return false;
     }
     /* eslint-disable @typescript-eslint/no-unnecessary-condition -- runtime guard on untrusted on-disk JSON */
-    if (typeof rec !== "object" || rec === null || typeof rec.p !== "string")
-      return false;
+    if (typeof rec !== "object" || rec === null) return false;
+    if ("c" in rec) {
+      if (!Array.isArray(rec.c)) return false;
+      if (rec.c.length === 0) delete index.cursors;
+      else index.cursors = rec.c;
+      continue;
+    }
+    if (typeof rec.p !== "string") return false;
     /* eslint-enable @typescript-eslint/no-unnecessary-condition */
     if ("gone" in rec) delete files[rec.p];
     else files[rec.p] = rec.e;
@@ -140,7 +150,7 @@ export async function loadCorpusFile<TPartial>(
   if (typeof parsed.log === "string") {
     const log = await readOptional(logPath(indexPath, parsed.log));
     if (log !== null) {
-      if (!replayLog(parsed.files, log)) return fresh();
+      if (!replayLog(parsed, log)) return fresh();
       logBytes = Buffer.byteLength(log);
     }
     // A log ending mid-record (an append cut by a crash, or one main is still
@@ -229,6 +239,33 @@ export async function recordCorpusChanges<TPartial>(
       e === undefined ? { p, gone: true } : { p, e };
     text += `${JSON.stringify(rec)}\n`;
   }
+  await appendLog(indexPath, index, state, text);
+}
+
+/**
+ * Persist `index.cursors` (none: `[]`): one log line, appended after every
+ * entry line already written — so call it once the entries the cursors vouch
+ * for are recorded. A document with no log yet writes a snapshot instead.
+ */
+export async function recordCorpusCursors<TPartial>(
+  indexPath: string,
+  index: CorpusFile<TPartial>,
+): Promise<void> {
+  const state = logStates.get(index);
+  if (state === undefined || index.log !== state.generation) {
+    await saveCorpusSnapshot(indexPath, index);
+    return;
+  }
+  const rec: LogRecord<TPartial> = { c: index.cursors ?? [] };
+  await appendLog(indexPath, index, state, `${JSON.stringify(rec)}\n`);
+}
+
+async function appendLog<TPartial>(
+  indexPath: string,
+  index: CorpusFile<TPartial>,
+  state: LogState,
+  text: string,
+): Promise<void> {
   if (text === "") return;
   await appendFile(logPath(indexPath, state.generation), text, "utf8");
   state.logBytes += Buffer.byteLength(text);

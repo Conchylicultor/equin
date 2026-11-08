@@ -31435,23 +31435,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/launcher/login-services`
       - Exemptions:
         - Exempts itself from: `paths:no-hardcoded-paths` — `deps/internal/identity.ts`, `deps/internal/sign.ts`, `deps/internal/codesign.test.ts` (sanctioned)
-    - **`corpus-index`** — Fingerprint-keyed incremental file index: defineCorpusIndex enumerates files under roots matching a predicate, re-parses only those whose (mtimeMs,size) changed through a bounded heavy-read-gated pipeline, drops vanished entries, and persists atomically (host scope ⇒ main-only). ensureFresh is the lazy on-read correctness fallback; startWatcher is main-only push freshness.
+    - **`corpus-index`** — Fingerprint-keyed incremental file index: defineCorpusIndex enumerates files under roots matching a predicate, re-parses only those whose (mtimeMs,size) changed through a bounded heavy-read-gated pipeline, drops vanished entries, and persists atomically (host scope ⇒ main-only). ensureFresh is the lazy on-read correctness fallback; startWatcher is main-only push freshness. The corpus-index.checkpoint job (every 5 min, main) saves each watched root's journal cursor up to where its live watch vouches, so a boot's catch-up replays only what no watch heard.
       - Server:
         - Uses:
           - `infra/file-watcher.defineFileWatcher`
+          - `infra/file-watcher.FileWatcher`
           - `infra/file-watcher.journalChangesSince`
           - `infra/file-watcher.journalCursor`
           - `infra/file-watcher.JournalCursor`
           - `infra/file-watcher.JournalCursorResult`
           - `infra/file-watcher.JournalReplay`
           - `infra/host/host-read-pool.withHeavyReadSlot`
+          - `infra/jobs.defineJob`
           - `infra/warmup.defineWarmup`
           - `packages/source-digest.sourceDigest`
         - Exports (types):
+          - `CheckpointOutcome`
           - `CorpusDelta`
           - `CorpusIndex`
           - `CorpusIndexSpec`
+          - `CorpusWatch`
         - Exports (values): `defineCorpusIndex`
+        - Register: `defineJob('corpus-index.checkpoint')`
       - Core:
         - Uses:
           - `packages/source-digest.defineSourceSet`
@@ -33536,10 +33541,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 77 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 78 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×20
           - `conversations` ×16
-          - `infra` ×13
+          - `infra` ×14
           - `debug` ×8
           - `tasks` ×7
           - `database` ×3

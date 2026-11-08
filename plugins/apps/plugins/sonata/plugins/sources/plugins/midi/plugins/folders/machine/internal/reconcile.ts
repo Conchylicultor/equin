@@ -2,6 +2,7 @@ import { sep } from "node:path";
 import {
   defineCorpusIndex,
   type CorpusDelta,
+  type CorpusWatch,
 } from "@plugins/infra/plugins/corpus-index/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import {
@@ -55,9 +56,12 @@ export function markMidiPathsChanged(paths: Iterable<string>): void {
   midiIndex.markChanged(paths);
 }
 
-/** A folder's watch just opened: the index catches it up before trusting it. */
-export function markMidiFolderWatched(dir: string): void {
-  midiIndex.markWatchOpened(dir);
+/**
+ * A folder's watch just opened: the index catches it up before trusting it,
+ * and its checkpoints ask `watch` what it has handed over.
+ */
+export function markMidiFolderWatched(dir: string, watch: CorpusWatch): void {
+  midiIndex.markWatchOpened(dir, watch);
 }
 
 /**

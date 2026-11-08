@@ -180,6 +180,21 @@ export interface FileWatcher {
   stop(): Promise<void>;
   /** Batches folded into a pending reaction instead of costing a run. */
   folded(): number;
+  /**
+   * Resolves once every event this watch had received when called has been
+   * handed to `onChange` by a run that has settled — a batch still in its
+   * debounce window is handed over now, not at the window's end. What a
+   * consumer that remembers "the watch has told me everything up to here"
+   * waits on (corpus-index's cursor checkpoint). Not a wait for quiet: a
+   * batch arriving after the call is not waited for.
+   */
+  drained(): Promise<void>;
+  /**
+   * How many loss reports (dropped events, the dir gone) this watch has
+   * received, counted when each arrives — before its `onLost` runs. Equal
+   * readings bracket a stretch in which the watch dropped nothing.
+   */
+  losses(): number;
 }
 
 /**
@@ -291,9 +306,16 @@ export async function createFileWatcher(
     }
   };
 
+  let lossCount = 0;
   const lost = (dir: string, error: unknown): void => {
+    lossCount += 1;
     console.error(`[file-watcher] error on ${dir}`, error);
     losses?.trigger(dir, [error]);
+  };
+
+  const drained = async (): Promise<void> => {
+    if (pending.length > 0) flush();
+    await changes.settled();
   };
 
   const stopPipeline = (): void => {
@@ -329,6 +351,8 @@ export async function createFileWatcher(
     });
     return {
       folded: () => changes.stats().folded,
+      drained,
+      losses: () => lossCount,
       async stop(): Promise<void> {
         stopPipeline();
         await follow.stop();
@@ -421,6 +445,8 @@ export async function createFileWatcher(
 
   return {
     folded: () => changes.stats().folded,
+    drained,
+    losses: () => lossCount,
     async stop(): Promise<void> {
       stopPipeline();
       await newDirs?.stop();

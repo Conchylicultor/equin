@@ -13,6 +13,9 @@ pending run (its items appended), started when the current run settles.
   unhandled rejection); `run(items?)` resolves when its covering run settles.
   A failure never wedges the key: the pending run still starts.
 - `idle()` for tests and shutdown; `stats()` counts triggers, runs and folds.
+- `settled()` resolves once the runs running or pending at the call have
+  settled (either outcome) — not later triggers, so it resolves under a steady
+  stream too. What `FileWatcher.drained()` waits on.
 
 The file-watch layer (`infra/file-watcher`, `infra/git/checkout-watch`) wraps
 every subscriber's callback in one, so a watcher that RETURNS its work's promise

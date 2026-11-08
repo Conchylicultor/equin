@@ -112,6 +112,52 @@ describe("createCoalescer", () => {
     expect(calls).toBe(2);
   });
 
+  test("settled() waits for the running and pending runs, never a later trigger", async () => {
+    const gates: (() => void)[] = [];
+    const batches: number[][] = [];
+    const c = createCoalescer<number>({
+      run: async (items) => {
+        batches.push(items);
+        const gate = deferred();
+        gates.push(gate.resolve);
+        await gate.promise;
+      },
+    });
+    await c.settled(); // nothing running: at once
+    c.trigger([1]);
+    c.trigger([2]); // pending behind [1]
+    let settled = false;
+    void c.settled().then(() => {
+      settled = true;
+    });
+    gates[0]!();
+    await tick();
+    expect(batches).toEqual([[1], [2]]);
+    c.trigger([3]); // lands after the call: folded behind [2], not waited for
+    expect(settled).toBe(false);
+    gates[1]!();
+    await tick();
+    expect(settled).toBe(true);
+    expect(batches).toEqual([[1], [2], [3]]);
+    gates[2]!();
+    await c.idle();
+  });
+
+  test("settled() resolves after a failed run too", async () => {
+    const gate = deferred();
+    const c = createCoalescer({
+      run: async () => {
+        await gate.promise;
+        throw new Error("boom");
+      },
+    });
+    const run = c.run();
+    const settled = c.settled();
+    gate.resolve();
+    expect(run).rejects.toThrow("boom");
+    await settled;
+  });
+
   test("a sync reaction runs inline", () => {
     let calls = 0;
     const c = createCoalescer({ run: () => void (calls += 1) });
