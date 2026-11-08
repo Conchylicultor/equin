@@ -26,6 +26,7 @@
   - Imported by:
     - `apps/pages/agent-origin`
     - `apps/pages/starred`
+    - `page/callout`
     - `page/editor`
     - `page/editor-collab`
     - `page/links`

@@ -144,6 +144,7 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
     - `host-service:icons.runtime-symbol-drawer` "icons.runtime-symbol-drawer"
   - Uses:
     - `network/live.serveValue`
+    - `ui/icons/saved-sources.SavedIconSource`
     - `ui/icons/saved-sources.savedIconSources`
     - `ui/icons/saved-sources.savedIconSourcesCode`
   - Exports (types):

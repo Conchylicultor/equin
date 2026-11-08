@@ -10,7 +10,7 @@ import { conversationCategoryConfig } from "../../shared/config";
 export const savedIconsSource = defineSavedIconSource({
   code: import.meta,
   id: "conversation-category.avatars",
-  tables: [],
+  kind: "watched",
   names: (): SavedSymbolName[] =>
     getConfig(conversationCategoryConfig).categories.flatMap((c) =>
       c.items.flatMap((item) =>

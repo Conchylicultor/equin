@@ -1,27 +1,65 @@
 import type { RoutedSource } from "@plugins/network/plugins/live/plugins/query-resource/server";
+import type { ServedAllCollection } from "@plugins/network/plugins/live/server";
 import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import { defineSourceSet } from "@plugins/packages/plugins/source-digest/core";
 
 /**
  * A place that stores user-picked icons, and so wants them drawable at first
  * paint. The resident saved-icon sprites draw every name any source reports.
+ * Three kinds, by where the names live and how a change reaches the sprites:
+ *
+ * - {@link FollowedSavedIconSource} — rows of a served scoped collection: the
+ *   sprites follow that one scope, so a write reaches them only when it
+ *   touches a row of it and a column the collection reads.
+ * - {@link TableSavedIconSource} — whole tables: any write to any row of them
+ *   recomputes the sprites.
+ * - {@link WatchedSavedIconSource} — a store outside Postgres (a config),
+ *   watched.
  */
-export interface SavedIconSource {
-  /** Unique across sources (diagnostics, duplicate detection). */
+export type SavedIconSource =
+  FollowedSavedIconSource | TableSavedIconSource | WatchedSavedIconSource;
+
+interface SavedIconSourceBase {
+  /** Unique across sources (diagnostics, duplicate detection, the follow's name). */
   readonly id: string;
-  /**
-   * The saved names this source holds right now. A DB-backed source reads
-   * through the `db` pool and lists those tables in `tables`: the served value
-   * declares them as its reads and recomputes when they change.
-   */
+}
+
+/**
+ * The names live in the rows of ONE scope of a served scoped `all`
+ * collection (`all: { by }`): `collection` followed at `where`, each row's
+ * names read by `namesOf`. Preferred for a DB store — the follow keeps the
+ * collection's column gate and scope match.
+ */
+export interface FollowedSavedIconSource<
+  Row = unknown,
+  B extends string = string,
+> extends SavedIconSourceBase {
+  readonly kind: "followed";
+  readonly collection: ServedAllCollection<Row, B>;
+  readonly where: { readonly [K in B]: string };
+  namesOf(rows: readonly Row[]): readonly SavedSymbolName[];
+}
+
+/**
+ * The names a query over whole tables reads, through the `db` pool: the
+ * served value declares `tables` as its reads, so a write to ANY row of them
+ * recomputes it.
+ */
+export interface TableSavedIconSource extends SavedIconSourceBase {
+  readonly kind: "tables";
   readonly tables: readonly RoutedSource[];
-  names(): Promise<readonly SavedSymbolName[]> | readonly SavedSymbolName[];
-  /**
-   * For a source whose truth is NOT in Postgres (a config): start watching it,
-   * calling `onChange` whenever its names may have changed; return the stop.
-   * Omitted for a DB-backed source.
-   */
-  watch?(onChange: () => void): () => void;
+  names(): Promise<readonly SavedSymbolName[]>;
+}
+
+/**
+ * The names live outside Postgres (a config): `watch` starts watching it,
+ * calling `onChange` whenever its names may have changed, and returns the
+ * stop.
+ */
+export interface WatchedSavedIconSource extends SavedIconSourceBase {
+  readonly kind: "watched";
+  names(): readonly SavedSymbolName[];
+  watch(onChange: () => void): () => void;
 }
 
 const sources = new Map<string, SavedIconSource>();
@@ -41,6 +79,14 @@ export const savedIconSourcesCode = defineSourceSet(
  * persisted sprites are recomputed when it changes. The sprites plugin knows
  * no source by name; a second source with one id throws.
  */
+export function defineSavedIconSource<Row, B extends string>(
+  source: FollowedSavedIconSource<Row, B> & { code: ImportMeta },
+): FollowedSavedIconSource<Row, B>;
+export function defineSavedIconSource(
+  source: (TableSavedIconSource | WatchedSavedIconSource) & {
+    code: ImportMeta;
+  },
+): SavedIconSource;
 export function defineSavedIconSource({
   code,
   ...source
@@ -51,7 +97,7 @@ export function defineSavedIconSource({
     );
   }
   savedIconSourcesCode.include(code);
-  sources.set(source.id, source);
+  sources.set(source.id, source as SavedIconSource);
   return source;
 }
 

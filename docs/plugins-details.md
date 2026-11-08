@@ -21228,11 +21228,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `libpqEnvSync`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 153 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 152 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×42
       - `conversations` ×17
       - `infra` ×15
-      - `page` ×15
+      - `page` ×14
       - `tasks` ×14
       - `active-data` ×8
       - `debug` ×7
@@ -22086,7 +22086,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/events`
           - `infra/jobs`
           - `network/live/query-resource`
-          - `page/callout`
           - `page/links`
           - `release/runs-arm`
           - `tasks/tasks-core`
@@ -26619,14 +26618,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 35 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+            - Imported by: 36 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
               - `apps` ×7
               - `conversations` ×6
               - `debug` ×4
               - `infra` ×4
               - `tasks` ×4
+              - `page` ×3
               - `backup` ×2
-              - `page` ×2
               - `active-data`
               - `apps-core/app-launcher`
               - `history/engine`
@@ -37092,13 +37091,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 338 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 339 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×86
           - `conversations` ×70
           - `debug` ×33
           - `tasks` ×28
           - `infra` ×22
-          - `page` ×15
+          - `page` ×16
           - `active-data` ×13
           - `build` ×10
           - `primitives` ×10
@@ -39257,6 +39256,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/pages/agent-origin`
           - `apps/pages/starred`
+          - `page/callout`
           - `page/editor`
           - `page/editor-collab`
           - `page/links`
@@ -39355,7 +39355,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `bulletedListBlock`
       - Cross-plugin:
         - Imported by: `apps/pages/welcome/quick-create`
-    - **`callout`** — Callout block type: a void CONTAINER whose tinted box wraps blocks of any type nested inside it, with a changeable leading icon and semantic color, for notes/tips/warnings. Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary.
+    - **`callout`** — Callout block type: a void CONTAINER whose tinted box wraps blocks of any type nested inside it, with a changeable leading icon and semantic color, for notes/tips/warnings. Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary, and serves page.blocks-by-type — the live blocks of one type, which the callouts' saved-icon source follows at type = callout.
       - Web:
         - Contributes:
           - `Editor.Block` "callout" → `ContainerNoRow`
@@ -39372,22 +39372,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons.Icon`
         - Exports (values): `calloutBlock`
       - Server:
-        - Contributes: `page.block-data` "callout"
+        - Contributes:
+          - `page.block-data` "callout"
+          - `resource.declare` "page.blocks-by-type"
+          - `resource.declare` "page.blocks-by-type:rows"
         - Uses:
-          - `database.db`
-          - `database/sql-projection.nullable`
-          - `database/sql-projection.parsed`
+          - `network/live.serveCollection`
           - `page/editor._blocks`
           - `page/editor.Editor`
-          - `page/editor.liveBlocks`
           - `ui/icons/saved-sources.defineSavedIconSource`
+        - Resources:
+          - `page.blocks-by-type` (keyed)
+          - `page.blocks-by-type:rows` (keyed, point)
       - Core:
         - Uses:
+          - `fields/json/config.jsonField`
+          - `network/live.liveCollection`
+          - `page/block-entity.pagesEntityRef`
           - `page/container.defineContainerBlock`
           - `ui/icons.symbol`
           - `ui/icons/saved-names.SavedSymbolNameSchema`
         - Exports (types): `CalloutColor`
         - Exports (values):
+          - `blocksByType`
           - `CALLOUT_COLORS`
           - `calloutBlock`
           - `calloutDataSchema`
@@ -57725,7 +57732,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tag-tree/engine`
               - `ui/icons/sprites`
           - Server:
-            - Exports (types): `SavedIconSource`
+            - Exports (types):
+              - `FollowedSavedIconSource`
+              - `SavedIconSource`
+              - `TableSavedIconSource`
+              - `WatchedSavedIconSource`
             - Exports (values):
               - `defineSavedIconSource`
               - `savedIconSources`
@@ -57760,6 +57771,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `host-service:icons.runtime-symbol-drawer` "icons.runtime-symbol-drawer"
             - Uses:
               - `network/live.serveValue`
+              - `ui/icons/saved-sources.SavedIconSource`
               - `ui/icons/saved-sources.savedIconSources`
               - `ui/icons/saved-sources.savedIconSourcesCode`
             - Exports (types):

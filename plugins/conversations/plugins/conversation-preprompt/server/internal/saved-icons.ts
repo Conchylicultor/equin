@@ -19,6 +19,7 @@ const iconExpr = sql`${_conversationPrepromptTable.icon} ->> 'icon'`.mapWith(
 export const prepromptSnapshotIconsSource = defineSavedIconSource({
   code: import.meta,
   id: "conversation-preprompt.snapshots",
+  kind: "tables",
   tables: [conversationPreprompt],
   names: async () =>
     (

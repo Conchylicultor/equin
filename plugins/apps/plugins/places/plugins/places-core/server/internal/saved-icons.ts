@@ -10,6 +10,7 @@ import { _places } from "./tables";
 export const placeIconsSource = defineSavedIconSource({
   code: import.meta,
   id: "places.places",
+  kind: "tables",
   tables: [_places],
   names: async () =>
     (

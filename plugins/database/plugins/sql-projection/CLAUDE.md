@@ -230,7 +230,6 @@ Design: `research/2026-08-25-database-mapped-sql-projections.md`.
     - `infra/events`
     - `infra/jobs`
     - `network/live/query-resource`
-    - `page/callout`
     - `page/links`
     - `release/runs-arm`
     - `tasks/tasks-core`

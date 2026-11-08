@@ -16,6 +16,7 @@ export function defineTagTreeIconSource(
   defineSavedIconSource({
     code: import.meta,
     id: `tag-tree.${treeId}`,
+    kind: "tables",
     tables: [table],
     names: async () =>
       (

@@ -5,7 +5,12 @@ export {
   savedIconSources,
   savedIconSourcesCode,
 } from "./internal/saved-sources";
-export type { SavedIconSource } from "./internal/saved-sources";
+export type {
+  FollowedSavedIconSource,
+  SavedIconSource,
+  TableSavedIconSource,
+  WatchedSavedIconSource,
+} from "./internal/saved-sources";
 
 export default {
   description:

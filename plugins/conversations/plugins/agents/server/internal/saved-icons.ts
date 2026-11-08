@@ -7,6 +7,7 @@ import { _agents } from "./tables";
 export const agentIconsSource = defineSavedIconSource({
   code: import.meta,
   id: "conversations.agents",
+  kind: "tables",
   tables: [_agents],
   names: async () =>
     (

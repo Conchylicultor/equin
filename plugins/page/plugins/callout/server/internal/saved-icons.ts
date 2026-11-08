@@ -1,28 +1,34 @@
-import { and, eq, isNotNull, sql } from "drizzle-orm";
-import { db } from "@plugins/database/server";
-import { _blocks, liveBlocks } from "@plugins/page/plugins/editor/server";
+import { isNull } from "drizzle-orm";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import { _blocks } from "@plugins/page/plugins/editor/server";
 import { defineSavedIconSource } from "@plugins/ui/plugins/icons/plugins/saved-sources/server";
-import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
-import {
-  nullable,
-  parsed,
-} from "@plugins/database/plugins/sql-projection/server";
-import { calloutBlock } from "../../core";
+import { blocksByType, calloutBlock, calloutDataSchema } from "../../core";
 
-const iconExpr = sql`${liveBlocks.data} ->> 'icon'`.mapWith(
-  nullable(parsed(SavedSymbolNameSchema, "saved-icons.icon")),
-);
+// Only the icon: a payload the sprites cannot draw from is one whose icon is bad.
+const calloutIconSchema = calloutDataSchema.pick({ icon: true });
 
-/** Every live callout's saved icon, so callouts are drawable at first paint. */
+// Routed over the `page_blocks` TABLE with the live-block predicate as its
+// base membership (a routed compile reads a base table, never the
+// `liveBlocks` subquery): a trash is a where-flip exit, a restore an entrant.
+export const blocksByTypeServed = serveCollection(blocksByType, {
+  from: _blocks,
+  where: isNull(_blocks.deletedAt),
+});
+
+/**
+ * Every live callout's saved icon, so callouts are drawable at first paint.
+ * Followed, not read whole: a write to any other block — the page editor's
+ * typing projection, an agent note — reaches the sprites not at all.
+ */
 export const calloutIconsSource = defineSavedIconSource({
   code: import.meta,
+  kind: "followed",
   id: "page.callout-icons",
-  tables: [_blocks],
-  names: async () =>
-    (
-      await db
-        .selectDistinct({ icon: iconExpr })
-        .from(liveBlocks)
-        .where(and(eq(liveBlocks.type, calloutBlock.type), isNotNull(iconExpr)))
-    ).flatMap((r) => (r.icon === null ? [] : [r.icon])),
+  collection: blocksByTypeServed,
+  where: { type: calloutBlock.type },
+  namesOf: (rows) =>
+    rows.flatMap((row) => {
+      const icon = calloutIconSchema.parse(row.data).icon;
+      return icon === null ? [] : [icon];
+    }),
 });

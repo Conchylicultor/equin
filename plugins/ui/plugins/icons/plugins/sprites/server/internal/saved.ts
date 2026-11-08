@@ -1,3 +1,7 @@
+import {
+  type FollowMap,
+  followsAtBind,
+} from "@plugins/network/plugins/live/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   DEFAULT_STYLE_KEYS,
@@ -8,15 +12,48 @@ import { runtimeSymbols, symbolsHash } from "./drawer";
 import {
   savedIconSources,
   savedIconSourcesCode,
+  type SavedIconSource,
 } from "@plugins/ui/plugins/icons/plugins/saved-sources/server";
 
-/** Every saved name some saved-icon source holds right now, sorted, once each. */
-export async function savedIconNames(): Promise<readonly SavedSymbolName[]> {
+type Followed = Readonly<Record<string, readonly unknown[]>>;
+
+/**
+ * Every saved name some saved-icon source holds right now, sorted, once each.
+ * A followed source's rows come from `followed` inside the sprites' loader
+ * (the follow's own read), or are read through its collection's set
+ * otherwise (a warm-up).
+ */
+export async function savedIconNames(
+  followed?: Followed,
+): Promise<readonly SavedSymbolName[]> {
   const names = new Set<SavedSymbolName>();
   for (const source of savedIconSources()) {
-    for (const name of await source.names()) names.add(name);
+    for (const name of await namesOf(source, followed)) names.add(name);
   }
   return [...names].sort();
+}
+
+async function namesOf(
+  source: SavedIconSource,
+  followed: Followed | undefined,
+): Promise<readonly SavedSymbolName[]> {
+  switch (source.kind) {
+    case "followed": {
+      if (followed === undefined) {
+        return source.namesOf(await source.collection.all.load(source.where));
+      }
+      const rows = followed[source.id];
+      if (rows === undefined) {
+        throw new Error(
+          `[icons] the saved-icon source "${source.id}" was not followed — it registered after the sprites bound`,
+        );
+      }
+      return source.namesOf(rows);
+    }
+    case "tables":
+    case "watched":
+      return source.names();
+  }
 }
 
 let changes = 0;
@@ -34,9 +71,11 @@ function bump(): void {
 }
 
 /**
- * The resident saved-icon sprites. DB-backed: the tables every source declares
- * are the value's reads (a thunk — sources register at module eval, after this
- * value is declared), so a change to them recomputes the value; a config source
+ * The resident saved-icon sprites. DB-backed: each followed source's scope is
+ * a follow (a write reaches the value only when it touches a row of that
+ * scope and a column its collection reads), each whole-table source's tables
+ * are reads (both built at the bind — sources register at module eval, after
+ * this value is declared); a config source
  * bumps the tick while the value has a subscriber. The first subscriber also
  * bumps it once — a value restored from the persisted snapshot is recomputed
  * against config that changed while the backend was down.
@@ -45,14 +84,31 @@ export const savedIconSpritesServed = serveValue(savedIconSprites, {
   source: "db",
   // Its loader runs every source's `names()`, reached through the registry.
   code: [import.meta, savedIconSourcesCode],
+  // One follow per followed source, by its id — built at the bind, once
+  // every source has registered.
+  follows: followsAtBind<unknown, FollowMap>((follow) =>
+    Object.fromEntries(
+      savedIconSources().flatMap((s) =>
+        s.kind === "followed"
+          ? [[s.id, follow(s.collection, () => ({ where: s.where }))]]
+          : [],
+      ),
+    ),
+  ),
   reads: () => ({
-    tables: [...new Set(savedIconSources().flatMap((s) => s.tables))],
+    tables: [
+      ...new Set(
+        savedIconSources().flatMap((s) =>
+          s.kind === "tables" ? s.tables : [],
+        ),
+      ),
+    ],
     reason:
-      "one resident value draws every name any saved-icon source holds, so a write to any row of a source's table may change it",
+      "one resident value draws every name a whole-table saved-icon source holds, so a write to any row of its table may change it",
   }),
   recomputeOn: [savedIconsChangedServed],
-  loader: async () => {
-    const sorted = await savedIconNames();
+  loader: async (_params, { followed }) => {
+    const sorted = await savedIconNames(followed as Followed);
     return {
       symbolsHash: symbolsHash(),
       names: [...sorted],
@@ -67,7 +123,7 @@ export const savedIconSpritesServed = serveValue(savedIconSprites, {
   },
   whileSubscribed: () => {
     const stops = savedIconSources().flatMap((s) =>
-      s.watch ? [s.watch(bump)] : [],
+      s.kind === "watched" ? [s.watch(bump)] : [],
     );
     bump();
     return () => {

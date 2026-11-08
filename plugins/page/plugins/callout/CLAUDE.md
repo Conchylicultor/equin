@@ -139,7 +139,7 @@ keeps the origin's id and caret; the wrap is ONE undo entry).
 
 ## Plugin reference
 
-- Description: Callout block type: a void CONTAINER whose tinted box wraps blocks of any type nested inside it, with a changeable leading icon and semantic color, for notes/tips/warnings. Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary.
+- Description: Callout block type: a void CONTAINER whose tinted box wraps blocks of any type nested inside it, with a changeable leading icon and semantic color, for notes/tips/warnings. Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary, and serves page.blocks-by-type — the live blocks of one type, which the callouts' saved-icon source follows at type = callout.
 - Web:
   - Contributes:
     - `Editor.Block` "callout" → `ContainerNoRow`
@@ -156,22 +156,29 @@ keeps the origin's id and caret; the wrap is ONE undo entry).
     - `ui/icons.Icon`
   - Exports (values): `calloutBlock`
 - Server:
-  - Contributes: `page.block-data` "callout"
+  - Contributes:
+    - `page.block-data` "callout"
+    - `resource.declare` "page.blocks-by-type"
+    - `resource.declare` "page.blocks-by-type:rows"
   - Uses:
-    - `database.db`
-    - `database/sql-projection.nullable`
-    - `database/sql-projection.parsed`
+    - `network/live.serveCollection`
     - `page/editor._blocks`
     - `page/editor.Editor`
-    - `page/editor.liveBlocks`
     - `ui/icons/saved-sources.defineSavedIconSource`
+  - Resources:
+    - `page.blocks-by-type` (keyed)
+    - `page.blocks-by-type:rows` (keyed, point)
 - Core:
   - Uses:
+    - `fields/json/config.jsonField`
+    - `network/live.liveCollection`
+    - `page/block-entity.pagesEntityRef`
     - `page/container.defineContainerBlock`
     - `ui/icons.symbol`
     - `ui/icons/saved-names.SavedSymbolNameSchema`
   - Exports (types): `CalloutColor`
   - Exports (values):
+    - `blocksByType`
     - `CALLOUT_COLORS`
     - `calloutBlock`
     - `calloutDataSchema`

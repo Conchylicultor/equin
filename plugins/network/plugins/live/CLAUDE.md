@@ -1792,13 +1792,13 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValueOn`
     - `sliceRange`
 - Cross-plugin:
-  - Imported by: 338 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 339 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×86
     - `conversations` ×70
     - `debug` ×33
     - `tasks` ×28
     - `infra` ×22
-    - `page` ×15
+    - `page` ×16
     - `active-data` ×13
     - `build` ×10
     - `primitives` ×10

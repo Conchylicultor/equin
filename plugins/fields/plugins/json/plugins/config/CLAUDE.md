@@ -39,14 +39,14 @@
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×7
     - `conversations` ×6
     - `debug` ×4
     - `infra` ×4
     - `tasks` ×4
+    - `page` ×3
     - `backup` ×2
-    - `page` ×2
     - `active-data`
     - `apps-core/app-launcher`
     - `history/engine`

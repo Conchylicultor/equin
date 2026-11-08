@@ -26,7 +26,11 @@ It is not a `sprites/core` export: `SavedIconSource.tables` names
     - `tag-tree/engine`
     - `ui/icons/sprites`
 - Server:
-  - Exports (types): `SavedIconSource`
+  - Exports (types):
+    - `FollowedSavedIconSource`
+    - `SavedIconSource`
+    - `TableSavedIconSource`
+    - `WatchedSavedIconSource`
   - Exports (values):
     - `defineSavedIconSource`
     - `savedIconSources`
