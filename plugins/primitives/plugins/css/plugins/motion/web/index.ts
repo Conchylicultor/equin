@@ -8,7 +8,11 @@ export {
 export { useSizeMotion } from "./internal/size-motion";
 export { useFlowMotion } from "./internal/flow-motion";
 export { prefersReducedMotion } from "./internal/reduced-motion";
-export { Arrival, type ArrivalProps } from "./internal/arrival";
+export {
+  Arrival,
+  type ArrivalProps,
+  type ArrivalStep,
+} from "./internal/arrival";
 
 export default {
   description:

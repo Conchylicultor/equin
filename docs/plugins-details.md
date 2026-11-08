@@ -39309,7 +39309,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
         - Contributes: `IdKinds.Kind` "block"
-        - Uses: 101 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 102 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `network/live/live-state` ×6
           - `primitives/dom/web-storage` ×5
           - `primitives/text-editor/caret-trigger` ×5
@@ -39327,6 +39327,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/multi-select` ×3
           - `primitives/text-editor/caret-motion` ×3
           - `reorder` ×3
+          - `primitives/css/motion` ×2
           - `primitives/dom/scroll-reveal` ×2
           - `primitives/latest-ref` ×2
           - `ids.IdKinds`
@@ -39336,7 +39337,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/inline.Inline`
-          - `primitives/css/motion.Arrival`
           - `primitives/css/overlay.Overlay`
           - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
@@ -44347,6 +44347,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/element-size.useResizeObserverSet`
             - Exports (types):
               - `ArrivalProps`
+              - `ArrivalStep`
               - `PresenceChild`
               - `PresenceProps`
             - Exports (values):

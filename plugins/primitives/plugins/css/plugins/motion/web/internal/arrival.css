@@ -27,3 +27,39 @@
   overflow: clip;
   animation: arrival-fade 180ms ease-out both;
 }
+
+/* A BATCH arriving as one gesture (`Arrival` given an `ArrivalStep`): every
+   row's slot opens at the same moment on the same calm ease-in-out, so the
+   batch's room is ONE continuous push — Σ hᵢ·E(t) = H·E(t), everything below
+   moving as one rigid mass. Each row's content then cascades in at its step
+   (`--arrival-delay`, set by `Arrival`): opacity and a small rise on a quick
+   ease-out, no scale, no overshoot. A large row (a map) rises further and a
+   bit slower. A row with nothing to show (`step: null`) only opens. */
+@keyframes arrival-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--arrival-rise, 10px));
+  }
+}
+
+.arrival-batch {
+  display: grid;
+  grid-template-rows: 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  animation: arrival-open 525ms cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+.arrival-batch > * {
+  min-height: 0;
+  overflow: clip;
+}
+
+.arrival-cue > * {
+  animation: arrival-rise var(--arrival-duration, 320ms)
+    cubic-bezier(0.16, 1, 0.3, 1) var(--arrival-delay, 0ms) both;
+}
+
+.arrival-cue.arrival-large {
+  --arrival-rise: 14px;
+  --arrival-duration: 490ms;
+}

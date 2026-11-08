@@ -20,7 +20,10 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { useChromePointerSensor } from "@plugins/primitives/plugins/sortable-list/web";
-import { Arrival } from "@plugins/primitives/plugins/css/plugins/motion/web";
+import {
+  Arrival,
+  type ArrivalStep,
+} from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -76,6 +79,7 @@ import {
 } from "../../core";
 import { fromNodes, toNodes } from "../internal/optimistic-block-ops";
 import { liveRunsOf } from "../internal/live-runs";
+import { arrivalSteps } from "../internal/arrival-steps";
 import { useBlockDocs } from "../internal/use-block-docs";
 import type { BlockDocs } from "../internal/collab-session";
 import type { CaretSurface, CaretSurfaceRef } from "../caret-surface";
@@ -280,9 +284,11 @@ function RowCell({
   blockId: string;
   row: number;
   /** Another writer added this block while the page was open
-   * (`arrivedRemotely`): it eases in rather than landing in one frame. Read
-   * at mount only. The feet after it glide down with the opening. */
-  arrived: boolean;
+   * (`arrivedRemotely`): its step in the cascade of the push that added it
+   * (`internal/arrival-steps.ts`) — it eases in with the rest of that push
+   * rather than landing in one frame. `false` at rest. Read at mount only.
+   * The feet after it glide down with the opening. */
+  arrived: ArrivalStep | false;
   frames: readonly string[];
   /** The container feet ending on this row, innermost first. Usually empty. */
   feet: readonly FootSeat[];
@@ -698,6 +704,20 @@ function SelectionLayer({
   // registrations, so a second local `handles.find(...)` was only a slower copy.
   const handleMap = useBlockHandles();
   const handles = useMemo(() => [...handleMap.values()], [handleMap]);
+  // The rows another writer just added, as ONE push: each one's step in the
+  // push's cascade (an empty line has none, a child enters with its parent).
+  // Meaningful at a row's mount only, like `arrivedRemotely` itself.
+  const arrivals = useMemo(() => {
+    const text = defaultTextHandle(handles);
+    return arrivalSteps(
+      flat,
+      arrivedRemotely,
+      (block) =>
+        text !== undefined &&
+        block.type === text.type &&
+        runsLength(liveRunsOf(docs, block)) === 0,
+    );
+  }, [flat, arrivedRemotely, handles, docs]);
 
   const nodes = useMemo(() => toNodes(rows), [rows]);
   // The same registry-derived set `BlockEditorInner` flattens with — read again
@@ -2564,7 +2584,7 @@ function SelectionLayer({
                     key={f.block.id}
                     blockId={f.block.id}
                     row={i}
-                    arrived={arrivedRemotely(f.block)}
+                    arrived={arrivals.get(f.block.id) ?? false}
                     frames={frameIdsByRow[i]!}
                     feet={feetByRow[i]!}
                     onOverhang={reportRowOverhang}

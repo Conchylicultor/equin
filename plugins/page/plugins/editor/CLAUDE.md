@@ -900,6 +900,14 @@ overhang, no change; rounding stays at the run's ends.
   overlay before server truth), the first load, an inline sub-page whose feed
   lands later (not yet in `livePages`), a row revealed by a fold (seen in an
   earlier push), memory mode (`livePages` empty).
+- **One push is one gesture**: the rows that mount in one render are one push,
+  and `internal/arrival-steps.ts` numbers their cascade in document order — a
+  row whose parent arrives with it shares its parent's step (a block's children
+  are its content), an empty default-text line gets `step: null` (no entry, its
+  room just opens). Every slot opens together on one curve, so the batch's room
+  is one continuous push (`<Arrival>`'s `ArrivalStep`).
+- **Never scrolls**: nothing in the arrival path moves the scroll position or
+  the focus — the camera belongs to the viewer.
 - The `Arrival` wrapper sits inside `RowCell` around the row only; feet after
   it glide down, and frames spanning the grid lines follow the row's height.
 
@@ -2188,7 +2196,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `Editor.TurnInto` ×2
     - `Editor.BlockMenuItem` ← `page.open-as-page`
   - Contributes: `IdKinds.Kind` "block"
-  - Uses: 101 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 102 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×6
     - `primitives/dom/web-storage` ×5
     - `primitives/text-editor/caret-trigger` ×5
@@ -2206,6 +2214,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `primitives/multi-select` ×3
     - `primitives/text-editor/caret-motion` ×3
     - `reorder` ×3
+    - `primitives/css/motion` ×2
     - `primitives/dom/scroll-reveal` ×2
     - `primitives/latest-ref` ×2
     - `ids.IdKinds`
@@ -2215,7 +2224,6 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
-    - `primitives/css/motion.Arrival`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`

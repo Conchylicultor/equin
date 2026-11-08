@@ -7,7 +7,7 @@ one. Five mechanisms, each owned where it can be automatic:
 |---|---|---|
 | **Enter** | the surface | `Surface` levels `overlay` / `float` wear `surface-enter` (ui-kit `app.css`): a fade and scale from the overlay token group (`--overlay-enter-duration` / `-easing` / `-scale`). Never `translate` — `Pin` / `Placed` centre with it. Popovers (`OverlayPanel`) keep their own `overlay-enter`. |
 | **Size** | the surface | `useSizeMotion` (attached by `Surface` overlay / float): when the surface's **content** changes its size — a card becoming a pill, a list drilling into a detail, a thread growing — it tweens width / height / corner radius instead of jumping. |
-| **Arrive** | `<Arrival>` | A row added to a flow of rows while the reader watches (a transcript line written live, a block another writer added to an open page) eases in: its slot opens from zero height while the row fades in, so the rows after it glide instead of jumping. In-flow, unlike Enter. |
+| **Arrive** | `<Arrival>` | A row added to a flow of rows while the reader watches (a transcript line written live, a block another writer added to an open page) eases in: its slot opens from zero height while the row fades in, so the rows after it glide instead of jumping; the rows of one write arrive as one staged gesture (one push, content cascading in). In-flow, unlike Enter. |
 | **In-flow change** | the container | `useFlowMotion` (attached by `detail-sections`' `SectionStack` and the `data-view` icons grid): when the SET of a container's laid-out children changes — a section shown, a tile added, one removed or moved — a new child fades and scales in and every displaced sibling glides from its old place (FLIP). |
 | **Exit** | `<Presence>` | A surface cannot animate its own unmount, so the conditional goes inside `<Presence>`, which keeps the leaving element drawn until its exit has run. Popovers exit by themselves (`OverlayPanel`'s `data-ending-style:overlay-exit`; base-ui waits for it). |
 
@@ -72,8 +72,23 @@ whose geometry something else already animates.
   the user just created — the list owner can, so it says so. A later render
   saying `arrived` never starts an entry.
 - The wrapper is always rendered (the entry ending never remounts the row); it
-  is a plain block at rest. 180 ms: `grid-template-rows` 0fr → 1fr on the
-  wrapper (clipping the row meanwhile), opacity 0 → 1 on the row.
+  is a plain block at rest.
+- **`arrived={true}`** — one row on its own (a transcript line): 180 ms,
+  `grid-template-rows` 0fr → 1fr on the wrapper (clipping the row meanwhile),
+  opacity 0 → 1 on the row.
+- **`arrived={{ step }}`** (`ArrivalStep`) — one row of a BATCH, the rows one
+  write added together, arriving as ONE gesture. Every row's slot opens at the
+  same moment on the same curve (525 ms, ease-in-out `cubic-bezier(.45,0,.55,1)`),
+  so the batch's room is one continuous push (Σ hᵢ·E(t) = H·E(t)) and what is
+  below moves as one rigid mass. Each row's content then cascades in at its
+  step: opacity + a 10 px rise, 320 ms ease-out `cubic-bezier(.16,1,.3,1)`,
+  starting 175 ms into the open and 70 ms per step — no scale, no overshoot.
+  A row taller than 160 px (a map) rises 14 px over 490 ms. `step: null` (a row
+  with nothing to show) only opens. The caller numbers the steps (document
+  order; rows that belong together share one). Design: prototype
+  `proto-1794145785-ej5bjg`, `?motion=staged`.
+- Nothing in it scrolls, focuses or reads the scroller: the camera is the
+  viewer's.
 - While entering it carries `FOLLOW_MOTION_ATTR` (`dom/auto-scroll`), so a
   stick-to-bottom surface glides with the opening.
 - Never under reduced motion.
@@ -133,6 +148,7 @@ Design: [`research/2026-10-25-global-surface-motion.md`](../../../../../../resea
     - `primitives/dom/element-size.useResizeObserverSet`
   - Exports (types):
     - `ArrivalProps`
+    - `ArrivalStep`
     - `PresenceChild`
     - `PresenceProps`
   - Exports (values):
