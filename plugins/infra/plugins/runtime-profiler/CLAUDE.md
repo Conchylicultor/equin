@@ -36,14 +36,18 @@ A concurrency gate calls `chargeWait(layer, ms, kind)` from its `onWait` callbac
 live `EntryContext.parent` chain, so a composite span like a `flush` draining many loaders
 names the gates its subtree waited on rather than showing huge wall-clock with empty `waits`.
 
-The load-bearing math is the **streaming interval-union** (`Track`, per ancestor): a flush
+The load-bearing math is the **interval-union** (`Track`, per ancestor): a flush
 drains loaders concurrently, so *summing* child waits into an ancestor could exceed its
 wall-clock (20 loaders × 60 s gate wait inside a 90 s flush ≠ "1200 s wait"). Each ancestor
 instead unions the intervals over its own timeline, guaranteeing `waitMs ≤ wall` and
 `selfMs ≥ 0` at every level; per-layer `waits` values are unions too (each ≤ wall). Every
 charge arrives at its interval's END (gates call `onWait` at slot acquisition; children
-charge at finish), so the stream is end-ordered by construction and the O(1) streaming
-union is *exact* — a non-end-ordered arrival would only undercount, never overcount. A
+and claims charge at finish), but its start can reach back past time already covered and
+over gaps in it (a loader that joined 1500 → 4000 is then claimed 0 → 4000). So a track
+keeps its covered set as disjoint intervals (`spans`) and a charge merges the tail ones it
+reaches — *exact*, amortized O(1). Past `TRACK_SPAN_CAP` intervals the oldest is frozen
+into the track's `floor`; only a charge reaching back past it is clipped (an undercount,
+never an overcount). A
 finished child charges its execution interval into the *nearest open ancestor only* (its
 own interval propagates upward when it finishes — charging every ancestor would
 double-count grandchildren); gate waits go to *all* open ancestors because unions are
@@ -110,11 +114,11 @@ same 600 ms and finished within a few ms of each other.
 ### Positioned wait bands (`WaitBand`)
 
 `Track` is the *measure* of the covered set; a **`WaitBand[]` per `(entry, layer)`** is the
-covered set itself, so a wait has a *when* and not merely a *how much*. Bands are derived
-from `contribute()`'s **return value** (the slice it newly covered, already clipped to that
-ancestor's `startMs` and frontier), never the raw `[start, end]` — every ancestor clips the
-same charge differently, which is what makes `Σ band widths === track.unionMs` true *by
-construction*. End-ordered arrival (above) makes the insert a tail op: O(1), no sort.
+covered set itself, so a wait has a *when* and not merely a *how much*. A band is pushed
+only when `contribute()` covered something, clipped to that ancestor's `startMs`, and merged
+into every trailing band it overlaps — the same merge the track does — which is what makes
+`Σ band widths === track.unionMs` (below the caps). End-ordered arrival (above) makes the
+insert a tail op: no sort.
 
 The list is capped at `WAIT_BAND_CAP` per `(entry, layer)`; on overflow the **smallest** band
 is dropped, never merged across a gap — painting time a span was not waiting would be worse

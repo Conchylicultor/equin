@@ -81,11 +81,14 @@ task-1793967465-8xd27d owns it.
   `push <key>` (`joinsOf`) and takes only that run's joins off, never a
   sibling's from the flush's mixed bands. The `sub` origin's join union rides
   the sub-ack as `joinedMs`, and `element` takes it off as `server-join`.
-- A claim reaching back past a wait already charged to the same entry is
-  under-counted by the streaming union: a loader that joined 1500 → 4000 and
-  was then filed (0 → 4000) leaves its `push` and `flush` with only the join
-  excluded, so they can still be filed on time the loader owns. Latency leaves
-  are unaffected (they intersect positioned bands).
+- ~~A claim reaching back past a wait already charged to the same entry is
+  under-counted by the streaming union.~~ Done (task-1793987024-7xncqd): a
+  `Track` now keeps its covered set as disjoint intervals (bounded at
+  `TRACK_SPAN_CAP`), so a charge reaching back over the frontier counts the
+  gaps it covers. A loader joined 1500 → 4000 and filed 0 → 4000 now has its
+  `push` and `flush` exclude all 4000 ms. The same fix makes `busyUnion` exact
+  when a child closes after its own waits moved the parent's frontier. A
+  parent's `selfMs` used to keep the child's pre-wait work as its own there.
 - Identical-duration slow DB ops at one instant are NOT a loop stall. For
   example, `job_run_stats` upserts at 2393 ms had 0.9 ms `event-loop` charged.
   The cause is database-side and is uninvestigated.

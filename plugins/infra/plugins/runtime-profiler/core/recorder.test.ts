@@ -10,7 +10,9 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
   __contribute,
+  __newTrack,
   __pushBand,
+  TRACK_SPAN_CAP,
   WAIT_BAND_CAP,
   beginWait,
   captureFlightWindow,
@@ -205,11 +207,10 @@ describe("wait propagation", () => {
     // Child executions [0,40] ∪ [0,50]: the streaming union sees [0,40] first
     // with an empty frontier → 40, then [0,50] adds the [40,50] tail → 50.
     expect(flush.childTotalMs).toBe(50);
-    // busy = waits ∪ child execs under the end-ordered streaming union: the
-    // waits cover [10,50]; child A's [0,40] arrives when the frontier is
-    // already at 40, so its [0,10] head is (conservatively) not re-counted —
-    // busy 40, self 20 (≥ the true 10, never negative).
-    expect(flush.selfTotalMs).toBe(20);
+    // busy = waits ∪ child execs: the waits cover [10,50]; child A's [0,40]
+    // arrives after the frontier passed 40 and still adds its [0,10] head —
+    // busy 50, self exactly 10.
+    expect(flush.selfTotalMs).toBe(10);
     // Each child individually: wall 40/50, wait 30, self = remainder.
     expect(agg("loader", "a").waitTotalMs).toBe(30);
     expect(agg("loader", "a").selfTotalMs).toBe(10);
@@ -890,8 +891,10 @@ describe("joins — a delivery is not judged on its run's join waits", () => {
     } finally {
       sub.dispose();
     }
-    expect(filed[0]).toBe("loader x");
-    expect(filed).not.toContain("push deliver:x");
+    // The loader is filed once: its claim (0 → 4000) reaches back over the
+    // join (1500 → 4000) its ancestors were already charged, so `push x` and
+    // the flush exclude all 4000 ms, not the join's 2500.
+    expect(filed).toEqual(["loader x"]);
     // The claim (0 → 4000) already covers the join (1500 → 4000): the leaf
     // intersects positioned bands, so the overlap is taken off once.
     expect(deliverOf("deliver:x").excludedMs).toBe(4000);
@@ -1605,28 +1608,78 @@ describe("loader read-set capture — handed to the installed sink", () => {
   });
 });
 
-describe("__contribute streaming union", () => {
+describe("__contribute interval union", () => {
   test("clips the interval start to the floor, returning the covered ms", () => {
-    const t: Track = { unionMs: 0, prevEnd: 0 };
-    expect(__contribute(t, -5, 10, 0)).toBe(10);
-    expect(t).toEqual({ unionMs: 10, prevEnd: 10 });
-    const t2: Track = { unionMs: 0, prevEnd: 4 };
-    expect(__contribute(t2, 0, 10, 4)).toBe(6);
-    expect(t2).toEqual({ unionMs: 6, prevEnd: 10 });
+    const t: Track = __newTrack(0);
+    expect(__contribute(t, -5, 10)).toBe(10);
+    expect(t).toEqual({ unionMs: 10, spans: [{ t0: 0, t1: 10 }], floor: 0 });
+    const t2: Track = __newTrack(4);
+    expect(__contribute(t2, 0, 10)).toBe(6);
+    expect(t2.unionMs).toBe(6);
   });
 
-  test("a fully-covered interval contributes 0 and keeps the frontier", () => {
-    const t: Track = { unionMs: 10, prevEnd: 10 };
-    expect(__contribute(t, 2, 8, 0)).toBe(0);
-    expect(t).toEqual({ unionMs: 10, prevEnd: 10 });
+  test("a fully-covered interval contributes 0", () => {
+    const t: Track = __newTrack(0);
+    __contribute(t, 0, 10);
+    expect(__contribute(t, 2, 8)).toBe(0);
+    expect(t).toEqual({ unionMs: 10, spans: [{ t0: 0, t1: 10 }], floor: 0 });
   });
 
-  test("out-of-order ends never overcount; partial overlap adds only the tail", () => {
-    const t: Track = { unionMs: 10, prevEnd: 10 };
-    expect(__contribute(t, 5, 15, 0)).toBe(5); // overlaps [5,10] → adds only [10,15]
-    expect(t).toEqual({ unionMs: 15, prevEnd: 15 });
-    expect(__contribute(t, 0, 12, 0)).toBe(0); // end behind the frontier → 0
-    expect(t).toEqual({ unionMs: 15, prevEnd: 15 });
+  test("partial overlap adds only the uncovered part", () => {
+    const t: Track = __newTrack(0);
+    __contribute(t, 0, 10);
+    expect(__contribute(t, 5, 15)).toBe(5);
+    expect(t.unionMs).toBe(15);
+    expect(__contribute(t, 0, 12)).toBe(0); // end behind the frontier, all covered
+    expect(t.spans).toEqual([{ t0: 0, t1: 15 }]);
+  });
+
+  test("a charge reaching back over the frontier counts the time before it", () => {
+    // A join 1500 → 4000 charged first, then the run's whole 0 → 4000.
+    const t: Track = __newTrack(0);
+    expect(__contribute(t, 1500, 4000)).toBe(2500);
+    expect(__contribute(t, 0, 4000)).toBe(1500);
+    expect(t).toEqual({
+      unionMs: 4000,
+      spans: [{ t0: 0, t1: 4000 }],
+      floor: 0,
+    });
+  });
+
+  test("a charge reaching back over several gaps fills only the gaps", () => {
+    const t: Track = __newTrack(0);
+    __contribute(t, 10, 20);
+    __contribute(t, 30, 40);
+    __contribute(t, 50, 60);
+    expect(__contribute(t, 15, 60)).toBe(20); // [20,30] ∪ [40,50]
+    expect(t.spans).toEqual([{ t0: 10, t1: 60 }]);
+    expect(t.unionMs).toBe(50);
+  });
+
+  test("an interval out of end order lands in its gap without bridging", () => {
+    const t: Track = __newTrack(0);
+    __contribute(t, 0, 10);
+    __contribute(t, 30, 40);
+    expect(__contribute(t, 15, 20)).toBe(5);
+    expect(t.spans).toEqual([
+      { t0: 0, t1: 10 },
+      { t0: 15, t1: 20 },
+      { t0: 30, t1: 40 },
+    ]);
+  });
+
+  test("past the cap the oldest span is frozen: a reach-back past it is clipped, never overcounted", () => {
+    const t: Track = __newTrack(0);
+    for (let i = 0; i <= TRACK_SPAN_CAP; i++)
+      __contribute(t, i * 10, i * 10 + 5);
+    expect(t.spans.length).toBe(TRACK_SPAN_CAP);
+    expect(t.floor).toBe(5);
+    const before = t.unionMs;
+    // [0,5] is frozen: only the gaps after the floor are new.
+    expect(__contribute(t, 0, TRACK_SPAN_CAP * 10 + 5)).toBe(
+      TRACK_SPAN_CAP * 5,
+    );
+    expect(t.unionMs).toBe(before + TRACK_SPAN_CAP * 5);
   });
 });
 
@@ -1642,6 +1695,20 @@ describe("__pushBand tail-merge and drop-smallest", () => {
     expect(bands).toEqual([
       { layer: "g", t0: 0, t1: 25 },
       { layer: "g", t0: 40, t1: 50 },
+    ]);
+  });
+
+  test("a slice reaching back merges every trailing band of its layer it touches", () => {
+    const bands: WaitBand[] = [];
+    __pushBand(bands, "g", 10, 20, 12);
+    __pushBand(bands, "h", 22, 24, 12);
+    __pushBand(bands, "g", 30, 40, 12);
+    __pushBand(bands, "g", 35, 50, 12); // reaches [30,40] only
+    __pushBand(bands, "g", 0, 60, 12); // stops at the other layer's band
+    expect(bands).toEqual([
+      { layer: "g", t0: 10, t1: 20 },
+      { layer: "h", t0: 22, t1: 24 },
+      { layer: "g", t0: 0, t1: 60 },
     ]);
   });
 

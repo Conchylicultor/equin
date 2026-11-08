@@ -35,13 +35,16 @@ import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 // wall-clock (20 loaders × 60s gate wait inside a 90s flush would read as
 // "1200s of wait"). Each ancestor therefore accumulates waits as an
 // interval-UNION over its own timeline (`Track`), guaranteeing
-// `waitMs ≤ wall` and `selfMs ≥ 0` at every level. Because every charge
-// arrives at its interval's END time (gates call `onWait` at slot acquisition;
-// children charge at finish), the charge stream is end-ordered by
-// construction, so a streaming union — O(1) state per track, no interval list
-// — is exact for these streams; an interval that reaches back before the
-// track's covered frontier contributes only the part past it (conservative:
-// never overcounts, so `selfMs` can never go negative).
+// `waitMs ≤ wall` and `selfMs ≥ 0` at every level. Every charge arrives at its
+// interval's END time (gates call `onWait` at slot acquisition; children and
+// claims charge at finish), but its START can reach back over time already
+// covered and past gaps in it: a loader that joined 1500 → 4000 charged its
+// ancestors at 4000, then closes or is claimed with its whole 0 → 4000. So a
+// track keeps its covered set as disjoint intervals and a charge merges the
+// tail ones it reaches — exact, amortized O(1) for end-ordered charges.
+// Bounded at `TRACK_SPAN_CAP` intervals: past it the oldest is frozen into the
+// track's floor, and only a charge reaching back past that floor is clipped
+// (an undercount, never an overcount — `selfMs` can never go negative).
 //
 // A finished child charges its execution interval into the NEAREST open
 // ancestor only: each parent's own interval propagates upward when *it*
@@ -213,14 +216,16 @@ let nextSpanId = 1;
 export type WaitBreakdown = Record<string, number>;
 
 /**
- * A streaming interval-union accumulator over one entry's timeline.
- * `prevEnd` is the covered frontier: because charges arrive end-ordered (see
- * module header), everything at/before `prevEnd` that will ever be covered
- * already is, so a single scalar suffices — no interval list.
+ * An interval-union accumulator over one entry's timeline (see module header).
+ * `spans` is the covered set itself — disjoint, ascending, at most
+ * `TRACK_SPAN_CAP` — and `unionMs` its measure. Nothing at or before `floor`
+ * can be covered any more: the owner's start, or the end of the oldest span
+ * frozen at the cap. Create one with `newTrack`.
  */
 export interface Track {
   unionMs: number;
-  prevEnd: number;
+  spans: { t0: number; t1: number }[];
+  floor: number;
 }
 
 /**
@@ -456,46 +461,78 @@ export function profilerNowMs(): number {
   return now();
 }
 
-// --- Streaming interval union ---
+// --- Interval union ---
 
-// Contribute the interval [start, end] to a track, returning the newly-covered
-// ms (0 when the interval added nothing). `floor` clips the interval to the
-// owning context's lifetime (a wait that started before the entry did must not
-// count against the entry's wall-clock). The frontier check makes it a union,
-// not a sum: only time past `prevEnd` is new coverage. An interval fully
-// at/before the frontier contributes 0 — with end-ordered arrival this means
-// "already covered"; in the theoretical non-end-ordered case it undercounts,
-// never overcounts (so selfMs stays ≥ 0). The returned slice is exactly
-// `[end − covered, end]`, which a caller records as a positioned wait band —
-// bands and the scalar union then share one source and cannot diverge.
-function contribute(
+// Max disjoint covered intervals a track keeps. A charge reaches back over a
+// gap only as far as the run it belongs to started, so the tail a charge merges
+// is short; the cap only bounds an entry that waited in many separate bursts.
+export const TRACK_SPAN_CAP = 64;
+
+/** An empty track over a timeline starting at `floor` (the owner's start). */
+function newTrack(floor: number): Track {
+  return { unionMs: 0, spans: [], floor };
+}
+
+// Where [start, end] lands in a track's covered set: the tail spans it
+// overlaps or touches, `spans[lo, hi)` (those after `hi` start past `end` —
+// only a charge out of end order leaves any), the one span they merge into,
+// and the ms of it not yet covered. `start` is clipped to the track's floor, so
+// pre-owner time (and time frozen at the cap) never counts.
+function placeInTrack(
   track: Track,
   start: number,
   end: number,
-  floor: number,
-): number {
-  if (start < floor) start = floor;
-  const lo = start > track.prevEnd ? start : track.prevEnd;
-  if (end > lo) {
-    track.unionMs += end - lo;
-    track.prevEnd = end;
-    return end - lo;
+): { lo: number; hi: number; t0: number; t1: number; covered: number } | null {
+  if (start < track.floor) start = track.floor;
+  if (end <= start) return null;
+  const spans = track.spans;
+  let hi = spans.length;
+  while (hi > 0 && spans[hi - 1]!.t0 > end) hi--;
+  let lo = hi;
+  let t0 = start;
+  let t1 = end;
+  let already = 0;
+  while (lo > 0 && spans[lo - 1]!.t1 >= start) {
+    const s = spans[--lo]!;
+    if (s.t0 < t0) t0 = s.t0;
+    if (s.t1 > t1) t1 = s.t1;
+    already += s.t1 - s.t0;
   }
-  return 0;
+  return { lo, hi, t0, t1, covered: t1 - t0 - already };
 }
 
-// Test-only export: the streaming union is the load-bearing math of the whole
+// Contribute the interval [start, end] to a track, returning the newly-covered
+// ms (0 when the interval added nothing). A union, not a sum: time the track
+// already covers is never counted twice, and a gap between covered spans
+// still counts when a later charge reaching back covers it.
+function contribute(track: Track, start: number, end: number): number {
+  const at = placeInTrack(track, start, end);
+  if (!at) return 0;
+  track.unionMs += at.covered;
+  track.spans.splice(at.lo, at.hi - at.lo, { t0: at.t0, t1: at.t1 });
+  if (track.spans.length > TRACK_SPAN_CAP)
+    track.floor = track.spans.shift()!.t1;
+  return at.covered;
+}
+
+/** What `contribute(track, start, end)` would add, without adding it. */
+function uncoveredIn(track: Track, start: number, end: number): number {
+  return placeInTrack(track, start, end)?.covered ?? 0;
+}
+
+// Test-only export: the interval union is the load-bearing math of the whole
 // decomposition, so it is unit-tested directly. Not part of the public API.
-export { contribute as __contribute };
+export { contribute as __contribute, newTrack as __newTrack };
 
 // Max positioned wait bands retained per (entry, layer). A Gantt wants the
 // largest stalls, not all of them; overflow drops the smallest (see pushBand).
 export const WAIT_BAND_CAP = 12;
 
-// Append the covered slice `[t0, t1]` to a per-layer band list. Charges arrive
-// END-ORDERED by construction (the same premise the streaming union rests on —
-// see the module header), so this is a tail op: extend the last band when the
-// new slice touches it (`t0 <= last.t1`), else push a fresh band. Over `cap`,
+// Append the covered interval `[t0, t1]` to a band list. Charges arrive
+// END-ORDERED by construction (see the module header), so this is a tail op:
+// merge every trailing band of the same layer the interval overlaps or touches
+// — it may reach back past several, the way a track's charge does — else push
+// a fresh band. Over `cap`,
 // drop the SMALLEST band — NEVER merge across a gap to make room, which would
 // paint time the span was not waiting (the recorder is conservative in the UNDER
 // direction everywhere). `waitMs` stays the authoritative total, so a dropped
@@ -507,12 +544,16 @@ function pushBand(
   t1: number,
   cap: number,
 ): void {
-  const last = bands[bands.length - 1];
-  if (last && last.layer === layer && t0 <= last.t1) {
-    last.t1 = t1;
-  } else {
-    bands.push({ layer, t0, t1 });
+  for (
+    let last = bands[bands.length - 1];
+    last && last.layer === layer && t0 <= last.t1 && last.t0 <= t1;
+    last = bands[bands.length - 1]
+  ) {
+    if (last.t0 < t0) t0 = last.t0;
+    if (last.t1 > t1) t1 = last.t1;
+    bands.pop();
   }
+  bands.push({ layer, t0, t1 });
   if (bands.length > cap) {
     let minIdx = 0;
     for (let i = 1; i < bands.length; i++) {
@@ -1628,10 +1669,9 @@ export function captureFlightWindow(opts: {
 
 // The waits in progress of one open context, as of `atMs`. `pendingWaitMs` is
 // what the in-progress intervals — all ending now — would add to its wait
-// union: one interval `[earliest start, now]` contributed to a COPY of the
-// track (the live one is charged only when each wait ends). Exact when no
-// ended wait overlaps the in-progress ones; otherwise it undercounts, never
-// overcounts, as everywhere in the decomposition.
+// union: one interval `[earliest start, now]`, measured against the track
+// without charging it (the track is charged only when each wait ends). The
+// in-progress intervals all end now, so `[earliest, now]` is their union.
 function pendingOf(
   ctx: EntryContext,
   atMs: number,
@@ -1649,12 +1689,7 @@ function pendingOf(
       });
   }
   waiting.sort((a, b) => b.waitedMs - a.waitedMs);
-  const pendingWaitMs = contribute(
-    { unionMs: ctx.waitUnion.unionMs, prevEnd: ctx.waitUnion.prevEnd },
-    earliest,
-    atMs,
-    ctx.startMs,
-  );
+  const pendingWaitMs = uncoveredIn(ctx.waitUnion, earliest, atMs);
   return waiting.length > 0 ? { pendingWaitMs, waiting } : { pendingWaitMs };
 }
 
@@ -1967,11 +2002,11 @@ function claimEnclosing(
     const unions = (a.claimUnions ??= new Map());
     let track = unions.get(name);
     if (!track) {
-      track = { unionMs: 0, prevEnd: a.startMs };
+      track = newTrack(a.startMs);
       unions.set(name, track);
     }
-    contribute(track, start, end, a.startMs);
-    contribute(a.excludedUnion, start, end, a.startMs);
+    contribute(track, start, end);
+    contribute(a.excludedUnion, start, end);
     const lo = start < a.startMs ? a.startMs : start;
     if (end > lo) {
       pushBand((a.claimBands ??= []), name, lo, end, CLAIM_BAND_CAP);
@@ -2272,7 +2307,7 @@ function capDetail(detail: SpanDetail | undefined): SpanDetail | undefined {
  * Charge `ms` of wait time, under layer name `layer`, to EVERY open enclosing
  * entry (innermost included). A concurrency gate calls this from its `onWait`
  * callback at slot acquisition, so the interval `[now − ms, now]` is exact and
- * arrives end-ordered (the invariant the streaming union relies on). Each open
+ * arrives end-ordered (see the module header). Each open
  * ancestor unions the interval into its own per-layer track, `waitUnion`, and
  * `busyUnion` — so a composite entry (flush) sees the gates its subtree waited
  * on, while concurrent waiters can never push an ancestor's wait past its
@@ -2342,24 +2377,33 @@ export function chargeWait(layer: string, ms: number, kind: WaitKind): void {
     if (a.closed) continue;
     let track = a.layerUnions.get(layer);
     if (!track) {
-      track = { unionMs: 0, prevEnd: a.startMs };
+      track = newTrack(a.startMs);
       a.layerUnions.set(layer, track);
     }
-    const covered = contribute(track, start, end, a.startMs);
-    contribute(a.waitUnion, start, end, a.startMs);
-    contribute(a.busyUnion, start, end, a.startMs);
-    contribute(a.excludedUnion, start, end, a.startMs);
-    // Record a band for exactly the slice the layer track just counted:
-    // `[end − covered, end]`. A charge that covered nothing (a fully re-covered
-    // interval, or a 0 ms git-memo marker) adds no band, since it added no union
-    // — `waitUnion`/`busyUnion` are cross-layer measures and get no bands.
+    const covered = contribute(track, start, end);
+    contribute(a.waitUnion, start, end);
+    contribute(a.busyUnion, start, end);
+    contribute(a.excludedUnion, start, end);
+    // Record a band merging the interval the layer track just counted into the
+    // bands it reaches, so the bands stay the track's covered set. A charge
+    // that covered nothing (a fully re-covered interval, or a 0 ms git-memo
+    // marker) adds no band, since it added no union — `waitUnion`/`busyUnion`
+    // are cross-layer measures and get no bands.
     if (covered > 0) {
       let bands = a.layerBands.get(layer);
       if (!bands) {
         bands = [];
         a.layerBands.set(layer, bands);
       }
-      pushBand(bands, layer, end - covered, end, WAIT_BAND_CAP);
+      // Clipped like the track (its floor is ≥ the entry's start), so a band
+      // never paints time the track did not count.
+      pushBand(
+        bands,
+        layer,
+        start < track.floor ? track.floor : start,
+        end,
+        WAIT_BAND_CAP,
+      );
     }
     // A join is another run's time: kept positioned so whoever reports this
     // entry's latency elsewhere can take it off (`childJoins`, `onJoined`).
@@ -2624,7 +2668,7 @@ export async function recordEntrySpan<T>(
   const t0 = now();
   // Fresh accumulators per entry, chained to the live parent context: a gate
   // charge deep inside `fn` walks this chain and unions into every open level.
-  // All tracks start their frontier at t0 so pre-entry time can never count.
+  // All tracks floor at t0 so pre-entry time can never count.
   // The id is minted HERE, at open — children run inside `fn` and must be able
   // to name this run as their parent while it is still in flight.
   const ctx: EntryContext = {
@@ -2636,10 +2680,10 @@ export async function recordEntrySpan<T>(
     closed: false,
     layerUnions: new Map(),
     layerBands: new Map(),
-    waitUnion: { unionMs: 0, prevEnd: t0 },
-    busyUnion: { unionMs: 0, prevEnd: t0 },
-    childUnion: { unionMs: 0, prevEnd: t0 },
-    excludedUnion: { unionMs: 0, prevEnd: t0 },
+    waitUnion: newTrack(t0),
+    busyUnion: newTrack(t0),
+    childUnion: newTrack(t0),
+    excludedUnion: newTrack(t0),
   };
   openEntries.add(ctx);
   try {
@@ -2653,8 +2697,8 @@ export async function recordEntrySpan<T>(
     // interval is dropped — conservative, the ancestors' records are final.
     for (let a: EntryContext | undefined = ctx.parent; a; a = a.parent) {
       if (a.closed) continue;
-      contribute(a.childUnion, t0, t1, a.startMs);
-      contribute(a.busyUnion, t0, t1, a.startMs);
+      contribute(a.childUnion, t0, t1);
+      contribute(a.busyUnion, t0, t1);
       break;
     }
     // (2) Close before recording so nothing can race a mutation in between.
