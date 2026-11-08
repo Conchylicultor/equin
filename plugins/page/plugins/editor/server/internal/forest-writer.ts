@@ -181,15 +181,18 @@ export async function writeDocRanks(
   changes: readonly { id: string; docRank: string }[],
 ): Promise<void> {
   if (changes.length === 0) return;
-  await tx.execute(sql`
-    UPDATE ${_blocks}
-       SET doc_rank = v.doc_rank
-      FROM unnest(
-             ${sql.param(changes.map((c) => c.id))}::text[],
-             ${sql.param(changes.map((c) => c.docRank))}::text[]
-           ) AS v(id, doc_rank)
-     WHERE ${_blocks}.id = v.id
-  `);
+  // One statement however many rows moved: the per-row values ride as two
+  // parallel arrays, `unnest`ed into a row source the UPDATE joins on.
+  await tx
+    .update(_blocks)
+    .set({ docRank: sql`v.doc_rank` })
+    .from(
+      sql`unnest(
+            ${sql.param(changes.map((c) => c.id))}::text[],
+            ${sql.param(changes.map((c) => c.docRank))}::text[]
+          ) AS v(id, doc_rank)`,
+    )
+    .where(eq(_blocks.id, sql`v.id`));
 }
 
 /**

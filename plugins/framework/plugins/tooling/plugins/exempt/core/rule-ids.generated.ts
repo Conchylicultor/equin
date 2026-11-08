@@ -179,6 +179,7 @@ export type ExemptableRuleId =
   | "sql-projection/no-asserted-sql-type"
   | "sql-rows/no-unparsed-sql-rows"
   | "sql-writes:fit:dynamic"
+  | "sql-writes:fit:hand-written"
   | "sql-writes:fit:schema"
   | "surface/no-adhoc-surface"
   | "test-layout/bun-sync-settle-matchers"

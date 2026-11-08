@@ -950,6 +950,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `boundaries/no-platform-api` — `server/internal/queue-schema.ts`, `server/internal/superseded-trigger.ts` (debt)
     - `sql-writes:fit:schema` — `machine/internal/dead-job-gc.ts`, `machine/internal/graphile-queue.ts`, `machine/internal/introspection.ts`, `machine/internal/stuck-lock-sweeper.ts`, `machine/internal/worker.ts` (sanctioned)
+    - `sql-writes:fit:hand-written` — `machine/internal/dead-job-gc.ts`, `machine/internal/graphile-queue.ts`, `machine/internal/introspection.ts`, `machine/internal/stuck-lock-sweeper.ts`, `machine/internal/worker.ts` (sanctioned)
+    - `sql-writes:fit:hand-written` — `machine/internal/run-stats.ts` (sanctioned)
 - Machine:
   - Exports (types):
     - `BacklogJobStat`

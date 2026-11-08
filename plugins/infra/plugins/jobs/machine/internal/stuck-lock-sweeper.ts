@@ -173,6 +173,7 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
   const dropped = await executeRows(database, {
     label: "stuck-lock-sweep: superseded",
     row: DroppedRowSchema,
+    // sql-writes:hand-written — graphile's own tables (graphile_worker._private_*)
     query: sql`
     DELETE FROM graphile_worker._private_jobs j
      WHERE ${supersededExpr}
@@ -227,6 +228,7 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
   const reclaimed = await executeRows(database, {
     label: "stuck-lock-sweep: jobs",
     row: ReclaimedRowSchema,
+    // sql-writes:hand-written — graphile's own tables (graphile_worker._private_*)
     query: sql`
     UPDATE graphile_worker._private_jobs j
        SET locked_at = NULL,
@@ -309,6 +311,7 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
   const reclaimedQueues = await executeRows(database, {
     label: "stuck-lock-sweep: queues",
     row: ReclaimedQueueRowSchema,
+    // sql-writes:hand-written — graphile's own tables (graphile_worker._private_*)
     query: sql`
     UPDATE graphile_worker._private_job_queues q
        SET locked_at = NULL,

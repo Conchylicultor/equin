@@ -36,6 +36,35 @@ export interface SqlSite {
   /** The static text: `chunks.length === holes.length + 1`. */
   readonly chunks: readonly string[];
   readonly holes: readonly Hole[];
+  /**
+   * Start offset of the `sql-writes:hand-written` marker comment binding this
+   * site — on the literal or an enclosing node up to its statement — or null.
+   */
+  readonly marker: number | null;
+}
+
+/**
+ * The site-level declaration of a hand-written write (see CLAUDE.md): a comment
+ * that OPENS with the marker, so prose naming it is never one.
+ */
+export const HAND_WRITTEN_MARKER =
+  /^(?:\/\/|\/\*+)\s*sql-writes:hand-written\b/;
+
+/**
+ * Offsets of every comment in `sf` carrying the marker — what a marker bound
+ * to no site is found against. Read off the AST's comment ranges, so SQL text
+ * inside a literal is never mistaken for a comment.
+ */
+export function markerComments(sf: ts.SourceFile): number[] {
+  const text = sf.getFullText();
+  const out = new Set<number>();
+  const visit = (n: ts.Node): void => {
+    for (const r of ts.getLeadingCommentRanges(text, n.getFullStart()) ?? [])
+      if (HAND_WRITTEN_MARKER.test(text.slice(r.pos, r.end))) out.add(r.pos);
+    ts.forEachChild(n, visit);
+  };
+  visit(sf);
+  return [...out];
 }
 
 const LEAD =
@@ -49,6 +78,30 @@ const DDL =
 /** Whether `text` (holes as placeholders) may hold a SQL write or table DDL. */
 export function mayMatter(text: string, tagged: boolean): boolean {
   return (WRITE.test(text) || DDL.test(text)) && (tagged || LEAD.test(text));
+}
+
+/**
+ * The marker comment leading `node` or an ancestor of it, up to and including
+ * the statement holding it (a write nested in a call, an object, a ternary is
+ * bound by a comment on its statement).
+ */
+function markerOf(sf: ts.SourceFile, node: ts.Node): number | null {
+  const text = sf.getFullText();
+  for (
+    let n: ts.Node | undefined = node;
+    n && !ts.isSourceFile(n);
+    n = n.parent
+  ) {
+    for (const r of ts.getLeadingCommentRanges(text, n.getFullStart()) ?? [])
+      if (HAND_WRITTEN_MARKER.test(text.slice(r.pos, r.end))) return r.pos;
+    if (
+      ts.isBlock(n.parent) ||
+      ts.isSourceFile(n.parent) ||
+      ts.isModuleBlock(n.parent)
+    )
+      break;
+  }
+  return null;
 }
 
 const isSqlTag = (tag: ts.Expression): boolean =>
@@ -72,7 +125,10 @@ export class SiteScanner {
     private readonly schemaFiles: ReadonlySet<string>,
   ) {}
 
-  async scan(relFile: string, text: string): Promise<SqlSite[]> {
+  async scan(
+    relFile: string,
+    text: string,
+  ): Promise<{ sites: SqlSite[]; markers: number[] }> {
     const sf = await this.parse(relFile, text);
     const found: ts.Node[] = [];
     const visit = (node: ts.Node): void => {
@@ -93,7 +149,7 @@ export class SiteScanner {
       const site = await this.siteOf(sf, relFile, node);
       if (site) sites.push(site);
     }
-    return sites;
+    return { sites, markers: markerComments(sf) };
   }
 
   private isCandidate(node: ts.Node): boolean {
@@ -133,7 +189,14 @@ export class SiteScanner {
     const holes: Hole[] = [];
     for (const e of exprs) holes.push(await this.hole(sf, e, tagged));
     const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
-    return { file, line: line + 1, tagged, chunks, holes };
+    return {
+      file,
+      line: line + 1,
+      tagged,
+      chunks,
+      holes,
+      marker: markerOf(sf, node),
+    };
   }
 
   private async hole(

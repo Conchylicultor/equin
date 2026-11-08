@@ -119,6 +119,7 @@ export async function settleDeadInflightRun(
     terminal = { exitCode: HARD_KILL_EXIT_CODE, finishedAt: new Date() };
   }
 
+  // sql-writes:hand-written — the CLI's first-writer-wins close, against the previous build's schema
   await db.execute(sql`
     update "build_runs"
     set "finished_at" = ${terminal.finishedAt}, "exit_code" = ${terminal.exitCode}

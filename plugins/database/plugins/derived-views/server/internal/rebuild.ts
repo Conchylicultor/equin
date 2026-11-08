@@ -181,6 +181,7 @@ export async function rebuildDerivedViews(
     }
 
     await tx.execute(
+      // sql-writes:hand-written — imperative derived_view_state table, no typed handle (debt)
       drizzleSql`
         INSERT INTO "public".${drizzleSql.raw(`"${DERIVED_VIEW_STATE_TABLE_NAME}"`)} (id, signature)
         VALUES (true, ${signature})

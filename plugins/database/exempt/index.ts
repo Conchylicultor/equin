@@ -17,4 +17,11 @@ export default [
     reason:
       "A generator over the catalog: shifts every timestamp column of every table the snapshot holds (read from information_schema), so its table and column names are data, not source.",
   },
+  {
+    rule: "sql-writes:fit:hand-written",
+    paths: ["plugins/pglite/server/internal/pglite-driver.ts"],
+    kind: "sanctioned",
+    reason:
+      "PGlite's clock shift rewrites every timestamp column the catalog lists, by name: a generator over the catalog, not a write to a declared table.",
+  },
 ] satisfies Exemptions;

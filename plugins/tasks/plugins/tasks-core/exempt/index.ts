@@ -17,4 +17,11 @@ export default [
     reason:
       "A trigger table built by infra/events' defineTriggerEvent, whose shared column set (events/server/internal/base-columns.ts) keys every *_triggers table by a bare uuid. Phase 6 of the unified prefixed ids keys them all at once (uuid -> text + a declared kind) in that one file; delete this entry then.",
   },
+  {
+    rule: "sql-writes:fit:hand-written",
+    paths: ["server/internal/mutations/mandate.ts"],
+    kind: "sanctioned",
+    reason:
+      "Re-derives the effective mandate of each start task with one WITH RECURSIVE walk up the folder tree feeding the write: a recursive data-modifying statement no typed update can express.",
+  },
 ] satisfies Exemptions;

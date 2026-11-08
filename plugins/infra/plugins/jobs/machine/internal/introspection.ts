@@ -282,6 +282,7 @@ export async function isRowSuperseded(jobId: string): Promise<boolean> {
 }
 
 export async function markJobPermanentlyFailed(jobId: string): Promise<void> {
+  // sql-writes:hand-written — graphile's own tables (graphile_worker._private_*)
   await db.execute(sql`
     UPDATE graphile_worker._private_jobs
        SET max_attempts = attempts

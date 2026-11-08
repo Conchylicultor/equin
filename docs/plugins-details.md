@@ -2051,6 +2051,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ids:pk-declared` — `server/internal/tables.ts` (debt)
                   - `boundaries/no-platform-api` — `server/internal/collect.ts`, `server/internal/request-context.ts` (debt)
                   - `networking/no-page-transport` — `web/internal/instance.ts` (sanctioned)
+                  - `sql-writes:fit:hand-written` — `server/internal/aggregate-sql.ts` (sanctioned)
               - Test helpers:
                 - Core: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core/testing`
                   - `ZERO_METRICS`
@@ -13873,7 +13874,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/runs-arm`
           - `framework/cli/build`
       - Exemptions:
-        - Exempts itself from: `blocking-fs/sync-named` — `shared/stale-holder.ts` (debt)
+        - Exempts itself from:
+          - `blocking-fs/sync-named` — `shared/stale-holder.ts` (debt)
+          - `sql-writes:fit:hand-written` — `shared/recorder.ts`, `shared/stale-holder.ts` (sanctioned)
       - Machine:
         - Exports (values): `settleDeadInflightRun`
       - Cli:
@@ -21207,6 +21210,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `readTag`
       - `schemaChangedAtBoot`
       - `snapshotWatermark`
+      - `trimToNewest`
       - `writeAtomically`
   - Machine:
     - Uses: `database/pgbouncer.convergePgbouncerConfig`
@@ -21257,6 +21261,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exempts itself from:
       - `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
       - `sql-writes:fit:dynamic` — `plugins/pglite/server/internal/pglite-driver.ts` (sanctioned)
+      - `sql-writes:fit:hand-written` — `plugins/pglite/server/internal/pglite-driver.ts` (sanctioned)
   - Test helpers:
     - Server: `@plugins/database/server/testing`
       - `snapshotWatermark`
@@ -21514,7 +21519,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/links`
           - `tasks/tasks-core`
       - Exemptions:
-        - Exempts itself from: `sql-writes:fit:dynamic` — `core/internal/define-rollup.ts`, `server/internal/rebuild.ts` (sanctioned)
+        - Exempts itself from:
+          - `sql-writes:fit:dynamic` — `core/internal/define-rollup.ts`, `server/internal/rebuild.ts` (sanctioned)
+          - `sql-writes:fit:hand-written` — `core/internal/define-rollup.ts`, `server/internal/rebuild.ts` (sanctioned)
       - Test helpers:
         - Server: `@plugins/database/plugins/derived-tables/server/testing`
           - `installRollups` — Install `rollups` onto a throwaway test database (`createTestDb`) whose source tables exist, and reconcile them — the SAME code path the boot schema layer runs (prepare the tables, install the trigger sets, reconcile), so the DDL and the reconcile under test are byte-identical to what a backend installs.
@@ -21601,6 +21608,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor`
           - `page/links`
           - `tasks/tasks-core`
+      - Exemptions:
+        - Exempts itself from: `sql-writes:fit:hand-written` — `server/internal/rebuild.ts` (debt)
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
       - Cross-plugin:
         - Imported by:
@@ -21865,6 +21874,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `core/internal/schema-glob.ts`, `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/snapshot-dag.ts` (debt)
           - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/migration-phases-valid.ts`, `check/orphaned-tables.ts` (debt)
           - `blocking-fs/sync-named` — `core/internal/drizzle-stage.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts` (sanctioned)
+          - `sql-writes:fit:hand-written` — `server/internal/runner.ts` (sanctioned)
         - Exempted by:
           - `database/migrations` (0 debt)
           - `framework/tooling/checks` (0 debt)
@@ -31142,7 +31152,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `conversations/model-provider/catalog.getModelCatalog`
           - `database.db`
+          - `database.trimToNewest`
           - `database/admin.ExcludeFromFork`
+          - `database/sql-projection.nullable`
           - `database/sql-projection.parsed`
           - `infra/claude-cli/accounts.activeClaudeAccountId`
           - `infra/claude-cli/availability.noteClaudeCodeFailure`
@@ -32265,7 +32277,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×3
           - `plugin-meta/plugin-health`
       - Exemptions:
-        - Exempts itself from: `sql-writes:fit:dynamic` — `server/internal/define-extension.ts` (sanctioned)
+        - Exempts itself from:
+          - `sql-writes:fit:dynamic` — `server/internal/define-extension.ts` (sanctioned)
+          - `sql-writes:fit:hand-written` — `server/internal/define-extension.ts` (sanctioned)
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger(). Contributes a BackgroundTriggerSource so the Background activity catalog names the events that start each job.
       - Server:
         - Contributes:
@@ -32276,6 +32290,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `background.trigger-source` "job"
         - Uses:
           - `database.db`
+          - `database.trimToNewest`
           - `database.writeAtomically`
           - `database/sql-column.parsedJson`
           - `database/sql-projection.parsed`
@@ -32487,6 +32502,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `boundaries/no-platform-api` — `server/internal/serial-queue.ts` (debt)
           - `sql-writes:fit:schema` — `machine/internal/crash-recovery.ts`, `machine/internal/queue-lock-no-steal.ts`, `machine/internal/superseded.ts` (sanctioned)
+          - `sql-writes:fit:hand-written` — `machine/internal/crash-recovery.ts`, `machine/internal/queue-lock-no-steal.ts`, `machine/internal/superseded.ts` (sanctioned)
       - Shared:
         - Exports (types):
           - `DeleteTargetingBody`
@@ -33729,6 +33745,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `boundaries/no-platform-api` — `server/internal/queue-schema.ts`, `server/internal/superseded-trigger.ts` (debt)
           - `sql-writes:fit:schema` — `machine/internal/dead-job-gc.ts`, `machine/internal/graphile-queue.ts`, `machine/internal/introspection.ts`, `machine/internal/stuck-lock-sweeper.ts`, `machine/internal/worker.ts` (sanctioned)
+          - `sql-writes:fit:hand-written` — `machine/internal/dead-job-gc.ts`, `machine/internal/graphile-queue.ts`, `machine/internal/introspection.ts`, `machine/internal/stuck-lock-sweeper.ts`, `machine/internal/worker.ts` (sanctioned)
+          - `sql-writes:fit:hand-written` — `machine/internal/run-stats.ts` (sanctioned)
       - Machine:
         - Exports (types):
           - `BacklogJobStat`
@@ -34848,7 +34866,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `user-path/no-unproven-claim` — `core/internal/repo-root.ts` (sanctioned)
         - **`root-migration`** — `./equin data-dir migrate`: moves an install's data root from the legacy home dir to ~/.equin (and its local backups beside it) in one run, with every other process of the app stopped — rewrites every stored copy of the old path (each database in the cluster, the files under the root, Claude Code's transcript dirs), drops the cache entries that hold it, removes the legacy name once a scan finds none left and no checkout of the repo still runs code from before the move (otherwise keeps it as a link and names those checkouts), and relabels the gateway's login service dev.equin.gateway. A dry run by default; --apply executes.
           - Exemptions:
-            - Exempts itself from: `sql-writes:fit:dynamic` — `cli/databases.ts` (sanctioned)
+            - Exempts itself from:
+              - `sql-writes:fit:dynamic` — `cli/databases.ts` (sanctioned)
+              - `sql-writes:fit:hand-written` — `cli/databases.ts` (sanctioned)
     - **`request-origin`** — Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
       - Core:
         - Uses: `framework/product-name.LEGACY_IDS`
@@ -37621,6 +37641,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `debug/profiling/boot-bench`
               - `network/live/boot-snapshot`
+          - Exemptions:
+            - Exempts itself from:
+              - `sql-writes:fit:hand-written` — `server/internal/changelog-horizon.ts`, `server/internal/handoff.ts` (sanctioned)
+              - `sql-writes:fit:hand-written` — `server/internal/tables-ddl.ts` (sanctioned)
+              - `sql-writes:fit:hand-written` — `server/internal/persist.ts`, `server/internal/produced-guard.ts` (debt)
           - Test helpers:
             - Server: `@plugins/network/plugins/live/plugins/live-state-snapshot/server/testing`
               - `pruneChangelog` — Prune the durable changelog, and record what it deleted in the SAME statement: the prune horizon (`max_pruned_xid`) moves to the highest xid this run deleted, never down.
@@ -40178,6 +40203,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
           - `check-thread-safety/no-blocking-check-work` — `check/index.ts`, `check/no-token-identity-outside-owner.ts` (debt)
+          - `sql-writes:fit:hand-written` — `server/internal/page-id.ts` (sanctioned)
         - Exempted by: `page/editor` (0 debt)
       - Test helpers:
         - Web: `@plugins/page/plugins/editor/web/testing`
@@ -57420,6 +57446,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
+          - `sql-writes:fit:hand-written` — `server/internal/mutations/mandate.ts` (sanctioned)
       - Machine:
         - Register: `defineRefReaction('tasks.push-ledger (refs/heads/main)')`
       - Test helpers:

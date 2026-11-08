@@ -34,6 +34,11 @@
   - Imported by:
     - `debug/profiling/boot-bench`
     - `network/live/boot-snapshot`
+- Exemptions:
+  - Exempts itself from:
+    - `sql-writes:fit:hand-written` — `server/internal/changelog-horizon.ts`, `server/internal/handoff.ts` (sanctioned)
+    - `sql-writes:fit:hand-written` — `server/internal/tables-ddl.ts` (sanctioned)
+    - `sql-writes:fit:hand-written` — `server/internal/persist.ts`, `server/internal/produced-guard.ts` (debt)
 - Test helpers:
   - Server: `@plugins/network/plugins/live/plugins/live-state-snapshot/server/testing`
     - `pruneChangelog` — Prune the durable changelog, and record what it deleted in the SAME statement: the prune horizon (`max_pruned_xid`) moves to the highest xid this run deleted, never down.

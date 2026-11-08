@@ -33,6 +33,7 @@ const RETENTION = "24 hours";
 export async function pruneChangelog(db: NodePgDatabase): Promise<void> {
   await db.execute(
     drizzleSql.raw(
+      // sql-writes:hand-written — data-modifying CTE: prune the changelog and raise its horizon in one statement
       `WITH pruned AS (
          DELETE FROM ${LIVE_STATE_CHANGELOG_TABLE}
          WHERE xid < (SELECT COALESCE(min(position), 0) FROM ${LIVE_STATE_SNAPSHOT_TABLE})

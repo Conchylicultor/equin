@@ -155,6 +155,7 @@ async function insertRow(
   // type is then inferred from the target column, so no `::text[]` cast is
   // needed. Both forms were measured with `.toSQL()` and round-tripped
   // against the deployed table.
+  // sql-writes:hand-written — the CLI's ledger write against the previous build's schema, naming only its own columns
   await db.execute(sql`
     insert into "build_runs" ("id", "trigger", "commit_hash", "namespace", "targets", "pid")
     values (${r.id}, ${r.trigger}, ${r.commitHash}, ${namespace}, ${sql.param(r.targets)}, ${r.pid})
@@ -231,6 +232,7 @@ export async function closeRunOn(
   exitCode: number,
 ): Promise<void> {
   try {
+    // sql-writes:hand-written — the CLI's ledger write against the previous build's schema, naming only its own columns
     await db.execute(sql`
       update "build_runs" set "finished_at" = ${new Date()}, "exit_code" = ${exitCode}
       where "id" = ${buildRunIdKind.key(id)} and "finished_at" is null

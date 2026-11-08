@@ -61,6 +61,7 @@ async function writeEffective(
   const rows = await executeRows(exec, {
     label: "writeEffective",
     row: MovedRowSchema,
+    // sql-writes:hand-written — WITH RECURSIVE walk up the folder tree feeding the write
     query: sql`
     WITH RECURSIVE
       start AS (${starts}),

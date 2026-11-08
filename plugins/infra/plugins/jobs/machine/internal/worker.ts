@@ -651,6 +651,7 @@ async function repointHoldTasks(): Promise<void> {
     // expands a JS array inside a `sql` template into a comma-separated list of
     // bound params, which is right for `IN (…)` and malformed for anything
     // wanting ONE array value.
+    // sql-writes:hand-written — graphile's own tables (graphile_worker._private_*)
     await db.execute(sql`
       INSERT INTO graphile_worker._private_tasks (identifier)
       SELECT unnest(ARRAY[${sql.join(
@@ -673,6 +674,7 @@ async function repointHoldTasks(): Promise<void> {
         label: `repointHoldTasks: ${hold}`,
         // `j.id` is `bigint`, which pg hands back as a string; `::text` says so.
         row: z.object({ id: z.string() }),
+        // sql-writes:hand-written — graphile's own tables (graphile_worker._private_*)
         query: sql`
         UPDATE graphile_worker._private_jobs j
            SET task_id = t.id, priority = ${priority}

@@ -194,7 +194,9 @@ from `build`, so both sides of an otherwise-cyclic edge can reach them.
     - `build/runs-arm`
     - `framework/cli/build`
 - Exemptions:
-  - Exempts itself from: `blocking-fs/sync-named` — `shared/stale-holder.ts` (debt)
+  - Exempts itself from:
+    - `blocking-fs/sync-named` — `shared/stale-holder.ts` (debt)
+    - `sql-writes:fit:hand-written` — `shared/recorder.ts`, `shared/stale-holder.ts` (sanctioned)
 - Machine:
   - Exports (values): `settleDeadInflightRun`
 - Cli:

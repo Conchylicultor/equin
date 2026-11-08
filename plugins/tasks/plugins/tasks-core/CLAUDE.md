@@ -810,6 +810,7 @@ serves them.
   - Exempts itself from:
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
+    - `sql-writes:fit:hand-written` — `server/internal/mutations/mandate.ts` (sanctioned)
 - Machine:
   - Register: `defineRefReaction('tasks.push-ledger (refs/heads/main)')`
 - Test helpers:

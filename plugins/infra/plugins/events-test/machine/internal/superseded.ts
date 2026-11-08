@@ -174,6 +174,7 @@ export async function handleSuperseded(): Promise<Response> {
 
     // Make the row look claimed, exactly as graphile's `get_job` leaves it —
     // except back-dated past the acquisition grace.
+    // sql-writes:hand-written — stages a graphile row (graphile_worker._private_*)
     await db.execute(drizzleSql`
       UPDATE graphile_worker._private_jobs
          SET locked_at = now() - ${FORGED_LOCK_AGE}::interval,

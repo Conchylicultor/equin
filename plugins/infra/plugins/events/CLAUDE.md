@@ -122,6 +122,7 @@ insert and the ring's inline prune reach it through the change feed. The
     - `background.trigger-source` "job"
   - Uses:
     - `database.db`
+    - `database.trimToNewest`
     - `database.writeAtomically`
     - `database/sql-column.parsedJson`
     - `database/sql-projection.parsed`

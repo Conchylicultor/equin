@@ -139,6 +139,7 @@ export async function handleQueueLockNoSteal(): Promise<Response> {
     // Make the row AND its queue look claimed, exactly as graphile's `get_job`
     // leaves them (it stamps both in one statement) — except back-dated past the
     // acquisition grace.
+    // sql-writes:hand-written — stages a graphile row (graphile_worker._private_*)
     await db.execute(drizzleSql`
       UPDATE graphile_worker._private_jobs
          SET locked_at = now() - ${FORGED_LOCK_AGE}::interval,
@@ -147,6 +148,7 @@ export async function handleQueueLockNoSteal(): Promise<Response> {
              run_at = now() - interval '1 second'
        WHERE id = ${jobId}::bigint
     `);
+    // sql-writes:hand-written — stages a graphile row (graphile_worker._private_*)
     await db.execute(drizzleSql`
       UPDATE graphile_worker._private_job_queues
          SET locked_at = now() - ${FORGED_LOCK_AGE}::interval,

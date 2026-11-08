@@ -262,6 +262,7 @@ The dashboard's Events panel expands an event into these rows.
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `boundaries/no-platform-api` — `server/internal/collect.ts`, `server/internal/request-context.ts` (debt)
     - `networking/no-page-transport` — `web/internal/instance.ts` (sanctioned)
+    - `sql-writes:fit:hand-written` — `server/internal/aggregate-sql.ts` (sanctioned)
 - Test helpers:
   - Core: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core/testing`
     - `ZERO_METRICS`

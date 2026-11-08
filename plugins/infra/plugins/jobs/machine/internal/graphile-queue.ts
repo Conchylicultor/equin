@@ -200,10 +200,12 @@ async function cancelUnstarted(
 ): Promise<void> {
   if ("key" in match) {
     await db.execute(
+      // sql-writes:hand-written — graphile's own tables (graphile_worker._private_*)
       sql`DELETE FROM graphile_worker._private_jobs WHERE key = ${match.key} AND locked_at IS NULL`,
     );
   } else {
     await db.execute(
+      // sql-writes:hand-written — graphile's own tables (graphile_worker._private_*)
       sql`DELETE FROM graphile_worker._private_jobs WHERE key LIKE ${`${match.keyPrefix}%`} AND locked_at IS NULL`,
     );
   }

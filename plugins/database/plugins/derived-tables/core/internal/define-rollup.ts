@@ -173,6 +173,7 @@ function writeKeys(s: Shape, keysSql: string): { ctes: string; del: string } {
     ${onConflict}
     RETURNING 1
   )`,
+    // sql-writes:hand-written — generated from the rollup's declaration
     del: `DELETE FROM ${qualified(s.table)} AS t
    WHERE t.${qk} = ANY(${keysSql})
      AND NOT EXISTS (SELECT 1 FROM _rollup_agg AS a WHERE a.${qk} = t.${qk})`,

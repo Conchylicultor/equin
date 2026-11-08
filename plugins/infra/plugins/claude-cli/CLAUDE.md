@@ -132,7 +132,9 @@ block keep taking a plain `ClaudeCliCall`.
   - Uses:
     - `conversations/model-provider/catalog.getModelCatalog`
     - `database.db`
+    - `database.trimToNewest`
     - `database/admin.ExcludeFromFork`
+    - `database/sql-projection.nullable`
     - `database/sql-projection.parsed`
     - `infra/claude-cli/accounts.activeClaudeAccountId`
     - `infra/claude-cli/availability.noteClaudeCodeFailure`

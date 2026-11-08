@@ -1,5 +1,7 @@
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
-import { db } from "@plugins/database/server";
+import { db, trimToNewest } from "@plugins/database/server";
+import { nullable } from "@plugins/database/plugins/sql-projection/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import { _claudeCliCallHorizon, _claudeCliCalls } from "./tables";
 import { CLAUDE_CLI_RING_ID, RECENT_CALLS_LIMIT } from "../../core/resources";
@@ -37,14 +39,11 @@ export async function recordClaudeCliCall(
       durationMs: input.durationMs,
       correlationId: input.correlationId,
     });
-      await tx.execute(sql`
-      DELETE FROM claude_cli_calls
-      WHERE id NOT IN (
-        SELECT id FROM claude_cli_calls
-        ORDER BY created_at DESC
-        LIMIT ${RECENT_CALLS_LIMIT}
-      )
-    `);
+      await trimToNewest(tx, _claudeCliCalls, {
+        key: _claudeCliCalls.id,
+        newestFirst: _claudeCliCalls.createdAt,
+        keep: RECENT_CALLS_LIMIT,
+      });
       await writeRingHorizon(tx);
     });
     // eslint-disable-next-line promise-safety/no-bare-catch
@@ -53,22 +52,33 @@ export async function recordClaudeCliCall(
   }
 }
 
-type Executor = Pick<typeof db, "execute">;
+type Executor = Pick<NodePgDatabase, "insert" | "select">;
 
 /**
  * Rewrite the ring horizon from the log as it stands: its size and its
  * oldest call. Run by the recorder after each trim, and at boot (the log may
  * have moved without it — a fork excludes both tables, an older build kept no
- * horizon).
+ * horizon). An unchanged horizon is not rewritten (`setWhere`), so the change
+ * feed moves no reader of it.
  */
 export async function writeRingHorizon(executor: Executor): Promise<void> {
-  await executor.execute(sql`
-    INSERT INTO ${_claudeCliCallHorizon} (id, total, oldest)
-    SELECT ${CLAUDE_CLI_RING_ID}, count(*)::int, min(created_at)
-    FROM ${_claudeCliCalls}
-    ON CONFLICT (id) DO UPDATE
-      SET total = EXCLUDED.total, oldest = EXCLUDED.oldest
-      WHERE (${_claudeCliCallHorizon}.total, ${_claudeCliCallHorizon}.oldest)
-        IS DISTINCT FROM (EXCLUDED.total, EXCLUDED.oldest)
-  `);
+  const h = _claudeCliCallHorizon;
+  await executor
+    .insert(h)
+    .select(
+      executor
+        .select({
+          id: sql`${CLAUDE_CLI_RING_ID}`.mapWith(h.id).as("id"),
+          total: sql`count(*)::int`.mapWith(h.total).as("total"),
+          oldest: sql`min(${_claudeCliCalls.createdAt})`
+            .mapWith(nullable(h.oldest))
+            .as("oldest"),
+        })
+        .from(_claudeCliCalls),
+    )
+    .onConflictDoUpdate({
+      target: h.id,
+      set: { total: sql`excluded.total`, oldest: sql`excluded.oldest` },
+      setWhere: sql`(${h.total}, ${h.oldest}) IS DISTINCT FROM (excluded.total, excluded.oldest)`,
+    });
 }

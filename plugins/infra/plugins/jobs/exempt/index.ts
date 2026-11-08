@@ -75,4 +75,24 @@ export default [
     reason:
       "Writes graphile-worker's own tables (graphile_worker._private_*), created by graphile-worker's migrations rather than declared in this repo, so the check cannot know their columns. The jobs plugin owns the graphile integration.",
   },
+  {
+    rule: "sql-writes:fit:hand-written",
+    paths: [
+      "machine/internal/dead-job-gc.ts",
+      "machine/internal/graphile-queue.ts",
+      "machine/internal/introspection.ts",
+      "machine/internal/stuck-lock-sweeper.ts",
+      "machine/internal/worker.ts",
+    ],
+    kind: "sanctioned",
+    reason:
+      "Writes graphile-worker's own tables (graphile_worker._private_*), created by graphile-worker's migrations rather than declared in this repo — and the dead-job archive is one INSERT … SELECT out of them. The jobs plugin owns the graphile integration.",
+  },
+  {
+    rule: "sql-writes:fit:hand-written",
+    paths: ["machine/internal/run-stats.ts"],
+    kind: "sanctioned",
+    reason:
+      "One statement records a finished run: the stats upsert's RETURNING runs feeds the ring slot of the job_runs insert (a data-modifying CTE), so the counter and the ring cannot disagree and no transaction sits idle between them.",
+  },
 ] satisfies Exemptions;

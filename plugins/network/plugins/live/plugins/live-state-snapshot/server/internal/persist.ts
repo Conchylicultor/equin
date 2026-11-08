@@ -89,6 +89,7 @@ export async function persistSnapshot(
       s.definition IS DISTINCT FROM EXCLUDED.definition
       OR s.definition_at IS DISTINCT FROM s.persisted_at
     )`;
+    // sql-writes:hand-written — imperative live_state_snapshot table, no typed handle (debt)
     await db.execute(drizzleSql`
       INSERT INTO ${table} AS s
         (resource_key, params_key, value, position, tables_read, persisted_at,
@@ -121,6 +122,7 @@ export async function persistSnapshot(
     `);
     return;
   }
+  // sql-writes:hand-written — imperative live_state_snapshot table, no typed handle (debt)
   await db.execute(drizzleSql`
     INSERT INTO ${table}
       (resource_key, params_key, value, position, tables_read, persisted_at,
@@ -276,6 +278,7 @@ export async function sweepUnusableSnapshots(
 ): Promise<number> {
   if (exp.persisted.length === 0) return 0;
   const removed = await executeRows(db, {
+    // sql-writes:hand-written — imperative live_state_snapshot table, no typed handle (debt)
     query: drizzleSql`
       DELETE FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
       WHERE NOT (params_key = '{}' AND ${usableRowSql(exp)})
@@ -300,6 +303,7 @@ export async function clearPersistedSnapshots(
 ): Promise<number> {
   if (keys.length === 0) return 0;
   const removed = await executeRows(db, {
+    // sql-writes:hand-written — imperative live_state_snapshot table, no typed handle (debt)
     query: drizzleSql`
       DELETE FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
       WHERE params_key = '{}'

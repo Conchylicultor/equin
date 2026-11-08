@@ -204,6 +204,7 @@ export async function recordJobRun(
   const lastError =
     run.error === null ? null : cap(run.error, STATS_ERROR_CHARS);
   const input = run.input === undefined ? null : JSON.stringify(run.input);
+  // sql-writes:hand-written — data-modifying CTE: the stats upsert's RETURNING feeds the ring insert
   await dbx.execute(sql`
     WITH s AS (
       INSERT INTO job_run_stats AS st (

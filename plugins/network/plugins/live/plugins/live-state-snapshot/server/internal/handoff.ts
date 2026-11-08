@@ -88,6 +88,7 @@ export async function writeEpochHandoff(
     // Only the latest boot's record is ever trusted: this write replaces
     // every other one, so a successor never replays from a cut older than its
     // immediate predecessor's.
+    // sql-writes:hand-written — data-modifying CTE: replace the epoch handoff row in one statement
     await db.execute(drizzleSql`
       WITH old AS (
         DELETE FROM ${drizzleSql.raw(LIVE_STATE_HANDOFF_TABLE)}

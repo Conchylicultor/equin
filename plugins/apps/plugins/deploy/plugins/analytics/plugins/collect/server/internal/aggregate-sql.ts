@@ -1,4 +1,4 @@
-import { sql, type SQL } from "drizzle-orm";
+import { eq, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import {
@@ -14,7 +14,11 @@ import {
   type VisitDimension,
 } from "../../core";
 import type { AnalyticsDb } from "./collect";
-import { analyticsVisits } from "./tables";
+import {
+  analyticsDaily,
+  analyticsVisitMembers,
+  analyticsVisits,
+} from "./tables";
 
 /**
  * The ONE definition of "which (dimension, value) pairs a visit has, and what
@@ -262,7 +266,8 @@ export async function dailyTotalsRows(
  */
 export async function rollupDay(dbx: AnalyticsDb, day: string): Promise<void> {
   await dbx.transaction(async (tx) => {
-    await tx.execute(sql`DELETE FROM analytics_daily WHERE day = ${day}`);
+    await tx.delete(analyticsDaily).where(eq(analyticsDaily.day, day));
+    // sql-writes:hand-written — set-based INSERT … SELECT over the WITH aggregation of a day's raw visits
     await tx.execute(sql`
       WITH ${visitsAndMemberships(sql`v.day = ${day}`)}
       INSERT INTO analytics_daily
@@ -274,9 +279,10 @@ export async function rollupDay(dbx: AnalyticsDb, day: string): Promise<void> {
         JOIN base k ON k.id = f.visit_id
       WHERE f.dim <> ${TOTAL_DIMENSION} AND mm.dim <> ${UNFILTERED_LEVEL}
       GROUP BY k.day, f.dim, f.value, mm.dim, mm.value`);
-    await tx.execute(
-      sql`DELETE FROM analytics_visit_members WHERE day = ${day}`,
-    );
+    await tx
+      .delete(analyticsVisitMembers)
+      .where(eq(analyticsVisitMembers.day, day));
+    // sql-writes:hand-written — set-based INSERT … SELECT over the WITH aggregation of a day's raw visits
     await tx.execute(sql`
       WITH ${visitsAndMemberships(sql`v.day = ${day}`)}
       INSERT INTO analytics_visit_members (visit_id, day, visitor_id, dim, value)

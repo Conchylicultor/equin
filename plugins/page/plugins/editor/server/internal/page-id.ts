@@ -123,6 +123,7 @@ export async function recomputePageIdSubtree(
       old_page_id: z.string().nullable(),
       page_id: z.string().nullable(),
     }),
+    // sql-writes:hand-written — WITH RECURSIVE … UPDATE re-deriving page_id over a moved subtree
     query: sql`
     WITH RECURSIVE resolved AS (
       -- Root: pageId derived from its current parent via the standard rule.

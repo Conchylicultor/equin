@@ -54,4 +54,11 @@ export default [
     reason:
       "Host tooling only: no backend loads this module (blocking-fs:sync-named-reach measures the backends' import graph), so its blocking helpers hold only the CLI's, a check's or a script's own thread.",
   },
+  {
+    rule: "sql-writes:fit:hand-written",
+    paths: ["server/internal/runner.ts"],
+    kind: "sanctioned",
+    reason:
+      "The migration runner's own ledger table is written while the schema it records is being applied — before any table definition is known to hold — by the runner that owns that table.",
+  },
 ] satisfies Exemptions;

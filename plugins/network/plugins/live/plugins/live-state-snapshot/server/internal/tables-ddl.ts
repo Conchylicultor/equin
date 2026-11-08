@@ -159,6 +159,7 @@ async function ensureChangelogHorizon(db: NodePgDatabase): Promise<void> {
     : `SELECT true, NULL::numeric`;
   await db.execute(
     drizzleSql.raw(
+      // sql-writes:hand-written — seeds the imperative horizon table in its own boot DDL
       `INSERT INTO ${LIVE_STATE_CHANGELOG_HORIZON_TABLE} (id, max_pruned_xid)
        ${seed}
        ON CONFLICT (id) DO NOTHING`,

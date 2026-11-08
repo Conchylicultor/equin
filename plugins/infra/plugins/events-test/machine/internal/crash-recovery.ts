@@ -142,6 +142,7 @@ export async function handleCrashRecovery(): Promise<Response> {
     // except back-dated well past the acquisition grace. `is_available` is a
     // generated column off `locked_at`, so this also gates the live worker from
     // claiming the row until the lock is legitimately reclaimed.
+    // sql-writes:hand-written — stages a graphile row (graphile_worker._private_*)
     await db.execute(drizzleSql`
       UPDATE graphile_worker._private_jobs
          SET locked_at = now() - ${FORGED_LOCK_AGE}::interval,

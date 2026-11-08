@@ -23,4 +23,11 @@ export default [
     reason:
       "Page-wide telemetry: page-view analytics belong to the page and reach the page's own server (D3).",
   },
+  {
+    rule: "sql-writes:fit:hand-written",
+    paths: ["server/internal/aggregate-sql.ts"],
+    kind: "sanctioned",
+    reason:
+      "The nightly rollup re-sums a day's raw visits into analytics_daily / analytics_visit_members as one set-based INSERT … SELECT whose source is the shared WITH aggregation (visitsAndMemberships, aggregate-sql.ts) the raw report and the hourly chart also read — the one membership definition that keeps totals and raw reports equal. It is SQL text by design, so the insert's source stays that text rather than a typed select.",
+  },
 ] satisfies Exemptions;

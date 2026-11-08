@@ -1,6 +1,6 @@
-import { sql } from "drizzle-orm";
+import { lt, sql } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@plugins/database/server";
+import { db, trimToNewest } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { DEAD_JOBS_ARCHIVE_CAP } from "../../core/resources";
 import { deadJobPredicate, jobNameExpr, queueJobsFrom } from "./introspection";
@@ -8,6 +8,7 @@ import { defineJob, type EnqueueTx } from "../../server/internal/registry";
 import { ownedWorkflowRunIds } from "../../server/internal/run-identity";
 import { ANY_QUEUE_CHANGE, emitQueueActivity } from "./slot-ledger";
 import { deleteWorkflowLogs } from "../../server/internal/workflow-log";
+import { _deadJobs } from "../../server/internal/tables";
 
 const PurgedRowSchema = z.object({
   id: z.string(),
@@ -39,6 +40,7 @@ export async function reconcileDeadJobs(
   await database.transaction(async (tx) => {
     // Archive: insert dead queue rows into dead_jobs. ON CONFLICT DO NOTHING
     // keeps this safe to run on every boot / re-fork.
+    // sql-writes:hand-written — graphile's own tables (graphile_worker._private_*)
     await tx.execute(sql`
       INSERT INTO dead_jobs (id, job_name, input, attempts, max_attempts, last_error, died_at)
       SELECT j.id::text,
@@ -63,6 +65,7 @@ export async function reconcileDeadJobs(
     const purged = await executeRows(tx, {
       label: "dead-job-gc: purge",
       row: PurgedRowSchema,
+      // sql-writes:hand-written — graphile's own tables (graphile_worker._private_*)
       query: sql`
       DELETE FROM graphile_worker._private_jobs j
        USING graphile_worker._private_tasks t
@@ -75,21 +78,16 @@ export async function reconcileDeadJobs(
     });
     await deleteWorkflowLogs(tx, ownedWorkflowRunIds(purged));
 
-    // Bound the archive: drop rows past the TTL.
-    await tx.execute(sql`
-      DELETE FROM dead_jobs
-       WHERE archived_at < now() - (${ARCHIVE_TTL})::interval
-    `);
-
-    // Bound the archive: keep only the newest DEAD_JOBS_ARCHIVE_CAP rows.
-    await tx.execute(sql`
-      DELETE FROM dead_jobs
-       WHERE id IN (
-         SELECT id FROM dead_jobs
-          ORDER BY archived_at DESC
-          OFFSET ${DEAD_JOBS_ARCHIVE_CAP}
-       )
-    `);
+    // Bound the archive: drop rows past the TTL, then keep only the newest
+    // DEAD_JOBS_ARCHIVE_CAP rows.
+    await tx
+      .delete(_deadJobs)
+      .where(lt(_deadJobs.archivedAt, sql`now() - (${ARCHIVE_TTL})::interval`));
+    await trimToNewest(tx, _deadJobs, {
+      key: _deadJobs.id,
+      newestFirst: _deadJobs.archivedAt,
+      keep: DEAD_JOBS_ARCHIVE_CAP,
+    });
   });
 
   // dead_jobs is public (the change feed moves the dead-jobs collection on the

@@ -112,6 +112,7 @@ async function shiftClock(pglite: PGlite, ms: number): Promise<void> {
     await tx.exec("SET LOCAL session_replication_role = replica");
     for (const [table, cols] of byTable) {
       await tx.exec(
+        // sql-writes:hand-written — clock shift over every timestamp column the catalog lists
         `UPDATE ${quote(table)} SET ${cols
           .map(
             (c) => `${quote(c)} = ${quote(c)} + interval '${ms} milliseconds'`,

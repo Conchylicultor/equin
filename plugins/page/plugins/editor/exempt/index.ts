@@ -92,4 +92,11 @@ export default [
     reason:
       "Per-file synchronous work on the shared check thread (a blocking fs/process call made per item, or a direct maskSource / createSourceFile) that predates the rule; move it onto ctx.repo() / fs/promises and checks/core's maskedSource / parsedTsSource.",
   },
+  {
+    rule: "sql-writes:fit:hand-written",
+    paths: ["server/internal/page-id.ts"],
+    kind: "sanctioned",
+    reason:
+      "Re-derives page_id over a moved subtree with one WITH RECURSIVE … UPDATE: the new value of each row depends on its ancestors' new values, which no typed update can express.",
+  },
 ] satisfies Exemptions;

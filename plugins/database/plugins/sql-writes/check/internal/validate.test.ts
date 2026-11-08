@@ -90,6 +90,7 @@ function site(
       file: "f.ts",
       line: 1,
       tagged: true,
+      marker: null,
       chunks: [...strings],
       holes: holes.map(asHole),
     },

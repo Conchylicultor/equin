@@ -25,6 +25,60 @@ subquery:
 | `missing-required` | an INSERT leaves out a NOT NULL column nothing in the database fills (no DB default — a JS `$defaultFn` does not count —, not generated, identity or serial) | `sql-writes:fit:schema` |
 | `dynamic` | its target table or a written column is not spelled in source (an interpolated value or list), or a `sql` tagged write does not parse | `sql-writes:fit:dynamic` |
 
+## Every hand-written write is declared (`sql-writes:fit:hand-written`)
+
+Fitting the schema is not enough: a write that COULD go through a typed handle
+should, because the handle is what makes a wrong column a tsc error before it
+is a runtime one. So every write site outside an e2e script is a
+`hand-written` issue unless the plugin that owns the file declares it, in its
+own `exempt/index.ts`, under `sql-writes:fit:hand-written` with the reason the
+typed path cannot express it (`./equin exempt list --rule
+sql-writes:fit:hand-written`) — AND each write in it is bound by its own
+marker comment on its statement (or any enclosing node up to it):
+
+```ts
+// sql-writes:hand-written — WITH RECURSIVE walk up the folder tree feeding the write
+const rows = await executeRows(exec, { query: sql`WITH RECURSIVE …` });
+```
+
+The manifest says which plugin owns the exception and why (kind, reason, a debt
+task); the marker says which statements it covers. So a NEW raw write fails
+`./equin check` even in a declared file, until it is typed or marked; a marker
+opening a comment that binds no write is a stale marker, a marker that binds
+MORE than one write (a comment above a `switch`, an object of statements, two
+writes in one statement) is refused — one marker declares one write, so a write
+added under it later is not covered — and a declared file
+whose writes are gone is an unused exemption — both fail too. Only a comment
+that OPENS with the marker is one (prose naming it is not), and SQL text inside
+a literal is never read as a comment (`sites.ts`'s `markerOf`).
+
+The typed path, in the order to reach for it:
+
+| you want | write it with |
+|---|---|
+| insert / update / delete by column | drizzle's builders on the table handle (`db.insert(t).values`, `.update(t).set`, `.delete(t).where`) |
+| an upsert, a conditional one | `.onConflictDoUpdate({ target, set, setWhere })`; an extension's `upsert` / `upsertQuery(id, values, { onlyIf })` |
+| rows from a query | `.insert(t).select(qb.select({...}).from(…))` |
+| per-row values in one statement | `.update(t).set({ col: sql\`v.col\` }).from(sql\`unnest(…) AS v(…)\`)` |
+| a capped log (keep the newest N) | `trimToNewest(exec, t, { key, newestFirst, keep })` (`database/server`) |
+| several writes, atomically, no idle window | `writeAtomically(exec, [builders…])` (`database/server`) |
+
+What stays hand-written, declared `kind: "sanctioned"`: a data-modifying or
+recursive CTE (one write feeding the next in one statement, a `WITH RECURSIVE`
+walk feeding an UPDATE), a set-based `INSERT … SELECT` over a hand-written
+aggregation, graphile-worker's own tables, a generator writing names it
+computes from a declaration or the catalog (rollups, the extension handle,
+PGlite's clock shift, the data-root migration), the migration runner's own
+ledger, and the build CLI's ledger write (new code against the previous
+schema). A write to a table made by imperative DDL (no drizzle handle yet) is
+`kind: "debt"`, naming the task that gives it one.
+
+**e2e scripts are out of this rule's scope** (still parsed and fitted): they
+drive the deployed app from outside and may import only `core` / `e2e`
+barrels, so the server's typed tables are unreachable from them, and an
+out-of-band row is often what the script verifies (the change feed carrying
+it to the page).
+
 ## The declared schema (`check/internal/model.ts`, `schema-probe.ts`)
 
 No hand-kept list. Two sources:

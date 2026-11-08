@@ -338,6 +338,7 @@ export function defineExtension<
       sql`${param(value, col)}::${sql.raw(col.getSQLType())}`;
     // An empty patch rewrites the key with its own value, as `upsertBuilder`.
     const set = cols.length > 0 ? cols : [keyColumn];
+    // sql-writes:hand-written — the guarded upsert, compiled from the extension's columns as embeddable SQL
     return sql`insert into ${table} (${sql.join(
       [keyColumn, ...cols].map(name),
       sql`, `,

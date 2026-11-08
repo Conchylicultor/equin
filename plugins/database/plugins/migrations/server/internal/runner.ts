@@ -709,12 +709,14 @@ async function runSteps(tx: Tx, steps: readonly SchemaStep[]): Promise<void> {
   for (const step of steps) {
     if (step.kind === "record") {
       await tx.execute(
+        // sql-writes:hand-written — the runner's own ledger, written while the schema is being applied
         drizzleSql`INSERT INTO ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (hash, file, contract_pending) VALUES (${step.hash}, ${step.file}, ${step.contractPending})`,
       );
       continue;
     }
     if (step.kind === "complete") {
       await tx.execute(
+        // sql-writes:hand-written — the runner's own ledger, written while the schema is being applied
         drizzleSql`UPDATE ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} SET contract_pending = false WHERE hash IN (${drizzleSql.join(
           step.hashes.map((h) => drizzleSql`${h}`),
           drizzleSql`, `,

@@ -140,6 +140,7 @@ export async function sweepProducedSnapshots(
   }
   if (swept.length === 0) return [];
   const deleted = await executeRows(db, {
+    // sql-writes:hand-written — imperative live_state_snapshot table, no typed handle (debt)
     query: drizzleSql`
       DELETE FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
        WHERE (resource_key, params_key) IN (${drizzleSql.join(

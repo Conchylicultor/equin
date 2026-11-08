@@ -304,6 +304,7 @@ async function takeOlderStateTables(
       });
       signatures = new Map(rows.map((r) => [r.name, r.signature]));
     }
+    // sql-writes:hand-written — generated from the rollup's declaration
     await tx.execute(drizzleSql.raw(`DELETE FROM "public"."${table}"`));
   }
   return signatures;

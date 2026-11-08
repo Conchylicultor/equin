@@ -41,4 +41,15 @@ export default [
     reason:
       "Drives graphile-worker's own tables (graphile_worker._private_*) to stage crash and lock scenarios; those tables come from graphile-worker's migrations, not from a declaration in this repo.",
   },
+  {
+    rule: "sql-writes:fit:hand-written",
+    paths: [
+      "machine/internal/crash-recovery.ts",
+      "machine/internal/queue-lock-no-steal.ts",
+      "machine/internal/superseded.ts",
+    ],
+    kind: "sanctioned",
+    reason:
+      "The harnesses stage a stuck or superseded graphile row by writing graphile-worker's own tables (graphile_worker._private_*), which graphile's migrations create and this repo declares no typed table for.",
+  },
 ] satisfies Exemptions;

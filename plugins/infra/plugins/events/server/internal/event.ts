@@ -7,7 +7,7 @@ import {
   pgTable,
 } from "drizzle-orm/pg-core";
 import { type EnqueueTx } from "@plugins/infra/plugins/jobs/server";
-import { db } from "@plugins/database/server";
+import { db, trimToNewest } from "@plugins/database/server";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { eventTriggerColumns } from "./base-columns";
 import {
@@ -283,12 +283,9 @@ async function recordEmission(
     matchedTriggerIds,
   });
   // Cap at EMISSIONS_CAP rows — cheap single DELETE instead of a window.
-  await exec.execute(
-    sql`DELETE FROM ${_event_emissions}
-        WHERE ${_event_emissions.id} IN (
-          SELECT id FROM ${_event_emissions}
-          ORDER BY ${_event_emissions.emittedAt} DESC
-          OFFSET ${EMISSIONS_CAP}
-        )`,
-  );
+  await trimToNewest(exec, _event_emissions, {
+    key: _event_emissions.id,
+    newestFirst: _event_emissions.emittedAt,
+    keep: EMISSIONS_CAP,
+  });
 }

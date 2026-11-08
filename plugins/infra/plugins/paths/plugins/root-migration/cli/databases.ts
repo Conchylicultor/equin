@@ -93,6 +93,7 @@ export function tableUpdateSql(
     .map((column) => matchesSql(column, move, params))
     .join(" OR ");
   return {
+    // sql-writes:hand-written — rewrites catalog-listed columns holding the old data root
     sql: `UPDATE ${ident(table.schema)}.${ident(table.name)} SET ${set} WHERE ${where}`,
     params,
   };
