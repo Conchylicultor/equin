@@ -4416,7 +4416,6 @@ export function createResourceRuntime(
       if (union > batch.maxIds) open = undefined;
     }
     const joining = open !== undefined;
-    const t0 = performance.now();
     const target = open ?? { ids: new Set<string>(), members: [] };
     const value = new Promise<FlightValue>((resolve, reject) => {
       target.members.push({ ...read, ids, resolve, reject });
@@ -4425,9 +4424,11 @@ export function createResourceRuntime(
     if (joining) {
       const stats = pointBatchStatsOf(entry.key);
       stats.joined++;
-      const charge = () => opts.onCoalesceWait?.(performance.now() - t0);
+      // Announced now, charged as the batch settles: the joiner waits on
+      // another read's batch, never on its own work.
+      const end = opts.onCoalesceJoin?.();
       // Observes only — the flight's caller handles the rejection.
-      void value.then(charge, charge);
+      if (end) void value.then(end, end);
     } else {
       openPointBatches.set(slot, target);
       startPointBatch(entry, slot, target, read.pk);

@@ -31916,7 +31916,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/request-origin.originOf`
           - `infra/request-origin.UNREVERTED_WRITE_HEADER`
           - `infra/runtime-identity.isMain`
-          - `infra/runtime-profiler.chargeWait`
+          - `infra/runtime-profiler.beginWait`
           - `infra/runtime-profiler.gateWaitHooks`
           - `infra/runtime-profiler.recordEntrySpan`
           - `packages/inflight.createInflight`
@@ -34824,13 +34824,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Track`
           - `WaitBand`
           - `WaitBreakdown`
+          - `WaitEnd`
           - `WaitKind`
         - Exports (values):
           - `__contribute`
           - `__pushBand`
           - `beginWait`
           - `captureFlightWindow`
-          - `chargeWait`
           - `currentCallerKind`
           - `currentEntryLabel`
           - `currentOriginClass`
@@ -34843,6 +34843,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installProfilingSuppressionRuntime`
           - `installRootContextRuntime`
           - `installSpanContextRuntime`
+          - `markWait`
           - `noteLoopObserved`
           - `noteLoopTurn`
           - `onSlowSpan`
@@ -34863,13 +34864,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 70 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
-          - `infra` ×23
+        - Imported by: 68 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+          - `infra` ×22
           - `debug` ×20
           - `conversations` ×6
           - `apps` ×5
-          - `database` ×3
           - `tasks` ×3
+          - `database` ×2
           - `packages` ×2
           - `reports` ×2
           - `auth`
@@ -38528,7 +38529,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`watched-memo`** — Watch-authoritative result memo: createWatchedMemo({ name, facts, signatureOf, compute, changes }) keeps one value per key fresh from its change source while anyone watches it — every change runs one coalesced pass (facts, then compute over them), a get while watched is the held value with no probe — and falls back, unwatched or after a failed pass, to a signature probe whose miss single-flights compute over the probe's own facts.
       - Core:
         - Uses:
-          - `infra/runtime-profiler.chargeWait`
+          - `infra/runtime-profiler.beginWait`
+          - `infra/runtime-profiler.markWait`
           - `infra/runtime-profiler.runTracked`
           - `packages/coalesce.createKeyedCoalescer`
           - `packages/inflight.createInflight`
