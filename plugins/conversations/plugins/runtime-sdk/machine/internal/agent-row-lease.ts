@@ -60,7 +60,10 @@ export function leaseAgentRow<T>(
         return held.get(id) ?? null;
       },
       async update(patch) {
-        const row = await updateAgentRow(id, patch);
+        const prev = held.get(id);
+        // Nothing held is no row: the lease read it on entry.
+        if (!prev) return null;
+        const row = await updateAgentRow(id, prev, patch);
         if (row) held.set(id, row);
         else held.delete(id);
         return row;

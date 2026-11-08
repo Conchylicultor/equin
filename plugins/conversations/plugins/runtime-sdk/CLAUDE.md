@@ -84,6 +84,18 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   Only writers hold; a catch-up of an agent no longer followed releases it.
   Sound because one backend per DB serves the runtime and nothing else writes
   the table.
+- **The per-batch checkpoint is out of the change feed; the stop is its own
+  row** (`server/internal/tables.ts`, `rows.ts`). `conversations_ext_sdk_agent`
+  (cursor, read position, the projection) moves on every batch an agent writes
+  and is read only through the lease, so the server barrel excludes it from the
+  feed (`ExcludeFromChangeFeed`). The fields a live surface reads — `stoppedAt`,
+  `stopError`, `account` (the runtime-sdk.error-stopped collection, auto-resume)
+  — live in `conversations_ext_sdk_agent_stop`, written in the SAME statement
+  as the batch's checkpoint (`writeAtomically`) and only when one of them moved
+  (`STOP_FIELDS`). Before: every batch was a feed change — trigger, changelog
+  row, NOTIFY, routing pass reaching no reader (2026-11-08: ~6,500/h on main).
+  The file watch and catch-up per append remain: each append is an event to
+  apply.
 - **The consumer signals the status reconciler only when the runtime's answer
   moves** (`machine/internal/runtime-info.ts`): `infoOf` is the one derivation
   of what `inspect` reports from a projection, and a batch signals only when
@@ -121,7 +133,7 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   true }` only counts. What the DB cannot place (no conversation or attempt
   row, a namespace that is no attempt) is kept. Never by age: a held task's
   idle agent keeps its directory while its workspace does.
-- `server/` — the `conversations_ext_sdk_agent` side table, the pure event
+- `server/` — the `conversations_ext_sdk_agent` and `…_stop` side tables, the pure event
   reducer, the launch → options-file mapping.
 - Conversations left on the retired tmux runtime were moved by the data
   migration `retire_tmux_rows` (`runtime='sdk'`; a live row hibernated, so its
@@ -278,7 +290,7 @@ Gotchas the spike hit:
 
 ## Plugin reference
 
-- Description: The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (named by the account; the week collapsed, the session too expanded; attention while its limit is reached), the conversations an API error stopped (Resume all), and Manage accounts. The agent manager's sidebar foot: the Claude account new agents launch on with its weekly quota, opening the account menu (its session and week meters; each account's weekly room, add — signing in to another account in the app, or an API key — / remove / switch, auto-switch, auto-resume when a limit resets, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
+- Description: The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (named by the account; the week collapsed, the session too expanded; attention while its limit is reached), the conversations an API error stopped (Resume all), and Manage accounts. The agent manager's sidebar foot: the Claude account new agents launch on with its weekly quota, opening the account menu (its session and week meters; each account's weekly room, add — signing in to another account in the app, or an API key — / remove / switch, auto-switch, auto-resume when a limit resets, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor — out of the change feed, being the consumer's per-batch checkpoint) and the conversations_ext_sdk_agent_stop side table (the part a live surface reads: the API-error stop and the account, written only when it changes), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
 - Web:
   - Contributes:
     - `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
@@ -320,6 +332,7 @@ Gotchas the spike hit:
     - `resource.declare` "runtime-sdk.error-stopped"
     - `resource.declare` "runtime-sdk.error-stopped:groups"
     - `resource.declare` "runtime-sdk.error-stopped:rows"
+    - `change-feed-exclusion` "conversations_ext_sdk_agent"
     - `ConfigV2.Register` "runtime-sdk-auto-resume"
     - `trigger` "runtime-sdk.attempt-ended"
     - `Workspace.Reclaimed` "runtime-sdk.agent-dirs"
@@ -333,14 +346,18 @@ Gotchas the spike hit:
     - `conversations/agent-launch.LAUNCH_CLI_SETTINGS`
     - `conversations/agent-launch.mergeLaunchSettings`
     - `database.db`
+    - `database.writeAtomically`
     - `infra/entity-extensions.defineExtension`
     - `network/live.serveCollection`
     - `network/live.ServeCollectionOptions`
+    - `network/live/change-feed.ExcludeFromChangeFeed`
     - `tasks/tasks-core._attempts`
     - `tasks/tasks-core._conversations`
     - `tasks/tasks-core._tasks`
   - DB schema: `plugins/conversations/plugins/runtime-sdk/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `conversations_ext_sdk_agent`)
+  - Entity extension of:
+    - `tasks/tasks-core` (table `conversations_ext_sdk_agent`)
+    - `tasks/tasks-core` (table `conversations_ext_sdk_agent_stop`)
   - Resources:
     - `runtime-sdk.agent-processes` (push, notified, whole: one entry per namespace on this machine with a live agent — at most its worktrees, whole: one entry per Claude account on this machine — a handful)
     - `runtime-sdk.claude-usage` (push, notified, whole: one entry per Claude account signed in on this machine — a handful)

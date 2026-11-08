@@ -1,5 +1,13 @@
-import { and, eq, inArray, isNotNull, ne } from "drizzle-orm";
-import { db } from "@plugins/database/server";
+import {
+  and,
+  eq,
+  getTableColumns,
+  inArray,
+  isNotNull,
+  ne,
+  sql,
+} from "drizzle-orm";
+import { db, writeAtomically } from "@plugins/database/server";
 import {
   _attempts,
   _conversations,
@@ -8,7 +16,7 @@ import {
 import { USAGE_LIMIT_ERROR } from "../../core";
 import { EMPTY_PROJECTION, type AgentProjection } from "./reducer";
 import type { ReadPosition } from "./read-position";
-import { sdkAgents } from "./tables";
+import { sdkAgentStops, sdkAgents } from "./tables";
 
 // The sdk runtime's reads and writes of this backend's DB.
 
@@ -94,18 +102,21 @@ export async function usageLimitStoppedConversations(): Promise<
   { id: string; stoppedAt: number }[]
 > {
   const rows = await db
-    .select({ id: _conversations.id, stoppedAt: sdkAgents.table.stoppedAt })
+    .select({
+      id: _conversations.id,
+      stoppedAt: sdkAgentStops.table.stoppedAt,
+    })
     .from(_conversations)
     .innerJoin(
-      sdkAgents.table,
-      eq(sdkAgents.table.conversationId, _conversations.id),
+      sdkAgentStops.table,
+      eq(sdkAgentStops.table.conversationId, _conversations.id),
     )
     .where(
       and(
         eq(_conversations.runtime, "sdk"),
         inArray(_conversations.status, [...LIVE_STATUSES]),
-        isNotNull(sdkAgents.table.stoppedAt),
-        eq(sdkAgents.table.stopError, USAGE_LIMIT_ERROR),
+        isNotNull(sdkAgentStops.table.stoppedAt),
+        eq(sdkAgentStops.table.stopError, USAGE_LIMIT_ERROR),
       ),
     );
   return rows.flatMap((r) =>
@@ -120,13 +131,60 @@ export interface AgentRow extends AgentProjection {
 }
 
 /**
+ * The projection's fields a live surface reads, stored in their own row
+ * (`conversations_ext_sdk_agent_stop`, tables.ts) — the rest is the consumer's
+ * private checkpoint, outside the change feed.
+ */
+const STOP_FIELDS = ["stoppedAt", "stopError", "account"] as const;
+type StopFields = Pick<AgentRow, (typeof STOP_FIELDS)[number]>;
+const NO_STOP: StopFields = { stoppedAt: null, stopError: null, account: null };
+
+function sameStop(a: StopFields, b: StopFields): boolean {
+  return (
+    a.stoppedAt?.getTime() === b.stoppedAt?.getTime() &&
+    a.stopError === b.stopError &&
+    a.account === b.account
+  );
+}
+
+/** `patch` without the stop fields: what goes to the checkpoint row. */
+function checkpointPatch(
+  patch: Partial<AgentRow>,
+): Omit<Partial<AgentRow>, (typeof STOP_FIELDS)[number]> {
+  const { stoppedAt: _s, stopError: _e, account: _a, ...rest } = patch;
+  return rest;
+}
+
+// A stop field reads NULL where the agent has no stop row (the LEFT join): the
+// empty projection's value for each of them.
+const agentRowColumns = {
+  ...getTableColumns(sdkAgents.table),
+  stoppedAt: sdkAgentStops.table.stoppedAt,
+  stopError: sdkAgentStops.table.stopError,
+  account: sdkAgentStops.table.account,
+};
+
+/** The checkpoint row with its stop row (when it has one) joined. */
+function selectAgentRows() {
+  return db
+    .select(agentRowColumns)
+    .from(sdkAgents.table)
+    .leftJoin(
+      sdkAgentStops.table,
+      eq(sdkAgentStops.table.conversationId, sdkAgents.table.conversationId),
+    );
+}
+
+/**
  * The agent's row read from the DB, or null before its first `create`. Only
  * the machine's row lease (`machine/internal/agent-row-lease.ts`) calls it: it
  * is the row's one writer and holds the current row, so any other read goes
  * through it.
  */
 export async function readAgentRow(id: string): Promise<AgentRow | null> {
-  const row = await sdkAgents.get(id);
+  const [row] = await selectAgentRows()
+    .where(eq(sdkAgents.table.conversationId, id))
+    .limit(1);
   return row ? agentRowOf(row) : null;
 }
 
@@ -136,51 +194,101 @@ export async function readAgentRows(
 ): Promise<Map<string, AgentRow>> {
   const out = new Map<string, AgentRow>();
   if (ids.length === 0) return out;
-  const rows = await db
-    .select()
-    .from(sdkAgents.table)
-    .where(inArray(sdkAgents.table.conversationId, [...ids]));
+  const rows = await selectAgentRows().where(
+    inArray(sdkAgents.table.conversationId, [...ids]),
+  );
   for (const row of rows) out.set(row.conversationId, agentRowOf(row));
   return out;
 }
 
-type StoredRow = NonNullable<Awaited<ReturnType<typeof sdkAgents.get>>>;
-
-function agentRowOf(row: StoredRow): AgentRow {
+type CheckpointRow = NonNullable<Awaited<ReturnType<typeof sdkAgents.get>>>;
+function agentRowOf(row: CheckpointRow & StopFields): AgentRow {
   const { conversationId: _id, createdAt: _c, updatedAt: _u, ...rest } = row;
   return rest;
 }
 
 /**
- * Write `patch` to the agent's row and answer the row as written — null when
- * there is none (its conversation was deleted). One statement, so a batch's
- * projection, cursor and read position land together and a restart reads on
- * from exactly the line after the cursor.
+ * Write `patch` over the agent's row `prev` (as last written) and answer the
+ * row as written — null when there is none (its conversation was deleted).
+ * One statement, so a batch's projection, cursor and read position land
+ * together and a restart reads on from exactly the line after the cursor. The
+ * stop row is in that statement only when a stop field moved: a batch that
+ * moved only the checkpoint writes nothing the change feed carries.
  */
 export async function updateAgentRow(
   id: string,
+  prev: AgentRow,
   patch: Partial<AgentRow>,
 ): Promise<AgentRow | null> {
-  const row = await sdkAgents.update(id, patch);
-  return row ? agentRowOf(row) : null;
+  const checkpoint = checkpointPatch(patch);
+  // A field the patch leaves undefined keeps its value, as drizzle's SET does.
+  const stop: StopFields = {
+    stoppedAt: patch.stoppedAt === undefined ? prev.stoppedAt : patch.stoppedAt,
+    stopError: patch.stopError === undefined ? prev.stopError : patch.stopError,
+    account: patch.account === undefined ? prev.account : patch.account,
+  };
+  if (sameStop(prev, stop)) {
+    const row = await sdkAgents.update(id, checkpoint);
+    return row ? agentRowOf({ ...row, ...stop }) : null;
+  }
+  const hasCheckpoint = Object.values(checkpoint).some((v) => v !== undefined);
+  await writeAtomically(db, [
+    hasCheckpoint
+      ? db
+          .update(sdkAgents.table)
+          .set(checkpoint)
+          .where(eq(sdkAgents.table.conversationId, id))
+      : null,
+    stopUpsert(id, stop),
+  ]);
+  return { ...prev, ...checkpoint, ...stop };
+}
+
+/**
+ * The stop row's upsert, inserting only while the agent's checkpoint row
+ * exists: a conversation deleted under its agent (the cascade took the
+ * checkpoint) writes nothing rather than failing the stop row's foreign key,
+ * and its next checkpoint-only write answers null, as before the split.
+ */
+function stopUpsert(id: string, stop: StopFields) {
+  return sql`INSERT INTO ${sdkAgentStops.table} ("parent_id", "stopped_at", "stop_error", "account")
+    SELECT "parent_id", ${stop.stoppedAt}::timestamptz, ${stop.stopError}::text, ${stop.account}::text
+    FROM ${sdkAgents.table} WHERE "parent_id" = ${id}
+    ON CONFLICT ("parent_id") DO UPDATE SET
+      "stopped_at" = EXCLUDED."stopped_at",
+      "stop_error" = EXCLUDED."stop_error",
+      "account" = EXCLUDED."account",
+      "updated_at" = now()`;
 }
 
 /**
  * A fresh row: the empty projection, the cursor at 0, no read position — what
- * an agent whose events file is gone starts from (it numbers from 1 again).
+ * an agent whose events file is gone starts from (it numbers from 1 again). Its
+ * stop row goes with it: the empty projection has no stop and no account.
  */
 export async function resetAgentRow(
   id: string,
   worktreePath: string,
   sessionId: string,
 ): Promise<AgentRow> {
-  const row = await sdkAgents.upsert(id, {
+  const {
+    stoppedAt: _s,
+    stopError: _e,
+    account: _a,
+    ...checkpoint
+  } = {
     ...EMPTY_PROJECTION,
     eventsPosition: null,
     sessionId,
     worktreePath,
-  });
-  return agentRowOf(row);
+  };
+  await writeAtomically(db, [
+    sdkAgents.upsertQuery(id, checkpoint),
+    db
+      .delete(sdkAgentStops.table)
+      .where(eq(sdkAgentStops.table.conversationId, id)),
+  ]);
+  return { ...checkpoint, ...NO_STOP };
 }
 
 /** The attempt conversation `id` belongs to. Throws for an unknown conversation. */

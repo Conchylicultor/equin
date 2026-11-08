@@ -9,9 +9,11 @@ import {
   errorStoppedConversations,
   type ErrorStoppedConversation,
 } from "../../core";
-import { _sdkAgentsTable } from "./tables";
+import { _sdkAgentStopsTable } from "./tables";
 
-// Served from the conversations table with the agent's side row joined: the
+// Served from the conversations table with the agent's stop row joined
+// (`conversations_ext_sdk_agent_stop`, written only when a stop field moves —
+// never the per-batch checkpoint, which is out of the change feed): the
 // reducer sets `stopped_at` (and `stop_error`) on the CLI's notice of a failed
 // model request and clears it on the next turn or process, so a resume (or the
 // conversation closing) moves the row out of the window.
@@ -21,11 +23,11 @@ import { _sdkAgentsTable } from "./tables";
 const agentJoin = {
   kind: "lookup",
   alias: "agent",
-  table: _sdkAgentsTable,
-  pk: _sdkAgentsTable.conversationId,
+  table: _sdkAgentStopsTable,
+  pk: _sdkAgentStopsTable.conversationId,
   on: { from: "base", col: _conversations.id },
   required: true,
-} satisfies LookupJoin<"agent", typeof _sdkAgentsTable>;
+} satisfies LookupJoin<"agent", typeof _sdkAgentStopsTable>;
 
 const errorStoppedServeOptions: ServeCollectionOptions<
   typeof _conversations,

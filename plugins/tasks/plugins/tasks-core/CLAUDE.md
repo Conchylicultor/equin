@@ -785,6 +785,7 @@ serves them.
     - `conversations/conversation-progress` (table `conversations_ext_progress`)
     - `conversations/conversations-view/queue` (table `conversations_ext_queue`)
     - `conversations/runtime-sdk` (table `conversations_ext_sdk_agent`)
+    - `conversations/runtime-sdk` (table `conversations_ext_sdk_agent_stop`)
     - `conversations/spawn-failure` (table `conversations_ext_spawn_failure`)
     - `conversations/conversation-view/turn-summary` (table `conversations_ext_turn_summary`)
     - `conversations/usage` (table `conversations_ext_usage`)

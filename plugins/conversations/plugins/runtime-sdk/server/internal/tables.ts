@@ -16,9 +16,18 @@ import { ReadPositionSchema } from "./read-position";
 // the agent's row lease (machine/internal/agent-row-lease.ts) — the consumer in
 // ONE update per batch of lines, so the cursor never moves past a line whose
 // projection was not written, and the position never disagrees with the
-// cursor; a launch preparing the row or naming its session. Server-only: the status reconciler
-// reads it through the runtime's `inspect`, the web through the conversation
-// row it updates.
+// cursor; a launch preparing the row or naming its session.
+//
+// The consumer's private checkpoint, so it is OUT of the change feed (the server
+// barrel's `ExcludeFromChangeFeed`): it moves on every batch an agent writes —
+// assistant text, tool calls — and nothing outside the lease reads it (the
+// status reconciler asks the runtime's `inspect`, which reads the held row; the
+// web reads the conversation row the reconciler updates). Through the feed, each
+// batch cost a trigger, a changelog row, a NOTIFY and a routing pass that reached
+// no reader (2026-11-08: ~6,500 changes/h on main, route
+// `conversations_ext_sdk_agent` ~630 per 5 min). What a live surface does read of
+// an agent — the API-error stop — is its own row below, written only when it
+// changes.
 const sdkAgentShape = defineExtensionShape({
   key: "conversationId",
   fields: {
@@ -37,10 +46,7 @@ const sdkAgentShape = defineExtensionShape({
     turnReplied: boolField(),
     lastAssistantUuid: nullable(textField()),
     rewindAnchorUuid: nullable(textField()),
-    account: nullable(textField()),
     turnIds: boolField(),
-    stoppedAt: nullable(dateField()),
-    stopError: nullable(textField()),
   },
 });
 
@@ -54,3 +60,28 @@ export const sdkAgents = defineExtension(
 );
 // Re-export the underlying pgTable so drizzle-kit's schema glob picks it up.
 export const _sdkAgentsTable = sdkAgents.table;
+
+// The `conversations_ext_sdk_agent_stop` row: the part of the projection a live
+// surface reads — the runtime-sdk.error-stopped collection (the stop banner, the
+// accounts pane) and auto-resume — kept apart from the per-batch checkpoint
+// above so the change feed carries a write of it only when one of these moved
+// (`STOP_FIELDS`, rows.ts: in the same statement as the batch's cursor). Absent
+// until the agent's first `started` names its account.
+const sdkAgentStopShape = defineExtensionShape({
+  key: "conversationId",
+  fields: {
+    /** When a failed model request last stopped the agent's turn (reducer.ts). */
+    stoppedAt: nullable(dateField()),
+    /** The CLI's kind of that failure. */
+    stopError: nullable(textField()),
+    /** The Claude account the agent runs on — the one a usage limit stopped. */
+    account: nullable(textField()),
+  },
+});
+
+export const sdkAgentStops = defineExtension(
+  _conversations,
+  "sdk_agent_stop",
+  sdkAgentStopShape,
+);
+export const _sdkAgentStopsTable = sdkAgentStops.table;
