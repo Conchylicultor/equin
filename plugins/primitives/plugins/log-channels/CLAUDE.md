@@ -249,7 +249,9 @@ count accumulates across drops.
     - `upstream`
   - Endpoint callers: `log-files`
 - Exemptions:
-  - Exempts itself from: `networking/no-page-transport` — `web/client-log.ts` (sanctioned)
+  - Exempts itself from:
+    - `networking/no-page-transport` — `web/client-log.ts` (sanctioned)
+    - `blocking-fs/no-sync-fs` — `machine/internal/file-persistence.ts` (debt)
 - Machine:
   - Register: `log-file-sinks`
 - Sub-plugins:

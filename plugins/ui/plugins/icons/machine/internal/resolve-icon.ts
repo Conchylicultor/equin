@@ -8,7 +8,7 @@ import {
   type SymbolName,
   type SymbolSets,
 } from "../../core";
-import { readIconSet } from "@plugins/ui/plugins/icons/plugins/icon-sets/core";
+import { readIconSetSync } from "@plugins/ui/plugins/icons/plugins/icon-sets/core";
 
 /**
  * One Material Symbols glyph as SVG markup, for a consumer with no sprite sheet
@@ -22,8 +22,8 @@ export function symbolBody(
   style: IconStyle = DEFAULT_ICON_STYLE,
 ): IconBody {
   const sets: SymbolSets = {
-    regular: readIconSet("@iconify-json/material-symbols"),
-    light: readIconSet("@iconify-json/material-symbols-light"),
+    regular: readIconSetSync("@iconify-json/material-symbols"),
+    light: readIconSetSync("@iconify-json/material-symbols-light"),
   };
   const { set, iconifyName: drawn } = resolveSymbol(
     sets,

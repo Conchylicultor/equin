@@ -25,7 +25,7 @@ import { readSleepNow } from "./sleep-now";
  * history and not a failure.
  */
 function readOpLines(): OpLine[] {
-  const result = opLogSink.readJsonlTail<OpLine>();
+  const result = opLogSink.readJsonlTailSync<OpLine>();
   if (result.kind === "missing") return []; // no op has ever run on this host
   return result.records;
 }

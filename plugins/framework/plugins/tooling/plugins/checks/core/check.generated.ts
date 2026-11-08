@@ -98,6 +98,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/deps/plugins/python/plugins/uv-updater", id: "infra.deps.python.uv-updater", loader: () => import("@plugins/infra/plugins/deps/plugins/python/plugins/uv-updater/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/rust/plugins/cargo-updater", id: "infra.deps.rust.cargo-updater", loader: () => import("@plugins/infra/plugins/deps/plugins/rust/plugins/cargo-updater/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/check"), dependsOn: [] },
+  { pluginPath: "infra/plugins/host-fs/plugins/blocking-fs", id: "infra.host-fs.blocking-fs", loader: () => import("@plugins/infra/plugins/host-fs/plugins/blocking-fs/check"), dependsOn: ["framework/plugins/tooling/plugins/boundaries", "framework/plugins/tooling/plugins/exempt"] },
   { pluginPath: "infra/plugins/jobs", id: "infra.jobs", loader: () => import("@plugins/infra/plugins/jobs/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/launcher/plugins/gateway-logs", id: "infra.launcher.gateway-logs", loader: () => import("@plugins/infra/plugins/launcher/plugins/gateway-logs/check"), dependsOn: [] },

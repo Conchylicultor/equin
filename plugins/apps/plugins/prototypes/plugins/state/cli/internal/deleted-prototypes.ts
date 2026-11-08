@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { libpqEnv } from "@plugins/database/core";
+import { libpqEnvSync } from "@plugins/database/core";
 import {
   queryRows,
   SqlRowError,
@@ -49,7 +49,7 @@ const NO_TABLE = "42P01";
 export async function readDeletedPrototypes(
   namespace: Namespace,
 ): Promise<DeletedPrototypes> {
-  const env = libpqEnv();
+  const env = libpqEnvSync();
   const { Client } = await import("pg");
   const client = new Client({
     host: env.PGHOST,

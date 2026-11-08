@@ -62,9 +62,9 @@ export function resolveGitLayer(
  */
 export interface CommittedFiles {
   /** One file's text, or `null` when the layer has no such file. */
-  read(ref: ConfigFileRef): string | null;
+  readSync(ref: ConfigFileRef): string | null;
   /** The app ids with an `@app/<id>` directory under `storePath`'s hierarchy. */
-  appIds(storePath: string): string[];
+  appIdsSync(storePath: string): string[];
 }
 
 function committedProxy(
@@ -74,13 +74,13 @@ function committedProxy(
   const where = configFileRelPath(ref);
   return {
     read() {
-      const raw = files.read(ref);
+      const raw = files.readSync(ref);
       return raw === null ? null : parseConfigFile(raw, where);
     },
     write() {
       throw new Error(`The committed config layer is read-only: ${where}`);
     },
-    exists: () => files.read(ref) !== null,
+    exists: () => files.readSync(ref) !== null,
   };
 }
 
@@ -95,7 +95,7 @@ export function committedDocument(
   files: CommittedFiles,
 ): GitLayerDocument | undefined {
   const scoped = new Map<string, ConfigProxy>();
-  for (const appId of files.appIds(storePath)) {
+  for (const appId of files.appIdsSync(storePath)) {
     scoped.set(
       appId,
       committedProxy(files, {
@@ -131,8 +131,8 @@ export function committedFilesFromMap(
     ids.add(appId);
   }
   return {
-    read: (ref) => files.get(configFileRelPath(ref)) ?? null,
-    appIds: (storePath) =>
+    readSync: (ref) => files.get(configFileRelPath(ref)) ?? null,
+    appIdsSync: (storePath) =>
       [...(appIdsByHier.get(hierOf(storePath)) ?? [])].sort(),
   };
 }
@@ -160,11 +160,11 @@ export interface CommittedFs {
  */
 export function committedFilesIn(dir: string, fs: CommittedFs): CommittedFiles {
   return {
-    read(ref) {
+    readSync(ref) {
       const file = `${dir}/${configFileRelPath(ref)}`;
       return fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
     },
-    appIds(storePath) {
+    appIdsSync(storePath) {
       const hier = hierOf(storePath);
       const appDir = `${dir}/${hier === "" ? "" : `${hier}/`}${APP_SCOPE_DIR}`;
       if (!fs.existsSync(appDir)) return [];

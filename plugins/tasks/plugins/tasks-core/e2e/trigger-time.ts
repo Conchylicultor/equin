@@ -38,7 +38,7 @@ import { Client } from "pg";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import {
   buildConnectionString,
-  readDatabaseConfig,
+  readDatabaseConfigSync,
 } from "@plugins/database/core";
 import {
   arg,
@@ -59,7 +59,7 @@ if (namespace === MAIN_WORKTREE_NAME) {
     "refusing to measure on main's database — this script commits throwaway rows; run it against this checkout's worktree deploy",
   );
 }
-const config = readDatabaseConfig();
+const config = readDatabaseConfigSync();
 const client = new Client({
   connectionString: buildConnectionString(
     {

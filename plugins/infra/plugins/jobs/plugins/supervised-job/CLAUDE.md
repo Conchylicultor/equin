@@ -157,7 +157,7 @@ exists to enforce, made unspellable rather than documented:
 - The event can arrive **late, twice, or for a row already closed**. `finish` is
   called once per run per PROCESS, and a restart makes a second process.
 
-So every wake re-reads the marker file and decides from scratch (`observeRun`,
+So every wake re-reads the marker file and decides from scratch (`observeRunSync`,
 exported from `core/`): present ⇒ ended; absent with a live process group ⇒ keep
 waiting; absent with an empty group ⇒ hard kill, `exitCode: -1`, `signalCode: null`. **Never re-derive killed-ness from
 `exitCode > 128`** — `kill -TERM` and a program calling `exit(143)` are the same
@@ -377,7 +377,7 @@ checkout on disk) stays the authority, observed before every wait.
   by an unrelated process never satisfies "dead pid, no marker", so its workflow
   waits one interval forever. `supervised-run`'s reconciler has the same
   property; the fix, if it ever matters, belongs there.
-- **The close rule is written once** — `observeRun` in `core/`, called by both
+- **The close rule is written once** — `observeRunSync` in `core/`, called by both
   `awaitSupervisedRun` and the reconciler's `settleRun`, so the two cannot
   disagree about whether a run ended.
 
@@ -507,7 +507,7 @@ close?  =  !(terminal == null && isRunAlive(pid))
 value   =  terminal ?? { exitCode: -1, finishedAt: now }
 ```
 
-Stated once, as `observeRun` in `core/`; `settleRun` and `awaitSupervisedRun`
+Stated once, as `observeRunSync` in `core/`; `settleRun` and `awaitSupervisedRun`
 both call it.
 
 A marker present closes the run even while the pid is alive — the shim writes it
@@ -615,7 +615,7 @@ child, attached:
   like `2>&1`); the caller **echoes it** to its own stdout from the file, heard
   through a `writesWhileOpen` follow of the transcript — the terminal shows the
   record, never a second copy.
-- **The caller writes the marker** (`writeRunTerminal`, `core/`, checked
+- **The caller writes the marker** (`writeRunTerminalSync`, `core/`, checked
   against the parser's own regex): it waits on the child, so it observes what
   the shim would — the status, and the first catchable signal that reached it
   (relayed to the child, recorded by name). A SIGKILLed caller writes none,
@@ -796,14 +796,14 @@ construction, and the job and the body it spawns cannot drift apart.
     - `HARD_KILL_EXIT_CODE`
     - `isRunAlive`
     - `isRunId`
-    - `observeRun`
-    - `readRunTerminal`
+    - `observeRunSync`
+    - `readRunTerminalSync`
     - `RUN_TERMINAL_ENV`
     - `RunMarkerError`
     - `SUPERVISED_EXEC_COMMAND`
     - `SUPERVISED_EXIT_TEMPFAIL`
     - `supervisedArgv`
-    - `writeRunTerminal`
+    - `writeRunTerminalSync`
 - Cli:
   - Uses:
     - `framework/server-core.runExec`
@@ -831,6 +831,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `ids:pk-declared` — `server/internal/tables-run-ended.ts` (debt)
     - `boundaries/no-platform-api` — `core/internal/terminal.ts`, `server/internal/run/supervisor.ts`, `server/internal/run/tail.ts` (debt)
+    - `blocking-fs/no-sync-fs` — `server/internal/loop.ts`, `server/internal/run/supervisor.ts` (debt)
 - Test helpers:
   - Core: `@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing`
     - `execContextForTests` — An `ExecContext` for tests: origin `cli`, admission that admits at once.

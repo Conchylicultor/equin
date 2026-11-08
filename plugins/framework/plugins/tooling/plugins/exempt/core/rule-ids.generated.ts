@@ -14,6 +14,7 @@ export type ExemptableRuleId =
   | "aria-safety/no-orphan-composite-role"
   | "bar/no-adhoc-bar"
   | "blocking-fs/no-sync-fs"
+  | "blocking-fs/sync-named"
   | "boot:closure-digestable"
   | "boundaries/no-platform-api"
   | "boundaries:machine-portable-declaration"

@@ -6,9 +6,9 @@ import {
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { asPath } from "@plugins/framework/plugins/plugin-id/core";
 import {
-  pathExists,
-  readIfExists,
-  walkFiles,
+  pathExistsSync,
+  readIfExistsSync,
+  walkFilesSync,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
   type ExemptedBy,
@@ -25,20 +25,20 @@ import {
 
 /** The ESLint namespace of this plugin's `lint/index.ts` contribution. */
 function lintNamespace(dir: AppPath): string | undefined {
-  const src = readIfExists(joinAppPath(dir, "lint", "index.ts"));
+  const src = readIfExistsSync(joinAppPath(dir, "lint", "index.ts"));
   return src?.match(/\bname:\s*"([^"]+)"/)?.[1];
 }
 
 /** Every check id declared under this plugin's `check/` folder. */
 function checkIds(dir: AppPath): string[] {
   const checkDir = joinAppPath(dir, "check");
-  if (!pathExists(checkDir)) return [];
+  if (!pathExistsSync(checkDir)) return [];
   const files: AppPath[] = [];
-  walkFiles(checkDir, files);
+  walkFilesSync(checkDir, files);
   const ids = new Set<string>();
   for (const f of files) {
     if (!f.endsWith(".ts") || f.endsWith(".test.ts")) continue;
-    const src = readIfExists(f);
+    const src = readIfExistsSync(f);
     if (!src) continue;
     for (const m of src.matchAll(/\bid:\s*"([^"]+)"/g)) ids.add(m[1]!);
   }

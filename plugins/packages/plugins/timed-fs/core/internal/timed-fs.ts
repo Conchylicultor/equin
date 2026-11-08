@@ -203,7 +203,11 @@ function timedAsync<F extends AnyFn>(layer: FsWaitLayer, op: string, fn: F): F {
   }) as F;
 }
 
-function timedSync<F extends AnyFn>(layer: FsWaitLayer, op: string, fn: F): F {
+function timedSyncCall<F extends AnyFn>(
+  layer: FsWaitLayer,
+  op: string,
+  fn: F,
+): F {
   return ((...args: Parameters<F>) => {
     fsCallGuard?.(op, targetOf(args[0]));
     const t0 = performance.now();
@@ -269,45 +273,45 @@ export async function exists(path: fs.PathLike): Promise<boolean> {
   }
 }
 
-export const readFileSync: typeof fs.readFileSync = timedSync(
+export const readFileSync: typeof fs.readFileSync = timedSyncCall(
   S.readFileSync,
   "readFileSync",
   fs.readFileSync,
 );
-export const readdirSync: typeof fs.readdirSync = timedSync(
+export const readdirSync: typeof fs.readdirSync = timedSyncCall(
   S.readdirSync,
   "readdirSync",
   fs.readdirSync,
 );
-export const statSync: typeof fs.statSync = timedSync(
+export const statSync: typeof fs.statSync = timedSyncCall(
   S.statSync,
   "statSync",
   fs.statSync,
 );
-export const lstatSync: typeof fs.lstatSync = timedSync(
+export const lstatSync: typeof fs.lstatSync = timedSyncCall(
   S.lstatSync,
   "lstatSync",
   fs.lstatSync,
 );
-export const accessSync: typeof fs.accessSync = timedSync(
+export const accessSync: typeof fs.accessSync = timedSyncCall(
   S.accessSync,
   "accessSync",
   fs.accessSync,
 );
-export const existsSync: typeof fs.existsSync = timedSync(
+export const existsSync: typeof fs.existsSync = timedSyncCall(
   S.existsSync,
   "existsSync",
   fs.existsSync,
 );
-export const readlinkSync: typeof fs.readlinkSync = timedSync(
+export const readlinkSync: typeof fs.readlinkSync = timedSyncCall(
   S.readlinkSync,
   "readlinkSync",
   fs.readlinkSync,
 );
 export const realpathSync: typeof fs.realpathSync = Object.assign(
-  timedSync(S.realpathSync, "realpathSync", fs.realpathSync),
+  timedSyncCall(S.realpathSync, "realpathSync", fs.realpathSync),
   {
-    native: timedSync(
+    native: timedSyncCall(
       S.realpathSync,
       "realpathSync.native",
       fs.realpathSync.native,

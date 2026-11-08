@@ -5,7 +5,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { fstatSync, readSync } from "node:fs";
 import {
-  openOwnedFd,
+  openOwnedFdSync,
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
 import { open } from "node:fs/promises";
@@ -74,10 +74,10 @@ interface FileChunk {
  * Returns `null` for a missing file; every other fs error rethrows (a permission
  * error or a bad fd is a real bug, not an empty file).
  */
-function readLastBytes(file: AppPath, budget: number): FileChunk | null {
+function readLastBytesSync(file: AppPath, budget: number): FileChunk | null {
   let fd: OwnedFd;
   try {
-    fd = openOwnedFd(file, "r");
+    fd = openOwnedFdSync(file, "r");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
@@ -105,7 +105,7 @@ function readLastBytes(file: AppPath, budget: number): FileChunk | null {
   }
 }
 
-/** {@link readLastBytes} without blocking the event loop. */
+/** {@link readLastBytesSync} without blocking the event loop. */
 async function readLastBytesAsync(
   file: AppPath,
   budget: number,
@@ -162,7 +162,10 @@ function splitLines(text: string): string[] {
  * files reproduces the original line stream exactly — no line needs rejoining
  * across a file boundary.
  */
-export function readTail(path: AppPath, opts: TailOptions = {}): TailResult {
+export function readTailSync(
+  path: AppPath,
+  opts: TailOptions = {},
+): TailResult {
   const budget = opts.maxBytes ?? DEFAULT_MAX_BYTES;
   const includeRotated = opts.includeRotated ?? false;
 
@@ -170,7 +173,7 @@ export function readTail(path: AppPath, opts: TailOptions = {}): TailResult {
   const chunks: FileChunk[] = [];
   let remaining = budget;
 
-  const live = readLastBytes(path, remaining);
+  const live = readLastBytesSync(path, remaining);
   if (live === null) return { kind: "missing" };
   chunks.push(live);
   remaining -= Buffer.byteLength(live.text, "utf8");
@@ -182,10 +185,11 @@ export function readTail(path: AppPath, opts: TailOptions = {}): TailResult {
     for (let n = 1; ; n++) {
       if (remaining <= 0) {
         // Budget spent. If another rotation slot exists, we are dropping history.
-        moreHistoryExists = readLastBytes(rotationPath(path, n), 1) !== null;
+        moreHistoryExists =
+          readLastBytesSync(rotationPath(path, n), 1) !== null;
         break;
       }
-      const chunk = readLastBytes(rotationPath(path, n), remaining);
+      const chunk = readLastBytesSync(rotationPath(path, n), remaining);
       if (chunk === null) break; // no `.n` — history ends here
       chunks.push(chunk);
       remaining -= Buffer.byteLength(chunk.text, "utf8");
@@ -196,7 +200,7 @@ export function readTail(path: AppPath, opts: TailOptions = {}): TailResult {
 }
 
 /**
- * {@link readTail} without blocking the event loop — the same walk, budget and
+ * {@link readTailSync} without blocking the event loop — the same walk, budget and
  * stitching over `node:fs/promises`, for a reader inside a shared async cycle
  * (a live-resource loader) where a synchronous read freezes everything else.
  */
@@ -289,14 +293,14 @@ function assembleTail(
  * `node:path`. `T` is an unchecked assertion; a caller that needs a guarantee
  * validates (e.g. `safeParse`) on top.
  */
-export function readJsonlTail<T>(
+export function readJsonlTailSync<T>(
   path: AppPath,
   opts: TailOptions = {},
 ): JsonlTailResult<T> {
-  return parseJsonlTail<T>(readTail(path, opts));
+  return parseJsonlTail<T>(readTailSync(path, opts));
 }
 
-/** {@link readJsonlTail} without blocking the event loop (see {@link readTailAsync}). */
+/** {@link readJsonlTailSync} without blocking the event loop (see {@link readTailAsync}). */
 export async function readJsonlTailAsync<T>(
   path: AppPath,
   opts: TailOptions = {},

@@ -8,7 +8,7 @@ import {
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import {
-  pruneWorktreeRunArtifacts,
+  pruneWorktreeRunArtifactsSync,
   RUN_TERMINAL_SUFFIX,
   RUN_TRANSCRIPT_SUFFIX,
   worktreeArtifacts,
@@ -19,8 +19,8 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import {
   assertRunId,
-  observeRun,
-  readRunTerminal,
+  observeRunSync,
+  readRunTerminalSync,
   supervisedArgv,
 } from "../../../core";
 import {
@@ -193,7 +193,7 @@ async function untrack(run: LiveRun): Promise<void> {
 /**
  * Apply the close rule to one run, and close it when it has reached a terminal.
  *
- * The rule itself is {@link observeRun} in this plugin's `core/` — the one
+ * The rule itself is {@link observeRunSync} in this plugin's `core/` — the one
  * statement of it, shared with the job workflow's `awaitSupervisedRun`, so the
  * reconciler and a waiting workflow cannot disagree about whether a run ended:
  *
@@ -221,7 +221,7 @@ async function settleRun(
   pid: number | null,
   now: Date,
 ): Promise<boolean> {
-  const observation = observeRun(kind.id, runId, pid, now);
+  const observation = observeRunSync(kind.id, runId, pid, now);
   if (observation.state === "running") return false;
   const run = live.get(liveKey(kind.id, runId));
   // Drain BEFORE the row closes: a UI that stops following a finished run must
@@ -350,7 +350,7 @@ async function settleFromMarker(
   kind: SupervisedRunKind,
   runId: string,
 ): Promise<void> {
-  if (readRunTerminal(kind.id, runId) === null) return;
+  if (readRunTerminalSync(kind.id, runId) === null) return;
   await settleRun(kind, runId, null, new Date());
   await syncWatcher();
 }
@@ -646,7 +646,7 @@ export async function startSupervisedRun(
     // Append, not truncate: `"a"` also creates the file, so the transcript exists
     // before the child does and the tail has something to open from the first
     // pump onwards.
-    const fd = openOwnedFd(transcriptPath, "a");
+    const fd = await openOwnedFd(transcriptPath, "a");
     try {
       const shim = supervisedArgv(opts.argv, terminalPath);
       const proc = Bun.spawn(shim.argv, {
@@ -669,7 +669,7 @@ export async function startSupervisedRun(
     // "writing a new set trims the old ones" rule the build and release prunes
     // follow, so there is no sweeper to schedule and nothing to forget.
     await pruneOutsideWatcherStart(() =>
-      pruneWorktreeRunArtifacts(worktree, kind.id),
+      pruneWorktreeRunArtifactsSync(worktree, kind.id),
     );
 
     await kind.spec.setPid(opts.runId, pid);

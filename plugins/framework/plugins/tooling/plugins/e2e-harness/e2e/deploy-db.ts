@@ -1,7 +1,7 @@
 import { Pool } from "pg";
 import {
   buildConnectionString,
-  readDatabaseConfig,
+  readDatabaseConfigSync,
 } from "@plugins/database/core";
 import { targetNamespace } from "./target";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
@@ -34,7 +34,7 @@ export function openDeployDb(): DeployDb {
       "refusing to seed rows into main's database — run this against a worktree deploy",
     );
   }
-  const config = readDatabaseConfig();
+  const config = readDatabaseConfigSync();
   const pool = new Pool({
     connectionString: buildConnectionString(
       {

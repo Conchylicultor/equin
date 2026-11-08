@@ -166,15 +166,17 @@ describe("committedFilesIn", () => {
   });
 
   test("reads a file by its layout path, null when absent", () => {
-    expect(read.read({ storePath: "top.jsonc", file: "override" })).toBe("T");
-    expect(read.read({ storePath: "a/b/config.jsonc", file: "origin" })).toBe(
-      "O",
-    );
-    expect(read.read({ storePath: "a/b/config.jsonc", file: "override" })).toBe(
-      null,
+    expect(read.readSync({ storePath: "top.jsonc", file: "override" })).toBe(
+      "T",
     );
     expect(
-      read.read({
+      read.readSync({ storePath: "a/b/config.jsonc", file: "origin" }),
+    ).toBe("O");
+    expect(
+      read.readSync({ storePath: "a/b/config.jsonc", file: "override" }),
+    ).toBe(null);
+    expect(
+      read.readSync({
         storePath: "a/b/config.jsonc",
         scopeId: "app:home",
         file: "override",
@@ -183,8 +185,8 @@ describe("committedFilesIn", () => {
   });
 
   test("lists the app scopes under a nested and a top-level hierarchy", () => {
-    expect(read.appIds("a/b/config.jsonc")).toEqual(["home"]);
-    expect(read.appIds("top.jsonc")).toEqual(["pages"]);
-    expect(read.appIds("x/config.jsonc")).toEqual([]);
+    expect(read.appIdsSync("a/b/config.jsonc")).toEqual(["home"]);
+    expect(read.appIdsSync("top.jsonc")).toEqual(["pages"]);
+    expect(read.appIdsSync("x/config.jsonc")).toEqual([]);
   });
 });

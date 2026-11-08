@@ -189,7 +189,7 @@ async function spawnPlain(
   dir: AppPath,
   env: Record<string, string | undefined>,
 ): Promise<Child> {
-  const out = openOwnedFd(joinAppPath(dir, OUTPUT), "w", 0o600);
+  const out = await openOwnedFd(joinAppPath(dir, OUTPUT), "w", 0o600);
   try {
     const child = Bun.spawn([await bundledClaudeBin(), ...args], {
       cwd: dir,

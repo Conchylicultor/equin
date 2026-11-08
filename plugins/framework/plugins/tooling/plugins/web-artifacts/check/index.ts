@@ -58,7 +58,7 @@ async function worktreeRoot(): Promise<AppPath> {
 
 import {
   type CheckoutDeploy,
-  resolveCheckoutDeploy,
+  resolveCheckoutDeploySync,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/core";
 import { diffImportMaps } from "../core/import-map";
@@ -96,13 +96,13 @@ type DeployedDist =
  * names a directory nothing ever deployed to, and `asNamespace` on it launders
  * away the very brand check that would have said so.
  *
- * `resolveCheckoutDeploy` asks the third question instead — which deploy did
+ * `resolveCheckoutDeploySync` asks the third question instead — which deploy did
  * this checkout *publish* — by reading back the `spec.json` each deploy wrote
  * naming the checkout behind it. It is synchronous and git-free, so
  * `cacheSignature()` can still call it.
  */
 function deployedDist(root: AppPath): DeployedDist {
-  const resolved = resolveCheckoutDeploy(root);
+  const resolved = resolveCheckoutDeploySync(root);
   return resolved.kind === "resolved"
     ? {
         kind: "dist",

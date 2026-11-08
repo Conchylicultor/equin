@@ -12,7 +12,7 @@ import { checkoutWorktreeName } from "../../core/internal/paths";
 import { getDataDirs, isDataDir } from "../../core/internal/data-dir";
 import type { DataDir, DataDirKind } from "../../core/internal/data-dir";
 import {
-  readForeignManifests,
+  readForeignManifestsSync,
   type DataDirsManifest,
 } from "../../core/internal/data-dirs-manifest";
 import {
@@ -187,7 +187,7 @@ export const logsClaimedCheck: Check = {
           };
         }),
     );
-    const foreign = readForeignManifests(
+    const foreign = readForeignManifestsSync(
       checkoutWorktreeName(await getWorktreeRoot()),
     );
     const audit = auditLogs(scanned, foreign.manifests);

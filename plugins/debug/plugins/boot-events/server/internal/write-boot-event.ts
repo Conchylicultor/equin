@@ -67,7 +67,7 @@ export function writeBootStartEvent(): void {
   const processStartedAt = Math.round(performance.timeOrigin);
   const file = channelFileSink(BOOT_CHANNEL);
   const append = (line: BootLine): void =>
-    file.append(
+    file.appendSync(
       logEnvelope({
         t: line.sampledAt,
         stream: "stdout",
@@ -122,7 +122,7 @@ export function writeBootDeadEvent(
     deadBy,
     phase: "dead",
   };
-  openDynamicSink(logsDirFor(worktree), BOOT_CHANNEL.id).append(
+  openDynamicSink(logsDirFor(worktree), BOOT_CHANNEL.id).appendSync(
     logEnvelope({
       t: line.sampledAt,
       stream: "stdout",

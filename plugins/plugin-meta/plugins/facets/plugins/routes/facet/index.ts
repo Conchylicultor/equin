@@ -10,11 +10,11 @@ import type {
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   endpointExports,
-  readIfExists,
+  readIfExistsSync,
   stripTypes,
   matchBracket,
   maskSource,
-  walkFiles,
+  walkFilesSync,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type RouteDef, type RoutesData, routesFacetDef } from "../core";
 import {
@@ -35,13 +35,13 @@ export default createFacet<RoutesData>({
     //    `[endpoint.route]` computed keys whose definition lives in `shared/`
     //    (e.g. notifications, crashes) get silently dropped.
     const endpointFiles: AppPath[] = [];
-    walkFiles(joinAppPath(ctx.dir, "core"), endpointFiles);
-    walkFiles(joinAppPath(ctx.dir, "shared"), endpointFiles);
+    walkFilesSync(joinAppPath(ctx.dir, "core"), endpointFiles);
+    walkFilesSync(joinAppPath(ctx.dir, "shared"), endpointFiles);
 
     const endpointRoutes = new Map<string, string>(); // exportName → routeString
     for (const file of endpointFiles) {
       if (!file.endsWith(".ts")) continue;
-      const raw = readIfExists(file);
+      const raw = readIfExistsSync(file);
       if (!raw) continue;
       // The one reading of an endpoint declaration (parse-utils), shared with
       // the browser-host coverage guard.
@@ -53,7 +53,7 @@ export default createFacet<RoutesData>({
     // ── For each runtime, scan the barrel for httpRoutes and wsRoutes ─────────
     for (const runtime of ["server", "machine", "central"] as const) {
       const barrelPath = joinAppPath(ctx.dir, runtime, "index.ts");
-      const raw = readIfExists(barrelPath);
+      const raw = readIfExistsSync(barrelPath);
       if (!raw) continue;
       const src = stripTypes(raw);
 
@@ -195,7 +195,7 @@ const API_PREFIX_RE = /\/api\/([A-Za-z0-9_-]+)/g;
 function apiPrefixesUsedIn(dir: AppPath): string[] {
   const files: AppPath[] = [];
   for (const sub of ["web", "server", "machine", "central"]) {
-    walkFiles(joinAppPath(dir, sub), files);
+    walkFilesSync(joinAppPath(dir, sub), files);
   }
   const hit = new Set<string>();
   for (const f of files) {
@@ -204,7 +204,7 @@ function apiPrefixesUsedIn(dir: AppPath): string[] {
     // exclude it since the URL genuinely lives in a string — so drop the
     // fixture leg of the false positive by path.
     if (isTestCodePath(f.split("/"))) continue;
-    const raw = readIfExists(f);
+    const raw = readIfExistsSync(f);
     // Most files name no endpoint; skip masking them.
     if (!raw?.includes("/api/")) continue;
     // Sanctioned token-in-string scan: the `/api/<prefix>` URL lives inside

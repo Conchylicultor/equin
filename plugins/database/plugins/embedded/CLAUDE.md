@@ -22,7 +22,7 @@ This plugin ships:
 
 ## Its log
 
-`PG_LOG_FILE` is the gateway's service channel `logs/gateway/services/postgres.log` (50 MB × 5), never a file Postgres owns: the start script gives `pg_ctl -l` the relay pipe (`/dev/fd/3`, the fd the supervisor hands it with `--log-fd` — see `gateway/CLAUDE.md` → "the log relay"), so the postmaster and every backend write their stderr into the gateway's rotating writer. The pre-relay `postgres/postgres.log` (`PG_LEGACY_LOG_FILE`, 1.7 GB by 2026-11-04) is moved into that rotation as its newest free backup on the first FRESH start under a relay-aware gateway (`adoptLegacyLog`), so it ages out instead of vanishing; a reattached cluster keeps writing it until it restarts (a `debt` claim, task-1793827129-t489g4). Behind a gateway older than the relay, the script says so and logs to the legacy file.
+`PG_LOG_FILE` is the gateway's service channel `logs/gateway/services/postgres.log` (50 MB × 5), never a file Postgres owns: the start script gives `pg_ctl -l` the relay pipe (`/dev/fd/3`, the fd the supervisor hands it with `--log-fd` — see `gateway/CLAUDE.md` → "the log relay"), so the postmaster and every backend write their stderr into the gateway's rotating writer. The pre-relay `postgres/postgres.log` (`PG_LEGACY_LOG_FILE`, 1.7 GB by 2026-11-04) is moved into that rotation as its newest free backup on the first FRESH start under a relay-aware gateway (`adoptLegacyLogSync`), so it ages out instead of vanishing; a reattached cluster keeps writing it until it restarts (a `debt` claim, task-1793827129-t489g4). Behind a gateway older than the relay, the script says so and logs to the legacy file.
 
 ## Connection routing (server-side)
 

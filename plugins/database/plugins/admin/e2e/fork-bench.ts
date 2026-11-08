@@ -27,7 +27,7 @@ import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
 import {
   buildConnectionString,
-  readDatabaseConfig,
+  readDatabaseConfigSync,
 } from "@plugins/database/core";
 import {
   getWorktreeRoot,
@@ -48,7 +48,7 @@ function scratchName(): string {
 }
 
 function connString(database: string): string {
-  const config = readDatabaseConfig();
+  const config = readDatabaseConfigSync();
   return buildConnectionString(
     {
       host: process.env.PGHOST ?? config.connection.host,

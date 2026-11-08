@@ -4,5 +4,6 @@ export {
   adoptFd,
   FdAlreadyClosedError,
   openOwnedFd,
+  openOwnedFdSync,
 } from "./internal/owned-fd";
 export type { OwnedFd } from "./internal/owned-fd";

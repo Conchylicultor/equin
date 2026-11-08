@@ -5,7 +5,7 @@ import {
   readFileSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import {
-  pruneWorktreeTestArtifacts,
+  pruneWorktreeTestArtifactsSync,
   worktreeArtifacts,
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/core";
@@ -67,7 +67,7 @@ export function writeTestStatus(name: Namespace, status: TestStatus): void {
   const tmp = `${path}.tmp.${process.pid}`;
   writeFileSync(tmp, JSON.stringify(status, null, 2) + "\n");
   renameSync(tmp, path);
-  if (fresh) pruneWorktreeTestArtifacts(name);
+  if (fresh) pruneWorktreeTestArtifactsSync(name);
 }
 
 /** One run's record by its `opId`; `null` when that run wrote none (it never started, or was pruned). */

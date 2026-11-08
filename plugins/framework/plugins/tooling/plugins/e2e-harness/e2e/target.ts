@@ -55,7 +55,7 @@
  * So the target is no longer computed at all. Every deploy RECORDS itself: the
  * build writes `~/.equin/worktrees/<ns>/spec.json` naming the absolute
  * path of the checkout whose backend answers that namespace, and
- * `resolveCheckoutDeploy(REPO_ROOT)` reads that registry back. A checkout that
+ * `resolveCheckoutDeploySync(REPO_ROOT)` reads that registry back. A checkout that
  * has published nothing resolves to nothing and the run REFUSES — which is the
  * true answer, and the one a name can never give, since a directory basename
  * always names *some* plausible host. `--composition` reaches the deploys whose
@@ -72,10 +72,10 @@
  * Naming the deploy is only half of it: `deploy-identity.ts` then PROVES that
  * the app answering it is the build this checkout published.
  */
-import { resolveBuildReceipt } from "@plugins/framework/plugins/cli/plugins/op-runtime/core";
+import { resolveBuildReceiptSync } from "@plugins/framework/plugins/cli/plugins/op-runtime/core";
 import type { ResolvedReceipt } from "@plugins/framework/plugins/cli/plugins/op-runtime/core";
 import {
-  resolveCheckoutDeploy,
+  resolveCheckoutDeploySync,
   worktreesDir,
 } from "@plugins/infra/plugins/paths/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
@@ -169,7 +169,7 @@ function rawTarget(): RawTarget {
     return { kind: "stated", raw: stated.raw, flag: stated.flag };
   }
 
-  const resolution = resolveCheckoutDeploy(REPO_ROOT, composition);
+  const resolution = resolveCheckoutDeploySync(REPO_ROOT, composition);
   if (resolution.kind === "none") noDeploy(composition, resolution);
   const { deploy } = resolution;
   return {
@@ -327,7 +327,7 @@ const BUILD_STATE: Record<Exclude<ResolvedReceipt["kind"], "none">, string> = {
  * when the two disagree; this line's job is to put the record on screen.
  *
  * It does the READ as well, inside a try, because this read must not be able to
- * end the run. `readBuildReceipt` throws on a receipt that is not valid JSON —
+ * end the run. `readBuildReceiptSync` throws on a receipt that is not valid JSON —
  * correctly, at the authoritative read in `deploy-identity.ts`, where a receipt
  * we cannot read is a build we cannot vouch for. Here it would abort every e2e
  * script in the checkout over a banner line, and for the scripts that bind
@@ -341,7 +341,7 @@ const BUILD_STATE: Record<Exclude<ResolvedReceipt["kind"], "none">, string> = {
 function describeBuild(namespace: Namespace): string {
   let resolved: ResolvedReceipt;
   try {
-    resolved = resolveBuildReceipt(namespace);
+    resolved = resolveBuildReceiptSync(namespace);
   } catch (err) {
     const why = err instanceof Error ? err.message : String(err);
     return `build record unreadable: ${why}`;

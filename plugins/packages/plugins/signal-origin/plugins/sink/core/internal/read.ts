@@ -1,5 +1,5 @@
 import {
-  readJsonlTail,
+  readJsonlTailSync,
   readJsonlTailAsync,
 } from "@plugins/infra/plugins/file-sink/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
@@ -24,7 +24,7 @@ import { SIGNAL_ORIGIN_FILE, type SignalOriginLine } from "./lines";
  * signal handler, and the reason a caller may use this from any context.
  */
 export function readSignalOriginLines(): SignalOriginLine[] {
-  return readSignalOriginLinesFrom(SIGNAL_ORIGIN_FILE);
+  return readSignalOriginLinesFromSync(SIGNAL_ORIGIN_FILE);
 }
 
 /**
@@ -52,8 +52,12 @@ export async function readSignalOriginLinesAsync(): Promise<
  * testable against a fixture, since `SIGNAL_ORIGIN_FILE` is frozen at module
  * eval and cannot be redirected once the graph is loaded.
  */
-export function readSignalOriginLinesFrom(file: AppPath): SignalOriginLine[] {
-  const result = readJsonlTail<SignalOriginLine>(file, { includeRotated: true });
+export function readSignalOriginLinesFromSync(
+  file: AppPath,
+): SignalOriginLine[] {
+  const result = readJsonlTailSync<SignalOriginLine>(file, {
+    includeRotated: true,
+  });
   if (result.kind === "missing") return [];
   return result.records;
 }

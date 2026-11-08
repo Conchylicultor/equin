@@ -12,7 +12,7 @@ import { basename, dirname } from "node:path";
 // back through the barrel that re-exports it.
 import type { FileSink, FileSinkSpec, RotateBound } from "./types";
 import type { JsonlTailResult, TailOptions, TailResult } from "./read";
-import { readJsonlTail, readTail } from "./read";
+import { readJsonlTailSync, readTailSync } from "./read";
 
 // The bounded-append / rotation primitive, extracted from
 // log-channels/server/internal/persist.ts. Node-only: `node:fs` + `node:path`,
@@ -43,7 +43,7 @@ function rotationPath(path: AppPath, n: number): AppPath {
   return joinAppPath(appPathParent(path), `${basename(path)}.${n}`);
 }
 
-function unlinkIfExists(path: AppPath): void {
+function unlinkIfExistsSync(path: AppPath): void {
   try {
     unlinkSync(path);
   } catch (err) {
@@ -51,7 +51,7 @@ function unlinkIfExists(path: AppPath): void {
   }
 }
 
-function renameIfExists(from: AppPath, to: AppPath): void {
+function renameIfExistsSync(from: AppPath, to: AppPath): void {
   try {
     renameSync(from, to);
   } catch (err) {
@@ -63,13 +63,13 @@ function renameIfExists(from: AppPath, to: AppPath): void {
 // at most `keep` rotated files survive; the next appendFileSync recreates a fresh
 // live file. renameSync is atomic within a dir; ENOENT is tolerated on every slot
 // (a rotation slot may not exist yet), but any other error rethrows.
-function rotateFile(path: AppPath, keep: number): void {
+function rotateFileSync(path: AppPath, keep: number): void {
   // Drop the oldest rotation first, then shift .(K-1)→.K … .1→.2, then live→.1.
-  unlinkIfExists(rotationPath(path, keep));
+  unlinkIfExistsSync(rotationPath(path, keep));
   for (let i = keep - 1; i >= 1; i--) {
-    renameIfExists(rotationPath(path, i), rotationPath(path, i + 1));
+    renameIfExistsSync(rotationPath(path, i), rotationPath(path, i + 1));
   }
-  renameIfExists(path, rotationPath(path, 1));
+  renameIfExistsSync(path, rotationPath(path, 1));
 }
 
 // Live-file path → its current byte size (seeded once from disk on first miss).
@@ -81,7 +81,7 @@ const fileBytes = new Map<AppPath, number>();
 // The live file's current size: the in-memory counter, seeded from disk the first
 // time this process touches the path. A file that isn't there yet is 0 bytes;
 // anything other than ENOENT is a real error and rethrows.
-function currentSize(path: AppPath): number {
+function currentSizeSync(path: AppPath): number {
   const known = fileBytes.get(path);
   if (known !== undefined) return known;
   try {
@@ -100,7 +100,7 @@ function currentSize(path: AppPath): number {
 // state, which is every write after the first. Deliberately NOT memoized with a
 // Set of already-ensured dirs: that caches a belief about the world which a
 // worktree teardown can falsify. A second ENOENT rethrows — loud.
-function writeAppend(path: AppPath, payload: string): void {
+function writeAppendSync(path: AppPath, payload: string): void {
   try {
     appendFileSync(path, payload);
   } catch (err) {
@@ -110,8 +110,8 @@ function writeAppend(path: AppPath, payload: string): void {
   }
 }
 
-// THE one write path: `append(line)` is `appendLines(path, [line], …)` and
-// `appendAll(lines)` is `appendLines(path, lines, …)`. One implementation, one
+// THE one write path: `append(line)` is `appendLinesSync(path, [line], …)` and
+// `appendAll(lines)` is `appendLinesSync(path, lines, …)`. One implementation, one
 // size gate — two copies of the gate is exactly how the "a line is never split
 // across a rotation" invariant would drift between the singular and the batch
 // form.
@@ -138,7 +138,7 @@ function writeAppend(path: AppPath, payload: string): void {
 //     history to make room for nothing. Reachable only in that degenerate case —
 //     the line is oversized either way, so the choice is whether to also lose a
 //     rotation.
-function appendLines(
+function appendLinesSync(
   path: AppPath,
   lines: readonly string[],
   maxBytes: number,
@@ -148,14 +148,14 @@ function appendLines(
   // not bring the file into existence as a side effect of asking for nothing.
   if (lines.length === 0) return;
 
-  let size = currentSize(path);
+  let size = currentSizeSync(path);
   let group: string[] = [];
   let groupBytes = 0;
 
   // One appendFileSync per rotation group.
-  const flush = (): void => {
+  const flushSync = (): void => {
     if (group.length === 0) return;
-    writeAppend(path, group.join("\n") + "\n");
+    writeAppendSync(path, group.join("\n") + "\n");
     size += groupBytes;
     fileBytes.set(path, size);
     group = [];
@@ -167,15 +167,15 @@ function appendLines(
     if (size + groupBytes + lineBytes > maxBytes && size + groupBytes > 0) {
       // Write what fits, THEN rotate: the group already in hand belongs to the
       // pre-rotation file, and this line starts the fresh one.
-      flush();
-      rotateFile(path, keep);
+      flushSync();
+      rotateFileSync(path, keep);
       size = 0;
       fileBytes.set(path, 0);
     }
     group.push(line);
     groupBytes += lineBytes;
   }
-  flush();
+  flushSync();
 }
 
 function makeSink(
@@ -200,20 +200,20 @@ function makeSink(
       return pathOf();
     },
     bound,
-    append(line: string): void {
-      appendLines(pathOf(), [line], maxBytes, keep);
+    appendSync(line: string): void {
+      appendLinesSync(pathOf(), [line], maxBytes, keep);
     },
-    appendAll(lines: readonly string[]): void {
-      appendLines(pathOf(), lines, maxBytes, keep);
+    appendAllSync(lines: readonly string[]): void {
+      appendLinesSync(pathOf(), lines, maxBytes, keep);
     },
     // The read budget is deliberately NOT derived from `maxBytes`: a default sink
     // is 128 MB × 3, so `bound`-derived defaults would mean a 512 MB read. The
     // reader carries its own 8 MB default; a caller that wants more says so.
-    readTail(opts?: TailOptions): TailResult {
-      return readTail(pathOf(), opts);
+    readTailSync(opts?: TailOptions): TailResult {
+      return readTailSync(pathOf(), opts);
     },
-    readJsonlTail<T>(opts?: TailOptions): JsonlTailResult<T> {
-      return readJsonlTail<T>(pathOf(), opts);
+    readJsonlTailSync<T>(opts?: TailOptions): JsonlTailResult<T> {
+      return readJsonlTailSync<T>(pathOf(), opts);
     },
   };
 }

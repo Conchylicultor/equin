@@ -66,7 +66,7 @@ export type ResolvedReceipt =
 /**
  * Atomic so a reader never sees a torn file (tmp + rename).
  */
-export function writeBuildReceipt(
+export function writeBuildReceiptSync(
   name: Namespace,
   receipt: BuildReceipt,
 ): void {
@@ -79,7 +79,7 @@ export function writeBuildReceipt(
 }
 
 /** The raw receipt, or `null` when this worktree has never recorded a build. */
-export function readBuildReceipt(name: Namespace): BuildReceipt | null {
+export function readBuildReceiptSync(name: Namespace): BuildReceipt | null {
   const path = worktreeArtifacts.buildStatus(name);
   let raw: string;
   try {
@@ -127,8 +127,8 @@ export function resolveReceipt(receipt: BuildReceipt | null): ResolvedReceipt {
 }
 
 /** Convenience: read + resolve in one call. */
-export function resolveBuildReceipt(name: Namespace): ResolvedReceipt {
-  return resolveReceipt(readBuildReceipt(name));
+export function resolveBuildReceiptSync(name: Namespace): ResolvedReceipt {
+  return resolveReceipt(readBuildReceiptSync(name));
 }
 
 /**
@@ -162,7 +162,7 @@ export function interruptedPredecessorWarning(
  * sets no exit code the caller can see), so the NEXT op is where it surfaces —
  * and the next op is very often the one about to verify against a stale deploy.
  */
-export function reportInterruptedPredecessor(name: Namespace): void {
-  const warning = interruptedPredecessorWarning(resolveBuildReceipt(name));
+export function reportInterruptedPredecessorSync(name: Namespace): void {
+  const warning = interruptedPredecessorWarning(resolveBuildReceiptSync(name));
   if (warning !== null) console.warn(warning);
 }

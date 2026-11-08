@@ -14,8 +14,8 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  assertDirTrusted,
-  ensureDirTrusted,
+  assertDirTrustedSync,
+  ensureDirTrustedSync,
   isDirTrusted,
   withDirTrusted,
 } from "./claude-trust";
@@ -101,14 +101,14 @@ describe("ensureDirTrusted / assertDirTrusted on a file", () => {
   test("writes once, keeps the mode, and the assert then passes", () => {
     const path = joinAppPath(dir, "claude.json");
     writeFileSync(path, config({}), { mode: 0o600 });
-    expect(() => assertDirTrusted(`${ROOT}/att-1`, path)).toThrow(
+    expect(() => assertDirTrustedSync(`${ROOT}/att-1`, path)).toThrow(
       "restart the backend",
     );
-    ensureDirTrusted(ROOT, path);
+    ensureDirTrustedSync(ROOT, path);
     const written = readFileSync(path, "utf8");
     expect(statSync(path).mode & 0o777).toBe(0o600);
-    ensureDirTrusted(ROOT, path);
+    ensureDirTrustedSync(ROOT, path);
     expect(readFileSync(path, "utf8")).toBe(written);
-    assertDirTrusted(`${ROOT}/att-1`, path);
+    assertDirTrustedSync(`${ROOT}/att-1`, path);
   });
 });

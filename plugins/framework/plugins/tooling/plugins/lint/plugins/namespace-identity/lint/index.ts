@@ -18,7 +18,7 @@ export default {
    *     while reverting the user's live config documents on main.
    *   - The remedy is reachable from the files it fires on. `namespaceFor` and
    *     `asNamespace` live in @plugins/infra/plugins/namespace/core, and
-   *     `resolveCheckoutDeploy` in @plugins/infra/plugins/paths/core — `core`
+   *     `resolveCheckoutDeploySync` in @plugins/infra/plugins/paths/core — `core`
    *     barrels, which the `e2e` runtime may import. The usual reason to switch
    *     a rule off in a driver (it points at a `web` primitive `e2e` may not
    *     reach) does not apply.

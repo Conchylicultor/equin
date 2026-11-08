@@ -8,7 +8,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { flockTry, waitForFlock } from "@plugins/packages/plugins/flock/core";
-import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
+import { openOwnedFdSync } from "@plugins/packages/plugins/owned-fd/core";
 import {
   MANIFEST_FILE,
   RECORDED_CALLS_FILE,
@@ -119,7 +119,7 @@ export function openRecording(opts: {
 async function pruneRuns(root: AppPath, keep: number): Promise<void> {
   const path = joinAppPath(root, PRUNE_LOCK_FILE);
   // "a": create without truncating — the lock file's content is never read.
-  const lock = openOwnedFd(path, "a");
+  const lock = openOwnedFdSync(path, "a");
   if (flockTry(lock.fd)) {
     try {
       await pruneRunsLocked(root, keep);

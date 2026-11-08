@@ -3,7 +3,7 @@ import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import {
   worktreeDataDir,
   worktreeArtifacts,
-  pruneWorktreeBuildArtifacts,
+  pruneWorktreeBuildArtifactsSync,
 } from "@plugins/infra/plugins/paths/server";
 import { buildProgressSpanStart, buildProgressSpanEnd } from "./build-progress";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
@@ -80,7 +80,7 @@ function makeSpanCollector(): SpanCollector {
     renameSync(tmp, path);
     // Trim old per-build artifact sets now that this build's set is on disk (the leak
     // fix). See pruneWorktreeBuildArtifacts: the just-written files are always retained.
-    pruneWorktreeBuildArtifacts(name);
+    pruneWorktreeBuildArtifactsSync(name);
   }
 
   return {

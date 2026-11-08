@@ -34,9 +34,9 @@ import type { DataDirDeclaration } from "../core/internal/app-data-dirs";
 import {
   declaredSets,
   describeAttribution,
-  manifestStamps,
+  manifestStampsSync,
   partitionByOwner,
-  readForeignManifests,
+  readForeignManifestsSync,
 } from "../core/internal/data-dirs-manifest";
 import {
   legacyRootEntries,
@@ -624,7 +624,7 @@ const noUndeclaredDataDirsCheck: Check = {
     const obs = observeRoot();
     if (obs.entries === null) return "no-root";
     const lines = [
-      `manifests:${manifestStamps().join(",")}`,
+      `manifests:${manifestStampsSync().join(",")}`,
       `root:${[...obs.entries].sort().join(",")}`,
       ...[...obs.kinds.entries()]
         .sort(([a], [b]) => a.localeCompare(b))
@@ -693,7 +693,7 @@ const noUndeclaredDataDirsCheck: Check = {
     // Excluding the wrong namespace would leave OUR OWN possibly-stale manifest
     // in the foreign set, where it could excuse an entry this checkout has
     // stopped declaring — turning a real local orphan into someone else's.
-    const foreign = readForeignManifests(
+    const foreign = readForeignManifestsSync(
       checkoutWorktreeName(await getWorktreeRoot()),
     );
     /** Attributed entries, collected across both rules for one log line. */

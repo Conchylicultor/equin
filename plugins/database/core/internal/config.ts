@@ -59,7 +59,7 @@ let cached: DatabaseConfig | null = null;
  * crash or a default depending on which entry point you came through. Keep
  * exactly one reader here.
  */
-export function readDatabaseConfig(): DatabaseConfig {
+export function readDatabaseConfigSync(): DatabaseConfig {
   if (cached) return cached;
   try {
     const raw = readFileSync(CONFIG_PATH, "utf-8");
@@ -75,12 +75,12 @@ export function readDatabaseConfig(): DatabaseConfig {
 
 /**
  * The libpq environment (`PGHOST` / `PGPORT` / `PGUSER`) for a child process or
- * a raw `pg.Client`, derived from `readDatabaseConfig()` — so it inherits that
+ * a raw `pg.Client`, derived from `readDatabaseConfigSync()` — so it inherits that
  * function's single, tolerant failure semantics. An explicitly-set `PG*` in the
  * ambient environment always wins over the config file.
  */
-export function libpqEnv(): Record<string, string> {
-  const config = readDatabaseConfig();
+export function libpqEnvSync(): Record<string, string> {
+  const config = readDatabaseConfigSync();
   return {
     PGHOST: process.env.PGHOST ?? config.connection.host,
     PGPORT: process.env.PGPORT ?? String(config.connection.port),

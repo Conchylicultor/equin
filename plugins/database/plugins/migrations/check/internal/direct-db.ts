@@ -5,7 +5,7 @@ import { Pool } from "pg";
 // helpers for non-backend consumers and is import-safe by design.
 import {
   buildConnectionString,
-  readDatabaseConfig,
+  readDatabaseConfigSync,
 } from "@plugins/database/core";
 
 // The one connect bound for every direct DB connection a check opens.
@@ -45,7 +45,7 @@ export async function withDirectDb<T>(
   fn: (pool: Pool) => Promise<T>,
 ): Promise<DirectDbResult<T>> {
   return withDirectConnection(
-    buildConnectionString(readDatabaseConfig().connection, database),
+    buildConnectionString(readDatabaseConfigSync().connection, database),
     fn,
   );
 }

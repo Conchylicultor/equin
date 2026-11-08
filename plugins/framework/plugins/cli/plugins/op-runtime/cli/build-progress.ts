@@ -103,7 +103,7 @@ let current: OpenRun | null = null;
  * `spans` array the profiler already keeps.
  */
 function writeRecord(record: BuildProgressRecord): void {
-  progressSink.append(JSON.stringify(record));
+  progressSink.appendSync(JSON.stringify(record));
 }
 
 function stamp(): RecordBase {
@@ -283,7 +283,7 @@ export interface BuildRunProgress {
  * otherwise lose its `run` line. Newest run first, by last activity.
  */
 export function readBuildProgress(): BuildRunProgress[] {
-  const result = progressSink.readJsonlTail<BuildProgressRecord>({
+  const result = progressSink.readJsonlTailSync<BuildProgressRecord>({
     includeRotated: true,
     maxBytes: 8 * 1024 * 1024,
   });

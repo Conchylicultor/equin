@@ -14,7 +14,10 @@ import type {
   InstallContext,
   Ready,
 } from "@plugins/infra/plugins/deps/deps";
-import { BROWSER_EXECUTABLES_FILE, readBrowserExecutables } from "../../core";
+import {
+  BROWSER_EXECUTABLES_FILE,
+  readBrowserExecutablesSync,
+} from "../../core";
 
 /** The browsers this kind installs. Only Chromium has a user today. */
 export type PlaywrightBrowserName = "chromium";
@@ -197,7 +200,7 @@ export function playwrightBrowser(opts: {
         { cwd: ctx.root, env, timeoutMs: MINUTE },
       );
       // Playwright answered success; now hold it to what it reported.
-      const read = readBrowserExecutables(ctx.dir);
+      const read = readBrowserExecutablesSync(ctx.dir);
       if (!read.ok) {
         throw new Error(
           `playwright install ${browser} finished, but ${read.reason}`,
@@ -209,7 +212,7 @@ export function playwrightBrowser(opts: {
       await assertSystemLibraries(read.executables.headlessShell, pw.cli);
     },
 
-    isIntact: (dir) => readBrowserExecutables(dir).ok,
+    isIntact: (dir) => readBrowserExecutablesSync(dir).ok,
   };
 }
 
@@ -274,7 +277,7 @@ export async function launchChromium(
   ready: Ready<PlaywrightBrowserSource>,
   opts: ChromiumLaunchOptions = {},
 ): Promise<Browser> {
-  const read = readBrowserExecutables(ready.dir);
+  const read = readBrowserExecutablesSync(ready.dir);
   if (!read.ok) {
     throw new Error(
       `${ready.dep.id} is no longer intact (${read.reason}) — reinstall it: ./equin deps install ${ready.dep.id}`,
@@ -319,7 +322,7 @@ export async function launchPersistentChromium(
   userDataDir: string,
   opts: PersistentChromiumLaunchOptions = {},
 ): Promise<BrowserContext> {
-  const read = readBrowserExecutables(ready.dir);
+  const read = readBrowserExecutablesSync(ready.dir);
   if (!read.ok) {
     throw new Error(
       `${ready.dep.id} is no longer intact (${read.reason}) — reinstall it: ./equin deps install ${ready.dep.id}`,

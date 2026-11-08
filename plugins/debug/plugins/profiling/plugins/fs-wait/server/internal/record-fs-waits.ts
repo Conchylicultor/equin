@@ -81,7 +81,7 @@ export function recordFsWaits(opts: {
       line: JSON.stringify(line),
     });
     if (sink === null) held.push(entry);
-    else sink.append(entry);
+    else sink.appendSync(entry);
   };
   const open = (namespace: Namespace): void => {
     sink = defineFileSink({
@@ -91,7 +91,7 @@ export function recordFsWaits(opts: {
       path: () =>
         joinAppPath(logsDirFor(namespace), `${FS_WAIT_CHANNEL}.jsonl`),
     });
-    if (held.length > 0) sink.appendAll(held.splice(0));
+    if (held.length > 0) sink.appendAllSync(held.splice(0));
   };
   const namespace = opts.namespace;
   if (namespace instanceof Promise) {

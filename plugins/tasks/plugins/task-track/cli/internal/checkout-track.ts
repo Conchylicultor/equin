@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { libpqEnv } from "@plugins/database/core";
+import { libpqEnvSync } from "@plugins/database/core";
 import {
   queryRows,
   SqlRowError,
@@ -51,7 +51,7 @@ export type CheckoutTrack =
 export async function checkoutTrack(
   worktreeName: string,
 ): Promise<CheckoutTrack> {
-  const env = libpqEnv();
+  const env = libpqEnvSync();
   const { Client } = await import("pg");
   const client = new Client({
     host: env.PGHOST,

@@ -626,7 +626,7 @@ only agreement that matters.
     - `infra/host-fs/user-path.joinAppPath`
     - `infra/spawn.spawnCaptured`
     - `infra/spawn.spawnExpectOk`
-    - `packages/owned-fd.openOwnedFd`
+    - `packages/owned-fd.openOwnedFdSync`
     - `packages/owned-fd.OwnedFd`
     - `packages/semaphore.createSemaphore`
     - `packages/timed-fs.existsSync`
@@ -716,6 +716,7 @@ only agreement that matters.
     - `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
     - `boundaries/no-platform-api` — `core/internal/schema-glob.ts`, `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/snapshot-dag.ts` (debt)
     - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/migration-phases-valid.ts`, `check/orphaned-tables.ts` (debt)
+    - `blocking-fs/sync-named` — `core/internal/drizzle-stage.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts` (sanctioned)
   - Exempted by:
     - `database/migrations` (0 debt)
     - `framework/tooling/checks` (0 debt)

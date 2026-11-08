@@ -25,7 +25,7 @@ export async function resolveTarget(
   const resolution =
     checkout === null
       ? ({ kind: "none" } as const)
-      : lookupCheckoutDeploy(checkout);
+      : await lookupCheckoutDeploy(checkout);
   if (resolution.kind === "none") {
     return { kind: "unbuilt", checkout: conv.worktreePath };
   }

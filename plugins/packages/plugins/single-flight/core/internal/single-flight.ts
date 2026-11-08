@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import {
-  openOwnedFd,
+  openOwnedFdSync,
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
 import { z } from "zod";
@@ -145,7 +145,7 @@ export async function singleFlight<V, R>(
   const files = flightFiles(opts.dir, opts.key);
 
   // "a": create without truncating — the lock file's content is never read.
-  const lock = openOwnedFd(files.lock, "a");
+  const lock = openOwnedFdSync(files.lock, "a");
   if (flockTry(lock.fd)) return runLead(opts, files, fdHold(lock), lead);
   lock.close();
 
@@ -190,7 +190,7 @@ export async function tryLead<V, R>(
   lead: (publish: Publish<V>) => Promise<R>,
 ): Promise<{ role: "led"; result: R } | { role: "busy" }> {
   const files = flightFiles(opts.dir, opts.key);
-  const lock = openOwnedFd(files.lock, "a");
+  const lock = openOwnedFdSync(files.lock, "a");
   if (!flockTry(lock.fd)) {
     lock.close();
     return { role: "busy" };

@@ -22,7 +22,7 @@ import net from "node:net";
 import { sql } from "drizzle-orm";
 import { makeWorkerUtils } from "graphile-worker";
 import { z } from "zod";
-import { readDatabaseConfig } from "@plugins/database/core";
+import { readDatabaseConfigSync } from "@plugins/database/core";
 import {
   createDbPool,
   queryDeadlineSink,
@@ -47,7 +47,7 @@ let t: TestDb;
 let proxy: BlackHoleProxy;
 
 function upstreamTarget(): net.NetConnectOpts {
-  const { connection } = readDatabaseConfig();
+  const { connection } = readDatabaseConfigSync();
   return connection.host.startsWith("/")
     ? { path: `${connection.host}/.s.PGSQL.${connection.port}` }
     : { host: connection.host, port: connection.port };
@@ -69,7 +69,7 @@ afterAll(async () => {
 
 describe("enqueue through the jobs-enqueue pool", () => {
   test("an insert that gets no reply rejects naming the jobs-enqueue pool", async () => {
-    const { user } = readDatabaseConfig().connection;
+    const { user } = readDatabaseConfigSync().connection;
     const { name: dbName } = await executeOne(t.db, {
       query: sql`SELECT current_database()::text AS name`,
       row: z.object({ name: z.string() }),

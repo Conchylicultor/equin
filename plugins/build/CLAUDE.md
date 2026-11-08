@@ -408,6 +408,8 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `debug/reports`
     - `menu-bar`
   - Endpoint callers: `restart-skip`
+- Exemptions:
+  - Exempts itself from: `blocking-fs/no-sync-fs` — `machine/internal/run-terminal.ts` (debt)
 - Shared:
   - Exports (types): `BuildRun`
   - Exports (values):
@@ -417,7 +419,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
   - **`build-commits`** — Commits included since the previous build, shown in the build detail pane.
   - **`build-fix`** — Launch-agent button in the build detail pane for failed builds, and the same launch as a Build failed notification's Fix (the fix-build notification action).
   - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
-  - **`build-logs`** — Logs section in the build detail pane: the run's transcript as its steps and lines (build.run-logs, newest first, paged by viewport).
+  - **`build-logs`** [exempt] — Logs section in the build detail pane: the run's transcript as its steps and lines (build.run-logs, newest first, paged by viewport).
   - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane.
   - **`build-status`** — Single source of truth for build-run status display metadata — label, badge variant, and dot color per BuildStatus.
   - **`build-termination`** — Per-run termination record, desktop-only: the build.run-termination live value — what the host-global signal-origin sink recorded about the death of one build run (which signal, and who sent it)…
@@ -425,7 +427,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
   - **`restart-skip`** [exempt] — Restart-skip, central's half: POST /api/restart-skip/central/adopt — main's deploy asks central before restarting it, and central answers adopted only when a process spawned now would run exactly…
     - Plugins:
       - **`hooks`** — Restart-skip's contribution kinds, a leaf every contributor imports (so contributing never pulls in the judgement and its imports): RestartSkip.BootInput (files a backend reads once and holds — a…
-  - **`run-ledger`** — Build-runs ledger leaf: the build_runs entity, and (cli/) the hand-SQL build-run recorder the `./equin build` CLI imports without the table or the heavy build barrel.
+  - **`run-ledger`** [exempt] — Build-runs ledger leaf: the build_runs entity, and (cli/) the hand-SQL build-run recorder the `./equin build` CLI imports without the table or the heavy build barrel.
   - **`runs-arm`** — The build arm's presence on the merged run surface: its rows' link into the existing build run-detail pane, and the status / targets / commit / exit-code columns only a build row has. The build arm…
   - **`serve-composition`** [exempt] — Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), the served-liveness read (the server-resolved namespace plus…
   - **`server-build-id`** [exempt] — Served-bundle and server pin leaf: the commit this backend process was materialized from (serverPin — HEAD sampled at module eval, sealed by build/deployment at onAllReady, unresolved on a mixed…

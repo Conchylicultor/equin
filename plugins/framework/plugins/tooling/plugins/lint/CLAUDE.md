@@ -246,6 +246,7 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `rule-kind-safety/no-raw-rule-tester` — `core/testing/rule-tester.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/ide-lint-config.ts` (sanctioned)
     - `boundaries/no-platform-api` — `core/ide-lint-config.ts` (sanctioned)
+    - `blocking-fs/sync-named` — `core/declared-utilities.ts`, `core/plugin-dirs.ts` (sanctioned)
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
     - `createRuleTester` — A syntactic rule's tester: no program, no project.

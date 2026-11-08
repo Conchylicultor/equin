@@ -506,6 +506,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - Exempts itself from:
     - `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
     - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
+    - `blocking-fs/no-sync-fs` — `machine/internal/resolve-icon.ts` (debt)
   - Exempted by: `ui/icons` (0 debt)
 - Server:
   - Exports (values):

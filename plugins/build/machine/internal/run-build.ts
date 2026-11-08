@@ -2,6 +2,7 @@ import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { z } from "zod";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { isMainCompositionBuild } from "@plugins/build/core";
@@ -114,7 +115,7 @@ export const buildJob = defineSupervisedJob({
         !(await claimBuildRun({
           buildId,
           trigger: input.trigger,
-          commitHash: getHeadCommit(),
+          commitHash: await getHeadCommit(),
           targets,
         }))
       ) {
@@ -166,12 +167,16 @@ export const buildJob = defineSupervisedJob({
  * `.build-commit` and against the checkout's HEAD — both full — to decide
  * whether a target has already been attempted, and an abbreviated form makes
  * that comparison silently always-false. Every display of the column truncates
- * at render, which is where truncation belongs.
+ * at render, which is where truncation belongs. `null` when git answers with
+ * a failure; a wedged git (no answer in a minute) throws.
  */
-export function getHeadCommit(): string | null {
-  const proc = Bun.spawnSync(["git", "rev-parse", "HEAD"], {
+export async function getHeadCommit(): Promise<string | null> {
+  const proc = await spawnCaptured(["git", "rev-parse", "HEAD"], {
     cwd: REPO_ROOT,
+    // A wedge-breaker: rev-parse reads one ref.
+    timeoutMs: 60_000,
   });
+  if (proc.timedOut) throw new Error("git rev-parse HEAD timed out");
   if (proc.exitCode !== 0) return null;
-  return proc.stdout.toString().trim() || null;
+  return proc.stdout.trim() || null;
 }

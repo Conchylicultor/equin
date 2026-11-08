@@ -62,7 +62,7 @@ function isSnapshot(repo: RepoFiles): repo is RepoSnapshot {
 }
 
 /** A gitignored file's content from disk, for the module graph (null when absent). */
-export function readOutside(root: AppPath, rel: string): string | null {
+export function readOutsideSync(root: AppPath, rel: string): string | null {
   const abs = joinAppPath(root, rel);
   if (!existsSync(abs) || !statSync(abs).isFile()) return null;
   return readFileSync(abs, "utf8");
@@ -99,7 +99,7 @@ export async function buildFacetedPluginTree(
       {
         snapshot: repo,
         store: currentRecordStore(),
-        readOutside: (rel) => readOutside(repo.root, rel),
+        readOutside: (rel) => readOutsideSync(repo.root, rel),
       },
       nodes,
       facets,

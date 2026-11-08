@@ -201,7 +201,7 @@ export function computeEagerTier(input: {
 
 // ── Scanning the file set (the per-file scan: `eager-tier.scan.ts`) ──
 
-// parse-utils' `walkFiles` predicate, over the file set instead of a directory
+// parse-utils' `walkFilesSync` predicate, over the file set instead of a directory
 // walk: `.ts`/`.tsx` that is not test code (via `isTestCodePath`), skipping
 // `node_modules`, nested `plugins/` (sub-plugins are their own nodes) and
 // test-code directories.

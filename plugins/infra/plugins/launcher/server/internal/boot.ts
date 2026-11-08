@@ -592,7 +592,7 @@ export async function spawnGatewayDaemon(
   const spec = gatewayLaunchSpec(opts);
   // Truncate ("w"): only holds raw stdout/stderr until slog takes over, plus
   // any panic. The gateway writes its own rotating logs under -log-dir.
-  const logFd = openOwnedFd(spec.stdioLog, "w");
+  const logFd = await openOwnedFd(spec.stdioLog, "w");
 
   const gw = Bun.spawn(spec.argv, {
     cwd: spec.cwd,

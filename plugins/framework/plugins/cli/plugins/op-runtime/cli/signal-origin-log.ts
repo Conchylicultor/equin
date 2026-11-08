@@ -39,7 +39,7 @@ const sink = defineFileSink({
  */
 export function recordSignalOriginLine(line: SignalOriginLineInput): void {
   try {
-    sink.append(JSON.stringify({ at: new Date().toISOString(), ...line }));
+    sink.appendSync(JSON.stringify({ at: new Date().toISOString(), ...line }));
     // eslint-disable-next-line promise-safety/no-bare-catch -- runs on the death path (signal listener / exit hook); a throw here would replace the incident record with a second, less useful failure. There is no recovery to attempt and nothing left to report to.
   } catch {
     // Intentionally swallowed — see above.

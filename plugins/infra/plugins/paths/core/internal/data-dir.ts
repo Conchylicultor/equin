@@ -9,7 +9,7 @@ import { dirname, join, relative, sep } from "node:path";
 // `@plugins/infra/plugins/paths/core` alias would cycle back through the barrel
 // that re-exports it.
 import type { LogClaim } from "./log-claims";
-import { isHostSingleton, isRelease, resolveDataRoot } from "./paths";
+import { isHostSingleton, isRelease, resolveDataRootSync } from "./paths";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 
 // The declared-directory registry for `~/.equin/`.
@@ -269,7 +269,7 @@ const APP_DIR_RECLAIM_REASON =
  * still, so freezing here would be strictly worse.
  */
 export function dataRoot(): AppPath {
-  return resolveDataRoot();
+  return resolveDataRootSync();
 }
 
 /**
@@ -308,7 +308,7 @@ export function relativeToDataRoot(
  * `what` names the thing being ensured in the error (`cache/check (owner …)`,
  * or an area of one).
  */
-function ensureDirectory(path: AppPath, what: string): AppPath {
+function ensureDirectorySync(path: AppPath, what: string): AppPath {
   // A `DataDir` names a DIRECTORY. Several entries at the root are loose
   // FILES today (`duress.latch`, `gateway.pid`, `push-holder.json`, the
   // `*.jsonl` sinks), and pointing a declaration's `legacyLocation` at one
@@ -352,7 +352,7 @@ function makeDataDir(spec: DataDirSpec): DataDir {
   // Every path this declaration hands out goes through here, so a move is
   // honoured by `.path`, `.file()`, `.ensure()` and every `subdir()` handle
   // alike — there is no accessor that could read the new location early.
-  const resolveIn = (segments: readonly string[]): AppPath => {
+  const resolveInSync = (segments: readonly string[]): AppPath => {
     const base = home();
     if (moves.length === 0) return joinAppPath(base, ...segments);
 
@@ -367,7 +367,7 @@ function makeDataDir(spec: DataDirSpec): DataDir {
 
     const dest = move.to === undefined ? base : joinAppPath(base, move.to);
     const from = joinAppPath(dataRoot(), move.from);
-    if (resolveMove(key, move, from, dest) === "new")
+    if (resolveMoveSync(key, move, from, dest) === "new")
       return joinAppPath(base, ...segments);
     // Still at the old location: re-base what lies below the moved area.
     const below = move.to === undefined ? parts : parts.slice(1);
@@ -378,14 +378,14 @@ function makeDataDir(spec: DataDirSpec): DataDir {
     assertAreaName(name, `${key}.subdir() name`);
     return {
       get path(): AppPath {
-        return resolveIn([name]);
+        return resolveInSync([name]);
       },
       file(...segments: string[]): AppPath {
-        return resolveIn([name, ...segments]);
+        return resolveInSync([name, ...segments]);
       },
       ensure(): AppPath {
-        return ensureDirectory(
-          resolveIn([name]),
+        return ensureDirectorySync(
+          resolveInSync([name]),
           `${key} area "${name}" (owner ${spec.owner})`,
         );
       },
@@ -395,13 +395,16 @@ function makeDataDir(spec: DataDirSpec): DataDir {
   return {
     spec,
     get path(): AppPath {
-      return resolveIn([]);
+      return resolveInSync([]);
     },
     file(...segments: string[]): AppPath {
-      return resolveIn(segments);
+      return resolveInSync(segments);
     },
     ensure(): AppPath {
-      return ensureDirectory(resolveIn([]), `${key} (owner ${spec.owner})`);
+      return ensureDirectorySync(
+        resolveInSync([]),
+        `${key} (owner ${spec.owner})`,
+      );
     },
     subdir: area,
   };
@@ -428,7 +431,7 @@ type MoveState = "settled" | "pending" | "conflict";
  */
 const settledMoves = new Set<string>();
 
-function inspectMove(from: AppPath, dest: AppPath, key: string): MoveState {
+function inspectMoveSync(from: AppPath, dest: AppPath, key: string): MoveState {
   const old = lstatSync(from, { throwIfNoEntry: false });
   // Absent: moved already (or a fresh root that never had it). A symlink: the
   // shim a previous move planted — the bytes are behind it, at the new spot.
@@ -454,7 +457,7 @@ function splitCopyError(key: string, from: AppPath, dest: AppPath): Error {
  * Settle one move on the current root, and say which side the bytes are on.
  * Performs the move when it is pending and THIS process is the one allowed to.
  */
-function resolveMove(
+function resolveMoveSync(
   key: string,
   move: MovedFrom,
   from: AppPath,
@@ -462,11 +465,11 @@ function resolveMove(
 ): "new" | "old" {
   if (settledMoves.has(from)) return "new";
 
-  const state = inspectMove(from, dest, key);
+  const state = inspectMoveSync(from, dest, key);
   if (state === "conflict") throw splitCopyError(key, from, dest);
   if (state === "pending") {
-    if (!thisProcessMayMoveSharedData()) return "old";
-    performMove(key, move, from, dest);
+    if (!thisProcessMayMoveSharedDataSync()) return "old";
+    performMoveSync(key, move, from, dest);
   }
   settledMoves.add(from);
   return "new";
@@ -491,7 +494,7 @@ function errnoCode(err: unknown): string | undefined {
   return err instanceof Error ? (err as NodeJS.ErrnoException).code : undefined;
 }
 
-function performMove(
+function performMoveSync(
   key: string,
   move: MovedFrom,
   from: AppPath,
@@ -506,7 +509,7 @@ function performMove(
   } catch (err) {
     const code = errnoCode(err);
     if (code === undefined || !RACE_CODES.has(code)) throw err;
-    const now = inspectMove(from, dest, key);
+    const now = inspectMoveSync(from, dest, key);
     if (now === "settled") return; // another mover won; it plants the shim
     if (now === "conflict") throw splitCopyError(key, from, dest);
     throw err; // still pending — the error was not a race after all
@@ -572,7 +575,7 @@ let mainCheckoutMemo: boolean | undefined;
  * `getMainRepoRoot` is not available here. Memoized: `REPO_ROOT` is where this
  * module's own source sits, which cannot change for the life of the process.
  */
-function runsFromMainCheckout(): boolean {
+function runsFromMainCheckoutSync(): boolean {
   mainCheckoutMemo ??=
     lstatSync(join(REPO_ROOT, ".git"), {
       throwIfNoEntry: false,
@@ -580,11 +583,11 @@ function runsFromMainCheckout(): boolean {
   return mainCheckoutMemo;
 }
 
-function thisProcessMayMoveSharedData(): boolean {
+function thisProcessMayMoveSharedDataSync(): boolean {
   return mayMoveSharedData({
     hostSingleton: isHostSingleton(),
     release: isRelease(),
-    mainCheckout: runsFromMainCheckout(),
+    mainCheckout: runsFromMainCheckoutSync(),
   });
 }
 

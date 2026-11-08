@@ -28,7 +28,9 @@ This plugin ships:
 - Cross-plugin:
   - Imported by: `database/admin`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/bin.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `server/internal/bin.ts` (debt)
+    - `blocking-fs/no-sync-fs` — `server/internal/bin.ts` (debt)
 - Server:
   - Exports (types): `PgClientTool`
   - Exports (values):

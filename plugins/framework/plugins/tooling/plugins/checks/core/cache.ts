@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "crypto";
 import { renameSync, rmSync, writeFileSync } from "fs";
-import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
+import { openOwnedFdSync } from "@plugins/packages/plugins/owned-fd/core";
 import {
   existsSync,
   readdirSync,
@@ -347,7 +347,7 @@ function sweepIdleFlights(now: number): number {
       for (const f of files) rmSync(joinAppPath(dir, f), { force: true });
       continue;
     }
-    const lockFd = openOwnedFd(joinAppPath(dir, lock), "a");
+    const lockFd = openOwnedFdSync(joinAppPath(dir, lock), "a");
     try {
       if (!flockTry(lockFd.fd)) continue; // a run holds it: in use, not idle
       for (const f of files)

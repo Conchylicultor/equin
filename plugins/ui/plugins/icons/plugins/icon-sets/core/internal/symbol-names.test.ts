@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { readIconSet, symbolBaseNames } from "./symbol-names";
+import { readIconSetSync, symbolBaseNames } from "./symbol-names";
 
 describe("symbolBaseNames (installed sets)", () => {
   const names = new Set(
     symbolBaseNames(
-      readIconSet("@iconify-json/material-symbols"),
-      readIconSet("@iconify-json/material-symbols-light"),
+      readIconSetSync("@iconify-json/material-symbols"),
+      readIconSetSync("@iconify-json/material-symbols-light"),
     ),
   );
 

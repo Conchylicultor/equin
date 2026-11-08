@@ -55,7 +55,7 @@ function packageDir(pkg: string): AppPath {
 }
 
 /** The installed version of each set: what the generated file is stamped with. */
-export function installedSetVersions(): string[] {
+export function installedSetVersionsSync(): string[] {
   return ICON_SET_PACKAGES.map((pkg) => {
     const json = JSON.parse(
       readFileSync(`${packageDir(pkg)}package.json`, "utf8"),
@@ -81,7 +81,7 @@ export function readInputsHash(generated: string): string | undefined {
   return HASH_RE.exec(generated)?.[1];
 }
 
-export function readIconSet(
+export function readIconSetSync(
   pkg: (typeof ICON_SET_PACKAGES)[number],
 ): IconifyJSON {
   return JSON.parse(
@@ -205,11 +205,14 @@ export function readListInputsHash(json: string): string | undefined {
  * ({@link SYMBOL_NAME_LIST_REL_PATH}) — as repo-relative path + content, for
  * the codegen step to write. Reads every set (~0.5 s).
  */
-export function renderSymbolNameFiles(): { path: string; content: string }[] {
-  const versions = installedSetVersions();
+export function renderSymbolNameFilesSync(): {
+  path: string;
+  content: string;
+}[] {
+  const versions = installedSetVersionsSync();
   const symbols = symbolBaseNames(
-    readIconSet("@iconify-json/material-symbols"),
-    readIconSet("@iconify-json/material-symbols-light"),
+    readIconSetSync("@iconify-json/material-symbols"),
+    readIconSetSync("@iconify-json/material-symbols-light"),
   );
   return [
     {
@@ -217,8 +220,8 @@ export function renderSymbolNameFiles(): { path: string; content: string }[] {
       content: renderSymbolNames({
         versions,
         symbols,
-        brands: brandNames(readIconSet("@iconify-json/simple-icons")),
-        lucide: lucideNames(readIconSet("@iconify-json/lucide")),
+        brands: brandNames(readIconSetSync("@iconify-json/simple-icons")),
+        lucide: lucideNames(readIconSetSync("@iconify-json/lucide")),
       }),
     },
     {

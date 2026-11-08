@@ -235,6 +235,8 @@ through `foldOpLines`. The before/after ruler of
     - `framework/cli/build`
     - `framework/cli/op-runtime`
     - `framework/cli/push`
+- Exemptions:
+  - Exempts itself from: `blocking-fs/no-sync-fs` — `server/internal/jsonl.ts`, `server/internal/read.ts` (debt)
 - Server:
   - Exports (types):
     - `OpProfiler`

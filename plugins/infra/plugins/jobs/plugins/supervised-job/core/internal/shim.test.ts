@@ -26,7 +26,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
-import { readRunTerminal, type RunTerminal } from "./terminal";
+import { readRunTerminalSync, type RunTerminal } from "./terminal";
 import { supervisedArgv } from "./shim";
 
 const dirs: string[] = [];
@@ -216,7 +216,7 @@ describe("supervisedArgv — signals", () => {
 /**
  * THE pair. Two runs whose exit STATUS is identical and whose meaning is
  * opposite — one was killed, one chose to exit 143 — asserted through the real
- * shim and the real `readRunTerminal`, because everything in between them is
+ * shim and the real `readRunTerminalSync`, because everything in between them is
  * the mechanism that keeps them apart.
  *
  * `128 + signo` collapses these two into one number, which is how
@@ -227,7 +227,7 @@ describe("supervisedArgv — signals", () => {
  */
 describe("a kill and a deliberate exit(143) are told apart", () => {
   // These two run against the REAL artifact paths, not a temp dir, so the
-  // assertion goes through `readRunTerminal` — the function every consumer
+  // assertion goes through `readRunTerminalSync` — the function every consumer
   // actually calls — rather than re-parsing the marker in the test.
   const KIND = "shimtest";
   const worktree = runtimeNamespace();
@@ -253,7 +253,7 @@ describe("a kill and a deliberate exit(143) are told apart", () => {
       process.kill(-proc.pid, kill);
     }
     await proc.exited;
-    return readRunTerminal(KIND, runId);
+    return readRunTerminalSync(KIND, runId);
   }
 
   test("killed by a group SIGTERM ⇒ 143 WITH signalCode TERM", async () => {

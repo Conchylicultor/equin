@@ -21,7 +21,7 @@ and `support/runs.ts` resolve their own target.
 ## The default target is READ from the registry, never guessed from a name
 
 Pass no target flag and the script drives the deploy **this checkout
-published** — `resolveCheckoutDeploy(REPO_ROOT)` reads every
+published** — `resolveCheckoutDeploySync(REPO_ROOT)` reads every
 `~/.equin/worktrees/<ns>/spec.json` and keeps the namespaces whose
 `server` path is this checkout's backend. Nothing is derived from a directory
 name, and no environment variable has any spelling in this runtime.

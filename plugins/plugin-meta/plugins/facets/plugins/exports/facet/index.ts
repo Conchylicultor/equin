@@ -14,7 +14,7 @@ import {
 } from "@plugins/framework/plugins/plugin-id/core";
 import {
   parseBarrelExports,
-  readIfExists,
+  readIfExistsSync,
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
@@ -26,7 +26,7 @@ export default createFacet<ExportsData>({
 
   extract(ctx) {
     const parse = (runtime: RuntimeFolder): ExportedSymbol[] => {
-      const raw = readIfExists(joinAppPath(ctx.dir, runtime, "index.ts"));
+      const raw = readIfExistsSync(joinAppPath(ctx.dir, runtime, "index.ts"));
       if (!raw) return [];
       // Fully mask comments/regex/strings (parseBarrelExports reads only
       // export-name identifiers, never a string value) so neither a commented-out

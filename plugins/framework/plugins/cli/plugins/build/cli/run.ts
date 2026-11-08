@@ -69,12 +69,12 @@ import {
   publishLane,
   pushBuildSpan,
   readCliCrash,
-  reportInterruptedPredecessor,
+  reportInterruptedPredecessorSync,
   runCheckSubprocess,
   signalOriginTap,
   valveGates,
   writeBuildProfile,
-  writeBuildReceipt,
+  writeBuildReceiptSync,
   type BuildReceipt,
   type BuildReceiptStatus,
   type FatalSignal,
@@ -97,7 +97,7 @@ import {
   listDatabases,
   forkTempPrefix,
 } from "@plugins/database/plugins/admin/server";
-import { libpqEnv, readDatabaseConfig } from "@plugins/database/core";
+import { libpqEnvSync, readDatabaseConfigSync } from "@plugins/database/core";
 import { PG_LOG_FILE } from "@plugins/database/plugins/embedded/server";
 import {
   type Lane,
@@ -222,7 +222,7 @@ async function databaseReady(name: string): Promise<boolean> {
   // embedded-postgres, and we'd rather not depend on the user's PATH for
   // routine readiness checks. Connect to `postgres` (the target may not exist
   // yet) and query pg_database for the target.
-  const env = libpqEnv();
+  const env = libpqEnvSync();
   const { Client } = await import("pg");
   const c = new Client({
     host: env.PGHOST!,
@@ -254,7 +254,7 @@ async function databaseReady(name: string): Promise<boolean> {
  * are configured (externally managed DB, assumed ready).
  *
  * INTENTIONAL BEHAVIOR DELTA (recorded, not accidental): this used to call the
- * CLI's own ENOENT-throwing copy of `readDatabaseConfig`, so a missing
+ * CLI's own ENOENT-throwing copy of `readDatabaseConfigSync`, so a missing
  * `~/.equin/state/db-config/database.json` crashed HERE with a bare filesystem error.
  * Against the single tolerant reader it now falls through the
  * `services.length === 0` branch above ("externally managed DB") and the real,
@@ -265,9 +265,9 @@ async function databaseReady(name: string): Promise<boolean> {
  * the wrong problem.
  */
 async function waitForPg(): Promise<void> {
-  const config = readDatabaseConfig();
+  const config = readDatabaseConfigSync();
   if (config.services.length === 0) return;
-  const env = libpqEnv();
+  const env = libpqEnvSync();
   const { Client } = await import("pg");
   let lastErr: string | null = null;
   await retryUntil(
@@ -408,7 +408,7 @@ async function requireBaseDatabase(name: string): Promise<void> {
   // With `services: []` the user runs their own Postgres and the app supervises
   // nothing — so the start script never runs, and we do not provision inside a
   // cluster the app does not own. Name the command that creates it instead.
-  const selfHosted = readDatabaseConfig().services.length === 0;
+  const selfHosted = readDatabaseConfigSync().services.length === 0;
   console.error(
     [
       `ERROR: no database for "${name}".`,
@@ -656,7 +656,8 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // that fact ever surfaces without someone thinking to go looking for it.
   // Per TARGET: the receipt is per-namespace, so an interrupted predecessor
   // is a fact about the namespace this build is about to overwrite.
-  for (const target of targets) reportInterruptedPredecessor(target.namespace);
+  for (const target of targets)
+    reportInterruptedPredecessorSync(target.namespace);
 
   // Every build has ONE stable id — its run transcript and exit marker, its
   // build-profile-<id>.json, its build_runs row and the bundle's .build-id —
@@ -751,7 +752,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       exitCode,
     };
     receipts.set(ns, closed);
-    writeBuildReceipt(ns, closed);
+    writeBuildReceiptSync(ns, closed);
   };
   let buildFinalized = false;
   const finalizeBuild = async (
@@ -780,7 +781,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     // `finalizeBuild(true)`, where the `success ? 0` arm wins.
     for (const [ns, receipt] of receipts) {
       if (receipt.finishedAt !== null) continue;
-      writeBuildReceipt(ns, {
+      writeBuildReceiptSync(ns, {
         ...receipt,
         status: terminal?.status ?? (success ? "ok" : "failed"),
         finishedAt: new Date().toISOString(),
@@ -861,7 +862,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       if (open.finishedAt !== null) continue;
       const stamped: BuildReceipt = { ...open, signal };
       receipts.set(ns, stamped);
-      writeBuildReceipt(ns, stamped);
+      writeBuildReceiptSync(ns, stamped);
     }
   };
 
@@ -1103,7 +1104,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           logPath: transcriptPath,
         };
         receipts.set(ns, receipt);
-        writeBuildReceipt(ns, receipt);
+        writeBuildReceiptSync(ns, receipt);
       };
 
       endSpan = buildProfilerStart(

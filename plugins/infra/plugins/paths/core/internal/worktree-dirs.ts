@@ -16,12 +16,12 @@ import { worktreesDir } from "./paths";
 // also holds non-directory entries (att-*.json sidecars, Finder .DS_Store) —
 // only directories have logs/, so anything else is skipped. A missing
 // worktrees dir means "no worktrees yet" and yields [].
-export function listWorktreeDirs(): string[] {
-  return listDirNames(worktreesDir());
+export function listWorktreeDirsSync(): string[] {
+  return listDirNamesSync(worktreesDir());
 }
 
 // Parameterized on dir only so the co-located test can run against a temp dir.
-export function listDirNames(dir: AppPath): string[] {
+export function listDirNamesSync(dir: AppPath): string[] {
   let names: string[];
   try {
     names = readdirSync(dir);
@@ -43,7 +43,7 @@ export function listDirNames(dir: AppPath): string[] {
   return dirs;
 }
 
-// `listWorktreeDirs` without blocking the event loop — for a caller on a hot
+// `listWorktreeDirsSync` without blocking the event loop — for a caller on a hot
 // async path (a live-resource loader), where ~200 sync stats would freeze every
 // other loader and request for the scan's whole duration.
 export async function listWorktreeDirsAsync(): Promise<string[]> {

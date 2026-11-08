@@ -89,7 +89,7 @@ export async function withFileLock<T>(
       lockPath,
       async () => {
         await mkdir(dirname(lockPath), { recursive: true });
-        const fd = openOwnedFd(lockPath, "a");
+        const fd = await openOwnedFd(lockPath, "a");
         if (flockTry(fd.fd)) {
           try {
             return await fn();

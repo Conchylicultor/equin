@@ -10,7 +10,7 @@ import {
   recordEntrySpan,
   type EntryContext,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { readDatabaseConfig } from "@plugins/database/core";
+import { readDatabaseConfigSync } from "@plugins/database/core";
 import {
   laneUser,
   PGBOUNCER_LANES,
@@ -92,7 +92,7 @@ describe("PgBouncer pool per lane", () => {
 
     // The database sees them, by lane: the background role is their session user.
     const backgroundUser = laneUser(
-      readDatabaseConfig().connection.user,
+      readDatabaseConfigSync().connection.user,
       "background",
     );
     const sessions = await app.front.query<{ n: string }>(

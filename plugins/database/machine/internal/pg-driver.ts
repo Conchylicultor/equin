@@ -19,7 +19,7 @@ import {
   registerGateGauge,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
-  readDatabaseConfig,
+  readDatabaseConfigSync,
   buildConnectionString,
 } from "@plugins/database/core";
 import {
@@ -61,10 +61,10 @@ import {
 // one. It is still loud and never silently defaulted — a real query in a process
 // that declared no namespace throws here.
 
-// The connection config is read on first use too (`readDatabaseConfig` is
+// The connection config is read on first use too (`readDatabaseConfigSync` is
 // memoized), never at module load: a module must not read a file or the
 // environment as it loads (barrel-import's load guard).
-const config = () => readDatabaseConfig();
+const config = () => readDatabaseConfigSync();
 // The cluster's own socket. A session-bound LISTEN (`listen` below) must use it:
 // pgbouncer's transaction pooling breaks LISTEN.
 const direct = () => ({

@@ -102,7 +102,7 @@ export type {
  * `generateMigration` consumes. Lives HERE, beside `MigrationAnswer` itself,
  * rather than in one command: every command that can drive a migration
  * (`build`, `build --hermetic`) takes the same flag, and a second hand-rolled
- * copy of this validator is exactly how the three divergent `readDatabaseConfig`
+ * copy of this validator is exactly how the three divergent `readDatabaseConfigSync`
  * readers this plan started by unifying came about.
  *
  * MAY TERMINATE THE PROCESS: exits 1 on malformed input. That is argv

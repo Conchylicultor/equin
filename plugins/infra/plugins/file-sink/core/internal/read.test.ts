@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineFileSink } from "./file-sink";
-import { readJsonlTail, readTail } from "./read";
+import { readJsonlTailSync, readTailSync } from "./read";
 import {
   type AppPath,
   asAppPath,
@@ -36,7 +36,7 @@ function write(name: string, content: string): AppPath {
 describe("readTail", () => {
   test("reads every line when the file is under budget", () => {
     const path = write("a.jsonl", "one\ntwo\nthree\n");
-    const result = readTail(path);
+    const result = readTailSync(path);
     expect(result).toEqual({
       kind: "read",
       lines: ["one", "two", "three"],
@@ -49,7 +49,7 @@ describe("readTail", () => {
     // 4 lines of 4 bytes each ("aaa\n"). A 10-byte budget starts mid-"bbb", so the
     // clipped leading fragment must be dropped rather than surfaced as a line.
     const path = write("b.jsonl", "aaa\nbbb\nccc\nddd\n");
-    const result = readTail(path, { maxBytes: 10 });
+    const result = readTailSync(path, { maxBytes: 10 });
     expect(result).toEqual({
       kind: "read",
       lines: ["ccc", "ddd"],
@@ -59,12 +59,12 @@ describe("readTail", () => {
   });
 
   test("a missing file is `missing`, never an empty read", () => {
-    expect(readTail(joinAppPath(dir, "nope.jsonl"))).toEqual({
+    expect(readTailSync(joinAppPath(dir, "nope.jsonl"))).toEqual({
       kind: "missing",
     });
     // The distinction is load-bearing: a present-but-empty file IS a read.
     const empty = write("empty.jsonl", "");
-    expect(readTail(empty)).toEqual({
+    expect(readTailSync(empty)).toEqual({
       kind: "read",
       lines: [],
       truncated: false,
@@ -74,7 +74,7 @@ describe("readTail", () => {
 
   test("maxLines keeps the NEWEST lines and flags truncated", () => {
     const path = write("c.jsonl", "1\n2\n3\n4\n5\n");
-    const result = readTail(path, { maxLines: 2 });
+    const result = readTailSync(path, { maxLines: 2 });
     expect(result).toEqual({
       kind: "read",
       lines: ["4", "5"],
@@ -82,7 +82,7 @@ describe("readTail", () => {
       filesRead: 1,
     });
     // Not truncated when the cap is not actually reached.
-    expect(readTail(path, { maxLines: 99 })).toMatchObject({
+    expect(readTailSync(path, { maxLines: 99 })).toMatchObject({
       truncated: false,
     });
   });
@@ -96,11 +96,11 @@ describe("readTail", () => {
       maxBytes: 5, // "L0\n" is 3 bytes → every subsequent append rotates
       keep: 3,
     });
-    for (let i = 0; i < 4; i++) sink.append(`L${i}`);
+    for (let i = 0; i < 4; i++) sink.appendSync(`L${i}`);
     // Live=L3, .1=L2, .2=L1, .3=L0
 
     // Default: live file only — history is NOT stitched.
-    expect(readTail(path)).toEqual({
+    expect(readTailSync(path)).toEqual({
       kind: "read",
       lines: ["L3"],
       truncated: false,
@@ -108,7 +108,7 @@ describe("readTail", () => {
     });
 
     // Opt in: chronological order is restored across the rotation boundary.
-    const stitched = readTail(path, { includeRotated: true });
+    const stitched = readTailSync(path, { includeRotated: true });
     expect(stitched).toEqual({
       kind: "read",
       lines: ["L0", "L1", "L2", "L3"],
@@ -129,9 +129,9 @@ describe("readTail", () => {
       maxBytes: 12, // "L0\n" is 3 bytes → 4 lines per rotation group
       keep: 3,
     });
-    sink.appendAll(["L0", "L1", "L2", "L3", "L4", "L5"]);
+    sink.appendAllSync(["L0", "L1", "L2", "L3", "L4", "L5"]);
 
-    expect(readTail(path, { includeRotated: true })).toEqual({
+    expect(readTailSync(path, { includeRotated: true })).toEqual({
       kind: "read",
       lines: ["L0", "L1", "L2", "L3", "L4", "L5"],
       truncated: false,
@@ -148,11 +148,11 @@ describe("readTail", () => {
       maxBytes: 5,
       keep: 3,
     });
-    for (let i = 0; i < 4; i++) sink.append(`L${i}`);
+    for (let i = 0; i < 4; i++) sink.appendSync(`L${i}`);
 
     // 6 bytes covers exactly the live file + `.1` ("L3\n" + "L2\n"); `.2` exists
     // but is never opened, so history was clipped.
-    const result = readTail(path, { includeRotated: true, maxBytes: 6 });
+    const result = readTailSync(path, { includeRotated: true, maxBytes: 6 });
     expect(result).toEqual({
       kind: "read",
       lines: ["L2", "L3"],
@@ -165,7 +165,7 @@ describe("readTail", () => {
 describe("readJsonlTail", () => {
   test("parses each line into a record", () => {
     const path = write("f.jsonl", '{"n":1}\n{"n":2}\n');
-    expect(readJsonlTail<{ n: number }>(path)).toEqual({
+    expect(readJsonlTailSync<{ n: number }>(path)).toEqual({
       kind: "read",
       records: [{ n: 1 }, { n: 2 }],
       truncated: false,
@@ -176,7 +176,7 @@ describe("readJsonlTail", () => {
   test("a torn trailing line is skipped (SyntaxError only)", () => {
     // A half-flushed append leaves an unterminated object at the tail.
     const path = write("g.jsonl", '{"n":1}\n{"n":2}\n{"n":\n');
-    expect(readJsonlTail<{ n: number }>(path)).toEqual({
+    expect(readJsonlTailSync<{ n: number }>(path)).toEqual({
       kind: "read",
       records: [{ n: 1 }, { n: 2 }],
       truncated: false,
@@ -195,35 +195,35 @@ describe("readJsonlTail", () => {
       throw new RangeError("boom");
     };
     try {
-      expect(() => readJsonlTail(path)).toThrow(RangeError);
+      expect(() => readJsonlTailSync(path)).toThrow(RangeError);
     } finally {
       JSON.parse = realParse;
     }
   });
 
   test("a missing file is `missing`, never []", () => {
-    expect(readJsonlTail(joinAppPath(dir, "nope.jsonl"))).toEqual({
+    expect(readJsonlTailSync(joinAppPath(dir, "nope.jsonl"))).toEqual({
       kind: "missing",
     });
   });
 });
 
 describe("FileSink read methods", () => {
-  test("sink.readTail / sink.readJsonlTail read the sink's own path", () => {
+  test("sink.readTailSync / sink.readJsonlTailSync read the sink's own path", () => {
     const path = joinAppPath(dir, "i.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
       path,
     });
-    sink.append(JSON.stringify({ n: 1 }));
-    sink.append(JSON.stringify({ n: 2 }));
+    sink.appendSync(JSON.stringify({ n: 1 }));
+    sink.appendSync(JSON.stringify({ n: 2 }));
 
-    expect(sink.readTail()).toMatchObject({
+    expect(sink.readTailSync()).toMatchObject({
       kind: "read",
       lines: ['{"n":1}', '{"n":2}'],
     });
-    expect(sink.readJsonlTail<{ n: number }>()).toMatchObject({
+    expect(sink.readJsonlTailSync<{ n: number }>()).toMatchObject({
       kind: "read",
       records: [{ n: 1 }, { n: 2 }],
     });
@@ -239,9 +239,11 @@ describe("FileSink read methods", () => {
     expect(sink.bound.maxBytes).toBe(128 * 1024 * 1024);
     // A 2-byte explicit budget clips: proof the budget comes from opts, and that
     // the default is not silently derived from `bound`.
-    sink.append("aaaa");
-    sink.append("bbbb");
-    expect(sink.readTail({ maxBytes: 5 })).toMatchObject({ truncated: true });
+    sink.appendSync("aaaa");
+    sink.appendSync("bbbb");
+    expect(sink.readTailSync({ maxBytes: 5 })).toMatchObject({
+      truncated: true,
+    });
   });
 
   test("a sink whose file was never written reports missing", () => {
@@ -250,6 +252,6 @@ describe("FileSink read methods", () => {
       description: "t",
       path: joinAppPath(dir, "k.jsonl"),
     });
-    expect(sink.readTail()).toEqual({ kind: "missing" });
+    expect(sink.readTailSync()).toEqual({ kind: "missing" });
   });
 });

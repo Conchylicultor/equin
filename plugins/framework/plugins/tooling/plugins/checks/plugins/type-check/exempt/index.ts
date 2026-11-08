@@ -47,4 +47,19 @@ export default [
     reason:
       "Lists the IGNORED entries (`--others --ignored --directory`), which no file set holds: the coverage gate needs to know what git ignores, once per type-check run.",
   },
+  {
+    rule: "blocking-fs/sync-named",
+    paths: [
+      "shared/batch-processes.ts",
+      "shared/batch-worker.ts",
+      "shared/name-store.ts",
+      "shared/pass-set.ts",
+      "shared/repo-view.ts",
+      "shared/tsc-engine.ts",
+      "shared/worker.ts",
+    ],
+    kind: "sanctioned",
+    reason:
+      "Host tooling only: no backend loads this module (blocking-fs:sync-named-reach measures the backends' import graph), so its blocking helpers hold only the CLI's, a check's or a script's own thread.",
+  },
 ] satisfies Exemptions;

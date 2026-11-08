@@ -43,4 +43,15 @@ export default [
     reason:
       "Per-file synchronous work on the shared check thread (a blocking fs/process call made per item, or a direct maskSource / createSourceFile) that predates the rule; move it onto ctx.repo() / fs/promises and checks/core's maskedSource / parsedTsSource.",
   },
+  {
+    rule: "blocking-fs/sync-named",
+    paths: [
+      "core/internal/drizzle-stage.ts",
+      "core/internal/schema-snapshot.ts",
+      "core/internal/snapshot-bodies.ts",
+    ],
+    kind: "sanctioned",
+    reason:
+      "Host tooling only: no backend loads this module (blocking-fs:sync-named-reach measures the backends' import graph), so its blocking helpers hold only the CLI's, a check's or a script's own thread.",
+  },
 ] satisfies Exemptions;

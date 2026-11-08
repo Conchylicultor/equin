@@ -13,7 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { listDirNames } from "./worktree-dirs";
+import { listDirNamesSync } from "./worktree-dirs";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 
 describe("listDirNames", () => {
@@ -24,7 +24,7 @@ describe("listDirNames", () => {
       mkdirSync(joinAppPath(dir, MAIN_WORKTREE_NAME));
       writeFileSync(joinAppPath(dir, ".DS_Store"), "finder junk");
       writeFileSync(joinAppPath(dir, "att-abc.json"), "{}");
-      expect(listDirNames(dir).sort()).toEqual([
+      expect(listDirNamesSync(dir).sort()).toEqual([
         "claude-123",
         MAIN_WORKTREE_NAME,
       ]);
@@ -43,7 +43,7 @@ describe("listDirNames", () => {
         joinAppPath(dir, "does-not-exist"),
         joinAppPath(dir, "vanished"),
       );
-      expect(listDirNames(dir)).toEqual(["alive"]);
+      expect(listDirNamesSync(dir)).toEqual(["alive"]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -51,7 +51,9 @@ describe("listDirNames", () => {
 
   test("missing root dir yields an empty list", () => {
     expect(
-      listDirNames(asAppPath(join(tmpdir(), "worktree-dirs-nonexistent-root"))),
+      listDirNamesSync(
+        asAppPath(join(tmpdir(), "worktree-dirs-nonexistent-root")),
+      ),
     ).toEqual([]);
   });
 });

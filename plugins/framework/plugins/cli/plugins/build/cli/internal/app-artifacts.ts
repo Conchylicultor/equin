@@ -17,7 +17,7 @@ import {
   type CodegenPass,
   type CodegenStep,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { listNamedCompositionRegistries } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
+import { listNamedCompositionRegistriesSync } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 import { repoProgram } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { readTypeCheckTree } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/cli";
 import { spawnTypeCheckWorker } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/server";
@@ -551,7 +551,7 @@ export async function prepareCompositionSources(opts: {
     compositions.filter((id) => id !== MAIN_COMPOSITION_ID),
     [
       ...new Set(
-        (await listNamedCompositionRegistries(repo)).map((r) => r.name),
+        (await listNamedCompositionRegistriesSync(repo)).map((r) => r.name),
       ),
     ],
     (id) => byId.has(id),

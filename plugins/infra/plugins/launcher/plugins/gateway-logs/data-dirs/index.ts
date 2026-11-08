@@ -65,6 +65,9 @@ export function serviceLogFile(service: string): AppPath {
   return gatewayLogs.file(SERVICE_LOGS_SUBDIR, `${service}.log`);
 }
 
-export { adoptLegacyLog, type LegacyLogAdoption } from "./internal/legacy-log";
+export {
+  adoptLegacyLogSync,
+  type LegacyLogAdoption,
+} from "./internal/legacy-log";
 
 export default [gatewayLogs];

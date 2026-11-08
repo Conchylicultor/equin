@@ -118,6 +118,7 @@ straight onto the page canvas; agents attaching to the user's tabs.
     - `no-raw-websocket` — `machine/internal/relay.ts` (sanctioned)
     - `boundaries/no-platform-api` — `shared/code-id.ts` (sanctioned)
     - `scroll-safety/no-scrolling-focus` — `bin/page-script.ts` (sanctioned)
+    - `blocking-fs/no-sync-fs` — `machine/internal/host-client.ts` (debt)
 - Core:
   - Exports (types):
     - `ClientMessage`

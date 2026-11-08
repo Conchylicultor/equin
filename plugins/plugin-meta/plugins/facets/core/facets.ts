@@ -30,8 +30,8 @@ export interface ExtractContext {
    * either way, so the facet derives it rather than depending on a stamp.
    */
   pluginId: string;
-  // The plugin's files, read once, in memory. The parse-utils `readIfExists` /
-  // `walkFiles` helpers read from it (wired ambiently by buildPluginTree's
+  // The plugin's files, read once, in memory. The parse-utils `readIfExistsSync` /
+  // `walkFilesSync` helpers read from it (wired ambiently by buildPluginTree's
   // extract loop), so facet bodies need no change; the structure facet reads it
   // through codegen's standardPluginDirsFromSnapshot.
   fs?: FsSnapshot;

@@ -13,16 +13,16 @@
 // `web/` may import it.
 //
 // `resolveReceipt` — the pure `BuildReceipt | null` → `ResolvedReceipt` kernel
-// — is deliberately absent. `resolveBuildReceipt` is what every caller outside
+// — is deliberately absent. `resolveBuildReceiptSync` is what every caller outside
 // the module wants, and the co-located test names the kernel by its own path,
 // so exporting it here would only widen the surface for no caller.
 
 export {
-  writeBuildReceipt,
-  readBuildReceipt,
-  resolveBuildReceipt,
+  writeBuildReceiptSync,
+  readBuildReceiptSync,
+  resolveBuildReceiptSync,
   interruptedPredecessorWarning,
-  reportInterruptedPredecessor,
+  reportInterruptedPredecessorSync,
 } from "./internal/build-receipt";
 export type {
   BuildReceipt,

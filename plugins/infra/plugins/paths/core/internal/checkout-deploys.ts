@@ -5,7 +5,9 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   existsSync,
+  readFile,
   readFileSync,
+  realpath,
   realpathSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, resolve } from "node:path";
@@ -26,7 +28,7 @@ import {
   worktreeArtifacts,
   worktreesDir,
 } from "./paths";
-import { listWorktreeDirs } from "./worktree-dirs";
+import { listWorktreeDirsSync } from "./worktree-dirs";
 
 // Which deploys a CHECKOUT published — read back out of the registry that
 // checkout wrote, never guessed from a directory basename.
@@ -99,21 +101,37 @@ type SpecRead =
   | { kind: "malformed"; reason: string }
   | { kind: "deploy"; server: string; composition: string };
 
-function readDeploySpec(path: AppPath): SpecRead {
+function readDeploySpecSync(path: AppPath): SpecRead {
+  try {
+    return parseDeploySpec(readFileSync(path, "utf8"));
+  } catch (err) {
+    return specReadFailure(err);
+  }
+}
+
+/** {@link readDeploySpecSync}, without holding the thread. */
+async function readDeploySpec(path: AppPath): Promise<SpecRead> {
   let text: string;
   try {
-    text = readFileSync(path, "utf8");
+    text = await readFile(path, "utf8");
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    // ENOTDIR alongside ENOENT for the reason `statManifest` folds them
-    // together: both answer "is there a spec here" with no, and a namespace dir
-    // that is really a file must not take the whole scan down with it.
-    if (code === "ENOENT" || code === "ENOTDIR") return { kind: "absent" };
-    // EACCES, EISDIR, an I/O error: the spec is there and we cannot read it,
-    // which is not the same as there being none.
-    return { kind: "malformed", reason: `unreadable (${String(code ?? err)})` };
+    return specReadFailure(err);
   }
+  return parseDeploySpec(text);
+}
 
+function specReadFailure(err: unknown): SpecRead {
+  const code = (err as NodeJS.ErrnoException).code;
+  // ENOTDIR alongside ENOENT for the reason `statManifestSync` folds them
+  // together: both answer "is there a spec here" with no, and a namespace dir
+  // that is really a file must not take the whole scan down with it.
+  if (code === "ENOENT" || code === "ENOTDIR") return { kind: "absent" };
+  // EACCES, EISDIR, an I/O error: the spec is there and we cannot read it,
+  // which is not the same as there being none.
+  return { kind: "malformed", reason: `unreadable (${String(code ?? err)})` };
+}
+
+function parseDeploySpec(text: string): SpecRead {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -167,9 +185,19 @@ function readDeploySpec(path: AppPath): SpecRead {
  * real fault and throws — which is right for the caller's OWN root, and wrong
  * for a path that came out of somebody else's spec: see `comparableSpecPath`.
  */
-function comparablePath(path: AppPath): string {
+function comparablePathSync(path: AppPath): string {
   try {
     return realpathSync(path);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return resolve(path);
+    throw err;
+  }
+}
+
+/** {@link comparablePathSync}, without holding the thread. */
+async function comparablePath(path: AppPath): Promise<string> {
+  try {
+    return await realpath(path);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return resolve(path);
     throw err;
@@ -194,18 +222,32 @@ function comparablePath(path: AppPath): string {
  * did. This is a second read of the same spec's contents, so it belongs under
  * the same rule as the first.
  */
-function comparableSpecPath(
-  path: AppPath,
-): { kind: "path"; path: string } | { kind: "fault"; reason: string } {
+type SpecServerPath =
+  { kind: "path"; path: string } | { kind: "fault"; reason: string };
+
+function comparableSpecPathSync(path: AppPath): SpecServerPath {
   try {
-    return { kind: "path", path: comparablePath(path) };
+    return { kind: "path", path: comparablePathSync(path) };
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    return {
-      kind: "fault",
-      reason: `server path unresolvable (${String(code ?? err)})`,
-    };
+    return specPathFault(err);
   }
+}
+
+/** {@link comparableSpecPathSync}, without holding the thread. */
+async function comparableSpecPath(path: AppPath): Promise<SpecServerPath> {
+  try {
+    return { kind: "path", path: await comparablePath(path) };
+  } catch (err) {
+    return specPathFault(err);
+  }
+}
+
+function specPathFault(err: unknown): SpecServerPath {
+  const code = (err as NodeJS.ErrnoException).code;
+  return {
+    kind: "fault",
+    reason: `server path unresolvable (${String(code ?? err)})`,
+  };
 }
 
 /**
@@ -214,7 +256,7 @@ function comparableSpecPath(
  * `scanned` rides along because a caller cannot recover it afterwards — an
  * empty result says nothing about whether the registry was empty or merely
  * held nobody's deploy but ours — and re-deriving it from a second
- * `listWorktreeDirs()` would count entries this scan skipped.
+ * `listWorktreeDirsSync()` would count entries this scan skipped.
  */
 interface CheckoutScan {
   readonly deploys: CheckoutDeploy[];
@@ -237,24 +279,24 @@ interface CheckoutScan {
  * @throws when specs could not be read AND nothing matched — see the decision
  *   below, which is deliberately made after the whole scan.
  */
-function scanCheckout(root: AppPath): CheckoutScan {
-  const ours = comparablePath(joinAppPath(root, SERVER_CORE_RELATIVE));
+function scanCheckoutSync(root: AppPath): CheckoutScan {
+  const ours = comparablePathSync(joinAppPath(root, SERVER_CORE_RELATIVE));
   const deploys: CheckoutDeploy[] = [];
   const malformed: string[] = [];
   let scanned = 0;
 
-  for (const name of listWorktreeDirs()) {
+  for (const name of listWorktreeDirsSync()) {
     if (!isNamespace(name)) continue;
     scanned += 1;
     const path = worktreeArtifacts.spec(asNamespace(name));
-    const read = readDeploySpec(path);
+    const read = readDeploySpecSync(path);
     if (read.kind === "absent") continue;
     if (read.kind === "malformed") {
       malformed.push(`${path}: ${read.reason}`);
       continue;
     }
     // The server dir a spec the app wrote names: app-owned by that claim.
-    const server = comparableSpecPath(asAppPath(read.server));
+    const server = comparableSpecPathSync(asAppPath(read.server));
     if (server.kind === "fault") {
       malformed.push(`${path}: ${server.reason}`);
       continue;
@@ -305,10 +347,10 @@ function scanCheckout(root: AppPath): CheckoutScan {
  * the scan without its denominator, which is all any caller outside this file
  * has ever wanted.
  *
- * @throws when specs could not be used AND nothing matched — see `scanCheckout`.
+ * @throws when specs could not be used AND nothing matched — see `scanCheckoutSync`.
  */
-export function deploysForCheckout(root: AppPath): CheckoutDeploy[] {
-  return scanCheckout(root).deploys;
+export function deploysForCheckoutSync(root: AppPath): CheckoutDeploy[] {
+  return scanCheckoutSync(root).deploys;
 }
 
 /**
@@ -350,35 +392,97 @@ function candidateNamespaces(
  * the specs of the few namespaces a build of it could have published — see
  * {@link candidateNamespaces}. `none` says only that there is none: a caller
  * that must explain why (which deploys this checkout DOES serve) asks
- * {@link resolveCheckoutDeploy}, which scans the registry for that, on the
+ * {@link resolveCheckoutDeploySync}, which scans the registry for that, on the
  * refusal path only.
  *
  * @throws when a candidate's spec cannot be used AND no candidate matched — it
  *   may be the one naming this checkout (the scan's rule, over the candidates).
  */
-export function lookupCheckoutDeploy(
+export function lookupCheckoutDeploySync(
   root: AppPath,
   composition?: string,
-): { kind: "resolved"; deploy: CheckoutDeploy } | { kind: "none" } {
+): CheckoutDeployLookup {
   const wanted = composition ?? MAIN_COMPOSITION_ID;
-  const ours = comparablePath(joinAppPath(root, SERVER_CORE_RELATIVE));
-  const matches: CheckoutDeploy[] = [];
-  const malformed: string[] = [];
-  for (const namespace of candidateNamespaces(
-    comparablePath(root),
+  const ours = comparablePathSync(joinAppPath(root, SERVER_CORE_RELATIVE));
+  const reads = candidateNamespaces(comparablePathSync(root), root, wanted).map(
+    (namespace): CandidateRead => {
+      const path = worktreeArtifacts.spec(namespace);
+      const read = readDeploySpecSync(path);
+      return {
+        namespace,
+        path,
+        read,
+        server:
+          read.kind === "deploy" && read.composition === wanted
+            ? comparableSpecPathSync(asAppPath(read.server))
+            : null,
+      };
+    },
+  );
+  return judgeLookup(wanted, ours, reads);
+}
+
+/**
+ * {@link lookupCheckoutDeploySync}, without holding the thread: the same few
+ * candidate specs, read and resolved through `fs/promises` — what a backend
+ * calls (browser-MCP's target resolution).
+ */
+export async function lookupCheckoutDeploy(
+  root: AppPath,
+  composition?: string,
+): Promise<CheckoutDeployLookup> {
+  const wanted = composition ?? MAIN_COMPOSITION_ID;
+  const ours = await comparablePath(joinAppPath(root, SERVER_CORE_RELATIVE));
+  const candidates = candidateNamespaces(
+    await comparablePath(root),
     root,
     wanted,
-  )) {
-    const path = worktreeArtifacts.spec(namespace);
-    const read = readDeploySpec(path);
+  );
+  const reads = await Promise.all(
+    candidates.map(async (namespace): Promise<CandidateRead> => {
+      const path = worktreeArtifacts.spec(namespace);
+      const read = await readDeploySpec(path);
+      return {
+        namespace,
+        path,
+        read,
+        server:
+          read.kind === "deploy" && read.composition === wanted
+            ? await comparableSpecPath(asAppPath(read.server))
+            : null,
+      };
+    }),
+  );
+  return judgeLookup(wanted, ours, reads);
+}
+
+type CheckoutDeployLookup =
+  { kind: "resolved"; deploy: CheckoutDeploy } | { kind: "none" };
+
+/** One candidate's spec, read — and its `server` path resolved when it could match. */
+interface CandidateRead {
+  namespace: Namespace;
+  path: AppPath;
+  read: SpecRead;
+  server: SpecServerPath | null;
+}
+
+/** The lookup's decision over the candidates' reads, shared by both twins. */
+function judgeLookup(
+  wanted: string,
+  ours: string,
+  reads: readonly CandidateRead[],
+): CheckoutDeployLookup {
+  const matches: CheckoutDeploy[] = [];
+  const malformed: string[] = [];
+  for (const { namespace, path, read, server } of reads) {
     if (read.kind === "absent") continue;
     if (read.kind === "malformed") {
       malformed.push(`${path}: ${read.reason}`);
       continue;
     }
-    if (read.composition !== wanted) continue;
+    if (read.composition !== wanted || server === null) continue;
     // The server dir a spec the app wrote names: app-owned by that claim.
-    const server = comparableSpecPath(asAppPath(read.server));
     if (server.kind === "fault") {
       malformed.push(`${path}: ${server.reason}`);
       continue;
@@ -433,15 +537,15 @@ export function lookupCheckoutDeploy(
  * (`sonata.att-x`), whose namespace shares no label with the checkout it was
  * built from — the case a basename gets silently wrong.
  */
-export function resolveCheckoutDeploy(
+export function resolveCheckoutDeploySync(
   root: AppPath,
   composition?: string,
 ): CheckoutDeployResolution {
-  const found = lookupCheckoutDeploy(root, composition);
+  const found = lookupCheckoutDeploySync(root, composition);
   if (found.kind === "resolved") return found;
   // The refusal path: say what this checkout DOES serve, which only the whole
   // registry can.
-  const { deploys, scanned } = scanCheckout(root);
+  const { deploys, scanned } = scanCheckoutSync(root);
   return { kind: "none", others: deploys, scanned };
 }
 
@@ -461,9 +565,9 @@ export function resolveCheckoutDeploy(
 export type MainNamespaceOwner =
   { kind: "unclaimed" } | { kind: "claimed"; checkoutRoot: string };
 
-export function mainNamespaceOwner(): MainNamespaceOwner {
+export function mainNamespaceOwnerSync(): MainNamespaceOwner {
   const path = worktreeArtifacts.spec(MAIN_WORKTREE_NAME);
-  const read = readDeploySpec(path);
+  const read = readDeploySpecSync(path);
   if (read.kind === "absent") return { kind: "unclaimed" };
   if (read.kind === "malformed") {
     throw new Error(
@@ -482,10 +586,10 @@ export function mainNamespaceOwner(): MainNamespaceOwner {
   // The checkout a spec the app wrote names: app-owned by that claim.
   const checkoutRoot = asAppPath(server.slice(0, -suffix.length));
   if (!existsSync(checkoutRoot)) return { kind: "unclaimed" };
-  return { kind: "claimed", checkoutRoot: comparablePath(checkoutRoot) };
+  return { kind: "claimed", checkoutRoot: comparablePathSync(checkoutRoot) };
 }
 
-/** `root`'s comparable identity, for matching against {@link mainNamespaceOwner}. */
-export function comparableCheckoutPath(root: AppPath): string {
-  return comparablePath(root);
+/** `root`'s comparable identity, for matching against {@link mainNamespaceOwnerSync}. */
+export function comparableCheckoutPathSync(root: AppPath): string {
+  return comparablePathSync(root);
 }

@@ -44,7 +44,7 @@ export type ReadBrowserExecutables =
  * is the kind's `isIntact`, which runs on every `ensureDep` fast path and
  * every state read.
  */
-export function readBrowserExecutables(
+export function readBrowserExecutablesSync(
   envDir: AppPath,
 ): ReadBrowserExecutables {
   const file = joinAppPath(envDir, BROWSER_EXECUTABLES_FILE);

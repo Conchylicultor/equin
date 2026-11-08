@@ -6,7 +6,7 @@ import {
 } from "@plugins/database/plugins/admin/server";
 import {
   buildConnectionString,
-  readDatabaseConfig,
+  readDatabaseConfigSync,
 } from "@plugins/database/core";
 import { mintTestDbName } from "../../core/internal/scratch-name";
 
@@ -74,7 +74,7 @@ export async function createTestDb(
   const pool = await openShortLivedClient(name);
   const db = drizzle(pool);
   const connectionString = buildConnectionString(
-    readDatabaseConfig().connection,
+    readDatabaseConfigSync().connection,
     name,
   );
 

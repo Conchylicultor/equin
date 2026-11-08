@@ -22,7 +22,7 @@ import { worktreeArtifacts } from "./paths";
 // the owner-gone rule instead of guessing from a missing row.
 
 /** Record that `minter`'s backend made the checkout `checkout`. Written once, right after the checkout exists. */
-export function stampCheckoutMinter(
+export function stampCheckoutMinterSync(
   checkout: Namespace,
   minter: Namespace,
 ): void {
@@ -41,7 +41,9 @@ export type CheckoutMinterRead =
  * existed, so it means "unknown", never "main"; `malformed` is its own arm so an
  * unreadable stamp can never read as either.
  */
-export function readCheckoutMinter(checkout: Namespace): CheckoutMinterRead {
+export function readCheckoutMinterSync(
+  checkout: Namespace,
+): CheckoutMinterRead {
   const path = worktreeArtifacts.checkoutMinter(checkout);
   let text: string;
   try {

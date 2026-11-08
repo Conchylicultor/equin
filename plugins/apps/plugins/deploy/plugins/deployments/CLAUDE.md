@@ -208,7 +208,7 @@ run is not re-judged mid-way. A gate answers `pass` or `needs-approval` with the
 sentence to show; any refusal ends the run `needs-approval` (`holdRunForApproval`,
 beside `failRun` in `run-state.ts`) having converged and shipped nothing, and all
 refusals are reported at once. A refusal also names **where it is resolved**
-(`resolveIn`: a `DeploymentDetail` section id), persisted on the run as
+(`resolveInSync`: a `DeploymentDetail` section id), persisted on the run as
 `approvalSections`; `ApprovalLinks` links there (open the section + scroll to
 it, navigating to the site's Settings tab when needed) on every surface that shows
 the run — no surface reads the message to find out where. The server list's

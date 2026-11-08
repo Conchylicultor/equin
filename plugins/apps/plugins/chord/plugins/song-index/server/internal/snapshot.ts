@@ -65,7 +65,7 @@ export async function ensureSnapshot(hooks: SnapshotHooks): Promise<AppPath> {
   if (await exists(path)) return path;
 
   songIndexArea.ensure();
-  const lock = openOwnedFd(songIndexArea.file("snapshot.lock"), "a");
+  const lock = await openOwnedFd(songIndexArea.file("snapshot.lock"), "a");
   try {
     if (!flockTry(lock.fd)) {
       hooks.log("another process is building the snapshot; waiting for it");

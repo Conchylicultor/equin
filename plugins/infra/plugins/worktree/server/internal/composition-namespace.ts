@@ -24,6 +24,7 @@ import {
 
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 import { basename } from "node:path";
 import {
@@ -131,11 +132,14 @@ export function namespaceCollision(
   return null;
 }
 
-function branchExists(root: string, name: string): boolean {
-  const proc = Bun.spawnSync(
+async function branchExists(root: string, name: string): Promise<boolean> {
+  const proc = await spawnCaptured(
     ["git", "show-ref", "--verify", "--quiet", `refs/heads/${name}`],
-    { cwd: root, stdout: "ignore", stderr: "ignore" },
+    // A wedge-breaker: show-ref reads one ref file.
+    { cwd: root, timeoutMs: 60_000 },
   );
+  if (proc.timedOut)
+    throw new Error(`git show-ref refs/heads/${name} timed out in ${root}`);
   return proc.exitCode === 0;
 }
 
@@ -161,7 +165,7 @@ export async function probeNamespace(
     gitWorktreeDirExists: await exists(
       joinAppPath(root, ".claude", "worktrees", ns),
     ),
-    branchExists: branchExists(root, ns),
+    branchExists: await branchExists(root, ns),
     compositionIdExists: compositionIds.has(ns),
   };
 }

@@ -12,7 +12,7 @@ import {
   checkBroadcasts,
   installFatalSignalExit,
   opPriority,
-  reportInterruptedPredecessor,
+  reportInterruptedPredecessorSync,
   signalOriginTap,
 } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import { normalizeGeneratedArtifacts } from "@plugins/framework/plugins/cli/plugins/git-artifacts/cli";
@@ -449,7 +449,7 @@ const pushAction: CliAction<
   // An interrupted build prints no verdict and sets no exit code its caller
   // can see, so the next op is where it surfaces — and pushing work that was
   // never actually deployed is the expensive version of that mistake.
-  reportInterruptedPredecessor(opSlug);
+  reportInterruptedPredecessorSync(opSlug);
   // A push is human-blocking, so every grant it takes is interactive — the
   // same fact `runRebasedChecks` passes to `withHostGrant`. Recorded on the
   // op because the lane is what explains WHY a wait was as long as it was.

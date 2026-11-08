@@ -23,7 +23,7 @@
     - `compositionRegistryFileName`
     - `compositionRegistryPath`
     - `compositionRegistryRedirects`
-    - `listNamedCompositionRegistries`
+    - `listNamedCompositionRegistriesSync`
     - `parseNamedCompositionRegistryFileName`
 - Cross-plugin:
   - Imported by:

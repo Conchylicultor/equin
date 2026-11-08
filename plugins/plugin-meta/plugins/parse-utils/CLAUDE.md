@@ -91,8 +91,8 @@ caller**. Omitting `path` keeps the `ts` loader — correct only for `.ts`-only 
 ## Inside a snapshot (`runWithFsSnapshot`)
 
 A faceted plugin-tree build runs every facet's scanners inside one in-memory
-snapshot of the source (`core/snapshot-scope.ts`). Within it, `readIfExists`,
-`walkFiles` and **`pathExists`** (use it instead of `existsSync` in a scanner)
+snapshot of the source (`core/snapshot-scope.ts`). Within it, `readIfExistsSync`,
+`walkFilesSync` and **`pathExistsSync`** (use it instead of `existsSync` in a scanner)
 answer from memory — absence included, when the directory holding the path was
 scanned — and `maskSource` / `stripTypes` are memoized per input string for the
 snapshot's lifetime, since every facet masks the same files again. Outside a
@@ -194,16 +194,16 @@ snapshot they read the disk and compute, unchanged.
     - `parseServerContributionDeclarations`
     - `parseStaticCallId`
     - `parseStringField`
-    - `pathExists`
+    - `pathExistsSync`
     - `providedServiceNames`
-    - `readIfExists`
+    - `readIfExistsSync`
     - `readStaticCallId`
     - `readStringLiteral`
     - `runWithFsSnapshot`
     - `sourceFilesIn`
     - `stripTypes`
     - `unresolvableCallIdMessage`
-    - `walkFiles`
+    - `walkFilesSync`
 - Cross-plugin:
   - Imported by:
     - `framework/tooling/boundaries`

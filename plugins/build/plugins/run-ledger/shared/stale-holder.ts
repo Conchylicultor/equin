@@ -4,7 +4,7 @@ import { z } from "zod";
 import {
   HARD_KILL_EXIT_CODE,
   isRunAlive,
-  readRunTerminal,
+  readRunTerminalSync,
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
@@ -68,11 +68,11 @@ export interface BuildTerminal {
  * but does not parse THROWS (`RunMarkerError`): it is published by rename, so
  * malformed bytes are a writer defect, never a hard kill.
  */
-export function readBuildTerminal(
+export function readBuildTerminalSync(
   namespace: Namespace,
   buildId: string,
 ): BuildTerminal | null {
-  const terminal = readRunTerminal(BUILD_RUN_KIND_ID, buildId, namespace);
+  const terminal = readRunTerminalSync(BUILD_RUN_KIND_ID, buildId, namespace);
   return terminal === null
     ? null
     : { exitCode: terminal.exitCode, finishedAt: terminal.finishedAt };
@@ -108,7 +108,7 @@ export async function settleDeadInflightRun(
   // The holder closed between our failed insert and this read — the slot is free.
   if (holder === undefined) return true;
 
-  const recorded = readBuildTerminal(namespace, holder.id);
+  const recorded = readBuildTerminalSync(namespace, holder.id);
   let terminal: BuildTerminal;
   if (recorded !== null) {
     terminal = recorded;

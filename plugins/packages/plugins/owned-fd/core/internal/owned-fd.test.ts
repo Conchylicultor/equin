@@ -3,21 +3,21 @@ import { fstatSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { adoptFd, FdAlreadyClosedError, openOwnedFd } from "./owned-fd";
+import { adoptFd, FdAlreadyClosedError, openOwnedFdSync } from "./owned-fd";
 
 const dir = asAppPath(mkdtempSync(join(tmpdir(), "owned-fd-")));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 describe("OwnedFd", () => {
   test("closes its descriptor exactly once; the second close throws and never reaches the kernel", () => {
-    const a = openOwnedFd(asAppPath(join(dir, "a")), "w");
+    const a = openOwnedFdSync(asAppPath(join(dir, "a")), "w");
     expect(a.closed).toBe(false);
     a.close();
     expect(a.closed).toBe(true);
 
     // Something else may hold the number by now — the reuse that made a
     // second raw close fatal to an innocent resource.
-    const b = openOwnedFd(asAppPath(join(dir, "b")), "w");
+    const b = openOwnedFdSync(asAppPath(join(dir, "b")), "w");
 
     let err: unknown;
     try {

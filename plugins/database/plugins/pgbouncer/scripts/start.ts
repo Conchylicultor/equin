@@ -7,7 +7,7 @@ import {
   serviceLogTarget,
   type ServiceLogTarget,
 } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/core";
-import { adoptLegacyLog } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
+import { adoptLegacyLogSync } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
 import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
 import { writeFileSync, rmSync } from "node:fs";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
@@ -112,7 +112,7 @@ function pingSocket(timeoutMs: number): Promise<boolean> {
  */
 function launch(binary: string, target: ServiceLogTarget): Launched {
   if (target.kind === "relay") {
-    const adopted = adoptLegacyLog(
+    const adopted = adoptLegacyLogSync(
       PGBOUNCER_LEGACY_LOG_FILE,
       PGBOUNCER_LOG_FILE,
     );

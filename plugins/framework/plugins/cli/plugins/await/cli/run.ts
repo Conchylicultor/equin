@@ -10,7 +10,7 @@ import {
   type AwaitedOp,
   type OpState,
 } from "@plugins/framework/plugins/cli/plugins/await/core";
-import { resolveBuildReceipt } from "@plugins/framework/plugins/cli/plugins/op-runtime/core";
+import { resolveBuildReceiptSync } from "@plugins/framework/plugins/cli/plugins/op-runtime/core";
 import {
   readTestStatus,
   testFailureLines,
@@ -103,7 +103,7 @@ function seconds(
 function detailFor(state: OpState, slug: Namespace): string[] {
   if (state.kind !== "ended") return [];
   if (state.op === "build") {
-    const resolved = resolveBuildReceipt(slug);
+    const resolved = resolveBuildReceiptSync(slug);
     if (resolved.kind === "none") return [];
     const r = resolved.receipt;
     return [

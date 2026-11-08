@@ -75,7 +75,10 @@ export function withDirTrusted(
  * re-read immediately before it, so a concurrent write since the first read is
  * not undone. Throws on an unparseable file.
  */
-export function ensureDirTrusted(dir: string, path = CLAUDE_USER_CONFIG): void {
+export function ensureDirTrustedSync(
+  dir: string,
+  path = CLAUDE_USER_CONFIG,
+): void {
   if (
     withDirTrusted(readFileSync(path, "utf8"), dir, path).kind === "unchanged"
   ) {
@@ -93,7 +96,10 @@ export function ensureDirTrusted(dir: string, path = CLAUDE_USER_CONFIG): void {
  * Throws unless `dir` is trusted — a session started there would otherwise
  * sit at Claude Code's trust dialog forever, with nothing reporting it.
  */
-export function assertDirTrusted(dir: string, path = CLAUDE_USER_CONFIG): void {
+export function assertDirTrustedSync(
+  dir: string,
+  path = CLAUDE_USER_CONFIG,
+): void {
   if (!isDirTrusted(readFileSync(path, "utf8"), dir, path)) {
     throw new Error(
       `${dir} is not trusted in ${path}, so a Claude Code session there stops at its trust dialog. ` +

@@ -36,4 +36,11 @@ export default [
     reason:
       "Not host code: loaded by path only by the root eslint.config.ts, inside the editor's ESLint process (Node), never through a barrel. It lists the manifests with node:child_process because infra/spawn's runner is Bun-only, and the editor's ESLint is a Node process.",
   },
+  {
+    rule: "blocking-fs/sync-named",
+    paths: ["core/declared-utilities.ts", "core/plugin-dirs.ts"],
+    kind: "sanctioned",
+    reason:
+      "Host tooling only: no backend loads this module (blocking-fs:sync-named-reach measures the backends' import graph), so its blocking helpers hold only the CLI's, a check's or a script's own thread.",
+  },
 ] satisfies Exemptions;

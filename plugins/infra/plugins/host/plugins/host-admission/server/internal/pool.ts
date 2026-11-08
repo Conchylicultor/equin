@@ -1,7 +1,7 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { dlopen } from "bun:ffi";
 import {
-  openOwnedFd,
+  openOwnedFdSync,
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
 import {
@@ -36,7 +36,7 @@ const LOCK_NB = 4;
 function slotHeld(slotPath: AppPath): boolean {
   let fd: OwnedFd;
   try {
-    fd = openOwnedFd(slotPath, "a");
+    fd = openOwnedFdSync(slotPath, "a");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return false; // no file ⇒ never held
     throw err;

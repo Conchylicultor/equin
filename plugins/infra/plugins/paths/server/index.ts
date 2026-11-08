@@ -5,8 +5,8 @@ export {
   SERVER_CORE_RELATIVE,
   webDistDir,
   HOME_DIR,
-  backupsDir,
-  dataRootLayout,
+  backupsDirSync,
+  dataRootLayoutSync,
   worktreesDir,
   worktreeDataDir,
   worktreeArtifacts,
@@ -57,7 +57,7 @@ export type {
 export { GIT, PGREP, PS, SAMPLE } from "./internal/bins";
 
 export {
-  listWorktreeDirs,
+  listWorktreeDirsSync,
   listWorktreeDirsAsync,
 } from "../core/internal/worktree-dirs";
 
@@ -75,9 +75,9 @@ export {
 } from "../core/internal/checkout-ref";
 
 export {
-  pruneWorktreeBuildArtifacts,
-  pruneWorktreeCheckArtifacts,
-  pruneWorktreeRunArtifacts,
+  pruneWorktreeBuildArtifactsSync,
+  pruneWorktreeCheckArtifactsSync,
+  pruneWorktreeRunArtifactsSync,
   BUILD_ARTIFACTS_RETENTION,
   CHECK_ARTIFACTS_RETENTION,
   RUN_ARTIFACTS_RETENTION,

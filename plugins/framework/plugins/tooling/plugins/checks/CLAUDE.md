@@ -556,6 +556,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-set.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-files.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/tree-hash.ts` (sanctioned)
+    - `blocking-fs/sync-named` — `core/cache.ts`, `core/content-hash.ts`, `core/progress-log.ts`, `core/scripts/fix-shared-to-relative.ts`, `core/thread-attribution.ts`, `core/transcript.ts`, `core/tree-hash.ts` (sanctioned)
 - Cli:
   - Exports (values): `openGrepIndexStore`
 - Test helpers:

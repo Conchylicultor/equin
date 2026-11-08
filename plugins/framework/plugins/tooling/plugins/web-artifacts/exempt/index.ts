@@ -65,4 +65,29 @@ export default [
     reason:
       "The build's artifact pipeline takes its snapshot after codegen and the formatter wrote, so every address is read off the tree the artifacts are built from \u2014 the build's own pass, once per run.",
   },
+  {
+    rule: "blocking-fs/sync-named",
+    paths: [
+      "core/internal/browser-hosts.ts",
+      "core/internal/compose.ts",
+      "core/internal/global-css.ts",
+      "core/internal/host-snapshots.ts",
+      "core/internal/identity.ts",
+      "core/internal/lease.ts",
+      "core/internal/package-assets.ts",
+      "core/internal/pipeline.ts",
+      "core/internal/plan.ts",
+      "core/internal/precompress.ts",
+      "core/internal/served-dists.ts",
+      "core/internal/staged-verify.ts",
+      "core/internal/store.ts",
+      "core/internal/vendor-cache.ts",
+      "core/internal/vendors.ts",
+      "core/internal/vite-builder.ts",
+      "core/internal/worker-link.ts",
+    ],
+    kind: "sanctioned",
+    reason:
+      "Host tooling only: no backend loads this module (blocking-fs:sync-named-reach measures the backends' import graph), so its blocking helpers hold only the CLI's, a check's or a script's own thread.",
+  },
 ] satisfies Exemptions;

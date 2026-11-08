@@ -187,7 +187,7 @@ export async function reexecUnderLockedBun(
 /**
  * The real mise binary — never a shim (see the module docblock): PATH, unless
  * that is mise's own shims dir, then the installer's default location. Same
- * lookup as `toolchain/core`'s `findMiseBin`, which this closure cannot import.
+ * lookup as `toolchain/core`'s `findMiseBinSync`, which this closure cannot import.
  */
 function realMise(env: Record<string, string | undefined>): string | null {
   const onPath = Bun.which("mise", { PATH: env.PATH ?? "" });

@@ -3,7 +3,7 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { linkSync, mkdirSync, renameSync, rmSync, writeSync } from "node:fs";
-import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
+import { openOwnedFdSync } from "@plugins/packages/plugins/owned-fd/core";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
 import { liveOpsDir } from "../../data-dirs";
 import {
@@ -63,7 +63,7 @@ export function markWorktreeOpStart(
     opsDir(slug),
     `${opId}.json.${process.pid}${TMP_SUFFIX}`,
   );
-  const fd = openOwnedFd(tmp, "w");
+  const fd = openOwnedFdSync(tmp, "w");
   let linked = false;
   try {
     if (!flockTry(fd.fd))

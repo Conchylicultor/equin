@@ -34,7 +34,7 @@ import type {
  * about.
  *
  * Scoped to `e2e/`, which is where the target comes from the deploy registry on
- * disk instead (`target.ts` → `resolveCheckoutDeploy`). The harness's own
+ * disk instead (`target.ts` → `resolveCheckoutDeploySync`). The harness's own
  * `target.ts` is excluded by path: it is the file that resolves the target at
  * all, so the check is about the scripts rather than about the resolver. It
  * reads no environment variable today either — the exclusion names that single

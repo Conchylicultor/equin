@@ -257,7 +257,7 @@ module eval).
   `Cargo.lock` (crates.io, 3-day cooldown, `deps-cargo:holds`).
 - `playwright-browser` — the `playwright-browser` kind (`playwrightBrowser`,
   `launchChromium`, its `deps/` barrel; the `env/executables.json` record and
-  its reader `readBrowserExecutables` in its `core/`):
+  its reader `readBrowserExecutablesSync` in its `core/`):
   `playwrightBrowser({ browser: "chromium" })`. Identity = the
   `playwright-core` version resolved through the kind's own module graph (the
   one `launchChromium` imports `playwright` from) + the platform; install =

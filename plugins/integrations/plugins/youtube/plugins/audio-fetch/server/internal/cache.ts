@@ -81,7 +81,7 @@ export async function tryLockVideo(
 ): Promise<OwnedFd | null> {
   const path = lockPath(dir, videoId);
   await mkdir(dirname(path), { recursive: true });
-  const lock = openOwnedFd(path, "a");
+  const lock = await openOwnedFd(path, "a");
   if (flockTry(lock.fd)) return lock;
   lock.close();
   return null;

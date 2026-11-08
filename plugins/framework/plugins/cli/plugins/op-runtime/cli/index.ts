@@ -38,10 +38,10 @@
 export { checkBroadcasts } from "./broadcasts";
 
 export {
-  readBuildReceipt,
-  reportInterruptedPredecessor,
-  resolveBuildReceipt,
-  writeBuildReceipt,
+  readBuildReceiptSync,
+  reportInterruptedPredecessorSync,
+  resolveBuildReceiptSync,
+  writeBuildReceiptSync,
 } from "./build-receipt";
 export type {
   BuildReceipt,

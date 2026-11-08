@@ -123,8 +123,8 @@ when it returns `true`. The rule is the supervised reconciler's:
 terminal = runs/build-<id>.exit-code ?? (isRunAlive(pid) ? still running : HARD_KILL_EXIT_CODE)
 ```
 
-The run's exit marker is the build's terminal record (`readBuildTerminal`, over
-supervised-job's `readRunTerminal`). Every build has one: the backend's shim
+The run's exit marker is the build's terminal record (`readBuildTerminalSync`, over
+supervised-job's `readRunTerminalSync`). Every build has one: the backend's shim
 writes it for a build the backend started, the attached relay (`runAttached`)
 for a hand-run one — on every ending but a hard kill. So the row gets the build
 process's real status and the marker's mtime as its end time. A marker that
@@ -139,7 +139,7 @@ LIVE build holds the slot.
 This leaf's whole import graph is intentionally minimal: drizzle,
 `database/admin/server`, `namespace/core`, and — for the settle —
 `jobs/supervised-job/core` (`isRunAlive`, `HARD_KILL_EXIT_CODE`,
-`readRunTerminal`), db-free and queue-free by its own barrel's rules. **Never add a `config_v2`,
+`readRunTerminalSync`), db-free and queue-free by its own barrel's rules. **Never add a `config_v2`,
 `shell/notifications`, env-bound `database/server`, `jobs`, or `events` import
 here** — that eval-safety is the entire reason the leaf exists.
 
@@ -193,6 +193,8 @@ from `build`, so both sides of an otherwise-cyclic edge can reach them.
     - `build/build-logs`
     - `build/runs-arm`
     - `framework/cli/build`
+- Exemptions:
+  - Exempts itself from: `blocking-fs/sync-named` — `shared/stale-holder.ts` (debt)
 - Machine:
   - Exports (values): `settleDeadInflightRun`
 - Cli:

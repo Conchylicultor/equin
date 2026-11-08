@@ -32,7 +32,7 @@ export interface BarrelExport {
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-export function readIfExists(path: AppPath): string | null {
+export function readIfExistsSync(path: AppPath): string | null {
   const snapshot = currentFsSnapshot();
   if (snapshot) {
     const cached = snapshot.files.get(path);
@@ -51,7 +51,7 @@ export function readIfExists(path: AppPath): string | null {
  * covers `path` (or the directory holding it), from disk otherwise — so a facet
  * asking "has this plugin a `web/`?" for every plugin costs no syscall.
  */
-export function pathExists(path: AppPath): boolean {
+export function pathExistsSync(path: AppPath): boolean {
   const known = snapshotHas(path);
   if (known !== undefined) return known;
   assertDiskReadAllowed(path);
@@ -622,7 +622,7 @@ function isSkippedWalkDir(name: string): boolean {
 
 // A plugin's API/dep surface excludes co-located bun:test files (`*.test.ts(x)`,
 // which the convention co-locates next to source rather than under `__tests__`) —
-// the same rationale as the `__tests__` dir skip. Since `walkFiles` is the shared
+// the same rationale as the `__tests__` dir skip. Since `walkFilesSync` is the shared
 // source-file enumerator for every facet + codegen scan, excluding them here keeps
 // a test fixture (e.g. a `liveValue("mismatch-test", …)` in a
 // `*.test.ts`) or a test-only import from leaking into a plugin's docs.
@@ -638,14 +638,14 @@ function isSourceFile(name: string, css: boolean): boolean {
  * `.ts`/`.tsx`, plus `.css` with `{ css: true }` — for a scanner that reads
  * what a plugin styles with, not only what it imports.
  */
-export function walkFiles(
+export function walkFilesSync(
   dir: AppPath,
   out: AppPath[],
   opts?: { css?: boolean },
 ): void {
   const css = opts?.css ?? false;
   // Snapshot fast-path: traverse the in-memory directory map. Any subdirectory
-  // not covered by the snapshot re-dispatches through `walkFiles`, which falls
+  // not covered by the snapshot re-dispatches through `walkFilesSync`, which falls
   // back to disk for that subtree — so the result is identical to a pure-disk
   // walk regardless of snapshot coverage.
   const snapshot = currentFsSnapshot();
@@ -659,7 +659,7 @@ export function walkFiles(
         const p = joinAppPath(dir, e.name);
         if (e.isDirectory()) {
           if (isSkippedWalkDir(e.name)) continue;
-          walkFiles(p, out, opts);
+          walkFilesSync(p, out, opts);
         } else if (e.isFile() && isSourceFile(e.name, css)) {
           out.push(p);
         }
@@ -681,7 +681,7 @@ export function walkFiles(
     const p = joinAppPath(dir, e.name);
     if (e.isDirectory()) {
       if (isSkippedWalkDir(e.name)) continue;
-      walkFiles(p, out, opts);
+      walkFilesSync(p, out, opts);
     } else if (e.isFile() && isSourceFile(e.name, css)) {
       out.push(p);
     }
@@ -689,7 +689,7 @@ export function walkFiles(
 }
 
 /**
- * {@link walkFiles}' answer read off a repo's file set instead of the disk: the
+ * {@link walkFilesSync}' answer read off a repo's file set instead of the disk: the
  * source files under `dir` (absolute) — same skipped directories, same
  * test-file exclusion — with no syscall. Membership is git's, so a gitignored
  * file under `dir` is not among them. For a scan over many plugins (a codegen

@@ -58,7 +58,7 @@ graph reads the database without one fails at boot
 the same capture, as a persisted value's floor. A suite that builds its own
 runtime takes the real capture from `@plugins/database/server/testing`.
 
-`database/core`'s `readDatabaseConfig` (`readFileSync`) stays in `core/` (debt):
+`database/core`'s `readDatabaseConfigSync` (`readFileSync`) stays in `core/` (debt):
 CLIs, checks and e2e scripts read it there.
 
 ## Runtime query profiling
@@ -511,8 +511,8 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
   - Exports (values):
     - `buildConnectionString`
     - `DATABASE_CONFIG_PATH`
-    - `libpqEnv`
-    - `readDatabaseConfig`
+    - `libpqEnvSync`
+    - `readDatabaseConfigSync`
 - Cross-plugin:
   - Imported by: 153 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×42
@@ -543,7 +543,9 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `ui/theme-engine/saved-themes`
     - `wish`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
+    - `blocking-fs/no-sync-fs` — `machine/internal/pg-driver.ts` (debt)
 - Test helpers:
   - Server: `@plugins/database/server/testing`
     - `snapshotWatermark`

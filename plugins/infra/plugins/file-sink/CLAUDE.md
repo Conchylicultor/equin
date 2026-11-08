@@ -55,7 +55,7 @@ filter naturally excludes the rotations.
 ## API
 
 - **`sink.append(line)` / `sink.appendAll(lines)`** — one line, or a whole batch as
-  ONE `appendFileSync`. Both are the *same* function (`appendLines`) with one size
+  ONE `appendFileSync`. Both are the *same* function (`appendLinesSync`) with one size
   gate, so `appendAll(lines)` is byte-for-byte `for (const l of lines) append(l)`.
   Keep it that way: two gates is how "a line is never split across a rotation"
   would drift apart between the two forms.
@@ -197,7 +197,7 @@ as the only escape. Being importable from every runtime *is* the feature.
     - `infra/host-fs/user-path.appPathParent`
     - `infra/host-fs/user-path.asAppPath`
     - `infra/host-fs/user-path.joinAppPath`
-    - `packages/owned-fd.openOwnedFd`
+    - `packages/owned-fd.openOwnedFdSync`
     - `packages/owned-fd.OwnedFd`
     - `packages/timed-fs.stat`
     - `packages/timed-fs.statSync`
@@ -218,10 +218,10 @@ as the only escape. Being importable from every runtime *is* the feature.
     - `isHistoryPosition`
     - `openDynamicSink`
     - `readHistory`
-    - `readJsonlTail`
     - `readJsonlTailAsync`
-    - `readTail`
+    - `readJsonlTailSync`
     - `readTailAsync`
+    - `readTailSync`
     - `sanitizeChannel`
     - `statHistory`
 - Cross-plugin:

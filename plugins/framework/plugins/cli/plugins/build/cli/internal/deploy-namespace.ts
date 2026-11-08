@@ -585,7 +585,7 @@ export async function deployNamespace(
     // throws if the marker cannot be read back, so a marker-less namespace can
     // never reach the spec write at all.
     await stampMarker();
-    // The back-pointer a reader follows the other way: `deploysForCheckout`
+    // The back-pointer a reader follows the other way: `deploysForCheckoutSync`
     // matches specs against this same constant to answer which deploys a
     // checkout published, so writer and reader share one spelling.
     const server = resolve(root, SERVER_CORE_RELATIVE);

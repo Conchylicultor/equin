@@ -13,8 +13,8 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  pruneBuildArtifactsInDir,
-  pruneCheckArtifactsInDir,
+  pruneBuildArtifactsInDirSync,
+  pruneCheckArtifactsInDirSync,
 } from "./prune-artifacts";
 
 const dirs: AppPath[] = [];
@@ -48,7 +48,7 @@ describe("pruneBuildArtifactsInDir", () => {
     }
     const dir = seed(files);
 
-    pruneBuildArtifactsInDir(dir, 2);
+    pruneBuildArtifactsInDirSync(dir, 2);
 
     const remaining = new Set(readdirSync(dir));
     for (const i of [3, 4]) {
@@ -76,7 +76,7 @@ describe("pruneBuildArtifactsInDir", () => {
       { name: "build-old-1.log", ageMs: 5_000 },
     ]);
 
-    pruneBuildArtifactsInDir(dir, 0); // keep zero id-keyed sets
+    pruneBuildArtifactsInDirSync(dir, 0); // keep zero id-keyed sets
 
     const remaining = new Set(readdirSync(dir));
     expect(remaining.has("build-profile.json")).toBe(true);
@@ -94,7 +94,7 @@ describe("pruneBuildArtifactsInDir", () => {
       { name: "build-profile.json.tmp.999", ageMs: 3_000 },
     ]);
 
-    pruneBuildArtifactsInDir(dir, 50);
+    pruneBuildArtifactsInDirSync(dir, 50);
 
     const remaining = new Set(readdirSync(dir));
     expect(remaining.has("build-profile-c9-9.json")).toBe(true);
@@ -109,7 +109,7 @@ describe("pruneBuildArtifactsInDir", () => {
       { name: "build-profile-c1-1.json", ageMs: 2_000 },
     ]);
 
-    pruneBuildArtifactsInDir(dir, 0);
+    pruneBuildArtifactsInDirSync(dir, 0);
 
     const remaining = new Set(readdirSync(dir));
     expect(remaining.has("spec.json")).toBe(true);
@@ -119,7 +119,10 @@ describe("pruneBuildArtifactsInDir", () => {
 
   test("no-ops on a missing dir", () => {
     expect(() =>
-      pruneBuildArtifactsInDir(asAppPath(join(tmpdir(), "nope-xyz-123")), 5),
+      pruneBuildArtifactsInDirSync(
+        asAppPath(join(tmpdir(), "nope-xyz-123")),
+        5,
+      ),
     ).not.toThrow();
   });
 
@@ -133,7 +136,7 @@ describe("pruneBuildArtifactsInDir", () => {
       { name: "build-c1-1.log", ageMs: 1_000 },
     ]);
 
-    pruneBuildArtifactsInDir(dir, 0);
+    pruneBuildArtifactsInDirSync(dir, 0);
 
     const remaining = new Set(readdirSync(dir));
     expect(remaining.has("check-c1-1.log")).toBe(true);
@@ -151,7 +154,7 @@ describe("pruneCheckArtifactsInDir", () => {
     }
     const dir = seed(files);
 
-    pruneCheckArtifactsInDir(dir, 2);
+    pruneCheckArtifactsInDirSync(dir, 2);
 
     const remaining = new Set(readdirSync(dir));
     for (const i of [3, 4]) {
@@ -169,7 +172,7 @@ describe("pruneCheckArtifactsInDir", () => {
       { name: "check-c8-8.log.tmp.12345", ageMs: 2_000 },
     ]);
 
-    pruneCheckArtifactsInDir(dir, 50);
+    pruneCheckArtifactsInDirSync(dir, 50);
 
     const remaining = new Set(readdirSync(dir));
     expect(remaining.has("check-c9-9.log")).toBe(true);
@@ -182,7 +185,7 @@ describe("pruneCheckArtifactsInDir", () => {
       { name: "check-c1-1.log", ageMs: 1_000 },
     ]);
 
-    pruneCheckArtifactsInDir(dir, 50);
+    pruneCheckArtifactsInDirSync(dir, 50);
 
     const remaining = new Set(readdirSync(dir));
     expect(remaining.has("check.log")).toBe(false);
@@ -198,7 +201,7 @@ describe("pruneCheckArtifactsInDir", () => {
       { name: "check-c1-1.log", ageMs: 1_000 },
     ]);
 
-    pruneCheckArtifactsInDir(dir, 0);
+    pruneCheckArtifactsInDirSync(dir, 0);
 
     const remaining = new Set(readdirSync(dir));
     expect(remaining.has("build-profile-c1-1.json")).toBe(true);
@@ -210,7 +213,10 @@ describe("pruneCheckArtifactsInDir", () => {
 
   test("no-ops on a missing dir", () => {
     expect(() =>
-      pruneCheckArtifactsInDir(asAppPath(join(tmpdir(), "nope-xyz-789")), 5),
+      pruneCheckArtifactsInDirSync(
+        asAppPath(join(tmpdir(), "nope-xyz-789")),
+        5,
+      ),
     ).not.toThrow();
   });
 });

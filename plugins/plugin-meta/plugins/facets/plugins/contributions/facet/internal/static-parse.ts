@@ -1,8 +1,8 @@
 import { join } from "path";
 import {
   matchBracket,
-  walkFiles,
-  readIfExists,
+  walkFilesSync,
+  readIfExistsSync,
   readStringLiteral,
   findImports,
   maskSource,
@@ -418,10 +418,10 @@ export function parseRouteDeclarations(pluginDir: AppPath): RouteDeclaration[] {
   const out: RouteDeclaration[] = [];
   const files: AppPath[] = [];
   for (const runtime of ["core", "shared", "web"]) {
-    walkFiles(joinAppPath(pluginDir, runtime), files);
+    walkFilesSync(joinAppPath(pluginDir, runtime), files);
   }
   for (const f of files) {
-    const src = readIfExists(f);
+    const src = readIfExistsSync(f);
     if (src) out.push(...routeDeclarationsIn(src));
   }
   return out;
@@ -533,9 +533,9 @@ export function paneDeclarationsIn(
 export function parsePaneDeclarations(pluginDir: AppPath): PaneDeclaration[] {
   const out: PaneDeclaration[] = [];
   const files: AppPath[] = [];
-  walkFiles(joinAppPath(pluginDir, "web"), files);
+  walkFilesSync(joinAppPath(pluginDir, "web"), files);
   for (const f of files) {
-    const src = readIfExists(f);
+    const src = readIfExistsSync(f);
     if (src) out.push(...paneDeclarationsIn(src, f));
   }
   return out;
@@ -556,9 +556,9 @@ export function parseServerCompanionKinds(
   const out: ServerCompanionKind[] = [];
   for (const runtime of ["server", "machine"] as const) {
     const files: AppPath[] = [];
-    walkFiles(joinAppPath(pluginDir, runtime), files);
+    walkFilesSync(joinAppPath(pluginDir, runtime), files);
     for (const f of files) {
-      const src = readIfExists(f);
+      const src = readIfExistsSync(f);
       if (!src) continue;
       for (const d of parseServerContributionDeclarations(src, f)) {
         if (!d.companions) continue;
@@ -584,7 +584,7 @@ export function parseServerCompanionKinds(
 function companionCallsIn(
   file: AppPath,
 ): { callee: string; token: SourceRef | null }[] {
-  const src = readIfExists(file);
+  const src = readIfExistsSync(file);
   if (!src) return [];
   const stripped = stripTypes(src, file);
   const masked = maskSource(stripped);
@@ -649,6 +649,8 @@ export function parseServerCompanions(
  * desktop's provider lives there and ships with its plugin.
  */
 export function parseHostServiceProvides(pluginDir: string): string[] {
-  const src = readIfExists(asAppPath(join(pluginDir, "server", "index.ts")));
+  const src = readIfExistsSync(
+    asAppPath(join(pluginDir, "server", "index.ts")),
+  );
   return src ? providedServiceNames(src) : [];
 }

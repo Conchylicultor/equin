@@ -15,7 +15,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
-import { readRunTerminal } from "../../core/internal/terminal";
+import { readRunTerminalSync } from "../../core/internal/terminal";
 import { runAttached } from "./attached";
 
 const NS = asNamespace("attached-run-test");
@@ -57,7 +57,7 @@ describe("runAttached", () => {
     expect(
       readFileSync(worktreeArtifacts.runTranscript(NS, KIND, id), "utf-8"),
     ).toBe("one\ntwo\nthree\n");
-    expect(readRunTerminal(KIND, id, NS)).toMatchObject({
+    expect(readRunTerminalSync(KIND, id, NS)).toMatchObject({
       exitCode: 3,
       signalCode: null,
     });
@@ -74,7 +74,7 @@ describe("runAttached", () => {
   test("a child killed by a signal records 128 + signo", async () => {
     const id = runId();
     expect(await run(id, "kill -TERM $$")).toBe(143);
-    expect(readRunTerminal(KIND, id, NS)?.exitCode).toBe(143);
+    expect(readRunTerminalSync(KIND, id, NS)?.exitCode).toBe(143);
   });
 
   test("a run id already ended is refused, not overwritten", async () => {

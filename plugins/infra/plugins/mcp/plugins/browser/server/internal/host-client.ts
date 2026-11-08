@@ -23,7 +23,7 @@ import {
   type AgentBrowserStatus,
 } from "../../core";
 import { agentBrowserDir } from "../../data-dirs";
-import { hostCodeId } from "../../shared/code-id";
+import { hostCodeIdSync } from "../../shared/code-id";
 import {
   HOST_FILES,
   HOST_ORIGIN,
@@ -80,7 +80,7 @@ export const agentBrowserStatusWatcher = defineFileWatcher({
 let codeIdMemo: string | null = null;
 /** Which host code this checkout would run. */
 function ownCodeId(): string {
-  return (codeIdMemo ??= hostCodeId(PLUGIN_DIR));
+  return (codeIdMemo ??= hostCodeIdSync(PLUGIN_DIR));
 }
 
 function alive(pid: number): boolean {

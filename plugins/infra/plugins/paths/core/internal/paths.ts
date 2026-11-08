@@ -31,7 +31,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
-  readHomeDataRootLayout,
+  readHomeDataRootLayoutSync,
   type DataRootLayout,
 } from "./data-root-layout";
 
@@ -44,7 +44,7 @@ export const PLUGINS_DIR = joinAppPath(REPO_ROOT, "plugins");
  * binary's virtual FS (un-shipped, unreachable), so `launch.ts` points this at the
  * vendored tree via `EQUIN_REPO_CONFIG_DIR`; in dev it falls back to the repo.
  *
- * A FUNCTION for the same reason as {@link resolveDataRoot} and
+ * A FUNCTION for the same reason as {@link resolveDataRootSync} and
  * {@link worktreesDir}: `launch.ts` sets its env var, and a const would capture
  * whatever the environment said when this module was first imported. With this
  * one converted, NO constant in this module freezes an environment read — which
@@ -67,7 +67,7 @@ export const WEB_CORE_RELATIVE = "plugins/framework/plugins/web-core";
  *
  * Spelled ONCE because it is read from both ends and by different processes:
  * `deployNamespace` resolves it against the checkout it is building, and
- * `deploysForCheckout` matches every registered spec against it to answer which
+ * `deploysForCheckoutSync` matches every registered spec against it to answer which
  * deploys a checkout owns. A second copy that drifted would not fail anywhere —
  * it would answer "this checkout has published nothing", which reads as "you
  * never built" and sends the reader after the wrong fix.
@@ -211,7 +211,7 @@ export function setReleaseIdentity(identity: ReleaseIdentity): void {
  * - which namespace does this checkout OWN? — `checkoutNamespace(root)`, which
  *   mints it from git (`namespaceFor` over `checkoutRef`) rather than from a
  *   basename, and answers whether or not anything was ever deployed;
- * - which deploy did this checkout PUBLISH? — `resolveCheckoutDeploy(root)`,
+ * - which deploy did this checkout PUBLISH? — `resolveCheckoutDeploySync(root)`,
  *   read back out of the `spec.json` that build wrote. It is the only one that
  *   can answer "nothing yet", and the only one that can name a composition
  *   deploy (`sonata.att-x`), whose namespace shares no label with this string.
@@ -248,8 +248,8 @@ export const HOME_DIR = resolve(homedir());
  * A function for that second reason, the same one that makes `webDistDir()` a
  * function and `DataDir.path` a getter. See `webDistDir`'s docblock below.
  */
-export function resolveDataRoot(): AppPath {
-  return dataRootLayout().root;
+export function resolveDataRootSync(): AppPath {
+  return dataRootLayoutSync().root;
 }
 
 /**
@@ -261,12 +261,12 @@ export function resolveDataRoot(): AppPath {
  * an install changes layout only through `./equin data-dir migrate`, which
  * runs with every other process of the app stopped and starts the gateway it
  * restores as a fresh process. The environment is still read on every call,
- * for the reason in {@link resolveDataRoot}.
+ * for the reason in {@link resolveDataRootSync}.
  */
-export function dataRootLayout(): DataRootLayout {
+export function dataRootLayoutSync(): DataRootLayout {
   const dir = readEnvPath("DIR");
   if (dir !== undefined) return { kind: "custom", root: dir };
-  homeLayout ??= readHomeDataRootLayout(HOME_DIR);
+  homeLayout ??= readHomeDataRootLayoutSync(HOME_DIR);
   return homeLayout;
 }
 let homeLayout: DataRootLayout | undefined;
@@ -280,11 +280,11 @@ let homeLayout: DataRootLayout | undefined;
  * It follows the root's layout: an install not yet migrated keeps
  * `~/.backups/<LEGACY_IDS.backupsDirName>` (the migration moves it with the root), every other
  * install uses `~/.backups/equin`. A function for the same reason as
- * {@link dataRootLayout}.
+ * {@link dataRootLayoutSync}.
  */
-export function backupsDir(): AppPath {
+export function backupsDirSync(): AppPath {
   const dirs = backupsDirs();
-  return dataRootLayout().kind === "legacy" ? dirs.legacy : dirs.current;
+  return dataRootLayoutSync().kind === "legacy" ? dirs.legacy : dirs.current;
 }
 
 /** Both home-relative backups dirs, current first. */
@@ -316,13 +316,13 @@ export function backupsDirs(): { current: AppPath; legacy: AppPath } {
  * here rather than declared with `defineDataDir`: its children are namespaces
  * minted at runtime, not a fixed set anyone could declare.
  *
- * A FUNCTION, not a const, for the reason in {@link resolveDataRoot} — a const
+ * A FUNCTION, not a const, for the reason in {@link resolveDataRootSync} — a const
  * would freeze the root at whatever the environment said when this module was
  * first imported, which is precisely the bug the eager `EQUIN_DIR` used
  * to carry.
  */
 export function worktreesDir(): AppPath {
-  return joinAppPath(resolveDataRoot(), "worktrees");
+  return joinAppPath(resolveDataRootSync(), "worktrees");
 }
 
 /** The per-worktree data dir: `<worktreesDir()>/<name>/`. */
@@ -343,7 +343,7 @@ export function worktreeDataDir(name: Namespace): AppPath {
  * what keeps the watch narrow, not a filter the watcher would have to remember.
  *
  * A second, smaller reason: the prune is directory-scoped
- * (`pruneRunArtifactsInDir`), so keeping the newest N runs cannot even in
+ * (`pruneRunArtifactsInDirSync`), so keeping the newest N runs cannot even in
  * principle see a `build-<id>.log` — the two families never share a directory.
  *
  * Spelled as a function above `worktreeArtifacts` because the object literal
@@ -414,7 +414,7 @@ export const WORKTREE_SPEC_FILE = "spec.json";
  * `dist-publish.ts` at `<base>` → `<base>.live.<pid>` (with `<base>.staging.*` /
  * `<base>.swap.*` siblings in flight), so the path named here is the stable
  * pointer, never the tree itself. Their cleanup is NOT the file-retention
- * pruner (`pruneWorktreeBuildArtifacts`, which only ever matches the file
+ * pruner (`pruneWorktreeBuildArtifactsSync`, which only ever matches the file
  * patterns above): a dist tree is reclaimed by `sweepDistLeftovers` at publish
  * time and, wholesale, by `removeWorktreeSpec`'s recursive remove of
  * `worktreeDataDir(name)` (`infra/worktree/server/internal/spec.ts`).
@@ -615,7 +615,7 @@ export const worktreeArtifacts = {
     joinAppPath(worktreeDataDir(name), "data-dirs.json"),
   /**
    * Which checkout's CLI last acted as this namespace — `{ root }`, rewritten
-   * by every op that mints the namespace from a checkout (`stampCheckoutOwner`).
+   * by every op that mints the namespace from a checkout (`stampCheckoutOwnerSync`).
    * The provenance the reaper needs for a namespace that no attempt row and no
    * composition marker owns: a second clone's main checkout, an e2e's temp
    * repo, a hand-made worktree.
@@ -625,7 +625,7 @@ export const worktreeArtifacts = {
   /**
    * Which backend minted this agent checkout — `{ minter }`, the namespace whose
    * database holds its attempt row. Written by `setupWorktree` (infra/worktree) once
-   * the checkout exists (`stampCheckoutMinter`); read by the reaper, for a
+   * the checkout exists (`stampCheckoutMinterSync`); read by the reaper, for a
    * checkout main's attempts table does not name.
    */
   checkoutMinter: (name: Namespace): AppPath =>

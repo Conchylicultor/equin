@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-infra-host-fs-blocking-fs",
-  "description": "No synchronous fs call on a backend's JS thread: the type-aware blocking-fs/no-sync-fs lint refuses node:fs *Sync calls (timed-fs's twins included), Bun.resolveSync and sync glob scans in server/, machine/ and central/ code, so a slow disk can never freeze a backend for seconds; a file that blocks no backend (its own child process, pre-listen boot, a sync exit handler) declares a sanctioned exemption.",
+  "description": "No synchronous fs call or child process on a backend's JS thread: the type-aware blocking-fs/no-sync-fs lint refuses node:fs / node:child_process *Sync calls (timed-fs's twins included), Bun.resolveSync / spawnSync, sync glob scans and core/shared/data-dirs *Sync helpers in server/, machine/, central/ and deps/ code; blocking-fs/sync-named makes every helper there that blocks carry the *Sync name, and the blocking-fs:sync-named-reach check holds a helper excused as tool-only to no backend loading it. A file that blocks no backend (its own child process, pre-listen boot, a sync exit handler) declares a sanctioned exemption.",
   "private": true,
   "version": "0.0.1"
 }

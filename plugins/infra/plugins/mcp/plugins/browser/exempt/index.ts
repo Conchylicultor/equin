@@ -15,4 +15,12 @@ export default [
     reason:
       "Runs in the agent-browser host and the backend, never in a page: it reverts a session's writes on the deploy it names by URL — no subtree, no transport.",
   },
+  {
+    rule: "blocking-fs/no-sync-fs",
+    paths: ["server/internal/host-client.ts"],
+    kind: "debt",
+    task: "task-1793991088-yd3u37",
+    reason:
+      "Calls a *Sync helper (or a sync child process) that has no async twin yet; blocks the backend's thread for as long as the disk or the child takes.",
+  },
 ] satisfies Exemptions;

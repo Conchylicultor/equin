@@ -90,7 +90,7 @@ barrel written after its folder was first read would not be found.
     - `framework/slot-declaration.trackSlotSites`
     - `infra/launcher/env-names.envName`
     - `infra/namespace.asNamespace`
-    - `infra/paths.dataRootLayout`
+    - `infra/paths.dataRootLayoutSync`
     - `infra/paths/repo-root.REPO_ROOT`
     - `infra/runtime-identity.declareRuntimeNamespace`
     - `infra/runtime-identity.hasRuntimeNamespace`
@@ -113,7 +113,9 @@ barrel written after its folder was first read would not be found.
     - `framework/tooling/codegen`
     - `plugin-meta/plugin-records/evaluate`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `core/internal/stubs.ts`, `core/internal/load-guard.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `core/internal/stubs.ts`, `core/internal/load-guard.ts` (debt)
+    - `blocking-fs/sync-named` — `core/internal/load-guard.ts` (sanctioned)
 - Test helpers:
   - Core: `@plugins/plugin-meta/plugins/barrel-import/core/testing`
     - `reactExportsSeen`

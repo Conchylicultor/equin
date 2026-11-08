@@ -362,6 +362,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
   - Exempts itself from:
     - `host-pools-declared` — `server` (sanctioned)
     - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts` (debt)
+    - `blocking-fs/no-sync-fs` — `server/internal/pool.ts` (debt)
 - Core:
   - Exports (types):
     - `CpuBudget`

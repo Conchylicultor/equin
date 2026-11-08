@@ -17,7 +17,7 @@ browser that needs to *name* a directory reads the string literals in the
 
 `EQUIN_DIR` when set (a release bundle, a preview, a VM). Otherwise it is
 decided by what is **installed**, not by the code's version
-(`core/internal/data-root-layout.ts`, `dataRootLayout()`):
+(`core/internal/data-root-layout.ts`, `dataRootLayoutSync()`):
 
 | on disk | root |
 |---|---|
@@ -31,7 +31,7 @@ machine that has not migrated. The same rule is mirrored in `gateway/dataroot.go
 (with the same test cases), `install.sh` and the host scripts listed as
 `dataDirName` mirrors. The home layout is read once per process; only
 `./equin data-dir migrate` changes it, with the app stopped. The local
-backups dir (`backupsDir()`, outside the root) follows the same layout.
+backups dir (`backupsDirSync()`, outside the root) follows the same layout.
 
 **Moving an install over:** `./equin data-dir migrate` (the `root-migration`
 sub-plugin) — dry run by default, `--apply` executes. It refuses while any
@@ -54,7 +54,7 @@ different right answers depending on who is asking:
 |---|---|---|
 | which namespace is **this runtime** the server for? | `runtimeNamespace()` (`infra/runtime-identity`) | a gateway-spawned backend, or an exec child its spawner told |
 | which namespace does **this checkout** own? | `checkoutNamespace(root)` | the CLI, checks |
-| which deploy did this checkout **publish**? | `resolveCheckoutDeploy(root)` | anything driving the deployed app |
+| which deploy did this checkout **publish**? | `resolveCheckoutDeploySync(root)` | anything driving the deployed app |
 
 The first does not live in this plugin at all, and that split is the point. It is
 declared once, at a process's entry point, from the `--namespace` its spawner
@@ -67,7 +67,7 @@ script that read it acted on MAIN's deploy while reporting success. See
 The third is a READ, not a derivation, and that is what makes it safe.
 `./equin build` records the checkout that published a namespace in that
 namespace's own `spec.json` — the `server` field, an absolute path ending in
-`SERVER_CORE_RELATIVE` — and `deploysForCheckout(root)` matches every registered
+`SERVER_CORE_RELATIVE` — and `deploysForCheckoutSync(root)` matches every registered
 spec against it. So a checkout that has never been built resolves to `none`
 rather than to somebody else's app, and a `--composition` build's namespace
 (`sonata.att-x`, which shares no label with the checkout) is found by the same
@@ -86,7 +86,7 @@ as a worktree named by the root's basename (as given and through symlinks) —
 and still decides by each spec's `server` field, so a candidate somebody else
 published is simply not a match. A few reads, where the scan read and resolved
 ~180 specs synchronously (3–5 s stalls on main per browser-MCP call under host
-load). `resolveCheckoutDeploy` is that lookup, plus the scan on a miss only —
+load). `resolveCheckoutDeploySync` is that lookup, plus the scan on a miss only —
 the refusal names what this checkout DOES serve, which only the whole registry
 can say. A spec naming this checkout under a name no build mints (a
 `serve-app --name`, a renamed namespace) is not resolved, only listed.
@@ -314,9 +314,9 @@ reaped namespaces' gateway logs were each found by accident, months in.
 
 - Description: Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
 - Core:
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `packages/timed-fs` ×10
     - `infra/namespace` ×8
-    - `packages/timed-fs` ×8
     - `infra/launcher/env-names` ×4
     - `infra/host-fs/user-path` ×3
     - `framework/product-name` ×2
@@ -347,8 +347,8 @@ reaped namespaces' gateway logs were each found by accident, months in.
   - Exports (values):
     - `actAsCheckoutNamespace`
     - `backendEntryFor`
-    - `backupsDir`
     - `backupsDirs`
+    - `backupsDirSync`
     - `CHECK_ARTIFACTS_RETENTION`
     - `checkoutNamespace`
     - `checkoutRef`
@@ -362,36 +362,37 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `DATA_DIR_KINDS`
     - `DATA_DIR_NAME`
     - `dataRoot`
-    - `dataRootLayout`
+    - `dataRootLayoutSync`
     - `DataRootSplitError`
     - `defineAppDataDir`
     - `defineDataDir`
-    - `deploysForCheckout`
+    - `deploysForCheckoutSync`
     - `getDataDirs`
     - `HOME_DIR`
     - `homeDataRoots`
     - `isHostSingleton`
     - `isRelease`
     - `LEGACY_LAYOUT`
-    - `listWorktreeDirs`
+    - `listWorktreeDirsSync`
     - `LOG_FILE_RE`
     - `logPatternMatches`
     - `lookupCheckoutDeploy`
+    - `lookupCheckoutDeploySync`
     - `planMigration`
     - `PLUGINS_DIR`
-    - `pruneWorktreeCheckArtifacts`
-    - `pruneWorktreeTestArtifacts`
+    - `pruneWorktreeCheckArtifactsSync`
+    - `pruneWorktreeTestArtifactsSync`
     - `publishedLogClaim`
-    - `readCheckoutMinter`
-    - `readCheckoutOwner`
-    - `readHomeDataRootLayout`
+    - `readCheckoutMinterSync`
+    - `readCheckoutOwnerSync`
+    - `readHomeDataRootLayoutSync`
     - `relativeToDataRoot`
     - `releaseIdentity`
     - `repoConfigDir`
-    - `resolveCheckoutDeploy`
+    - `resolveCheckoutDeploySync`
     - `SERVER_CORE_RELATIVE`
     - `setReleaseIdentity`
-    - `stampCheckoutMinter`
+    - `stampCheckoutMinterSync`
     - `toolchainPin`
     - `WORKTREE_SPEC_FILE`
     - `worktreeArtifacts`
@@ -430,6 +431,8 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
+    - `blocking-fs/no-sync-fs` — `server/internal/publish-data-dirs.ts` (debt)
+    - `blocking-fs/sync-named` — `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/paths.ts` (debt)
 - Server:
   - Exports (types):
     - `AppIdentity`
@@ -444,7 +447,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `ReleaseIdentity`
   - Exports (values):
     - `actAsCheckoutNamespace`
-    - `backupsDir`
+    - `backupsDirSync`
     - `BUILD_ARTIFACTS_RETENTION`
     - `CHECK_ARTIFACTS_RETENTION`
     - `checkoutNamespace`
@@ -457,7 +460,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `claudeTranscriptPath`
     - `DATA_DIR_KINDS`
     - `dataRoot`
-    - `dataRootLayout`
+    - `dataRootLayoutSync`
     - `defineAppDataDir`
     - `defineDataDir`
     - `getDataDirs`
@@ -465,13 +468,13 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `HOME_DIR`
     - `isHostSingleton`
     - `isRelease`
-    - `listWorktreeDirs`
     - `listWorktreeDirsAsync`
+    - `listWorktreeDirsSync`
     - `PGREP`
     - `PLUGINS_DIR`
-    - `pruneWorktreeBuildArtifacts`
-    - `pruneWorktreeCheckArtifacts`
-    - `pruneWorktreeRunArtifacts`
+    - `pruneWorktreeBuildArtifactsSync`
+    - `pruneWorktreeCheckArtifactsSync`
+    - `pruneWorktreeRunArtifactsSync`
     - `PS`
     - `publishDataDirsManifest`
     - `relativeToDataRoot`

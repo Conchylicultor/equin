@@ -21,7 +21,7 @@ import { worktreeArtifacts } from "./paths";
 // it one more "owner is gone" case.
 
 /** Record that `root`'s CLI is acting as `ns`. Rewritten on every op, so the file's mtime is the last use. */
-export function stampCheckoutOwner(ns: Namespace, root: string): void {
+export function stampCheckoutOwnerSync(ns: Namespace, root: string): void {
   const path = worktreeArtifacts.checkoutOwner(ns);
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify({ root: resolve(root) })}\n`);
@@ -36,7 +36,7 @@ export type CheckoutOwnerRead =
  * The stamp for `ns`. `malformed` is its own arm: a stamp that exists and cannot
  * be read must not read as "no owner recorded", and never as "owner gone".
  */
-export function readCheckoutOwner(ns: Namespace): CheckoutOwnerRead {
+export function readCheckoutOwnerSync(ns: Namespace): CheckoutOwnerRead {
   const path = worktreeArtifacts.checkoutOwner(ns);
   let text: string;
   let lastUsedMs: number;

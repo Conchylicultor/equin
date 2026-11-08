@@ -37,7 +37,7 @@ function rotatingSink(): FileSink {
 
 async function write(sink: FileSink, from: number, to: number): Promise<void> {
   for (let i = from; i < to; i++) {
-    sink.append(line(i));
+    sink.appendSync(line(i));
     // A fresh file is born on the append after a rotation: space them out so
     // no two files share a birth microsecond.
     await Bun.sleep(2);

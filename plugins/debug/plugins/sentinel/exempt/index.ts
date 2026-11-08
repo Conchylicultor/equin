@@ -27,4 +27,15 @@ export default [
     reason:
       "The home directory itself (its volume's free space), never a folder under it.",
   },
+  {
+    rule: "blocking-fs/no-sync-fs",
+    paths: [
+      "server/internal/worker/entry.ts",
+      "server/internal/worker/sample.ts",
+    ],
+    kind: "debt",
+    task: "task-1793991088-yd3u37",
+    reason:
+      "Calls a *Sync helper (or a sync child process) that has no async twin yet; blocks the backend's thread for as long as the disk or the child takes.",
+  },
 ] satisfies Exemptions;

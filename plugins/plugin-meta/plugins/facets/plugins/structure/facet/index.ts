@@ -5,7 +5,7 @@ import {
 } from "@plugins/plugin-meta/plugins/facets/core";
 import { standardPluginDirsFromSnapshot } from "@plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery/core";
 import {
-  readIfExists,
+  readIfExistsSync,
   type FsSnapshot,
   type SnapshotDirEntry,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
@@ -77,7 +77,7 @@ function isIgnoredDir(name: string): boolean {
 
 /** Self-declared SPA/CLI bootstrap root (`package.json` `equin.compositionRoot`). */
 function readCompositionRoot(dir: AppPath): boolean {
-  const src = readIfExists(joinAppPath(dir, "package.json"));
+  const src = readIfExistsSync(joinAppPath(dir, "package.json"));
   if (!src) return false;
   try {
     return JSON.parse(src)[PLUGIN_MANIFEST_KEY]?.compositionRoot === true;

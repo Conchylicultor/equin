@@ -218,7 +218,7 @@ whenever the current one was killed before writing its own.
 
 A SIGKILLed build runs no handler, so it leaves the receipt at `running` with a
 dead pid — which `resolveReceipt` reports as `interrupted`, and which `build`,
-`check` and `push` each announce at startup via `reportInterruptedPredecessor`.
+`check` and `push` each announce at startup via `reportInterruptedPredecessorSync`.
 That is the only trace such a build leaves: it printed no verdict (the
 `installVerdictGuard` backstop cannot run) and its exit status is invisible behind
 a pipe.
@@ -476,6 +476,7 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/internal/claudemd-conflicts.ts`, `core/internal/git-dir.ts`, `core/internal/merge-markers.ts`, `core/internal/registry-entry.ts` (debt)
     - `cli:codegen-manifests-not-frozen:registry` — `core/cli.generated.ts` (sanctioned)
+    - `blocking-fs/sync-named` — `core/internal/git-dir.ts`, `core/internal/merge-markers.ts`, `core/internal/registry-entry.ts` (sanctioned)
 - Sub-plugins:
   - **`await`** — `./equin await` — block until this checkout's running op writes its verdict, and print it. Starts nothing; the wake-up becomes a tool result instead of a notification that may never arrive.
   - **`bootstrap`** [exempt] — CLI bootstrap — the npm-free half that must run with node_modules absent: ensureDeps, the post-install re-exec, the orphan guard, the build lock.

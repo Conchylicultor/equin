@@ -16,7 +16,7 @@ import {
   launchChromium,
   type PlaywrightBrowserSource,
 } from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
-import { readBrowserExecutables } from "@plugins/infra/plugins/deps/plugins/playwright-browser/core";
+import { readBrowserExecutablesSync } from "@plugins/infra/plugins/deps/plugins/playwright-browser/core";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import {
   agentOriginHeaders,
@@ -164,7 +164,7 @@ function launchFailure(
     const { path, version } = packageVersion("playwright-core", dirname(pkg));
     return `${version}  (${path})`;
   });
-  const recorded = readBrowserExecutables(installed.dir);
+  const recorded = readBrowserExecutablesSync(installed.dir);
   const executables = recorded.ok
     ? `headless ${recorded.executables.headlessShell}\n` +
       `                  headed   ${recorded.executables.headed}\n` +

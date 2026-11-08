@@ -3,13 +3,13 @@ import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
 import { constants } from "node:os";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
-import { pruneWorktreeRunArtifacts } from "@plugins/infra/plugins/paths/server";
+import { pruneWorktreeRunArtifactsSync } from "@plugins/infra/plugins/paths/server";
 import { spawnToFile } from "@plugins/infra/plugins/spawn/core";
 import { watchForCommand } from "@plugins/infra/plugins/file-watcher/cli";
 import type { AttachedRun } from "./attached";
 import { RUN_TERMINAL_ENV } from "../../core/internal/shim";
 import { assertRunId, assertRunKindId } from "../../core/internal/ids";
-import { writeRunTerminal } from "../../core/internal/terminal";
+import { writeRunTerminalSync } from "../../core/internal/terminal";
 
 /** The catchable signals an attached run's parent relays to its child. */
 const RELAYED_SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP", "SIGQUIT"] as const;
@@ -44,7 +44,7 @@ export async function runAttachedNow(opts: AttachedRun): Promise<number> {
   // Created before the child exists, so the echo has a file from the start.
   adoptFd(openSync(transcript, "a")).close();
   // The same "a new set trims the old ones" rule the backend's spawn follows.
-  pruneWorktreeRunArtifacts(opts.namespace, opts.kindId);
+  pruneWorktreeRunArtifactsSync(opts.namespace, opts.kindId);
 
   const echo = createEcho(transcript);
   const watcher = await watchForCommand({
@@ -82,7 +82,7 @@ export async function runAttachedNow(opts: AttachedRun): Promise<number> {
       result.signalCode === null
         ? result.exitCode
         : 128 + signalNumber(result.signalCode);
-    writeRunTerminal(terminal, { exitCode: status, signalCode: received });
+    writeRunTerminalSync(terminal, { exitCode: status, signalCode: received });
     return status;
   } finally {
     for (const off of relays) off();

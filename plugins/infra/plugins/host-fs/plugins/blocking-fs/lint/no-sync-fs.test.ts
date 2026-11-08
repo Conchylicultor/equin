@@ -33,7 +33,7 @@ const valid = (code: string, file = SERVER_CASE) => ({
 const invalid = (code: string, names: string[], file = SERVER_CASE) => ({
   filename: at(file),
   code: PRELUDE + code,
-  errors: names.map((name) => ({ messageId: "sync" as const, data: { name } })),
+  errors: names.map((name) => ({ messageId: "fs" as const, data: { name } })),
 });
 
 const ruleTester = createTypedRuleTester({
@@ -51,8 +51,10 @@ ruleTester.run("no-sync-fs", rule, {
     valid(`function loadSync(x: string) { return x; } loadSync(p);`),
     // Callbacks passed to an fs call are not themselves sync calls.
     valid(`fs.readFile(p, (err, data) => { void err; void data; });`),
-    // Not covered by design: a property not named like a blocking function.
-    valid(`const o = { read: fs.readFileSync }; o.read(p);`),
+    // Not covered by design: a call through a property not named like a
+    // blocking function (`o.read(p)` below is not asked about) — the hand-on
+    // itself is reported where it is written (see invalid).
+    valid(`declare const o: { read: typeof fs.readFileSync }; o.read(p);`),
     // Out of scope: a CLI file.
     valid(`readFileSync(p);`, CLI_CASE),
   ],
@@ -72,6 +74,11 @@ ruleTester.run("no-sync-fs", rule, {
     invalid(`[p].map((x) => existsSync(x)); fs.rmSync?.(p);`, [
       "existsSync",
       "rmSync",
+    ]),
+    // Handing a blocking function on by reference is reported where it is
+    // written: whoever receives it calls it on this thread.
+    invalid(`const o = { read: fs.readFileSync }; o.read(p);`, [
+      "readFileSync",
     ]),
     // An optional chain on a receiver that may be absent.
     invalid(`declare const m: typeof fs | undefined; m?.readFileSync(p);`, [

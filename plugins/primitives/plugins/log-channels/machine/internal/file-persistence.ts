@@ -16,14 +16,14 @@ import {
 export const filePersistence: LogPersistenceImpl = {
   sinkFor(channel) {
     const file = channelFileSink(channel);
-    return { appendAll: (lines) => file.appendAll(lines.map(logEnvelope)) };
+    return { appendAll: (lines) => file.appendAllSync(lines.map(logEnvelope)) };
   },
   // The browser's open-ended channel family shares one rotation through
   // `openDynamicSink`, bounded by the declared `client-log` family entry
   // (`clientLogFamily`, log-files) rather than one registry entry per id.
   clientSinkFor(channelId) {
     const file = openDynamicSink(logsDir(), channelId);
-    return { appendAll: (lines) => file.appendAll(lines.map(logEnvelope)) };
+    return { appendAll: (lines) => file.appendAllSync(lines.map(logEnvelope)) };
   },
   clientIngressPaused: isUnderDuress,
 };

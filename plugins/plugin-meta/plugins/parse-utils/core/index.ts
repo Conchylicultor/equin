@@ -7,13 +7,13 @@ export {
   parseDefineGroup,
   parseStaticCallId,
   parseStringField,
-  pathExists,
-  readIfExists,
+  pathExistsSync,
+  readIfExistsSync,
   readStaticCallId,
   readStringLiteral,
   stripTypes,
   unresolvableCallIdMessage,
-  walkFiles,
+  walkFilesSync,
   sourceFilesIn,
 } from "./helpers";
 export type {

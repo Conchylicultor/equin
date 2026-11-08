@@ -47,7 +47,7 @@ export function collectedDirRegistryPath(def: DiscoveredCollectedDir): AppPath {
 //
 // `prewarm` is in this ONE set (rather than a released-only sibling set)
 // because release is its only consumer and release is now per-name too — which
-// also means `listNamedCompositionRegistries` lists prewarm files, so
+// also means `listNamedCompositionRegistriesSync` lists prewarm files, so
 // a future reclaim sweep would list prewarm files like any other. (Nothing
 // sweeps today — the compose-serve deactivation stage that used to was deleted
 // with the serve fan-out; Phase 5 owns the replacement.)
@@ -167,7 +167,7 @@ export function parseNamedCompositionRegistryFileName(
  * registries themselves are GITIGNORED, so no file set holds them: reading the
  * (at most five) owning `core/` directories is the only way to see them.
  */
-export async function listNamedCompositionRegistries(
+export async function listNamedCompositionRegistriesSync(
   repo: RepoFiles,
 ): Promise<Array<{ dir: string; name: string; file: string }>> {
   const root = repo.root;

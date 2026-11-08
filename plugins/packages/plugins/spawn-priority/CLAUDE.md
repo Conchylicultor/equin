@@ -94,8 +94,10 @@ keeps the P-cores free for the interactive backends. Details + experiment data:
 `research/2026-07-07-global-background-work-priority-isolation.md`.
 
 Escape hatch / A-B harness: `EQUIN_NO_SPAWN_PRIORITY=1` disables all
-demotion. Non-darwin falls back to `nice -n 10` (Linux) or no-op — fail-open,
-a spawn never breaks because the host lacks a priority tool.
+demotion. On macOS `/usr/sbin/taskpolicy` is taken as present (it ships with
+every release since 10.9) — not probed, since a probe is a stat on the
+spawning thread for every demoted spawn (`blocking-fs/sync-named`). Non-darwin
+falls back to `nice -n 10` (Linux) or no-op.
 
 Do NOT demote a backend server process with this (the gateway decides a
 backend's start priority; the backend itself leaves darwinbg once ready, the
@@ -115,9 +117,7 @@ re-exports what server consumers use (same-plugin re-export), and
 
 - Description: OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends, and backgroundShellPrefix does it for every command an SDK agent's CLI launches; spawnInForeground starts a scarce slot holder's child out of darwinbg; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
 - Core:
-  - Uses:
-    - `infra/launcher/env-names.readEnv`
-    - `packages/timed-fs.existsSync`
+  - Uses: `infra/launcher/env-names.readEnv`
   - Exports (types):
     - `DarwinBackground`
     - `SpawnTier`

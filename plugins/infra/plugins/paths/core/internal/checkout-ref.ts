@@ -12,8 +12,11 @@ import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 // this file lives INSIDE the `paths` plugin, so the alias would cycle back
 // through the barrel that re-exports it. Same reasoning as `data-dir.ts`
 // importing `./paths`.
-import { comparableCheckoutPath, mainNamespaceOwner } from "./checkout-deploys";
-import { stampCheckoutOwner } from "./checkout-owner";
+import {
+  comparableCheckoutPathSync,
+  mainNamespaceOwnerSync,
+} from "./checkout-deploys";
+import { stampCheckoutOwnerSync } from "./checkout-owner";
 import { checkoutWorktreeName } from "./paths";
 
 /**
@@ -46,7 +49,7 @@ export class MainNamespaceCollisionError extends Error {
  * 2. Is that repository the one this data root's main app is served from? The
  *    data root serves ONE instance (research/2026-07-02-global-adr-single-
  *    instance-per-user.md), recorded by the `spec.json` its main build wrote
- *    (`mainNamespaceOwner`). Without this, the main checkout of ANY clone on
+ *    (`mainNamespaceOwnerSync`). Without this, the main checkout of ANY clone on
  *    the machine — a second copy, an e2e's temp repo — minted the main namespace and
  *    ran its ops, logs and deploys as main's. Such a checkout is named like any
  *    other non-main one, by its basename, and one whose basename IS the main
@@ -59,10 +62,10 @@ export async function checkoutRef(root: AppPath): Promise<CheckoutRef> {
   const mainRoot = await getMainRepoRoot(root);
   const name = checkoutWorktreeName(root);
   if (resolve(root) !== resolve(mainRoot)) return { kind: "worktree", name };
-  const owner = mainNamespaceOwner();
+  const owner = mainNamespaceOwnerSync();
   if (
     owner.kind === "unclaimed" ||
-    owner.checkoutRoot === comparableCheckoutPath(root)
+    owner.checkoutRoot === comparableCheckoutPathSync(root)
   )
     return { kind: "main" };
   if (name === MAIN_WORKTREE_NAME)
@@ -72,7 +75,7 @@ export async function checkoutRef(root: AppPath): Promise<CheckoutRef> {
 
 /**
  * The namespace a checkout's OWN app answers to — the second of the three
- * questions that look alike and are not (see `deploysForCheckout` for the
+ * questions that look alike and are not (see `deploysForCheckoutSync` for the
  * third, and `currentWorktreeName` for the first).
  *
  * This pair — the main composition, plus the checkout git says this root is —
@@ -84,7 +87,7 @@ export async function checkoutRef(root: AppPath): Promise<CheckoutRef> {
  *
  * It says which namespace this checkout WOULD serve, not that anything is
  * serving it: a checkout that has never been built still has one. Ask
- * `resolveCheckoutDeploy(root)` when the question is what is actually deployed.
+ * `resolveCheckoutDeploySync(root)` when the question is what is actually deployed.
  */
 export async function checkoutNamespace(root: AppPath): Promise<Namespace> {
   return namespaceFor(MAIN_COMPOSITION_ID, await checkoutRef(root));
@@ -93,7 +96,7 @@ export async function checkoutNamespace(root: AppPath): Promise<Namespace> {
 /**
  * {@link checkoutNamespace}, for a caller about to ACT as that namespace — an op
  * (`build`, `push`, a direct op) that will write into its data dir. Also records
- * the checkout on the namespace (`stampCheckoutOwner`), so the reaper can
+ * the checkout on the namespace (`stampCheckoutOwnerSync`), so the reaper can
  * reclaim a dir whose checkout is gone even when no attempt row or composition
  * marker names it. One function, so an op cannot mint without stamping.
  */
@@ -101,6 +104,6 @@ export async function actAsCheckoutNamespace(
   root: AppPath,
 ): Promise<Namespace> {
   const ns = await checkoutNamespace(root);
-  stampCheckoutOwner(ns, root);
+  stampCheckoutOwnerSync(ns, root);
   return ns;
 }

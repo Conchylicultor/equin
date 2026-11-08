@@ -72,12 +72,12 @@ every move proven before it lands.
   - Exports (values):
     - `addLockedTool`
     - `compareVersions`
-    - `findMiseBin`
+    - `findMiseBinSync`
     - `HOLDS`
     - `HOLDS_FILE`
     - `isExactRelease`
     - `lockProblems`
-    - `miseBin`
+    - `miseBinSync`
     - `parseMiseLock`
     - `parseMiseToolRequests`
     - `setLockedVersion`

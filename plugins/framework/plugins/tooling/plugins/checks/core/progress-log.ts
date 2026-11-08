@@ -313,7 +313,7 @@ function worktreeName(): string {
  * provide.
  */
 function appendToSink(record: ProgressRecord): void {
-  progressSink.append(JSON.stringify(record));
+  progressSink.appendSync(JSON.stringify(record));
 }
 
 /** A live run's handle: the record writers plus the heartbeat's stop. */
@@ -735,7 +735,7 @@ export interface CheckRunProgress {
  * Returns newest run first, ordered by last activity.
  */
 export function readCheckProgress(): CheckRunProgress[] {
-  const result = progressSink.readJsonlTail<ProgressRecord>({
+  const result = progressSink.readJsonlTailSync<ProgressRecord>({
     includeRotated: true,
     maxBytes: 8 * 1024 * 1024, // covers the full 6 MB footprint
   });

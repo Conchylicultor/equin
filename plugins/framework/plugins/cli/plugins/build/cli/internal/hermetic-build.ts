@@ -67,7 +67,7 @@ import { reapLegacyCheckoutDist } from "./legacy-dist-reap";
  * first few hundred lines and interleaved with real work, `openBuildProgress`,
  * `createOpProfiler`, `createBuildRunRecorder`, `markWorktreeOpStart`, a
  * `process.on("exit")` hook, `installVerdictGuard`, `installFatalSignalExit` and
- * `writeBuildReceipt` — and the exit-code contract below is precisely the claim
+ * `writeBuildReceiptSync` — and the exit-code contract below is precisely the claim
  * that NONE of them is armed. Inline, that claim survives only as long as
  * nobody adds the 21st exit hook without its guard; branch-once-and-delegate
  * makes it structural, because this path never enters the function that arms

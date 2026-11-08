@@ -1,5 +1,5 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
 import {
   openOwnedFd,
   type OwnedFd,
@@ -49,7 +49,7 @@ export async function spawnToFile(
   argv: string[],
   opts: SpawnToFileOptions,
 ): Promise<SpawnPassthroughResult> {
-  const fd = openOwnedFd(opts.outputPath, "a");
+  const fd = await openOwnedFd(opts.outputPath, "a");
   let open = true;
   const close = (): void => {
     if (!open) return;
@@ -75,9 +75,9 @@ async function runToCompletion(
   // The same two guarantees `spawnCaptured` gives: the child is SIGTERMed if
   // we exit first (live-children), and dies on its own if we are SIGKILLed and
   // it called `exitWithParent()` (the lifeline, in a dir private to this spawn).
-  const dir = asAppPath(mkdtempSync(join(tmpdir(), "sg-spawn-")));
+  const dir = asAppPath(await mkdtemp(join(tmpdir(), "sg-spawn-")));
   try {
-    const lifeline = holdParentLifeline(dir);
+    const lifeline = await holdParentLifeline(dir);
     try {
       const proc = spawnAtTier(opts.tier ?? "inherit", argv, (tiered) =>
         Bun.spawn(tiered, {
@@ -105,6 +105,6 @@ async function runToCompletion(
       lifeline.release();
     }
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    await rm(dir, { recursive: true, force: true });
   }
 }

@@ -1,7 +1,7 @@
 import { sep } from "path";
 import {
-  walkFiles,
-  readIfExists,
+  walkFilesSync,
+  readIfExistsSync,
   findMarkerCalls,
   maskSource,
   matchBracket,
@@ -361,10 +361,10 @@ export function parseRegisterCalls(
 /** Read every file under `dir` as a `SourceFile`. */
 function readPluginSources(dir: AppPath): SourceFile[] {
   const paths: AppPath[] = [];
-  walkFiles(dir, paths);
+  walkFilesSync(dir, paths);
   const files: SourceFile[] = [];
   for (const path of paths) {
-    const src = readIfExists(path);
+    const src = readIfExistsSync(path);
     if (src) files.push({ path, src });
   }
   return files;

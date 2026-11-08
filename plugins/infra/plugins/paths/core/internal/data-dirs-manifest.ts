@@ -106,7 +106,7 @@ export function declaredSets(
  * i.e. report another agent's live directory as an orphan, which is the exact
  * failure this file exists to end.
  */
-export function writeDataDirsManifest(
+export function writeDataDirsManifestSync(
   namespace: Namespace,
   sets: DeclaredSets,
 ): string {
@@ -152,15 +152,15 @@ export interface ForeignManifests {
  * away, so without this the verdict would replay green over a directory that
  * has since become a real orphan.
  *
- * Unlike {@link readForeignManifests} this takes no `self` and excludes
+ * Unlike {@link readForeignManifestsSync} this takes no `self` and excludes
  * nothing. A signature may cover MORE than the verdict reads — that only costs
  * a re-run — and taking no self is what keeps it callable from a synchronous
  * `cacheSignature()`, which has no worktree root to derive one from.
  */
-export function manifestStamps(): string[] {
+export function manifestStampsSync(): string[] {
   const stamps: string[] = [];
-  for (const name of listNamespaces()) {
-    const st = statManifest(worktreeArtifacts.dataDirs(asNamespace(name)));
+  for (const name of listNamespacesSync()) {
+    const st = statManifestSync(worktreeArtifacts.dataDirs(asNamespace(name)));
     if (st) stamps.push(`${name}:${st.mtimeMs}:${st.size}`);
   }
   return stamps;
@@ -177,7 +177,7 @@ export function manifestStamps(): string[] {
  * and `throwIfNoEntry: false` suppresses only ENOENT — so the audit threw
  * instead of running.
  */
-function listNamespaces(): string[] {
+function listNamespacesSync(): string[] {
   let entries;
   try {
     entries = readdirSync(worktreesDir(), { withFileTypes: true });
@@ -201,7 +201,9 @@ function listNamespaces(): string[] {
  * namespace dir pointing at a file would otherwise crash the whole audit over
  * one namespace's oddity.
  */
-function statManifest(path: AppPath): ReturnType<typeof statSync> | undefined {
+function statManifestSync(
+  path: AppPath,
+): ReturnType<typeof statSync> | undefined {
   try {
     const st = statSync(path);
     return st.isFile() ? st : undefined;
@@ -252,14 +254,14 @@ function parseManifest(raw: string): DataDirsManifest | string {
  * not booted since manifests existed, or never boots at all. The cost is an
  * unattributed entry, which reads as an ordinary undeclared one.
  */
-export function readForeignManifests(self: string): ForeignManifests {
+export function readForeignManifestsSync(self: string): ForeignManifests {
   const manifests: DataDirsManifest[] = [];
   const unreadable: UnreadableManifest[] = [];
 
-  for (const name of listNamespaces()) {
+  for (const name of listNamespacesSync()) {
     if (name === self) continue;
     const path = worktreeArtifacts.dataDirs(asNamespace(name));
-    if (!statManifest(path)) continue;
+    if (!statManifestSync(path)) continue;
     const parsed = parseManifest(readFileSync(path, "utf8"));
     if (typeof parsed === "string") {
       unreadable.push({ namespace: name, reason: parsed });

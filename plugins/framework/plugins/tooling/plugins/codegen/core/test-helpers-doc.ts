@@ -14,7 +14,7 @@ import {
   findImports,
   maskSource,
   parseBarrelExports,
-  readIfExists,
+  readIfExistsSync,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 /**
@@ -50,7 +50,7 @@ export function collectTestHelpers(p: {
   const out: TestHelperBarrel[] = [];
   for (const runtime of RUNTIME_FOLDERS) {
     const barrelFile = joinAppPath(p.dir, runtime, TESTING_FOLDER, "index.ts");
-    const raw = readIfExists(barrelFile);
+    const raw = readIfExistsSync(barrelFile);
     if (raw === null) continue;
     const masked = maskSource(raw);
     const sources = reExportSources(raw, asAppPath(dirname(barrelFile)));
@@ -62,7 +62,10 @@ export function collectTestHelpers(p: {
         .filter((s) => s.kind === "value")
         .map(({ name }) => {
           const file = sources.get(name) ?? barrelFile;
-          const summary = declarationSummary(readIfExists(file) ?? "", name);
+          const summary = declarationSummary(
+            readIfExistsSync(file) ?? "",
+            name,
+          );
           return summary === undefined ? { name } : { name, summary };
         }),
       types: symbols.filter((s) => s.kind === "type").map((s) => s.name),

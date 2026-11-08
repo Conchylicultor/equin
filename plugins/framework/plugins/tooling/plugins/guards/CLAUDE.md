@@ -335,6 +335,8 @@ can blind or deafen all of them at once.
     - `user-path/no-sync-fs` — `core/context.ts`, `core/git-target.ts`, `core/guards/poll-loop.ts`, `core/walk-scope.ts` (sanctioned)
     - `python/no-system-python` — `core` (sanctioned)
     - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts`, `core/walk-scope.ts` (debt)
+    - `blocking-fs/sync-named` — `core/agent-ops.ts`, `core/context.ts`, `core/git-target.ts`, `core/guards/git-diff-main.ts`, `core/guards/poll-loop.ts`, `core/walk-scope.ts` (debt)
+    - `blocking-fs/sync-named` — `core/informed-once.ts` (sanctioned)
 - Sub-plugins:
   - **`agent-policy`** — The protections every agent runs with — the guard and stop-guard hooks and the deny rules — declared once as data: `.claude/settings.json`'s protection keys are generated from it…
   - **`module-extension`** — MODULE_EXTENSION: the extensions bun loads as a module (.ts/.tsx/.js/.jsx and their m/c forms) — the one set the bun-script guard denies and `./equin run` accepts. A leaf with no imports, so the e2e…

@@ -113,7 +113,7 @@ function writeEpisodeLine(
     reason,
     episodeSetAt,
   };
-  episodesFile.append(
+  episodesFile.appendSync(
     logEnvelope({
       t: Date.now(),
       stream: "stdout",

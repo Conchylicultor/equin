@@ -25,8 +25,8 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import {
-  readCheckoutMinter,
-  stampCheckoutMinter,
+  readCheckoutMinterSync,
+  stampCheckoutMinterSync,
 } from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { attemptBranchName, attemptBranchRef } from "../../core";
@@ -1312,7 +1312,7 @@ export async function convergeExistingCheckout(
  *
  * @param minter the namespace whose backend makes this checkout — the one
  * whose database holds its attempt row (`runtimeNamespace()` of the caller).
- * REQUIRED: it is stamped beside the checkout (`stampCheckoutMinter`) so main's
+ * REQUIRED: it is stamped beside the checkout (`stampCheckoutMinterSync`) so main's
  * reaper can tell a checkout a worktree build minted — whose row it cannot
  * read — from an abandoned one. First mint wins: a retry or reuse never
  * re-attributes it.
@@ -1412,8 +1412,8 @@ export async function setupWorktree(
 // checkout beside it reads as a registry orphan, and the sweep removes it.
 function stampMinter(id: string, minter: Namespace): void {
   const checkout = asNamespace(id);
-  if (readCheckoutMinter(checkout).kind === "absent")
-    stampCheckoutMinter(checkout, minter);
+  if (readCheckoutMinterSync(checkout).kind === "absent")
+    stampCheckoutMinterSync(checkout, minter);
 }
 
 /**

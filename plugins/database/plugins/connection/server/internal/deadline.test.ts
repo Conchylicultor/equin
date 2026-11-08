@@ -48,7 +48,7 @@ import { startBlackHoleProxy, type BlackHoleProxy } from "../testing";
 // No throwaway database: every statement here is table-free (`select 1`,
 // `pg_sleep`), so the suite talks to the always-present `postgres` maintenance
 // database. The upstream is the embedded cluster's socket, named by
-// `database/embedded` (not `readDatabaseConfig` from `database/core`: that edge
+// `database/embedded` (not `readDatabaseConfigSync` from `database/core`: that edge
 // would close a plugin cycle, since `database` imports this plugin).
 //
 // Requires the running embedded cluster (./equin build). Unreachable

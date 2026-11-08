@@ -14,15 +14,15 @@ import {
   asPath,
 } from "@plugins/framework/plugins/plugin-id/core";
 import {
-  walkFiles,
-  readIfExists,
+  walkFilesSync,
+  readIfExistsSync,
   findImports,
   runWithFsSnapshot,
   maskSource,
   markerCallSpans,
   matchBracket,
   parseStaticCallId,
-  pathExists,
+  pathExistsSync,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { APP_STYLESHEET_PATH } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { parse as parseJsonc } from "jsonc-parser";
@@ -55,7 +55,7 @@ import {
 // written inside a string or comment never registers a phantom use.
 function parseRawUses(runtimeDir: AppPath): RawUse[] {
   const files: AppPath[] = [];
-  walkFiles(runtimeDir, files);
+  walkFilesSync(runtimeDir, files);
   const uses: RawUse[] = [];
   const seen = new Set<string>();
 
@@ -67,7 +67,7 @@ function parseRawUses(runtimeDir: AppPath): RawUse[] {
   };
 
   for (const f of files) {
-    const raw = readIfExists(f);
+    const raw = readIfExistsSync(f);
     if (!raw) continue;
     for (const imp of findImports(raw)) {
       // The old namedRe/nsRe/defRe/sideRe were all `import`-only (never
@@ -119,8 +119,10 @@ function parseRawUses(runtimeDir: AppPath): RawUse[] {
 // the folder a group's descriptor lives in (its `web/` registers it).
 function parseTokenGroups(coreDir: AppPath): DeclaredTokenGroup[] {
   const files: AppPath[] = [];
-  walkFiles(coreDir, files);
-  return files.flatMap((f) => tokenGroupsDeclaredIn(readIfExists(f) ?? "", f));
+  walkFilesSync(coreDir, files);
+  return files.flatMap((f) =>
+    tokenGroupsDeclaredIn(readIfExistsSync(f) ?? "", f),
+  );
 }
 
 // The runtimes a page loads, where a word can be a Tailwind class. Elsewhere
@@ -138,13 +140,13 @@ function shippedSources(dir: AppPath): SourceText[] {
   const out: SourceText[] = [];
   for (const rt of SHIPPED_RUNTIME_FOLDERS) {
     const rtDir = joinAppPath(dir, rt);
-    if (!pathExists(rtDir)) continue;
+    if (!pathExistsSync(rtDir)) continue;
     const files: AppPath[] = [];
-    walkFiles(rtDir, files, { css: true });
+    walkFilesSync(rtDir, files, { css: true });
     for (const file of files)
       out.push({
         file,
-        content: readIfExists(file) ?? "",
+        content: readIfExistsSync(file) ?? "",
         classes: STYLED_RUNTIME_FOLDERS.has(rt),
       });
   }
@@ -173,9 +175,9 @@ function literalMarkerIds(src: string, marker: string): string[] {
 // The field types a plugin defines: `defineFieldType("<id>")` in its `core/`.
 function parseFieldTypeDefs(coreDir: AppPath): string[] {
   const files: AppPath[] = [];
-  walkFiles(coreDir, files);
+  walkFilesSync(coreDir, files);
   return files.flatMap((f) =>
-    literalMarkerIds(readIfExists(f) ?? "", "defineFieldType"),
+    literalMarkerIds(readIfExistsSync(f) ?? "", "defineFieldType"),
   );
 }
 
@@ -209,9 +211,9 @@ function spelledKeys(src: string): { fieldTypes: string[]; views: string[] } {
 // rows name the view types the DataView shows.
 function parseDataViewIds(webDir: AppPath): string[] {
   const files: AppPath[] = [];
-  walkFiles(webDir, files);
+  walkFilesSync(webDir, files);
   return files.flatMap((f) =>
-    literalMarkerIds(readIfExists(f) ?? "", "defineDataView"),
+    literalMarkerIds(readIfExistsSync(f) ?? "", "defineDataView"),
   );
 }
 
@@ -232,7 +234,7 @@ function authoredViewTypes(
     asPath(pluginId),
     `${dataViewId}.jsonc`,
   );
-  const text = readIfExists(asAppPath(file));
+  const text = readIfExistsSync(asAppPath(file));
   if (text === null) return [];
   const doc = parseJsonc(text) as { views?: unknown } | undefined;
   if (!Array.isArray(doc?.views)) return [];
@@ -288,12 +290,12 @@ export default createFacet<CrossRefsData>({
     const raw = emptyByRuntime<RawUse>();
     for (const rt of RUNTIME_FOLDERS) {
       const rtDir = joinAppPath(ctx.dir, rt);
-      if (pathExists(rtDir)) raw[rt] = parseRawUses(rtDir);
+      if (pathExistsSync(rtDir)) raw[rt] = parseRawUses(rtDir);
     }
     const coreDir = joinAppPath(ctx.dir, "core");
     const webDir = joinAppPath(ctx.dir, "web");
     const keyDefs: KeyRef[] = (
-      pathExists(coreDir) ? parseFieldTypeDefs(coreDir) : []
+      pathExistsSync(coreDir) ? parseFieldTypeDefs(coreDir) : []
     ).map((key) => ({ space: "field-type", key }));
     // A definer uses its own type (anything holding a date field imports the
     // token it defines). Spelled field types are raw until relate() keeps the
@@ -301,11 +303,11 @@ export default createFacet<CrossRefsData>({
     const keyRefs: KeyRef[] = [...keyDefs];
     for (const rt of SHIPPED_RUNTIME_FOLDERS) {
       const rtDir = joinAppPath(ctx.dir, rt);
-      if (!pathExists(rtDir)) continue;
+      if (!pathExistsSync(rtDir)) continue;
       const files: AppPath[] = [];
-      walkFiles(rtDir, files);
+      walkFilesSync(rtDir, files);
       for (const f of files) {
-        const spelled = spelledKeys(readIfExists(f) ?? "");
+        const spelled = spelledKeys(readIfExistsSync(f) ?? "");
         for (const key of spelled.fieldTypes)
           keyRefs.push({ space: "field-type", key });
         for (const key of spelled.views)
@@ -316,12 +318,12 @@ export default createFacet<CrossRefsData>({
       apiUses: emptyByRuntime(),
       importedBy: [],
       raw,
-      tokenGroups: pathExists(coreDir) ? parseTokenGroups(coreDir) : [],
+      tokenGroups: pathExistsSync(coreDir) ? parseTokenGroups(coreDir) : [],
       tokenUses: [],
       tokenUsedBy: [],
       keyDefs: sortKeyRefs(keyDefs),
       keyRefs,
-      rawDataViews: pathExists(webDir) ? parseDataViewIds(webDir) : [],
+      rawDataViews: pathExistsSync(webDir) ? parseDataViewIds(webDir) : [],
     };
   },
 

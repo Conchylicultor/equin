@@ -15,7 +15,7 @@ the launcher imports them (a declaration in the launcher itself is a cycle).
 - `serviceLogTarget(argv)` (`core`) — what a start script reads off its argv:
   `--log-fd <n>`, the relay pipe the supervisor hands it, or `absent` behind a
   gateway older than the relay.
-- `adoptLegacyLog(legacy, live)` — the one-shot move of a daemon's pre-relay
+- `adoptLegacyLogSync(legacy, live)` — the one-shot move of a daemon's pre-relay
   log file into its channel's rotation, on a fresh start (task-1793827129-t489g4
   deletes it).
 

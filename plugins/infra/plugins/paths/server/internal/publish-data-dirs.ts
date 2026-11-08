@@ -3,7 +3,7 @@ import { getDataDirs, isDataDir } from "../../core/internal/data-dir";
 import type { DataDir } from "../../core/internal/data-dir";
 import {
   declaredSets,
-  writeDataDirsManifest,
+  writeDataDirsManifestSync,
 } from "../../core/internal/data-dirs-manifest";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { isRelease } from "../../core/internal/paths";
@@ -41,5 +41,5 @@ export async function publishDataDirsManifest(): Promise<void> {
     dedupeKey: (d) => `${d.spec.kind}/${d.spec.name}`,
     label: "data-dir",
   });
-  writeDataDirsManifest(runtimeNamespace(), declaredSets(getDataDirs()));
+  writeDataDirsManifestSync(runtimeNamespace(), declaredSets(getDataDirs()));
 }

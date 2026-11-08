@@ -6,7 +6,7 @@ import {
   RUN_TERMINAL_SUFFIX,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
-import { readRunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
+import { readRunTerminalSync } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import {
   BUILD_RUN_KIND_ID,
   buildRunIdKind,
@@ -37,7 +37,7 @@ import {
 //
 // A run that ended before this process started is never announced — there is
 // no edge left to report. A reader decides it from the marker itself
-// (`readRunTerminal(BUILD_RUN_KIND_ID, runId)`): present ⇒ its artifacts are
+// (`readRunTerminalSync(BUILD_RUN_KIND_ID, runId)`): present ⇒ its artifacts are
 // final.
 
 /**
@@ -125,7 +125,7 @@ const hub = createRunTerminalHub(async () => {
         const runId = buildRunIdOfMarker(basename(event.path));
         // Re-read the marker rather than trust the event: it is the authority,
         // and a malformed one throws (RunMarkerError) — a writer defect.
-        if (runId !== null && readRunTerminal(BUILD_RUN_KIND_ID, runId))
+        if (runId !== null && readRunTerminalSync(BUILD_RUN_KIND_ID, runId))
           ended.add(runId);
       }
       for (const runId of ended) hub.announce(runId);

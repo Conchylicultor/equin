@@ -1,6 +1,6 @@
 import { rm } from "node:fs/promises";
 import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
-import { backupsDir } from "@plugins/infra/plugins/paths/server";
+import { backupsDirSync } from "@plugins/infra/plugins/paths/server";
 import { getConfig } from "@plugins/config_v2/server";
 import type { BackupArchive, BackupTargetResult } from "@plugins/backup/core";
 import { localBackupConfig } from "../../shared/config";
@@ -18,7 +18,7 @@ export async function runLocalTarget(
 
   let entries: string[];
   try {
-    entries = await readdir(backupsDir());
+    entries = await readdir(backupsDirSync());
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return { targetId: "local", ok: true, detail: archive.archivePath };
@@ -31,7 +31,7 @@ export async function runLocalTarget(
   const completed: string[] = [];
   for (const e of candidates) {
     try {
-      await stat(`${backupsDir()}/${e}/archive.tar.gz`);
+      await stat(`${backupsDirSync()}/${e}/archive.tar.gz`);
       completed.push(e);
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
@@ -43,7 +43,7 @@ export async function runLocalTarget(
   if (keepLast > 0 && dirs.length > keepLast) {
     const toDelete = dirs.slice(keepLast);
     for (const dir of toDelete) {
-      await rm(`${backupsDir()}/${dir}`, { recursive: true, force: true });
+      await rm(`${backupsDirSync()}/${dir}`, { recursive: true, force: true });
     }
   }
 

@@ -20,7 +20,7 @@ const HOST_SOURCE_DIRS = ["bin", "shared", "core"] as const;
  * open tab. Imports into other plugins are not hashed; a change there that
  * alters the wire bumps `ENGINE_PROTOCOL` instead.
  */
-export function hostCodeId(pluginDir: AppPath): string {
+export function hostCodeIdSync(pluginDir: AppPath): string {
   const hash = createHash("sha256");
   for (const dir of HOST_SOURCE_DIRS) {
     const root = joinAppPath(pluginDir, dir);

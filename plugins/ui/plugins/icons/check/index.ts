@@ -15,7 +15,7 @@ import type { IconifyJSON } from "@iconify/types";
 import {
   SYMBOL_NAMES_REL_PATH,
   SYMBOL_NAME_LIST_REL_PATH,
-  installedSetVersions,
+  installedSetVersionsSync,
   readInputsHash,
   readListInputsHash,
   symbolNamesInputsHash,
@@ -40,7 +40,7 @@ const symbolNamesInSync: Check = {
   async run(ctx) {
     const pass = codegenPassOver(await ctx.repo());
     const root = pass.root;
-    const expected = symbolNamesInputsHash(installedSetVersions());
+    const expected = symbolNamesInputsHash(installedSetVersionsSync());
     for (const [rel, read] of [
       [SYMBOL_NAMES_REL_PATH, readInputsHash],
       [SYMBOL_NAME_LIST_REL_PATH, readListInputsHash],

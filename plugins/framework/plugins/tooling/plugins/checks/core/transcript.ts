@@ -7,7 +7,7 @@ import { dirname } from "node:path";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { CheckResult } from "@plugins/framework/plugins/tooling/core";
 import {
-  pruneWorktreeCheckArtifacts,
+  pruneWorktreeCheckArtifactsSync,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
@@ -334,7 +334,7 @@ export function openCheckTranscript(args: {
       // Writing a new transcript is what trims the old ones — the same
       // convention every other per-run artifact follows. A killed run skips its
       // prune; the next completed run reaps it.
-      pruneWorktreeCheckArtifacts(args.worktree);
+      pruneWorktreeCheckArtifactsSync(args.worktree);
     },
   };
 }

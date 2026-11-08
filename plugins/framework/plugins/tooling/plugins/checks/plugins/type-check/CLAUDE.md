@@ -362,6 +362,7 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
     - `user-path/no-unproven-claim` — `shared/worker.ts`, `shared/batch-worker.ts` (sanctioned)
     - `check-thread-safety/no-blocking-check-work` — `check/import-graph.ts` (debt)
     - `repo-walk-safety/no-adhoc-repo-listing` — `shared/repo-view.ts` (sanctioned)
+    - `blocking-fs/sync-named` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/name-store.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (sanctioned)
 - Cli:
   - Exports (values): `readTypeCheckTree`
 - Sub-plugins:

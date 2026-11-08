@@ -5,16 +5,16 @@
  * through the module-level `db` singleton, so — exactly like the
  * `run-build.test.ts` suite this mirrors, and the page/editor `parent-liveness`
  * one before it — it cannot be pointed at a fixture DB. But its per-row close
- * DECISION is `observeRun`, which is fully determined by two pure, db-free
+ * DECISION is `observeRunSync`, which is fully determined by two pure, db-free
  * functions:
  *
  *   close?  =  !(readRunTerminal(kind, id) == null && isRunAlive(pid))
  *   value   =  readRunTerminal(kind, id) ?? { exitCode: -1, finishedAt: now }
  *
- * So covering `readRunTerminal` (against real marker files at the real resolved
+ * So covering `readRunTerminalSync` (against real marker files at the real resolved
  * path) and `isRunAlive` (against real processes and real process groups)
  * exercises the whole rule, and the composition block at the bottom drives the
- * real `observeRun` so the three scenarios are asserted end-to-end without a
+ * real `observeRunSync` so the three scenarios are asserted end-to-end without a
  * fixture DB (`observe.test.ts` covers it against live children too):
  *
  *   - marker present, pid alive ⇒ terminal != null ⇒ CLOSE at the recorded code
@@ -36,8 +36,8 @@ import {
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import {
   isRunAlive,
-  observeRun,
-  readRunTerminal,
+  observeRunSync,
+  readRunTerminalSync,
   RunMarkerError,
 } from "./terminal";
 
@@ -72,13 +72,13 @@ describe("readRunTerminal", () => {
   test("a marker holding 0 reads as a clean exit", () => {
     const runId = uniqueRunId("ok");
     writeMarker(runId, "0 -\n");
-    expect(readRunTerminal(KIND, runId)?.exitCode).toBe(0);
+    expect(readRunTerminalSync(KIND, runId)?.exitCode).toBe(0);
   });
 
   test("a marker holding a non-zero code reads as that code", () => {
     const runId = uniqueRunId("fail");
     writeMarker(runId, "7 -\n");
-    expect(readRunTerminal(KIND, runId)?.exitCode).toBe(7);
+    expect(readRunTerminalSync(KIND, runId)?.exitCode).toBe(7);
   });
 
   test("143 (SIGTERM) is an ordinary recorded code, not a missing marker", () => {
@@ -88,7 +88,7 @@ describe("readRunTerminal", () => {
     // signal killed the supervisor and left nothing to read.
     const runId = uniqueRunId("killed");
     writeMarker(runId, "143 TERM\n");
-    const t = readRunTerminal(KIND, runId);
+    const t = readRunTerminalSync(KIND, runId);
     expect(t?.exitCode).toBe(143);
     expect(t?.signalCode).toBe("TERM");
   });
@@ -100,7 +100,7 @@ describe("readRunTerminal", () => {
     const runId = uniqueRunId("mtime");
     const finishedAt = new Date(Date.now() - 5 * 60_000);
     writeMarker(runId, "0 -\n", finishedAt);
-    const terminal = readRunTerminal(KIND, runId);
+    const terminal = readRunTerminalSync(KIND, runId);
     expect(terminal).not.toBeNull();
     // Filesystem mtime granularity varies; a second of slack is well inside it
     // while still being three orders of magnitude tighter than "now".
@@ -110,7 +110,7 @@ describe("readRunTerminal", () => {
   });
 
   test("no marker (ENOENT) ⇒ null — the hard-SIGKILL signal", () => {
-    expect(readRunTerminal(KIND, uniqueRunId("absent"))).toBeNull();
+    expect(readRunTerminalSync(KIND, uniqueRunId("absent"))).toBeNull();
   });
 
   test("an unparseable marker THROWS — it is a writer defect, not a run state", () => {
@@ -120,38 +120,40 @@ describe("readRunTerminal", () => {
     // that under "hard-killed" and hide the defect behind a plausible `-1`.
     const runId = uniqueRunId("garbage");
     writeMarker(runId, "not a marker");
-    expect(() => readRunTerminal(KIND, runId)).toThrow(RunMarkerError);
+    expect(() => readRunTerminalSync(KIND, runId)).toThrow(RunMarkerError);
   });
 
   test("a one-field marker throws — the signal field is not optional", () => {
     const runId = uniqueRunId("onefield");
     writeMarker(runId, "143");
-    expect(() => readRunTerminal(KIND, runId)).toThrow(/malformed exit marker/);
+    expect(() => readRunTerminalSync(KIND, runId)).toThrow(
+      /malformed exit marker/,
+    );
   });
 
   test("an empty marker throws", () => {
     const runId = uniqueRunId("empty");
     writeMarker(runId, "");
-    expect(() => readRunTerminal(KIND, runId)).toThrow(RunMarkerError);
+    expect(() => readRunTerminalSync(KIND, runId)).toThrow(RunMarkerError);
   });
 
   test("trailing whitespace is tolerated — the code is still read", () => {
     const runId = uniqueRunId("ws");
     writeMarker(runId, "12 -\n");
-    expect(readRunTerminal(KIND, runId)?.exitCode).toBe(12);
+    expect(readRunTerminalSync(KIND, runId)?.exitCode).toBe(12);
   });
 
   test("a number followed by junk throws, never yields the leading number", () => {
     // `parseInt("13oops")` is 13 — a confident wrong answer stamped on the row.
     const runId = uniqueRunId("junk");
     writeMarker(runId, "13oops -");
-    expect(() => readRunTerminal(KIND, runId)).toThrow(RunMarkerError);
+    expect(() => readRunTerminalSync(KIND, runId)).toThrow(RunMarkerError);
   });
 
   test("`-` in the signal field means no signal was observed", () => {
     const runId = uniqueRunId("nosig");
     writeMarker(runId, "143 -\n");
-    const terminal = readRunTerminal(KIND, runId);
+    const terminal = readRunTerminalSync(KIND, runId);
     // The same 143 a SIGTERM produces, and the field is what separates them.
     expect(terminal?.exitCode).toBe(143);
     expect(terminal?.signalCode).toBeNull();
@@ -160,13 +162,13 @@ describe("readRunTerminal", () => {
   test("an invalid kind id throws rather than resolving a path", () => {
     // The `-` ban is what keeps one kind's prune out of another kind's files,
     // so it fails here rather than silently naming a colliding artifact.
-    expect(() => readRunTerminal("test-kind", "abc")).toThrow(
+    expect(() => readRunTerminalSync("test-kind", "abc")).toThrow(
       /invalid kind id/,
     );
   });
 
   test("a run id that would escape the runs dir throws", () => {
-    expect(() => readRunTerminal(KIND, "../../etc/passwd")).toThrow(
+    expect(() => readRunTerminalSync(KIND, "../../etc/passwd")).toThrow(
       /invalid run id/,
     );
   });
@@ -280,21 +282,23 @@ describe("close condition (composition)", () => {
     // one for the few milliseconds before the pid reaps — not an anomaly.
     const runId = uniqueRunId("closealive");
     writeMarker(runId, "0 -\n");
-    expect(observeRun(KIND, runId, process.pid, now)).toMatchObject({
+    expect(observeRunSync(KIND, runId, process.pid, now)).toMatchObject({
       state: "ended",
       terminal: { exitCode: 0 },
     });
   });
 
   test("no marker + pid dead ⇒ closes with the -1/now sentinel", () => {
-    expect(observeRun(KIND, uniqueRunId("closedead"), null, now)).toEqual({
+    expect(observeRunSync(KIND, uniqueRunId("closedead"), null, now)).toEqual({
       state: "ended",
       terminal: { exitCode: -1, signalCode: null, finishedAt: now },
     });
   });
 
   test("running run (no marker, pid alive) ⇒ left open", () => {
-    expect(observeRun(KIND, uniqueRunId("running"), process.pid, now)).toEqual({
+    expect(
+      observeRunSync(KIND, uniqueRunId("running"), process.pid, now),
+    ).toEqual({
       state: "running",
     });
   });

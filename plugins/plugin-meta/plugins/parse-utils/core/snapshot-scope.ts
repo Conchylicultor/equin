@@ -4,7 +4,7 @@
  * A facet-extraction pass over the whole plugin tree re-reads every source file
  * multiple times (once per file-walking facet) via synchronous `readFileSync` /
  * `readdirSync`, monopolizing the single event loop. When a snapshot is in
- * effect (see `runWithFsSnapshot`), `readIfExists` / `walkFiles` / `pathExists`
+ * effect (see `runWithFsSnapshot`), `readIfExistsSync` / `walkFilesSync` / `pathExists`
  * answer from these maps instead of disk — so the (still-synchronous) facet
  * `extract()` functions touch zero disk. The snapshot is built once,
  * asynchronously and in parallel, before the extract loop.
@@ -45,8 +45,8 @@ export interface SnapshotDirEntry {
 let activeSnapshot: FsSnapshot | null = null;
 
 /**
- * Run `fn` with `snapshot` as the ambient FS snapshot consulted by `readIfExists`
- * / `walkFiles` / `pathExists`, and scoping the pure-transform memos below. `fn`
+ * Run `fn` with `snapshot` as the ambient FS snapshot consulted by `readIfExistsSync`
+ * / `walkFilesSync` / `pathExists`, and scoping the pure-transform memos below. `fn`
  * MUST be synchronous (no `await`) — the ambient is restored synchronously on
  * return, so even interleaved concurrent builds never observe each other's
  * snapshot. Pass `null` to force the sync-disk path.

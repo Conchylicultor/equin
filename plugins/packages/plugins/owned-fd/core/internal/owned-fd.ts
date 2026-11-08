@@ -1,4 +1,4 @@
-import { closeSync, openSync, type Mode, type OpenMode } from "node:fs";
+import { closeSync, open, openSync, type Mode, type OpenMode } from "node:fs";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // ---------------------------------------------------------------------------
@@ -72,11 +72,32 @@ class Owned implements OwnedFd {
 }
 
 /**
+ * Open `path` without holding the thread, owned: the open runs on libuv's
+ * pool (node's callback `open`, which hands back the bare number — not
+ * `fs/promises`' `FileHandle`, which closes its descriptor again when it is
+ * collected). What a backend calls (`blocking-fs/no-sync-fs`).
+ */
+export function openOwnedFd(
+  path: AppPath,
+  flags: OpenMode = "r",
+  mode?: Mode | null,
+): Promise<OwnedFd> {
+  return new Promise((resolve, reject) => {
+    open(path, flags, mode, (err, fd) => {
+      if (err === null) resolve(new Owned(fd));
+      else reject(err);
+    });
+  });
+}
+
+/**
  * `openSync`, owned: the descriptor closes through the returned handle only.
+ * Blocks the thread until the disk answers — for the CLI, a check, an exit
+ * path; a backend awaits `openOwnedFd`.
  * The path is an `AppPath` — a synchronous open of a path macOS gates would
  * block the thread on a permission prompt (`user-path/no-sync-fs`).
  */
-export function openOwnedFd(
+export function openOwnedFdSync(
   path: AppPath,
   flags: OpenMode = "r",
   mode?: Mode | null,

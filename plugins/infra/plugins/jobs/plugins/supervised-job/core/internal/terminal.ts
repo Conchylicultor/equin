@@ -90,7 +90,7 @@ export interface RunTerminal {
    * function ran.
    *
    * The build plugin went out of its way to recover the true instant and states
-   * why (`run-build.ts`'s `readBuildTerminal`): a reconcile pass that stamps its
+   * why (`run-build.ts`'s `readBuildTerminalSync`): a reconcile pass that stamps its
    * own `now` inflates the row's Duration by the whole gap between the child
    * exiting and something noticing — often many minutes after a restart, and
    * the run's Duration then disagrees with its own transcript. Release does use
@@ -183,7 +183,7 @@ function signalProbe(target: number): boolean {
  * alive for the moment before it reaps.
  *
  * `null` means one of two things, and they are deliberately not distinguished
- * here — {@link observeRun} composes this with {@link isRunAlive}, and the pair
+ * here — {@link observeRunSync} composes this with {@link isRunAlive}, and the pair
  * says which:
  *
  * - the run is still going (no marker yet, group alive), or
@@ -199,7 +199,7 @@ function signalProbe(target: number): boolean {
  * hide a real defect behind a plausible-looking `-1`. Any other read error is a
  * genuine fault and rethrows.
  */
-export function readRunTerminal(
+export function readRunTerminalSync(
   kindId: string,
   runId: string,
   namespace: Namespace = runtimeNamespace(),
@@ -240,7 +240,7 @@ export function readRunTerminal(
  * once, like the shim's `printf … && mv`; the body is checked against
  * {@link MARKER_BODY} so this writer cannot drift from the parser.
  */
-export function writeRunTerminal(
+export function writeRunTerminalSync(
   path: AppPath,
   terminal: { exitCode: number; signalCode: string | null },
 ): void {
@@ -307,13 +307,13 @@ export type RunObservation =
  * `now` is the instant stamped on that last arm only; a marker always carries
  * its own mtime.
  */
-export function observeRun(
+export function observeRunSync(
   kindId: string,
   runId: string,
   pid: number | null,
   now: Date,
 ): RunObservation {
-  const terminal = readRunTerminal(kindId, runId);
+  const terminal = readRunTerminalSync(kindId, runId);
   if (terminal !== null) return { state: "ended", terminal };
   if (isRunAlive(pid)) return { state: "running" };
   return {

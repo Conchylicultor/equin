@@ -26,8 +26,8 @@ import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/c
  * `runWithFsSnapshot`, it makes the (still-synchronous) facet `extract()`
  * functions touch zero disk.
  *
- * Coverage mirrors what the parse-utils scanners read: `walkFiles` surfaces
- * `.ts`/`.tsx` (and `.css` for a scanner that asks), and `readIfExists`
+ * Coverage mirrors what the parse-utils scanners read: `walkFilesSync` surfaces
+ * `.ts`/`.tsx` (and `.css` for a scanner that asks), and `readIfExistsSync`
  * additionally reads `package.json`. We record
  * every directory we descend into (so an absent file resolves to `null` with no
  * syscall) and read exactly those file kinds. A directory is an entry of its
@@ -48,7 +48,7 @@ import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/c
  * landed and passed every later one.
  */
 
-// Same directory-skip rules as `walkFiles` (`node_modules` / `plugins` /
+// Same directory-skip rules as `walkFilesSync` (`node_modules` / `plugins` /
 // test-code dirs), plus dot-dirs and build output (`dist*`) which are never
 // plugin source. `plugins` is skipped because each sub-plugin dir is walked
 // from its own root (every plugin dir is passed in), so descending into it
@@ -64,9 +64,9 @@ function isSkippedDir(name: string): boolean {
   );
 }
 
-// Only the file kinds the scanners pass to `readIfExists` / surface from
-// `walkFiles`. Keeps the snapshot tight while covering every read. Mirrors
-// `walkFiles`' exclusion of test code (via `isTestCodePath`), which is never
+// Only the file kinds the scanners pass to `readIfExistsSync` / surface from
+// `walkFilesSync`. Keeps the snapshot tight while covering every read. Mirrors
+// `walkFilesSync`' exclusion of test code (via `isTestCodePath`), which is never
 // part of a plugin's API/dep surface.
 function shouldRead(name: string): boolean {
   if (name === "package.json") return true;

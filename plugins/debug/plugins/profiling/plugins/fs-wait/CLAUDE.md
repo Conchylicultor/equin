@@ -36,7 +36,9 @@ the cross-process record.
     - `primitives/log-channels/log-files.logsDirFor`
   - Exports (values): `recordFsWaits`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/record-fs-waits.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `server/internal/record-fs-waits.ts` (debt)
+    - `blocking-fs/no-sync-fs` — `server/internal/record-fs-waits.ts` (debt)
 - Core:
   - Exports (types): `FsWaitLine`
   - Exports (values):

@@ -44,4 +44,30 @@ export default [
     reason:
       "a relative import specifier read from a testing barrel of the checkout's own plugins, resolved against the barrel that names it",
   },
+  {
+    rule: "blocking-fs/sync-named",
+    paths: [
+      "core/authored-override-seed.ts",
+      "core/barrel-stubs-gen.ts",
+      "core/claude-settings-gen.ts",
+      "core/config-origin-gen.ts",
+      "core/custom-utilities-gen.ts",
+      "core/declared-apps.ts",
+      "core/docgen.ts",
+      "core/evaluated-barrels.ts",
+      "core/fields-eager-gen.ts",
+      "core/file-scans.ts",
+      "core/git-layer-config.ts",
+      "core/override-legend-stamp.ts",
+      "core/pre-barrel-guard.ts",
+      "core/slot-declaration-guard.ts",
+      "core/space-ramp-gen.ts",
+      "core/symbol-names-gen.ts",
+      "core/test-helpers-doc.ts",
+      "core/write-generated.ts",
+    ],
+    kind: "sanctioned",
+    reason:
+      "Host tooling only: no backend loads this module (blocking-fs:sync-named-reach measures the backends' import graph), so its blocking helpers hold only the CLI's, a check's or a script's own thread.",
+  },
 ] satisfies Exemptions;

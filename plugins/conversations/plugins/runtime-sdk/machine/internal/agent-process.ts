@@ -6,7 +6,7 @@ import {
   readFile,
   stat,
 } from "@plugins/packages/plugins/timed-fs/core";
-import { spawnSync } from "node:child_process";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { userInfo } from "node:os";
 import {
   agentSessionEnv,
@@ -263,7 +263,7 @@ export async function startAgentProcess(
   const exited = new Promise<string>((resolve) => {
     settle = resolve;
   });
-  const log = openOwnedFd(logPath, "a");
+  const log = await openOwnedFd(logPath, "a");
   try {
     instances.set(
       id,
@@ -297,6 +297,12 @@ export async function startAgentProcess(
 }
 
 /**
+ * A wedge-breaker for the `ps` / `pgrep` queries below, not a latency bound:
+ * each answers in milliseconds, so only a wedged child reaches it.
+ */
+const PROCESS_QUERY_TIMEOUT_MS = 30_000;
+
+/**
  * The agent's pid, while its pid file names a live process that is this
  * conversation's agent — its argv carries this pid file. A file a killed agent
  * left behind can name a pid the system has since given to another process,
@@ -306,27 +312,30 @@ async function livePid(id: string): Promise<number | null> {
   const pidFile = agentPidPath(id);
   const read = await readPidFile(pidFile);
   if (read.kind !== "pid" || !pidAlive(read.pid)) return null;
-  const ps = spawnSync(PS, ["-ww", "-o", "command=", "-p", String(read.pid)], {
-    encoding: "utf8",
-  });
+  const ps = await spawnCaptured(
+    [PS, "-ww", "-o", "command=", "-p", String(read.pid)],
+    { timeoutMs: PROCESS_QUERY_TIMEOUT_MS },
+  );
   // ps exits 1 when the pid is gone (it exited since the liveness check).
-  if (ps.status === 1) return null;
-  if (ps.status !== 0) {
+  if (ps.exitCode === 1 && !ps.timedOut) return null;
+  if (ps.exitCode !== 0 || ps.timedOut) {
     throw new Error(
-      `ps -p ${String(read.pid)} failed (${String(ps.status ?? ps.signal)}): ${ps.stderr.trim()}`,
+      `ps -p ${String(read.pid)} failed (${ps.timedOut ? "timed out" : String(ps.signalCode ?? ps.exitCode)}): ${ps.stderr.trim()}`,
     );
   }
   return ps.stdout.includes(`--pid-file ${pidFile}`) ? read.pid : null;
 }
 
 /** The direct children of `pid` — an agent's CLI. */
-function childPids(pid: number): number[] {
-  const r = spawnSync(PGREP, ["-P", String(pid)], { encoding: "utf8" });
+async function childPids(pid: number): Promise<number[]> {
+  const r = await spawnCaptured([PGREP, "-P", String(pid)], {
+    timeoutMs: PROCESS_QUERY_TIMEOUT_MS,
+  });
   // pgrep exits 1 when nothing matches.
-  if (r.status === 1) return [];
-  if (r.status !== 0) {
+  if (r.exitCode === 1 && !r.timedOut) return [];
+  if (r.exitCode !== 0 || r.timedOut) {
     throw new Error(
-      `pgrep -P ${String(pid)} failed (${String(r.status ?? r.signal)}): ${r.stderr.trim()}`,
+      `pgrep -P ${String(pid)} failed (${r.timedOut ? "timed out" : String(r.signalCode ?? r.exitCode)}): ${r.stderr.trim()}`,
     );
   }
   return r.stdout.split("\n").filter(Boolean).map(Number);
@@ -351,7 +360,7 @@ function sigkill(pid: number): void {
 export async function killAgentProcess(id: string): Promise<number | null> {
   const pid = await livePid(id);
   if (pid !== null) {
-    for (const child of childPids(pid)) sigkill(child);
+    for (const child of await childPids(pid)) sigkill(child);
     sigkill(pid);
   }
   // What it would have removed on a clean exit.

@@ -7,7 +7,7 @@ import {
   getWorktreeRoot,
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
-import { readBrowserExecutables } from "@plugins/infra/plugins/deps/plugins/playwright-browser/core";
+import { readBrowserExecutablesSync } from "@plugins/infra/plugins/deps/plugins/playwright-browser/core";
 import type { FixtureMutation } from "@plugins/primitives/plugins/css/plugins/layout-harness/plugins/geometry/core";
 import type { HarnessWindow } from "./harness-window";
 import type { MeasuredFixture } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
@@ -118,7 +118,7 @@ async function installedHeadlessChromium(): Promise<string> {
   const { dir } = z
     .object({ dir: z.string() })
     .parse(JSON.parse(res.stdout.trim().split("\n").at(-1) ?? ""));
-  const read = readBrowserExecutables(asAppPath(dir));
+  const read = readBrowserExecutablesSync(asAppPath(dir));
   if (!read.ok) throw new Error(`chromium at ${dir}: ${read.reason}`);
   return read.executables.headlessShell;
 }

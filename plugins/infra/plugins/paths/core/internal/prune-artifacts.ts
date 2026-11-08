@@ -185,7 +185,7 @@ function isCrashedWriteTemp(
  * Delete one entry, tolerating the races inherent to concurrent readers/writers
  * (it vanished between the scan and the unlink) but loud on any other fs error.
  */
-function unlinkQuiet(dir: AppPath, entry: string): void {
+function unlinkQuietSync(dir: AppPath, entry: string): void {
   try {
     unlinkSync(joinAppPath(dir, entry));
   } catch (err) {
@@ -206,7 +206,7 @@ function unlinkQuiet(dir: AppPath, entry: string): void {
  * Fails soft on the races inherent to concurrent readers (a file vanishing mid-scan
  * → skip) but loud on any other fs error, so a real problem still surfaces.
  */
-function pruneArtifactsInDir(
+function pruneArtifactsInDirSync(
   dir: AppPath,
   family: ArtifactFamily,
   keep: number,
@@ -224,7 +224,7 @@ function pruneArtifactsInDir(
   const groups = new Map<string, { files: string[]; mtimeMs: number }>();
   for (const entry of entries) {
     if (isCrashedWriteTemp(entry, family.tmpPrefixes)) {
-      unlinkQuiet(dir, entry);
+      unlinkQuietSync(dir, entry);
       continue;
     }
     const id = runIdOf(entry, family.patterns);
@@ -247,13 +247,13 @@ function pruneArtifactsInDir(
     .sort((a, b) => b.mtimeMs - a.mtimeMs)
     .slice(keep);
   for (const group of stale) {
-    for (const entry of group.files) unlinkQuiet(dir, entry);
+    for (const entry of group.files) unlinkQuietSync(dir, entry);
   }
 }
 
 /** Directory-scoped build prune, split out so it is testable against a throwaway dir. */
-export function pruneBuildArtifactsInDir(dir: AppPath, keep: number): void {
-  pruneArtifactsInDir(dir, BUILD_FAMILY, keep);
+export function pruneBuildArtifactsInDirSync(dir: AppPath, keep: number): void {
+  pruneArtifactsInDirSync(dir, BUILD_FAMILY, keep);
 }
 
 /**
@@ -266,18 +266,18 @@ export function pruneBuildArtifactsInDir(dir: AppPath, keep: number): void {
  * files preserves the trap. (Removable once the fleet has turned over — nothing
  * writes it any more.)
  */
-export function pruneCheckArtifactsInDir(dir: AppPath, keep: number): void {
-  pruneArtifactsInDir(dir, CHECK_FAMILY, keep);
-  unlinkQuiet(dir, LEGACY_CHECK_LOG);
+export function pruneCheckArtifactsInDirSync(dir: AppPath, keep: number): void {
+  pruneArtifactsInDirSync(dir, CHECK_FAMILY, keep);
+  unlinkQuietSync(dir, LEGACY_CHECK_LOG);
 }
 
 /** Directory-scoped supervised-run prune, split out so it is testable against a throwaway dir. */
-export function pruneRunArtifactsInDir(
+export function pruneRunArtifactsInDirSync(
   dir: AppPath,
   kindId: string,
   keep: number,
 ): void {
-  pruneArtifactsInDir(dir, runFamily(kindId), keep);
+  pruneArtifactsInDirSync(dir, runFamily(kindId), keep);
 }
 
 /**
@@ -292,28 +292,28 @@ export function pruneRunArtifactsInDir(
  * LIVE is likewise safe, because its transcript's mtime advances every time the
  * child writes a line.
  */
-export function pruneWorktreeRunArtifacts(
+export function pruneWorktreeRunArtifactsSync(
   name: Namespace,
   kindId: string,
   keep: number = RUN_ARTIFACTS_RETENTION,
 ): void {
-  pruneRunArtifactsInDir(worktreeArtifacts.runsDir(name), kindId, keep);
+  pruneRunArtifactsInDirSync(worktreeArtifacts.runsDir(name), kindId, keep);
 }
 
 /** Cap the per-build artifacts in one worktree's data dir to the newest `keep` build ids. */
-export function pruneWorktreeBuildArtifacts(
+export function pruneWorktreeBuildArtifactsSync(
   name: Namespace,
   keep: number = BUILD_ARTIFACTS_RETENTION,
 ): void {
-  pruneBuildArtifactsInDir(worktreeDataDir(name), keep);
+  pruneBuildArtifactsInDirSync(worktreeDataDir(name), keep);
 }
 
 /** Cap the per-run check transcripts in one worktree's data dir to the newest `keep` run ids. */
-export function pruneWorktreeCheckArtifacts(
+export function pruneWorktreeCheckArtifactsSync(
   name: Namespace,
   keep: number = CHECK_ARTIFACTS_RETENTION,
 ): void {
-  pruneCheckArtifactsInDir(worktreeDataDir(name), keep);
+  pruneCheckArtifactsInDirSync(worktreeDataDir(name), keep);
 }
 
 /**
@@ -322,15 +322,15 @@ export function pruneWorktreeCheckArtifacts(
  * before the record became per-op — it would otherwise sit beside the per-run
  * files holding whichever run last finished.
  */
-export function pruneTestArtifactsInDir(dir: AppPath, keep: number): void {
-  pruneArtifactsInDir(dir, TEST_FAMILY, keep);
-  unlinkQuiet(dir, LEGACY_TEST_STATUS);
+export function pruneTestArtifactsInDirSync(dir: AppPath, keep: number): void {
+  pruneArtifactsInDirSync(dir, TEST_FAMILY, keep);
+  unlinkQuietSync(dir, LEGACY_TEST_STATUS);
 }
 
 /** Cap the per-run test records in one worktree's data dir to the newest `keep` run ids. */
-export function pruneWorktreeTestArtifacts(
+export function pruneWorktreeTestArtifactsSync(
   name: Namespace,
   keep: number = TEST_ARTIFACTS_RETENTION,
 ): void {
-  pruneTestArtifactsInDir(worktreeDataDir(name), keep);
+  pruneTestArtifactsInDirSync(worktreeDataDir(name), keep);
 }

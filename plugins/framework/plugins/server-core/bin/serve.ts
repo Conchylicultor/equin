@@ -127,7 +127,7 @@ export async function serve({
   });
   const processStartedAt = Math.round(performance.timeOrigin);
   installBootJournal((entry) => {
-    bootJournal.append(
+    bootJournal.appendSync(
       logEnvelope({
         t: Date.now(),
         stream: "stdout",

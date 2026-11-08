@@ -14,10 +14,10 @@
 export {
   HARD_KILL_EXIT_CODE,
   isRunAlive,
-  observeRun,
-  readRunTerminal,
+  observeRunSync,
+  readRunTerminalSync,
   RunMarkerError,
-  writeRunTerminal,
+  writeRunTerminalSync,
 } from "./internal/terminal";
 export type { RunObservation, RunTerminal } from "./internal/terminal";
 export { supervisedArgv, RUN_TERMINAL_ENV } from "./internal/shim";

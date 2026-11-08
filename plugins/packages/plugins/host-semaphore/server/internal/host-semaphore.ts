@@ -1,7 +1,7 @@
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import {
-  openOwnedFd,
+  openOwnedFdSync,
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
 import {
@@ -550,7 +550,7 @@ export function createHostSemaphore(opts: {
     // invariant, so we WAIT for the guard via one `flock-wait` child rather than crash. A blocking in-process flock is banned (freezes the
     // loop) and polling is banned; the child does the blocking wait off our loop.
     const guard = guardFile();
-    const guardFd = openOwnedFd(guard, "w");
+    const guardFd = openOwnedFdSync(guard, "w");
     let guardHeld: HeldFlock | undefined;
     if (!flockTry(guardFd.fd)) {
       guardFd.close();
@@ -582,7 +582,7 @@ export function createHostSemaphore(opts: {
         const probeFds: OwnedFd[] = [];
         let allFree = true;
         for (let i = 0; i < hi; i++) {
-          const probe = openOwnedFd(slotFile(i), "w");
+          const probe = openOwnedFdSync(slotFile(i), "w");
           probeFds.push(probe);
           if (!flockTry(probe.fd)) {
             allFree = false;
@@ -655,7 +655,7 @@ export function createHostSemaphore(opts: {
   function sweepKeep(limit: number, order: number[]): OwnedFd[] {
     const kept: OwnedFd[] = [];
     for (const i of order) {
-      const slot = openOwnedFd(slotFile(i), "w");
+      const slot = openOwnedFdSync(slotFile(i), "w");
       if (kept.length < limit && flockTry(slot.fd)) {
         kept.push(slot);
       } else {
@@ -741,7 +741,7 @@ export function createHostSemaphore(opts: {
     signal: AbortSignal | undefined,
   ): Promise<() => Promise<void>> {
     await slots.ensure();
-    const demand = openOwnedFd(demandFile(), "w");
+    const demand = openOwnedFdSync(demandFile(), "w");
     if (flockTryShared(demand.fd)) {
       return () => {
         demand.close();
@@ -757,7 +757,7 @@ export function createHostSemaphore(opts: {
   // exclusive try that releases immediately. The slot directory is ensured once
   // per acquire, ahead of it (`acquireShare`).
   function demandPresent(): boolean {
-    const probe = openOwnedFd(demandFile(), "w");
+    const probe = openOwnedFdSync(demandFile(), "w");
     try {
       return !flockTry(probe.fd);
     } finally {

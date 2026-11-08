@@ -12,7 +12,7 @@ import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { scratchWorkspacesDir } from "../../data-dirs";
-import { assertDirTrusted } from "../../core";
+import { assertDirTrustedSync } from "../../core";
 import { scratchLaunchFragment } from "./launch-fragment";
 
 // A plain directory, `<data>/state/workspaces/<attemptId>`, holding only what
@@ -107,7 +107,7 @@ async function assertCheckoutGuards(): Promise<void> {
 }
 
 export const scratchWorkspace = createScratchWorkspace({
-  assertTrusted: (dir) => assertDirTrusted(dir),
+  assertTrusted: (dir) => assertDirTrustedSync(dir),
   guardsRoot: REPO_ROOT,
   assertGuards: assertCheckoutGuards,
 });

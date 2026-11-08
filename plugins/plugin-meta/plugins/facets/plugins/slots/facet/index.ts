@@ -15,13 +15,13 @@ import {
   type SlotHandle,
 } from "@plugins/framework/plugins/slot-declaration/core";
 import {
-  readIfExists,
+  readIfExistsSync,
   stripTypes,
   maskSource,
   parseDefineGroup,
   markerCallSpans,
   matchBracket,
-  walkFiles,
+  walkFilesSync,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type SlotDef, slotsFacetDef } from "../core";
 import {
@@ -280,12 +280,12 @@ function parseSlotsFromSource(dir: AppPath, pluginId: string): SlotDef[] {
   const slots: SlotDef[] = [];
   const seen = new Set<string>();
   const files: AppPath[] = [];
-  walkFiles(joinAppPath(dir, "web"), files);
+  walkFilesSync(joinAppPath(dir, "web"), files);
   const companionCalls: CompanionSlotCall[] = [];
   const maskedFiles: string[] = [];
 
   for (const file of files) {
-    const src = readIfExists(file);
+    const src = readIfExistsSync(file);
     if (!src) continue;
     // stripTypes drops comments on the happy path; a FULL mask additionally
     // defends the transpile-failure fallback — a `defineSlot()` written in a

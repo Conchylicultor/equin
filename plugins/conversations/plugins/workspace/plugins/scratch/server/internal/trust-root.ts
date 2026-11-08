@@ -1,4 +1,4 @@
-import { ensureDirTrusted } from "../../core";
+import { ensureDirTrustedSync } from "../../core";
 import { scratchWorkspacesDir } from "../../data-dirs";
 
 /**
@@ -10,5 +10,5 @@ import { scratchWorkspacesDir } from "../../data-dirs";
  * declaration (the `provision` folder's boundary row is `provision`, `core`).
  */
 export function trustScratchRoot(): void {
-  ensureDirTrusted(scratchWorkspacesDir.path);
+  ensureDirTrustedSync(scratchWorkspacesDir.path);
 }

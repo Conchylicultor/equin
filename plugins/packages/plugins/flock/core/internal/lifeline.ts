@@ -1,4 +1,3 @@
-import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
 import {
@@ -34,10 +33,12 @@ export interface ParentLifeline {
  * non-blocking acquire cannot meet a competitor; failing it means the fd is
  * broken, and that throws rather than spawning an unguarded child.
  */
-export function holdParentLifeline(dir: AppPath): ParentLifeline {
+export async function holdParentLifeline(
+  dir: AppPath,
+): Promise<ParentLifeline> {
   const path = joinAppPath(dir, "lifeline");
-  writeFileSync(path, "");
-  const lock = openOwnedFd(path, "r");
+  // "w" creates the file; the flock is the descriptor's, whatever its mode.
+  const lock = await openOwnedFd(path, "w");
   if (!flockTry(lock.fd)) {
     lock.close();
     throw new Error(`holdParentLifeline: could not lock fresh file ${path}`);

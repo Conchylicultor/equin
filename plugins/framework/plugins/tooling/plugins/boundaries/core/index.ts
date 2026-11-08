@@ -13,3 +13,5 @@ export { compositionRoots } from "./composition-roots";
 export { isPlatformApi, platformValueUsesIn } from "./platform-apis";
 export { serverPortabilityOf } from "./portability";
 export type { Offender, ServerPortability } from "./portability";
+export { resolveRepoModule } from "./repo-module";
+export { loadsAtRuntime } from "./portability-facts.scan";

@@ -157,7 +157,7 @@ row with a rising count and a new source starting to fail mints its own.
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `infra/jobs/supervised-job.defineSupervisedJob`
-    - `infra/paths.backupsDir`
+    - `infra/paths.backupsDirSync`
     - `primitives/log-channels.Log`
     - `reports.ReportKind`
     - `reports/engine.recordReport`
@@ -229,6 +229,7 @@ row with a rising count and a new source starting to fail mints its own.
   - Exempts itself from:
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `boundaries/no-platform-api` — `server/internal/assemble-archive.ts`, `server/internal/reconcile-backups.ts` (debt)
+    - `blocking-fs/no-sync-fs` — `server/internal/assemble-archive.ts`, `server/internal/reconcile-backups.ts` (debt)
 - Shared:
   - Exports (values): `runBackup`
 - Sub-plugins:

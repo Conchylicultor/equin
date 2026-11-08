@@ -30,7 +30,7 @@ import {
   type CompositionMarker,
 } from "@plugins/infra/plugins/worktree/server";
 import { assertServableCompositionNamespace } from "@plugins/plugin-meta/plugins/composition/core";
-import { listNamedCompositionRegistries } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
+import { listNamedCompositionRegistriesSync } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { exists } from "@plugins/packages/plugins/timed-fs/core";
 
@@ -164,7 +164,7 @@ export async function reclaimNamespace(
  * Removing it first leaves a window in which a respawn boots against a missing
  * registry and throws.
  *
- * ENUMERATED, never named. `listNamedCompositionRegistries` is the same sweep
+ * ENUMERATED, never named. `listNamedCompositionRegistriesSync` is the same sweep
  * input the deleted deactivation stage used, so `web`, `server` and `prewarm` are
  * all reclaimed together and a fourth filtered runtime added later is reclaimed
  * with no edit here. It lists the checkout's files, which is why it is the
@@ -186,7 +186,7 @@ async function removeFilteredRegistries(
   if (!(await exists(checkout.root))) return;
   // Another checkout than this backend's, so its file set is listed here.
   const repo = await loadRepoFiles(checkout.root);
-  for (const { name, file } of await listNamedCompositionRegistries(repo)) {
+  for (const { name, file } of await listNamedCompositionRegistriesSync(repo)) {
     if (name === composition) await rm(file, { force: true });
   }
 }

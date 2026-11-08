@@ -52,7 +52,7 @@ Not just the ban — the two right answers:
 - **Mint it.** `namespaceFor(compositionId, ref)`, or `checkoutNamespace(root)`
   when the composition is the main app.
 - **Read it.** When what you want is the deploy this checkout actually
-  published, `resolveCheckoutDeploy(root)` from
+  published, `resolveCheckoutDeploySync(root)` from
   `@plugins/infra/plugins/paths/core` reads it off the registry on disk, where
   it was recorded at mint time, instead of re-deriving it from a name.
 
@@ -91,7 +91,7 @@ seen nothing at the one site that mattered. It cannot follow a binding
 (`const name = checkoutWorktreeName(root); asNamespace(name)`) — that limit is
 recorded as a `valid` fixture in the suite rather than left unstated. The direct
 nesting is the shape every live instance took, and the runtime rungs stand behind
-it: `resolveCheckoutDeploy` refuses when no deploy answers, and the e2e identity
+it: `resolveCheckoutDeploySync` refuses when no deploy answers, and the e2e identity
 assert refuses when the origin is serving a build this checkout did not publish.
 
 `enforceEverywhere`, so it survives in test and e2e files where contributed

@@ -37,7 +37,7 @@ export async function acquireDrainerLock(
   for (;;) {
     signal.throwIfAborted();
     // "a": create without truncating — the lock file's content is never read.
-    const fd = openOwnedFd(path, "a");
+    const fd = await openOwnedFd(path, "a");
     if (flockTry(fd.fd)) return fd;
     fd.close();
     const held = await waitForFlock(path, { signal });

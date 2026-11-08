@@ -2,12 +2,12 @@ import {
   asAppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import {
   openOwnedFd,
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";
@@ -113,7 +113,7 @@ export async function spawnCaptured(
   // Before any side effect — the tmpdir AND the child. A caller that has already
   // been abandoned must not launch a fresh subprocess only to kill it a tick later.
   signal?.throwIfAborted();
-  const dir = asAppPath(mkdtempSync(join(tmpdir(), "sg-spawn-")));
+  const dir = asAppPath(await mkdtemp(join(tmpdir(), "sg-spawn-")));
   try {
     const outPath = joinAppPath(dir, "out");
     const errPath = joinAppPath(dir, "err");
@@ -131,18 +131,22 @@ export async function spawnCaptured(
     // Held until the child is reaped; the kernel drops it if WE die first, and a
     // child that called `exitWithParent()` dies with it. The tmpdir is private
     // to this spawn, so the lock cannot be contended.
-    const lifeline = holdParentLifeline(dir);
+    const lifeline = await holdParentLifeline(dir);
     try {
       if (opts.stdin !== undefined) {
         const inPath = joinAppPath(dir, "in");
-        writeFileSync(inPath, opts.stdin);
-        inFd = openOwnedFd(inPath, "r");
+        await writeFile(inPath, opts.stdin);
+        inFd = await openOwnedFd(inPath, "r");
       }
       // `mergeStderr` aliases the two: ONE handle, so one close.
-      const out = openOwnedFd(outPath, "w");
+      const out = await openOwnedFd(outPath, "w");
       outFd = out;
-      const err = opts.mergeStderr ? out : openOwnedFd(errPath, "w");
+      const err = opts.mergeStderr ? out : await openOwnedFd(errPath, "w");
       errFd = err;
+      // Again, right before the child exists: the awaits above (tmpdir,
+      // lifeline, opens) are a window an abort can land in, and a listener
+      // added to an already-aborted signal never fires.
+      signal?.throwIfAborted();
       // The tier wraps exactly the synchronous `Bun.spawn` call: a
       // `foreground` lift (`spawnInForeground`) lasts only as long as the fork.
       const child = spawnAtTier(opts.tier ?? "inherit", argv, (tiered) =>
@@ -238,10 +242,10 @@ export async function spawnCaptured(
     // wins over `timedOut` whichever fired first, and wins over a clean exit that
     // simply had not been returned yet.
     if (aborted) throw signal?.reason;
-    const stdoutBytes = new Uint8Array(readFileSync(outPath));
+    const stdoutBytes = new Uint8Array(await readFile(outPath));
     const stderrBytes = opts.mergeStderr
       ? new Uint8Array(0)
-      : new Uint8Array(readFileSync(errPath));
+      : new Uint8Array(await readFile(errPath));
     // rusage is only populated once the child has exited.
     return makeResult(
       exitCode,
@@ -252,7 +256,7 @@ export async function spawnCaptured(
       readResourceUsage(proc),
     );
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    await rm(dir, { recursive: true, force: true });
   }
 }
 

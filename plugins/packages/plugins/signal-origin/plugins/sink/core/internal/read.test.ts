@@ -6,7 +6,7 @@ import {
   asAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readSignalOriginLinesFrom } from "./read";
+import { readSignalOriginLinesFromSync } from "./read";
 
 function line(buildId: string, signal: string): string {
   return JSON.stringify({
@@ -27,7 +27,7 @@ function fixtureFile(): AppPath {
 
 describe("readSignalOriginLines", () => {
   test("a host where nothing was ever killed reads as an empty history", () => {
-    expect(readSignalOriginLinesFrom(fixtureFile())).toEqual([]);
+    expect(readSignalOriginLinesFromSync(fixtureFile())).toEqual([]);
   });
 
   test("stitches rotations back in, oldest-first", () => {
@@ -37,7 +37,10 @@ describe("readSignalOriginLines", () => {
     writeFileSync(`${file}.1`, line("older", "SIGINT") + "\n");
     writeFileSync(file, line("newer", "SIGTERM") + "\n");
 
-    expect(readSignalOriginLinesFrom(file).map((r) => r.buildId)).toEqual(["older", "newer"]);
+    expect(readSignalOriginLinesFromSync(file).map((r) => r.buildId)).toEqual([
+      "older",
+      "newer",
+    ]);
   });
 
   test("skips a torn tail line instead of throwing", () => {
@@ -46,7 +49,7 @@ describe("readSignalOriginLines", () => {
     const file = fixtureFile();
     writeFileSync(file, line("b1", "SIGTERM") + "\n" + '{"event":"sig');
 
-    const records = readSignalOriginLinesFrom(file);
+    const records = readSignalOriginLinesFromSync(file);
     expect(records).toHaveLength(1);
     expect(records[0]?.buildId).toBe("b1");
   });

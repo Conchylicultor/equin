@@ -19,13 +19,13 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
  * Plan: research/2026-10-17-infra-agent-browser-persistent-host.md
  */
 import { renameSync, unlinkSync, writeFileSync } from "node:fs";
-import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
+import { openOwnedFdSync } from "@plugins/packages/plugins/owned-fd/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { resolve } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import type { AgentBrowserHostStatus } from "../core";
 import { agentBrowserDir } from "../data-dirs";
-import { hostCodeId } from "../shared/code-id";
+import { hostCodeIdSync } from "../shared/code-id";
 import {
   HOST_FILES,
   HOST_PROTOCOL,
@@ -46,12 +46,12 @@ import { runTool } from "./host-tools";
 
 const dir = agentBrowserDir.ensure();
 const file = (name: string) => agentBrowserDir.file(name);
-const codeId = hostCodeId(asAppPath(resolve(import.meta.dir, "..")));
+const codeId = hostCodeIdSync(asAppPath(resolve(import.meta.dir, "..")));
 const startedAt = new Date().toISOString();
 
 // The singleton: whoever holds the lock is THE host. The kernel drops it when
 // this process dies however it dies, so a crashed host never blocks the next.
-const lockFd = openOwnedFd(file(HOST_FILES.lock), "a");
+const lockFd = openOwnedFdSync(file(HOST_FILES.lock), "a");
 if (!flockTry(lockFd.fd)) {
   console.error(`[agent-browser] another host holds ${dir}; exiting`);
   process.exit(0);

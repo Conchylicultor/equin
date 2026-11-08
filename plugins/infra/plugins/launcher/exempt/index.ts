@@ -37,4 +37,11 @@ export default [
     reason:
       "Per-file synchronous work on the shared check thread (a blocking fs/process call made per item, or a direct maskSource / createSourceFile) that predates the rule; move it onto ctx.repo() / fs/promises and checks/core's maskedSource / parsedTsSource.",
   },
+  {
+    rule: "blocking-fs/no-sync-fs",
+    paths: ["server/internal/boot.ts"],
+    kind: "sanctioned",
+    reason:
+      "killListenerOnPort's `lsof` runs only in the launcher's own process (`./equin start` / `stop`, the release `launch` binary) tearing the stack down \u2014 never on a serving backend.",
+  },
 ] satisfies Exemptions;

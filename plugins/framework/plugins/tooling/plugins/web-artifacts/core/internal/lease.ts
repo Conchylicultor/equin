@@ -42,7 +42,7 @@
 
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import {
-  openOwnedFd,
+  openOwnedFdSync,
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
 import {
@@ -107,7 +107,7 @@ async function withStoreLock<T>(
   fn: () => T,
 ): Promise<T> {
   mkdirSync(appPathParent(layout.lockFile), { recursive: true });
-  const fd = openOwnedFd(layout.lockFile, "a");
+  const fd = openOwnedFdSync(layout.lockFile, "a");
   try {
     if (mode === "shared" ? flockTryShared(fd.fd) : flockTry(fd.fd)) {
       try {
@@ -164,7 +164,7 @@ export function openBuildLease(
 
   const create = (): void => {
     mkdirSync(dir, { recursive: true });
-    const fd = openOwnedFd(joinAppPath(dir, OWNER_LOCK), "a");
+    const fd = openOwnedFdSync(joinAppPath(dir, OWNER_LOCK), "a");
     if (!flockTry(fd.fd)) {
       fd.close();
       throw new Error(
@@ -236,7 +236,7 @@ export function liveLeaseTargets(leasesDir: AppPath): Set<string> {
     const dir = joinAppPath(leasesDir, name);
     let fd: OwnedFd | null;
     try {
-      fd = openOwnedFd(joinAppPath(dir, OWNER_LOCK), "r");
+      fd = openOwnedFdSync(joinAppPath(dir, OWNER_LOCK), "r");
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       fd = null; // no owner lock: the owner died mid-release

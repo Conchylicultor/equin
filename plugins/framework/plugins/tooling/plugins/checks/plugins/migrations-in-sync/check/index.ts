@@ -10,7 +10,7 @@ import { resolve } from "path";
 // import-safe by design (same precedent as
 // plugins/database/plugins/migrations/check/index.ts). This used to be a
 // hand-inlined third copy of the reader.
-import { libpqEnv } from "@plugins/database/core";
+import { libpqEnvSync } from "@plugins/database/core";
 // The plugin dir is drizzle-kit's cwd, and every relative path in
 // drizzle.config.ts resolves against it (the `schema:` globs and `out`). Taking
 // it from the migrations plugin rather than re-typing the literal is what keeps
@@ -83,7 +83,7 @@ const check: Check = {
           // is inherited by everything the child spawns in turn.
           env: {
             ...process.env,
-            ...libpqEnv(),
+            ...libpqEnvSync(),
             NO_COLOR: "1",
           },
         },

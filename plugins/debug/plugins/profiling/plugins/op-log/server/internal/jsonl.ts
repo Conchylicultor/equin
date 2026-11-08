@@ -19,5 +19,5 @@ export const opLogSink = defineFileSink({
 
 /** Append one record to the op log through its bounded sink. */
 export function appendOpLog(record: unknown): void {
-  opLogSink.append(JSON.stringify(record));
+  opLogSink.appendSync(JSON.stringify(record));
 }

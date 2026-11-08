@@ -19,7 +19,7 @@
  */
 import { readSync } from "fs";
 import {
-  openOwnedFd,
+  openOwnedFdSync,
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
 import {
@@ -65,7 +65,7 @@ const HEAD_RE = /^\{\s*"id":\s*"([^"]+)",\s*"prevId":\s*"([^"]+)"/;
 export function readStart(path: AppPath): string | null {
   let fd: OwnedFd;
   try {
-    fd = openOwnedFd(path, "r");
+    fd = openOwnedFdSync(path, "r");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;

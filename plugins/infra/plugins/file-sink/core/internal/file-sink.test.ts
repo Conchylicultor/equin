@@ -50,8 +50,8 @@ describe("defineFileSink rotation", () => {
       maxBytes: 1 << 20,
       keep: 3,
     });
-    sink.append("line-1");
-    sink.append("line-2");
+    sink.appendSync("line-1");
+    sink.appendSync("line-2");
 
     expect(readFileSync(path, "utf8").trim().split("\n")).toEqual([
       "line-1",
@@ -69,8 +69,8 @@ describe("defineFileSink rotation", () => {
       maxBytes: 10, // "line-1\n" is 7 bytes: the 2nd append (7+7=14) crosses it.
       keep: 3,
     });
-    sink.append("line-1"); // seeds the live file (7 ≤ 10)
-    sink.append("line-2"); // 7 + 7 > 10 → rotate, then fresh write
+    sink.appendSync("line-1"); // seeds the live file (7 ≤ 10)
+    sink.appendSync("line-2"); // 7 + 7 > 10 → rotate, then fresh write
 
     // Live file holds only the post-rotation line.
     expect(
@@ -90,7 +90,7 @@ describe("defineFileSink rotation", () => {
       maxBytes: 5, // "L0\n" is 3 bytes: every subsequent append rotates.
       keep: 3,
     });
-    for (let i = 0; i < 8; i++) sink.append(`L${i}`);
+    for (let i = 0; i < 8; i++) sink.appendSync(`L${i}`);
 
     // keep is 3 — never more, regardless of how many rotations occurred.
     expect(rotatedFiles("c\\.jsonl")).toEqual([
@@ -135,7 +135,7 @@ describe("appendAll", () => {
       maxBytes: 1 << 20,
       keep: 3,
     });
-    sink.appendAll(["b0", "b1", "b2", "b3", "b4"]);
+    sink.appendAllSync(["b0", "b1", "b2", "b3", "b4"]);
 
     expect(readFileSync(path, "utf8")).toBe("b0\nb1\nb2\nb3\nb4\n");
     expect(existsSync(path + ".1")).toBe(false);
@@ -153,7 +153,7 @@ describe("appendAll", () => {
       maxBytes: 1 << 20,
       keep: 3,
     });
-    sink.appendAll([]);
+    sink.appendAllSync([]);
 
     expect(existsSync(path)).toBe(false);
     expect(existsSync(nested)).toBe(false);
@@ -172,7 +172,7 @@ describe("appendAll", () => {
       keep: 3,
     });
     const lines = ["L0", "L1", "L2", "L3", "L4", "L5"];
-    sink.appendAll(lines);
+    sink.appendAllSync(lines);
 
     const rotated = readFileSync(path + ".1", "utf8");
     const live = readFileSync(path, "utf8");
@@ -198,7 +198,7 @@ describe("appendAll", () => {
       maxBytes: 12, // 3 × "aaa\n" = 12 bytes exactly
       keep: 3,
     });
-    exactSink.appendAll(["aaa", "aaa", "aaa"]);
+    exactSink.appendAllSync(["aaa", "aaa", "aaa"]);
     expect(existsSync(exact + ".1")).toBe(false);
     expect(readFileSync(exact, "utf8")).toBe("aaa\naaa\naaa\n");
 
@@ -211,7 +211,7 @@ describe("appendAll", () => {
       maxBytes: 11,
       keep: 3,
     });
-    overSink.appendAll(["aaa", "aaa", "aaa"]);
+    overSink.appendAllSync(["aaa", "aaa", "aaa"]);
     expect(readFileSync(over + ".1", "utf8")).toBe("aaa\naaa\n");
     expect(readFileSync(over, "utf8")).toBe("aaa\n");
   });
@@ -227,7 +227,7 @@ describe("appendAll", () => {
       maxBytes: 6, // 2 lines per rotation group
       keep: 2,
     });
-    sink.appendAll([
+    sink.appendAllSync([
       "L0",
       "L1",
       "L2",
@@ -256,7 +256,7 @@ describe("appendAll", () => {
       keep: 3,
     });
     const big = "X".repeat(50);
-    sink.appendAll(["aa", "bb", big]);
+    sink.appendAllSync(["aa", "bb", big]);
 
     // The group in hand belongs to the pre-rotation file…
     expect(readFileSync(path + ".1", "utf8")).toBe("aa\nbb\n");
@@ -276,7 +276,7 @@ describe("appendAll", () => {
       keep: 3,
     });
     const big = "Y".repeat(50);
-    sink.appendAll([big]);
+    sink.appendAllSync([big]);
 
     expect(readFileSync(path, "utf8")).toBe(big + "\n");
     expect(rotatedFiles("bh\\.jsonl")).toEqual([]);
@@ -303,8 +303,8 @@ describe("appendAll", () => {
 
     // 10 × 3 bytes over a 12-byte cap → two rotations.
     const lines = ["L0", "L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8", "L9"];
-    for (const line of lines) loopSink.append(line);
-    batchSink.appendAll(lines);
+    for (const line of lines) loopSink.appendSync(line);
+    batchSink.appendAllSync(lines);
 
     expect(rotatedFiles("bi\\.jsonl")).toEqual(["bi.jsonl.1", "bi.jsonl.2"]);
     expect(rotatedFiles("bj\\.jsonl")).toEqual(["bj.jsonl.1", "bj.jsonl.2"]);
@@ -327,11 +327,11 @@ describe("appendAll", () => {
       maxBytes: 1 << 20,
       keep: 3,
     });
-    sink.append("before");
+    sink.appendSync("before");
     rmSync(dir, { recursive: true, force: true });
     expect(existsSync(dir)).toBe(false);
 
-    sink.appendAll(["after-1", "after-2"]);
+    sink.appendAllSync(["after-1", "after-2"]);
     expect(readFileSync(path, "utf8")).toBe("after-1\nafter-2\n");
   });
 });
@@ -377,7 +377,7 @@ describe("openDynamicSink", () => {
     // Path-traversal-safe: every non-[A-Za-z0-9_-] char becomes "_".
     expect(sink.path).toBe(joinAppPath(dir, "weird_name_.jsonl"));
 
-    sink.append("x");
+    sink.appendSync("x");
     expect(existsSync(joinAppPath(dir, "weird_name_.jsonl"))).toBe(true);
     // A dynamic sink is covered by one family bound, not the registry.
     expect(getFileSinks().size).toBe(before);

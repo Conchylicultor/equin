@@ -22,11 +22,13 @@ why the `spawn-safety/no-raw-bun-spawn` lint rule (contributed by this plugin's
 ## Mechanics
 
 `spawnCaptured` removes the stream instead of racing it: per call,
-`mkdtempSync(os.tmpdir(), "sg-spawn-")` → write the stdin buffer to a file if
-given → `openSync` numeric fds for in/out/err (`mergeStderr` reuses the out fd)
-→ `Bun.spawn(argv, { stdin: inFd ?? "ignore", stdout: outFd, stderr: errFd })`
-→ `await proc.exited` → capture rusage → close fds, read the files, `rmSync`
-in `finally`. Raw numeric fds are a plain kernel dup2 — **zero JS stream
+`mkdtemp(os.tmpdir(), "sg-spawn-")` → write the stdin buffer to a file if
+given → `openOwnedFd` numeric fds for in/out/err (`mergeStderr` reuses the out
+fd) → `Bun.spawn(argv, { stdin: inFd ?? "ignore", stdout: outFd, stderr: errFd })`
+→ `await proc.exited` → capture rusage → close fds, read the files, `rm` in
+`finally`. Every file step is async: a spawn holds its caller's thread for
+none of them (`blocking-fs/no-sync-fs` — `spawnCaptured` runs on every
+backend). Raw numeric fds are a plain kernel dup2 — **zero JS stream
 machinery in either direction**, so there is nothing for the exit-during-pull
 race to wedge. Temp files orphaned by a hard crash are reclaimed by the OS
 tmpdir sweep (repo convention).
@@ -185,9 +187,9 @@ or its job has a deadline, and that is the bound.
 
 - **No `maxOutputBytes`** — a silent output cap is an absorbed failure.
 - **No sync variant** — `Bun.spawnSync` / `execFileSync` buffer natively (no
-  JS streams, no wedge). The few existing sync sites are untouched and
-  rule-legal; a loop-blocking sync spawn is fine for the CLI, revisit
-  server-side in Stage 2.
+  JS streams, no wedge), so the CLI may use them. A backend may not:
+  `blocking-fs/no-sync-fs` refuses a sync child process on a backend's thread,
+  which waits for the child to exit.
 
 ## Exception policy
 
@@ -242,7 +244,7 @@ presence only — **no re-exports**; import from `core/`.
     - `packages/sleep-clock.AwakeClockReading`
     - `packages/sleep-clock.readAwakeClock`
     - `packages/spawn-priority.spawnAtTier`
-    - `packages/timed-fs.readFileSync`
+    - `packages/timed-fs.readFile`
   - Exports (types):
     - `ChildResourceUsage`
     - `SpawnBaseOptions`
@@ -262,20 +264,20 @@ presence only — **no re-exports**; import from `core/`.
     - `spawnPassthrough`
     - `spawnToFile`
 - Cross-plugin:
-  - Imported by: 88 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 90 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×29
     - `infra` ×24
     - `apps` ×9
     - `debug` ×5
     - `database` ×3
+    - `build` ×2
     - `code-explorer` ×2
+    - `conversations` ×2
     - `plugin-meta` ×2
     - `primitives` ×2
     - `release` ×2
     - `auth/apple-signing`
     - `backup`
-    - `build/serve-composition`
-    - `conversations/conversation-view/op-status`
     - `hints/ask`
     - `reports/outbox`
     - `review/plugin-changes`

@@ -12,9 +12,9 @@ export {
   sanitizeChannel,
 } from "./internal/file-sink";
 export {
-  readTail,
+  readTailSync,
   readTailAsync,
-  readJsonlTail,
+  readJsonlTailSync,
   readJsonlTailAsync,
 } from "./internal/read";
 export type { TailOptions, TailResult, JsonlTailResult } from "./internal/read";

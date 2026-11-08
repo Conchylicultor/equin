@@ -2,7 +2,7 @@ import { mkdirSync, renameSync, rmSync } from "node:fs";
 import { readdirSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dlopen } from "bun:ffi";
 import {
-  openOwnedFd,
+  openOwnedFdSync,
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
 import { flockTry, waitForFlock } from "@plugins/packages/plugins/flock/core";
@@ -135,7 +135,7 @@ function ticketName(place: TicketPlace): string {
 }
 
 /** Live tickets in `dir`, oldest first. Unowned ones are reaped on the way. */
-function liveTickets(dir: AppPath, before?: string): string[] {
+function liveTicketsSync(dir: AppPath, before?: string): string[] {
   let names: string[];
   try {
     names = readdirSync(dir);
@@ -146,7 +146,7 @@ function liveTickets(dir: AppPath, before?: string): string[] {
   const live: string[] = [];
   for (const name of names.filter((n) => TICKET.test(n)).sort()) {
     if (before !== undefined && name >= before) break;
-    if (isLive(joinAppPath(dir, name))) live.push(name);
+    if (isLiveSync(joinAppPath(dir, name))) live.push(name);
   }
   return live;
 }
@@ -155,10 +155,10 @@ function liveTickets(dir: AppPath, before?: string): string[] {
  * Is a ticket held by its owner? A lock we can take means nobody holds it: the
  * owner left (between its unlink and its close) or died — reap the file.
  */
-function isLive(path: AppPath): boolean {
+function isLiveSync(path: AppPath): boolean {
   let lock: OwnedFd;
   try {
-    lock = openOwnedFd(path, "r");
+    lock = openOwnedFdSync(path, "r");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
     throw err;
@@ -178,7 +178,7 @@ function isLive(path: AppPath): boolean {
  */
 export function createTicketLine(dir: AppPath): TicketLine {
   return {
-    isEmpty: () => liveTickets(dir).length === 0,
+    isEmpty: () => liveTicketsSync(dir).length === 0,
 
     async join(opts = {}) {
       const { signal } = opts;
@@ -189,7 +189,7 @@ export function createTicketLine(dir: AppPath): TicketLine {
       const name = ticketName(place);
       const path = joinAppPath(dir, name);
       const tmp = joinAppPath(dir, `.${name}.tmp`);
-      const lock = openOwnedFd(tmp, "wx");
+      const lock = openOwnedFdSync(tmp, "wx");
       if (!flockTry(lock.fd)) {
         lock.close();
         rmSync(tmp, { force: true });
@@ -213,7 +213,7 @@ export function createTicketLine(dir: AppPath): TicketLine {
       try {
         for (;;) {
           signal?.throwIfAborted();
-          const ahead = liveTickets(dir, name);
+          const ahead = liveTicketsSync(dir, name);
           const predecessor = ahead.at(-1);
           if (predecessor === undefined) return ticket;
           const predecessorPath = joinAppPath(dir, predecessor);

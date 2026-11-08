@@ -27,7 +27,7 @@ export type LegacyLogAdoption =
  * Delete with the legacy path constants once no machine has the files
  * (task-1793827129-t489g4).
  */
-export function adoptLegacyLog(
+export function adoptLegacyLogSync(
   legacy: AppPath,
   live: AppPath,
 ): LegacyLogAdoption {

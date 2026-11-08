@@ -57,7 +57,7 @@
  */
 import {
   interruptedPredecessorWarning,
-  resolveBuildReceipt,
+  resolveBuildReceiptSync,
 } from "@plugins/framework/plugins/cli/plugins/op-runtime/core";
 import type {
   BuildReceipt,
@@ -314,7 +314,7 @@ async function check(): Promise<void> {
   if (t.kind === "stated") return;
 
   const { origin, deploy } = t;
-  const resolved = resolveBuildReceipt(deploy.namespace);
+  const resolved = resolveBuildReceiptSync(deploy.namespace);
   const answered = await probe();
 
   if (resolved.kind !== "ok") {

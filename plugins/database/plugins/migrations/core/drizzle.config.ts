@@ -10,7 +10,7 @@ import {
  * `generate` is a pure filesystem operation: it diffs the discovered schema
  * files against the snapshots in `./data` and writes SQL. It opens no
  * connection, so this file needs no database. It used to call
- * `readDatabaseConfig()` and throw without a worktree identity, which made a
+ * `readDatabaseConfigSync()` and throw without a worktree identity, which made a
  * filesystem codegen step LOOK database-entangled — the reason migration
  * generation appeared impossible on a host with no local cluster.
  *

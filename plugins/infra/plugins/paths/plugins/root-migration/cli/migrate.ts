@@ -22,8 +22,8 @@ import {
   CLAUDE_PROJECTS_DIR,
   DataRootSplitError,
   HOME_DIR,
-  listWorktreeDirs,
-  readHomeDataRootLayout,
+  listWorktreeDirsSync,
+  readHomeDataRootLayoutSync,
   type DataRootLayout,
 } from "@plugins/infra/plugins/paths/core";
 import { listWorktreeOps } from "@plugins/infra/plugins/worktree/server";
@@ -90,7 +90,7 @@ function readLayout(): MigrationFacts["layout"] {
   const dir = readEnv("DIR");
   if (dir !== undefined) return { kind: "custom", root: asAppPath(dir) };
   try {
-    return readHomeDataRootLayout(HOME_DIR);
+    return readHomeDataRootLayoutSync(HOME_DIR);
   } catch (err) {
     if (err instanceof DataRootSplitError) {
       return { kind: "split", message: err.message };
@@ -138,7 +138,7 @@ async function liveAgents(): Promise<LiveAgent[]> {
 // root under such a build must still be refused, and this runs once per
 // migration — so it reads them all.
 async function liveOps(): Promise<LiveWork[]> {
-  const slugs = listWorktreeDirs();
+  const slugs = listWorktreeDirsSync();
   const ops = (await Promise.all(slugs.map((s) => listWorktreeOps(s)))).flat();
   return ops.map((op) => ({
     what: `${op.op} in ${op.slug} (pid ${op.pid})`,

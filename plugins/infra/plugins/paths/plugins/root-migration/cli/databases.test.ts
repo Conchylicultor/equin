@@ -12,7 +12,7 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import { readDatabaseConfig } from "@plugins/database/core";
+import { readDatabaseConfigSync } from "@plugins/database/core";
 import { rewriteDatabase, scanDatabase } from "./databases";
 
 const MOVES = [{ from: "/home/u/.old", to: "/home/u/.equin" }];
@@ -55,7 +55,7 @@ afterAll(async () => {
 });
 
 test("rewrites stored paths, leaves prose, fires no trigger, scans clean", async () => {
-  const conn = readDatabaseConfig().connection;
+  const conn = readDatabaseConfigSync().connection;
   expect((await scanDatabase(conn, name, MOVES)).length).toBeGreaterThan(0);
 
   const rows = await rewriteDatabase(conn, name, MOVES);

@@ -1,6 +1,5 @@
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { join } from "node:path";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 
 export const TASKPOLICY = "/usr/sbin/taskpolicy";
 
@@ -23,7 +22,10 @@ export const DEMOTE_FLAGS = ["-b"];
 function prefixTokens(): string[] {
   // Escape hatch + A/B verification harness: disable all demotion host-wide.
   if (readEnv("NO_SPAWN_PRIORITY") === "1") return [];
-  if (process.platform === "darwin" && existsSync(TASKPOLICY)) {
+  // taskpolicy ships with every macOS since 10.9: no probe. A probe was a
+  // stat on the spawning thread for every demoted spawn; a host without the
+  // binary fails the spawn loudly (ENOENT) instead.
+  if (process.platform === "darwin") {
     return [TASKPOLICY, ...DEMOTE_FLAGS, "--"];
   }
   // Non-darwin fallback: CPU nice only (no IO demotion). Fail-open — a spawn

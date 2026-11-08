@@ -20,7 +20,7 @@ import {
   type FacetKeying,
   type FacetRecordsInput,
 } from "./facet-records";
-import { readOutside, relateFacets } from "./faceted-tree";
+import { readOutsideSync, relateFacets } from "./faceted-tree";
 import { openLiveSnapshot, type LiveRepoSnapshot } from "./live-snapshot";
 
 // The faceted tree kept up to date by what changed, for a reader that lives
@@ -95,7 +95,7 @@ export async function openFacetedIndex(
   const input: FacetRecordsInput = {
     snapshot,
     store,
-    readOutside: (rel) => readOutside(root, rel),
+    readOutside: (rel) => readOutsideSync(root, rel),
   };
   const keying: FacetKeying = await facetKeying(input, facets);
   const batchInputs = new Set(

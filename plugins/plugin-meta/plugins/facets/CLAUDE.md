@@ -67,10 +67,10 @@ Adding a facet = adding one folder subtree; no consumer changes.
    defineFacet<FooData>("foo")`. Add a pure `fooToComparable(data): string[]` if
    the facet appears in the diff surface.
 2. `facet/index.ts` — `export default createFacet({ def, extract, relate?,
-   renderDoc })`. Import parsing helpers (`parseDefineGroup`, `walkFiles`,
-   `readIfExists`, …) from
+   renderDoc })`. Import parsing helpers (`parseDefineGroup`, `walkFilesSync`,
+   `readIfExistsSync`, …) from
    `@plugins/plugin-meta/plugins/parse-utils/core`; import the facet's own types
-   from its `core/`. Enumerate source files with `walkFiles` / `walkFilesAsync`,
+   from its `core/`. Enumerate source files with `walkFilesSync` / `walkFilesAsync`,
    never a private `readdir` walk: they own the rule that test code (`*.test.ts`,
    `__tests__/`, `<runtime>/testing/`) and sub-plugin trees are not the plugin's
    surface. Docgen enforces it on the output: a rendered fact naming a test-code

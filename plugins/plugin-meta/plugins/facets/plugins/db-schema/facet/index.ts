@@ -14,13 +14,13 @@ import {
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
 import {
-  readIfExists,
+  readIfExistsSync,
   stripTypes,
   findMarkerCalls,
   findImports,
   maskSource,
   markerCallSpans,
-  walkFiles,
+  walkFilesSync,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type DbSchemaFacetData, dbSchemaFacetDef } from "../core";
 import {
@@ -250,23 +250,23 @@ export function parseEntityRefNames(
 // files) cannot see.
 function collectRefNames(pluginDir: AppPath): [string, string][] {
   const files: AppPath[] = [];
-  walkFiles(pluginDir, files);
+  walkFilesSync(pluginDir, files);
   const local = new Map<string, string>();
   for (const f of files) {
-    const raw = readIfExists(f);
+    const raw = readIfExistsSync(f);
     if (!raw || !raw.includes("entityRef(")) continue;
     parseEntityRefNames(stripTypes(raw), local);
   }
   return [...local];
 }
 
-// Enumerates through the shared `walkFiles`, which owns the rule for what is
+// Enumerates through the shared `walkFilesSync`, which owns the rule for what is
 // source and what is not (test code, sub-plugin trees, `node_modules`). A
 // private walker here once listed a `server/testing/` harness as DB schema,
 // because its file name contained "schema".
 function findDbFiles(pluginDir: AppPath): AppPath[] {
   const files: AppPath[] = [];
-  walkFiles(joinAppPath(pluginDir, "server"), files);
+  walkFilesSync(joinAppPath(pluginDir, "server"), files);
   return files
     .filter((full) => {
       const name = basename(full);
@@ -274,7 +274,7 @@ function findDbFiles(pluginDir: AppPath): AppPath[] {
       if (/schema|tables?/.test(name.replace(/\.ts$/, ""))) return true;
       // Mask comments + string interiors so a commented or stringified
       // `pgTable(` / `pgView(` doesn't misclassify a non-schema file.
-      const raw = readIfExists(full);
+      const raw = readIfExistsSync(full);
       const src = raw === null ? null : maskSource(raw, { strings: true });
       return !!src && (src.includes("pgTable(") || src.includes("pgView("));
     })
@@ -288,7 +288,7 @@ export default createFacet<DbSchemaFacetData>({
 
   extract(ctx) {
     const dbFiles = findDbFiles(ctx.dir);
-    const sources = dbFiles.map((f) => readIfExists(f) ?? "");
+    const sources = dbFiles.map((f) => readIfExistsSync(f) ?? "");
     const refNames = collectRefNames(ctx.dir);
     const decls = sources.map((src) => parseTableDecls(stripTypes(src)));
     const local = new Map(refNames);

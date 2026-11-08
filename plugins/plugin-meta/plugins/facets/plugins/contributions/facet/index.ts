@@ -18,7 +18,7 @@ import {
   slotsFacetDef,
 } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
 import {
-  readIfExists,
+  readIfExistsSync,
   stripTypes,
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
@@ -57,7 +57,7 @@ export default createFacet<ContributionsFacetData>({
     const panes = parsePaneDeclarations(ctx.dir);
     const routes = parseRouteDeclarations(ctx.dir);
     const paneRefs: Record<string, SourceRef> = {};
-    const webIndex = readIfExists(joinAppPath(ctx.dir, "web", "index.ts"));
+    const webIndex = readIfExistsSync(joinAppPath(ctx.dir, "web", "index.ts"));
     if (webIndex) {
       // Mask the source FULLY (comments/regex AND string interiors blanked) and
       // locate the block + each call over the mask, then read the real slot

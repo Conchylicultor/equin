@@ -184,7 +184,7 @@ queues behind the mutex it was holding.
     - `framework/cli/op-runtime.checkBroadcasts`
     - `framework/cli/op-runtime.installFatalSignalExit`
     - `framework/cli/op-runtime.opPriority`
-    - `framework/cli/op-runtime.reportInterruptedPredecessor`
+    - `framework/cli/op-runtime.reportInterruptedPredecessorSync`
     - `framework/cli/op-runtime.runCheckSubprocess`
     - `framework/cli/op-runtime.signalOriginTap`
     - `reports/engine.resolveFixedReports`

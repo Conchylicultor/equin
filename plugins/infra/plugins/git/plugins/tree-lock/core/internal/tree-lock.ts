@@ -1,6 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
+import { openOwnedFdSync } from "@plugins/packages/plugins/owned-fd/core";
 import {
   existsSync,
   readFileSync,
@@ -71,7 +71,7 @@ export async function holdTreeRead(root: AppPath): Promise<HeldFlock> {
   const path = treeLockPath(root);
   if (path === null) return NOT_A_CHECKOUT;
   ensureLockFile(path);
-  const fd = openOwnedFd(path, "a");
+  const fd = openOwnedFdSync(path, "a");
   if (flockTryShared(fd.fd)) {
     const releaseSync = (): void => {
       if (!fd.closed) fd.close(); // closing the description drops the lock

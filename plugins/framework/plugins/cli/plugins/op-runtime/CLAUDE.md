@@ -177,10 +177,10 @@ the shared Playwright harness.
   - Exports (values):
     - `interruptedPredecessorWarning`
     - `parseStepBlocks`
-    - `readBuildReceipt`
-    - `reportInterruptedPredecessor`
-    - `resolveBuildReceipt`
-    - `writeBuildReceipt`
+    - `readBuildReceiptSync`
+    - `reportInterruptedPredecessorSync`
+    - `resolveBuildReceiptSync`
+    - `writeBuildReceiptSync`
 - Cli:
   - Uses:
     - `infra/jobs/supervised-job.cliExecContext`
@@ -229,18 +229,18 @@ the shared Playwright harness.
     - `publishLane`
     - `pushBuildSpan`
     - `readBuildProgress`
-    - `readBuildReceipt`
+    - `readBuildReceiptSync`
     - `readCliCrash`
     - `recordCliCrash`
     - `renderVerdict`
-    - `reportInterruptedPredecessor`
-    - `resolveBuildReceipt`
+    - `reportInterruptedPredecessorSync`
+    - `resolveBuildReceiptSync`
     - `runCheckSubprocess`
     - `signalOriginTap`
     - `valveGates`
     - `withDirectOp`
     - `writeBuildProfile`
-    - `writeBuildReceipt`
+    - `writeBuildReceiptSync`
 - Cross-plugin:
   - Imported by:
     - `build/build-logs`

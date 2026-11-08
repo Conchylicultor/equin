@@ -5,7 +5,7 @@
 export {
   BROWSER_EXECUTABLES_FILE,
   BrowserExecutablesSchema,
-  readBrowserExecutables,
+  readBrowserExecutablesSync,
 } from "./internal/executables";
 export type {
   BrowserExecutables,

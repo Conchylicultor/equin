@@ -4,9 +4,9 @@ export {
   SERVER_CORE_RELATIVE,
   backendEntryFor,
   HOME_DIR,
-  backupsDir,
+  backupsDirSync,
   backupsDirs,
-  dataRootLayout,
+  dataRootLayoutSync,
   worktreesDir,
   worktreeDataDir,
   worktreeArtifacts,
@@ -26,13 +26,13 @@ export {
 export type { ReleaseIdentity } from "./internal/paths";
 // Where the root is when the environment does not say — decided by what is
 // installed (`~/.equin`, or the legacy dir until `./equin data-dir migrate`
-// moves it). `dataRootLayout()` (above) is this process's answer; the migration
+// moves it). `dataRootLayoutSync()` (above) is this process's answer; the migration
 // reads the disk afresh, since it is the one thing that changes it.
 export {
   DATA_DIR_NAME,
   DataRootSplitError,
   homeDataRoots,
-  readHomeDataRootLayout,
+  readHomeDataRootLayoutSync,
 } from "./internal/data-root-layout";
 export type { DataRootLayout } from "./internal/data-root-layout";
 // The toolchain a process belongs to: its own checkout's locked mise tools,
@@ -43,27 +43,28 @@ export { toolchainPin } from "./internal/toolchain-pin";
 // of it. All three sit in `core` rather than `server` because their readers are
 // not backends: the CLI mints a checkout's namespace, and an e2e script — which
 // may import no `server` barrel at all — resolves the deploy it is about to
-// drive. The `server` barrel re-exports `listWorktreeDirs` and `checkoutRef`, so
+// drive. The `server` barrel re-exports `listWorktreeDirsSync` and `checkoutRef`, so
 // their existing server-side callers are unchanged.
-export { listWorktreeDirs } from "./internal/worktree-dirs";
+export { listWorktreeDirsSync } from "./internal/worktree-dirs";
 export {
   actAsCheckoutNamespace,
   checkoutRef,
   checkoutNamespace,
 } from "./internal/checkout-ref";
 // Who acts as a namespace: stamped by the CLI, read by the reaper.
-export { readCheckoutOwner } from "./internal/checkout-owner";
+export { readCheckoutOwnerSync } from "./internal/checkout-owner";
 export type { CheckoutOwnerRead } from "./internal/checkout-owner";
 // Which backend minted an agent checkout: stamped by worktree.prepare, read by the reaper.
 export {
-  readCheckoutMinter,
-  stampCheckoutMinter,
+  readCheckoutMinterSync,
+  stampCheckoutMinterSync,
 } from "./internal/checkout-minter";
 export type { CheckoutMinterRead } from "./internal/checkout-minter";
 export {
-  deploysForCheckout,
+  deploysForCheckoutSync,
   lookupCheckoutDeploy,
-  resolveCheckoutDeploy,
+  lookupCheckoutDeploySync,
+  resolveCheckoutDeploySync,
 } from "./internal/checkout-deploys";
 export type {
   CheckoutDeploy,
@@ -126,7 +127,7 @@ export type { LegacyMove, MigrationStep } from "./internal/legacy-layout";
 // The test-run record is written by `cli/test`'s `core` too (`writeTestStatus`),
 // so its prune sits here for the same reason.
 export {
-  pruneWorktreeCheckArtifacts,
-  pruneWorktreeTestArtifacts,
+  pruneWorktreeCheckArtifactsSync,
+  pruneWorktreeTestArtifactsSync,
   CHECK_ARTIFACTS_RETENTION,
 } from "./internal/prune-artifacts";

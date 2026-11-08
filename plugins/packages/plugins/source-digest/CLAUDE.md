@@ -84,7 +84,9 @@ import.meta`, carried by `Resource.Declare`) — the L2 stamps judged by
     - `reports/engine`
     - `ui/icons/saved-sources`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `shared/digest.ts` (sanctioned)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `shared/digest.ts` (sanctioned)
+    - `blocking-fs/sync-named` — `shared/digest.ts` (debt)
 - Server:
   - Exports (types): `ComputedLoads`
   - Exports (values):

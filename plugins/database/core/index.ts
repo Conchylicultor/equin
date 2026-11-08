@@ -1,6 +1,6 @@
 export {
-  readDatabaseConfig,
-  libpqEnv,
+  readDatabaseConfigSync,
+  libpqEnvSync,
   buildConnectionString,
   DATABASE_CONFIG_PATH,
 } from "./internal/config";

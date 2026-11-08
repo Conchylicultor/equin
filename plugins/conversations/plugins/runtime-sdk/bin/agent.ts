@@ -175,7 +175,7 @@ function emit(body: EventBody): void {
   // Written before anyone is told: a backend that crashes after reading a line
   // finds it on replay (the page cache outlives the process; only a host crash
   // would need an fsync).
-  events.append(JSON.stringify(line));
+  events.appendSync(JSON.stringify(line));
 }
 
 // ── usage file ──────────────────────────────────────────────────────────────

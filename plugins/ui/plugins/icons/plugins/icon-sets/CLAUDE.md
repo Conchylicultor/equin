@@ -13,11 +13,11 @@
   - Exports (types): `SymbolNameList`
   - Exports (values):
     - `ICON_SET_PACKAGES`
-    - `installedSetVersions`
-    - `readIconSet`
+    - `installedSetVersionsSync`
+    - `readIconSetSync`
     - `readInputsHash`
     - `readListInputsHash`
-    - `renderSymbolNameFiles`
+    - `renderSymbolNameFilesSync`
     - `SYMBOL_NAME_LIST_REL_PATH`
     - `SYMBOL_NAMES_REL_PATH`
     - `symbolNamesInputsHash`

@@ -131,7 +131,7 @@ export function decideDataRootLayout(
 }
 
 /** What sits at `path`, read without following a final link. */
-export function readRootEntry(path: AppPath): RootEntry {
+export function readRootEntrySync(path: AppPath): RootEntry {
   let isLink: boolean;
   try {
     isLink = lstatSync(path).isSymbolicLink();
@@ -158,10 +158,10 @@ export function readRootEntry(path: AppPath): RootEntry {
 }
 
 /** The home-relative layout as it is on disk now — read fresh, never cached. */
-export function readHomeDataRootLayout(home: string): DataRootLayout {
+export function readHomeDataRootLayoutSync(home: string): DataRootLayout {
   const roots = homeDataRoots(home);
   return decideDataRootLayout(roots, {
-    current: readRootEntry(roots.current),
-    legacy: readRootEntry(roots.legacy),
+    current: readRootEntrySync(roots.current),
+    legacy: readRootEntrySync(roots.legacy),
   });
 }

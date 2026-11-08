@@ -7,7 +7,7 @@ import type {
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   parseBarrelExports,
-  readIfExists,
+  readIfExistsSync,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
   resourceDescriptorFactories,
@@ -92,7 +92,7 @@ function barrelExportNames(specifier: string): Set<string> {
   const names = new Set<string>();
   const dir = join(REPO_ROOT, specifier.replace("@plugins/", "plugins/"));
   for (const file of ["index.ts", "resources.ts"]) {
-    const src = readIfExists(asAppPath(join(dir, file)));
+    const src = readIfExistsSync(asAppPath(join(dir, file)));
     if (src == null) continue;
     for (const e of parseBarrelExports(src)) names.add(e.name);
   }

@@ -99,7 +99,7 @@ export default createRule({
         "and write that follows lands on whatever else answers that name. Mint the " +
         "namespace instead — `namespaceFor(compositionId, ref)`, or " +
         "`checkoutNamespace(root)` — or, when what you want is the deploy this " +
-        "checkout published, read it: `resolveCheckoutDeploy(root)` from " +
+        "checkout published, read it: `resolveCheckoutDeploySync(root)` from " +
         "@plugins/infra/plugins/paths/core.",
       launderedPathSegment:
         "`basename(path)` is a path's last segment, not a namespace, and " +
@@ -111,7 +111,7 @@ export default createRule({
         "the right read there is `isNamespace`, whose non-throwing answer lets one " +
         "stray directory be skipped instead of taking the whole scan down. Mint the " +
         "namespace with `namespaceFor` / `checkoutNamespace`, or read this checkout's " +
-        "deploy with `resolveCheckoutDeploy(root)` from " +
+        "deploy with `resolveCheckoutDeploySync(root)` from " +
         "@plugins/infra/plugins/paths/core.",
     },
   },

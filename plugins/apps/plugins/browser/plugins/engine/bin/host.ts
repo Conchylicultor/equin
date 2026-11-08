@@ -16,7 +16,7 @@
  * Plan: research/2026-10-24-apps-browser-streamed-chromium.md
  */
 import { renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
-import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
+import { openOwnedFdSync } from "@plugins/packages/plugins/owned-fd/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { resolve } from "node:path";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
@@ -25,7 +25,7 @@ import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority
 import { browserDir } from "@plugins/apps/plugins/browser/data-dirs";
 import { ENGINE_PROTOCOL, ENGINE_WS_PATH } from "../core";
 import { browserEngineDir, browserEngineUploadsDir } from "../data-dirs";
-import { hostCodeId } from "../shared/code-id";
+import { hostCodeIdSync } from "../shared/code-id";
 import {
   HOST_FILES,
   HostShutdownBodySchema,
@@ -53,12 +53,12 @@ function argValue(name: string): string {
 const launchedBy = argValue("--launched-by");
 const dir = browserEngineDir.ensure();
 const file = (name: string) => browserEngineDir.file(name);
-const codeId = hostCodeId(asAppPath(resolve(import.meta.dir, "..")));
+const codeId = hostCodeIdSync(asAppPath(resolve(import.meta.dir, "..")));
 const startedAt = new Date().toISOString();
 
 // The singleton: whoever holds the lock is THE host. The kernel drops it when
 // this process dies however it dies, so a crashed host never blocks the next.
-const lockFd = openOwnedFd(file(HOST_FILES.lock), "a");
+const lockFd = openOwnedFdSync(file(HOST_FILES.lock), "a");
 if (!flockTry(lockFd.fd)) {
   console.error(`[browser-engine] another host holds ${dir}; exiting`);
   process.exit(0);

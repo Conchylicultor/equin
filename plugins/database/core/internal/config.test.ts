@@ -12,7 +12,7 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { dbConfigDir } from "../../data-dirs";
 
 /**
- * `readDatabaseConfig()` resolves its path ONCE, into a module-level
+ * `readDatabaseConfigSync()` resolves its path ONCE, into a module-level
  * `CONFIG_PATH` const, and then memoizes the parsed result for the process
  * lifetime.
  *
@@ -48,7 +48,7 @@ interface Probe {
 }
 
 /**
- * Run `readDatabaseConfig()` + `libpqEnv()` in a child with a fully controlled
+ * Run `readDatabaseConfigSync()` + `libpqEnvSync()` in a child with a fully controlled
  * environment and return both results. Throws on a non-zero exit — a crash IS
  * the failure this test exists to detect (the deleted CLI copy threw ENOENT here).
  */
@@ -59,8 +59,8 @@ async function probe(env: Record<string, string>): Promise<Probe> {
   );
   writeFileSync(
     file,
-    `import { readDatabaseConfig, libpqEnv } from ${JSON.stringify(CONFIG_MODULE)};\n` +
-      `console.log(JSON.stringify({ config: readDatabaseConfig(), env: libpqEnv() }));\n`,
+    `import { readDatabaseConfigSync, libpqEnvSync } from ${JSON.stringify(CONFIG_MODULE)};\n` +
+      `console.log(JSON.stringify({ config: readDatabaseConfigSync(), env: libpqEnvSync() }));\n`,
   );
   const result = await spawnCaptured([process.execPath, "run", file], {
     cwd: import.meta.dir,

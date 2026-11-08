@@ -36,7 +36,7 @@ import {
 } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import type { OutcomeByKind } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import { checkBroadcasts } from "./broadcasts";
-import { reportInterruptedPredecessor } from "./build-receipt";
+import { reportInterruptedPredecessorSync } from "./build-receipt";
 import { installFatalSignalExit } from "./fatal-signals";
 import { signalOriginTap } from "./signal-origin-tap";
 import { publishLane } from "./lane";
@@ -311,7 +311,7 @@ const realDeps: DirectOpDeps = {
   priority: async (kind, isMainCheckout) =>
     opPriority(await getWorktreeRoot(), kind, isMainCheckout),
   checkBroadcasts,
-  reportInterruptedPredecessor,
+  reportInterruptedPredecessor: reportInterruptedPredecessorSync,
   publishLane,
   createOpProfiler,
   markWorktreeOpStart,

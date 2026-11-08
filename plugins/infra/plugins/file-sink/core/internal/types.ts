@@ -54,7 +54,7 @@ export interface FileSink {
   readonly path: AppPath;
   description: string;
   bound: RotateBound;
-  append(line: string): void;
+  appendSync(line: string): void;
   /**
    * Append MANY lines as ONE write — the batch form of `append`, and the reason a
    * caller holding an array never has to loop. Semantics are byte-for-byte what
@@ -68,14 +68,14 @@ export interface FileSink {
    * `check-progress`) rely on to interleave lines from concurrent processes —
    * those must keep using `append`, one line per call.
    */
-  appendAll(lines: readonly string[]): void;
+  appendAllSync(lines: readonly string[]): void;
   /**
    * Bounded tail read of this sink's own file — the read counterpart of `append`.
    * Binding it to the sink removes the chance of reading a sink from the wrong
    * path. Same semantics as the free `readTail(path, opts)`; the read budget comes
    * from `opts` (8 MB default), NOT from `bound.maxBytes`.
    */
-  readTail(opts?: TailOptions): TailResult;
-  /** `readTail` with each line tolerantly `JSON.parse`d into a `T`. */
-  readJsonlTail<T>(opts?: TailOptions): JsonlTailResult<T>;
+  readTailSync(opts?: TailOptions): TailResult;
+  /** `readTailSync` with each line tolerantly `JSON.parse`d into a `T`. */
+  readJsonlTailSync<T>(opts?: TailOptions): JsonlTailResult<T>;
 }

@@ -1,7 +1,7 @@
 import { mkdir, rm, rename } from "node:fs/promises";
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
-import { backupsDir } from "@plugins/infra/plugins/paths/server";
+import { backupsDirSync } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type {
   BackupArchive,
@@ -42,7 +42,7 @@ export async function assembleArchive(
   trigger: "manual" | "periodic",
 ): Promise<BackupArchive> {
   const timestamp = formatTimestamp();
-  const runDir = join(backupsDir(), timestamp);
+  const runDir = join(backupsDirSync(), timestamp);
   const stagingDir = join(runDir, "staging");
   const archivePath = join(runDir, "archive.tar.gz");
   // Compress into a sidecar first, then atomically rename onto the final path.
@@ -67,7 +67,7 @@ export async function assembleArchive(
   //
   // `recursive: false` makes the kernel answer, so there is no check-then-act
   // window between asking and creating.
-  await mkdir(backupsDir(), { recursive: true });
+  await mkdir(backupsDirSync(), { recursive: true });
   try {
     await mkdir(runDir);
   } catch (err) {

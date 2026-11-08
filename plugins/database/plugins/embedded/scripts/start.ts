@@ -22,7 +22,7 @@ import {
   type ServiceLogTarget,
 } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/core";
 import { adoptFd, type OwnedFd } from "@plugins/packages/plugins/owned-fd/core";
-import { adoptLegacyLog } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
+import { adoptLegacyLogSync } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
 import { mkdirSync, rmSync, symlinkSync } from "node:fs";
 import {
   existsSync,
@@ -226,7 +226,7 @@ function postmasterLog(target: ServiceLogTarget): {
   if (target.kind === "relay") {
     // Fresh start, so nothing writes the pre-relay file any more: move it into
     // the new channel's rotation rather than leave it unbounded.
-    const adopted = adoptLegacyLog(PG_LEGACY_LOG_FILE, PG_LOG_FILE);
+    const adopted = adoptLegacyLogSync(PG_LEGACY_LOG_FILE, PG_LOG_FILE);
     if (adopted.kind === "moved")
       console.log(`pg: moved ${PG_LEGACY_LOG_FILE} to ${adopted.to}`);
     if (adopted.kind === "slots-full")

@@ -11,7 +11,7 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
  * genuinely not installed is a legitimate no-op for them — doesn't need to
  * catch an error to find that out.
  */
-export function findMiseBin(): string | null {
+export function findMiseBinSync(): string | null {
   const onPath = Bun.which("mise");
   if (onPath !== null) return onPath;
   // mise's own fixed install location under home — not a user-chosen path.
@@ -20,8 +20,8 @@ export function findMiseBin(): string | null {
 }
 
 /** Same resolution, but throws for a caller that requires mise to proceed. */
-export function miseBin(): string {
-  const bin = findMiseBin();
+export function miseBinSync(): string {
+  const bin = findMiseBinSync();
   if (bin !== null) return bin;
   throw new Error(
     `mise is not installed (not on PATH, not at ${join(HOME_DIR, ".local", "bin", "mise")}). Install it: https://mise.jdx.dev`,

@@ -24,9 +24,9 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
-  deploysForCheckout,
-  lookupCheckoutDeploy,
-  resolveCheckoutDeploy,
+  deploysForCheckoutSync,
+  lookupCheckoutDeploySync,
+  resolveCheckoutDeploySync,
 } from "./checkout-deploys";
 import { SERVER_CORE_RELATIVE } from "./paths";
 
@@ -126,7 +126,7 @@ describe("deploysForCheckout", () => {
       composition: MAIN_WORKTREE_NAME,
     });
 
-    expect(deploysForCheckout(main)).toEqual([
+    expect(deploysForCheckoutSync(main)).toEqual([
       {
         namespace: asNamespace(MAIN_WORKTREE_NAME),
         composition: MAIN_WORKTREE_NAME,
@@ -145,7 +145,7 @@ describe("deploysForCheckout", () => {
     const root = fx.checkout(MAIN_WORKTREE_NAME);
     fx.register(MAIN_WORKTREE_NAME, { server: serverOf(root) });
 
-    expect(deploysForCheckout(root)).toEqual([
+    expect(deploysForCheckoutSync(root)).toEqual([
       {
         namespace: asNamespace(MAIN_WORKTREE_NAME),
         composition: MAIN_WORKTREE_NAME,
@@ -161,7 +161,7 @@ describe("deploysForCheckout", () => {
     fx.register(MAIN_WORKTREE_NAME, { server: serverOf(main) });
     fx.register("att-1", { server: serverOf(worktree) });
 
-    expect(deploysForCheckout(worktree).map((d) => d.namespace)).toEqual([
+    expect(deploysForCheckoutSync(worktree).map((d) => d.namespace)).toEqual([
       asNamespace("att-1"),
     ]);
   });
@@ -176,7 +176,7 @@ describe("deploysForCheckout", () => {
       server: join(main, "plugins/framework/plugins/central-core"),
     });
 
-    expect(deploysForCheckout(main)).toEqual([]);
+    expect(deploysForCheckoutSync(main)).toEqual([]);
   });
 
   test("a directory name that is not a namespace is skipped, not thrown on", () => {
@@ -187,7 +187,7 @@ describe("deploysForCheckout", () => {
     fx.register("Not A Namespace", { server: serverOf(root) });
     fx.register(MAIN_WORKTREE_NAME, { server: serverOf(root) });
 
-    expect(deploysForCheckout(root).map((d) => d.namespace)).toEqual([
+    expect(deploysForCheckoutSync(root).map((d) => d.namespace)).toEqual([
       asNamespace(MAIN_WORKTREE_NAME),
     ]);
   });
@@ -198,7 +198,7 @@ describe("deploysForCheckout", () => {
     // Six of the ~70 dirs on a working box are in exactly this state.
     mkdirSync(join(fx.worktrees, "head-check"), { recursive: true });
 
-    expect(deploysForCheckout(root)).toEqual([]);
+    expect(deploysForCheckoutSync(root)).toEqual([]);
   });
 
   test("a malformed spec is reported, not raised, once something matched", () => {
@@ -208,7 +208,7 @@ describe("deploysForCheckout", () => {
     const broken = fx.register("att-2", "{ not json");
 
     const { result, warnings } = capturingWarnings(() =>
-      deploysForCheckout(root),
+      deploysForCheckoutSync(root),
     );
     expect(result.map((d) => d.namespace)).toEqual([
       asNamespace(MAIN_WORKTREE_NAME),
@@ -221,7 +221,7 @@ describe("deploysForCheckout", () => {
     const root = fx.checkout("att-3");
     const broken = fx.register("att-3", "{ not json");
 
-    expect(() => deploysForCheckout(root)).toThrow(broken);
+    expect(() => deploysForCheckoutSync(root)).toThrow(broken);
   });
 
   test("a server path that cannot be resolved is reported, not raised, once something matched", () => {
@@ -233,7 +233,7 @@ describe("deploysForCheckout", () => {
     const broken = fx.register("att-tangled", { server: fx.loop("tangled") });
 
     const { result, warnings } = capturingWarnings(() =>
-      deploysForCheckout(root),
+      deploysForCheckoutSync(root),
     );
     expect(result.map((d) => d.namespace)).toEqual([
       asNamespace(MAIN_WORKTREE_NAME),
@@ -248,7 +248,7 @@ describe("deploysForCheckout", () => {
     const root = fx.checkout("att-tangled");
     const broken = fx.register("att-tangled", { server: fx.loop("tangled") });
 
-    expect(() => deploysForCheckout(root)).toThrow(broken);
+    expect(() => deploysForCheckoutSync(root)).toThrow(broken);
   });
 
   test("a spec whose server is not a path is malformed, not absent", () => {
@@ -256,7 +256,9 @@ describe("deploysForCheckout", () => {
     const root = fx.checkout("att-4");
     fx.register("att-4", { web: "/somewhere" });
 
-    expect(() => deploysForCheckout(root)).toThrow(/"server" is not a path/);
+    expect(() => deploysForCheckoutSync(root)).toThrow(
+      /"server" is not a path/,
+    );
   });
 
   test("a checkout reached through a symlink matches its own spec", () => {
@@ -268,7 +270,7 @@ describe("deploysForCheckout", () => {
     const linked = joinAppPath(appPathParent(real), "linked");
     symlinkSync(real, linked);
 
-    expect(deploysForCheckout(linked).map((d) => d.namespace)).toEqual([
+    expect(deploysForCheckoutSync(linked).map((d) => d.namespace)).toEqual([
       asNamespace(MAIN_WORKTREE_NAME),
     ]);
   });
@@ -281,7 +283,7 @@ describe("resolveCheckoutDeploy", () => {
     fx.register("sonata", { server: serverOf(root), composition: "sonata" });
     fx.register(MAIN_WORKTREE_NAME, { server: serverOf(root) });
 
-    const resolution = resolveCheckoutDeploy(root);
+    const resolution = resolveCheckoutDeploySync(root);
     expect(resolution.kind).toBe("resolved");
     if (resolution.kind !== "resolved") throw new Error("unreachable");
     expect(resolution.deploy.namespace).toBe(asNamespace(MAIN_WORKTREE_NAME));
@@ -292,7 +294,7 @@ describe("resolveCheckoutDeploy", () => {
     const other = fx.checkout(MAIN_WORKTREE_NAME);
     fx.register(MAIN_WORKTREE_NAME, { server: serverOf(other) });
 
-    expect(resolveCheckoutDeploy(fx.checkout("att-5"))).toEqual({
+    expect(resolveCheckoutDeploySync(fx.checkout("att-5"))).toEqual({
       kind: "none",
       others: [],
       scanned: 1,
@@ -313,7 +315,7 @@ describe("resolveCheckoutDeploy", () => {
     // refusal quotes.
     fx.register("Not A Namespace", { server: serverOf(root) });
 
-    expect(resolveCheckoutDeploy(root)).toEqual({
+    expect(resolveCheckoutDeploySync(root)).toEqual({
       kind: "none",
       others: [],
       scanned: 3,
@@ -328,7 +330,7 @@ describe("resolveCheckoutDeploy", () => {
       composition: "sonata",
     });
 
-    expect(resolveCheckoutDeploy(root)).toEqual({
+    expect(resolveCheckoutDeploySync(root)).toEqual({
       kind: "none",
       others: [
         {
@@ -350,7 +352,7 @@ describe("resolveCheckoutDeploy", () => {
     fx.register(MAIN_WORKTREE_NAME, { server: serverOf(root) });
 
     const { result, warnings } = capturingWarnings(() =>
-      resolveCheckoutDeploy(root),
+      resolveCheckoutDeploySync(root),
     );
     expect(result.kind).toBe("resolved");
     if (result.kind !== "resolved") throw new Error("unreachable");
@@ -367,8 +369,8 @@ describe("resolveCheckoutDeploy", () => {
     // `serve-app --name`, a renamed namespace): never a candidate.
     fx.register("preview", { server: serverOf(root) });
 
-    expect(lookupCheckoutDeploy(root)).toEqual({ kind: "none" });
-    expect(resolveCheckoutDeploy(root)).toEqual({
+    expect(lookupCheckoutDeploySync(root)).toEqual({ kind: "none" });
+    expect(resolveCheckoutDeploySync(root)).toEqual({
       kind: "none",
       others: [
         {
@@ -388,7 +390,7 @@ describe("resolveCheckoutDeploy", () => {
     symlinkSync(real, linked);
     fx.register("att-11", { server: serverOf(real) });
 
-    const resolution = lookupCheckoutDeploy(linked);
+    const resolution = lookupCheckoutDeploySync(linked);
     expect(resolution.kind).toBe("resolved");
     if (resolution.kind !== "resolved") throw new Error("unreachable");
     expect(resolution.deploy.namespace).toBe(asNamespace("att-11"));
@@ -399,7 +401,7 @@ describe("resolveCheckoutDeploy", () => {
     const root = fx.checkout("att-12");
     fx.register("att-12", "{ not json");
 
-    expect(() => lookupCheckoutDeploy(root)).toThrow(/att-12/);
+    expect(() => lookupCheckoutDeploySync(root)).toThrow(/att-12/);
   });
 
   test("a named composition resolves its own namespace", () => {
@@ -411,7 +413,7 @@ describe("resolveCheckoutDeploy", () => {
     });
     fx.register("att-7", { server: serverOf(root) });
 
-    const resolution = resolveCheckoutDeploy(root, "sonata");
+    const resolution = resolveCheckoutDeploySync(root, "sonata");
     expect(resolution.kind).toBe("resolved");
     if (resolution.kind !== "resolved") throw new Error("unreachable");
     expect(resolution.deploy.namespace).toBe(asNamespace("sonata.att-7"));
@@ -422,7 +424,7 @@ describe("resolveCheckoutDeploy", () => {
     const root = fx.checkout("att-8");
     fx.register("att-8", { server: serverOf(root) });
 
-    const resolution = resolveCheckoutDeploy(root, "nope");
+    const resolution = resolveCheckoutDeploySync(root, "nope");
     expect(resolution.kind).toBe("none");
     if (resolution.kind !== "none") throw new Error("unreachable");
     expect(resolution.others.map((d) => d.composition)).toEqual([

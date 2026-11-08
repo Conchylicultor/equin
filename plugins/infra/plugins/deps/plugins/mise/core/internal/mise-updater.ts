@@ -47,19 +47,19 @@ function miseVersion(output: string): string {
   return output.trim().split(/\s+/)[0] ?? "";
 }
 
-function readRequests(root: AppPath): Map<string, string> {
+function readRequestsSync(root: AppPath): Map<string, string> {
   return parseMiseToolRequests(
     readFileSync(joinAppPath(root, "mise.toml"), "utf8"),
   );
 }
 
 /** Tools `mise.toml` declares that the lock does not record yet: first locks. */
-function newlyDeclared(
+function newlyDeclaredSync(
   root: AppPath,
   locked: ReadonlyMap<string, readonly string[]>,
 ): Set<string> {
   return new Set(
-    [...readRequests(root).keys()].filter(
+    [...readRequestsSync(root).keys()].filter(
       (tool) =>
         TOOLS.some((t) => t.name === tool) &&
         (locked.get(tool)?.length ?? 0) === 0,
@@ -72,15 +72,15 @@ function newlyDeclared(
  * tool `mise.toml` has just started declaring may have no lock entry yet (the
  * upgrade records its first one). Throws naming every problem.
  */
-function assertSound(root: AppPath): {
+function assertSoundSync(root: AppPath): {
   locked: Map<string, string[]>;
   fresh: Set<string>;
 } {
   const locked = parseMiseLock(
     readFileSync(joinAppPath(root, "mise.lock"), "utf8"),
   );
-  const fresh = newlyDeclared(root, locked);
-  const problems = lockProblems(readRequests(root), locked, {
+  const fresh = newlyDeclaredSync(root, locked);
+  const problems = lockProblems(readRequestsSync(root), locked, {
     holds: HOLDS,
     today: utcDay(new Date()),
     unlockedAllowed: fresh,
@@ -112,7 +112,7 @@ export const miseUpdater: Updater = {
   async prepare(root, log) {
     // Soundness first, as before the move onto the runner: a broken pair is
     // refused before mise touches anything.
-    assertSound(root);
+    assertSoundSync(root);
     const before = miseVersion(await mise(root, ["--version"], MINUTE));
     log("Updating mise itself…");
     await mise(root, ["self-update", "--yes"], 10 * MINUTE);
@@ -164,7 +164,7 @@ export const miseUpdater: Updater = {
         `Unknown tool ${unknown.join(", ")}. Tools: ${TOOLS.map((t) => t.name).join(", ")}.`,
       );
     }
-    const { locked, fresh } = assertSound(root);
+    const { locked, fresh } = assertSoundSync(root);
     const moves: Move[] = [];
     for (const spec of TOOLS) {
       if (only !== undefined && !only.includes(spec.name)) continue;

@@ -4,8 +4,8 @@ import {
   type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import {
-  readIfExists,
-  walkFiles,
+  readIfExistsSync,
+  walkFilesSync,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { deploySecretsFacetDef, type DeploySecretsData } from "../core";
 import { extractDeploySecrets } from "./extract";
@@ -24,9 +24,9 @@ export default createFacet<DeploySecretsData>({
 
   extract(ctx) {
     const files: AppPath[] = [];
-    walkFiles(joinAppPath(ctx.dir, "core"), files);
+    walkFilesSync(joinAppPath(ctx.dir, "core"), files);
     const declared = files.flatMap((f) => {
-      const src = readIfExists(f);
+      const src = readIfExistsSync(f);
       return src === null
         ? []
         : extractDeploySecrets(src, relative(ctx.dir, f));

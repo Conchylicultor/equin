@@ -60,7 +60,7 @@ export function featurePaths(
 /** Take the lock without waiting: its held descriptor, or `null` when another holds it. */
 export async function tryLock(path: AppPath): Promise<OwnedFd | null> {
   await mkdir(asAppPath(dirname(path)), { recursive: true });
-  const owned = openOwnedFd(path, "a");
+  const owned = await openOwnedFd(path, "a");
   if (flockTry(owned.fd)) return owned;
   owned.close();
   return null;
@@ -97,7 +97,7 @@ export async function waitLock(
 /** Whether some process holds the lock now: take it for an instant, release. */
 export async function isLockHeld(path: AppPath): Promise<boolean> {
   if (!(await exists(path))) return false;
-  const fd = openOwnedFd(path, "a");
+  const fd = await openOwnedFd(path, "a");
   try {
     return !flockTry(fd.fd);
   } finally {
