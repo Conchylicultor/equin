@@ -6,12 +6,14 @@ import {
   readdirSync,
   renameSync,
   rmSync,
+  symlinkSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { spawn } from "node:child_process";
 import type * as parcel from "@parcel/watcher";
 import { createWrapper } from "@parcel/watcher/wrapper";
 import { ensureDep } from "@plugins/infra/plugins/deps/deps";
@@ -231,5 +233,111 @@ describe.skipIf(process.platform !== "darwin")(
       await expectHeld(base, 0);
       expect(watchErrors).toEqual([]);
     });
+    test("a subscribe that fails holds nothing, and the next one of the directory opens", async () => {
+      const dir = tempDir("rollback");
+      // Many names, so the failing one is rarely the first the open reaches.
+      const names = Array.from({ length: 200 }, (_, i) => `f${i}.log`);
+      for (const n of names) writeFileSync(join(dir, n), "x\n");
+      // A followed name no descriptor can be opened on: a symlink to itself.
+      symlinkSync("loop", join(dir, "loop"));
+
+      const base = openFds();
+      // Upstream left the subscriptions it had made before the failure in the
+      // backend — their descriptors, and the directory's cached listing, held
+      // for the life of the process; every later subscription of the directory
+      // reused that listing, met an entry its own ignore excludes and failed
+      // with whatever errno the thread last held.
+      expect(
+        subscribe(dir, { ignore: [onlyNames([...names, "loop"])] }),
+      ).rejects.toThrow(/Too many levels of symbolic links/);
+      await expectHeld(base, 0);
+
+      const other = Array.from({ length: 5 }, (_, i) => `g${i}.log`);
+      for (const n of other) writeFileSync(join(dir, n), "x\n");
+      const { sub, events } = await subscribe(dir, {
+        ignore: [onlyNames(other)],
+      });
+      await expectHeld(base, other.length + 1);
+      appendFileSync(join(dir, other[0]!), "y\n");
+      await until(
+        () => events.some((e) => e.path === join(dir, other[0]!)),
+        5_000,
+        "a write to a followed file",
+      );
+      await sub.unsubscribe();
+      await expectHeld(base, 0);
+      expect(watchErrors).toEqual([]);
+    }, 30_000);
+
+    test("subscriptions of one directory with different ignores each see exactly their own files", async () => {
+      const dir = tempDir("shared");
+      const a = ["a0.log", "a1.log"];
+      const b = ["b0.log", "b1.log"];
+      for (const n of [...a, ...b]) writeFileSync(join(dir, n), "x\n");
+
+      const base = openFds();
+      // Upstream shared one cached listing per directory between them, read
+      // through the FIRST one's ignore: the second failed outright (`error
+      // watching <dir>: Undefined error: 0`) or missed its files.
+      const first = await subscribe(dir, { ignore: [onlyNames(a)] });
+      const second = await subscribe(dir, { ignore: [onlyNames(b)] });
+      await expectHeld(base, a.length + b.length + 2);
+
+      for (const n of [...a, ...b]) appendFileSync(join(dir, n), "y\n");
+      const paths = (events: parcel.Event[]): string[] =>
+        [...new Set(events.map((e) => e.path))].sort();
+      await until(
+        () =>
+          paths(first.events).length === a.length &&
+          paths(second.events).length === b.length,
+        5_000,
+        "each subscription hearing its own files",
+      );
+      expect(paths(first.events)).toEqual(a.map((n) => join(dir, n)));
+      expect(paths(second.events)).toEqual(b.map((n) => join(dir, n)));
+
+      await first.sub.unsubscribe();
+      await second.sub.unsubscribe();
+      await expectHeld(base, 0);
+      expect(watchErrors).toEqual([]);
+    });
+
+    test("re-opening a follow while its directory keeps changing never fails", async () => {
+      const dir = tempDir("churn");
+      // The runs dir's size on main: every diff of it is a long readdir.
+      for (let i = 0; i < 1_200; i++)
+        writeFileSync(join(dir, `old-${i}.log`), "");
+      const base = openFds();
+      // The supervised runs dir under a burst of starts: other processes
+      // create and delete entries the follow does not name while it is
+      // re-opened over a changing set of names. Upstream's event thread diffed
+      // the directory into the subscription's cached listing — unignored
+      // entries included — while `subscribe` iterated it on another thread:
+      // the open met an entry it ignores and failed with a stale errno
+      // ("File exists", "No such file or directory", "Undefined error: 0").
+      const writer = spawn(
+        "/bin/sh",
+        [
+          "-c",
+          `cd ${JSON.stringify(dir)} && i=0; while :; do i=$((i+1)); : > other-$i.log; rm -f other-$((i-40)).log; done`,
+        ],
+        { stdio: "ignore" },
+      );
+      try {
+        for (let round = 0; round < 150; round++) {
+          const names = Array.from(
+            { length: 1 + (round % 7) },
+            (_, i) => `run-${round}-${i}.log`,
+          );
+          for (const n of names) writeFileSync(join(dir, n), "x\n");
+          const { sub } = await subscribe(dir, { ignore: [onlyNames(names)] });
+          await sub.unsubscribe();
+        }
+      } finally {
+        writer.kill("SIGKILL");
+      }
+      await expectHeld(base, 0);
+      expect(watchErrors).toEqual([]);
+    }, 60_000);
   },
 );

@@ -18,11 +18,13 @@ export async function parcelWatcherPackageDir(root: string): Promise<string> {
 }
 
 /**
- * A line only the patched kqueue backend holds. The build refuses source
- * without it: compiling upstream's would ship the leak under the patched name
- * (a checkout whose `node_modules` predates the patch).
+ * A line only the current patch's kqueue backend holds. The build refuses
+ * source without it: compiling upstream's — or an earlier revision of the
+ * patch — would ship its bugs under the patched name (a checkout whose
+ * `node_modules` predates the patch).
  */
-const PATCH_MARKER = "std::unordered_set<int> &closing";
+const PATCH_MARKER =
+  "std::shared_ptr<DirTree> tree = std::make_shared<DirTree>(watcher->mDir);";
 
 /** binding.gyp's darwin target: the shared sources plus every darwin backend. */
 const SOURCES = [

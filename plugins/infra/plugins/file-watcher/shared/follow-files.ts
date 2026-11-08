@@ -16,11 +16,13 @@ import { WatchedDirGoneError } from "./dir-gone";
 //
 // Two constraints of @parcel/watcher 2.6.0 shape the rest:
 //
-// - **One subscription per directory per process.** parcel caches a
+// - **One subscription per directory per process.** Upstream caches a
 //   directory's listing by path and shares it between subscriptions, even when
 //   their ignore lists differ: a second subscription with a different ignore
 //   fails outright (measured: `error watching <dir>: Undefined error: 0`), or
-//   misses the files the first one ignored. So every follow of one directory —
+//   misses the files the first one ignored. The patched addon (below) gives
+//   each subscription a listing of its own, but a release still loads the
+//   upstream prebuild, so the constraint stays. So every follow of one directory —
 //   whatever declaration it comes from — shares ONE subscription whose ignore
 //   lets through exactly the union of their names, re-opened when that union
 //   changes. Between the close and the re-open nothing is heard, so after every

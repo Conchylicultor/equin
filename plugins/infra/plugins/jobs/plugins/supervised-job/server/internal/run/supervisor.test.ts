@@ -27,7 +27,14 @@
  */
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { afterEach, describe, expect, test } from "bun:test";
-import { appendFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import type { LogChannel } from "@plugins/primitives/plugins/log-channels/server";
 import type { RunTerminal } from "../../../core";
@@ -335,16 +342,23 @@ describe("reconcileSupervisedRuns: a run whose shim alone was SIGKILLed", () => 
  * real files and a real (very short-lived) child.
  */
 let setPidFails = false;
+/** Run between the spawn and the follow's open (from `setPid`), when set. */
+let afterSpawn: ((runId: string) => void) | null = null;
 
 const spawnKind = defineSupervisedRunKind({
   id: "suptestspawn",
   channel,
   listUnfinished: () => Promise.resolve([]),
-  setPid: () =>
-    setPidFails
+  setPid: (runId) => {
+    afterSpawn?.(runId);
+    return setPidFails
       ? Promise.reject(new Error("setPid write failed"))
-      : Promise.resolve(),
-  finish: () => Promise.resolve(),
+      : Promise.resolve();
+  },
+  finish: (runId, terminal) => {
+    finished.push({ runId, terminal, publishedBefore: [...published] });
+    return Promise.resolve();
+  },
 });
 await spawnKind.register();
 
@@ -400,6 +414,56 @@ describe("startSupervisedRun: which side of the spawn a failure happened on", ()
     }
   });
 });
+
+describe.skipIf(process.platform !== "darwin")(
+  "startSupervisedRun: a follow that fails to open",
+  () => {
+    test("is not the start's failure: the run starts, and settles on the liveness path", async () => {
+      // 2026-11-06 to 11-08: opening the follow failed after the spawn, the
+      // start threw "failed to start AFTER its child was spawned", and the
+      // job retried and dead-lettered while its child did the work. Here the
+      // open fails for sure: between the spawn and the open, the transcript's
+      // NAME becomes a symlink to itself, which kqueue cannot open (ELOOP).
+      // The child keeps writing to the file it was handed.
+      const runId = uniqueRunId("watchfail");
+      trackArtifacts(runId);
+      const transcript = worktreeArtifacts.runTranscript(
+        worktree,
+        "suptestspawn",
+        runId,
+      );
+      const aside = `${transcript}.aside`;
+      created.push(aside);
+      afterSpawn = (id) => {
+        if (id !== runId) return;
+        renameSync(transcript, aside);
+        symlinkSync(transcript, transcript);
+      };
+      let pid: number;
+      try {
+        ({ pid } = await startSupervisedRun(spawnKind, {
+          runId,
+          argv: ["/bin/sh", "-c", "echo did-the-work; sleep 1"],
+        }));
+      } finally {
+        afterSpawn = null;
+        if (existsSync(aside)) {
+          rmSync(transcript);
+          renameSync(aside, transcript);
+        }
+      }
+      // Ticking although no follow is open: it is what settles the run.
+      expect(supervisedRunLivenessTimer.running).toBe(true);
+
+      await waitUntil(() => groupGone(pid));
+      await reconcileSupervisedRuns();
+      const own = finished.filter((f) => f.runId === runId);
+      expect(own).toHaveLength(1);
+      expect(own[0]?.terminal.exitCode).toBe(0);
+      expect(own[0]?.publishedBefore).toContain("did-the-work");
+    });
+  },
+);
 
 describe("startSupervisedRun: output is published while the run is live", () => {
   test("a line reaches the channel before the child exits", async () => {

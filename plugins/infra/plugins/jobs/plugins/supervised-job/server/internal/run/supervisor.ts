@@ -361,6 +361,11 @@ async function settleFromMarker(
  * changes (a run tracked or settled). Syncs run one at a time, a burst folding
  * into one trailing sync; the call resolves once a sync that started after it
  * has settled.
+ *
+ * A follow that fails to open does not fail the sync: watching is an
+ * observation of runs that already exist, so its failure is reported as what
+ * it is ({@link reportWatchFailure}) and never becomes a run's — or its job's —
+ * result. Until a later sync opens it, the liveness tick settles the runs.
  */
 function syncWatcher(): Promise<void> {
   return watcherSync.run();
@@ -388,36 +393,64 @@ async function applyWatcher(): Promise<void> {
   const key = files.join("\n");
   if ((watcher?.files ?? "") === key) return;
   const previous = watcher;
-  if (files.length > 0) {
+  if (files.length === 0) {
+    watcher = null;
+    supervisedRunLivenessTimer.stop();
+    await previous?.handle.stop();
+    return;
+  }
+  // Ticking while any run is live, the follow open or not: the tick settles a
+  // run no file event will report, and it ends in a sync — so a follow that
+  // failed to open is retried by it.
+  supervisedRunLivenessTimer.start();
+  let handle: FileWatcher;
+  try {
     await mkdir(worktreeArtifacts.runsDir(ns), { recursive: true });
     // The new follow opens before the old one closes: both name the same dir,
     // so they share one native subscription and no write goes unheard between.
-    watcher = {
-      files: key,
-      handle: await supervisedRunWatcher.start({
-        files,
-        onChange: (events) =>
-          runTracked("watch:supervised-run", () => onArtifactEvents(events)),
-        onLost: () =>
-          runTracked("watch:supervised-run:lost", () =>
-            reconcileSupervisedRuns(),
-          ),
-      }),
-    };
-    if (previous === null) supervisedRunLivenessTimer.start();
-  } else {
-    watcher = null;
-    supervisedRunLivenessTimer.stop();
+    handle = await supervisedRunWatcher.start({
+      files,
+      onChange: (events) =>
+        runTracked("watch:supervised-run", () => onArtifactEvents(events)),
+      onLost: () =>
+        runTracked("watch:supervised-run:lost", () =>
+          reconcileSupervisedRuns(),
+        ),
+    });
+  } catch (err) {
+    // `watcher` keeps the files it last opened over, so the next sync retries.
+    reportWatchFailure(err);
+    return;
   }
+  watcher = { files: key, handle };
   await previous?.handle.stop();
+}
+
+/**
+ * File a failure to open the live runs' follow. Reported, not thrown: the runs
+ * exist whether or not they are watched — throwing it from a run's start made
+ * a job whose child was doing its work fail, retry and dead-letter (2026-11-06
+ * to 11-08: 20 jobs a day). What it costs is said in the report: no live
+ * output, and a settle on the next liveness tick instead of at the marker.
+ */
+function reportWatchFailure(err: unknown): void {
+  reportServerError({
+    message: `[supervised-run] following the live runs' files failed: ${
+      err instanceof Error ? err.message : String(err)
+    } — their output is not streamed live, and each settles on the liveness tick (every 60 s) instead of when it ends`,
+    stack: err instanceof Error ? (err.stack ?? null) : null,
+  });
 }
 
 /**
  * Delete from the runs dir only while no follow is (re-)opening.
  *
  * Opening the follow lists the runs dir (parcel stats every entry, ignored ones
- * included), and an entry deleted between the listing and its stat fails the
- * WHOLE open with `error watching <runs>: No such file or directory`. The
+ * included), and under upstream @parcel/watcher an entry deleted between the
+ * listing and its stat fails the WHOLE open with `error watching <runs>: No
+ * such file or directory`. The addon `./equin build` links skips such an entry
+ * (`infra/file-watcher/plugins/parcel-addon`); a release still runs the
+ * upstream prebuild, which is what this guard is kept for. The
  * prune is the only thing in this process that deletes there, and another
  * kind's run starting at the same instant pruned under a live open
  * (2026-10-15: backup and worktree-cleanup.reap-stale, both scheduled at
@@ -475,7 +508,9 @@ const SPAWN_ERROR_BRAND: unique symbol = Symbol.for(
  *   would stay open forever with a live seeded pid and wedge the kind. Closing
  *   it is the repair.
  * - **`childStarted: true`** — `Bun.spawn` returned and the child is running; the
- *   failure was in the bookkeeping after it (the `setPid` write, the watcher).
+ *   failure was in the bookkeeping after it (the `setPid` write). Watching it
+ *   is not one of those: a follow that fails to open is reported, never thrown
+ *   (see `syncWatcher`).
  *   The run genuinely exists: it will write its transcript and its exit marker,
  *   and the reconciler settles it through the ordinary path. **Closing the row
  *   here would release the in-flight lock while the child is still running**, so

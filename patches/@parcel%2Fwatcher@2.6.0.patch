@@ -24,21 +24,40 @@ index 78ee744d74900c39a839cafa46b295258fc86307..75613c7548f7ad2c38bd5013654fdce6
      handleError(err);
      try {
 diff --git a/src/kqueue/KqueueBackend.cc b/src/kqueue/KqueueBackend.cc
-index 2991c32fa320cd61d5b575a49ace19cb8a940d03..5526cb226362939c759b1ed6f161d27038deb97d 100644
+index 2991c32fa320cd61d5b575a49ace19cb8a940d03..4eb82c8ab4964ba89e9121ed63ae0845a7da7d6e 100644
 --- a/src/kqueue/KqueueBackend.cc
 +++ b/src/kqueue/KqueueBackend.cc
-@@ -58,6 +58,10 @@ void KqueueBackend::start() {
+@@ -58,13 +58,27 @@ void KqueueBackend::start() {
  
      // Track all of the watchers that are touched so we can notify them at the end of the events.
      std::unordered_set<WatcherRef> watchers;
+-
 +    // Descriptors of entries that stopped being watched in this batch. Closed only
 +    // once the batch is handled: closing one mid-batch would let a watchDir below
 +    // reuse its number while a later event of this batch still names the old file.
 +    std::unordered_set<int> closing;
- 
++    bool stopping = false;
++
++    // equin: the batch is handled under the backend's mutex, which `subscribe`
++    // and `unsubscribe` hold (Backend::watch / unwatch). Upstream ran it
++    // unlocked: a directory diff here added entries to a tree a `subscribe` on
++    // another thread was iterating, and read subscriptions an `unsubscribe` was
++    // erasing — the open then failed with a stale errno, or the process
++    // crashed. Watchers are notified after it is released.
++    {
++    std::unique_lock<std::mutex> lock(mMutex);
      for (int i = 0; i < event_count; i++) {
        int flags = events[i].fflags;
-@@ -75,21 +79,44 @@ void KqueueBackend::start() {
+       int fd = events[i].ident;
+       if (fd == mPipe[0]) {
+         // pipe was written to. break out of the loop.
+-        goto done;
++        stopping = true;
++        break;
+       }
+ 
+       auto it = mFdToEntry.find(fd);
+@@ -75,21 +89,44 @@ void KqueueBackend::start() {
  
        DirEntry *entry = it->second;
  
@@ -91,7 +110,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..5526cb226362939c759b1ed6f161d270
              struct stat st;
              lstat(sub->path.c_str(), &st);
              if (entry->mtime != CONVERT_TIME(st.st_mtim)) {
-@@ -101,6 +128,11 @@ void KqueueBackend::start() {
+@@ -101,6 +138,16 @@ void KqueueBackend::start() {
        }
      }
  
@@ -99,11 +118,86 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..5526cb226362939c759b1ed6f161d270
 +    for (auto it = closing.begin(); it != closing.end(); it++) {
 +      close(*it);
 +    }
++    }
++
++    if (stopping) {
++      goto done;
++    }
 +
      for (auto it = watchers.begin(); it != watchers.end(); it++) {
        (*it)->notify();
      }
-@@ -188,7 +220,7 @@ std::vector<KqueueSubscription *> KqueueBackend::findSubscriptions(std::string &
+@@ -118,14 +165,63 @@ KqueueBackend::~KqueueBackend() {
+ }
+ 
+ void KqueueBackend::subscribe(WatcherRef watcher) {
+-  // Build a full directory tree recursively, and watch each directory.
+-  std::shared_ptr<DirTree> tree = getTree(watcher);
+-
++  // equin: a tree of its own, read through this watcher's own ignore. Upstream
++  // took the one cached per directory path (getTree), shared by every
++  // subscription of the directory whatever its ignore: read through the first
++  // one's, and grown by every directory diff with entries no ignore filtered —
++  // so a later subscription met entries it ignores and failed with a stale
++  // errno ("Undefined error: 0", "File exists"), or missed the files the first
++  // one ignored. Separate trees hold separate descriptors, which `unsubscribe`
++  // and the removal paths already handle per tree.
++  std::shared_ptr<DirTree> tree = std::make_shared<DirTree>(watcher->mDir);
++  readTree(watcher, tree);
++  tree->isComplete = true;
++
++  std::vector<std::string> gone;
+   for (auto it = tree->entries.begin(); it != tree->entries.end(); it++) {
+-    bool success = watchDir(watcher, it->second.path, tree);
+-    if (!success) {
+-      throw WatcherError(std::string("error watching " + watcher->mDir + ": " + strerror(errno)), watcher);
++    if (watcher->isIgnored(it->second.path)) {
++      continue;
++    }
++    errno = 0;
++    if (watchDir(watcher, it->second.path, tree)) {
++      continue;
++    }
++    int err = errno;
++    if (err == ENOENT && it->second.path != watcher->mDir) {
++      // Gone since the listing: not in the tree, so a re-creation is a create.
++      gone.push_back(it->second.path);
++      continue;
++    }
++    // Nothing of a failed subscription stays behind. Upstream left the
++    // entries it had watched so far in the backend — their descriptors held,
++    // their tree alive and diffed for the life of the process.
++    unsubscribe(watcher);
++    throw WatcherError(std::string("error watching " + watcher->mDir + ": " + (err != 0 ? strerror(err) : "unknown error")), watcher);
++  }
++  for (auto it = gone.begin(); it != gone.end(); it++) {
++    // A directory takes its entries with it, and some may be watched already
++    // (the tree is unordered): close theirs and drop their subscriptions
++    // first, so nothing maps to an entry the removal frees.
++    std::string prefix = *it + DIR_SEP;
++    for (auto entry = tree->entries.begin(); entry != tree->entries.end(); entry++) {
++      if (entry->first.rfind(prefix, 0) != 0) {
++        continue;
++      }
++      int fd = (int)(size_t)entry->second.state;
++      if (fd > 0) {
++        mFdToEntry.erase(fd);
++        close(fd);
++      }
++      auto range = mSubscriptions.equal_range(entry->first);
++      for (auto sub = range.first; sub != range.second;) {
++        if (sub->second.tree == tree) {
++          sub = mSubscriptions.erase(sub);
++        } else {
++          sub++;
++        }
++      }
+     }
++    tree->remove(*it);
+   }
+ }
+ 
+@@ -188,7 +284,7 @@ std::vector<KqueueSubscription *> KqueueBackend::findSubscriptions(std::string &
    return subs;
  }
  
@@ -112,7 +206,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..5526cb226362939c759b1ed6f161d270
    // macOS doesn't support fdclosedir, so we have to duplicate the file descriptor
    // to ensure the closedir doesn't also stop watching.
    #if __APPLE__
-@@ -197,6 +229,9 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -197,6 +293,9 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
  
    DIR *dir = fdopendir(fd);
    if (dir == NULL) {
@@ -122,7 +216,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..5526cb226362939c759b1ed6f161d270
      return false;
    }
  
-@@ -242,6 +277,11 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -242,6 +341,11 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
              bool success = watchDir(sub->watcher, fullpath, sub->tree);
              if (!success) {
                sub->tree->remove(fullpath);
@@ -134,7 +228,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..5526cb226362939c759b1ed6f161d270
                return false;
              }
            }
-@@ -270,7 +310,16 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -270,7 +374,16 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
            }
          }
  
@@ -152,7 +246,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..5526cb226362939c759b1ed6f161d270
          mSubscriptions.erase(entry->first);
          entry = tree->entries.erase(entry);
        } else {
-@@ -288,13 +337,59 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -288,13 +401,59 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
    return true;
  }
  
@@ -228,3 +322,35 @@ index 3c6a9cdd5c1de26b0eb5c5f2835409098fb601ae..c57769fc94a8a37f20fdcc30254220de
  };
  
  #endif
+diff --git a/src/shared/BruteForceBackend.hh b/src/shared/BruteForceBackend.hh
+index de7a73d1e9549300408fbb56dec837720eed80d1..46e7462bcdc77891eec59ad80d9fa59d16544083 100644
+--- a/src/shared/BruteForceBackend.hh
++++ b/src/shared/BruteForceBackend.hh
+@@ -18,7 +18,8 @@ public:
+   }
+ 
+   std::shared_ptr<DirTree> getTree(WatcherRef watcher, bool shouldRead = true);
+-private:
++protected:
++  // equin: protected, so the kqueue backend reads a tree of its own per subscription.
+   void readTree(WatcherRef watcher, std::shared_ptr<DirTree> tree);
+ };
+ 
+diff --git a/src/unix/fts.cc b/src/unix/fts.cc
+index d50c3e4931eb29a408ea29c1394a3fc977349455..bcd2eaabc8a92cf5c73e7a203be1d45c0f960bbe 100644
+--- a/src/unix/fts.cc
++++ b/src/unix/fts.cc
+@@ -28,6 +28,13 @@ void BruteForceBackend::readTree(WatcherRef watcher, std::shared_ptr<DirTree> tr
+ 
+   while ((node = fts_read(fts)) != NULL) {
+     if (node->fts_errno) {
++      // equin: an entry below the root that went between the directory's
++      // listing and its stat (another process pruning it), or that this watcher
++      // ignores, is simply not part of the tree — upstream failed the whole
++      // subscription on it ("No such file or directory").
++      if (!isRoot && (node->fts_errno == ENOENT || watcher->isIgnored(std::string(node->fts_path)))) {
++        continue;
++      }
+       fts_close(fts);
+       throw WatcherError(strerror(node->fts_errno), watcher);
+     }

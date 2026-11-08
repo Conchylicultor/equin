@@ -8,7 +8,7 @@ path, not per descriptor) — each leaks one for the life of the process. This
 plugin ships the fixed build.
 
 - **The fix** is `patches/@parcel%2Fwatcher@2.6.0.patch` (bun
-  `patchedDependencies`), in `src/kqueue/KqueueBackend.cc`:
+  `patchedDependencies`), mostly in `src/kqueue/KqueueBackend.cc`:
   - every removal path queues the descriptor — each tree's own (nested watches
     hold separate trees), and those of a removed directory's entries — and
     closes them **after** the batch is handled. Closing mid-batch would let a
@@ -25,8 +25,26 @@ plugin ships the fixed build.
     cached tree's entry;
   - `compareDir` closes its `dup` on both early returns.
 
-  Unchanged: `start()` touches the subscription maps without the backend's
-  mutex while `subscribe` / `unsubscribe` hold it (upstream's race).
+  - `start()` handles each batch under the backend's mutex, which `subscribe` /
+    `unsubscribe` hold: upstream read subscriptions an `unsubscribe` was
+    erasing (a use-after-free — main's three Bun segfaults of 2026-11-06..08,
+    in `compareDir` → `Watcher::isIgnored`) and grew a tree a `subscribe` was
+    iterating; watchers are notified after it is released;
+  - `subscribe` reads a tree of its own through its own ignore. Upstream shared
+    the one cached per directory path, read through the FIRST subscription's
+    ignore and grown by every directory diff, so a later subscription of the
+    directory met entries it ignores and failed with a stale errno (`error
+    watching <dir>: Undefined error: 0` / `File exists`) or missed its files —
+    the supervised runs dir's follow, re-opened per live-run change, died this
+    way under bursts of run starts (2026-11-06..08, ~20 dead jobs a day);
+  - a failed `subscribe` rolls back what it watched (upstream left it in the
+    backend: descriptors held and the tree kept alive — every later open of
+    the directory then failed), and reports its real errno; an entry gone
+    between the listing and its open is dropped, not a failure;
+  - `src/unix/fts.cc`'s `readTree` skips an entry below the root that went
+    between the listing and its stat (another process pruning it), or that
+    the watcher ignores — upstream failed the open with `No such file or
+    directory`.
 - **`index.js` loads `build/Release/watcher.node` first** (same patch), ahead
   of the prebuilt `@parcel/watcher-<platform>` package, which is upstream's
   unpatched code.
