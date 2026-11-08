@@ -2148,6 +2148,10 @@
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-read",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/send-message": {
+      "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-send-message",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/skill": {
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-skill",
       "version": "0.0.1",
@@ -8416,6 +8420,8 @@
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-query-db": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-query-db@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/query-db"],
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-read": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-read@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/read"],
+
+    "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-send-message": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-send-message@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/send-message"],
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-skill": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-skill@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/skill"],
 

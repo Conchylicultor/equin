@@ -579,6 +579,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/send-message`
     - `conversations/conversation-view/running-agents`
     - `conversations/usage`
     - `network/live`

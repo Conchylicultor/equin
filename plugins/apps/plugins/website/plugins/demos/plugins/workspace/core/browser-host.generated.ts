@@ -295,6 +295,7 @@ export const browserHost = {
     "conversations.conversation-view.jsonl-viewer.tool-call.page-tools.write-note",
     "conversations.conversation-view.jsonl-viewer.tool-call.query-db",
     "conversations.conversation-view.jsonl-viewer.tool-call.read",
+    "conversations.conversation-view.jsonl-viewer.tool-call.send-message",
     "conversations.conversation-view.jsonl-viewer.tool-call.skill",
     "conversations.conversation-view.jsonl-viewer.tool-call.task-tools",
     "conversations.conversation-view.jsonl-viewer.tool-call.tool-search",

@@ -16636,8 +16636,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 51 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `conversations` ×48
+            - Imported by: 52 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `conversations` ×49
               - `apps/places/places-map`
               - `network/live`
               - `tasks/outcome-report`
@@ -17729,6 +17729,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --line-height-caption`
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/send-message`
                   - `conversations/conversation-view/running-agents`
                   - `conversations/usage`
                   - `network/live`
@@ -17797,8 +17798,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Slots:
                   - `JsonlViewerTool.Renderer`
                   - `JsonlViewerTool.Footer`
-                - Slot contributors: 22 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
-                  - `JsonlViewerTool.Renderer` ×21
+                - Slot contributors: 23 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                  - `JsonlViewerTool.Renderer` ×22
                   - `JsonlViewerTool.Footer` ← `debug.browser-recordings`
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
@@ -17844,8 +17845,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density` ×4
                   - `ui/tokens/shape` ×4
                   - `ui/tokens/font-family --font-mono`
-                - Imported by: 23 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
-                  - `conversations` ×21
+                - Imported by: 24 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                  - `conversations` ×22
                   - `apps/places/places-map`
                   - `debug/browser-recordings`
               - Plugins:
@@ -17921,7 +17922,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/type-scale --font-weight-medium`
                       - `ui/tokens/type-scale --font-weight-normal`
                       - `ui/tokens/type-scale --line-height-caption`
-                    - Imported by: `conversations/conversation-view/running-agents`
+                    - Imported by:
+                      - `conversations/conversation-view/jsonl-viewer/tool-call/send-message`
+                      - `conversations/conversation-view/running-agents`
                   - Core:
                     - Exports (types): `AgentInput`
                     - Exports (values):
@@ -18230,6 +18233,45 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --destructive`
                       - `ui/tokens/density --space-sm`
                       - `ui/tokens/font-family --font-mono`
+                - **`send-message`** — Renders SendMessage tool calls: the recipient (a sub-agent by name or by its launch description, main, or another session), the caller's summary or the message's first line, and whether it was queued, resumed a stopped sub-agent or failed; opened, the message as markdown (or a protocol reply in words) and how it was delivered, with a button onto the recipient sub-agent's pane.
+                  - Web:
+                    - Contributes: `JsonlViewerTool.Renderer` "SendMessage" → `SendMessageView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+                      - `conversations/conversation-view/jsonl-viewer/subagents.useConversationSubagents`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call/agent.agentReportPane`
+                      - `primitives/css/badge.Badge`
+                      - `primitives/css/line.Line`
+                      - `primitives/css/rigid.rigidClass`
+                      - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/icon-button.IconButton`
+                      - `primitives/link-gesture.activationProps`
+                      - `primitives/markdown.Markdown`
+                      - `primitives/pane.useOpenPane`
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/categorical --categorical-6`
+                      - `ui/tokens/color-palette --destructive`
+                      - `ui/tokens/color-palette --muted-foreground`
+                      - `ui/tokens/density --space-md`
+                      - `ui/tokens/density --space-sm`
+                      - `ui/tokens/shape --spacing`
+                      - `ui/tokens/type-scale --font-scale`
+                      - `ui/tokens/type-scale --font-size-caption`
+                      - `ui/tokens/type-scale --font-weight-medium`
+                      - `ui/tokens/type-scale --font-weight-normal`
+                      - `ui/tokens/type-scale --line-height-caption`
+                  - Core:
+                    - Exports (types):
+                      - `Delivery`
+                      - `MessageBody`
+                      - `Recipient`
+                      - `SendMessageCall`
+                    - Exports (values): `readSendMessage`
                 - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Skill" → `SkillToolView`
@@ -43628,10 +43670,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 174 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 175 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×34
-              - `conversations` ×26
+              - `conversations` ×27
               - `reports` ×16
               - `primitives` ×10
               - `tasks` ×10
@@ -44157,10 +44199,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 124 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 125 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×37
               - `primitives` ×20
-              - `conversations` ×17
+              - `conversations` ×18
               - `debug` ×7
               - `page` ×6
               - `ui` ×6
@@ -44414,9 +44456,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 143 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 144 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×36
-              - `conversations` ×26
+              - `conversations` ×27
               - `primitives` ×20
               - `debug` ×13
               - `page` ×8
@@ -44503,8 +44545,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `scrollClasses`
               - `useScrollsSideways`
           - Cross-plugin:
-            - Imported by: 99 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
-              - `conversations` ×29
+            - Imported by: 100 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+              - `conversations` ×30
               - `apps` ×21
               - `primitives` ×15
               - `debug` ×13
@@ -44631,9 +44673,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 435 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 436 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×109
-              - `conversations` ×72
+              - `conversations` ×73
               - `primitives` ×54
               - `debug` ×38
               - `ui` ×31
@@ -44871,9 +44913,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 418 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 419 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×111
-              - `conversations` ×79
+              - `conversations` ×80
               - `primitives` ×47
               - `debug` ×37
               - `page` ×24
@@ -47601,9 +47643,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 131 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 132 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×46
-          - `conversations` ×20
+          - `conversations` ×21
           - `primitives` ×20
           - `tasks` ×8
           - `page` ×7
@@ -47852,9 +47894,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×16
-          - `conversations` ×14
+          - `conversations` ×15
           - `apps` ×10
           - `page` ×5
           - `tasks` ×4
@@ -48133,27 +48175,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/shape` ×3
           - `ui/tokens/font-family --font-mono`
-        - Imported by:
-          - `active-data`
-          - `active-data/go`
-          - `conversations/conversation-view/jsonl-viewer`
-          - `conversations/conversation-view/jsonl-viewer/compaction`
-          - `conversations/conversation-view/jsonl-viewer/event-turn`
-          - `conversations/conversation-view/jsonl-viewer/request-shape`
-          - `conversations/conversation-view/jsonl-viewer/subagents`
-          - `conversations/conversation-view/jsonl-viewer/teammate-message`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
-          - `conversations/conversation-view/markdown-extensions`
-          - `debug/mcp-tools`
-          - `debug/memory`
+        - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/markdown/REFERENCE.md`](../plugins/primitives/plugins/markdown/REFERENCE.md)
+          - `conversations` ×13
+          - `tasks` ×3
+          - `active-data` ×2
+          - `debug` ×2
           - `primitives/file-viewer/markdown`
-          - `tasks/outcome-report`
-          - `tasks/sidequest-autopilot`
-          - `tasks/task-triage`
     - **`metrics`** — Metrics surfaces: useMetricCatalog / useMetric / useMetricDetails / useMetricDetailsTotal (live reads of the served metrics values — the details one key-range pages, every loaded one live, and its total the per-question meta sibling — so a change the metric's source announces refetches what is on screen, without polling), MetricTile (KPI toggle with value, polarity-coloured delta and sparkline), MetricCard (controls derived from the catalog entry: split, daily | cumulative for flows, table twin, previous-period line on the unsplit total), BreakdownCard, RangeBar, the DrillDrawer listing the records behind a bucket, BoardView (sections of focus tiles, a lead card and a card grid, every ref checked against the catalog) and Board (a view-core tabbed board whose specs live in a config declared with defineBoardConfig). Metrics engine: the MetricsServer.Source contribution (a source's metrics and breakdowns bound to their evaluators), the served metrics.catalog / metrics.query / metrics.details live values evaluating any of them through the one tz-aware bucketing engine — each query and drill-down (its key-range pages and its total) watching its source's `changes` through one refcounted subscription per source — and the sqlFlow / sqlLevel helpers joining a table against the engine's intervals.
       - Server:
         - Contributes:
@@ -49387,9 +49414,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 193 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 194 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×72
-          - `conversations` ×31
+          - `conversations` ×32
           - `debug` ×27
           - `active-data` ×10
           - `tasks` ×10
@@ -57048,9 +57075,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 544 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 545 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×154
-          - `conversations` ×82
+          - `conversations` ×83
           - `page` ×52
           - `primitives` ×52
           - `fields` ×41
@@ -58176,9 +58203,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `CategoricalTokenValues`
             - Exports (values): `categoricalGroup`
           - Cross-plugin:
-            - Tokens used by: 31 plugins — full list in [`plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md)
+            - Tokens used by: 32 plugins — full list in [`plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md)
               - `debug` ×10
-              - `conversations` ×6
+              - `conversations` ×7
               - `apps` ×5
               - `plugin-meta` ×4
               - `primitives` ×2
@@ -58290,9 +58317,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 530 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 531 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×118
-              - `conversations` ×92
+              - `conversations` ×93
               - `primitives` ×73
               - `debug` ×37
               - `page` ×33
@@ -58452,10 +58479,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 344 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 345 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×71
               - `primitives` ×70
-              - `conversations` ×50
+              - `conversations` ×51
               - `debug` ×28
               - `ui` ×24
               - `page` ×21
@@ -58878,8 +58905,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 391 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×83
+            - Tokens used by: 392 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×84
               - `apps` ×82
               - `primitives` ×60
               - `page` ×35
@@ -59033,9 +59060,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Tokens used by: 229 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 230 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×59
-              - `conversations` ×38
+              - `conversations` ×39
               - `primitives` ×38
               - `debug` ×15
               - `plugin-meta` ×14

@@ -50,7 +50,9 @@
     - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
-  - Imported by: `conversations/conversation-view/running-agents`
+  - Imported by:
+    - `conversations/conversation-view/jsonl-viewer/tool-call/send-message`
+    - `conversations/conversation-view/running-agents`
 - Core:
   - Exports (types): `AgentInput`
   - Exports (values):

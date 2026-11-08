@@ -354,7 +354,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
           - **`system`** — Renders system events in the JSONL viewer; an informational notice folds with the harness context around it.
           - **`task-notification`** — Renders background task completion notifications in the JSONL viewer, with a button onto the finished task that the owning plugin contributes through TaskNotification.Open (first claim wins).
           - **`teammate-message`** — Renders messages relayed from other Claude sessions (<teammate-message> blocks) distinctly from human user messages.
-          - **`tool-call`** [exempt] [21 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
+          - **`tool-call`** [exempt] [22 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
           - **`transcript-stats`** — The transcript's status strip: the readings pinned at the foot of the conversation, and the TranscriptStats.Item slot they come from. Owns the reading position — the strip reports the transcript as…
             - Plugins:
               - **`context`** — The context window as a transcript stat: a ring at the end of the strip showing how full the agent's window is against where the harness compacts it (the harness's own measure as the agent last…

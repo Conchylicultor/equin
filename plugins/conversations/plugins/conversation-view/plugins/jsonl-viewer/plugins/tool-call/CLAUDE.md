@@ -9,8 +9,8 @@
   - Slots:
     - `JsonlViewerTool.Renderer`
     - `JsonlViewerTool.Footer`
-  - Slot contributors: 22 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `JsonlViewerTool.Renderer` ×21
+  - Slot contributors: 23 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `JsonlViewerTool.Renderer` ×22
     - `JsonlViewerTool.Footer` ← `debug.browser-recordings`
   - Contributes:
     - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
@@ -56,8 +56,8 @@
     - `ui/tokens/density` ×4
     - `ui/tokens/shape` ×4
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×21
+  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×22
     - `apps/places/places-map`
     - `debug/browser-recordings`
 - Sub-plugins:
@@ -72,6 +72,7 @@
   - **`page-tools`** [3 sub-plugins] — Shared appearance for the equin page MCP tool rows (read_page / write_agent_note / edit_page): the page-identity chip, the apply-report chips, the markdown body, and the refusal block. Contributes…
   - **`query-db`** — Renders query_db MCP tool calls: the SQL on one line (highlighted inside), the database when one was named, the row count in the note, and the rows as a compact table; a failed query turns the card…
   - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
+  - **`send-message`** — Renders SendMessage tool calls: the recipient (a sub-agent by name or by its launch description, main, or another session), the caller's summary or the message's first line, and whether it was…
   - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
   - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay. Serves a conversation's task list folded from its Task* tool calls over the whole transcript…
   - **`timeline`** — Renders get_timeline MCP tool calls: the window and filters asked for in the summary, the events found in the note, and the report as sections inside — events as a compact table, duress, host…

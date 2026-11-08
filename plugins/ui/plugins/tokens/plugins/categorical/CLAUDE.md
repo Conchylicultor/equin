@@ -22,9 +22,9 @@
   - Exports (types): `CategoricalTokenValues`
   - Exports (values): `categoricalGroup`
 - Cross-plugin:
-  - Tokens used by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×10
-    - `conversations` ×6
+    - `conversations` ×7
     - `apps` ×5
     - `plugin-meta` ×4
     - `primitives` ×2
