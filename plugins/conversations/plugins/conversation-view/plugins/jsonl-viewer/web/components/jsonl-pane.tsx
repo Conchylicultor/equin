@@ -42,12 +42,7 @@ const CONVERSATION_SUBJECT: TranscriptSubject = { kind: "conversation" };
 
 /** A sent turn's echo, drawn as the transcript's own prompt row. */
 const renderEcho: RenderEcho = (turn, status) => (
-  <EchoRow
-    turnId={turn.id}
-    text={turn.text}
-    sentAt={turn.sentAt}
-    status={status}
-  />
+  <EchoRow turn={turn} status={status} />
 );
 
 /**

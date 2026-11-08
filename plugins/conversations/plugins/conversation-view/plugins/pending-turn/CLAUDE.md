@@ -66,9 +66,10 @@ ledger window and tab sends, filtered to the echo states).
 
 **An echo is the host's own user row, not a look-alike.** `PendingTurnCard`
 takes a required `renderEcho(turn, status)`: the host draws the turn with the
-component it draws the confirmed turn with (the transcript: a stand-in
-`user-text` event through its renderer, in its pinned section header —
-`jsonl-viewer`'s `EchoRow`; a thread: its `UserBubble`) and places `status` —
+component it draws the confirmed turn with (the transcript: a stand-in of
+the row the turn's line becomes, through its renderer — a `user-text` in its
+pinned section header, an `event` turn's `event-turn` card inline —
+`jsonl-viewer`'s `EchoRow` / `echoEventOf`; a thread: its `UserBubble`) and places `status` —
 the caption, a highlight sweeping across it — under it. So when the transcript
 takes over, the message does not move, re-wrap or change colour; only the
 status line goes. Never dim or restyle the echo itself.
