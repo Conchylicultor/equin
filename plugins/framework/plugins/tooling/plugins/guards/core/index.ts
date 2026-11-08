@@ -1,5 +1,4 @@
 export { GUARDS } from "./registry";
-export { BYPASS_TOKENS } from "./bypass-tokens";
 export type {
   AllowVerdict,
   DenyVerdict,
@@ -20,7 +19,6 @@ export { defineGuard } from "./define-guard";
 export { fileHint } from "./file-hint";
 export type { FileHintSpec } from "./file-hint";
 export { parseShell } from "./parse-shell";
-export { TOOL_USE_ID_RE, toolUseIdFrom } from "./tool-use-id";
 export { parseArgv, redirectionTargets } from "./argv";
 export type { ParsedArgv, FileOperand, KnownCommand } from "./argv";
 export { createContext } from "./context";

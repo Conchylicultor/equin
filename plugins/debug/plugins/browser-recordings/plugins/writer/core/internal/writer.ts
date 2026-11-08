@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, rename, rm, rmdir, writeFile } from "node:fs/promises";
 import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join } from "node:path";
-import { TOOL_USE_ID_RE } from "@plugins/framework/plugins/tooling/plugins/guards/core";
+import { TOOL_USE_ID_RE } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/tool-use-id/core";
 import {
   joinAppPath,
   type AppPath,

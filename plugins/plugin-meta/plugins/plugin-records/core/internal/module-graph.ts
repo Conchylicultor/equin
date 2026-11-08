@@ -110,13 +110,20 @@ export interface ModuleGraphInput {
    * A file outside the snapshot (gitignored): its content, or null when
    * absent. Calls sharing this function (by identity) share one graph over
    * the same set: a reader with no file outside the set passes
-   * {@link NO_OUTSIDE_FILES}, not a fresh `() => null`, so they do.
+   * {@link NO_OUTSIDE_FILES}, not a fresh `async () => null`, so they do; one
+   * reading the checkout passes `outsideFilesAt(root)`.
    */
-  readOutside(rel: string): string | null;
+  readOutside: OutsideFiles;
 }
 
+/**
+ * A reader of the files outside a snapshot. Asynchronous: the graph is grown
+ * on whatever thread asks for it, a backend's included.
+ */
+export type OutsideFiles = (rel: string) => Promise<string | null>;
+
 /** No file outside the set exists: an import of a gitignored module resolves to nothing. */
-export const NO_OUTSIDE_FILES = (_rel: string): string | null => null;
+export const NO_OUTSIDE_FILES: OutsideFiles = async () => null;
 
 /**
  * The graph reachable from `entries` (repo-relative), with Merkle keys. Reads
@@ -193,7 +200,7 @@ interface GraphState {
   /** Each module's component key: what an importer's key folds in. */
   compKeys: Map<string, string>;
   /** Contents read outside the set, by path (null: absent). */
-  outsideContent: Map<string, string | null>;
+  outsideContent: Map<string, Promise<string | null>>;
   /** A plain file set's members, read once: its blob id and its scan share it. */
   memberContent: Map<string, Promise<string | null>>;
   /** Growth is one call at a time: a call's walk sees every earlier call's modules. */
@@ -247,7 +254,7 @@ async function growGraph(
 ): Promise<void> {
   const { snapshot, store } = input;
   const { modules, outsideContent, memberContent } = state;
-  const contentOutside = (rel: string): string | null => {
+  const contentOutside = (rel: string): Promise<string | null> => {
     let c = outsideContent.get(rel);
     if (c === undefined) {
       c = input.readOutside(rel);
@@ -255,10 +262,10 @@ async function growGraph(
     }
     return c;
   };
-  const exists = (rel: string): boolean =>
+  const exists = async (rel: string): Promise<boolean> =>
     input.written?.has(rel) ||
     snapshot.has(rel) ||
-    contentOutside(rel) !== null;
+    (await contentOutside(rel)) !== null;
   const hasBlobs =
     typeof (snapshot as Partial<RepoSnapshot>).blobOf === "function";
   const readMember = (rel: string): Promise<string | null> => {
@@ -276,12 +283,15 @@ async function growGraph(
         throw new Error(`[plugin-records] cannot read module ${rel}`);
       return gitBlobId(c);
     }
-    const c = contentOutside(rel);
+    const c = await contentOutside(rel);
     if (c === null)
       throw new Error(`[plugin-records] module ${rel} does not exist`);
     return gitBlobId(c);
   };
-  const resolveFrom = (fromRel: string, spec: string): string | null => {
+  const resolveFrom = async (
+    fromRel: string,
+    spec: string,
+  ): Promise<string | null> => {
     const base = spec.startsWith(PLUGINS_ALIAS)
       ? relJoin("plugins", spec.slice(PLUGINS_ALIAS.length))
       : relJoin(relDirname(fromRel), spec);
@@ -295,12 +305,14 @@ async function growGraph(
     // module (a generated file a barrel imports), never the common case.
     for (const c of candidates)
       if (input.written?.has(c) || snapshot.has(c)) return c;
-    for (const c of candidates) if (contentOutside(c) !== null) return c;
+    // One at a time, stopping at the first: each probe reads the file.
+    for (const c of candidates)
+      if ((await contentOutside(c)) !== null) return c;
     return null;
   };
 
   for (const e of entries)
-    if (!modules.has(e) && !exists(e))
+    if (!modules.has(e) && !(await exists(e)))
       throw new Error(`[plugin-records] entry module ${e} does not exist`);
   // Only what no earlier call reached is walked: an existing module's deps are
   // all in the graph already (its walk was complete).
@@ -354,7 +366,7 @@ async function growGraph(
                 input.written?.get(path) ??
                 (snapshot.has(path)
                   ? await readMember(path)
-                  : contentOutside(path));
+                  : await contentOutside(path));
               if (src === null)
                 throw new Error(`[plugin-records] cannot read module ${path}`);
               facts = { imports: scanModuleImports(src, path) };
@@ -371,7 +383,7 @@ async function growGraph(
           };
           for (const imp of facts.imports) {
             if (!isInternal(imp.spec)) continue;
-            const target = resolveFrom(path, imp.spec);
+            const target = await resolveFrom(path, imp.spec);
             if (target === null) {
               node.unresolved.push(imp.spec);
               continue;

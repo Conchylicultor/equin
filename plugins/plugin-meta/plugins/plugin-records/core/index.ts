@@ -20,9 +20,11 @@ export type {
   RecordWorkers,
 } from "./internal/workers";
 export { buildModuleGraph, NO_OUTSIDE_FILES } from "./internal/module-graph";
+export { outsideFilesAt } from "./internal/outside-files";
 export type {
   ModuleGraph,
   ModuleGraphInput,
+  OutsideFiles,
   ModuleNode,
 } from "./internal/module-graph";
 export {

@@ -18,8 +18,13 @@ const digest = await sourceDigest([myCode]);
   its own, so the module whose code counts has no wrong spelling. Plain data,
   portable (a compiler that also runs in a browser host declares one).
 - **`server`** — `sourceDigest(sets)`: sha256 over the static runtime import
-  closure of every included module, read with Bun's transpiler and resolver
-  (type-only imports erased; `@plugins/*` resolved as at runtime). Repo files
+  closure of every included module, read with Bun's transpiler (type-only
+  imports erased) and resolved by `shared/resolve.ts` — Bun's resolution for
+  what this repo imports (`@plugins/*` from `tsconfig.base.json`, Bun 1.4.4's
+  measured extension order, a package by its `node_modules` entry), answered
+  with async listings so a backend's walk never waits on the disk, and refusing
+  (failing closed) what it cannot answer exactly. `resolve.test.ts` holds it to
+  `Bun.resolveSync`, import by import, over a backend's and central's closures. Repo files
   count by path relative to the closure's common ancestor plus bytes — so main
   and a worktree with the same code agree — packages by `name@version`,
   builtins by name. Desktop-only (exempt from `no-platform-api`, sanctioned).
@@ -49,8 +54,10 @@ const digest = await sourceDigest([myCode]);
   scanned imports are remembered per process under its stat stamp
   (`ino:size:ctime`, recorded only when the stamp before and after the read
   agree), so a later walk still visits and stats every file and re-resolves
-  every import, but reads and scans only files whose stamp moved: O(closure)
-  stats, O(changed files) reads. restart-skip walks it once after boot (a
+  every import (against directory listings read fresh for that walk — so a file
+  added since, shadowing a resolution, is seen; `Bun.resolveSync` answers from
+  an in-process directory cache, measured returning a file already deleted), but reads and scans only files whose stamp moved:
+  O(closure) stats + O(directories) listings, O(changed files) reads. restart-skip walks it once after boot (a
   warm-up), so the first deploy asks cheaply too. The walk goes a level at a
   time, 64 files at once with one yield per batch: one file at a time, a warm
   walk of a backend (5,371 files) spent 128 ms on stats that cost 14 ms
@@ -84,9 +91,7 @@ import.meta`, carried by `Resource.Declare`) — the L2 stamps judged by
     - `reports/engine`
     - `ui/icons/saved-sources`
 - Exemptions:
-  - Exempts itself from:
-    - `boundaries/no-platform-api` — `shared/digest.ts` (sanctioned)
-    - `blocking-fs/sync-named` — `shared/digest.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `shared/digest.ts`, `shared/resolve.ts` (sanctioned)
 - Server:
   - Exports (types): `ComputedLoads`
   - Exports (values):

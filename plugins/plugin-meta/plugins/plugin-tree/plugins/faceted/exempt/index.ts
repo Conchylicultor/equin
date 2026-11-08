@@ -15,12 +15,4 @@ export default [
     reason:
       "The faceted index's live snapshot: a long-lived reader in the backend's faceted-tree worker, listed once cold and then kept up to date by the watcher's paths — its own pass, which no check pass holds.",
   },
-  {
-    rule: "blocking-fs/sync-named",
-    paths: ["core/internal/faceted-index.ts", "core/internal/faceted-tree.ts"],
-    kind: "debt",
-    task: "task-1793991095-ppkf09",
-    reason:
-      "readOutside is a synchronous member of the plugin-records keying input, read deep in the module graph; making it async ripples through plugin-records' keying.",
-  },
 ] satisfies Exemptions;

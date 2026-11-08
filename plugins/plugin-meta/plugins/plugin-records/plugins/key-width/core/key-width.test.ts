@@ -44,7 +44,11 @@ function widthsOf(fixture: Record<string, string>, producers: string[]) {
     },
   };
   return keyWidths(
-    { snapshot, store: createMemoryRecordStore(), readOutside: () => null },
+    {
+      snapshot,
+      store: createMemoryRecordStore(),
+      readOutside: async () => null,
+    },
     producers,
   );
 }

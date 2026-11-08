@@ -7,18 +7,16 @@
  *
  *   ./equin run plugins/plugin-meta/plugins/plugin-records/scripts/closure-equivalence.ts
  */
-import {
-  existsSync,
-  readFileSync,
-  realpathSync,
-  statSync,
-} from "@plugins/packages/plugins/timed-fs/core";
-import { join } from "node:path";
+import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { importClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { buildModuleGraph, createMemoryRecordStore } from "../core";
+import {
+  buildModuleGraph,
+  createMemoryRecordStore,
+  outsideFilesAt,
+} from "../core";
 
 const root = asAppPath(realpathSync(await getWorktreeRoot()));
 const snapshot = await loadRepoSnapshot(root);
@@ -36,16 +34,16 @@ console.log(
 );
 
 const outside: string[] = [];
+const fromDisk = outsideFilesAt(root);
 t = performance.now();
 const graph = await buildModuleGraph(
   {
     snapshot,
     store: createMemoryRecordStore(),
-    readOutside: (rel) => {
-      const abs = join(root, rel);
-      if (!existsSync(abs) || !statSync(abs).isFile()) return null;
-      outside.push(rel);
-      return readFileSync(abs, "utf8");
+    readOutside: async (rel) => {
+      const content = await fromDisk(rel);
+      if (content !== null) outside.push(rel);
+      return content;
     },
   },
   barrels,

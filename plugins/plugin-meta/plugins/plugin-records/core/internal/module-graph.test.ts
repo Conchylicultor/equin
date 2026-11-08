@@ -46,7 +46,7 @@ function graphOf(
     {
       snapshot: snapshotOf(files),
       store: opts?.store ?? createMemoryRecordStore(),
-      readOutside: (rel) => opts?.outside?.[rel] ?? null,
+      readOutside: async (rel) => opts?.outside?.[rel] ?? null,
     },
     entries,
   );
@@ -199,7 +199,7 @@ describe("buildModuleGraph", () => {
       {
         snapshot: { ...snap, read: (p) => (reads.push(p), snap.read(p)) },
         store,
-        readOutside: () => null,
+        readOutside: async () => null,
       },
       [`${P}/a/web/index.ts`],
     );
@@ -224,7 +224,7 @@ describe("buildModuleGraph", () => {
       {
         snapshot: { ...edited, read: (p) => (reads.push(p), edited.read(p)) },
         store,
-        readOutside: () => null,
+        readOutside: async () => null,
       },
       [`${P}/a/web/index.ts`],
     );

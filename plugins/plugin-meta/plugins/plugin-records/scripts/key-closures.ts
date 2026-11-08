@@ -20,7 +20,7 @@ for (let i = 0; i < argv.length; i++) {
 const root = asAppPath(process.cwd());
 const snapshot = await loadRepoSnapshot(root);
 const graph = await buildModuleGraph(
-  { snapshot, store: createMemoryRecordStore(), readOutside: () => null },
+  { snapshot, store: createMemoryRecordStore(), readOutside: async () => null },
   modules,
 );
 

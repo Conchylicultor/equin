@@ -61,18 +61,11 @@ export default [
       "core/git-target.ts",
       "core/guards/git-diff-main.ts",
       "core/guards/poll-loop.ts",
+      "core/informed-once.ts",
       "core/walk-scope.ts",
     ],
-    kind: "debt",
-    task: "task-1793991095-ppkf09",
-    reason:
-      "Guards run in their own hook process, but backends load guards core for two constants (TOOL_USE_ID_RE, BYPASS_TOKENS) and the barrel pulls the whole guard registry: cut that reach and these become sanctioned, held there by blocking-fs:sync-named-reach.",
-  },
-  {
-    rule: "blocking-fs/sync-named",
-    paths: ["core/informed-once.ts"],
     kind: "sanctioned",
     reason:
-      "Host tooling only: no backend loads this module (blocking-fs:sync-named-reach measures the backends' import graph), so its blocking helpers hold only the CLI's, a check's or a script's own thread.",
+      "PreToolUse / Stop guard code, run in Claude Code's own short hook process: no backend loads guards core (the constants backends read live in the guards/tool-use-id and guards/bypass-tokens leaves), held there by blocking-fs:sync-named-reach.",
   },
 ] satisfies Exemptions;

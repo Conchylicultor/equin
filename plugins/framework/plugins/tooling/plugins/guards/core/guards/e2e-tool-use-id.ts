@@ -1,5 +1,5 @@
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { TOOL_USE_ID_RE } from "../tool-use-id";
+import { TOOL_USE_ID_RE } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/tool-use-id/core";
 import { defineGuard } from "../define-guard";
 import { parseShell } from "../parse-shell";
 import type { BashInput } from "../types";

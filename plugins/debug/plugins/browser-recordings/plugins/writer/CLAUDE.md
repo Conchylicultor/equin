@@ -12,7 +12,7 @@
     - `debug/browser-recordings.RecordingManifest`
     - `debug/browser-recordings.RecordingSource`
     - `debug/browser-recordings.RecordingStep`
-    - `framework/tooling/guards.TOOL_USE_ID_RE`
+    - `framework/tooling/guards/tool-use-id.TOOL_USE_ID_RE`
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.joinAppPath`
     - `packages/flock.flockTry`

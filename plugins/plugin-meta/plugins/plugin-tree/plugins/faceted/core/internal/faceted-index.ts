@@ -1,6 +1,9 @@
 import type { Facet } from "@plugins/plugin-meta/plugins/facets/core";
 import { loadFacets } from "@plugins/plugin-meta/plugins/facets/plugins/loader/core";
-import { currentRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import {
+  currentRecordStore,
+  outsideFilesAt,
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   createStructureIndex,
   pluginTreeDelta,
@@ -20,7 +23,7 @@ import {
   type FacetKeying,
   type FacetRecordsInput,
 } from "./facet-records";
-import { readOutsideSync, relateFacets } from "./faceted-tree";
+import { relateFacets } from "./faceted-tree";
 import { openLiveSnapshot, type LiveRepoSnapshot } from "./live-snapshot";
 
 // The faceted tree kept up to date by what changed, for a reader that lives
@@ -95,7 +98,7 @@ export async function openFacetedIndex(
   const input: FacetRecordsInput = {
     snapshot,
     store,
-    readOutside: (rel) => readOutsideSync(root, rel),
+    readOutside: outsideFilesAt(root),
   };
   const keying: FacetKeying = await facetKeying(input, facets);
   const batchInputs = new Set(

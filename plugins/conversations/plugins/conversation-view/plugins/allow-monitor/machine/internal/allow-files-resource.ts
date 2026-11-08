@@ -4,7 +4,10 @@ import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { acquireEventualDirWatch } from "@plugins/infra/plugins/file-watcher/machine";
-import { BYPASS_TOKENS } from "@plugins/framework/plugins/tooling/plugins/guards/core";
+import {
+  BYPASS_TOKENS,
+  isBypassToken,
+} from "@plugins/framework/plugins/tooling/plugins/guards/plugins/bypass-tokens/core";
 import { conversationWorkspacesServed } from "@plugins/tasks/plugins/tasks-core/server";
 import { conversationWorkspaceOf } from "@plugins/tasks/plugins/tasks-core/core";
 import { allowFiles, type AllowFiles } from "../../core";
@@ -57,8 +60,7 @@ async function watchAllowFiles(
     onChange: (events) => {
       if (
         events.some(
-          (e) =>
-            e.path === worktreePath || BYPASS_TOKENS.includes(basename(e.path)),
+          (e) => e.path === worktreePath || isBypassToken(basename(e.path)),
         )
       )
         notify();

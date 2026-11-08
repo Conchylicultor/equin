@@ -1,9 +1,4 @@
-import {
-  existsSync,
-  readFileSync,
-  realpathSync,
-  statSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
 import { relative } from "path";
 import {
   joinAppPath,
@@ -20,7 +15,10 @@ import {
   asPluginId,
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
-import { currentRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import {
+  currentRecordStore,
+  outsideFilesAt,
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   evaluateBarrels,
   type BarrelRef,
@@ -87,12 +85,6 @@ export interface BarrelEvaluation {
   }[];
 }
 
-function readOutside(root: AppPath, rel: string): string | null {
-  const abs = joinAppPath(root, rel);
-  if (!existsSync(abs) || !statSync(abs).isFile()) return null;
-  return readFileSync(abs, "utf8");
-}
-
 async function evaluate(
   pass: CodegenPass,
   runtimes: readonly BarrelRuntime[],
@@ -132,7 +124,7 @@ async function evaluate(
     {
       snapshot,
       store: currentRecordStore(),
-      readOutside: (rel) => readOutside(root, rel),
+      readOutside: outsideFilesAt(root),
       realRoot,
     },
     refs,

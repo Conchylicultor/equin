@@ -1,3 +1,4 @@
+import type { BypassToken } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/bypass-tokens/core";
 export type AllowVerdict = { kind: "allow" };
 /**
  * Refuse the call. `fatal` escalates to ending the turn; `allowOnRepeat` softens
@@ -197,7 +198,7 @@ export interface Guard<I = unknown> {
   name: string;
   matcher: ToolMatcher | ToolMatcher[];
   /** File at the worktree root whose presence lets this guard's calls through. */
-  bypassToken?: string;
+  bypassToken?: BypassToken;
   /**
    * Tell each agent (the main conversation, every subagent) this guard's
    * `inform` at most once per session — for a long message, such as a whole

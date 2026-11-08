@@ -1,9 +1,4 @@
 import type { SlotNaming } from "@plugins/framework/plugins/slot-declaration/core";
-import {
-  existsSync,
-  readFileSync,
-  statSync,
-} from "@plugins/packages/plugins/timed-fs/core";
 import { relative } from "path";
 import type {
   RepoFiles,
@@ -16,7 +11,10 @@ import {
   type Facet,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import { loadFacets } from "@plugins/plugin-meta/plugins/facets/plugins/loader/core";
-import { currentRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import {
+  currentRecordStore,
+  outsideFilesAt,
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { runWithFsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
   createTimeSlicer,
@@ -27,10 +25,7 @@ import {
   type PluginNode,
   type PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import {
-  joinAppPath,
-  type AppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { buildFsSnapshot } from "./fs-snapshot";
 import { extractFacetRecords } from "./facet-records";
 
@@ -59,13 +54,6 @@ export interface BuildFacetedTreeOptions {
 
 function isSnapshot(repo: RepoFiles): repo is RepoSnapshot {
   return typeof (repo as Partial<RepoSnapshot>).blobOf === "function";
-}
-
-/** A gitignored file's content from disk, for the module graph (null when absent). */
-export function readOutsideSync(root: AppPath, rel: string): string | null {
-  const abs = joinAppPath(root, rel);
-  if (!existsSync(abs) || !statSync(abs).isFile()) return null;
-  return readFileSync(abs, "utf8");
 }
 
 /**
@@ -99,7 +87,7 @@ export async function buildFacetedPluginTree(
       {
         snapshot: repo,
         store: currentRecordStore(),
-        readOutside: (rel) => readOutsideSync(repo.root, rel),
+        readOutside: outsideFilesAt(repo.root),
       },
       nodes,
       facets,

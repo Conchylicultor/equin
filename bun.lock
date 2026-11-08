@@ -3850,12 +3850,20 @@
       "name": "@equin/plugin-framework-tooling-guards-agent-policy",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/guards/plugins/bypass-tokens": {
+      "name": "@equin/plugin-framework-tooling-guards-bypass-tokens",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/guards/plugins/module-extension": {
       "name": "@equin/plugin-framework-tooling-guards-module-extension",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/guards/plugins/refusal-format": {
       "name": "@equin/plugin-framework-tooling-guards-refusal-format",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/guards/plugins/tool-use-id": {
+      "name": "@equin/plugin-framework-tooling-guards-tool-use-id",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/import-closure": {
@@ -9291,9 +9299,13 @@
 
     "@equin/plugin-framework-tooling-guards-agent-policy": ["@equin/plugin-framework-tooling-guards-agent-policy@workspace:plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy"],
 
+    "@equin/plugin-framework-tooling-guards-bypass-tokens": ["@equin/plugin-framework-tooling-guards-bypass-tokens@workspace:plugins/framework/plugins/tooling/plugins/guards/plugins/bypass-tokens"],
+
     "@equin/plugin-framework-tooling-guards-module-extension": ["@equin/plugin-framework-tooling-guards-module-extension@workspace:plugins/framework/plugins/tooling/plugins/guards/plugins/module-extension"],
 
     "@equin/plugin-framework-tooling-guards-refusal-format": ["@equin/plugin-framework-tooling-guards-refusal-format@workspace:plugins/framework/plugins/tooling/plugins/guards/plugins/refusal-format"],
+
+    "@equin/plugin-framework-tooling-guards-tool-use-id": ["@equin/plugin-framework-tooling-guards-tool-use-id@workspace:plugins/framework/plugins/tooling/plugins/guards/plugins/tool-use-id"],
 
     "@equin/plugin-framework-tooling-import-closure": ["@equin/plugin-framework-tooling-import-closure@workspace:plugins/framework/plugins/tooling/plugins/import-closure"],
 

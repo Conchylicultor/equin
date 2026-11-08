@@ -1,6 +1,6 @@
 import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join, sep } from "node:path";
-import { TOOL_USE_ID_RE } from "@plugins/framework/plugins/tooling/plugins/guards/core";
+import { TOOL_USE_ID_RE } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/tool-use-id/core";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { browserRecordingsDir } from "../../data-dirs";

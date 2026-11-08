@@ -22654,7 +22654,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/browser-recordings.RecordingManifest`
               - `debug/browser-recordings.RecordingSource`
               - `debug/browser-recordings.RecordingStep`
-              - `framework/tooling/guards.TOOL_USE_ID_RE`
+              - `framework/tooling/guards/tool-use-id.TOOL_USE_ID_RE`
               - `infra/host-fs/user-path.AppPath`
               - `infra/host-fs/user-path.joinAppPath`
               - `packages/flock.flockTry`
@@ -28859,7 +28859,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/boundaries` (2 debt)
               - `framework/tooling/checks` (11 debt)
               - `framework/tooling/checks/type-check` (16 debt)
-              - `framework/tooling/codegen` (22 debt)
+              - `framework/tooling/codegen` (21 debt)
               - `framework/tooling/codegen/composition-registries` (1 debt)
               - `framework/tooling/collected-dir/discovery` (1 debt)
               - `framework/tooling/format` (5 debt)
@@ -28918,6 +28918,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/timed-fs` (0 debt)
               - `plugin-meta/barrel-import` (2 debt)
               - `plugin-meta/parse-utils` (1 debt)
+              - `plugin-meta/plugin-records` (1 debt)
               - `plugin-meta/plugin-refs` (1 debt)
               - `plugin-meta/plugin-tree` (2 debt)
               - `plugin-meta/plugin-tree/faceted` (2 debt)
@@ -29249,11 +29250,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2` ×15
               - `framework/plugin-id` ×13
               - `network/live/resource-vocabulary` ×11
-              - `plugin-meta/plugin-records` ×7
+              - `plugin-meta/plugin-records` ×8
               - `framework/slot-declaration` ×6
-              - `packages/timed-fs` ×6
               - `plugin-meta/barrel-import` ×6
               - `plugin-meta/composition` ×6
+              - `packages/timed-fs` ×5
               - `plugin-meta/closure` ×5
               - `plugin-meta/facets` ×5
               - `plugin-meta/plugin-records/evaluate` ×5
@@ -29443,10 +29444,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/relocate`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-config-proxy.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
+              - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-config-proxy.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
               - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.scan.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
-              - `blocking-fs/sync-named` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-config-proxy.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/override-legend-stamp.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/symbol-names-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (sanctioned)
+              - `blocking-fs/sync-named` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-config-proxy.ts`, `core/git-layer-config.ts`, `core/override-legend-stamp.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/symbol-names-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (sanctioned)
           - Plugins:
             - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, and every per-name registry and backend entry on disk — without the build pipeline, so a serving backend (worktree reclaim) can list them.
               - Core:
@@ -29642,11 +29643,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/collected-dir` ×2
               - `framework/tooling/guards/refusal-format` ×2
               - `infra/launcher/agent-scratch` ×2
-              - `infra/launcher/env-names` ×2
               - `infra/namespace` ×2
               - `packages/owned-fd` ×2
               - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
               - `framework/tooling/guards/module-extension.MODULE_EXTENSION`
+              - `framework/tooling/guards/tool-use-id.TOOL_USE_ID_RE`
+              - `infra/launcher/env-names.envName`
               - `infra/paths/repo-root.REPO_ROOT`
               - `packages/string-hash.hashHex`
             - Exports (types):
@@ -29671,7 +29673,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WatchSubject`
               - `WindowEntry`
             - Exports (values):
-              - `BYPASS_TOKENS`
               - `classify`
               - `createContext`
               - `defineGuard`
@@ -29684,17 +29685,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readTaskReport`
               - `redirectionTargets`
               - `THRESHOLD`
-              - `TOOL_USE_ID_RE`
-              - `toolUseIdFrom`
               - `watchSubjects`
               - `WINDOW_MS`
               - `WINDOW_SIZE`
-          - Cross-plugin:
-            - Imported by:
-              - `conversations/conversation-view/allow-monitor`
-              - `debug/browser-recordings`
-              - `debug/browser-recordings/writer`
-              - `framework/tooling/e2e-harness`
           - Exemptions:
             - Exempts itself from:
               - `timed-fs/no-untimed-fs-read` — `bin/bootstrap.ts` (sanctioned)
@@ -29702,8 +29695,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `user-path/no-sync-fs` — `core/context.ts`, `core/git-target.ts`, `core/guards/poll-loop.ts`, `core/walk-scope.ts` (sanctioned)
               - `python/no-system-python` — `core` (sanctioned)
               - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts`, `core/walk-scope.ts` (debt)
-              - `blocking-fs/sync-named` — `core/agent-ops.ts`, `core/context.ts`, `core/git-target.ts`, `core/guards/git-diff-main.ts`, `core/guards/poll-loop.ts`, `core/walk-scope.ts` (debt)
-              - `blocking-fs/sync-named` — `core/informed-once.ts` (sanctioned)
+              - `blocking-fs/sync-named` — `core/agent-ops.ts`, `core/context.ts`, `core/git-target.ts`, `core/guards/git-diff-main.ts`, `core/guards/poll-loop.ts`, `core/informed-once.ts`, `core/walk-scope.ts` (sanctioned)
           - Plugins:
             - **`agent-policy`** — The protections every agent runs with — the guard and stop-guard hooks and the deny rules — declared once as data: `.claude/settings.json`'s protection keys are generated from it (guards:claude-settings-in-sync) and every app launch carries it, whatever its workspace, so an agent outside the repo (a scratch workspace) is guarded too.
               - Core:
@@ -29724,6 +29716,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/stop-gate`
                   - `conversations/workspace/scratch`
                   - `framework/tooling/codegen`
+            - **`bypass-tokens`** — BYPASS_TOKENS: every bypass file a guard may honour (.allow-main, …), declared as data, and the BypassToken type a guard's bypassToken must be — so a guard cannot name an undeclared file (tsc) and guards:bypass-tokens-declared fails on a declared one no guard honours. A leaf, so the conversation view's bypass chip reads the set without loading the guard registry.
+              - Cross-plugin:
+                - Imported by: `conversations/conversation-view/allow-monitor`
+              - Core:
+                - Exports (types): `BypassToken`
+                - Exports (values):
+                  - `BYPASS_TOKENS`
+                  - `isBypassToken`
             - **`module-extension`** — MODULE_EXTENSION: the extensions bun loads as a module (.ts/.tsx/.js/.jsx and their m/c forms) — the one set the bun-script guard denies and `./equin run` accepts. A leaf with no imports, so the e2e path convention (and the lint rule reading it) reaches the constant without the guard runtime.
               - Cross-plugin:
                 - Imported by:
@@ -29742,6 +29742,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `joinRefusal`
                   - `REFUSAL_HEADER`
                   - `refusalReason`
+            - **`tool-use-id`** — TOOL_USE_ID_RE and toolUseIdFrom(env): the tool-use id a PreToolUse guard stamps into a Bash command's environment (TOOL_USE_ID), so what the command leaves behind (an e2e recording) is filed under its transcript row. A leaf, so the recordings backend reads it without loading the guard registry.
+              - Core:
+                - Uses: `infra/launcher/env-names.readEnv`
+                - Exports (values):
+                  - `TOOL_USE_ID_RE`
+                  - `toolUseIdFrom`
+              - Cross-plugin:
+                - Imported by:
+                  - `debug/browser-recordings`
+                  - `debug/browser-recordings/writer`
+                  - `framework/tooling/e2e-harness`
+                  - `framework/tooling/guards`
         - **`import-closure`** — Static import-closure measurement (importClosure): the exact repo modules an entrypoint loads, the tree-shaken live subset, the npm specifiers it reaches, and the import chain to any one module — measured with Bun.build so it cannot drift from what actually loads.
           - Core:
             - Uses:
@@ -33363,7 +33375,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/checks/type-check` (0 debt)
               - `framework/tooling/codegen` (0 debt)
               - `framework/tooling/format` (0 debt)
-              - `framework/tooling/guards` (6 debt)
+              - `framework/tooling/guards` (0 debt)
               - `framework/tooling/import-closure` (0 debt)
               - `framework/tooling/lint` (0 debt)
               - `framework/tooling/web-artifacts` (0 debt)
@@ -33375,9 +33387,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/worktree` (0 debt)
               - `packages/signal-origin` (0 debt)
               - `packages/single-flight` (0 debt)
-              - `packages/source-digest` (1 debt)
               - `plugin-meta/barrel-import` (0 debt)
-              - `plugin-meta/plugin-tree/faceted` (2 debt)
               - `plugin-meta/relocate` (0 debt)
               - `plugin-meta/token-usage` (0 debt)
               - `primitives/icon-picker` (0 debt)
@@ -33432,13 +33442,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 104 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+            - Imported by: 105 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
               - `infra` ×35
               - `framework` ×21
               - `apps` ×8
               - `debug` ×7
               - `packages` ×6
-              - `plugin-meta` ×4
+              - `plugin-meta` ×5
               - `config_v2` ×3
               - `database` ×3
               - `release` ×3
@@ -34098,8 +34108,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 44 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
-              - `framework` ×16
+            - Imported by: 45 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+              - `framework` ×17
               - `infra` ×11
               - `database` ×4
               - `packages` ×4
@@ -38550,9 +38560,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports/engine`
           - `ui/icons/saved-sources`
       - Exemptions:
-        - Exempts itself from:
-          - `boundaries/no-platform-api` — `shared/digest.ts` (sanctioned)
-          - `blocking-fs/sync-named` — `shared/digest.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `shared/digest.ts`, `shared/resolve.ts` (sanctioned)
       - Server:
         - Exports (types): `ComputedLoads`
         - Exports (values):
@@ -42941,14 +42949,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`plugin-records`** — Content-addressed records of what the build learns about each plugin (file facts, facet extracts, evaluated barrels), shared by every worktree's build and check pass; the daily plugin-records.verify job recomputes them on main and fails on any record that disagrees with its key.
       - Core:
         - Uses:
+          - `infra/host-fs/user-path.AppPath`
+          - `infra/host-fs/user-path.joinAppPath`
           - `packages/string-hash.sha1Hex`
           - `packages/string-hash.sha256Hex`
+          - `packages/timed-fs.readFile`
         - Exports (types):
           - `BundledClosure`
           - `FileScan`
           - `ModuleGraph`
           - `ModuleGraphInput`
           - `ModuleNode`
+          - `OutsideFiles`
           - `RecordJob`
           - `RecordJobRequest`
           - `RecordStore`
@@ -42964,6 +42976,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installRecordStore`
           - `installRecordWorkers`
           - `NO_OUTSIDE_FILES`
+          - `outsideFilesAt`
           - `readGrouped`
           - `RECORD_TABLES`
           - `recordKey`
@@ -43002,7 +43015,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-tree/faceted`
           - `plugin-meta/relocate`
       - Exemptions:
-        - Exempts itself from: `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
+        - Exempts itself from:
+          - `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `core/internal/outside-files.ts` (debt)
       - Plugins:
         - **`evaluate`** — Evaluated records: what importing a plugin barrel produced (its definition, slots, contributions), serialized as data under the barrel's module Merkle key, so a build reads it without importing anything. Apart from plugin-records' core so a record producer that only makes keys and stores records (the facet harness) does not key on barrel-import's stubs and the slot-declaration engine.
           - Core:
@@ -43202,17 +43217,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and the faceted index a backend keeps in a worker thread (FacetedTreeSource's desktop provider): built once, then refreshed by the watcher's paths — only the plugins owning them re-keyed, only moved records extracted, relate only when a record text changed.
           - Core:
-            - Uses: 43 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
-              - `plugin-meta/plugin-records` ×10
+            - Uses: 41 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
+              - `plugin-meta/plugin-records` ×12
               - `plugin-meta/plugin-tree` ×9
               - `framework/tooling` ×6
               - `plugin-meta/facets` ×4
               - `framework/plugin-id` ×3
-              - `packages/timed-fs` ×3
-              - `infra/host-fs/user-path` ×2
               - `packages/macrotask-yield` ×2
               - `plugin-meta/facets/loader` ×2
               - `plugin-meta/parse-utils` ×2
+              - `infra/host-fs/user-path.AppPath`
             - Exports (types):
               - `BuildFacetedTreeOptions`
               - `FacetedIndex`
@@ -43234,7 +43248,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `boundaries/no-platform-api` — `core/internal/fs-snapshot.ts`, `core/internal/faceted-tree.ts` (debt)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/internal/live-snapshot.ts` (sanctioned)
-              - `blocking-fs/sync-named` — `core/internal/faceted-index.ts`, `core/internal/faceted-tree.ts` (debt)
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections.
       - Web:
         - Slots:

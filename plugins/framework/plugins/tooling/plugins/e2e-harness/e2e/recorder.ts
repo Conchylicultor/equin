@@ -1,7 +1,7 @@
 import { basename, relative } from "node:path";
 import type { Browser, BrowserContext, CDPSession, Page } from "playwright";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import { toolUseIdFrom } from "@plugins/framework/plugins/tooling/plugins/guards/core";
+import { toolUseIdFrom } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/tool-use-id/core";
 import { browserRecordingsDir } from "@plugins/debug/plugins/browser-recordings/data-dirs";
 import type { RecordingStep } from "@plugins/debug/plugins/browser-recordings/core";
 import { openRecording } from "@plugins/debug/plugins/browser-recordings/plugins/writer/core";

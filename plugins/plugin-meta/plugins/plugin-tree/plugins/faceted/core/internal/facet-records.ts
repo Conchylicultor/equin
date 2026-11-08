@@ -15,6 +15,7 @@ import {
   recordWorkerCount,
   repoModuleOf,
   runRecordJobs,
+  type OutsideFiles,
   type RecordStore,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { pluginFilesManifest } from "./fs-snapshot";
@@ -67,7 +68,7 @@ export interface FacetRecordsInput {
   snapshot: RepoSnapshot;
   store: RecordStore;
   /** A file outside the snapshot, from disk (null when absent). */
-  readOutside(rel: string): string | null;
+  readOutside: OutsideFiles;
 }
 
 /**

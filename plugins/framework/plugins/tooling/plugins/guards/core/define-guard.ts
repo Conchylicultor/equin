@@ -1,3 +1,4 @@
+import type { BypassToken } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/bypass-tokens/core";
 import type { Guard, GuardContext, ToolMatcher, Verdict } from "./types";
 
 export type Denial = DenialText &
@@ -54,11 +55,11 @@ export interface GuardDef<I> {
   name: string;
   matcher: ToolMatcher | ToolMatcher[];
   /** File token checked via ctx.hasBypass() before check() runs */
-  bypassToken?: string;
+  bypassToken?: BypassToken;
   check(input: I, ctx: GuardContext): Denial | Inform | Rewrite<I> | null;
 }
 
-function formatEpilogue(bypassToken?: string): string {
+function formatEpilogue(bypassToken?: BypassToken): string {
   let epilogue =
     "If you believe this block is a false positive: STOP immediately, report the blocked command and your reasoning to the user, and wait for instructions. Do NOT attempt to work around this guard — not by restructuring the command, not by using alternative tools, not by any other means.";
   if (bypassToken) {
@@ -67,7 +68,7 @@ function formatEpilogue(bypassToken?: string): string {
   return epilogue;
 }
 
-function formatDenyMessage(denial: Denial, bypassToken?: string): string {
+function formatDenyMessage(denial: Denial, bypassToken?: BypassToken): string {
   let msg = denial.blocked;
   if (denial.why) msg += `\n\n${denial.why}`;
   msg += `\n\n${denial.hint}`;

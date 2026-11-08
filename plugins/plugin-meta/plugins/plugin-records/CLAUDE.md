@@ -210,14 +210,18 @@ its docblock records — and then lowered as readily as raised.
 - Description: Content-addressed records of what the build learns about each plugin (file facts, facet extracts, evaluated barrels), shared by every worktree's build and check pass; the daily plugin-records.verify job recomputes them on main and fails on any record that disagrees with its key.
 - Core:
   - Uses:
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.joinAppPath`
     - `packages/string-hash.sha1Hex`
     - `packages/string-hash.sha256Hex`
+    - `packages/timed-fs.readFile`
   - Exports (types):
     - `BundledClosure`
     - `FileScan`
     - `ModuleGraph`
     - `ModuleGraphInput`
     - `ModuleNode`
+    - `OutsideFiles`
     - `RecordJob`
     - `RecordJobRequest`
     - `RecordStore`
@@ -233,6 +237,7 @@ its docblock records — and then lowered as readily as raised.
     - `installRecordStore`
     - `installRecordWorkers`
     - `NO_OUTSIDE_FILES`
+    - `outsideFilesAt`
     - `readGrouped`
     - `RECORD_TABLES`
     - `recordKey`
@@ -271,7 +276,9 @@ its docblock records — and then lowered as readily as raised.
     - `plugin-meta/plugin-tree/faceted`
     - `plugin-meta/relocate`
 - Exemptions:
-  - Exempts itself from: `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
+  - Exempts itself from:
+    - `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `core/internal/outside-files.ts` (debt)
 - Sub-plugins:
   - **`evaluate`** — Evaluated records: what importing a plugin barrel produced (its definition, slots, contributions), serialized as data under the barrel's module Merkle key, so a build reads it without importing…
   - **`key-width`** — How much of a record producer's key is code it never calls: keyWidths walks a producer's closure through the names it actually imports from each barrel and attributes the rest to the barrel imports…

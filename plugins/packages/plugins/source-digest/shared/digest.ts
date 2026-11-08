@@ -1,19 +1,31 @@
 import { createHash } from "node:crypto";
-import { lstat, readFile, stat } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  lstat,
+  readFile,
+  realpath,
+  stat,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { builtinModules } from "node:module";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { allSourceSets, type ClosureSince, type SourceSet } from "../core";
+import {
+  createImportResolver,
+  UnresolvedImportError,
+  type ImportResolver,
+  type Resolution,
+} from "./resolve";
 
 // The digest of a source set: sha256 over the static runtime import closure of
 // its modules, as the Bun runtime would load it.
 //
 // - Imports are read with Bun's own transpiler (`scanImports`), so a type-only
-//   import — erased before anything runs — is no edge, and resolved with
-//   `Bun.resolveSync`, which reads the same tsconfig `@plugins/*` paths the
-//   runtime does. A dynamic `import("…")` with a literal path counts too.
+//   import — erased before anything runs — is no edge, and resolved by
+//   `./resolve` (async, the runtime's answer for what this repo imports, the
+//   tsconfig `@plugins/*` paths included; it refuses what it cannot answer
+//   exactly). A dynamic `import("…")` with a literal path counts too.
 // - A repo file counts by its path RELATIVE to the closure's common ancestor
 //   and its bytes, so main and a worktree running the same code agree on the
 //   digest (a `host` corpus index main persists is read by every worktree).
@@ -57,24 +69,22 @@ const NODE_MODULES = `${sep}node_modules${sep}`;
 /** A closure the walk cannot vouch for: a computed load, an import that does not resolve. */
 class UnmeasurableClosureError extends Error {}
 
-/** The directory of the package a resolved `node_modules` file belongs to. */
-function packageDirOf(resolved: string): { name: string; dir: string } {
-  const at = resolved.lastIndexOf(NODE_MODULES) + NODE_MODULES.length;
-  const segments = resolved.slice(at).split(sep);
-  const name = segments[0]!.startsWith("@")
+/** The name of the package whose real directory (under `node_modules`) is `dir`. */
+function packageNameAt(dir: string): string {
+  const at = dir.lastIndexOf(NODE_MODULES) + NODE_MODULES.length;
+  const segments = dir.slice(at).split(sep);
+  return segments[0]!.startsWith("@")
     ? `${segments[0]}/${segments[1]}`
     : segments[0]!;
-  return { name, dir: resolved.slice(0, at) + name.split("/").join(sep) };
 }
 
-// `name@version` of the package a resolved `node_modules` file belongs to,
-// memoized per package dir within one closure walk (a closure reaches one
-// package from many files).
+// `name@version` of the package at `dir`, memoized per package dir within one
+// closure walk (a closure reaches one package from many files).
 function packageIdOf(
-  resolved: string,
+  dir: string,
   packageIds: Map<string, Promise<string>>,
 ): Promise<string> {
-  const { name, dir } = packageDirOf(resolved);
+  const name = packageNameAt(`${dir}${sep}`);
   let id = packageIds.get(dir);
   if (id === undefined) {
     id = readFile(`${dir}${sep}package.json`, "utf8").then((text) => {
@@ -109,8 +119,8 @@ interface Closure {
 interface ClosureVisitor {
   /** The imports of the repo file `path` (and whatever the visitor records of it). */
   facts(path: string): Promise<FileFacts>;
-  /** `specifier`, imported by `importer`, resolved to `resolved` under `node_modules`. */
-  package(importer: string, specifier: string, resolved: string): Promise<void>;
+  /** An import that resolved to a package (its `node_modules` entry and real directory). */
+  package(pkg: Extract<Resolution, { kind: "package" }>): Promise<void>;
   builtin(specifier: string): void;
 }
 
@@ -190,11 +200,42 @@ async function readFacts(
  */
 const WALK_BATCH = 64;
 
+type Edge = Resolution | { builtin: string };
+
+/** A resolver refusal, as the closure refusal every caller reads. */
+function unmeasurable(err: unknown): never {
+  if (!(err instanceof UnresolvedImportError)) throw err;
+  throw new UnmeasurableClosureError(`[source-digest] ${err.message}`, {
+    cause: err,
+  });
+}
+
+// One import's edge. Always a promise, so a refusal never leaves the batch's
+// other edges unawaited (a synchronous throw mid-`map` would).
+async function edgeOf(
+  resolver: ImportResolver,
+  specifier: string,
+  file: string,
+): Promise<Edge> {
+  if (isBuiltin(specifier)) return { builtin: specifier };
+  try {
+    return await resolver.resolve(specifier, file);
+  } catch (err) {
+    unmeasurable(err);
+  }
+}
+
 async function walkClosure(
   entries: readonly string[],
   visit: ClosureVisitor,
 ): Promise<void> {
-  const seen = new Set<string>(entries);
+  // One resolver per walk: its directory listings are this walk's view of the
+  // tree, so a later walk sees a file added since (a new shadowing match).
+  const resolver = createImportResolver();
+  // Real paths, as every resolved path is: one file, one identity.
+  const seen = new Set<string>(
+    await Promise.all(entries.map((e) => realpath(e))),
+  );
   // Breadth-first, a batch of one level at a time: each file's facts, then
   // its edges. Every file is still visited once and every import resolved.
   let level = [...seen];
@@ -203,32 +244,25 @@ async function walkClosure(
     for (let i = 0; i < level.length; i += WALK_BATCH) {
       const batch = level.slice(i, i + WALK_BATCH);
       const facts = await Promise.all(batch.map((file) => visit.facts(file)));
-      // Asked once the batch resolved, so a refusal leaves none unawaited.
-      const packages: [string, string, string][] = [];
-      batch.forEach((file, j) => {
-        for (const specifier of facts[j]!.imports) {
-          if (isBuiltin(specifier)) {
-            visit.builtin(specifier);
-            continue;
-          }
-          let resolved: string;
-          try {
-            resolved = Bun.resolveSync(specifier, dirname(file));
-          } catch (err) {
-            throw new UnmeasurableClosureError(
-              `[source-digest] cannot resolve "${specifier}" imported by ${file}`,
-              { cause: err },
-            );
-          }
-          if (resolved.includes(NODE_MODULES)) {
-            packages.push([file, specifier, resolved]);
-          } else if (!seen.has(resolved)) {
-            seen.add(resolved);
-            next.push(resolved);
-          }
+      const edges = await Promise.all(
+        batch.flatMap((file, j) =>
+          facts[j]!.imports.map((specifier) =>
+            edgeOf(resolver, specifier, file),
+          ),
+        ),
+      );
+      // Asked once the batch resolved, so a refusal leaves none unawaited;
+      // in import order, so a walk's order does not depend on I/O timing.
+      const packages: Extract<Resolution, { kind: "package" }>[] = [];
+      for (const edge of edges) {
+        if ("builtin" in edge) visit.builtin(edge.builtin);
+        else if (edge.kind === "package") packages.push(edge);
+        else if (!seen.has(edge.path)) {
+          seen.add(edge.path);
+          next.push(edge.path);
         }
-      });
-      await Promise.all(packages.map((p) => visit.package(...p)));
+      }
+      await Promise.all(packages.map((p) => visit.package(p)));
       // One batch at a time on the serving thread: let timers and I/O run.
       await yieldMacrotask();
     }
@@ -251,8 +285,8 @@ async function closureOf(entries: readonly string[]): Promise<Closure> {
       closure.files.set(path, sha256(bytes));
       return facts;
     },
-    async package(_importer, _specifier, resolved) {
-      closure.packages.add(await packageIdOf(resolved, packageIds));
+    async package(pkg) {
+      closure.packages.add(await packageIdOf(pkg.dir, packageIds));
     },
     builtin(specifier) {
       closure.builtins.add(specifier);
@@ -308,7 +342,6 @@ export async function closureChangedSince(
 ): Promise<ClosureSince> {
   const files = new Set<string>();
   const checked = new Set<string>();
-  const moduleDirs = new Map<string, Promise<string | null>>();
   const assertBefore = async (
     path: string,
     read: (p: string) => Promise<{ ctimeMs: number }>,
@@ -340,12 +373,9 @@ export async function closureChangedSince(
         }
         return facts;
       },
-      async package(importer, specifier, resolved) {
-        await assertBefore(
-          await nodeModulesEntry(importer, specifier, moduleDirs),
-          lstat,
-        );
-        await assertBefore(packageJsonOf(resolved), stat);
+      async package(pkg) {
+        await assertBefore(pkg.entry, lstat);
+        await assertBefore(join(pkg.dir, "package.json"), stat);
       },
       builtin() {},
     });
@@ -364,63 +394,6 @@ export async function closureChangedSince(
     throw err;
   }
   return { kind: "unchanged", files };
-}
-
-/** The package name a bare specifier imports (`@scope/name/sub` → `@scope/name`). */
-function packageNameOf(specifier: string): string {
-  const parts = specifier.split("/");
-  return specifier.startsWith("@") ? `${parts[0]}/${parts[1]}` : parts[0]!;
-}
-
-/**
- * The `node_modules/<name>` entry an import of `specifier` from `importer`
- * resolves through: the first one that exists walking up from the importer's
- * directory. Throws when none does — `Bun.resolveSync` just found one, so the
- * tree moved under the walk.
- *
- * `found` is one walk's answers by (directory, name): within one instant a
- * directory's answer is the same for every importer under it, so a closure's
- * ~1,400 package imports ask each directory once instead of walking up from
- * each importer again (~11,000 `lstat`s).
- */
-function nodeModulesEntry(
-  importer: string,
-  specifier: string,
-  found: Map<string, Promise<string | null>>,
-): Promise<string> {
-  const name = packageNameOf(specifier);
-  const at = (dir: string): Promise<string | null> => {
-    const key = `${dir}\0${name}`;
-    let entry = found.get(key);
-    if (entry === undefined) {
-      entry = (async () => {
-        const candidate = join(dir, "node_modules", ...name.split("/"));
-        try {
-          await lstat(candidate);
-          return candidate;
-        } catch (err) {
-          if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-        }
-        const parent = dirname(dir);
-        return parent === dir ? null : at(parent);
-      })();
-      found.set(key, entry);
-    }
-    return entry;
-  };
-  return at(dirname(importer)).then((entry) => {
-    if (entry === null) {
-      throw new UnmeasurableClosureError(
-        `[source-digest] no node_modules entry for "${specifier}" above ${importer}`,
-      );
-    }
-    return entry;
-  });
-}
-
-/** The `package.json` of the package a resolved `node_modules` file belongs to. */
-function packageJsonOf(resolved: string): string {
-  return join(packageDirOf(resolved).dir, "package.json");
 }
 
 // A call that loads a module at runtime: `import(…)` / `require(…)`.

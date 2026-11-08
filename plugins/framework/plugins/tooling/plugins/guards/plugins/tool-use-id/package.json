@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-guards-tool-use-id",
+  "version": "0.0.1",
+  "private": true,
+  "description": "TOOL_USE_ID_RE and toolUseIdFrom(env): the tool-use id a PreToolUse guard stamps into a Bash command's environment (TOOL_USE_ID), so what the command leaves behind (an e2e recording) is filed under its transcript row. A leaf, so the recordings backend reads it without loading the guard registry."
+}

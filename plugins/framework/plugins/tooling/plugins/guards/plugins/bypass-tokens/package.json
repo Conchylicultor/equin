@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-guards-bypass-tokens",
+  "version": "0.0.1",
+  "private": true,
+  "description": "BYPASS_TOKENS: every bypass file a guard may honour (.allow-main, …), declared as data, and the BypassToken type a guard's bypassToken must be — so a guard cannot name an undeclared file (tsc) and guards:bypass-tokens-declared fails on a declared one no guard honours. A leaf, so the conversation view's bypass chip reads the set without loading the guard registry."
+}

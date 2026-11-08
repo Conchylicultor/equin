@@ -14,6 +14,7 @@ import {
   agentPolicySettings,
   GUARD_SCRIPTS,
 } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
+import { BYPASS_TOKENS } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/bypass-tokens/core";
 import type { ToolMatcher } from "../core";
 
 /** A tool name the matcher covers — for an MCP server, any of its tools. */
@@ -88,6 +89,29 @@ const claudeSettingsInSync: Check = {
   },
 };
 
+/**
+ * The bypass files are declared as data (guards/bypass-tokens) so a backend
+ * reads them without loading the guard registry. tsc holds every guard's
+ * `bypassToken` to the declared set; this holds the other direction — a
+ * declared file no guard honours would show as a bypass in the conversation
+ * view that bypasses nothing.
+ */
+const bypassTokensDeclared: Check = {
+  id: "guards:bypass-tokens-declared",
+  description:
+    "every declared bypass file (guards/bypass-tokens BYPASS_TOKENS) is honoured by a guard (built-in or plugin-contributed)",
+  async run() {
+    const honoured = new Set((await loadGuards()).map((g) => g.bypassToken));
+    const stale = BYPASS_TOKENS.filter((t) => !honoured.has(t));
+    if (stale.length === 0) return { ok: true };
+    return {
+      ok: false,
+      message: `declared bypass files no guard honours: ${stale.join(", ")}`,
+      hint: "Remove them from guards/plugins/bypass-tokens/core/bypass-tokens.ts.",
+    };
+  },
+};
+
 const GUARDS_BIN = "plugins/framework/plugins/tooling/plugins/guards/bin";
 
 /**
@@ -134,4 +158,5 @@ export default [
   matcherCoversGuards,
   claudeSettingsInSync,
   bootstrapStandsAlone,
+  bypassTokensDeclared,
 ];

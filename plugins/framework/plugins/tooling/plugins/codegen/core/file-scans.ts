@@ -1,8 +1,7 @@
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
-import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   currentRecordStore,
+  outsideFilesAt,
   scanFilesCached,
   type FileScan,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
@@ -23,16 +22,7 @@ export function scanFiles<T>(
     {
       snapshot: repo,
       store: currentRecordStore(),
-      readOutside: (rel) => {
-        try {
-          return readFileSync(joinAppPath(repo.root, rel), "utf8");
-        } catch (err) {
-          const code = (err as NodeJS.ErrnoException).code;
-          if (code === "ENOENT" || code === "EISDIR" || code === "ENOTDIR")
-            return null;
-          throw err;
-        }
-      },
+      readOutside: outsideFilesAt(repo.root),
     },
     files,
     scanner,
