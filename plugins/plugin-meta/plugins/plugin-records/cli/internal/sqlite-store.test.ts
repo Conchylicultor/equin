@@ -103,6 +103,28 @@ test("the daily reclaim drops unread keys, then the values nobody names", () => 
   check.close();
 });
 
+test("opening an existing store never waits for a writer", () => {
+  const path = join(dir, "open-under-writer.sqlite");
+  const seed = openRecordStore({ path });
+  seed.putMany("file", [[k("w"), "v"]]);
+  seed.flush();
+  // Another process mid-transaction holds the write lock; an open (and a
+  // read) goes ahead at once — with no busy wait to hide behind.
+  const writer = new Database(path);
+  writer.exec("BEGIN IMMEDIATE");
+  writer.exec("UPDATE keys SET used = used");
+  const t0 = performance.now();
+  const s = openRecordStore({ path });
+  expect(s.getMany("file", [k("w")]).get(k("w"))).toBe("v");
+  expect(performance.now() - t0).toBeLessThan(5_000);
+  writer.exec("ROLLBACK");
+  writer.close();
+  // The fresh file still got the setting only a creation can give it.
+  const check = new Database(path, { readonly: true });
+  expect(check.query("PRAGMA auto_vacuum").get()).toEqual({ auto_vacuum: 2 });
+  check.close();
+});
+
 test("a key that is not a record key is refused", () => {
   const s = openRecordStore({ path: join(dir, "refuse.sqlite") });
   expect(() => s.putMany("file", [["k1", "v"]])).toThrow(/not a record key/);

@@ -78,8 +78,19 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
   // writer instead of failing.
   db.exec("PRAGMA busy_timeout = 30000");
   // Before any table exists, or it does not take: a reclaim can then return
-  // its freed pages (`incremental_vacuum`) without rewriting the file.
-  db.exec("PRAGMA auto_vacuum = INCREMENTAL");
+  // its freed pages (`incremental_vacuum`) without rewriting the file. Only
+  // then: setting it runs a WRITE transaction even when the file already has
+  // it, so on every open it queued each reader behind whichever writer held
+  // the store, and threw SQLITE_BUSY once one held it past the timeout
+  // (2026-11-08: builds and pushes aborted at this line). Everything else
+  // here is a read on an existing store — journal_mode = WAL once the file is
+  // WAL, CREATE … IF NOT EXISTS once the schema exists — so an open never
+  // waits for a writer.
+  const fresh =
+    z
+      .object({ n: z.number() })
+      .parse(db.query("SELECT count(*) AS n FROM sqlite_schema").get()).n === 0;
+  if (fresh) db.exec("PRAGMA auto_vacuum = INCREMENTAL");
   db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA synchronous = NORMAL");
   db.exec(
