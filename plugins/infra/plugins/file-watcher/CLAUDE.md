@@ -276,6 +276,20 @@ and closed; the parcel stream missed 0 of 10 and 0 of 50. The daemon's pid-file
 holder (`infra/spawn/daemon`), which arms then reads, missed exactly such
 writes. Tests: the `depth children` cases in `shared/engine.test.ts`.
 
+It also **held the JS thread on every open and close** (main's 1.2 s
+`close ← closeNativeWatcher ← … ← stop` stall, and the `watch ← FSWatcher ←
+watchChildren` ones). Sampled (`scripts/measure-watch-blocking.ts`, Bun 1.4.4):
+the JS thread waits on Bun's FSEvents-loop lock (`_os_unfair_lock_lock_slow`)
+while Bun's `CFThreadLoop` thread, holding it, restarts the shared stream —
+`FSEventStreamStart → register_with_server → mach_msg`, a synchronous RPC to
+`fseventsd`. So each open or close cost one fseventsd round trip ON the event
+loop: 50 ms median, up to ~600 ms on an idle-ish host, over a second while
+fseventsd is loaded. parcel makes the same RPCs (`FSEventStreamStart` /
+`Stop`) in its subscribe / unsubscribe async work, on Bun's worker pool: the
+JS thread holds ~0.05 ms per call and sits idle in `kevent` meanwhile. Off
+macOS, `fs.watch` is inotify: one descriptor per watch, no shared stream to
+restart. Write-up: `research/2026-11-08-infra-file-watcher-close-stall.md`.
+
 ## A dir that may not exist: `acquireEventualDirWatch` (machine)
 
 `acquireDirWatch` rejects for a missing dir. A dir whose path is known before

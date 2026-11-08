@@ -1,6 +1,6 @@
 import { isAppThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
-  paintThemeStyles,
+  themePainter,
   type ConfiguredColorMode,
   type ThemeId,
   type ThemePaintSources,
@@ -60,13 +60,16 @@ export function renderThemeHead(
       : [{ appId: app.id, basePath: app.basePath, themeId }];
   });
 
+  // One painter for every entry: they share the sub-theme and fixed-theme
+  // blocks and each app's scoped blocks, rendered once here instead of per entry.
+  const painter = themePainter(sources);
   const entry = (
     rootThemeId: ThemeId,
     colorMode: ConfiguredColorMode,
     rootAppId?: string,
   ) =>
     styleTags(
-      paintThemeStyles(sources, {
+      painter.paint({
         rootThemeId,
         appThemes: appThemes.filter((a) => a.appId !== rootAppId),
       }),

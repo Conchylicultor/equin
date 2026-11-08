@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test";
 
 import { both, defineTokenGroup } from "./define-token-group";
 import { defineFixedTheme } from "./fixed-theme";
-import { paintThemeStyles, themeStyleId } from "./paint";
+import { paintThemeStyles, themePainter, themeStyleId } from "./paint";
 import { defineSubTheme } from "./sub-theme";
 import { DEFAULT_THEME_ID, defineTheme, type Theme } from "./theme";
 
@@ -138,5 +138,35 @@ describe("paintThemeStyles", () => {
     expect(styles["theme-engine-opt-in"]).toBe(
       ":root {\n  --inset: initial;\n}\n.dark {\n  --inset: initial;\n}",
     );
+  });
+});
+
+describe("themePainter", () => {
+  it("paints each selection exactly as paintThemeStyles does, in its order, whatever it painted before", () => {
+    const painter = themePainter(sources);
+    const selections = [
+      {
+        rootThemeId: DEFAULT_THEME_ID,
+        appThemes: [{ appId: "a", themeId: "red" }],
+      },
+      { rootThemeId: "red", appThemes: [] },
+      {
+        rootThemeId: DEFAULT_THEME_ID,
+        appThemes: [
+          { appId: "b", themeId: "red" },
+          { appId: "a", themeId: "red" },
+        ],
+      },
+      {
+        rootThemeId: "missing",
+        appThemes: [{ appId: "a", themeId: "missing" }],
+      },
+    ];
+    for (const selection of selections) {
+      const shared = painter.paint(selection);
+      const alone = paintThemeStyles(sources, selection);
+      expect(shared).toEqual(alone);
+      expect(Object.keys(shared)).toEqual(Object.keys(alone));
+    }
   });
 });

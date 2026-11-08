@@ -232,27 +232,74 @@ export function paintThemeStyles(
   sources: ThemePaintSources,
   selection: ThemePaintSelection,
 ): Record<string, string> {
-  const { groups, themesById } = sources;
-  const styles: Record<string, string> = {};
+  return themePainter(sources).paint(selection);
+}
 
-  const paintScope = (themeId: ThemeId, scopeToken?: string) => {
-    const painted = themesById.has(themeId) ? themeId : DEFAULT_THEME_ID;
-    const { theme } = resolveTheme(painted, themesById, groups);
-    for (const g of groups) {
-      styles[themeStyleId(g.id, scopeToken)] = renderThemeGroupBlock(
-        g,
-        theme.groups[g.id]!,
-        theme.colorAdjust,
-        scopeToken,
-      );
+/** {@link paintThemeStyles} over one set of sources, for several selections. */
+export interface ThemePainter {
+  paint(selection: ThemePaintSelection): Record<string, string>;
+}
+
+/**
+ * A painter of several selections over the same sources — the server's
+ * first-frame head paints one per app path. A block is a function of the
+ * sources and of its (theme, scope) alone, so each is rendered once per
+ * painter however many selections hold it: the sub-theme and fixed-theme
+ * blocks (every selection holds them, unchanged), and each scope's blocks for
+ * a theme. Holds nothing past the painter: a new render makes a new one.
+ */
+export function themePainter(sources: ThemePaintSources): ThemePainter {
+  const scopes = new Map<string, Record<string, string>>();
+  let regions: Record<string, string> | undefined;
+
+  const scope = (themeId: ThemeId, scopeToken?: string) => {
+    const key = JSON.stringify([themeId, scopeToken ?? null]);
+    let painted = scopes.get(key);
+    if (painted === undefined) {
+      painted = paintScopeStyles(sources, themeId, scopeToken);
+      scopes.set(key, painted);
     }
+    return painted;
   };
 
-  paintScope(selection.rootThemeId);
-  for (const { appId, themeId } of selection.appThemes) {
-    paintScope(themeId, appThemeScope(appId));
-  }
+  return {
+    paint(selection) {
+      const styles: Record<string, string> = {};
+      Object.assign(styles, scope(selection.rootThemeId));
+      for (const { appId, themeId } of selection.appThemes) {
+        Object.assign(styles, scope(themeId, appThemeScope(appId)));
+      }
+      Object.assign(styles, (regions ??= paintRegionStyles(sources)));
+      return styles;
+    },
+  };
+}
 
+/** One scope's blocks — `:root` without a token, else `[data-theme-scope=…]` — for the theme it selects. */
+function paintScopeStyles(
+  sources: ThemePaintSources,
+  themeId: ThemeId,
+  scopeToken?: string,
+): Record<string, string> {
+  const { groups, themesById } = sources;
+  const styles: Record<string, string> = {};
+  const painted = themesById.has(themeId) ? themeId : DEFAULT_THEME_ID;
+  const { theme } = resolveTheme(painted, themesById, groups);
+  for (const g of groups) {
+    styles[themeStyleId(g.id, scopeToken)] = renderThemeGroupBlock(
+      g,
+      theme.groups[g.id]!,
+      theme.colorAdjust,
+      scopeToken,
+    );
+  }
+  return styles;
+}
+
+/** The blocks no scope chooses: every sub-theme's, then every fixed theme's. */
+function paintRegionStyles(sources: ThemePaintSources): Record<string, string> {
+  const { groups } = sources;
+  const styles: Record<string, string> = {};
   for (const { subTheme, group, fragment } of subThemeBlocks(
     sources.subThemes,
     groups,
@@ -274,7 +321,6 @@ export function paintThemeStyles(
       );
     }
   }
-
   return styles;
 }
 

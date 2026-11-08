@@ -12126,7 +12126,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses:
           - `infra/endpoints.machineHandler`
-          - `ui/icons.symbolBody`
+          - `ui/icons/sprites.manifestSymbolBody`
         - Exports (values):
           - `appIconPng`
           - `appIconSvg`
@@ -57317,7 +57317,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 545 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 544 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×154
           - `conversations` ×83
           - `page` ×52
@@ -57329,7 +57329,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data` ×11
           - `ui` ×11
           - `infra` ×8
-          - `apps-core` ×7
+          - `apps-core` ×6
           - `auth` ×6
           - `config_v2` ×5
           - `shell` ×5
@@ -57622,6 +57622,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `icons.sprites` (push, fixed, whole: the resident sprites — the default style's two and the brands)
           - Machine:
             - Uses: `network/live.serveValue`
+            - Exports (values): `manifestSymbolBody`
           - Core:
             - Uses:
               - `network/live.liveValue`
@@ -57643,6 +57644,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `spriteHash`
           - Cross-plugin:
             - Imported by:
+              - `apps-core/app-manifest`
               - `debug/icons`
               - `framework/browser-server/demo/scope`
               - `ui/icons/sprites/bundled-sprites`
@@ -58158,6 +58160,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `subThemeBlocks`
           - `subThemeBlockValues`
           - `THEME_STYLE_ID_PREFIXES`
+          - `themePainter`
           - `themeSelectionConfig`
           - `themeStyleId`
           - `TokenGroupFragmentSchema`

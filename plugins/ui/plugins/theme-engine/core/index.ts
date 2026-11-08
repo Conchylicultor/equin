@@ -52,6 +52,7 @@ export {
   renderSubThemeBlock,
   renderThemeGroupBlock,
   subThemeBlocks,
+  themePainter,
   themeStyleId,
 } from "./paint";
 export type { ThemePaintSelection, ThemePaintSources } from "./paint";

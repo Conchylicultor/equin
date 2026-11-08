@@ -374,6 +374,7 @@ exactly.
     - `subThemeBlocks`
     - `subThemeBlockValues`
     - `THEME_STYLE_ID_PREFIXES`
+    - `themePainter`
     - `themeSelectionConfig`
     - `themeStyleId`
     - `TokenGroupFragmentSchema`

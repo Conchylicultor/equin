@@ -4,14 +4,19 @@ import {
   ACTIVE_FORM_VERSION,
   ALL_STYLE_KEYS,
   BRANDS_SPRITE,
+  DEFAULT_ICON_STYLE,
   LUCIDE_ACTIVE_SPRITE,
   LUCIDE_MAP,
   LUCIDE_SPRITE,
   SETI_SPRITE,
   brandId,
+  resolveIcon,
   resolveSymbol,
+  styleKeyOf,
   symbolId,
+  type IconBody,
   type SpriteKey,
+  type SymbolName,
   type SymbolSets,
 } from "@plugins/ui/plugins/icons/core";
 import { SETI_SET, readSetiSet } from "@plugins/ui/plugins/icons/server";
@@ -98,11 +103,15 @@ async function lucideSprite(): Promise<Map<SpriteKey, string>> {
  * All 12 symbol sprites, for the manifest's names. Under `ms-<K>-<name>` each
  * holds the drawing `resolveSymbol` picks for style K — the style's own, or
  * its nearest fallback — so `<Icon>` needs no fallback of its own.
+ *
+ * And, from the same pass over the same parsed sets, each manifest symbol's
+ * glyph in the default style at rest as a bare body ({@link manifestSymbolBody}):
+ * what a consumer with no sprite sheet draws (an app's OS icon).
  */
-function symbolSprites(sets: SymbolSets): Map<SpriteKey, string> {
-  const out = new Map<SpriteKey, string>();
+function symbolSprites(sets: SymbolSets): SetBuild {
+  const sprites = new Map<SpriteKey, string>();
   for (const styleKey of ALL_STYLE_KEYS) {
-    out.set(
+    sprites.set(
       styleKey,
       buildSprite(
         ICON_MANIFEST.symbols.map((name) => ({
@@ -112,30 +121,42 @@ function symbolSprites(sets: SymbolSets): Map<SpriteKey, string> {
       ),
     );
   }
-  return out;
+  const rest = styleKeyOf(DEFAULT_ICON_STYLE, false);
+  const bodies = new Map<string, IconBody>(
+    ICON_MANIFEST.symbols.map((name) => {
+      const { set, iconifyName } = resolveSymbol(sets, name, rest);
+      return [name, resolveIcon(set, iconifyName)];
+    }),
+  );
+  return { sprites, bodies };
+}
+
+/** What one set group's build yields: its sprites, and for the symbols the default style's bare glyphs. */
+interface SetBuild {
+  sprites: Map<SpriteKey, string>;
+  bodies?: ReadonlyMap<string, IconBody>;
 }
 
 // One build per sprite group per process, memoized: the ~10 MB sets are
 // parsed once, every sprite they yield is kept (a few hundred KB), and the
 // parsed sets are dropped. The manifest and node_modules cannot change under a
 // running process.
-const builds = new Map<SetKey, Promise<Map<SpriteKey, string>>>();
+const builds = new Map<SetKey, Promise<SetBuild>>();
 
-async function loadSet(key: SetKey): Promise<Map<SpriteKey, string>> {
+async function loadSet(key: SetKey): Promise<SetBuild> {
   if (key === BRANDS_SPRITE) {
     // No brand is drawn: nothing to parse the 5 MB brand set for.
     if (ICON_MANIFEST.brands.length === 0) {
-      return brandSprite({ prefix: "simple-icons", icons: {} });
+      return { sprites: brandSprite({ prefix: "simple-icons", icons: {} }) };
     }
-    return brandSprite(await readSet(PACKAGE.brands));
+    return { sprites: brandSprite(await readSet(PACKAGE.brands)) };
   }
-  if (key === SETI_SPRITE) return await setiSprite();
-  if (key === LUCIDE_SPRITE) return await lucideSprite();
+  if (key === SETI_SPRITE) return { sprites: await setiSprite() };
+  if (key === LUCIDE_SPRITE) return { sprites: await lucideSprite() };
   return await withSymbolSets(symbolSprites);
 }
 
-export async function spriteFor(key: SpriteKey): Promise<string> {
-  const setKey = setOf(key);
+function buildOf(setKey: SetKey): Promise<SetBuild> {
   let build = builds.get(setKey);
   if (!build) {
     // A failed build is not cached: the next request retries (and fails
@@ -146,13 +167,35 @@ export async function spriteFor(key: SpriteKey): Promise<string> {
     });
     builds.set(setKey, build);
   }
-  const sprite = (await build).get(key);
+  return build;
+}
+
+export async function spriteFor(key: SpriteKey): Promise<string> {
+  const setKey = setOf(key);
+  const sprite = (await buildOf(setKey)).sprites.get(key);
   if (sprite === undefined) {
     throw new Error(
       `[icons] sprite "${key}" was not built from set "${setKey}"`,
     );
   }
   return sprite;
+}
+
+/**
+ * One manifest symbol's glyph in the default style at rest — the drawing the
+ * resident sprite holds under its id — as a bare body. Read from the symbol
+ * sprites' build (the sets parsed once per process, with every sprite), never
+ * by parsing the sets again. Throws for a name the manifest does not hold: an
+ * app's icon is a `symbol("…")` literal, so the build scanned it.
+ */
+export async function manifestSymbolBody(name: SymbolName): Promise<IconBody> {
+  const body = (await buildOf("symbols")).bodies?.get(name);
+  if (body === undefined) {
+    throw new Error(
+      `[icons] "${name}" is not in the icon manifest — only a symbol("…") literal the build scanned has a drawing here`,
+    );
+  }
+  return body;
 }
 
 /** The desktop's sprite drawer: every key, from the installed sets. */

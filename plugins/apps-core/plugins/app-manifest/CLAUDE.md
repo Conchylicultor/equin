@@ -22,8 +22,9 @@ head tags linking them from the app's pages.
 - **`machine/`** — `GET /api/apps/:appId/icon/:file` (`getAppIconPng`,
   `needsMachine`; `:file` is `<size>.png`, sizes `APP_ICON_SIZES` = 192 and 512
   for the manifest, 16–1024 for the macOS iconset the native helper builds an
-  installed app's icon from): `appIconToSvg` (`app-icon/core`) over the glyph `symbolBody`
-  (`ui/icons/server`) reads from the installed icon sets, on `appTileFill` (the
+  installed app's icon from): `appIconToSvg` (`app-icon/core`) over the glyph `manifestSymbolBody`
+  (`ui/icons/sprites/machine`) hands over from the sprites' one pass over the
+  installed icon sets (never a parse per icon), on `appTileFill` (the
   same colour the rail's tile paints), rasterized with resvg like the release
   CLI, memoized per app and size for the process's life (its inputs only change
   with a build, which restarts it).
@@ -54,7 +55,7 @@ head tags linking them from the app's pages.
 - Machine:
   - Uses:
     - `infra/endpoints.machineHandler`
-    - `ui/icons.symbolBody`
+    - `ui/icons/sprites.manifestSymbolBody`
   - Exports (values):
     - `appIconPng`
     - `appIconSvg`

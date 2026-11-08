@@ -106,32 +106,75 @@ export function subThemeBlockValues(
   named: Record<string, string>,
   mode: "light" | "dark",
 ): Record<string, string> {
+  const { tokens, defaults, readers } = derivationsOf(group)[mode];
   const out = { ...named };
-  const tokens = Object.keys(group.schema);
-  const defaultOf = (token: string) => {
-    const field = group.schema[token]!;
-    return mode === "dark"
-      ? (field.darkDefault ?? field.default)
-      : field.default;
-  };
-  // A fixpoint: a token derived from a re-declared one is re-declared too.
-  let grew = true;
-  while (grew) {
-    grew = false;
-    const changedVars = Object.keys(out).map((token) => group.vars[token]);
-    for (const token of tokens) {
-      if (Object.hasOwn(out, token)) continue;
-      const value = defaultOf(token);
-      if (changedVars.some((v) => v !== undefined && readsVar(value, v))) {
-        out[token] = value;
-        grew = true;
+  // A fixpoint over the readers index, round by round: a token derived from a
+  // re-declared one is re-declared too. Each round adds, in schema order, the
+  // tokens reading a var the previous round declared — the only ones a round
+  // can add, since a token left out did not read any earlier var. So a call
+  // walks only what the named tokens reach, never every token per var.
+  let declared = Object.keys(out);
+  while (declared.length > 0) {
+    const reached = new Set<number>();
+    for (const token of declared) {
+      const v = group.vars[token];
+      if (v === undefined) continue;
+      for (const i of readers.get(v) ?? []) {
+        if (!Object.hasOwn(out, tokens[i]!)) reached.add(i);
       }
     }
+    declared = [...reached].sort((a, b) => a - b).map((i) => tokens[i]!);
+    for (const token of declared) out[token] = defaults[token]!;
   }
   return out;
 }
 
-/** Does a CSS value read the custom property `name` (as `var(name)` or `var(name, …)`)? */
-function readsVar(value: string, name: string): boolean {
-  return new RegExp(`var\\(\\s*${name}\\s*[,)]`).test(value);
+/** A group's derivations in one mode: which tokens' defaults read each var. */
+interface Derivations {
+  /** The schema's tokens, in schema order (what `readers` indexes). */
+  tokens: string[];
+  /** Each token's default in this mode. */
+  defaults: Record<string, string>;
+  /** var name (`--pad-x`) → the indexes of the tokens whose default reads it. */
+  readers: Map<string, number[]>;
+}
+
+/** A `var(--name` followed by its end (`,` fallback or `)`); the name is captured. */
+const VAR_READ = /var\(\s*(--[^\s,()]+)\s*[,)]/g;
+
+// A function of the group's spec alone, which is immutable data (declared in
+// code or generated at build), so it is derived once per spec object and held
+// as long as the spec is: nothing to invalidate. Before, every call compiled a
+// RegExp per (token × declared var) per fixpoint round — the server's
+// first-frame render paid that for every sub-theme fragment of every entry.
+const derivations = new WeakMap<
+  TokenGroupSpec,
+  Record<"light" | "dark", Derivations>
+>();
+
+function derivationsOf(
+  group: TokenGroupSpec,
+): Record<"light" | "dark", Derivations> {
+  const hit = derivations.get(group);
+  if (hit !== undefined) return hit;
+  const tokens = Object.keys(group.schema);
+  const forMode = (mode: "light" | "dark"): Derivations => {
+    const defaults: Record<string, string> = {};
+    const readers = new Map<string, number[]>();
+    tokens.forEach((token, i) => {
+      const field = group.schema[token]!;
+      const value =
+        mode === "dark" ? (field.darkDefault ?? field.default) : field.default;
+      defaults[token] = value;
+      for (const [, name] of value.matchAll(VAR_READ)) {
+        const list = readers.get(name!);
+        if (list === undefined) readers.set(name!, [i]);
+        else if (list.at(-1) !== i) list.push(i);
+      }
+    });
+    return { tokens, defaults, readers };
+  };
+  const built = { light: forMode("light"), dark: forMode("dark") };
+  derivations.set(group, built);
+  return built;
 }

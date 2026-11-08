@@ -170,6 +170,7 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
     - `icons.sprites` (push, fixed, whole: the resident sprites — the default style's two and the brands)
 - Machine:
   - Uses: `network/live.serveValue`
+  - Exports (values): `manifestSymbolBody`
 - Core:
   - Uses:
     - `network/live.liveValue`
@@ -191,6 +192,7 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
     - `spriteHash`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/app-manifest`
     - `debug/icons`
     - `framework/browser-server/demo/scope`
     - `ui/icons/sprites/bundled-sprites`

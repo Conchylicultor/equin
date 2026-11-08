@@ -109,6 +109,23 @@ describe("subThemeBlockValues", () => {
     });
   });
 
+  it("follows a var read as another var's fallback, and a chain in schema order", () => {
+    const chain = defineTokenGroup("chain", {
+      c: { default: "calc(var(--b) * 2)" },
+      a: { default: "1px" },
+      b: { default: "var(--missing, var(--a))" },
+      d: { default: "var( --c )" },
+    });
+    const out = subThemeBlockValues(chain, { a: "2px" }, "light");
+    expect(out).toEqual({
+      a: "2px",
+      b: "var(--missing, var(--a))",
+      c: "calc(var(--b) * 2)",
+      d: "var( --c )",
+    });
+    expect(Object.keys(out)).toEqual(["a", "b", "c", "d"]);
+  });
+
   it("matches the variable name exactly, not a prefix", () => {
     expect(subThemeBlockValues(density, { gap: "6px" }, "dark")).toEqual({
       gap: "6px",

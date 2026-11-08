@@ -15,13 +15,13 @@ import { getAppCatalog, type AppCatalog, type CatalogApp } from "../../core";
  * the shim is written from on this side — id, name, base path and the icon's
  * picture — so a renamed app, a moved one or a changed icon is a stale shim.
  */
-function catalogApp(app: AppRef): CatalogApp {
+async function catalogApp(app: AppRef): Promise<CatalogApp> {
   return {
     id: app.id,
     name: app.name,
     basePath: app.basePath,
     hash: hashHex(
-      JSON.stringify([app.id, app.name, app.basePath, appIconSvg(app)]),
+      JSON.stringify([app.id, app.name, app.basePath, await appIconSvg(app)]),
     ),
     icons: APP_ICON_SIZES.map((size) => ({
       size,
@@ -31,16 +31,16 @@ function catalogApp(app: AppRef): CatalogApp {
 }
 
 /** Every installable app (listed; unlisted ones such as the panel are not). */
-export function appCatalog(): AppCatalog {
+export async function appCatalog(): Promise<AppCatalog> {
   return {
-    apps: declaredApps.flatMap((d) => {
-      const app = installableApp(declaredApps, d.app.id);
-      return app === undefined ? [] : [catalogApp(app)];
-    }),
+    apps: await Promise.all(
+      declaredApps.flatMap((d) => {
+        const app = installableApp(declaredApps, d.app.id);
+        return app === undefined ? [] : [catalogApp(app)];
+      }),
+    ),
   };
 }
 
 /** `GET /api/menu-bar/apps` (`getAppCatalog`, needsMachine). */
-export const handleAppCatalog = implementMachine(getAppCatalog, () =>
-  appCatalog(),
-);
+export const handleAppCatalog = implementMachine(getAppCatalog, appCatalog);
