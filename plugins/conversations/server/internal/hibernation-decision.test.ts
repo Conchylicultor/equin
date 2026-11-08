@@ -2,14 +2,16 @@ import { describe, expect, test } from "bun:test";
 import { decideMissingProcessAction } from "./hibernation-decision";
 
 const SESSION = "a4ee9684-418d-4661-b372-2960760538a7";
-const onMain = { onMain: true };
+const CREATED = new Date("2026-10-02T12:00:00Z");
+// A database never forked owns every row.
+const unforked = { forkedAt: null };
 
 describe("decideMissingProcessAction", () => {
   test("resumable + not yet hibernated → hibernate", () => {
     expect(
       decideMissingProcessAction(
-        { claudeSessionId: SESSION, hibernatedAt: null },
-        onMain,
+        { claudeSessionId: SESSION, hibernatedAt: null, createdAt: CREATED },
+        unforked,
       ),
     ).toBe("hibernate");
   });
@@ -19,8 +21,12 @@ describe("decideMissingProcessAction", () => {
   test("already hibernated → leave-hibernated (NOT gone)", () => {
     expect(
       decideMissingProcessAction(
-        { claudeSessionId: SESSION, hibernatedAt: new Date(0) },
-        onMain,
+        {
+          claudeSessionId: SESSION,
+          hibernatedAt: new Date(0),
+          createdAt: CREATED,
+        },
+        unforked,
       ),
     ).toBe("leave-hibernated");
   });
@@ -29,19 +35,28 @@ describe("decideMissingProcessAction", () => {
   test("no resumable session → gone", () => {
     expect(
       decideMissingProcessAction(
-        { claudeSessionId: null, hibernatedAt: null },
-        onMain,
+        { claudeSessionId: null, hibernatedAt: null, createdAt: CREATED },
+        unforked,
       ),
     ).toBe("gone");
   });
 
-  test("non-main runtime → leave-unowned, never a status write", () => {
+  test("a row the fork copied in → leave-unowned, never a status write", () => {
     expect(
       decideMissingProcessAction(
-        { claudeSessionId: SESSION, hibernatedAt: null },
-        { onMain: false },
+        { claudeSessionId: SESSION, hibernatedAt: null, createdAt: CREATED },
+        { forkedAt: new Date(CREATED.getTime() + 1) },
       ),
     ).toBe("leave-unowned");
+  });
+
+  test("a row created after the fork point is this database's own", () => {
+    expect(
+      decideMissingProcessAction(
+        { claudeSessionId: SESSION, hibernatedAt: null, createdAt: CREATED },
+        { forkedAt: new Date(CREATED.getTime() - 1) },
+      ),
+    ).toBe("hibernate");
   });
 
   // Regressions for the bug that reaped live conversations' worktrees: a missing
@@ -55,8 +70,8 @@ describe("decideMissingProcessAction", () => {
     test("mid-work rows hibernate like any other resumable row", () => {
       expect(
         decideMissingProcessAction(
-          { claudeSessionId: SESSION, hibernatedAt: null },
-          onMain,
+          { claudeSessionId: SESSION, hibernatedAt: null, createdAt: CREATED },
+          unforked,
         ),
       ).toBe("hibernate");
     });
@@ -66,8 +81,8 @@ describe("decideMissingProcessAction", () => {
     test("a failed resume still holding its session id hibernates", () => {
       expect(
         decideMissingProcessAction(
-          { claudeSessionId: SESSION, hibernatedAt: null },
-          onMain,
+          { claudeSessionId: SESSION, hibernatedAt: null, createdAt: CREATED },
+          unforked,
         ),
       ).toBe("hibernate");
     });
@@ -78,14 +93,22 @@ describe("decideMissingProcessAction", () => {
   // it is absent from this decision entirely.
   test("the hibernation config cannot influence the decision", () => {
     const decide = decideMissingProcessAction as unknown as (
-      row: { claudeSessionId: string | null; hibernatedAt: Date | null },
-      opts: { onMain: boolean; hibernationEnabled?: boolean },
+      row: {
+        claudeSessionId: string | null;
+        hibernatedAt: Date | null;
+        createdAt: Date;
+      },
+      opts: { forkedAt: Date | null; hibernationEnabled?: boolean },
     ) => string;
-    const row = { claudeSessionId: SESSION, hibernatedAt: null };
-    expect(decide(row, { onMain: true, hibernationEnabled: false })).toBe(
+    const row = {
+      claudeSessionId: SESSION,
+      hibernatedAt: null,
+      createdAt: CREATED,
+    };
+    expect(decide(row, { forkedAt: null, hibernationEnabled: false })).toBe(
       "hibernate",
     );
-    expect(decide(row, { onMain: true, hibernationEnabled: true })).toBe(
+    expect(decide(row, { forkedAt: null, hibernationEnabled: true })).toBe(
       "hibernate",
     );
   });

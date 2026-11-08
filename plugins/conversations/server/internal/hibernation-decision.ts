@@ -1,8 +1,11 @@
+import { isOwnConversation } from "./conversation-ownership";
+
 /**
  * What to do with a DB row whose live process is missing.
  * - `"hibernate"`: resumable row not yet hibernated → stamp `hibernatedAt`.
  * - `"leave-hibernated"`: resumable row already hibernated → leave alone.
- * - `"leave-unowned"`: not this runtime's row to classify (non-main) → no write.
+ * - `"leave-unowned"`: not this database's own row (a fork's copy of a row of
+ *   the database it was forked from) → no write.
  * - `"gone"`: nothing to resume (no `claudeSessionId`) → mark disconnected.
  *
  * A MISSING PROCESS NEVER CHANGES STATUS. An agent process is an internal
@@ -44,15 +47,21 @@ export type MissingProcessAction =
   "hibernate" | "leave-hibernated" | "leave-unowned" | "gone";
 
 export function decideMissingProcessAction(
-  row: { claudeSessionId: string | null; hibernatedAt: Date | null },
-  opts: { onMain: boolean },
+  row: {
+    claudeSessionId: string | null;
+    hibernatedAt: Date | null;
+    createdAt: Date;
+  },
+  opts: { forkedAt: Date | null },
 ): MissingProcessAction {
-  // Conversation rows are owned by main. Each worktree's forked DB holds stale
-  // copies of rows it did not spawn, whose agents it cannot see (agent paths
-  // are per namespace). A non-main reconciler classifying those would write
-  // `gone` into its fork for conversations that are alive elsewhere — the same
-  // mislabelling, just scoped to one fork.
-  if (!opts.onMain) return "leave-unowned";
+  // A row is classified only by the backend whose database created it. A
+  // worktree's forked DB holds copies of main's rows, whose agents it cannot
+  // see (agent paths are per namespace): classifying those would write into
+  // its fork for conversations alive elsewhere. But the rows it launched
+  // itself, after the fork, are its own like main's are main's — deciding by
+  // namespace (`isMain()`) left a worktree's killed agents `waiting` and never
+  // hibernated, so the next turn failed with no agent to resume.
+  if (!isOwnConversation(row, opts.forkedAt)) return "leave-unowned";
 
   // Resumable ⇒ hibernated, whatever the status was and whatever the
   // hibernation config says. `hibernationConfig.enabled` gates the PROACTIVE

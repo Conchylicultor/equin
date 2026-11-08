@@ -1,4 +1,4 @@
-import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
+import { databaseForkedAt } from "@plugins/database/plugins/fork-point/server";
 import { dirname } from "node:path";
 import { z } from "zod";
 import {
@@ -82,6 +82,8 @@ interface LiveSnapshot {
   spawnsInFlight: ReadonlySet<string>;
   /** The rows with an inline launch running in this backend, read at the same point. */
   inlineLaunchesInFlight: ReadonlySet<string>;
+  /** This database's fork point: which of the rows are its own to classify. */
+  forkedAt: Date | null;
 }
 
 /**
@@ -106,6 +108,7 @@ async function collectLive(
       .map((r) => r.id),
     mark,
   );
+  const forkedAt = await databaseForkedAt();
   const merged = new Map<string, LiveEntry>();
   const failedRuntimes = new Set<string>();
   for (const runtime of Runtime.all()) {
@@ -146,6 +149,7 @@ async function collectLive(
     failedRuntimes,
     spawnsInFlight,
     inlineLaunchesInFlight,
+    forkedAt,
   };
 }
 
@@ -255,7 +259,7 @@ async function planFor(
   const candidate = sessionCandidate(row, liveness);
   const gate = candidate === null ? null : await sessionGate(row, candidate);
   const plan = planConversationUpdate(row, liveness, {
-    onMain: isMain(),
+    forkedAt: live.forkedAt,
     now: Date.now(),
     sessionAccepted: gate === "accepted",
     questionHold: holds.get(row.id) ?? null,

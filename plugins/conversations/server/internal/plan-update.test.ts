@@ -49,7 +49,7 @@ const UNKNOWN: Liveness = { kind: "unknown", reason: "behind" };
 
 function ctx(overrides: Partial<PlanContext> = {}): PlanContext {
   return {
-    onMain: true,
+    forkedAt: null,
     now: NOW,
     sessionAccepted: false,
     questionHold: null,
@@ -493,14 +493,37 @@ describe("planConversationUpdate — no live session", () => {
     });
   });
 
-  test("off main, a working row is not this backend's to settle", () => {
+  // A forked database's rows from before its fork point are copies of the
+  // source's: their agents run elsewhere, so they are never settled here.
+  test("a row the fork copied in is not this backend's to settle", () => {
     expect(
       planConversationUpdate(
         row({ status: "working" }),
         ABSENT,
-        ctx({ onMain: false }),
+        ctx({ forkedAt: new Date(NOW - 1000) }),
       ),
     ).toEqual({ kind: "noop" });
+  });
+
+  // The row a worktree backend launched itself, after its database's fork:
+  // its own, reconciled like any of main's (it stayed `waiting`, never
+  // hibernated, and its next turn failed with no agent to resume).
+  test("a row created after the fork point is this backend's own", () => {
+    const forkedAt = new Date(NOW - 2 * 60 * 60_000);
+    expect(
+      planConversationUpdate(
+        row({ status: "waiting" }),
+        ABSENT,
+        ctx({ forkedAt }),
+      ),
+    ).toEqual({ kind: "hibernate", endTurn: false });
+    expect(
+      planConversationUpdate(
+        row({ status: "working" }),
+        ABSENT,
+        ctx({ forkedAt }),
+      ),
+    ).toEqual({ kind: "hibernate", endTurn: true });
   });
 
   test("nothing to resume → gone", () => {
@@ -509,12 +532,12 @@ describe("planConversationUpdate — no live session", () => {
     ).toEqual({ kind: "gone", stuckStartingMs: null });
   });
 
-  test("off main → never a write", () => {
+  test("a row the fork copied in → never a write", () => {
     expect(
       planConversationUpdate(
         row({ claudeSessionId: null }),
         ABSENT,
-        ctx({ onMain: false }),
+        ctx({ forkedAt: new Date(NOW - 1000) }),
       ),
     ).toEqual({ kind: "noop" });
   });

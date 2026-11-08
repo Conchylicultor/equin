@@ -57,7 +57,11 @@ export type Liveness =
   | { kind: "unknown"; reason: string };
 
 export interface PlanContext {
-  onMain: boolean;
+  /**
+   * When this backend's database was forked (`databaseForkedAt`), or null for
+   * one never forked: decides which rows are its own (`isOwnConversation`).
+   */
+  forkedAt: Date | null;
   now: number;
   /**
    * Whether the live session id passed `sessionGate` — the async gate the
@@ -417,7 +421,9 @@ function planAbsent(row: PlanRow, ctx: PlanContext): UpdatePlan {
   // way: with no process, nothing holds that turn any more.
   const endTurn =
     row.status === "working" || row.waitingFor === STUCK_TURN_WAITING_FOR;
-  const action = decideMissingProcessAction(row, { onMain: ctx.onMain });
+  const action = decideMissingProcessAction(row, {
+    forkedAt: ctx.forkedAt,
+  });
   switch (action) {
     case "hibernate":
       return { kind: "hibernate", endTurn };

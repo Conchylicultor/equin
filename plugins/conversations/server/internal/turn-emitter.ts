@@ -16,7 +16,8 @@ import {
   _conversationTurnCompletedTriggers,
   conversationTurnCompleted,
 } from "./tables-turn-completed-event";
-import { ownConversationFilter } from "./conversation-ownership";
+import { databaseForkedAt } from "@plugins/database/plugins/fork-point/server";
+import { isOwnConversation } from "./conversation-ownership";
 
 // conversationId → unsubscribe
 const subscriptions = new Map<string, () => void>();
@@ -38,8 +39,11 @@ const reconcileGate = createSemaphore(1);
 function reconcile(conversationId: string): Promise<void> {
   return reconcileGate.run(async () => {
     const row = await getConversationRuntime(conversationId);
-    const own = await ownConversationFilter();
-    const active = row !== null && isActiveStatus(row.status) && own(row);
+    const forkedAt = await databaseForkedAt();
+    const active =
+      row !== null &&
+      isActiveStatus(row.status) &&
+      isOwnConversation(row, forkedAt);
     const unsub = subscriptions.get(conversationId);
     if (active && !unsub) {
       subscriptions.set(
@@ -59,9 +63,13 @@ function reconcile(conversationId: string): Promise<void> {
 export function startTurnEmitter(): Promise<void> {
   return reconcileGate.run(async () => {
     const convs = await listConversationsForInfra();
-    const own = await ownConversationFilter();
+    const forkedAt = await databaseForkedAt();
     for (const c of convs) {
-      if (!isActiveStatus(c.status) || !own(c) || subscriptions.has(c.id))
+      if (
+        !isActiveStatus(c.status) ||
+        !isOwnConversation(c, forkedAt) ||
+        subscriptions.has(c.id)
+      )
         continue;
       subscriptions.set(c.id, subscribeToConversation(c.id));
     }

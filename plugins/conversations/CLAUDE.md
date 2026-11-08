@@ -24,6 +24,12 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   "Unknown" (tooltip: since when, last known status); the transcript foot says
   "Status unknown" instead of the quiet idle foot.
   Design: [`research/2026-10-25-conversations-turn-identity-and-fresh-projection.md`](../../research/2026-10-25-conversations-turn-identity-and-fresh-projection.md) (B3/B4).
+- **A row is classified only by the database that created it**
+  (`isOwnConversation`: created after `databaseForkedAt()`, or the database was
+  never forked) — never by namespace. A worktree's fork holds copies of main's
+  rows, whose agents it cannot see, and leaves them alone; the conversations it
+  launched itself it hibernates / settles / sweeps like main does its own. The
+  turn-emitter follows the same rule.
 - **A `starting` row with no session is decided by whether its launch is
   still coming, never by its age.** Two facts, read before the runtimes are
   asked: its `conversations.spawn` job is in flight (`inFlight`: a queue row

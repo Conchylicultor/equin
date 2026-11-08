@@ -1,5 +1,3 @@
-import { databaseForkedAt } from "@plugins/database/plugins/fork-point/server";
-
 /**
  * Is a conversation this backend's own — created in this database — rather
  * than a copy the fork that made this database brought over from main's?
@@ -20,12 +18,4 @@ export function isOwnConversation(
   forkedAt: Date | null,
 ): boolean {
   return forkedAt === null || row.createdAt.getTime() > forkedAt.getTime();
-}
-
-/** {@link isOwnConversation} against this database's fork point. */
-export async function ownConversationFilter(): Promise<
-  (row: { createdAt: Date }) => boolean
-> {
-  const forkedAt = await databaseForkedAt();
-  return (row) => isOwnConversation(row, forkedAt);
 }
