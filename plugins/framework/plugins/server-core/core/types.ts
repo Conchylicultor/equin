@@ -192,6 +192,10 @@ export interface ServerPluginDefinition {
    * migrated DB and ready registry are guaranteed). Use this for background
    * work (pollers, watchers) that issues DB queries — scheduling it from the
    * plugin's module body races the migration runner.
+   *
+   * Never fatal, for any plugin: the backend already serves, so a rejection is
+   * filed as a report (one row per plugin and hook) and the backend goes on —
+   * an exit would only respawn it into the same failure, a crash loop.
    */
   onReady?: () => void | Promise<void>;
   /**
@@ -200,14 +204,14 @@ export interface ServerPluginDefinition {
    * state another plugin only produces in its `onReady` and that you can't
    * express as a `dependsOn` edge — e.g. building schedules whose definitions
    * read config the config plugin populates in its own `onReady`. Runs in
-   * parallel across plugins; a load-bearing plugin's rejection aborts boot.
+   * parallel across plugins; a rejection is reported, never fatal (as `onReady`).
    */
   onAllReady?: () => void | Promise<void>;
   /**
    * Called once on a SERVING host (the desktop's `serve`, the browser host)
    * after `onAllReady` — and, in the browser, the seed — while the host is
    * already serving; never in `exec`. Runs in parallel across plugins; a
-   * load-bearing plugin's rejection rejects the phase.
+   * rejection is reported, never fatal (as `onReady`).
    *
    * Not a home for new post-serving work: declare a `defineWarmup`
    * (infra/warmup), which drains here under a concurrency gate, a host slot

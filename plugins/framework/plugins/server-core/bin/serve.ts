@@ -361,7 +361,10 @@ export async function serve({
   // The serving host's post-ready phases, shared with the browser host
   // (`core/boot-stages.ts`'s `runPostReadyPhases`): the change-feed assertion
   // (D3), `onReady` (eager graph-driven: each plugin fires as soon as all its
-  // `dependsOn` parents have resolved), then the `onAllReady` barrier.
+  // `dependsOn` parents have resolved), then the `onAllReady` barrier. A
+  // hook's failure is reported and never rejects it (an exit here respawned
+  // into the same failure: a crash loop); only the wiring asserts ahead of
+  // the hooks still throw, and a graph wired wrong must not serve.
   await runPostReadyPhases(ordered);
 
   // Graceful shutdown: drain workers, flush state, release DB connections.

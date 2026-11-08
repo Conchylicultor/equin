@@ -37,8 +37,8 @@ asserts at least one `ChangelogRetention` contribution
 (`assertChangelogRetained`), after starting the listener, so a graph assembled
 outside the closure engine reports an unbounded changelog instead of growing
 one silently. `exec` children and partial-graph test boots never reach it.
-The plugin is not `loadBearing`, so that throw is logged by the boot sequence
-rather than killing the serving backend.
+A post-ready hook is never fatal, so that throw is filed as a report by the boot
+sequence rather than killing the serving backend.
 
 A serving host whose graph serves DB-backed reads but boots no change feed fails
 at boot (server-core's `assertDbReadsHaveChangeFeed`, keyed on the relation

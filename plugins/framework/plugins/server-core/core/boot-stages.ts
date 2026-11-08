@@ -11,6 +11,7 @@ import {
 import { setBootMode, setRegisteringPlugin } from "./boot-mode";
 import { assertHostServices } from "./host-service";
 import { collectContributions } from "./contributions";
+import { reportServerError } from "./error-reporter";
 import {
   LOAD_SPAN_FLOOR_MS,
   profilerStart,
@@ -132,8 +133,8 @@ export type BootSpec = {
  *
  * Fatality, unchanged from the single-mode boot this was extracted from: a load
  * failure, a `register` throw and an `onReadyBlocking` throw all abort boot
- * unconditionally (NOT gated on `loadBearing`); only the post-barrier phases are
- * gated, and those are serve-only.
+ * unconditionally (NOT gated on `loadBearing`). The post-barrier phases —
+ * serving hosts only — are never fatal ({@link reportPostReadyHookFailure}).
  */
 export async function bootPluginGraph(
   spec: BootSpec,
@@ -406,9 +407,8 @@ async function runRegisterPhase(ordered: LoadedServerPlugin[]): Promise<void> {
 //   genuinely optional-for-correctness must make that explicit by handling its own
 //   failure INSIDE the hook (see `live-state-snapshot`), never by relying on the
 //   framework to swallow it.
-// - `onReady` runs AFTER the server is already serving. Killing a live, serving
-//   backend because a background poller/watcher threw is reserved for genuinely
-//   critical plugins, so that phase stays gated on `loadBearing`.
+// - `onReady` runs AFTER the server is already serving, and is never fatal —
+//   see `reportPostReadyHookFailure`.
 async function runGraphPhase(
   ordered: LoadedServerPlugin[],
   hook: "onReadyBlocking" | "onReady",
@@ -437,8 +437,11 @@ async function runGraphPhase(
         for (const h of handlers) h.attach();
         await fn?.call(p);
       } catch (err) {
-        console.error(`[plugin.${p.id}] ${hook} failed`, err);
-        if (hook === "onReadyBlocking" || p.loadBearing) throw err;
+        if (hook === "onReadyBlocking") {
+          console.error(`[plugin.${p.id}] ${hook} failed`, err);
+          throw err;
+        }
+        reportPostReadyHookFailure(p, hook, err);
       } finally {
         end();
       }
@@ -446,6 +449,51 @@ async function runGraphPhase(
     resolved.set(p.id, ready);
   }
   await Promise.all(resolved.values());
+}
+
+/**
+ * A post-ready hook (`onReady`, `onAllReady`, `onSettled`) failed: printed and
+ * filed as a report (one row per plugin and hook), and the backend goes on
+ * serving — for every plugin, `loadBearing` or not.
+ *
+ * Never an exit. These phases run after the readiness flip, so the gateway has
+ * already swapped this backend in; exiting only respawns it, and the respawn
+ * runs the same hook on the same data. A deterministic failure — one bad row a
+ * boot-time catch-up writes — was a crash loop of the whole backend: on
+ * 2026-11-08 `conversations`' `onReady` (its boot status reconcile) threw a DB
+ * trigger's refusal and main exited every ~10 s, 70+ times, with nothing to
+ * show it but the error it died of. A transient failure gained nothing either:
+ * a restart that happens to pass is a retry, and hides why the hook failed.
+ * What a hook did not start stays down until the next boot — the report says
+ * which plugin and hook, so it is seen and fixed, not restarted around. Its
+ * `dependsOn` children still run their own hook: each must cope with a parent
+ * that did not finish starting (work no child may run without belongs in the
+ * parent's `onReadyBlocking`, the one fatal phase).
+ */
+function reportPostReadyHookFailure(
+  p: LoadedServerPlugin,
+  hook: "onReady" | "onAllReady" | "onSettled",
+  err: unknown,
+): void {
+  console.error(`[plugin.${p.id}] ${hook} failed`, err);
+  // A non-Error throw has no stack of its own: none, rather than this
+  // function's (which would point at the reporter, not the hook).
+  const isError = err instanceof Error;
+  reportServerError({
+    message: `[plugin.${p.id}] ${hook} failed: ${isError ? err.message : describeThrown(err)}`,
+    stack: isError ? (err.stack ?? null) : null,
+    errorType: isError ? err.name : typeof err,
+    scope: `plugin-hook:${p.id}:${hook}`,
+  });
+}
+
+/** A thrown non-Error in words — never throwing itself (a hostile `toString`). */
+function describeThrown(thrown: unknown): string {
+  try {
+    return String(thrown);
+  } catch (stringifyError) {
+    return `(a thrown ${typeof thrown} that could not be stringified: ${stringifyError instanceof Error ? stringifyError.message : "unknown"})`;
+  }
 }
 
 // ── onReadyBlocking ─────────────────────────────────────────────
@@ -482,7 +530,7 @@ export async function runReadyBarrier(
 // Phase 3 — full barrier: every plugin's `onReady` has resolved. Plugins whose
 // initialization must observe another plugin's onReady-produced state (without
 // a dependsOn edge — e.g. a schedule whose definition reads config) run here.
-// Parallel; a load-bearing plugin's rejection aborts boot.
+// Parallel; a rejection is reported, never fatal (`reportPostReadyHookFailure`).
 async function runAllReadyPhase(ordered: LoadedServerPlugin[]): Promise<void> {
   await Promise.all(
     ordered.map(async (p) => {
@@ -491,8 +539,7 @@ async function runAllReadyPhase(ordered: LoadedServerPlugin[]): Promise<void> {
       try {
         await p.onAllReady();
       } catch (err) {
-        console.error(`[plugin.${p.id}] onAllReady failed`, err);
-        if (p.loadBearing) throw err;
+        reportPostReadyHookFailure(p, "onAllReady", err);
       } finally {
         end();
       }
@@ -535,8 +582,8 @@ export async function runPostReadyPhases(
  * never run heavy post-serving work, and this function is the only caller of
  * the hook.
  *
- * Parallel; same error policy as `onAllReady` — logged, and a load-bearing
- * plugin's rejection rejects the phase. Wrapped in one `settled` profiler span
+ * Parallel; same error policy as `onAllReady` — a rejection is reported, never
+ * fatal. Wrapped in one `settled` profiler span
  * (each hook an `onSettled:<id>` span under it), so a boot profile is complete
  * once that span is recorded, whatever plugins the graph holds.
  */
@@ -557,8 +604,7 @@ export async function runSettledPhase(
         try {
           await p.onSettled();
         } catch (err) {
-          console.error(`[plugin.${p.id}] onSettled failed`, err);
-          if (p.loadBearing) throw err;
+          reportPostReadyHookFailure(p, "onSettled", err);
         } finally {
           endHook();
         }

@@ -135,9 +135,10 @@ export async function bootBrowserHost(
   await opts.seed?.({ request });
   const t3 = performance.now();
   // Not awaited: the host is ready to serve now, and catch-up work runs while
-  // it does. The catch is here, not at each entry, so none can forget it: it
-  // names the phase and rethrows, so the failure surfaces as the worker's
-  // unhandled rejection even when nothing awaits `settled`.
+  // it does. A hook's own failure is reported by the phase and never rejects
+  // it; anything else that rejects it (a bug in the phase itself) is named
+  // here and rethrown, so it surfaces as the worker's unhandled rejection even
+  // when nothing awaits `settled`.
   const settled = runSettledPhase(ordered);
   void settled.catch((err: unknown) => {
     console.error("[browser-host] the settled phase failed", err);

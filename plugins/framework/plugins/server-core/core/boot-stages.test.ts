@@ -1,4 +1,13 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  spyOn,
+  test,
+} from "bun:test";
+import type { Mock } from "bun:test";
 import { z } from "zod";
 import {
   clearRelationBases,
@@ -15,6 +24,8 @@ import {
   runShutdownHooks,
 } from "./boot-stages";
 import { sinkHandler } from "./sink-handler";
+import { serverErrorSink } from "./error-reporter";
+import type { ServerErrorReport } from "./error-reporter";
 import { isolateHostServices } from "./testing/host-services";
 import { clearCollectedContributions } from "./contributions";
 
@@ -73,25 +84,25 @@ describe("bootPluginGraph — the preload-declare assert", () => {
   });
 });
 
+// The post-ready phases hold a serving host to a change feed and a watermark
+// source when it serves live reads; these graphs serve none, but the resource
+// runtime is a process singleton other suites in this bun process register
+// DB-backed reads on, so install inert ones for the duration.
+async function asServingHost<T>(fn: () => Promise<T>): Promise<T> {
+  setRelationBases((relation) => [relation]);
+  setWatermarkSource(() => Promise.resolve("0"));
+  try {
+    return await fn();
+  } finally {
+    setWatermarkSource(null);
+    clearRelationBases();
+  }
+}
+
 // The settled phase of a serving host: `runSettledPhase` is the only caller of
 // `onSettled`, after the post-ready phases. Plugins are handed in directly — the
 // phases read only the loaded definitions.
 describe("runSettledPhase — the onSettled hook", () => {
-  // The post-ready phases hold a serving host to a change feed and a watermark
-  // source when it serves live reads; this graph serves none, but the resource
-  // runtime is a process singleton other suites in this bun process register
-  // DB-backed reads on, so install inert ones for the duration.
-  async function asServingHost<T>(fn: () => Promise<T>): Promise<T> {
-    setRelationBases((relation) => [relation]);
-    setWatermarkSource(() => Promise.resolve("0"));
-    try {
-      return await fn();
-    } finally {
-      setWatermarkSource(null);
-      clearRelationBases();
-    }
-  }
-
   test("runs after every onAllReady, and never in the post-ready phases", async () => {
     const events: string[] = [];
     const ordered: LoadedServerPlugin[] = [
@@ -114,22 +125,126 @@ describe("runSettledPhase — the onSettled hook", () => {
     await runSettledPhase(ordered);
     expect(events).toEqual(["onAllReady", "onSettled"]);
   });
+});
 
-  test("a load-bearing plugin's throw rejects the phase; another's is logged", async () => {
-    const boom = (): never => {
-      throw new Error("settle-boom");
+// The post-ready phases run on a host that already serves: a hook's failure is
+// filed (one report per plugin and hook) and never rejects the phase, for a
+// load-bearing plugin too — on 2026-11-08 a load-bearing `onReady` rejecting on
+// a deterministic DB error exited main at every boot, a crash loop.
+describe("post-ready hook failures — reported, never fatal", () => {
+  let filed: ServerErrorReport[] = [];
+  const handler = sinkHandler(serverErrorSink, () => (r: ServerErrorReport) => {
+    filed.push(r);
+  });
+  let error: Mock<typeof console.error>;
+  beforeEach(() => {
+    filed = [];
+    handler.attach();
+    error = spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    handler.detach();
+    error.mockRestore();
+  });
+
+  const boom = (what: string) => (): never => {
+    throw new Error(what);
+  };
+
+  test("a load-bearing plugin's onReady / onAllReady / onSettled throw is filed, the phases resolve and the others still run", async () => {
+    const ran: string[] = [];
+    const ordered: LoadedServerPlugin[] = [
+      {
+        id: "test.load-bearing",
+        loadBearing: true,
+        onReady: boom("ready-boom"),
+        onAllReady: boom("all-ready-boom"),
+        onSettled: boom("settle-boom"),
+      },
+      {
+        id: "test.other",
+        onReady: () => {
+          ran.push("onReady");
+        },
+        onAllReady: () => {
+          ran.push("onAllReady");
+        },
+        onSettled: () => {
+          ran.push("onSettled");
+        },
+      },
+    ];
+    await asServingHost(() => runPostReadyPhases(ordered));
+    await runSettledPhase(ordered);
+
+    expect(ran).toEqual(["onReady", "onAllReady", "onSettled"]);
+    expect(filed.map((r) => [r.scope, r.message])).toEqual([
+      [
+        "plugin-hook:test.load-bearing:onReady",
+        "[plugin.test.load-bearing] onReady failed: ready-boom",
+      ],
+      [
+        "plugin-hook:test.load-bearing:onAllReady",
+        "[plugin.test.load-bearing] onAllReady failed: all-ready-boom",
+      ],
+      [
+        "plugin-hook:test.load-bearing:onSettled",
+        "[plugin.test.load-bearing] onSettled failed: settle-boom",
+      ],
+    ]);
+    expect(
+      filed.every((r) => r.errorType === "Error" && r.stack !== null),
+    ).toBe(true);
+  });
+
+  test("a dependent's onReady still runs after its parent's failed", async () => {
+    const ran: string[] = [];
+    const parent: LoadedServerPlugin = {
+      id: "test.parent",
+      onReady: boom("parent-boom"),
     };
-    await runSettledPhase([{ id: "test.optional", onSettled: boom }]);
+    const child: LoadedServerPlugin = {
+      id: "test.child",
+      dependsOn: [parent],
+      onReady: () => {
+        ran.push("child");
+      },
+    };
+    await asServingHost(() => runPostReadyPhases([parent, child]));
+    expect(ran).toEqual(["child"]);
+    expect(filed.map((r) => r.scope)).toEqual([
+      "plugin-hook:test.parent:onReady",
+    ]);
+  });
 
-    let caught: unknown;
-    try {
-      await runSettledPhase([
-        { id: "test.load-bearing", loadBearing: true, onSettled: boom },
-      ]);
-    } catch (err) {
-      caught = err;
-    }
-    expect((caught as Error).message).toBe("settle-boom");
+  test("a non-Error throw is filed with its words and no borrowed stack", async () => {
+    const hostile = {
+      toString(): string {
+        throw new Error("no words");
+      },
+    };
+    await asServingHost(() =>
+      runPostReadyPhases([
+        { id: "test.string", onReady: () => Promise.reject("plain words") },
+        { id: "test.hostile", onReady: () => Promise.reject(hostile) },
+      ]),
+    );
+    expect(filed.map((r) => [r.message, r.stack, r.errorType])).toEqual([
+      ["[plugin.test.string] onReady failed: plain words", null, "string"],
+      [
+        "[plugin.test.hostile] onReady failed: (a thrown object that could not be stringified: no words)",
+        null,
+        "object",
+      ],
+    ]);
+  });
+
+  test("an onReadyBlocking throw still aborts boot, and is not filed as a hook report", async () => {
+    const barrier = runReadyBarrier([
+      { id: "test.blocking", onReadyBlocking: boom("barrier-boom") },
+    ]);
+    expect(barrier).rejects.toThrow("barrier-boom");
+    expect(filed).toEqual([]);
   });
 });
 
