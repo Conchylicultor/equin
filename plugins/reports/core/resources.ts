@@ -40,6 +40,7 @@ export const reportsList = liveCollection("reports.list", {
       "lastClientId",
       "lastBuildId",
       "recent",
+      "hourly",
       "taskId",
       "firstSeenAt",
       "createdAt",

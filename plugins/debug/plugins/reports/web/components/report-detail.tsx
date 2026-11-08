@@ -2,11 +2,19 @@ import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import {
+  RelativeTime,
+  useNow,
+} from "@plugins/primitives/plugins/relative-time/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { TabOriginBadge } from "@plugins/apps-core/plugins/tab-origin/web";
 import { useStaleFrontend } from "@plugins/build/web";
-import { reportsList, type Report } from "@plugins/reports/core";
+import {
+  formatReportActivity,
+  reportActivity,
+  reportsList,
+  type Report,
+} from "@plugins/reports/core";
 import { Reports } from "@plugins/reports/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -132,6 +140,7 @@ function HeaderBadges({
   /** The bundle graph this server is serving; `lastBuildId` holds the reporting tab's. */
   serverGraph: string | null;
 }) {
+  const now = useNow(60_000);
   return (
     <Cluster>
       <Badge variant="muted" className="font-mono">
@@ -148,9 +157,9 @@ function HeaderBadges({
         c.lastBuildId !== serverGraph && (
           <Badge variant="warning">outdated tab</Badge>
         )}
-      {c.count > 1 && (
-        <span className="tabular-nums text-muted-foreground">×{c.count}</span>
-      )}
+      <span className="tabular-nums text-muted-foreground">
+        {formatReportActivity(reportActivity(c, now))}
+      </span>
       <span className="text-muted-foreground">
         <RelativeTime date={c.lastSeenAt} />
       </span>

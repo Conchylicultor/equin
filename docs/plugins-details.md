@@ -24149,11 +24149,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "reports"
           - `DebugApp.Sidebar` "Reports"
           - `Notifications.Action` "fix-report"
-        - Uses: 31 symbols — full list in [`plugins/debug/plugins/reports/REFERENCE.md`](../plugins/debug/plugins/reports/REFERENCE.md)
+        - Uses: 32 symbols — full list in [`plugins/debug/plugins/reports/REFERENCE.md`](../plugins/debug/plugins/reports/REFERENCE.md)
           - `primitives/data-view` ×5
           - `primitives/pane` ×5
           - `network/live` ×2
           - `primitives/launch/investigate` ×2
+          - `primitives/relative-time` ×2
           - `reports` ×2
           - `apps-core/tab-origin.TabOriginBadge`
           - `apps/debug/shell.DebugApp`
@@ -24168,13 +24169,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/loading.Loading`
-          - `primitives/relative-time.RelativeTime`
           - `shell/notifications.Notifications`
         - Exports (values):
           - `reportDetailPane`
           - `reportsPane`
       - Cross-plugin:
         - Uses tokens:
+          - `ui/tokens/color-palette --faint-foreground`
           - `ui/tokens/color-palette --foreground`
           - `ui/tokens/color-palette --muted`
           - `ui/tokens/color-palette --muted-foreground`
@@ -51915,8 +51916,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/pane.defineRoute`
     - Exports (types):
       - `Report`
+      - `ReportActivity`
+      - `ReportActivityInput`
       - `ReportBody`
       - `ReportFingerprintContext`
+      - `ReportHourly`
       - `ReportId`
       - `ReportInput`
       - `ReportOccurrence`
@@ -51924,12 +51928,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReportSource`
     - Exports (values):
       - `CLIENT_REPORT_SOURCES`
+      - `formatRecentCount`
+      - `formatReportActivity`
       - `investigateReport`
       - `isStaleOrigin`
       - `normalizeMessage`
+      - `REPORT_HOURLY_MAX`
       - `REPORT_RECENT_MAX`
+      - `reportActivity`
       - `reportDetailRoute`
       - `reportFields`
+      - `reportHourOf`
       - `reportIdKind`
       - `REPORTS_SEARCHABLE`
       - `reportsConfig`

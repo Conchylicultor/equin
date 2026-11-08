@@ -33,6 +33,28 @@ export const ReportOccurrenceSchema = z.object({
 });
 export type ReportOccurrence = z.infer<typeof ReportOccurrenceSchema>;
 
+/** How many hour buckets a report keeps in {@link reportFields}' `hourly`. */
+export const REPORT_HOURLY_MAX = 24;
+
+/**
+ * A report's occurrences counted per clock hour (UTC hour start, epoch ms),
+ * newest first, the newest {@link REPORT_HOURLY_MAX} hours that saw one — what
+ * "how many in the last 24 h" is read from (`reportActivity`), since `count`
+ * is the lifetime total and `recent` keeps only the newest few.
+ *
+ * `untrackedBefore`: null when the report was counted per hour from its first
+ * occurrence — every occurrence in a kept hour is in it; otherwise when
+ * counting began (a report first seen before `hourly` existed), occurrences
+ * before it possibly missing.
+ */
+export const ReportHourlySchema = z.object({
+  hours: cappedList(z.object({ h: z.number(), n: z.number() }), {
+    max: REPORT_HOURLY_MAX,
+  }),
+  untrackedBefore: z.number().nullable(),
+});
+export type ReportHourly = z.infer<typeof ReportHourlySchema>;
+
 /**
  * A report's fields, in column order — the `reports` table is built from them
  * (`server/internal/tables.ts`). One row per (fingerprint, worktree).
@@ -65,7 +87,8 @@ export const reportFields = {
     }),
     default: {},
   }),
-  count: intField({ label: "×" }),
+  /** Every occurrence since first seen — the lifetime total. */
+  count: intField({ label: "Total" }),
   /**
    * Generic velocity state: set when this fingerprint fired faster than the
    * velocity window allows; while the burst lasts, recordReport skips the bell
@@ -99,6 +122,11 @@ export const reportFields = {
     schema: cappedList(ReportOccurrenceSchema, { max: REPORT_RECENT_MAX }),
     default: [],
   }),
+  /**
+   * Occurrences per hour (see {@link ReportHourlySchema}). Null on a report
+   * not written since the column was added: nothing counted per hour yet.
+   */
+  hourly: nullable(jsonField({ schema: ReportHourlySchema })),
   /**
    * Soft reference to tasks.id — the cross-plugin FK would cross a plugin
    * boundary, so integrity is validated in code via getTask(). A deleted task

@@ -2,7 +2,11 @@ import { and, asc, count, eq, gte, inArray, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _reports, ReportKind, type ReportRow } from "@plugins/reports/server";
 import { reportsProducer } from "./producer";
-import { reportIdKind } from "@plugins/reports/core";
+import {
+  formatReportActivity,
+  reportActivity,
+  reportIdKind,
+} from "@plugins/reports/core";
 
 // Not yet investigated: no task linked, and not classified as noise.
 const uninvestigated = and(isNull(_reports.taskId), eq(_reports.noise, false));
@@ -81,5 +85,12 @@ export function renderReportTask(row: ReportRow): {
       `renderReportTask: no ReportKind registered for kind "${row.kind}"`,
     );
   }
-  return spec.renderTask(row);
+  const { title, description } = spec.renderTask(row);
+  // Every kind's body states the lifetime count; this line says what it is
+  // doing now, so an investigator can tell a live problem from an old one.
+  const activity = formatReportActivity(reportActivity(row, Date.now()));
+  return {
+    title,
+    description: `${description}\n\n**Activity:** ${activity}`,
+  };
 }

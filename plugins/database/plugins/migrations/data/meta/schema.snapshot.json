@@ -1,6 +1,6 @@
 {
-  "id": "59f5fa0f-368d-4bae-953a-1830707e831d",
-  "prevId": "60dec196-7ede-4019-b83e-532e4ffe7dbe",
+  "id": "02649ede-c21c-49a2-8be8-299a7d9b6c00",
+  "prevId": "59f5fa0f-368d-4bae-953a-1830707e831d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -11849,6 +11849,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'[]'::jsonb"
+        },
+        "hourly": {
+          "name": "hourly",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "task_id": {
           "name": "task_id",

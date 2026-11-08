@@ -53,6 +53,7 @@ const reportsEntity = defineEntity(reportsEntityRef, {
       lastClientId: false,
       lastBuildId: false,
       recent: false,
+      hourly: false,
       firstSeenAt: false,
       lastSeenAt: false,
       createdAt: false,

@@ -13,9 +13,18 @@ export { normalizeMessage } from "./message-identity";
 export { reportIdKind } from "./id-kind";
 export type { ReportId } from "./id-kind";
 export {
+  reportActivity,
+  reportHourOf,
+  formatRecentCount,
+  formatReportActivity,
+} from "./activity";
+export type { ReportActivity, ReportActivityInput } from "./activity";
+export {
+  REPORT_HOURLY_MAX,
   REPORT_RECENT_MAX,
   reportFields,
   reportsEntityRef,
+  type ReportHourly,
   type ReportOccurrence,
 } from "./entity";
 // The report contract every runtime shares: the HTTP body the browser posts

@@ -35,7 +35,11 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const infoReportIcon = symbol("info");
 import {
   reportDetailRoute,
+  REPORT_HOURLY_MAX,
   REPORT_RECENT_MAX,
+  formatReportActivity,
+  reportActivity,
+  reportHourOf,
   isStaleOrigin,
   reportIdKind,
   type ReportId,
@@ -530,6 +534,11 @@ function ringBell(bell: Bell, incident: IncidentBell | null): void {
         title: staleOrigin ? `${spec.meta.notif} (stale tab)` : spec.meta.notif,
         description: bellDescription(desc),
         variant: spec.meta.variant,
+        // What the report itself is doing, as of this ring: its last 24 h
+        // beside its lifetime total. The meta line's ×N is THIS
+        // notification's recurrences (since it was filed), never the report's
+        // lifetime — so neither number passes for the other.
+        detail: formatReportActivity(reportActivity(row, Date.now())),
         muted: row.noise,
         // equin's own telemetry: a user not in Developer mode never sees it.
         audience: "developer",
@@ -646,6 +655,33 @@ function buildUpsert(
       limit ${REPORT_RECENT_MAX}
     ) kept
   )`;
+  // This occurrence's hour joins `hourly`: summed into its bucket, cut to the
+  // newest REPORT_HOURLY_MAX hours. A row with no `hourly` yet (first seen
+  // before it existed) starts counting here and says so (`untrackedBefore`):
+  // the write time, not the occurrence's — a replayed older occurrence must
+  // not claim the untracked ones between it and now were counted.
+  const hour = reportHourOf(occurredAt.getTime());
+  const countingFrom = Math.max(occurredAt.getTime(), Date.now());
+  const hourly = sql`jsonb_build_object(
+    'untrackedBefore',
+    case when ${t.hourly} is null
+      then to_jsonb(${countingFrom}::bigint)
+      else ${t.hourly}->'untrackedBefore' end,
+    'hours',
+    (
+      select coalesce(jsonb_agg(jsonb_build_object('h', h, 'n', n) order by h desc), '[]'::jsonb)
+      from (
+        select (b->>'h')::bigint h, sum((b->>'n')::int)::int n
+        from jsonb_array_elements(
+          coalesce(${t.hourly}->'hours', '[]'::jsonb)
+            || jsonb_build_array(jsonb_build_object('h', ${hour}::bigint, 'n', 1))
+        ) b
+        group by 1
+        order by 1 desc
+        limit ${REPORT_HOURLY_MAX}
+      ) kept
+    )
+  )`;
   return q
     .insert(t)
     .values({
@@ -659,6 +695,7 @@ function buildUpsert(
       userAgent: v.userAgent,
       data: v.data,
       recent: [occurrence],
+      hourly: { hours: [{ h: hour, n: 1 }], untrackedBefore: null },
       rateLimited: v.limited,
       noise: v.noise,
       staleOrigin: v.staleOrigin,
@@ -675,6 +712,7 @@ function buildUpsert(
         message: sql`case when ${isNewest} then ${v.message} else ${t.message} end`,
         url: sql`case when ${isNewest} then ${v.url} else ${t.url} end`,
         recent,
+        hourly,
         // Explicit ::jsonb cast: this rides a raw sql param (not the column's
         // drizzle mapper), so the driver must not guess the wire type.
         data: sql`case when ${isNewest} then ${JSON.stringify(v.data)}::jsonb else ${t.data} end`,

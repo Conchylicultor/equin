@@ -27,7 +27,9 @@ Each row shows:
 - the report **source** (badge),
 - a **noise** badge when the report matched a built-in noise rule,
 - a **loop** badge when the report is part of a crash loop,
-- a **×count** dedup multiplier when the same fingerprint recurred,
+- **24 h**: how many times it fired in the last 24 h (`≥ n` when only a floor is
+  known), beside the lifetime **Total** (sortable). Both come from
+  `reportActivity` (`reports/core`); the detail header says the same in one line,
 - the **last-seen** relative time,
 - a **task →** link to the report's filed task (`/agents/tasks/t/<taskId>`) when present,
 - and the error line (`errorType: message`, or just `message`), truncated.
@@ -51,11 +53,12 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `Pane.Register` "reports"
     - `DebugApp.Sidebar` "Reports"
     - `Notifications.Action` "fix-report"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `primitives/pane` ×5
     - `network/live` ×2
     - `primitives/launch/investigate` ×2
+    - `primitives/relative-time` ×2
     - `reports` ×2
     - `apps-core/tab-origin.TabOriginBadge`
     - `apps/debug/shell.DebugApp`
@@ -70,13 +73,13 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/loading.Loading`
-    - `primitives/relative-time.RelativeTime`
     - `shell/notifications.Notifications`
   - Exports (values):
     - `reportDetailPane`
     - `reportsPane`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`

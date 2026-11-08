@@ -5,12 +5,9 @@ import {
   runInBackgroundLane,
   runWithoutProfiling,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import {
-  _reports,
-  reportInvestigationSink,
-  ReportKind,
-} from "@plugins/reports/server";
+import { _reports, reportInvestigationSink } from "@plugins/reports/server";
 import { reportsProducer } from "./producer";
+import { renderReportTask } from "./uninvestigated";
 import { reportIdKind } from "@plugins/reports/core";
 
 // Appended to every report-filed task. The agent that picks one up is about to
@@ -70,18 +67,7 @@ export async function investigateReport(
           );
         }
 
-        const spec = ReportKind.getContributions().find(
-          (k) => k.kind === row.kind,
-        );
-        if (!spec) {
-          // A persisted report whose kind has no registered spec is a wiring bug,
-          // not a runtime condition to paper over.
-          throw new Error(
-            `investigateReport: no ReportKind registered for kind "${row.kind}"`,
-          );
-        }
-
-        const { title, description } = spec.renderTask(row);
+        const { title, description } = renderReportTask(row);
         const result = await reportInvestigationSink.emit({
           existingTaskId: row.taskId,
           title,

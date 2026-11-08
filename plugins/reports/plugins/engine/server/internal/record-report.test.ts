@@ -217,4 +217,49 @@ describe("writeReport (real DB)", () => {
     expect(routed).toHaveLength(1);
     expect([...(routed[0]?.ids ?? [])].sort()).toEqual([a!.id, b!.id].sort());
   });
+
+  test("hourly sums each occurrence into its clock hour, newest hour first", async () => {
+    const T_NEXT_HOUR = new Date("2026-07-11T04:05:00.000Z");
+    await writeReport(values({ occurredAt: T0 }), t.db);
+    await writeReport(values({ occurredAt: T1 }), t.db);
+    const [row] = await writeReport(values({ occurredAt: T_NEXT_HOUR }), t.db);
+
+    expect(row?.hourly).toEqual({
+      hours: [
+        { h: Date.parse("2026-07-11T04:00:00.000Z"), n: 1 },
+        { h: Date.parse("2026-07-11T03:00:00.000Z"), n: 2 },
+      ],
+      untrackedBefore: null,
+    });
+  });
+
+  test("hourly keeps only the newest REPORT_HOURLY_MAX hours", async () => {
+    let row: Awaited<ReturnType<typeof writeReport>>[number] | undefined;
+    for (let i = 0; i < 30; i++) {
+      [row] = await writeReport(
+        values({ occurredAt: new Date(T0.getTime() + i * 3_600_000) }),
+        t.db,
+      );
+    }
+    expect(row?.count).toBe(30);
+    expect(row?.hourly?.hours).toHaveLength(24);
+    expect(row?.hourly?.hours[0]?.h).toBe(
+      Date.parse("2026-07-12T08:00:00.000Z"),
+    );
+  });
+
+  test("a row written before hourly existed starts counting at its next occurrence, and says so", async () => {
+    const [first] = await writeReport(values({ occurredAt: T0 }), t.db);
+    // The state every row recorded before the column was added is in.
+    await t.db.execute(sql`UPDATE reports SET hourly = NULL`);
+    const writtenAt = Date.now();
+    const [row] = await writeReport(values({ occurredAt: T2 }), t.db);
+
+    expect(row?.id).toBe(first?.id);
+    expect(row?.hourly?.hours).toEqual([
+      { h: Date.parse("2026-07-11T03:00:00.000Z"), n: 1 },
+    ]);
+    // Counting began at the write, not at the (older) occurrence.
+    expect(row?.hourly?.untrackedBefore).toBeGreaterThanOrEqual(writtenAt);
+  });
 });

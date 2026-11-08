@@ -1,9 +1,17 @@
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import {
+  RelativeTime,
+  useNow,
+} from "@plugins/primitives/plugins/relative-time/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { TabOriginBadge } from "@plugins/apps-core/plugins/tab-origin/web";
 import { useStaleFrontend } from "@plugins/build/web";
-import { reportsList, REPORTS_SEARCHABLE } from "@plugins/reports/core";
+import {
+  formatRecentCount,
+  reportActivity,
+  reportsList,
+  REPORTS_SEARCHABLE,
+} from "@plugins/reports/core";
 import type { Report } from "@plugins/reports/core";
 import { Reports } from "@plugins/reports/web";
 import {
@@ -83,12 +91,15 @@ const overrides = fieldOverrides(reportsList, {
       r.rateLimited ? <Badge variant="destructive">rate-limited</Badge> : null,
     width: "8rem",
   },
+  // The lifetime total, beside the recent count (`extraFields`): sortable,
+  // never the number a row leads with.
   count: {
-    cell: (r) =>
-      r.count > 1 ? (
-        <span className="tabular-nums text-muted-foreground">×{r.count}</span>
-      ) : null,
-    width: "4rem",
+    cell: (r) => (
+      <span className="tabular-nums text-faint-foreground">
+        {r.count.toLocaleString("en-US")}
+      </span>
+    ),
+    width: "5rem",
   },
   lastSeenAt: {
     cell: (r) => (
@@ -116,6 +127,17 @@ const extraFields: FieldDef<Report>[] = [
     sortable: false,
     filterable: false,
     width: "auto",
+  },
+  {
+    id: "last24h",
+    label: "24 h",
+    type: "text",
+    // Read against the clock, so neither sortable nor filterable server-side.
+    value: () => "",
+    cell: (r) => <RecentCount report={r} />,
+    sortable: false,
+    filterable: false,
+    width: "4rem",
   },
   {
     id: "summary",
@@ -148,5 +170,22 @@ function AttributionBadges({ report: c }: { report: Report }) {
           <Badge variant="warning">outdated tab</Badge>
         )}
     </>
+  );
+}
+
+/** How many times the report fired in the last 24 h (`≥ n` when only a floor is known). */
+function RecentCount({ report }: { report: Report }) {
+  const now = useNow(60_000);
+  const activity = reportActivity(report, now);
+  return (
+    <span
+      className={
+        activity.recent.n > 0
+          ? "tabular-nums text-foreground"
+          : "tabular-nums text-faint-foreground"
+      }
+    >
+      {formatRecentCount(activity)}
+    </span>
   );
 }
