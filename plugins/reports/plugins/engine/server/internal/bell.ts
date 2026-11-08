@@ -126,6 +126,11 @@ function writeBell(
       description: bellDescription(desc),
       variant: regressed ? "error" : spec.meta.variant,
       state: fixNoticeOf(row),
+      // What the report itself is doing, as of this ring: its last 24 h
+      // beside its lifetime total. The meta line's ×N is THIS
+      // notification's recurrences (since it was filed), never the
+      // report's lifetime — so neither number passes for the other.
+      detail: formatReportActivity(reportActivity(row, Date.now())),
       muted: row.noise,
       // equin's own telemetry: a user not in Developer mode never sees it.
       audience: "developer",

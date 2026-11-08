@@ -134,6 +134,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `fields/identifier/config.identifierField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
+    - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `ids.defineIdKind`
     - `ids.idKindField`
@@ -150,6 +151,9 @@ before it) beside the total, worded by `formatReportActivity`
     - `ReportActivityInput`
     - `ReportBody`
     - `ReportFingerprintContext`
+    - `ReportFixFacts`
+    - `ReportFixStanding`
+    - `ReportFixState`
     - `ReportHourly`
     - `ReportId`
     - `ReportInput`
@@ -158,11 +162,16 @@ before it) beside the total, worded by `formatReportActivity`
     - `ReportSource`
   - Exports (values):
     - `CLIENT_REPORT_SOURCES`
+    - `FIXES_REPORT_TRAILER`
+    - `fixStandingOf`
     - `formatRecentCount`
     - `formatReportActivity`
     - `investigateReport`
     - `isStaleOrigin`
     - `normalizeMessage`
+    - `regresses`
+    - `REPORT_FIX_STATE_LABELS`
+    - `REPORT_FIX_STATES`
     - `REPORT_HOURLY_MAX`
     - `REPORT_RECENT_MAX`
     - `reportActivity`
@@ -193,7 +202,9 @@ before it) beside the total, worded by `formatReportActivity`
     - `tasks/reports-investigation`
     - `upstream`
 - Exemptions:
-  - Exempts itself from: `networking/no-page-transport` — `web/report.ts` (sanctioned)
+  - Exempts itself from:
+    - `networking/no-page-transport` — `web/report.ts` (sanctioned)
+    - `investigate:failures-registered` — `core/resources.ts` (sanctioned)
 - Sub-plugins:
   - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, it was written inside…
   - **`caret-flight`** — Caret-flight collector: drains the page editor's caretFlightReportSink into a report whenever a claimed caret landing is abandoned and the keystrokes it was holding had to be replayed into the…

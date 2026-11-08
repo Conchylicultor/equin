@@ -155,6 +155,7 @@ pass the same `code` field.
   - Exports (values):
     - `fileReportFromProcess`
     - `fileReportFromProcessSync`
+    - `headCommitOf`
     - `isOutboxEntryName`
     - `isOutboxTempName`
     - `mergeBaseWithMain`

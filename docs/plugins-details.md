@@ -13714,7 +13714,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deploymentServed`
           - `readDeployment`
           - `readDeploymentState`
-          - `serverPin`
       - Core:
         - Uses:
           - `network/live.liveValue`
@@ -13787,6 +13786,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/restart-skip`
               - `build/server-build-id`
               - `database/migrations`
+              - `reports/engine`
           - Server:
             - Exports (types): `AdoptHook`
             - Exports (values): `RestartSkip`
@@ -13933,15 +13933,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/website/promo-film`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
-    - **`server-build-id`** — Served-bundle pin leaf: reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts), re-read when the backend adopts a deploy instead of restarting (restart-skip). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
+    - **`server-build-id`** — Served-bundle and server pin leaf: the commit this backend process was materialized from (serverPin — HEAD sampled at module eval, sealed by build/deployment at onAllReady, unresolved on a mixed boot), and reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts), re-read when the backend adopts a deploy instead of restarting (restart-skip). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
       - Server:
         - Contributes: `restart-skip.adopted` "the web graph live-resource contract verdicts are judged against"
         - Uses:
           - `build/restart-skip/hooks.RestartSkip`
+          - `infra/paths.GIT`
           - `infra/paths.webDistDir`
         - Exports (values):
+          - `adoptServerPin`
           - `getServerCommit`
           - `getServerGraphHash`
+          - `sealServerPin`
+          - `serverPin`
+          - `serverPinCommit`
       - Cross-plugin:
         - Imported by:
           - `build/deployment`
@@ -22038,7 +22043,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `toMapper`
     - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
       - Cross-plugin:
-        - Imported by: 52 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
+        - Imported by: 53 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
           - `database` ×14
           - `apps` ×9
           - `debug` ×6
@@ -22050,6 +22055,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats` ×2
           - `build/run-ledger`
           - `primitives/metrics`
+          - `reports/engine`
           - `search/engine`
           - `shell/notifications`
       - Exemptions:
@@ -24162,21 +24168,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `ReportStormPayload`
         - Exports (values): `ReportStormPayloadSchema`
-    - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task; and a report notification's Fix (the fix-report notification action), the detail pane's investigate launch.
+    - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, fix status and linked task — a view bar of Worklist (open ∪ regressed) / Regressed / Fix pending / Fixed / All; and a report notification's Fix (the fix-report notification action), the detail pane's investigate launch.
       - Web:
         - Slots:
           - `reportsPane.Actions`
           - `reportDetailPane.Actions`
+          - `sources`
         - Slot contributors:
           - `reportsPane.Actions` ← `primitives.pane`
           - `reportDetailPane.Actions` ← `primitives.pane`
+          - `sources` ← `debug.reports`
         - Contributes:
           - `Pane.Register` "report-detail"
           - `Pane.Register` "reports"
           - `DebugApp.Sidebar` "Reports"
           - `Notifications.Action` "fix-report"
-        - Uses: 32 symbols — full list in [`plugins/debug/plugins/reports/REFERENCE.md`](../plugins/debug/plugins/reports/REFERENCE.md)
-          - `primitives/data-view` ×5
+          - `sources` "Worklist" → `ReportsSource`
+          - `sources` "Regressed" → `ReportsSource`
+          - `sources` "Fix pending" → `ReportsSource`
+          - `sources` "Fixed" → `ReportsSource`
+          - `sources` "All" → `ReportsSource`
+        - Uses: 34 symbols — full list in [`plugins/debug/plugins/reports/REFERENCE.md`](../plugins/debug/plugins/reports/REFERENCE.md)
+          - `primitives/data-view` ×7
           - `primitives/pane` ×5
           - `network/live` ×2
           - `primitives/launch/investigate` ×2
@@ -28038,6 +28051,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/op-runtime.reportInterruptedPredecessor`
               - `framework/cli/op-runtime.runCheckSubprocess`
               - `framework/cli/op-runtime.signalOriginTap`
+              - `reports/engine.resolveFixedReports`
         - **`regen-generated`** — `./equin regen-generated` — the repo-tree half of build's codegen standalone (registries, barrels, plugin docs, manifests, config origins), for the post-rebase normalize step in `push`.
           - Cli:
             - Uses: `plugin-meta/plugin-records.openRecordStore`
@@ -28206,7 +28220,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNSTAMPED_GATEWAY_WARNING`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by: 63 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
+        - Imported by: 64 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
           - `infra` ×14
           - `framework` ×11
           - `apps` ×10
@@ -28217,10 +28231,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup` ×2
           - `packages` ×2
           - `page` ×2
+          - `reports` ×2
           - `auth`
           - `debug/sentinel/machine-usage`
           - `network/live/resource-protocol`
-          - `reports/main-thread-stall`
           - `screenshot`
           - `stats/commits`
           - `tasks/tasks-core`
@@ -30563,7 +30577,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 40 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+    - Imported by: 41 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
       - `apps` ×13
       - `conversations` ×6
       - `primitives` ×3
@@ -30573,9 +30587,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra` ×2
       - `page` ×2
       - `release` ×2
+      - `reports` ×2
       - `history/engine`
       - `plugin-meta/plugin-health`
-      - `reports`
       - `shell/notifications`
       - `tag-tree/engine`
 
@@ -32536,6 +32550,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/login-services`
               - `plugin-meta/plugin-health`
               - `release`
+              - `reports/engine`
               - `review/plugin-changes`
               - `stats/commits`
               - `tasks/attempt-work`
@@ -34162,7 +34177,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 69 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 70 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×12
           - `debug` ×11
           - `apps` ×9
@@ -34175,9 +34190,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup` ×2
           - `database` ×2
           - `release` ×2
+          - `reports` ×2
           - `auth`
           - `menu-bar`
-          - `reports/live-state-stale-drop`
       - Exemptions:
         - Exempts itself from:
           - `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)
@@ -34281,13 +34296,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 127 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 126 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×31
           - `apps` ×20
           - `framework` ×17
           - `debug` ×13
           - `conversations` ×7
-          - `build` ×6
+          - `build` ×5
           - `backup` ×4
           - `plugin-meta` ×4
           - `primitives` ×3
@@ -34534,19 +34549,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 39 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 41 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×12
               - `infra` ×8
+              - `build` ×6
               - `apps` ×5
-              - `build` ×5
               - `plugin-meta` ×2
+              - `reports` ×2
               - `code-explorer`
               - `config_v2`
               - `conversations/workspace/scratch`
               - `debug/boot-events`
               - `primitives/css/layout-harness`
               - `release`
-              - `reports/outbox`
           - Exemptions:
             - Exempts itself from: `user-path/no-unproven-claim` — `core/internal/repo-root.ts` (sanctioned)
         - **`root-migration`** — `./equin data-dir migrate`: moves an install's data root from the legacy home dir to ~/.equin (and its local backups beside it) in one run, with every other process of the app stopped — rewrites every stored copy of the old path (each database in the cluster, the files under the root, Claude Code's transcript dirs), drops the cache entries that hold it, removes the legacy name once a scan finds none left and no checkout of the repo still runs code from before the move (otherwise keeps it as a link and names those checkouts), and relabels the gateway's login service dev.equin.gateway. A dry run by default; --apply executes.
@@ -37221,7 +37236,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 299 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 300 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×83
               - `conversations` ×48
               - `debug` ×29
@@ -37229,8 +37244,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×22
               - `page` ×16
               - `primitives` ×14
+              - `build` ×8
               - `infra` ×8
-              - `build` ×7
               - `active-data` ×5
               - `plugin-meta` ×5
               - `auth` ×4
@@ -37864,6 +37879,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/paths/data-files`
           - `infra/paths/data-files/memory`
           - `infra/request-origin/agent-write-ledger`
+          - `reports/engine`
       - Core:
         - Exports (types): `KeyedMutex`
         - Exports (values): `createKeyedMutex`
@@ -43589,6 +43605,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `NameStatusRecord`
           - `RawNumstatRecord`
         - Exports (values):
+          - `containsCommit`
           - `GitError`
           - `LOG_FORMAT`
           - `parseDiffNameStatusZ`
@@ -43626,6 +43643,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/commits-graph`
           - `infra/git/checkout-watch`
           - `infra/git/git-watcher`
+          - `reports/engine`
           - `review/plugin-changes`
           - `tasks/attempt-work`
           - `tasks/task-triage`
@@ -51638,8 +51656,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 280 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×280
+    - Contributes: 281 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×281
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -51664,8 +51682,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 279 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×279
+    - Contributes: 280 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×280
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -51939,6 +51957,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields/identifier/config.identifierField`
       - `fields/int/config.intField`
       - `fields/json/config.jsonField`
+      - `fields/text/config.enumTextField`
       - `fields/text/config.textField`
       - `ids.defineIdKind`
       - `ids.idKindField`
@@ -51955,6 +51974,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReportActivityInput`
       - `ReportBody`
       - `ReportFingerprintContext`
+      - `ReportFixFacts`
+      - `ReportFixStanding`
+      - `ReportFixState`
       - `ReportHourly`
       - `ReportId`
       - `ReportInput`
@@ -51963,11 +51985,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReportSource`
     - Exports (values):
       - `CLIENT_REPORT_SOURCES`
+      - `FIXES_REPORT_TRAILER`
+      - `fixStandingOf`
       - `formatRecentCount`
       - `formatReportActivity`
       - `investigateReport`
       - `isStaleOrigin`
       - `normalizeMessage`
+      - `regresses`
+      - `REPORT_FIX_STATE_LABELS`
+      - `REPORT_FIX_STATES`
       - `REPORT_HOURLY_MAX`
       - `REPORT_RECENT_MAX`
       - `reportActivity`
@@ -51998,7 +52025,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/reports-investigation`
       - `upstream`
   - Exemptions:
-    - Exempts itself from: `networking/no-page-transport` — `web/report.ts` (sanctioned)
+    - Exempts itself from:
+      - `networking/no-page-transport` — `web/report.ts` (sanctioned)
+      - `investigate:failures-registered` — `core/resources.ts` (sanctioned)
   - Plugins:
     - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, it was written inside another bar, its fit disagrees with the layout engine, its placement never converged, it refused to relocate an iframe, or one of its widgets declared a form it does not render), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, nested-bar = a measuring bar was written inside another bar's occupant so both claim the same row's slack, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading, empty-rung = a widget declared a smaller form and rendered nothing as it), fingerprints by fault + origin (the innermost UI-context node above the bar's root, falling back to the label that several unrelated bars share) + overflow mode + the offending occupant's id, excluding the per-occurrence lineage path, round evidence and message so one broken bar = one row, and renders a per-fault task — what the bar did instead, the consumer-side fix, and for no-convergence the recorded rounds naming which occupant resized itself. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
       - Web:
@@ -52137,16 +52166,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `change-producer` "reports"
+          - `fork-data-exclusion` "report_fixes"
           - `fork-data-exclusion` "reports"
-        - Uses: 22 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+          - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
+        - Uses: 30 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `reports` ×8
-          - `shell/notifications` ×3
+          - `shell/notifications` ×4
+          - `build/server-build-id` ×3
           - `infra/host/duress/shed` ×2
-          - `build/server-build-id.getServerGraphHash`
+          - `primitives/commit-list` ×2
+          - `build/restart-skip/hooks.RestartSkip`
           - `config_v2.getConfig`
           - `database/admin.ExcludeFromFork`
           - `database.db`
+          - `ids.idRef`
           - `infra/endpoints.implement`
+          - `infra/git/git-watcher.defineRefReaction`
           - `infra/retention.defineRetention`
           - `infra/warmup.defineWarmup`
           - `network/live/change-feed.defineChangeProducer`
@@ -52168,22 +52203,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `renderReportTask`
           - `reportOutboxFatalSink`
           - `reportOutboxSink`
+          - `reportWorklist`
+          - `reportWorklistCounts`
           - `restateReportOccurrence`
-          - `uninvestigatedReportCounts`
-          - `uninvestigatedReports`
         - Register:
           - `defineWarmup('reports.backfill-noise')`
           - `defineJob('retention.reports')`
+          - `defineRefReaction('reports.fix-claims (refs/heads/main)')`
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `debug` ×11
           - `conversations` ×4
           - `database` ×3
           - `infra` ×3
           - `reports` ×3
           - `backup`
+          - `framework/cli/push`
           - `page/place/google`
           - `stats/cost`
           - `tasks/reports-investigation`
@@ -52193,6 +52230,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sink-safety/no-adhoc-file-sink` — `server/internal/crash-append.ts` (sanctioned)
           - `blocking-fs/no-sync-fs` — `server/internal/crash-append.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/buffer.ts`, `server/internal/crash-append.ts` (debt)
+      - Cli:
+        - Exports (types): `FixedReports`
+        - Exports (values):
+          - `fixesReportTrailer`
+          - `resolveFixedReports`
     - **`host-check`** — Host-check report kind's Debug → Reports summary view: one line naming the failing host-scoped check and the first line of its message. Filed by main's hourly host audit through the report outbox — no collector here. Host-check report kind: one row per failing host-scoped check (fingerprint = check id), filed through the report outbox by main's hourly checks.host-audit job (`./equin check --scope host --file-reports`) — the only place a host check's verdict is delivered, since no worktree's check pass asserts the shared machine. Renders a task carrying the check's message and hint verbatim. Warning, re-arms every 6 h.
       - Web:
         - Contributes: `Reports.KindView` → `HostCheckSummary`
@@ -52418,6 +52460,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `fileReportFromProcess`
           - `fileReportFromProcessSync`
+          - `headCommitOf`
           - `isOutboxEntryName`
           - `isOutboxTempName`
           - `mergeBaseWithMain`
@@ -53565,6 +53608,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `_notifications`
           - `recordNotification`
+          - `restateByMetadata`
           - `restateNotification`
           - `setMutedByMetadata`
         - Register: `defineJob('notifications.ttl-cleanup')`
@@ -53603,9 +53647,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `NotificationAction`
           - `NotificationCategory`
           - `NotificationId`
+          - `NotificationState`
         - Exports (values):
           - `NOTIFICATION_CATEGORIES`
           - `NOTIFICATION_CATEGORY_LABELS`
+          - `NOTIFICATION_STATE_TONES`
           - `NOTIFICATION_VARIANTS`
           - `NotificationActionSchema`
           - `notificationFields`
@@ -53613,6 +53659,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `notificationIdKind`
           - `notificationsEntityRef`
           - `notificationsRoute`
+          - `NotificationStateSchema`
       - Cross-plugin:
         - Uses tokens: 30 vars — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `ui/tokens/color-palette` ×13
@@ -55422,8 +55469,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports.ReportRow`
           - `reports/engine.linkReportsToTask`
           - `reports/engine.renderReportTask`
-          - `reports/engine.uninvestigatedReportCounts`
-          - `reports/engine.uninvestigatedReports`
+          - `reports/engine.reportWorklist`
+          - `reports/engine.reportWorklistCounts`
           - `tasks/automations.automationConfigRegistration`
           - `tasks/automations.defineAutomation`
           - `tasks/task-category.setTaskCategory`
@@ -59382,7 +59429,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reports.ReportKind`
       - `reports/engine.linkReportsToTask`
       - `reports/engine.recordReport`
-      - `reports/engine.uninvestigatedReports`
+      - `reports/engine.reportWorklist`
       - `tasks/automations.automationConfigRegistration`
       - `tasks/automations.defineAutomation`
       - `tasks/task-category.TaskCategory`
