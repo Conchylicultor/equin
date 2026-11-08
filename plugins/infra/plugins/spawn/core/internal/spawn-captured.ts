@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";
 import { spawnAtTier } from "@plugins/packages/plugins/spawn-priority/core";
+import { armAwakeDeadline } from "./awake-deadline";
 import { childEnv } from "./child-env";
 import { trackLiveChild } from "./live-children";
 import { readResourceUsage } from "./resource-usage";
@@ -123,7 +124,7 @@ export async function spawnCaptured(
     let exitCode: number;
     let timedOut = false;
     let aborted = false;
-    let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
+    let cancelDeadline: (() => void) | undefined;
     let killTimer: ReturnType<typeof setTimeout> | undefined;
     let onAbort: (() => void) | undefined;
     let untrack: (() => void) | undefined;
@@ -170,7 +171,9 @@ export async function spawnCaptured(
         }
       };
       if (opts.timeoutMs !== undefined) {
-        deadlineTimer = setTimeout(() => {
+        // Awake time, not wall time: a machine asleep past the deadline did not
+        // run the child for it (`armAwakeDeadline`).
+        cancelDeadline = armAwakeDeadline(opts.timeoutMs, () => {
           // THE CHILD MAY ALREADY BE GONE, and then this is not a timeout.
           // `timedOut` means "our deadline fired and WE killed a child that was
           // still running" — not "our timer got round to firing". The two come
@@ -186,7 +189,7 @@ export async function spawnCaptured(
           if (child.exitCode !== null || child.signalCode !== null) return;
           timedOut = true;
           escalateKill();
-        }, opts.timeoutMs);
+        });
       }
       if (signal) {
         onAbort = () => {
@@ -226,7 +229,7 @@ export async function spawnCaptured(
       inFd?.close();
       outFd?.close();
       if (errFd !== undefined && errFd !== outFd) errFd.close();
-      if (deadlineTimer !== undefined) clearTimeout(deadlineTimer);
+      cancelDeadline?.();
       if (killTimer !== undefined) clearTimeout(killTimer);
     }
     // AFTER the inner `finally` (fds closed, timers cleared, listener removed)

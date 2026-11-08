@@ -141,16 +141,24 @@ install, at any tier. It ran per launch, and the reap then deleted the same
 
 - **Harvest** — `removeWorktree`, after the rename into the trash: the trashed
   checkout's `node_modules/.bun` moves to `.claude/worktree-dep-stores/<ms>-<name>/store`
-  (staged, published by one rename), the newest 2 kept. Only when `ensureDeps`'
+  (staged, published by one rename) — and nothing deleted: every store waits
+  until it ages out (below). Only when `ensureDeps`'
   stamp exists (the install finished) and no store entry is newer than it — a
   file edited in place is the one change bun's re-link would not undo.
 - **Adopt** — `installCheckout`, before the install: a checkout with no
   `node_modules` takes the newest entry under 7 days old as its
   `node_modules/.bun`; the install (no stamp came with it) re-links it, cloning
   only what the lock changed.
+- **No count bound — supply is demand, 72 h late.** A store is made when its
+  checkout is reaped, and the reaper takes a finished checkout only at 72 h
+  old (all 260 harvests of 11-05..08 came from checkouts made 72–80 h before);
+  it is used when a checkout is made. Launches swing 3 → 88 a day, so a fixed
+  count deletes a quiet day's reaps the busy day after needs: at 2 it deleted
+  231 of 260 stores while 164 of 193 installs ran cold. The bound is age: the
+  reaper's sweep (`emptyDepStorePool`) deletes entries over 7 days old — the
+  only place a store is deleted. A waiting store costs ~18 MB (APFS clones).
 - **An entry is only ever taken by renaming it to a claimed name**
-  (`.claimed-…`) — by an adopter or by a delete (eviction past the newest 2,
-  expiry). The rename is exclusive, so two adopters, or an adopter and a
+  (`.claimed-…`) — by an adopter or by the sweep's delete (expiry). The rename is exclusive, so two adopters, or an adopter and a
   delete, are told apart by it, and an adopter can never move a store an
   `rm -rf` is half-way through.
 - **Never fails a removal**: the harvest runs after the removal is committed,

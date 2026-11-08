@@ -31,6 +31,12 @@ export type SleepClockReading =
   /** This platform offers no such clocks here — NOT "it did not sleep". */
   | { supported: false };
 
+/** How long the machine has been awake since boot: a clock that stops while it sleeps. */
+export type AwakeClockReading =
+  | { supported: true; awakeMs: number }
+  /** This platform offers no such clock here — NOT "no time passed". */
+  | { supported: false };
+
 interface LibSystem {
   clockNs(id: number): bigint;
   sysctl(name: string, buf: Uint8Array): number | null;
@@ -134,6 +140,21 @@ export function readSleepClock(): SleepClockReading {
     asleepMs: ns > 0n ? Number(ns) / 1e6 : 0,
     wakeAtMs: readWakeAtMs(),
   };
+}
+
+/**
+ * The machine's awake clock right now (CLOCK_UPTIME_RAW): two readings differ by
+ * the time the machine was AWAKE between them, sleep excluded — what a deadline
+ * on work this machine runs should count. A JS timer does not: Bun's
+ * `setTimeout` keeps running through sleep, so a 30-minute timer armed before a
+ * night of dark wakes fires at the first wake past 30 wall-clock minutes, after
+ * the work it bounds ran for a few of them.
+ *
+ * darwin only. Elsewhere `{ supported: false }`.
+ */
+export function readAwakeClock(): AwakeClockReading {
+  if (process.platform !== "darwin") return { supported: false };
+  return { supported: true, awakeMs: Number(readNs(CLOCK_UPTIME_RAW)) / 1e6 };
 }
 
 /**

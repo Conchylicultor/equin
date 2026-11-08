@@ -34918,6 +34918,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/flock.holdParentLifeline`
           - `packages/owned-fd.openOwnedFd`
           - `packages/owned-fd.OwnedFd`
+          - `packages/sleep-clock.AwakeClockReading`
+          - `packages/sleep-clock.readAwakeClock`
           - `packages/spawn-priority.spawnAtTier`
           - `packages/timed-fs.readFileSync`
         - Exports (types):
@@ -38140,15 +38142,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/health-monitor`
           - `debug/profiling/op-log`
           - `infra/host/machine-sleep`
+          - `infra/spawn`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/sleep-clock.ts` (debt)
       - Core:
         - Exports (types):
+          - `AwakeClockReading`
           - `SleepClockReading`
           - `SleepMeter`
           - `SleepReading`
         - Exports (values):
           - `createSleepMeter`
+          - `readAwakeClock`
           - `readSleepClock`
     - **`smooth-clock`** — Smooth clock over a stepping time source: createSmoothClockModel turns readings that advance in steps (an embedded player's posted playhead, an AudioContext's buffer-quantized currentTime) into a continuous line slewed toward each new reading (at most 5 % off the rate) and snapped only on a jump — so whatever renders or plays against it advances every frame instead of stuttering.
       - Cross-plugin:

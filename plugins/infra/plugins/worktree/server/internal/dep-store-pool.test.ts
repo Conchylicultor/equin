@@ -111,11 +111,14 @@ describe("harvestDepStore", () => {
     expect(existsSync(file)).toBe(true);
   });
 
-  test("keeps the newest two and deletes the rest", async () => {
-    for (const [i, name] of ["att-1", "att-2", "att-3"].entries()) {
-      await harvestDepStore(repo, installedCheckout(name), 1000 + i);
-    }
-    expect(poolNames()).toEqual(["1001-att-2", "1002-att-3"]);
+  test("keeps every store it harvests: a burst of reaps deletes none", async () => {
+    const names = ["att-1", "att-2", "att-3", "att-4", "att-5"];
+    await Promise.all(
+      names.map((name, i) =>
+        harvestDepStore(repo, installedCheckout(name), 1000 + i),
+      ),
+    );
+    expect(poolNames()).toEqual(names.map((n, i) => `${1000 + i}-${n}`));
   });
 
   test("a failure is a result, never a throw: the removal it follows is committed", async () => {

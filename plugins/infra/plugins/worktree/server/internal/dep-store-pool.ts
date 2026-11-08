@@ -47,13 +47,25 @@ const NODE_MODULES = "node_modules";
 // is "this store is complete", and its mtime is when it was last made correct.
 const STAMP_REL = join("node_modules", ".equin-deps");
 
-/**
- * How many harvested stores wait at once. Checkouts are made faster than they
- * are removed (~100 vs ~67 a day on 2026-11-04), so the pool is normally empty
- * or one deep; the bound only matters when removals bunch up (a bulk delete),
- * where the oldest past it is deleted as before.
- */
-const POOL_MAX = 2;
+// HOW MANY WAIT: every one harvested, until it ages out — the pool has no count
+// bound, because supply IS demand, three days late. A store is produced when
+// its checkout is reaped, and the reaper takes a finished checkout only once it
+// is SAFE_REAP_AGE_MS (72 h) old: measured 2026-11-05..08, all 260 harvests came
+// from checkouts made 72–80 h earlier. It is consumed when a checkout is made.
+// Every checkout made is reaped once, so the two rates are the same series,
+// shifted by 72 h — and launches swing 3 → 88 a day, so the shifted series and
+// today's disagree by tens of stores either way. A constant bound (it was 2)
+// cannot hold a quiet day's reaps for the busy day after: replaying those four
+// days' events, 2 deleted 231 of 260 stores while 164 of 193 installs ran cold
+// (the real counts: 63, 73, 0, 26 cold a day); keeping each store until it ages
+// out gives 0 cold installs once the pool has stock (11-08: 26 → 0).
+//
+// What that holds is bounded by the age bound below: at most the reaps of
+// POOL_MAX_AGE_MS, and in practice the swing of ~3 days of launches (at most
+// ~174 in the replay). A waiting store costs ~18 MB on disk (its files are APFS
+// clones of bun's cache; only the metadata is its own) and no CPU. A store
+// demand never comes back for is deleted once, by the reaper's sweep
+// (`emptyDepStorePool`) — never on the harvest path, which only renames.
 
 /**
  * Older than this, a waiting store is deleted rather than adopted: it has
@@ -64,12 +76,16 @@ const POOL_MAX_AGE_MS = 7 * 24 * 60 * 60_000;
 
 /**
  * A transient name older than this was left by a process that died holding it
- * (a crashed harvest or adopt, a killed delete); the sweep deletes it. Above
- * the delete's own timeout, so a live delete is never raced.
+ * (a crashed harvest or adopt, a killed delete); the sweep deletes it. A live
+ * delete is never raced: a store is deleted only by `emptyDepStorePool`, inside
+ * the reaper's sweep, one sweep at a time (its job-wide lock), so a claimed name
+ * a sweep finds is never one a delete is still working on.
  */
 const TRANSIENT_GRACE_MS = 60 * 60_000;
 
-// Deleting a store is ~75k entries, like a trash entry's node_modules.
+// Deleting a store is ~75k entries, like a trash entry's node_modules: 5–50 s
+// measured. Counted in awake time (spawnCaptured's deadline), so a machine
+// dozing through the delete does not time it out.
 const POOL_RM_TIMEOUT_MS = 30 * 60_000;
 
 const STAGING_PREFIX = ".staging-";
@@ -192,9 +208,6 @@ async function harvest(
   await mkdir(staging, { recursive: true });
   await rename(store, join(staging, STORE_DIR));
   await rename(staging, join(pool, entry));
-  for (const old of (await listPublished(pool)).slice(POOL_MAX)) {
-    await deleteEntry(pool, old, now);
-  }
   return { kind: "harvested", entry };
 }
 

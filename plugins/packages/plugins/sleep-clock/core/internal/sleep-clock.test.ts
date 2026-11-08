@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { createSleepMeter, readSleepClock } from "./sleep-clock";
+import {
+  createSleepMeter,
+  readAwakeClock,
+  readSleepClock,
+} from "./sleep-clock";
 
 describe.if(process.platform === "darwin")("readSleepClock (darwin)", () => {
   test("reads a boot session, a cumulative sleep and the last wake", () => {
@@ -30,5 +34,16 @@ describe.if(process.platform === "darwin")("readSleepClock (darwin)", () => {
 describe.if(process.platform !== "darwin")("readSleepClock (elsewhere)", () => {
   test("says it cannot tell", () => {
     expect(readSleepClock()).toEqual({ supported: false });
+  });
+});
+
+describe.if(process.platform === "darwin")("readAwakeClock (darwin)", () => {
+  test("advances with awake time", async () => {
+    const a = readAwakeClock();
+    await new Promise((r) => setTimeout(r, 20));
+    const b = readAwakeClock();
+    if (!a.supported || !b.supported)
+      throw new Error("expected support on darwin");
+    expect(b.awakeMs - a.awakeMs).toBeGreaterThanOrEqual(15);
   });
 });

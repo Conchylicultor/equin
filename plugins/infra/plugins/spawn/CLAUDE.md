@@ -239,6 +239,8 @@ presence only — **no re-exports**; import from `core/`.
     - `packages/flock.holdParentLifeline`
     - `packages/owned-fd.openOwnedFd`
     - `packages/owned-fd.OwnedFd`
+    - `packages/sleep-clock.AwakeClockReading`
+    - `packages/sleep-clock.readAwakeClock`
     - `packages/spawn-priority.spawnAtTier`
     - `packages/timed-fs.readFileSync`
   - Exports (types):

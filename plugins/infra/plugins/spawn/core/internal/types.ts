@@ -19,7 +19,9 @@ import type { SpawnTier } from "@plugins/packages/plugins/spawn-priority/core";
  */
 export interface SpawnBound {
   /**
-   * Hard wall-clock ceiling for the child, in ms. On expiry the child is sent
+   * Hard ceiling for the child, in ms of time the machine was AWAKE (sleep is
+   * not counted: a laptop dozing past the deadline gave the child none of it —
+   * `awake-deadline.ts`). On expiry the child is sent
    * `SIGTERM`, then `SIGKILL` after a short grace, and the result comes back
    * with `timedOut: true` — a RESULT, not a throw, so the caller classifies it.
    *

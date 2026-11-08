@@ -79,8 +79,10 @@ const PRUNE_TIMEOUT_MS = 60_000; // metadata-only, same starvation exposure as l
 // Deleting a trashed checkout's files (~16k files plus node_modules). Not a
 // wedge detector like the bounds above — it runs OUTSIDE the mutate gate, on a
 // tree already out of `.claude/worktrees/`, so a kill here costs nothing but a
-// later retry by `emptyWorktreeTrash`. Kept below TRASH_GRACE_MS so a sweep never
-// races a removal still deleting its own entry.
+// later retry by `emptyWorktreeTrash`. Counted in awake time (spawnCaptured),
+// TRASH_GRACE_MS in wall time: a removal whose delete spans a sleep can still be
+// at it when a sweep takes the entry as a leftover — two `rm -rf`s of one tree,
+// the later one finishing what the first left.
 const TRASH_RM_TIMEOUT_MS = 30 * 60_000;
 const REF_TIMEOUT_MS = 60_000; // one ref read, same starvation exposure as list
 
