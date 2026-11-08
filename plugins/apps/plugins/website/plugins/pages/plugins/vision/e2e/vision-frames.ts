@@ -153,7 +153,7 @@ async function traceCpu<T>(
   ];
 }
 
-/** Scroll the pane by wheel until chapter k's card sits at its middle. */
+/** Scroll the pane by wheel until chapter k's card sits on the reading line. */
 async function readChapter(page: Page, k: number): Promise<void> {
   for (let i = 0; i < 8; i++) {
     const dy = await page.evaluate((i) => {
@@ -166,7 +166,15 @@ async function readChapter(page: Page, k: number): Promise<void> {
       )
         scroller = scroller.parentElement;
       const sr = scroller?.getBoundingClientRect();
-      const mid = (sr?.top ?? 0) + (scroller?.clientHeight ?? 0) / 2;
+      // where the page reads a card (ladder-scroll publishes the zoom's reading line)
+      const read = Number.parseFloat(
+        document
+          .querySelector<HTMLElement>(".vision-zoom")
+          ?.style.getPropertyValue("--vs-read") ?? "",
+      );
+      if (!Number.isFinite(read))
+        throw new Error("vision: no --vs-read on .vision-zoom");
+      const mid = (sr?.top ?? 0) + read;
       const r = card.getBoundingClientRect();
       return r.top + r.height / 2 - mid;
     }, k);

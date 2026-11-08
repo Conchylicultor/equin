@@ -21,6 +21,22 @@ export const smooth = (t: number): number => {
   return c * c * (3 - 2 * c);
 };
 
+/**
+ * A switch decided by a value that can hover at its threshold (a scroll position at rest under a
+ * thumb, a page that moves a few pixels as a phone's toolbar hides): it turns on once the value
+ * reaches `on` and off again only below `off`, so a value hovering at either cannot flip it back
+ * and forth. Every on/off decision the zoom takes from scroll goes through one.
+ */
+export function latch(on: number, off: number): (x: number) => boolean {
+  if (!(off < on))
+    throw new Error(`latch: off (${off}) must be below on (${on})`);
+  let state = false;
+  return (x) => {
+    if (state ? x < off : x >= on) state = !state;
+    return state;
+  };
+}
+
 export type Ease = (t: number) => number;
 export const EASE = {
   io: (t: number) =>

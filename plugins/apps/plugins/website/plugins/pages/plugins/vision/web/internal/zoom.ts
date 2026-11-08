@@ -1,5 +1,5 @@
 import { createInViewWatcher } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
-import { clamp01, smooth, type Pt } from "./kit/math";
+import { clamp01, latch, smooth, type Pt } from "./kit/math";
 import { disc } from "./kit/night";
 import { C } from "./kit/palette";
 import { all, circ, one } from "./kit/svg";
@@ -33,6 +33,8 @@ import { mountShared, type World } from "./chapters/shared";
 /** 2 → 3: chapter 2 plays on while the zoom moves out; at p = SPLIT it stops where it is and comes apart. */
 const SPLIT = 2.3;
 const SPLIT_LEN = 0.65;
+/** …and is put back together only below SPLIT_BACK: a page at rest at SPLIT does not take it apart and back again. */
+const SPLIT_BACK = 2.24;
 
 /** Frame k's drawing fades in over p ∈ [k - 1 + FIN_AT, k - 1 + FIN_AT + FIN_LEN]. */
 const FIN_AT = 0.25;
@@ -50,6 +52,12 @@ export interface Zoom {
   update(p: number): void;
   /** The stage changed size. */
   resize(): void;
+  /**
+   * Where a card is read, in px from the top of the screen: where the copy sits beside or under the
+   * scene, given the scene's layout. The ladder holds the picture at a chapter while its card's
+   * centre is there.
+   */
+  readingLine(): number;
   dispose(): void;
 }
 
@@ -167,9 +175,11 @@ export function mountZoom(
   ];
 
   let u = 1;
+  let readAt = 0;
   let last = 0;
   let lastP = -1;
   let split = false;
+  const splitAt = latch(SPLIT, SPLIT_BACK);
   /** Chapter 2's loop stops where it is while it is taken apart. */
   const frozen = (k: number) => k === 2 && split;
   let sep = 0;
@@ -188,10 +198,14 @@ export function mountZoom(
       U = Math.min(h * 0.8, avail * 0.96);
       cx = 490 + avail / 2;
       cy = h * 0.5;
+      // the copy is beside the scene: read at the screen's middle
+      readAt = h / 2;
     } else {
       U = Math.min(h * 0.5, w * 0.92);
       cx = w / 2;
       cy = h * 0.33;
+      // the copy is under the scene: read in the middle of what is left below it
+      readAt = (cy + U / 2 + h) / 2;
     }
     u = U / 1000;
     scene.style.left = `${cx}px`;
@@ -244,13 +258,14 @@ export function mountZoom(
       backs[k]!.style.transform = tr;
       fronts[k]!.style.transform = tr;
     }
-    // 2 → 3: past SPLIT, chapter 2 is frozen as it is and taken apart; back before it, it plays on
-    if (p >= SPLIT && !split) {
+    // 2 → 3: past SPLIT, chapter 2 is frozen as it is and taken apart; back before SPLIT_BACK, it plays on
+    const apart = splitAt(p);
+    if (apart && !split) {
       chapter2.render();
       pieces.split();
       split = true;
       os.windows(pieces.list());
-    } else if (p < SPLIT && split) {
+    } else if (!apart && split) {
       pieces.clear();
       split = false;
       os.windows([]);
@@ -333,6 +348,7 @@ export function mountZoom(
       layout();
       update(last);
     },
+    readingLine: () => readAt,
     dispose() {
       watcher.disconnect();
       document.removeEventListener("visibilitychange", setRunning);

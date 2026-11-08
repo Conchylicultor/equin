@@ -10,10 +10,14 @@ import { mountZoom } from "./zoom";
  * pinned stage (the zoom), the chapter cards scrolling over it, and the layer
  * strip pinned under the site header.
  *
- * Scroll → progress: p is where the screen's centre sits among the cards'
- * centres. While a card is read (its centre within HOLD of the middle), the
+ * Scroll → progress: p is where the reading line sits among the cards'
+ * centres. While a card is read (its centre within HOLD of the line), the
  * picture holds at its chapter; it moves on as the card leaves. p = 2.5 is
- * half-way from chapter 2 to 3.
+ * half-way from chapter 2 to 3. The line is where the layout puts the copy
+ * (`Zoom.readingLine`): the screen's middle where the cards sit beside the
+ * scene, the band under the scene where they sit below it (narrow screens) —
+ * so the picture is at its chapter, not half-way into it, wherever a reader
+ * naturally stops to read. Published as `--vs-read` for the e2e scripts.
  *
  * Everything is read from the PANE's scroll container, never the window: the
  * "screen" is its viewport (`--screen`), the header the part of it the site
@@ -55,6 +59,10 @@ export function mountLadderScroll(
       cards[0]!.getBoundingClientRect().top - scrollerTop() < screen() * 0.82,
   });
 
+  const publishReadingLine = () =>
+    root.style.setProperty("--vs-read", `${zoom.readingLine()}px`);
+  publishReadingLine();
+
   const onSeg = (e: MouseEvent) => {
     const i = segs.indexOf(e.currentTarget as HTMLButtonElement);
     revealElement(steps[i], { behavior: "smooth", block: "center" });
@@ -76,7 +84,7 @@ export function mountLadderScroll(
     queued = 0;
     const top = scrollerTop();
     const s = screen();
-    const mid = s / 2;
+    const mid = zoom.readingLine();
     const hold = s * HOLD;
     const centres = cards.map((c) => {
       const r = c.getBoundingClientRect();
@@ -133,6 +141,7 @@ export function mountLadderScroll(
     resize() {
       fit();
       zoom.resize();
+      publishReadingLine();
       queue();
     },
     dispose() {

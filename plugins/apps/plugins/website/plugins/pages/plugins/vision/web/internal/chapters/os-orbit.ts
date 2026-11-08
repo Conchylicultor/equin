@@ -1,4 +1,4 @@
-import { io, n1, random, smooth } from "../kit/math";
+import { io, latch, n1, random, smooth } from "../kit/math";
 import { gpath, grect, type OsKind } from "../kit/night";
 import { C } from "../kit/palette";
 import { circ, rect, setAttr, svgEl } from "../kit/svg";
@@ -607,8 +607,12 @@ export function mountOrbitDesktop(
   }
 
   // chapter 2's drawing of a window hands over to this one on a short timed fade once the desktop has
-  // nearly settled — never part-way with the scroll, so a pause can't leave both drawings on screen
-  const mixTarget = () => (settle >= 0.85 ? 1 : 0);
+  // nearly settled — never part-way with the scroll, so a pause can't leave both drawings on screen.
+  // Latched: a page at rest a few pixels either side of the hand-off (a phone's scroll under a thumb)
+  // would otherwise start the fade, turn it back, start it again — a flicker through the dark ground
+  // both drawings show at half opacity.
+  const handedOver = latch(0.85, 0.6);
+  const mixTarget = () => (handedOver(settle) ? 1 : 0);
 
   function render() {
     const on = wins.length > 0;

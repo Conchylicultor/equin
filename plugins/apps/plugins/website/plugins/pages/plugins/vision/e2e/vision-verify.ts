@@ -4,7 +4,7 @@
 //
 //   - the heading fills the first screen and the layer strip is hidden;
 //   - the six chapter cards are there, the empty-`before` ones with one paragraph;
-//   - reading each chapter (its card at the middle of the pane) lights that card,
+//   - reading each chapter (its card on the reading line) lights that card,
 //     shows the strip with that chapter's number and name, and puts that frame
 //     of the zoom on screen; the heading has dissolved;
 //   - the frames animate on their own (a frame's drawing changes over time while
@@ -52,7 +52,7 @@ interface State {
   heroOpacity: number;
   /** Which frames' drawings are visible. */
   fronts: boolean[];
-  /** How far chapter k's card centre is from the pane's middle. */
+  /** How far chapter k's card centre is from the reading line. */
   offsets: number[];
 }
 
@@ -66,7 +66,13 @@ async function state(page: Page): Promise<State> {
     )
       scroller = scroller.parentElement;
     const sr = scroller?.getBoundingClientRect();
-    const mid = (sr?.top ?? 0) + (scroller?.clientHeight ?? 0) / 2;
+    // where the page reads a card (ladder-scroll publishes the zoom's reading line)
+    const read = Number.parseFloat(
+      root?.style.getPropertyValue("--vs-read") ?? "",
+    );
+    if (!Number.isFinite(read))
+      throw new Error("vision: no --vs-read on .vision-zoom");
+    const mid = (sr?.top ?? 0) + read;
     const cards = [...document.querySelectorAll<HTMLElement>(".vs-card")];
     const strip = document.querySelector<HTMLElement>(".vs-strip");
     const hero = document.querySelector<HTMLElement>(".vision-zoom-hero");
@@ -92,7 +98,7 @@ async function state(page: Page): Promise<State> {
   });
 }
 
-/** Scroll the pane by wheel until chapter k's card sits at its middle. */
+/** Scroll the pane by wheel until chapter k's card sits on the reading line. */
 async function readChapter(page: Page, k: number): Promise<void> {
   for (let i = 0; i < 6; i++) {
     const dy = (await state(page)).offsets[k] ?? 0;

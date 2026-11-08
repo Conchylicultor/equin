@@ -15,8 +15,15 @@ options <id>`) before porting a change; only those picks are implemented.
 - A pinned stage (one screen of the pane's viewport) draws the zoom; six
   chapter cards scroll over it (`internal/ladder.ts`, the prototype's copy
   verbatim — a chapter with no `before` shows only its present). Scroll
-  progress p is where the screen's centre sits among the cards' centres, held
-  at a chapter while its card is read.
+  progress p is where the reading line sits among the cards' centres, held
+  at a chapter while its card is read. The line is where the layout puts the
+  copy (`Zoom.readingLine`: the screen's middle beside the scene, the band
+  under it on narrow screens), so a reader at rest sees the chapter, never a
+  hand-off half-way through.
+- Every on/off decision taken from p (chapter 2 coming apart, its apps handing
+  over to the OS's windows) is a `latch` (`kit/math.ts`): on at one value, off
+  only below a lower one. A page at rest at a threshold (a thumb, a phone's
+  toolbar resizing the pane) must not flip it back and forth.
 - Frame k fills the scene at p = k and is a smaller thing inside frame k + 1 at
   p = k + 1 (`chapters/geometry.ts`'s `IN`): an idea's spark → the app's
   improve button → the window chapter 2's apps play in → that window coming
