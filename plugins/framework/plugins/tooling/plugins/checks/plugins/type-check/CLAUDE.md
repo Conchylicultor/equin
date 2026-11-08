@@ -92,7 +92,7 @@ R(F)   = H( global, F's path and version,
             (use, M(use)) of every name F's source uses )
 ```
 
-`global` = `tscEngineFp` (compiler, options, lockfile, patches, `producerSources()`) + every global source file's and global repo `.d.ts`'s version. A stored result is valid iff its R is today's.
+`global` = `tscEngineFp` (compiler, options, lockfile, the patches the compiler can see — `typeVisiblePatch`: one touching only JS, native code or source maps is out, as tsc reads no `.js` without `allowJs` — `producerSources()`) + every global source file's and global repo `.d.ts`'s version. A stored result is valid iff its R is today's.
 
 A repo `.d.ts`'s reach is read from syntax (`declScope`, checked against the checker):
 
@@ -170,14 +170,14 @@ Results are stored per **(file, blob version)** (`shared/lint-results.ts`, `type
 | a directive file, whole (`LINT_GROUP_ALL`) | `typedResultKey(all fp, result key)` | any of the above |
 
 - **Rules half** (`check/lint-groups.ts`): one fp per group, each folding in the **engine**:
-  - the config builder's RUNTIME import closure (`LINT_CONFIG_SOURCE`; `import type` edges are erased, so not followed), `shared/worker.ts`, root tsconfigs, `package.json`, `patches/**`. Keep the builder's imports to what can change a message — it takes the manifests' file set (`lint/core/ide-lint-config.ts` lists it) and the stylesheet's `@utility` set (`readDeclaredUtilities`) as data, so the repo-file enumeration, the file reads and the process plumbing under them stay out (a test holds it there: the engine reaches `lint/core` and `exempt/core` only);
-  - the lockfile minus workspace entries (`lockfileNpmResolutions`, `infra/deps/npm`);
+  - the config builder's RUNTIME import closure (`LINT_CONFIG_SOURCE`; `import type` edges are erased, so not followed), `shared/worker.ts`, root tsconfigs. Keep the builder's imports to what can change a message — it takes the manifests' file set (`lint/core/ide-lint-config.ts` lists it) and the stylesheet's `@utility` set (`readDeclaredUtilities`) as data, so the repo-file enumeration, the file reads and the process plumbing under them stay out (a test holds it there: the engine reaches `lint/core` and `exempt/core` only);
+  - the npm code they LOAD: the packages the closure imports by name (held by `ENGINE_PACKAGES` in `lint-groups.test.ts`), closed over their dependencies in the code checkout's `bun.lock`, with the patches applied to any of them (`lockfileNpmClosure`, `infra/deps/npm`). Not the whole lockfile, not every `patches/` file, not `package.json`: a dependency or patch no rule loads (graphile-worker, @parcel/watcher, a server feature's new package) re-lints nothing;
   - the `@utility` set (`lintDataKey`).
 
   Groups:
 
   - Base group = the builder's own rules.
-  - Each contribution (`lintContributionPaths()`) = the closure of `plugins/<p>/lint/index.ts` (`lintClosures`, walked from roots only).
+  - Each contribution (`lintContributionPaths()`) = the closure of `plugins/<p>/lint/index.ts` (`lintClosures`, walked from roots only), and the npm code it loads (as the engine's).
   - Rules are versioned in the tree they run FROM (`codeCheckoutRoot`).
   - Groups holding a type-aware rule (`typeAwareLintGroups`, stored under `typeAwareKey`) get a **typed group fp** (`typedGroupFps`) = group fp + the typed engine (`producerSources()`).
 
@@ -207,7 +207,8 @@ What a change costs:
 | one type-aware rule | that typed part everywhere (one program 2 over the tree) |
 | producer code | every typed part |
 | walk code | nothing |
-| lint core, a tsconfig, a global `.d.ts`, a real dependency bump | everything |
+| a dependency or patch no rule loads | no syntactic part (the typed parts follow the result key: a patch touching only JS moves none, any other resolution change moves every one) |
+| lint core, a tsconfig, a global `.d.ts`, a bump of a package lint loads | everything |
 
 ## The run base: a run reads only what changed
 
@@ -224,11 +225,13 @@ What a change costs:
 1. this tree;
 2. the worktree's last completed run (hint);
 3. `HEAD`'s tree;
-4. the merge-base with `main`.
+4. the merge-base with `main`;
+5. the latest root written under this run's rules, on any tree (the **rules pointer**, `lintInputsKey`).
 
 - Rules first: a base under other rules sends every file, and on a busy host the per-file store has long evicted most results (2026-11-05: main's current base-group key held by 172 of 15,002 files).
   - After a rebase onto a main whose rules moved, the hint is such a base. The merge-base's base, written by the pusher's check of that tree, carries every unchanged file.
   - First-stored-wins re-linted the whole tree (~500 CPU-s) on every such rebase.
+- The rules pointer is last (its tree can be far, so more files differ) and is the only same-rules candidate when no nearby tree has a base under these rules: a fresh worktree off a main tree nobody checked (`base none`), a rebase onto a main whose merged tree nobody checked. So a rules move is re-linted once per HOST, by the first run under the new rules; every later run carries from it.
 - A candidate naming a missing shard is passed over; with no usable candidate the run takes the full path, every reason logged. Correctness never rests on the choice: a shard carries only when its listing hash equals the root's, a file only when its version does, and rules are compared.
 
 **Planning**:
@@ -239,11 +242,12 @@ What a change costs:
 
 **Recording** (`finalize`):
 
-- Rewrites only shards holding a sent/patched file or whose listing moved; writes root, pointer, hint.
+- Rewrites only shards holding a sent/patched file or whose listing moved (content-addressed: a shard whose state did not change is not written); writes root, pointer, hint, rules pointer.
 - Shards are touched after `TOUCH_AFTER_DAYS` (3) so a shard (14 days) outlives every root (7 days).
 - **Nothing is written** when the worker crashed or keyed nothing (`ProgramOutcome.keys` null/absent).
 - The verdict reads only message-holding shards plus files a file-level exemption names.
 - The per-file store stays the reuse layer for TEXTS (an API edit and its revert do not re-lint users twice).
+- **A text the base held, re-run because the rules moved, is not rewritten in the per-file store** (`left to the base` in the lint line): its new results live in the next base, found through the rules pointer. Only a typed part whose rules did not move (it ran because R moved) is recorded. Before, every rule edit rewrote ~15k entries (2026-11-08: 18 such runs in 6.5 h, up to 58 % of a minute's file events).
 
 ## The walk base: the walk visits only what changed
 

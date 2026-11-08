@@ -11,7 +11,10 @@ import {
 import { join, relative } from "path";
 import ts from "typescript";
 import { sha256 } from "./keys";
-import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/core";
+import {
+  lockfileNpmResolutions,
+  patchTouchedFiles,
+} from "@plugins/infra/plugins/deps/plugins/npm/core";
 import {
   type AppPath,
   asAppPath,
@@ -36,7 +39,8 @@ export function formatDiagnostic(root: string, d: ts.Diagnostic): string {
  * compiler and its options (paths relative to the root, so every worktree
  * shares one key), the npm resolutions (`lockfileNpmResolutions`: a contract edge
  * into a dependency is dropped, so a dependency's own types move every key
- * through here), dependency patches, and this engine's own code.
+ * through here), the dependency patches the compiler can see
+ * (`typeVisiblePatch`), and this engine's own code.
  */
 export function tscEngineFp(
   root: AppPath,
@@ -71,13 +75,49 @@ export function tscEngineFp(
         joinAppPath(patches, relative(patches, join(e.parentPath, e.name))),
       )
       .sort()) {
-      parts.push(
-        `patch ${rel(root, entry)} ${sha256(readFileSync(entry, "utf8"))}`,
-      );
+      const text = readFileSync(entry, "utf8");
+      if (!typeVisiblePatch(text, options)) continue;
+      parts.push(`patch ${rel(root, entry)} ${sha256(text)}`);
     }
   }
   parts.push(`code ${sourcesFp(producerSources())}`);
   return sha256(parts.join("\n"));
+}
+
+/**
+ * A package file the compiler never reads: compiled JS (without `allowJs` — tsc
+ * reads a dependency's declarations and `package.json`, not its code), native
+ * sources, source maps.
+ */
+function isTypeInvisible(path: string, options: ts.CompilerOptions): boolean {
+  if (/\.(c|cc|cpp|h|hh|hpp|m|mm|map)$/.test(path)) return true;
+  return options.allowJs !== true && /\.[cm]?jsx?$/.test(path);
+}
+
+/**
+ * Whether a dependency patch can change what the compiler reads: it adds,
+ * deletes or renames a file, or edits one `isTypeInvisible` does not clear —
+ * or it cannot be read as a
+ * git-style diff, which is never assumed inert. Every patch used to be
+ * engine: a fix to graphile-worker's or @parcel/watcher's JS (4 of 20 global
+ * moves on main in the week to 2026-11-08) re-checked and re-linted every
+ * file in every worktree.
+ */
+export function typeVisiblePatch(
+  text: string,
+  options: ts.CompilerOptions,
+): boolean {
+  // Adding, deleting or renaming even a JS file can change what a specifier
+  // resolves to (an untyped module, a missing one): only edits in place of
+  // invisible files are invisible. Hunk lines start with ` `, `+` or `-`, so
+  // these headers cannot be imitated by one.
+  if (/^(new file mode|deleted file mode|rename from|copy from) /m.test(text)) {
+    return true;
+  }
+  const touched = patchTouchedFiles(text);
+  return (
+    touched === undefined || touched.some((p) => !isTypeInvisible(p, options))
+  );
 }
 
 /** The hash of some of this directory's sources, by name and content. */

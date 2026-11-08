@@ -1,7 +1,8 @@
 /**
  * The narrowed lint key (research/2026-10-15-global-lint-cache-per-contribution.md):
  *   1. the lockfile counts only by its npm resolutions — a new workspace entry
- *      changes nothing, a version bump does;
+ *      changes nothing, a version bump does (the tsc engine's key; lint's own
+ *      is narrower still — the packages it loads, `lint-groups.test.ts`);
  *   2. a stored entry keeps the newest results per part (syntactic group keys
  *      and typed keys, each with its own budget) and drops the rest;
  *   3. exemptions apply when results are read, including the report of a

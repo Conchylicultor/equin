@@ -12,10 +12,9 @@
 // edits among them changed an npm resolution. So (c) is split:
 //
 //   - the ENGINE, what every rule's result depends on: the lint config builder
-//     and what it imports, this check's own worker, the lockfile's npm
-//     resolutions, the root tsconfigs, ambient `.d.ts`, dependency patches,
-//     and what rules read from the lint data files (`lintDataKey`). Folded
-//     into every group below.
+//     and what it imports, this check's own worker, the npm code they load
+//     (below), the root tsconfigs and what rules read from the lint data
+//     files (`lintDataKey`). Folded into every group below.
 //   - the TYPED ENGINE, what only a result that reads types depends on: the
 //     two-program check that computes each file's result key, and the emit
 //     options that decide what a `.d.ts` says. Folded into every typed part and
@@ -24,8 +23,19 @@
 //   - the BASE group: the rules the config builder enables itself
 //     (typescript-eslint, react-hooks, eslint core) — the engine alone.
 //   - one group per lint CONTRIBUTION (`plugins/<p>/lint/index.ts`): its own
-//     import closure. A rule's `*.test.ts` is not in it; a helper the rule
-//     imports from outside `lint/` is.
+//     import closure and the npm code it loads. A rule's `*.test.ts` is not in
+//     it; a helper the rule imports from outside `lint/` is.
+//
+// NPM CODE counts by what a closure LOADS: the packages its files import by
+// name, closed over their dependencies in `bun.lock`, with the patch files
+// `bun.lock` applies to any of them (`lockfileNpmClosure`). The whole
+// lockfile and every `patches/` file used to be engine: a patch of
+// graphile-worker or @parcel/watcher — which no rule loads — or a dependency
+// added for a server feature re-linted every group of every file (8 of 20
+// engine moves on main in the week to 2026-11-08,
+// research/2026-11-08-global-lint-store-rewrites.md). The root `package.json`
+// is not engine either: no rule reads it, and what it pins reaches a rule only
+// through `bun.lock`.
 //
 // Each group's fingerprint keys that group's SYNTACTIC rules, which read the
 // text alone. A group that holds a type-aware rule also has a TYPED part — its
@@ -62,6 +72,7 @@
 // research/2026-10-17-global-lint-keyed-on-what-it-reads.md.
 
 import { createHash } from "crypto";
+import { isBuiltin } from "module";
 import { join, relative } from "path";
 import {
   LINT_CONFIG_SOURCE,
@@ -69,7 +80,7 @@ import {
   lintDataKey,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { LINT_GROUP_ALL, LINT_GROUP_BASE } from "../core";
-import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/core";
+import { lockfileNpmClosure } from "@plugins/infra/plugins/deps/plugins/npm/core";
 import type { TypeAwareGroups } from "../shared/lint-results";
 import type { RepoView } from "../shared/repo-view";
 import { producerSources } from "../shared/tsc-engine";
@@ -98,7 +109,8 @@ function groupHash(s: string): string {
  * The engine inputs the import graph cannot see: config files rather than
  * modules. The root tsconfigs only — every other `tsconfig*.json` in the tree
  * is a rule test's fixture (`lint/**\/tsconfig.case.json`), which no rule reads
- * at check time.
+ * at check time. (Dependency patches count per closure, by the packages it
+ * loads: `npmKey`.)
  *
  * Not the repo's `.d.ts`: a syntactic rule reads the file's own text, and a
  * typed part is keyed on the file's result key, which holds every `.d.ts` the
@@ -107,13 +119,31 @@ function groupHash(s: string): string {
  * any `.d.ts` re-linted every group on every file.
  */
 function isEngineConfigFile(rel: string): boolean {
-  if (!rel.includes("/")) {
-    if (rel === "package.json") return true;
-    if (rel.startsWith("tsconfig") && rel.endsWith(".json")) return true;
-  }
-  if (rel.startsWith("patches/")) return true;
-  return false;
+  return (
+    !rel.includes("/") && rel.startsWith("tsconfig") && rel.endsWith(".json")
+  );
 }
+
+/**
+ * The npm package a bare specifier loads (`@s/p/sub` → `@s/p`, `p/sub` → `p`),
+ * or undefined for a runtime builtin (`node:fs`, `path`, `bun`, `bun:test`),
+ * which is the runtime's, not the lockfile's.
+ */
+function npmPackageOf(spec: string): string | undefined {
+  if (spec === "bun" || spec.startsWith("bun:") || isBuiltin(spec)) {
+    return undefined;
+  }
+  const parts = spec.split("/");
+  return spec.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
+}
+
+/** A specifier resolved against the repo, not `node_modules`. */
+const isRepoSpecifier = (spec: string): boolean =>
+  spec.startsWith("./") ||
+  spec.startsWith("../") ||
+  spec.startsWith("@plugins/") ||
+  spec === "@" ||
+  spec.startsWith("@/");
 
 /** This file, repo-relative: how the checkout whose code RUNS is found. */
 const OWN_PATH =
@@ -227,24 +257,45 @@ export function lintClosures(
   view: Pick<RepoView, "isFile" | "readText" | "treeHash">,
 ) {
   const deps = new Map<string, readonly string[]>();
+  /** The npm packages each parsed file imports by name. */
+  const packages = new Map<string, readonly string[]>();
   const depsOf = (rel: string): readonly string[] => {
     let d = deps.get(rel);
     if (d === undefined) {
       const out = new Set<string>();
+      const pkgs = new Set<string>();
       if (isLintable(rel)) {
         for (const spec of runtimeImportSpecifiers(view.readText(rel))) {
           const to = resolveSpecifier(rel, spec, view.isFile);
-          if (to !== null && to !== rel) out.add(to);
+          if (to !== null) {
+            if (to !== rel) out.add(to);
+            continue;
+          }
+          // A missing repo file is no npm code, and neither is a computed
+          // `import(\`${…}\`)` (the builder's load of a registry by path).
+          if (isRepoSpecifier(spec) || spec.includes("${")) continue;
+          const pkg = npmPackageOf(spec);
+          if (pkg !== undefined) pkgs.add(pkg);
         }
       }
       d = [...out];
       deps.set(rel, d);
+      packages.set(rel, [...pkgs]);
     }
     return d;
   };
   return {
     /** How many files the walks have parsed so far. */
     parsed: (): number => deps.size,
+    /** The npm packages the files of a closure (`of`'s answer) import by name. */
+    packagesOf(files: Iterable<string>): Set<string> {
+      const out = new Set<string>();
+      for (const f of files) {
+        depsOf(f);
+        for (const p of packages.get(f)!) out.add(p);
+      }
+      return out;
+    },
     /**
      * Forward import closure of `start`, not descending into `stop` (files the
      * engine already covers) nor into a generated registry. Cycle-safe.
@@ -296,11 +347,40 @@ function body(files: Iterable<string>, view: RepoView): string {
 }
 
 /**
+ * The npm code a closure loads, as text to hash: the lock entries its
+ * packages reach (`lockfileNpmClosure`) and each patch applied to one of them,
+ * by version — read from the CODE checkout's tree, whose `node_modules` the
+ * rules run with (the checked tree itself on a check run). Throws on a package the lockfile does not hold — code that
+ * imports it cannot run, and a key that left it out would not move when it
+ * is installed.
+ */
+function npmKey(
+  label: string,
+  packages: ReadonlySet<string>,
+  view: RepoView,
+): string {
+  if (packages.size === 0) return "";
+  if (!view.isFile("bun.lock")) {
+    throw new Error(
+      `type-check: lint ${label} imports npm packages (${[...packages].sort().slice(0, 3).join(", ")}) and the checked tree ${view.treeHash} has no bun.lock`,
+    );
+  }
+  const closure = lockfileNpmClosure(view.readText("bun.lock"), packages);
+  if (closure.missing.length > 0) {
+    throw new Error(
+      `type-check: lint ${label} imports ${closure.missing.join(", ")}, which bun.lock does not hold`,
+    );
+  }
+  return `${sha256(closure.entries.join("\n"))}\n${body(closure.patches, view)}`;
+}
+
+/**
  * Compute the engine and every group's fingerprint for this tree. `view` is the
- * checked tree — its config files (tsconfigs, `package.json`, ambient `.d.ts`,
- * patches, the lockfile, the lint data files) are what the rules run against;
- * `code` is the tree of the checkout the rules run FROM (`codeCheckoutRoot`) —
- * the same tree on a check run, the repo's own beside a test's fixture.
+ * checked tree — its config files (the root tsconfigs, the lint data files)
+ * are what the rules run against; `code` is the tree of the checkout the rules
+ * run FROM (`codeCheckoutRoot`): their sources, and the lockfile and patches
+ * its `node_modules` was installed from — the same tree on a check run, the
+ * repo's own beside a test's fixture.
  */
 export async function computeLintGroups(
   view: RepoView,
@@ -308,18 +388,15 @@ export async function computeLintGroups(
 ): Promise<LintGroups> {
   const closures = lintClosures(code);
 
-  // The engine: the config builder's import closure and the worker (code),
-  // plus the config files no import names, plus the lockfile's resolutions
-  // and what rules read from the lint data files (the checked tree).
+  // The engine: the config builder's import closure and the worker, and the
+  // npm code they load (code), plus the config files no import names and
+  // what rules read from the lint data files (the checked tree).
   const engineCode = closures.of(LINT_CONFIG_SOURCE, new Set());
   for (const f of ownSources(WORKER_SOURCES)) engineCode.add(f);
   const engineConfig = view.files().filter(isEngineConfigFile);
   const engine = new Set([...engineCode, ...engineConfig]);
-  const lock = view.isFile("bun.lock")
-    ? sha256(lockfileNpmResolutions(view.readText("bun.lock")))
-    : "";
   const engineFp = sha256(
-    `lock:${lock}\ndata:${lintDataKey(view.root)}\n${body(engineCode, code)}\n${body(engineConfig, view)}`,
+    `npm:${npmKey("engine", closures.packagesOf(engineCode), code)}\ndata:${lintDataKey(view.root)}\n${body(engineCode, code)}\n${body(engineConfig, view)}`,
   );
 
   const fps = new Map<string, string>();
@@ -329,7 +406,9 @@ export async function computeLintGroups(
     const closure = closures.of(entry, engine);
     fps.set(
       pluginPath,
-      groupHash(`${pluginPath}\n${engineFp}\n${body(closure, code)}`),
+      groupHash(
+        `${pluginPath}\n${engineFp}\n${body(closure, code)}\nnpm:${npmKey(pluginPath, closures.packagesOf(closure), code)}`,
+      ),
     );
   }
   const typedEngineFp = groupHash(

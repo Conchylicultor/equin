@@ -231,6 +231,12 @@ interface JobState {
   known: LintEntry | undefined;
   /** The syntactic keys of `known` this run reuses (one per fresh group). */
   reusedSyntactic: Set<string>;
+  /**
+   * The base held this very text, under other rules: it is sent because the
+   * rules moved, and what it re-runs for that is left to the next base, not
+   * written to the per-file store (`finalize`).
+   */
+  carriedText: boolean;
 }
 
 /** The base a run carries from. */
@@ -282,9 +288,11 @@ const treeOf = (root: AppPath, rev: string): Promise<string | undefined> =>
 /**
  * The base a run carries from, among the candidate trees with a stored root —
  * this very tree (a re-run, or a sibling's), the worktree's last completed
- * run's, `HEAD`'s, the merge-base with `main`'s: the first whose rules are
- * this run's, else the first. Which one wins decides only how much is left to
- * do (`../shared/run-base.ts`): a hint is never trusted for the verdict.
+ * run's, `HEAD`'s, the merge-base with `main`'s, and last the latest root any
+ * run wrote under this run's rules (the rules pointer, on whatever tree): the
+ * first whose rules are this run's, else the first. Which one wins decides
+ * only how much is left to do (`../shared/run-base.ts`): a hint is never
+ * trusted for the verdict.
  *
  * Rules first, because a base under other rules carries nothing on its own:
  * every file is sent, and only the per-file store can spare its re-lint —
@@ -294,6 +302,14 @@ const treeOf = (root: AppPath, rev: string): Promise<string | undefined> =>
  * written by the pusher's check of that very tree — has this run's rules and
  * carries every file the worktree did not change. Taking the first stored one
  * re-linted the whole tree (~500 CPU-s) on every such rebase.
+ *
+ * The rules pointer goes last: its tree can be far from this one (every file
+ * that differs is sent), but it is the only candidate under this run's rules
+ * when no tree near this one has a base under them — a fresh worktree off a
+ * main tree nobody checked (`base none`), a rebase onto a main whose rules
+ * moved and whose merged tree nobody checked. Before it, each such run
+ * re-linted the whole tree under rules another worktree had already run
+ * everywhere: 2026-11-08, 18 whole-tree rewrites of ~15k entries in 6.5 h.
  *
  * A base that names a shard the store no longer holds is passed over; when no
  * candidate is usable the run takes the full path and says why.
@@ -305,36 +321,55 @@ async function chooseBase(
   bases: RunBaseStore,
   lint: RunBaseLint,
 ): Promise<BaseChoice> {
-  const candidates: [string, () => Promise<string | undefined>][] = [
-    ["this tree", () => Promise.resolve(treeHash)],
-    ["last run", () => Promise.resolve(bases.hint(worktree))],
-    ["HEAD", () => treeOf(root, "HEAD")],
+  /** A candidate tree, and the root it names when it is not the tree's own pointer. */
+  type Candidate = { tree: string; root?: string } | undefined;
+  const byTree = async (t: Promise<string | undefined>): Promise<Candidate> => {
+    const tree = await t;
+    return tree === undefined ? undefined : { tree };
+  };
+  const candidates: [string, () => Promise<Candidate>][] = [
+    ["this tree", () => byTree(Promise.resolve(treeHash))],
+    ["last run", () => byTree(Promise.resolve(bases.hint(worktree)))],
+    ["HEAD", () => byTree(treeOf(root, "HEAD"))],
     [
       "merge-base",
       async () => {
         const mb = await gitLine(root, ["merge-base", "HEAD", "main"]);
-        return mb === undefined ? undefined : treeOf(root, mb);
+        return mb === undefined ? undefined : byTree(treeOf(root, mb));
+      },
+    ],
+    [
+      "same rules",
+      () => {
+        const p = bases.rulesPointer(lint);
+        return Promise.resolve(
+          p === undefined ? undefined : { tree: p.treeHash, root: p.root },
+        );
       },
     ],
   ];
   const misses: string[] = [];
+  /** Roots already weighed (two candidates can name one). */
   const seen = new Set<string>();
   let first: ChosenBase | undefined;
   /** Stored bases passed over: unusable, or (before the winner) other rules. */
   const passed: string[] = [];
   for (const [label, get] of candidates) {
-    const t = await get();
-    if (t === undefined) {
+    const c = await get();
+    if (c === undefined) {
       misses.push(`${label}: none`);
       continue;
     }
-    if (seen.has(t)) continue;
-    seen.add(t);
-    const hash = bases.pointer(t);
+    const t = c.tree;
+    const hash = c.root ?? bases.pointer(t);
     if (hash === undefined) {
+      if (seen.has(`tree:${t}`)) continue;
+      seen.add(`tree:${t}`);
       misses.push(`${label} ${t.slice(0, 12)}: no base`);
       continue;
     }
+    if (seen.has(hash)) continue;
+    seen.add(hash);
     const base = bases.root(hash);
     if (base === undefined) {
       misses.push(`${label} ${t.slice(0, 12)}: root pruned`);
@@ -621,6 +656,7 @@ export async function openPreparation({
       stored,
       known,
       reusedSyntactic: new Set(),
+      carriedText: carried !== undefined,
     };
     states.set(rel, state);
     const typed = { known: known?.typed ?? [] };
@@ -738,6 +774,7 @@ export async function openPreparation({
       results.set(rel, r);
     }
     let storeWrites = 0;
+    let leftToBase = 0;
     /** Write a file's per-file store entry when the merge changes it. */
     const record = (
       rel: string,
@@ -866,6 +903,39 @@ export async function openPreparation({
       const freshT = new Map<string, RawLintMessage[]>();
       const t = typedOf(rel, st.directive, r, res, st.known, freshT);
       tally(st.directive, freshS.size, freshT.size);
+      next.set(rel, fileBase(st.version, st.directive, r, s, t));
+      if (st.carriedText) {
+        // A text the base held, re-run because the rules moved. Its results
+        // under the new rules go into the next base — content-addressed, so a
+        // shard whose messages did not change is not even rewritten — and
+        // that base is found by every later run under these rules, on any
+        // tree (the rules pointer). Written per file as well, they were one
+        // store rewrite per lintable file for every rule edit: ~15k entries,
+        // each a tmp file, a rename and a counter (2026-11-08: 18 such runs in
+        // 6.5 h, 58 % of a minute's file events). Only a typed part whose
+        // rules did NOT move is recorded: it ran because the file's result
+        // key moved, as it would have under unchanged rules.
+        const baseLint = base!.root.lint;
+        const unmoved = new Set(
+          (st.directive
+            ? baseLint.allFp === lint.allFp
+              ? wholeParts
+              : []
+            : typedParts.filter((p) => baseLint.typed[p.group] === p.fp)
+          ).map((p) => typedResultKey(p.fp, r)),
+        );
+        const keptT = new Map([...freshT].filter(([k]) => unmoved.has(k)));
+        if (freshS.size + freshT.size > keptT.size) leftToBase++;
+        if (keptT.size === 0) continue;
+        record(rel, st.version, st.stored, {
+          directive: st.directive,
+          syntactic: new Map(),
+          typed: keptT,
+          keepSyntactic,
+          keepTyped,
+        });
+        continue;
+      }
       // Fresh results first, then the stored keys — or, for a text the store
       // has no entry for, its whole result, so the next run on this text in
       // any tree finds it.
@@ -898,7 +968,6 @@ export async function openPreparation({
               keepTyped,
             },
       );
-      next.set(rel, fileBase(st.version, st.directive, r, s, t));
     }
 
     // Every carried file whose result key moved: its syntactic results
@@ -1020,6 +1089,7 @@ export async function openPreparation({
       const { hash, wrote } = bases.putRoot(nextRoot);
       bases.setPointer(treeHash, hash);
       bases.setHint(worktree, treeHash);
+      bases.setRulesPointer(lint, { root: hash, treeHash });
       rootNote = `root ${hash.slice(0, 12)} ${wrote ? "written" : "kept"}`;
     }
     const baseMs = performance.now() - t1;
@@ -1069,7 +1139,7 @@ export async function openPreparation({
 
     const sec = (x: number): string => (x / 1000).toFixed(1);
     return {
-      lintLine: `${lintLineOf("")} (finalize: records ${sec(recordMs)}s — ${states.size} planned, ${movedKeys} carried with a moved key, ${storeWrites} entries written; exemptions ${sec(exemptionsMs)}s, verdict ${sec(verdictMs)}s over ${subjects.length} files)`,
+      lintLine: `${lintLineOf("")} (finalize: records ${sec(recordMs)}s — ${states.size} planned, ${movedKeys} carried with a moved key, ${storeWrites} entries written, ${leftToBase} left to the base; exemptions ${sec(exemptionsMs)}s, verdict ${sec(verdictMs)}s over ${subjects.length} files)`,
       lintViolations,
       baseLine: `base ${sec(baseMs)}s: shards ${rebuilt} rebuilt (${newShards} new), ${carriedShards} carried (${touched} touched), ${shardsRead} read for the verdict; ${rootNote}`,
     };

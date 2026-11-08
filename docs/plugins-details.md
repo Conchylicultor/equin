@@ -31798,14 +31798,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/updates.OutdatedWaiting`
               - `infra/deps/updates.utcDay`
             - Exports (types):
+              - `NpmClosure`
               - `Packument`
               - `Plan`
               - `Workspace`
             - Exports (values):
               - `groupProblems`
               - `installedVersions`
+              - `lockfileNpmClosure`
               - `lockfileNpmResolutions`
               - `newestTag`
+              - `patchTouchedFiles`
               - `planNpm`
               - `policyProblems`
               - `rangeAt`

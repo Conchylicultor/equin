@@ -34,6 +34,14 @@
 // file only when its version does, and the global inputs are compared. Picking
 // a base is a matter of how much is left to do, never of what the verdict is.
 //
+// Besides the tree pointers, a RULES pointer per set of lint inputs names the
+// root the latest completed run under them wrote, whatever its tree: the base
+// a run can carry from when none of its own candidate trees has one under its
+// rules — a fresh worktree off a main tree nobody checked, or a worktree
+// rebased onto a main whose rules moved. Without it, every such run re-linted
+// the whole tree under rules some other worktree had already run everywhere
+// (2026-11-08: 18 such whole-tree runs in 6.5 h, research/2026-11-08-global-lint-store-rewrites.md).
+//
 // The ROOT's directory is bounded tighter than the shards' (one root per
 // distinct tree), and a root that carries a shard last marked used more than
 // `TOUCH_AFTER_DAYS` ago touches it — so every shard outlives every root that
@@ -276,6 +284,16 @@ function canonicalRoot(root: RunBaseRoot): RunBaseRoot {
 export const rootHash = (root: RunBaseRoot): string =>
   short(JSON.stringify(canonicalRoot(root)));
 
+/** One spelling of a set of lint inputs, as the rules pointer's key. */
+export const lintInputsKey = (lint: RunBaseLint): string =>
+  short(
+    JSON.stringify({
+      fps: sortedRecord(lint.fps) ?? {},
+      typed: sortedRecord(lint.typed) ?? {},
+      allFp: lint.allFp,
+    }),
+  );
+
 /** Whether a base's lint inputs are the run's: then every carried file's state stands. */
 export function sameLintInputs(a: RunBaseLint, b: RunBaseLint): boolean {
   const same = (x: Record<string, string>, y: Record<string, string>) => {
@@ -310,10 +328,24 @@ export interface RunBaseStore {
   /** The tree this worktree's last completed run checked: a hint, never trusted. */
   hint(worktree: string): string | undefined;
   setHint(worktree: string, treeHash: string): void;
+  /**
+   * The root the latest completed run under these lint inputs wrote, and the
+   * tree it checked — on any tree, in any worktree. A hint like the others:
+   * the root is still compared with the run's inputs before it is used.
+   */
+  rulesPointer(lint: RunBaseLint): RulesPointer | undefined;
+  setRulesPointer(lint: RunBaseLint, pointer: RulesPointer): void;
+}
+
+/** What a rules pointer names: a root, and the tree it was recorded on. */
+export interface RulesPointer {
+  root: string;
+  treeHash: string;
 }
 
 const pointerSchema = z.object({ root: z.string() });
 const hintSchema = z.object({ treeHash: z.string() });
+const rulesPointerSchema = z.object({ root: z.string(), treeHash: z.string() });
 
 /** Open (and lazily create) the host-wide run base store. */
 export function openRunBaseStore(): RunBaseStore {
@@ -324,6 +356,8 @@ export function openRunBaseStore(): RunBaseStore {
   const rootKey = (h: string) => `root\0${RUN_BASE_FORMAT}\0${h}`;
   const shardKey = (h: string) => `shard\0${RUN_BASE_FORMAT}\0${h}`;
   const hintKey = (w: string) => `hint\0${w}`;
+  const rulesKey = (lint: RunBaseLint) =>
+    `rules\0${RUN_BASE_FORMAT}\0${lintInputsKey(lint)}`;
   // Every entry is written below and renamed into place whole, so a shape a
   // schema rejects is a bug in this file — surfaced, not skipped.
   return {
@@ -366,6 +400,13 @@ export function openRunBaseStore(): RunBaseStore {
     },
     setHint(w, treeHash) {
       roots.record(hintKey(w), { treeHash });
+    },
+    rulesPointer(lint) {
+      const raw = roots.read(rulesKey(lint));
+      return raw === undefined ? undefined : rulesPointerSchema.parse(raw);
+    },
+    setRulesPointer(lint, pointer) {
+      roots.record(rulesKey(lint), { ...pointer });
     },
   };
 }

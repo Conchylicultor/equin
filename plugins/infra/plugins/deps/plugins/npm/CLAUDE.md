@@ -146,14 +146,17 @@ functions in `core/internal/coherence.ts` over `readWorkspace(files)` (a check r
     - `infra/deps/updates.OutdatedWaiting`
     - `infra/deps/updates.utcDay`
   - Exports (types):
+    - `NpmClosure`
     - `Packument`
     - `Plan`
     - `Workspace`
   - Exports (values):
     - `groupProblems`
     - `installedVersions`
+    - `lockfileNpmClosure`
     - `lockfileNpmResolutions`
     - `newestTag`
+    - `patchTouchedFiles`
     - `planNpm`
     - `policyProblems`
     - `rangeAt`

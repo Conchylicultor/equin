@@ -26,8 +26,17 @@ import {
 import { tmpdir } from "os";
 import { dirname, join } from "path";
 import { gitBlobSha, repoViewOver, type RepoView } from "../shared/repo-view";
-import { LINT_CONFIG_SOURCE } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import { codeCheckoutRoot, lintClosures } from "./lint-groups";
+import {
+  LINT_DATA_FILES,
+  LINT_CONFIG_SOURCE,
+} from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { readTreeSnapshot } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { viewOfSnapshot } from "../shared/repo-view";
+import {
+  codeCheckoutRoot,
+  computeLintGroups,
+  lintClosures,
+} from "./lint-groups";
 
 const TREE = "0".repeat(40);
 const roots: string[] = [];
@@ -194,4 +203,115 @@ test("the lint engine reaches only its declared folders", () => {
     }),
   );
   expect([...folders].sort()).toEqual([...ENGINE_FOLDERS].sort());
+});
+
+test("a closure's npm packages are what its files import by name, builtins aside", () => {
+  const view = viewOf({
+    "plugins/shell/lint/index.ts": [
+      'import { b } from "./b";',
+      'import ts from "typescript";',
+      'import { x } from "@typescript-eslint/utils/ts-eslint";',
+      'import { readFileSync } from "fs";',
+      'import { join } from "node:path";',
+      'import { test } from "bun:test";',
+      'import { $ } from "bun";',
+      'import { m } from "./missing";',
+      'import type { T } from "zod";',
+      "",
+    ].join("\n"),
+    "plugins/shell/lint/b.ts": 'import picomatch from "picomatch/posix";\n',
+  });
+  const walks = lintClosures(view);
+  const closure = walks.of("plugins/shell/lint/index.ts", new Set());
+  expect(sorted(walks.packagesOf(closure))).toEqual([
+    "@typescript-eslint/utils",
+    "picomatch",
+    "typescript",
+  ]);
+});
+
+// The npm packages the engine imports by name: with their lockfile closure,
+// the npm code every group folds in. Like ENGINE_FOLDERS, a new one fails
+// here, so whoever adds it sees that a bump of it (or of anything it depends
+// on) re-lints every file.
+const ENGINE_PACKAGES = [
+  // The builder's own rules and parser (the base group).
+  "@typescript-eslint/eslint-plugin",
+  "@typescript-eslint/parser",
+  "eslint-plugin-react-hooks",
+  // The worker's linter, and the parser's compiler.
+  "eslint",
+  "typescript",
+  // The exemption manifests' schema (exempt/core).
+  "zod",
+];
+
+test("the lint engine loads only its declared npm packages", () => {
+  const root = codeCheckoutRoot();
+  const disk = {
+    treeHash: "working tree",
+    isFile: (rel: string) => existsSync(join(root, rel)),
+    readText: (rel: string) => readFileSync(join(root, rel), "utf8"),
+  };
+  const walks = lintClosures(disk);
+  const engine = walks.of(LINT_CONFIG_SOURCE, new Set());
+  engine.add(
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/shared/worker.ts",
+  );
+  expect(sorted(walks.packagesOf(engine))).toEqual([...ENGINE_PACKAGES].sort());
+});
+
+test("a dependency or patch no rule loads moves no group; a patch of one a rule loads moves every group", async () => {
+  const code = viewOfSnapshot(
+    await readTreeSnapshot(asAppPath(codeCheckoutRoot())),
+    {},
+  );
+  const real = (rel: string): string =>
+    readFileSync(join(codeCheckoutRoot(), rel), "utf8");
+  const lock = real("bun.lock");
+  const patches = code.files().filter((f) => f.startsWith("patches/"));
+  const base: Record<string, string> = {
+    "bun.lock": lock,
+    "package.json": real("package.json"),
+    "tsconfig.json": real("tsconfig.json"),
+    "tsconfig.base.json": real("tsconfig.base.json"),
+    ...Object.fromEntries(LINT_DATA_FILES.map((f) => [f, real(f)])),
+    ...Object.fromEntries(patches.map((p) => [p, real(p)])),
+  };
+  // The npm code is the CODE checkout's: the fixture's lockfile and patches
+  // stand in for the code tree's, under the repo's own rules.
+  const fpsOf = async (files: Record<string, string>) => {
+    const v = viewOf(files);
+    const mine = (rel: string) =>
+      rel === "bun.lock" || rel.startsWith("patches/");
+    const withNpm: RepoView = {
+      ...code,
+      isFile: (rel) => (mine(rel) ? v.isFile(rel) : code.isFile(rel)),
+      version: (rel) => (mine(rel) ? v.version(rel) : code.version(rel)),
+      readText: (rel) => (mine(rel) ? v.readText(rel) : code.readText(rel)),
+    };
+    return (await computeLintGroups(v, withNpm)).fps;
+  };
+  const before = await fpsOf(base);
+
+  // A server-only package's patch, and a new dependency nobody lints with.
+  const graphile = patches.find((p) => p.includes("graphile-worker"))!;
+  const unrelated = await fpsOf({
+    ...base,
+    [graphile]: `${base[graphile]}\n`,
+    "package.json": base["package.json"]!.replace(
+      '"dependencies": {',
+      '"dependencies": {\n    "left-pad": "^1.3.0",',
+    ),
+    "bun.lock": lock.replace(
+      '  "packages": {\n',
+      '  "packages": {\n    "left-pad": ["left-pad@1.3.0", "", {}, "sha512-x"],\n',
+    ),
+  });
+  expect(unrelated).toEqual(before);
+
+  // A patch of a package the builder loads.
+  const hooks = patches.find((p) => p.includes("eslint-plugin-react-hooks"))!;
+  const moved = await fpsOf({ ...base, [hooks]: `${base[hooks]}\n` });
+  for (const [g, fp] of before) expect(moved.get(g)).not.toBe(fp);
 });

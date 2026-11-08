@@ -378,7 +378,11 @@ test(
         allFp: "1".repeat(16),
       },
     };
-    store.setPointer(treeHash, store.putRoot(forged).hash);
+    const forgedHash = store.putRoot(forged).hash;
+    store.setPointer(treeHash, forgedHash);
+    // No run under the current rules is left to carry from: the rules
+    // pointer names the forged root too (weighed, and passed over).
+    store.setRulesPointer(base.lint, { root: forgedHash, treeHash });
     // The per-file store holds this text's results under the CURRENT
     // fingerprints too (it would answer them — the reuse it exists for), so
     // it is emptied: what is left known is the base's, under the forged ones.
@@ -404,6 +408,42 @@ test(
     expect(worked.typed).toEqual([D]);
     const done = await moved.finalize(worked.outcome);
     expect(done.lintViolations).toBe(before.done.lintViolations);
+    // What the moved rules re-ran is in the next base only: no per-file
+    // entry is rewritten for a text the base held.
+    expect(done.lintLine).toContain(
+      `0 entries written, ${moved.plan.lintFiles.length} left to the base`,
+    );
+    // ... and the next run carries every file from it.
+    const again = await run();
+    expect(sent(again.plan)).toEqual([]);
+    expect(again.done.lintViolations).toBe(before.done.lintViolations);
+  },
+  TIMEOUT_MS,
+);
+
+test(
+  "with no candidate tree under this run's rules, the latest run under them is the base",
+  async () => {
+    const before = await run();
+    const store = openRunBaseStore();
+    const treeHash = (await computeTreeHash(root))!;
+    const current = store.root(store.pointer(treeHash)!)!;
+    // This tree's own base is under other rules (a worktree whose last run
+    // predates the rules it now has); the rules pointer still names the
+    // current root, as a sibling's run under these rules would have left it.
+    const forged = {
+      ...current,
+      lint: { ...current.lint, allFp: "2".repeat(16) },
+    };
+    store.setPointer(treeHash, store.putRoot(forged).hash);
+    rmSync(lintResultsV3Dir.path, { recursive: true, force: true });
+
+    const r = await run();
+    expect(r.plan.baseLine).toContain("base same rules");
+    expect(r.plan.baseLine).toContain("this tree");
+    expect(r.plan.baseLine).toContain("other rules");
+    expect(sent(r.plan)).toEqual([]);
+    expect(r.done.lintViolations).toBe(before.done.lintViolations);
   },
   TIMEOUT_MS,
 );
