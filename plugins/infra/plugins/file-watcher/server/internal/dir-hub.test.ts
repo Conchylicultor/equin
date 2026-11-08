@@ -558,27 +558,6 @@ describe("createDirWatchHub over the real engine", () => {
     for (let i = 0; i < 150 && !done(); i++) await Bun.sleep(20);
   };
 
-  /**
-   * Resolve once `watched`'s watch hears an entry written into it. Bun's
-   * single-directory `fs.watch` goes live a moment AFTER it returns: on macOS
-   * every directory watch of the process shares one FSEvents stream, which Bun
-   * (re)starts on its own thread, from "now", whenever a watch opens or closes.
-   * A write landing in that gap is never reported — measured: this file's first
-   * directory watch, opened after the parcel-backed test above, lost both
-   * entries written right after `acquire` and heard nothing at all, while a
-   * write half a second later was heard. So probe until one is heard, then
-   * test.
-   */
-  const untilLive = async (watched: string, heard: FileChangeEvent[]) => {
-    for (let i = 0; i < 20; i++) {
-      const probe = join(watched, `.probe-${i}`);
-      writeFileSync(probe, "");
-      await wait(() => paths(heard).includes(probe));
-      if (paths(heard).includes(probe)) return;
-    }
-    throw new Error(`the watch of ${watched} never went live`);
-  };
-
   test("a single-directory watch hears its entries, not a write deeper down, and the folder going", async () => {
     dir = realpathSync(mkdtempSync(join(tmpdir(), "dir-hub-")));
     const watched = join(dir, "watched");
@@ -591,7 +570,6 @@ describe("createDirWatchHub over the real engine", () => {
       scope: "children",
       onChange: (e) => void heard.push(...e),
     });
-    await untilLive(watched, heard);
     writeFileSync(join(sub, "deep.txt"), "x");
     writeFileSync(join(watched, "f.txt"), "x");
     await wait(() => paths(heard).includes(join(watched, "f.txt")));
@@ -621,18 +599,15 @@ describe("createDirWatchHub over the real engine", () => {
       scope: "children",
       onChange: (e) => void heard.push(...e),
     });
-    await untilLive(watched, heard);
     renameSync(sibling, join(dir, "sibling-moved"));
     renameSync(watched, join(dir, "moved"));
     await wait(() =>
       heard.some((e) => e.path === watched && e.type === "delete"),
     );
     expect(heard).toContainEqual({ type: "delete", path: watched });
-    // Nothing but the probe and the folder itself: the sibling moving is
-    // not this folder's business.
-    expect(
-      heard.filter((e) => !e.path.startsWith(join(watched, ".probe-"))),
-    ).toEqual([{ type: "delete", path: watched }]);
+    // Nothing but the folder itself: the sibling moving is not this
+    // folder's business.
+    expect(heard).toEqual([{ type: "delete", path: watched }]);
     release();
   });
 });

@@ -233,29 +233,39 @@ here. `infra/corpus-index` uses it for its boot catch-up.
 ## `depth: "children"`: a folder's own entries, and the folder going
 
 A `children` watch (what `acquireDirWatch({ scope: "children" })` opens when no
-recursive root covers the dir) is Bun's single-directory `fs.watch` of the dir —
-plus a second one of its **parent**, filtered to the dir's own name. Bun's watch
-of a dir reports nothing when that dir is removed or moved away (measured on
-macOS: no event, no error, no close), so without the parent watch an open
-listing of a deleted folder would stay stale. The parent hears it as a `rename`
-of the dir's entry; an inode check turns that into a `delete` of the dir
-(removed, moved away, or replaced by another folder of the same name), on which
-the holder re-arms. `/` has no parent and cannot go. A watch that reported its
-dir gone is retired from the hub, so that re-arm opens a fresh watch of
-whatever folder now sits at the path rather than joining the dead one.
+recursive root covers the dir) hears the dir's direct entries and the dir
+itself going — reported once, as a `delete` of the dir (removed, moved away,
+or replaced by another folder of the same name: an inode check), on which the
+holder re-arms. A watch that reported its dir gone is retired from the hub, so
+that re-arm opens a fresh watch of whatever folder now sits at the path rather
+than joining the dead one. **It is live when it resolves**: a write landing
+right after `start` / `acquire` is heard, so "arm, then read" is correct.
 
-Two Bun behaviours a caller of this depth must know (measured on macOS, Bun
-1.4.3):
+- **macOS: its own FSEvents stream** (`subscribeChildren` in
+  `shared/engine.ts`): a parcel subscription of the dir with every deeper path
+  ignored natively (a relative path holding a `/`, dropped before parcel stats
+  it). FSEvents watches by path prefix — no descriptor per entry, nothing
+  walked — so `~` or `/` costs one stream. parcel starts the stream
+  (`FSEventStreamStart`, since now) before `subscribe` resolves, and each
+  subscription has its own, so no other watch opening or closing touches it.
+  The dir going is heard on the stream itself (its own path), closed at once
+  like a `subtree` root. A native error (FSEvents dropped events) reaches
+  `onLost`.
+- **Elsewhere: Bun's single-directory `fs.watch`** of the dir, plus a second
+  one of its **parent** filtered to the dir's own name (Bun's watch of a dir
+  reports nothing when that dir is removed or moved away); `/` has no parent
+  and cannot go. A failing watch is reported as its dir gone. Its liveness at
+  return is not measured off macOS.
 
-- **It goes live a moment after it resolves.** Bun opens the native watch on
-  its own thread; a change landing before that is never reported. A test that
-  writes right after `acquire` must first wait for a probe entry to be heard
-  (`untilLive` in `server/internal/dir-hub.test.ts`).
-- **Every directory watch of the process shares one FSEvents stream**, which
-  Bun restarts from "now" whenever any directory watch opens or closes — so a
-  live watch can miss a change landing during another watch's open or close
-  (measured: 72 of 300 writes missed under constant open/close churn, none
-  without).
+Why not Bun's `fs.watch` on macOS (what this depth was until 2026-11-08): it
+opened the native watch on its own thread after returning, and every directory
+watch of the process shared ONE FSEvents stream that Bun restarted from "now"
+whenever any of them opened or closed. Measured side by side on one loaded host
+(fseventsd at ~190% CPU, 30 s to be heard): `fs.watch` missed 10 of 10 writes
+made right after it opened and 48 of 50 writes made while another watch opened
+and closed; the parcel stream missed 0 of 10 and 0 of 50. The daemon's pid-file
+holder (`infra/spawn/daemon`), which arms then reads, missed exactly such
+writes. Tests: the `depth children` cases in `shared/engine.test.ts`.
 
 ## A dir that may not exist: `acquireEventualDirWatch` (machine)
 

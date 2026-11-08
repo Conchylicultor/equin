@@ -23,9 +23,9 @@ export const dirWatcher = defineFileWatcher({
 
 /**
  * The hub's single-directory watches: what a `children` request (a folder's
- * listing) opens when no recursive root above it is open — two handles per
- * folder (it and its parent, to hear it go), never a watch of the tree below
- * it. One instance per dir.
+ * listing) opens when no recursive root above it is open — the folder's
+ * direct entries and its going, never a watch of the tree below it (the
+ * engine's `depth: "children"`). One instance per dir.
  */
 export const dirEntriesWatcher = defineFileWatcher({
   name: "file-watcher.dir-entries",
@@ -64,8 +64,8 @@ const hub = createDirWatchHub({
  * the returned release runs. Watchers of the same folder tree share one native
  * watch: a dir under an already-watched root rides it. A `children` request
  * with no root above it opens only a single-directory watch of its dir. Resolves once the watch
- * is open — a single-directory one goes live a moment later (the engine's
- * `depth: "children"`); rejects when `dir` cannot be watched.
+ * is live — a change after it is heard, so arm-then-read is correct; rejects
+ * when `dir` cannot be watched.
  *
  * ```ts
  * whileSubscribed: async ({ path }, notify) =>

@@ -6,6 +6,7 @@ import {
   realpathSync,
   renameSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,6 +19,7 @@ import {
   type FileWatcherOptions,
 } from "./engine";
 import { followedDirs } from "./follow-files";
+import type { FileChangeEvent } from "./registry";
 
 let dir: string | null = null;
 let staging: string | null = null;
@@ -324,6 +326,97 @@ describe("createFileWatcher: a watched dir that goes", () => {
     } finally {
       await after.stop();
     }
+  });
+});
+
+describe("createFileWatcher: depth children", () => {
+  const childrenWatch = (
+    of: string,
+    heard: FileChangeEvent[],
+  ): Promise<FileWatcher> =>
+    createFileWatcher({
+      dirs: [of],
+      depth: "children",
+      debounceMs: 0,
+      onChange: (batch) => void heard.push(...batch),
+    });
+
+  test("is live when it resolves: a write right after start is heard", async () => {
+    // Each round a fresh watch, written to at once — the arm-then-read shape
+    // (the daemon's pid-file holder). Bun's fs.watch went live a moment after
+    // it returned and lost such writes.
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-children-")));
+    for (let i = 0; i < 10; i++) {
+      const watched = join(dir, `w${i}`);
+      mkdirSync(watched);
+      const heard: FileChangeEvent[] = [];
+      const w = await childrenWatch(watched, heard);
+      try {
+        const file = join(watched, "pid");
+        writeFileSync(file, "x");
+        await until(() => heard.some((e) => e.path === file));
+        expect(heard.map((e) => e.path)).toContain(file);
+      } finally {
+        await w.stop();
+      }
+    }
+  });
+
+  test("hears every write while other directory watches open and close", async () => {
+    // Bun's directory watches shared one FSEvents stream, restarted from
+    // "now" on every open or close: 72 of 300 writes were missed under churn.
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-children-")));
+    const watched = join(dir, "watched");
+    const other = join(dir, "other");
+    mkdirSync(watched);
+    mkdirSync(other);
+    const heard: FileChangeEvent[] = [];
+    watcher = await childrenWatch(watched, heard);
+    const written: string[] = [];
+    for (let i = 0; i < 50; i++) {
+      const churn = await childrenWatch(other, []);
+      const file = join(watched, `f${i}`);
+      writeFileSync(file, "x");
+      written.push(file);
+      await churn.stop();
+    }
+    const missing = () =>
+      written.filter((f) => !heard.some((e) => e.path === f));
+    await until(() => missing().length === 0);
+    expect(missing()).toEqual([]);
+  });
+
+  test("a dir reached through a symlink: entries named under it, nothing deeper", async () => {
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-children-")));
+    const real = join(dir, "real");
+    const link = join(dir, "link");
+    mkdirSync(join(real, "sub"), { recursive: true });
+    symlinkSync(real, link);
+    const heard: FileChangeEvent[] = [];
+    watcher = await childrenWatch(link, heard);
+    writeFileSync(join(real, "sub", "deep.txt"), "x");
+    writeFileSync(join(real, "f.txt"), "x");
+    await until(() => heard.some((e) => e.path === join(link, "f.txt")));
+    expect(heard.map((e) => e.path)).toContain(join(link, "f.txt"));
+    expect(heard.every((e) => e.path.startsWith(`${link}/`))).toBe(true);
+  });
+
+  test("hears its entries only, and the folder going as one delete of it", async () => {
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-children-")));
+    const watched = join(dir, "watched");
+    const sub = join(watched, "sub");
+    mkdirSync(sub, { recursive: true });
+    const heard: FileChangeEvent[] = [];
+    watcher = await childrenWatch(watched, heard);
+    writeFileSync(join(sub, "deep.txt"), "x");
+    writeFileSync(join(watched, "f.txt"), "x");
+    await until(() => heard.some((e) => e.path === join(watched, "f.txt")));
+    expect(heard.map((e) => e.path)).not.toContain(join(sub, "deep.txt"));
+    rmSync(watched, { recursive: true });
+    await until(() => heard.some((e) => e.path === watched));
+    expect(heard.filter((e) => e.path === watched)).toEqual([
+      { type: "delete", path: watched },
+    ]);
   });
 });
 

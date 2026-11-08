@@ -42,10 +42,9 @@ export interface DirWatchHub {
   /**
    * Watch `dir` until the returned release runs. Resolves once the native
    * watch is open; rejects when it cannot be opened (a missing dir), holding
-   * nothing. A recursive (`subtree`) watch, or a `children` one riding it, is
-   * live then. A `children` watch with no root above it is open but not yet
-   * live: Bun arms a single-directory watch on its own thread a moment later,
-   * and a change landing in that gap is never reported.
+   * nothing. The watch is live then, whatever its scope: a change landing
+   * after it resolves is heard (a `children` watch off macOS excepted — see
+   * the engine's `depth: "children"`).
    */
   acquire(request: DirWatchRequest): Promise<DirWatchRelease>;
   /** The roots with a native recursive watch open, or opening (a retired one is not). */

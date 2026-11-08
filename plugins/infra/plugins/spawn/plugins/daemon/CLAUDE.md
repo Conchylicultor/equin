@@ -89,15 +89,14 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
   its file behind (no file event, nothing polls) is seen at the next get.
   Before the first read the instance stays `starting`, never a stand-in
   "absent".
-- **The watch is a best effort; a get backs it up.** A single-folder watch
-  goes live a moment after it opens, and the process's shared FSEvents
-  stream can miss a write while another watch opens or closes
-  (`infra/file-watcher`). So a get that finds nothing alive (`starting`, or
-  an attached instance `exited`) also asks for a fresh async read: a missed
-  write is caught by the next look, never by a timer. The folder is never
-  created here: while it is missing, or after it went (its watch dropped),
-  there is no watch and the read says `absent`; the next read opens it
-  again. A failure to open it other than a missing folder is reported
+- **Arm, then read.** The watch is live when `acquireDirWatch` resolves
+  (`infra/file-watcher`), so the first read, made after it, sees every write
+  the watch does not hear. The folder is never created here: while it is
+  missing, or after it went or its watch lost events (its watch dropped),
+  there is no watch and the read says `absent`. So a get that finds nothing
+  alive (`starting`, or an attached instance `exited`) asks for a fresh
+  async read, which opens the watch again — a folder that came later is
+  caught by the next look, never by a timer. A failure to open it other than a missing folder is reported
   (`reportServerError`) and retried on the next read, which still runs.
 - **A bootstrap's exit is judged by a read that started after it.** Each
   read is numbered when it starts; until one numbered past the bootstrap's

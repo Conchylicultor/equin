@@ -140,15 +140,13 @@ export interface DirWatchOptions extends WatchOptionsBase {
   /**
    * How deep each watched dir is heard. `"subtree"` (the default) is
    * parcel's native recursive watch: every path at any depth. `"children"` is
-   * the platform's single-directory watch (`fs.watch` without `recursive`) —
    * the dir's direct entries created, written, renamed or removed, and the
-   * dir itself going (heard through a second single-directory watch, of its
-   * parent) — so watching a huge folder (`~`, `/`) costs two handles, not a
-   * watch of everything below it. It goes live a moment after `start`
-   * resolves, not at it: Bun opens the native watch on its own thread (on
-   * macOS, one FSEvents stream shared by every directory watch of the
-   * process, restarted from "now" whenever one opens or closes). No `ignore`
-   * beside it (a throw).
+   * dir itself going (one `delete` of it), never a watch of everything below
+   * it — so watching a huge folder (`~`, `/`) stays cheap. Live when `start`
+   * resolves: on macOS its own FSEvents stream with every deeper path ignored
+   * natively (`subscribeChildren`), elsewhere Bun's single-directory
+   * `fs.watch` of it and of its parent (`watchChildren`). No `ignore` beside
+   * it (a throw).
    */
   depth?: WatchDepth;
 }
@@ -206,8 +204,9 @@ export function watcherBackend(
   writesWhileOpen: boolean,
   depth: WatchDepth = "subtree",
 ): WatcherBackend {
-  if (depth === "children") return "fs-watch";
   const platform = process.platform;
+  if (depth === "children")
+    return platform === "darwin" ? "fs-events" : "fs-watch";
   if (platform === "darwin") return writesWhileOpen ? "kqueue" : "fs-events";
   if (platform === "linux") return "inotify";
   if (platform === "win32") return "windows";
@@ -356,7 +355,9 @@ export async function createFileWatcher(
     );
   };
 
-  const parcelWatcher = depth === "subtree" ? await getParcelWatcher() : null;
+  const backend = watcherBackend(false, depth);
+  const parcelWatcher =
+    backend === "fs-watch" ? null : await getParcelWatcher();
 
   const matchers = new Map(dirs.map((d) => [d, ignoreMatcher(d, ignore)]));
   const ignoredUnder = (root: string): ((path: string) => boolean) => {
@@ -369,7 +370,7 @@ export async function createFileWatcher(
   // A backend that watches each directory on its own misses what a new
   // directory already held when it got to it — see `new-dirs.ts`.
   const newDirs: NewDirWatches | null =
-    parcelWatcher !== null && watcherBackend(false, depth) === "inotify"
+    parcelWatcher !== null && backend === "inotify"
       ? createNewDirWatches({
           subscribe: (root, dir) =>
             parcelWatcher.subscribe(dir, handlerFor(root), {
@@ -398,7 +399,11 @@ export async function createFileWatcher(
       const sub =
         parcelWatcher === null
           ? await watchChildren(dir, take)
-          : await subscribeRoot(parcelWatcher, dir, {
+          : depth === "children"
+            ? await subscribeChildren(parcelWatcher, dir, take, (error) =>
+                lost(dir, error),
+              )
+            : await subscribeRoot(parcelWatcher, dir, {
               onEvents: handlerFor(dir),
               options: parcelOptions,
               onGone: (gone) => {
@@ -489,6 +494,56 @@ async function subscribeRoot(
 }
 
 /**
+ * The `"children"` depth on macOS: an FSEvents stream of `dir` alone, every
+ * path below its direct entries ignored inside parcel (a relative path with a
+ * `/` in it — dropped before parcel stats anything), its events at `dir`
+ * itself withheld. FSEvents watches by path prefix, so this holds no
+ * descriptor per entry and walks nothing, however big the folder.
+ *
+ * Why not Bun's `fs.watch` (what the other platforms use): it opens the
+ * native watch on its own thread after returning, so a change landing just
+ * after `start` resolved was never reported; and every directory watch of the
+ * process shares ONE FSEvents stream that Bun restarts from "now" whenever
+ * any of them opens or closes, so a live watch missed changes landing during
+ * another's churn (measured, Bun 1.4.3: 72 of 300 writes missed). parcel
+ * gives each subscription its own stream, started (`FSEventStreamStart`,
+ * since now) before `subscribe` resolves: live at resolve, and no other
+ * watch's open or close touches it.
+ *
+ * The dir going — removed, moved away, replaced (its inode changed) — is
+ * reported once, as a `delete` of `dir` (the children contract), and its
+ * stream closed at once (see `subscribeRoot`: a dead root deafens every other
+ * parcel subscription). A native error (FSEvents dropped events) is a loss,
+ * not the dir going: `lost`.
+ */
+async function subscribeChildren(
+  parcelWatcher: ParcelWatcherApi,
+  dir: string,
+  onEvents: (events: parcel.Event[]) => void,
+  lost: (error: Error) => void,
+): Promise<{ unsubscribe(): Promise<void> }> {
+  // FSEvents names real paths, and parcel matches its ignore against the dir
+  // it was given: subscribe the real one, and name entries under `dir` as the
+  // caller spelled it (a dir reached through a symlink included).
+  const real = await realpath(dir);
+  const entry = (e: parcel.Event): parcel.Event | null => {
+    if (!e.path.startsWith(`${real}/`)) return null;
+    const name = e.path.slice(real.length + 1);
+    return name.includes("/") ? null : { ...e, path: join(dir, name) };
+  };
+  return subscribeRoot(parcelWatcher, real, {
+    onEvents: parcelBatchHandler((events) => {
+      const entries = events
+        .map(entry)
+        .filter((e): e is parcel.Event => e !== null);
+      if (entries.length > 0) onEvents(entries);
+    }, lost),
+    options: { ignore: [/\//] },
+    onGone: () => onEvents([{ type: "delete", path: dir }]),
+  });
+}
+
+/**
  * What one parcel subscription does with a callback. parcel hands an error
  * WITH the rest of its batch — FSEvents flags a drop on one event among many —
  * so the events are delivered first and the loss reported after: dropping the
@@ -517,8 +572,8 @@ async function entryExists(path: string): Promise<boolean> {
 }
 
 /**
- * The `"children"` depth: a single-directory `fs.watch` of `dir`, its events
- * turned into parcel's shape. `fs.watch` says only `rename` (an entry came or
+ * The `"children"` depth off macOS: a single-directory `fs.watch` of `dir`,
+ * its events turned into parcel's shape. `fs.watch` says only `rename` (an entry came or
  * went) or `change` (written) and a name, so a rename is classified by
  * looking: there now is a `create`, gone a `delete`.
  *

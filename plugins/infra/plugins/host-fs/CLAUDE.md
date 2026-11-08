@@ -38,10 +38,9 @@ watch already open above the folder (a checkout's), or opens a
 single-directory watch of the folder alone (`infra/file-watcher`'s
 `file-watcher.dir-entries`), so viewing `~` or `/` costs one handle. Every
 value is read only once its watch is open (`whileSubscribed` is awaited first),
-so nothing is re-read at arm time. A recursive watch is live by then; a
-single-directory one is not yet — Bun arms it on its own thread a moment later
-— so a change landing in that gap can be missed, and the value stays stale
-until the next change (see `infra/file-watcher`'s CLAUDE.md).
+so nothing is re-read at arm time. The watch is live by then, a
+single-directory one included (on macOS; see `infra/file-watcher`'s CLAUDE.md),
+so no change after the read is missed.
 
 | Value | Question → answer | Bound · freshness |
 |---|---|---|

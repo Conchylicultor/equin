@@ -50,11 +50,11 @@ function isMissing(err: unknown): boolean {
  * hub, then a read, then one read per change of the entry. Nothing is read
  * on the caller's thread and nothing polls.
  *
- * The watch is a best effort, not the authority: a single-folder watch goes
- * live a moment after it opens, and the process's shared FSEvents stream can
- * miss a write while another watch opens or closes (`infra/file-watcher`).
- * So the follower also asks for a read ({@link HeldPidFile.refresh}) whenever
- * a get finds nothing alive — a missed write is caught by the next look.
+ * The watch is live when the hub resolves it (`infra/file-watcher`), so the
+ * read made after arming sees every write the watch does not hear. While
+ * there is no watch (no folder yet, or it went or lost events), the follower
+ * asks for a read ({@link HeldPidFile.refresh}) whenever a get finds nothing
+ * alive — that read re-opens the watch.
  *
  * The folder is never created here: while it is missing (a launch's folder
  * the process makes later, a data root removed) there is no watch, the read
