@@ -70,7 +70,9 @@ import {
   declaredDeps,
   SEALED_MANIFEST,
   sealDep,
+  type SealOutcome,
 } from "@plugins/infra/plugins/deps/deps";
+import { parcelWatcherAddon } from "@plugins/infra/plugins/file-watcher/plugins/parcel-addon/deps";
 import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import { FATAL_SIGNAL_EXITS } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import {
@@ -109,7 +111,8 @@ import {
 //     pgbouncer/pgbouncer-start    compiled PgBouncer start binary
 //     pgbouncer/native/bin/pgbouncer  vendored PgBouncer native binary
 //     pg-client/bin/{pg_dump,pg_restore}  vendored Postgres client tools
-//     parcel-watcher/watcher.node   vendored @parcel/watcher native addon
+//     parcel-watcher/watcher.node   vendored @parcel/watcher native addon (darwin:
+//                                  the sealed patched build; linux: the prebuild)
 //     config/                      raw git-layer config tree (EQUIN_REPO_CONFIG_DIR)
 //     config-seed/config/<comp>/   resolved config defaults, seeded into <data>/config on first run
 //     web/                         filtered Vite dist (served statically)
@@ -1211,6 +1214,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   // fails the release here; an optional one is recorded as left out.
   const depTarget = nodeTargetFor(platform);
   const sealExec = cliExecContext();
+  const sealedDeps = new Map<string, SealOutcome>();
   for (const dep of (await declaredDeps()).filter((d) => d.bundle !== null)) {
     console.log(`  • ${dep.id} (sealed for ${platform})`);
     const sealed = await sealDep(dep, {
@@ -1225,6 +1229,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
         ? `      ${sealed.identity} (${(sealed.bytes / 1e6).toFixed(1)} MB)`
         : `      left out: ${sealed.reason}`,
     );
+    sealedDeps.set(dep.id, sealed);
   }
   if (!existsSync(join(out, SEALED_MANIFEST))) {
     throw new Error(
@@ -1259,10 +1264,23 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
 
   // @parcel/watcher native addon: bun --compile can't embed .node addons, so the
   // file-watcher loader dlopens this vendored copy at runtime (EQUIN_PARCEL_WATCHER_NODE).
-  console.log("  • parcel-watcher native addon");
+  // Darwin's is the patched build sealed above — upstream's prebuild leaks a
+  // kqueue descriptor per watched file that goes; a target the declaration
+  // leaves out (linux: inotify, no leak) carries the prebuild.
+  const addon = sealedDeps.get(parcelWatcherAddon.id);
+  if (addon === undefined) {
+    throw new Error(
+      `release: ${parcelWatcherAddon.id} was not sealed — its declaration lost \`bundle\`, so the bundle would ship upstream's leaking addon`,
+    );
+  }
+  console.log(
+    `  • parcel-watcher native addon (${addon.kind === "sealed" ? "patched" : "upstream prebuild"})`,
+  );
   mkdirSync(join(out, "parcel-watcher"), { recursive: true });
   cpSync(
-    parcelWatcherNativeNode(root, platform, natives),
+    addon.kind === "sealed"
+      ? join(addon.dir, parcelWatcherAddon.source.output)
+      : parcelWatcherNativeNode(root, platform, natives),
     join(out, "parcel-watcher", "watcher.node"),
   );
 

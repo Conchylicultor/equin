@@ -1,4 +1,4 @@
-import { defineDep } from "@plugins/infra/plugins/deps/deps";
+import { defineDep, type DepTarget } from "@plugins/infra/plugins/deps/deps";
 import { build } from "@plugins/infra/plugins/deps/plugins/build/deps";
 import { readFile, realpath } from "@plugins/packages/plugins/timed-fs/core";
 import { mkdir, rm } from "node:fs/promises";
@@ -59,6 +59,41 @@ const COMPILE_FLAGS = [
 const MINUTE = 60_000;
 
 /**
+ * The oldest macOS the addon loads on — upstream's prebuild's floor, and the
+ * `LSMinimumSystemVersion` equin's app bundles declare. Without it clang stamps
+ * the build host's SDK version, so a release built on a new Mac refuses to
+ * load (`dlopen`) on any older one.
+ */
+const MACOS_MIN = "11.0";
+
+/** Node's arch spelling → clang's `-arch`, for the darwin arches a release targets. */
+const CLANG_ARCH: Readonly<Record<string, string>> = {
+  arm64: "arm64",
+  x64: "x86_64",
+};
+
+/**
+ * Which targets the patched addon is built for: darwin, either arch (clang
+ * cross-compiles between them with the one macOS SDK). Linux runs inotify,
+ * whose watches the kernel drops with the file — upstream's prebuild has no
+ * leak there, and compiling for it would need a Linux sysroot.
+ */
+function darwinOnly(
+  target: DepTarget,
+): { ok: true } | { ok: false; reason: string } {
+  if (target.platform !== "darwin") {
+    return {
+      ok: false,
+      reason: `the patch fixes the kqueue backend, darwin's; ${target.platform} runs another backend`,
+    };
+  }
+  if (CLANG_ARCH[target.arch] === undefined) {
+    return { ok: false, reason: `no clang -arch for ${target.arch}` };
+  }
+  return { ok: true };
+}
+
+/**
  * `@parcel/watcher`'s native addon, compiled from the patched source
  * (`patches/@parcel%2Fwatcher@*.patch`): its kqueue backend closes the
  * descriptor of a watched file that is deleted or renamed, which upstream
@@ -68,6 +103,11 @@ const MINUTE = 60_000;
  *
  * Darwin only: kqueue is the backend patched, and the one the engine runs
  * there (`writesWhileOpen`). Elsewhere the prebuilt addon loads.
+ *
+ * Sealed into every darwin release bundle (`bundle`, `targets`: either arch,
+ * `-arch` from the target), which `release` vendors as the bundle's
+ * `parcel-watcher/watcher.node` in place of upstream's prebuild. A linux
+ * bundle leaves it out and carries the prebuild (inotify never leaked).
  *
  * Its identity is the patch, this declaration (sources and flags), the
  * plugin's `package.json` (the Node-API headers' version) and
@@ -94,15 +134,20 @@ export const parcelWatcherAddon = defineDep({
     ],
     tool: { versionArgv: [cxx, "--version"] },
     output: "watcher.node",
+    targets: darwinOnly,
     admission: {
       none: "awaited inside `build`, which already holds its host grant",
     },
     run: async (ctx) => {
-      if (ctx.target.platform !== "darwin") {
-        throw new Error(
-          `parcel-watcher-addon builds the darwin (kqueue) addon only, not ${ctx.target.platform}`,
-        );
+      const can = darwinOnly(ctx.target);
+      if (!can.ok) {
+        throw new Error(`parcel-watcher-addon cannot be built: ${can.reason}`);
       }
+      const arch = [
+        "-arch",
+        CLANG_ARCH[ctx.target.arch]!,
+        `-mmacosx-version-min=${MACOS_MIN}`,
+      ];
       const pkg = await parcelWatcherPackageDir(ctx.root);
       const kqueue = await readFile(
         join(pkg, "src/kqueue/KqueueBackend.cc"),
@@ -144,6 +189,7 @@ export const parcelWatcherAddon = defineDep({
         SOURCES.map((src, i) =>
           run([
             cxx,
+            ...arch,
             ...COMPILE_FLAGS,
             `-I${addonApi}`,
             `-I${nodeApi}`,
@@ -156,6 +202,7 @@ export const parcelWatcherAddon = defineDep({
       );
       await run([
         cxx,
+        ...arch,
         "-bundle",
         "-undefined",
         "dynamic_lookup",
@@ -168,6 +215,10 @@ export const parcelWatcherAddon = defineDep({
       await rm(objDir, { recursive: true });
     },
   }),
+  bundle: {
+    optional:
+      "a linux bundle loads upstream's prebuilt addon: inotify has no descriptor leak",
+  },
   updates: {
     none: "built from this checkout's patched @parcel/watcher; moves with the npm updater's bump of the package and its patch",
   },

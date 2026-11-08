@@ -32463,12 +32463,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Deps:
             - Uses:
               - `infra/deps.defineDep`
+              - `infra/deps.DepTarget`
               - `infra/deps/build.build`
             - Exports (values):
               - `parcelWatcherAddon`
               - `parcelWatcherPackageDir`
           - Cross-plugin:
-            - Imported by: `framework/cli/build`
+            - Imported by:
+              - `framework/cli/build`
+              - `framework/cli/release`
     - **`git`** — Umbrella for the two plugins that answer 'has git state moved, and must I read it again?': the ref watcher that reports every advance, and the signature-keyed memo that skips a gated recompute when a cheap probe says nothing changed.
       - Plugins:
         - **`checkout-watch`** — The checkout watch hub: acquireCheckoutWatch(root, { refs, onChange }) hears every change that can move a git checkout's state — its working tree and its git dir (HEAD, index, and the refs the reader names beside its own branch; a linked worktree's git dir and the common refs live outside it) — each change tagged worktree or git, refcounted per checkout over the shared directory-watch hub, each reader's reaction coalesced (one running plus one pending).

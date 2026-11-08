@@ -99,8 +99,9 @@ warm subscription, so the backend's own are not counted):
 
 ## Not covered
 
-- Release bundles vendor the upstream prebuild (`cli/release` copies
-  `@parcel/watcher-<tag>`).
+- ~~Release bundles vendor the upstream prebuild~~ — since 2026-11-08 a darwin
+  release seals `parcel-watcher-addon` (either arch) and vendors it; linux
+  bundles keep the prebuild (inotify).
 - `start()` reads and writes `mSubscriptions` / `mFdToEntry` without the
   backend's mutex while `subscribe` / `unsubscribe` hold it — upstream's race,
   unchanged.

@@ -88,8 +88,10 @@ Upstream's kqueue backend leaks; this engine runs a patched build of
 `@parcel/watcher` instead, owned by the **`parcel-addon`** child plugin (its
 `CLAUDE.md`): `patches/@parcel%2Fwatcher@*.patch` fixes the backend and makes
 `index.js` load `build/Release/watcher.node` first, and `./equin build` copies
-the compiled `parcel-watcher-addon` dependency there. Without the copy (a
-checkout never built, Linux, a release bundle) the upstream prebuild loads.
+the compiled `parcel-watcher-addon` dependency there. A darwin release bundle
+seals the same dependency and vendors it as the addon its launcher points
+`EQUIN_PARCEL_WATCHER_NODE` at. Without the copy (a checkout never built,
+Linux) the upstream prebuild loads.
 A child, not this plugin's own `deps/`: the deps engine and the CLI exec
 context both import this plugin.
 
