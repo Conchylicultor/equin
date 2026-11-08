@@ -19,7 +19,7 @@ func newTestProxy(t *testing.T, defaultNamespace string) *Proxy {
 	cfg := &Config{SocketsDir: t.TempDir(), ChildEnv: testChildEnv(t)}
 	reg := NewRegistry(cfg)
 	routes := NewCentralRoutesStore(filepath.Join(t.TempDir(), "central-routes.json")) // unloaded ⇒ Match==""
-	return NewProxy(reg, routes, &Supervisor{}, defaultNamespace)
+	return NewProxy(reg, routes, &Supervisor{}, defaultNamespace, newPanicReporter("", panicReportWindow))
 }
 
 func serve(p *Proxy, host, path string) *httptest.ResponseRecorder {
@@ -138,7 +138,7 @@ func newStaticProxyNamed(t *testing.T, name string) staticFixture {
 	}
 	routes := NewCentralRoutesStore(filepath.Join(t.TempDir(), "central-routes.json"))
 	return staticFixture{
-		proxy:  NewProxy(reg, routes, &Supervisor{}, ""),
+		proxy:  NewProxy(reg, routes, &Supervisor{}, "", newPanicReporter("", panicReportWindow)),
 		reg:    reg,
 		regDir: regDir,
 		web:    web,

@@ -461,7 +461,9 @@ func TestFailedBootIsNotRetriedByBackgroundTraffic(t *testing.T) {
 		t.Fatalf("spawns = %d, want 2 (the deploy's, not the browser's inside the cooldown)", n)
 	}
 	pf.wt.mu.Lock()
-	pf.wt.brokenUntil = time.Time{}
+	broken := pf.wt.phase.(phaseBroken)
+	broken.until = time.Time{}
+	pf.wt.phase = broken
 	pf.wt.mu.Unlock()
 	if _, err := pf.wt.Ensure(ctx, StartBrowser, "test"); !errors.Is(err, ErrSpawnFailed) {
 		t.Fatalf("browser past the cooldown: err = %v, want a new (failed) spawn", err)

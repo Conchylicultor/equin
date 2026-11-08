@@ -309,7 +309,7 @@ func main() {
 		fatal(fmt.Sprintf("gateway: fatal: %v", err), "listen failed", err)
 	}
 
-	proxy := NewProxy(reg, routes, sup, cfg.DefaultNamespace)
+	proxy := NewProxy(reg, routes, sup, cfg.DefaultNamespace, newPanicReporter(cfg.ReportOutboxDir, panicReportWindow))
 	proxy.publicHosts = parsePublicHosts(cfg.PublicHosts)
 	srv := &http.Server{
 		Handler:           proxy,

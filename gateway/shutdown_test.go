@@ -20,7 +20,7 @@ func startTermIgnoringBackend(t *testing.T, wt *Worktree) *backend {
 		t.Fatalf("start: %v", err)
 	}
 	t.Cleanup(func() { _ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) })
-	bk := &backend{cmd: cmd, exitCh: make(chan struct{}), socketPath: wt.primarySocketPath()}
+	bk := &backend{cmd: cmd, exitCh: make(chan struct{}), socketPath: wt.primarySocketPath(), proxy: newReverseProxy(wt.primarySocketPath())}
 	go func() {
 		_ = cmd.Wait()
 		close(bk.exitCh)
@@ -28,8 +28,7 @@ func startTermIgnoringBackend(t *testing.T, wt *Worktree) *backend {
 	// Let the shell install its trap before anyone signals it.
 	time.Sleep(200 * time.Millisecond)
 	wt.mu.Lock()
-	wt.state = StateRunning
-	wt.active = bk
+	wt.phase = runningOn(bk)
 	wt.mu.Unlock()
 	return bk
 }

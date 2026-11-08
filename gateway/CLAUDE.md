@@ -149,7 +149,9 @@ Flat single-package layout:
 gateway/
 ├── main.go        # Flags, wiring, signal handling, sockets-dir setup, service bring-up
 ├── env.go         # ChildEnv: the declared environment every child starts from; the only os.Environ()/exec.Command site
-├── worktree.go    # Worktree state machine (Idle→Starting→Running→Restarting→Stopping), spawn, lifecycle
+├── worktree.go    # Worktree lifecycle transitions (Ensure, Restart, Stop, exit), spawn, readiness
+├── lifecycle.go   # The lifecycle as one value: the phase union and the spawnAttempt every waiter shares
+├── handler_panic.go # A request-handler panic recovered into a 500 and filed as a gateway-panic report
 ├── registry.go    # Map of worktrees: dir-level fsnotify watch + lazy Resolve + periodic Reconcile, idle sweeper, stale-socket sweep
 ├── supervisor.go  # Generic service supervisor: start commands, readiness probes, watchdog
 ├── logrelay.go    # Relay mode (`gateway -log-relay <path>`): a supervised daemon's output through a rotating writer
@@ -175,6 +177,16 @@ Two socket paths per worktree: `<name>.sock` (primary) and `<name>.next.sock` (s
 If the new backend fails to start (bad code, broken migration), the old backend stays up and the restart returns an error. Failed deploys cause zero downtime.
 
 State machine during restart: `Running → Restarting → Running`. During `Restarting`, `Ensure()` returns the old proxy immediately (no blocking, no 502). The idle sweeper skips worktrees in `Restarting` state. `Stop()` waits for an in-flight restart to settle before proceeding.
+
+### The lifecycle is one value (`lifecycle.go`)
+
+The state and the backend it holds are ONE value, `phase` (`phaseIdle`, `phaseStarting{spawn}`, `phaseRunning{bk}`, `phaseRestarting{serving, next}`, `phaseStopping{bk}`, `phaseBroken{err, until}`), written by one assignment under `w.mu`. `phaseRunning` is built only by `runningOn(bk)`, which asserts a ready backend with its proxy — so "running with no backend" has no spelling, and `Ensure` returning `nil` error always comes with a backend. Before, `state` and `active` were separate fields every transition wrote separately; on 2026-11-08 18:21 an exit and a hot restart's swap interleaved into `running` with `active == nil`, and every request to main panicked for 11 minutes.
+
+**Phases end by identity, never by state alone.** `phaseStarting` is ended only by the boot that owns its `spawnAttempt`; `phaseRunning` only by the exit of exactly its backend, `Stop`, or `Restart`. A draining predecessor or a lost spawn cannot clear a phase that names another backend.
+
+**The serving backend exiting mid-restart** hands the in-flight successor its waiters: `phaseRestarting{serving, next}` → `phaseStarting{next}`. Requests wait on the successor's boot rather than cold-spawning a rival beside it (which is what raced the swap in the incident); the restart then ends that phase — running on the successor, or broken with its failure (`hot restart failed, and the old backend exited during it`).
+
+**Socket cleanup is by identity too** (`releaseBackendArtifacts`): a backend's socket and pid sidecar are removed only while the sidecar on its path still names its pid. Both socket paths are reused, and the drain of an already-dead backend used to unlink its successor's fresh socket by path (the incident's `dial unix …: no such file or directory` on main's primary socket). The pre-spawn unlink of a stale path stays path-based.
 
 ## Start priority
 
@@ -351,6 +363,10 @@ the process exits — dropping the panic block still buffered in it), read until
 EOF, bounded at 2 s for a grandchild holding it open. The payload is a
 cross-language contract: `testdata/backend-crash-entry.json` is read by this
 writer's test and by `plugins/debug/plugins/backend-crash`'s schema test.
+
+## A handler panic is reported
+
+`Proxy.ServeHTTP` defers `recoverHandlerPanic` (`handler_panic.go`) first thing: a panic in any handler answers `500` with the panic's text, is logged at error with its stack (`gateway handler panicked`), and is filed as a `gateway-panic` entry in the report outbox, coalesced per panic site (the function it was raised in): the first at once, the rest within a minute as one counted entry. `http.ErrAbortHandler` passes through unreported. Before, net/http's own recover wrote one `http: panic serving` line and dropped the connection — 240+ of them on 2026-11-08, and no report. Kind and schema: `plugins/debug/plugins/gateway-panic` (contract pinned by `testdata/gateway-panic-entry.json`).
 
 ## Orphan-backend reaping & stale-socket cleanup
 

@@ -215,6 +215,11 @@ type backend struct {
 	// readyAt: epoch ms it passed its readiness probe (0 while booting) —
 	// whether a death was a boot that never came up or a serving backend.
 	readyAt atomic.Int64
+	// exited: its process has ended, recorded by onBackendExit under the
+	// owning Worktree's mu — so the owner of a boot, which publishes the
+	// phase under that same mu, never publishes a backend that has already
+	// exited between passing readiness and being published.
+	exited bool
 
 	// connMu guards both connection counters. httpConns tracks in-flight HTTP
 	// requests — bounded, short-lived, and waited on at drain so they finish
@@ -284,17 +289,11 @@ type Worktree struct {
 	spec atomic.Pointer[Spec]
 
 	// All other fields below are guarded by mu.
-	mu           sync.Mutex
-	state        State
-	active       *backend
+	mu sync.Mutex
+	// phase is the lifecycle state and the backend(s) it holds, as one value
+	// (lifecycle.go). Never nil: NewWorktree starts it at phaseIdle.
+	phase        phase
 	lastActivity time.Time
-	brokenUntil  time.Time
-	readyCh      chan struct{} // signal-only; waiters re-check state
-	lastSpawnErr error
-	// browserJoined records that a StartBrowser caller joined the in-flight
-	// spawn before its backend was published to active, so the spawner
-	// promotes it on publish. Reset at each spawn.
-	browserJoined bool
 
 	// loops counts this worktree's unrequested backend deaths into crash
 	// loops (exit_report.go). Its own mutex; not guarded by mu.
@@ -302,9 +301,6 @@ type Worktree struct {
 
 	// restartMu serializes concurrent Restart() calls.
 	restartMu sync.Mutex
-	// restartDone is non-nil during StateRestarting. Closed when restart
-	// settles (success or failure). Snapshot under w.mu; closed by Restart().
-	restartDone chan struct{}
 
 	// logBuf is a per-worktree ring of backend stdout/stderr lines. It
 	// persists across respawns so crash output remains visible after the
@@ -326,6 +322,7 @@ func NewWorktree(name string, spec *Spec, cfg *Config) (*Worktree, error) {
 	w := &Worktree{
 		Name:    name,
 		cfg:     cfg,
+		phase:   phaseIdle{},
 		logBuf:  newLogRing(cfg.LogBufferLines),
 		loops:   newCrashLoops(name),
 		logFile: newRotatingWriter(filepath.Join(cfg.LogDir, name+".log"), maxLogBytes, maxLogBackups),
@@ -373,11 +370,10 @@ func (w *Worktree) secondarySocketPath() string {
 	return filepath.Join(w.cfg.SocketsDir, w.Name+".next.sock")
 }
 
-// restartTargetPath returns the socket path to use for the next hot restart.
-// Picks whichever of primary/secondary the current active backend is NOT using.
-// Must be called with w.mu held.
-func (w *Worktree) restartTargetPath() string {
-	if w.active != nil && w.active.socketPath == w.primarySocketPath() {
+// restartTargetPath returns the socket path to use for a hot restart of
+// serving: whichever of primary/secondary it is NOT using.
+func (w *Worktree) restartTargetPath(serving *backend) string {
+	if serving.socketPath == w.primarySocketPath() {
 		return w.secondarySocketPath()
 	}
 	return w.primarySocketPath()
@@ -386,49 +382,48 @@ func (w *Worktree) restartTargetPath() string {
 // Ensure starts the backend if needed and returns the active backend. The
 // caller serves the request through bk.proxy; returning the backend (not just
 // the proxy) lets HTTP/WS handlers count their connection against the exact
-// process serving it, so drain waits on the right backend.
-// Concurrent callers share a single in-flight spawn via readyCh. reason sets
+// process serving it, so drain waits on the right backend. A nil error always
+// comes with a ready backend (phaseRunning cannot hold none).
+// Concurrent callers share a single in-flight boot (spawnAttempt). reason sets
 // the priority of a spawn this call begins; a StartBrowser caller joining a
 // background spawn promotes it at once.
 func (w *Worktree) Ensure(ctx context.Context, reason StartReason, cause string) (*backend, error) {
 	w.mu.Lock()
 
-	switch w.state {
-	case StateRunning:
-		bk := w.active
+	switch p := w.phase.(type) {
+	case phaseRunning:
 		w.mu.Unlock()
-		return bk, nil
+		return p.bk, nil
 
-	case StateRestarting:
+	case phaseRestarting:
 		// Old backend still serving — return it for zero downtime.
-		bk := w.active
 		w.mu.Unlock()
-		return bk, nil
+		return p.serving, nil
 
-	case StateStarting:
-		ch := w.readyCh
+	case phaseStarting:
+		att := p.spawn
 		var joined *backend
 		if reason == StartBrowser {
 			// Before the spawner publishes its backend, the flag tells it to
 			// promote on publish; after, we promote it ourselves. Both under
 			// mu, so exactly one of the two sees the other's write.
-			w.browserJoined = true
-			joined = w.active
+			att.browserJoined = true
+			joined = att.bk
 		}
 		w.mu.Unlock()
 		w.promoteBackend(joined)
 		select {
-		case <-ch:
+		case <-att.done:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return w.snapshotAfterSpawn()
+		return att.outcome()
 
-	case StateStopping:
+	case phaseStopping:
 		w.mu.Unlock()
 		return nil, ErrStopping
 
-	case StateBroken:
+	case phaseBroken:
 		// A failed boot is not retried by traffic. Whatever made it fail — a
 		// boot that cannot finish by its deadline, a crash — is still there
 		// for the next request, and a client polling a dead worktree (an
@@ -438,30 +433,22 @@ func (w *Worktree) Ensure(ctx context.Context, reason StartReason, cause string)
 		// a new spec) or a browser start (a person asking) retries it; the
 		// pinned central keeps the cooldown (backends depend on it).
 		if reason == StartBackground && !w.Pinned() {
-			err := fmt.Errorf("%w: %v", ErrBootFailed, w.lastSpawnErr)
 			w.mu.Unlock()
-			return nil, err
+			return nil, fmt.Errorf("%w: %v", ErrBootFailed, p.err)
 		}
 		// A deploy is new code or a new spec — not a retry of the same boot —
 		// so it does not wait out the cooldown; a browser start does (a tab
 		// reconnecting in a loop must not respawn back to back).
-		if reason != StartDeploy && time.Now().Before(w.brokenUntil) {
-			err := w.lastSpawnErr
+		if reason != StartDeploy && time.Now().Before(p.until) {
 			w.mu.Unlock()
-			if err == nil {
-				err = ErrBroken
-			}
-			return nil, err
+			return nil, p.err
 		}
 		// cooled down → fall through to spawn
 	}
 
-	// Idle or cooled-down Broken: begin spawn
-	w.state = StateStarting
-	w.readyCh = make(chan struct{})
-	w.lastSpawnErr = nil
-	w.browserJoined = false
-	readyCh := w.readyCh
+	// Idle or cooled-down Broken: begin a cold start.
+	att := newSpawnAttempt()
+	w.phase = phaseStarting{spawn: att}
 	spec := w.Spec()
 	socketPath := w.primarySocketPath()
 	w.mu.Unlock()
@@ -471,72 +458,95 @@ func (w *Worktree) Ensure(ctx context.Context, reason StartReason, cause string)
 	// nothing else names them.
 	slog.Info("backend start requested", "worktree", w.Name, "reason", reason, "cause", cause)
 
-	// Run the spawn outside the lock so concurrent callers see Starting and wait.
-	var stats bootStats
-	stats.SpawnRequestedAt = time.Now().UnixMilli()
-	bk, spawnErr := w.startBackend(spec, socketPath, reason)
-	if spawnErr == nil {
-		stats.SpawnedAt = time.Now().UnixMilli()
-		// Snapshot before any promote clears it (escalation or post-ready).
-		// Unpublished yet, so no other goroutine can touch it.
-		stats.Demoted = bk.demoted
-		// Make cmd visible so Stop can find it before readiness completes.
-		w.mu.Lock()
-		w.active = bk
-		joined := w.browserJoined
-		w.mu.Unlock()
-		if joined {
-			w.promoteBackend(bk)
-		}
-		var wait readyWait
-		wait, spawnErr = w.awaitBackendReady(bk, socketPath)
-		stats.Escalated, stats.RespondedHTTP = wait.escalated, wait.respondedHTTP
-		if spawnErr == nil {
-			stats.ReadyObservedAt = time.Now().UnixMilli()
-		} else {
-			w.abandonUnreadyBackend(bk, "cold start", wait, spawnErr)
-		}
-	}
-
+	// Run the boot outside the lock so concurrent callers see Starting and wait.
+	bk, stats, spawnErr := w.boot(att, spec, socketPath, reason, "cold start")
 	if spawnErr != nil {
-		wrapped := fmt.Errorf("%w: %v", ErrSpawnFailed, spawnErr)
-		w.mu.Lock()
-		w.active = nil
-		w.state = StateBroken
-		w.brokenUntil = time.Now().Add(w.cfg.BrokenCooldown)
-		w.lastSpawnErr = wrapped
-		w.mu.Unlock()
-		close(readyCh)
-		slog.Warn("backend spawn failed", "worktree", w.Name, "err", wrapped)
-		return nil, wrapped
+		spawnErr = fmt.Errorf("%w: %v", ErrSpawnFailed, spawnErr)
 	}
 
-	// Boot burst over — lift the darwinbg demotion for steady-state serving.
-	w.promoteBackend(bk)
-
-	bk.readyAt.Store(time.Now().UnixMilli())
 	w.mu.Lock()
-	w.state = StateRunning
-	bk.proxy = newReverseProxy(socketPath)
+	if cur, ok := w.phase.(phaseStarting); !ok || cur.spawn != att {
+		// Nothing but this boot ends its phaseStarting (lifecycle.go); if
+		// something did, serve nothing from this backend rather than orphan
+		// it behind a phase that names another.
+		found := w.phase
+		w.mu.Unlock()
+		bugErr := w.lifecycleBug("cold start", found)
+		if bk != nil {
+			w.terminateBackend(context.Background(), bk, "cold start lost its phase")
+			w.releaseBackendArtifacts(bk)
+		}
+		att.settle(nil, bugErr)
+		return nil, bugErr
+	}
+	var exitedBk *backend
+	if spawnErr == nil && bk.exited {
+		spawnErr = fmt.Errorf("%w: %w", ErrSpawnFailed, errExitedAfterReady)
+		exitedBk = bk
+	}
+	if spawnErr != nil {
+		w.phase = phaseBroken{err: spawnErr, until: time.Now().Add(w.cfg.BrokenCooldown)}
+		w.mu.Unlock()
+		if exitedBk != nil {
+			w.releaseBackendArtifacts(exitedBk)
+		}
+		att.settle(nil, spawnErr)
+		slog.Warn("backend spawn failed", "worktree", w.Name, "err", spawnErr)
+		return nil, spawnErr
+	}
+	w.phase = runningOn(bk)
 	w.lastActivity = time.Now()
 	w.mu.Unlock()
+	att.settle(bk, nil)
 	go postBootReport(socketPath, stats)
-	close(readyCh)
 	slog.Info("backend ready", "worktree", w.Name, "socket", socketPath)
 	return bk, nil
 }
 
-func (w *Worktree) snapshotAfterSpawn() (*backend, error) {
+// boot spawns a backend for att on socketPath and waits for it to pass
+// readiness: the part a cold start and a hot restart share. On success the
+// backend is promoted and has its proxy — ready for runningOn. On failure
+// nothing of it is left running. It changes no phase: its caller owns att's.
+func (w *Worktree) boot(att *spawnAttempt, spec *Spec, socketPath string, reason StartReason, what string) (*backend, bootStats, error) {
+	var stats bootStats
+	stats.SpawnRequestedAt = time.Now().UnixMilli()
+	bk, err := w.startBackend(spec, socketPath, reason)
+	if err != nil {
+		return nil, stats, err
+	}
+	stats.SpawnedAt = time.Now().UnixMilli()
+	// Snapshot before any promote clears it (escalation or post-ready).
+	// Unpublished yet, so no other goroutine can touch it.
+	stats.Demoted = bk.demoted
+	// Publish it to the attempt: the status snapshot shows it, and a browser
+	// joining from now on promotes it itself.
 	w.mu.Lock()
-	defer w.mu.Unlock()
-	if w.state == StateRunning && w.active != nil {
-		return w.active, nil
+	att.bk = bk
+	joined := att.browserJoined
+	w.mu.Unlock()
+	if joined {
+		w.promoteBackend(bk)
 	}
-	if w.lastSpawnErr != nil {
-		return nil, w.lastSpawnErr
+	wait, err := w.awaitBackendReady(bk, socketPath)
+	stats.Escalated, stats.RespondedHTTP = wait.escalated, wait.respondedHTTP
+	if err != nil {
+		w.abandonUnreadyBackend(bk, what, wait, err)
+		return nil, stats, err
 	}
-	return nil, errors.New("spawn did not complete successfully")
+	stats.ReadyObservedAt = time.Now().UnixMilli()
+	bk.readyAt.Store(stats.ReadyObservedAt)
+	// Boot burst over — lift the darwinbg demotion for steady-state serving.
+	w.promoteBackend(bk)
+	bk.proxy = newReverseProxy(socketPath)
+	if testHookBootReady != nil {
+		testHookBootReady(bk)
+	}
+	return bk, stats, nil
 }
+
+// testHookBootReady, set only by tests, runs once a boot's backend has passed
+// readiness and before its owner publishes it — the window an exit can land in.
+var testHookBootReady func(*backend)
 
 const drainTimeout = 30 * time.Second
 
@@ -547,87 +557,121 @@ const drainTimeout = 30 * time.Second
 const postKillTimeout = 3 * time.Second
 
 // Restart performs a zero-downtime restart: spawns a new backend on the
-// alternate socket, waits for it to be ready, atomically swaps the proxy
-// pointer, then drains and stops the old backend in the background.
-// If the new backend fails to start, the old backend is left intact.
+// alternate socket, waits for it to be ready, swaps it in, then drains and
+// stops the old backend in the background. If the new backend fails to start,
+// the old backend is left intact.
+//
+// If the serving backend exits while its successor boots, the exit hands the
+// successor its waiters (phaseStarting): requests wait on this boot instead of
+// cold-spawning a second backend beside it, and this restart ends that phase.
 func (w *Worktree) Restart(ctx context.Context) error {
 	w.restartMu.Lock()
 	defer w.restartMu.Unlock()
 
 	// --- Step 1: Running → Restarting ---
 	w.mu.Lock()
-	if w.state != StateRunning {
-		s := w.state
+	cur, ok := w.phase.(phaseRunning)
+	if !ok {
+		s := w.phase.state()
 		w.mu.Unlock()
 		return fmt.Errorf("cannot hot-restart in state %s", s)
 	}
-	w.state = StateRestarting
-	oldBk := w.active
-	newSocketPath := w.restartTargetPath()
+	oldBk := cur.bk
+	att := newSpawnAttempt()
+	w.phase = phaseRestarting{serving: oldBk, next: att}
+	newSocketPath := w.restartTargetPath(oldBk)
 	spec := w.Spec()
-	doneCh := make(chan struct{})
-	w.restartDone = doneCh
 	w.mu.Unlock()
 
-	defer func() {
-		w.mu.Lock()
-		w.restartDone = nil
-		w.mu.Unlock()
-		close(doneCh)
-	}()
-
-	// --- Step 2: Spawn new backend on alternate socket ---
+	// --- Step 2: spawn the successor on the alternate socket, await ready ---
 	slog.Info("hot restart: spawning", "worktree", w.Name, "socket", newSocketPath)
-	var stats bootStats
-	stats.SpawnRequestedAt = time.Now().UnixMilli()
 	// A restart is a deploy: nobody is waiting on the new process (the old one
 	// keeps serving), so it boots in the background.
-	newBk, spawnErr := w.startBackend(spec, newSocketPath, StartBackground)
+	newBk, stats, spawnErr := w.boot(att, spec, newSocketPath, StartBackground, "hot restart")
 
-	// --- Step 3: Wait for readiness ---
-	if spawnErr == nil {
-		stats.SpawnedAt = time.Now().UnixMilli()
-		// Snapshot before any promote clears it (escalation or post-ready).
-		stats.Demoted = newBk.demoted
-		var wait readyWait
-		wait, spawnErr = w.awaitBackendReady(newBk, newSocketPath)
-		stats.Escalated, stats.RespondedHTTP = wait.escalated, wait.respondedHTTP
-		if spawnErr == nil {
-			stats.ReadyObservedAt = time.Now().UnixMilli()
-		} else {
-			w.abandonUnreadyBackend(newBk, "hot restart", wait, spawnErr)
-		}
-	}
-
-	// --- Step 4 (failure): keep old backend, revert state ---
-	if spawnErr != nil {
-		w.mu.Lock()
-		if w.state == StateRestarting {
-			w.state = StateRunning
-		}
-		w.mu.Unlock()
-		slog.Warn("hot restart failed; old backend intact",
-			"worktree", w.Name, "old_socket", oldBk.socketPath, "err", spawnErr)
-		return fmt.Errorf("hot restart failed (old backend intact): %w", spawnErr)
-	}
-
-	// --- Step 4 (success): atomic swap ---
-	// Boot burst over — lift the darwinbg demotion for steady-state serving.
-	w.promoteBackend(newBk)
-	newBk.proxy = newReverseProxy(newSocketPath)
-	newBk.readyAt.Store(time.Now().UnixMilli())
+	// --- Step 3: end the phase this restart owns ---
 	w.mu.Lock()
-	w.active = newBk
-	w.state = StateRunning
-	w.lastActivity = time.Now()
+	var exitedBk *backend
+	if spawnErr == nil && newBk.exited {
+		spawnErr = errExitedAfterReady
+		exitedBk, newBk = newBk, nil
+	}
+	oldServing := false
+	switch p := w.phase.(type) {
+	case phaseRestarting:
+		if p.next != att {
+			found := w.phase
+			w.mu.Unlock()
+			return w.restartLost(att, newBk, found)
+		}
+		oldServing = true
+		if spawnErr == nil {
+			w.phase = runningOn(newBk)
+			w.lastActivity = time.Now()
+		} else {
+			w.phase = runningOn(oldBk)
+		}
+	case phaseStarting:
+		if p.spawn != att {
+			found := w.phase
+			w.mu.Unlock()
+			return w.restartLost(att, newBk, found)
+		}
+		// The old backend exited mid-restart; its callers wait on this boot.
+		if spawnErr == nil {
+			w.phase = runningOn(newBk)
+			w.lastActivity = time.Now()
+		} else {
+			spawnErr = fmt.Errorf("%w: %v", ErrSpawnFailed, spawnErr)
+			w.phase = phaseBroken{err: spawnErr, until: time.Now().Add(w.cfg.BrokenCooldown)}
+		}
+	default:
+		found := w.phase
+		w.mu.Unlock()
+		return w.restartLost(att, newBk, found)
+	}
 	w.mu.Unlock()
+	if exitedBk != nil {
+		w.releaseBackendArtifacts(exitedBk)
+	}
+	att.settle(newBk, spawnErr)
+
+	if spawnErr != nil {
+		if oldServing {
+			slog.Warn("hot restart failed; old backend intact",
+				"worktree", w.Name, "old_socket", oldBk.socketPath, "err", spawnErr)
+			return fmt.Errorf("hot restart failed (old backend intact): %w", spawnErr)
+		}
+		slog.Warn("hot restart failed, and the old backend exited during it; worktree broken",
+			"worktree", w.Name, "old_socket", oldBk.socketPath, "err", spawnErr)
+		return fmt.Errorf("hot restart failed, and the old backend exited during it: %w", spawnErr)
+	}
+
 	go postBootReport(newSocketPath, stats)
+	if !oldServing {
+		slog.Info("hot restart: successor took over from a backend that exited mid-restart", "worktree", w.Name,
+			"old_socket", oldBk.socketPath, "new_socket", newSocketPath)
+		return nil
+	}
 	slog.Info("hot restart: swapped", "worktree", w.Name,
 		"old_socket", oldBk.socketPath, "new_socket", newSocketPath)
 
-	// --- Step 5: Drain old backend in background ---
+	// --- Step 4: Drain old backend in background ---
 	go w.drainAndStop(oldBk)
 	return nil
+}
+
+// restartLost ends a restart whose phase something else ended (a lifecycle
+// bug): its successor is stopped rather than left running unowned, and its
+// waiters get the error.
+func (w *Worktree) restartLost(att *spawnAttempt, newBk *backend, found phase) error {
+	err := w.lifecycleBug("hot restart", found)
+	if newBk != nil {
+		w.terminateBackend(context.Background(), newBk, "hot restart lost its phase")
+		w.releaseBackendArtifacts(newBk)
+	}
+	att.settle(nil, err)
+	return err
 }
 
 // drainAndStop lets in-flight HTTP requests on bk finish (up to drainTimeout)
@@ -635,7 +679,7 @@ func (w *Worktree) Restart(ctx context.Context) error {
 // and the client sees a 502. WebSocket connections (live-state, terminal, logs)
 // are long-lived and never close on their own, so they are NOT waited on; they
 // are cut when the process exits and clients reconnect to the already-live new
-// backend. Runs in a goroutine kicked off by Restart(); never modifies w.state.
+// backend. Runs in a goroutine kicked off by Restart(); never modifies w.phase.
 func (w *Worktree) drainAndStop(bk *backend) {
 	deadline := time.Now().Add(drainTimeout)
 	for bk.httpCount() > 0 && time.Now().Before(deadline) {
@@ -650,61 +694,49 @@ func (w *Worktree) drainAndStop(bk *backend) {
 			"worktree", w.Name, "wsConns", n)
 	}
 	w.terminateBackend(context.Background(), bk, "hot restart drain")
-	_ = removeBackendArtifacts(bk.socketPath)
+	w.releaseBackendArtifacts(bk)
 	slog.Info("hot restart: old backend drained and stopped",
 		"worktree", w.Name, "socket", bk.socketPath)
 }
 
 // Stop performs a graceful shutdown: SIGTERM → grace → SIGKILL. Idempotent.
-// If the worktree is currently spawning, Stop waits for the spawn to settle
-// first to avoid racing the spawn cleanup path. If a hot restart is in flight,
-// waits for it to settle before stopping.
+// A boot or hot restart in flight is waited out first (its owner ends its
+// phase), then whatever it settled to is stopped.
 func (w *Worktree) Stop(ctx context.Context) error {
-	w.mu.Lock()
-	if w.state == StateStarting {
-		ch := w.readyCh
+	for {
+		w.mu.Lock()
+		var wait <-chan struct{}
+		switch p := w.phase.(type) {
+		case phaseStarting:
+			wait = p.spawn.done
+		case phaseRestarting:
+			wait = p.next.done
+		case phaseRunning:
+			bk := p.bk
+			w.phase = phaseStopping{bk: bk}
+			w.mu.Unlock()
+
+			w.terminateBackend(ctx, bk, "stop")
+			w.releaseBackendArtifacts(bk)
+
+			w.mu.Lock()
+			if cur, ok := w.phase.(phaseStopping); ok && cur.bk == bk {
+				w.phase = phaseIdle{}
+			}
+			w.mu.Unlock()
+			slog.Info("backend stopped", "worktree", w.Name)
+			return nil
+		default:
+			w.mu.Unlock()
+			return nil
+		}
 		w.mu.Unlock()
 		select {
-		case <-ch:
+		case <-wait:
 		case <-ctx.Done():
 			return ctx.Err()
 		}
-		w.mu.Lock()
 	}
-	if w.state == StateRestarting {
-		doneCh := w.restartDone
-		w.mu.Unlock()
-		if doneCh != nil {
-			select {
-			case <-doneCh:
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		}
-		w.mu.Lock()
-	}
-	if w.state != StateRunning {
-		w.mu.Unlock()
-		return nil
-	}
-	w.state = StateStopping
-	bk := w.active
-	w.mu.Unlock()
-
-	if bk != nil {
-		w.terminateBackend(ctx, bk, "stop")
-	}
-
-	if bk != nil {
-		_ = removeBackendArtifacts(bk.socketPath)
-	}
-	w.mu.Lock()
-	w.active = nil
-	w.state = StateIdle
-	w.mu.Unlock()
-
-	slog.Info("backend stopped", "worktree", w.Name)
-	return nil
 }
 
 // TouchBackend resets the idle timer. Called after every backend-bound request.
@@ -717,12 +749,12 @@ func (w *Worktree) TouchBackend() {
 // Snapshot returns a consistent view of the worktree state for /gateway/worktrees.
 func (w *Worktree) Snapshot() WorktreeStatus {
 	w.mu.Lock()
-	state := w.state
+	state := w.phase.state()
 	last := w.lastActivity
-	bk := w.active
+	bk := backendOf(w.phase)
 	var lastSpawnErr string
-	if w.lastSpawnErr != nil {
-		lastSpawnErr = w.lastSpawnErr.Error()
+	if p, ok := w.phase.(phaseBroken); ok && p.err != nil {
+		lastSpawnErr = p.err.Error()
 	}
 	w.mu.Unlock()
 	spec := w.Spec()
@@ -766,10 +798,8 @@ func (w *Worktree) ShouldSweep(idleTimeout time.Duration) bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	// Sweep when the backend is running and has been idle past the timeout.
-	if w.state != StateRunning {
-		return false
-	}
-	if w.active != nil && w.active.conns() > 0 {
+	p, ok := w.phase.(phaseRunning)
+	if !ok || p.bk.conns() > 0 {
 		return false
 	}
 	return time.Since(w.lastActivity) >= idleTimeout
@@ -966,9 +996,12 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string, reason StartReaso
 	return bk, nil
 }
 
-// onBackendExit is invoked from the cmd.Wait goroutine. It only transitions
-// state if the exiting backend is the currently active one — a draining old
-// backend from a hot restart is silently ignored.
+// onBackendExit is invoked from the cmd.Wait goroutine. It ends a phase only
+// when the exiting backend is the one that phase serves from, compared by
+// identity: phaseRunning on bk → idle; phaseRestarting serving bk → its
+// in-flight successor takes the waiters (phaseStarting). Any other exit — a
+// draining predecessor, a boot whose own spawner sees the exit, a stop — is
+// not the exit handler's to act on.
 //
 // A death the gateway did not cause — by a signal it did not send (a
 // segfault, a kill from outside) or by an exit code nobody asked for — is
@@ -989,28 +1022,43 @@ func (w *Worktree) onBackendExit(bk *backend, err error, exitedAt time.Time) {
 	}
 
 	w.mu.Lock()
-	isActive := (w.active == bk)
-	state := w.state
+	bk.exited = true
+	ended := ""
+	switch p := w.phase.(type) {
+	case phaseRunning:
+		if p.bk == bk {
+			w.phase = phaseIdle{}
+			ended = "idle"
+		}
+	case phaseRestarting:
+		if p.serving == bk {
+			w.phase = phaseStarting{spawn: p.next}
+			ended = "waiting on the hot restart's successor"
+		}
+	}
 	w.mu.Unlock()
-
-	if !isActive {
+	if ended == "" {
 		return
 	}
+	slog.Warn("backend exited unexpectedly", "worktree", w.Name, "pid", backendPID(bk), "now", ended, "err", err)
+	w.releaseBackendArtifacts(bk)
+}
 
-	if state == StateStopping {
+// releaseBackendArtifacts removes bk's socket and pid sidecar — only while
+// the sidecar on its path still names bk. Both sockets are reused: a cold
+// start after an exit binds the primary path again, so a predecessor's late
+// cleanup by path alone deleted its successor's live socket (2026-11-08: the
+// drain of a backend that had already exited unlinked main's fresh primary socket,
+// "dial unix …: no such file or directory"). A path whose
+// sidecar is gone (its write failed, or another cleanup ran) is removed as
+// before; one naming another pid is left to that backend.
+func (w *Worktree) releaseBackendArtifacts(bk *backend) {
+	if sc, err := readBackendSidecar(bk.socketPath); err == nil && sc.PID != backendPID(bk) {
+		slog.Info("socket now belongs to another backend; left in place",
+			"worktree", w.Name, "socket", bk.socketPath, "pid", backendPID(bk), "owner", sc.PID)
 		return
 	}
-
-	slog.Warn("backend exited unexpectedly", "worktree", w.Name, "err", err)
 	_ = removeBackendArtifacts(bk.socketPath)
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if w.active != bk {
-		return
-	}
-	w.active = nil
-	w.state = StateIdle
 }
 
 // logAdaptiveTimeout records the readiness timeout chosen for a spawn so slow
@@ -1083,7 +1131,7 @@ func (w *Worktree) abandonUnreadyBackend(bk *backend, phase string, wait readyWa
 			outcome = fmt.Sprintf("killed (SIGKILL), still running after %s", postKillTimeout)
 		}
 	}
-	_ = removeBackendArtifacts(bk.socketPath)
+	w.releaseBackendArtifacts(bk)
 	slog.Warn("backend abandoned: not ready by its deadline",
 		"worktree", w.Name, "phase", phase, "pid", backendPID(bk), "socket", bk.socketPath,
 		"deadline", wait.deadline, "waited", wait.waited,
@@ -1131,6 +1179,10 @@ func (w *Worktree) killAfterSIGTERM(bk *backend, why string, waited time.Duratio
 // enough for a stack and the error it ends in (a failed boot migration prints
 // its pg error, then the rethrow's stack).
 const exitTailLines = 40
+
+// errExitedAfterReady: the backend passed readiness, then its process ended
+// before its boot's owner could publish it as running.
+var errExitedAfterReady = errors.New("backend exited right after it became ready")
 
 // errExitedBeforeReady: the backend process ended before its readiness probe
 // passed — a boot crash. The error that killed it is on its stderr.

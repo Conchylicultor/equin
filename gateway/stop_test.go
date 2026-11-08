@@ -30,7 +30,7 @@ func runFakeBackend(t *testing.T, wt *Worktree) (*backend, int) {
 		t.Fatalf("start sleep: %v", err)
 	}
 	t.Cleanup(func() { _ = cmd.Process.Kill() })
-	bk := &backend{cmd: cmd, exitCh: make(chan struct{}), socketPath: wt.primarySocketPath()}
+	bk := &backend{cmd: cmd, exitCh: make(chan struct{}), socketPath: wt.primarySocketPath(), proxy: newReverseProxy(wt.primarySocketPath())}
 	go func() {
 		_ = cmd.Wait()
 		close(bk.exitCh)
@@ -38,8 +38,7 @@ func runFakeBackend(t *testing.T, wt *Worktree) (*backend, int) {
 	mustTouch(t, bk.socketPath)
 
 	wt.mu.Lock()
-	wt.state = StateRunning
-	wt.active = bk
+	wt.phase = runningOn(bk)
 	wt.mu.Unlock()
 	return bk, cmd.Process.Pid
 }

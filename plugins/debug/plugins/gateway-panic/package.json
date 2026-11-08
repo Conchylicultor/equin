@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-debug-gateway-panic",
+  "description": "A request handler that panics inside the gateway is a report: the gateway recovers it (a 500, an error line), and files a gateway-panic entry in the report outbox, coalesced per panic site, which main drains. Declares the kind and renders its evidence (where it panicked, the value, the stack, the request, how many times).",
+  "private": true,
+  "version": "0.0.1"
+}

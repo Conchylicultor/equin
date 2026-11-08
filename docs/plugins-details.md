@@ -22193,7 +22193,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `uptimeOf`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
-        - Imported by: `debug/service-down`
+        - Imported by:
+          - `debug/gateway-panic`
+          - `debug/service-down`
     - **`backend-liveness`** — Backend-frozen report renderer: a one-line Debug → Reports summary for the backend-frozen kind. The backend-frozen report kind — filed by central's liveness probe through the report outbox, drained by main: every minute while a backend stays frozen, once when the episode ends (main's own freeze is filed as soon as its thread runs again). Plus a debug-only trigger that freezes a worktree backend's JS thread to reproduce it. Backend liveness probe (central): every 15 s asks each running backend for any HTTP answer on its own socket, and appends a frozen episode to the backend-liveness data dir when one stays unanswered for a minute of awake time (machine sleep never counts; a stopped process is paused, not frozen) — from outside the backend, so a frozen JS thread is noticed while it lasts.
       - Web:
         - Contributes: `Reports.KindView` → `BackendFrozenSummary`
@@ -22767,6 +22769,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `DuressShedPayload`
         - Exports (values): `DuressShedPayloadSchema`
+    - **`gateway-panic`** — Gateway-panic report renderer: a one-line Debug → Reports summary for the gateway-panic kind (where the gateway panicked, the request, how many times). The gateway-panic report kind — filed by the gateway through the report outbox when one of its request handlers panics (recovered: the request gets a 500), coalesced per panic site, drained by main: where it panicked, the value, the stack, the request it was serving and how many times.
+      - Web:
+        - Contributes: `Reports.KindView` → `GatewayPanicSummary`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "gateway-panic"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Uses:
+          - `debug/backend-crash.CrashLineSchema`
+          - `debug/backend-crash.CrashTailSchema`
+        - Exports (types): `GatewayPanicPayload`
+        - Exports (values):
+          - `describeGatewayPanic`
+          - `GatewayPanicPayloadSchema`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`health-monitor`** — Health monitor debug pane: per-backend event-loop lag, phys_footprint/heap, and GC pressure over time, plus host load/memory/swap. Continuous per-backend health sampler: event-loop lag, GC/heap pressure, and phys_footprint appended to per-worktree JSONL (read from disk even when a backend is wedged), plus main-only host metrics. Surfaced as the Debug → Health pane.
       - Web:
         - Slots: `healthMonitorPane.Actions`
@@ -34114,6 +34136,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/embedded`
               - `database/pgbouncer`
               - `debug/backend-crash`
+              - `debug/gateway-panic`
               - `debug/logs`
               - `debug/service-down`
               - `framework/cli/serve-app`
@@ -44020,9 +44043,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 178 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 179 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
-              - `debug` ×36
+              - `debug` ×37
               - `conversations` ×27
               - `reports` ×17
               - `primitives` ×10
@@ -44452,10 +44475,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 107 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 108 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×21
+              - `debug` ×18
               - `reports` ×18
-              - `debug` ×17
               - `primitives` ×12
               - `conversations` ×9
               - `page` ×6
@@ -52202,8 +52225,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 38 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×38
+    - Slot contributors: 39 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×39
     - Contributes:
       - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
@@ -52318,9 +52341,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 68 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 69 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×29
-      - `debug` ×17
+      - `debug` ×18
       - `conversations` ×6
       - `database` ×4
       - `infra` ×3
@@ -58752,11 +58775,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 533 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 534 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×118
               - `conversations` ×93
               - `primitives` ×73
-              - `debug` ×39
+              - `debug` ×40
               - `page` ×33
               - `plugin-meta` ×28
               - `ui` ×26

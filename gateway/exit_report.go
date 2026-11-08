@@ -251,7 +251,7 @@ func (w *Worktree) reportBackendDeath(bk *backend, d backendDeath, exitedAt time
 // further death. checkout is the spec's server dir at that moment.
 func (w *Worktree) endCrashLoop(l backendCrashLoop) {
 	w.mu.Lock()
-	state := w.state.String()
+	state := w.phase.state().String()
 	w.mu.Unlock()
 	l.StateAtEnd = &state
 	w.fileOutboxEntry(entryOf(backendCrashLoopKind, loopMessage(l), l, *l.EndedAt, w.Spec().Server))

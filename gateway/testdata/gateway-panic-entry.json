@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "kind": "gateway-panic",
+  "message": "gateway handler panicked in equin/gateway.(*backend).incHTTP serving GET equin.localhost:9000/api/health: runtime error: invalid memory address or nil pointer dereference (240 times)",
+  "data": {
+    "site": "equin/gateway.(*backend).incHTTP",
+    "value": "runtime error: invalid memory address or nil pointer dereference",
+    "stack": [
+      "goroutine 1 [running]:",
+      "equin/gateway.(*backend).incHTTP(0x0)",
+      "\t/x/gateway/worktree.go:227 +0x1c"
+    ],
+    "method": "GET",
+    "host": "equin.localhost:9000",
+    "path": "/api/health",
+    "count": 240,
+    "firstAt": 1794158464000,
+    "lastAt": 1794159145000
+  },
+  "occurredAt": 1794159145000,
+  "writer": {
+    "pid": 1234,
+    "checkout": "/x/gateway"
+  }
+}

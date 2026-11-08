@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -30,13 +31,21 @@ type Proxy struct {
 	// publicHosts are the hostnames a deployed site is served under (Caddy
 	// forwards them unchanged); principalOf counts them as equin hosts.
 	publicHosts map[string]bool
+	// panics files a handler panic as a report (handler_panic.go).
+	panics *panicReporter
 }
 
-func NewProxy(reg *Registry, routes *CentralRoutesStore, sup *Supervisor, defaultNamespace string) *Proxy {
-	return &Proxy{reg: reg, routes: routes, sup: sup, defaultNamespace: defaultNamespace}
+func NewProxy(reg *Registry, routes *CentralRoutesStore, sup *Supervisor, defaultNamespace string, panics *panicReporter) *Proxy {
+	return &Proxy{reg: reg, routes: routes, sup: sup, defaultNamespace: defaultNamespace, panics: panics}
 }
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// A handler panic is a 500, an error line and a report — not net/http's
+	// INFO-level "http: panic serving" line and a dropped connection.
+	sw := &startedWriter{ResponseWriter: w}
+	w = sw
+	defer p.panics.recoverHandlerPanic(sw, r)
+
 	// A content host is a world of its own (content.go): stamped `content`,
 	// routed by path, nothing but declared content routes. Ahead of everything
 	// else — `<item>.content.localhost` would otherwise read as a namespace,
@@ -393,20 +402,8 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 			// would apply the new argv only on some later respawn, and the
 			// build would report "deployed" against the previous spec.
 			p.reg.RefreshSpec(name)
-			snap := wt.Snapshot()
-			switch snap.State {
-			case "running", "restarting":
-				if err := wt.Restart(ctx); err != nil {
-					http.Error(w, "hot restart failed: "+err.Error(), http.StatusInternalServerError)
-					return
-				}
-			case "idle", "broken":
-				if _, err := wt.Ensure(ctx, StartDeploy, startCause(r, "restart route")); err != nil {
-					http.Error(w, "cold start failed: "+err.Error(), http.StatusInternalServerError)
-					return
-				}
-			default:
-				http.Error(w, "backend is "+snap.State+"; retry shortly", http.StatusServiceUnavailable)
+			if status, err := deployRestart(ctx, wt, startCause(r, "restart route")); err != nil {
+				http.Error(w, err.Error(), status)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
@@ -447,6 +444,39 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.NotFound(w, r)
+}
+
+// deployRestart applies a deploy to wt, whatever it is doing: a hot restart
+// when a backend serves, a deploy start when none does. A boot in flight (a
+// start traffic asked for, or a hot restart's successor taking over from a
+// backend that exited mid-restart) is waited out first and the deploy then
+// applied to what it settled to — joining it would answer the build with a
+// backend booted from the spec before this deploy. Returns the HTTP status of
+// a failure.
+func deployRestart(ctx context.Context, wt *Worktree, cause string) (int, error) {
+	for range 2 {
+		switch state := wt.Snapshot().State; state {
+		case "running", "restarting":
+			if err := wt.Restart(ctx); err != nil {
+				return http.StatusInternalServerError, fmt.Errorf("hot restart failed: %w", err)
+			}
+			return http.StatusOK, nil
+		case "idle", "broken":
+			if _, err := wt.Ensure(ctx, StartDeploy, cause); err != nil {
+				return http.StatusInternalServerError, fmt.Errorf("cold start failed: %w", err)
+			}
+			return http.StatusOK, nil
+		case "starting":
+			// Only a wait: its outcome is read back as the state the loop
+			// switches on next (running → restart, broken → a deploy start).
+			if _, err := wt.Ensure(ctx, StartDeploy, cause); err != nil && ctx.Err() != nil {
+				return http.StatusServiceUnavailable, fmt.Errorf("deploy gave up waiting on the boot in flight: %w", ctx.Err())
+			}
+		default:
+			return http.StatusServiceUnavailable, fmt.Errorf("backend is %s; retry shortly", state)
+		}
+	}
+	return http.StatusServiceUnavailable, errors.New("backend is starting again; retry shortly")
 }
 
 // streamBackendLogs serves a Server-Sent Events stream of a worktree's

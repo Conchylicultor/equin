@@ -2643,6 +2643,10 @@
       "name": "@equin/plugin-debug-duress-shed",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/gateway-panic": {
+      "name": "@equin/plugin-debug-gateway-panic",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/health-monitor": {
       "name": "@equin/plugin-debug-health-monitor",
       "version": "0.0.1",
@@ -8671,6 +8675,8 @@
     "@equin/plugin-debug-config-orphans": ["@equin/plugin-debug-config-orphans@workspace:plugins/debug/plugins/config-orphans"],
 
     "@equin/plugin-debug-duress-shed": ["@equin/plugin-debug-duress-shed@workspace:plugins/debug/plugins/duress-shed"],
+
+    "@equin/plugin-debug-gateway-panic": ["@equin/plugin-debug-gateway-panic@workspace:plugins/debug/plugins/gateway-panic"],
 
     "@equin/plugin-debug-health-monitor": ["@equin/plugin-debug-health-monitor@workspace:plugins/debug/plugins/health-monitor"],
 

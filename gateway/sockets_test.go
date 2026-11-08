@@ -403,30 +403,14 @@ func TestSocketPathAlternation(t *testing.T) {
 		t.Fatalf("secondary should end with .next.sock: %s", secondary)
 	}
 
-	// With no active backend, restartTargetPath returns primary.
-	wt.mu.Lock()
-	target := wt.restartTargetPath()
-	wt.mu.Unlock()
-	if target != primary {
-		t.Fatalf("restartTargetPath with nil active should be primary, got %s", target)
+	// Serving from primary, the restart targets secondary.
+	if target := wt.restartTargetPath(&backend{socketPath: primary}); target != secondary {
+		t.Fatalf("restartTargetPath serving primary should be secondary, got %s", target)
 	}
 
-	// With active on primary, restartTargetPath returns secondary.
-	wt.mu.Lock()
-	wt.active = &backend{socketPath: primary}
-	target = wt.restartTargetPath()
-	wt.mu.Unlock()
-	if target != secondary {
-		t.Fatalf("restartTargetPath with active on primary should be secondary, got %s", target)
-	}
-
-	// With active on secondary, restartTargetPath returns primary.
-	wt.mu.Lock()
-	wt.active = &backend{socketPath: secondary}
-	target = wt.restartTargetPath()
-	wt.mu.Unlock()
-	if target != primary {
-		t.Fatalf("restartTargetPath with active on secondary should be primary, got %s", target)
+	// Serving from secondary, the restart targets primary.
+	if target := wt.restartTargetPath(&backend{socketPath: secondary}); target != primary {
+		t.Fatalf("restartTargetPath serving secondary should be primary, got %s", target)
 	}
 }
 
@@ -468,26 +452,24 @@ func TestOnBackendExitIgnoresDraining(t *testing.T) {
 		t.Fatalf("NewWorktree: %v", err)
 	}
 
-	activeBk := &backend{socketPath: filepath.Join(dir, "active.sock")}
+	activeBk := &backend{socketPath: filepath.Join(dir, "active.sock"), proxy: newReverseProxy(filepath.Join(dir, "active.sock"))}
 	drainingBk := &backend{socketPath: filepath.Join(dir, "draining.sock")}
 
 	wt.mu.Lock()
-	wt.state = StateRunning
-	wt.active = activeBk
+	wt.phase = runningOn(activeBk)
 	wt.mu.Unlock()
 
 	// Simulate the draining backend exiting — should NOT change state.
 	wt.onBackendExit(drainingBk, nil, time.Now())
 
 	wt.mu.Lock()
-	state := wt.state
-	active := wt.active
+	p, running := wt.phase.(phaseRunning)
 	wt.mu.Unlock()
 
-	if state != StateRunning {
-		t.Fatalf("state should remain Running, got %s", state)
+	if !running {
+		t.Fatalf("state should remain Running, got %s", wt.Snapshot().State)
 	}
-	if active != activeBk {
+	if p.bk != activeBk {
 		t.Fatal("active backend should not change when a non-active backend exits")
 	}
 }
@@ -502,12 +484,13 @@ func TestEnsureReturnsProxyDuringRestart(t *testing.T) {
 
 	proxy := newReverseProxy(filepath.Join(dir, "t.sock"))
 	wt.mu.Lock()
-	wt.state = StateRestarting
-	wt.active = &backend{
-		socketPath: filepath.Join(dir, "t.sock"),
-		proxy:      proxy,
+	wt.phase = phaseRestarting{
+		serving: &backend{
+			socketPath: filepath.Join(dir, "t.sock"),
+			proxy:      proxy,
+		},
+		next: newSpawnAttempt(),
 	}
-	wt.restartDone = make(chan struct{})
 	wt.mu.Unlock()
 
 	// Ensure() should return the old backend during a restart, not block or error.
