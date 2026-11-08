@@ -20,6 +20,7 @@ export type {
   ResourceParams,
   DependsOnEntry,
   KeyedMembership,
+  PointBatch,
   AliasMembership,
   PersistMeta,
   RoutedCut,

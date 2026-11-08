@@ -9,6 +9,7 @@ import type {
   ExternalWindowMembership,
   KeyedMembership,
   KeyedServerResourceOptions,
+  PointBatch,
   Resource,
   ResourceParams,
   RoutePlan,
@@ -172,6 +173,12 @@ interface PointOuter<P extends ResourceParams> extends AssembleOuter {
    * driver, which the compile (at module eval) must not touch.
    */
   handoffDefinition: () => HandoffDefinitionAnswer;
+  /**
+   * The batched cold read (resource-runtime's `PointBatch`): every tuple is
+   * one family, since a point tuple's params are its ids alone — unless the
+   * `where` is a function of them, which may read more than the ids (absent).
+   */
+  batch?: PointBatch<P>;
 }
 
 const encoder =
@@ -356,6 +363,7 @@ export function assemblePoint<Row, P extends ResourceParams>(
   const membership: KeyedMembership<P> = {
     kind: "point",
     idsOf: (params) => outer.idsOf(params),
+    ...(outer.batch !== undefined ? { batch: outer.batch } : {}),
   };
   const scopePolicy: ScopePolicy<P> = scopePolicyOf(
     arm,
@@ -548,6 +556,9 @@ function planBounded<Row, P extends WindowParams | PointParams>(
                 : { declared: true, id: spec.encodeRowId },
           }),
         ),
+        ...(typeof spec.where === "function"
+          ? {}
+          : { batch: { familyOf: () => "", maxIds: codec.maxIds } }),
         ...encodeRow,
         ...debounceMs,
       },

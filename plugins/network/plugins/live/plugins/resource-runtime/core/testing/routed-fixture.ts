@@ -31,7 +31,7 @@ import {
   type ReachPlan,
   type RoutePlan,
 } from "../routing";
-import type { Resource, ResourceParams } from "../runtime";
+import type { PointBatch, Resource, ResourceParams } from "../runtime";
 import type { Harness } from "../test-support";
 
 /**
@@ -146,6 +146,8 @@ interface RoutedTableFields<Row> {
   familyOf?: (params: ResourceParams) => string;
   /** `point`: the tuple's id set. Default: `params.ids`, comma-separated. */
   idsOf?: (params: ResourceParams) => readonly string[];
+  /** `point`: the batched cold read (`PointBatch`). Default: none. */
+  batch?: PointBatch;
   /** Default: `identityPlan(table)`. */
   plan?: RoutePlan;
   /** Default: an array of anything (the suites assert on frames, not parses). */
@@ -214,6 +216,7 @@ export function defineRoutedTable<Row>(
               idsOf:
                 spec.idsOf ??
                 ((p: ResourceParams) => (p.ids ? p.ids.split(",") : [])),
+              ...(spec.batch !== undefined ? { batch: spec.batch } : {}),
             },
           };
   const resource = h.runtime.defineResource<Row[], ResourceParams>(

@@ -37604,6 +37604,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PersistedBase`
               - `PersistedValueCheck`
               - `PersistMeta`
+              - `PointBatch`
               - `ReachPlan`
               - `ReadTags`
               - `RelationRead`

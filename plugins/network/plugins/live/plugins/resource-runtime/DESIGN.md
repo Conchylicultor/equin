@@ -485,6 +485,19 @@ used to run the full loader behind the 6-slot read gate
   must gate it on its own sub like `update` / `delta`; a params-less frame
   matches no sub and is dropped.
 
+- **Point batches.** After a restart every tab replays one `:rows` tuple per
+  row (a chip per task); each was its own read for a slot of six (~120 reads
+  queued ~2 s on main, 2026-11-08). An idle cold one-id read costs ~5–10 ms
+  and a seven-id read about the same, so the cost is per read, not per row:
+  batching removes the per-read part instead of hiding it. Batching only
+  forms while reads queue (the slot is taken a microtask later at the
+  earliest), so an idle server's reads are unchanged. The epoch handoff
+  covers clean restarts only for inheritable entries; batching also covers
+  crashes and non-inheritable entries (`reports.list:rows`, produced
+  table). Rejected: raising `READ_LOAD_CONCURRENCY` (more concurrent cold
+  reads, same total work); client-side id-set subscriptions (would merge
+  per-row cache identity).
+
 ## The params gate: a contract mismatch is version skew, not a crash
 
 - **Gate before `authorize` / registration** so no push, revalidate or scoped

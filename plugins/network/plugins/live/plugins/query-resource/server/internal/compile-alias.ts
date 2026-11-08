@@ -841,7 +841,13 @@ export function compileAllCollection<
   const point = contracts.rows.point;
   const rowsPolicy: ScopePolicy<PointParams> = {
     routes: compiledRoutePlan<PointParams>(routes, usesOf, derivedReads),
-    membership: { kind: "point", idsOf: (params) => point.decode(params) },
+    membership: {
+      kind: "point",
+      idsOf: (params) => point.decode(params),
+      // The rows of the ids alone (`scopedSql(ids, …, null)` reads no
+      // param), so every tuple is one family (resource-runtime's `PointBatch`).
+      batch: { familyOf: () => "", maxIds: point.maxIds },
+    },
   };
   const rows = {
     // The subscribed ids are the client's: one the pk cannot hold is absent.

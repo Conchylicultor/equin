@@ -261,7 +261,36 @@ export type KeyedMembership<P extends ResourceParams = ResourceParams> =
        */
       familyOf?: (params: P) => string;
     }
-  | { kind: "point"; idsOf: (params: P) => readonly string[] };
+  | {
+      kind: "point";
+      idsOf: (params: P) => readonly string[];
+      /**
+       * Whether concurrent cold reads of several tuples may be ONE load (see
+       * `PointBatch`). Absent ⇒ every tuple loads alone.
+       */
+      batch?: PointBatch<P>;
+    };
+
+/**
+ * A point set's batched cold read. A tuple's read-path load (sub-ack, HTTP)
+ * that finds another tuple of the same `familyOf` still queued for its
+ * read-admission slot rides that tuple's read instead of queueing its own: ONE
+ * slot, ONE watermark and ONE loader run at the first member's params with
+ * `ctx.affectedIds` = the union of the members' ids (at most `maxIds`), each
+ * member then served the rows of its own ids. So the reconnect herd of a page
+ * of per-row tuples (a chip per task, a row per report) costs one query per
+ * resource instead of one per row, each holding a slot of six.
+ *
+ * The declaration is the loader's promise: for any two tuples of one family,
+ * the loader at either's params reads exactly the rows `ctx.affectedIds`
+ * names — the tuples differ in their ids alone (a compiled `:rows` read with a
+ * static `where`). `maxIds` bounds the union to what the row-array schema
+ * accepts.
+ */
+export interface PointBatch<P extends ResourceParams = ResourceParams> {
+  familyOf: (params: P) => string;
+  maxIds: number;
+}
 
 /**
  * The `scopedMembership` alias — an UNBOUNDED window: `orderOf` is the whole
@@ -305,7 +334,12 @@ type MembershipRecord =
       /** Order-signature seam — on the alias it makes an order move re-run `orderOf`. */
       orderSignatureOf?: (row: unknown, params: ResourceParams) => string;
     }
-  | { kind: "point"; idsOf: (params: ResourceParams) => readonly string[] };
+  | {
+      kind: "point";
+      idsOf: (params: ResourceParams) => readonly string[];
+      /** The batched cold read — see `PointBatch`. */
+      batch?: PointBatch;
+    };
 
 /**
  * What one read-path load of a resource costs, for read admission — see
@@ -4223,22 +4257,28 @@ export function createResourceRuntime(
         (untrackedFlightReaders.get(flightKey) ?? 0) + 1,
       );
     }
+    const batch = gated ? pointBatchOf(entry) : undefined;
     const flight = inflight.run(
       flightKey,
       gated
-        ? (inFlight) =>
-            admitRead(
-              entry,
-              { pk, probe: false },
-              () => {
-                if (readWanted(entry, pk)) return true;
-                // Giving up: no caller arriving from now on may join and
-                // inherit the `ReadAbandoned` — it starts a fresh read.
-                inFlight.detach();
-                return false;
-              },
-              load,
-            )
+        ? (inFlight) => {
+            const wanted = () => {
+              if (readWanted(entry, pk)) return true;
+              // Giving up: no caller arriving from now on may join and
+              // inherit the `ReadAbandoned` — it starts a fresh read.
+              inFlight.detach();
+              return false;
+            };
+            return batch !== undefined
+              ? readPointBatched(entry, batch, {
+                  params,
+                  pk,
+                  wanted,
+                  seedEtag,
+                  seedAckTx,
+                })
+              : admitRead(entry, { pk, probe: false }, wanted, load);
+          }
         : load,
       {
         onWait: opts.onCoalesceWait,
@@ -4302,6 +4342,230 @@ export function createResourceRuntime(
         class: key,
       },
     );
+  }
+
+  // The point batch a gated read of `entry` may join (`PointBatch`), or
+  // undefined: the entry declares none, or something about it makes a load
+  // more than "the rows of these ids" — a value read through follows or
+  // noted per load (its held state is per tuple), a `revalidate` signature
+  // (its ETag describes one tuple's value), bytes, an external source, a
+  // memory read (it takes no slot to share).
+  function pointBatchOf(entry: RegistryEntry): PointBatch | undefined {
+    const membership = entry.membership;
+    if (membership?.kind !== "point" || membership.batch === undefined) {
+      return undefined;
+    }
+    const routing = entry.routing;
+    if (
+      routing === undefined ||
+      routing.via.size > 0 ||
+      routing.loadedRoutes.size > 0 ||
+      entry.externalSource === true ||
+      entry.revalidate !== undefined ||
+      entry.bytes === true ||
+      entry.readCost === "memory"
+    ) {
+      return undefined;
+    }
+    return membership.batch;
+  }
+
+  // The point batches still waiting for their read-admission slot, one open
+  // per (key, family): a read of the family joins it until the slot comes
+  // (or it is full), then the next read opens another. See `PointBatch`.
+  interface PointBatchMember {
+    params: ResourceParams;
+    pk: string;
+    ids: readonly string[];
+    /** Asked once, when the slot comes (`readWanted`, detaching on false). */
+    wanted: () => boolean;
+    seedEtag: string | undefined;
+    seedAckTx: readonly string[] | undefined;
+    resolve: (value: FlightValue) => void;
+    reject: (err: unknown) => void;
+  }
+  interface OpenPointBatch {
+    ids: Set<string>;
+    members: PointBatchMember[];
+  }
+  const openPointBatches = new Map<string, OpenPointBatch>();
+  const pointBatchStats = new Map<string, { runs: number; joined: number }>();
+
+  // One tuple's cold read through its family's batch: joins the open one when
+  // its ids fit (`maxIds`), else opens one and queues it for a slot. The
+  // promise is the flight's own (no hop added); a joiner's wait is charged as
+  // `read-coalesce` in its own context, like a joined flight's.
+  function readPointBatched(
+    entry: RegistryEntry,
+    batch: PointBatch,
+    read: Omit<PointBatchMember, "ids" | "resolve" | "reject">,
+  ): Promise<FlightValue> {
+    const membership = entry.membership as Extract<
+      MembershipRecord,
+      { kind: "point" }
+    >;
+    let ids: readonly string[];
+    let slot: string;
+    try {
+      ids = membership.idsOf(read.params);
+      slot = `${entry.key}\u0000${batch.familyOf(read.params)}`;
+    } catch (err) {
+      return Promise.reject(err);
+    }
+    let open = openPointBatches.get(slot);
+    if (open !== undefined) {
+      let union = open.ids.size;
+      for (const id of new Set(ids)) if (!open.ids.has(id)) union++;
+      if (union > batch.maxIds) open = undefined;
+    }
+    const joining = open !== undefined;
+    const t0 = performance.now();
+    const target = open ?? { ids: new Set<string>(), members: [] };
+    const value = new Promise<FlightValue>((resolve, reject) => {
+      target.members.push({ ...read, ids, resolve, reject });
+    });
+    for (const id of ids) target.ids.add(id);
+    if (joining) {
+      const stats = pointBatchStatsOf(entry.key);
+      stats.joined++;
+      const charge = () => opts.onCoalesceWait?.(performance.now() - t0);
+      // Observes only — the flight's caller handles the rejection.
+      void value.then(charge, charge);
+    } else {
+      openPointBatches.set(slot, target);
+      startPointBatch(entry, slot, target, read.pk);
+    }
+    return value;
+  }
+
+  function pointBatchStatsOf(key: string): { runs: number; joined: number } {
+    let stats = pointBatchStats.get(key);
+    if (stats === undefined) {
+      stats = { runs: 0, joined: 0 };
+      pointBatchStats.set(key, stats);
+    }
+    return stats;
+  }
+
+  // Queue an opened batch for its slot. When the slot comes the batch closes
+  // (a later read opens the next one), every member nobody is owed any more
+  // is dropped (`ReadAbandoned`, as a lone read is), and the rest load as one.
+  function startPointBatch(
+    entry: RegistryEntry,
+    slot: string,
+    batch: OpenPointBatch,
+    firstPk: string,
+  ): void {
+    const wanted = () => {
+      if (openPointBatches.get(slot) === batch) openPointBatches.delete(slot);
+      const live: PointBatchMember[] = [];
+      for (const m of batch.members) {
+        if (m.wanted()) live.push(m);
+        else m.reject(new ReadAbandoned(entry.key));
+      }
+      batch.members = live;
+      return live.length > 0;
+    };
+    // A rejection the members did not see yet (the loader's, the gate's)
+    // settles every one; a settled member ignores it.
+    void admitRead(entry, { pk: firstPk, probe: false }, wanted, () =>
+      runPointBatch(entry, batch.members),
+    ).then(undefined, (err: unknown) => {
+      if (openPointBatches.get(slot) === batch) openPointBatches.delete(slot);
+      for (const m of batch.members) m.reject(err);
+    });
+  }
+
+  // The batch's one load, in its slot: the watermark first (Rule B — captured
+  // before the loader's first read, so it is a valid floor for every member),
+  // then the loader. A lone member loads exactly as an unbatched read does;
+  // several load the union of their ids as a scoped read, each served its own
+  // ids' rows in the loader's order.
+  async function runPointBatch(
+    entry: RegistryEntry,
+    members: readonly PointBatchMember[],
+  ): Promise<void> {
+    pointBatchStatsOf(entry.key).runs++;
+    let watermark: string | undefined;
+    if (opts.captureWatermark && readsDb(entry)) {
+      try {
+        watermark = await captureSharedWatermark(opts.captureWatermark);
+      } catch (err) {
+        // Tokenless degrade, as `getResourceValue`'s flight.
+        reportLoaderError(`watermark capture failed for ${entry.key}`, err);
+      }
+    }
+    const first = members[0]!;
+    const sink: { raw: unknown; heldFollows?: boolean } = { raw: undefined };
+    if (members.length === 1) {
+      const value = await timedLoad(entry, first.params, undefined, sink);
+      first.resolve({
+        value,
+        raw: sink.raw,
+        etag: first.seedEtag,
+        watermark: sink.heldFollows === true ? undefined : watermark,
+        ackTx: first.seedAckTx,
+      });
+      return;
+    }
+    const union = new Set<string>();
+    for (const m of members) for (const id of m.ids) union.add(id);
+    const rows = await timedLoad(
+      entry,
+      first.params,
+      { affectedIds: [...union] },
+      sink,
+    );
+    if (!Array.isArray(rows)) {
+      throw new Error(
+        `keyed resource "${entry.key}" loader must return an array`,
+      );
+    }
+    const keyOf = entry.keyOf!;
+    const byId = new Map<string, number[]>();
+    members.forEach((m, i) => {
+      for (const id of new Set(m.ids)) {
+        const at = byId.get(id);
+        if (at === undefined) byId.set(id, [i]);
+        else at.push(i);
+      }
+    });
+    const served: unknown[][] = members.map(() => []);
+    const found = new Set<string>();
+    for (const row of rows as unknown[]) {
+      const id = keyOf(row);
+      found.add(id);
+      for (const i of byId.get(id) ?? []) served[i]!.push(row);
+    }
+    for (const [i, m] of members.entries()) {
+      // A member an id of which named no row is read alone, in this slot:
+      // the id may be absent, or the database may match it under another
+      // spelling than the row's key (a uuid in upper case) — which only its
+      // own read can tell apart. Never the herd's case: there every id is
+      // a row's key as served.
+      if (m.ids.some((id) => !found.has(id))) {
+        const own: { raw: unknown; heldFollows?: boolean } = { raw: undefined };
+        const value = await timedLoad(entry, m.params, undefined, own);
+        m.resolve({
+          value,
+          raw: own.raw,
+          etag: m.seedEtag,
+          watermark: own.heldFollows === true ? undefined : watermark,
+          ackTx: m.seedAckTx,
+        });
+        continue;
+      }
+      const value = served[i]!;
+      m.resolve({
+        value,
+        // `raw` serves D8's identity fast path, for a `revalidate` entry
+        // only — which never batches (`pointBatchOf`).
+        raw: value,
+        etag: m.seedEtag,
+        watermark: sink.heldFollows === true ? undefined : watermark,
+        ackTx: m.seedAckTx,
+      });
+    }
   }
 
   // A `readCost: "memory"` read of a WARM tuple slower than
@@ -5356,6 +5620,9 @@ export function createResourceRuntime(
             idsOf: def.membership.idsOf as (
               params: ResourceParams,
             ) => readonly string[],
+            ...("batch" in def.membership && def.membership.batch !== undefined
+              ? { batch: def.membership.batch as PointBatch }
+              : {}),
           }
       : def.scopedMembership
         ? {
@@ -10160,6 +10427,7 @@ export function createResourceRuntime(
       notifyStats: NotifyCounts;
       subShortCircuits: number;
       abandonedReads: number;
+      pointBatches: { runs: number; joined: number };
       handoff: string;
       resumedSubs: number;
       staleFlightSupersedes: number;
@@ -10300,6 +10568,9 @@ export function createResourceRuntime(
         // Reads skipped at the read-admission gate because every subscriber
         // of the tuple left while they queued (see `ReadAbandoned`).
         abandonedReads: abandonedReads.get(entry.key) ?? 0,
+        // Batched cold point reads (`PointBatch`): loads run through a batch,
+        // and reads that rode one another tuple opened (no slot, no query).
+        pointBatches: pointBatchStats.get(entry.key) ?? { runs: 0, joined: 0 },
         handoff: notInheritable(entry) ?? "inheritable",
         resumedSubs: resumedSubs.get(entry.key) ?? 0,
         // Stale-flight supersessions for this key (a push drain refused an

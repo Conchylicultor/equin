@@ -706,6 +706,20 @@ All but the version are co-produced by the starter. A push drain mints
   fair share: a slot is held for a whole load. ONE gate on purpose: a read
   yielding its slot to wait gives back its key's share with it, so no
   per-key gate held across a yield can deadlock two keys.
+- **Point reads queued together load as one (`PointBatch`).** A point
+  membership's `batch: { familyOf, maxIds }` promises the loader at any
+  family member's params reads exactly `ctx.affectedIds` (query-resource
+  declares it on `:rows` with a static `where`, and on an `all` set's
+  `:rows`).
+  - A gated read finding a same-family tuple still queued for a slot joins
+    it. At the slot: abandoned members drop (`ReadAbandoned`), the rest run
+    ONE watermark + ONE loader call over the union (≤ `maxIds`), each
+    served its own ids' rows.
+  - A lone member loads as an unbatched read. A member with an id no row
+    matched is re-read alone in the same slot.
+  - Never with follows / loaded routes, `revalidate`, bytes, external,
+    memory reads. A failed batch fails every member.
+  - `_debug.<key>.pointBatches`. `runtime-point-batch.test.ts`.
 - **A memory read takes no slot (`readCost: "memory"`).** An entry declaring
   that its loader and `revalidate` answer from memory this process holds (a
   constant, or a memo whose one build every reader shares) runs its reads at
@@ -957,6 +971,7 @@ Out of reach at this seam (DB-backed harness instead):
     - `PersistedBase`
     - `PersistedValueCheck`
     - `PersistMeta`
+    - `PointBatch`
     - `ReachPlan`
     - `ReadTags`
     - `RelationRead`
