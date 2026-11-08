@@ -2,7 +2,10 @@ import type { MachinePluginDefinition } from "@plugins/framework/plugins/server-
 import { SecretStore } from "@plugins/infra/plugins/secrets/server";
 import { centralSecretStore } from "./internal/central-store";
 
-export { centralSecretStore } from "./internal/central-store";
+export {
+  centralSecretStore,
+  centralSecretStoreFor,
+} from "./internal/central-store";
 
 export default {
   description:

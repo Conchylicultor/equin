@@ -1,3 +1,4 @@
+import type { SecretWrite } from "@plugins/infra/plugins/secrets/core";
 import {
   DEPLOY_SECRET_STATUS_LABELS,
   type DeploySecretRow,
@@ -15,7 +16,8 @@ export interface RequiredSecret {
  *
  * - `values`: the current local value's fingerprint per key, absent when no
  *   value is set;
- * - `grants`: the approved fingerprint per key, for THIS deployment.
+ * - `grants`: the approved fingerprint per key, for THIS deployment;
+ * - `lastWrites`: the store's last write per key, absent when it holds none.
  *
  * Every required key gets a row. A grant for a key no longer required has no
  * row: it is dropped from the delivered env without asking, because removing a
@@ -25,6 +27,7 @@ export function diffSecrets(
   required: readonly RequiredSecret[],
   values: ReadonlyMap<string, string>,
   grants: ReadonlyMap<string, string>,
+  lastWrites: ReadonlyMap<string, SecretWrite>,
 ): DeploySecretRow[] {
   return required.map((r) => {
     const fingerprint = values.get(r.key) ?? null;
@@ -43,6 +46,7 @@ export function diffSecrets(
       description: r.description,
       status,
       fingerprint,
+      lastWrite: lastWrites.get(r.key) ?? null,
     };
   });
 }

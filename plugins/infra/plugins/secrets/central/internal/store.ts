@@ -5,34 +5,30 @@ import { decrypt, encrypt } from "./crypto";
 import { getEncryptionKey } from "./key-store";
 import { secretsDir, storePath } from "./paths";
 import type { SecretMetadata } from "@plugins/infra/plugins/secrets/core";
+import {
+  applyWrite,
+  emptyBlob,
+  listKeys,
+  metadataOf,
+  readValue,
+  upgradeBlob,
+  type Access,
+  type StoreBlob,
+} from "./layers";
 
-interface Entry {
-  value: string;
-  updatedAt: number;
-}
-
-interface StoreBlob {
-  version: 1;
-  namespaces: Record<string, Record<string, Entry>>;
-}
-
-const EMPTY: StoreBlob = { version: 1, namespaces: {} };
+export type { Access } from "./layers";
 
 let cached: StoreBlob | null = null;
 let writeChain: Promise<unknown> = Promise.resolve();
 
 async function loadFromDisk(): Promise<StoreBlob> {
   const store = storePath();
-  if (!(await exists(store))) return { version: 1, namespaces: {} };
+  if (!(await exists(store))) return emptyBlob();
   const key = await getEncryptionKey();
   const blob = await readFile(store);
   const decrypted = decrypt(blob, key);
-  const parsed = JSON.parse(decrypted.toString("utf8")) as StoreBlob;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- forward-compat guard; parsed JSON may have any shape
-  if (parsed.version !== 1 || !parsed.namespaces) {
-    throw new Error("secrets: store has unexpected shape");
-  }
-  return parsed;
+  // An older version upgrades in memory; the next write persists it.
+  return upgradeBlob(JSON.parse(decrypted.toString("utf8")));
 }
 
 export async function initStore(): Promise<void> {
@@ -55,8 +51,7 @@ function ensureLoaded(): StoreBlob {
   return cached;
 }
 
-async function persist(): Promise<void> {
-  const blob = ensureLoaded();
+async function persist(blob: StoreBlob): Promise<void> {
   const key = await getEncryptionKey();
   const json = Buffer.from(JSON.stringify(blob), "utf8");
   const encrypted = encrypt(json, key);
@@ -84,59 +79,65 @@ function enqueueWrite<T>(fn: () => Promise<T>): Promise<T> {
   return next;
 }
 
-export function getLocal(namespace: string, key: string): string | undefined {
-  const blob = ensureLoaded();
-  return blob.namespaces[namespace]?.[key]?.value;
+export function getLocal(
+  access: Access,
+  namespace: string,
+  key: string,
+): string | undefined {
+  return readValue(ensureLoaded(), access, namespace, key);
 }
 
-export function hasLocal(namespace: string, key: string): boolean {
-  const blob = ensureLoaded();
-  return blob.namespaces[namespace]?.[key] !== undefined;
+export function hasLocal(
+  access: Access,
+  namespace: string,
+  key: string,
+): boolean {
+  return getLocal(access, namespace, key) !== undefined;
 }
 
 export function getMetadataLocal(
+  access: Access,
   namespace: string,
   key: string,
 ): SecretMetadata {
-  const blob = ensureLoaded();
-  const entry = blob.namespaces[namespace]?.[key];
-  if (!entry) return { set: false };
-  return { set: true, updatedAt: entry.updatedAt };
+  return metadataOf(ensureLoaded(), access, namespace, key);
 }
 
-export function listKeysLocal(namespace: string): string[] {
-  const blob = ensureLoaded();
-  const ns = blob.namespaces[namespace];
-  return ns ? Object.keys(ns) : [];
+export function listKeysLocal(access: Access, namespace: string): string[] {
+  return listKeys(ensureLoaded(), access, namespace);
 }
 
-export async function setLocal(
+/** Set (`value`) or delete (`null`) in the caller's layer; persisted only when something changed. */
+function writeLocal(
+  access: Access,
+  namespace: string,
+  key: string,
+  value: string | null,
+): Promise<void> {
+  return enqueueWrite(async () => {
+    // Applied to a copy, which becomes the store only once it is on disk: a
+    // failed persist (keychain locked, disk full) leaves memory as the file is.
+    const next = structuredClone(ensureLoaded());
+    if (applyWrite(next, access, namespace, key, value, Date.now())) {
+      await persist(next);
+      cached = next;
+    }
+  });
+}
+
+export function setLocal(
+  access: Access,
   namespace: string,
   key: string,
   value: string,
 ): Promise<void> {
-  return enqueueWrite(async () => {
-    const blob = ensureLoaded();
-    if (!blob.namespaces[namespace]) blob.namespaces[namespace] = {};
-    blob.namespaces[namespace]![key] = { value, updatedAt: Date.now() };
-    await persist();
-  });
+  return writeLocal(access, namespace, key, value);
 }
 
-export async function deleteLocal(
+export function deleteLocal(
+  access: Access,
   namespace: string,
   key: string,
 ): Promise<void> {
-  return enqueueWrite(async () => {
-    const blob = ensureLoaded();
-    const ns = blob.namespaces[namespace];
-    if (!ns) return;
-    if (!(key in ns)) return;
-    delete ns[key];
-    if (Object.keys(ns).length === 0) delete blob.namespaces[namespace];
-    await persist();
-  });
+  return writeLocal(access, namespace, key, null);
 }
-
-// Exposed for the boot-time legacy migration.
-export { EMPTY };

@@ -6,6 +6,7 @@ import {
   setSecret,
   SecretsKeychainLockedError,
 } from "@plugins/infra/plugins/secrets/central";
+import { defineSecretNamespace } from "@plugins/infra/plugins/secrets/core";
 
 export interface StoredAccount {
   kind: AuthProviderKind;
@@ -31,7 +32,7 @@ export interface TokenStoreBlob {
   };
 }
 
-const NAMESPACE = "auth-tokens";
+const NAMESPACE = defineSecretNamespace("auth-tokens", { scope: "machine" });
 const BLOB_KEY = "blob-v1";
 const EMPTY_BLOB: TokenStoreBlob = { version: 1, providers: {} };
 

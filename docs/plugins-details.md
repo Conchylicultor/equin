@@ -2288,7 +2288,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteCheck` "secrets"
                   - `item-actions` "set-value" → `SetValueAction`
                   - `item-actions` "approve" → `ApproveAction`
-                - Uses: 27 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/REFERENCE.md)
+                - Uses: 28 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/REFERENCE.md)
                   - `apps/deploy/deployments` ×9
                   - `primitives/css/ui-kit` ×4
                   - `primitives/data-view` ×4
@@ -2301,6 +2301,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/text.Text`
                   - `primitives/icon-button.IconButton`
                   - `primitives/overlay/imperative-dialog.useOpenDialog`
+                  - `primitives/relative-time.RelativeTime`
               - Server:
                 - Contributes:
                   - `deploy.gate` "deploy-secrets"
@@ -2315,6 +2316,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/entities.defaultNow`
                   - `infra/entities.defineEntity`
                   - `infra/secrets.getSecret`
+                  - `infra/secrets.getSecretMetadata`
                   - `infra/secrets.setSecret`
                   - `network/live.serveValue`
                   - `plugin-meta/plugin-tree.getFacetsTreeCached`
@@ -2333,6 +2335,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ids.idKindField`
                   - `infra/endpoints.defineEndpoint`
                   - `infra/entities.entityRef`
+                  - `infra/secrets.SecretWriteSchema`
                   - `network/live.liveValue`
                   - `packages/list-bound.wholeList`
                 - Exports (types):
@@ -27156,12 +27159,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `config_v2/fields.fieldSample`
               - `fields/secret.secretFieldType`
+              - `infra/secrets.defineSecretNamespace`
               - `network/live.liveValue`
               - `packages/list-bound.wholeRecord`
             - Exports (types):
               - `ConfigV2SecretMeta`
               - `SecretFieldDef`
             - Exports (values):
+              - `CONFIG_FIELD_SECRETS`
               - `configSecretMeta`
               - `secretField`
               - `secretSample`
@@ -34254,12 +34259,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 70 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 72 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×12
           - `debug` ×11
-          - `apps` ×9
+          - `apps` ×10
+          - `infra` ×8
           - `conversations` ×7
-          - `infra` ×7
           - `build` ×5
           - `plugin-meta` ×3
           - `primitives` ×3
@@ -34756,8 +34761,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 65 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
-          - `infra` ×15
+        - Imported by: 66 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+          - `infra` ×16
           - `debug` ×13
           - `conversations` ×8
           - `build` ×7
@@ -34949,11 +34954,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SecretStore`
           - `setSecret`
       - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
+        - Uses:
+          - `infra/endpoints.defineEndpoint`
+          - `infra/namespace.isNamespace`
+          - `packages/list-bound.cappedList`
         - Exports (types):
           - `SecretMetadata`
+          - `SecretNamespace`
           - `SecretRef`
+          - `SecretScope`
+          - `SecretWrite`
         - Exports (values):
+          - `defineSecretNamespace`
+          - `SECRET_HISTORY_LIMIT`
+          - `SECRETS_CALLER_HEADER`
           - `secretsDelete`
           - `SecretsError`
           - `secretsGet`
@@ -34963,6 +34977,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SecretsMainOfflineError`
           - `secretsMeta`
           - `secretsSet`
+          - `SecretWriteSchema`
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deploy-secrets/approvals`
@@ -34977,7 +34992,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `paths:no-hardcoded-paths` — `central/index.ts` (sanctioned)
       - Machine:
-        - Exports (values): `centralSecretStore`
+        - Exports (values):
+          - `centralSecretStore`
+          - `centralSecretStoreFor`
       - Central:
         - Exports (types):
           - `SecretMetadata`
@@ -35000,7 +35017,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/secrets/meta`
           - `POST /api/secrets/list`
       - Cli:
-        - Exports (values): `centralSecretStore`
+        - Exports (values):
+          - `centralSecretStore`
+          - `centralSecretStoreFor`
     - **`spawn`** — Wedge-proof child-process primitive: spawnCaptured/spawnExpectOk capture stdout/stderr via temp-file fds (no piped stdio, so bun 1.3.13's exit-during-stream-pull race has nothing to wedge), spawnPassthrough inherits the parent's streams, and getWorktreeRoot/getMainRepoRoot are the memoized canonical git-root helpers. Node-only (no db/jobs) so a CLI process can import it; the spawn-safety lint rule routes every raw Bun.spawn here.
       - Core:
         - Uses:
@@ -37974,11 +37993,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 124 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 125 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×26
           - `debug` ×18
+          - `infra` ×16
           - `conversations` ×15
-          - `infra` ×15
           - `tasks` ×8
           - `build` ×5
           - `stats` ×4
@@ -49927,8 +49946,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
-          - `apps` ×24
+        - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+          - `apps` ×25
           - `debug` ×13
           - `conversations` ×9
           - `infra` ×4

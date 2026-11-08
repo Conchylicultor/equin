@@ -1,6 +1,7 @@
 import { defineHostService } from "@plugins/framework/plugins/server-core/core";
 import type {
   SecretMetadata,
+  SecretNamespace,
   SecretRef,
 } from "@plugins/infra/plugins/secrets/core";
 
@@ -15,7 +16,12 @@ import type {
  * A process that runs this code WITHOUT booting a graph (a `./equin` verb, an
  * agent process) names the provider itself:
  * `provideHostServicesUnbooted([SecretStore.provide(centralSecretStore)])`,
- * `centralSecretStore` from `infra/secrets/cli`.
+ * `centralSecretStore` from `infra/secrets/cli` (or `centralSecretStoreFor(ns)`
+ * when it acts for a namespace it knows but did not declare).
+ *
+ * Every ref names a declared `SecretNamespace`; an `instance` one is read and
+ * written in the caller's own layer (main's is the base) — see the plugin's
+ * CLAUDE.md.
  */
 export interface SecretStoreImpl {
   get(ref: SecretRef): Promise<string | undefined>;
@@ -23,7 +29,7 @@ export interface SecretStoreImpl {
   delete(ref: SecretRef): Promise<void>;
   has(ref: SecretRef): Promise<boolean>;
   metadata(ref: SecretRef): Promise<SecretMetadata>;
-  listKeys(namespace: string): Promise<string[]>;
+  listKeys(namespace: SecretNamespace): Promise<string[]>;
 }
 
 export const SecretStore = defineHostService<SecretStoreImpl>("secrets.store");
@@ -44,11 +50,13 @@ export function hasSecret(ref: SecretRef): Promise<boolean> {
   return SecretStore.get().has(ref);
 }
 
-/** `{ set, updatedAt? }` — never the value. */
+/** `{ set, updatedAt?, history }` — never the value. */
 export function getSecretMetadata(ref: SecretRef): Promise<SecretMetadata> {
   return SecretStore.get().metadata(ref);
 }
 
-export function listKeysInNamespace(namespace: string): Promise<string[]> {
+export function listKeysInNamespace(
+  namespace: SecretNamespace,
+): Promise<string[]> {
   return SecretStore.get().listKeys(namespace);
 }

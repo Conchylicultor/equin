@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
+import { SecretWriteSchema } from "@plugins/infra/plugins/secrets/core";
 
 /**
  * The id of the site Settings tab's Secrets section — contributed under it
@@ -51,6 +52,12 @@ export const DeploySecretRowSchema = z.object({
    * value replaced in between is refused instead of approved blind.
    */
   fingerprint: z.string().nullable(),
+  /**
+   * The value's last write as this deployment's instance sees it — when, set
+   * or delete, and by which namespace (`null`: one that named none) — or null
+   * when the store holds no write of it. Who, never what.
+   */
+  lastWrite: SecretWriteSchema.nullable(),
 });
 export type DeploySecretRow = z.infer<typeof DeploySecretRowSchema>;
 

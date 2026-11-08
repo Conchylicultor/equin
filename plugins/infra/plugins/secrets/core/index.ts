@@ -1,4 +1,15 @@
-export type { SecretRef, SecretMetadata } from "./internal/types";
+export type {
+  SecretRef,
+  SecretMetadata,
+  SecretNamespace,
+  SecretScope,
+  SecretWrite,
+} from "./internal/types";
+export { SECRET_HISTORY_LIMIT, SecretWriteSchema } from "./internal/types";
+export {
+  defineSecretNamespace,
+  SECRETS_CALLER_HEADER,
+} from "./internal/namespaces";
 export {
   SecretsError,
   SecretsMainOfflineError,

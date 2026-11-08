@@ -8,8 +8,7 @@ import { SecretsMainOfflineError } from "@plugins/infra/plugins/secrets/core";
 import type { FieldStorageProvider } from "@plugins/config_v2/server";
 import { getAllDescriptors } from "@plugins/config_v2/server";
 import { configSecretMetaServed } from "./resource";
-
-const NAMESPACE = "config-fields";
+import { CONFIG_FIELD_SECRETS } from "../../core";
 
 function secretKey(descriptorName: string, fieldKey: string): string {
   return `${descriptorName}.${fieldKey}`;
@@ -26,7 +25,7 @@ export const secretStorageProvider: FieldStorageProvider = {
   async load(descriptorName, fieldKey) {
     try {
       const key = secretKey(descriptorName, fieldKey);
-      const ref = { namespace: NAMESPACE, key };
+      const ref = { namespace: CONFIG_FIELD_SECRETS, key };
       const value = await getSecret(ref);
       const meta = await getSecretMetadata(ref);
       return { value: value ?? "", set: meta.set };
@@ -40,7 +39,10 @@ export const secretStorageProvider: FieldStorageProvider = {
 
   async save(descriptorName, fieldKey, value) {
     await setSecret(
-      { namespace: NAMESPACE, key: secretKey(descriptorName, fieldKey) },
+      {
+        namespace: CONFIG_FIELD_SECRETS,
+        key: secretKey(descriptorName, fieldKey),
+      },
       value,
     );
     const path = findStorePath(descriptorName);
@@ -49,7 +51,7 @@ export const secretStorageProvider: FieldStorageProvider = {
 
   async clear(descriptorName, fieldKey) {
     await deleteSecret({
-      namespace: NAMESPACE,
+      namespace: CONFIG_FIELD_SECRETS,
       key: secretKey(descriptorName, fieldKey),
     });
     const path = findStorePath(descriptorName);

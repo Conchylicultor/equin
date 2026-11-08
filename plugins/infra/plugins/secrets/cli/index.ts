@@ -3,4 +3,4 @@
 // provider itself, `provideHostServicesUnbooted([SecretStore.provide(
 // centralSecretStore)])`. Declares no command; a `bin/` reaches it here, since
 // only `cli` and `check` rows list `machine`.
-export { centralSecretStore } from "../machine";
+export { centralSecretStore, centralSecretStoreFor } from "../machine";

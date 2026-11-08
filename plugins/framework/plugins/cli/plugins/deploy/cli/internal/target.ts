@@ -44,7 +44,7 @@ import { assertCompositionName } from "@plugins/plugin-meta/plugins/composition/
 import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
 import { provideHostServicesUnbooted } from "@plugins/framework/plugins/server-core/core";
 import { SecretStore } from "@plugins/infra/plugins/secrets/server";
-import { centralSecretStore } from "@plugins/infra/plugins/secrets/machine";
+import { centralSecretStoreFor } from "@plugins/infra/plugins/secrets/machine";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/core";
 
 // ── Budgets ───────────────────────────────────────────────────────────────────
@@ -287,8 +287,12 @@ export async function resolveTarget(opts: {
   }
 
   // A CLI process boots no graph: it names the host service the key is read
-  // through itself — the secrets store, central's.
-  provideHostServicesUnbooted([SecretStore.provide(centralSecretStore)]);
+  // through itself — the secrets store, central's — and, having no runtime
+  // namespace, the namespace it reads as: the checkout's, whose layer holds the
+  // key of a server added in this worktree (`deploy-ssh` is instance-scoped).
+  provideHostServicesUnbooted([
+    SecretStore.provide(centralSecretStoreFor(await deployNamespace())),
+  ]);
   const secret = await getServerSshPrivateKey(server.id);
   if (!secret.configured) {
     refuse(

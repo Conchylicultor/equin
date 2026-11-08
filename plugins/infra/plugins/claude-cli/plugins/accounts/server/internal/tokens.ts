@@ -3,6 +3,7 @@ import {
   getSecret,
   setSecret,
 } from "@plugins/infra/plugins/secrets/server";
+import { defineSecretNamespace } from "@plugins/infra/plugins/secrets/core";
 import {
   claudeCredentialKind,
   SYSTEM_ACCOUNT_ID,
@@ -13,7 +14,9 @@ import {
 // encrypted secrets store (namespace `claude-accounts`, keyed by account id) —
 // never in the accounts file.
 
-const TOKENS_NAMESPACE = "claude-accounts";
+const TOKENS_NAMESPACE = defineSecretNamespace("claude-accounts", {
+  scope: "machine",
+});
 
 export async function saveClaudeAccountCredential(
   id: string,

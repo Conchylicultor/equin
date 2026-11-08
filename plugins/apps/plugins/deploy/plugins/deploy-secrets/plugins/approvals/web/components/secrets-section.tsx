@@ -10,6 +10,11 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import {
+  asNamespace,
+  namespaceLabel,
+} from "@plugins/infra/plugins/namespace/core";
 import {
   DEPLOY_SECRET_STATUSES,
   DEPLOY_SECRET_STATUS_LABELS,
@@ -36,6 +41,29 @@ const STATUS_BADGE: Record<
 function statusLabel(status: DeploySecretStatus): string {
   const label = DEPLOY_SECRET_STATUS_LABELS[status];
   return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+/** Who wrote a value, as a namespace is shown (main reads `equin`). */
+function writerLabel(by: string | null): string {
+  return by === null ? "an unnamed caller" : namespaceLabel(asNamespace(by));
+}
+
+/** "Set 3h ago by att-…" — the row's last write, or "No writes yet". */
+function LastWriteCell({ row }: { row: SecretItem }): ReactElement {
+  const w = row.lastWrite;
+  if (w === null) {
+    return (
+      <Text variant="caption" tone="faint">
+        No writes yet
+      </Text>
+    );
+  }
+  return (
+    <Text variant="caption" tone="muted">
+      {w.op === "set" ? "Set" : "Deleted"}{" "}
+      <RelativeTime date={new Date(w.at)} /> by {writerLabel(w.by)}
+    </Text>
+  );
 }
 
 /**
@@ -85,6 +113,14 @@ export function SecretsSection({
         ),
         filterable: true,
         groupable: true,
+      },
+      {
+        id: "lastWrite",
+        label: "Last write",
+        type: "date",
+        value: (r) => (r.lastWrite === null ? null : new Date(r.lastWrite.at)),
+        cell: (r) => <LastWriteCell row={r} />,
+        sortable: true,
       },
       {
         id: "plugin",

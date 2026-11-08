@@ -29,6 +29,7 @@ describe("diffSecrets", () => {
         // Granted once, no longer required: no row — dropped without asking.
         ["E_DROPPED", "fp-e"],
       ]),
+      new Map(),
     );
     expect(rows.map((r) => [r.key, r.status, r.fingerprint])).toEqual([
       ["A_MISSING", "missing-value", null],
@@ -43,8 +44,24 @@ describe("diffSecrets", () => {
     ]);
   });
 
+  test("each row carries its key's last write, null when the store holds none", () => {
+    const write = { at: 1, op: "set" as const, by: "att-1-abc", changed: true };
+    const rows = diffSecrets(
+      [req("A"), req("B")],
+      new Map([["A", "fp-a"]]),
+      new Map(),
+      new Map([["A", write]]),
+    );
+    expect(rows.map((r) => r.lastWrite)).toEqual([write, null]);
+  });
+
   test("a grant for a missing value is still missing", () => {
-    const [row] = diffSecrets([req("K")], new Map(), new Map([["K", "fp"]]));
+    const [row] = diffSecrets(
+      [req("K")],
+      new Map(),
+      new Map([["K", "fp"]]),
+      new Map(),
+    );
     expect(row?.status).toBe("missing-value");
   });
 
@@ -52,6 +69,7 @@ describe("diffSecrets", () => {
     const rows = diffSecrets(
       [req("RESEND_API_KEY")],
       new Map([["RESEND_API_KEY", "fp"]]),
+      new Map(),
       new Map(),
     );
     const msg = approvalMessage(pendingSecrets(rows));

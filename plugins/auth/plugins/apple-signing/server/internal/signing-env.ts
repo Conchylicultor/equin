@@ -1,12 +1,11 @@
 import { getSecret } from "@plugins/infra/plugins/secrets/server";
 import { getConfig } from "@plugins/config_v2/server";
+import { CONFIG_FIELD_SECRETS } from "@plugins/fields/plugins/secret/plugins/config/core";
 import { appleSigningConfig } from "../../shared/config";
-
-const SECRET_NAMESPACE = "config-fields";
 
 async function readSecret(field: string): Promise<string> {
   const value = await getSecret({
-    namespace: SECRET_NAMESPACE,
+    namespace: CONFIG_FIELD_SECRETS,
     key: `${appleSigningConfig.name}.${field}`,
   });
   return value ?? "";

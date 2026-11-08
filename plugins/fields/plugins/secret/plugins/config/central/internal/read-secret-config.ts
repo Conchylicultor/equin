@@ -1,8 +1,7 @@
 import type { ConfigDescriptor, ConfigValues } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { getSecret } from "@plugins/infra/plugins/secrets/central";
-
-const NAMESPACE = "config-fields";
+import { CONFIG_FIELD_SECRETS } from "../../core";
 
 export async function readSecretConfig<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
@@ -11,7 +10,7 @@ export async function readSecretConfig<F extends FieldsRecord>(
   for (const [key, field] of Object.entries(descriptor.fields)) {
     if (field.type.id === "secret") {
       const v = await getSecret({
-        namespace: NAMESPACE,
+        namespace: CONFIG_FIELD_SECRETS,
         key: `${descriptor.name}.${key}`,
       });
       result[key] = v ?? "";

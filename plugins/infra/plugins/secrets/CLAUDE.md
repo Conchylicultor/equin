@@ -10,27 +10,29 @@ Encrypted-at-rest key-value primitive. Consumers: `auth` (OAuth tokens / API key
 - **Worktrees call central over HTTP via the gateway.** `getSecret`/`setSecret`/`deleteSecret`/`hasSecret`/`getSecretMetadata`/`listKeysInNamespace` (`server/`) go through the `SecretStore` host service (`secrets.store`); its one provider is the `machine/` half (`centralSecretStore`), which POSTs JSON to `http://localhost:9000/api/secrets/*`. No browser host provides it, so — portability rule 3 (`boundaries/core`) — `infra/secrets/server` and every server barrel loading it are not portable and never boot in a browser host (where `localhost:9000` would be the visitor's own machine). A process that runs this code without booting a graph (the agent process, `./equin deploy`) names the provider itself: `provideHostServicesUnbooted([SecretStore.provide(centralSecretStore)])`, `centralSecretStore` from `infra/secrets/cli` (a `bin/` cannot import `machine/`). The gateway routes those prefixes to `central` regardless of host (see `~/.equin/state/gateway/central-routes.json`). The previous unix-socket RPC and `~/.equin/secrets.sock` are gone.
 - **Boot is in central's `onReady`.** Central's plugin definition (`plugins/infra/plugins/secrets/central/index.ts`) loads the keychain, hydrates the encrypted blob, and runs the legacy `~/.equin/state/auth/tokens.json.enc` migration before the HTTP handlers are reachable. The server-side `ready` promise resolves immediately — there's nothing to wait for in-process.
 
-## Namespaces
+## Namespaces and scopes
 
-Secrets are addressed by `{ namespace, key }`. Conventions:
+Secrets are addressed by `{ namespace, key }`, where `namespace` is a declared `SecretNamespace` — `defineSecretNamespace(id, { scope })` (`core/`), spelled once by the plugin owning it. A ref naming an undeclared namespace does not compile; one id declared with two scopes throws.
 
-- `auth-tokens` — one entry keyed `blob-v1`, holding the JSON-encoded `TokenStoreBlob` (all providers/accounts).
-- `config-fields` — one entry per config full-key (e.g. `google.clientSecret`), holding the plaintext string.
+- **`scope: "machine"`** — the user's credential, one value for every namespace on the computer (sign in once, every worktree works): `auth-tokens` (auth's `TokenStoreBlob`, keyed `blob-v1`), `claude-accounts` (per account id), `config-fields` (per config full-key, `fields/secret/config`'s `CONFIG_FIELD_SECRETS`).
+- **`scope: "instance"`** — the value belongs to the instance writing it, like its DB rows (a worktree gets a fork of main's DB, not main's DB): `deploy-secrets`, `deploy-ssh`, `deploy-secret-grants`. Central keeps a **base layer** (main's) and one **overlay per caller namespace**:
+  - main (`MAIN_WORKTREE_NAME` exactly — `promo-film.<main checkout>` is not main) reads and writes the base;
+  - any other namespace reads its overlay, falling through to the base, and writes / deletes only its overlay (a delete is a tombstone, so main's value does not reappear). A seed or a worktree testing Set value gets its own copy and never touches main's;
+  - a caller that names no namespace reads the base, and its write is refused — 403 over HTTP (`InstanceWriteRefusedError` in central).
 
-Add new namespaces freely; the store doesn't care. Keep namespaces short and lowercase-hyphen.
+The scope travels on every request body, read off the ref's `SecretNamespace`. The caller's namespace rides in `SECRETS_CALLER_HEADER` (`core/`): `centralSecretStore` stamps `runtimeNamespace()` per call (none when the process declared none — the agent process, a test preload without one); a CLI that acts for a checkout uses `centralSecretStoreFor(ns)` (`./equin deploy` reads its checkout's `deploy-ssh` key). The header is the caller's own claim — an accident guard against our own code, not authentication (single-instance ADR).
 
-## Using it
+Central's in-process API (`central/`: auth, `fields/secret/config`'s central half) takes machine namespaces only and throws on an instance one: central serves every namespace and runs as none.
 
-```ts
-import { getSecret, setSecret } from "@plugins/infra/plugins/secrets/server";
+A backend built before scopes existed sends no `scope`; central resolves it from a closed record of the three pre-scope instance namespaces (`central/internal/legacy-scope.ts`) — never as `machine`.
 
-await setSecret({ namespace: "my-plugin", key: "api-key" }, "sk-…");
-const v = await getSecret({ namespace: "my-plugin", key: "api-key" }); // "sk-…"
-```
+Overlays of removed worktrees are not reclaimed yet (entries are tiny and bounded by namespaces).
 
-The server-side barrel is a thin facade over the `SecretStore` host service; on the computer every call hits central through the gateway. `getSecretMetadata` returns `{ set: boolean, updatedAt?: number }` without ever exposing the value — use it when all you need is a "configured?" bit.
+## Write history
 
-If central is unreachable (gateway down, central crash-looped, manifest not yet loaded) the call throws `SecretsMainOfflineError` after one quick retry.
+Every entry (base and overlay) keeps its last 20 writes, `{ at, op: "set" | "delete", by: <caller namespace> | null, changed }` (`changed`: the value differs from the one the caller saw before). Never a value or a digest. `getSecretMetadata` returns `{ set, updatedAt?, history }`; the Deploy app's Secrets section shows each row's last write from it.
+
+The blob is `{ version: 2, namespaces /* base */, overlays: { [caller]: { [ns]: { [key]: entry } } } }`; a v1 blob (no history, no overlays) upgrades in place on load (`central/internal/layers.ts`, the pure layering / history / upgrade logic, tested without a keychain or a file).
 
 ## No `web/`
 
@@ -71,11 +73,20 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.eq
     - `SecretStore`
     - `setSecret`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `infra/namespace.isNamespace`
+    - `packages/list-bound.cappedList`
   - Exports (types):
     - `SecretMetadata`
+    - `SecretNamespace`
     - `SecretRef`
+    - `SecretScope`
+    - `SecretWrite`
   - Exports (values):
+    - `defineSecretNamespace`
+    - `SECRET_HISTORY_LIMIT`
+    - `SECRETS_CALLER_HEADER`
     - `secretsDelete`
     - `SecretsError`
     - `secretsGet`
@@ -85,6 +96,7 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.eq
     - `SecretsMainOfflineError`
     - `secretsMeta`
     - `secretsSet`
+    - `SecretWriteSchema`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deploy-secrets/approvals`
@@ -99,7 +111,9 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.eq
 - Exemptions:
   - Exempts itself from: `paths:no-hardcoded-paths` — `central/index.ts` (sanctioned)
 - Machine:
-  - Exports (values): `centralSecretStore`
+  - Exports (values):
+    - `centralSecretStore`
+    - `centralSecretStoreFor`
 - Central:
   - Exports (types):
     - `SecretMetadata`
@@ -122,6 +136,8 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.eq
     - `POST /api/secrets/meta`
     - `POST /api/secrets/list`
 - Cli:
-  - Exports (values): `centralSecretStore`
+  - Exports (values):
+    - `centralSecretStore`
+    - `centralSecretStoreFor`
 
 <!-- AUTOGENERATED:END -->

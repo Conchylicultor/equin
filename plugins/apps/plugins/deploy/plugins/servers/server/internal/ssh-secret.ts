@@ -1,11 +1,14 @@
 import { getSecret } from "@plugins/infra/plugins/secrets/server";
+import { defineSecretNamespace } from "@plugins/infra/plugins/secrets/core";
 
 /**
  * The secrets namespace holding each server's SSH private key, keyed by server
  * id. Declared once here, beside the accessor, so no site in this plugin spells
  * the string a second time.
  */
-export const SSH_SECRET_NAMESPACE = "deploy-ssh";
+export const SSH_SECRET_NAMESPACE = defineSecretNamespace("deploy-ssh", {
+  scope: "instance",
+});
 
 /**
  * The server's SSH private key, as a discriminated result.

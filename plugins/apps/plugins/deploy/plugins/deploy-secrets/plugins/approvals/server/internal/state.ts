@@ -1,7 +1,14 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { getSecret } from "@plugins/infra/plugins/secrets/server";
+import {
+  getSecret,
+  getSecretMetadata,
+} from "@plugins/infra/plugins/secrets/server";
+import {
+  defineSecretNamespace,
+  type SecretWrite,
+} from "@plugins/infra/plugins/secrets/core";
 import { _deployDeployments } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
 import { deploymentIdKind } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import type { DeploySecretRow } from "../../core/schemas";
@@ -13,13 +20,30 @@ import { _deploySecretGrants } from "./tables";
 /**
  * The local secrets-store namespace deploy secret values live in, keyed by the
  * env var (`RESEND_API_KEY`). One value per key, shared by every deployment.
- * Spelled once, here.
+ * Spelled once, here. Instance-scoped: main's values are what main deploys; a
+ * worktree (or a seed running in one) reads them but writes its own layer.
  */
-export const DEPLOY_SECRETS_NAMESPACE = "deploy-secrets";
+export const DEPLOY_SECRETS_NAMESPACE = defineSecretNamespace(
+  "deploy-secrets",
+  {
+    scope: "instance",
+  },
+);
 
 /** Read one secret's current local value, or `undefined` when none is set. */
 export function readSecretValue(key: string): Promise<string | undefined> {
   return getSecret({ namespace: DEPLOY_SECRETS_NAMESPACE, key });
+}
+
+/** The store's last write of one secret (who and when, never the value), or `undefined` when it holds none. */
+async function readSecretLastWrite(
+  key: string,
+): Promise<SecretWrite | undefined> {
+  const { history } = await getSecretMetadata({
+    namespace: DEPLOY_SECRETS_NAMESPACE,
+    key,
+  });
+  return history.at(-1);
 }
 
 /** Everything the gate, the Secrets section and delivery decide from, read once. */
@@ -60,14 +84,21 @@ export async function planFor(
   const required = await requiredDeploySecrets(compositionId);
   const values = new Map<string, string>();
   const fingerprints = new Map<string, string>();
+  const lastWrites = new Map<string, SecretWrite>();
   if (required.length > 0) {
     const hmacKey = await fingerprintKey();
-    for (const r of required) {
-      const value = await readSecretValue(r.key);
-      if (value === undefined || value === "") continue;
-      values.set(r.key, value);
-      fingerprints.set(r.key, await fingerprintSecret(hmacKey, r.key, value));
-    }
+    await Promise.all(
+      required.map(async (r) => {
+        const [lastWrite, value] = await Promise.all([
+          readSecretLastWrite(r.key),
+          readSecretValue(r.key),
+        ]);
+        if (lastWrite !== undefined) lastWrites.set(r.key, lastWrite);
+        if (value === undefined || value === "") return;
+        values.set(r.key, value);
+        fingerprints.set(r.key, await fingerprintSecret(hmacKey, r.key, value));
+      }),
+    );
   }
   const grantRows = await db
     .select({
@@ -79,5 +110,8 @@ export async function planFor(
       eq(_deploySecretGrants.deploymentId, deploymentIdKind.key(deploymentId)),
     );
   const grants = new Map(grantRows.map((g) => [g.key, g.valueFingerprint]));
-  return { rows: diffSecrets(required, fingerprints, grants), values };
+  return {
+    rows: diffSecrets(required, fingerprints, grants, lastWrites),
+    values,
+  };
 }

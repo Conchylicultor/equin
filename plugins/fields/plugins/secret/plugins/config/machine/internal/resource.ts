@@ -5,7 +5,7 @@ import {
   getAllDescriptors,
   hasFieldStorageProvider,
 } from "@plugins/config_v2/server";
-import { configSecretMeta } from "../../core";
+import { CONFIG_FIELD_SECRETS, configSecretMeta } from "../../core";
 import type { ConfigV2SecretMeta } from "../../core";
 
 // External: the truth is the central secrets store. `storage.ts` notifies the
@@ -30,7 +30,7 @@ export const configSecretMetaServed = serveValue(configSecretMeta, {
       if (!hasFieldStorageProvider(field.type.id)) continue;
       try {
         const meta = await getSecretMetadata({
-          namespace: "config-fields",
+          namespace: CONFIG_FIELD_SECRETS,
           key: `${descriptor.name}.${key}`,
         });
         result[key] = meta;

@@ -1,11 +1,17 @@
 import { getSecret, setSecret } from "@plugins/infra/plugins/secrets/server";
+import { defineSecretNamespace } from "@plugins/infra/plugins/secrets/core";
 
 /**
  * Where the fingerprint key lives: the local secrets store, beside the values
  * it fingerprints but in its own namespace, so a value can never be read back
  * as the key nor listed among the secrets.
  */
-const HMAC_KEY_REF = { namespace: "deploy-secret-grants", key: "hmac-v1" };
+const HMAC_KEY_REF = {
+  namespace: defineSecretNamespace("deploy-secret-grants", {
+    scope: "instance",
+  }),
+  key: "hmac-v1",
+};
 
 /**
  * A fingerprint of one secret's value: `HMAC-SHA256(local key, key ‖ NUL ‖
@@ -39,7 +45,7 @@ export async function importHmacKey(hex: string): Promise<CryptoKey> {
   const pairs = hex.match(/../g);
   if (pairs === null || hex.length !== 64) {
     throw new Error(
-      `[deploy-secrets] the fingerprint key in ${HMAC_KEY_REF.namespace}/${HMAC_KEY_REF.key} is not 32 hex bytes.`,
+      `[deploy-secrets] the fingerprint key in ${HMAC_KEY_REF.namespace.id}/${HMAC_KEY_REF.key} is not 32 hex bytes.`,
     );
   }
   return crypto.subtle.importKey(

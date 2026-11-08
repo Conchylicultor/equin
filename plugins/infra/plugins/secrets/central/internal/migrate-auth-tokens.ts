@@ -2,10 +2,13 @@ import { rename } from "node:fs/promises";
 import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { decrypt } from "./crypto";
 import { legacyAuthBlob, legacyAuthKey } from "./paths";
-import { hasLocal, setLocal } from "./store";
+import { hasLocal, setLocal, type Access } from "./store";
 
-export const AUTH_TOKENS_NAMESPACE = "auth-tokens";
-export const AUTH_TOKENS_KEY = "blob-v1";
+// The auth plugin's namespace (`auth/central`'s token store declares the same
+// id, machine-scoped), written here once by the legacy migration.
+const AUTH_TOKENS_NAMESPACE = "auth-tokens";
+const AUTH_TOKENS_KEY = "blob-v1";
+const MIGRATION_ACCESS: Access = { scope: "machine", caller: null };
 
 /**
  * One-shot migration: read the legacy `~/.equin/state/auth/tokens.json.enc`
@@ -21,7 +24,7 @@ export async function migrateLegacyAuthTokens(): Promise<
   if (!(await exists(blobPath)) || !(await exists(keyFilePath))) {
     return "noop";
   }
-  if (hasLocal(AUTH_TOKENS_NAMESPACE, AUTH_TOKENS_KEY)) {
+  if (hasLocal(MIGRATION_ACCESS, AUTH_TOKENS_NAMESPACE, AUTH_TOKENS_KEY)) {
     // Already migrated; leave legacy files alone so the operator can clean up
     // or roll back if desired.
     return "skipped";
@@ -46,7 +49,12 @@ export async function migrateLegacyAuthTokens(): Promise<
   ) {
     throw new Error("[secrets] legacy auth blob has unexpected shape");
   }
-  await setLocal(AUTH_TOKENS_NAMESPACE, AUTH_TOKENS_KEY, plaintext);
+  await setLocal(
+    MIGRATION_ACCESS,
+    AUTH_TOKENS_NAMESPACE,
+    AUTH_TOKENS_KEY,
+    plaintext,
+  );
   const ts = Date.now();
   try {
     await rename(blobPath, `${blobPath}.migrated-${ts}`);

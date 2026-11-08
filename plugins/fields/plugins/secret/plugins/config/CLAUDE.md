@@ -57,12 +57,14 @@ The **secret** type's config capability, spanning all four runtimes:
   - Uses:
     - `config_v2/fields.fieldSample`
     - `fields/secret.secretFieldType`
+    - `infra/secrets.defineSecretNamespace`
     - `network/live.liveValue`
     - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `ConfigV2SecretMeta`
     - `SecretFieldDef`
   - Exports (values):
+    - `CONFIG_FIELD_SECRETS`
     - `configSecretMeta`
     - `secretField`
     - `secretSample`
