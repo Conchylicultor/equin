@@ -257,13 +257,14 @@ describe("activity", () => {
     floor.start("w2", fakeJob({ id: "3" }));
     floor.fatal("w2"); // the row stays locked until the sweeper's reclaim
     off();
-    const none = { unheldRows: false, deaths: false };
-    const unheld = { unheldRows: true, deaths: false };
+    const none = { unheldRows: false, deaths: false, ready: false };
+    const unheld = { unheldRows: true, deaths: false, ready: false };
+    const laneReleased = { unheldRows: true, deaths: false, ready: true };
     expect(seen).toEqual([
       unheld,
       none,
       none,
-      unheld,
+      laneReleased,
       ANY_QUEUE_CHANGE,
       unheld,
       unheld,

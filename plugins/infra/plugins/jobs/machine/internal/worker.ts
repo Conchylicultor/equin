@@ -30,7 +30,6 @@ import {
   priorityFor,
   RUNNERS,
   taskFor,
-  TOTAL_JOB_SLOTS,
   type HoldClass,
 } from "../../core/hold";
 import {
@@ -64,7 +63,11 @@ import {
   makeDurableCtx,
 } from "../../server/internal/step-ctx";
 import { LOCK_HELD, withJobLock } from "./job-lock";
-import { isRowSuperseded, markJobPermanentlyFailed } from "./introspection";
+import {
+  isRowSuperseded,
+  markJobPermanentlyFailed,
+  queryQueueDue,
+} from "./introspection";
 import {
   classifyFailure,
   discardWorkflowLog,
@@ -74,6 +77,7 @@ import { exitForDeadRunner, watchRunner } from "./runner-watch";
 import { attachRunStats, clearRunStats, markRunSuspended } from "./run-stats";
 import { jobsLog } from "./jobs-log";
 import { JOBS_POOL_IDLE_TIMEOUT_MS } from "./pool-idle";
+import { createQueueWake, NO_POLL_INTERVAL_MS } from "./queue-wake";
 
 // One runner per entry in the ladder (`RUNNERS`), all sharing one pg pool.
 let runners: Runner[] | null = null;
@@ -86,6 +90,11 @@ let stoppingWorkers = false;
 // exit. graphile's `stop()` throws on them, so `stopWorkers` skips them.
 const deadRunners = new Set<Runner>();
 
+// The one queue wake over every runner of this backend (queue-wake.ts). Its
+// read runs on the app's background lane, like every handler: a stalled lane
+// stops the jobs themselves, so a dedicated connection would buy nothing.
+const queueWake = createQueueWake({ readDue: () => queryQueueDue() });
+
 // One slot-ledger detach per runner, undone by `stopWorkers`.
 let ledgerDetaches: (() => void)[] = [];
 
@@ -95,10 +104,21 @@ let ledgerDetaches: (() => void)[] = [];
 // `_rawOptions.pgPool` branch), so a caller-supplied pool survives `runner.stop()`
 // and three runners can safely share it. `stopWorkers()` ends it explicitly.
 //
-// Sized `TOTAL_JOB_SLOTS + RUNNERS.length`: one connection per worker slot plus
-// one per runner for its own LISTEN/poll client. Three runners left to build
-// their own default pools would be 30 connections per backend, against a cluster
-// with ~16 live backends — the reason the shared pool is not an optimization.
+// Sized `2 × RUNNERS.length`: each runner's LISTEN client holds one connection
+// for good, and beside it a runner only ever needs ONE statement at a time —
+// a fetch or an outcome write, each a few ms. More was never faster: on a
+// notification for k rows graphile wakes up to k idle workers per runner, and
+// their parallel fetches race for the same rows (`SKIP LOCKED`), most coming
+// back empty. Sized one per slot (`TOTAL_JOB_SLOTS + RUNNERS.length`, 11), each
+// minute's cron wake fanned out to every slot at once and, with idle
+// connections kept for two ticks, every backend held all 11 for good (101
+// across the cluster, 2026-11-08). Now a burst queues for a connection for a few
+// ms instead of opening one: three runners each holding one statement still
+// fetch k rows in k × a few ms. Nothing nests a checkout inside another
+// (graphile resolves its task ids before checking out the fetch client; cron
+// and the outcome writes each take one), so a queued checkout always gets one.
+// Three runners left to build their own default pools would be 30 connections
+// per backend — the reason the shared pool is not an optimization.
 //
 // NOTE `pgPool` and `connectionString` are mutually exclusive in graphile's own
 // assertion (`dist/lib.js:182-186`), so the runner options below pass neither
@@ -119,7 +139,7 @@ async function getRunnerPool(): Promise<Pool> {
     runnerPool ??= createDbPool({
       name: "jobs-runner",
       connectionString: connString,
-      max: TOTAL_JOB_SLOTS + RUNNERS.length,
+      max: 2 * RUNNERS.length,
       idleTimeoutMillis: JOBS_POOL_IDLE_TIMEOUT_MS,
     });
   }
@@ -463,6 +483,11 @@ export async function startWorkers(): Promise<Runner[]> {
       // The run history rides the same emitter for the same reason: an event on
       // it is a run in one of this backend's slots. See run-stats.ts.
       attachRunStats(events),
+      // What wakes this runner's idle workers for rows no insert announced —
+      // graphile's poll is off (`pollInterval` below). See queue-wake.ts.
+      queueWake.attach(spec.id, Object.keys(taskList), events, {
+        listenInserts: spec.legacy === true,
+      }),
     );
 
     const runner = await run(
@@ -488,8 +513,18 @@ export async function startWorkers(): Promise<Runner[]> {
         // 2026-10-28). Batched, every write is a pending op of the batcher, and
         // `terminate()` awaits the batcher's release before `stop()` resolves.
         // A 0 ms batch adds one macrotask of lock time per job, nothing more.
+        //
+        // `pollInterval`: graphile's poll, switched off. Every idle worker
+        // re-ran its fetch each 2 s (graphile's default) despite the LISTEN —
+        // ~4 queries a second per backend, forever. The rows it existed for
+        // (future `run_at`, rows freed without a notification) are woken by
+        // the queue wake attached above instead. See queue-wake.ts.
         preset: {
-          worker: { completeJobBatchDelay: 0, failJobBatchDelay: 0 },
+          worker: {
+            completeJobBatchDelay: 0,
+            failJobBatchDelay: 0,
+            pollInterval: NO_POLL_INTERVAL_MS,
+          },
         },
       },
       // Hand graphile the live (initially empty) cron-item array; it re-reads

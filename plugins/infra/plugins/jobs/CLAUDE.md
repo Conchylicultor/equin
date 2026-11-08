@@ -668,6 +668,31 @@ prunes a retired job name's ring yet.
 `readRecentJobRuns(name)` still reads one job's ring for the Background
 activity catalog.
 
+## No poll: the queue wake
+
+**graphile's poll is off** (`pollInterval: NO_POLL_INTERVAL_MS`). In continuous
+mode every idle worker re-ran its fetch each 2 s despite the LISTEN — ~4 fetch
+queries a second per backend, forever, and connections that never idled out.
+graphile notifies `jobs:insert` on every insert (future-dated or not), so the
+poll only ever found rows that became fetchable WITHOUT an insert. Each of
+those now has its own signal (`machine/internal/queue-wake.ts`):
+
+| a row became fetchable because… | what wakes the workers |
+| --- | --- |
+| it was inserted | graphile's own LISTEN nudge (the wake only re-arms its timer) |
+| its future `run_at` came due (`runAt`, `ctx.sleep`, a wait's timeout racer, a retry's backoff) | ONE timer to the earliest future `run_at`, re-armed on every insert, failure outcome and wake |
+| a write freed it without a notification (lane released, failure unlocked, sweeper reclaim, Debug → Queue retry) | `QueueActivity.ready` → one `queryQueueDue` → each runner nudged for the rows its task list can fetch |
+| it was inserted while a LISTEN connection was down | `pool:listen:success` (every reconnect) wakes like `ready` |
+| graphile's `resetLocked` unlocked it (locked > 4 h) | `resetLocked:success` wakes like `ready` |
+| a fetch failed | a wake after 2 s, graphile's own retry delay |
+
+- **A new raw write to graphile's tables that frees a row must carry `ready`**
+  (`ANY_QUEUE_CHANGE` does). Without it the row waits for the next unrelated
+  wake — there is no poll to find it.
+- **The timer is a deadline, not a loop**: nothing future-dated, no timer. Its
+  single sleep is capped at a minute only because a timer's clock stops while
+  the machine sleeps; the capped sleep re-reads the wall clock and nothing else.
+
 ## Connections: every one carries the deadline
 
 The plugin owns four connection sets, all on the DIRECT socket
@@ -678,7 +703,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
 
 | pool | built in | what runs on it |
 | --- | --- | --- |
-| `jobs-runner` | `worker.ts` `getRunnerPool` | the three runners' fetches, completions and LISTEN connections (shared, `TOTAL_JOB_SLOTS + RUNNERS.length`) |
+| `jobs-runner` | `worker.ts` `getRunnerPool` | the three runners' fetches, completions and LISTEN connections (shared, `2 × RUNNERS.length`: one LISTEN + one statement at a time per runner) |
 | `jobs-enqueue` | `worker.ts` `getEnqueuePool` | `WorkerUtils` — `addJob`, reschedule, complete (max 10, graphile's old default) |
 | `jobs-schema` | `queue-schema.ts` `installQueueSchema` | graphile's migrations + the superseded trigger, under `BOOT_DDL_QUERY_DEADLINE_MS` (15 min) |
 | `job-lock` | `job-lock.ts` `lockPool` | the advisory lock / unlock around each handler |
@@ -920,6 +945,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `jobs:no-raw-addjob` — `machine/internal/graphile-queue.ts`, `check/index.ts` (sanctioned)
     - `jobs:no-raw-addjob` — `machine/internal/enqueue-deadline.test.ts` (sanctioned)
     - `jobs:no-raw-addjob` — `machine/internal/graphile-completion-patch.test.ts` (sanctioned)
+    - `jobs:no-raw-addjob` — `machine/internal/queue-wake.test.ts` (sanctioned)
     - `jobs:no-raw-addjob:task-literal` — `core/hold.ts`, `check/index.ts` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `boundaries/no-platform-api` — `server/internal/queue-schema.ts`, `server/internal/superseded-trigger.ts` (debt)

@@ -30,6 +30,13 @@ export default [
       "Not an enqueue path: proves `patches/graphile-worker@0.18.0.patch` by driving a bare graphile runner on a throwaway database, with its own task list and a faulty pool. `job.enqueue` reaches only the app's own runners.",
   },
   {
+    rule: "jobs:no-raw-addjob",
+    paths: ["machine/internal/queue-wake.test.ts"],
+    kind: "sanctioned",
+    reason:
+      "Not an enqueue path: proves the queue wake by driving bare graphile runners (poll off) on a throwaway database with future-dated, failing and serial-lane rows. `job.enqueue` reaches only the app's own runners.",
+  },
+  {
     rule: "jobs:no-raw-addjob:task-literal",
     paths: ["core/hold.ts", "check/index.ts"],
     kind: "sanctioned",

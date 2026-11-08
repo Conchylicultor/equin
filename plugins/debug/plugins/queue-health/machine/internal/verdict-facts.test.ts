@@ -54,15 +54,15 @@ describe("verdict facts", () => {
     expect(await h.facts.classes.read()).toBe(1);
     expect(await h.facts.dead.read()).toBe(1);
 
-    h.emit({ unheldRows: false, deaths: false }); // a plain success
+    h.emit({ unheldRows: false, deaths: false, ready: false }); // a plain success
     expect(await h.facts.classes.read()).toBe(1);
     expect(await h.facts.dead.read()).toBe(1);
 
-    h.emit({ unheldRows: true, deaths: false }); // a pickup
+    h.emit({ unheldRows: true, deaths: false, ready: false }); // a pickup
     expect(await h.facts.classes.read()).toBe(2);
     expect(await h.facts.dead.read()).toBe(1);
 
-    h.emit({ unheldRows: true, deaths: true }); // a failure
+    h.emit({ unheldRows: true, deaths: true, ready: true }); // a failure
     expect(await h.facts.classes.read()).toBe(3);
     expect(await h.facts.dead.read()).toBe(2);
 
@@ -85,7 +85,7 @@ describe("verdict facts", () => {
     const release = h.facts.track();
     h.gate();
     const inFlight = h.facts.classes.read();
-    h.emit({ unheldRows: true, deaths: false });
+    h.emit({ unheldRows: true, deaths: false, ready: false });
     h.releaseAll();
     expect(await inFlight).toBe(1);
     expect(await h.facts.classes.read()).toBe(2);

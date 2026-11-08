@@ -118,6 +118,12 @@ export interface QueueActivity {
   /** A run may have died, or a dead row moved or left: `queryRecentDeadJobs`
    * may differ. */
   deaths: boolean;
+  /** A row may have become fetchable — now, or at a new `run_at` — without a
+   * `jobs:insert` notification saying so (a failed run unlocked for its
+   * retry, a serial lane released, a retry, a reclaim). graphile does not poll
+   * (queue-wake.ts), so this is what wakes its idle workers for that row: a
+   * new raw write to graphile's tables that frees a row must carry it. */
+  ready: boolean;
 }
 
 /** Activity that may have moved anything — every mutation outside the ledger's
@@ -125,6 +131,7 @@ export interface QueueActivity {
 export const ANY_QUEUE_CHANGE: QueueActivity = {
   unheldRows: true,
   deaths: true,
+  ready: true,
 };
 
 const activityListeners = new Set<(activity: QueueActivity) => void>();
@@ -241,23 +248,22 @@ export function attachSlotLedger(
       }
     });
     // A slot took a row: it stopped waiting (or stopped being scheduled).
-    emitQueueActivity({ unheldRows: true, deaths: false });
+    emitQueueActivity({ unheldRows: true, deaths: false, ready: false });
   };
   // The slot is free now; the row's outcome is written a moment later
   // (`onOutcomeWritten`), so this announces the ledger's change alone.
   const onComplete = ({ worker }: WorkerEventMap["job:complete"]): void => {
     slots.delete(worker.workerId);
-    emitQueueActivity({ unheldRows: false, deaths: false });
+    emitQueueActivity({ unheldRows: false, deaths: false, ready: false });
   };
   // A successful run's row is deleted while still locked, so no unheld row
   // moves — unless it held a serial lane, whose release turns the rows behind
   // it into rows waiting for a slot. A failed run's row is unlocked: back in
-  // the queue for its retry, or dead.
+  // the queue for its retry (at a later `run_at`), or dead. Neither write
+  // sends a notification, so both are `ready`.
   const onOutcomeWritten = ({ job, failed }: OutcomeWritten): void => {
-    emitQueueActivity({
-      unheldRows: failed || job.job_queue_id !== null,
-      deaths: failed,
-    });
+    const freed = failed || job.job_queue_id !== null;
+    emitQueueActivity({ unheldRows: freed, deaths: failed, ready: freed });
   };
   // The worker failed to write the job's outcome back and is releasing itself
   // ("committing seppuku"). It will never emit `job:complete`, so this is the
@@ -267,13 +273,15 @@ export function attachSlotLedger(
     slots.delete(worker.workerId);
     // Its row stays locked until the sweeper reclaims it, which announces
     // that itself.
-    emitQueueActivity({ unheldRows: false, deaths: false });
+    emitQueueActivity({ unheldRows: false, deaths: false, ready: false });
   };
   const onNotification = ({
     message,
   }: WorkerEventMap["pool:listen:notification"]): void => {
+    // Not `ready`: graphile's own LISTEN client already wakes its workers for
+    // an insert.
     if (message.channel === INSERT_CHANNEL) {
-      emitQueueActivity({ unheldRows: true, deaths: false });
+      emitQueueActivity({ unheldRows: true, deaths: false, ready: false });
     }
   };
 

@@ -12,6 +12,7 @@ import {
 } from "../../core/hold";
 import { isSlotForfeited } from "./forfeit";
 import { SUPERSEDED_FLAG } from "../../server/internal/superseded-trigger";
+import type { EnqueueTx } from "../../server/internal/registry";
 
 // THE single home for the graphile-internals coupling. Every read of the queue —
 // dead-job reaping (dead-job-gc.ts) and the read-only introspection API below —
@@ -724,4 +725,53 @@ export async function queryRecentDeadJobs(opts: {
     lastDiedAt: Number(r.last_died_at),
     lastError: r.last_error,
   }));
+}
+
+const QueueDueRowSchema = z.object({
+  task: z.string(),
+  due: z.number().int(),
+  next_in_ms: z.string().nullable(),
+});
+
+/** Per graphile task: how many rows a worker could fetch right now, and how
+ * long until the next one becomes fetchable by its own `run_at`. */
+export interface QueueDueByTask {
+  /** Ready and not held back by a serial lane — what an idle worker's fetch
+   * would get (`waitingForSlotPredicate`). */
+  due: number;
+  /** Until the earliest unlocked row with attempts left whose `run_at` is still
+   * ahead (database clock, so no skew against this process). null: none. */
+  nextInMs: number | null;
+}
+
+// Read-only: what the queue wake (queue-wake.ts) needs to stand in for
+// graphile's poll — rows that are fetchable now without having been announced,
+// and when the next future-dated one comes due. One indexed pass over the
+// available rows (graphile's `jobs_main_index` is `WHERE is_available`).
+export async function queryQueueDue(
+  exec: EnqueueTx = db,
+): Promise<Map<string, QueueDueByTask>> {
+  const rows = await executeRows(exec, {
+    label: "queryQueueDue",
+    row: QueueDueRowSchema,
+    query: sql`
+    SELECT t.identifier AS task,
+           (count(*) FILTER (WHERE ${waitingForSlotPredicate}))::int AS due,
+           ceil(extract(epoch FROM min(j.run_at) FILTER (WHERE j.run_at > now()) - now()) * 1000)::bigint::text AS next_in_ms
+      FROM ${queueJobsFrom}
+     WHERE ${jobTaskScope}
+       AND j.locked_at IS NULL
+       AND j.attempts < j.max_attempts
+     GROUP BY 1
+  `,
+  });
+  return new Map(
+    rows.map((r) => [
+      r.task,
+      {
+        due: r.due,
+        nextInMs: r.next_in_ms === null ? null : Number(r.next_in_ms),
+      },
+    ]),
+  );
 }

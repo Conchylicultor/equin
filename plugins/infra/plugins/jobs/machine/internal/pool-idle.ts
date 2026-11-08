@@ -22,6 +22,6 @@ import { CRON_RESOLUTION_MS } from "../../core/cron";
 // out its most recently released connection first, so a steady tick keeps
 // exactly the connections it uses warm, and one no tick has needed for two
 // minutes — the extra a burst opened (boot, a backlog) — still closes. The pools'
-// `max` (`TOTAL_JOB_SLOTS + RUNNERS.length`, `TOTAL_JOB_SLOTS`, 10) still bounds
-// what can be held.
+// `max` (`2 × RUNNERS.length`, `TOTAL_JOB_SLOTS`, 10) still bounds what can be
+// held.
 export const JOBS_POOL_IDLE_TIMEOUT_MS = 2 * CRON_RESOLUTION_MS;

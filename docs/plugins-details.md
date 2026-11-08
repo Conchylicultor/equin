@@ -33487,6 +33487,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `jobs:no-raw-addjob` — `machine/internal/graphile-queue.ts`, `check/index.ts` (sanctioned)
           - `jobs:no-raw-addjob` — `machine/internal/enqueue-deadline.test.ts` (sanctioned)
           - `jobs:no-raw-addjob` — `machine/internal/graphile-completion-patch.test.ts` (sanctioned)
+          - `jobs:no-raw-addjob` — `machine/internal/queue-wake.test.ts` (sanctioned)
           - `jobs:no-raw-addjob:task-literal` — `core/hold.ts`, `check/index.ts` (sanctioned)
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `boundaries/no-platform-api` — `server/internal/queue-schema.ts`, `server/internal/superseded-trigger.ts` (debt)
@@ -37736,23 +37737,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Plugins:
     - **`coalesce`** — Trigger coalescer: createCoalescer / createKeyedCoalescer run a reaction at most once at a time per key and fold every trigger that lands mid-run into ONE trailing run (its items merged), so however many triggers arrive the work is bounded to one running plus one pending per key — and a trigger never joins a run that started before it.
       - Cross-plugin:
-        - Imported by:
-          - `apps/prototypes/files`
-          - `apps/sonata/sources/midi/folders`
-          - `conversations/conversation-progress`
-          - `conversations/runtime-sdk`
-          - `conversations/transcript-watcher`
-          - `debug/profiling/op-log/op-store`
-          - `debug/sentinel`
+        - Imported by: 21 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
+          - `infra` ×9
+          - `conversations` ×3
+          - `apps` ×2
+          - `debug` ×2
           - `framework/tooling/web-artifacts`
-          - `infra/file-watcher`
-          - `infra/git/checkout-watch`
-          - `infra/git/git-watcher`
-          - `infra/host/duress/latch`
-          - `infra/host/io-health`
-          - `infra/jobs/supervised-job`
-          - `infra/paths/data-files/memory`
-          - `infra/spawn/daemon`
           - `packages/watched-memo`
           - `plugin-meta/plugin-tree`
           - `reports/outbox`
